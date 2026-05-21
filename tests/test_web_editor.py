@@ -1,3 +1,10 @@
+"""Editor view-model contract tests.
+
+Behavioral scenarios (expand/shrink/change/undo) are covered by
+test_web_integration.py; here we pin the Editor's own state-machine contract:
+the initial state, undo availability, and the shrink guard.
+"""
+
 from rtt.web.editor import INITIAL_MAPPING, Editor
 
 
@@ -8,41 +15,10 @@ def test_editor_starts_at_meantone_with_no_undo():
     assert editor.can_undo is False
 
 
-def test_edit_mapping_recomputes_and_enables_undo():
+def test_an_edit_enables_undo():
     editor = Editor()
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
-    assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
     assert editor.can_undo is True
-
-
-def test_undo_restores_previous_state():
-    editor = Editor()
-    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
-    editor.undo()
-    assert editor.state.mapping == INITIAL_MAPPING
-    assert editor.can_undo is False
-
-
-def test_edit_comma_basis_recomputes_mapping():
-    editor = Editor()
-    editor.edit_comma_basis([[-4, 4, -1]])
-    assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
-
-
-def test_expand_then_undo_round_trips_dimension():
-    editor = Editor()
-    editor.expand()
-    assert editor.state.d == 4
-    editor.undo()
-    assert editor.state.d == 3
-
-
-def test_shrink_then_undo_round_trips_dimension():
-    editor = Editor()
-    editor.shrink()
-    assert editor.state.d == 2
-    editor.undo()
-    assert editor.state.d == 3
 
 
 def test_undo_with_empty_stack_is_a_noop():
