@@ -83,6 +83,11 @@ def test_canonical_form_keeps_nonstandard_domain_basis():
     assert canonical_form(t) == Temperament(((11, 35, 31),), Variance.ROW, (2, 9, 7))
 
 
+def test_canonical_form_drops_standard_domain_basis():
+    t = Temperament(((24, 38, 56),), Variance.ROW, (2, 3, 5))
+    assert canonical_form(t) == Temperament(((12, 19, 28),), Variance.ROW)
+
+
 def test_canonical_form_matches_parsed_ebk():
     some = parse_temperament_data("[⟨5 8 12] ⟨7 11 16]}")
     assert canonical_form(some) == parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")

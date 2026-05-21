@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sympy as sp
 
+from rtt.domain_basis import is_standard_prime_limit_domain_basis
 from rtt.matrix_utils import (
     Matrix,
     all_zeros,
@@ -15,9 +16,15 @@ from rtt.temperament import Temperament, Variance
 
 
 def canonical_form(t: Temperament) -> Temperament:
-    """Canonical form of a temperament, by its mapping or comma-basis variance."""
+    """Canonical form of a temperament, by its mapping or comma-basis variance.
+
+    A standard prime-limit domain basis is dropped (normalized to None).
+    """
     canonicalize = canonical_ca if t.variance is Variance.COL else canonical_ma
-    return Temperament(canonicalize(t.matrix), t.variance, t.domain_basis)
+    domain_basis = t.domain_basis
+    if domain_basis is not None and is_standard_prime_limit_domain_basis(domain_basis):
+        domain_basis = None
+    return Temperament(canonicalize(t.matrix), t.variance, domain_basis)
 
 
 def canonical_ma(matrix: Matrix) -> Matrix:

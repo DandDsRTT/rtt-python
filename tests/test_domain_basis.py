@@ -9,10 +9,15 @@ from rtt.domain_basis import (
     domain_basis_merge,
     get_basis_a,
     get_domain_basis,
+    get_domain_basis_change_for_c,
+    get_domain_basis_change_for_m,
     get_domain_basis_dimension,
     get_standard_prime_limit_domain_basis,
+    is_denominator_factor,
+    is_numerator_factor,
     is_standard_prime_limit_domain_basis,
     is_subspace_of,
+    signs_match,
 )
 from rtt.temperament import Temperament, Variance
 
@@ -170,3 +175,72 @@ def test_get_basis_a():
     assert get_basis_a(t) == Temperament(
         ((1, 0, 0, 0), (0, 2, 0, 0), (0, 0, 0, 1)), COL
     )
+
+
+@pytest.mark.parametrize(
+    "a, b, expected",
+    [
+        (3, 5, True),
+        (-3, -5, True),
+        (-3, 5, False),
+        (3, -5, False),
+        (3, 0, True),
+        (0, 5, True),
+        (-3, 0, True),
+        (0, -5, True),
+    ],
+)
+def test_signs_match(a, b, expected):
+    assert signs_match(a, b) is expected
+
+
+@pytest.mark.parametrize(
+    "subspace, superspace, expected",
+    [
+        ((1, 0, 0), (1, 0, 0), True),
+        ((2, 0, 0), (1, 0, 0), True),
+        ((1, 1, 0), (1, 0, 0), True),
+        ((1, 1, 0), (1, 1, 0), True),
+        ((2, 1, 0), (1, 1, 0), True),
+        ((1, 1, 0), (1, 2, 0), False),
+        ((1, 0, 0), (0, 0, 1), False),
+    ],
+)
+def test_is_numerator_factor(subspace, superspace, expected):
+    assert is_numerator_factor(subspace, superspace) is expected
+
+
+@pytest.mark.parametrize(
+    "subspace, superspace, expected",
+    [
+        ((1, 0, 0), (1, 0, 0), False),
+        ((1, -1, 0), (1, 0, 0), False),
+        ((1, -1, 0), (0, 1, 0), True),
+    ],
+)
+def test_is_denominator_factor(subspace, superspace, expected):
+    assert is_denominator_factor(subspace, superspace) is expected
+
+
+@pytest.mark.parametrize(
+    "original, target, expected",
+    [
+        ((2, 3, 5, 7), (2, 3, 5), ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0))),
+        ((2, 3, 7), (2, 9, 7), ((1, 0, 0), (0, 2, 0), (0, 0, 1))),
+        ((2, 3, 5, 7), (2, F(9, 7), F(5, 3)), ((1, 0, 0, 0), (0, 2, 0, -1), (0, -1, 1, 0))),
+    ],
+)
+def test_get_domain_basis_change_for_m(original, target, expected):
+    assert get_domain_basis_change_for_m(original, target) == expected
+
+
+@pytest.mark.parametrize(
+    "original, target, expected",
+    [
+        ((2, 3, 5), (2, 3, 5, 7), ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0))),
+        ((2, 9, 7), (2, 3, 7), ((1, 0, 0), (0, 2, 0), (0, 0, 1))),
+        ((2, F(9, 7), F(5, 3)), (2, 3, 5, 7), ((1, 0, 0, 0), (0, 2, 0, -1), (0, -1, 1, 0))),
+    ],
+)
+def test_get_domain_basis_change_for_c(original, target, expected):
+    assert get_domain_basis_change_for_c(original, target) == expected

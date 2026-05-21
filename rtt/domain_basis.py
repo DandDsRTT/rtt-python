@@ -63,6 +63,64 @@ def is_subspace_of(subspace: tuple, superspace: tuple) -> bool:
     return domain_basis_merge(subspace, superspace) == tuple(superspace)
 
 
+def signs_match(a: int, b: int) -> bool:
+    return _sign(a) == 0 or _sign(b) == 0 or _sign(a) == _sign(b)
+
+
+def _sign(n: int) -> int:
+    return (n > 0) - (n < 0)
+
+
+def _factorization_acceptable(a: int, b: int) -> bool:
+    return abs(a) >= abs(b) and signs_match(a, b)
+
+
+def is_numerator_factor(subspace_entry: tuple, superspace_entry: tuple) -> bool:
+    """Whether subtracting the superspace monzo moves the subspace monzo toward 0."""
+    return all(
+        _factorization_acceptable(s, s - sup)
+        for s, sup in zip(subspace_entry, superspace_entry)
+    )
+
+
+def is_denominator_factor(subspace_entry: tuple, superspace_entry: tuple) -> bool:
+    """Whether adding the superspace monzo moves the subspace monzo toward 0."""
+    return all(
+        _factorization_acceptable(s, s + sup)
+        for s, sup in zip(subspace_entry, superspace_entry)
+    )
+
+
+def get_domain_basis_change_for_m(original_superspace: tuple, target_subspace: tuple) -> tuple:
+    """Express each target-subspace generator in terms of the original superspace."""
+    dimension = get_domain_basis_dimension(tuple(original_superspace) + tuple(target_subspace))
+    target_a = pad_vectors_with_zeros_up_to_d(
+        tuple(quotient_to_pcv(q) for q in target_subspace), dimension
+    )
+    superspace_a = pad_vectors_with_zeros_up_to_d(
+        tuple(quotient_to_pcv(q) for q in original_superspace), dimension
+    )
+    change = []
+    for target_entry in target_a:
+        column = []
+        remaining = list(target_entry)
+        for superspace_entry in superspace_a:
+            count = 0
+            while is_numerator_factor(remaining, superspace_entry):
+                count += 1
+                remaining = [r - s for r, s in zip(remaining, superspace_entry)]
+            while is_denominator_factor(remaining, superspace_entry):
+                count -= 1
+                remaining = [r + s for r, s in zip(remaining, superspace_entry)]
+            column.append(count)
+        change.append(tuple(column))
+    return tuple(change)
+
+
+def get_domain_basis_change_for_c(original_subspace: tuple, target_superspace: tuple) -> tuple:
+    return get_domain_basis_change_for_m(target_superspace, original_subspace)
+
+
 def get_basis_a(t: Temperament) -> Temperament:
     """A temperament's domain basis as a comma-basis matrix of monzos."""
     domain_basis = get_domain_basis(t)
