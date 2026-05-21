@@ -213,6 +213,12 @@ def test_ea_dual_is_an_involution(t):
         (left_interior_product, D5G1CO, D5G3CONTRA, D5G2CONTRA),
         (interior_product, D5G1CO, D5G3CONTRA, D5G2CONTRA),
         (interior_product, D5G3CONTRA, D5G1CO, D5G2CONTRA),
+        (right_interior_product, D3G2CONTRA1, D3G1CO1, D3G1CONTRA1),
+        (right_interior_product, D3G2CO1, D3G1CONTRA2, D3G1CO2),
+        (right_interior_product, D3G1CO1, D3G1CONTRA2, D3UNISONCO),
+        (left_interior_product, D3G1CO1, D3G2CONTRA1, D3G1CONTRA1),
+        (left_interior_product, D3G1CO1, D3G1CONTRA2, D3JICONTRA),
+        (left_interior_product, D3G1CONTRA2, D3G2CO1, D3G1CO2),
     ],
 )
 def test_ea_products(op, u1, u2, expected):
@@ -242,6 +248,12 @@ def test_ea_products(op, u1, u2, expected):
          ET7_MC),  # et5Mc ^ et7Mc: grade 4 > 3
         (progressive_product, matrix_to_multivector(MEANTONE_M),
          matrix_to_multivector(Temperament(((1, 2, 3), (0, 3, 5)), ROW))),  # grade 4 > 3
+        (right_interior_product, D3G1CONTRA1, D3G1CO2),  # interior products bottoming out
+        (right_interior_product, D3G1CONTRA1, D3G2CO2),
+        (right_interior_product, D3G1CO1, D3G2CONTRA1),
+        (left_interior_product, D3G2CO1, D3G1CONTRA2),
+        (left_interior_product, D3G1CONTRA1, D3G1CO2),
+        (left_interior_product, D3G2CONTRA1, D3G1CO1),
     ],
 )
 def test_ea_product_errors(op, u1, u2):

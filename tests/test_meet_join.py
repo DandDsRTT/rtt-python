@@ -4,6 +4,7 @@ comma_merge on larger inputs."""
 
 import pytest
 
+from rtt.canonicalization import canonical_form
 from rtt.dual import dual
 from rtt.exterior_algebra import Multivector, matrix_to_multivector, progressive_product
 from rtt.merging import comma_merge, map_merge
@@ -177,3 +178,10 @@ EA_PRODUCT_ERRORS = [
 def test_ea_meet_join_product_errors(u1, u2):
     with pytest.raises(ValueError):
         progressive_product(u1, u2)
+
+
+def test_dual_with_nonstandard_basis():
+    m = Temperament(((1, 1, 3), (0, 3, -1)), ROW, (2, 3, 7))
+    c = Temperament(((-10, 1, 3),), COL, (2, 3, 7))
+    assert dual(m) == canonical_form(c)
+    assert dual(c) == canonical_form(m)
