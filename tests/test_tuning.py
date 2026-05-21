@@ -17,7 +17,12 @@ ROW = Variance.ROW
 TOL = 1e-3
 
 MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
+PAJARA = "[⟨2 3 5 6] ⟨0 1 -2 -2]}"
 SIX_TILT = "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
+TEN_TILT = (
+    "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5, 7/3, 7/4, "
+    "7/5, 7/6, 8/3, 8/5, 9/4, 9/5, 9/7, 10/7}"
+)
 
 # (optimization_power, damage_weight_slope, log_prime_power [5a], norm_power [4], expected)
 # Mirrors tests.m 2588-2624: meantone optimized over the sixTilt target-interval set
@@ -64,6 +69,31 @@ def test_optimize_generator_tuning_map_explicit(
         damage_weight_slope=slope,
         complexity_log_prime_power=log_prime_power,
         complexity_norm_power=norm_power,
+    )
+    assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
+
+
+# Minimax over a larger target set (pajara, 18 intervals) where the plain minimax
+# optimum is non-unique: only the nested (lexicographic) minimax pins down these
+# generators. Mirrors the exact (non-"quick") pajara cases from tests.m 2633-2645.
+NESTED_MINIMAX_CASES = [
+    ("unityWeight", 1, 0, (600.000, 108.128)),  # minimax-U
+    ("simplicityWeight", 1, 0, (596.502, 106.708)),  # minimax-copfr-S
+    ("complexityWeight", 1, 0, (600.581, 107.714)),  # minimax-copfr-C
+]
+
+
+@pytest.mark.parametrize("slope, norm_power, log_prime_power, expected", NESTED_MINIMAX_CASES)
+def test_optimize_generator_tuning_map_nested_minimax(
+    slope, norm_power, log_prime_power, expected
+):
+    t = parse_temperament_data(PAJARA)
+    spec = TuningSchemeSpec(
+        optimization_power=inf,
+        target_intervals=TEN_TILT,
+        damage_weight_slope=slope,
+        complexity_norm_power=norm_power,
+        complexity_log_prime_power=log_prime_power,
     )
     assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
 
