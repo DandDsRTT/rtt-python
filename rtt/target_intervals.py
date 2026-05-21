@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import re
 from fractions import Fraction
+
+import sympy as sp
 
 from rtt.math_utils import octave_reduce
 
@@ -44,6 +47,39 @@ def get_otonal_chord(harmonics: tuple[int, ...]) -> tuple[Fraction, ...]:
         for lower in range(len(harmonics))
         for higher in range(lower + 1, len(harmonics))
     )
+
+
+def process_tilt(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
+    """Resolve a TILT target-interval spec (``"TILT"`` or ``"N-TILT"``) to its quotients.
+    With no explicit limit, default to the integer just below the next prime past the
+    domain basis's greatest numerator."""
+    spec = target_spec.replace("truncated integer limit triangle", "TILT")
+    match = re.search(r"(\d*)-?TILT", spec)
+    given = match.group(1) if match else ""
+    if given:
+        return get_tilt(int(given))
+    greatest = max(Fraction(q).numerator for q in domain_basis)
+    return get_tilt(int(sp.nextprime(greatest)) - 1)
+
+
+def process_old(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
+    """Resolve an OLD target-interval spec (``"OLD"`` or ``"N-OLD"``) to its quotients.
+    With no explicit limit, default to the odd just below the next prime past the domain
+    basis's greatest odd part."""
+    spec = target_spec.replace("odd limit diamond", "OLD")
+    match = re.search(r"(\d*)-?OLD", spec)
+    given = match.group(1) if match else ""
+    if given:
+        return get_old(int(given))
+    greatest = max(_odd_part(Fraction(q).numerator) for q in domain_basis)
+    return get_old(int(sp.nextprime(greatest)) - 2)
+
+
+def _odd_part(n: int) -> int:
+    """The largest odd divisor of ``n`` (its value with all factors of 2 removed)."""
+    while n % 2 == 0:
+        n //= 2
+    return n
 
 
 def _dedup(values) -> tuple:

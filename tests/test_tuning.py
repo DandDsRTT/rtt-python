@@ -12,6 +12,7 @@ from rtt.tuning import (
     get_dual_power,
     get_just_tuning_map,
     optimize_generator_tuning_map,
+    optimize_tuning_map,
 )
 from rtt.temperament import Temperament, Variance
 
@@ -322,6 +323,82 @@ def test_held_intervals_determine_tuning():
     t = parse_temperament_data(MEANTONE)
     assert optimize_generator_tuning_map(t, "held-{2/1, 5/4} minimax-U") == pytest.approx(
         (1200.000, 696.578), abs=TOL
+    )
+
+
+# Handling ETs (tests.m 2770-2780): a single-generator 53-ET, target = TILT (default
+# integer limit from the domain basis), across all powers and weights.
+ET_TILT = [
+    ("TILT minimax-U", 22.644),
+    ("TILT miniRMS-U", 22.650),
+    ("TILT miniaverage-U", 22.642),
+    ("TILT minimax-C", 22.638),
+    ("TILT miniRMS-C", 22.657),
+    ("TILT miniaverage-C", 22.662),
+    ("TILT minimax-S", 22.647),
+    ("TILT miniRMS-S", 22.644),
+    ("TILT miniaverage-S", 22.642),
+]
+
+
+@pytest.mark.parametrize("scheme, expected", ET_TILT)
+def test_optimize_et_tilt(scheme, expected):
+    t = parse_temperament_data("[⟨53 84 123]}")
+    assert optimize_generator_tuning_map(t, scheme) == pytest.approx((expected,), abs=TOL)
+
+
+# Held-interval cases that use a TILT target (tests.m 2832-2838).
+TILT_HELD = [
+    ("held-octave TILT miniRMS-U", (1200.000, 696.274)),
+    ("held-2 TILT miniRMS-U", (1200.000, 696.274)),
+    ("held-2/1 TILT miniRMS-U", (1200.000, 696.274)),
+    ("held-{2} TILT miniRMS-U", (1200.000, 696.274)),
+    ("held-{2/1} TILT miniRMS-U", (1200.000, 696.274)),
+    ("held-3/2 TILT miniRMS-U", (1209.926, 701.955)),
+    ("held-5/4 TILT miniRMS-U", (1201.536, 697.347)),
+]
+
+
+@pytest.mark.parametrize("scheme, expected", TILT_HELD)
+def test_held_tilt(scheme, expected):
+    t = parse_temperament_data(MEANTONE)
+    assert optimize_generator_tuning_map(t, scheme) == pytest.approx(expected, abs=TOL)
+
+
+# "held-octave OLD minimax-U" (= the original "minimax"/Tenney-minimax), tests.m 2883-2901.
+HELD_OCTAVE_OLD_GENERATORS = [
+    ("[⟨1 2 3] ⟨0 3 5]}", (1200.000, -162.737)),  # porcupine
+    ("[⟨1 0 2] ⟨0 5 1]}", (1200.000, 380.391)),  # magic
+    ("[⟨1 1 1] ⟨0 4 9]}", (1200.000, 176.257)),  # tetracot
+    ("[⟨1 0 -4 -13] ⟨0 1 4 10]}", (1200.000, 1896.578)),  # meantone7
+    ("[⟨1 0 2 -1] ⟨0 5 1 12]}", (1200.000, 380.391)),  # magic7
+    ("[⟨1 -1 -1 -2] ⟨0 7 9 13]}", (1200.000, 443.519)),  # sensi
+]
+
+
+@pytest.mark.parametrize("ebk, expected", HELD_OCTAVE_OLD_GENERATORS)
+def test_held_octave_old_generators(ebk, expected):
+    t = parse_temperament_data(ebk)
+    assert optimize_generator_tuning_map(t, "held-octave OLD minimax-U") == pytest.approx(
+        expected, abs=TOL
+    )
+
+
+def test_held_octave_old_augene():
+    t = parse_temperament_data("[⟨3 0 7 18] ⟨0 1 0 -2]}")  # accuracy=1 in the library
+    assert optimize_generator_tuning_map(t, "held-octave OLD minimax-U") == pytest.approx(
+        (400.000, 1908.798), abs=0.1
+    )
+
+
+def test_held_octave_old_tuning_map():
+    meantone = parse_temperament_data(MEANTONE)
+    assert optimize_tuning_map(meantone, "held-octave OLD minimax-U") == pytest.approx(
+        (1200.000, 1896.578, 2786.314), abs=TOL
+    )
+    sensamagic = parse_temperament_data("[⟨1 0 0 0] ⟨0 1 1 2] ⟨0 0 2 -1]}")
+    assert optimize_tuning_map(sensamagic, "held-octave OLD minimax-U") == pytest.approx(
+        (1200.000, 1901.955, 2781.584, 3364.096), abs=TOL
     )
 
 

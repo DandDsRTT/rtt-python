@@ -12,7 +12,9 @@ from scipy.optimize import linprog, minimize
 from rtt.dimensions import get_d
 from rtt.domain_basis import get_domain_basis
 from rtt.dual import dual
+from rtt.math_utils import pad_vectors_with_zeros_up_to_d, quotient_to_pcv
 from rtt.parsing import parse_quotient_list
+from rtt.target_intervals import process_old, process_tilt
 from rtt.temperament import Temperament, Variance
 
 
@@ -80,7 +82,9 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     if held_match:
         held, name = held_match.group(1), held_match.group(2)
     power = inf if "minimax" in name else (2 if "miniRMS" in name else 1)
-    target_match = re.search(r"\{[\d/,\s]*\}", name)
+    target_match = re.search(
+        r"\{[\d/,\s]*\}|\d*-?TILT|\d*-?OLD|primes", name
+    )
     return TuningSchemeSpec(
         optimization_power=power,
         target_intervals=target_match.group(0) if target_match else None,
@@ -106,7 +110,7 @@ def optimize_generator_tuning_map(
     if held_null is not None and held_null.shape[1] == 0:
         return tuple(float(g) for g in held_generators)  # held intervals pin the tuning
 
-    monzos = parse_quotient_list(spec.target_intervals, d)  # k monzos
+    monzos = _resolve_target_intervals(spec.target_intervals, t, d)  # k monzos
     targets = np.array(monzos, dtype=float)  # k x d
     weights = _damage_weights(monzos, t, spec)  # k
     tempered = (targets @ mapping.T) * weights[:, None]  # k x r
@@ -124,6 +128,31 @@ def optimize_generator_tuning_map(
     else:
         generators = _solve_optimum(tempered, just, spec.optimization_power, mapping.shape[0])
     return tuple(float(g) for g in generators)
+
+
+def optimize_tuning_map(t: Temperament, spec: TuningSchemeSpec | str) -> tuple[float, ...]:
+    """The optimum tuning map (the generators applied to the mapping) under the scheme."""
+    generators = np.array(optimize_generator_tuning_map(t, spec), dtype=float)
+    mapping = np.array(_mapping_matrix(t), dtype=float)
+    return tuple(float(x) for x in generators @ mapping)
+
+
+def _resolve_target_intervals(
+    target_spec: str, t: Temperament, d: int
+) -> tuple[tuple[int, ...], ...]:
+    """Resolve a target-interval spec to monzos: an explicit ``{...}`` quotient list, a
+    TILT/OLD named scheme, or ``"primes"`` (the identity)."""
+    if "TILT" in target_spec or "truncated integer limit triangle" in target_spec:
+        quotients = process_tilt(target_spec, get_domain_basis(t))
+    elif "OLD" in target_spec or "odd limit diamond" in target_spec:
+        quotients = process_old(target_spec, get_domain_basis(t))
+    elif target_spec == "primes":
+        return tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
+    else:
+        return parse_quotient_list(target_spec, d)
+    return pad_vectors_with_zeros_up_to_d(
+        tuple(quotient_to_pcv(q) for q in quotients), d
+    )
 
 
 def _parse_interval_spec(text: str, d: int) -> tuple[tuple[int, ...], ...]:
