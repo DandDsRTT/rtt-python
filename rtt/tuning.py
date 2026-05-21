@@ -5,7 +5,7 @@ from fractions import Fraction
 from math import log2
 
 import numpy as np
-from scipy.optimize import linprog
+from scipy.optimize import linprog, minimize
 
 from rtt.dimensions import get_d
 from rtt.domain_basis import get_domain_basis
@@ -87,7 +87,20 @@ def _solve_optimum(
         return _minimax(tempered, just, rank)
     if power == 1:
         return _minisum(tempered, just, rank)
-    raise NotImplementedError(f"optimization power {power} not yet ported")
+    return _power_sum(tempered, just, power)
+
+
+def _power_sum(tempered: np.ndarray, just: np.ndarray, power: float) -> np.ndarray:
+    """Minimize the sum of damages raised to ``power`` (the optimum for a finite power
+    other than 1, 2, or ∞), starting from the least-squares solution."""
+    initial = np.linalg.lstsq(tempered, just, rcond=None)[0]
+    result = minimize(
+        lambda generators: np.sum(np.abs(tempered @ generators - just) ** power),
+        initial,
+        method="Nelder-Mead",
+        options={"xatol": 1e-9, "fatol": 1e-12, "maxiter": 100000},
+    )
+    return result.x
 
 
 def _minimax(tempered: np.ndarray, just: np.ndarray, rank: int) -> np.ndarray:

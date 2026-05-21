@@ -18,6 +18,7 @@ TOL = 1e-3
 
 MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
 PAJARA = "[⟨2 3 5 6] ⟨0 1 -2 -2]}"
+BLACKWOOD = "[⟨5 8 0] ⟨0 0 1]}"
 SIX_TILT = "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
 TEN_TILT = (
     "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5, 7/3, 7/4, "
@@ -94,6 +95,55 @@ def test_optimize_generator_tuning_map_nested_minimax(
         damage_weight_slope=slope,
         complexity_norm_power=norm_power,
         complexity_log_prime_power=log_prime_power,
+    )
+    assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
+
+
+# Sweeping the interval-complexity norm power (trait 4) for a minimax simplicity-weighted
+# meantone tuning. Mirrors tests.m 2800-2806.
+NORM_POWER_CONTINUUM = [
+    (inf, (1201.191, 697.405)),
+    (5.00, (1201.381, 697.460)),
+    (3.00, (1201.513, 697.503)),
+    (2.00, (1201.600, 697.531)),
+    (1.50, (1201.648, 697.547)),
+    (1.25, (1201.673, 697.556)),
+    (1.00, (1201.699, 697.564)),
+]
+
+
+@pytest.mark.parametrize("norm_power, expected", NORM_POWER_CONTINUUM)
+def test_optimize_generator_tuning_map_norm_power_continuum(norm_power, expected):
+    t = parse_temperament_data(MEANTONE)
+    spec = TuningSchemeSpec(
+        optimization_power=inf,
+        target_intervals=SIX_TILT,
+        damage_weight_slope="simplicityWeight",
+        complexity_norm_power=norm_power,
+    )
+    assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
+
+
+# Sweeping the optimization power (trait 2) for a unity-weighted blackwood tuning.
+# Mirrors tests.m 2787-2793; powers other than inf/2/1 use the general power-sum method.
+POWER_CONTINUUM = [
+    (inf, (240.000, 2795.336)),
+    (5.00, (239.174, 2787.898)),
+    (3.00, (238.745, 2784.044)),
+    (2.00, (238.408, 2781.006)),
+    (1.50, (238.045, 2777.737)),
+    (1.25, (237.793, 2775.471)),
+    (1.00, (237.744, 2775.036)),
+]
+
+
+@pytest.mark.parametrize("power, expected", POWER_CONTINUUM)
+def test_optimize_generator_tuning_map_power_continuum(power, expected):
+    t = parse_temperament_data(BLACKWOOD)
+    spec = TuningSchemeSpec(
+        optimization_power=power,
+        target_intervals=SIX_TILT,
+        damage_weight_slope="unityWeight",
     )
     assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
 
