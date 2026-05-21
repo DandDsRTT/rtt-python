@@ -242,3 +242,20 @@ def matrix_to_multivector(t: Temperament) -> Multivector:
     return ea_canonical_form(
         Multivector(get_largest_minors_l(t.matrix), grade, t.variance, get_d(t))
     )
+
+
+def u_to_tensor(u: Multivector):
+    """The fully antisymmetric grade-tensor (``d`` in each of the ``grade`` modes) built
+    from the multivector's Plücker coordinates; for grade 2 this is the antisymmetric
+    ``d × d`` matrix, returned as nested tuples."""
+    d = _ea_get_decomposable_d(u)
+    index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords))
+
+    def build(prefix: tuple) -> object:
+        if len(prefix) == u.grade:
+            if len(set(prefix)) < u.grade:
+                return 0  # repeated index -> antisymmetric entry is zero
+            return _permutation_sign(prefix) * index_to_coord[tuple(sorted(prefix))]
+        return tuple(build(prefix + (axis,)) for axis in range(d))
+
+    return build(())

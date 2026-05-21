@@ -2,10 +2,12 @@ from fractions import Fraction
 
 import pytest
 
+from rtt.domain_basis import get_domain_basis_dimension
 from rtt.parsing import (
     is_covariant_ebk,
     parse_domain_basis,
     parse_ebk_vector,
+    parse_quotient_list,
     parse_temperament_data,
 )
 from rtt.temperament import Temperament, Variance
@@ -82,3 +84,21 @@ def test_parse_ebk_vector(text, expected):
 )
 def test_is_covariant_ebk(ebk, expected):
     assert is_covariant_ebk(ebk) == expected
+
+
+# parseQuotientL (tests.m 199-204): parse a quotient (string, with synonym forms) to its
+# prime monzo(s), padded to the domain basis's prime dimension. The 5-limit cases use d = 3;
+# the nonstandard 2.9.7.11 basis has prime dimension 5, and 11/7 maps to its prime monzo.
+@pytest.mark.parametrize(
+    "text, domain_basis, expected",
+    [
+        ("2", (2, 3, 5), ((1, 0, 0),)),
+        ("2/1", (2, 3, 5), ((1, 0, 0),)),
+        ("{2}", (2, 3, 5), ((1, 0, 0),)),
+        ("{2/1}", (2, 3, 5), ((1, 0, 0),)),
+        ("{2/1, 3/2}", (2, 3, 5), ((1, 0, 0), (-1, 1, 0))),
+        ("{11/7}", (2, 9, 7, 11), ((0, 0, 0, -1, 1),)),
+    ],
+)
+def test_parse_quotient_list(text, domain_basis, expected):
+    assert parse_quotient_list(text, get_domain_basis_dimension(domain_basis)) == expected

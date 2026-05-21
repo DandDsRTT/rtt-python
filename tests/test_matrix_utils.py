@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 import pytest
 
 from rtt.matrix_utils import (
@@ -5,12 +7,35 @@ from rtt.matrix_utils import (
     get_largest_minors_l,
     hnf,
     inner_l_length,
+    inverse,
     remove_all_zero_lists,
     remove_unneeded_zero_lists,
     reverse_inner_l,
     reverse_outer_l,
     rotate_180,
 )
+
+
+def _f(*pairs):
+    return tuple(Fraction(n, d) for n, d in pairs)
+
+
+# inverse (tests.m 372-374): a 2D matrix -> its exact rational inverse; a 1D vector ->
+# element-wise reciprocals; a scalar -> its reciprocal.
+def test_inverse_matrix():
+    assert inverse(((1, 2, 3), (4, 5, 0), (0, 0, 9))) == (
+        _f((-5, 3), (2, 3), (5, 9)),
+        _f((4, 3), (-1, 3), (-4, 9)),
+        _f((0, 1), (0, 1), (1, 9)),
+    )
+
+
+def test_inverse_vector():
+    assert inverse((1, 2, 3)) == _f((1, 1), (1, 2), (1, 3))
+
+
+def test_inverse_scalar():
+    assert inverse(3) == Fraction(1, 3)
 
 
 def test_reverse_inner_l():

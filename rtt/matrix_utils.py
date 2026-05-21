@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from fractions import Fraction
 from itertools import combinations
 
 import sympy as sp
@@ -7,6 +8,20 @@ import sympy as sp
 from rtt.list_utils import divide_out_gcd
 
 Matrix = tuple[tuple[int, ...], ...]
+
+
+def inverse(x):
+    """Polymorphic inverse: a 2D matrix becomes its exact rational matrix inverse, a 1D
+    vector its element-wise reciprocals, and a scalar its reciprocal."""
+    if not isinstance(x, (list, tuple)):
+        return Fraction(1) / Fraction(x)
+    if x and isinstance(x[0], (list, tuple)):
+        inverted = sp.Matrix([list(row) for row in x]).inv()
+        return tuple(
+            tuple(Fraction(int(entry.p), int(entry.q)) for entry in row)
+            for row in inverted.tolist()
+        )
+    return tuple(Fraction(1) / Fraction(value) for value in x)
 
 
 def reverse_inner_l(matrix: Matrix) -> Matrix:

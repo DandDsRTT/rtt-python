@@ -21,6 +21,7 @@ from rtt.exterior_algebra import (
     progressive_product,
     regressive_product,
     right_interior_product,
+    u_to_tensor,
 )
 from rtt.temperament import Temperament, Variance
 
@@ -368,3 +369,8 @@ def test_ea_addition(op, u1, u2, expected):
 def test_ea_addition_errors(op, u1, u2):
     with pytest.raises(ValueError):
         op(u1, u2)
+
+
+def test_u_to_tensor():
+    # tests.m 1556: a grade-2 multivector becomes its antisymmetric d×d tensor.
+    assert u_to_tensor(D3G2CO1) == ((0, 1, 4), (-1, 0, 4), (-4, -4, 0))
