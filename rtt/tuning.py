@@ -107,7 +107,6 @@ def complexity_name_traits(name: str) -> dict:
 
 
 # Historical tuning-scheme names, each expressed as the equivalent systematic name.
-# (POTE/POTOP/Weil/Kees etc. await destretching and the size-factor complexity.)
 _ORIGINAL_NAME_SCHEMES = {
     "minimax": "held-octave OLD minimax-U",
     "least squares": "held-octave OLD miniRMS-U",
@@ -125,6 +124,21 @@ _ORIGINAL_NAME_SCHEMES = {
     "POTE": "destretched-octave minimax-ES",
     "POTOP": "destretched-octave minimax-S",
     "POTT": "destretched-octave minimax-S",
+    "Frobenius": "minimax-E-copfr-S",
+    "BOP": "minimax-sopfr-S",
+    "Benedetti": "minimax-sopfr-S",
+    "BE": "minimax-E-sopfr-S",
+    "Benedetti-Euclidean": "minimax-E-sopfr-S",
+    "Weil": "minimax-lils-S",
+    "WOP": "minimax-lils-S",
+    "WE": "minimax-E-lils-S",
+    "Weil-Euclidean": "minimax-E-lils-S",
+    "Kees": "destretched-octave minimax-lils-S",
+    "KOP": "destretched-octave minimax-lils-S",
+    "KE": "destretched-octave minimax-E-lils-S",
+    "Kees-Euclidean": "destretched-octave minimax-E-lils-S",
+    "CWE": "destretched-octave minimax-E-lils-S",
+    "constrained Weil-Euclidean": "destretched-octave minimax-E-lils-S",
 }
 
 
@@ -187,30 +201,83 @@ def optimize_generator_tuning_map(
     mapping = np.array(_mapping_matrix(t), dtype=float)  # r x d
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)  # d
 
-    held_generators, held_null = _held_constraint(spec, mapping, just_tuning_map, d)
-    if held_null is not None and held_null.shape[1] == 0:
-        return tuple(float(g) for g in held_generators)  # held intervals pin the tuning
-
-    monzos, weights, power = _optimization_setup(t, spec, d)
-    targets = np.array(monzos, dtype=float)  # k x d
-    tempered = (targets @ mapping.T) * weights[:, None]  # k x r
-    just = (targets @ just_tuning_map) * weights  # k
-
-    if held_null is not None:
-        # g = held_generators + held_null @ y, optimizing only the held-justly subspace
-        free = _solve_optimum(
-            tempered @ held_null,
-            just - tempered @ held_generators,
-            power,
-            held_null.shape[1],
-        )
-        generators = held_generators + held_null @ free
+    if _is_all_interval(spec) and spec.complexity_size_factor != 0:
+        generators = _optimize_augmented_all_interval(t, spec, mapping, just_tuning_map, d)
     else:
-        generators = _solve_optimum(tempered, just, power, mapping.shape[0])
+        monzos, weights, power = _optimization_setup(t, spec, d)
+        generators = _constrained_solve(
+            mapping, just_tuning_map, monzos, weights, power, _held_monzos(spec, d)
+        )
 
     if spec.destretched_interval:
         generators = _destretch(generators, spec.destretched_interval, mapping, just_tuning_map, d)
     return tuple(float(g) for g in generators)
+
+
+def _is_all_interval(spec: TuningSchemeSpec) -> bool:
+    """Whether the scheme targets every interval (an empty target set), which by duality
+    becomes an optimization over the primes (or the size-augmented primes)."""
+    return spec.target_intervals is not None and spec.target_intervals.strip() in ("{}", "")
+
+
+def _constrained_solve(
+    mapping: np.ndarray,
+    just_tuning_map: np.ndarray,
+    monzos: tuple[tuple[int, ...], ...],
+    weights: np.ndarray,
+    power: float,
+    held_monzos: np.ndarray | None,
+) -> np.ndarray:
+    """The generators minimizing the weighted ``power``-norm of the target damages, holding
+    any ``held_monzos`` exactly justly (reparameterizing onto the held-justly subspace)."""
+    targets = np.array(monzos, dtype=float).reshape(-1, mapping.shape[1])  # k x d
+    tempered = (targets @ mapping.T) * weights[:, None]  # k x r
+    just = (targets @ just_tuning_map) * weights  # k
+    if held_monzos is None:
+        return _solve_optimum(tempered, just, power, mapping.shape[0])
+    tempered_side = held_monzos @ mapping.T  # n_held x r
+    held_generators, *_ = np.linalg.lstsq(tempered_side, held_monzos @ just_tuning_map, rcond=None)
+    held_null = null_space(tempered_side)
+    if held_null.shape[1] == 0:
+        return held_generators  # held intervals pin the tuning
+    # g = held_generators + held_null @ y, optimizing only the held-justly subspace
+    free = _solve_optimum(
+        tempered @ held_null, just - tempered @ held_generators, power, held_null.shape[1]
+    )
+    return held_generators + held_null @ free
+
+
+def _optimize_augmented_all_interval(
+    t: Temperament,
+    spec: TuningSchemeSpec,
+    mapping: np.ndarray,
+    just_tuning_map: np.ndarray,
+    d: int,
+) -> np.ndarray:
+    """All-interval schemes with a size factor (Weil/lils family) augment the system with a
+    phantom prime: an extra generator and a mapping row ``(size_factor·log2(p), -1)``, the
+    phantom tuned justly to 0 and weighted 1. After solving, the phantom generator is dropped."""
+    rank = mapping.shape[0]
+    size_factor = spec.complexity_size_factor
+    log_primes = np.array([log2(float(q)) for q in get_domain_basis(t)])
+
+    aug_mapping = np.zeros((rank + 1, d + 1))
+    aug_mapping[:rank, :d] = mapping
+    aug_mapping[rank, :d] = size_factor * log_primes
+    aug_mapping[rank, d] = -1.0
+    aug_just = np.append(just_tuning_map, 0.0)
+
+    primes, prime_weights, power = _optimization_setup(
+        t, replace(spec, complexity_size_factor=0), d
+    )
+    aug_monzos = np.eye(d + 1)
+    weights = np.append(prime_weights, 1.0)  # phantom prime weighted 1
+
+    held = _held_monzos(spec, d)
+    aug_held = None if held is None else np.hstack([held, np.ones((held.shape[0], 1))])
+
+    generators = _constrained_solve(aug_mapping, aug_just, aug_monzos, weights, power, aug_held)
+    return generators[:rank]  # drop the phantom generator
 
 
 def _destretch(
@@ -235,7 +302,9 @@ def _optimization_setup(
     An all-interval scheme (empty target set) instead optimizes over the primes with
     simplicity weighting, at the dual of the interval-complexity norm power — minimax
     over every interval is, by duality, this optimization over the primes."""
-    if spec.target_intervals is not None and spec.target_intervals.strip() in ("{}", ""):
+    if spec.target_intervals is None:
+        return (), np.array([]), spec.optimization_power  # held intervals alone pin the tuning
+    if spec.target_intervals.strip() in ("{}", ""):
         primes = tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
         weights = _damage_weights(primes, t, replace(spec, damage_weight_slope="simplicityWeight"))
         return primes, weights, get_dual_power(spec.complexity_norm_power)
@@ -273,19 +342,11 @@ def _parse_interval_spec(text: str, d: int) -> tuple[tuple[int, ...], ...]:
     return parse_quotient_list(text.replace("octave", "2"), d)
 
 
-def _held_constraint(
-    spec: TuningSchemeSpec, mapping: np.ndarray, just_tuning_map: np.ndarray, d: int
-) -> tuple[np.ndarray | None, np.ndarray | None]:
-    """For held intervals (tuned exactly justly), a particular generator map satisfying
-    those equalities and an orthonormal basis for the remaining free directions; both
-    ``None`` if the scheme holds no intervals."""
+def _held_monzos(spec: TuningSchemeSpec, d: int) -> np.ndarray | None:
+    """The monzos of the scheme's held intervals (tuned exactly justly), or ``None``."""
     if not spec.held_intervals:
-        return None, None
-    held = np.array(_parse_interval_spec(spec.held_intervals, d), dtype=float)
-    tempered_side = held @ mapping.T  # n_held x r: each held interval's tempered size
-    just_side = held @ just_tuning_map  # its just size
-    generators, *_ = np.linalg.lstsq(tempered_side, just_side, rcond=None)
-    return generators, null_space(tempered_side)
+        return None
+    return np.array(_parse_interval_spec(spec.held_intervals, d), dtype=float)
 
 
 def _damage_weights(

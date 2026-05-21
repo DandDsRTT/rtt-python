@@ -221,3 +221,116 @@ def test_original_name_equivalences(original, systematic):
     assert optimize_tuning_map(meantone, original) == pytest.approx(
         optimize_tuning_map(meantone, systematic), abs=TOL
     )
+
+
+# Alternative-complexity all-interval families (tests.m 3470-3540), size factor 0 so they
+# go through the ordinary (un-augmented) all-interval path. Each maps a (temperament -> tuning
+# map) over the standard temperament set. A few use looser accuracy in the library (TOL_2).
+TOL_2 = 1e-2
+
+# minimax-E-copfr-S = "Frobenius" (tests.m 3472-3490).
+FROBENIUS_TUNING_MAPS = {
+    "meantone": (1202.6068, 1899.3482, 2786.9654),
+    "blackwood": (1191.8899, 1907.0238, 2786.3137),
+    "dicot": (1215.1441, 1907.0030, 2776.2177),
+    "augmented": (1195.0446, 1901.9550, 2788.4374),
+    "mavila": (1210.9365, 1897.2679, 2784.7514),
+    "porcupine": (1198.5953, 1908.9787, 2782.0995),
+    "srutal": (1198.4746, 1902.5097, 2786.5911),
+    "hanson": (1200.5015, 1902.3729, 2785.8122),
+    "magic": (1202.3503, 1902.1900, 2785.1386),
+    "negri": (1203.2384, 1901.2611, 2785.3885),
+    "tetracot": (1198.8664, 1903.9955, 2785.4068),
+    "meantone7": (1201.3440, 1898.5615, 2788.8699, 3368.1428),
+    "magic7": (1202.0285, 1904.1849, 2784.8940, 3368.0151),
+    "pajara": (1196.6908, 1901.7292, 2778.3407, 3376.6861),
+    "augene": (1195.2617, 1901.4887, 2788.9439, 3368.5928),
+    "sensi": (1198.2677, 1904.0314, 2790.4025, 3364.8772),
+    "sensamagic": (1200.0000, 1904.3201, 2785.8407, 3367.8799),
+}
+
+
+@pytest.mark.parametrize("name, expected", FROBENIUS_TUNING_MAPS.items())
+def test_frobenius_minimax_e_copfr_s(name, expected):
+    t = parse_temperament_data(TEMPERAMENTS[name])
+    assert optimize_tuning_map(t, "minimax-E-copfr-S") == pytest.approx(expected, abs=TOL)
+
+
+def test_frobenius_original_name():
+    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+    assert optimize_generator_tuning_map(meantone, "Frobenius") == pytest.approx(
+        optimize_generator_tuning_map(meantone, "minimax-E-copfr-S"), abs=TOL
+    )
+
+
+# minimax-sopfr-S = "BOP"/"Benedetti" (tests.m 3494-3517). tetracot and magic7 use accuracy 2.
+BOP_TUNING_MAPS = {
+    "meantone": ((1201.7205, 1899.3742, 2790.6150), TOL),
+    "blackwood": ((1194.179, 1910.686, 2786.314), TOL),
+    "dicot": ((1207.4392, 1913.1138, 2767.7157), TOL),
+    "augmented": ((1197.1684, 1901.9550, 2793.3928), TOL),
+    "mavila": ((1206.5842, 1892.0787, 2769.8533), TOL),
+    "porcupine": ((1196.9271, 1906.5643, 2778.6315), TOL),
+    "srutal": ((1199.1112, 1903.2881, 2788.5356), TOL),
+    "hanson": ((1200.2845, 1902.3817, 2785.6025), TOL),
+    "magic": ((1201.2339, 1903.8058, 2783.2290), TOL),
+    "negri": ((1201.7937, 1899.2645, 2781.8295), TOL),
+    "tetracot": ((1199.0293, 1903.4111, 2783.8883), TOL_2),
+    "meantone7": ((1201.721, 1899.374, 2790.615, 3371.376), TOL),
+    "magic7": ((1201.2340, 1903.8044, 2783.2288, 3367.8966), TOL_2),
+    "pajara": ((1197.3094, 1902.8073, 2779.5873, 3378.2420), TOL),
+    "augene": ((1197.168, 1904.326, 2793.393, 3374.358), TOL),
+    "sensi": ((1198.5891, 1903.5233, 2789.8411, 3363.8876), TOL),
+    "sensamagic": ((1200.0000, 1903.2071, 2784.2269, 3365.9043), TOL),
+}
+
+
+@pytest.mark.parametrize("name, expected_tol", BOP_TUNING_MAPS.items())
+def test_bop_minimax_sopfr_s(name, expected_tol):
+    expected, tol = expected_tol
+    t = parse_temperament_data(TEMPERAMENTS[name])
+    assert optimize_tuning_map(t, "minimax-sopfr-S") == pytest.approx(expected, abs=tol)
+
+
+@pytest.mark.parametrize("original", ["BOP", "Benedetti"])
+def test_bop_original_names(original):
+    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+    assert optimize_generator_tuning_map(meantone, original) == pytest.approx(
+        optimize_generator_tuning_map(meantone, "minimax-sopfr-S"), abs=TOL
+    )
+
+
+# minimax-E-sopfr-S = "BE"/"Benedetti-Euclidean" (tests.m 3521-3540).
+BE_TUNING_MAPS = {
+    "meantone": (1201.4768, 1898.6321, 2788.6213),
+    "blackwood": (1193.9975, 1910.3960, 2786.3137),
+    "dicot": (1205.8488, 1906.3416, 2761.9439),
+    "augmented": (1197.2692, 1901.9550, 2793.6282),
+    "mavila": (1208.5464, 1893.7139, 2778.683),
+    "porcupine": (1199.5668, 1906.8283, 2778.1916),
+    "srutal": (1198.8183, 1902.9219, 2787.6566),
+    "hanson": (1200.1533, 1902.2425, 2785.3554),
+    "magic": (1201.1456, 1902.2128, 2782.7337),
+    "negri": (1202.2630, 1900.8639, 2782.2726),
+    "tetracot": (1199.5499, 1903.7780, 2784.0631),
+    "meantone7": (1201.3847, 1898.6480, 2789.0531, 3368.4787),
+    "magic7": (1200.9990, 1903.1832, 2782.6345, 3366.6407),
+    "pajara": (1197.9072, 1903.2635, 2781.9626, 3380.9162),
+    "augene": (1196.4076, 1903.1641, 2791.6178, 3372.1175),
+    "sensi": (1199.7904, 1902.7978, 2789.2516, 3362.3687),
+    "sensamagic": (1200.0000, 1903.3868, 2785.5183, 3365.7078),
+}
+
+
+@pytest.mark.parametrize("name, expected", BE_TUNING_MAPS.items())
+def test_be_minimax_e_sopfr_s(name, expected):
+    t = parse_temperament_data(TEMPERAMENTS[name])
+    assert optimize_tuning_map(t, "minimax-E-sopfr-S") == pytest.approx(expected, abs=TOL)
+
+
+@pytest.mark.parametrize("original", ["BE", "Benedetti-Euclidean"])
+def test_be_original_names(original):
+    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+    assert optimize_generator_tuning_map(meantone, original) == pytest.approx(
+        optimize_generator_tuning_map(meantone, "minimax-E-sopfr-S"), abs=TOL
+    )

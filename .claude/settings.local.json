@@ -3,7 +3,10 @@
     "allow": [
       "Bash(PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests -q)",
       "Bash(PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -c \"import os; p=r'C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56'; [print\\(f, os.path.getsize\\(os.path.join\\(p,'rtt',f\\)\\), 'bytes'\\) for f in sorted\\(os.listdir\\(os.path.join\\(p,'rtt'\\)\\)\\) if f.endswith\\('.py'\\)]\")",
-      "Bash(PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests/test_tuning_alt_complexities.py -q)"
+      "Bash(PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests/test_tuning_alt_complexities.py -q)",
+      "Skill(keybindings-help)",
+      "Skill(keybindings-help:*)",
+      "Bash(PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest \"tests/test_tuning_all_interval.py\" -q)"
     ]
   }
 }
