@@ -1,9 +1,13 @@
-from math import log2
+from math import log2, sqrt
 
 import pytest
 
 from rtt.parsing import parse_temperament_data
-from rtt.tuning import generator_tuning_map_from_t_and_tuning_map, get_just_tuning_map
+from rtt.tuning import (
+    generator_tuning_map_from_t_and_tuning_map,
+    get_complexity,
+    get_just_tuning_map,
+)
 from rtt.temperament import Temperament, Variance
 
 ROW = Variance.ROW
@@ -20,6 +24,20 @@ def test_get_just_tuning_map_nonstandard_basis():
     t = Temperament(((1, 0, -4, 0), (0, 1, 2, 0), (0, 0, 0, 1)), ROW, (2, 9, 5, 21))
     expected = (1200 * log2(2), 1200 * log2(9), 1200 * log2(5), 1200 * log2(21))
     assert get_just_tuning_map(t) == pytest.approx(expected, abs=TOL)
+
+
+@pytest.mark.parametrize(
+    "norm_power, log_prime_power, expected",
+    [
+        (1, 0, 3),
+        (2, 0, sqrt(3)),
+        (1, 1, 1 + log2(3) + log2(5)),
+    ],
+)
+def test_get_complexity(norm_power, log_prime_power, expected):
+    dummy = Temperament(((1, 2, 3), (0, 5, 6)), ROW)
+    result = get_complexity((1, 1, -1), dummy, norm_power, log_prime_power, 0, 0, "")
+    assert result == pytest.approx(expected, abs=1e-9)
 
 
 def test_generator_tuning_map_from_t_and_tuning_map():
