@@ -19,7 +19,7 @@ from rtt.domain_basis import (
     is_subspace_of,
 )
 from rtt.dual import dual
-from rtt.math_utils import pad_vectors_with_zeros_up_to_d, quotient_to_pcv
+from rtt.math_utils import pad_vectors_with_zeros_up_to_d, pcv_to_quotient, quotient_to_pcv
 from rtt.parsing import parse_quotient_list, parse_quotients
 from rtt.target_intervals import process_old, process_tilt
 from rtt.temperament import Temperament, Variance
@@ -377,6 +377,60 @@ def optimize_tuning_map(t: Temperament, spec: TuningSchemeSpec | str) -> tuple[f
     generators = np.array(optimize_generator_tuning_map(t, spec), dtype=float)
     mapping = np.array(_mapping_matrix(t), dtype=float)
     return tuple(float(x) for x in generators @ mapping)
+
+
+def get_tuning_map_damages(
+    t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str
+) -> dict:
+    """Each target interval's damage under a *given* tuning map (not an optimization):
+    the scheme-weighted absolute error, keyed by the interval's quotient."""
+    monzos, damages, _ = _evaluate_damages(t, tuning_map, spec)
+    return {pcv_to_quotient(monzo): float(damage) for monzo, damage in zip(monzos, damages)}
+
+
+def get_generator_tuning_map_damages(
+    t: Temperament, generator_tuning_map: tuple, spec: TuningSchemeSpec | str
+) -> dict:
+    """Each target interval's damage under a given *generator* tuning map."""
+    return get_tuning_map_damages(t, _tuning_map_from_generators(t, generator_tuning_map), spec)
+
+
+def get_tuning_map_mean_damage(
+    t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str
+) -> float:
+    """The scheme's mean damage of a given tuning map: the power-mean of the target damages
+    at the optimization power (the max for minimax, RMS for miniRMS, and so on)."""
+    _, damages, power = _evaluate_damages(t, tuning_map, spec)
+    if power == inf:
+        return float(np.max(damages))
+    return float((np.sum(damages**power) / len(damages)) ** (1 / power))
+
+
+def get_generator_tuning_map_mean_damage(
+    t: Temperament, generator_tuning_map: tuple, spec: TuningSchemeSpec | str
+) -> float:
+    """The scheme's mean damage of a given generator tuning map."""
+    return get_tuning_map_mean_damage(t, _tuning_map_from_generators(t, generator_tuning_map), spec)
+
+
+def _tuning_map_from_generators(t: Temperament, generator_tuning_map: tuple) -> np.ndarray:
+    return np.array(generator_tuning_map, dtype=float) @ np.array(_mapping_matrix(t), dtype=float)
+
+
+def _evaluate_damages(
+    t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str
+) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
+    """The (target monzos, per-target damages, mean power) for a given tuning map: each
+    damage is the scheme's weight times the absolute mistuning of that target."""
+    if isinstance(spec, str):
+        spec = tuning_scheme_from_systematic_name(_ORIGINAL_NAME_SCHEMES.get(spec, spec))
+    d = get_d(t)
+    just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
+    monzos, weights, power = _optimization_setup(t, spec, d)
+    targets = np.array(monzos, dtype=float).reshape(-1, d)
+    tempered = np.array(tuning_map, dtype=float)
+    damages = np.abs(targets @ tempered - targets @ just_tuning_map) * weights
+    return monzos, damages, power
 
 
 def _resolve_target_intervals(

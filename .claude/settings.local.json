@@ -8,7 +8,8 @@
       "Skill(keybindings-help:*)",
       "Bash(PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest \"tests/test_tuning_all_interval.py\" -q)",
       "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests/test_tuning_nonstandard.py -q)",
-      "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests -q)"
+      "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests -q)",
+      "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests/test_tuning_damage.py -q)"
     ]
   }
 }
