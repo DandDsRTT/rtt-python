@@ -462,9 +462,11 @@ def get_complexity(
     size_factor,  # trait 5c
     nonprime_basis_approach: str,  # trait 7
 ) -> float:
-    """An interval's complexity: a (pre-transformed) norm of its monzo."""
-    if size_factor != 0:
-        raise NotImplementedError("size-factor (Weil/lils) complexity not yet ported")
+    """An interval's complexity: a (pre-transformed) norm of its monzo.
+
+    A nonzero ``size_factor`` augments the pre-transformed monzo with one extra entry
+    (the size-weighted sum, ``size_factor`` times the interval's log size), then divides
+    the norm by ``1 + size_factor`` — the Weil/lils family of complexities."""
     diagonal = []
     for q in get_domain_basis(t):
         fraction = Fraction(q)
@@ -480,6 +482,8 @@ def get_complexity(
             weight *= base**prime_power
         diagonal.append(weight)
     transformed = [w * x for w, x in zip(diagonal, pcv)]
+    if size_factor != 0:
+        transformed.append(size_factor * sum(transformed))
     ord_ = np.inf if norm_power == float("inf") else norm_power
     return float(np.linalg.norm(transformed, ord_)) / (1 + size_factor)
 
