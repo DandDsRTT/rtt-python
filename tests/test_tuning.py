@@ -273,8 +273,6 @@ def test_optimize_generator_tuning_map_complexity_name(power, slope, complexity_
 
 
 # Held-intervals (trait 0, tests.m 2813-2853): named intervals tuned exactly justly.
-# The TILT-target and over-determined (h>r) cases are deferred (need TILT-name resolution
-# / the coinciding-damage held edge).
 @pytest.mark.parametrize("held", ["octave", "2", "2/1", "{2}", "{2/1}"])
 def test_held_octave_synonyms_dict(held):
     t = parse_temperament_data(MEANTONE)
@@ -305,6 +303,15 @@ def test_held_two_intervals():
     assert optimize_generator_tuning_map(t, spec) == pytest.approx((1200.000, 701.955), abs=TOL)
     name = f"held-{{2/1, 3/2}} {FIVE_OLD} miniaverage-U"
     assert optimize_generator_tuning_map(t, name) == pytest.approx((1200.000, 701.955), abs=TOL)
+
+
+def test_held_octave_with_target_single_free_generator():
+    # tests.m 2872: the coinciding-damage edge where the held octave pins one generator,
+    # leaving a single free one and a target (prime 5) whose damage is already locked.
+    t = parse_temperament_data("[⟨3 0 7] ⟨0 1 0]}")
+    assert optimize_generator_tuning_map(
+        t, "held-octave {3/1, 5/1} minimax-U"
+    ) == pytest.approx((400.000, 1901.955), abs=TOL)
 
 
 def test_held_interval_minimax():

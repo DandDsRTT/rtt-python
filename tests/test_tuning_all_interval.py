@@ -173,6 +173,14 @@ def test_potop_destretched_octave_minimax_s(ebk, expected, tol):
     assert optimize_generator_tuning_map(t, "POTOP") == pytest.approx(expected, abs=tol)
 
 
+def test_potop_locked_primes_tuning_map():
+    # tests.m 3027 (accuracy 1): an 11-limit POTOP whose minimax-S has a pair of locked primes.
+    t = parse_temperament_data("[⟨1 3 0 0 3] ⟨0 -3 5 6 1]}")
+    assert optimize_tuning_map(t, "POTOP") == pytest.approx(
+        (1200.00, 1915.81, 2806.98, 3368.38, 4161.40), abs=0.1
+    )
+
+
 def test_all_interval_explicit_specs():
     meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
     assert optimize_generator_tuning_map(
