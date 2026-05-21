@@ -121,6 +121,17 @@ def get_domain_basis_change_for_c(original_subspace: tuple, target_superspace: t
     return get_domain_basis_change_for_m(target_superspace, original_subspace)
 
 
+def get_simplest_prime_only_basis(domain_basis: tuple) -> tuple[int, ...]:
+    """The sorted unique primes appearing in any basis element's numerator or denominator
+    — the simplest prime-only basis containing the subgroup."""
+    primes = set()
+    for element in domain_basis:
+        fraction = Fraction(element)
+        for value in (fraction.numerator, fraction.denominator):
+            primes.update(int(prime) for prime in sp.factorint(value) if prime != 1)
+    return tuple(sorted(primes))
+
+
 def express_quotients_in_domain_basis(quotients: tuple, domain_basis: tuple) -> tuple:
     """Express each quotient (assumed to lie in the subgroup) as an integer monzo over the
     domain basis. Solves the exact linear system ``monzo · basis = prime_monzo(quotient)``

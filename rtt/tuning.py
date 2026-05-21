@@ -10,9 +10,11 @@ from scipy.linalg import null_space
 from scipy.optimize import linprog, minimize
 
 from rtt.dimensions import get_d
+from rtt.change_basis import change_domain_basis_for_c
 from rtt.domain_basis import (
     express_quotients_in_domain_basis,
     get_domain_basis,
+    get_simplest_prime_only_basis,
     is_standard_prime_limit_domain_basis,
     is_subspace_of,
 )
@@ -209,21 +211,67 @@ def optimize_generator_tuning_map(
     or a historical scheme name (e.g. ``"TOP"``, ``"TE"``, ``"CTE"``)."""
     if isinstance(spec, str):
         spec = tuning_scheme_from_systematic_name(_ORIGINAL_NAME_SCHEMES.get(spec, spec))
+
+    # trait 7, prime-based: re-express the temperament over its simplest prime-only basis,
+    # optimize there, then map the generators back to the original (nonprime) basis.
+    prime_based = spec.nonprime_basis_approach == "prime-based" and not (
+        is_standard_prime_limit_domain_basis(get_domain_basis(t))
+    )
+    solve_t = _change_to_simplest_prime_basis(t) if prime_based else t
+    solve_spec = replace(spec, nonprime_basis_approach="") if prime_based else spec
+
+    generators = _solve_generators(solve_t, solve_spec)
+    if prime_based:
+        generators = _retrieve_prime_domain_basis_generators(generators, t, solve_t)
+
+    if spec.destretched_interval:
+        mapping = np.array(_mapping_matrix(t), dtype=float)
+        just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
+        generators = _destretch(
+            generators, spec.destretched_interval, mapping, just_tuning_map, get_d(t)
+        )
+    return tuple(float(g) for g in generators)
+
+
+def _solve_generators(t: Temperament, spec: TuningSchemeSpec) -> np.ndarray:
+    """The optimum generators for a scheme over the temperament's own domain basis."""
     d = get_d(t)
     mapping = np.array(_mapping_matrix(t), dtype=float)  # r x d
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)  # d
-
     if _is_all_interval(spec) and spec.complexity_size_factor != 0:
-        generators = _optimize_augmented_all_interval(t, spec, mapping, just_tuning_map, d)
-    else:
-        monzos, weights, power = _optimization_setup(t, spec, d)
-        generators = _constrained_solve(
-            mapping, just_tuning_map, monzos, weights, power, _held_monzos(spec, d)
-        )
+        return _optimize_augmented_all_interval(t, spec, mapping, just_tuning_map, d)
+    monzos, weights, power = _optimization_setup(t, spec, d)
+    return _constrained_solve(
+        mapping, just_tuning_map, monzos, weights, power, _held_monzos(spec, d)
+    )
 
-    if spec.destretched_interval:
-        generators = _destretch(generators, spec.destretched_interval, mapping, just_tuning_map, d)
-    return tuple(float(g) for g in generators)
+
+def _change_to_simplest_prime_basis(t: Temperament) -> Temperament:
+    """Re-express a temperament over the simplest prime-only basis containing its subgroup,
+    by embedding its comma basis into that prime superspace."""
+    comma_basis = t if t.variance is Variance.COL else dual(t)
+    prime_basis = get_simplest_prime_only_basis(get_domain_basis(t))
+    return dual(change_domain_basis_for_c(comma_basis, prime_basis))
+
+
+def _retrieve_prime_domain_basis_generators(
+    generators: np.ndarray, original_t: Temperament, prime_t: Temperament
+) -> np.ndarray:
+    """Convert generators optimized over the prime basis back to the original (nonprime)
+    basis: re-derive the prime tuning map, restrict it to the original basis elements, then
+    recover the original temperament's generators from that tuning map."""
+    prime_mapping = np.array(_mapping_matrix(prime_t), dtype=float)
+    tuning_over_primes = np.asarray(generators) @ prime_mapping
+    basis_change = np.array(
+        express_quotients_in_domain_basis(
+            get_domain_basis(original_t), get_domain_basis(prime_t)
+        ),
+        dtype=float,
+    )  # original-basis elements as prime-basis monzos
+    tuning_over_original = tuning_over_primes @ basis_change.T
+    return np.array(
+        generator_tuning_map_from_t_and_tuning_map(original_t, tuple(tuning_over_original))
+    )
 
 
 def _is_all_interval(spec: TuningSchemeSpec) -> bool:
