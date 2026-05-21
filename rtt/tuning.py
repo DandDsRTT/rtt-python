@@ -6,6 +6,7 @@ from fractions import Fraction
 from math import inf, log2
 
 import numpy as np
+from scipy.linalg import null_space
 from scipy.optimize import linprog, minimize
 
 from rtt.dimensions import get_d
@@ -31,6 +32,7 @@ class TuningSchemeSpec:
     complexity_prime_power: float = 0  # trait 5b
     complexity_size_factor: float = 0  # trait 5c
     nonprime_basis_approach: str = ""  # trait 7
+    held_intervals: str | None = None  # trait 0: intervals tuned exactly justly
 
 
 _SLOPE_BY_LETTER = {
@@ -71,13 +73,19 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     """Build a spec from a systematic tuning-scheme name like ``"{2/1, ...} minimax-E-copfr-S"``:
     the ``mini{max,RMS,average}`` prefix gives the optimization power, an optional ``{...}``
     gives the target intervals, and the trailing ``U``/``S``/``C`` plus complexity tokens
-    give the damage weighting."""
+    give the damage weighting. An optional ``held-<interval(s)>`` prefix names intervals
+    to tune justly."""
+    held = None
+    held_match = re.match(r"\s*held-(\{[^}]*\}|[\w/]+)\s+(.*)", name)
+    if held_match:
+        held, name = held_match.group(1), held_match.group(2)
     power = inf if "minimax" in name else (2 if "miniRMS" in name else 1)
     target_match = re.search(r"\{[\d/,\s]*\}", name)
     return TuningSchemeSpec(
         optimization_power=power,
         target_intervals=target_match.group(0) if target_match else None,
         damage_weight_slope=_SLOPE_BY_LETTER[name.strip()[-1]],
+        held_intervals=held,
         **_complexity_traits_from_name(name),
     )
 
@@ -90,17 +98,52 @@ def optimize_generator_tuning_map(
     ``spec`` may be a :class:`TuningSchemeSpec` or a systematic tuning-scheme name string."""
     if isinstance(spec, str):
         spec = tuning_scheme_from_systematic_name(spec)
+    d = get_d(t)
     mapping = np.array(_mapping_matrix(t), dtype=float)  # r x d
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)  # d
-    monzos = parse_quotient_list(spec.target_intervals, get_d(t))  # k monzos
+
+    held_generators, held_null = _held_constraint(spec, mapping, just_tuning_map, d)
+    if held_null is not None and held_null.shape[1] == 0:
+        return tuple(float(g) for g in held_generators)  # held intervals pin the tuning
+
+    monzos = parse_quotient_list(spec.target_intervals, d)  # k monzos
     targets = np.array(monzos, dtype=float)  # k x d
     weights = _damage_weights(monzos, t, spec)  # k
-
     tempered = (targets @ mapping.T) * weights[:, None]  # k x r
     just = (targets @ just_tuning_map) * weights  # k
-    rank = mapping.shape[0]
-    generators = _solve_optimum(tempered, just, spec.optimization_power, rank)
+
+    if held_null is not None:
+        # g = held_generators + held_null @ y, optimizing only the held-justly subspace
+        free = _solve_optimum(
+            tempered @ held_null,
+            just - tempered @ held_generators,
+            spec.optimization_power,
+            held_null.shape[1],
+        )
+        generators = held_generators + held_null @ free
+    else:
+        generators = _solve_optimum(tempered, just, spec.optimization_power, mapping.shape[0])
     return tuple(float(g) for g in generators)
+
+
+def _parse_interval_spec(text: str, d: int) -> tuple[tuple[int, ...], ...]:
+    """Parse an interval-set spec (``"octave"``, ``"2"``, ``"2/1"``, ``"{2/1, 3/2}"``) into monzos."""
+    return parse_quotient_list(text.replace("octave", "2"), d)
+
+
+def _held_constraint(
+    spec: TuningSchemeSpec, mapping: np.ndarray, just_tuning_map: np.ndarray, d: int
+) -> tuple[np.ndarray | None, np.ndarray | None]:
+    """For held intervals (tuned exactly justly), a particular generator map satisfying
+    those equalities and an orthonormal basis for the remaining free directions; both
+    ``None`` if the scheme holds no intervals."""
+    if not spec.held_intervals:
+        return None, None
+    held = np.array(_parse_interval_spec(spec.held_intervals, d), dtype=float)
+    tempered_side = held @ mapping.T  # n_held x r: each held interval's tempered size
+    just_side = held @ just_tuning_map  # its just size
+    generators, *_ = np.linalg.lstsq(tempered_side, just_side, rcond=None)
+    return generators, null_space(tempered_side)
 
 
 def _damage_weights(

@@ -22,6 +22,7 @@ MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
 PAJARA = "[⟨2 3 5 6] ⟨0 1 -2 -2]}"
 BLACKWOOD = "[⟨5 8 0] ⟨0 0 1]}"
 SRUTAL = "[⟨2 0 11] ⟨0 1 -2]}"
+FIVE_OLD = "{2/1, 3/2, 4/3, 5/4, 8/5, 5/3, 6/5}"
 SIX_TILT = "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
 TEN_TILT = (
     "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5, 7/3, 7/4, "
@@ -268,6 +269,60 @@ def test_optimize_generator_tuning_map_complexity_name(power, slope, complexity_
         optimization_power=power, target_intervals=SIX_TILT, damage_weight_slope=slope, **traits
     )
     assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
+
+
+# Held-intervals (trait 0, tests.m 2813-2853): named intervals tuned exactly justly.
+# The TILT-target and over-determined (h>r) cases are deferred (need TILT-name resolution
+# / the coinciding-damage held edge).
+@pytest.mark.parametrize("held", ["octave", "2", "2/1", "{2}", "{2/1}"])
+def test_held_octave_synonyms_dict(held):
+    t = parse_temperament_data(MEANTONE)
+    spec = TuningSchemeSpec(
+        optimization_power=1,
+        target_intervals=FIVE_OLD,
+        damage_weight_slope="unityWeight",
+        held_intervals=held,
+    )
+    assert optimize_generator_tuning_map(t, spec) == pytest.approx((1200.000, 696.578), abs=TOL)
+
+
+@pytest.mark.parametrize("held", ["octave", "2", "2/1", "{2}", "{2/1}"])
+def test_held_octave_synonyms_name(held):
+    t = parse_temperament_data(MEANTONE)
+    name = f"held-{held} {FIVE_OLD} miniaverage-U"
+    assert optimize_generator_tuning_map(t, name) == pytest.approx((1200.000, 696.578), abs=TOL)
+
+
+def test_held_two_intervals():
+    t = parse_temperament_data(MEANTONE)
+    spec = TuningSchemeSpec(
+        optimization_power=1,
+        target_intervals=FIVE_OLD,
+        damage_weight_slope="unityWeight",
+        held_intervals="{2/1, 3/2}",
+    )
+    assert optimize_generator_tuning_map(t, spec) == pytest.approx((1200.000, 701.955), abs=TOL)
+    name = f"held-{{2/1, 3/2}} {FIVE_OLD} miniaverage-U"
+    assert optimize_generator_tuning_map(t, name) == pytest.approx((1200.000, 701.955), abs=TOL)
+
+
+def test_held_interval_minimax():
+    t = parse_temperament_data(MEANTONE)
+    spec = TuningSchemeSpec(
+        optimization_power=inf,
+        target_intervals=FIVE_OLD,
+        damage_weight_slope="unityWeight",
+        held_intervals="5/3",
+    )
+    assert optimize_generator_tuning_map(t, spec) == pytest.approx((1200.000, 694.786), abs=TOL)
+
+
+def test_held_intervals_determine_tuning():
+    # h = r: the held intervals alone pin the generators, no target set needed.
+    t = parse_temperament_data(MEANTONE)
+    assert optimize_generator_tuning_map(t, "held-{2/1, 5/4} minimax-U") == pytest.approx(
+        (1200.000, 696.578), abs=TOL
+    )
 
 
 def test_get_just_tuning_map_standard():
