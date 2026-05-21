@@ -1,25 +1,55 @@
 from __future__ import annotations
 
 import re
+from fractions import Fraction
 
 from rtt.temperament import Temperament, Variance
 
-_COVARIANT_RE = re.compile(r"^\[?\s*[<⟨{]")
+_COVARIANT_RE = re.compile(r"\[?\s*[<⟨{][^\[]*")
 _ROW_VECTOR_RE = re.compile(r"[⟨{<]([\d\-+*/.,\s]*)[\]|]\s*")
 _COL_VECTOR_RE = re.compile(r"[\[|]([\d\-+*/.,\s]*)[}⟩>]\s*")
 _SPLIT_RE = re.compile(r"(?:\s*,\s*)|\s+")
+_DOMAIN_BASIS_PREFIX_RE = re.compile(r"^([\d./]+)\s+(.*)$", re.DOTALL)
 
 
-def parse_temperament_data(data: str) -> Temperament:
-    if _COVARIANT_RE.match(data):
+def is_covariant_ebk(ebk: str) -> bool:
+    """Whether the EBK string denotes a covariant (mapping / covector) temperament."""
+    return _COVARIANT_RE.fullmatch(ebk) is not None
+
+
+def parse_temperament_data(data: str | Temperament) -> Temperament:
+    if isinstance(data, Temperament):  # already-structured input passes through
+        return data
+    domain_basis = None
+    prefix = _DOMAIN_BASIS_PREFIX_RE.match(data)
+    if prefix:
+        domain_basis = parse_domain_basis(prefix.group(1))
+        data = prefix.group(2)
+    if is_covariant_ebk(data):
         variance = Variance.ROW
         raw_vectors = _ROW_VECTOR_RE.findall(data)
     else:
         variance = Variance.COL
         raw_vectors = _COL_VECTOR_RE.findall(data)
-    matrix = tuple(_parse_ebk_vector(v) for v in raw_vectors)
-    return Temperament(matrix, variance)
+    matrix = tuple(parse_ebk_vector(v) for v in raw_vectors)
+    return Temperament(matrix, variance, domain_basis)
 
 
-def _parse_ebk_vector(s: str) -> tuple[int, ...]:
-    return tuple(int(token) for token in _SPLIT_RE.split(s.strip()) if token)
+def parse_domain_basis(text: str) -> tuple:
+    """Parse a dot-separated domain basis like ``2.3.7`` into ``(2, 3, 7)``."""
+    return tuple(Fraction(p) if "/" in p else int(p) for p in text.split("."))
+
+
+def parse_ebk_vector(text: str) -> tuple:
+    """Parse one EBK vector's entries; empty entries (e.g. ``,,``) become None."""
+    return tuple(_to_number(token) for token in _SPLIT_RE.split(text.strip()))
+
+
+def _to_number(token: str):
+    if token == "":
+        return None
+    if "." in token:
+        return float(token)
+    if "/" in token:
+        return Fraction(token)
+    return int(token)
