@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 from math import inf, log2
 
@@ -71,6 +71,25 @@ def complexity_name_traits(name: str) -> dict:
     return _complexity_traits_from_name(name)
 
 
+# Historical tuning-scheme names, each expressed as the equivalent systematic name.
+# (POTE/POTOP/Weil/Kees etc. await destretching and the size-factor complexity.)
+_ORIGINAL_NAME_SCHEMES = {
+    "minimax": "held-octave OLD minimax-U",
+    "least squares": "held-octave OLD miniRMS-U",
+    "TOP": "minimax-S",
+    "TIPTOP": "minimax-S",
+    "T1": "minimax-S",
+    "TOP-max": "minimax-S",
+    "Tenney": "minimax-S",
+    "TE": "minimax-ES",
+    "Tenney-Euclidean": "minimax-ES",
+    "T2": "minimax-ES",
+    "TOP-RMS": "minimax-ES",
+    "CTE": "held-octave minimax-ES",
+    "Constrained Tenney-Euclidean": "held-octave minimax-ES",
+}
+
+
 def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     """Build a spec from a systematic tuning-scheme name like ``"{2/1, ...} minimax-E-copfr-S"``:
     the ``mini{max,RMS,average}`` prefix gives the optimization power, an optional ``{...}``
@@ -85,9 +104,12 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     target_match = re.search(
         r"\{[\d/,\s]*\}|\d*-?TILT|\d*-?OLD|primes", name
     )
+    target = target_match.group(0) if target_match else None
+    if target is None and ("all-interval" in name or ("minimax" in name and "S" in name)):
+        target = "{}"  # all-interval scheme (e.g. minimax-S = TOP, minimax-ES = TE)
     return TuningSchemeSpec(
         optimization_power=power,
-        target_intervals=target_match.group(0) if target_match else None,
+        target_intervals=target,
         damage_weight_slope=_SLOPE_BY_LETTER[name.strip()[-1]],
         held_intervals=held,
         **_complexity_traits_from_name(name),
@@ -99,9 +121,10 @@ def optimize_generator_tuning_map(
 ) -> tuple[float, ...]:
     """The generator tuning map minimizing target-interval damage under the scheme.
 
-    ``spec`` may be a :class:`TuningSchemeSpec` or a systematic tuning-scheme name string."""
+    ``spec`` may be a :class:`TuningSchemeSpec`, a systematic tuning-scheme name string,
+    or a historical scheme name (e.g. ``"TOP"``, ``"TE"``, ``"CTE"``)."""
     if isinstance(spec, str):
-        spec = tuning_scheme_from_systematic_name(spec)
+        spec = tuning_scheme_from_systematic_name(_ORIGINAL_NAME_SCHEMES.get(spec, spec))
     d = get_d(t)
     mapping = np.array(_mapping_matrix(t), dtype=float)  # r x d
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)  # d
@@ -110,9 +133,8 @@ def optimize_generator_tuning_map(
     if held_null is not None and held_null.shape[1] == 0:
         return tuple(float(g) for g in held_generators)  # held intervals pin the tuning
 
-    monzos = _resolve_target_intervals(spec.target_intervals, t, d)  # k monzos
+    monzos, weights, power = _optimization_setup(t, spec, d)
     targets = np.array(monzos, dtype=float)  # k x d
-    weights = _damage_weights(monzos, t, spec)  # k
     tempered = (targets @ mapping.T) * weights[:, None]  # k x r
     just = (targets @ just_tuning_map) * weights  # k
 
@@ -121,13 +143,29 @@ def optimize_generator_tuning_map(
         free = _solve_optimum(
             tempered @ held_null,
             just - tempered @ held_generators,
-            spec.optimization_power,
+            power,
             held_null.shape[1],
         )
         generators = held_generators + held_null @ free
     else:
-        generators = _solve_optimum(tempered, just, spec.optimization_power, mapping.shape[0])
+        generators = _solve_optimum(tempered, just, power, mapping.shape[0])
     return tuple(float(g) for g in generators)
+
+
+def _optimization_setup(
+    t: Temperament, spec: TuningSchemeSpec, d: int
+) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
+    """The (target monzos, per-target damage weights, optimization power) for the scheme.
+
+    An all-interval scheme (empty target set) instead optimizes over the primes with
+    simplicity weighting, at the dual of the interval-complexity norm power — minimax
+    over every interval is, by duality, this optimization over the primes."""
+    if spec.target_intervals is not None and spec.target_intervals.strip() in ("{}", ""):
+        primes = tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
+        weights = _damage_weights(primes, t, replace(spec, damage_weight_slope="simplicityWeight"))
+        return primes, weights, get_dual_power(spec.complexity_norm_power)
+    monzos = _resolve_target_intervals(spec.target_intervals, t, d)
+    return monzos, _damage_weights(monzos, t, spec), spec.optimization_power
 
 
 def optimize_tuning_map(t: Temperament, spec: TuningSchemeSpec | str) -> tuple[float, ...]:
