@@ -2,3 +2,6 @@ sympy
 numpy
 scipy
 pytest
+
+# web UI (monolith front end)
+nicegui
