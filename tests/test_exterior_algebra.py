@@ -3,6 +3,7 @@ import pytest
 from rtt.exterior_algebra import (
     Multivector,
     ea_canonical_form,
+    ea_dual,
     ea_get_d,
     ea_get_n,
     ea_get_r,
@@ -68,6 +69,45 @@ def test_multivector_to_matrix(u, expected):
 def test_multivector_to_matrix_errors(u):
     with pytest.raises(ValueError):
         multivector_to_matrix(u)
+
+
+@pytest.mark.parametrize(
+    "u, expected",
+    [
+        (CANONICAL_MC, CANONICAL_MM),
+        (Multivector((-107, 87, -72, 49, -31), 4, COL), CANONICAL_MM),
+        (CANONICAL_MM, CANONICAL_MC),
+        (Multivector((-31, -49, -72, -87, -107), 1, ROW), CANONICAL_MC),
+        (Multivector((1,), 0, COL, 3), Multivector((1,), 3, ROW)),
+        (Multivector((1,), 0, ROW, 5), Multivector((1,), 5, COL)),
+        (Multivector((1, 0, 1), 2, ROW), Multivector((1, 0, 1), 1, COL)),
+        (MEANTONE_MM, Multivector((4, -4, 1), 1, COL)),
+    ],
+)
+def test_ea_dual(u, expected):
+    assert ea_dual(u) == expected
+
+
+def test_ea_dual_nondecomposable_errors():
+    with pytest.raises(ValueError):
+        ea_dual(NONDECOMPOSABLE)
+
+
+@pytest.mark.parametrize(
+    "t",
+    [
+        Temperament(((1, 0, -4), (0, 1, 4)), ROW),
+        Temperament(((4, -4, 1),), COL),
+        Temperament(((12, 19, 28),), ROW),
+        Temperament(((1, 0, -4, -13), (0, 1, 4, 10)), ROW),
+        Temperament(((5, 8, 12), (7, 11, 16)), ROW),
+        Temperament(((1, 1),), ROW),
+        Temperament(((1, 0, 0), (0, 1, 0), (0, 0, 1)), ROW),
+    ],
+)
+def test_ea_dual_is_an_involution(t):
+    u = matrix_to_multivector(t)
+    assert ea_dual(ea_dual(u)) == u
 
 
 @pytest.mark.parametrize(

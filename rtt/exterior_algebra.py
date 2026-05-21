@@ -136,6 +136,10 @@ def ea_canonical_form(u: Multivector) -> Multivector:
         return u
     if is_nondecomposable(u):
         raise ValueError("nondecomposable multivector has no canonical form")
+    return _decomposable_ea_canonical_form(u)
+
+
+def _decomposable_ea_canonical_form(u: Multivector) -> Multivector:
     coords = divide_out_gcd(u.coords)
     descends = (u.variance is Variance.ROW and leading_entry(coords) < 0) or (
         u.variance is Variance.COL and trailing_entry(coords) < 0
@@ -144,6 +148,28 @@ def ea_canonical_form(u: Multivector) -> Multivector:
         coords = tuple(-x for x in coords)
     d = ea_get_d(u) if u.grade == 0 else None
     return Multivector(coords, u.grade, u.variance, d)
+
+
+def ea_dual(u: Multivector) -> Multivector:
+    """The dual multivector (the Hodge dual), in canonical form."""
+    if is_nondecomposable(u):
+        raise ValueError("nondecomposable multivector has no dual")
+    dual_variance = Variance.COL if u.variance is Variance.ROW else Variance.ROW
+    d = _ea_get_decomposable_d(u)
+    if u.grade == 0:
+        return Multivector((1,), d, dual_variance)
+    if u.grade == d:
+        return Multivector((1,), 0, dual_variance, d)
+    index_to_coord = dict(zip(combinations(range(d), u.grade), u.coords))
+    dual_grade = d - u.grade
+    dual_coords = []
+    for indices in combinations(range(d), dual_grade):
+        complement = tuple(x for x in range(d) if x not in indices)
+        sign = _permutation_sign(complement + indices)
+        dual_coords.append(sign * index_to_coord[complement])
+    return _decomposable_ea_canonical_form(
+        Multivector(tuple(dual_coords), dual_grade, dual_variance)
+    )
 
 
 def matrix_to_multivector(t: Temperament) -> Multivector:
