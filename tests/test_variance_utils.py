@@ -1,5 +1,15 @@
+import pytest
+
 from rtt.temperament import Temperament, Variance
-from rtt.variance_utils import add_t, is_cols, is_rows, scale, subtract_t, transpose
+from rtt.variance_utils import (
+    add_t,
+    is_cols,
+    is_rows,
+    multiply,
+    scale,
+    subtract_t,
+    transpose,
+)
 
 ROW, COL = Variance.ROW, Variance.COL
 M = Temperament(((1, 0, -4), (0, 1, 4)), ROW)
@@ -33,6 +43,29 @@ def test_add_t():
 def test_subtract_t():
     assert subtract_t(M, ONES) == Temperament(((0, -1, -5), (-1, 0, 3)), ROW)
     assert subtract_t(MAP, ONES_MAP) == Temperament(((11, 18, 27),), ROW)
+
+
+MAP_1X3 = Temperament(((1, 1, 1),), ROW)
+MAP_2X3 = Temperament(((1, 1, 1), (1, 1, 1)), ROW)
+COMMAS_1 = Temperament(((1, 1, 1),), COL)
+COMMAS_2 = Temperament(((1, 1, 1), (1, 1, 1)), COL)
+
+
+@pytest.mark.parametrize(
+    "factors, variance, expected",
+    [
+        ([MAP_1X3, COMMAS_1], ROW, 3),
+        ([MAP_1X3, COMMAS_2], ROW, Temperament(((3, 3),), ROW)),
+        ([MAP_2X3, COMMAS_1], ROW, Temperament(((3,), (3,)), ROW)),
+        ([MAP_2X3, COMMAS_2], ROW, Temperament(((3, 3), (3, 3)), ROW)),
+        ([MAP_1X3, COMMAS_1], COL, 3),
+        ([MAP_1X3, COMMAS_2], COL, Temperament(((3, 3),), COL)),
+        ([MAP_2X3, COMMAS_1], COL, Temperament(((3, 3),), COL)),
+        ([MAP_2X3, COMMAS_2], COL, Temperament(((3, 3), (3, 3)), COL)),
+    ],
+)
+def test_multiply(factors, variance, expected):
+    assert multiply(factors, variance) == expected
 
 
 def test_transpose():

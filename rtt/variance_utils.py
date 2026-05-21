@@ -1,6 +1,33 @@
 from __future__ import annotations
 
+from rtt.matrix_utils import transpose as _transpose_matrix
 from rtt.temperament import Temperament, Variance
+
+
+def multiply(temperaments: list[Temperament], variance: Variance):
+    """Matrix-product a list of temperaments; result carries the given variance.
+
+    A 1x1 result is returned as a bare scalar (variance is irrelevant).
+    """
+    matrices = [
+        _transpose_matrix(t.matrix) if t.variance is Variance.COL else t.matrix
+        for t in temperaments
+    ]
+    product = matrices[0]
+    for nxt in matrices[1:]:
+        product = _matmul(product, nxt)
+    if len(product) == 1 and len(product[0]) == 1:
+        return product[0][0]
+    if variance is Variance.ROW or len(product) == 1:
+        return Temperament(product, variance)
+    return Temperament(_transpose_matrix(product), variance)
+
+
+def _matmul(a, b):
+    return tuple(
+        tuple(sum(a[i][k] * b[k][j] for k in range(len(b))) for j in range(len(b[0])))
+        for i in range(len(a))
+    )
 
 
 def is_cols(t: Temperament) -> bool:
