@@ -13,10 +13,10 @@ from rtt.dimensions import get_d
 from rtt.change_basis import change_domain_basis_for_c
 from rtt.domain_basis import (
     express_quotients_in_domain_basis,
+    filter_target_intervals_for_nonstandard_domain_basis,
     get_domain_basis,
     get_simplest_prime_only_basis,
     is_standard_prime_limit_domain_basis,
-    is_subspace_of,
 )
 from rtt.dual import dual
 from rtt.math_utils import pad_vectors_with_zeros_up_to_d, pcv_to_quotient, quotient_to_pcv
@@ -454,7 +454,7 @@ def _resolve_target_intervals(
         return pad_vectors_with_zeros_up_to_d(
             tuple(quotient_to_pcv(q) for q in quotients), d
         )
-    in_basis = tuple(q for q in quotients if is_subspace_of((q,), domain_basis))
+    in_basis = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain_basis)
     return express_quotients_in_domain_basis(in_basis, domain_basis)
 
 

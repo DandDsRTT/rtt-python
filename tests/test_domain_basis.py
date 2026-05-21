@@ -12,6 +12,7 @@ from rtt.domain_basis import (
     get_domain_basis_change_for_c,
     get_domain_basis_change_for_m,
     get_domain_basis_dimension,
+    get_simplest_prime_only_basis,
     get_standard_prime_limit_domain_basis,
     is_denominator_factor,
     is_numerator_factor,
@@ -244,3 +245,16 @@ def test_get_domain_basis_change_for_m(original, target, expected):
 )
 def test_get_domain_basis_change_for_c(original, target, expected):
     assert get_domain_basis_change_for_c(original, target) == expected
+
+
+@pytest.mark.parametrize(
+    "domain_basis, expected",
+    [
+        ((2, F(5, 3), F(9, 7)), (2, 3, 5, 7)),  # tests.m 4102
+        ((2, 3, 5), (2, 3, 5)),
+        ((4, 3, 5), (2, 3, 5)),
+        ((2, F(13, 5)), (2, 5, 13)),
+    ],
+)
+def test_get_simplest_prime_only_basis(domain_basis, expected):
+    assert get_simplest_prime_only_basis(domain_basis) == expected

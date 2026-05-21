@@ -9,7 +9,12 @@
       "Bash(PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest \"tests/test_tuning_all_interval.py\" -q)",
       "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests/test_tuning_nonstandard.py -q)",
       "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests -q)",
-      "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests/test_tuning_damage.py -q)"
+      "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests/test_tuning_damage.py -q)",
+      "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -c \"pass\")",
+      "Bash(PYTHONIOENCODING=utf-8 PYTHONPATH=\"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\" python -m pytest tests/test_target_intervals.py -q)",
+      "Bash(awk -F: '$1>=4086 && $1<=4161')",
+      "Bash(PYTHONIOENCODING=utf-8 sed -n '1,15p' \"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\\\\tests\\\\test_domain_basis.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 tail -n 8 \"C:\\\\Users\\\\Douglas\\\\workspace\\\\DandDsRTT\\\\rtt-python\\\\.claude\\\\worktrees\\\\elated-nash-522d56\\\\tests\\\\test_domain_basis.py\")"
     ]
   }
 }

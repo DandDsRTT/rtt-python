@@ -121,6 +121,14 @@ def get_domain_basis_change_for_c(original_subspace: tuple, target_superspace: t
     return get_domain_basis_change_for_m(target_superspace, original_subspace)
 
 
+def filter_target_intervals_for_nonstandard_domain_basis(
+    quotients: tuple, domain_basis: tuple
+) -> tuple:
+    """Keep only the quotients that lie in the domain basis's subgroup (e.g. over the basis
+    ``4.3.5`` the interval ``2/1`` is dropped, since 2 is not an integer power of 4, 3, 5)."""
+    return tuple(quotient for quotient in quotients if is_subspace_of((quotient,), domain_basis))
+
+
 def get_simplest_prime_only_basis(domain_basis: tuple) -> tuple[int, ...]:
     """The sorted unique primes appearing in any basis element's numerator or denominator
     — the simplest prime-only basis containing the subgroup."""

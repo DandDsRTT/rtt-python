@@ -5,7 +5,8 @@ from fractions import Fraction
 
 import pytest
 
-from rtt.target_intervals import get_old, get_otonal_chord, get_tilt
+from rtt.domain_basis import filter_target_intervals_for_nonstandard_domain_basis
+from rtt.target_intervals import get_old, get_otonal_chord, get_tilt, process_old, process_tilt
 
 
 def _set(*pairs):
@@ -60,3 +61,39 @@ OTONAL_CHORDS = [
 @pytest.mark.parametrize("harmonics, expected", OTONAL_CHORDS)
 def test_get_otonal_chord(harmonics, expected):
     assert set(get_otonal_chord(harmonics)) == expected
+
+
+# Default integer/odd limit picked from the domain basis (tests.m 3885-3914): with no explicit
+# limit, TILT/OLD pick the integer/odd just below the next prime past the basis's greatest part.
+@pytest.mark.parametrize(
+    "domain_basis, default_limit",
+    [((2, 3, 5), "6-TILT"), ((2, 3, 5, 7), "10-TILT"), ((2, 9, 21), "22-TILT")],
+)
+def test_process_tilt_default_limit(domain_basis, default_limit):
+    assert process_tilt("TILT", domain_basis) == process_tilt(default_limit, domain_basis)
+
+
+@pytest.mark.parametrize(
+    "domain_basis, default_limit",
+    [((2, 3, 5), "5-OLD"), ((2, 3, 5, 7), "9-OLD"), ((2, 9, 21), "21-OLD")],
+)
+def test_process_old_default_limit(domain_basis, default_limit):
+    assert process_old("OLD", domain_basis) == process_old(default_limit, domain_basis)
+
+
+# Filtering a target set to a nonstandard subgroup (tests.m 4109-4112): over the basis 4.3.5,
+# 2/1 is dropped (2 is not a power of 4); over 2.3.7, the 5-bearing intervals are dropped.
+FILTER_CASES = [
+    (get_old(5), (4, 3, 5), {(4, 3), (5, 4), (5, 3)}),
+    (get_old(9), (2, 3, 7),
+     {(2, 1), (4, 3), (8, 7), (16, 9), (3, 2), (12, 7), (7, 4), (7, 6), (14, 9), (9, 8), (9, 7)}),
+    (get_tilt(6), (4, 3, 5), {(3, 1), (4, 3), (5, 3), (5, 4)}),
+    (get_tilt(8), (2, 3, 7),
+     {(2, 1), (3, 1), (3, 2), (4, 3), (7, 3), (7, 4), (7, 6), (8, 3)}),
+]
+
+
+@pytest.mark.parametrize("quotients, domain_basis, expected", FILTER_CASES)
+def test_filter_target_intervals_for_nonstandard_domain_basis(quotients, domain_basis, expected):
+    filtered = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain_basis)
+    assert set(filtered) == {Fraction(n, d) for n, d in expected}
