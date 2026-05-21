@@ -154,14 +154,28 @@ def test_optimize_generator_tuning_map_power_continuum(power, expected):
 
 
 # Section "fully by tuningSchemeSystematicName" (tests.m 2633-2677): pajara optimized
-# over tenTilt, scheme given as a single systematic-name string. The 6 minimax E/quick
-# cases (minimax-E-copfr-S/-S/-ES/-E-copfr-C/-C/-EC) are omitted pending review — the
-# library's published values there are provably suboptimal (lower-max-damage proof in the
-# mismatch report); judgment suspended.
+# over tenTilt, scheme given as a single systematic-name string.
+#
+# The six minimax cases assert OUR values, which have strictly lower max damage than the
+# library's published ones (tests.m 2638-2651): five are flagged "quick"->True there
+# (Wolfram-Cloud time-limited approximations) and minimax-E-copfr-S is a coinciding-damage
+# vertex miss. Library value (max damage) -> ours (max damage):
+#   minimax-S          ⟨598.965 107.215] (3.208)   -> ⟨598.447 107.642] (3.107)
+#   minimax-ES         ⟨598.815 107.238] (4.943)   -> ⟨599.682 108.396] (4.713)
+#   minimax-E-copfr-S  ⟨598.078 106.945] (11.206)  -> ⟨598.233 106.938] (11.117)
+#   minimax-E-copfr-C  ⟨598.779 107.058] (32.683)  -> ⟨599.438 108.035] (31.263)
+#   minimax-C          ⟨599.031 107.398] (113.127) -> ⟨601.553 108.008] (97.667)
+#   minimax-EC         ⟨598.378 107.249] (72.195)  -> ⟨600.318 107.852] (64.868)
 PAJARA_SYSTEMATIC = [
     ("minimax-U", (600.000, 108.128)),
     ("minimax-copfr-S", (596.502, 106.708)),
     ("minimax-copfr-C", (600.581, 107.714)),
+    ("minimax-S", (598.4467, 107.6415)),
+    ("minimax-ES", (599.6825, 108.3961)),
+    ("minimax-E-copfr-S", (598.2334, 106.9379)),
+    ("minimax-E-copfr-C", (599.4383, 108.0348)),
+    ("minimax-C", (601.5533, 108.0079)),
+    ("minimax-EC", (600.3175, 107.8518)),
     ("miniRMS-U", (598.247, 106.830)),
     ("miniRMS-copfr-S", (598.488, 106.799)),
     ("miniRMS-E-copfr-S", (598.346, 106.837)),
@@ -192,8 +206,9 @@ def test_optimize_generator_tuning_map_systematic_name(scheme_name, expected):
 
 
 # Section "by damageSystematicName" (tests.m 2684-2720): srutal over sixTilt, damage
-# scheme named (slope + complexity) with explicit power. The single L1 tie
-# (power 1, copfr-S-damage) is omitted — same total damage, alternate optimal vertex.
+# scheme named (slope + complexity) with explicit power. The L1 (power 1) copfr-S-damage
+# case asserts OUR vertex ⟨599.111 1901.955]; it is a true tie with the library's
+# ⟨599.054 1901.955] (identical total damage 0.815, just a different optimal vertex).
 SRUTAL_DAMAGE = [
     (inf, "U-damage", (600.000, 1905.214)),
     (inf, "copfr-S-damage", (599.425, 1903.105)),
@@ -214,6 +229,7 @@ SRUTAL_DAMAGE = [
     (2, "C-damage", (599.159, 1902.609)),
     (2, "EC-damage", (599.116, 1902.444)),
     (1, "U-damage", (598.914, 1901.955)),
+    (1, "copfr-S-damage", (599.111, 1901.955)),  # tie with library's ⟨599.054 1901.955]
     (1, "E-copfr-S-damage", (598.914, 1901.955)),
     (1, "S-damage", (599.111, 1901.955)),
     (1, "ES-damage", (598.914, 1901.955)),
@@ -234,14 +250,15 @@ def test_optimize_generator_tuning_map_damage_name(power, damage_name, expected)
 
 
 # Section "by intervalComplexitySystematicName" (tests.m 2727-2763): blackwood over sixTilt,
-# explicit power + slope, complexity named separately ("" = none, for unityWeight). The single
-# minimax E-complexity case (power inf, simplicity) is omitted — library used a "quick"
-# approximation with higher max damage; judgment suspended.
+# explicit power + slope, complexity named separately ("" = none, for unityWeight). The minimax
+# E-complexity (power inf, simplicity) case asserts OUR ⟨238.927 2786.118] (max damage 7.912),
+# which beats the library's "quick" approximation ⟨238.801 2784.928] (8.011).
 BLACKWOOD_COMPLEXITY = [
     (inf, "unityWeight", "", (240.000, 2795.336)),
     (inf, "simplicityWeight", "copfr-complexity", (238.612, 2784.926)),
     (inf, "simplicityWeight", "copfr-E-complexity", (238.445, 2783.722)),
     (inf, "simplicityWeight", "complexity", (238.867, 2785.650)),
+    (inf, "simplicityWeight", "E-complexity", (238.9274, 2786.1182)),
     (inf, "complexityWeight", "copfr-complexity", (241.504, 2811.877)),
     (inf, "complexityWeight", "copfr-E-complexity", (241.702, 2812.251)),
     (inf, "complexityWeight", "complexity", (241.209, 2808.887)),
