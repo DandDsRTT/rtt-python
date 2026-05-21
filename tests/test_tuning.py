@@ -5,6 +5,8 @@ import pytest
 from rtt.parsing import parse_temperament_data
 from rtt.tuning import (
     TuningSchemeSpec,
+    complexity_name_traits,
+    damage_name_traits,
     generator_tuning_map_from_t_and_tuning_map,
     get_complexity,
     get_dual_power,
@@ -19,6 +21,7 @@ TOL = 1e-3
 MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"
 PAJARA = "[⟨2 3 5 6] ⟨0 1 -2 -2]}"
 BLACKWOOD = "[⟨5 8 0] ⟨0 0 1]}"
+SRUTAL = "[⟨2 0 11] ⟨0 1 -2]}"
 SIX_TILT = "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
 TEN_TILT = (
     "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5, 7/3, 7/4, "
@@ -144,6 +147,125 @@ def test_optimize_generator_tuning_map_power_continuum(power, expected):
         optimization_power=power,
         target_intervals=SIX_TILT,
         damage_weight_slope="unityWeight",
+    )
+    assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
+
+
+# Section "fully by tuningSchemeSystematicName" (tests.m 2633-2677): pajara optimized
+# over tenTilt, scheme given as a single systematic-name string. The 6 minimax E/quick
+# cases (minimax-E-copfr-S/-S/-ES/-E-copfr-C/-C/-EC) are omitted pending review — the
+# library's published values there are provably suboptimal (lower-max-damage proof in the
+# mismatch report); judgment suspended.
+PAJARA_SYSTEMATIC = [
+    ("minimax-U", (600.000, 108.128)),
+    ("minimax-copfr-S", (596.502, 106.708)),
+    ("minimax-copfr-C", (600.581, 107.714)),
+    ("miniRMS-U", (598.247, 106.830)),
+    ("miniRMS-copfr-S", (598.488, 106.799)),
+    ("miniRMS-E-copfr-S", (598.346, 106.837)),
+    ("miniRMS-S", (599.020, 106.492)),
+    ("miniRMS-ES", (598.882, 106.594)),
+    ("miniRMS-copfr-C", (598.518, 106.789)),
+    ("miniRMS-E-copfr-C", (598.655, 106.720)),
+    ("miniRMS-C", (597.875, 107.083)),
+    ("miniRMS-EC", (597.804, 107.013)),
+    ("miniaverage-U", (598.914, 105.214)),
+    ("miniaverage-copfr-S", (598.914, 105.214)),
+    ("miniaverage-E-copfr-S", (598.914, 105.214)),
+    ("miniaverage-S", (598.914, 105.214)),
+    ("miniaverage-ES", (598.914, 105.214)),
+    ("miniaverage-copfr-C", (598.914, 105.214)),
+    ("miniaverage-E-copfr-C", (598.914, 105.214)),
+    ("miniaverage-C", (598.603, 106.145)),
+    ("miniaverage-EC", (598.603, 106.145)),
+]
+
+
+@pytest.mark.parametrize("scheme_name, expected", PAJARA_SYSTEMATIC)
+def test_optimize_generator_tuning_map_systematic_name(scheme_name, expected):
+    t = parse_temperament_data(PAJARA)
+    assert optimize_generator_tuning_map(
+        t, f"{TEN_TILT} {scheme_name}"
+    ) == pytest.approx(expected, abs=TOL)
+
+
+# Section "by damageSystematicName" (tests.m 2684-2720): srutal over sixTilt, damage
+# scheme named (slope + complexity) with explicit power. The single L1 tie
+# (power 1, copfr-S-damage) is omitted — same total damage, alternate optimal vertex.
+SRUTAL_DAMAGE = [
+    (inf, "U-damage", (600.000, 1905.214)),
+    (inf, "copfr-S-damage", (599.425, 1903.105)),
+    (inf, "E-copfr-S-damage", (599.362, 1902.875)),
+    (inf, "S-damage", (599.555, 1903.365)),
+    (inf, "ES-damage", (599.577, 1903.449)),
+    (inf, "copfr-C-damage", (600.752, 1907.971)),
+    (inf, "E-copfr-C-damage", (600.863, 1908.379)),
+    (inf, "C-damage", (600.413, 1906.917)),
+    (inf, "EC-damage", (600.296, 1906.485)),
+    (2, "U-damage", (599.131, 1902.390)),
+    (2, "copfr-S-damage", (599.219, 1902.515)),
+    (2, "E-copfr-S-damage", (599.156, 1902.381)),
+    (2, "S-damage", (599.431, 1903.058)),
+    (2, "ES-damage", (599.363, 1902.960)),
+    (2, "copfr-C-damage", (599.232, 1902.839)),
+    (2, "E-copfr-C-damage", (599.247, 1902.882)),
+    (2, "C-damage", (599.159, 1902.609)),
+    (2, "EC-damage", (599.116, 1902.444)),
+    (1, "U-damage", (598.914, 1901.955)),
+    (1, "E-copfr-S-damage", (598.914, 1901.955)),
+    (1, "S-damage", (599.111, 1901.955)),
+    (1, "ES-damage", (598.914, 1901.955)),
+    (1, "copfr-C-damage", (598.914, 1901.955)),
+    (1, "E-copfr-C-damage", (598.914, 1901.955)),
+    (1, "C-damage", (598.914, 1901.955)),
+    (1, "EC-damage", (598.914, 1901.955)),
+]
+
+
+@pytest.mark.parametrize("power, damage_name, expected", SRUTAL_DAMAGE)
+def test_optimize_generator_tuning_map_damage_name(power, damage_name, expected):
+    t = parse_temperament_data(SRUTAL)
+    spec = TuningSchemeSpec(
+        optimization_power=power, target_intervals=SIX_TILT, **damage_name_traits(damage_name)
+    )
+    assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
+
+
+# Section "by intervalComplexitySystematicName" (tests.m 2727-2763): blackwood over sixTilt,
+# explicit power + slope, complexity named separately ("" = none, for unityWeight). The single
+# minimax E-complexity case (power inf, simplicity) is omitted — library used a "quick"
+# approximation with higher max damage; judgment suspended.
+BLACKWOOD_COMPLEXITY = [
+    (inf, "unityWeight", "", (240.000, 2795.336)),
+    (inf, "simplicityWeight", "copfr-complexity", (238.612, 2784.926)),
+    (inf, "simplicityWeight", "copfr-E-complexity", (238.445, 2783.722)),
+    (inf, "simplicityWeight", "complexity", (238.867, 2785.650)),
+    (inf, "complexityWeight", "copfr-complexity", (241.504, 2811.877)),
+    (inf, "complexityWeight", "copfr-E-complexity", (241.702, 2812.251)),
+    (inf, "complexityWeight", "complexity", (241.209, 2808.887)),
+    (inf, "complexityWeight", "E-complexity", (240.981, 2805.237)),
+    (2, "unityWeight", "", (238.408, 2781.006)),
+    (2, "simplicityWeight", "copfr-complexity", (238.316, 2781.797)),
+    (2, "simplicityWeight", "copfr-E-complexity", (238.248, 2781.458)),
+    (2, "simplicityWeight", "complexity", (238.779, 2784.026)),
+    (2, "simplicityWeight", "E-complexity", (238.712, 2783.815)),
+    (2, "complexityWeight", "copfr-complexity", (238.916, 2784.540)),
+    (2, "complexityWeight", "copfr-E-complexity", (239.047, 2784.702)),
+    (2, "complexityWeight", "complexity", (238.642, 2783.284)),
+    (2, "complexityWeight", "E-complexity", (238.583, 2782.365)),
+    (1, "unityWeight", "", (237.744, 2775.036)),
+    (1, "simplicityWeight", "copfr-complexity", (237.744, 2775.036)),
+    (1, "simplicityWeight", "E-complexity", (237.744, 2775.036)),
+    (1, "complexityWeight", "complexity", (237.744, 2775.036)),
+]
+
+
+@pytest.mark.parametrize("power, slope, complexity_name, expected", BLACKWOOD_COMPLEXITY)
+def test_optimize_generator_tuning_map_complexity_name(power, slope, complexity_name, expected):
+    t = parse_temperament_data(BLACKWOOD)
+    traits = complexity_name_traits(complexity_name) if complexity_name else {}
+    spec = TuningSchemeSpec(
+        optimization_power=power, target_intervals=SIX_TILT, damage_weight_slope=slope, **traits
     )
     assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
 

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from fractions import Fraction
-from math import log2
+from math import inf, log2
 
 import numpy as np
 from scipy.optimize import linprog, minimize
@@ -32,10 +33,63 @@ class TuningSchemeSpec:
     nonprime_basis_approach: str = ""  # trait 7
 
 
+_SLOPE_BY_LETTER = {
+    "U": "unityWeight",
+    "S": "simplicityWeight",
+    "C": "complexityWeight",
+}
+
+
+def _complexity_traits_from_name(name: str) -> dict:
+    """The complexity traits (4, 5a, 5b) a scheme/damage/complexity name encodes:
+    "E" = Euclidean norm, "copfr" = unweighted (count of prime factors w/ repetition),
+    otherwise the default log-prime (Tenney) weighting."""
+    copfr = "copfr" in name
+    return {
+        "complexity_norm_power": 2 if "E" in name else 1,
+        "complexity_log_prime_power": 0 if copfr else 1,
+        "complexity_prime_power": 0,
+    }
+
+
+def damage_name_traits(name: str) -> dict:
+    """Traits a damage systematic name encodes, e.g. ``"E-copfr-S-damage"``: the slope
+    (final letter) plus the complexity traits."""
+    core = name.replace("-damage", "")
+    return {
+        "damage_weight_slope": _SLOPE_BY_LETTER[core[-1]],
+        **_complexity_traits_from_name(core),
+    }
+
+
+def complexity_name_traits(name: str) -> dict:
+    """Traits an interval-complexity systematic name encodes, e.g. ``"copfr-E-complexity"``."""
+    return _complexity_traits_from_name(name)
+
+
+def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
+    """Build a spec from a systematic tuning-scheme name like ``"{2/1, ...} minimax-E-copfr-S"``:
+    the ``mini{max,RMS,average}`` prefix gives the optimization power, an optional ``{...}``
+    gives the target intervals, and the trailing ``U``/``S``/``C`` plus complexity tokens
+    give the damage weighting."""
+    power = inf if "minimax" in name else (2 if "miniRMS" in name else 1)
+    target_match = re.search(r"\{[\d/,\s]*\}", name)
+    return TuningSchemeSpec(
+        optimization_power=power,
+        target_intervals=target_match.group(0) if target_match else None,
+        damage_weight_slope=_SLOPE_BY_LETTER[name.strip()[-1]],
+        **_complexity_traits_from_name(name),
+    )
+
+
 def optimize_generator_tuning_map(
-    t: Temperament, spec: TuningSchemeSpec
+    t: Temperament, spec: TuningSchemeSpec | str
 ) -> tuple[float, ...]:
-    """The generator tuning map minimizing target-interval damage under the scheme."""
+    """The generator tuning map minimizing target-interval damage under the scheme.
+
+    ``spec`` may be a :class:`TuningSchemeSpec` or a systematic tuning-scheme name string."""
+    if isinstance(spec, str):
+        spec = tuning_scheme_from_systematic_name(spec)
     mapping = np.array(_mapping_matrix(t), dtype=float)  # r x d
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)  # d
     monzos = parse_quotient_list(spec.target_intervals, get_d(t))  # k monzos
