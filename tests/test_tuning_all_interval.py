@@ -123,6 +123,54 @@ def test_cte_held_octave_minimax_es(name, expected):
     )
 
 
+# destretched-octave minimax-ES = POTE, tuning maps (tests.m 2998-3014).
+POTE_TUNING_MAPS = {
+    "meantone": (1200.000, 1896.239, 2784.955),
+    "blackwood": (1200.000, 1920.000, 2799.594),
+    "dicot": (1200.000, 1897.189, 2748.594),
+    "augmented": (1200.000, 1906.638, 2800.000),
+    "mavila": (1200.000, 1879.806, 2760.582),
+    "porcupine": (1200.000, 1908.149, 2780.248),
+    "srutal": (1200.000, 1904.898, 2790.204),
+    "hanson": (1200.000, 1902.039, 2785.033),
+    "magic": (1200.000, 1900.292, 2780.058),
+    "negri": (1200.000, 1896.980, 2777.265),
+    "tetracot": (1200.000, 1904.639, 2785.438),
+    "meantone7": (1200.000, 1896.495, 2785.980, 3364.949),
+    "magic7": (1200.000, 1901.760, 2780.352, 3364.224),
+    "pajara": (1200.000, 1907.048, 2785.905, 3385.905),
+    "augene": (1200.000, 1909.257, 2800.000, 3381.486),
+    "sensi": (1200.000, 1903.679, 2790.444, 3363.975),
+    "sensamagic": (1200.000, 1903.742, 2785.546, 3366.583),
+}
+
+
+@pytest.mark.parametrize("name, expected", POTE_TUNING_MAPS.items())
+def test_pote_destretched_octave_minimax_es(name, expected):
+    t = parse_temperament_data(TEMPERAMENTS[name])
+    assert optimize_tuning_map(t, "POTE") == pytest.approx(expected, abs=TOL)
+
+
+# destretched-octave minimax-S = POTOP (tests.m 3024-3035); some use looser accuracy.
+POTOP_CASES = [
+    ("[⟨1 -1 0 1] ⟨0 10 9 7]}", (1200.000, 310.196), TOL),
+    ("[⟨1 2 6 2 10] ⟨0 -1 -9 2 -16]}", (1200.0, 490.4), 0.1),
+    ("[⟨1 2 6 2 1] ⟨0 -1 -9 2 6]}", (1200.0, 490.9), 0.1),
+    ("[⟨1 2 -3 2 1] ⟨0 -1 13 2 6]}", (1200.0, 491.9), 0.1),
+    ("[⟨1 1 2 1] ⟨0 1 0 2] ⟨0 0 1 2]}", (1200.0, 700.391, 384.022), TOL),
+    ("[⟨1 1 0] ⟨0 1 4]}", (1200.0, 696.58), 0.01),
+    ("[⟨1 1 0 -3] ⟨0 1 4 10]}", (1200.0, 696.58), 0.01),
+    # [7j]: the library's value is corrected (its 706.843 has more damage than this 709.184).
+    ("[⟨2 2 7 8 14 5] ⟨0 1 -2 -2 -6 2]}", (600.000, 709.184), TOL),
+]
+
+
+@pytest.mark.parametrize("ebk, expected, tol", POTOP_CASES)
+def test_potop_destretched_octave_minimax_s(ebk, expected, tol):
+    t = parse_temperament_data(ebk)
+    assert optimize_generator_tuning_map(t, "POTOP") == pytest.approx(expected, abs=tol)
+
+
 def test_all_interval_explicit_specs():
     meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
     assert optimize_generator_tuning_map(
@@ -162,6 +210,8 @@ ORIGINAL_NAME_EQUIVALENCES = [
     ("Constrained Tenney-Euclidean", "held-octave minimax-ES"),
     ("minimax", "held-octave OLD minimax-U"),
     ("least squares", "held-octave OLD miniRMS-U"),
+    ("POTE", "destretched-octave minimax-ES"),
+    ("POTOP", "destretched-octave minimax-S"),
 ]
 
 

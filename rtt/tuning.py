@@ -35,6 +35,7 @@ class TuningSchemeSpec:
     complexity_size_factor: float = 0  # trait 5c
     nonprime_basis_approach: str = ""  # trait 7
     held_intervals: str | None = None  # trait 0: intervals tuned exactly justly
+    destretched_interval: str | None = None  # trait 6: interval rescaled to be just
 
 
 _SLOPE_BY_LETTER = {
@@ -87,6 +88,9 @@ _ORIGINAL_NAME_SCHEMES = {
     "TOP-RMS": "minimax-ES",
     "CTE": "held-octave minimax-ES",
     "Constrained Tenney-Euclidean": "held-octave minimax-ES",
+    "POTE": "destretched-octave minimax-ES",
+    "POTOP": "destretched-octave minimax-S",
+    "POTT": "destretched-octave minimax-S",
 }
 
 
@@ -100,6 +104,10 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     held_match = re.match(r"\s*held-(\{[^}]*\}|[\w/]+)\s+(.*)", name)
     if held_match:
         held, name = held_match.group(1), held_match.group(2)
+    destretched = None
+    destretched_match = re.match(r"\s*destretched-(\S+)\s+(.*)", name)
+    if destretched_match:
+        destretched, name = destretched_match.group(1), destretched_match.group(2)
     power = inf if "minimax" in name else (2 if "miniRMS" in name else 1)
     target_match = re.search(
         r"\{[\d/,\s]*\}|\d*-?TILT|\d*-?OLD|primes", name
@@ -112,6 +120,7 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
         target_intervals=target,
         damage_weight_slope=_SLOPE_BY_LETTER[name.strip()[-1]],
         held_intervals=held,
+        destretched_interval=destretched,
         **_complexity_traits_from_name(name),
     )
 
@@ -149,7 +158,24 @@ def optimize_generator_tuning_map(
         generators = held_generators + held_null @ free
     else:
         generators = _solve_optimum(tempered, just, power, mapping.shape[0])
+
+    if spec.destretched_interval:
+        generators = _destretch(generators, spec.destretched_interval, mapping, just_tuning_map, d)
     return tuple(float(g) for g in generators)
+
+
+def _destretch(
+    generators: np.ndarray,
+    destretched_interval: str,
+    mapping: np.ndarray,
+    just_tuning_map: np.ndarray,
+    d: int,
+) -> np.ndarray:
+    """Rescale the whole tuning so the destretched interval comes out exactly just."""
+    interval = np.array(_parse_interval_spec(destretched_interval, d)[0], dtype=float)
+    just_size = just_tuning_map @ interval
+    tempered_size = (generators @ mapping) @ interval
+    return generators * (just_size / tempered_size)
 
 
 def _optimization_setup(
