@@ -51,6 +51,13 @@ def transpose(matrix: Matrix) -> Matrix:
     return tuple(zip(*matrix)) if matrix else ()
 
 
+def matrix_multiply(a: Matrix, b: Matrix) -> Matrix:
+    return tuple(
+        tuple(sum(a[i][k] * b[k][j] for k in range(len(b))) for j in range(len(b[0])))
+        for i in range(len(a))
+    )
+
+
 def get_largest_minors_l(matrix: Matrix) -> tuple[int, ...]:
     """The rank-order minors (first row-subset, all column-subsets), gcd divided out."""
     m = sp.Matrix(matrix)
