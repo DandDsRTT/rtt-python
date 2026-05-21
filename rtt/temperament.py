@@ -8,6 +8,36 @@ class Variance(Enum):
     ROW = "row"  # covariant: mappings / covectors, written ⟨...]
     COL = "col"  # contravariant: comma bases / vectors, written [...⟩
 
+    @classmethod
+    def from_string(cls, text: str) -> "Variance":
+        """Map any of the library's variance synonyms to ROW or COL."""
+        if text in _COL_SYNONYMS:
+            return cls.COL
+        if text in _ROW_SYNONYMS:
+            return cls.ROW
+        raise ValueError(f"Unrecognized variance: {text!r}")
+
+
+_COL_SYNONYMS = frozenset(
+    {
+        "vector", "vectors", "contra", "contravector", "contravectors",
+        "contravariant", "v", "c", "comma", "commas", "comma basis",
+        "comma-basis", "commaBasis", "comma_basis", "i", "interval", "intervals",
+        "g", "generator", "generators", "pcv", "gcv", "monzo", "monzos",
+        "against", "col", "cols", "column-major order", "column-major",
+        "column order", "col-major order", "col-major", "col order",
+    }
+)
+
+_ROW_SYNONYMS = frozenset(
+    {
+        "map", "maps", "co", "covector", "covectors", "covariant", "m",
+        "mapping", "et", "ets", "edo", "edos", "edomapping", "edomappings",
+        "val", "vals", "with", "row", "rows", "row-major order", "row-major",
+        "row order",
+    }
+)
+
 
 @dataclass(frozen=True)
 class Temperament:
