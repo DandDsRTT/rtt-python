@@ -41,6 +41,13 @@ def get_complexity(
     return float(np.linalg.norm(transformed, ord_)) / (1 + size_factor)
 
 
+def get_dual_power(power):
+    """The Hölder-conjugate (dual) norm power: 1 <-> inf, 2 <-> 2."""
+    if power == 1:
+        return float("inf")
+    return 1 / (1 - 1 / power)
+
+
 def get_just_tuning_map(t: Temperament) -> tuple[float, ...]:
     """The just tuning map: the size in cents (1200·log2) of each basis element."""
     return tuple(1200.0 * log2(float(q)) for q in get_domain_basis(t))

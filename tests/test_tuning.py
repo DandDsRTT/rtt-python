@@ -6,6 +6,7 @@ from rtt.parsing import parse_temperament_data
 from rtt.tuning import (
     generator_tuning_map_from_t_and_tuning_map,
     get_complexity,
+    get_dual_power,
     get_just_tuning_map,
 )
 from rtt.temperament import Temperament, Variance
@@ -38,6 +39,13 @@ def test_get_complexity(norm_power, log_prime_power, expected):
     dummy = Temperament(((1, 2, 3), (0, 5, 6)), ROW)
     result = get_complexity((1, 1, -1), dummy, norm_power, log_prime_power, 0, 0, "")
     assert result == pytest.approx(expected, abs=1e-9)
+
+
+@pytest.mark.parametrize(
+    "power, expected", [(1, float("inf")), (2, 2), (float("inf"), 1)]
+)
+def test_get_dual_power(power, expected):
+    assert get_dual_power(power) == expected
 
 
 def test_generator_tuning_map_from_t_and_tuning_map():
