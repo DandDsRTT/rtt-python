@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from functools import reduce
+from math import lcm
+
 import sympy as sp
 
 from rtt.canonicalization import Matrix, canonical_ca, canonical_ma
@@ -22,6 +25,6 @@ def _integer_null_space(matrix: Matrix) -> Matrix:
     """Null-space basis as integer row vectors (denominators cleared)."""
     result = []
     for vector in sp.Matrix(matrix).nullspace():
-        multiplier = sp.ilcm(*[entry.q for entry in vector])
+        multiplier = reduce(lcm, (int(entry.q) for entry in vector), 1)
         result.append(tuple(int(entry * multiplier) for entry in vector))
     return tuple(result)

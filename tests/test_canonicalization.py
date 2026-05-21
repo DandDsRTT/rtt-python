@@ -1,42 +1,47 @@
 import pytest
 
-from rtt.canonicalization import canonical_ca, canonical_form, canonical_ma
+from rtt.canonicalization import (
+    canonical_ca,
+    canonical_form,
+    canonical_ma,
+    col_hermite_defactor,
+)
 from rtt.parsing import parse_temperament_data
 from rtt.temperament import Temperament, Variance
 
-# Saturated mappings: plain HNF already yields the canonical form
-# (cases drawn from rtt-library/tests.m canonicalFormPrivate / canonicalMa).
-SATURATED_MA = [
+# Every canonicalFormPrivate / canonicalMa mapping case from rtt-library/tests.m
+# (the domain-basis-dependent cases live with canonical_form below).
+CANONICAL_MA = [
+    (((12, 0, 0), (19, 0, 0)), ((1, 0, 0),)),
     (((1, 1, 0), (0, 1, 4)), ((1, 0, -4), (0, 1, 4))),
     (((12, 19, 28),), ((12, 19, 28),)),
-    (((12, 0, 0), (19, 0, 0)), ((1, 0, 0),)),
     (((7, 11, 16), (22, 35, 51)), ((1, 2, 3), (0, 3, 5))),
+    (((3, 0, -1), (0, 3, 5)), ((1, 2, 3), (0, 3, 5))),
+    (((1, 2, 3), (0, 3, 5)), ((1, 2, 3), (0, 3, 5))),
+    (((0, 1, 4, 10), (1, 0, -4, -13)), ((1, 0, -4, -13), (0, 1, 4, 10))),
+    (((10, 13, 12, 0), (-1, -1, 0, 3)), ((1, 0, -4, -13), (0, 1, 4, 10))),
+    (((5, 8, 0), (0, 0, 1)), ((5, 8, 0), (0, 0, 1))),
+    (((2, 0, 11, 12), (0, 1, -2, -2)), ((2, 0, 11, 12), (0, 1, -2, -2))),
+    (
+        ((1, 0, 0, -5), (0, 1, 0, 2), (0, 0, 1, 2)),
+        ((1, 0, 0, -5), (0, 1, 0, 2), (0, 0, 1, 2)),
+    ),
+    (
+        ((1, 0, 0, -5, 12), (0, 1, 0, 2, -1), (0, 0, 1, 2, -3)),
+        ((1, 0, 0, -5, 12), (0, 1, 0, 2, -1), (0, 0, 1, 2, -3)),
+    ),
+    (((12, 19, 28), (26, 43, 60)), ((1, 8, 0), (0, 11, -4))),
+    (((17, 16, -4), (4, -4, 1)), ((1, 0, 0), (0, 4, -1))),
+    (((6, 5, -4), (4, -4, 1)), ((2, 1, -1), (0, 2, -1))),
     (((12, 19, 28), (0, 0, 0)), ((12, 19, 28),)),
+    (((1, 0, 0, -5), (0, 1, 0, 2), (1, 1, 0, -3)), ((1, 0, 0, -5), (0, 1, 0, 2))),
+    (((0, 0),), ((0, 0),)),
+    (((1, 0, 0), (0, 1, 0), (0, 0, 1)), ((1, 0, 0), (0, 1, 0), (0, 0, 1))),
+    (((1, 0, -4), (0, 1, 4), (0, 0, 0)), ((1, 0, -4), (0, 1, 4))),
+    (((12, 19, 28, 0),), ((12, 19, 28, 0),)),
     (((0, 0, 0), (0, 0, 0)), ((0, 0, 0),)),
 ]
 
-
-# Enfactored mappings: the row lattice is not saturated, so defactoring
-# (not just HNF) is required to reach the canonical form.
-ENFACTORED_MA = [
-    (((3, 0, -1), (0, 3, 5)), ((1, 2, 3), (0, 3, 5))),
-    (((6, 5, -4), (4, -4, 1)), ((2, 1, -1), (0, 2, -1))),
-    (((12, 19, 28), (26, 43, 60)), ((1, 8, 0), (0, 11, -4))),
-    (((17, 16, -4), (4, -4, 1)), ((1, 0, 0), (0, 4, -1))),
-]
-
-
-@pytest.mark.parametrize("matrix, expected", SATURATED_MA)
-def test_canonical_ma_saturated(matrix, expected):
-    assert canonical_ma(matrix) == expected
-
-
-@pytest.mark.parametrize("matrix, expected", ENFACTORED_MA)
-def test_canonical_ma_enfactored(matrix, expected):
-    assert canonical_ma(matrix) == expected
-
-
-# Comma bases canonicalize via the "antitranspose sandwich" (rotate180 either side).
 CANONICAL_CA = [
     (((-4, 4, -1),), ((4, -4, 1),)),
     (
@@ -46,9 +51,21 @@ CANONICAL_CA = [
 ]
 
 
+@pytest.mark.parametrize("matrix, expected", CANONICAL_MA)
+def test_canonical_ma(matrix, expected):
+    assert canonical_ma(matrix) == expected
+
+
 @pytest.mark.parametrize("matrix, expected", CANONICAL_CA)
 def test_canonical_ca(matrix, expected):
     assert canonical_ca(matrix) == expected
+
+
+def test_col_hermite_defactor():
+    # Matches Wolfram exactly. (hermiteRightUnimodular's exact output is omitted:
+    # the unimodular transform isn't unique, and mine differs only by the sign of
+    # one column — which cancels out, so col_hermite_defactor still matches.)
+    assert col_hermite_defactor(((6, 5, -4), (4, -4, 1))) == ((6, 5, -4), (-4, -4, 3))
 
 
 def test_canonical_form_mapping():
@@ -61,7 +78,11 @@ def test_canonical_form_comma_basis():
     assert canonical_form(t) == Temperament(((4, -4, 1),), Variance.COL)
 
 
+def test_canonical_form_keeps_nonstandard_domain_basis():
+    t = Temperament(((22, 70, 62),), Variance.ROW, (2, 9, 7))
+    assert canonical_form(t) == Temperament(((11, 35, 31),), Variance.ROW, (2, 9, 7))
+
+
 def test_canonical_form_matches_parsed_ebk():
-    # someMeantoneM canonicalizes to meantoneM (rtt-library/tests.m:481)
     some = parse_temperament_data("[⟨5 8 12] ⟨7 11 16]}")
     assert canonical_form(some) == parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")
