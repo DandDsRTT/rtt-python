@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from itertools import product
+
 import sympy as sp
 
 from rtt.canonicalization import canonical_form
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.domain_basis import get_domain_basis
 from rtt.dual import dual
-from rtt.list_utils import leading_entry, trailing_entry
-from rtt.matrix_utils import get_largest_minors_l, remove_all_zero_lists
+from rtt.list_utils import divide_out_gcd, leading_entry, trailing_entry
+from rtt.matrix_utils import get_largest_minors_l, hnf, remove_all_zero_lists, transpose
 from rtt.merging import comma_merge, map_merge
 from rtt.temperament import Temperament, Variance
 
@@ -86,10 +88,35 @@ def _initial_explicit_ldb_form(t: Temperament, ldb: tuple, grade: int) -> tuple:
 
 
 def _defactor_with_nonempty_ldb(t, ldb, grade, initial):
-    raise NotImplementedError(
-        "addabilization defactoring for linearly dependent temperaments "
-        "(the FindInstance modular solve) is not yet ported"
+    # Adjust the last (linear-independence) vector by an integer combination of
+    # the shared basis so it becomes divisible by the enfactoring, then defactor.
+    # Any valid modular solution gives the same canonical result.
+    base = initial[-1]
+    enfactoring = abs(_get_greatest_factor(initial))
+    multiples = _find_modular_solution(ldb, base, enfactoring)
+    combination = (
+        sum(multiples[i] * ldb[i][j] for i in range(len(ldb))) for j in range(len(base))
     )
+    new_last = divide_out_gcd(tuple(b + c for b, c in zip(base, combination)))
+    return tuple(initial[:-1]) + (new_last,)
+
+
+def _get_greatest_factor(a: tuple) -> int:
+    rank = sp.Matrix(a).rank()
+    square = transpose(hnf(transpose(a))[:rank])
+    return int(sp.Matrix(square).det())
+
+
+def _find_modular_solution(ldb: tuple, base: tuple, modulus: int) -> tuple:
+    if modulus <= 1:
+        return (0,) * len(ldb)
+    for candidate in product(range(modulus), repeat=len(ldb)):
+        if all(
+            (base[j] + sum(candidate[i] * ldb[i][j] for i in range(len(ldb)))) % modulus == 0
+            for j in range(len(base))
+        ):
+            return candidate
+    raise ValueError("no modular solution found for addabilization defactoring")
 
 
 def _is_negative(a: tuple, is_contravariant: bool) -> bool:
