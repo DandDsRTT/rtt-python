@@ -6,8 +6,13 @@ from rtt.exterior_algebra import (
     ea_diff,
     ea_dual,
     ea_get_d,
+    ea_get_grade,
+    ea_get_largest_minors_l,
     ea_get_n,
     ea_get_r,
+    ea_get_variance,
+    ea_indices,
+    is_nondecomposable,
     interior_product,
     left_interior_product,
     ea_sum,
@@ -73,6 +78,34 @@ def test_ea_dimensions():
     assert ea_get_d(MEANTONE_MM) == 3
     assert ea_get_r(MEANTONE_MM) == 2
     assert ea_get_n(MEANTONE_MM) == 1
+
+
+def test_ea_accessors():
+    assert ea_get_largest_minors_l(MEANTONE_MM) == (1, 4, 4)
+    assert ea_get_grade(MEANTONE_MM) == 2
+    assert ea_get_variance(MEANTONE_MM) is ROW
+
+
+def test_is_nondecomposable():
+    assert is_nondecomposable(NONDECOMPOSABLE) is True
+    assert is_nondecomposable(MEANTONE_MM) is False
+
+
+@pytest.mark.parametrize(
+    "d, grade, expected",
+    [
+        (0, 0, ((),)),
+        (1, 0, ((),)),
+        (1, 1, ((0,),)),
+        (2, 1, ((0,), (1,))),
+        (2, 2, ((0, 1),)),
+        (3, 2, ((0, 1), (0, 2), (1, 2))),
+        (4, 2, ((0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3))),
+        (4, 3, ((0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3))),
+    ],
+)
+def test_ea_indices(d, grade, expected):
+    assert ea_indices(d, grade) == expected
 
 
 @pytest.mark.parametrize(

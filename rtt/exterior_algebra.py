@@ -69,6 +69,11 @@ def _ea_get_decomposable_d(u: Multivector) -> int:
     return d
 
 
+def ea_indices(d: int, grade: int) -> tuple:
+    """The grade-subsets of the d dimensions, in lexicographic order."""
+    return tuple(combinations(range(d), grade))
+
+
 def is_nondecomposable(u: Multivector) -> bool:
     return _multivector_to_matrix_or_none(u) is None
 
