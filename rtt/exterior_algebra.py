@@ -172,6 +172,46 @@ def ea_dual(u: Multivector) -> Multivector:
     )
 
 
+def progressive_product(u1: Multivector, u2: Multivector) -> Multivector:
+    """The wedge product (join): grades add; inputs must share variance."""
+    if u1.variance is not u2.variance:
+        raise ValueError("progressive product requires matching variance")
+    d = ea_get_d(u1)
+    grade = u1.grade + u2.grade
+    if grade > d:
+        raise ValueError("progressive product grade exceeds dimensionality")
+    coords1 = dict(zip(combinations(range(d), u1.grade), u1.coords))
+    coords2 = dict(zip(combinations(range(d), u2.grade), u2.coords))
+    result = []
+    for indices in combinations(range(d), grade):
+        total = 0
+        for left in combinations(indices, u1.grade):
+            right = tuple(x for x in indices if x not in left)
+            total += _permutation_sign(left + right) * coords1[left] * coords2[right]
+        result.append(total)
+    return ea_canonical_form(Multivector(tuple(result), grade, u1.variance))
+
+
+def regressive_product(u1: Multivector, u2: Multivector) -> Multivector:
+    """The vee product (meet): the dual of the wedge of the duals."""
+    return ea_dual(progressive_product(ea_dual(u1), ea_dual(u2)))
+
+
+def right_interior_product(u1: Multivector, u2: Multivector) -> Multivector:
+    return ea_dual(progressive_product(ea_dual(u1), u2))
+
+
+def left_interior_product(u1: Multivector, u2: Multivector) -> Multivector:
+    return ea_dual(progressive_product(u1, ea_dual(u2)))
+
+
+def interior_product(u1: Multivector, u2: Multivector) -> Multivector:
+    """The symmetric interior product (right or left, by the inputs' grades)."""
+    if u1.grade >= u2.grade:
+        return right_interior_product(u1, u2)
+    return left_interior_product(u1, u2)
+
+
 def matrix_to_multivector(t: Temperament) -> Multivector:
     grade = get_n(t) if t.variance is Variance.COL else get_r(t)
     return ea_canonical_form(
