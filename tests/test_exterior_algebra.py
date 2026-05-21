@@ -3,12 +3,14 @@ import pytest
 from rtt.exterior_algebra import (
     Multivector,
     ea_canonical_form,
+    ea_diff,
     ea_dual,
     ea_get_d,
     ea_get_n,
     ea_get_r,
     interior_product,
     left_interior_product,
+    ea_sum,
     matrix_to_multivector,
     multivector_to_matrix,
     progressive_product,
@@ -228,3 +230,96 @@ def test_ea_product_errors(op, u1, u2):
 )
 def test_matrix_to_multivector(t, expected):
     assert matrix_to_multivector(t) == expected
+
+
+_MEANTONE_MM = Multivector((1, 4, 4), 2, ROW)
+_PORCUPINE_MM = Multivector((3, 5, 1), 2, ROW)
+_MEANTONE_MC = Multivector((4, -4, 1), 1, COL)
+_PORCUPINE_MC = Multivector((1, -5, 3), 1, COL)
+_ET7_MM = Multivector((7, 11, 16), 1, ROW)
+_ET5_MM = Multivector((5, 8, 12), 1, ROW)
+_ET7_MC = Multivector((16, -11, 7), 2, COL)
+_ET5_MC = Multivector((12, -8, 5), 2, COL)
+_ET12_MM = Multivector((12, 19, 28, 34), 1, ROW)
+_ET19_MM = Multivector((19, 30, 44, 53), 1, ROW)
+_ET12_MC = ea_dual(_ET12_MM)
+_ET19_MC = ea_dual(_ET19_MM)
+_AUG = Multivector((3, 0, -7), 2, ROW)
+_DIM = Multivector((4, 4, -3), 2, ROW)
+_TET = Multivector((4, 9, 5), 2, ROW)
+_DIC = Multivector((2, 1, -3), 2, ROW)
+_SRU = Multivector((2, -4, -11), 2, ROW)
+
+
+@pytest.mark.parametrize(
+    "op, u1, u2, expected",
+    [
+        (ea_sum, _MEANTONE_MM, _PORCUPINE_MM, Multivector((4, 9, 5), 2, ROW)),
+        (ea_diff, _MEANTONE_MM, _PORCUPINE_MM, Multivector((2, 1, -3), 2, ROW)),
+        (ea_sum, _MEANTONE_MC, _PORCUPINE_MC, Multivector((5, -9, 4), 1, COL)),
+        (ea_diff, _MEANTONE_MC, _PORCUPINE_MC, Multivector((-3, -1, 2), 1, COL)),
+        (ea_sum, _ET7_MM, _ET5_MM, Multivector((12, 19, 28), 1, ROW)),
+        (ea_diff, _ET7_MM, _ET5_MM, Multivector((2, 3, 4), 1, ROW)),
+        (ea_sum, _ET7_MC, _ET5_MC, Multivector((28, -19, 12), 2, COL)),
+        (ea_diff, _ET7_MC, _ET5_MC, Multivector((4, -3, 2), 2, COL)),
+        (ea_sum, _ET12_MM, _ET19_MM, Multivector((31, 49, 72, 87), 1, ROW)),
+        (ea_diff, _ET12_MM, _ET19_MM, Multivector((7, 11, 16, 19), 1, ROW)),
+        (ea_sum, _ET12_MC, _ET19_MC, Multivector((-87, 72, -49, 31), 3, COL)),
+        (ea_diff, _ET12_MC, _ET19_MC, Multivector((-19, 16, -11, 7), 3, COL)),
+        # examples with themselves (diff -> zero multivector, not an error)
+        (ea_sum, _MEANTONE_MM, _MEANTONE_MM, _MEANTONE_MM),
+        (ea_diff, _MEANTONE_MM, _MEANTONE_MM, Multivector((0, 0, 0), 2, ROW)),
+        (ea_sum, _ET7_MC, _ET7_MC, Multivector((16, -11, 7), 2, COL)),
+        (ea_diff, _ET7_MC, _ET7_MC, Multivector((0, 0, 0), 2, COL)),
+        # basic examples
+        (ea_sum, _AUG, _DIM, Multivector((7, 4, -10), 2, ROW)),
+        (ea_diff, _AUG, _DIM, Multivector((1, 4, 4), 2, ROW)),
+        (ea_sum, _AUG, _TET, Multivector((7, 9, -2), 2, ROW)),
+        (ea_diff, _AUG, _TET, Multivector((1, 9, 12), 2, ROW)),
+        (ea_sum, _AUG, _DIC, Multivector((5, 1, -10), 2, ROW)),
+        (ea_diff, _AUG, _DIC, Multivector((1, -1, -4), 2, ROW)),
+        (ea_sum, _AUG, _SRU, Multivector((5, -4, -18), 2, ROW)),
+        (ea_diff, _AUG, _SRU, Multivector((1, 4, 4), 2, ROW)),
+        (ea_sum, _DIM, _TET, Multivector((8, 13, 2), 2, ROW)),
+        (ea_diff, _DIM, _TET, Multivector((0, 5, 8), 2, ROW)),
+        (ea_sum, _DIM, _DIC, Multivector((6, 5, -6), 2, ROW)),
+        (ea_diff, _DIM, _DIC, Multivector((2, 3, 0), 2, ROW)),
+        (ea_sum, _DIM, _SRU, Multivector((3, 0, -7), 2, ROW)),
+        (ea_diff, _DIM, _SRU, Multivector((1, 4, 4), 2, ROW)),
+        (ea_sum, _TET, _DIC, Multivector((3, 5, 1), 2, ROW)),
+        (ea_diff, _TET, _DIC, Multivector((1, 4, 4), 2, ROW)),
+        (ea_sum, _TET, _SRU, Multivector((6, 5, -6), 2, ROW)),
+        (ea_diff, _TET, _SRU, Multivector((2, 13, 16), 2, ROW)),
+        (ea_sum, _DIC, _SRU, Multivector((4, -3, -14), 2, ROW)),
+        (ea_diff, _DIC, _SRU, Multivector((0, 5, 8), 2, ROW)),
+        # addable but not linearly dependent (mixed variance)
+        (ea_sum, Multivector((2, 3), 1, COL), Multivector((4, -7), 1, ROW), Multivector((9, 7), 1, COL)),
+        (ea_diff, Multivector((2, 3), 1, COL), Multivector((4, -7), 1, ROW), Multivector((5, 1), 1, COL)),
+        # canonicalize-first matters
+        (ea_sum, Multivector((-2, 4, -2), 1, ROW), Multivector((7, 7, 0), 1, ROW), Multivector((2, -1, 1), 1, ROW)),
+        (ea_diff, Multivector((-2, 4, -2), 1, ROW), Multivector((7, 7, 0), 1, ROW), Multivector((0, 3, -1), 1, ROW)),
+    ],
+)
+def test_ea_addition(op, u1, u2, expected):
+    assert op(u1, u2) == expected
+
+
+@pytest.mark.parametrize(
+    "op, u1, u2",
+    [
+        (ea_sum, Multivector((1, 4, 10, 4, 13, 12), 2, ROW), Multivector((0, 5, 0, 8, 0, -14), 2, ROW)),
+        (ea_diff, Multivector((1, 4, 10, 4, 13, 12), 2, ROW), Multivector((0, 5, 0, 8, 0, -14), 2, ROW)),
+        (ea_sum, _ET7_MM, _MEANTONE_MM),  # mismatched rank
+        (ea_sum, _ET7_MC, _MEANTONE_MC),
+        (ea_sum, _ET7_MM, _ET12_MM),  # mismatched dimensionality
+        (ea_sum, _ET7_MC, _ET12_MC),
+        (
+            ea_sum,
+            Multivector((0, 0, 0, 41, -27, 2, 41, -27, 2, 31), 3, ROW),
+            Multivector((48, 140, 46, 20, 10, 10, -250, -53, 85, 30), 3, ROW),
+        ),
+    ],
+)
+def test_ea_addition_errors(op, u1, u2):
+    with pytest.raises(ValueError):
+        op(u1, u2)

@@ -212,6 +212,26 @@ def interior_product(u1: Multivector, u2: Multivector) -> Multivector:
     return left_interior_product(u1, u2)
 
 
+def ea_sum(u1: Multivector, u2: Multivector) -> Multivector:
+    """Sum two addable multivectors (entry-wise on coordinates, canonicalized)."""
+    return _ea_addition(u1, u2, is_sum=True)
+
+
+def ea_diff(u1: Multivector, u2: Multivector) -> Multivector:
+    return _ea_addition(u1, u2, is_sum=False)
+
+
+def _ea_addition(u1: Multivector, u2: Multivector, is_sum: bool) -> Multivector:
+    first = ea_canonical_form(u1)
+    second = ea_dual(u2) if u2.variance is not first.variance else ea_canonical_form(u2)
+    if ea_get_r(first) != ea_get_r(second) or ea_get_d(first) != ea_get_d(second):
+        raise ValueError("multivectors not addable: dimensions differ")
+    combined = tuple(
+        a + b if is_sum else a - b for a, b in zip(first.coords, second.coords)
+    )
+    return ea_canonical_form(Multivector(combined, first.grade, first.variance))
+
+
 def matrix_to_multivector(t: Temperament) -> Multivector:
     grade = get_n(t) if t.variance is Variance.COL else get_r(t)
     return ea_canonical_form(
