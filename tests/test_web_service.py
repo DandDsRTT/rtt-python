@@ -46,3 +46,8 @@ def test_full_rank_mapping_has_zero_comma_and_zero_nullity():
     state = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
     assert state.comma_basis == ((0, 0, 0),)
     assert (state.d, state.r, state.n) == (3, 3, 0)
+
+
+def test_standard_primes_gives_the_domain_basis_header():
+    assert service.standard_primes(3) == (2, 3, 5)
+    assert service.standard_primes(5) == (2, 3, 5, 7, 11)

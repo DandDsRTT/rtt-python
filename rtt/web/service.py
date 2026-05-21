@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.dual import dual
+from rtt.math_utils import get_primes
 from rtt.temperament import Temperament, Variance
 
 Matrix = tuple[tuple[int, ...], ...]
@@ -46,6 +47,11 @@ def from_comma_basis(comma_basis) -> TemperamentState:
     comma_basis = _to_matrix(comma_basis)
     mapping = dual(Temperament(comma_basis, Variance.COL)).matrix
     return _state(mapping, comma_basis)
+
+
+def standard_primes(d: int) -> tuple[int, ...]:
+    """The first ``d`` primes — the standard prime-limit domain basis (header labels)."""
+    return get_primes(d)
 
 
 def expand_domain(state: TemperamentState) -> TemperamentState:
