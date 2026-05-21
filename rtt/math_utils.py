@@ -13,6 +13,8 @@ def get_primes(count: int) -> tuple[int, ...]:
 def quotient_to_pcv(quotient: Fraction | int) -> tuple[int, ...]:
     """Quotient to prime-count vector (monzo) over the first N primes."""
     q = Fraction(quotient)
+    if q == 0:
+        return (0,)
     exponents: dict[int, int] = {}
     for prime, power in sp.factorint(q.numerator).items():
         exponents[int(prime)] = exponents.get(int(prime), 0) + power
