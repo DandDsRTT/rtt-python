@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from fractions import Fraction
 
+from rtt.math_utils import pad_vectors_with_zeros_up_to_d, quotient_to_pcv
 from rtt.temperament import Temperament, Variance
 
 _COVARIANT_RE = re.compile(r"\[?\s*[<⟨{][^\[]*")
@@ -33,6 +34,14 @@ def parse_temperament_data(data: str | Temperament) -> Temperament:
         raw_vectors = _COL_VECTOR_RE.findall(data)
     matrix = tuple(parse_ebk_vector(v) for v in raw_vectors)
     return Temperament(matrix, variance, domain_basis)
+
+
+def parse_quotient_list(text: str, d: int) -> tuple[tuple[int, ...], ...]:
+    """Parse a quotient-list string like ``"{2/1, 3/2, 5/4}"`` into monzos (each a
+    prime-count vector padded to ``d`` entries)."""
+    quotients = [Fraction(token) for token in re.findall(r"[\d/]+", text)]
+    pcvs = tuple(quotient_to_pcv(q) for q in quotients)
+    return pad_vectors_with_zeros_up_to_d(pcvs, d)
 
 
 def parse_domain_basis(text: str) -> tuple:
