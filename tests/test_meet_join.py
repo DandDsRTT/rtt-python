@@ -5,6 +5,7 @@ comma_merge on larger inputs."""
 import pytest
 
 from rtt.dual import dual
+from rtt.exterior_algebra import Multivector, matrix_to_multivector, progressive_product
 from rtt.merging import comma_merge, map_merge
 from rtt.temperament import Temperament, Variance
 
@@ -134,3 +135,45 @@ MERGE_CASES = [
 @pytest.mark.parametrize("merge, factors, expected", MERGE_CASES)
 def test_meet_join_merges(merge, factors, expected):
     assert merge(*factors) == expected
+
+
+# The same examples as wedgies (the EA progressive product = join/meet via duals).
+_mm = matrix_to_multivector
+EA_PRODUCT_CASES = [
+    (_mm(meantone_m11), _mm(meanpop_m11), Multivector((0, 0, 0, 0, 0), 4, ROW)),
+    (_mm(meantone_c11), _mm(marvel_c11), Multivector((0,), 5, COL)),
+    (_mm(meantone_m11), _mm(marvel_m11), Multivector((0,), 5, ROW)),
+    (
+        _mm(meantone_m11),
+        _mm(porcupine_m11),
+        _mm(dual(Temperament((VALINORSMA11,), COL))),
+    ),
+    (_mm(meantone_c7), _mm(porcupine_c7), _mm(Temperament(_identity(4), COL))),
+    (_mm(meantone_m7), _mm(porcupine_m7), _mm(Temperament(_identity(4), ROW))),
+    (_mm(miracle_m11), _mm(magic_m11), Multivector((0, 0, 0, 0, 0), 4, ROW)),
+    (_mm(miracle_c7), _mm(magic_c7), Multivector((0,), 4, COL)),
+    (_mm(miracle_m7), _mm(magic_m7), Multivector((0,), 4, ROW)),
+    (_mm(miracle_m11), _mm(mothra_m11), Multivector((0, 0, 0, 0, 0), 4, ROW)),
+    (_mm(miracle_m7), _mm(mothra_m7), Multivector((0,), 4, ROW)),
+    (_mm(meantone_m11), _mm(magic_m11), _mm(dual(Temperament((MARVEL_C11,), COL)))),
+]
+
+
+@pytest.mark.parametrize("u1, u2, expected", EA_PRODUCT_CASES)
+def test_ea_meet_join_products(u1, u2, expected):
+    assert progressive_product(u1, u2) == expected
+
+
+EA_PRODUCT_ERRORS = [
+    (_mm(meantone_c11), _mm(meanpop_c11)),
+    (_mm(meantone_c11), _mm(porcupine_c11)),
+    (_mm(miracle_c11), _mm(magic_c11)),
+    (_mm(miracle_c11), _mm(mothra_c11)),
+    (_mm(meantone_c11), _mm(magic_c11)),
+]
+
+
+@pytest.mark.parametrize("u1, u2", EA_PRODUCT_ERRORS)
+def test_ea_meet_join_product_errors(u1, u2):
+    with pytest.raises(ValueError):
+        progressive_product(u1, u2)
