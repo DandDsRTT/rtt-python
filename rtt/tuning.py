@@ -46,15 +46,49 @@ _SLOPE_BY_LETTER = {
 
 
 def _complexity_traits_from_name(name: str) -> dict:
-    """The complexity traits (4, 5a, 5b) a scheme/damage/complexity name encodes:
-    "E" = Euclidean norm, "copfr" = unweighted (count of prime factors w/ repetition),
-    otherwise the default log-prime (Tenney) weighting."""
-    copfr = "copfr" in name
-    return {
-        "complexity_norm_power": 2 if "E" in name else 1,
-        "complexity_log_prime_power": 0 if copfr else 1,
+    """The complexity traits (4, 5a, 5b, 5c) and any held-interval injection an interval-
+    complexity name encodes, following source.m's sequential dash-delimited token overrides.
+
+    ``E`` = Euclidean (norm power 2); ``copfr`` = unweighted, ``lopfr``/``lp``/[blank] =
+    log-prime (Tenney), ``sopfr``/``prod`` = prime (Benedetti); ``ils``/``ols``/``lils``/
+    ``lols``/``limit`` add the size factor (Weil-style); ``ols``/``lols``/``odd`` also hold
+    the octave justly."""
+    padded = "-" + name.replace(" ", "-") + "-"
+
+    def has(token: str) -> bool:
+        return f"-{token}-" in padded
+
+    traits = {
+        "complexity_norm_power": 2 if "-E" in padded else 1,
+        "complexity_log_prime_power": 1,
         "complexity_prime_power": 0,
+        "complexity_size_factor": 0,
     }
+    held = None
+    if has("copfr"):
+        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 0
+    if has("lopfr") or has("lp"):
+        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 1, 0
+    if has("sopfr") or has("prod"):
+        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
+    if has("ils"):
+        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
+        traits["complexity_size_factor"] = 1
+    if has("ols"):
+        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 0, 1
+        traits["complexity_size_factor"], held = 1, "octave"
+    if has("lils"):
+        traits["complexity_log_prime_power"], traits["complexity_prime_power"] = 1, 0
+        traits["complexity_size_factor"] = 1
+    if has("limit"):
+        traits["complexity_size_factor"] = 1
+    if has("lols"):
+        traits["complexity_size_factor"], held = 1, "octave"
+    if has("odd"):
+        held = "octave"
+    if held is not None:
+        traits["held_intervals"] = held
+    return traits
 
 
 def damage_name_traits(name: str) -> dict:
@@ -108,21 +142,36 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     destretched_match = re.match(r"\s*destretched-(\S+)\s+(.*)", name)
     if destretched_match:
         destretched, name = destretched_match.group(1), destretched_match.group(2)
-    power = inf if "minimax" in name else (2 if "miniRMS" in name else 1)
+    power = _optimization_power_from_name(name)
     target_match = re.search(
         r"\{[\d/,\s]*\}|\d*-?TILT|\d*-?OLD|primes", name
     )
     target = target_match.group(0) if target_match else None
     if target is None and ("all-interval" in name or ("minimax" in name and "S" in name)):
         target = "{}"  # all-interval scheme (e.g. minimax-S = TOP, minimax-ES = TE)
+    complexity_traits = _complexity_traits_from_name(name)
+    held = complexity_traits.pop("held_intervals", None) or held  # odd/ols/lols hold the octave
     return TuningSchemeSpec(
         optimization_power=power,
         target_intervals=target,
         damage_weight_slope=_SLOPE_BY_LETTER[name.strip()[-1]],
         held_intervals=held,
         destretched_interval=destretched,
-        **_complexity_traits_from_name(name),
+        **complexity_traits,
     )
+
+
+def _optimization_power_from_name(name: str) -> float:
+    """The optimization power (trait 2) a systematic name encodes: ``minimax`` = ∞,
+    ``miniRMS`` = 2, ``miniaverage`` = 1, ``mini-N-mean`` = N."""
+    if "minimax" in name:
+        return inf
+    if "miniRMS" in name:
+        return 2
+    mean_match = re.search(r"mini-(\d+)-mean", name)
+    if mean_match:
+        return float(int(mean_match.group(1)))
+    return 1
 
 
 def optimize_generator_tuning_map(
