@@ -107,6 +107,77 @@ def hnf_with_transform(matrix: Matrix) -> tuple[Matrix, Matrix]:
     return _to_matrix(transform), _to_matrix(rows)
 
 
+def smith_normal_form_with_transforms(matrix: Matrix) -> tuple[Matrix, Matrix, Matrix]:
+    """Smith Normal Form with the unimodular transforms U, V s.t. U @ matrix @ V == S."""
+    rows = [list(row) for row in matrix]
+    m = len(rows)
+    n = len(rows[0]) if rows else 0
+    left = [[int(i == j) for j in range(m)] for i in range(m)]
+    right = [[int(i == j) for j in range(n)] for i in range(n)]
+
+    def add_row(target, source, q):
+        rows[target] = [a + q * b for a, b in zip(rows[target], rows[source])]
+        left[target] = [a + q * b for a, b in zip(left[target], left[source])]
+
+    def add_col(target, source, q):
+        for row in rows:
+            row[target] += q * row[source]
+        for row in right:
+            row[target] += q * row[source]
+
+    def swap_rows(a, b):
+        rows[a], rows[b] = rows[b], rows[a]
+        left[a], left[b] = left[b], left[a]
+
+    def swap_cols(a, b):
+        for row in rows:
+            row[a], row[b] = row[b], row[a]
+        for row in right:
+            row[a], row[b] = row[b], row[a]
+
+    t = 0
+    while t < min(m, n):
+        if all(rows[i][j] == 0 for i in range(t, m) for j in range(t, n)):
+            break
+        if rows[t][t] == 0:  # bring some nonzero into the pivot position
+            spot = next((i, j) for i in range(t, m) for j in range(t, n) if rows[i][j])
+            swap_rows(t, spot[0])
+            swap_cols(t, spot[1])
+        while True:  # isolate (t, t) by alternating column/row reduction
+            pivot = min((i for i in range(t, m) if rows[i][t]), key=lambda i: abs(rows[i][t]))
+            swap_rows(t, pivot)
+            for i in range(t + 1, m):
+                if rows[i][t]:
+                    add_row(i, t, -(rows[i][t] // rows[t][t]))
+            if any(rows[i][t] for i in range(t + 1, m)):
+                continue
+            pivot = min((j for j in range(t, n) if rows[t][j]), key=lambda j: abs(rows[t][j]))
+            swap_cols(t, pivot)
+            for j in range(t + 1, n):
+                if rows[t][j]:
+                    add_col(j, t, -(rows[t][j] // rows[t][t]))
+            if any(rows[t][j] for j in range(t + 1, n)):
+                continue
+            break
+        offending = next(
+            (
+                i
+                for i in range(t + 1, m)
+                for j in range(t + 1, n)
+                if rows[i][j] % rows[t][t]
+            ),
+            None,
+        )
+        if offending is not None:
+            add_row(t, offending, 1)
+            continue
+        if rows[t][t] < 0:
+            rows[t] = [-x for x in rows[t]]
+            left[t] = [-x for x in left[t]]
+        t += 1
+    return _to_matrix(left), _to_matrix(rows), _to_matrix(right)
+
+
 def _reduce_column_to_pivot(
     rows: list[list[int]], transform: list[list[int]], pivot_row: int, col: int
 ) -> None:
