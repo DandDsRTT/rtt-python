@@ -121,6 +121,28 @@ def get_domain_basis_change_for_c(original_subspace: tuple, target_superspace: t
     return get_domain_basis_change_for_m(target_superspace, original_subspace)
 
 
+def express_quotients_in_domain_basis(quotients: tuple, domain_basis: tuple) -> tuple:
+    """Express each quotient (assumed to lie in the subgroup) as an integer monzo over the
+    domain basis. Solves the exact linear system ``monzo · basis = prime_monzo(quotient)``
+    (via the normal equations), which — unlike the greedy factoring of
+    ``get_domain_basis_change_for_m`` — handles basis elements that share primes."""
+    dimension = get_domain_basis_dimension(domain_basis)
+    basis_a = sp.Matrix(
+        pad_vectors_with_zeros_up_to_d(
+            tuple(quotient_to_pcv(b) for b in domain_basis), dimension
+        )
+    )  # d_basis x dimension
+    gram = basis_a * basis_a.T
+    monzos = []
+    for quotient in quotients:
+        prime_monzo = sp.Matrix(
+            pad_vectors_with_zeros_up_to_d((quotient_to_pcv(quotient),), dimension)[0]
+        )
+        solution = gram.solve(basis_a * prime_monzo)
+        monzos.append(tuple(int(value) for value in solution))
+    return tuple(monzos)
+
+
 def get_basis_a(t: Temperament) -> Temperament:
     """A temperament's domain basis as a comma-basis matrix of monzos."""
     domain_basis = get_domain_basis(t)

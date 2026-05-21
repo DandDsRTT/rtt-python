@@ -10,10 +10,15 @@ from scipy.linalg import null_space
 from scipy.optimize import linprog, minimize
 
 from rtt.dimensions import get_d
-from rtt.domain_basis import get_domain_basis
+from rtt.domain_basis import (
+    express_quotients_in_domain_basis,
+    get_domain_basis,
+    is_standard_prime_limit_domain_basis,
+    is_subspace_of,
+)
 from rtt.dual import dual
 from rtt.math_utils import pad_vectors_with_zeros_up_to_d, quotient_to_pcv
-from rtt.parsing import parse_quotient_list
+from rtt.parsing import parse_quotient_list, parse_quotients
 from rtt.target_intervals import process_old, process_tilt
 from rtt.temperament import Temperament, Variance
 
@@ -165,12 +170,19 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
         target = "{}"  # all-interval scheme (e.g. minimax-S = TOP, minimax-ES = TE)
     complexity_traits = _complexity_traits_from_name(name)
     held = complexity_traits.pop("held_intervals", None) or held  # odd/ols/lols hold the octave
+    # trait 7: "nonprime-based" is checked first since it contains "prime-based" as a substring
+    nonprime_approach = (
+        "nonprime-based"
+        if "nonprime-based" in name
+        else "prime-based" if "prime-based" in name else ""
+    )
     return TuningSchemeSpec(
         optimization_power=power,
         target_intervals=target,
         damage_weight_slope=_SLOPE_BY_LETTER[name.strip()[-1]],
         held_intervals=held,
         destretched_interval=destretched,
+        nonprime_basis_approach=nonprime_approach,
         **complexity_traits,
     )
 
@@ -323,18 +335,25 @@ def _resolve_target_intervals(
     target_spec: str, t: Temperament, d: int
 ) -> tuple[tuple[int, ...], ...]:
     """Resolve a target-interval spec to monzos: an explicit ``{...}`` quotient list, a
-    TILT/OLD named scheme, or ``"primes"`` (the identity)."""
-    if "TILT" in target_spec or "truncated integer limit triangle" in target_spec:
-        quotients = process_tilt(target_spec, get_domain_basis(t))
-    elif "OLD" in target_spec or "odd limit diamond" in target_spec:
-        quotients = process_old(target_spec, get_domain_basis(t))
-    elif target_spec == "primes":
+    TILT/OLD named scheme, or ``"primes"`` (the identity).
+
+    Over a nonstandard domain basis the resolved quotients are filtered to those that lie
+    in the subgroup and expressed as monzos in that (possibly nonprime) basis."""
+    domain_basis = get_domain_basis(t)
+    if target_spec == "primes":
         return tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
+    if "TILT" in target_spec or "truncated integer limit triangle" in target_spec:
+        quotients = process_tilt(target_spec, domain_basis)
+    elif "OLD" in target_spec or "odd limit diamond" in target_spec:
+        quotients = process_old(target_spec, domain_basis)
     else:
-        return parse_quotient_list(target_spec, d)
-    return pad_vectors_with_zeros_up_to_d(
-        tuple(quotient_to_pcv(q) for q in quotients), d
-    )
+        quotients = parse_quotients(target_spec)
+    if is_standard_prime_limit_domain_basis(domain_basis):
+        return pad_vectors_with_zeros_up_to_d(
+            tuple(quotient_to_pcv(q) for q in quotients), d
+        )
+    in_basis = tuple(q for q in quotients if is_subspace_of((q,), domain_basis))
+    return express_quotients_in_domain_basis(in_basis, domain_basis)
 
 
 def _parse_interval_spec(text: str, d: int) -> tuple[tuple[int, ...], ...]:

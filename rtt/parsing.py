@@ -36,11 +36,15 @@ def parse_temperament_data(data: str | Temperament) -> Temperament:
     return Temperament(matrix, variance, domain_basis)
 
 
+def parse_quotients(text: str) -> list[Fraction]:
+    """Parse a quotient-list string like ``"{2/1, 3/2, 5/4}"`` into fractions."""
+    return [Fraction(token) for token in re.findall(r"[\d/]+", text)]
+
+
 def parse_quotient_list(text: str, d: int) -> tuple[tuple[int, ...], ...]:
     """Parse a quotient-list string like ``"{2/1, 3/2, 5/4}"`` into monzos (each a
     prime-count vector padded to ``d`` entries)."""
-    quotients = [Fraction(token) for token in re.findall(r"[\d/]+", text)]
-    pcvs = tuple(quotient_to_pcv(q) for q in quotients)
+    pcvs = tuple(quotient_to_pcv(q) for q in parse_quotients(text))
     return pad_vectors_with_zeros_up_to_d(pcvs, d)
 
 
