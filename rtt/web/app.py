@@ -86,7 +86,8 @@ def index() -> None:
         d = editor.state.d
         with ui.column().classes("rtt-box"):
             with ui.row().classes("rtt-controls").style("gap:4px"):
-                ui.button("−", on_click=lambda: act(editor.shrink)).props("dense")
+                ui.button("−", on_click=lambda: act(editor.shrink)) \
+                    .props("dense").set_enabled(editor.can_shrink)
                 ui.button("+", on_click=lambda: act(editor.expand)).props("dense")
             with ui.grid(columns=d).style("gap:4px"):
                 for prime in service.standard_primes(d):
@@ -145,7 +146,7 @@ def index() -> None:
 
 
 def main() -> None:
-    ui.run(title="RTT", reload=False, show=False, port=8080)
+    ui.run(title="RTT", reload=False, show=False, port=8137)
 
 
 if __name__ in {"__main__", "__mp_main__"}:

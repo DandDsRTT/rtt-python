@@ -49,3 +49,12 @@ def test_undo_with_empty_stack_is_a_noop():
     editor = Editor()
     editor.undo()
     assert editor.state.mapping == INITIAL_MAPPING
+
+
+def test_cannot_shrink_below_one_dimension():
+    editor = Editor()
+    assert editor.can_shrink is True  # starts at d=3
+    editor.shrink()
+    editor.shrink()
+    assert editor.state.d == 1
+    assert editor.can_shrink is False

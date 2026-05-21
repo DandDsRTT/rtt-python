@@ -22,6 +22,11 @@ class Editor:
     def can_undo(self) -> bool:
         return bool(self._undo_stack)
 
+    @property
+    def can_shrink(self) -> bool:
+        """Whether the domain can lose a prime without collapsing to nothing."""
+        return self.state.d > 1
+
     def edit_mapping(self, mapping) -> None:
         self._snapshot()
         self.state = service.from_mapping(mapping)
