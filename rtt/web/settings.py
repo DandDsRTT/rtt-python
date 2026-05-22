@@ -49,6 +49,10 @@ DEFAULTS: dict[str, bool] = {
     key: default for _, items in SHOW_GROUPS for key, _, default in items
 }
 
+# Toggles whose content the layout actually builds today; the panel disables
+# (greys out) the rest until their content exists.
+IMPLEMENTED: frozenset[str] = frozenset({"names", "temperament_boxes", "tuning_boxes"})
+
 
 def defaults() -> dict[str, bool]:
     return dict(DEFAULTS)

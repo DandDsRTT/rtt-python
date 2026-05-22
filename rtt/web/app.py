@@ -22,11 +22,10 @@ _T = "0.25s"  # transition duration
 _CSS = f"""
 .rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:30px; font-weight:bold;
              color:#000; margin:6px 0 8px 2px; }}
-.rtt-undo {{ width:100px !important; height:22px !important; min-height:22px !important;
-            background:#fff !important; border:1px solid #888 !important; border-radius:0 !important;
-            box-shadow:none !important; padding:0 !important; margin:0; }}
-.rtt-undo .q-btn__content {{ color:#777 !important; font-size:14px;
-            font-family:'Cambria',Georgia,serif; }}
+.rtt-iconbtn {{ width:30px !important; min-width:30px !important; height:30px !important;
+            min-height:30px !important; padding:0 !important; box-shadow:none !important; }}
+.rtt-iconbtn .q-icon {{ color:#777 !important; font-size:21px; }}
+.rtt-iconbtn.q-btn--disable .q-icon {{ color:#c4c4c4 !important; }}
 
 .rtt-scroll {{ overflow-x:auto; max-width:100%; }}
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
@@ -57,9 +56,10 @@ _CSS = f"""
 .rtt-frac-num {{ border-bottom:1px solid #000; padding:0 3px; }}
 .rtt-frac-den {{ padding:0 3px; }}
 .rtt-tval {{ display:flex; align-items:baseline; justify-content:center; width:100%;
-            font-size:12px; color:#000; white-space:nowrap; line-height:1; }}
+            font-size:13px; color:#000; white-space:nowrap; line-height:1; }}
 .rtt-cents-int {{ flex:1 1 0; text-align:right; }}
-.rtt-cents-frac {{ flex:1 1 0; text-align:left; font-size:9px; color:#000; }}
+.rtt-cents-frac {{ flex:1 1 0; text-align:left; font-size:9px; color:#000;
+                  position:relative; top:3px; }}
 .rtt-cellinput {{ width:26px !important; min-height:26px; }}
 .rtt-cellinput .q-field__control {{ width:26px !important; height:26px !important; min-height:26px !important;
             padding:0 !important; background:#fff; outline:1px solid #c8c8c8; }}
@@ -74,12 +74,9 @@ _CSS = f"""
            font-family:'Cambria',Georgia,serif; }}
 
 .rtt-toggle {{ width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-              font-size:10px; line-height:1; color:#666; background:#fff; border:1px solid #aaa;
-              cursor:pointer; user-select:none; }}
+              font-size:12px !important; line-height:1; color:#666; background:#fff;
+              border:1px solid #bbb; cursor:pointer; user-select:none; }}
 .rtt-toggle:hover {{ background:#ececec; color:#000; }}
-.rtt-gear {{ width:26px !important; min-width:26px !important; height:26px !important;
-            min-height:26px !important; padding:0 !important; box-shadow:none !important; }}
-.rtt-gear .q-icon {{ color:#777 !important; font-size:20px; }}
 .rtt-show-card {{ font-family:'Cambria',Georgia,serif; background:#fff; color:#000;
                  min-width:440px; padding:14px 18px; border-radius:0; box-shadow:0 2px 12px #0003; }}
 .rtt-show-title {{ font-size:22px; font-weight:bold; margin-bottom:6px; }}
@@ -191,7 +188,7 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-rowlabel")
             elif cb.kind in ("rowtoggle", "coltoggle"):
                 item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets"
-                labels[cb.id] = ui.label(cb.text).classes("rtt-toggle")
+                labels[cb.id] = ui.label(cb.text).classes("rtt-toggle material-icons")
                 wrap.on("click", lambda _=None, it=item: on_toggle(it))
             elif cb.kind == "minus":
                 refs["minus"] = ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
@@ -266,18 +263,20 @@ def index() -> None:
                 with ui.column().classes("rtt-show-group"):
                     ui.label(group_name).classes("rtt-show-grouptitle")
                     for key, label, _ in items:
-                        ui.checkbox(label, value=settings[key],
-                                    on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
+                        box = ui.checkbox(label, value=settings[key],
+                                          on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
                             .props("dense size=xs color=grey-8").classes("rtt-show-item")
+                        if key not in show_settings.IMPLEMENTED:
+                            box.props("disable")  # not built yet -> greyed and inert
 
     ui.label("RTT App").classes("rtt-title")
-    with ui.row().style("gap:6px; margin-bottom:10px; align-items:center"):
-        refs["undo"] = ui.button("undo", on_click=lambda: act(editor.undo), color=None) \
-            .props("no-caps unelevated square").classes("rtt-undo")
-        refs["redo"] = ui.button("redo", on_click=lambda: act(editor.redo), color=None) \
-            .props("no-caps unelevated square").classes("rtt-undo")
+    with ui.row().style("gap:4px; margin-bottom:10px; align-items:center"):
+        refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
+            .props("flat dense round").classes("rtt-iconbtn")
+        refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
+            .props("flat dense round").classes("rtt-iconbtn")
         ui.button(icon="settings", on_click=show_dialog.open, color=None) \
-            .props("flat dense round").classes("rtt-gear")
+            .props("flat dense round").classes("rtt-iconbtn")
     with ui.element("div").classes("rtt-scroll"):
         with ui.element("div").classes("rtt-outer"):
             board = ui.element("div").classes("rtt-board")
