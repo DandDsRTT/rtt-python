@@ -48,6 +48,7 @@ _CSS = f"""
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; }}
 .rtt-genratio {{ font-size:14px; color:#000; }}
+.rtt-val {{ font-size:14px; color:#000; }}
 .rtt-cellinput {{ width:26px !important; min-height:26px; }}
 .rtt-cellinput .q-field__control {{ width:26px !important; height:26px !important; min-height:26px !important;
             padding:0 !important; background:#fff; outline:1px solid #c8c8c8; }}
@@ -62,7 +63,7 @@ _CSS = f"""
            font-family:'Cambria',Georgia,serif; }}
 """
 
-_LABEL_KINDS = {"prime", "genratio", "colheader", "rowlabel"}
+_LABEL_KINDS = {"prime", "genratio", "colheader", "rowlabel", "target", "mapped"}
 
 
 def _parse_int(text):
@@ -110,6 +111,8 @@ def index() -> None:
                     labels[cb.id] = ui.label(cb.text)
             elif cb.kind == "genratio":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-genratio")
+            elif cb.kind in ("target", "mapped"):
+                labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "colheader":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":

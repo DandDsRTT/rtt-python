@@ -29,18 +29,25 @@ def build(state) -> Layout:
     r = len(state.mapping)
     primes = service.standard_primes(d)
     gens = service.generators(state.mapping)
+    targets = service.DEFAULT_TARGET_INTERVALS
+    k = len(targets)
+    mapped = service.mapped_target_intervals(state.mapping, targets)
 
     gen_x = LABEL_W + GAP
     primes_x = gen_x + GEN_W + GAP
     ctrl_x = primes_x + d * CELL + 6  # domain -/+ buttons sit after the primes
+    targets_x = ctrl_x + 52 + GAP
     header_y = 0
     quant_y = HEADER_H + GAP
     map_y = quant_y + CELL + GAP
-    total_w = ctrl_x + 52
+    total_w = targets_x + k * CELL + GAP
     total_h = map_y + r * CELL + GAP
 
     def prime_left(p):
         return primes_x + p * CELL
+
+    def target_left(j):
+        return targets_x + j * CELL
 
     def map_top(i):
         return map_y + i * CELL
@@ -52,6 +59,7 @@ def build(state) -> Layout:
     # column headers
     cells.append(CellBox("header:gens", gen_x, header_y, GEN_W, HEADER_H, "colheader", text="generators"))
     cells.append(CellBox("header:primes", primes_x, header_y, d * CELL, HEADER_H, "colheader", text="domain primes"))
+    cells.append(CellBox("header:targets", targets_x, header_y, k * CELL, HEADER_H, "colheader", text="target-intervals"))
 
     # row labels
     cells.append(CellBox("label:quantities", 0, quant_y, LABEL_W, CELL, "rowlabel", text="quantities"))
@@ -73,9 +81,18 @@ def build(state) -> Layout:
         for p in range(d):
             cells.append(CellBox(f"cell:mapping:{i}:{p}", prime_left(p), map_top(i), CELL, CELL, "mapping", gen=i, prime=p))
 
-    # shared axes: a vertical line per prime, a horizontal line per generator
+    # target-intervals column: the targets (quantities row) and the mapped list (mapping rows)
+    for j in range(k):
+        cells.append(CellBox(f"target:{j}", target_left(j), quant_y, CELL, CELL, "target", text=targets[j]))
+    for i in range(r):
+        for j in range(k):
+            cells.append(CellBox(f"cell:mapped:{i}:{j}", target_left(j), map_top(i), CELL, CELL, "mapped", text=str(mapped[i][j]), gen=i))
+
+    # shared axes: a vertical line per prime and per target, a horizontal line per generator
     for p in range(d):
         lines.append(Line(f"v:prime:{p}", "v", prime_left(p) + CELL / 2, 0, total_h))
+    for j in range(k):
+        lines.append(Line(f"v:target:{j}", "v", target_left(j) + CELL / 2, 0, total_h))
     for i in range(r):
         lines.append(Line(f"h:gen:{i}", "h", map_top(i) + CELL / 2, 0, total_w))
 
@@ -83,5 +100,7 @@ def build(state) -> Layout:
     blocks.append(Block("block:primes", primes_x - PAD, quant_y - PAD, d * CELL + 2 * PAD, CELL + 2 * PAD))
     blocks.append(Block("block:gens", gen_x - PAD, map_y - PAD, GEN_W + 2 * PAD, r * CELL + 2 * PAD))
     blocks.append(Block("block:mapping", primes_x - PAD, map_y - PAD, d * CELL + 2 * PAD, r * CELL + 2 * PAD))
+    blocks.append(Block("block:targets", targets_x - PAD, quant_y - PAD, k * CELL + 2 * PAD, CELL + 2 * PAD))
+    blocks.append(Block("block:mapped", targets_x - PAD, map_y - PAD, k * CELL + 2 * PAD, r * CELL + 2 * PAD))
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))

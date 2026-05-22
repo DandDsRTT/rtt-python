@@ -13,9 +13,12 @@ from rtt.dimensions import get_d, get_n, get_r
 from rtt.dual import dual
 from rtt.generator_detempering import get_generator_detempering
 from rtt.math_utils import get_primes, pcv_to_quotient
+from rtt.parsing import parse_quotient_list
 from rtt.temperament import Temperament, Variance
 
 Matrix = tuple[tuple[int, ...], ...]
+
+DEFAULT_TARGET_INTERVALS = ("2/1", "3/2", "5/4", "6/5")
 
 
 @dataclass(frozen=True)
@@ -63,6 +66,17 @@ def generators(mapping) -> tuple[str, ...]:
         quotient = pcv_to_quotient(monzo)
         ratios.append(f"{quotient.numerator}/{quotient.denominator}")
     return tuple(ratios)
+
+
+def mapped_target_intervals(mapping, ratios) -> Matrix:
+    """Each target interval mapped through ``M`` — the targets in generator coords (r x k)."""
+    mapping = _to_matrix(mapping)
+    d = len(mapping[0])
+    monzos = parse_quotient_list("{" + ", ".join(ratios) + "}", d)
+    return tuple(
+        tuple(sum(mapping[i][p] * monzo[p] for p in range(d)) for monzo in monzos)
+        for i in range(len(mapping))
+    )
 
 
 def expand_domain(state: TemperamentState) -> TemperamentState:

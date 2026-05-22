@@ -31,11 +31,20 @@ def test_primes_sit_above_the_mapping_columns():
     assert cells["prime:0"].y < cells["cell:mapping:0:0"].y  # quantities row above mapping
 
 
+def test_target_intervals_column_with_mapped_list():
+    cells = {c.id: c for c in _layout().cells}
+    assert cells["header:targets"].text == "target-intervals"
+    assert cells["target:0"].text == "2/1" and cells["target:2"].text == "5/4"
+    # the mapped target-interval list (M . target monzo) for [[1,1,0],[0,1,4]]
+    assert cells["cell:mapped:0:0"].text == "1"
+    assert cells["cell:mapped:1:2"].text == "4"  # 5/4 -> 4 generators of the fifth
+
+
 def test_shared_axes_are_first_class_lines():
     lay = _layout()
     vids = {ln.id for ln in lay.lines if ln.orientation == "v"}
     hids = {ln.id for ln in lay.lines if ln.orientation == "h"}
-    assert vids == {"v:prime:0", "v:prime:1", "v:prime:2"}
+    assert vids == {"v:prime:0", "v:prime:1", "v:prime:2", "v:target:0", "v:target:1", "v:target:2", "v:target:3"}
     assert hids == {"h:gen:0", "h:gen:1"}
 
 
