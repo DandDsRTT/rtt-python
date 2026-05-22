@@ -13,12 +13,34 @@ def test_editor_starts_at_meantone_with_no_undo():
     assert editor.state.mapping == INITIAL_MAPPING
     assert editor.state.comma_basis == ((4, -4, 1),)
     assert editor.can_undo is False
+    assert editor.can_redo is False
 
 
 def test_an_edit_enables_undo():
     editor = Editor()
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
     assert editor.can_undo is True
+
+
+def test_redo_restores_an_undone_action():
+    editor = Editor()
+    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
+    edited = editor.state.mapping
+    editor.undo()
+    assert editor.state.mapping == INITIAL_MAPPING
+    assert editor.can_redo is True
+    editor.redo()
+    assert editor.state.mapping == edited
+    assert editor.can_redo is False
+
+
+def test_a_fresh_edit_clears_the_redo_history():
+    editor = Editor()
+    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
+    editor.undo()
+    assert editor.can_redo is True
+    editor.edit_mapping([[1, 1, 0], [0, 1, 5]])  # a new action invalidates redo
+    assert editor.can_redo is False
 
 
 def test_undo_with_empty_stack_is_a_noop():

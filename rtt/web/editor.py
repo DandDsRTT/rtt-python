@@ -1,8 +1,9 @@
 """Framework-free view-model for the temperament editor.
 
-Holds the current :class:`~rtt.web.service.TemperamentState` and an undo stack,
-and exposes the user actions (edit either matrix, expand/shrink the domain, undo).
-The NiceGUI layer is thin glue over this; all of it is unit-testable without a UI.
+Holds the current :class:`~rtt.web.service.TemperamentState` plus undo/redo
+stacks, and exposes the user actions (edit either matrix, expand/shrink the
+domain, undo, redo). The NiceGUI layer is thin glue over this; all of it is
+unit-testable without a UI.
 """
 
 from __future__ import annotations
@@ -17,10 +18,15 @@ class Editor:
     def __init__(self) -> None:
         self.state: TemperamentState = service.from_mapping(INITIAL_MAPPING)
         self._undo_stack: list[TemperamentState] = []
+        self._redo_stack: list[TemperamentState] = []
 
     @property
     def can_undo(self) -> bool:
         return bool(self._undo_stack)
+
+    @property
+    def can_redo(self) -> bool:
+        return bool(self._redo_stack)
 
     @property
     def can_shrink(self) -> bool:
@@ -45,7 +51,14 @@ class Editor:
 
     def undo(self) -> None:
         if self._undo_stack:
+            self._redo_stack.append(self.state)
             self.state = self._undo_stack.pop()
+
+    def redo(self) -> None:
+        if self._redo_stack:
+            self._undo_stack.append(self.state)
+            self.state = self._redo_stack.pop()
 
     def _snapshot(self) -> None:
         self._undo_stack.append(self.state)
+        self._redo_stack.clear()  # a fresh action invalidates the redo history

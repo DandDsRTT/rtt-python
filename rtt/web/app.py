@@ -23,7 +23,7 @@ _CSS = f"""
              color:#000; margin:6px 0 8px 2px; }}
 .rtt-undo {{ width:100px !important; height:22px !important; min-height:22px !important;
             background:#fff !important; border:1px solid #888 !important; border-radius:0 !important;
-            box-shadow:none !important; padding:0 !important; margin:0 0 10px 2px; }}
+            box-shadow:none !important; padding:0 !important; margin:0; }}
 .rtt-undo .q-btn__content {{ color:#777 !important; font-size:14px;
             font-family:'Cambria',Georgia,serif; }}
 
@@ -173,13 +173,28 @@ def index() -> None:
         if "minus" in refs:
             refs["minus"].set_enabled(editor.can_shrink)
         refs["undo"].set_enabled(editor.can_undo)
+        refs["redo"].set_enabled(editor.can_redo)
         building[0] = False
 
     ui.label("RTT App").classes("rtt-title")
-    refs["undo"] = ui.button("undo", on_click=lambda: act(editor.undo), color=None) \
-        .props("no-caps unelevated square").classes("rtt-undo")
+    with ui.row().style("gap:6px; margin-bottom:10px"):
+        refs["undo"] = ui.button("undo", on_click=lambda: act(editor.undo), color=None) \
+            .props("no-caps unelevated square").classes("rtt-undo")
+        refs["redo"] = ui.button("redo", on_click=lambda: act(editor.redo), color=None) \
+            .props("no-caps unelevated square").classes("rtt-undo")
     with ui.element("div").classes("rtt-outer"):
         board = ui.element("div").classes("rtt-board")
+
+    def on_key(e):
+        if not (e.action.keydown and e.modifiers.ctrl):
+            return
+        is_z = e.key == "z" or e.key == "Z"
+        if e.key == "y" or (is_z and e.modifiers.shift):
+            act(editor.redo)
+        elif is_z:
+            act(editor.undo)
+
+    ui.keyboard(on_key=on_key)
     render()
 
 
