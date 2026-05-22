@@ -24,8 +24,7 @@ _CSS = """
 .rtt-undo .q-btn__content { color:#777 !important; font-size:14px;
             font-family:'Cambria',Georgia,serif; }
 
-.rtt-container { display:grid; grid-auto-columns:min-content; grid-auto-rows:min-content;
-                 background:#c0c0c0; padding:10px; width:max-content;
+.rtt-container { display:grid; background:#c0c0c0; padding:10px; width:max-content;
                  font-family:'Cambria',Georgia,serif; }
 .square-box { width:30px; height:30px; display:flex; align-items:center; justify-content:center;
               background:#e0e0e0; }
@@ -34,17 +33,18 @@ _CSS = """
 .corner-padding { background:#e0e0e0; width:100%; height:100%; min-width:10px; }
 .vertical-padding { min-height:10px; background:#e0e0e0; width:100%; height:100%; }
 .horizontal-padding { min-width:10px; background:#e0e0e0; height:100%; width:100%; }
-.corner-margin { background:#c0c0c0; width:100%; height:100%; min-width:10px; }
-.vertical-margin { min-height:10px; background:#c0c0c0; width:100%; height:100%;
-                   display:flex; justify-content:center; }
-.horizontal-margin { min-width:10px; background:#c0c0c0; height:100%; width:100%;
-                     display:flex; align-items:center; }
+.corner-margin { background:#c0c0c0; width:100%; height:100%; }
+.vertical-margin { position:relative; background:#c0c0c0; width:100%; height:100%; }
+.horizontal-margin { position:relative; background:#c0c0c0; height:100%; width:100%; }
 .blank { background:#e0e0e0; width:100%; height:100%; }
-.empty-box-element { height:100%; width:100%; display:flex; justify-content:center; align-items:center; }
+.empty-box-element { position:relative; height:100%; width:100%; }
 .box-name { z-index:10; background:#e0e0e0; text-align:center; width:100%; height:100%;
-            color:#444; font-size:12px; display:flex; align-items:center; justify-content:center; }
-.grid-line-horizontal { border-top:1px solid #e0e0e0; width:100%; height:0; }
-.grid-line-vertical { border-left:1px solid #e0e0e0; height:100%; width:0; }
+            color:#444; font-size:11px; white-space:nowrap; overflow:visible;
+            display:flex; align-items:center; justify-content:center; }
+.grid-line-horizontal { position:absolute; top:50%; left:0; width:100%; height:0;
+            border-top:1px solid #e0e0e0; }
+.grid-line-vertical { position:absolute; left:50%; top:0; height:100%; width:0;
+            border-left:1px solid #e0e0e0; }
 
 .rtt-whitebox { width:26px; height:26px; display:flex; align-items:center; justify-content:center;
                 background:#fff; outline:1px solid #c8c8c8; color:#000; font-size:14px; }
@@ -171,7 +171,12 @@ def index() -> None:
         state = editor.state
         primes = service.standard_primes(state.d)
         cells = grid.build(state.d, len(state.mapping), len(state.comma_basis), primes)
-        with ui.element("div").classes("rtt-container"):
+        cols, rows = grid.track_sizes(cells)
+        template = (
+            f"grid-template-columns:{' '.join(f'{w}px' for w in cols)};"
+            f"grid-template-rows:{' '.join(f'{h}px' for h in rows)};"
+        )
+        with ui.element("div").classes("rtt-container").style(template):
             for cell in cells:
                 _render_cell(cell, state)
         building[0] = False

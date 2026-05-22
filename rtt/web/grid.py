@@ -31,6 +31,33 @@ class Cell:
     vline: bool = False
 
 
+_CELL_PX = 30  # a content cell (square-input / square-box)
+_GAP_PX = 10  # a padding / margin track
+_NAME_PX = 16  # a box-name (label) row
+
+
+def track_sizes(cells: list[Cell]) -> tuple[list[int], list[int]]:
+    """Explicit, uniform column widths and row heights for the grid.
+
+    Content tracks are ``_CELL_PX`` wide/tall, padding/margin tracks ``_GAP_PX``;
+    fixed tracks keep every column and row aligned so the centered grid lines
+    line up (auto/min-content sizing left them ragged)."""
+    col_w: dict[int, int] = {}
+    row_h: dict[int, int] = {}
+    for c in cells:
+        if c.css in ("square-input", "square-box"):
+            for k in range(c.colspan):
+                col_w[c.col + k] = _CELL_PX
+            row_h[c.row] = _CELL_PX
+        elif c.css == "box-name":
+            row_h.setdefault(c.row, _NAME_PX)
+    max_col = max(c.col + c.colspan - 1 for c in cells)
+    max_row = max(c.row for c in cells)
+    cols = [col_w.get(i, _GAP_PX) for i in range(1, max_col + 1)]
+    rows = [row_h.get(i, _GAP_PX) for i in range(1, max_row + 1)]
+    return cols, rows
+
+
 def _band(content_subs: list[str]) -> list[str]:
     """Wrap a band's content sub-tracks with the padding ring and trailing margin."""
     return ["pad", *content_subs, "pad", "margin"]

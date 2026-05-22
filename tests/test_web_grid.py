@@ -60,3 +60,14 @@ def test_prime_columns_carry_vertical_grid_lines_beyond_the_square():
     for col in {c.col for c in cs if c.kind == "prime"}:
         vline_rows = [c.row for c in cs if c.vline and c.col == col]
         assert len(vline_rows) >= 6  # extends above and below the d x d square
+
+
+def test_track_sizes_are_uniform_so_grid_lines_align():
+    cs = _cells()
+    cols, rows = grid.track_sizes(cs)
+    # every column that holds a cell value is one fixed content width, gaps another;
+    # uniform tracks are what keep the centered grid lines aligned.
+    content_cols = {c.col for c in cs if c.kind in ("prime", "mapping", "comma")}
+    assert all(cols[col - 1] == grid._CELL_PX for col in content_cols)
+    assert set(cols) <= {grid._GAP_PX, grid._CELL_PX}
+    assert set(rows) <= {grid._GAP_PX, grid._NAME_PX, grid._CELL_PX}
