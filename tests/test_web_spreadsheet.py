@@ -142,6 +142,28 @@ def test_collapsing_the_domain_primes_column_hides_the_mapping_matrix():
     assert "cell:mapped:0:0" in cids  # the target columns are unaffected
 
 
+def test_collapsed_column_header_text_is_blanked_so_it_cannot_overflow():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = {c.id: c for c in spreadsheet.build(base, collapsed={"col:targets"}).cells}
+    assert cells["header:targets"].text == ""  # nothing to overflow the strip and overlap neighbours
+    assert {c.id: c for c in spreadsheet.build(base).cells}["header:targets"].text == "target-intervals"
+
+
+def test_collapsed_band_keeps_a_strip_panel_so_it_animates_shut():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    full = {b.id: b for b in spreadsheet.build(base).blocks}
+    coll = {b.id: b for b in spreadsheet.build(base, collapsed={"row:tuning"}).blocks}
+    assert "block:tuning:primes" in coll  # the panel persists (so the renderer can shrink it)
+    assert coll["block:tuning:primes"].h < full["block:tuning:primes"].h  # ...folded to a strip
+
+
+def test_the_row_fold_node_clears_the_first_content_tile():
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))))
+    node = {c.id: c for c in lay.cells}["toggle:row:mapping"]
+    gens_block = {b.id: b for b in lay.blocks}["block:gens"]
+    assert node.x + node.w <= gens_block.x  # the node does not collide with the tile
+
+
 def test_names_off_hides_labels_and_headers_and_collapses_their_space():
     off = {c.id: c for c in _with(names=False).cells}
     on = {c.id: c for c in _with().cells}

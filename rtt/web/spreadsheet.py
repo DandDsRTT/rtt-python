@@ -60,9 +60,16 @@ def build(state, settings=None, collapsed=None) -> Layout:
         ("primes", d * COL_W, True, True),
         ("targets", k * COL_W, True, True),
     )
+    # A fold-toggle node column sits between the row-label gutter and the content
+    # (when names show); content starts past it with a clear gap so the tiles
+    # never collide with the nodes. The horizontal row lines anchor at node_cx.
+    node_x = label_w + GAP
+    node_cx = node_x + TOGGLE / 2
+    content_x0 = node_x + TOGGLE + GAP if show_names else label_w + GAP
+
     col_x, col_w, col_collapsible = {}, {}, {}
     ctrl_x = None
-    x = label_w + GAP
+    x = content_x0
     for key, natural, present, collapsible in col_bands:
         if not present:
             continue
@@ -76,7 +83,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         x += GAP
     total_w = x
 
-    gen_x = col_x.get("gens", label_w + GAP)
+    gen_x = col_x.get("gens", content_x0)
     primes_x = col_x["primes"]
     targets_x = col_x["targets"]
 
@@ -84,6 +91,10 @@ def build(state, settings=None, collapsed=None) -> Layout:
         return key in col_x and f"col:{key}" not in collapsed
 
     header_y = 0
+    col_node_y = header_h + (GAP - TOGGLE) / 2  # the column toggle sits just under the header text
+    # Branching (trunk/bus/verticals) starts just below the column nodes so no
+    # line pokes up past them; with names hidden it starts at the very top.
+    branch_top_y = col_node_y + TOGGLE if show_names else header_y
     fanout_y = header_h + GAP  # columns fan out into per-element lines here, above quantities
     quant_y = header_h + 2 * GAP
 
@@ -131,11 +142,14 @@ def build(state, settings=None, collapsed=None) -> Layout:
     col_header = {"gens": "generators", "primes": "domain primes", "targets": "target-intervals"}
     if show_names:
         for key in col_x:
-            cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=col_header[key]))
+            # blank the title on a collapsed (strip-width) column so it can't overflow
+            # and overlap its neighbours; the chevron toggle stays as the affordance
+            htext = "" if f"col:{key}" in collapsed else col_header[key]
+            cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=htext))
             if col_collapsible[key]:
-                glyph = "+" if f"col:{key}" in collapsed else "×"
+                glyph = "chevron_right" if f"col:{key}" in collapsed else "chevron_left"
                 tx = col_x[key] + (col_w[key] - TOGGLE) / 2  # centered under the header text
-                cells.append(CellBox(f"toggle:col:{key}", tx, HEADER_H + (GAP - TOGGLE) / 2, TOGGLE, TOGGLE, "coltoggle", text=glyph))
+                cells.append(CellBox(f"toggle:col:{key}", tx, col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
 
     # row labels (every present row; a collapsed row keeps its label as the
     # strip) plus a fold toggle in the gutter for the collapsible ones
@@ -143,9 +157,9 @@ def build(state, settings=None, collapsed=None) -> Layout:
         for key in row_y:
             cells.append(CellBox(f"label:{key}", 0, row_y[key], LABEL_W, row_h[key], "rowlabel", text=row_label[key]))
             if row_collapsible[key]:
-                glyph = "+" if f"row:{key}" in collapsed else "×"
+                glyph = "expand_more" if f"row:{key}" in collapsed else "expand_less"
                 ty = row_y[key] + (row_h[key] - TOGGLE) / 2
-                cells.append(CellBox(f"toggle:row:{key}", label_w + 1, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
+                cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
 
     # quantities row: domain primes (+ controls) and target ratios
     if col_open("primes"):
@@ -199,7 +213,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
     def fan(group_id, n, pitch_left):
         centers = [pitch_left(i) for i in range(n)]
         trunk_x = (centers[0] + centers[-1]) / 2
-        lines.append(Line(f"trunk:{group_id}", "v", trunk_x, header_h, fanout_y - header_h))
+        lines.append(Line(f"trunk:{group_id}", "v", trunk_x, branch_top_y, fanout_y - branch_top_y))
         if n > 1:
             lines.append(Line(f"bus:{group_id}", "h", fanout_y, centers[0], centers[-1] - centers[0]))
 
@@ -216,35 +230,40 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # branch off it as the horizontal generator lines.
     gen_cx = gen_x + col_w.get("gens", GEN_W) / 2
     if row_open("mapping"):
-        lines.append(Line("trunk:gens", "v", gen_cx, header_h, map_top(r - 1) + ROW_H / 2 - header_h))
+        lines.append(Line("trunk:gens", "v", gen_cx, branch_top_y, map_top(r - 1) + ROW_H / 2 - branch_top_y))
         for i in range(r):
-            lines.append(Line(f"h:gen:{i}", "h", map_top(i) + ROW_H / 2, gen_cx, total_w - gen_cx))
+            x0 = node_cx if show_names else gen_cx
+            lines.append(Line(f"h:gen:{i}", "h", map_top(i) + ROW_H / 2, x0, total_w - x0))
     for key in ("tuning", "just", "retune", "damage"):
         if row_open(key):
-            lines.append(Line(f"h:{key}", "h", row_y[key] + ROW_H / 2, primes_x, total_w - primes_x))
+            x0 = node_cx if show_names else primes_x
+            lines.append(Line(f"h:{key}", "h", row_y[key] + ROW_H / 2, x0, total_w - x0))
 
     # #e0e0e0 panels behind each content group
     def block(bid, x, y, w, h):
         blocks.append(Block(bid, x - PAD, y - PAD, w + 2 * PAD, h + 2 * PAD))
 
-    if col_open("primes"):
-        block("block:primes", primes_x, quant_y, col_w["primes"], ROW_H)
-    if col_open("targets"):
-        block("block:targets", targets_x, quant_y, col_w["targets"], ROW_H)
-    if row_open("mapping"):
-        if col_open("gens"):
-            block("block:gens", gen_x, row_y["mapping"], col_w["gens"], r * ROW_H)
-        if col_open("primes"):
-            block("block:mapping", primes_x, row_y["mapping"], col_w["primes"], r * ROW_H)
-        if col_open("targets"):
-            block("block:mapped", targets_x, row_y["mapping"], col_w["targets"], r * ROW_H)
+    # Panels are emitted for every *present* band (not just open ones) and sized
+    # from row_h/col_w, so collapsing folds the panel to a strip that the renderer
+    # animates shrinking — rather than the panel popping out of existence.
+    def panel(bid, key_x, x, w, y, h):
+        if key_x in col_x:
+            block(bid, x, y, w, h)
+
+    if "quantities" in row_y:
+        qh = row_h["quantities"]
+        panel("block:primes", "primes", primes_x, col_w.get("primes", 0), quant_y, qh)
+        panel("block:targets", "targets", targets_x, col_w.get("targets", 0), quant_y, qh)
+    if "mapping" in row_y:
+        my, mh = row_y["mapping"], row_h["mapping"]
+        panel("block:gens", "gens", gen_x, col_w.get("gens", 0), my, mh)
+        panel("block:mapping", "primes", primes_x, col_w.get("primes", 0), my, mh)
+        panel("block:mapped", "targets", targets_x, col_w.get("targets", 0), my, mh)
     for key in ("tuning", "just", "retune"):
-        if row_open(key):
-            if col_open("primes"):
-                block(f"block:{key}:primes", primes_x, row_y[key], col_w["primes"], ROW_H)
-            if col_open("targets"):
-                block(f"block:{key}:targets", targets_x, row_y[key], col_w["targets"], ROW_H)
-    if row_open("damage") and col_open("targets"):
-        block("block:damage:targets", targets_x, row_y["damage"], col_w["targets"], ROW_H)
+        if key in row_y:
+            panel(f"block:{key}:primes", "primes", primes_x, col_w.get("primes", 0), row_y[key], row_h[key])
+            panel(f"block:{key}:targets", "targets", targets_x, col_w.get("targets", 0), row_y[key], row_h[key])
+    if "damage" in row_y:
+        panel("block:damage:targets", "targets", targets_x, col_w.get("targets", 0), row_y["damage"], row_h["damage"])
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))
