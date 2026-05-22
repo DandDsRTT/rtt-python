@@ -40,12 +40,23 @@ def test_target_intervals_column_with_mapped_list():
     assert cells["cell:mapped:1:2"].text == "4"  # 5/4 -> 4 generators of the fifth
 
 
+def test_tuning_rows_over_primes_and_targets():
+    cells = {c.id: c for c in _layout().cells}
+    assert cells["label:tuning"].text == "tuning"
+    assert cells["label:just"].text == "just tuning"
+    assert cells["label:damage"].text == "damage"
+    assert {"tuning:prime:0", "tuning:target:0", "just:prime:0", "retune:target:0", "damage:target:0"} <= set(cells)
+    assert cells["just:prime:0"].text == "1200.00"  # just octave is pure
+    # tuning rows sit on the same shared prime columns as the mapping
+    assert cells["tuning:prime:2"].x == cells["cell:mapping:0:2"].x
+
+
 def test_shared_axes_are_first_class_lines():
     lay = _layout()
     vids = {ln.id for ln in lay.lines if ln.orientation == "v"}
     hids = {ln.id for ln in lay.lines if ln.orientation == "h"}
     assert vids == {"v:prime:0", "v:prime:1", "v:prime:2", "v:target:0", "v:target:1", "v:target:2", "v:target:3"}
-    assert hids == {"h:gen:0", "h:gen:1"}
+    assert hids == {"h:gen:0", "h:gen:1", "h:tuning", "h:just", "h:retune", "h:damage"}
 
 
 def test_axis_ids_are_stable_across_expand():

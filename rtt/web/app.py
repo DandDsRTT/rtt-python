@@ -49,6 +49,7 @@ _CSS = f"""
                 padding-right:8px; }}
 .rtt-genratio {{ font-size:14px; color:#000; }}
 .rtt-val {{ font-size:14px; color:#000; }}
+.rtt-tval {{ font-size:12px; color:#000; white-space:nowrap; }}
 .rtt-cellinput {{ width:26px !important; min-height:26px; }}
 .rtt-cellinput .q-field__control {{ width:26px !important; height:26px !important; min-height:26px !important;
             padding:0 !important; background:#fff; outline:1px solid #c8c8c8; }}
@@ -63,7 +64,7 @@ _CSS = f"""
            font-family:'Cambria',Georgia,serif; }}
 """
 
-_LABEL_KINDS = {"prime", "genratio", "colheader", "rowlabel", "target", "mapped"}
+_LABEL_KINDS = {"prime", "genratio", "colheader", "rowlabel", "target", "mapped", "tval"}
 
 
 def _parse_int(text):
@@ -113,6 +114,8 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-genratio")
             elif cb.kind in ("target", "mapped"):
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
+            elif cb.kind == "tval":
+                labels[cb.id] = ui.label(cb.text).classes("rtt-tval")
             elif cb.kind == "colheader":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":
@@ -181,7 +184,10 @@ def index() -> None:
 
 
 def main() -> None:
-    ui.run(title="RTT", reload=False, show=False, port=8137)
+    import sys
+
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8137
+    ui.run(title="RTT", reload=False, show=False, port=port)
 
 
 if __name__ in {"__main__", "__mp_main__"}:
