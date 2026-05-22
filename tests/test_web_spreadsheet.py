@@ -1,8 +1,14 @@
-from rtt.web import service, spreadsheet
+from rtt.web import service, settings, spreadsheet
 
 
 def _layout(mapping=((1, 1, 0), (0, 1, 4))):
     return spreadsheet.build(service.from_mapping(mapping))
+
+
+def _with(**overrides):
+    s = settings.defaults()
+    s.update(overrides)
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
 
 
 def test_rows_columns_and_cells_are_present():
@@ -71,3 +77,25 @@ def test_axis_ids_are_stable_across_expand():
     after = {ln.id for ln in spreadsheet.build(expanded).lines}
     assert before <= after  # existing prime/generator axes survive by id
     assert "v:prime:3" in after and "v:prime:3" not in before  # the added prime
+
+
+def test_tuning_boxes_off_hides_the_tuning_rows():
+    cells = {c.id for c in _with(tuning_boxes=False).cells}
+    assert not any(c.split(":")[0] in {"tuning", "just", "retune", "damage"} for c in cells)
+    assert {"label:tuning", "label:just", "label:retune", "label:damage"}.isdisjoint(cells)
+
+
+def test_temperament_boxes_off_hides_mapping_and_lifts_tuning():
+    off = {c.id: c for c in _with(temperament_boxes=False).cells}
+    on = {c.id: c for c in _with().cells}
+    assert "label:mapping" not in off
+    assert not any(c.startswith(("cell:mapping:", "cell:mapped:", "gen:")) for c in off)
+    assert off["tuning:prime:0"].y < on["tuning:prime:0"].y  # tuning rises into the freed space
+
+
+def test_names_off_hides_labels_and_headers_and_collapses_their_space():
+    off = {c.id: c for c in _with(names=False).cells}
+    on = {c.id: c for c in _with().cells}
+    assert not any(c.startswith(("label:", "header:")) for c in off)
+    assert off["prime:0"].x < on["prime:0"].x  # the label gutter collapses, content shifts left
+    assert off["prime:0"].y < on["prime:0"].y  # the header band collapses, content rises
