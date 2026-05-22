@@ -298,7 +298,7 @@ def main() -> None:
     import sys
 
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8137
-    ui.run(title="RTT", reload=False, show=False, port=port)
+    ui.run(title="RTT", reload=True, show=False, port=port)
 
 
 if __name__ in {"__main__", "__mp_main__"}:
