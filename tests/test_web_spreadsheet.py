@@ -93,6 +93,55 @@ def test_temperament_boxes_off_hides_mapping_and_lifts_tuning():
     assert off["tuning:prime:0"].y < on["tuning:prime:0"].y  # tuning rises into the freed space
 
 
+def test_each_collapsible_row_has_a_toggle_but_quantities_does_not():
+    cells = {c.id: c for c in _layout().cells}
+    for key in ("mapping", "tuning", "just", "retune", "damage"):
+        assert f"toggle:row:{key}" in cells  # the [x]/expand control
+    assert "toggle:row:quantities" not in cells  # the spine row is not collapsible
+    assert cells["toggle:row:tuning"].x < cells["tuning:prime:0"].x  # sits left of the content
+
+
+def test_a_collapsed_rows_toggle_still_renders_so_it_can_reexpand():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = {c.id: c for c in spreadsheet.build(base, collapsed={"row:tuning"}).cells}
+    assert "toggle:row:tuning" in cells  # the affordance survives collapse
+
+
+def test_collapsing_a_row_hides_its_content_but_keeps_the_label():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    full = {c.id: c for c in spreadsheet.build(base).cells}
+    coll = {c.id: c for c in spreadsheet.build(base, collapsed={"row:tuning"}).cells}
+    assert not any(c.startswith("tuning:") for c in coll)  # the tuning content is gone
+    assert "label:tuning" in coll  # ...but its label remains as a re-expandable strip
+    assert coll["label:tuning"].h < full["label:tuning"].h  # shrunk to a thin strip
+    assert coll["label:just"].y < full["label:just"].y  # rows below lift into the freed space
+
+
+def _in_targets(cid):
+    return (cid.startswith(("target:", "cell:mapped:", "damage:target:"))
+            or cid.startswith(("tuning:target:", "just:target:", "retune:target:")))
+
+
+def test_collapsing_the_targets_column_hides_its_cells_across_every_row():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    full = spreadsheet.build(base)
+    coll = spreadsheet.build(base, collapsed={"col:targets"})
+    cids = {c.id for c in coll.cells}
+    assert not any(_in_targets(c) for c in cids)  # gone from quantities, mapped, and every tuning row
+    assert "header:targets" in cids  # ...but the header survives as a strip
+    assert "toggle:col:targets" in cids  # with a re-expand toggle
+    assert coll.width < full.width  # and the board narrows
+
+
+def test_collapsing_the_domain_primes_column_hides_the_mapping_matrix():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cids = {c.id for c in spreadsheet.build(base, collapsed={"col:primes"}).cells}
+    assert not any(c.startswith(("prime:", "cell:mapping:")) for c in cids)
+    assert not any(c.startswith(("tuning:prime:", "just:prime:", "retune:prime:")) for c in cids)
+    assert "header:primes" in cids  # header strip stays
+    assert "cell:mapped:0:0" in cids  # the target columns are unaffected
+
+
 def test_names_off_hides_labels_and_headers_and_collapses_their_space():
     off = {c.id: c for c in _with(names=False).cells}
     on = {c.id: c for c in _with().cells}
