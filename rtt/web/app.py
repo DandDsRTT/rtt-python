@@ -55,11 +55,10 @@ _CSS = f"""
 .rtt-frac {{ display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }}
 .rtt-frac-num {{ border-bottom:1px solid #000; padding:0 3px; }}
 .rtt-frac-den {{ padding:0 3px; }}
-.rtt-tval {{ display:flex; align-items:baseline; justify-content:center; width:100%;
-            font-size:13px; color:#000; white-space:nowrap; line-height:1; }}
-.rtt-cents-int {{ flex:1 1 0; text-align:right; }}
-.rtt-cents-frac {{ flex:1 1 0; text-align:left; font-size:9px; color:#000;
-                  position:relative; top:3px; }}
+.rtt-tval {{ display:flex; flex-direction:column; align-items:center; justify-content:center;
+            width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
+.rtt-cents-int {{ font-size:13px; }}
+.rtt-cents-frac {{ font-size:9px; color:#000; }}
 .rtt-cellinput {{ width:26px !important; min-height:26px; }}
 .rtt-cellinput .q-field__control {{ width:26px !important; height:26px !important; min-height:26px !important;
             padding:0 !important; background:#fff; outline:1px solid #c8c8c8; }}
