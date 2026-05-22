@@ -28,6 +28,7 @@ _CSS = f"""
 .rtt-undo .q-btn__content {{ color:#777 !important; font-size:14px;
             font-family:'Cambria',Georgia,serif; }}
 
+.rtt-scroll {{ overflow-x:auto; max-width:100%; }}
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
               font-family:'Cambria',Georgia,serif; }}
 .rtt-board {{ position:relative; transition:width {_T}, height {_T}; }}
@@ -277,8 +278,9 @@ def index() -> None:
             .props("no-caps unelevated square").classes("rtt-undo")
         ui.button(icon="settings", on_click=show_dialog.open, color=None) \
             .props("flat dense round").classes("rtt-gear")
-    with ui.element("div").classes("rtt-outer"):
-        board = ui.element("div").classes("rtt-board")
+    with ui.element("div").classes("rtt-scroll"):
+        with ui.element("div").classes("rtt-outer"):
+            board = ui.element("div").classes("rtt-board")
 
     def on_key(e):
         if not (e.action.keydown and e.modifiers.ctrl):
