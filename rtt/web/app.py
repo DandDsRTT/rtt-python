@@ -48,8 +48,13 @@ _CSS = f"""
 .rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:nowrap; }}
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; }}
-.rtt-genratio {{ font-size:14px; color:#000; }}
 .rtt-val {{ font-size:14px; color:#000; }}
+.rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
+             font-size:13px; color:#000; }}
+.rtt-approx {{ font-size:13px; align-self:center; }}
+.rtt-frac {{ display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }}
+.rtt-frac-num {{ border-bottom:1px solid #000; padding:0 3px; }}
+.rtt-frac-den {{ padding:0 3px; }}
 .rtt-tval {{ font-size:12px; color:#000; white-space:nowrap; }}
 .rtt-cellinput {{ width:26px !important; min-height:26px; }}
 .rtt-cellinput .q-field__control {{ width:26px !important; height:26px !important; min-height:26px !important;
@@ -80,8 +85,7 @@ _CSS = f"""
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
 """
 
-_LABEL_KINDS = {"prime", "genratio", "colheader", "rowlabel", "target", "mapped", "tval",
-                "rowtoggle", "coltoggle"}
+_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "tval", "rowtoggle", "coltoggle"}
 
 
 def _parse_int(text):
@@ -90,6 +94,12 @@ def _parse_int(text):
         return int(str(text).strip())
     except (TypeError, ValueError):
         return None
+
+
+def _ratio_parts(text):
+    """Split a ratio like ``"3/2"`` into ``("3", "2")``; None if it isn't a fraction."""
+    num, sep, den = str(text).partition("/")
+    return (num, den) if sep and num and den else None
 
 
 @ui.page("/")
@@ -103,6 +113,7 @@ def index() -> None:
     els: dict = {}  # entity id -> outer element (persists across renders)
     inputs: dict = {}  # mapping cell id -> q-input
     labels: dict = {}  # cell id -> the label whose text tracks state
+    fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
     building = [False]
     refs: dict = {}
 
@@ -128,6 +139,20 @@ def index() -> None:
         collapsed.discard(item) if item in collapsed else collapsed.add(item)
         render()
 
+    def _ratio(cb, approx):
+        """A ratio rendered as a stacked fraction (with a ~ prefix when approximate)."""
+        parts = _ratio_parts(cb.text)
+        with ui.element("div").classes("rtt-ratio"):
+            if approx:
+                ui.label("~").classes("rtt-approx")
+            if parts:
+                with ui.element("div").classes("rtt-frac"):
+                    num = ui.label(parts[0]).classes("rtt-frac-num")
+                    den = ui.label(parts[1]).classes("rtt-frac-den")
+                fracs[cb.id] = (num, den)
+            else:
+                labels[cb.id] = ui.label(cb.text).classes("rtt-val")
+
     def _make_cell(cb):
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"')
         with wrap:
@@ -138,8 +163,10 @@ def index() -> None:
                 with ui.element("div").classes("rtt-white"):
                     labels[cb.id] = ui.label(cb.text)
             elif cb.kind == "genratio":
-                labels[cb.id] = ui.label(cb.text).classes("rtt-genratio")
-            elif cb.kind in ("target", "mapped"):
+                _ratio(cb, approx=True)
+            elif cb.kind == "target":
+                _ratio(cb, approx=False)
+            elif cb.kind == "mapped":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "tval":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-tval")
@@ -192,6 +219,10 @@ def index() -> None:
             els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
             if cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
+            elif cb.id in fracs:
+                num, den = _ratio_parts(cb.text) or (cb.text, "")
+                fracs[cb.id][0].set_text(num)
+                fracs[cb.id][1].set_text(den)
             elif cb.kind in _LABEL_KINDS:
                 labels[cb.id].set_text(cb.text)
 
@@ -200,6 +231,7 @@ def index() -> None:
             del els[eid]
             inputs.pop(eid, None)
             labels.pop(eid, None)
+            fracs.pop(eid, None)
 
         if "minus" in refs:
             refs["minus"].set_enabled(editor.can_shrink)

@@ -21,3 +21,10 @@ def test_parse_int_accepts_integers_and_rejects_partial_input():
     assert app._parse_int("-") is None
     assert app._parse_int("x") is None
     assert app._parse_int(None) is None
+
+
+def test_ratio_parts_splits_fractions_and_passes_through_non_fractions():
+    assert app._ratio_parts("3/2") == ("3", "2")  # rendered as a stacked fraction
+    assert app._ratio_parts("2/1") == ("2", "1")
+    assert app._ratio_parts("5") is None  # a bare integer is not a fraction
+    assert app._ratio_parts("") is None
