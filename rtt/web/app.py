@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from nicegui import ui
 
+from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
 from rtt.web.editor import Editor
 
@@ -62,6 +63,17 @@ _CSS = f"""
            border-radius:0 !important; padding:0 !important; box-shadow:none !important; }}
 .rtt-btn .q-btn__content {{ color:#000 !important; font-size:15px;
            font-family:'Cambria',Georgia,serif; }}
+
+.rtt-gear {{ width:26px !important; min-width:26px !important; height:26px !important;
+            min-height:26px !important; padding:0 !important; box-shadow:none !important; }}
+.rtt-gear .q-icon {{ color:#777 !important; font-size:20px; }}
+.rtt-show-card {{ font-family:'Cambria',Georgia,serif; background:#fff; color:#000;
+                 min-width:440px; padding:14px 18px; border-radius:0; box-shadow:0 2px 12px #0003; }}
+.rtt-show-title {{ font-size:22px; font-weight:bold; margin-bottom:6px; }}
+.rtt-show-groups {{ gap:44px; align-items:flex-start; flex-wrap:nowrap; }}
+.rtt-show-grouptitle {{ font-size:13px; font-weight:bold; color:#000;
+                       margin-bottom:2px; white-space:nowrap; }}
+.rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
 """
 
 _LABEL_KINDS = {"prime", "genratio", "colheader", "rowlabel", "target", "mapped", "tval"}
@@ -81,6 +93,7 @@ def index() -> None:
     ui.query("body").style("background:#fff")
 
     editor = Editor()
+    settings = show_settings.defaults()  # which parts of the grid are visible
     els: dict = {}  # entity id -> outer element (persists across renders)
     inputs: dict = {}  # mapping cell id -> q-input
     labels: dict = {}  # cell id -> the label whose text tracks state
@@ -88,7 +101,7 @@ def index() -> None:
     refs: dict = {}
 
     def on_mapping_change():
-        if building[0]:
+        if building[0] or not settings["temperament_boxes"]:  # no editable matrix when hidden
             return
         d, r = editor.state.d, len(editor.state.mapping)
         matrix = [[_parse_int(inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
@@ -100,6 +113,10 @@ def index() -> None:
     def act(action):
         action()
         render()
+
+    def on_show_toggle(key, value):
+        settings[key] = value
+        render()  # the reconciling renderer animates the affected rows/columns in or out
 
     def _make_cell(cb):
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"')
@@ -131,7 +148,7 @@ def index() -> None:
     def render():
         building[0] = True
         st = editor.state
-        lay = spreadsheet.build(st)
+        lay = spreadsheet.build(st, settings)
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
 
@@ -176,12 +193,25 @@ def index() -> None:
         refs["redo"].set_enabled(editor.can_redo)
         building[0] = False
 
+    with ui.dialog() as show_dialog, ui.card().classes("rtt-show-card"):
+        ui.label("Show").classes("rtt-show-title")
+        with ui.row().classes("rtt-show-groups"):
+            for group_name, items in show_settings.SHOW_GROUPS:
+                with ui.column().classes("rtt-show-group"):
+                    ui.label(group_name).classes("rtt-show-grouptitle")
+                    for key, label, _ in items:
+                        ui.checkbox(label, value=settings[key],
+                                    on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
+                            .props("dense size=xs color=grey-8").classes("rtt-show-item")
+
     ui.label("RTT App").classes("rtt-title")
-    with ui.row().style("gap:6px; margin-bottom:10px"):
+    with ui.row().style("gap:6px; margin-bottom:10px; align-items:center"):
         refs["undo"] = ui.button("undo", on_click=lambda: act(editor.undo), color=None) \
             .props("no-caps unelevated square").classes("rtt-undo")
         refs["redo"] = ui.button("redo", on_click=lambda: act(editor.redo), color=None) \
             .props("no-caps unelevated square").classes("rtt-undo")
+        ui.button(icon="settings", on_click=show_dialog.open, color=None) \
+            .props("flat dense round").classes("rtt-gear")
     with ui.element("div").classes("rtt-outer"):
         board = ui.element("div").classes("rtt-board")
 
