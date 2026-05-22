@@ -28,3 +28,10 @@ def test_ratio_parts_splits_fractions_and_passes_through_non_fractions():
     assert app._ratio_parts("2/1") == ("2", "1")
     assert app._ratio_parts("5") is None  # a bare integer is not a fraction
     assert app._ratio_parts("") is None
+
+
+def test_cents_parts_splits_whole_and_fraction_for_decimal_alignment():
+    assert app._cents_parts("1899.26") == ("1899", "26")  # big whole, small fraction
+    assert app._cents_parts("-2.69") == ("-2", "69")
+    assert app._cents_parts("0.00") == ("0", "00")
+    assert app._cents_parts("5") == ("5", "")  # no fractional part

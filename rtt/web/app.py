@@ -55,7 +55,10 @@ _CSS = f"""
 .rtt-frac {{ display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }}
 .rtt-frac-num {{ border-bottom:1px solid #000; padding:0 3px; }}
 .rtt-frac-den {{ padding:0 3px; }}
-.rtt-tval {{ font-size:12px; color:#000; white-space:nowrap; }}
+.rtt-tval {{ display:flex; align-items:baseline; justify-content:center; width:100%;
+            font-size:12px; color:#000; white-space:nowrap; line-height:1; }}
+.rtt-cents-int {{ flex:1 1 0; text-align:right; }}
+.rtt-cents-frac {{ flex:1 1 0; text-align:left; font-size:9px; color:#000; }}
 .rtt-cellinput {{ width:26px !important; min-height:26px; }}
 .rtt-cellinput .q-field__control {{ width:26px !important; height:26px !important; min-height:26px !important;
             padding:0 !important; background:#fff; outline:1px solid #c8c8c8; }}
@@ -85,7 +88,7 @@ _CSS = f"""
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
 """
 
-_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "tval", "rowtoggle", "coltoggle"}
+_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "rowtoggle", "coltoggle"}
 
 
 def _parse_int(text):
@@ -102,6 +105,12 @@ def _ratio_parts(text):
     return (num, den) if sep and num and den else None
 
 
+def _cents_parts(text):
+    """Split a cents value like ``"1899.26"`` into a big whole part and small fraction."""
+    whole, _, frac = str(text).partition(".")
+    return whole, frac
+
+
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
@@ -114,6 +123,7 @@ def index() -> None:
     inputs: dict = {}  # mapping cell id -> q-input
     labels: dict = {}  # cell id -> the label whose text tracks state
     fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
+    cents: dict = {}  # cents cell id -> (whole label, fraction label), aligned on the point
     building = [False]
     refs: dict = {}
 
@@ -169,7 +179,11 @@ def index() -> None:
             elif cb.kind == "mapped":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "tval":
-                labels[cb.id] = ui.label(cb.text).classes("rtt-tval")
+                whole, frac = _cents_parts(cb.text)
+                with ui.element("div").classes("rtt-tval"):
+                    w = ui.label(whole).classes("rtt-cents-int")
+                    f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
+                cents[cb.id] = (w, f)
             elif cb.kind == "colheader":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":
@@ -223,6 +237,10 @@ def index() -> None:
                 num, den = _ratio_parts(cb.text) or (cb.text, "")
                 fracs[cb.id][0].set_text(num)
                 fracs[cb.id][1].set_text(den)
+            elif cb.id in cents:
+                whole, frac = _cents_parts(cb.text)
+                cents[cb.id][0].set_text(whole)
+                cents[cb.id][1].set_text(f".{frac}" if frac else "")
             elif cb.kind in _LABEL_KINDS:
                 labels[cb.id].set_text(cb.text)
 
@@ -232,6 +250,7 @@ def index() -> None:
             inputs.pop(eid, None)
             labels.pop(eid, None)
             fracs.pop(eid, None)
+            cents.pop(eid, None)
 
         if "minus" in refs:
             refs["minus"].set_enabled(editor.can_shrink)
