@@ -31,6 +31,18 @@ def _cents(value) -> str:
     return f"{value:.2f}"
 
 
+def _title_w(title: str) -> int:
+    """Approx rendered width of a 13px bold column title, so a collapsed column
+    can fold to a strip that still fits its (horizontal) title without overflow."""
+    return max(STRIP, len(title) * 8 + 10)
+
+
+def _fold_glyph(is_collapsed: bool) -> str:
+    """Material Icons name for the fold toggle: out-chevrons to expand a collapsed
+    band, in-chevrons to collapse an expanded one."""
+    return "unfold_more" if is_collapsed else "unfold_less"
+
+
 def build(state, settings=None, collapsed=None) -> Layout:
     if settings is None:
         settings = _default_settings()
@@ -53,8 +65,10 @@ def build(state, settings=None, collapsed=None) -> Layout:
 
     # Column bands left-to-right: (key, natural width, present, collapsible).
     # Generators belong to the temperament; domain primes and targets are always
-    # present. A present band whose id is in `collapsed` folds to a strip. The
+    # present. A collapsed column folds to a strip just wide enough to keep its
+    # (horizontal) title readable, so it never overflows onto its neighbours. The
     # domain -/+ controls ride just right of the primes block when it is open.
+    col_header = {"gens": "generators", "primes": "domain primes", "targets": "target-intervals"}
     col_bands = (
         ("gens", GEN_W, show_temp, True),
         ("primes", d * COL_W, True, True),
@@ -74,7 +88,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         if not present:
             continue
         col_x[key] = x
-        col_w[key] = STRIP if f"col:{key}" in collapsed else natural
+        col_w[key] = _title_w(col_header[key]) if f"col:{key}" in collapsed else natural
         col_collapsible[key] = collapsible
         x += col_w[key]
         if key == "primes" and f"col:{key}" not in collapsed:
@@ -95,8 +109,10 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # Branching (trunk/bus/verticals) starts just below the column nodes so no
     # line pokes up past them; with names hidden it starts at the very top.
     branch_top_y = col_node_y + TOGGLE if show_names else header_y
-    fanout_y = header_h + GAP  # columns fan out into per-element lines here, above quantities
     quant_y = header_h + 2 * GAP
+    # the bus that joins a column's per-element verticals sits midway between the
+    # node and the first cell (not hugging the node)
+    fanout_y = (branch_top_y + quant_y) / 2
 
     # Row bands top-to-bottom: (key, natural height, present, collapsible, label),
     # laid out by the same running-cursor rule as the columns. The spine
@@ -137,17 +153,13 @@ def build(state, settings=None, collapsed=None) -> Layout:
     lines: list[Line] = []
     blocks: list[Block] = []
 
-    # column headers (every present column; a collapsed column keeps its header
-    # as the strip) plus a fold toggle in the header band for collapsible ones
-    col_header = {"gens": "generators", "primes": "domain primes", "targets": "target-intervals"}
+    # column headers (every present column keeps its title, even collapsed) plus a
+    # fold toggle in the header band for collapsible ones
     if show_names:
         for key in col_x:
-            # blank the title on a collapsed (strip-width) column so it can't overflow
-            # and overlap its neighbours; the chevron toggle stays as the affordance
-            htext = "" if f"col:{key}" in collapsed else col_header[key]
-            cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=htext))
+            cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=col_header[key]))
             if col_collapsible[key]:
-                glyph = "chevron_right" if f"col:{key}" in collapsed else "chevron_left"
+                glyph = _fold_glyph(f"col:{key}" in collapsed)
                 tx = col_x[key] + (col_w[key] - TOGGLE) / 2  # centered under the header text
                 cells.append(CellBox(f"toggle:col:{key}", tx, col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
 
@@ -157,7 +169,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         for key in row_y:
             cells.append(CellBox(f"label:{key}", 0, row_y[key], LABEL_W, row_h[key], "rowlabel", text=row_label[key]))
             if row_collapsible[key]:
-                glyph = "expand_more" if f"row:{key}" in collapsed else "expand_less"
+                glyph = _fold_glyph(f"row:{key}" in collapsed)
                 ty = row_y[key] + (row_h[key] - TOGGLE) / 2
                 cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
 
@@ -226,14 +238,22 @@ def build(state, settings=None, collapsed=None) -> Layout:
         for j in range(k):
             lines.append(Line(f"v:target:{j}", "v", target_left(j) + COL_W / 2, fanout_y, total_h - fanout_y))
 
-    # generators column: a trunk from its node down through the mapping rows, which
-    # branch off it as the horizontal generator lines.
+    # generators column axis: a trunk from its node down through the mapping rows.
     gen_cx = gen_x + col_w.get("gens", GEN_W) / 2
     if row_open("mapping"):
         lines.append(Line("trunk:gens", "v", gen_cx, branch_top_y, map_top(r - 1) + ROW_H / 2 - branch_top_y))
+        # the mapping sub-rows fan from the row node (mirroring the column fan): a
+        # single line to a vertical bar — midway between node and first cell — that
+        # joins the per-generator lines.
+        gy0, gyN = map_top(0) + ROW_H / 2, map_top(r - 1) + ROW_H / 2
+        if show_names and r > 1:
+            bar_x = (node_x + TOGGLE + gen_x) / 2
+            lines.append(Line("trunk:mapping", "h", (gy0 + gyN) / 2, node_cx, bar_x - node_cx))
+            lines.append(Line("vbar:mapping", "v", bar_x, gy0, gyN - gy0))
+        else:
+            bar_x = node_cx if show_names else gen_cx
         for i in range(r):
-            x0 = node_cx if show_names else gen_cx
-            lines.append(Line(f"h:gen:{i}", "h", map_top(i) + ROW_H / 2, x0, total_w - x0))
+            lines.append(Line(f"h:gen:{i}", "h", map_top(i) + ROW_H / 2, bar_x, total_w - bar_x))
     for key in ("tuning", "just", "retune", "damage"):
         if row_open(key):
             x0 = node_cx if show_names else primes_x

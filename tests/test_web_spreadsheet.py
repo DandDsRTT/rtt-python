@@ -142,11 +142,12 @@ def test_collapsing_the_domain_primes_column_hides_the_mapping_matrix():
     assert "cell:mapped:0:0" in cids  # the target columns are unaffected
 
 
-def test_collapsed_column_header_text_is_blanked_so_it_cannot_overflow():
+def test_collapsed_column_keeps_its_title_at_a_width_that_fits_it():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    cells = {c.id: c for c in spreadsheet.build(base, collapsed={"col:targets"}).cells}
-    assert cells["header:targets"].text == ""  # nothing to overflow the strip and overlap neighbours
-    assert {c.id: c for c in spreadsheet.build(base).cells}["header:targets"].text == "target-intervals"
+    coll = {c.id: c for c in spreadsheet.build(base, collapsed={"col:targets"}).cells}["header:targets"]
+    full = {c.id: c for c in spreadsheet.build(base).cells}["header:targets"]
+    assert coll.text == "target-intervals"  # the title stays put (not blanked, not rotated)
+    assert spreadsheet.STRIP < coll.w < full.w  # folded narrower, but wide enough to read the title
 
 
 def test_collapsed_band_keeps_a_strip_panel_so_it_animates_shut():
