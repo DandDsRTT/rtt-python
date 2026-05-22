@@ -11,7 +11,8 @@ from dataclasses import dataclass
 
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.dual import dual
-from rtt.math_utils import get_primes
+from rtt.generator_detempering import get_generator_detempering
+from rtt.math_utils import get_primes, pcv_to_quotient
 from rtt.temperament import Temperament, Variance
 
 Matrix = tuple[tuple[int, ...], ...]
@@ -52,6 +53,16 @@ def from_comma_basis(comma_basis) -> TemperamentState:
 def standard_primes(d: int) -> tuple[int, ...]:
     """The first ``d`` primes — the standard prime-limit domain basis (header labels)."""
     return get_primes(d)
+
+
+def generators(mapping) -> tuple[str, ...]:
+    """Each generator as an approximate ratio string, e.g. ``('2/1', '2/3')``."""
+    m = Temperament(_to_matrix(mapping), Variance.ROW)
+    ratios = []
+    for monzo in get_generator_detempering(m).matrix:
+        quotient = pcv_to_quotient(monzo)
+        ratios.append(f"{quotient.numerator}/{quotient.denominator}")
+    return tuple(ratios)
 
 
 def expand_domain(state: TemperamentState) -> TemperamentState:

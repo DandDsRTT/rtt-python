@@ -1,22 +1,21 @@
 """NiceGUI front end for the RTT monolith.
 
-The layout is a coordinate space (:mod:`rtt.web.layout`) of first-class line,
-block and cell entities with stable ids. The renderer is *persistent and
-reconciling*: it keeps one element per entity id and, on every state change,
-moves/updates the survivors and adds/removes the rest — never a full rebuild.
-With CSS transitions, expanding or shrinking the domain animates (axes slide,
-new ones fade in) instead of popping. Editing recomputes the dual in-process;
-no HTTP layer.
+The layout is the spreadsheet coordinate model (:mod:`rtt.web.spreadsheet`): rows
+are the temperament's quantities, columns the sets they're shown over, cells on
+shared prime/generator axes. The renderer is persistent and reconciling — one
+element per entity id, moved/updated on each state change rather than rebuilt —
+so rows/columns animate via CSS transitions. Editing the mapping recomputes
+in-process; domain expand/shrink and undo are available. No HTTP layer.
 """
 
 from __future__ import annotations
 
 from nicegui import ui
 
-from rtt.web import layout, service
+from rtt.web import spreadsheet
 from rtt.web.editor import Editor
 
-_PAD = 10  # px margin of #c0c0c0 around the coordinate space
+_PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 
 _CSS = f"""
@@ -45,7 +44,10 @@ _CSS = f"""
 
 .rtt-white {{ width:26px; height:26px; display:flex; align-items:center; justify-content:center;
              background:#fff; outline:1px solid #c8c8c8; color:#000; font-size:14px; }}
-.rtt-name {{ color:#444; font-size:11px; white-space:nowrap; }}
+.rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:nowrap; }}
+.rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
+                padding-right:8px; }}
+.rtt-genratio {{ font-size:14px; color:#000; }}
 .rtt-cellinput {{ width:26px !important; min-height:26px; }}
 .rtt-cellinput .q-field__control {{ width:26px !important; height:26px !important; min-height:26px !important;
             padding:0 !important; background:#fff; outline:1px solid #c8c8c8; }}
@@ -59,6 +61,8 @@ _CSS = f"""
 .rtt-btn .q-btn__content {{ color:#000 !important; font-size:15px;
            font-family:'Cambria',Georgia,serif; }}
 """
+
+_LABEL_KINDS = {"prime", "genratio", "colheader", "rowlabel"}
 
 
 def _parse_int(text):
@@ -76,31 +80,20 @@ def index() -> None:
 
     editor = Editor()
     els: dict = {}  # entity id -> outer element (persists across renders)
-    inputs: dict = {}  # cell id -> the q-input element
+    inputs: dict = {}  # mapping cell id -> q-input
+    labels: dict = {}  # cell id -> the label whose text tracks state
     building = [False]
     refs: dict = {}
-
-    def _gather(kind):
-        d, count = editor.state.d, len(editor.state.mapping if kind == "mapping" else editor.state.comma_basis)
-        key = (lambda i, p: f"cell:{kind}:{i}:{p}")
-        matrix = [[_parse_int(inputs[key(i, p)].value) for p in range(d)] for i in range(count)]
-        return None if any(v is None for row in matrix for v in row) else matrix
 
     def on_mapping_change():
         if building[0]:
             return
-        matrix = _gather("mapping")
-        if matrix is not None:
-            editor.edit_mapping(matrix)
-            render()
-
-    def on_comma_change():
-        if building[0]:
+        d, r = editor.state.d, len(editor.state.mapping)
+        matrix = [[_parse_int(inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
+        if any(v is None for row in matrix for v in row):
             return
-        matrix = _gather("comma")
-        if matrix is not None:
-            editor.edit_comma_basis(matrix)
-            render()
+        editor.edit_mapping(matrix)
+        render()
 
     def act(action):
         action()
@@ -109,28 +102,30 @@ def index() -> None:
     def _make_cell(cb):
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"')
         with wrap:
-            if cb.kind in ("mapping", "comma"):
-                handler = on_mapping_change if cb.kind == "mapping" else on_comma_change
-                inputs[cb.id] = ui.input(on_change=lambda e, fn=handler: fn()) \
+            if cb.kind == "mapping":
+                inputs[cb.id] = ui.input(on_change=lambda e: on_mapping_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "prime":
                 with ui.element("div").classes("rtt-white"):
-                    ui.label(cb.text)
+                    labels[cb.id] = ui.label(cb.text)
+            elif cb.kind == "genratio":
+                labels[cb.id] = ui.label(cb.text).classes("rtt-genratio")
+            elif cb.kind == "colheader":
+                labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
+            elif cb.kind == "rowlabel":
+                labels[cb.id] = ui.label(cb.text).classes("rtt-rowlabel")
             elif cb.kind == "minus":
                 refs["minus"] = ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
             elif cb.kind == "plus":
                 ui.button("+", on_click=lambda: act(editor.expand), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
-            elif cb.kind == "name":
-                ui.label(cb.text).classes("rtt-name")
         return wrap
 
     def render():
         building[0] = True
         st = editor.state
-        lay = layout.build_layout(st.d, len(st.mapping), len(st.comma_basis),
-                                  service.standard_primes(st.d))
+        lay = spreadsheet.build(st)
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
 
@@ -160,13 +155,14 @@ def index() -> None:
             els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
             if cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
-            elif cb.kind == "comma":
-                inputs[cb.id].value = str(st.comma_basis[cb.comma][cb.prime])
+            elif cb.kind in _LABEL_KINDS:
+                labels[cb.id].set_text(cb.text)
 
         for eid in [e for e in els if e not in seen]:
             els[eid].delete()
             del els[eid]
             inputs.pop(eid, None)
+            labels.pop(eid, None)
 
         if "minus" in refs:
             refs["minus"].set_enabled(editor.can_shrink)
