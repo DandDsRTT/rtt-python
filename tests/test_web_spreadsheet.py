@@ -51,12 +51,18 @@ def test_tuning_rows_over_primes_and_targets():
     assert cells["tuning:prime:2"].x == cells["cell:mapping:0:2"].x
 
 
-def test_shared_axes_are_first_class_lines():
+def test_shared_axes_and_branching():
     lay = _layout()
-    vids = {ln.id for ln in lay.lines if ln.orientation == "v"}
-    hids = {ln.id for ln in lay.lines if ln.orientation == "h"}
-    assert vids == {"v:prime:0", "v:prime:1", "v:prime:2", "v:target:0", "v:target:1", "v:target:2", "v:target:3"}
-    assert hids == {"h:gen:0", "h:gen:1", "h:tuning", "h:just", "h:retune", "h:damage"}
+    ids = {ln.id for ln in lay.lines}
+    assert {"v:prime:0", "v:prime:1", "v:prime:2"} <= ids  # per-prime axes
+    assert {"v:target:0", "v:target:1", "v:target:2", "v:target:3"} <= ids
+    assert {"h:gen:0", "h:gen:1", "h:tuning", "h:just", "h:retune", "h:damage"} <= ids
+    # each column header branches: a trunk down to a bus that fans into the verticals
+    assert {"trunk:primes", "trunk:targets", "trunk:gens", "bus:primes", "bus:targets"} <= ids
+    by_id = {ln.id: ln for ln in lay.lines}
+    cells = {c.id: c for c in lay.cells}
+    assert by_id["bus:primes"].pos < cells["prime:0"].y  # fan-out is ABOVE quantities
+    assert by_id["v:prime:0"].start == by_id["bus:primes"].pos  # verticals start at the fan-out
 
 
 def test_axis_ids_are_stable_across_expand():

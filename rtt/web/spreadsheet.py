@@ -44,7 +44,8 @@ def build(state) -> Layout:
     total_w = targets_x + k * COL_W + GAP
 
     header_y = 0
-    quant_y = HEADER_H + GAP
+    fanout_y = HEADER_H + GAP  # columns fan out into per-element lines here, above quantities
+    quant_y = HEADER_H + 2 * GAP
     map_y = quant_y + ROW_H + GAP
     tuning_y = map_y + r * ROW_H + GAP
     just_y = tuning_y + ROW_H + GAP
@@ -114,15 +115,31 @@ def build(state) -> Layout:
     for j, v in enumerate(tun.target_damage):  # damage is over the targets only
         cells.append(CellBox(f"damage:target:{j}", target_left(j), damage_y, COL_W, ROW_H, "tval", text=_cents(v)))
 
-    # shared axes
+    # shared axes, with each column header branching (above quantities) into one
+    # vertical line per element: a trunk from the node down to a bus, which fans
+    # into the per-element verticals that run down through the rows.
+    def fan(group_id, left_x, n, pitch_left):
+        centers = [pitch_left(i) for i in range(n)]
+        trunk_x = (centers[0] + centers[-1]) / 2
+        lines.append(Line(f"trunk:{group_id}", "v", trunk_x, HEADER_H, fanout_y - HEADER_H))
+        if n > 1:
+            lines.append(Line(f"bus:{group_id}", "h", fanout_y, centers[0], centers[-1] - centers[0]))
+
+    fan("primes", primes_x, d, lambda p: prime_left(p) + COL_W / 2)
     for p in range(d):
-        lines.append(Line(f"v:prime:{p}", "v", prime_left(p) + COL_W / 2, 0, total_h))
+        lines.append(Line(f"v:prime:{p}", "v", prime_left(p) + COL_W / 2, fanout_y, total_h - fanout_y))
+    fan("targets", targets_x, k, lambda j: target_left(j) + COL_W / 2)
     for j in range(k):
-        lines.append(Line(f"v:target:{j}", "v", target_left(j) + COL_W / 2, 0, total_h))
+        lines.append(Line(f"v:target:{j}", "v", target_left(j) + COL_W / 2, fanout_y, total_h - fanout_y))
+
+    # generators column: a trunk from its node down through the mapping rows, which
+    # branch off it as the horizontal generator lines.
+    gen_cx = gen_x + GEN_W / 2
+    lines.append(Line("trunk:gens", "v", gen_cx, HEADER_H, map_top(r - 1) + ROW_H / 2 - HEADER_H))
     for i in range(r):
-        lines.append(Line(f"h:gen:{i}", "h", map_top(i) + ROW_H / 2, 0, total_w))
+        lines.append(Line(f"h:gen:{i}", "h", map_top(i) + ROW_H / 2, gen_cx, total_w - gen_cx))
     for key, y in (("tuning", tuning_y), ("just", just_y), ("retune", retune_y), ("damage", damage_y)):
-        lines.append(Line(f"h:{key}", "h", y + ROW_H / 2, 0, total_w))
+        lines.append(Line(f"h:{key}", "h", y + ROW_H / 2, primes_x, total_w - primes_x))
 
     # #e0e0e0 panels behind each content group
     def block(bid, x, y, w, h):
