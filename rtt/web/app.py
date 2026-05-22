@@ -1,65 +1,63 @@
 """NiceGUI front end for the RTT monolith.
 
-Thin glue over :class:`rtt.web.editor.Editor`. The layout comes from
-:mod:`rtt.web.grid`, which reproduces the original app's coordinate grid (shared
-prime axis, #e0e0e0 padded blocks, #c0c0c0 margins, #e0e0e0 grid lines). Editing
-the mapping or comma basis recomputes the dual in-process; domain expand/shrink
-and undo are also available. No HTTP layer.
+The layout is a coordinate space (:mod:`rtt.web.layout`) of first-class line,
+block and cell entities with stable ids. The renderer is *persistent and
+reconciling*: it keeps one element per entity id and, on every state change,
+moves/updates the survivors and adds/removes the rest — never a full rebuild.
+With CSS transitions, expanding or shrinking the domain animates (axes slide,
+new ones fade in) instead of popping. Editing recomputes the dual in-process;
+no HTTP layer.
 """
 
 from __future__ import annotations
 
 from nicegui import ui
 
-from rtt.web import grid, service
+from rtt.web import layout, service
 from rtt.web.editor import Editor
 
-# The original app's styles (styles.scss), plus the title/undo and the input/button chrome.
-_CSS = """
-.rtt-title { font-family:'Cambria',Georgia,serif; font-size:30px; font-weight:bold;
-             color:#000; margin:6px 0 8px 2px; }
-.rtt-undo { width:100px !important; height:22px !important; min-height:22px !important;
+_PAD = 10  # px margin of #c0c0c0 around the coordinate space
+_T = "0.25s"  # transition duration
+
+_CSS = f"""
+.rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:30px; font-weight:bold;
+             color:#000; margin:6px 0 8px 2px; }}
+.rtt-undo {{ width:100px !important; height:22px !important; min-height:22px !important;
             background:#fff !important; border:1px solid #888 !important; border-radius:0 !important;
-            box-shadow:none !important; padding:0 !important; margin:0 0 10px 2px; }
-.rtt-undo .q-btn__content { color:#777 !important; font-size:14px;
-            font-family:'Cambria',Georgia,serif; }
+            box-shadow:none !important; padding:0 !important; margin:0 0 10px 2px; }}
+.rtt-undo .q-btn__content {{ color:#777 !important; font-size:14px;
+            font-family:'Cambria',Georgia,serif; }}
 
-.rtt-container { display:grid; background:#c0c0c0; padding:10px; width:max-content;
-                 font-family:'Cambria',Georgia,serif; }
-.square-box { width:30px; height:30px; display:flex; align-items:center; justify-content:center;
-              background:#e0e0e0; }
-.square-input { width:30px; height:30px; display:flex; align-items:center; justify-content:center;
-                background:#e0e0e0; }
-.corner-padding { background:#e0e0e0; width:100%; height:100%; min-width:10px; }
-.vertical-padding { min-height:10px; background:#e0e0e0; width:100%; height:100%; }
-.horizontal-padding { min-width:10px; background:#e0e0e0; height:100%; width:100%; }
-.corner-margin { background:#c0c0c0; width:100%; height:100%; }
-.vertical-margin { position:relative; background:#c0c0c0; width:100%; height:100%; }
-.horizontal-margin { position:relative; background:#c0c0c0; height:100%; width:100%; }
-.blank { background:#e0e0e0; width:100%; height:100%; }
-.empty-box-element { position:relative; height:100%; width:100%; }
-.box-name { z-index:10; background:#e0e0e0; text-align:center; width:100%; height:100%;
-            color:#444; font-size:11px; white-space:nowrap; overflow:visible;
-            display:flex; align-items:center; justify-content:center; }
-.grid-line-horizontal { position:absolute; top:50%; left:0; width:100%; height:0;
-            border-top:1px solid #e0e0e0; }
-.grid-line-vertical { position:absolute; left:50%; top:0; height:100%; width:0;
-            border-left:1px solid #e0e0e0; }
+.rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
+              font-family:'Cambria',Georgia,serif; }}
+.rtt-board {{ position:relative; transition:width {_T}, height {_T}; }}
+@keyframes rtt-in {{ from {{ opacity:0; }} to {{ opacity:1; }} }}
+.rtt-line, .rtt-block, .rtt-cell {{ animation:rtt-in {_T} ease; }}
 
-.rtt-whitebox { width:26px; height:26px; display:flex; align-items:center; justify-content:center;
-                background:#fff; outline:1px solid #c8c8c8; color:#000; font-size:14px; }
-.rtt-cell { width:26px !important; min-height:26px; }
-.rtt-cell .q-field__control { width:26px !important; height:26px !important; min-height:26px !important;
-            padding:0 !important; background:#fff; outline:1px solid #c8c8c8; }
-.rtt-cell .q-field__control::before, .rtt-cell .q-field__control::after { display:none !important; }
-.rtt-cell .q-field__native { text-align:center; padding:0 !important; color:#000; font-size:14px;
-            min-height:26px; font-family:'Cambria',Georgia,serif; }
-.rtt-cell .q-field__bottom, .rtt-cell .q-field__marginal { display:none !important; }
-.rtt-btn { width:20px !important; min-width:20px !important; height:20px !important;
+.rtt-line {{ position:absolute; z-index:1; opacity:1; transition:left {_T}, top {_T},
+            width {_T}, height {_T}, opacity {_T}; }}
+.rtt-line-v {{ border-left:1px solid #e0e0e0; width:0; }}
+.rtt-line-h {{ border-top:1px solid #e0e0e0; height:0; }}
+.rtt-block {{ position:absolute; z-index:2; background:#e0e0e0; opacity:1;
+             transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
+.rtt-cell {{ position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
+            opacity:1; transition:left {_T}, top {_T}, opacity {_T}; }}
+
+.rtt-white {{ width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+             background:#fff; outline:1px solid #c8c8c8; color:#000; font-size:14px; }}
+.rtt-name {{ color:#444; font-size:11px; white-space:nowrap; }}
+.rtt-cellinput {{ width:26px !important; min-height:26px; }}
+.rtt-cellinput .q-field__control {{ width:26px !important; height:26px !important; min-height:26px !important;
+            padding:0 !important; background:#fff; outline:1px solid #c8c8c8; }}
+.rtt-cellinput .q-field__control::before, .rtt-cellinput .q-field__control::after {{ display:none !important; }}
+.rtt-cellinput .q-field__native {{ text-align:center; padding:0 !important; color:#000; font-size:14px;
+            min-height:26px; font-family:'Cambria',Georgia,serif; }}
+.rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal {{ display:none !important; }}
+.rtt-btn {{ width:20px !important; min-width:20px !important; height:20px !important;
            min-height:20px !important; background:#fff !important; border:1px solid #888 !important;
-           border-radius:0 !important; padding:0 !important; box-shadow:none !important; }
-.rtt-btn .q-btn__content { color:#000 !important; font-size:15px;
-           font-family:'Cambria',Georgia,serif; }
+           border-radius:0 !important; padding:0 !important; box-shadow:none !important; }}
+.rtt-btn .q-btn__content {{ color:#000 !important; font-size:15px;
+           font-family:'Cambria',Georgia,serif; }}
 """
 
 
@@ -77,115 +75,110 @@ def index() -> None:
     ui.query("body").style("background:#fff")
 
     editor = Editor()
-    mapping_inputs: dict = {}  # (gen, prime) -> input
-    comma_inputs: dict = {}  # (comma, prime) -> input
+    els: dict = {}  # entity id -> outer element (persists across renders)
+    inputs: dict = {}  # cell id -> the q-input element
     building = [False]
     refs: dict = {}
 
-    def _matrix(inputs, rows, cols):
-        matrix = [[_parse_int(inputs[(r, c)].value) for c in range(cols)] for r in range(rows)]
-        if any(v is None for row in matrix for v in row):
-            return None
-        return matrix
-
-    def _shape(state):
-        return (state.d, len(state.mapping), len(state.comma_basis))
-
-    def _sync_undo():
-        refs["undo"].set_enabled(editor.can_undo)
+    def _gather(kind):
+        d, count = editor.state.d, len(editor.state.mapping if kind == "mapping" else editor.state.comma_basis)
+        key = (lambda i, p: f"cell:{kind}:{i}:{p}")
+        matrix = [[_parse_int(inputs[key(i, p)].value) for p in range(d)] for i in range(count)]
+        return None if any(v is None for row in matrix for v in row) else matrix
 
     def on_mapping_change():
         if building[0]:
             return
-        matrix = _matrix(mapping_inputs, len(editor.state.mapping), editor.state.d)
-        if matrix is None:
-            return
-        before = _shape(editor.state)
-        editor.edit_mapping(matrix)
-        _sync_undo()
-        if _shape(editor.state) == before:
-            building[0] = True
-            for (comma, prime), inp in comma_inputs.items():
-                inp.value = str(editor.state.comma_basis[comma][prime])
-            building[0] = False
-        else:
-            board.refresh()
+        matrix = _gather("mapping")
+        if matrix is not None:
+            editor.edit_mapping(matrix)
+            render()
 
     def on_comma_change():
         if building[0]:
             return
-        matrix = _matrix(comma_inputs, len(editor.state.comma_basis), editor.state.d)
-        if matrix is None:
-            return
-        before = _shape(editor.state)
-        editor.edit_comma_basis(matrix)
-        _sync_undo()
-        if _shape(editor.state) == before:
-            building[0] = True
-            for (gen, prime), inp in mapping_inputs.items():
-                inp.value = str(editor.state.mapping[gen][prime])
-            building[0] = False
-        else:
-            board.refresh()
+        matrix = _gather("comma")
+        if matrix is not None:
+            editor.edit_comma_basis(matrix)
+            render()
 
     def act(action):
         action()
-        board.refresh()
-        _sync_undo()
+        render()
 
-    def _render_cell(cell, state):
-        style = f"grid-row:{cell.row}; grid-column:{cell.col} / span {cell.colspan}"
-        with ui.element("div").classes(cell.css).style(style):
-            if cell.hline:
-                ui.element("div").classes("grid-line-horizontal")
-            if cell.vline:
-                ui.element("div").classes("grid-line-vertical")
-            if cell.kind == "prime":
-                with ui.element("div").classes("rtt-whitebox"):
-                    ui.label(cell.text)
-            elif cell.kind == "mapping":
-                mapping_inputs[(cell.gen, cell.prime)] = ui.input(
-                    value=str(state.mapping[cell.gen][cell.prime]),
-                    on_change=lambda e: on_mapping_change(),
-                ).props("dense borderless").classes("rtt-cell")
-            elif cell.kind == "comma":
-                comma_inputs[(cell.comma, cell.prime)] = ui.input(
-                    value=str(state.comma_basis[cell.comma][cell.prime]),
-                    on_change=lambda e: on_comma_change(),
-                ).props("dense borderless").classes("rtt-cell")
-            elif cell.kind == "minus":
-                btn = ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
+    def _make_cell(cb):
+        wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"')
+        with wrap:
+            if cb.kind in ("mapping", "comma"):
+                handler = on_mapping_change if cb.kind == "mapping" else on_comma_change
+                inputs[cb.id] = ui.input(on_change=lambda e, fn=handler: fn()) \
+                    .props("dense borderless").classes("rtt-cellinput")
+            elif cb.kind == "prime":
+                with ui.element("div").classes("rtt-white"):
+                    ui.label(cb.text)
+            elif cb.kind == "minus":
+                refs["minus"] = ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
-                btn.set_enabled(editor.can_shrink)
-            elif cell.kind == "plus":
+            elif cb.kind == "plus":
                 ui.button("+", on_click=lambda: act(editor.expand), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
-            elif cell.kind == "name":
-                ui.label(cell.text)
+            elif cb.kind == "name":
+                ui.label(cb.text).classes("rtt-name")
+        return wrap
 
-    @ui.refreshable
-    def board():
+    def render():
         building[0] = True
-        mapping_inputs.clear()
-        comma_inputs.clear()
-        state = editor.state
-        primes = service.standard_primes(state.d)
-        cells = grid.build(state.d, len(state.mapping), len(state.comma_basis), primes)
-        cols, rows = grid.track_sizes(cells)
-        template = (
-            f"grid-template-columns:{' '.join(f'{w}px' for w in cols)};"
-            f"grid-template-rows:{' '.join(f'{h}px' for h in rows)};"
-        )
-        with ui.element("div").classes("rtt-container").style(template):
-            for cell in cells:
-                _render_cell(cell, state)
+        st = editor.state
+        lay = layout.build_layout(st.d, len(st.mapping), len(st.comma_basis),
+                                  service.standard_primes(st.d))
+        board.style(f"width:{lay.width}px; height:{lay.height}px")
+        seen = set()
+
+        for ln in lay.lines:
+            seen.add(ln.id)
+            if ln.id not in els:
+                with board:
+                    cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
+                    els[ln.id] = ui.element("div").classes(cls).props(f'data-eid="{ln.id}"')
+            if ln.orientation == "v":
+                els[ln.id].style(f"left:{ln.pos}px; top:{ln.start}px; height:{ln.length}px")
+            else:
+                els[ln.id].style(f"top:{ln.pos}px; left:{ln.start}px; width:{ln.length}px")
+
+        for bl in lay.blocks:
+            seen.add(bl.id)
+            if bl.id not in els:
+                with board:
+                    els[bl.id] = ui.element("div").classes("rtt-block").props(f'data-eid="{bl.id}"')
+            els[bl.id].style(f"left:{bl.x}px; top:{bl.y}px; width:{bl.w}px; height:{bl.h}px")
+
+        for cb in lay.cells:
+            seen.add(cb.id)
+            if cb.id not in els:
+                with board:
+                    els[cb.id] = _make_cell(cb)
+            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
+            if cb.kind == "mapping":
+                inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
+            elif cb.kind == "comma":
+                inputs[cb.id].value = str(st.comma_basis[cb.comma][cb.prime])
+
+        for eid in [e for e in els if e not in seen]:
+            els[eid].delete()
+            del els[eid]
+            inputs.pop(eid, None)
+
+        if "minus" in refs:
+            refs["minus"].set_enabled(editor.can_shrink)
+        refs["undo"].set_enabled(editor.can_undo)
         building[0] = False
 
     ui.label("RTT App").classes("rtt-title")
     refs["undo"] = ui.button("undo", on_click=lambda: act(editor.undo), color=None) \
         .props("no-caps unelevated square").classes("rtt-undo")
-    refs["undo"].set_enabled(editor.can_undo)
-    board()
+    with ui.element("div").classes("rtt-outer"):
+        board = ui.element("div").classes("rtt-board")
+    render()
 
 
 def main() -> None:

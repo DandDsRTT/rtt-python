@@ -142,7 +142,7 @@ def _interactive_cell(component, rtype, ctype, g_row, g_col, row, col, d, n, pri
     gridded = rtype == "gridded" and g_col >= 0
     if component == "header":
         if gridded:
-            return Cell(row, col, "square-input", "prime", text=str(primes[g_col]))
+            return Cell(row, col, "square-input", "prime", text=str(primes[g_col]), prime=g_col)
         return Cell(row, col, "blank")
     if component == "mapping":
         if gridded:
