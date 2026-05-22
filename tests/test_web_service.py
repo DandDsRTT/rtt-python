@@ -51,3 +51,23 @@ def test_full_rank_mapping_has_zero_comma_and_zero_nullity():
 def test_standard_primes_gives_the_domain_basis_header():
     assert service.standard_primes(3) == (2, 3, 5)
     assert service.standard_primes(5) == (2, 3, 5, 7, 11)
+
+
+def test_generators_as_ratios():
+    assert service.generators([[1, 1, 0], [0, 1, 4]]) == ("2/1", "3/2")
+
+
+def test_mapped_target_intervals():
+    mapped = service.mapped_target_intervals([[1, 1, 0], [0, 1, 4]], ("2/1", "3/2", "5/4", "6/5"))
+    assert mapped == ((1, 0, -2, 2), (0, 1, 4, -3))
+
+
+def test_tuning_values_under_top():
+    import pytest
+
+    t = service.tuning([[1, 1, 0], [0, 1, 4]], service.DEFAULT_TARGET_INTERVALS)
+    assert t.tuning_map == pytest.approx((1201.699, 1899.263, 2790.258), abs=1e-2)
+    assert t.just_map == pytest.approx((1200.0, 1901.955, 2786.314), abs=1e-2)
+    assert t.retuning_map == pytest.approx((1.699, -2.692, 3.944), abs=1e-2)
+    assert t.target_damage == pytest.approx((1.699, 4.391, 0.547, 4.937), abs=1e-2)
+    assert all(d >= 0 for d in t.target_damage)  # damage is non-negative

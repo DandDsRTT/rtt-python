@@ -15,10 +15,28 @@ from rtt.generator_detempering import get_generator_detempering
 from rtt.math_utils import get_primes, pcv_to_quotient
 from rtt.parsing import parse_quotient_list
 from rtt.temperament import Temperament, Variance
+from rtt.tuning import (
+    get_just_tuning_map,
+    optimize_generator_tuning_map,
+    optimize_tuning_map,
+)
 
 Matrix = tuple[tuple[int, ...], ...]
 
 DEFAULT_TARGET_INTERVALS = ("2/1", "3/2", "5/4", "6/5")
+DEFAULT_TUNING_SCHEME = "TOP"
+
+
+@dataclass(frozen=True)
+class Tuning:
+    generator_map: tuple[float, ...]  # cents, over the generators
+    tuning_map: tuple[float, ...]  # cents, over the domain primes
+    just_map: tuple[float, ...]  # cents, over the domain primes
+    retuning_map: tuple[float, ...]  # tempered - just, over the primes
+    tempered_targets: tuple[float, ...]  # cents, over the target intervals
+    just_targets: tuple[float, ...]  # cents, over the target intervals
+    target_errors: tuple[float, ...]  # tempered - just, over the targets
+    target_damage: tuple[float, ...]  # |error| (unity weight), over the targets
 
 
 @dataclass(frozen=True)
@@ -76,6 +94,32 @@ def mapped_target_intervals(mapping, ratios) -> Matrix:
     return tuple(
         tuple(sum(mapping[i][p] * monzo[p] for p in range(d)) for monzo in monzos)
         for i in range(len(mapping))
+    )
+
+
+def tuning(mapping, ratios, scheme: str = DEFAULT_TUNING_SCHEME) -> Tuning:
+    """All tuning-row values (cents) for the temperament under ``scheme``."""
+    t = Temperament(_to_matrix(mapping), Variance.ROW)
+    d = get_d(t)
+    tempered = optimize_tuning_map(t, scheme)
+    just = get_just_tuning_map(t)
+    monzos = parse_quotient_list("{" + ", ".join(ratios) + "}", d)
+
+    def over(prime_map, monzo):
+        return sum(prime_map[p] * monzo[p] for p in range(d))
+
+    tempered_targets = tuple(over(tempered, m) for m in monzos)
+    just_targets = tuple(over(just, m) for m in monzos)
+    errors = tuple(t_ - j for t_, j in zip(tempered_targets, just_targets))
+    return Tuning(
+        generator_map=optimize_generator_tuning_map(t, scheme),
+        tuning_map=tempered,
+        just_map=just,
+        retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
+        tempered_targets=tempered_targets,
+        just_targets=just_targets,
+        target_errors=errors,
+        target_damage=tuple(abs(e) for e in errors),
     )
 
 
