@@ -64,6 +64,10 @@ _CSS = f"""
 .rtt-btn .q-btn__content {{ color:#000 !important; font-size:15px;
            font-family:'Cambria',Georgia,serif; }}
 
+.rtt-toggle {{ width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+              font-size:10px; line-height:1; color:#666; background:#fff; border:1px solid #aaa;
+              cursor:pointer; user-select:none; }}
+.rtt-toggle:hover {{ background:#ececec; color:#000; }}
 .rtt-gear {{ width:26px !important; min-width:26px !important; height:26px !important;
             min-height:26px !important; padding:0 !important; box-shadow:none !important; }}
 .rtt-gear .q-icon {{ color:#777 !important; font-size:20px; }}
@@ -76,7 +80,8 @@ _CSS = f"""
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
 """
 
-_LABEL_KINDS = {"prime", "genratio", "colheader", "rowlabel", "target", "mapped", "tval"}
+_LABEL_KINDS = {"prime", "genratio", "colheader", "rowlabel", "target", "mapped", "tval",
+                "rowtoggle", "coltoggle"}
 
 
 def _parse_int(text):
@@ -94,6 +99,7 @@ def index() -> None:
 
     editor = Editor()
     settings = show_settings.defaults()  # which parts of the grid are visible
+    collapsed: set = set()  # ids of individually folded rows/columns ("row:tuning")
     els: dict = {}  # entity id -> outer element (persists across renders)
     inputs: dict = {}  # mapping cell id -> q-input
     labels: dict = {}  # cell id -> the label whose text tracks state
@@ -118,6 +124,10 @@ def index() -> None:
         settings[key] = value
         render()  # the reconciling renderer animates the affected rows/columns in or out
 
+    def on_toggle(item):  # fold/unfold one row or column ("row:tuning", "col:targets")
+        collapsed.discard(item) if item in collapsed else collapsed.add(item)
+        render()
+
     def _make_cell(cb):
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"')
         with wrap:
@@ -137,6 +147,10 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-rowlabel")
+            elif cb.kind in ("rowtoggle", "coltoggle"):
+                item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets"
+                labels[cb.id] = ui.label(cb.text).classes("rtt-toggle")
+                wrap.on("click", lambda _=None, it=item: on_toggle(it))
             elif cb.kind == "minus":
                 refs["minus"] = ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
@@ -148,7 +162,7 @@ def index() -> None:
     def render():
         building[0] = True
         st = editor.state
-        lay = spreadsheet.build(st, settings)
+        lay = spreadsheet.build(st, settings, collapsed)
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
 

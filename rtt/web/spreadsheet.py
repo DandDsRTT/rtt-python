@@ -134,7 +134,8 @@ def build(state, settings=None, collapsed=None) -> Layout:
             cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=col_header[key]))
             if col_collapsible[key]:
                 glyph = "+" if f"col:{key}" in collapsed else "×"
-                cells.append(CellBox(f"toggle:col:{key}", col_x[key] + 1, header_y + (HEADER_H - TOGGLE) / 2, TOGGLE, TOGGLE, "coltoggle", text=glyph))
+                tx = col_x[key] + (col_w[key] - TOGGLE) / 2  # centered under the header text
+                cells.append(CellBox(f"toggle:col:{key}", tx, HEADER_H + (GAP - TOGGLE) / 2, TOGGLE, TOGGLE, "coltoggle", text=glyph))
 
     # row labels (every present row; a collapsed row keeps its label as the
     # strip) plus a fold toggle in the gutter for the collapsible ones
