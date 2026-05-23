@@ -76,9 +76,10 @@ def build(state, settings=None, collapsed=None) -> Layout:
     )
     # A fold-toggle node column sits between the row-label gutter and the content
     # (when names show); content starts past it with a clear gap so the tiles
-    # never collide with the nodes. The horizontal row lines anchor at node_cx.
+    # never collide with the nodes. Row lines fan from the node's right edge so
+    # their gaps match the columns'.
     node_x = label_w + GAP
-    node_cx = node_x + TOGGLE / 2
+    node_edge = node_x + TOGGLE  # the node's content-facing (right) edge
     content_x0 = node_x + TOGGLE + GAP if show_names else label_w + GAP
 
     col_x, col_w, col_collapsible = {}, {}, {}
@@ -109,10 +110,11 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # Branching (trunk/bus/verticals) starts just below the column nodes so no
     # line pokes up past them; with names hidden it starts at the very top.
     branch_top_y = col_node_y + TOGGLE if show_names else header_y
-    quant_y = header_h + 2 * GAP
-    # the bus that joins a column's per-element verticals sits midway between the
-    # node's centre and the first cell (visually balanced, not hugging either)
-    fanout_y = (col_node_y + TOGGLE / 2 + quant_y) / 2 if show_names else header_y + GAP
+    # Every axis fans with equal GAP/2 gaps at both ends: node-edge -> bus is the
+    # same as bus -> first cell (and mirrored at the far end), so all four fan
+    # lengths match. Hence the node-edge-to-first-cell distance is exactly GAP.
+    fanout_y = branch_top_y + GAP / 2
+    quant_y = branch_top_y + GAP
 
     # Row bands top-to-bottom: (key, natural height, present, collapsible, label),
     # laid out by the same running-cursor rule as the columns. The spine
@@ -256,19 +258,19 @@ def build(state, settings=None, collapsed=None) -> Layout:
         folded = "row:mapping" in collapsed
         cy = row_y["mapping"] + row_h["mapping"] / 2
         ys = [cy] * r if folded else [map_top(i) + ROW_H / 2 for i in range(r)]
-        left_bus_x = (node_cx + gen_x) / 2 if (show_names and r > 1 and not folded) else (node_cx if show_names else gen_cx)
+        left_bus_x = node_edge + GAP / 2 if (show_names and r > 1 and not folded) else (node_edge if show_names else gen_cx)
         for i in range(r):
             lines.append(Line(f"h:gen:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x))
         lines.append(Line("vbar:mapping:left", "v", left_bus_x, ys[0], ys[-1] - ys[0]))
         lines.append(Line("vbar:mapping:right", "v", right_bus_x, ys[0], ys[-1] - ys[0]))
-        lines.append(Line("trunk:mapping", "h", cy, node_cx, left_bus_x - node_cx))
+        lines.append(Line("trunk:mapping", "h", cy, node_edge, left_bus_x - node_edge))
         lines.append(Line("foot:mapping", "h", cy, right_bus_x, total_w - right_bus_x))
 
     # tuning-family rows are each a single line (no sub-rows), present or collapsed
     for key in ("tuning", "just", "retune", "damage"):
         if key not in row_y:
             continue
-        x0 = node_cx if show_names else primes_x
+        x0 = node_edge if show_names else primes_x
         lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, x0, total_w - x0))
 
     # #e0e0e0 panels behind each content group. A panel folds to zero size along
