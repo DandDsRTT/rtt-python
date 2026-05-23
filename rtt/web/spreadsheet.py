@@ -25,10 +25,25 @@ GEN_W = 50  # generators column width
 CTRL_W = 52  # domain shrink/expand (-/+) control gutter, right of the primes block
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
+CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
 BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 VEC_BRACKETS = ("[", "⟩")  # [ … ⟩ for vectors (monzos)
 LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
+
+# Quantity-name captions shown inside each (row, column) tile when names are on.
+CAPTIONS = {
+    ("mapping", "primes"): "(temperament) mapping",
+    ("mapping", "targets"): "mapped target-interval list",
+    ("tuning", "primes"): "tuning map",
+    ("tuning", "targets"): "tempered target-interval size list",
+    ("just", "primes"): "just tuning map",
+    ("just", "targets"): "(just) target-interval size list",
+    ("retune", "primes"): "retuning map",
+    ("retune", "targets"): "target-interval error list",
+    ("damage", "targets"): "target-interval damage list",
+}
+CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 
 
 def _cents(value) -> str:
@@ -51,13 +66,12 @@ def build(state, settings=None, collapsed=None) -> Layout:
     if settings is None:
         settings = _default_settings()
     collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
-    show_names = settings["names"]
+    show_captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
-    # The row-label gutter and column-header band collapse to nothing when names
-    # are hidden, so the values slide into the freed margin instead of leaving one.
-    label_w = LABEL_W if show_names else 0
-    header_h = HEADER_H if show_names else 0
+    # Row labels and column headers (and their gutters) are always present.
+    label_w = LABEL_W
+    header_h = HEADER_H
     d = state.d
     r = len(state.mapping)
     primes = service.standard_primes(d)
@@ -86,7 +100,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # their gaps match the columns'.
     node_x = label_w + GAP
     node_edge = node_x + TOGGLE  # the node's content-facing (right) edge
-    content_x0 = node_x + TOGGLE + GAP if show_names else label_w + GAP
+    content_x0 = node_x + TOGGLE + GAP
 
     col_x, col_w, col_collapsible = {}, {}, {}
     ctrl_x = None
@@ -115,7 +129,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
     col_node_y = header_h + (GAP - TOGGLE) / 2  # the column toggle sits just under the header text
     # Branching (trunk/bus/verticals) starts just below the column nodes so no
     # line pokes up past them; with names hidden it starts at the very top.
-    branch_top_y = col_node_y + TOGGLE if show_names else header_y
+    branch_top_y = col_node_y + TOGGLE
     quant_y = branch_top_y + GAP
     # The grey tiles overhang their cells by PAD and sit over the gridlines, so the
     # *visible* fan segment runs from the bus only to the tile edge. Put each bus
@@ -135,7 +149,9 @@ def build(state, settings=None, collapsed=None) -> Layout:
         ("retune", ROW_H, show_tuning, True, "retuning"),
         ("damage", ROW_H, show_tuning, True, "damage"),
     )
-    row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
+    # row_h is the value (cell/gridline) height; tile_h adds the in-tile caption
+    # band below it when captions are shown, so the grey tile grows to hold them.
+    row_y, row_h, row_label, row_collapsible, tile_h = {}, {}, {}, {}, {}
     y = quant_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
@@ -144,7 +160,9 @@ def build(state, settings=None, collapsed=None) -> Layout:
         row_h[key] = STRIP if f"row:{key}" in collapsed else natural
         row_label[key] = label
         row_collapsible[key] = collapsible
-        y += row_h[key] + GAP
+        captioned = show_captions and key in CAPTIONED_ROWS and f"row:{key}" not in collapsed
+        tile_h[key] = row_h[key] + (CAPTION_H if captioned else 0)
+        y += tile_h[key] + GAP
     total_h = y
 
     def row_open(key):
@@ -163,25 +181,23 @@ def build(state, settings=None, collapsed=None) -> Layout:
     lines: list[Line] = []
     blocks: list[Block] = []
 
-    # column headers (every present column keeps its title, even collapsed) plus a
+    # column headers (always shown; a collapsed column keeps its title) plus a
     # fold toggle in the header band for collapsible ones
-    if show_names:
-        for key in col_x:
-            cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=col_header[key]))
-            if col_collapsible[key]:
-                glyph = _fold_glyph(f"col:{key}" in collapsed)
-                tx = col_x[key] + (col_w[key] - TOGGLE) / 2  # centered under the header text
-                cells.append(CellBox(f"toggle:col:{key}", tx, col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
+    for key in col_x:
+        cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=col_header[key]))
+        if col_collapsible[key]:
+            glyph = _fold_glyph(f"col:{key}" in collapsed)
+            tx = col_x[key] + (col_w[key] - TOGGLE) / 2  # centered under the header text
+            cells.append(CellBox(f"toggle:col:{key}", tx, col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
 
-    # row labels (every present row; a collapsed row keeps its label as the
-    # strip) plus a fold toggle in the gutter for the collapsible ones
-    if show_names:
-        for key in row_y:
-            cells.append(CellBox(f"label:{key}", 0, row_y[key], LABEL_W, row_h[key], "rowlabel", text=row_label[key]))
-            if row_collapsible[key]:
-                glyph = _fold_glyph(f"row:{key}" in collapsed)
-                ty = row_y[key] + (row_h[key] - TOGGLE) / 2
-                cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
+    # row labels (always shown; a collapsed row keeps its label as the strip)
+    # plus a fold toggle in the gutter for the collapsible ones
+    for key in row_y:
+        cells.append(CellBox(f"label:{key}", 0, row_y[key], LABEL_W, row_h[key], "rowlabel", text=row_label[key]))
+        if row_collapsible[key]:
+            glyph = _fold_glyph(f"row:{key}" in collapsed)
+            ty = row_y[key] + (row_h[key] - TOGGLE) / 2
+            cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
 
     # quantities row: domain primes (+ controls) and target ratios
     if col_open("primes"):
@@ -288,7 +304,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         folded = "row:mapping" in collapsed
         cy = row_y["mapping"] + row_h["mapping"] / 2
         ys = [cy] * r if folded else [map_top(i) + ROW_H / 2 for i in range(r)]
-        left_bus_x = node_edge + FAN if (show_names and r > 1 and not folded) else (node_edge if show_names else gen_cx)
+        left_bus_x = node_edge + FAN if (r > 1 and not folded) else node_edge
         for i in range(r):
             lines.append(Line(f"h:gen:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x))
         lines.append(Line("vbar:mapping:left", "v", left_bus_x, ys[0], ys[-1] - ys[0]))
@@ -300,8 +316,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
     for key in ("tuning", "just", "retune", "damage"):
         if key not in row_y:
             continue
-        x0 = node_edge if show_names else primes_x
-        lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, x0, total_w - x0))
+        lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge))
 
     # #e0e0e0 panels behind each content group. A panel folds to zero size along
     # any collapsed axis (collapsing toward the band centre), so the renderer
@@ -311,7 +326,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         if ckey not in col_x or rkey not in row_y:
             return
         col_c, row_c = f"col:{ckey}" in collapsed, f"row:{rkey}" in collapsed
-        cw, ch, cx, cy = col_w[ckey], row_h[rkey], col_x[ckey], row_y[rkey]
+        cw, ch, cx, cy = col_w[ckey], tile_h[rkey], col_x[ckey], row_y[rkey]
         w, px = (0, 0) if col_c else (cw, PAD)
         h, py = (0, 0) if row_c else (ch, PAD)
         bx = cx + cw / 2 if col_c else cx
@@ -327,5 +342,12 @@ def build(state, settings=None, collapsed=None) -> Layout:
         panel(f"block:{key}:primes", "primes", key)
         panel(f"block:{key}:targets", "targets", key)
     panel("block:damage:targets", "targets", "damage")
+
+    # quantity-name captions inside each tile (below its values), toggled by names
+    if show_captions:
+        for (rkey, ckey), text in CAPTIONS.items():
+            if row_open(rkey) and col_open(ckey):
+                cy = row_y[rkey] + row_h[rkey]
+                cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H, "caption", text=text))
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))

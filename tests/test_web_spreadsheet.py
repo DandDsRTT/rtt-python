@@ -196,9 +196,12 @@ def test_the_row_fold_node_clears_the_first_content_tile():
     assert node.x + node.w <= gens_block.x  # the node does not collide with the tile
 
 
-def test_names_off_hides_labels_and_headers_and_collapses_their_space():
+def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
+    on = {c.id: c for c in _with(names=True).cells}
     off = {c.id: c for c in _with(names=False).cells}
-    on = {c.id: c for c in _with().cells}
-    assert not any(c.startswith(("label:", "header:")) for c in off)
-    assert off["prime:0"].x < on["prime:0"].x  # the label gutter collapses, content shifts left
-    assert off["prime:0"].y < on["prime:0"].y  # the header band collapses, content rises
+    # row labels and column headers are always present, independent of names
+    assert {"label:mapping", "header:primes"} <= set(on)
+    assert {"label:mapping", "header:primes"} <= set(off)
+    # the in-tile quantity captions appear only when names is on
+    assert on["caption:mapping:primes"].text == "(temperament) mapping"
+    assert not any(c.startswith("caption:") for c in off)

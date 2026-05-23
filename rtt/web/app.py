@@ -51,6 +51,8 @@ _CSS = f"""
 .rtt-val {{ font-size:14px; color:#000; }}
 .rtt-bracket {{ display:flex; align-items:center; justify-content:center; width:100%; height:100%;
                line-height:0.8; color:#000; font-family:'Cambria',Georgia,serif; }}
+.rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
+               font-family:'Cambria',Georgia,serif; font-style:italic; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
 .rtt-approx {{ font-size:13px; align-self:center; }}
@@ -179,6 +181,8 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "bracket":
                 ui.label(cb.text).classes("rtt-bracket")
+            elif cb.kind == "caption":
+                ui.label(cb.text).classes("rtt-caption")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):
