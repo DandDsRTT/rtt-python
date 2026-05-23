@@ -110,11 +110,13 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # Branching (trunk/bus/verticals) starts just below the column nodes so no
     # line pokes up past them; with names hidden it starts at the very top.
     branch_top_y = col_node_y + TOGGLE if show_names else header_y
-    # Every axis fans with equal GAP/2 gaps at both ends: node-edge -> bus is the
-    # same as bus -> first cell (and mirrored at the far end), so all four fan
-    # lengths match. Hence the node-edge-to-first-cell distance is exactly GAP.
-    fanout_y = branch_top_y + GAP / 2
     quant_y = branch_top_y + GAP
+    # The grey tiles overhang their cells by PAD and sit over the gridlines, so the
+    # *visible* fan segment runs from the bus only to the tile edge. Put each bus
+    # midway between the node/foot edge and the tile edge (PAD inside the cell), so
+    # the inner (bus->tile) and outer (node->bus) segments are equal: (GAP-PAD)/2.
+    FAN = (GAP - PAD) / 2
+    fanout_y = branch_top_y + FAN
 
     # Row bands top-to-bottom: (key, natural height, present, collapsible, label),
     # laid out by the same running-cursor rule as the columns. The spine
@@ -227,7 +229,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # both ends, bulging through the middle. Collapsing converges the per-element
     # lines onto the centre and shrinks both buses to nothing, so the renderer
     # animates the merge into a single straight gridline.
-    bot_bus_y = total_h - GAP / 2
+    bot_bus_y = total_h - FAN
 
     def column_axis(key, prefix, n, center_open):
         if key not in col_x:
@@ -253,12 +255,12 @@ def build(state, settings=None, collapsed=None) -> Layout:
 
     # mapping rows: the horizontal mirror of a column axis — fan out at the node
     # into one line per generator, fan back in on the right to a foot past the data.
-    right_bus_x = total_w - GAP / 2
+    right_bus_x = total_w - FAN
     if "mapping" in row_y:
         folded = "row:mapping" in collapsed
         cy = row_y["mapping"] + row_h["mapping"] / 2
         ys = [cy] * r if folded else [map_top(i) + ROW_H / 2 for i in range(r)]
-        left_bus_x = node_edge + GAP / 2 if (show_names and r > 1 and not folded) else (node_edge if show_names else gen_cx)
+        left_bus_x = node_edge + FAN if (show_names and r > 1 and not folded) else (node_edge if show_names else gen_cx)
         for i in range(r):
             lines.append(Line(f"h:gen:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x))
         lines.append(Line("vbar:mapping:left", "v", left_bus_x, ys[0], ys[-1] - ys[0]))
