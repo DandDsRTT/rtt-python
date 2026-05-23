@@ -190,6 +190,18 @@ def test_the_mapping_matrix_is_framed_top_and_bottom():
     assert {"ebktop:mapped:0", "ebkbrace:mapped:0"} <= set(cells)
 
 
+def test_mapped_list_rules_its_monzo_columns_apart_clear_of_the_marks():
+    cells = {c.id: c for c in _layout().cells}
+    # the mapped target-interval list separates its monzo columns with vertical
+    # bars, and the per-column top/bottom marks are inset so they never touch one
+    assert "sep:mapped:1" in cells  # a bar between columns 0 and 1
+    sep, first = cells["sep:mapped:1"], cells["cell:mapped:0:0"]
+    top0, brace0 = cells["ebktop:mapped:0"], cells["ebkbrace:mapped:0"]
+    assert top0.w < spreadsheet.COL_W and brace0.w < spreadsheet.COL_W  # inset, not full column
+    assert top0.x + top0.w < sep.x  # the mark stops short of the bar to its right
+    assert sep.y == first.y and sep.h == cells["cell:mapped:1:0"].y + cells["cell:mapped:1:0"].h - first.y
+
+
 def test_maps_get_angle_brackets_and_lists_get_square_brackets():
     cells = {c.id: c for c in _layout().cells}
     # each mapping row is a map: ⟨ … ] (one bracket pair per generator)

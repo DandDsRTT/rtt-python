@@ -30,6 +30,8 @@ FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-tic
 BRACE_H = 14  # height of a matrix's bottom curly-brace band (taller, room for the spike)
 FRAME_GAP = 5  # gap between a framing band and the matrix cells, so they don't merge
 BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
+MARK_INSET = 8  # inset of a mapped column's top/bottom mark, so it clears the rules
+SEP_W = 1  # width of a vertical rule separating the mapped list's monzo columns
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 
@@ -374,12 +376,16 @@ def build(state, settings=None, collapsed=None) -> Layout:
         gx, gw = col_x["primes"], col_w["primes"]
         cells.append(CellBox("ebktop:primes", gx, map_top_y, gw, FRAME_H, "ebktop"))
         cells.append(CellBox("ebkbrace:primes", gx, brace_y, gw, BRACE_H, "ebkbrace"))
-    # the mapped list is a row of vectors, so each target column is marked with a
-    # top bracket and a bottom curly brace
+    # the mapped list is a row of vectors: vertical rules separate the monzo
+    # columns, and each column is marked with its own top bracket and bottom
+    # brace — inset so they stop short of the rules rather than touching them
     if row_open("mapping") and col_open("targets"):
+        mark_w = COL_W - 2 * MARK_INSET
         for j in range(k):
-            cx = target_left(j)
-            cells.append(CellBox(f"ebktop:mapped:{j}", cx, map_top_y, COL_W, FRAME_H, "ebktop"))
-            cells.append(CellBox(f"ebkbrace:mapped:{j}", cx, brace_y, COL_W, BRACE_H, "ebkbrace"))
+            mx = target_left(j) + MARK_INSET
+            cells.append(CellBox(f"ebktop:mapped:{j}", mx, map_top_y, mark_w, FRAME_H, "ebktop"))
+            cells.append(CellBox(f"ebkbrace:mapped:{j}", mx, brace_y, mark_w, BRACE_H, "ebkbrace"))
+        for j in range(1, k):  # a rule on each interior column boundary
+            cells.append(CellBox(f"sep:mapped:{j}", target_left(j) - SEP_W / 2, row_y["mapping"], SEP_W, r * ROW_H, "vbar"))
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))

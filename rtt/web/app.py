@@ -19,6 +19,11 @@ from rtt.web.editor import Editor
 _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 
+# One weight and colour for every EBK bracket, brace and monzo rule.
+_BR_COLOR = "#1a1a1a"
+_BR_BAR = 2  # thick main-bar / angle stroke (px)
+_BR_SERIF = 1  # thin serif stroke (px)
+
 _CSS = f"""
 .rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:30px; font-weight:bold;
              color:#000; margin:6px 0 8px 2px; }}
@@ -52,6 +57,7 @@ _CSS = f"""
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
+.rtt-vbar {{ width:100%; height:100%; background:{_BR_COLOR}; }}
 /* captions hold off their fade-in until the tile has finished expanding */
 .rtt-caption-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
@@ -98,11 +104,6 @@ _LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "rowtoggle", "coltog
 # angle bracket is a single open polyline). Vertical brackets use a 16-wide
 # viewBox that maps 1:1 to the gutter, so serifs stay a fixed length while the
 # bar stretches to the row height.
-_BR_COLOR = "#1a1a1a"  # one colour for every bracket and brace
-_BR_BAR = 2  # thick main-bar / angle stroke (px)
-_BR_SERIF = 1  # thin serif stroke (px)
-
-
 def _stroke(d, w):
     return (f'<path d="{d}" fill="none" stroke="{_BR_COLOR}" stroke-width="{w}" '
             'stroke-linecap="square" vector-effect="non-scaling-stroke"/>')
@@ -243,6 +244,8 @@ def index() -> None:
                 ui.html(_ebk_top_svg()).classes("rtt-svgfill")
             elif cb.kind == "ebkbrace":
                 ui.html(_BRACE_SVG).classes("rtt-svgfill")
+            elif cb.kind == "vbar":
+                ui.element("div").classes("rtt-vbar")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):
