@@ -216,6 +216,29 @@ def test_maps_get_angle_brackets_and_lists_get_square_brackets():
     assert cells["bracket:map:0:l"].x < cells["cell:mapping:0:0"].x < cells["bracket:map:0:r"].x
 
 
+def test_per_row_brackets_are_short_and_centred_leaving_a_gap_between_rows():
+    cells = {c.id: c for c in _layout().cells}
+    l0, l1 = cells["bracket:map:0:l"], cells["bracket:map:1:l"]
+    row0 = cells["cell:mapping:0:0"]
+    # each per-row bracket is much shorter than the ROW_H row it sits in...
+    assert l0.h < spreadsheet.ROW_H
+    assert l0.h == l1.h
+    # ...and centred within its row
+    assert abs((l0.y + l0.h / 2) - (row0.y + row0.h / 2)) < 0.51
+    # so neighbouring rows' brackets keep a clear gap >= 75% of a bracket's height
+    gap = l1.y - (l0.y + l0.h)
+    assert gap >= 0.75 * l0.h
+
+
+def test_mapped_list_outer_bracket_still_spans_the_whole_matrix():
+    cells = {c.id: c for c in _layout().cells}
+    b = cells["bracket:mapped:l"]
+    first, last = cells["cell:mapped:0:0"], cells["cell:mapped:1:0"]
+    # the enclosing [ ] is the tall exception: it spans both mapping rows
+    assert b.h > spreadsheet.ROW_H
+    assert b.y <= first.y and b.y + b.h >= last.y + last.h
+
+
 def test_the_row_fold_node_clears_the_first_content_tile():
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))))
     node = {c.id: c for c in lay.cells}["toggle:row:mapping"]

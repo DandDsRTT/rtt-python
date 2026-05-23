@@ -30,6 +30,9 @@ FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-tic
 BRACE_H = 14  # height of a matrix's bottom curly-brace band (taller, room for the spike)
 FRAME_GAP = 5  # gap between a framing band and the matrix cells, so they don't merge
 BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
+VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
+# ROW_H row so neighbouring rows' brackets keep a clear gap (the enclosing
+# mapped-list [ ] is the tall exception and spans the whole matrix)
 MARK_INSET = 8  # inset of a mapped column's top/bottom mark, so it clears the rules
 SEP_W = 2  # width of a vertical rule between monzo columns (the renderer draws it
 # as thick as a square bracket's main bar; this is just the cell it centres in)
@@ -262,17 +265,20 @@ def build(state, settings=None, collapsed=None) -> Layout:
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
-    def bracket(bid, glyphs, group_key, y, h):
+    def bracket(bid, glyphs, group_key, y, h, *, fit=False):
+        # value brackets are short and centred in their row (so stacked rows keep a
+        # gap); the enclosing mapped-list [ ] passes fit=True to span the matrix.
         gx, gw = col_x[group_key], col_w[group_key]
-        cells.append(CellBox(f"bracket:{bid}:l", gx, y, BRACKET_W, h, "bracket", text=glyphs[0]))
-        cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, y, BRACKET_W, h, "bracket", text=glyphs[1]))
+        by, bh = (y, h) if fit else (y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H)
+        cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
+        cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
 
     if row_open("mapping"):
         if col_open("primes"):
             for i in range(r):
                 bracket(f"map:{i}", MAP_BRACKETS, "primes", map_top(i), ROW_H)
         if col_open("targets"):
-            bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H)
+            bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H, fit=True)
     for key in ("tuning", "just", "retune"):
         if row_open(key):
             if col_open("primes"):
