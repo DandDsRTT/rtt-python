@@ -10,6 +10,8 @@ in-process; domain expand/shrink and undo are available. No HTTP layer.
 
 from __future__ import annotations
 
+import math
+
 from nicegui import ui
 
 from rtt.web import settings as show_settings
@@ -19,16 +21,21 @@ from rtt.web.editor import Editor
 _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 
-# One weight and colour for every EBK bracket, brace and monzo rule.
+# One weight and colour for every EBK bracket, brace and monzo rule. Each mark is
+# drawn as an SVG whose viewBox maps 1:1 to the cell's px size (see _svg), so a
+# stroke specified as N px is exactly N px tall AND wide at any span — no scaling.
 _BR_COLOR = "#1a1a1a"
-_BR_BAR = 2  # thick main-bar / angle stroke (px)
-_BR_SERIF = 1  # thin serif stroke (px)
-# the brace is calligraphic: thick on its vertical strokes (serifs, cusp), thin
-# on its horizontal ones (arms, curls), like the mockup font's curly bracket
-_BR_BRACE_THIN = 1.3
-_BR_BRACE_THICK = 2.5
-_BRACE_END_W = 7  # px width of each fixed brace end-curl piece
-_BRACE_CENTER_W = 11  # px width of the fixed brace central-cusp piece
+_BR_BAR = 2  # main bar / monzo-rule / square-bracket bar thickness (px)
+_BR_SERIF_T = 2  # square + top bracket serif thickness — matches the bar's weight
+_BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches)
+_BR_INSET = 2.5  # gap from a bracket's open side to the value cells it hugs
+# The ⟨ and the brace are filled ribbons of varying width (see _ribbon): a
+# calligraphic pen lays a LONG stroke down THICK and a SHORT one THIN.
+_BR_ANGLE_THICK = 1.05  # ⟨ half-width at the vertex (heavier)
+_BR_ANGLE_THIN = 0.7  # ⟨ half-width at the open tips (lighter) — a subtle taper
+_BR_BRACE_THICK = 1.15  # brace arm half-width: the long horizontal stroke is thick
+_BR_BRACE_THIN = 0.55  # brace end-serif half-width: the short upturn is thin
+_BR_BRACE_CUSP = 0.3  # brace central-cusp half-width: the short dip is a near point
 
 _CSS = f"""
 .rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:30px; font-weight:bold;
@@ -62,23 +69,9 @@ _CSS = f"""
 .rtt-val {{ font-size:14px; color:#000; }}
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
+/* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
+   its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
-/* value brackets ⟨ ] [ as serif glyphs (font-size set inline from the cell height
-   so each is a touch shorter than its cell — neighbouring brackets keep a gap) */
-.rtt-ebkglyph {{ display:flex; align-items:center; justify-content:center; width:100%; height:100%;
-                font-family:'Cambria',Georgia,serif; line-height:1; color:{_BR_COLOR}; }}
-/* the matrix's top bracket: thick top bar + short thin down-tick serifs, as CSS
-   borders so the ticks keep a fixed 1px weight however wide the bar stretches
-   (a non-scaling SVG stroke distorts under the bar's large horizontal scale) */
-.rtt-ebktop {{ align-self:flex-start; width:100%; height:7px; box-sizing:border-box;
-              border-top:{_BR_BAR}px solid {_BR_COLOR}; border-left:{_BR_SERIF}px solid {_BR_COLOR};
-              border-right:{_BR_SERIF}px solid {_BR_COLOR}; }}
-/* the brace is a flex row of fixed end-curls + fixed centre cusp + stretchy arms,
-   so the curls and cusp stay identical at any width — only the arms stretch */
-.rtt-brace {{ display:flex; width:100%; height:100%; align-items:stretch; }}
-.rtt-brace-end {{ flex:0 0 {_BRACE_END_W}px; }}
-.rtt-brace-center {{ flex:0 0 {_BRACE_CENTER_W}px; }}
-.rtt-brace-arm {{ flex:1 1 0; min-width:0; }}
 /* captions hold off their fade-in until the tile has finished expanding */
 .rtt-caption-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
@@ -119,49 +112,140 @@ _CSS = f"""
 
 _LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "rowtoggle", "coltoggle"}
 
-# The per-row value brackets ⟨ ] [ are real serif glyphs (see .rtt-ebkglyph), so
-# they carry the mockup font's calligraphy for free and never suffer the
-# stroke-scaling artifacts a stretched SVG would. Only the framing that has to
-# stretch — the top bracket (CSS borders), the bottom brace and the monzo rules
-# (SVG) — is drawn by hand.
-def _stroke(d, w):
-    return (f'<path d="{d}" fill="none" stroke="{_BR_COLOR}" stroke-width="{w}" '
-            'stroke-linecap="square" vector-effect="non-scaling-stroke"/>')
+# Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
+# cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
+# as N px renders exactly N px wide regardless of how tall/long the mark spans.
+# This is the single rule that keeps the brackets and brace a constant weight —
+# the rejected font glyph scaled its weight with its height, and a fixed viewBox
+# stretched to the cell sheared its serifs. Square/top brackets are crisp filled
+# rects; the calligraphic ⟨ and brace are filled variable-width ribbons (_ribbon).
+_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "vbar"}
 
 
-def _svg(view, body):
-    return (f'<svg width="100%" height="100%" viewBox="{view}" preserveAspectRatio="none" '
-            f'style="display:block;overflow:visible">{body}</svg>')
+def _svg(w, h, body):
+    return (f'<svg width="100%" height="100%" viewBox="0 0 {w:.2f} {h:.2f}" '
+            f'preserveAspectRatio="none" style="display:block;overflow:visible">{body}</svg>')
 
 
-# A vertical rule between the mapped list's monzo columns, drawn at the same
-# weight as a square bracket's main bar (non-scaling => exact at any cell size).
-_VBAR_SVG = _svg("0 0 2 100", _stroke("M1,0 L1,100", _BR_BAR))
+def _rect(x, y, w, h):
+    return f'<rect x="{x:.2f}" y="{y:.2f}" width="{w:.2f}" height="{h:.2f}" fill="{_BR_COLOR}"/>'
 
 
-# The matrix's bottom curly brace, built as a stretchy composite so the two
-# end-curls and the central cusp keep a fixed shape at any width — only the two
-# arms between them stretch. Pieces are laid out in a flex row (see .rtt-brace*):
-# [end-L][arm][center][arm][end-R]. The arms meet the ends/center at y=6, so the
-# straight rule joins their curls seamlessly. 14-tall viewBox maps 1:1 to the band.
-def _brace_seg(d, w):
-    return (f'<path d="{d}" fill="none" stroke="{_BR_COLOR}" stroke-width="{w}" '
-            'stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>')
+def _ribbon(pts):
+    """One filled path tracing a variable-width stroke down a centreline. ``pts``
+    is a list of ``(x, y, half_width)``; the outline runs up one offset edge and
+    back down the other. A long run can be laid thick and a short turn thin, and
+    the centreline may double back (the brace cusp, the ⟨ vertex) — the offsets
+    meet at a clean point there, and any inner overlap fills solid (nonzero)."""
+    edge_a, edge_b = [], []
+    n = len(pts)
+    for i in range(n):
+        x, y, hw = pts[i]
+        px, py = pts[i - 1][:2] if i else pts[i][:2]
+        nx, ny = pts[i + 1][:2] if i < n - 1 else pts[i][:2]
+        tx, ty = nx - px, ny - py
+        length = math.hypot(tx, ty) or 1.0
+        ox, oy = -ty / length * hw, tx / length * hw  # normal * half-width
+        edge_a.append((x + ox, y + oy))
+        edge_b.append((x - ox, y - oy))
+    outline = edge_a + edge_b[::-1]
+    return ('<path fill="' + _BR_COLOR + '" d="M'
+            + ' '.join(f'{x:.2f},{y:.2f}' for x, y in outline) + ' Z"/>')
 
 
-# Each end: a thin curl rising from the arm into a thick vertical serif. The
-# centre: thin arms dropping to a thick vertical cusp. The thin connectors
-# overshoot ~1px into the arm boxes (overflow is visible) so the joins to the
-# stretchy arms never open a gap, and the round caps blend thin into thick.
-_BRACE_END_L = _svg(f"0 0 {_BRACE_END_W} 14",
-    _brace_seg("M8,6 Q4,6 2.6,4.8", _BR_BRACE_THIN) + _brace_seg("M2.6,5 L2.6,2", _BR_BRACE_THICK))
-_BRACE_END_R = _svg(f"0 0 {_BRACE_END_W} 14",
-    _brace_seg("M-1,6 Q3,6 4.4,4.8", _BR_BRACE_THIN) + _brace_seg("M4.4,5 L4.4,2", _BR_BRACE_THICK))
-_BRACE_CENTER = _svg(f"0 0 {_BRACE_CENTER_W} 14",
-    _brace_seg("M-1,6 Q4,6 5.5,9.4", _BR_BRACE_THIN) + _brace_seg("M5.5,8.8 L5.5,12.4", _BR_BRACE_THICK)
-    + _brace_seg("M5.5,9.4 Q7,6 12,6", _BR_BRACE_THIN))
-# arm: a thin horizontal rule that stretches to fill the gap
-_BRACE_ARM = _svg("0 0 10 14", _brace_seg("M0,6 L10,6", _BR_BRACE_THIN))
+def _qbez(p0, ctrl, p1, w0, w1, n, *, skip_first=False):
+    """Sample a quadratic Bézier from ``p0`` to ``p1`` into ``(x, y, half_width)``
+    centreline points, the width lerped ``w0``->``w1`` along it."""
+    out = []
+    for i in range(n + 1):
+        if skip_first and i == 0:
+            continue
+        t = i / n
+        mt = 1 - t
+        x = mt * mt * p0[0] + 2 * mt * t * ctrl[0] + t * t * p1[0]
+        y = mt * mt * p0[1] + 2 * mt * t * ctrl[1] + t * t * p1[1]
+        out.append((x, y, w0 + (w1 - w0) * t))
+    return out
+
+
+def _square_bracket(w, h, side):
+    """``[`` or ``]`` as a bar + two perpendicular feet, hugging the value cells
+    (open side ``_BR_INSET`` from them). Constant weight at 1 row or many."""
+    if side == "left":  # bar on the left, feet reaching right toward the cells
+        x_in = w - _BR_INSET
+        x_out = x_in - _BR_SERIF_L
+        bar_x = x_out
+    else:  # "right": bar on the right, feet reaching left toward the cells
+        x_out = _BR_INSET
+        bar_x = x_out + _BR_SERIF_L - _BR_BAR
+    return _svg(w, h,
+        _rect(bar_x, 0, _BR_BAR, h)
+        + _rect(x_out, 0, _BR_SERIF_L, _BR_SERIF_T)
+        + _rect(x_out, h - _BR_SERIF_T, _BR_SERIF_L, _BR_SERIF_T))
+
+
+def _top_bracket(w, h):
+    """The matrix's spanning top bracket: a bar across the top with a down-foot at
+    each end. Same weights as the square brackets, so the frame reads as one font."""
+    return _svg(w, h,
+        _rect(0, 0, w, _BR_BAR)
+        + _rect(0, 0, _BR_SERIF_T, _BR_SERIF_L)
+        + _rect(w - _BR_SERIF_T, 0, _BR_SERIF_T, _BR_SERIF_L))
+
+
+def _angle_bracket(w, h):
+    """``⟨`` as a chevron pointing left toward its vertex, opening to the cells on
+    the right. A filled ribbon, subtly heavier at the vertex than the open tips."""
+    x_in = w - _BR_INSET
+    vx = x_in - _BR_SERIF_L
+    cy = h / 2
+    ty = 1.6
+    top, vertex, bot = (x_in, ty), (vx, cy), (x_in, h - ty)
+    n = 10
+    pts = [(top[0] + (vertex[0] - top[0]) * i / n, top[1] + (vertex[1] - top[1]) * i / n,
+            _BR_ANGLE_THIN + (_BR_ANGLE_THICK - _BR_ANGLE_THIN) * i / n) for i in range(n + 1)]
+    pts += [(vertex[0] + (bot[0] - vertex[0]) * i / n, vertex[1] + (bot[1] - vertex[1]) * i / n,
+             _BR_ANGLE_THICK + (_BR_ANGLE_THIN - _BR_ANGLE_THICK) * i / n) for i in range(1, n + 1)]
+    return _svg(w, h, _ribbon(pts))
+
+
+def _brace(w, h):
+    """The matrix's bottom curly brace as ONE variable-width ribbon computed from
+    the width: two long horizontal arms (THICK) sweeping from upturned end-serifs
+    (THIN) into a central downward cusp (a THIN near-point). The end-curls and the
+    cusp are fixed px shapes, so they look identical at any width — only the arm
+    length grows. No pieces, so no seams or overshoot."""
+    cx = w / 2
+    arm_y, tip_y, cusp_y = 4.4, 0.9, h - 1.8
+    end_x, serif_dx, cusp_dx = 3.0, 3.2, 5.5
+    thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
+    n = 10
+    pts = _qbez((end_x, tip_y), (end_x, arm_y), (end_x + serif_dx, arm_y), thin, thick, n)
+    pts.append((cx - cusp_dx, arm_y, thick))
+    pts += _qbez((cx - cusp_dx, arm_y), (cx, arm_y), (cx, cusp_y), thick, cusp, n, skip_first=True)
+    pts += _qbez((cx, cusp_y), (cx, arm_y), (cx + cusp_dx, arm_y), cusp, thick, n, skip_first=True)
+    pts.append((w - end_x - serif_dx, arm_y, thick))
+    pts += _qbez((w - end_x - serif_dx, arm_y), (w - end_x, arm_y), (w - end_x, tip_y),
+                 thick, thin, n, skip_first=True)
+    return _svg(w, h, _ribbon(pts))
+
+
+def _vbar(w, h):
+    """A vertical rule between the mapped list's monzo columns, the bar's weight."""
+    return _svg(w, h, _rect((w - _BR_BAR) / 2, 0, _BR_BAR, h))
+
+
+def _ebk_svg(cb):
+    """The SVG for one EBK cell, generated from its current px box (cb.w, cb.h)."""
+    if cb.kind == "bracket":
+        if cb.text == "⟨":
+            return _angle_bracket(cb.w, cb.h)
+        return _square_bracket(cb.w, cb.h, "left" if cb.text == "[" else "right")
+    if cb.kind == "ebktop":
+        return _top_bracket(cb.w, cb.h)
+    if cb.kind == "ebkbrace":
+        return _brace(cb.w, cb.h)
+    return _vbar(cb.w, cb.h)  # "vbar"
 
 
 def _parse_int(text):
@@ -197,6 +281,8 @@ def index() -> None:
     labels: dict = {}  # cell id -> the label whose text tracks state
     fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
     cents: dict = {}  # cents cell id -> (whole label, fraction label), aligned on the point
+    htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
+    ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
     building = [False]
     refs: dict = {}
 
@@ -251,22 +337,11 @@ def index() -> None:
                 _ratio(cb, approx=False)
             elif cb.kind == "mapped":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
-            elif cb.kind == "bracket":
-                ui.label(cb.text).classes("rtt-ebkglyph")
+            elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, monzo rule
+                htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 ui.label(cb.text).classes("rtt-caption")
-            elif cb.kind == "ebktop":
-                ui.element("div").classes("rtt-ebktop")
-            elif cb.kind == "ebkbrace":
-                with ui.element("div").classes("rtt-brace"):
-                    ui.html(_BRACE_END_L).classes("rtt-brace-end")
-                    ui.html(_BRACE_ARM).classes("rtt-brace-arm")
-                    ui.html(_BRACE_CENTER).classes("rtt-brace-center")
-                    ui.html(_BRACE_ARM).classes("rtt-brace-arm")
-                    ui.html(_BRACE_END_R).classes("rtt-brace-end")
-            elif cb.kind == "vbar":
-                ui.html(_VBAR_SVG).classes("rtt-svgfill")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):
@@ -319,11 +394,14 @@ def index() -> None:
             if cb.id not in els:
                 with board:
                     els[cb.id] = _make_cell(cb)
-            # value-bracket glyphs run a touch shorter than their cell so adjacent
-            # brackets keep a gap; tall enclosing brackets still scale up with it
-            sized = f"; font-size:{cb.h - 7}px" if cb.kind == "bracket" else ""
-            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px{sized}")
-            if cb.kind == "mapping":
+            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
+            if cb.kind in _EBK_SVG_KINDS:
+                # the mark is drawn 1:1 to its px box, so redraw it whenever the box
+                # changes size (e.g. the brace/top bracket as the domain grows)
+                if ebk_sizes.get(cb.id) != (cb.w, cb.h):
+                    htmls[cb.id].set_content(_ebk_svg(cb))
+                    ebk_sizes[cb.id] = (cb.w, cb.h)
+            elif cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
             elif cb.id in fracs:
                 num, den = _ratio_parts(cb.text) or (cb.text, "")
@@ -343,6 +421,8 @@ def index() -> None:
             labels.pop(eid, None)
             fracs.pop(eid, None)
             cents.pop(eid, None)
+            htmls.pop(eid, None)
+            ebk_sizes.pop(eid, None)
 
         if "minus" in refs:
             refs["minus"].set_enabled(editor.can_shrink)

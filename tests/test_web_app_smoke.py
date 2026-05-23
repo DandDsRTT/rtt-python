@@ -49,13 +49,36 @@ def test_cents_parts_splits_whole_and_fraction_for_decimal_alignment():
     assert app._cents_parts("5") == ("5", "")  # no fractional part
 
 
-def test_brace_is_a_stretchy_composite_of_fixed_ends_centre_and_arms():
-    # the brace is built from fixed end-curls + a fixed centre cusp joined by
-    # stretchy arms, so the curls and cusp stay identical at any brace width and
-    # only the arms stretch. All pieces share the one bracket colour.
-    parts = [app._BRACE_END_L, app._BRACE_END_R, app._BRACE_CENTER, app._BRACE_ARM]
-    for p in parts:
-        assert p.startswith("<svg") and "non-scaling-stroke" in p
-        assert f'stroke="{app._BR_COLOR}"' in p  # one shared colour
-    assert app._BRACE_ARM.count("<path") == 1  # the arm is just a straight rule
-    assert app._BRACE_END_L != app._BRACE_END_R  # the ends mirror each other
+def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
+    # every EBK mark is one SVG whose viewBox is the cell's own px box, so its
+    # weight is a constant px count rather than a scaled stroke — that is what
+    # keeps a 1-row and a many-row bracket the exact same thickness.
+    marks = {
+        "[": app._square_bracket(16, 16, "left"),
+        "]2": app._square_bracket(16, 60, "right"),
+        "<": app._angle_bracket(16, 16),
+        "top": app._top_bracket(120, 9),
+        "vbar": app._vbar(2, 60),
+    }
+    for svg in marks.values():
+        assert svg.startswith("<svg") and f'fill="{app._BR_COLOR}"' in svg
+        assert "stroke-width" not in svg  # weight is the 1:1 viewBox, not a scaling stroke
+    assert 'viewBox="0 0 16.00 16.00"' in marks["["]
+    assert 'viewBox="0 0 16.00 60.00"' in marks["]2"]  # 1 row vs many: same generator
+
+
+def test_brace_is_one_filled_path_with_width_independent_end_curls():
+    # the brace is ONE filled variable-width ribbon computed from the width — no
+    # composite pieces (so no seams/overshoot). Only the arm length tracks the
+    # width; the end-curls/cusp are fixed px shapes identical at any width.
+    narrow, wide = app._brace(44, 14), app._brace(200, 14)
+    for svg in (narrow, wide):
+        assert svg.count("<path") == 1  # a single shape
+        assert "stroke" not in svg  # filled, not stroked
+        assert f'fill="{app._BR_COLOR}"' in svg  # the one shared bracket colour
+    assert 'viewBox="0 0 200.00 14.00"' in wide
+    prefix = 0  # the left end-curl is laid down before any arm, so the two paths...
+    while narrow[prefix] == wide[prefix]:
+        prefix += 1
+    assert prefix > 40  # ...agree coordinate-for-coordinate over the curl...
+    assert narrow != wide  # ...then diverge once the arm length differs
