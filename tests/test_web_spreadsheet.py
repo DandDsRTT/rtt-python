@@ -63,12 +63,16 @@ def test_shared_axes_and_branching():
     assert {"v:prime:0", "v:prime:1", "v:prime:2"} <= ids  # per-prime axes
     assert {"v:target:0", "v:target:1", "v:target:2", "v:target:3"} <= ids
     assert {"h:gen:0", "h:gen:1", "h:tuning", "h:just", "h:retune", "h:damage"} <= ids
-    # each column header branches: a trunk down to a bus that fans into the verticals
-    assert {"trunk:primes", "trunk:targets", "trunk:gens", "bus:primes", "bus:targets"} <= ids
+    # each column fans out from a top bus and back in to a bottom bus + foot
+    assert {"trunk:primes", "trunk:targets", "trunk:gens"} <= ids
+    assert {"bus:primes:top", "bus:primes:bot", "foot:primes"} <= ids
     by_id = {ln.id: ln for ln in lay.lines}
     cells = {c.id: c for c in lay.cells}
-    assert by_id["bus:primes"].pos < cells["prime:0"].y  # fan-out is ABOVE quantities
-    assert by_id["v:prime:0"].start == by_id["bus:primes"].pos  # verticals start at the fan-out
+    assert by_id["bus:primes:top"].pos < cells["prime:0"].y  # top fan-out is ABOVE quantities
+    assert by_id["v:prime:0"].start == by_id["bus:primes:top"].pos  # verticals start at the top bus
+    assert by_id["bus:primes:bot"].pos > by_id["bus:primes:top"].pos  # ...and rejoin at the bottom
+    # the per-generator mapping lines fan back in on the right to a foot
+    assert {"vbar:mapping:left", "vbar:mapping:right", "foot:mapping"} <= ids
 
 
 def test_axis_ids_are_stable_across_expand():
@@ -160,14 +164,15 @@ def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline():
     assert "h:tuning" in lines  # leaving a single gridline through the folded row
 
 
-def test_collapsing_a_column_folds_its_panels_away_and_leaves_one_gridline():
+def test_collapsing_a_column_folds_its_panels_away_and_converges_the_lines():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     lay = spreadsheet.build(base, collapsed={"col:primes"})
     blocks = {b.id: b for b in lay.blocks}
-    lines = {ln.id for ln in lay.lines}
+    by_id = {ln.id: ln for ln in lay.lines}
     assert blocks["block:mapping"].w == 0  # the primes-column panels fold to nothing
-    assert "trunk:primes" in lines  # one vertical gridline through the folded column
-    assert "v:prime:0" not in lines  # ...and the per-prime fan is gone
+    # the per-prime verticals converge onto one x (so they read as a single line)
+    assert by_id["v:prime:0"].pos == by_id["v:prime:1"].pos == by_id["v:prime:2"].pos
+    assert by_id["bus:primes:top"].length == 0  # ...and the buses shrink to nothing
 
 
 def test_the_row_fold_node_clears_the_first_content_tile():

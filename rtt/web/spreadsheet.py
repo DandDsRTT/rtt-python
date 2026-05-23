@@ -219,50 +219,52 @@ def build(state, settings=None, collapsed=None) -> Layout:
         for j, v in enumerate(tun.target_damage):
             cells.append(CellBox(f"damage:target:{j}", target_left(j), row_y["damage"], COL_W, ROW_H, "tval", text=_cents(v)))
 
-    # shared axes, with each column header branching (above quantities) into one
-    # vertical line per element: a trunk from the node down to a bus, which fans
-    # into the per-element verticals that run down through the rows.
-    def fan(group_id, n, pitch_left):
-        centers = [pitch_left(i) for i in range(n)]
-        trunk_x = (centers[0] + centers[-1]) / 2
-        lines.append(Line(f"trunk:{group_id}", "v", trunk_x, branch_top_y, fanout_y - branch_top_y))
-        if n > 1:
-            lines.append(Line(f"bus:{group_id}", "h", fanout_y, centers[0], centers[-1] - centers[0]))
+    # Shared axes. A multi-element group is one line that fans out at the near end
+    # (from its node) into one line per element, runs through the data, then fans
+    # back in at the far end to a foot extending a touch past the data — pinched at
+    # both ends, bulging through the middle. Collapsing converges the per-element
+    # lines onto the centre and shrinks both buses to nothing, so the renderer
+    # animates the merge into a single straight gridline.
+    bot_bus_y = total_h - GAP / 2
 
-    # open columns fan into per-element verticals; a collapsed column shows a
-    # single vertical gridline through it (and no grey tiles)
-    if col_open("primes"):
-        fan("primes", d, lambda p: prime_left(p) + COL_W / 2)
-        for p in range(d):
-            lines.append(Line(f"v:prime:{p}", "v", prime_left(p) + COL_W / 2, fanout_y, total_h - fanout_y))
-    elif "primes" in col_x:
-        lines.append(Line("trunk:primes", "v", primes_x + col_w["primes"] / 2, branch_top_y, total_h - branch_top_y))
-    if col_open("targets"):
-        fan("targets", k, lambda j: target_left(j) + COL_W / 2)
-        for j in range(k):
-            lines.append(Line(f"v:target:{j}", "v", target_left(j) + COL_W / 2, fanout_y, total_h - fanout_y))
-    elif "targets" in col_x:
-        lines.append(Line("trunk:targets", "v", targets_x + col_w["targets"] / 2, branch_top_y, total_h - branch_top_y))
+    def column_axis(key, prefix, n, center_open):
+        if key not in col_x:
+            return
+        cx = col_x[key] + col_w[key] / 2
+        xs = [cx] * n if f"col:{key}" in collapsed else [center_open(i) for i in range(n)]
+        for i in range(n):
+            lines.append(Line(f"v:{prefix}:{i}", "v", xs[i], fanout_y, bot_bus_y - fanout_y))
+        lines.append(Line(f"bus:{key}:top", "h", fanout_y, xs[0], xs[-1] - xs[0]))
+        lines.append(Line(f"bus:{key}:bot", "h", bot_bus_y, xs[0], xs[-1] - xs[0]))
+        lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y))
+        lines.append(Line(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y))
 
-    # generators column axis: a trunk from its node down through the mapping rows.
+    column_axis("primes", "prime", d, lambda p: prime_left(p) + COL_W / 2)
+    column_axis("targets", "target", k, lambda j: target_left(j) + COL_W / 2)
+
+    # generators column: a single vertical axis from its node down through the
+    # mapping rows (it has no per-element fan — the generators are one column).
     gen_cx = gen_x + col_w.get("gens", GEN_W) / 2
-    if row_open("mapping"):
-        lines.append(Line("trunk:gens", "v", gen_cx, branch_top_y, map_top(r - 1) + ROW_H / 2 - branch_top_y))
-        # the mapping sub-rows fan from the row node (mirroring the column fan): a
-        # single line to a vertical bar — midway between node and first cell — that
-        # joins the per-generator lines.
-        gy0, gyN = map_top(0) + ROW_H / 2, map_top(r - 1) + ROW_H / 2
-        if show_names and r > 1:
-            bar_x = (node_cx + gen_x) / 2  # midway between the node centre and the first cell
-            lines.append(Line("trunk:mapping", "h", (gy0 + gyN) / 2, node_cx, bar_x - node_cx))
-            lines.append(Line("vbar:mapping", "v", bar_x, gy0, gyN - gy0))
-        else:
-            bar_x = node_cx if show_names else gen_cx
+    if "mapping" in row_y:
+        gen_bot = map_top(r - 1) + ROW_H / 2 if row_open("mapping") else row_y["mapping"] + row_h["mapping"] / 2
+        lines.append(Line("trunk:gens", "v", gen_cx, branch_top_y, gen_bot - branch_top_y))
+
+    # mapping rows: the horizontal mirror of a column axis — fan out at the node
+    # into one line per generator, fan back in on the right to a foot past the data.
+    right_bus_x = total_w - GAP / 2
+    if "mapping" in row_y:
+        folded = "row:mapping" in collapsed
+        cy = row_y["mapping"] + row_h["mapping"] / 2
+        ys = [cy] * r if folded else [map_top(i) + ROW_H / 2 for i in range(r)]
+        left_bus_x = (node_cx + gen_x) / 2 if (show_names and r > 1 and not folded) else (node_cx if show_names else gen_cx)
         for i in range(r):
-            lines.append(Line(f"h:gen:{i}", "h", map_top(i) + ROW_H / 2, bar_x, total_w - bar_x))
-    elif "mapping" in row_y:  # collapsed: a single gridline through the folded row
-        x0 = node_cx if show_names else primes_x
-        lines.append(Line("h:mapping", "h", row_y["mapping"] + row_h["mapping"] / 2, x0, total_w - x0))
+            lines.append(Line(f"h:gen:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x))
+        lines.append(Line("vbar:mapping:left", "v", left_bus_x, ys[0], ys[-1] - ys[0]))
+        lines.append(Line("vbar:mapping:right", "v", right_bus_x, ys[0], ys[-1] - ys[0]))
+        lines.append(Line("trunk:mapping", "h", cy, node_cx, left_bus_x - node_cx))
+        lines.append(Line("foot:mapping", "h", cy, right_bus_x, total_w - right_bus_x))
+
+    # tuning-family rows are each a single line (no sub-rows), present or collapsed
     for key in ("tuning", "just", "retune", "damage"):
         if key not in row_y:
             continue
