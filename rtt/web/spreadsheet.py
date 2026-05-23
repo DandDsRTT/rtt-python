@@ -111,8 +111,8 @@ def build(state, settings=None, collapsed=None) -> Layout:
     branch_top_y = col_node_y + TOGGLE if show_names else header_y
     quant_y = header_h + 2 * GAP
     # the bus that joins a column's per-element verticals sits midway between the
-    # node and the first cell (not hugging the node)
-    fanout_y = (branch_top_y + quant_y) / 2
+    # node's centre and the first cell (visually balanced, not hugging either)
+    fanout_y = (col_node_y + TOGGLE / 2 + quant_y) / 2 if show_names else header_y + GAP
 
     # Row bands top-to-bottom: (key, natural height, present, collapsible, label),
     # laid out by the same running-cursor rule as the columns. The spine
@@ -229,14 +229,20 @@ def build(state, settings=None, collapsed=None) -> Layout:
         if n > 1:
             lines.append(Line(f"bus:{group_id}", "h", fanout_y, centers[0], centers[-1] - centers[0]))
 
+    # open columns fan into per-element verticals; a collapsed column shows a
+    # single vertical gridline through it (and no grey tiles)
     if col_open("primes"):
         fan("primes", d, lambda p: prime_left(p) + COL_W / 2)
         for p in range(d):
             lines.append(Line(f"v:prime:{p}", "v", prime_left(p) + COL_W / 2, fanout_y, total_h - fanout_y))
+    elif "primes" in col_x:
+        lines.append(Line("trunk:primes", "v", primes_x + col_w["primes"] / 2, branch_top_y, total_h - branch_top_y))
     if col_open("targets"):
         fan("targets", k, lambda j: target_left(j) + COL_W / 2)
         for j in range(k):
             lines.append(Line(f"v:target:{j}", "v", target_left(j) + COL_W / 2, fanout_y, total_h - fanout_y))
+    elif "targets" in col_x:
+        lines.append(Line("trunk:targets", "v", targets_x + col_w["targets"] / 2, branch_top_y, total_h - branch_top_y))
 
     # generators column axis: a trunk from its node down through the mapping rows.
     gen_cx = gen_x + col_w.get("gens", GEN_W) / 2
@@ -247,43 +253,45 @@ def build(state, settings=None, collapsed=None) -> Layout:
         # joins the per-generator lines.
         gy0, gyN = map_top(0) + ROW_H / 2, map_top(r - 1) + ROW_H / 2
         if show_names and r > 1:
-            bar_x = (node_x + TOGGLE + gen_x) / 2
+            bar_x = (node_cx + gen_x) / 2  # midway between the node centre and the first cell
             lines.append(Line("trunk:mapping", "h", (gy0 + gyN) / 2, node_cx, bar_x - node_cx))
             lines.append(Line("vbar:mapping", "v", bar_x, gy0, gyN - gy0))
         else:
             bar_x = node_cx if show_names else gen_cx
         for i in range(r):
             lines.append(Line(f"h:gen:{i}", "h", map_top(i) + ROW_H / 2, bar_x, total_w - bar_x))
+    elif "mapping" in row_y:  # collapsed: a single gridline through the folded row
+        x0 = node_cx if show_names else primes_x
+        lines.append(Line("h:mapping", "h", row_y["mapping"] + row_h["mapping"] / 2, x0, total_w - x0))
     for key in ("tuning", "just", "retune", "damage"):
-        if row_open(key):
-            x0 = node_cx if show_names else primes_x
-            lines.append(Line(f"h:{key}", "h", row_y[key] + ROW_H / 2, x0, total_w - x0))
+        if key not in row_y:
+            continue
+        x0 = node_cx if show_names else primes_x
+        lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, x0, total_w - x0))
 
-    # #e0e0e0 panels behind each content group
-    def block(bid, x, y, w, h):
-        blocks.append(Block(bid, x - PAD, y - PAD, w + 2 * PAD, h + 2 * PAD))
+    # #e0e0e0 panels behind each content group. A panel folds to zero size along
+    # any collapsed axis (collapsing toward the band centre), so the renderer
+    # animates it shrinking away to nothing — leaving only the band's gridline,
+    # never a leftover grey strip.
+    def panel(bid, ckey, rkey):
+        if ckey not in col_x or rkey not in row_y:
+            return
+        col_c, row_c = f"col:{ckey}" in collapsed, f"row:{rkey}" in collapsed
+        cw, ch, cx, cy = col_w[ckey], row_h[rkey], col_x[ckey], row_y[rkey]
+        w, px = (0, 0) if col_c else (cw, PAD)
+        h, py = (0, 0) if row_c else (ch, PAD)
+        bx = cx + cw / 2 if col_c else cx
+        by = cy + ch / 2 if row_c else cy
+        blocks.append(Block(bid, bx - px, by - py, w + 2 * px, h + 2 * py))
 
-    # Panels are emitted for every *present* band (not just open ones) and sized
-    # from row_h/col_w, so collapsing folds the panel to a strip that the renderer
-    # animates shrinking — rather than the panel popping out of existence.
-    def panel(bid, key_x, x, w, y, h):
-        if key_x in col_x:
-            block(bid, x, y, w, h)
-
-    if "quantities" in row_y:
-        qh = row_h["quantities"]
-        panel("block:primes", "primes", primes_x, col_w.get("primes", 0), quant_y, qh)
-        panel("block:targets", "targets", targets_x, col_w.get("targets", 0), quant_y, qh)
-    if "mapping" in row_y:
-        my, mh = row_y["mapping"], row_h["mapping"]
-        panel("block:gens", "gens", gen_x, col_w.get("gens", 0), my, mh)
-        panel("block:mapping", "primes", primes_x, col_w.get("primes", 0), my, mh)
-        panel("block:mapped", "targets", targets_x, col_w.get("targets", 0), my, mh)
+    panel("block:primes", "primes", "quantities")
+    panel("block:targets", "targets", "quantities")
+    panel("block:gens", "gens", "mapping")
+    panel("block:mapping", "primes", "mapping")
+    panel("block:mapped", "targets", "mapping")
     for key in ("tuning", "just", "retune"):
-        if key in row_y:
-            panel(f"block:{key}:primes", "primes", primes_x, col_w.get("primes", 0), row_y[key], row_h[key])
-            panel(f"block:{key}:targets", "targets", targets_x, col_w.get("targets", 0), row_y[key], row_h[key])
-    if "damage" in row_y:
-        panel("block:damage:targets", "targets", targets_x, col_w.get("targets", 0), row_y["damage"], row_h["damage"])
+        panel(f"block:{key}:primes", "primes", key)
+        panel(f"block:{key}:targets", "targets", key)
+    panel("block:damage:targets", "targets", "damage")
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))

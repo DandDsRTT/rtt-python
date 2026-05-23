@@ -150,12 +150,24 @@ def test_collapsed_column_keeps_its_title_at_a_width_that_fits_it():
     assert spreadsheet.STRIP < coll.w < full.w  # folded narrower, but wide enough to read the title
 
 
-def test_collapsed_band_keeps_a_strip_panel_so_it_animates_shut():
+def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    full = {b.id: b for b in spreadsheet.build(base).blocks}
-    coll = {b.id: b for b in spreadsheet.build(base, collapsed={"row:tuning"}).blocks}
-    assert "block:tuning:primes" in coll  # the panel persists (so the renderer can shrink it)
-    assert coll["block:tuning:primes"].h < full["block:tuning:primes"].h  # ...folded to a strip
+    lay = spreadsheet.build(base, collapsed={"row:tuning"})
+    blocks = {b.id: b for b in lay.blocks}
+    lines = {ln.id for ln in lay.lines}
+    assert "block:tuning:primes" in blocks  # the panel persists so the renderer can animate it...
+    assert blocks["block:tuning:primes"].h == 0  # ...folding to nothing (no leftover grey tile)
+    assert "h:tuning" in lines  # leaving a single gridline through the folded row
+
+
+def test_collapsing_a_column_folds_its_panels_away_and_leaves_one_gridline():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    lay = spreadsheet.build(base, collapsed={"col:primes"})
+    blocks = {b.id: b for b in lay.blocks}
+    lines = {ln.id for ln in lay.lines}
+    assert blocks["block:mapping"].w == 0  # the primes-column panels fold to nothing
+    assert "trunk:primes" in lines  # one vertical gridline through the folded column
+    assert "v:prime:0" not in lines  # ...and the per-prime fan is gone
 
 
 def test_the_row_fold_node_clears_the_first_content_tile():
