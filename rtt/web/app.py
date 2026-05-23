@@ -49,8 +49,6 @@ _CSS = f"""
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; }}
 .rtt-val {{ font-size:14px; color:#000; }}
-.rtt-bracket {{ display:flex; align-items:center; justify-content:center; width:100%; height:100%;
-               line-height:0.8; color:#000; font-family:'Cambria',Georgia,serif; }}
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
 .rtt-ebktop {{ width:100%; height:100%; border:1px solid #555; border-bottom:none; }}
@@ -102,6 +100,19 @@ _BRACE_SVG = (
     '<path d="M0,0 Q6,0 6,4 L44,4 Q50,4 50,9 Q50,4 56,4 L94,4 Q100,4 100,0" '
     'fill="none" stroke="#555" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>'
 )
+
+# Value brackets drawn as SVG (font-independent, so ⟨ never renders as a curly
+# brace), stretched to fill the bracket gutter: ⟨ … ] for maps, [ … ] for lists.
+_BRACKET_PATHS = {"⟨": "M85,4 L20,50 L85,96",
+                  "[": "M80,4 L25,4 L25,96 L80,96", "]": "M20,4 L75,4 L75,96 L20,96"}
+
+
+def _bracket_svg(ch):
+    return (
+        '<svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="display:block">'
+        f'<path d="{_BRACKET_PATHS[ch]}" fill="none" stroke="#000" stroke-width="1.5" '
+        'vector-effect="non-scaling-stroke"/></svg>'
+    )
 
 
 def _parse_int(text):
@@ -192,7 +203,7 @@ def index() -> None:
             elif cb.kind == "mapped":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "bracket":
-                ui.label(cb.text).classes("rtt-bracket")
+                ui.html(_bracket_svg(cb.text)).classes("rtt-svgfill")
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 ui.label(cb.text).classes("rtt-caption")
@@ -252,8 +263,7 @@ def index() -> None:
             if cb.id not in els:
                 with board:
                     els[cb.id] = _make_cell(cb)
-            sized = f"; font-size:{round(cb.h * 1.15)}px" if cb.kind == "bracket" else ""
-            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px{sized}")
+            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
             if cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
             elif cb.id in fracs:

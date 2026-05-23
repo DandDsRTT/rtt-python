@@ -47,3 +47,16 @@ def test_cents_parts_splits_whole_and_fraction_for_decimal_alignment():
     assert app._cents_parts("-2.69") == ("-2", "69")
     assert app._cents_parts("0.00") == ("0", "00")
     assert app._cents_parts("5") == ("5", "")  # no fractional part
+
+
+def test_bracket_svg_covers_exactly_the_glyphs_the_grid_emits():
+    # value brackets are drawn as SVG (not font glyphs) so ⟨ doesn't render as a
+    # curly brace; the render table must match what spreadsheet actually emits.
+    from rtt.web.spreadsheet import LIST_BRACKETS, MAP_BRACKETS
+
+    emitted = set(MAP_BRACKETS) | set(LIST_BRACKETS)  # ⟨ ] [
+    for ch in emitted:
+        svg = app._bracket_svg(ch)
+        assert svg.startswith("<svg") and "non-scaling-stroke" in svg  # stays ~1px when stretched
+        assert app._BRACKET_PATHS[ch] in svg  # the shape drawn for this glyph
+    assert set(app._BRACKET_PATHS) == emitted  # no dead paths for glyphs never drawn

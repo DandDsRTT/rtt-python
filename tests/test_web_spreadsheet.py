@@ -179,8 +179,13 @@ def test_the_mapping_matrix_is_framed_top_and_bottom():
     cells = {c.id: c for c in _layout().cells}
     # the mapping matrix gets a spanning top bracket and bottom curly brace
     assert "ebktop:primes" in cells and "ebkbrace:primes" in cells
-    assert cells["ebktop:primes"].y < cells["cell:mapping:0:0"].y  # top bracket above the values
-    assert cells["ebkbrace:primes"].y >= cells["cell:mapping:1:0"].y  # brace below the values
+    top, brace = cells["ebktop:primes"], cells["ebkbrace:primes"]
+    first, last = cells["cell:mapping:0:0"], cells["cell:mapping:1:0"]
+    # the framing bands stand off the matrix by a gap, so the top bracket and
+    # bottom brace never butt up against the per-row ⟨ … ] brackets (which would
+    # read as one tall curly shape on the left edge)
+    assert top.y + top.h < first.y  # top bracket sits fully above row 0, clear of it
+    assert brace.y > last.y + last.h  # brace sits fully below the last row, clear of it
     # the mapped list is marked per target column
     assert {"ebktop:mapped:0", "ebkbrace:mapped:0"} <= set(cells)
 
