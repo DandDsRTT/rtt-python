@@ -16,7 +16,8 @@ from rtt.web.layout import Block, CellBox, Layout, Line
 from rtt.web.settings import defaults as _default_settings
 
 ROW_H = 30  # px per row / matrix-entry height
-COL_W = 56  # px per value column (wide enough for cents like 1899.26)
+COL_W = 30  # px per value column; == ROW_H so matrix cells are squares that tile
+# the column (a shared-border grid, per the mockup); cents stack int-over-frac to fit
 GAP = 14  # px between row/column groups
 PAD = 4  # px a block extends around its cells
 LABEL_W = 96  # row-label gutter width

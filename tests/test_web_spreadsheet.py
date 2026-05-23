@@ -71,6 +71,21 @@ def test_target_intervals_column_with_mapped_list():
     assert cells["cell:mapped:1:2"].text == "4"  # 5/4 -> 4 generators of the fifth
 
 
+def test_mapping_cells_form_a_square_touching_grid():
+    cells = {c.id: c for c in _layout().cells}
+    c00 = cells["cell:mapping:0:0"]
+    # each cell is square, so the matrix reads as a grid of squares (mockup z_map2)
+    assert c00.w == c00.h == spreadsheet.ROW_H
+    # consecutive cells in a row/column abut exactly — shared borders, no gaps
+    assert cells["cell:mapping:0:1"].x == c00.x + c00.w
+    assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.w
+    assert cells["cell:mapping:1:0"].y == c00.y + c00.h
+    # the mapped target-interval list sits on the same square columns
+    m00 = cells["cell:mapped:0:0"]
+    assert m00.w == m00.h == spreadsheet.ROW_H
+    assert cells["cell:mapped:0:1"].x == m00.x + m00.w
+
+
 def test_tuning_rows_over_primes_and_targets():
     cells = {c.id: c for c in _layout().cells}
     assert cells["label:tuning"].text == "tuning"
