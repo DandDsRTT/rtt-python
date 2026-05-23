@@ -60,6 +60,10 @@ _CSS = f"""
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
+/* value brackets ⟨ ] [ as serif glyphs (font-size set inline from the cell height
+   so each is a touch shorter than its cell — neighbouring brackets keep a gap) */
+.rtt-ebkglyph {{ display:flex; align-items:center; justify-content:center; width:100%; height:100%;
+                font-family:'Cambria',Georgia,serif; line-height:1; color:{_BR_COLOR}; }}
 /* the matrix's top bracket: thick top bar + short thin down-tick serifs, as CSS
    borders so the ticks keep a fixed 1px weight however wide the bar stretches
    (a non-scaling SVG stroke distorts under the bar's large horizontal scale) */
@@ -112,34 +116,19 @@ _CSS = f"""
 
 _LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "rowtoggle", "coltoggle"}
 
-# EBK brackets, drawn as SVG so they're font-independent and — thanks to
-# non-scaling strokes — keep one weight and colour no matter what cell height
-# they stretch to fill. Each is a thick main bar with short thinner serifs (the
-# angle bracket is a single open polyline). Vertical brackets use a 16-wide
-# viewBox that maps 1:1 to the gutter, so serifs stay a fixed length while the
-# bar stretches to the row height.
+# The per-row value brackets ⟨ ] [ are real serif glyphs (see .rtt-ebkglyph), so
+# they carry the mockup font's calligraphy for free and never suffer the
+# stroke-scaling artifacts a stretched SVG would. Only the framing that has to
+# stretch — the top bracket (CSS borders), the bottom brace and the monzo rules
+# (SVG) — is drawn by hand.
 def _stroke(d, w):
     return (f'<path d="{d}" fill="none" stroke="{_BR_COLOR}" stroke-width="{w}" '
             'stroke-linecap="square" vector-effect="non-scaling-stroke"/>')
 
 
-# First entry of each glyph is the thick bar; the rest are thin serifs.
-_BRACKET_PARTS = {
-    "⟨": ["M13,1 L6,50 L13,99"],
-    "[": ["M5,1 L5,99", "M5,1 L11,1", "M5,99 L11,99"],
-    "]": ["M11,1 L11,99", "M11,1 L5,1", "M11,99 L5,99"],
-}
-
-
 def _svg(view, body):
     return (f'<svg width="100%" height="100%" viewBox="{view}" preserveAspectRatio="none" '
             f'style="display:block;overflow:visible">{body}</svg>')
-
-
-def _bracket_svg(ch):
-    bar, *serifs = _BRACKET_PARTS[ch]
-    body = _stroke(bar, _BR_BAR) + "".join(_stroke(s, _BR_SERIF) for s in serifs)
-    return _svg("0 0 16 100", body)
 
 
 # A vertical rule between the mapped list's monzo columns, drawn at the same
@@ -255,7 +244,7 @@ def index() -> None:
             elif cb.kind == "mapped":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "bracket":
-                ui.html(_bracket_svg(cb.text)).classes("rtt-svgfill")
+                ui.label(cb.text).classes("rtt-ebkglyph")
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 ui.label(cb.text).classes("rtt-caption")
@@ -322,7 +311,10 @@ def index() -> None:
             if cb.id not in els:
                 with board:
                     els[cb.id] = _make_cell(cb)
-            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
+            # value-bracket glyphs run a touch shorter than their cell so adjacent
+            # brackets keep a gap; tall enclosing brackets still scale up with it
+            sized = f"; font-size:{cb.h - 7}px" if cb.kind == "bracket" else ""
+            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px{sized}")
             if cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
             elif cb.id in fracs:
