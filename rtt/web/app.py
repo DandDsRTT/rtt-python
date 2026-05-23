@@ -49,6 +49,8 @@ _CSS = f"""
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; }}
 .rtt-val {{ font-size:14px; color:#000; }}
+.rtt-bracket {{ display:flex; align-items:center; justify-content:center; width:100%; height:100%;
+               line-height:0.8; color:#000; font-family:'Cambria',Georgia,serif; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
 .rtt-approx {{ font-size:13px; align-self:center; }}
@@ -175,6 +177,8 @@ def index() -> None:
                 _ratio(cb, approx=False)
             elif cb.kind == "mapped":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
+            elif cb.kind == "bracket":
+                ui.label(cb.text).classes("rtt-bracket")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):
@@ -227,7 +231,8 @@ def index() -> None:
             if cb.id not in els:
                 with board:
                     els[cb.id] = _make_cell(cb)
-            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
+            sized = f"; font-size:{round(cb.h * 1.15)}px" if cb.kind == "bracket" else ""
+            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px{sized}")
             if cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
             elif cb.id in fracs:

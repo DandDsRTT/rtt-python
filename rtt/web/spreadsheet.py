@@ -25,6 +25,10 @@ GEN_W = 50  # generators column width
 CTRL_W = 52  # domain shrink/expand (-/+) control gutter, right of the primes block
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
+BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
+MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
+VEC_BRACKETS = ("[", "⟩")  # [ … ⟩ for vectors (monzos)
+LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 
 
 def _cents(value) -> str:
@@ -69,10 +73,12 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # (horizontal) title readable, so it never overflows onto its neighbours. The
     # domain -/+ controls ride just right of the primes block when it is open.
     col_header = {"gens": "generators", "primes": "domain primes", "targets": "target-intervals"}
+    # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
+    # the value cells are inset by BRACKET_W within the group.
     col_bands = (
         ("gens", GEN_W, show_temp, True),
-        ("primes", d * COL_W, True, True),
-        ("targets", k * COL_W, True, True),
+        ("primes", 2 * BRACKET_W + d * COL_W, True, True),
+        ("targets", 2 * BRACKET_W + k * COL_W, True, True),
     )
     # A fold-toggle node column sits between the row-label gutter and the content
     # (when names show); content starts past it with a clear gap so the tiles
@@ -145,10 +151,10 @@ def build(state, settings=None, collapsed=None) -> Layout:
         return key in row_y and f"row:{key}" not in collapsed
 
     def prime_left(p):
-        return primes_x + p * COL_W
+        return primes_x + BRACKET_W + p * COL_W
 
     def target_left(j):
-        return targets_x + j * COL_W
+        return targets_x + BRACKET_W + j * COL_W
 
     def map_top(i):
         return row_y["mapping"] + i * ROW_H
@@ -222,6 +228,28 @@ def build(state, settings=None, collapsed=None) -> Layout:
     if row_open("damage") and col_open("targets"):  # damage is over the targets only
         for j, v in enumerate(tun.target_damage):
             cells.append(CellBox(f"damage:target:{j}", target_left(j), row_y["damage"], COL_W, ROW_H, "tval", text=_cents(v)))
+
+    # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
+    # target-side rows are lists ([ … ]). Maps stack one per generator row.
+    def bracket(bid, glyphs, group_key, y, h):
+        gx, gw = col_x[group_key], col_w[group_key]
+        cells.append(CellBox(f"bracket:{bid}:l", gx, y, BRACKET_W, h, "bracket", text=glyphs[0]))
+        cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, y, BRACKET_W, h, "bracket", text=glyphs[1]))
+
+    if row_open("mapping"):
+        if col_open("primes"):
+            for i in range(r):
+                bracket(f"map:{i}", MAP_BRACKETS, "primes", map_top(i), ROW_H)
+        if col_open("targets"):
+            bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H)
+    for key in ("tuning", "just", "retune"):
+        if row_open(key):
+            if col_open("primes"):
+                bracket(f"{key}:map", MAP_BRACKETS, "primes", row_y[key], ROW_H)
+            if col_open("targets"):
+                bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
+    if row_open("damage") and col_open("targets"):
+        bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
 
     # Shared axes. A multi-element group is one line that fans out at the near end
     # (from its node) into one line per element, runs through the data, then fans

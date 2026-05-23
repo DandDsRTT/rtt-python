@@ -175,6 +175,20 @@ def test_collapsing_a_column_folds_its_panels_away_and_converges_the_lines():
     assert by_id["bus:primes:top"].length == 0  # ...and the buses shrink to nothing
 
 
+def test_maps_get_angle_brackets_and_lists_get_square_brackets():
+    cells = {c.id: c for c in _layout().cells}
+    # each mapping row is a map: ⟨ … ] (one bracket pair per generator)
+    assert cells["bracket:map:0:l"].text == "⟨" and cells["bracket:map:0:r"].text == "]"
+    assert "bracket:map:1:l" in cells
+    # tuning/just/retuning maps are maps too
+    assert cells["bracket:tuning:map:l"].text == "⟨" and cells["bracket:tuning:map:r"].text == "]"
+    # the target-side lists are plain: [ … ]
+    assert cells["bracket:mapped:l"].text == "[" and cells["bracket:mapped:r"].text == "]"
+    assert cells["bracket:damage:l"].text == "[" and cells["bracket:damage:r"].text == "]"
+    # brackets sit just outside the value cells (left of the first, right of the last)
+    assert cells["bracket:map:0:l"].x < cells["cell:mapping:0:0"].x < cells["bracket:map:0:r"].x
+
+
 def test_the_row_fold_node_clears_the_first_content_tile():
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))))
     node = {c.id: c for c in lay.cells}["toggle:row:mapping"]
