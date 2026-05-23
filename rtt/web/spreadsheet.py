@@ -31,7 +31,8 @@ BRACE_H = 14  # height of a matrix's bottom curly-brace band (taller, room for t
 FRAME_GAP = 5  # gap between a framing band and the matrix cells, so they don't merge
 BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
 MARK_INSET = 8  # inset of a mapped column's top/bottom mark, so it clears the rules
-SEP_W = 1  # width of a vertical rule separating the mapped list's monzo columns
+SEP_W = 2  # width of a vertical rule between monzo columns (the renderer draws it
+# as thick as a square bracket's main bar; this is just the cell it centres in)
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 

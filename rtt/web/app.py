@@ -57,7 +57,12 @@ _CSS = f"""
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
-.rtt-vbar {{ width:100%; height:100%; background:{_BR_COLOR}; }}
+/* the matrix's top bracket: thick top bar + short thin down-tick serifs, as CSS
+   borders so the ticks keep a fixed 1px weight however wide the bar stretches
+   (a non-scaling SVG stroke distorts under the bar's large horizontal scale) */
+.rtt-ebktop {{ align-self:flex-start; width:100%; height:7px; box-sizing:border-box;
+              border-top:{_BR_BAR}px solid {_BR_COLOR}; border-left:{_BR_SERIF}px solid {_BR_COLOR};
+              border-right:{_BR_SERIF}px solid {_BR_COLOR}; }}
 /* captions hold off their fade-in until the tile has finished expanding */
 .rtt-caption-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
@@ -128,12 +133,9 @@ def _bracket_svg(ch):
     return _svg("0 0 16 100", body)
 
 
-def _ebk_top_svg():
-    # the matrix's top bracket: a thick top bar (stretches with the tile width)
-    # with short thin down-tick serifs — the square bracket rotated flat.
-    body = (_stroke("M1,1 L99,1", _BR_BAR)
-            + _stroke("M1,1 L1,7", _BR_SERIF) + _stroke("M99,1 L99,7", _BR_SERIF))
-    return _svg("0 0 100 9", body)
+# A vertical rule between the mapped list's monzo columns, drawn at the same
+# weight as a square bracket's main bar (non-scaling => exact at any cell size).
+_VBAR_SVG = _svg("0 0 2 100", _stroke("M1,0 L1,100", _BR_BAR))
 
 
 # The matrix's bottom curly brace, a calligraphic under-brace: a filled outline
@@ -241,11 +243,11 @@ def index() -> None:
                 wrap.classes("rtt-caption-cell")
                 ui.label(cb.text).classes("rtt-caption")
             elif cb.kind == "ebktop":
-                ui.html(_ebk_top_svg()).classes("rtt-svgfill")
+                ui.element("div").classes("rtt-ebktop")
             elif cb.kind == "ebkbrace":
                 ui.html(_BRACE_SVG).classes("rtt-svgfill")
             elif cb.kind == "vbar":
-                ui.element("div").classes("rtt-vbar")
+                ui.html(_VBAR_SVG).classes("rtt-svgfill")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):
