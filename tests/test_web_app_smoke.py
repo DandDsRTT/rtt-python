@@ -71,3 +71,12 @@ def test_square_brackets_are_a_thick_bar_with_thin_serifs_angle_is_one_stroke():
         assert svg.count("<path") == 3  # one main bar + two serifs
         assert f'stroke-width="{app._BR_BAR}"' in svg and f'stroke-width="{app._BR_SERIF}"' in svg
     assert app._bracket_svg("⟨").count("<path") == 1  # just the open polyline
+
+
+def test_brace_is_a_filled_calligraphic_shape_in_the_shared_colour():
+    # the matrix's bottom brace is calligraphic — a filled outline whose weight
+    # tapers, not a uniform stroke — and shares the one bracket colour
+    brace = app._BRACE_SVG
+    assert brace.startswith("<svg")
+    assert f'fill="{app._BR_COLOR}"' in brace  # filled outline, shared colour
+    assert 'fill="none"' not in brace  # not the old uniform stroke

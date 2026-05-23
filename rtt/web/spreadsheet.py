@@ -26,7 +26,8 @@ CTRL_W = 52  # domain shrink/expand (-/+) control gutter, right of the primes bl
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
-FRAME_H = 9  # height of a matrix's top-bracket / bottom-brace framing band
+FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
+BRACE_H = 14  # height of a matrix's bottom curly-brace band (taller, room for the spike)
 FRAME_GAP = 5  # gap between a framing band and the matrix cells, so they don't merge
 BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
@@ -160,16 +161,19 @@ def build(state, settings=None, collapsed=None) -> Layout:
         if not present:
             continue
         folded = f"row:{key}" in collapsed
-        # framing band (bracket/brace) plus a gap before the cells; top == bottom
-        frame = (FRAME_H + FRAME_GAP) if (key in FRAMED_ROWS and not folded) else 0
+        framed = key in FRAMED_ROWS and not folded
+        # framing bands stand off the cells by FRAME_GAP: a top bracket (FRAME_H)
+        # and a taller bottom curly brace (BRACE_H, with room for its spike)
+        top_frame = (FRAME_H + FRAME_GAP) if framed else 0
+        bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
         cap = CAPTION_H if (show_captions and key in CAPTIONED_ROWS and not folded) else 0
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
-        row_y[key] = y + frame  # values sit below the top framing band
-        row_frame[key] = frame
+        row_y[key] = y + top_frame  # values sit below the top framing band
+        row_frame[key] = bot_frame  # the caption sits below the bottom brace band
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = frame + row_h[key] + frame + cap
+        tile_h[key] = top_frame + row_h[key] + bot_frame + cap
         y += tile_h[key] + GAP
     total_h = y
 
@@ -369,13 +373,13 @@ def build(state, settings=None, collapsed=None) -> Layout:
     if row_open("mapping") and col_open("primes"):
         gx, gw = col_x["primes"], col_w["primes"]
         cells.append(CellBox("ebktop:primes", gx, map_top_y, gw, FRAME_H, "ebktop"))
-        cells.append(CellBox("ebkbrace:primes", gx, brace_y, gw, FRAME_H, "ebkbrace"))
+        cells.append(CellBox("ebkbrace:primes", gx, brace_y, gw, BRACE_H, "ebkbrace"))
     # the mapped list is a row of vectors, so each target column is marked with a
     # top bracket and a bottom curly brace
     if row_open("mapping") and col_open("targets"):
         for j in range(k):
             cx = target_left(j)
             cells.append(CellBox(f"ebktop:mapped:{j}", cx, map_top_y, COL_W, FRAME_H, "ebktop"))
-            cells.append(CellBox(f"ebkbrace:mapped:{j}", cx, brace_y, COL_W, FRAME_H, "ebkbrace"))
+            cells.append(CellBox(f"ebkbrace:mapped:{j}", cx, brace_y, COL_W, BRACE_H, "ebkbrace"))
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))

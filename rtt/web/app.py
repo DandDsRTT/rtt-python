@@ -92,14 +92,6 @@ _CSS = f"""
 
 _LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "rowtoggle", "coltoggle"}
 
-# A horizontal curly under-brace that stretches to the tile width (the matrix's
-# bottom-brace pointing to its caption). Non-scaling stroke keeps it 1px.
-_BRACE_SVG = (
-    '<svg width="100%" height="100%" viewBox="0 0 100 9" preserveAspectRatio="none" style="display:block">'
-    '<path d="M0,0 Q6,0 6,4 L44,4 Q50,4 50,9 Q50,4 56,4 L94,4 Q100,4 100,0" '
-    'fill="none" stroke="#555" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>'
-)
-
 # EBK brackets, drawn as SVG so they're font-independent and — thanks to
 # non-scaling strokes — keep one weight and colour no matter what cell height
 # they stretch to fill. Each is a thick main bar with short thinner serifs (the
@@ -141,6 +133,18 @@ def _ebk_top_svg():
     body = (_stroke("M1,1 L99,1", _BR_BAR)
             + _stroke("M1,1 L1,7", _BR_SERIF) + _stroke("M99,1 L99,7", _BR_SERIF))
     return _svg("0 0 100 9", body)
+
+
+# The matrix's bottom curly brace, a calligraphic under-brace: a filled outline
+# (so the weight tapers to the two tips and the central spike, unlike a uniform
+# stroke) drawn symmetrically about x=50. Stretches to the tile width; the
+# 14-tall viewBox maps 1:1 to the brace band so its weight is size-independent.
+_BRACE_SVG = _svg("0 0 100 14",
+    f'<path fill="{_BR_COLOR}" d="'
+    'M4,2 C7,4 9,5.5 14,5.8 C30,6.4 40,6.8 45,8.7 C48,9.9 49,11.4 50,13 '
+    'C51,11.4 52,9.9 55,8.7 C60,6.8 70,6.4 86,5.8 C91,5.5 93,4 96,2 '
+    'C94,3.4 92,3.9 87,4.2 C71,4.8 61,5.2 56,6.7 C52.5,7.8 51,8 50,9 '
+    'C49,8 47.5,7.8 44,6.7 C39,5.2 29,4.8 13,4.2 C8,3.9 6,3.4 4,2 Z"/>')
 
 
 def _parse_int(text):
