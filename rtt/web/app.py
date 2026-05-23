@@ -23,7 +23,10 @@ _T = "0.25s"  # transition duration
 _BR_COLOR = "#1a1a1a"
 _BR_BAR = 2  # thick main-bar / angle stroke (px)
 _BR_SERIF = 1  # thin serif stroke (px)
-_BR_BRACE = 1.6  # curly-brace stroke (px); a touch lighter than the straight bars
+# the brace is calligraphic: thick on its vertical strokes (serifs, cusp), thin
+# on its horizontal ones (arms, curls), like the mockup font's curly bracket
+_BR_BRACE_THIN = 1.3
+_BR_BRACE_THICK = 2.5
 _BRACE_END_W = 7  # px width of each fixed brace end-curl piece
 _BRACE_CENTER_W = 11  # px width of the fixed brace central-cusp piece
 
@@ -141,19 +144,24 @@ _VBAR_SVG = _svg("0 0 2 100", _stroke("M1,0 L1,100", _BR_BAR))
 # arms between them stretch. Pieces are laid out in a flex row (see .rtt-brace*):
 # [end-L][arm][center][arm][end-R]. The arms meet the ends/center at y=6, so the
 # straight rule joins their curls seamlessly. 14-tall viewBox maps 1:1 to the band.
-def _brace_path(d):
-    return (f'<path d="{d}" fill="none" stroke="{_BR_COLOR}" stroke-width="{_BR_BRACE}" '
-            'stroke-linecap="butt" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>')
+def _brace_seg(d, w):
+    return (f'<path d="{d}" fill="none" stroke="{_BR_COLOR}" stroke-width="{w}" '
+            'stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>')
 
 
-# end-curls: the arm enters at y=6 and curls up to a short vertical serif (a
-# terminal perpendicular to the brace's horizontal run, not a tapered wisp)
-_BRACE_END_L = _svg(f"0 0 {_BRACE_END_W} 14", _brace_path("M7,6 Q3,6 2.4,3.4 L2.4,1.6"))
-_BRACE_END_R = _svg(f"0 0 {_BRACE_END_W} 14", _brace_path("M0,6 Q4,6 4.6,3.4 L4.6,1.6"))
-# center: both arms drop to a pointed downward cusp
-_BRACE_CENTER = _svg(f"0 0 {_BRACE_CENTER_W} 14", _brace_path("M0,6 C3,6 5,8.5 5.5,12.4 C6,8.5 8,6 11,6"))
-# arm: a straight horizontal rule that stretches to fill the gap
-_BRACE_ARM = _svg("0 0 10 14", _brace_path("M0,6 L10,6"))
+# Each end: a thin curl rising from the arm into a thick vertical serif. The
+# centre: thin arms dropping to a thick vertical cusp. The thin connectors
+# overshoot ~1px into the arm boxes (overflow is visible) so the joins to the
+# stretchy arms never open a gap, and the round caps blend thin into thick.
+_BRACE_END_L = _svg(f"0 0 {_BRACE_END_W} 14",
+    _brace_seg("M8,6 Q4,6 2.6,4.8", _BR_BRACE_THIN) + _brace_seg("M2.6,5 L2.6,2", _BR_BRACE_THICK))
+_BRACE_END_R = _svg(f"0 0 {_BRACE_END_W} 14",
+    _brace_seg("M-1,6 Q3,6 4.4,4.8", _BR_BRACE_THIN) + _brace_seg("M4.4,5 L4.4,2", _BR_BRACE_THICK))
+_BRACE_CENTER = _svg(f"0 0 {_BRACE_CENTER_W} 14",
+    _brace_seg("M-1,6 Q4,6 5.5,9.4", _BR_BRACE_THIN) + _brace_seg("M5.5,8.8 L5.5,12.4", _BR_BRACE_THICK)
+    + _brace_seg("M5.5,9.4 Q7,6 12,6", _BR_BRACE_THIN))
+# arm: a thin horizontal rule that stretches to fill the gap
+_BRACE_ARM = _svg("0 0 10 14", _brace_seg("M0,6 L10,6", _BR_BRACE_THIN))
 
 
 def _parse_int(text):
