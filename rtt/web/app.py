@@ -52,7 +52,9 @@ _CSS = f"""
 .rtt-bracket {{ display:flex; align-items:center; justify-content:center; width:100%; height:100%;
                line-height:0.8; color:#000; font-family:'Cambria',Georgia,serif; }}
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
-               font-family:'Cambria',Georgia,serif; font-style:italic; }}
+               font-family:'Cambria',Georgia,serif; }}
+/* captions hold off their fade-in until the tile has finished expanding */
+.rtt-caption-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
 .rtt-approx {{ font-size:13px; align-self:center; }}
@@ -182,6 +184,7 @@ def index() -> None:
             elif cb.kind == "bracket":
                 ui.label(cb.text).classes("rtt-bracket")
             elif cb.kind == "caption":
+                wrap.classes("rtt-caption-cell")
                 ui.label(cb.text).classes("rtt-caption")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
