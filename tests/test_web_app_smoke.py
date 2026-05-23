@@ -73,10 +73,13 @@ def test_square_brackets_are_a_thick_bar_with_thin_serifs_angle_is_one_stroke():
     assert app._bracket_svg("⟨").count("<path") == 1  # just the open polyline
 
 
-def test_brace_is_a_filled_calligraphic_shape_in_the_shared_colour():
-    # the matrix's bottom brace is calligraphic — a filled outline whose weight
-    # tapers, not a uniform stroke — and shares the one bracket colour
-    brace = app._BRACE_SVG
-    assert brace.startswith("<svg")
-    assert f'fill="{app._BR_COLOR}"' in brace  # filled outline, shared colour
-    assert 'fill="none"' not in brace  # not the old uniform stroke
+def test_brace_is_a_stretchy_composite_of_fixed_ends_centre_and_arms():
+    # the brace is built from fixed end-curls + a fixed centre cusp joined by
+    # stretchy arms, so the curls and cusp stay identical at any brace width and
+    # only the arms stretch. All pieces share the one bracket colour.
+    parts = [app._BRACE_END_L, app._BRACE_END_R, app._BRACE_CENTER, app._BRACE_ARM]
+    for p in parts:
+        assert p.startswith("<svg") and "non-scaling-stroke" in p
+        assert f'stroke="{app._BR_COLOR}"' in p  # one shared colour
+    assert app._BRACE_ARM.count("<path") == 1  # the arm is just a straight rule
+    assert app._BRACE_END_L != app._BRACE_END_R  # the ends mirror each other

@@ -23,6 +23,9 @@ _T = "0.25s"  # transition duration
 _BR_COLOR = "#1a1a1a"
 _BR_BAR = 2  # thick main-bar / angle stroke (px)
 _BR_SERIF = 1  # thin serif stroke (px)
+_BR_BRACE = 1.6  # curly-brace stroke (px); a touch lighter than the straight bars
+_BRACE_END_W = 7  # px width of each fixed brace end-curl piece
+_BRACE_CENTER_W = 11  # px width of the fixed brace central-cusp piece
 
 _CSS = f"""
 .rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:30px; font-weight:bold;
@@ -63,6 +66,12 @@ _CSS = f"""
 .rtt-ebktop {{ align-self:flex-start; width:100%; height:7px; box-sizing:border-box;
               border-top:{_BR_BAR}px solid {_BR_COLOR}; border-left:{_BR_SERIF}px solid {_BR_COLOR};
               border-right:{_BR_SERIF}px solid {_BR_COLOR}; }}
+/* the brace is a flex row of fixed end-curls + fixed centre cusp + stretchy arms,
+   so the curls and cusp stay identical at any width — only the arms stretch */
+.rtt-brace {{ display:flex; width:100%; height:100%; align-items:stretch; }}
+.rtt-brace-end {{ flex:0 0 {_BRACE_END_W}px; }}
+.rtt-brace-center {{ flex:0 0 {_BRACE_CENTER_W}px; }}
+.rtt-brace-arm {{ flex:1 1 0; min-width:0; }}
 /* captions hold off their fade-in until the tile has finished expanding */
 .rtt-caption-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
@@ -138,16 +147,24 @@ def _bracket_svg(ch):
 _VBAR_SVG = _svg("0 0 2 100", _stroke("M1,0 L1,100", _BR_BAR))
 
 
-# The matrix's bottom curly brace, a calligraphic under-brace: a filled outline
-# (so the weight tapers to the two tips and the central spike, unlike a uniform
-# stroke) drawn symmetrically about x=50. Stretches to the tile width; the
-# 14-tall viewBox maps 1:1 to the brace band so its weight is size-independent.
-_BRACE_SVG = _svg("0 0 100 14",
-    f'<path fill="{_BR_COLOR}" d="'
-    'M4,2 C7,4 9,5.5 14,5.8 C30,6.4 40,6.8 45,8.7 C48,9.9 49,11.4 50,13 '
-    'C51,11.4 52,9.9 55,8.7 C60,6.8 70,6.4 86,5.8 C91,5.5 93,4 96,2 '
-    'C94,3.4 92,3.9 87,4.2 C71,4.8 61,5.2 56,6.7 C52.5,7.8 51,8 50,9 '
-    'C49,8 47.5,7.8 44,6.7 C39,5.2 29,4.8 13,4.2 C8,3.9 6,3.4 4,2 Z"/>')
+# The matrix's bottom curly brace, built as a stretchy composite so the two
+# end-curls and the central cusp keep a fixed shape at any width — only the two
+# arms between them stretch. Pieces are laid out in a flex row (see .rtt-brace*):
+# [end-L][arm][center][arm][end-R]. The arms meet the ends/center at y=6, so the
+# straight rule joins their curls seamlessly. 14-tall viewBox maps 1:1 to the band.
+def _brace_path(d):
+    return (f'<path d="{d}" fill="none" stroke="{_BR_COLOR}" stroke-width="{_BR_BRACE}" '
+            'stroke-linecap="butt" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>')
+
+
+# end-curls: the arm enters at y=6 and curls up to a short vertical serif (a
+# terminal perpendicular to the brace's horizontal run, not a tapered wisp)
+_BRACE_END_L = _svg(f"0 0 {_BRACE_END_W} 14", _brace_path("M7,6 Q3,6 2.4,3.4 L2.4,1.6"))
+_BRACE_END_R = _svg(f"0 0 {_BRACE_END_W} 14", _brace_path("M0,6 Q4,6 4.6,3.4 L4.6,1.6"))
+# center: both arms drop to a pointed downward cusp
+_BRACE_CENTER = _svg(f"0 0 {_BRACE_CENTER_W} 14", _brace_path("M0,6 C3,6 5,8.5 5.5,12.4 C6,8.5 8,6 11,6"))
+# arm: a straight horizontal rule that stretches to fill the gap
+_BRACE_ARM = _svg("0 0 10 14", _brace_path("M0,6 L10,6"))
 
 
 def _parse_int(text):
@@ -245,7 +262,12 @@ def index() -> None:
             elif cb.kind == "ebktop":
                 ui.element("div").classes("rtt-ebktop")
             elif cb.kind == "ebkbrace":
-                ui.html(_BRACE_SVG).classes("rtt-svgfill")
+                with ui.element("div").classes("rtt-brace"):
+                    ui.html(_BRACE_END_L).classes("rtt-brace-end")
+                    ui.html(_BRACE_ARM).classes("rtt-brace-arm")
+                    ui.html(_BRACE_CENTER).classes("rtt-brace-center")
+                    ui.html(_BRACE_ARM).classes("rtt-brace-arm")
+                    ui.html(_BRACE_END_R).classes("rtt-brace-end")
             elif cb.kind == "vbar":
                 ui.html(_VBAR_SVG).classes("rtt-svgfill")
             elif cb.kind == "tval":
