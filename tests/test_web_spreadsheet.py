@@ -175,6 +175,16 @@ def test_collapsing_a_column_folds_its_panels_away_and_converges_the_lines():
     assert by_id["bus:primes:top"].length == 0  # ...and the buses shrink to nothing
 
 
+def test_the_mapping_matrix_is_framed_top_and_bottom():
+    cells = {c.id: c for c in _layout().cells}
+    # the mapping matrix gets a spanning top bracket and bottom curly brace
+    assert "ebktop:primes" in cells and "ebkbrace:primes" in cells
+    assert cells["ebktop:primes"].y < cells["cell:mapping:0:0"].y  # top bracket above the values
+    assert cells["ebkbrace:primes"].y >= cells["cell:mapping:1:0"].y  # brace below the values
+    # the mapped list is marked per target column
+    assert {"ebktop:mapped:0", "ebkbrace:mapped:0"} <= set(cells)
+
+
 def test_maps_get_angle_brackets_and_lists_get_square_brackets():
     cells = {c.id: c for c in _layout().cells}
     # each mapping row is a map: ⟨ … ] (one bracket pair per generator)

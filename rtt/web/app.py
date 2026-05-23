@@ -53,6 +53,8 @@ _CSS = f"""
                line-height:0.8; color:#000; font-family:'Cambria',Georgia,serif; }}
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
+.rtt-ebktop {{ width:100%; height:100%; border:1px solid #555; border-bottom:none; }}
+.rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
 /* captions hold off their fade-in until the tile has finished expanding */
 .rtt-caption-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
@@ -92,6 +94,14 @@ _CSS = f"""
 """
 
 _LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "rowtoggle", "coltoggle"}
+
+# A horizontal curly under-brace that stretches to the tile width (the matrix's
+# bottom-brace pointing to its caption). Non-scaling stroke keeps it 1px.
+_BRACE_SVG = (
+    '<svg width="100%" height="100%" viewBox="0 0 100 9" preserveAspectRatio="none" style="display:block">'
+    '<path d="M0,0 Q6,0 6,4 L44,4 Q50,4 50,9 Q50,4 56,4 L94,4 Q100,4 100,0" '
+    'fill="none" stroke="#555" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>'
+)
 
 
 def _parse_int(text):
@@ -186,6 +196,10 @@ def index() -> None:
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 ui.label(cb.text).classes("rtt-caption")
+            elif cb.kind == "ebktop":
+                ui.element("div").classes("rtt-ebktop")
+            elif cb.kind == "ebkbrace":
+                ui.html(_BRACE_SVG).classes("rtt-svgfill")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):

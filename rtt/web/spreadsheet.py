@@ -26,6 +26,7 @@ CTRL_W = 52  # domain shrink/expand (-/+) control gutter, right of the primes bl
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
+FRAME_H = 9  # height of a matrix's top-bracket / bottom-brace framing band
 BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 VEC_BRACKETS = ("[", "⟩")  # [ … ⟩ for vectors (monzos)
@@ -44,6 +45,7 @@ CAPTIONS = {
     ("damage", "targets"): "target-interval damage list",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
+FRAMED_ROWS = frozenset({"mapping"})  # multi-row matrices get a top bracket + bottom brace band
 
 
 def _cents(value) -> str:
@@ -149,19 +151,24 @@ def build(state, settings=None, collapsed=None) -> Layout:
         ("retune", ROW_H, show_tuning, True, "retuning"),
         ("damage", ROW_H, show_tuning, True, "damage"),
     )
-    # row_h is the value (cell/gridline) height; tile_h adds the in-tile caption
-    # band below it when captions are shown, so the grey tile grows to hold them.
-    row_y, row_h, row_label, row_collapsible, tile_h = {}, {}, {}, {}, {}
+    # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
+    # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
+    row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
+    tile_h, tile_top, row_frame = {}, {}, {}
     y = quant_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
             continue
-        row_y[key] = y
-        row_h[key] = STRIP if f"row:{key}" in collapsed else natural
+        folded = f"row:{key}" in collapsed
+        frame = FRAME_H if (key in FRAMED_ROWS and not folded) else 0  # top == bottom band
+        cap = CAPTION_H if (show_captions and key in CAPTIONED_ROWS and not folded) else 0
+        row_h[key] = STRIP if folded else natural
+        tile_top[key] = y
+        row_y[key] = y + frame  # values sit below the top framing band
+        row_frame[key] = frame
         row_label[key] = label
         row_collapsible[key] = collapsible
-        captioned = show_captions and key in CAPTIONED_ROWS and f"row:{key}" not in collapsed
-        tile_h[key] = row_h[key] + (CAPTION_H if captioned else 0)
+        tile_h[key] = frame + row_h[key] + frame + cap
         y += tile_h[key] + GAP
     total_h = y
 
@@ -326,7 +333,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         if ckey not in col_x or rkey not in row_y:
             return
         col_c, row_c = f"col:{ckey}" in collapsed, f"row:{rkey}" in collapsed
-        cw, ch, cx, cy = col_w[ckey], tile_h[rkey], col_x[ckey], row_y[rkey]
+        cw, ch, cx, cy = col_w[ckey], tile_h[rkey], col_x[ckey], tile_top[rkey]
         w, px = (0, 0) if col_c else (cw, PAD)
         h, py = (0, 0) if row_c else (ch, PAD)
         bx = cx + cw / 2 if col_c else cx
@@ -343,11 +350,29 @@ def build(state, settings=None, collapsed=None) -> Layout:
         panel(f"block:{key}:targets", "targets", key)
     panel("block:damage:targets", "targets", "damage")
 
-    # quantity-name captions inside each tile (below its values), toggled by names
+    # quantity-name captions inside each tile (below its values + bottom frame),
+    # toggled by names
     if show_captions:
         for (rkey, ckey), text in CAPTIONS.items():
             if row_open(rkey) and col_open(ckey):
-                cy = row_y[rkey] + row_h[rkey]
+                cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
                 cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H, "caption", text=text))
+
+    # the mapping is a column of stacked maps, so it's enclosed by a top bracket
+    # and a bottom curly brace spanning the matrix, drawn in its frame bands
+    map_top_y, map_bot_y = tile_top.get("mapping"), None
+    if "mapping" in row_y:
+        map_bot_y = row_y["mapping"] + row_h["mapping"]
+    if row_open("mapping") and col_open("primes"):
+        gx, gw = col_x["primes"], col_w["primes"]
+        cells.append(CellBox("ebktop:primes", gx, map_top_y, gw, FRAME_H, "ebktop"))
+        cells.append(CellBox("ebkbrace:primes", gx, map_bot_y, gw, FRAME_H, "ebkbrace"))
+    # the mapped list is a row of vectors, so each target column is marked with a
+    # top bracket and a bottom curly brace
+    if row_open("mapping") and col_open("targets"):
+        for j in range(k):
+            cx = target_left(j)
+            cells.append(CellBox(f"ebktop:mapped:{j}", cx, map_top_y, COL_W, FRAME_H, "ebktop"))
+            cells.append(CellBox(f"ebkbrace:mapped:{j}", cx, map_bot_y, COL_W, FRAME_H, "ebkbrace"))
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))
