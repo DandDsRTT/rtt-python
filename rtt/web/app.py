@@ -51,7 +51,6 @@ _CSS = f"""
 .rtt-val {{ font-size:14px; color:#000; }}
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
-.rtt-ebktop {{ width:100%; height:100%; border:1px solid #555; border-bottom:none; }}
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
 /* captions hold off their fade-in until the tile has finished expanding */
 .rtt-caption-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
@@ -101,18 +100,47 @@ _BRACE_SVG = (
     'fill="none" stroke="#555" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>'
 )
 
-# Value brackets drawn as SVG (font-independent, so ⟨ never renders as a curly
-# brace), stretched to fill the bracket gutter: ⟨ … ] for maps, [ … ] for lists.
-_BRACKET_PATHS = {"⟨": "M85,4 L20,50 L85,96",
-                  "[": "M80,4 L25,4 L25,96 L80,96", "]": "M20,4 L75,4 L75,96 L20,96"}
+# EBK brackets, drawn as SVG so they're font-independent and — thanks to
+# non-scaling strokes — keep one weight and colour no matter what cell height
+# they stretch to fill. Each is a thick main bar with short thinner serifs (the
+# angle bracket is a single open polyline). Vertical brackets use a 16-wide
+# viewBox that maps 1:1 to the gutter, so serifs stay a fixed length while the
+# bar stretches to the row height.
+_BR_COLOR = "#1a1a1a"  # one colour for every bracket and brace
+_BR_BAR = 2  # thick main-bar / angle stroke (px)
+_BR_SERIF = 1  # thin serif stroke (px)
+
+
+def _stroke(d, w):
+    return (f'<path d="{d}" fill="none" stroke="{_BR_COLOR}" stroke-width="{w}" '
+            'stroke-linecap="square" vector-effect="non-scaling-stroke"/>')
+
+
+# First entry of each glyph is the thick bar; the rest are thin serifs.
+_BRACKET_PARTS = {
+    "⟨": ["M13,1 L6,50 L13,99"],
+    "[": ["M5,1 L5,99", "M5,1 L11,1", "M5,99 L11,99"],
+    "]": ["M11,1 L11,99", "M11,1 L5,1", "M11,99 L5,99"],
+}
+
+
+def _svg(view, body):
+    return (f'<svg width="100%" height="100%" viewBox="{view}" preserveAspectRatio="none" '
+            f'style="display:block;overflow:visible">{body}</svg>')
 
 
 def _bracket_svg(ch):
-    return (
-        '<svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="display:block">'
-        f'<path d="{_BRACKET_PATHS[ch]}" fill="none" stroke="#000" stroke-width="1.5" '
-        'vector-effect="non-scaling-stroke"/></svg>'
-    )
+    bar, *serifs = _BRACKET_PARTS[ch]
+    body = _stroke(bar, _BR_BAR) + "".join(_stroke(s, _BR_SERIF) for s in serifs)
+    return _svg("0 0 16 100", body)
+
+
+def _ebk_top_svg():
+    # the matrix's top bracket: a thick top bar (stretches with the tile width)
+    # with short thin down-tick serifs — the square bracket rotated flat.
+    body = (_stroke("M1,1 L99,1", _BR_BAR)
+            + _stroke("M1,1 L1,7", _BR_SERIF) + _stroke("M99,1 L99,7", _BR_SERIF))
+    return _svg("0 0 100 9", body)
 
 
 def _parse_int(text):
@@ -208,7 +236,7 @@ def index() -> None:
                 wrap.classes("rtt-caption-cell")
                 ui.label(cb.text).classes("rtt-caption")
             elif cb.kind == "ebktop":
-                ui.element("div").classes("rtt-ebktop")
+                ui.html(_ebk_top_svg()).classes("rtt-svgfill")
             elif cb.kind == "ebkbrace":
                 ui.html(_BRACE_SVG).classes("rtt-svgfill")
             elif cb.kind == "tval":

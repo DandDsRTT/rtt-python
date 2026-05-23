@@ -51,12 +51,23 @@ def test_cents_parts_splits_whole_and_fraction_for_decimal_alignment():
 
 def test_bracket_svg_covers_exactly_the_glyphs_the_grid_emits():
     # value brackets are drawn as SVG (not font glyphs) so ⟨ doesn't render as a
-    # curly brace; the render table must match what spreadsheet actually emits.
+    # curly brace; one renderer per glyph the grid emits, and no dead ones.
     from rtt.web.spreadsheet import LIST_BRACKETS, MAP_BRACKETS
 
     emitted = set(MAP_BRACKETS) | set(LIST_BRACKETS)  # ⟨ ] [
     for ch in emitted:
         svg = app._bracket_svg(ch)
-        assert svg.startswith("<svg") and "non-scaling-stroke" in svg  # stays ~1px when stretched
-        assert app._BRACKET_PATHS[ch] in svg  # the shape drawn for this glyph
-    assert set(app._BRACKET_PATHS) == emitted  # no dead paths for glyphs never drawn
+        # non-scaling stroke => identical weight regardless of the cell it fills
+        assert svg.startswith("<svg") and "non-scaling-stroke" in svg
+    assert set(app._BRACKET_PARTS) == emitted  # no renderer for a glyph never drawn
+
+
+def test_square_brackets_are_a_thick_bar_with_thin_serifs_angle_is_one_stroke():
+    # point of the redesign: a thick main bar, thinner serifs, and an angle
+    # bracket that is a single open stroke (no serifs)
+    assert app._BR_BAR > app._BR_SERIF
+    for ch in ("[", "]"):
+        svg = app._bracket_svg(ch)
+        assert svg.count("<path") == 3  # one main bar + two serifs
+        assert f'stroke-width="{app._BR_BAR}"' in svg and f'stroke-width="{app._BR_SERIF}"' in svg
+    assert app._bracket_svg("⟨").count("<path") == 1  # just the open polyline
