@@ -368,7 +368,7 @@ def _optimization_setup(
         primes = tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
         weights = _damage_weights(primes, t, replace(spec, damage_weight_slope="simplicityWeight"))
         return primes, weights, get_dual_power(spec.complexity_norm_power)
-    monzos = _resolve_target_intervals(spec.target_intervals, t, d)
+    monzos = resolve_target_intervals(spec.target_intervals, t, d)
     return monzos, _damage_weights(monzos, t, spec), spec.optimization_power
 
 
@@ -433,7 +433,7 @@ def _evaluate_damages(
     return monzos, damages, power
 
 
-def _resolve_target_intervals(
+def resolve_target_intervals(
     target_spec: str, t: Temperament, d: int
 ) -> tuple[tuple[int, ...], ...]:
     """Resolve a target-interval spec to monzos: an explicit ``{...}`` quotient list, a
