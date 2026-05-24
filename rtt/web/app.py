@@ -315,7 +315,8 @@ def index() -> None:
 
     editor = Editor()
     settings = show_settings.defaults()  # which parts of the grid are visible
-    collapsed: set = set()  # ids of folded rows/columns/tiles ("row:tuning", "tile:mapping:primes")
+    collapsed: set = {"col:commas"}  # ids of folded rows/columns/tiles; commas starts
+    # folded to a strip (the mockup's default view), expandable on click
     els: dict = {}  # entity id -> outer element (persists across renders)
     inputs: dict = {}  # mapping cell id -> q-input
     labels: dict = {}  # cell id -> the label whose text tracks state
@@ -334,6 +335,17 @@ def index() -> None:
         if any(v is None for row in matrix for v in row):
             return
         editor.edit_mapping(matrix)
+        render()
+
+    def on_comma_change():
+        if building[0] or not settings["temperament_boxes"]:  # comma basis lives in the mapping row
+            return
+        d, nc = editor.state.d, len(editor.state.comma_basis)
+        # the comma cells are the basis transposed (prime down the rows, comma across)
+        basis = [[_parse_int(inputs[f"cell:comma:{p}:{c}"].value) for p in range(d)] for c in range(nc)]
+        if any(v is None for comma in basis for v in comma):
+            return
+        editor.edit_comma_basis(basis)
         render()
 
     def act(action):
@@ -368,12 +380,15 @@ def index() -> None:
             if cb.kind == "mapping":
                 inputs[cb.id] = ui.input(on_change=lambda e: on_mapping_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
+            elif cb.kind == "commacell":
+                inputs[cb.id] = ui.input(on_change=lambda e: on_comma_change()) \
+                    .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "prime":
                 with ui.element("div").classes("rtt-white"):
                     labels[cb.id] = ui.label(cb.text)
             elif cb.kind == "genratio":
                 _ratio(cb, approx=True)
-            elif cb.kind == "target":
+            elif cb.kind in ("target", "commaratio"):
                 _ratio(cb, approx=False)
             elif cb.kind == "mapped":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
@@ -405,6 +420,14 @@ def index() -> None:
                     .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn")
             elif cb.kind == "plus":
                 ui.button("+", on_click=lambda: act(editor.expand), color=None) \
+                    .props("unelevated dense no-caps square").classes("rtt-btn")
+            elif cb.kind == "comma_minus":
+                # the same hover affordance as the domain −, but on the last comma
+                wrap.classes("rtt-minus-zone")
+                ui.button("-", on_click=lambda: act(editor.remove_comma), color=None) \
+                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn")
+            elif cb.kind == "comma_plus":
+                ui.button("+", on_click=lambda: act(editor.add_comma), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
         return wrap
 
@@ -447,6 +470,8 @@ def index() -> None:
                     ebk_sizes[cb.id] = (cb.w, cb.h)
             elif cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
+            elif cb.kind == "commacell":
+                inputs[cb.id].value = str(st.comma_basis[cb.comma][cb.prime])
             elif cb.id in fracs:
                 num, den = _ratio_parts(cb.text) or (cb.text, "")
                 fracs[cb.id][0].set_text(num)
