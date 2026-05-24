@@ -96,6 +96,21 @@ PRESELECTS = (
 )
 PRESELECT_ROWS = frozenset(row for _, row, _ in PRESELECTS)
 
+# Mnemonics: the letter of a caption that spells the quantity's symbol, shown
+# underlined when mnemonics is on — a memory aid linking the name to its symbol
+# (e.g. "tuning map" -> t, "target-interval damage list" -> d). Each entry names
+# the word whose first letter is underlined. The mapped list (Y) and tempered
+# size list (a) use symbols absent from their names, so they carry no underline.
+MNEMONICS = {
+    ("mapping", "primes"): "mapping",   # M
+    ("tuning", "primes"): "tuning",     # t
+    ("just", "primes"): "just",         # j
+    ("just", "targets"): "just",        # j̄ (just target-interval sizes)
+    ("retune", "primes"): "retuning",   # r
+    ("retune", "targets"): "error",     # e
+    ("damage", "targets"): "damage",    # d
+}
+
 # Always-present content tiles (a row×column intersection) as (grey-panel id, row,
 # column). Each gets a grey panel and a top-left fold toggle; the panel/toggle ids
 # stay stable so the reconciling renderer can animate a single tile folding away.
@@ -188,6 +203,7 @@ def build(state, settings=None, collapsed=None,
         target_spec = service.DEFAULT_TARGET_SPEC
     collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
     show_captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
+    show_mnemonics = show_captions and settings["mnemonics"]  # underline a caption's symbol letter
     show_preselects = settings["preselects"]  # the per-quantity chooser dropdowns
     show_counts = settings["counts"]
     show_ptext = settings["plain_text_values"]  # the boxed EBK string under each tile
@@ -664,7 +680,10 @@ def build(state, settings=None, collapsed=None,
                 continue
             if tile_open(rkey, ckey):
                 cy = row_y[rkey] + col_value_h(rkey, ckey) + row_frame[rkey]
-                cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H, "caption", text=text))
+                kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
+                underlines = ((text.index(kw), 1),) if kw else ()
+                cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H,
+                                     "caption", text=text, underlines=underlines))
 
     # preselect chooser dropdowns, in the reserved band below each governing tile
     # (and below its caption when names show). The tuning/target choosers carry the

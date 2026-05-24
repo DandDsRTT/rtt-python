@@ -46,6 +46,7 @@ class CellBox:
     gen: int = -1
     prime: int = -1
     comma: int = -1
+    underlines: tuple[tuple[int, int], ...] = ()  # (start, len) spans of text to underline (mnemonics)
 
 
 @dataclass(frozen=True)

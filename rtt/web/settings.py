@@ -8,6 +8,11 @@ toggling a box adds/removes content (which the reconciling renderer animates).
 Toggles whose behaviour is built are listed in :data:`IMPLEMENTED` and render as
 interactive checkboxes; the rest are shown at their default state and greyed out
 until their content exists.
+
+A few toggles are *sub-controls* of another (see :data:`SUBCONTROLS`): the panel
+indents them under their parent and only shows them while the parent is on.
+``mnemonics`` refines ``names`` — it underlines each name caption's symbol letter
+— so it only makes sense when names are shown.
 """
 
 from __future__ import annotations
@@ -17,13 +22,13 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
         "general",
         (
             ("names", "names", True),
+            ("mnemonics", "mnemonics", False),
             ("symbols", "symbols", False),
             ("equivalences", "equivalences", False),
             ("gridded_values", "gridded values", True),
             ("plain_text_values", "plain text values", False),
             ("charts", "charts", False),
             ("preselects", "preselects", False),
-            ("mnemonics", "mnemonics", False),
             ("quantities", "quantities", True),
             ("units", "units", False),
             ("math_expressions", "math expressions", False),
@@ -49,11 +54,16 @@ DEFAULTS: dict[str, bool] = {
     key: default for _, items in SHOW_GROUPS for key, _, default in items
 }
 
+# Sub-control -> parent: the panel indents the child under its parent and only
+# shows it while the parent is on.
+SUBCONTROLS: dict[str, str] = {"mnemonics": "names"}
+
 # Toggles whose behaviour the layout actually builds today; the panel disables
 # (greys out) the rest until their content exists.
 IMPLEMENTED: frozenset[str] = frozenset(
-    {"names", "gridded_values", "plain_text_values", "quantities", "domain_quantities",
-     "counts", "preselects", "temperament_boxes", "tuning_boxes", "math_expressions"}
+    {"names", "mnemonics", "gridded_values", "plain_text_values", "quantities",
+     "domain_quantities", "counts", "preselects", "temperament_boxes", "tuning_boxes",
+     "math_expressions"}
 )
 
 

@@ -940,3 +940,33 @@ def test_interest_captions_mirror_targets_without_damage_when_named():
     assert cells["caption:mapping:interest"].text == "mapped interval list"
     assert cells["caption:tuning:interest"].text == "tempered interval size list"
     assert "caption:damage:interest" not in cells
+
+
+def test_mnemonics_underline_the_symbol_letter_within_the_name_captions():
+    on = {c.id: c for c in _with(names=True, mnemonics=True).cells}
+    off = {c.id: c for c in _with(names=True, mnemonics=False).cells}
+    cap = on["caption:mapping:primes"]
+    # the caption keeps the plain name as its text...
+    assert cap.text == "(temperament) mapping"
+    # ...and mnemonics underlines the m of "mapping" — the symbol M — as a (start, len) span
+    assert cap.underlines == ((cap.text.index("mapping"), 1),)
+    # without mnemonics the caption carries no underlines
+    assert off["caption:mapping:primes"].underlines == ()
+
+
+def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_ones():
+    on = {c.id: c for c in _with(names=True, mnemonics=True).cells}
+
+    def underlined(cid):
+        c = on[cid]
+        return "".join(c.text[s:s + n] for s, n in c.underlines)
+
+    assert underlined("caption:tuning:primes") == "t"  # tuning map -> t
+    assert underlined("caption:just:primes") == "j"  # just tuning map -> j
+    assert underlined("caption:retune:primes") == "r"  # retuning map -> r
+    assert underlined("caption:retune:targets") == "e"  # target-interval error list -> e
+    assert underlined("caption:damage:targets") == "d"  # target-interval damage list -> d
+    # the mapped list (symbol Y) and tempered size list (symbol a) have no symbol
+    # letter in their names, so mnemonics leaves them unmarked
+    assert on["caption:mapping:targets"].underlines == ()
+    assert on["caption:tuning:targets"].underlines == ()

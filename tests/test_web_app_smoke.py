@@ -49,6 +49,15 @@ def test_cents_parts_splits_whole_and_fraction_for_decimal_alignment():
     assert app._cents_parts("5") == ("5", "")  # no fractional part
 
 
+def test_underline_html_wraps_only_the_marked_spans():
+    # no spans -> plain text (the caption with mnemonics off)
+    assert app._underline_html("tuning map", ()) == "tuning map"
+    # a leading one-letter span -> just that letter underlined (the symbol mnemonic)
+    assert app._underline_html("tuning map", ((0, 1),)) == "<u>t</u>uning map"
+    # a span mid-string keeps the surrounding text intact
+    assert app._underline_html("(temperament) mapping", ((14, 1),)) == "(temperament) <u>m</u>apping"
+
+
 def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
     # every EBK mark is one SVG whose viewBox is the cell's own px box, so its
     # weight is a constant px count rather than a scaled stroke — that is what

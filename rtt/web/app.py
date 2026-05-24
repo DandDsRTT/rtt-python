@@ -11,6 +11,7 @@ in-process; domain expand/shrink and undo are available. No HTTP layer.
 from __future__ import annotations
 
 import math
+from html import escape as _escape
 
 from nicegui import ui
 
@@ -154,6 +155,7 @@ _CSS = f"""
 .rtt-show-grouptitle {{ font-size:13px; font-weight:bold; color:#000;
                        margin-bottom:2px; white-space:nowrap; }}
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
+.rtt-show-sub {{ margin-left:20px; }}  /* a sub-control sits indented under its parent toggle */
 """
 
 _LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "count", "mathexpr",
@@ -331,6 +333,17 @@ def _cents_parts(text):
     return whole, frac
 
 
+def _underline_html(text, spans):
+    """``text`` with each ``(start, len)`` span wrapped in ``<u>`` — the mnemonic
+    underline marking a caption's symbol letter. All text is HTML-escaped."""
+    out, i = [], 0
+    for start, length in sorted(spans):
+        out.append(_escape(text[i:start]) + "<u>" + _escape(text[start:start + length]) + "</u>")
+        i = start + length
+    out.append(_escape(text[i:]))
+    return "".join(out)
+
+
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
@@ -352,13 +365,15 @@ def index() -> None:
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
     selects: dict = {}  # preselect cell id -> its q-select
     temperaments = dict(presets.TEMPERAMENTS)  # name -> defining comma basis
+    captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
+    caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
     building = [False]
     refs: dict = {}
 
     def drop(eid):
         """Remove an entity's element and forget every per-id handle for it."""
         els[eid].delete()
-        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects):
+        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects, captions, caption_html):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -446,7 +461,7 @@ def index() -> None:
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
-                ui.label(cb.text).classes("rtt-caption")
+                captions[cb.id] = ui.html("").classes("rtt-caption")  # content set in render()
             elif cb.kind == "preselect":
                 name = cb.id.split(":", 1)[1]  # temperament / tuning / target
                 if name == "temperament":
@@ -552,6 +567,11 @@ def index() -> None:
                 # mirror the live selection (tuning/target); "" leaves the temperament
                 # chooser on its placeholder. building[0] guards on_change from echoing.
                 selects[cb.id].value = cb.text or None
+            elif cb.kind == "caption":
+                html = _underline_html(cb.text, cb.underlines)
+                if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
+                    captions[cb.id].set_content(html)
+                    caption_html[cb.id] = html
             elif cb.kind in _LABEL_KINDS:
                 labels[cb.id].set_text(cb.text)
 
@@ -564,6 +584,7 @@ def index() -> None:
 
     with ui.dialog() as show_dialog, ui.card().classes("rtt-show-card"):
         ui.label("Show").classes("rtt-show-title")
+        boxes: dict = {}  # toggle key -> checkbox, so a sub-control can bind to its parent
         with ui.row().classes("rtt-show-groups"):
             for group_name, items in show_settings.SHOW_GROUPS:
                 with ui.column().classes("rtt-show-group"):
@@ -574,6 +595,10 @@ def index() -> None:
                             .props("dense size=xs color=grey-8").classes("rtt-show-item")
                         if key not in show_settings.IMPLEMENTED:
                             box.props("disable")  # not built yet -> greyed and inert
+                        boxes[key] = box
+                        parent = show_settings.SUBCONTROLS.get(key)
+                        if parent:  # indent under the parent and show only while it is on
+                            box.classes("rtt-show-sub").bind_visibility_from(boxes[parent], "value")
 
     ui.label("RTT App").classes("rtt-title")
     with ui.row().style("gap:4px; margin-bottom:10px; align-items:center"):
