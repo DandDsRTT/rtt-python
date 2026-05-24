@@ -30,8 +30,9 @@ _BR_COLOR = "#1a1a1a"
 _CELL_BORDER = f"1px solid {_BR_COLOR}"
 _CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
 _BR_BAR = 2  # main bar / monzo-rule / square-bracket bar thickness (px)
-_BR_SERIF_T = 2  # square + top bracket serif thickness — matches the bar's weight
-_BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches)
+_BR_SERIF_T = 1.2  # square + top bracket serif thickness — lighter than the main bar
+_BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches) — also
+# the shared footprint width every value bracket (square AND angle) draws within
 _BR_INSET = 2.5  # gap from a bracket's open side to the value cells it hugs
 # The ⟨ and the brace are filled ribbons of varying width (see _ribbon): a
 # calligraphic pen lays a LONG stroke down THICK and a SHORT one THIN.
@@ -205,13 +206,16 @@ def _top_bracket(w, h):
 
 
 def _angle_bracket(w, h):
-    """``⟨`` as a chevron pointing left toward its vertex, opening to the cells on
-    the right. A filled ribbon, subtly heavier at the vertex than the open tips."""
-    x_in = w - _BR_INSET
-    vx = x_in - _BR_SERIF_L
+    """``⟨`` drawn within the SAME oblong footprint as the square brackets — a
+    serif-length wide and the full cell height — so every value bracket shares one
+    rectangle. A filled ribbon, subtly heavier at the vertex than the open tips.
+    The centreline insets (vertex by the thick half-width, tips by the thin one)
+    land the ribbon's outer edge on that footprint, vertex hugging the far side."""
+    bx1 = w - _BR_INSET  # open tips, nearest the value cells
+    bx0 = bx1 - _BR_SERIF_L  # vertex, at the far edge — width matches the square's reach
     cy = h / 2
-    ty = 1.6
-    top, vertex, bot = (x_in, ty), (vx, cy), (x_in, h - ty)
+    vx, tx = bx0 + _BR_ANGLE_THICK, bx1 - 0.6
+    top, vertex, bot = (tx, 0.4), (vx, cy), (tx, h - 0.4)
     n = 10
     pts = [(top[0] + (vertex[0] - top[0]) * i / n, top[1] + (vertex[1] - top[1]) * i / n,
             _BR_ANGLE_THIN + (_BR_ANGLE_THICK - _BR_ANGLE_THIN) * i / n) for i in range(n + 1)]
