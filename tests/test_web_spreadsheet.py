@@ -906,11 +906,12 @@ def test_math_expressions_is_an_interactive_toggle():
 
 def test_counts_on_adds_a_top_row_of_per_column_cardinalities():
     cells = {c.id: c for c in _with(counts=True).cells}
-    # the counts row reports each present column's set cardinality
-    assert cells["count:gens"].text == "r = 2"  # rank: two generators
-    assert cells["count:primes"].text == "d = 3"  # dimensionality: 2.3.5
-    assert cells["count:commas"].text == "n = 1"  # nullity: one comma (syntonic)
-    assert cells["count:targets"].text == "k = 8"  # target-interval count: the 6-TILT is 8
+    # the counts row reports each present column's set cardinality, with the
+    # variable as a mathematical-italic letter (matching the Show panel's example)
+    assert cells["count:gens"].text == "\U0001D45F = 2"  # 𝑟 rank: two generators
+    assert cells["count:primes"].text == "\U0001D451 = 3"  # 𝑑 dimensionality: 2.3.5
+    assert cells["count:commas"].text == "\U0001D45B = 1"  # 𝑛 nullity: one comma (syntonic)
+    assert cells["count:targets"].text == "\U0001D458 = 8"  # 𝑘 target-interval count: the 6-TILT is 8
 
 
 def test_counts_row_sits_at_the_top_aligned_over_its_columns():
@@ -968,8 +969,22 @@ def test_counts_track_the_live_domain_after_an_expand():
     s = settings.defaults()
     s["counts"] = True
     cells = {c.id: c for c in spreadsheet.build(expanded, s).cells}
-    assert cells["count:primes"].text == "d = 4"  # the added prime grows the dimensionality
-    assert cells["count:gens"].text == "r = 3"  # ...and meantone gains an independent generator
+    assert cells["count:primes"].text == "\U0001D451 = 4"  # 𝑑: the added prime grows the dimensionality
+    assert cells["count:gens"].text == "\U0001D45F = 3"  # 𝑟: meantone gains an independent generator
+
+
+def test_every_count_sits_on_its_own_grey_panel():
+    # the counts row's panels derive from the same COUNTS source as its cells, so a
+    # count can never render without a tile background behind it (the nullity bug)
+    lay = _with(counts=True)
+    blocks = {b.id: b for b in lay.blocks}
+    counts = [c.id for c in lay.cells if c.id.startswith("count:")]
+    assert counts  # the counts row is populated
+    for cid in counts:
+        ckey = cid.split(":", 1)[1]
+        panel = blocks.get(f"block:counts:{ckey}")
+        assert panel is not None, f"{cid} has no backing panel"
+        assert panel.w > 0 and panel.h > 0  # a visible grey background
 
 
 def test_other_intervals_of_interest_column_is_present_right_of_targets():

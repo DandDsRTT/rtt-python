@@ -60,13 +60,18 @@ MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 
 # The counts row: each column's set cardinality, as (column key, symbol, name).
-# The symbol+value (e.g. "r = 2") is the cell; the name ("rank") is its caption.
+# The symbol+value (e.g. "r = 2", the symbol rendered math-italic via _mathit) is
+# the cell; the name ("rank") is its caption.
 COUNTS = (
     ("gens", "r", "rank"),
     ("primes", "d", "dimensionality"),
     ("commas", "n", "nullity"),
     ("targets", "k", "target-interval count"),
 )
+# The counts row's grey panels + fold toggles, derived from COUNTS so they track
+# its columns automatically — every count cell is guaranteed a backing tile, with
+# no second list to keep in sync.
+COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in COUNTS)
 
 # Quantity-name captions shown inside each (row, column) tile when names are on.
 CAPTIONS = {
@@ -169,12 +174,10 @@ EQUIVALENCES = {
 # Always-present content tiles (a row×column intersection) as (grey-panel id, row,
 # column). Each gets a grey panel and a top-left fold toggle; the panel/toggle ids
 # stay stable so the reconciling renderer can animate a single tile folding away.
-# The "other intervals of interest" column adds its own tiles dynamically (only
-# when the user has entered intervals) — see build().
+# The counts row's tiles derive from COUNTS (see COUNTS_TILES) and the "other
+# intervals of interest" column adds its own dynamically (only when the user has
+# entered intervals) — both are prepended/appended in build().
 TILES = (
-    ("block:counts:gens", "counts", "gens"),
-    ("block:counts:primes", "counts", "primes"),
-    ("block:counts:targets", "counts", "targets"),
     ("block:primes", "quantities", "primes"),
     ("block:commas", "quantities", "commas"),
     ("block:targets", "quantities", "targets"),
@@ -224,6 +227,14 @@ BODY_VALUE_KINDS = frozenset({
 
 def _cents(value) -> str:
     return f"{value:.2f}"
+
+
+def _mathit(letter: str) -> str:
+    """A single lowercase ASCII letter as its Unicode Mathematical Italic glyph
+    (e.g. ``d`` -> ``𝑑``), so a count's variable reads as math italic like the
+    Show panel's example. ``h`` is the one hole in the block — it maps to the
+    Planck-constant glyph ``ℎ`` instead of an undefined code point."""
+    return "ℎ" if letter == "h" else chr(0x1D44E + ord(letter) - ord("a"))
 
 
 def _log_operand(ratio: str) -> str:
@@ -339,7 +350,7 @@ def build(state, settings=None, collapsed=None,
         ("block:just:interest", "just", "interest"),
         ("block:retune:interest", "retune", "interest"),
     )
-    tiles = TILES + interest_tiles
+    tiles = COUNTS_TILES + TILES + interest_tiles
 
     # Column bands left-to-right: (key, natural width, present, collapsible).
     # Each set-column belongs to a box toggle: generators, the domain primes and
@@ -540,7 +551,7 @@ def build(state, settings=None, collapsed=None,
         for ckey, sym, _name in COUNTS:
             if tile_open("counts", ckey):
                 cells.append(CellBox(f"count:{ckey}", col_x[ckey], row_y["counts"], col_w[ckey], ROW_H,
-                                     "count", text=f"{sym} = {cardinality[ckey]}"))
+                                     "count", text=f"{_mathit(sym)} = {cardinality[ckey]}"))
 
     # quantities row: domain primes (+ controls) and target ratios (below the
     # tile's toggle head, like every other row's values). The whole row -- its
