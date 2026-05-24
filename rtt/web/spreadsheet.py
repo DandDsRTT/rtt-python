@@ -188,7 +188,7 @@ TILES = (
 # plain text on leaves just the inline string — the two value views are independent.)
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell", "static",
-    "tval", "mathexpr",
+    "vec", "tval", "mathexpr",
     "bracket", "ebktop", "ebkbrace", "vbar", "minus", "plus", "comma_minus", "comma_plus",
 })
 # "quantities" (general) narrows that to the body quantity values and the EBK
@@ -198,7 +198,7 @@ GRIDDED_KINDS = frozenset({
 # just row's "mathexpr" cells: a log₂ expression is not a bare number, so it
 # stays (math_expressions' own show_value logic trims its "= value" tail instead).
 BODY_VALUE_KINDS = frozenset({
-    "genratio", "mapping", "mapped", "commacell", "static", "tval",
+    "genratio", "mapping", "mapped", "commacell", "static", "vec", "tval",
     "bracket", "ebktop", "ebkbrace", "vbar",
 })
 
