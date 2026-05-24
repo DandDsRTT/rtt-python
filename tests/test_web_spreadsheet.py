@@ -1097,14 +1097,15 @@ def test_folding_a_row_drops_its_symbols_with_the_rest_of_its_content():
     assert "symbol:just:primes" in cells  # ...while open siblings keep theirs
 
 
-def test_comma_column_symbols_are_the_map_times_basis_products():
+def test_comma_column_symbols_are_map_times_basis_products():
     on = {c.id: c for c in _with(symbols=True, names=True).cells}
-    # the comma column has no dedicated letters; its symbols are products of the
-    # tuning maps and the comma basis 𝐂 (the basis itself is just 𝐂)
-    assert on["symbol:mapping:commas"].text == "𝐂"   # comma basis
-    assert on["symbol:tuning:commas"].text == "𝒕𝐂"   # tempered comma sizes
-    assert on["symbol:just:commas"].text == "𝒋𝐂"     # just comma sizes
-    assert on["symbol:retune:commas"].text == "𝒓𝐂"   # comma errors
+    # the comma basis 𝐂 lives in the interval-vectors row; the comma column has no
+    # dedicated letters, so the rest are products of the maps and that basis
+    assert on["symbol:vectors:commas"].text == "𝐂"    # comma basis
+    assert on["symbol:mapping:commas"].text == "𝐌𝐂"   # mapped comma list
+    assert on["symbol:tuning:commas"].text == "𝒕𝐂"    # tempered comma sizes
+    assert on["symbol:just:commas"].text == "𝒋𝐂"      # just comma sizes
+    assert on["symbol:retune:commas"].text == "𝒓𝐂"    # comma errors
     # comma damage is |error|, with no clean product form, so it carries no symbol
     assert "symbol:damage:commas" not in on
     # the comma symbol still aligns with the prime symbol in the same row

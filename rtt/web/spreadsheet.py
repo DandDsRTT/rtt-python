@@ -93,12 +93,14 @@ CAPTIONS = {
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # The bold quantity symbol shown above each name when symbols is on: bold-italic
 # for the maps (covectors), bold-upright for the vectors and matrices. The comma
-# column has no dedicated letters — its sizes are the map applied to the comma
-# basis 𝐂 (𝒕𝐂, 𝒋𝐂, 𝒓𝐂). The comma damage list (|error|, no product form) and the
-# "other intervals of interest" column carry no symbol.
+# column has no dedicated letters — everything but the basis 𝐂 (in the interval-
+# vectors row) is a product with it: the mapped comma list 𝐌𝐂 and the comma sizes
+# 𝒕𝐂, 𝒋𝐂, 𝒓𝐂. The comma damage list (|error|, no product form) and the "other
+# intervals of interest" column carry no symbol.
 SYMBOLS = {
+    ("vectors", "commas"): "𝐂",
     ("mapping", "primes"): "𝐌",
-    ("mapping", "commas"): "𝐂",
+    ("mapping", "commas"): "𝐌𝐂",
     ("mapping", "targets"): "𝐘",
     ("tuning", "primes"): "𝒕",
     ("tuning", "commas"): "𝒕𝐂",
