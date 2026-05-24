@@ -1107,10 +1107,11 @@ def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_one
     assert underlined("caption:retune:primes") == "r"  # retuning map -> r
     assert underlined("caption:retune:targets") == "e"  # target-interval error list -> e
     assert underlined("caption:damage:targets") == "d"  # target-interval damage list -> d
-    # the mapped list (symbol Y) and tempered size list (symbol a) have no symbol
-    # letter in their names, so mnemonics leaves them unmarked
+    # size/list tiles whose symbol letter isn't a word-initial in their name stay
+    # unmarked: the mapped list (𝐘), the tempered (𝐚) and just (𝐨) size lists
     assert on["caption:mapping:targets"].underlines == ()
     assert on["caption:tuning:targets"].underlines == ()
+    assert on["caption:just:targets"].underlines == ()
 
 
 def test_symbols_toggles_in_tile_symbol_glyphs_above_the_names():

@@ -139,19 +139,19 @@ PRESELECTS = (
 )
 PRESELECT_ROWS = frozenset(row for _, row, _ in PRESELECTS)
 
-# Mnemonics: the letter of a caption that spells the quantity's symbol, shown
-# underlined when mnemonics is on — a memory aid linking the name to its symbol
-# (e.g. "tuning map" -> t, "target-interval damage list" -> d). Each entry names
-# the word whose first letter is underlined. The mapped list (Y) and tempered
-# size list (a) use symbols absent from their names, so they carry no underline.
+# Mnemonics: underline the caption letter that spells the tile's symbol (see
+# SYMBOLS) — a memory aid linking the name to its symbol (e.g. "tuning map" -> t,
+# "target-interval damage list" -> d). Each entry names the word whose first letter
+# is underlined; keep these in step with SYMBOLS. A tile whose symbol letter is not
+# a word-initial in its name carries no underline — the mapped list (𝐘), and the
+# tempered (𝐚), just (𝐨) and other size lists.
 MNEMONICS = {
-    ("mapping", "primes"): "mapping",   # M
-    ("tuning", "primes"): "tuning",     # t
-    ("just", "primes"): "just",         # j
-    ("just", "targets"): "just",        # j̄ (just target-interval sizes)
-    ("retune", "primes"): "retuning",   # r
-    ("retune", "targets"): "error",     # e
-    ("damage", "targets"): "damage",    # d
+    ("mapping", "primes"): "mapping",   # 𝐌
+    ("tuning", "primes"): "tuning",     # 𝒕
+    ("just", "primes"): "just",         # 𝒋
+    ("retune", "primes"): "retuning",   # 𝒓
+    ("retune", "targets"): "error",     # 𝐞
+    ("damage", "targets"): "damage",    # 𝐝
 }
 
 # Each quantity's defining equation continues its symbol (see SYMBOLS): the mockup's
