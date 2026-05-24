@@ -188,11 +188,12 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
     ids = {c.id for c in lay.cells}
     # no value numbers anywhere: header primes/ratios, matrix, mapped list, cents
     assert not any(c.startswith(("prime:", "target:", "gen:", "cell:mapping:",
-                                 "cell:mapped:", "tuning:", "just:", "retune:", "damage:"))
+                                 "cell:mapped:", "comma:", "cell:comma:",
+                                 "tuning:", "just:", "retune:", "damage:"))
                    for c in ids)
-    # no EBK marks (brackets, top brackets, braces, monzo rules) and no domain controls
+    # no EBK marks (brackets, top brackets, braces, monzo rules) and no domain/comma controls
     assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
-    assert {"minus", "plus"}.isdisjoint(ids)
+    assert {"minus", "plus", "comma_minus", "comma_plus"}.isdisjoint(ids)
     # ...but the tiles stand empty save their fold toggles and name captions, and
     # the labels, headers and gridlines remain so the empty grid still reads
     assert {"label:mapping", "header:primes", "header:targets", "toggle:row:mapping",
@@ -203,14 +204,14 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
 
 def test_general_quantities_off_hides_the_body_values_but_keeps_the_headers():
     ids = {c.id for c in _with(quantities=False).cells}
-    # the body quantity values (matrix, mapped list, generator ratios, tuning
-    # cents) and their EBK marks are gone
-    assert not any(c.startswith(("gen:", "cell:mapping:", "cell:mapped:", "tuning:",
-                                 "just:", "retune:", "damage:")) for c in ids)
+    # the body quantity values (matrix, mapped list, comma basis, generator ratios,
+    # tuning cents) and their EBK marks are gone
+    assert not any(c.startswith(("gen:", "cell:mapping:", "cell:mapped:", "cell:comma:",
+                                 "tuning:", "just:", "retune:", "damage:")) for c in ids)
     assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
-    # ...but the quantities-row headers (domain primes, target ratios) and the
-    # domain controls remain -- those answer to 'gridded values'/the boxes, not this
-    assert {"prime:0", "target:0", "plus", "minus"} <= ids
+    # ...but the quantities-row headers (domain primes, comma + target ratios) and the
+    # domain/comma controls remain -- those answer to 'gridded values'/the boxes, not this
+    assert {"prime:0", "comma:0", "target:0", "plus", "minus", "comma_plus"} <= ids
     assert {"label:mapping", "header:primes", "toggle:row:mapping"} <= ids
 
 

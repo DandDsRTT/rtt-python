@@ -119,17 +119,18 @@ TILES = (
 
 # Cell kinds the value-display toggles filter out. "gridded values" hides
 # everything a tile holds besides its fold toggle and name caption: the value
-# numbers, the EBK marks framing them, and the domain ± controls.
+# numbers, the EBK marks framing them, and the domain/comma ± controls.
 GRIDDED_KINDS = frozenset({
-    "prime", "target", "genratio", "mapping", "mapped", "tval",
-    "bracket", "ebktop", "ebkbrace", "vbar", "minus", "plus",
+    "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell", "tval",
+    "bracket", "ebktop", "ebkbrace", "vbar", "minus", "plus", "comma_minus", "comma_plus",
 })
 # "quantities" (general) narrows that to the body quantity values and the EBK
-# marks framing them -- the matrix, mapped list, generator ratios and tuning
-# cents -- leaving the quantities-row headers (the prime / target ratios) and the
-# domain controls in place.
+# marks framing them -- the matrix, mapped list, comma basis, generator ratios
+# and tuning cents -- leaving the quantities-row headers (the prime / comma /
+# target ratios) and the domain/comma controls in place.
 BODY_VALUE_KINDS = frozenset({
-    "genratio", "mapping", "mapped", "tval", "bracket", "ebktop", "ebkbrace", "vbar",
+    "genratio", "mapping", "mapped", "commacell", "tval",
+    "bracket", "ebktop", "ebkbrace", "vbar",
 })
 
 
