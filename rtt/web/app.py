@@ -217,12 +217,12 @@ _CSS = f"""
 /* a sub-control's checkbox sits indented under its parent toggle; only the Show
    column indents, so the example column stays aligned with the other rows */
 .rtt-show-sub .rtt-show-item {{ margin-left:18px; }}
-.rtt-ex-cell {{ font-family:'Cambria Math','Cambria',Georgia,serif; font-size:14px; color:#000;
+.rtt-ex-cell {{ font-family:'Cambria',Georgia,serif; font-size:14px; color:#000;
                display:flex; align-items:center; min-height:24px; }}
 .rtt-ex {{ white-space:nowrap; }}
 """
 
-_LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "vec", "count", "mathexpr",
+_LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "vec", "mathexpr",
                 "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
@@ -555,18 +555,23 @@ def _example_html(key: str) -> str:
                 '<rect x="6" y="2" width="2" height="16" fill="#000"/>'
                 '<rect x="2" y="2" width="10" height="2" fill="#000"/>'
                 '<rect x="2" y="16" width="10" height="2" fill="#000"/></svg>')
-    return f'<span class="rtt-ex">{_escape(_EXAMPLE_TEXT[key])}</span>'
+    return f'<span class="rtt-ex">{_math_html(_EXAMPLE_TEXT[key])}</span>'
 
 
 def _demath(ch):
     """A Mathematical Alphanumeric letter as ``(base_letter, bold, italic)``, or
-    None for an ordinary character. Only the bold and bold-italic blocks are used
-    (matrices/vectors and maps); other characters pass through unstyled."""
+    None for an ordinary character. Covers the bold, italic and bold-italic blocks
+    — the maps (bold-italic), matrices/vectors (bold-upright) and the counts' plain
+    italic variables; other characters pass through unstyled."""
     cp = ord(ch)
     if 0x1D400 <= cp <= 0x1D419:  # bold capitals
         return chr(ord("A") + cp - 0x1D400), True, False
     if 0x1D41A <= cp <= 0x1D433:  # bold small
         return chr(ord("a") + cp - 0x1D41A), True, False
+    if 0x1D434 <= cp <= 0x1D44D:  # italic capitals
+        return chr(ord("A") + cp - 0x1D434), False, True
+    if 0x1D44E <= cp <= 0x1D467:  # italic small
+        return chr(ord("a") + cp - 0x1D44E), False, True
     if 0x1D468 <= cp <= 0x1D481:  # bold-italic capitals
         return chr(ord("A") + cp - 0x1D468), True, True
     if 0x1D482 <= cp <= 0x1D49B:  # bold-italic small
@@ -616,8 +621,8 @@ def index() -> None:
     temperaments = dict(presets.TEMPERAMENTS)  # name -> defining comma basis
     captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
-    symbol_cells: dict = {}  # symbol cell id -> the ui.html holding its styled glyph(s)
-    symbol_html: dict = {}  # symbol cell id -> last html, to rewrite on an equivalences toggle
+    math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
+    math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
     building = [False]
     refs: dict = {}
 
@@ -625,7 +630,7 @@ def index() -> None:
         """Remove an entity's element and forget every per-id handle for it."""
         els[eid].delete()
         for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects,
-                  captions, caption_html, symbol_cells, symbol_html, chart_keys):
+                  captions, caption_html, math_cells, math_rendered, chart_keys):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -729,14 +734,14 @@ def index() -> None:
             elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, monzo components)
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "count":
-                labels[cb.id] = ui.label(cb.text).classes("rtt-count")
+                math_cells[cb.id] = ui.html("").classes("rtt-count")  # content set in render()
             elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, monzo rule
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
             elif cb.kind == "chart":
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # bar chart drawn in render()
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
-                symbol_cells[cb.id] = ui.html("").classes("rtt-symbol")  # content set in render()
+                math_cells[cb.id] = ui.html("").classes("rtt-symbol")  # content set in render()
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 captions[cb.id] = ui.html("").classes("rtt-caption")  # content set in render()
@@ -864,11 +869,11 @@ def index() -> None:
                 # mirror the live selection (tuning/target); "" leaves the temperament
                 # chooser on its placeholder. building[0] guards on_change from echoing.
                 selects[cb.id].value = cb.text or None
-            elif cb.kind == "symbol":
-                html = _math_html(cb.text)
-                if symbol_html.get(cb.id) != html:  # rewrite when an equivalences toggle changes the tail
-                    symbol_cells[cb.id].set_content(html)
-                    symbol_html[cb.id] = html
+            elif cb.kind in ("symbol", "count"):  # math-styled text: symbols, their
+                html = _math_html(cb.text)        # equivalence tails, the counts' italic variables
+                if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
+                    math_cells[cb.id].set_content(html)
+                    math_rendered[cb.id] = html
             elif cb.kind == "caption":
                 html = _underline_html(cb.text, cb.underlines)
                 if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines

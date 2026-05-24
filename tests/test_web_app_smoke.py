@@ -74,6 +74,8 @@ def test_math_html_gives_each_maths_letter_explicit_weight_and_slant():
     # a product styles each letter on its own (the comma column's 𝒕𝐂)
     assert app._math_html("𝒕𝐂") == ('<span style="font-weight:700;font-style:italic">t</span>'
                                       '<span style="font-weight:700">C</span>')
+    # plain math-italic (no bold) — the counts' variables and some panel examples
+    assert app._math_html("𝑑") == '<span style="font-style:italic">d</span>'
     # ordinary characters (an equivalence tail's " = " and operators) pass through
     assert app._math_html(" = 𝒈𝐌") == (' = <span style="font-weight:700;font-style:italic">g</span>'
                                          '<span style="font-weight:700">M</span>')
@@ -110,7 +112,8 @@ def test_example_html_renders_each_special_sample_kind():
     # own markup — the EBK gridded mark and the chart are SVGs, the mnemonic sample
     # underlines its symbol letters, the preselect sample shows the chooser caret
     assert "log" in app._example_html("math_expressions")  # log₂3
-    assert "𝒕" in app._example_html("symbols")  # the bold-italic tuning-map covector
+    # the symbols sample is the bold-italic tuning-map covector, styled (not a raw glyph)
+    assert 'font-style:italic">t</span>' in app._example_html("symbols")
     assert "<svg" in app._example_html("gridded_values")  # the ⟨12 19 24] EBK mini-mark
     assert "<svg" in app._example_html("charts")  # the little sparkline
     assert "<u>" in app._example_html("mnemonics")  # underlined mnemonic letters
