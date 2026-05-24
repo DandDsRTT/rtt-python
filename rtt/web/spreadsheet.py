@@ -33,6 +33,8 @@ STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (off the edges and content)
 CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
+PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
+PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -66,6 +68,17 @@ CAPTIONS = {
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 FRAMED_ROWS = frozenset({"mapping"})  # multi-row matrices get a top bracket + bottom brace band
+
+# The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
+# column): each is a quick menu for one of the things you actually choose, riding
+# under its governing tile — the temperament under the mapping matrix, the tuning
+# scheme under the tuning map, the target-interval set under the target list.
+PRESELECTS = (
+    ("temperament", "mapping", "primes"),
+    ("tuning", "tuning", "primes"),
+    ("target", "quantities", "targets"),
+)
+PRESELECT_ROWS = frozenset(row for _, row, _ in PRESELECTS)
 
 # Every content tile (a row×column intersection) as (grey-panel id, row, column).
 # Each gets a grey panel and a top-left fold toggle; the panel/toggle ids stay
@@ -123,11 +136,17 @@ def _fold_glyph(is_collapsed: bool) -> str:
     return "unfold_more" if is_collapsed else "unfold_less"
 
 
-def build(state, settings=None, collapsed=None) -> Layout:
+def build(state, settings=None, collapsed=None,
+          tuning_scheme=None, target_spec=None) -> Layout:
     if settings is None:
         settings = _default_settings()
+    if tuning_scheme is None:
+        tuning_scheme = service.DEFAULT_TUNING_SCHEME
+    if target_spec is None:
+        target_spec = service.DEFAULT_TARGET_SPEC
     collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
     show_captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
+    show_preselects = settings["preselects"]  # the per-quantity chooser dropdowns
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
     # The just tuning row alone has an exact closed form (log₂ of each prime/ratio);
@@ -142,10 +161,10 @@ def build(state, settings=None, collapsed=None) -> Layout:
     r = len(state.mapping)
     primes = service.standard_primes(d)
     gens = service.generators(state.mapping)
-    targets = service.default_target_intervals(primes)
+    targets = service.target_interval_set(target_spec, primes)
     k = len(targets)
     mapped = service.mapped_target_intervals(state.mapping, targets)
-    tun = service.tuning(state.mapping, targets)
+    tun = service.tuning(state.mapping, targets, tuning_scheme)
     comma_ratios = service.comma_ratios(state.comma_basis)
     nc = len(comma_ratios)  # comma count shown (>= nullity when a blank comma waits)
     ctun = service.tuning(state.mapping, comma_ratios)  # comma sizes (tempered ~0)
@@ -251,13 +270,15 @@ def build(state, settings=None, collapsed=None) -> Layout:
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
         cap = CAPTION_H if (show_captions and key in CAPTIONED_ROWS and not folded) else 0
+        # a preselect chooser reserves a band below the caption for its row
+        pre = PRESELECT_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
         row_y[key] = y + head + top_frame  # values sit below the toggle head and top frame
         row_frame[key] = bot_frame  # the caption sits below the bottom brace band
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = head + top_frame + row_h[key] + bot_frame + cap
+        tile_h[key] = head + top_frame + row_h[key] + bot_frame + cap + pre
         y += tile_h[key] + GAP
     total_h = y
 
@@ -526,6 +547,20 @@ def build(state, settings=None, collapsed=None) -> Layout:
             if tile_open(rkey, ckey):
                 cy = row_y[rkey] + col_value_h(rkey, ckey) + row_frame[rkey]
                 cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H, "caption", text=text))
+
+    # preselect chooser dropdowns, in the reserved band below each governing tile
+    # (and below its caption when names show). The tuning/target choosers carry the
+    # live selection; the temperament chooser is a placeholder (it loads, not mirrors).
+    if show_preselects:
+        preselect_text = {"temperament": "", "tuning": tuning_scheme, "target": target_spec}
+        for name, rkey, ckey in PRESELECTS:
+            if not tile_open(rkey, ckey):
+                continue
+            py = row_y[rkey] + row_h[rkey] + row_frame[rkey]
+            if show_captions and (rkey, ckey) in CAPTIONS:
+                py += CAPTION_H
+            pw = min(col_w[ckey], PRESELECT_W)
+            cells.append(CellBox(f"preselect:{name}", col_x[ckey], py, pw, PRESELECT_H, "preselect", text=preselect_text[name]))
 
     # the mapping is a column of stacked maps, so it's enclosed by a top bracket
     # and a bottom curly brace spanning the matrix, drawn in its frame bands. Both

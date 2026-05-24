@@ -411,6 +411,63 @@ def test_collapsing_a_whole_band_removes_its_per_tile_toggles():
     assert not any(c.endswith(":primes") and c.startswith("toggle:tile:") for c in col_off)
 
 
+def test_preselects_off_shows_no_chooser_dropdowns():
+    cells = {c.id for c in _with(preselects=False).cells}
+    assert not any(c.startswith("preselect:") for c in cells)
+
+
+def test_preselects_on_adds_the_three_chooser_dropdowns_under_their_tiles():
+    cells = {c.id: c for c in _with(preselects=True).cells}
+    assert {"preselect:temperament", "preselect:tuning", "preselect:target"} <= set(cells)
+    # the temperament chooser sits under the mapping matrix, aligned to its column
+    temp, matrix = cells["preselect:temperament"], cells["cell:mapping:0:0"]
+    assert temp.y > matrix.y and temp.x == cells["header:primes"].x
+    # the target chooser sits under the target-interval list (quantities row)
+    assert cells["preselect:target"].x == cells["header:targets"].x
+
+
+def test_tuning_and_target_choosers_show_the_live_selection_temperament_is_a_placeholder():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["preselects"] = True
+    cells = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="POTE", target_spec="OLD").cells}
+    assert cells["preselect:tuning"].text == "POTE"  # reflects the active scheme
+    assert cells["preselect:target"].text == "OLD"  # reflects the active set
+    assert cells["preselect:temperament"].text == ""  # a chooser placeholder, not a live value
+
+
+def test_temperament_chooser_requires_the_mapping_tile_to_be_shown():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["preselects"], s["temperament_boxes"] = True, False
+    cells = {c.id for c in spreadsheet.build(base, s).cells}
+    assert "preselect:temperament" not in cells  # no mapping shown -> no temperament chooser
+    assert "preselect:tuning" in cells  # the other choosers are unaffected
+
+
+def test_preselect_dropdown_clears_the_row_below_it():
+    cells = {c.id: c for c in _with(preselects=True).cells}
+    drop, next_row = cells["preselect:tuning"], cells["label:just"]
+    assert drop.y + drop.h <= next_row.y  # the reserved band keeps it off the next row
+
+
+def test_build_honors_the_target_interval_spec():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5
+    tilt = {c.text for c in spreadsheet.build(base, target_spec="TILT").cells if c.id.startswith("target:")}
+    old = {c.text for c in spreadsheet.build(base, target_spec="OLD").cells if c.id.startswith("target:")}
+    assert tilt != old  # the two families differ
+    assert "8/5" in old and "8/5" not in tilt  # a diamond ratio absent from the triangle
+
+
+def test_build_honors_the_tuning_scheme():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    top = {c.id: c.text for c in spreadsheet.build(base, tuning_scheme="TOP").cells}
+    pote = {c.id: c.text for c in spreadsheet.build(base, tuning_scheme="POTE").cells}
+    # POTE holds the octave pure; TOP stretches it — so the prime-2 tuning differs
+    assert top["tuning:prime:0"] != pote["tuning:prime:0"]
+    assert pote["tuning:prime:0"] == "1200.00"
+
+
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
     on = {c.id: c for c in _with(names=True).cells}
     off = {c.id: c for c in _with(names=False).cells}

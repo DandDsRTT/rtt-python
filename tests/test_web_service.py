@@ -84,20 +84,27 @@ def test_mapped_target_intervals():
     assert mapped == ((1, 0, -2, 2), (0, 1, 4, -3))
 
 
-def test_default_target_intervals_is_the_domains_tilt():
+def test_tilt_target_interval_set_is_the_domains_tilt():
     # the 5-limit default is the 6-TILT (the integer just below the next prime past 5)
-    assert service.default_target_intervals((2, 3, 5)) == (
+    assert service.target_interval_set("TILT", (2, 3, 5)) == (
         "2/1", "3/1", "3/2", "4/3", "5/2", "5/3", "5/4", "6/5",
     )
 
 
-def test_default_target_intervals_tracks_the_domain():
+def test_tilt_target_interval_set_tracks_the_domain():
     # adding prime 7 grows the default to a superset (the 10-TILT); a 7-limit
     # interval that could not appear before now does
-    five_limit = set(service.default_target_intervals((2, 3, 5)))
-    seven_limit = set(service.default_target_intervals((2, 3, 5, 7)))
+    five_limit = set(service.target_interval_set("TILT", (2, 3, 5)))
+    seven_limit = set(service.target_interval_set("TILT", (2, 3, 5, 7)))
     assert five_limit < seven_limit
     assert "7/4" in seven_limit
+
+
+def test_old_target_interval_set_is_the_odd_limit_diamond():
+    # OLD selects the odd-limit-diamond family instead of the TILT triangle
+    old = service.target_interval_set("OLD", (2, 3, 5))
+    assert "5/4" in old and "6/5" in old and "8/5" in old  # diamond ratios
+    assert old != service.target_interval_set("TILT", (2, 3, 5))
 
 
 def test_tuning_values_under_top():

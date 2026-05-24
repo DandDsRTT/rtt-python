@@ -5,6 +5,7 @@ test_web_integration.py; here we pin the Editor's own state-machine contract:
 the initial state, undo availability, and the shrink guard.
 """
 
+from rtt.web import service
 from rtt.web.editor import INITIAL_MAPPING, Editor
 
 
@@ -64,6 +65,31 @@ def test_cannot_remove_the_sole_comma():
     assert editor.can_remove_comma is False  # removing it would empty the basis
     editor.add_comma()
     assert editor.can_remove_comma is True  # ...but with two, the last can go
+
+
+def test_editor_starts_with_default_tuning_scheme_and_target_spec():
+    editor = Editor()
+    assert editor.tuning_scheme == service.DEFAULT_TUNING_SCHEME
+    assert editor.target_spec == "TILT"
+
+
+def test_selecting_a_tuning_scheme_and_target_spec_updates_them():
+    editor = Editor()
+    editor.set_tuning_scheme("POTE")
+    editor.set_target_spec("OLD")
+    assert editor.tuning_scheme == "POTE"
+    assert editor.target_spec == "OLD"
+
+
+def test_scheme_and_target_spec_are_view_selections_outside_undo():
+    # they are display/analysis choices, not temperament edits, so they neither
+    # push onto the undo stack nor get reverted by undoing a temperament change
+    editor = Editor()
+    editor.set_tuning_scheme("CTE")
+    assert editor.can_undo is False  # selecting a scheme is not an undoable edit
+    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
+    editor.undo()
+    assert editor.tuning_scheme == "CTE"  # undo reverts the mapping, not the scheme
 
 
 def test_cannot_shrink_below_one_dimension():

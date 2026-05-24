@@ -14,7 +14,7 @@ from rtt.dual import dual
 from rtt.generator_detempering import get_generator_detempering
 from rtt.math_utils import get_primes, pcv_to_quotient
 from rtt.parsing import parse_quotient_list
-from rtt.target_intervals import process_tilt
+from rtt.target_intervals import process_old, process_tilt
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
     get_just_tuning_map,
@@ -25,6 +25,7 @@ from rtt.tuning import (
 Matrix = tuple[tuple[int, ...], ...]
 
 DEFAULT_TUNING_SCHEME = "TOP"
+DEFAULT_TARGET_SPEC = "TILT"  # the default target-interval set family (tracks the domain)
 
 
 @dataclass(frozen=True)
@@ -76,9 +77,15 @@ def standard_primes(d: int) -> tuple[int, ...]:
     return get_primes(d)
 
 
-def default_target_intervals(domain_basis) -> tuple[str, ...]:
-    """The default target-interval set for a domain basis — its TILT — as ratio strings."""
-    quotients = process_tilt("TILT", tuple(domain_basis))
+def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
+    """Resolve a target-interval set spec against a domain basis, as ratio strings.
+
+    ``spec`` selects the family — a truncated integer-limit triangle (``"TILT"`` /
+    ``"N-TILT"``) or an odd-limit diamond (``"OLD"`` / ``"N-OLD"``). With no explicit
+    limit the set tracks the domain. ``"TILT"`` is the as-shipped default.
+    """
+    domain = tuple(domain_basis)
+    quotients = process_old(spec, domain) if "OLD" in spec else process_tilt(spec, domain)
     return tuple(f"{q.numerator}/{q.denominator}" for q in quotients)
 
 

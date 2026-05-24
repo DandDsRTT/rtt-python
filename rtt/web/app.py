@@ -14,6 +14,7 @@ import math
 
 from nicegui import ui
 
+from rtt.web import presets
 from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
 from rtt.web.editor import Editor
@@ -84,6 +85,18 @@ _CSS = f"""
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
 /* captions hold off their fade-in until the tile has finished expanding */
 .rtt-caption-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
+/* the preselect chooser dropdowns: a compact bordered q-select that fills its
+   PRESELECT_H cell, with a thin grey rule and a small caret — like the mockup */
+.rtt-preselect {{ width:100%; }}
+.rtt-preselect .q-field__control {{ min-height:0 !important; height:20px;
+            background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 6px; }}
+.rtt-preselect .q-field__control::before, .rtt-preselect .q-field__control::after {{ display:none !important; }}
+.rtt-preselect .q-field__native, .rtt-preselect .q-field__input {{ font-size:11px; color:#000;
+            min-height:0 !important; padding:0; line-height:20px; font-family:'Cambria',Georgia,serif; }}
+.rtt-preselect .q-field__label {{ font-size:11px; color:#888; top:0; transform:none; line-height:20px;
+            font-family:'Cambria',Georgia,serif; }}
+.rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append {{ height:20px; min-height:0 !important; }}
+.rtt-preselect .q-icon {{ font-size:15px; color:#555; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
 .rtt-approx {{ font-size:13px; align-self:center; }}
@@ -328,13 +341,15 @@ def index() -> None:
     htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
     ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
+    selects: dict = {}  # preselect cell id -> its q-select
+    temperaments = dict(presets.TEMPERAMENTS)  # name -> defining comma basis
     building = [False]
     refs: dict = {}
 
     def drop(eid):
         """Remove an entity's element and forget every per-id handle for it."""
         els[eid].delete()
-        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds):
+        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -365,6 +380,20 @@ def index() -> None:
     def on_show_toggle(key, value):
         settings[key] = value
         render()  # the reconciling renderer animates the affected rows/columns in or out
+
+    def on_preselect(name, value):
+        # the temperament chooser loads a mapping (an undoable edit); the tuning and
+        # target choosers set the view selections. A programmatic reset to None (after
+        # a temperament load) or a re-render echo is ignored via building/None guards.
+        if building[0] or value is None:
+            return
+        if name == "temperament":
+            editor.edit_comma_basis(temperaments[value])
+        elif name == "tuning":
+            editor.set_tuning_scheme(value)
+        elif name == "target":
+            editor.set_target_spec(value)
+        render()
 
     def on_toggle(item):  # fold/unfold one row, column, or tile ("row:tuning", "tile:mapping:primes")
         collapsed.discard(item) if item in collapsed else collapsed.add(item)
@@ -407,6 +436,17 @@ def index() -> None:
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 ui.label(cb.text).classes("rtt-caption")
+            elif cb.kind == "preselect":
+                name = cb.id.split(":", 1)[1]  # temperament / tuning / target
+                if name == "temperament":
+                    opts, value, label = list(temperaments), None, "choose temperament"
+                elif name == "tuning":
+                    opts, value, label = list(presets.TUNING_SCHEMES), editor.tuning_scheme, None
+                else:  # target
+                    opts, value, label = list(presets.TARGET_SETS), editor.target_spec, None
+                selects[cb.id] = ui.select(opts, value=value, label=label,
+                        on_change=lambda e, n=name: on_preselect(n, e.value)) \
+                    .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):
@@ -446,7 +486,7 @@ def index() -> None:
     def render():
         building[0] = True
         st = editor.state
-        lay = spreadsheet.build(st, settings, collapsed)
+        lay = spreadsheet.build(st, settings, collapsed, editor.tuning_scheme, editor.target_spec)
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
 
@@ -495,6 +535,10 @@ def index() -> None:
                 whole, frac = _cents_parts(cb.text)
                 cents[cb.id][0].set_text(whole)
                 cents[cb.id][1].set_text(f".{frac}" if frac else "")
+            elif cb.kind == "preselect":
+                # mirror the live selection (tuning/target); "" leaves the temperament
+                # chooser on its placeholder. building[0] guards on_change from echoing.
+                selects[cb.id].value = cb.text or None
             elif cb.kind in _LABEL_KINDS:
                 labels[cb.id].set_text(cb.text)
 

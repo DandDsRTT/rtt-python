@@ -2,8 +2,10 @@
 
 Holds the current :class:`~rtt.web.service.TemperamentState` plus undo/redo
 stacks, and exposes the user actions (edit either matrix, expand/shrink the
-domain, undo, redo). The NiceGUI layer is thin glue over this; all of it is
-unit-testable without a UI.
+domain, undo, redo). It also tracks the two view selections that the derived rows
+are shown under — the tuning scheme and the target-interval set spec — which sit
+outside undo because they are display choices, not temperament edits. The NiceGUI
+layer is thin glue over this; all of it is unit-testable without a UI.
 """
 
 from __future__ import annotations
@@ -17,6 +19,11 @@ INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))  # meantone, matching the original app
 class Editor:
     def __init__(self) -> None:
         self.state: TemperamentState = service.from_mapping(INITIAL_MAPPING)
+        # Display/analysis selections: which tuning scheme and target-interval set
+        # the derived rows are shown under. Unlike the temperament itself, these are
+        # view choices (like the Show toggles), so they live outside the undo stack.
+        self.tuning_scheme: str = service.DEFAULT_TUNING_SCHEME
+        self.target_spec: str = service.DEFAULT_TARGET_SPEC
         self._undo_stack: list[TemperamentState] = []
         self._redo_stack: list[TemperamentState] = []
 
@@ -45,6 +52,12 @@ class Editor:
     def edit_comma_basis(self, comma_basis) -> None:
         self._snapshot()
         self.state = service.from_comma_basis(comma_basis)
+
+    def set_tuning_scheme(self, scheme: str) -> None:
+        self.tuning_scheme = scheme
+
+    def set_target_spec(self, spec: str) -> None:
+        self.target_spec = spec
 
     def expand(self) -> None:
         self._snapshot()
