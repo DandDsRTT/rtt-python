@@ -201,6 +201,19 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
     assert any(ln.id == "v:prime:0" for ln in lay.lines)  # as do the gridlines
 
 
+def test_general_quantities_off_hides_the_body_values_but_keeps_the_headers():
+    ids = {c.id for c in _with(quantities=False).cells}
+    # the body quantity values (matrix, mapped list, generator ratios, tuning
+    # cents) and their EBK marks are gone
+    assert not any(c.startswith(("gen:", "cell:mapping:", "cell:mapped:", "tuning:",
+                                 "just:", "retune:", "damage:")) for c in ids)
+    assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
+    # ...but the quantities-row headers (domain primes, target ratios) and the
+    # domain controls remain -- those answer to 'gridded values'/the boxes, not this
+    assert {"prime:0", "target:0", "plus", "minus"} <= ids
+    assert {"label:mapping", "header:primes", "toggle:row:mapping"} <= ids
+
+
 def test_temperament_boxes_off_removes_mapping_and_the_domain_primes_column():
     off = {c.id: c for c in _with(temperament_boxes=False).cells}
     on = {c.id: c for c in _with().cells}

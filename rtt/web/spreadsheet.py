@@ -124,6 +124,13 @@ GRIDDED_KINDS = frozenset({
     "prime", "target", "genratio", "mapping", "mapped", "tval",
     "bracket", "ebktop", "ebkbrace", "vbar", "minus", "plus",
 })
+# "quantities" (general) narrows that to the body quantity values and the EBK
+# marks framing them -- the matrix, mapped list, generator ratios and tuning
+# cents -- leaving the quantities-row headers (the prime / target ratios) and the
+# domain controls in place.
+BODY_VALUE_KINDS = frozenset({
+    "genratio", "mapping", "mapped", "tval", "bracket", "ebktop", "ebkbrace", "vbar",
+})
 
 
 def _cents(value) -> str:
@@ -182,6 +189,7 @@ def build(state, settings=None, collapsed=None,
     # at the end of build), leaving the tiles empty but for their fold toggles and
     # name captions.
     gridded = settings["gridded_values"]
+    gen_q = settings["quantities"]  # general "quantities": the body values (see BODY_VALUE_KINDS)
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
     header_h = HEADER_H
@@ -652,8 +660,11 @@ def build(state, settings=None, collapsed=None,
     # Value-display filtering. The tiles (blocks) and gridlines (lines) always
     # stand; only a tile's *contents* answer to the value-display toggles, so we
     # drop cells by kind here rather than threading the gates through every
-    # emission above. "gridded values" off empties the tiles entirely.
+    # emission above. "gridded values" off empties the tiles entirely; "quantities"
+    # (general) off drops just the body values and their marks.
     if not gridded:
         cells = [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
+    elif not gen_q:
+        cells = [cb for cb in cells if cb.kind not in BODY_VALUE_KINDS]
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))

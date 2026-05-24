@@ -52,8 +52,8 @@ DEFAULTS: dict[str, bool] = {
 # Toggles whose behaviour the layout actually builds today; the panel disables
 # (greys out) the rest until their content exists.
 IMPLEMENTED: frozenset[str] = frozenset(
-    {"names", "gridded_values", "quantities", "counts", "preselects",
-     "temperament_boxes", "tuning_boxes", "math_expressions"}
+    {"names", "gridded_values", "quantities", "domain_quantities", "counts",
+     "preselects", "temperament_boxes", "tuning_boxes", "math_expressions"}
 )
 
 
