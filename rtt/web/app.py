@@ -133,7 +133,7 @@ _CSS = f"""
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
 """
 
-_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "rowtoggle", "coltoggle"}
+_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "rowtoggle", "coltoggle", "tiletoggle"}
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
 # cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
@@ -314,7 +314,7 @@ def index() -> None:
 
     editor = Editor()
     settings = show_settings.defaults()  # which parts of the grid are visible
-    collapsed: set = set()  # ids of individually folded rows/columns ("row:tuning")
+    collapsed: set = set()  # ids of folded rows/columns/tiles ("row:tuning", "tile:mapping:primes")
     els: dict = {}  # entity id -> outer element (persists across renders)
     inputs: dict = {}  # mapping cell id -> q-input
     labels: dict = {}  # cell id -> the label whose text tracks state
@@ -343,7 +343,7 @@ def index() -> None:
         settings[key] = value
         render()  # the reconciling renderer animates the affected rows/columns in or out
 
-    def on_toggle(item):  # fold/unfold one row or column ("row:tuning", "col:targets")
+    def on_toggle(item):  # fold/unfold one row, column, or tile ("row:tuning", "tile:mapping:primes")
         collapsed.discard(item) if item in collapsed else collapsed.add(item)
         render()
 
@@ -391,8 +391,8 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-rowlabel")
-            elif cb.kind in ("rowtoggle", "coltoggle"):
-                item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets"
+            elif cb.kind in ("rowtoggle", "coltoggle", "tiletoggle"):
+                item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
                 labels[cb.id] = ui.label(cb.text).classes("rtt-toggle material-icons")
                 wrap.on("click", lambda _=None, it=item: on_toggle(it))
             elif cb.kind == "minus":
