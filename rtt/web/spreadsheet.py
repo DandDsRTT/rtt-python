@@ -36,6 +36,7 @@ CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names 
 PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 PTEXT_H = 18  # height of the plain-text value band (the boxed EBK string) below a tile
+SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -83,6 +84,22 @@ CAPTIONS = {
     ("retune", "interest"): "interval error list",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
+
+# The bold quantity symbol shown above each name when symbols is on: bold-italic
+# for the maps (covectors), bold-upright for the vectors and matrices. The comma
+# columns are not yet assigned symbols.
+SYMBOLS = {
+    ("mapping", "primes"): "𝐌",
+    ("mapping", "targets"): "𝐘",
+    ("tuning", "primes"): "𝒕",
+    ("tuning", "targets"): "𝐚",
+    ("just", "primes"): "𝒋",
+    ("just", "targets"): "𝐨",
+    ("retune", "primes"): "𝒓",
+    ("retune", "targets"): "𝐞",
+    ("damage", "targets"): "𝐝",
+}
+SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symbol slot
 FRAMED_ROWS = frozenset({"mapping"})  # multi-row matrices get a top bracket + bottom brace band
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
@@ -207,6 +224,7 @@ def build(state, settings=None, collapsed=None,
     show_preselects = settings["preselects"]  # the per-quantity chooser dropdowns
     show_counts = settings["counts"]
     show_ptext = settings["plain_text_values"]  # the boxed EBK string under each tile
+    show_symbols = settings["symbols"]  # the in-tile quantity symbols, stacked above the captions
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
     # Value-display toggles. "gridded values" is the master switch: with it off
@@ -350,7 +368,7 @@ def build(state, settings=None, collapsed=None,
     # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
-    tile_h, tile_top, row_frame, row_cap, row_pre = {}, {}, {}, {}, {}
+    tile_h, tile_top, row_frame, row_sym, row_cap, row_pre = {}, {}, {}, {}, {}, {}
     y = rows_top_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
@@ -365,6 +383,8 @@ def build(state, settings=None, collapsed=None,
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
         cap = CAPTION_H if (show_captions and key in CAPTIONED_ROWS and not folded) else 0
+        # the symbol reserves a slot above the caption for every symboled row
+        sym = SYMBOL_H if (show_symbols and key in SYMBOLED_ROWS and not folded) else 0
         # below the caption a tile reserves bands for the preselect chooser (its
         # row) and the plain-text value box, stacked in that order
         pre = PRESELECT_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
@@ -372,12 +392,13 @@ def build(state, settings=None, collapsed=None,
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
         row_y[key] = y + head + top_frame  # values sit below the toggle head and top frame
-        row_frame[key] = bot_frame  # the caption sits below the bottom brace band
+        row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
+        row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
         row_cap[key] = cap  # the preselect/plain-text bands sit below the caption
         row_pre[key] = pre  # ...and the plain-text band sits below the preselect band
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = head + top_frame + row_h[key] + bot_frame + cap + pre + ptext
+        tile_h[key] = head + top_frame + row_h[key] + bot_frame + sym + cap + pre + ptext
         y += tile_h[key] + GAP
     total_h = y
 
@@ -672,18 +693,28 @@ def build(state, settings=None, collapsed=None,
     for bid, rkey, ckey in tiles:
         panel(bid, ckey, rkey)
 
-    # quantity-name captions inside each tile (below its values + bottom frame),
-    # toggled by names. An empty interest column has no tiles, so it shows none.
-    if show_captions:
-        for (rkey, ckey), text in CAPTIONS.items():
-            if ckey == "interest" and not interest:
-                continue
-            if tile_open(rkey, ckey):
-                cy = row_y[rkey] + col_value_h(rkey, ckey) + row_frame[rkey]
-                kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
-                underlines = ((text.index(kw), 1),) if kw else ()
-                cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H,
-                                     "caption", text=text, underlines=underlines))
+    # quantity symbol + name stacked inside each tile, below its values + bottom
+    # frame: the bold symbol (toggled by symbols) on top, the long-form name
+    # (toggled by names) under it. Within a symboled row the slot is reserved for
+    # every captioned column so the names stay aligned across the row; the glyph is
+    # drawn only where one is defined (the comma columns have none yet). An empty
+    # interest column has no tiles, so it shows neither. Mnemonics underlines the
+    # caption letter that spells the symbol.
+    for (rkey, ckey), name in CAPTIONS.items():
+        if ckey == "interest" and not interest:
+            continue
+        if not tile_open(rkey, ckey):
+            continue
+        cy = row_y[rkey] + col_value_h(rkey, ckey) + row_frame[rkey]
+        if show_symbols and rkey in SYMBOLED_ROWS:
+            if (rkey, ckey) in SYMBOLS:
+                cells.append(CellBox(f"symbol:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], SYMBOL_H, "symbol", text=SYMBOLS[(rkey, ckey)]))
+            cy += SYMBOL_H
+        if show_captions:
+            kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
+            underlines = ((name.index(kw), 1),) if kw else ()
+            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H,
+                                 "caption", text=name, underlines=underlines))
 
     # preselect chooser dropdowns, in the reserved band below each governing tile
     # (and below its caption when names show). The tuning/target choosers carry the
@@ -694,6 +725,8 @@ def build(state, settings=None, collapsed=None,
             if not tile_open(rkey, ckey):
                 continue
             py = row_y[rkey] + row_h[rkey] + row_frame[rkey]
+            if show_symbols and rkey in SYMBOLED_ROWS and (rkey, ckey) in CAPTIONS:
+                py += SYMBOL_H
             if show_captions and (rkey, ckey) in CAPTIONS:
                 py += CAPTION_H
             pw = min(col_w[ckey], PRESELECT_W)
@@ -706,7 +739,7 @@ def build(state, settings=None, collapsed=None,
         strings = service.plain_text_values(state, tuning_scheme, target_spec)
         for (rkey, ckey), text in strings.items():
             if tile_open(rkey, ckey):
-                py = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_cap[rkey] + row_pre[rkey]
+                py = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_pre[rkey]
                 cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], py, col_w[ckey], PTEXT_H, "ptext", text=text))
 
     # the mapping is a column of stacked maps, so it's enclosed by a top bracket

@@ -970,3 +970,63 @@ def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_one
     # letter in their names, so mnemonics leaves them unmarked
     assert on["caption:mapping:targets"].underlines == ()
     assert on["caption:tuning:targets"].underlines == ()
+
+
+def test_symbols_toggles_in_tile_symbol_glyphs_above_the_names():
+    on = {c.id: c for c in _with(symbols=True, names=True).cells}
+    off = {c.id: c for c in _with(symbols=False).cells}
+    # each quantity's bold symbol shows only when symbols is on: bold-upright for
+    # the matrices/lists, bold-italic for the maps (covectors)
+    assert on["symbol:mapping:primes"].text == "𝐌"  # mapping matrix
+    assert on["symbol:mapping:targets"].text == "𝐘"  # mapped list (= MT)
+    assert on["symbol:tuning:primes"].text == "𝒕"  # tuning map
+    assert on["symbol:tuning:targets"].text == "𝐚"  # tempered target sizes
+    assert on["symbol:damage:targets"].text == "𝐝"  # damage list
+    assert not any(c.startswith("symbol:") for c in off)
+    # the symbol stacks directly above the name caption for the same quantity
+    assert on["symbol:mapping:primes"].y < on["caption:mapping:primes"].y
+    # row labels and column headers are unaffected, like names
+    assert {"label:mapping", "header:primes"} <= set(on)
+
+
+def test_symbol_takes_the_label_slot_and_pushes_the_name_down():
+    both = {c.id: c for c in _with(symbols=True, names=True).cells}
+    sym_only = {c.id: c for c in _with(symbols=True, names=False).cells}
+    # with names off, the lone symbol sits immediately below the (unframed) tuning row
+    assert sym_only["symbol:tuning:primes"].y == sym_only["tuning:prime:0"].y + spreadsheet.ROW_H
+    assert not any(c.startswith("caption:") for c in sym_only)
+    # with both on, the name sits exactly one symbol-height below the symbol
+    assert both["caption:tuning:primes"].y == both["symbol:tuning:primes"].y + spreadsheet.SYMBOL_H
+
+
+def test_folding_a_row_drops_its_symbols_with_the_rest_of_its_content():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["symbols"] = True
+    cells = {c.id for c in spreadsheet.build(base, s, collapsed={"row:tuning"}).cells}
+    assert not any(c.startswith("symbol:tuning:") for c in cells)  # the folded row sheds its symbols
+    assert "symbol:just:primes" in cells  # ...while open siblings keep theirs
+
+
+def test_comma_columns_reserve_the_symbol_slot_but_show_no_glyph():
+    on = {c.id: c for c in _with(symbols=True, names=True).cells}
+    # the comma columns have no assigned symbol yet, so none is drawn
+    assert not any(c.startswith("symbol:") and c.endswith(":commas") for c in on)
+    # ...but the reserved slot still offsets their caption, so it lines up with the
+    # prime/target captions in the same (equal-height) tuning row
+    assert on["caption:tuning:commas"].y == on["caption:tuning:primes"].y
+
+
+def test_counts_row_reserves_no_symbol_slot_so_its_captions_dont_shift():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+
+    def caps(symbols):
+        s = settings.defaults()
+        s["counts"], s["symbols"] = True, symbols
+        return {c.id: c for c in spreadsheet.build(base, s).cells}
+
+    on, off = caps(symbols=True), caps(symbols=False)
+    # the counts row carries no symbol (its r/d/n/k ride the value cells), so turning
+    # symbols on must not reserve a slot that would drift its captions down
+    assert not any(c.startswith("symbol:counts:") for c in on)
+    assert on["caption:counts:primes"].y == off["caption:counts:primes"].y

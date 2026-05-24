@@ -87,11 +87,16 @@ _CSS = f"""
 .rtt-ptext {{ display:inline-block; border:1px solid #888; background:#fff; color:#000;
              font-size:12px; line-height:1.1; white-space:nowrap; padding:1px 5px;
              font-family:'Cambria',Georgia,serif; }}
+/* the quantity symbol above the caption: the glyph itself carries its weight and
+   slant (bold-italic maths letters for maps, bold-upright for vectors/matrices),
+   so Cambria Math renders it without faux styling */
+.rtt-symbol {{ width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
+              font-family:'Cambria Math','Cambria',Georgia,serif; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
-/* captions hold off their fade-in until the tile has finished expanding */
-.rtt-caption-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
+/* the symbol + caption hold off their fade-in until the tile has finished expanding */
+.rtt-caption-cell, .rtt-symbol-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
 /* the preselect chooser dropdowns: a compact bordered q-select that fills its
    PRESELECT_H cell, with a thin grey rule and a small caret — like the mockup */
 .rtt-preselect {{ width:100%; }}
@@ -459,6 +464,9 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-count")
             elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, monzo rule
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
+            elif cb.kind == "symbol":
+                wrap.classes("rtt-symbol-cell")
+                ui.label(cb.text).classes("rtt-symbol")
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 captions[cb.id] = ui.html("").classes("rtt-caption")  # content set in render()

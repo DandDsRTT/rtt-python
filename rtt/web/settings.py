@@ -61,7 +61,7 @@ SUBCONTROLS: dict[str, str] = {"mnemonics": "names"}
 # Toggles whose behaviour the layout actually builds today; the panel disables
 # (greys out) the rest until their content exists.
 IMPLEMENTED: frozenset[str] = frozenset(
-    {"names", "mnemonics", "gridded_values", "plain_text_values", "quantities",
+    {"names", "symbols", "mnemonics", "gridded_values", "plain_text_values", "quantities",
      "domain_quantities", "counts", "preselects", "temperament_boxes", "tuning_boxes",
      "math_expressions"}
 )
