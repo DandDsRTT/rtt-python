@@ -1097,13 +1097,29 @@ def test_folding_a_row_drops_its_symbols_with_the_rest_of_its_content():
     assert "symbol:just:primes" in cells  # ...while open siblings keep theirs
 
 
-def test_comma_columns_reserve_the_symbol_slot_but_show_no_glyph():
+def test_comma_column_symbols_are_the_map_times_basis_products():
     on = {c.id: c for c in _with(symbols=True, names=True).cells}
-    # the comma columns have no assigned symbol yet, so none is drawn
-    assert not any(c.startswith("symbol:") and c.endswith(":commas") for c in on)
-    # ...but the reserved slot still offsets their caption, so it lines up with the
-    # prime/target captions in the same (equal-height) tuning row
-    assert on["caption:tuning:commas"].y == on["caption:tuning:primes"].y
+    # the comma column has no dedicated letters; its symbols are products of the
+    # tuning maps and the comma basis 𝐂 (the basis itself is just 𝐂)
+    assert on["symbol:mapping:commas"].text == "𝐂"   # comma basis
+    assert on["symbol:tuning:commas"].text == "𝒕𝐂"   # tempered comma sizes
+    assert on["symbol:just:commas"].text == "𝒋𝐂"     # just comma sizes
+    assert on["symbol:retune:commas"].text == "𝒓𝐂"   # comma errors
+    # comma damage is |error|, with no clean product form, so it carries no symbol
+    assert "symbol:damage:commas" not in on
+    # the comma symbol still aligns with the prime symbol in the same row
+    assert on["symbol:tuning:commas"].y == on["symbol:tuning:primes"].y
+
+
+def test_other_intervals_of_interest_column_carries_no_symbols():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["symbols"] = True
+    cells = {c.id: c for c in spreadsheet.build(base, s, interest=("3/2",)).cells}
+    # the interest column gets no symbols at all, even with the column populated
+    assert not any(c.startswith("symbol:") and c.endswith(":interest") for c in cells)
+    # its caption still lines up with the symboled columns (the slot stays reserved)
+    assert cells["caption:tuning:interest"].y == cells["caption:tuning:primes"].y
 
 
 def test_counts_row_reserves_no_symbol_slot_so_its_captions_dont_shift():
