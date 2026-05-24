@@ -227,6 +227,11 @@ _CSS = f"""
 .rtt-minus-btn {{ position:absolute !important; top:0; left:50%; transform:translateX(-50%);
            opacity:0; pointer-events:none; transition:opacity {_T}; }}
 .rtt-minus-zone:hover .rtt-minus-btn {{ opacity:1; pointer-events:auto; }}
+/* the vertical basis's domain −: reveals to the RIGHT of the highest prime (the
+   spine's spare width), since the row above it is the next prime, not free space */
+.rtt-minus-btn-v {{ position:absolute !important; right:0; top:50%; transform:translateY(-50%);
+           opacity:0; pointer-events:none; transition:opacity {_T}; }}
+.rtt-minus-zone:hover .rtt-minus-btn-v {{ opacity:1; pointer-events:auto; }}
 
 .rtt-toggle {{ width:100%; height:100%; display:flex; align-items:center; justify-content:center;
               font-size:12px !important; line-height:1; color:#666; background:#fff;
@@ -290,7 +295,7 @@ def _mathexpr_html(text: str, width: float) -> str:
 # the rejected font glyph scaled its weight with its height, and a fixed viewBox
 # stretched to the cell sheared its serifs. Square/top brackets are crisp filled
 # rects; the calligraphic ⟨ and brace are filled variable-width ribbons (_ribbon).
-_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "vbar"}
+_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar"}
 
 
 def _svg(w, h, body):
@@ -417,6 +422,23 @@ def _brace(w, h):
     return _svg(w, h, _ribbon(pts))
 
 
+def _angle_foot(w, h):
+    """The ket's ``⟩`` turned a quarter-turn to close a raw (untempered) monzo column:
+    a shallow downward chevron from the top corners to a centre vertex, the calligraphic
+    weight of the ⟨ angle bracket (heavier at the vertex than the open tips). A monzo
+    thus reads ``[ … ⟩`` down its column — square top, angle foot — telling it apart
+    from a tempered column, which closes with the curly brace (:func:`_brace`)."""
+    cx = w / 2
+    ty, vy = 0.8, h - 0.8  # open tips near the top corners, vertex near the bottom
+    left, vertex, right = (0.8, ty), (cx, vy), (w - 0.8, ty)
+    n = 8
+    pts = [(left[0] + (vertex[0] - left[0]) * i / n, left[1] + (vertex[1] - left[1]) * i / n,
+            _BR_ANGLE_THIN + (_BR_ANGLE_THICK - _BR_ANGLE_THIN) * i / n) for i in range(n + 1)]
+    pts += [(vertex[0] + (right[0] - vertex[0]) * i / n, vertex[1] + (right[1] - vertex[1]) * i / n,
+             _BR_ANGLE_THICK + (_BR_ANGLE_THIN - _BR_ANGLE_THICK) * i / n) for i in range(1, n + 1)]
+    return _svg(w, h, _ribbon(pts))
+
+
 def _vbar(w, h):
     """A vertical rule between the mapped list's monzo columns, the bar's weight."""
     return _svg(w, h, _rect((w - _BR_BAR) / 2, 0, _BR_BAR, h))
@@ -432,6 +454,8 @@ def _ebk_svg(cb):
         return _top_bracket(cb.w, cb.h)
     if cb.kind == "ebkbrace":
         return _brace(cb.w, cb.h)
+    if cb.kind == "ebkangle":
+        return _angle_foot(cb.w, cb.h)
     return _vbar(cb.w, cb.h)  # "vbar"
 
 
@@ -923,6 +947,12 @@ def index() -> None:
             elif cb.kind == "plus":
                 ui.button("+", on_click=lambda: act(editor.expand), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
+            elif cb.kind == "basis_minus":
+                # the domain − for the vertical basis: a hover zone over the highest
+                # prime revealing the − to its right, so it never covers the box
+                wrap.classes("rtt-minus-zone")
+                ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
+                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn-v")
             elif cb.kind == "comma_minus":
                 # the same hover affordance as the domain −, but on the last comma
                 wrap.classes("rtt-minus-zone")

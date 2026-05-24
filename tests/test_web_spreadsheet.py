@@ -724,9 +724,28 @@ def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index():
     # the quantities spine holds the domain basis (the d primes) as the vectors row's
     # row-index, stacked vertically — dual to the generators indexing the mapping rows
     assert [cells[f"basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
-    assert cells["basis:0"].x == cells["gen:0"].x  # the same quantities spine column
+    # boxed COL_W squares like the domain primes, centred in the wider spine column
+    assert cells["basis:0"].w == spreadsheet.COL_W == cells["prime:0"].w
+    gen0 = cells["gen:0"]  # the generators span the full spine; the basis is centred in it
+    assert cells["basis:0"].x + cells["basis:0"].w / 2 == gen0.x + gen0.w / 2
     assert cells["basis:0"].y == cells["cell:vec:primes:0:0"].y  # aligned with the top component
     assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet.ROW_H  # stacked down its column
+
+
+def test_interval_vectors_basis_has_vertical_domain_controls():
+    cells = {c.id: c for c in _layout().cells}
+    # the domain controls of the quantities row, oriented vertically: a + below the
+    # stack to add a prime, a − on the highest (bottom) prime to remove one
+    plus, minus, top, bot = cells["basis_plus"], cells["basis_minus"], cells["basis:0"], cells["basis:2"]
+    assert plus.y > bot.y  # + sits below the whole stack
+    assert abs((plus.x + plus.w / 2) - (top.x + top.w / 2)) < 1  # centred under the basis column
+    assert minus.y <= bot.y + spreadsheet.ROW_H and minus.y + minus.h > bot.y  # − rides the highest prime
+
+
+def test_interval_vectors_basis_minus_is_absent_when_the_domain_cannot_shrink():
+    base = service.from_mapping(((1,),))  # d == 1: removing the last prime is disallowed
+    cells = {c.id for c in spreadsheet.build(base).cells}
+    assert "basis_plus" in cells and "basis_minus" not in cells
 
 
 # --- the commas column (the comma basis, the mapping's dual) ---
@@ -819,11 +838,24 @@ def test_comma_basis_is_framed_as_a_monzo_list_spanning_its_d_tall_height():
     # the comma basis (in the interval-vectors row) is a list of monzos: an enclosing
     # [ ] plus per-column ket marks
     assert cells["bracket:vec:commas:l"].text == "[" and cells["bracket:vec:commas:r"].text == "]"
-    assert "ebktop:vec:commas:0" in cells and "ebkbrace:vec:commas:0" in cells
+    assert "ebktop:vec:commas:0" in cells and "ebkangle:vec:commas:0" in cells
     cb = cells["bracket:vec:commas:l"]
     # the enclosing bracket spans the full d=3 tall basis
     assert cb.y <= cells["cell:comma:0:0"].y
     assert cb.y + cb.h >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].h
+
+
+def test_untempered_monzo_columns_get_angle_feet_while_mapped_lists_keep_braces():
+    cells = {c.id: c for c in _layout().cells}
+    # the interval-vectors row holds RAW (untempered) monzos — each column is a ket,
+    # so its foot is the angle ⟩ (drawn as a down-chevron), not the curly brace
+    for group in ("primes", "commas", "targets"):
+        assert f"ebkangle:vec:{group}:0" in cells       # the ket's angle foot
+        assert f"ebkbrace:vec:{group}:0" not in cells   # never the curly brace
+        assert f"ebktop:vec:{group}:0" in cells         # the square top ([) is unchanged
+    # the mapped (tempered) lists in the mapping row keep the curly-brace foot
+    assert "ebkbrace:mapped:0" in cells and "ebkangle:mapped:0" not in cells
+    assert "ebkbrace:mapped_comma:0" in cells and "ebkangle:mapped_comma:0" not in cells
 
 
 def test_comma_tuning_rows_get_list_brackets_hugging_their_values():

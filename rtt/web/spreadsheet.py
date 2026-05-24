@@ -224,7 +224,8 @@ EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas")})
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell", "static",
     "vec", "tval", "mathexpr", "interestcell",
-    "bracket", "ebktop", "ebkbrace", "vbar", "minus", "plus", "comma_minus", "comma_plus",
+    "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar",
+    "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus",
 })
 # "quantities" (general) narrows that to the body quantity values and the EBK
@@ -235,7 +236,7 @@ GRIDDED_KINDS = frozenset({
 # stays (math_expressions' own show_value logic trims its "= value" tail instead).
 BODY_VALUE_KINDS = frozenset({
     "genratio", "mapping", "mapped", "commacell", "static", "vec", "tval", "interestcell",
-    "bracket", "ebktop", "ebkbrace", "vbar",
+    "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar",
 })
 
 
@@ -659,12 +660,18 @@ def build(state, settings=None, collapsed=None,
     # comma basis is the editable raw monzos (the mapping's dual); the targets become
     # a d x k matrix of monzo columns.
     if row_open("vectors"):
-        # the domain basis lists the interval-vectors' rows: the d primes in a vertical
-        # column in the quantities spine (the dual index, as the generators label the
-        # mapping rows). The same boxed primes the quantities row heads its columns with.
+        # the domain basis lists the interval-vectors' rows: the d primes as boxed
+        # COL_W squares (the same the quantities row heads its columns with) stacked
+        # down the quantities spine — the dual index, as the generators label the
+        # mapping rows. Its domain ± controls ride it vertically: + below the stack to
+        # add a prime, − on the highest (bottom) prime to remove one.
         if tile_open("vectors", "quantities"):
+            bx = col_x["quantities"] + (col_w["quantities"] - COL_W) / 2  # square, centred in the spine
             for p in range(d):
-                cells.append(CellBox(f"basis:{p}", col_x["quantities"], vec_top(p), col_w["quantities"], ROW_H, "prime", text=str(primes[p]), prime=p))
+                cells.append(CellBox(f"basis:{p}", bx, vec_top(p), COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
+            if d > 1:  # the highest prime is the removable one (shrink trims the last)
+                cells.append(CellBox("basis_minus", col_x["quantities"], vec_top(d - 1), col_w["quantities"], ROW_H, "basis_minus"))
+            cells.append(CellBox("basis_plus", bx + (COL_W - BTN) / 2, vec_top(d) + (GAP - BTN) // 2, BTN, BTN, "plus"))
         if tile_open("vectors", "primes"):
             for e in range(d):
                 for p in range(d):
@@ -1009,17 +1016,19 @@ def build(state, settings=None, collapsed=None,
     map_frame("gens")
     map_frame("primes")
 
-    # a matrix of monzo columns (the mapped lists, the interval-vector groups):
-    # vertical rules separate the columns, and each column is marked as a ket with
-    # its own top bracket + bottom brace — inset so they stop short of the rules.
-    def monzo_list_marks(rkey, name, ckey, left, n_cols, bordered=False):
+    # a matrix of monzo columns: vertical rules separate the columns, and each is
+    # marked top + bottom — inset so they stop short of the rules. The foot tells the
+    # two apart: a tempered/mapped column (generator coords) closes with a curly brace,
+    # a raw (untempered) monzo is a ket and closes with the angle ⟩ (a down-chevron).
+    # A bordered grid skips the rules — its own cell borders already divide the columns.
+    def monzo_list_marks(rkey, name, ckey, left, n_cols, foot="ebkbrace", bordered=False):
         if not tile_open(rkey, ckey):
             return
         mark_w = COL_W - 2 * MARK_INSET
         for c in range(n_cols):
             mx = left(c) + MARK_INSET
             cells.append(CellBox(f"ebktop:{name}:{c}", mx, frame_top_y(rkey), mark_w, FRAME_H, "ebktop"))
-            cells.append(CellBox(f"ebkbrace:{name}:{c}", mx, frame_brace_y(rkey), mark_w, BRACE_H, "ebkbrace"))
+            cells.append(CellBox(f"{foot}:{name}:{c}", mx, frame_brace_y(rkey), mark_w, BRACE_H, foot))
         if bordered:  # a bordered grid's own cell borders divide the columns; adding a
             return    # separator rule too would lay a second line over each shared border
         for c in range(1, n_cols):  # a rule on each interior column boundary
@@ -1028,12 +1037,13 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("mapping", "mapped_comma", "commas", comma_left, nc)
     monzo_list_marks("mapping", "mapped", "targets", target_left, k)
     monzo_list_marks("mapping", "imapped", "interest", interest_left, mi)
-    monzo_list_marks("vectors", "vec:primes", "primes", prime_left, d)
-    # the comma basis is the editable bordered grid (commacell), so it skips the
-    # separator rules — its cell borders already divide the comma columns
-    monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc, bordered=True)
-    monzo_list_marks("vectors", "vec:targets", "targets", target_left, k)
-    monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi)
+    # the interval-vectors row holds raw (untempered) monzos, so every column is a
+    # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
+    # (commacell), so it skips the separator rules (its cell borders divide the columns).
+    monzo_list_marks("vectors", "vec:primes", "primes", prime_left, d, foot="ebkangle")
+    monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc, foot="ebkangle", bordered=True)
+    monzo_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
+    monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle")
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the
