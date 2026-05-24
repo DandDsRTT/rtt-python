@@ -87,7 +87,9 @@ _CSS = f"""
 .rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0;
                     font-family:'Cambria',Georgia,serif; color:#000;
                     padding:8px 14px 16px; min-height:100vh; }}
-.rtt-app {{ flex:none; padding-left:46px; }}  /* left gutter clears the corner hamburger */
+/* the app fills the space right of the drawer; min-width:0 lets a wide grid scroll
+   inside its own .rtt-scroll rather than widening (and horizontally scrolling) the page */
+.rtt-app {{ flex:1 1 0; min-width:0; padding-left:46px; }}  /* left gutter clears the corner hamburger */
 
 .rtt-scroll {{ overflow-x:auto; max-width:100%; }}
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
@@ -475,6 +477,9 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "temperament_boxes": "𝑀",
     "form_controls": "canonical form",
     "tuning_boxes": "T",
+    "optimization": "𝑝",
+    "weighting": "𝒘",
+    "projection": "𝑃",
     "generator_detempering": "D",
     "nonstandard_domain": "prime-based",
     "identity_objects": "𝑀ⱼ",
@@ -535,11 +540,21 @@ def _example_html(key: str) -> str:
         return _example_chart()
     if key == "preselects":
         return _example_preselect()
-    if key == "mnemonics":  # the mnemonic underlines a caption's symbol letters
-        return _underline_html("canonical mapping", ((0, 1), (10, 1)))
+    if key == "mnemonics":  # the underlined mnemonic letters. Wrap in one element: the
+        # example cell is a flex box, which would split the words into separate items and
+        # trim the space between them — every branch here must return a single root element.
+        return f'<span class="rtt-ex">{_underline_html("canonical mapping", ((0, 1), (10, 1)))}</span>'
     if key == "quantities":  # a generic quantity over its size: 1 above .585
         return ('<span style="display:inline-flex;flex-direction:column;align-items:center;'
                 'line-height:1.05"><span>1</span><span style="font-size:9px">.585</span></span>')
+    if key in ("temperament_colorization", "tuning_colorization"):  # a colour swatch
+        color = "#e2e08c" if key == "temperament_colorization" else "#bfe7e4"
+        return f'<span style="display:inline-block;width:36px;height:14px;background:{color}"></span>'
+    if key == "tuning_ranges":  # the tuning-range I-beam (min/max generator bars)
+        return ('<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'
+                '<rect x="6" y="2" width="2" height="16" fill="#000"/>'
+                '<rect x="2" y="2" width="10" height="2" fill="#000"/>'
+                '<rect x="2" y="16" width="10" height="2" fill="#000"/></svg>')
     return f'<span class="rtt-ex">{_escape(_EXAMPLE_TEXT[key])}</span>'
 
 

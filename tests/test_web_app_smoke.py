@@ -102,6 +102,10 @@ def test_example_html_renders_each_special_sample_kind():
     assert "<svg" in app._example_html("charts")  # the little sparkline
     assert "<u>" in app._example_html("mnemonics")  # underlined mnemonic letters
     assert "▼" in app._example_html("preselects")  # the dropdown caret
+    # the stubbed box subcontrols: colorization is a colour swatch, tuning ranges an I-beam
+    assert "background:#" in app._example_html("temperament_colorization")
+    assert "background:#" in app._example_html("tuning_colorization")
+    assert "<svg" in app._example_html("tuning_ranges")  # the min/max I-beam
 
 
 def test_brace_is_one_filled_path_with_width_independent_end_curls():
