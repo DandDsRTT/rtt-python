@@ -36,7 +36,9 @@ TITLE_WRAP_W = 140  # cap on a collapsed column's title strip: a title wider tha
 # to an over-wide one-line ribbon — e.g. "other intervals of interest"
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (off the edges and content)
-CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
+CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mockup —
+# ~0.2 of the cell height; the CSS .rtt-caption must use the same size)
+CAPTION_LINE = 11  # px per wrapped caption line (font size + leading)
 PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 PTEXT_H = 18  # height of the plain-text value band (the boxed EBK string) below a tile
@@ -249,6 +251,25 @@ def _fold_glyph(is_collapsed: bool) -> str:
     return "unfold_more" if is_collapsed else "unfold_less"
 
 
+def _caption_lines(text: str, width: float) -> int:
+    """How many lines ``text`` wraps to in a ``width``-px caption at CAPTION_FONT,
+    so the tile can grow tall enough to hold it (rather than letting it spill, as a
+    narrow column's long name would). A greedy word wrap with a conservative serif
+    char-width estimate; an over-long word breaks across lines itself."""
+    max_chars = max(1, int((width - 4) / (CAPTION_FONT * 0.52)))  # -4: a little padding
+    lines, cur = 1, 0
+    for word in text.split():
+        wlen = len(word)
+        if cur and cur + 1 + wlen > max_chars:  # word won't fit on the current line
+            lines, cur = lines + 1, 0
+        if cur == 0 and wlen > max_chars:  # the word itself overflows one line
+            lines += (wlen - 1) // max_chars
+            cur = (wlen - 1) % max_chars + 1
+        else:
+            cur += (1 if cur else 0) + wlen
+    return lines
+
+
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=()) -> Layout:
     if settings is None:
@@ -410,6 +431,15 @@ def build(state, settings=None, collapsed=None,
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
     tile_h, tile_top, row_frame, row_sym, row_cap, row_pre = {}, {}, {}, {}, {}, {}
+
+    def caption_band(key, folded):
+        # the row's caption band is sized to its tallest (wrapped) caption, so the
+        # longest name fits within its tile rather than spilling off a narrow column
+        if not (show_captions and key in CAPTIONED_ROWS and not folded):
+            return 0
+        lines = [_caption_lines(CAPTIONS[(key, c)], col_w[c]) for c in col_x
+                 if (key, c) in CAPTIONS and col_open(c) and f"tile:{key}:{c}" not in collapsed]
+        return max(lines, default=1) * CAPTION_LINE
     y = rows_top_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
@@ -423,7 +453,7 @@ def build(state, settings=None, collapsed=None,
         # and a taller bottom curly brace (BRACE_H, with room for its spike)
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
-        cap = CAPTION_H if (show_captions and key in CAPTIONED_ROWS and not folded) else 0
+        cap = caption_band(key, folded)
         # the symbol line reserves a slot above the caption for every symboled row;
         # equivalences extends that same line (the "= …" continuation) rather than
         # adding a band, so it reserves the slot too even when symbols itself is off
@@ -793,7 +823,8 @@ def build(state, settings=None, collapsed=None,
         if show_captions:
             kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
             underlines = ((name.index(kw), 1),) if kw else ()
-            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H,
+            ch = _caption_lines(name, col_w[ckey]) * CAPTION_LINE  # hug this name's own lines
+            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], ch,
                                  "caption", text=name, underlines=underlines))
 
     # preselect chooser dropdowns, in the reserved band below each governing tile
@@ -808,7 +839,7 @@ def build(state, settings=None, collapsed=None,
             if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS and (rkey, ckey) in CAPTIONS:
                 py += SYMBOL_H
             if show_captions and (rkey, ckey) in CAPTIONS:
-                py += CAPTION_H
+                py += row_cap[rkey]
             pw = min(col_w[ckey], PRESELECT_W)
             cells.append(CellBox(f"preselect:{name}", col_x[ckey], py, pw, PRESELECT_H, "preselect", text=preselect_text[name]))
 

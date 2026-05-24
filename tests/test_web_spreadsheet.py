@@ -798,6 +798,25 @@ def test_comma_tuning_rows_get_list_brackets_hugging_their_values():
     assert l.x < cells["tuning:comma:0"].x < r.x
 
 
+def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column():
+    # a wide column fits the whole name on one line...
+    assert spreadsheet._caption_lines("tempered target-interval size list", 272) == 1
+    # ...but the narrow one-comma column forces it to several lines
+    assert spreadsheet._caption_lines("tempered comma size list", 62) >= 3
+
+
+def test_a_long_caption_grows_its_tile_rather_than_spilling():
+    cells = {c.id: c for c in _with(names=True).cells}
+    cap = cells["caption:tuning:commas"]  # "tempered comma size list" on a ~62px column
+    # the caption gets a line per wrapped line (not one fixed line), so the name
+    # stays within its column instead of overflowing it
+    assert cap.h == spreadsheet._caption_lines("tempered comma size list", cap.w) * spreadsheet.CAPTION_LINE
+    assert cap.h >= 3 * spreadsheet.CAPTION_LINE  # at least three lines tall here
+    # it stays as wide as its (one-comma) column and sits below the value cell
+    assert cap.w == cells["header:commas"].w
+    assert cap.y >= cells["tuning:comma:0"].y + spreadsheet.ROW_H
+
+
 def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():
     on = {c.id: c for c in _with(names=True).cells}
     off = {c.id: c for c in _with(names=False).cells}

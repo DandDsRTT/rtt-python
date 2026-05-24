@@ -80,8 +80,13 @@ _CSS = f"""
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; }}
 .rtt-val {{ font-size:{_CELL_FONT}px; color:#000; }}
-.rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
-               font-family:'Cambria',Georgia,serif; }}
+/* the in-tile quantity name: small (≈0.2 of the cell, per the mockup) and wrapping
+   within its column — the tile is sized tall enough to hold every wrapped line, so
+   a long name on a narrow column never spills out of bounds. It top-aligns in its
+   band so short names hug the cells when a sibling column's name wraps taller. */
+.rtt-caption {{ width:100%; text-align:center; font-size:9px; line-height:11px; color:#333;
+               overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }}
+.rtt-caption-cell {{ align-items:flex-start; }}
 .rtt-count {{ font-size:16px; color:#000; white-space:nowrap; }}
 /* the plain-text value: its EBK string in a box that hugs the text (centred by the
    cell), so a short value like 2.3.5 stays a small box and a long one overflows neatly */
