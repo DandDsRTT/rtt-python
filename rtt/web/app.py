@@ -25,6 +25,10 @@ _T = "0.25s"  # transition duration
 # drawn as an SVG whose viewBox maps 1:1 to the cell's px size (see _svg), so a
 # stroke specified as N px is exactly N px tall AND wide at any span — no scaling.
 _BR_COLOR = "#1a1a1a"
+# the value cells tile into a shared-border grid: each fills its square and draws
+# a 1px rule, so abutting cells read as one ruled spreadsheet (per the mockup)
+_CELL_BORDER = f"1px solid {_BR_COLOR}"
+_CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
 _BR_BAR = 2  # main bar / monzo-rule / square-bracket bar thickness (px)
 _BR_SERIF_T = 2  # square + top bracket serif thickness — matches the bar's weight
 _BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches)
@@ -61,12 +65,13 @@ _CSS = f"""
 .rtt-cell {{ position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
             opacity:1; transition:left {_T}, top {_T}, opacity {_T}; }}
 
-.rtt-white {{ width:26px; height:26px; display:flex; align-items:center; justify-content:center;
-             background:#fff; outline:1px solid #c8c8c8; color:#000; font-size:14px; }}
+.rtt-white {{ width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center;
+             justify-content:center; background:#fff; border:{_CELL_BORDER}; color:#000;
+             font-size:{_CELL_FONT}px; }}
 .rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:nowrap; }}
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; }}
-.rtt-val {{ font-size:14px; color:#000; }}
+.rtt-val {{ font-size:{_CELL_FONT}px; color:#000; }}
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
@@ -82,14 +87,14 @@ _CSS = f"""
 .rtt-frac-den {{ padding:0 3px; }}
 .rtt-tval {{ display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
-.rtt-cents-int {{ font-size:13px; }}
-.rtt-cents-frac {{ font-size:9px; color:#000; }}
-.rtt-cellinput {{ width:26px !important; min-height:26px; }}
-.rtt-cellinput .q-field__control {{ width:26px !important; height:26px !important; min-height:26px !important;
-            padding:0 !important; background:#fff; outline:1px solid #c8c8c8; }}
+.rtt-cents-int {{ font-size:10px; }}
+.rtt-cents-frac {{ font-size:7px; color:#000; }}
+.rtt-cellinput {{ width:100% !important; height:100%; min-height:0; }}
+.rtt-cellinput .q-field__control {{ width:100% !important; height:100% !important; min-height:0 !important;
+            box-sizing:border-box; padding:0 !important; background:#fff; border:{_CELL_BORDER}; }}
 .rtt-cellinput .q-field__control::before, .rtt-cellinput .q-field__control::after {{ display:none !important; }}
-.rtt-cellinput .q-field__native {{ text-align:center; padding:0 !important; color:#000; font-size:14px;
-            min-height:26px; font-family:'Cambria',Georgia,serif; }}
+.rtt-cellinput .q-field__native {{ text-align:center; padding:0 !important; color:#000; font-size:{_CELL_FONT}px;
+            min-height:0; font-family:'Cambria',Georgia,serif; }}
 .rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal {{ display:none !important; }}
 .rtt-btn {{ width:20px !important; min-width:20px !important; height:20px !important;
            min-height:20px !important; background:#fff !important; border:1px solid #888 !important;
