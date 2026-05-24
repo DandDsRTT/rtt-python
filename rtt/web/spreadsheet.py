@@ -11,6 +11,8 @@ and out. Reuses the entity types in :mod:`rtt.web.layout`.
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 from rtt.web import service
 from rtt.web.layout import Block, CellBox, Layout, Line
 from rtt.web.settings import defaults as _default_settings
@@ -252,12 +254,14 @@ def _log_operand(ratio: str) -> str:
     return num if den == "1" else f"({num}/{den})"
 
 
-def _math_expr(operand: str, cents: float, show_value: bool) -> str:
-    """A just value's closed form: ``log₂{operand}``, with ``= {octaves}`` appended
-    when the value (quantities) is also shown — e.g. ``log₂3 = 1.585``. The decimal
-    is in octaves (cents/1200) because that is what log₂ evaluates to."""
-    expr = f"log₂{operand}"
-    return f"{expr} = {cents / 1200:.3f}" if show_value else expr
+def _math_expr(operand: str, value: float, show_value: bool) -> str:
+    """A just value's exact closed form ``1200 · log₂{operand}`` — which *equals* the
+    cents value, so the decimal stays in cents and is kept as a true ``= {cents}``.
+    The two parts are newline-separated so the renderer stacks them (the ``=`` and
+    the decimal on the second line), e.g. ``"1200 · log₂2\\n= 1200.00"``. With the
+    value (quantities) off, only the expression shows."""
+    expr = f"1200 · log₂{operand}"
+    return f"{expr}\n= {service.cents(value)}" if show_value else expr
 
 
 def _title_w(title: str) -> int:
@@ -319,13 +323,13 @@ def build(state, settings=None, collapsed=None,
     # fold toggles, name captions and (when on) plain-text value boxes. "quantities"
     # (general) narrows that to the
     # body values (BODY_VALUE_KINDS); "domain_quantities" (specific) governs the
-    # quantities row and its spine column. The just row alone has an exact closed
-    # form, so "math_expressions" renders log₂ of each interval there instead of
-    # cents -- paired with its octave value when "quantities" is also on
-    # ("log₂3 = 1.585").
+    # quantities row and its spine column.
     gridded = settings["gridded_values"]
     show_quantities = settings["quantities"]
     show_domain_quantities = settings["domain_quantities"]
+    # Math expressions replaces a tuning cell's cents decimal with its exact closed
+    # form where one exists ("1200 · log₂3 = 1901.96", the = cents kept when
+    # quantities is on); cells with no closed form (optimized values) show nothing.
     show_math = settings["math_expressions"]
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
@@ -684,29 +688,60 @@ def build(state, settings=None, collapsed=None,
     group_elem = {"primes": "prime", "commas": "comma", "targets": "target", "interest": "interest"}
     group_left = {"primes": prime_left, "commas": comma_left, "targets": target_left,
                   "interest": interest_left}
-    group_operand = {
-        "primes": lambda i: str(primes[i]),
-        "commas": lambda i: _log_operand(comma_ratios[i]),
-        "targets": lambda i: _log_operand(targets[i]),
-        "interest": lambda i: _log_operand(interest_ratios[i]),
+    group_ratio = {  # the just interval ratio each value group is taken over
+        "primes": lambda i: f"{primes[i]}/1",
+        "commas": lambda i: comma_ratios[i],
+        "targets": lambda i: targets[i],
+        "interest": lambda i: interest_ratios[i],
     }
+
+    def closed_form_operand(key, group, i):
+        """The operand ``R`` of a cell's exact closed form ``1200 · log₂R``, or None
+        when the value has no closed form. A just size IS ``1200·log₂`` of its
+        interval. A comma vanishes in the temperament, so its retuning is the negated
+        just size and its damage that size's magnitude — both exact logs of the
+        inverted/oriented comma. The tempered sizes and the prime/target errors come
+        from optimization, so they have none."""
+        if key == "just":
+            return _log_operand(group_ratio[group](i))
+        if group == "commas" and key in ("retune", "damage"):
+            comma = Fraction(comma_ratios[i])
+            r = 1 / comma if key == "retune" else max(comma, 1 / comma)
+            return _log_operand(f"{r.numerator}/{r.denominator}")
+        return None
+
+    def math_emptied(key, group):
+        """A tuning tile whose values math expressions removes: its optimized values
+        have no exact closed form, so under math expressions it renders nothing at all
+        — no values, brackets, caption, or even its grey panel. (Mirrors which combos
+        closed_form_operand resolves; non-tuning rows are never emptied by math.)"""
+        if not show_math or key not in ("tuning", "just", "retune", "damage"):
+            return False
+        return not (key == "just" or (group == "commas" and key in ("retune", "damage")))
+
+    def shows_values(key, group):
+        """Whether a (row, group) tile renders its values/brackets/caption: it must be
+        open (not folded) and not emptied by math expressions."""
+        return tile_open(key, group) and not math_emptied(key, group)
 
     # tuning rows over the primes, commas and targets (cents); each can collapse on
     # its own. Commas sit on the same footing as targets — they are just the dual
-    # interval set — so the comma's tempered size is ~0 (it vanishes), with a real
-    # just size and error. The just row alone has an exact closed form (log₂ of each
-    # interval), so math expressions swaps its cents cells for that — paired with the
-    # octave value when quantities is also on ("log₂3 = 1.585"), the same cell id and
-    # box but a "mathexpr" kind the renderer swaps in.
+    # interval set. With math expressions on, a cell shows its exact closed form
+    # where one exists (a "mathexpr" kind the renderer swaps in for the cents cell)
+    # and NOTHING where it does not (optimized/derived values) — per Douglas: "if
+    # there's no closed form, show nothing when math expressions is checked".
     def tval_row(key, group, vals):
-        if not tile_open(key, group):
+        if not shows_values(key, group):
             return
         y = row_y[key]
         for i, v in enumerate(vals):
             cid = f"{key}:{group_elem[group]}:{i}"
             x = group_left[group](i)
-            if show_math and key == "just":
-                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(group_operand[group](i), v, show_quantities)))
+            if show_math:
+                operand = closed_form_operand(key, group, i)
+                if operand is None:
+                    continue  # no closed form -> show nothing
+                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, show_quantities)))
             else:
                 cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v)))
 
@@ -764,6 +799,8 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
 
+    # brackets follow shows_values, so a tuning group emptied by math expressions
+    # drops its (now-contentless) brackets too rather than framing empty space
     if row_open("mapping"):
         # the gens identity and the primes mapping are stacks of maps: ⟨ … ] per row
         for bid, ckey in (("selfmap", "gens"), ("map", "primes")):
@@ -784,17 +821,17 @@ def build(state, settings=None, collapsed=None,
             bracket("vec:interest", LIST_BRACKETS, "interest", row_y["vectors"], d * ROW_H, fit=True)
     for key in ("tuning", "just", "retune"):
         if row_open(key):
-            if tile_open(key, "primes"):
+            if shows_values(key, "primes"):
                 bracket(f"{key}:map", MAP_BRACKETS, "primes", row_y[key], ROW_H)
-            if tile_open(key, "commas"):
+            if shows_values(key, "commas"):
                 bracket(f"{key}:commalist", LIST_BRACKETS, "commas", row_y[key], ROW_H)
-            if tile_open(key, "targets"):
+            if shows_values(key, "targets"):
                 bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
-            if mi and tile_open(key, "interest"):
+            if mi and shows_values(key, "interest"):
                 bracket(f"{key}:ilist", LIST_BRACKETS, "interest", row_y[key], ROW_H)
-    if tile_open("damage", "commas"):
+    if shows_values("damage", "commas"):
         bracket("damage:commalist", LIST_BRACKETS, "commas", row_y["damage"], ROW_H)
-    if tile_open("damage", "targets"):
+    if shows_values("damage", "targets"):
         bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
 
     # Shared axes. A multi-element group is one line that fans out at the near end
@@ -886,7 +923,8 @@ def build(state, settings=None, collapsed=None,
         blocks.append(Block(bid, bx - px, by - py, w + 2 * px, h + 2 * py))
 
     for bid, rkey, ckey in tiles:
-        panel(bid, ckey, rkey)
+        if not math_emptied(rkey, ckey):  # a math-emptied tile shows no panel either
+            panel(bid, ckey, rkey)
 
     # quantity symbol + name stacked inside each tile, below its values + bottom
     # frame: the symbol line (toggled by symbols) on top, the long-form name
@@ -896,11 +934,12 @@ def build(state, settings=None, collapsed=None,
     # left side) even when symbols itself is off. Within a symboled row the slot is
     # reserved for every captioned column so the names stay aligned; the glyph and
     # equation are drawn only where defined (the comma columns have none yet). An
-    # empty interest column has no tiles. Mnemonics underlines the symbol letter.
+    # empty interest column has no tiles. Mnemonics underlines the symbol letter. A
+    # tile emptied by math expressions (no closed form) shows nothing here either.
     for (rkey, ckey), name in CAPTIONS.items():
         if ckey == "interest" and not interest:
             continue
-        if not tile_open(rkey, ckey):
+        if not shows_values(rkey, ckey):
             continue
         cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
         if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS:
@@ -919,6 +958,8 @@ def build(state, settings=None, collapsed=None,
     # preselect chooser dropdowns, in the reserved band below each governing tile
     # (and below its caption when names show). The tuning/target choosers carry the
     # live selection; the temperament chooser is a placeholder (it loads, not mirrors).
+    # These are controls, so they ride the tile whether or not math expressions has
+    # emptied its values — you can still pick a tuning while viewing closed forms.
     if show_preselects:
         preselect_text = {"temperament": "", "tuning": tuning_scheme, "target": target_spec}
         for name, rkey, ckey in PRESELECTS:
@@ -936,10 +977,11 @@ def build(state, settings=None, collapsed=None,
     # caption/preselect bands (the same numbers the grid shows, written inline). The
     # two editable duals (mapping, comma basis) render as inputs that drive the grid;
     # every other value is read-only. A read-only value wraps to as many lines as it
-    # needs and the tile grows to hold them, so nothing spills past its column.
+    # needs and the tile grows to hold them, so nothing spills past its column. A
+    # math-emptied tuning tile has no value to write, so it shows none.
     if show_ptext:
         for (rkey, ckey), text in ptext_strings.items():
-            if not tile_open(rkey, ckey):
+            if not shows_values(rkey, ckey):
                 continue
             py = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_pre[rkey]
             kind = "ptextedit" if (rkey, ckey) in EDITABLE_PTEXT else "ptext"

@@ -187,3 +187,26 @@ def test_range_chart_shows_a_placeholder_and_no_i_beams_when_there_is_no_range()
     assert "tuning ranges" in svg
     assert "no range" in svg  # the placeholder text
     assert "<rect" not in svg  # no I-beams drawn
+
+
+def _first_font(html):
+    return float(html.split("font-size:")[1].split("px")[0])
+
+
+def test_mathexpr_html_stacks_two_lines_each_with_a_fitted_font():
+    html = app._mathexpr_html("1200 · log₂(3/2)\n= 701.96", 30)
+    # a wrapper plus one div per line, each carrying its own inline font-size
+    assert html.count("<div") == 3
+    assert html.count("font-size:") == 2
+    assert "1200 · log₂(3/2)" in html and "= 701.96" in html
+
+
+def test_mathexpr_font_shrinks_for_longer_expressions():
+    short = app._mathexpr_html("1200 · log₂2\n= 1200.00", 30)  # short prime-map expression
+    long = app._mathexpr_html("1200 · log₂(6/5)\n= 315.64", 30)  # longer target-ratio one
+    assert _first_font(long) < _first_font(short)  # the longer line is scaled down to fit
+
+
+def test_fit_font_is_clamped_between_the_min_and_max():
+    assert app._fit_font("x", 30) == app._EXPR_MAX_FONT  # a tiny line caps at the max
+    assert app._fit_font("x" * 100, 30) == app._EXPR_MIN_FONT  # a huge line floors at the min

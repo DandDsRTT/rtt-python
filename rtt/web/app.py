@@ -196,9 +196,11 @@ _CSS = f"""
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
 .rtt-cents-int {{ font-size:10px; }}
 .rtt-cents-frac {{ font-size:7px; color:#000; }}
-/* a just value's closed form (log₂3 = 1.585); wraps within the square value cell */
-.rtt-mathexpr {{ width:100%; text-align:center; font-size:7.5px; line-height:1.12; color:#000;
-                white-space:normal; overflow:hidden; }}
+/* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
+   line's font is scaled (inline) to fit the narrow value square, so it never overflows */
+.rtt-mathexpr {{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; }}
+.rtt-mathexpr-stack {{ display:flex; flex-direction:column; align-items:center; justify-content:center;
+                      line-height:1.15; color:#000; white-space:nowrap; }}
 .rtt-cellinput {{ width:100% !important; height:100%; min-height:0; overflow:visible; }}
 .rtt-cellinput .q-field__inner {{ overflow:visible; }}
 .rtt-cellinput .q-field__control {{ position:absolute !important; top:0; left:0;
@@ -254,8 +256,32 @@ _CSS = f"""
 .rtt-ex {{ white-space:nowrap; }}
 """
 
-_LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "vec", "mathexpr",
+_LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "vec",
                 "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
+
+# A math-expression cell stacks 1–2 lines ("1200 · log₂(3/2)" over "= 701.96") in a
+# narrow value square, so each line's font is scaled down to fit the cell width.
+_EXPR_MAX_FONT = 9.0  # px — short lines (a bare prime map) sit at the comfortable size
+_EXPR_MIN_FONT = 3.5  # px — the floor for the longest target-ratio expressions
+_EXPR_CHAR_W = 0.5  # a glyph's width as a fraction of font size (serif average), for the fit
+
+
+def _fit_font(line: str, width: float) -> float:
+    """Largest font (capped) at which ``line`` fits ``width`` px on one line."""
+    if not line:
+        return _EXPR_MAX_FONT
+    fit = (width - 2) / (len(line) * _EXPR_CHAR_W)
+    return max(_EXPR_MIN_FONT, min(_EXPR_MAX_FONT, fit))
+
+
+def _mathexpr_html(text: str, width: float) -> str:
+    """The stacked HTML for a math-expression cell: each newline-separated line on
+    its own row, its font shrunk to fit the cell so long expressions stay in-bounds."""
+    lines = "".join(
+        f'<div style="font-size:{_fit_font(line, width):.2f}px">{line}</div>'
+        for line in text.split("\n")
+    )
+    return f'<div class="rtt-mathexpr-stack">{lines}</div>'
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
 # cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
@@ -689,6 +715,8 @@ def index() -> None:
     ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
     chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
     range_keys: dict = {}  # range-chart cell id -> last (w, h, ranges) drawn, to redraw on resize/data change
+    exprs: dict = {}  # math-expression cell id -> the ui.html holding its stacked lines
+    expr_state: dict = {}  # math-expression cell id -> last (text, w) rendered, to redraw on change
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
     selects: dict = {}  # preselect cell id -> its q-select
     ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
@@ -704,8 +732,9 @@ def index() -> None:
     def drop(eid):
         """Remove an entity's element and forget every per-id handle for it."""
         els[eid].delete()
-        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects, ptext_inputs,
-                  captions, caption_html, math_cells, math_rendered, chart_keys, range_keys, radios):
+        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, exprs, expr_state, kinds,
+                  selects, ptext_inputs, captions, caption_html, math_cells, math_rendered,
+                  chart_keys, range_keys, radios):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -874,8 +903,8 @@ def index() -> None:
                     w = ui.label(whole).classes("rtt-cents-int")
                     f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
                 cents[cb.id] = (w, f)
-            elif cb.kind == "mathexpr":  # a just value's closed form, e.g. "log₂3 = 1.585"
-                labels[cb.id] = ui.label(cb.text).classes("rtt-mathexpr")
+            elif cb.kind == "mathexpr":  # a just value's stacked closed form, fit to the cell
+                exprs[cb.id] = ui.html("").classes("rtt-mathexpr")  # content drawn in render()
             elif cb.kind == "colheader":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":
@@ -977,6 +1006,11 @@ def index() -> None:
                 inputs[cb.id].value = cb.text  # the normalized monzo component build computed
             elif cb.kind == "ptextedit":  # reflect the canonical string after a valid edit
                 ptext_inputs[cb.id].value = cb.text
+            elif cb.kind == "mathexpr":
+                # redraw (with refit fonts) whenever the expression text or cell width changes
+                if expr_state.get(cb.id) != (cb.text, cb.w):
+                    exprs[cb.id].set_content(_mathexpr_html(cb.text, cb.w))
+                    expr_state[cb.id] = (cb.text, cb.w)
             elif cb.id in fracs:
                 num, den = _ratio_parts(cb.text) or (cb.text, "")
                 fracs[cb.id][0].set_text(num)

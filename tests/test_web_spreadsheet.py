@@ -908,45 +908,64 @@ def test_comma_minus_rides_the_last_comma_only_when_more_than_one():
 # --- math expressions: the just row's exact log₂ closed forms ---
 
 def test_math_expressions_render_the_just_tuning_primes_as_logs():
-    # the just tuning map over primes is exactly log2 of each prime, so with math
-    # expressions on its cells show that closed form (= its octave value, since
-    # quantities is also on) instead of the cents decimal
+    # the just tuning map over primes is exactly 1200·log₂ of each prime, so with
+    # math expressions on its cells PREFIX the (unchanged) cents value with that
+    # equal expression — the "= cents" kept on a second line
     cells = {c.id: c for c in _with(math_expressions=True).cells}
     assert cells["just:prime:0"].kind == "mathexpr"
-    assert cells["just:prime:0"].text == "log₂2 = 1.000"  # the octave is one
-    assert cells["just:prime:1"].text == "log₂3 = 1.585"  # matches the mockup legend
-    assert cells["just:prime:2"].text == "log₂5 = 2.322"
+    assert cells["just:prime:0"].text == "1200 · log₂2\n= 1200.000"  # 1200·log₂2 == 1200
+    assert cells["just:prime:1"].text == "1200 · log₂3\n= 1901.955"
+    assert cells["just:prime:2"].text == "1200 · log₂5\n= 2786.314"
 
 
 def test_math_expressions_render_the_just_target_sizes_as_logs():
-    # the just target-size list is log2 of each target ratio; a bare prime ratio
+    # the just target-size list is 1200·log₂ of each target ratio; a bare prime ratio
     # (n/1) drops its denominator, a proper ratio keeps it in parentheses
     cells = {c.id: c for c in _with(math_expressions=True).cells}
-    assert cells["just:target:1"].text == "log₂3 = 1.585"  # 3/1 -> log₂3
-    assert cells["just:target:2"].text == "log₂(3/2) = 0.585"  # 3/2 keeps the ratio
+    assert cells["just:target:1"].text == "1200 · log₂3\n= 1901.955"  # 3/1 -> log₂3
+    assert cells["just:target:2"].text == "1200 · log₂(3/2)\n= 701.955"  # 3/2 keeps the ratio
 
 
 def test_math_expressions_render_the_just_comma_sizes_as_logs():
-    # a comma is an interval too, so its just size is log2 of its ratio; the
-    # syntonic comma 80/81 is a hair flat of unity, hence a small negative log
+    # a comma is an interval too, so its just size is 1200·log₂ of its ratio; the
+    # syntonic comma 80/81 is a hair flat of unity, hence a small negative size
     cells = {c.id: c for c in _with(math_expressions=True).cells}
     assert cells["just:comma:0"].kind == "mathexpr"
-    assert cells["just:comma:0"].text == "log₂(80/81) = -0.018"
+    assert cells["just:comma:0"].text == "1200 · log₂(80/81)\n= -21.506"
 
 
-def test_math_expressions_leave_the_tempered_and_retuning_rows_as_cents():
-    # only the just row has a closed form; the optimized tempered/retuning/damage
-    # values stay decimal cents (the choice the legend's "all tuning rows" implies)
+def test_math_expressions_show_the_comma_error_and_damage_as_logs():
+    # a comma vanishes in the temperament (its tempered size is 0), so its retuning
+    # is the negated just size and its damage that magnitude — both exact logs of the
+    # inverted comma (80/81 -> 81/80), unlike the optimized prime/target errors
     cells = {c.id: c for c in _with(math_expressions=True).cells}
-    for cid in ("tuning:prime:1", "retune:prime:1", "damage:target:0"):
-        assert cells[cid].kind == "tval"
-        assert "log" not in cells[cid].text
+    assert cells["retune:comma:0"].text == "1200 · log₂(81/80)\n= 21.506"
+    assert cells["damage:comma:0"].text == "1200 · log₂(81/80)\n= 21.506"
+
+
+def test_math_expressions_blank_the_tiles_with_no_closed_form():
+    # the tempered tuning row and the prime/target errors come from optimization, so
+    # they have no exact closed form — with math expressions on the WHOLE tile shows
+    # nothing: no value cells, no framing brackets, no caption, not even its panel
+    lay = _with(math_expressions=True)
+    cells = {c.id for c in lay.cells}
+    blocks = {b.id for b in lay.blocks}
+    for cid in ("tuning:prime:1", "tuning:comma:0", "tuning:target:0",
+                "retune:prime:1", "retune:target:0", "damage:target:0"):
+        assert cid not in cells
+    assert not any(c.startswith("bracket:tuning:") for c in cells)  # no empty brackets
+    assert "caption:tuning:primes" not in cells  # nor a caption labelling nothing
+    assert "block:tuning:primes" not in blocks  # nor an empty grey panel
+    # the just row keeps its content, so its panel, brackets and captions stay
+    assert "block:just:primes" in blocks
+    assert "bracket:just:map:l" in cells and "caption:just:primes" in cells
 
 
 def test_math_expressions_without_quantities_show_only_the_expression():
-    # quantities drives the "= value" tail; with it off the cell is the bare log
+    # quantities drives the "= value" second line; with it off the cell is the
+    # bare expression, no decimal and no newline
     cells = {c.id: c for c in _with(math_expressions=True, quantities=False).cells}
-    assert cells["just:prime:1"].text == "log₂3"
+    assert cells["just:prime:1"].text == "1200 · log₂3"
 
 
 def test_math_expressions_is_an_interactive_toggle():
