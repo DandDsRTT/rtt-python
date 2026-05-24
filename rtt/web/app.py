@@ -226,13 +226,19 @@ def _angle_bracket(w, h):
 
 def _brace(w, h):
     """The matrix's bottom curly brace as ONE variable-width ribbon computed from
-    the width: two long horizontal arms (THICK) sweeping from upturned end-serifs
-    (THIN) into a central downward cusp (a THIN near-point). The end-curls and the
-    cusp are fixed px shapes, so they look identical at any width — only the arm
-    length grows. No pieces, so no seams or overshoot."""
+    the width: long horizontal arms (THICK) sweeping from upturned end-serifs
+    (THIN) into a central downward cusp (a THIN near-point). Its depth (the short
+    bounding dimension) matches the value brackets' footprint. On a wide span the
+    curls keep a fixed shape and only the arm grows; on a narrow span (the
+    per-column braces) the curls shrink together so a short arm always survives.
+    One outline, so no seams or overshoot."""
     cx = w / 2
-    arm_y, tip_y, cusp_y = 4.4, 0.9, h - 1.8
-    end_x, serif_dx, cusp_dx = 3.0, 3.2, 5.5
+    end_x, serif_dx, cusp_dx = 2.0, 3.2, 5.5
+    span = end_x + serif_dx + cusp_dx + 1.0  # the curls plus a reserved minimal arm
+    if span > cx:  # too narrow to fit full curls — shrink them together to fit
+        s = cx / span
+        end_x, serif_dx, cusp_dx = end_x * s, serif_dx * s, cusp_dx * s
+    tip_y, arm_y, cusp_y = 0.12 * h, 0.34 * h, 0.95 * h
     thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
     n = 10
     pts = _qbez((end_x, tip_y), (end_x, arm_y), (end_x + serif_dx, arm_y), thin, thick, n)

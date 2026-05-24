@@ -29,7 +29,8 @@ STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
-BRACE_H = 14  # height of a matrix's bottom curly-brace band (taller, room for the spike)
+BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
+# short bounding dimension matches the value brackets' footprint (one EBK weight)
 FRAME_GAP = 5  # gap between a framing band and the matrix cells, so they don't merge
 BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
 VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
