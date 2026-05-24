@@ -516,13 +516,18 @@ def test_tuning_and_target_choosers_show_the_live_selection_temperament_is_a_pla
     assert cells["preselect:temperament"].text == ""  # a chooser placeholder, not a live value
 
 
-def test_temperament_chooser_requires_the_mapping_tile_to_be_shown():
+def test_preselect_choosers_follow_their_columns_when_temperament_is_hidden():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["preselects"], s["temperament_boxes"] = True, False
     cells = {c.id for c in spreadsheet.build(base, s).cells}
-    assert "preselect:temperament" not in cells  # no mapping shown -> no temperament chooser
-    assert "preselect:tuning" in cells  # the other choosers are unaffected
+    # the temperament and tuning choosers both ride the domain-primes column (under
+    # the mapping matrix / tuning map), which temperament_boxes owns -- so hiding the
+    # temperament takes both choosers with the column
+    assert "preselect:temperament" not in cells
+    assert "preselect:tuning" not in cells
+    # the target chooser rides the tuning-owned target-intervals column, so it stays
+    assert "preselect:target" in cells
 
 
 def test_preselect_dropdown_clears_the_row_below_it():
