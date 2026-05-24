@@ -21,6 +21,16 @@ def test_diamond_monotone_meantone_fifth_range():
     assert ranges[1] == pytest.approx((685.714, 720.0), abs=1e-2)
 
 
+def test_monotone_range_is_none_when_no_monotone_tuning_exists():
+    # [[1, 1]] over {2, 3} tempers 3/2 to a unison, so the diamond intervals
+    # cannot keep their JI order under any tuning -- no diamond-monotone range.
+    t = Temperament(((1, 1),), Variance.ROW)
+    assert get_generator_tuning_range(t, "monotone") is None
+    # Tradeoff tunings always exist; the lone (octave) generator is pinned pure.
+    tradeoff = get_generator_tuning_range(t, "tradeoff")
+    assert tradeoff[0] == pytest.approx((1200.0, 1200.0), abs=1e-6)
+
+
 def test_octave_generator_is_pinned_pure_in_both_modes():
     # The normalization holds 2/1 pure, so the period (octave) generator collapses
     # to a single point at 1200 cents in either mode -- only the fifth has a range.

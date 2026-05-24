@@ -30,8 +30,10 @@ def _mapping_matrix(t: Temperament) -> np.ndarray:
 
 def get_generator_tuning_range(
     t: Temperament, mode: Mode, target_spec: str = "OLD"
-) -> tuple[tuple[float, float], ...]:
-    """The ``(low, high)`` cents range of each generator, octave held pure."""
+) -> tuple[tuple[float, float], ...] | None:
+    """The ``(low, high)`` cents range of each generator, octave held pure.
+
+    ``None`` (monotone only) means no such tuning exists for this temperament."""
     d = get_d(t)
     mapping = _mapping_matrix(t)  # r x d
     r = mapping.shape[0]
@@ -59,11 +61,14 @@ def _monotone_range(
     octave_coords: np.ndarray,
     octave_just: float,
     r: int,
-) -> tuple[tuple[float, float], ...]:
+) -> tuple[tuple[float, float], ...] | None:
     """The diamond-monotone range: the tunings under which the tempered diamond
     intervals keep their JI size order. Sorting the diamond (plus 1/1) by just
     size, each consecutive step must temper non-negatively — a polytope whose
-    extent along each generator is a linear program, octave held pure."""
+    extent along each generator is a linear program, octave held pure.
+
+    Returns ``None`` when no diamond-monotone tuning exists — the polytope is
+    empty because some consonance can't keep its place (e.g. it tempers out)."""
     all_coords = np.vstack([np.zeros(r), coords])  # prepend 1/1 (the size floor)
     all_sizes = np.concatenate([[0.0], just_sizes])
     steps = np.diff(all_coords[np.argsort(all_sizes)], axis=0)  # (k, r): upper - lower
@@ -71,13 +76,16 @@ def _monotone_range(
     a_eq, b_eq = octave_coords.reshape(1, r), np.array([octave_just])
     bounds = [(None, None)] * r
 
-    def extreme(direction: np.ndarray) -> np.ndarray:
-        return linprog(direction, A_ub=a_ub, b_ub=b_ub, A_eq=a_eq, b_eq=b_eq, bounds=bounds).x
+    def solve(direction: np.ndarray):
+        return linprog(direction, A_ub=a_ub, b_ub=b_ub, A_eq=a_eq, b_eq=b_eq, bounds=bounds)
 
-    return tuple(
-        (float(extreme(unit)[i]), float(extreme(-unit)[i]))
-        for i, unit in enumerate(np.eye(r))
-    )
+    ranges = []
+    for i, unit in enumerate(np.eye(r)):
+        low, high = solve(unit), solve(-unit)
+        if not (low.success and high.success):
+            return None  # the monotone polytope is empty (or unbounded)
+        ranges.append((float(low.x[i]), float(high.x[i])))
+    return tuple(ranges)
 
 
 def _tradeoff_range(
