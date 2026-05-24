@@ -49,6 +49,23 @@ def test_undo_with_empty_stack_is_a_noop():
     assert editor.state.mapping == INITIAL_MAPPING
 
 
+def test_add_comma_then_remove_comma_round_trips_through_undo_state():
+    editor = Editor()
+    assert editor.state.comma_basis == ((4, -4, 1),)
+    editor.add_comma()
+    assert editor.state.comma_basis == ((4, -4, 1), (0, 0, 0))  # a blank comma to fill
+    assert editor.can_undo is True  # the add is undoable
+    editor.remove_comma()
+    assert editor.state.comma_basis == ((4, -4, 1),)
+
+
+def test_cannot_remove_the_sole_comma():
+    editor = Editor()  # meantone exposes a single comma
+    assert editor.can_remove_comma is False  # removing it would empty the basis
+    editor.add_comma()
+    assert editor.can_remove_comma is True  # ...but with two, the last can go
+
+
 def test_cannot_shrink_below_one_dimension():
     editor = Editor()
     assert editor.can_shrink is True  # starts at d=3

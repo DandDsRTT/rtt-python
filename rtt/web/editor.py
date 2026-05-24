@@ -33,6 +33,11 @@ class Editor:
         """Whether the domain can lose a prime without collapsing to nothing."""
         return self.state.d > 1
 
+    @property
+    def can_remove_comma(self) -> bool:
+        """Whether a comma can be dropped without emptying the basis."""
+        return len(self.state.comma_basis) > 1
+
     def edit_mapping(self, mapping) -> None:
         self._snapshot()
         self.state = service.from_mapping(mapping)
@@ -48,6 +53,14 @@ class Editor:
     def shrink(self) -> None:
         self._snapshot()
         self.state = service.shrink_domain(self.state)
+
+    def add_comma(self) -> None:
+        self._snapshot()
+        self.state = service.add_comma(self.state)
+
+    def remove_comma(self) -> None:
+        self._snapshot()
+        self.state = service.remove_comma(self.state)
 
     def undo(self) -> None:
         if self._undo_stack:
