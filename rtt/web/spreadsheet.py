@@ -40,7 +40,7 @@ TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (off the edges and content)
 CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mockup —
 # ~0.2 of the cell height; the CSS .rtt-caption must use the same size)
-CAPTION_LINE = 11  # px per wrapped caption line (font size + leading)
+CAPTION_LINE = 10  # px per wrapped caption line (font size + leading); == .rtt-caption line-height
 PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 PTEXT_FONT = 9  # px font of the plain-text value (small, like the caption; the CSS must match)

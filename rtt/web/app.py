@@ -121,16 +121,18 @@ _CSS = f"""
              width:calc(100% + {_CELL_BORDER_W}px); height:calc(100% + {_CELL_BORDER_W}px);
              box-sizing:border-box; display:flex; align-items:center; justify-content:center;
              background:#fff; border:{_CELL_BORDER}; color:#000; font-size:{_CELL_FONT}px; }}
+/* balance evens a wrapped title (e.g. "other intervals" / "of interest") instead of
+   orphaning its last word; the tight line-height keeps the two lines close */
 .rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:normal;
-                 width:100%; text-align:center; line-height:1.2; }}
+                 width:100%; text-align:center; line-height:1.1; text-wrap:balance; }}
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
-                padding-right:8px; }}
+                padding-right:8px; line-height:1.1; }}
 .rtt-val {{ font-size:{_CELL_FONT}px; color:#000; }}
 /* the in-tile quantity name: small (≈0.2 of the cell, per the mockup) and wrapping
    within its column — the tile is sized tall enough to hold every wrapped line, so
    a long name on a narrow column never spills out of bounds. It top-aligns in its
    band so short names hug the cells when a sibling column's name wraps taller. */
-.rtt-caption {{ width:100%; text-align:center; font-size:9px; line-height:11px; color:#333;
+.rtt-caption {{ width:100%; text-align:center; font-size:9px; line-height:10px; color:#333;
                overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }}
 .rtt-caption-cell {{ align-items:flex-start; }}
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
