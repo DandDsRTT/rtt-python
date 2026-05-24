@@ -225,10 +225,6 @@ BODY_VALUE_KINDS = frozenset({
 })
 
 
-def _cents(value) -> str:
-    return f"{value:.2f}"
-
-
 def _mathit(letter: str) -> str:
     """A single lowercase ASCII letter as its Unicode Mathematical Italic glyph
     (e.g. ``d`` -> ``𝑑``), so a count's variable reads as math italic like the
@@ -668,7 +664,7 @@ def build(state, settings=None, collapsed=None,
             if show_math and key == "just":
                 cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(group_operand[group](i), v, show_quantities)))
             else:
-                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=_cents(v)))
+                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v)))
 
     # a charted tile draws a bar chart in the band reserved above its values; the
     # chart spans the column group so its bars align with the value cells below.

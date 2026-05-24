@@ -150,7 +150,7 @@ def test_tuning_rows_over_primes_and_targets():
     assert cells["label:just"].text == "just tuning"
     assert cells["label:damage"].text == "damage"
     assert {"tuning:prime:0", "tuning:target:0", "just:prime:0", "retune:target:0", "damage:target:0"} <= set(cells)
-    assert cells["just:prime:0"].text == "1200.00"  # just octave is pure
+    assert cells["just:prime:0"].text == "1200.000"  # just octave is pure
     # tuning rows sit on the same shared prime columns as the mapping
     assert cells["tuning:prime:2"].x == cells["cell:mapping:0:2"].x
 
@@ -624,7 +624,7 @@ def test_build_honors_the_tuning_scheme():
     pote = {c.id: c.text for c in spreadsheet.build(base, tuning_scheme="POTE").cells}
     # POTE holds the octave pure; TOP stretches it — so the prime-2 tuning differs
     assert top["tuning:prime:0"] != pote["tuning:prime:0"]
-    assert pote["tuning:prime:0"] == "1200.00"
+    assert pote["tuning:prime:0"] == "1200.000"
 
 
 def test_plain_text_values_adds_a_string_band_under_each_tile():
@@ -756,11 +756,11 @@ def test_mapping_row_commas_show_the_mapped_comma_basis_vanishing():
 def test_comma_sizes_fill_the_tuning_family_rows():
     cells = {c.id: c for c in _layout().cells}
     # the comma vanishes in the temperament: its tempered size is ~0
-    assert cells["tuning:comma:0"].text == "0.00"
+    assert cells["tuning:comma:0"].text == "0.000"
     # ...but it has a real just size (the syntonic comma is ~21.5 cents)
-    assert cells["just:comma:0"].text == "-21.51"
-    assert cells["retune:comma:0"].text == "21.51"
-    assert cells["damage:comma:0"].text == "21.51"
+    assert cells["just:comma:0"].text == "-21.506"
+    assert cells["retune:comma:0"].text == "21.506"
+    assert cells["damage:comma:0"].text == "21.506"
     # comma tuning values share the comma column with the quantities-row ratio
     assert cells["tuning:comma:0"].x == cells["comma:0"].x
 
@@ -1043,7 +1043,7 @@ def test_populated_interest_renders_ratios_mapped_and_sizes_minus_damage():
     assert cells["cell:imapped:1:3"].text == "-4"  # 8/5 -> [3,-4]
     # tempered / just / retuning size rows
     assert {"tuning:interest:0", "just:interest:0", "retune:interest:3"} <= set(cells)
-    assert cells["just:interest:0"].text == "701.96"  # 3/2 just is a pure fifth
+    assert cells["just:interest:0"].text == "701.955"  # 3/2 just is a pure fifth
     # ...but NO damage row: these are not optimization targets
     assert not any(c.startswith("damage:interest") for c in cells)
 

@@ -441,7 +441,7 @@ def _ratio_parts(text):
 
 
 def _cents_parts(text):
-    """Split a cents value like ``"1899.26"`` into a big whole part and small fraction."""
+    """Split a cents value like ``"1899.260"`` into a big whole part and small fraction."""
     whole, _, frac = str(text).partition(".")
     return whole, frac
 

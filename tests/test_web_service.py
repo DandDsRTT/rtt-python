@@ -185,8 +185,8 @@ def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision():
     tun = service.tuning(state.mapping)
     sizes = service.interval_sizes(tun, targets)
 
-    def cents(vals):  # the same 2-dp the grid shows, so the two views agree
-        return " ".join(f"{v:.2f}" for v in vals)
+    def cents(vals):  # the same 3-dp the grid shows, so the two views agree
+        return " ".join(f"{v:.3f}" for v in vals)
 
     # tuning / just / retuning maps over the primes are covectors: ⟨ … ]
     assert pt[("tuning", "primes")] == f"⟨{cents(tun.tuning_map)}]"
@@ -197,7 +197,7 @@ def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision():
     assert pt[("just", "targets")] == f"[{cents(sizes.just)}]"
     assert pt[("retune", "targets")] == f"[{cents(sizes.errors)}]"
     assert pt[("damage", "targets")] == f"[{cents(sizes.damage)}]"
-    assert pt[("just", "primes")].startswith("⟨1200.00 ")  # the just octave is pure
+    assert pt[("just", "primes")].startswith("⟨1200.000 ")  # the just octave is pure
 
 
 def test_plain_text_commas_column_mirrors_the_grid():
@@ -207,7 +207,7 @@ def test_plain_text_commas_column_mirrors_the_grid():
     sizes = service.interval_sizes(service.tuning(state.mapping), commas)
 
     def cents(vals):
-        return " ".join(f"{v:.2f}" for v in vals)
+        return " ".join(f"{v:.3f}" for v in vals)
 
     assert pt[("quantities", "commas")] == "{" + ", ".join(commas) + "}"  # the comma set
     assert pt[("mapping", "commas")] == "[4 -4 1⟩"  # the comma basis as an EBK monzo

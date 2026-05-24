@@ -238,18 +238,20 @@ def _vector_list(matrix: Matrix) -> str:
     return "[" + " ".join("[" + " ".join(str(x) for x in col) + "]" for col in cols) + "]"
 
 
-def _cents(value: float) -> str:
-    return f"{value:.2f}"  # the 2-dp the grid shows, so text and grid agree
+def cents(value: float) -> str:
+    """A cents quantity at the 3-dp the grid and plain-text views share, so the
+    two displays always agree."""
+    return f"{value:.3f}"
 
 
 def _cents_map(values) -> str:
-    """A tuning covector over the primes: ``⟨1200.00 1901.95 …]``."""
-    return "⟨" + " ".join(_cents(v) for v in values) + "]"
+    """A tuning covector over the primes: ``⟨1200.000 1901.955 …]``."""
+    return "⟨" + " ".join(cents(v) for v in values) + "]"
 
 
 def _cents_list(values) -> str:
-    """A tuning list over the targets: ``[1200.00 1901.95 …]``."""
-    return "[" + " ".join(_cents(v) for v in values) + "]"
+    """A tuning list over the targets: ``[1200.000 1901.955 …]``."""
+    return "[" + " ".join(cents(v) for v in values) + "]"
 
 
 def expand_domain(state: TemperamentState) -> TemperamentState:
