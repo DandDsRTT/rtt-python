@@ -99,3 +99,26 @@ def test_cannot_shrink_below_one_dimension():
     editor.shrink()
     assert editor.state.d == 1
     assert editor.can_shrink is False
+
+
+def test_interest_intervals_add_edit_remove():
+    editor = Editor()
+    assert editor.interest_monzos == []  # starts empty
+    editor.add_interest()
+    assert editor.interest_monzos == [(0, 0, 0)]  # a blank 1/1 (zero monzo) at the current d
+    editor.set_interest_monzos([[-1, 1, 0], [0, 0, 0]])  # edit it to 3/2 and add a second
+    assert editor.interest_monzos == [(-1, 1, 0), (0, 0, 0)]
+    editor.remove_interest(1)
+    assert editor.interest_monzos == [(-1, 1, 0)]
+
+
+def test_interest_intervals_are_view_data_outside_undo():
+    # like the tuning/target selections, the interest set is curated display data,
+    # not a temperament edit: editing it does not push undo, and undoing a temperament
+    # change leaves it untouched
+    editor = Editor()
+    editor.add_interest()
+    assert editor.can_undo is False  # adding an interval of interest is not undoable
+    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
+    editor.undo()
+    assert editor.interest_monzos == [(0, 0, 0)]  # the undo reverts the mapping, not the set

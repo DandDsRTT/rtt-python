@@ -94,6 +94,7 @@ CAPTIONS = {
     ("damage", "targets"): "target-interval damage list",
     **{("counts", ckey): name for ckey, _sym, name in COUNTS},
     # other intervals of interest mirror the targets, minus the damage row
+    ("vectors", "interest"): "interval-of-interest list",
     ("mapping", "interest"): "mapped interval list",
     ("tuning", "interest"): "tempered interval size list",
     ("just", "interest"): "(just) interval size list",
@@ -210,8 +211,9 @@ TILES = (
 # plain text on leaves just the inline string — the two value views are independent.)
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell", "static",
-    "vec", "tval", "mathexpr",
+    "vec", "tval", "mathexpr", "interestcell",
     "bracket", "ebktop", "ebkbrace", "vbar", "minus", "plus", "comma_minus", "comma_plus",
+    "interest_minus", "interest_plus",
 })
 # "quantities" (general) narrows that to the body quantity values and the EBK
 # marks framing them -- the matrix, mapped list, comma basis, generator ratios
@@ -220,7 +222,7 @@ GRIDDED_KINDS = frozenset({
 # just row's "mathexpr" cells: a log₂ expression is not a bare number, so it
 # stays (math_expressions' own show_value logic trims its "= value" tail instead).
 BODY_VALUE_KINDS = frozenset({
-    "genratio", "mapping", "mapped", "commacell", "static", "vec", "tval",
+    "genratio", "mapping", "mapped", "commacell", "static", "vec", "tval", "interestcell",
     "bracket", "ebktop", "ebkbrace", "vbar",
 })
 
@@ -331,15 +333,19 @@ def build(state, settings=None, collapsed=None,
     nc = len(comma_ratios)  # comma count shown (>= nullity when a blank comma waits)
     mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
     comma_sizes = service.interval_sizes(tun, comma_ratios)  # comma sizes (tempered ~0)
-    # other intervals of interest: a user-supplied set (empty until they enter some),
-    # sized under the same scheme; it carries no damage row and contributes tiles only
-    # when populated, so an empty column adds no panels or fold toggles — just its
-    # header and a single straight axis rule.
-    interest = tuple(interest)
+    # other intervals of interest: a user-built set held as monzos and edited like
+    # the comma basis (editable vector cells). Normalize each monzo to the current d
+    # (pad/trim) so a domain change can't misalign them, then derive the ratios the
+    # quantities row shows and the mapping/sizes the lower rows show. It carries no
+    # damage row and contributes tiles only when populated, so an empty column adds no
+    # panels or fold toggles — just its header and a single straight axis rule.
+    interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in interest)
     mi = len(interest)
-    interest_mapped = service.mapped_intervals(state.mapping, interest)
-    interest_sizes = service.interval_sizes(tun, interest)  # interest sizes
+    interest_ratios = service.comma_ratios(interest)  # monzo -> "num/den" (the shared renderer)
+    interest_mapped = service.mapped_intervals(state.mapping, interest_ratios)
+    interest_sizes = service.interval_sizes(tun, interest_ratios)
     interest_tiles = () if not interest else (
+        ("block:vec:interest", "vectors", "interest"),
         ("block:interest", "quantities", "interest"),
         ("block:imapped", "mapping", "interest"),
         ("block:tuning:interest", "tuning", "interest"),
@@ -385,8 +391,9 @@ def build(state, settings=None, collapsed=None,
     node_edge = node_x + TOGGLE  # the node's content-facing (right) edge
     content_x0 = node_x + TOGGLE + GAP
 
-    # the domain and the comma basis each ride an expand (+) control in a gutter just
-    # right of their (open) block — domain primes add a prime, commas add a comma
+    # the domain, the comma basis and the interest set each ride an expand (+) control
+    # in a gutter just right of their (open) block — domain primes add a prime, commas
+    # add a comma, interest adds a blank interval to edit
     col_x, col_w, col_collapsible = {}, {}, {}
     ctrl_x = {}
     x = content_x0
@@ -397,7 +404,7 @@ def build(state, settings=None, collapsed=None,
         col_w[key] = _title_w(col_header[key]) if f"col:{key}" in collapsed else natural
         col_collapsible[key] = collapsible
         x += col_w[key]
-        if key in ("primes", "commas") and f"col:{key}" not in collapsed:
+        if key in ("primes", "commas", "interest") and f"col:{key}" not in collapsed:
             ctrl_x[key] = x + 6
             x = ctrl_x[key] + CTRL_W
         x += GAP
@@ -575,9 +582,15 @@ def build(state, settings=None, collapsed=None,
         if tile_open("quantities", "targets"):
             for j in range(k):
                 cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
-        if tile_open("quantities", "interest"):  # the user's other intervals of interest (ratios)
+        if tile_open("quantities", "interest"):  # the user's other intervals of interest
             for i in range(mi):
-                cells.append(CellBox(f"interest:{i}", interest_left(i), qy, COL_W, ROW_H, "target", text=interest[i]))
+                # the derived ratio (read-only, from the monzo) heads each column, like a comma's
+                cells.append(CellBox(f"interest:{i}", interest_left(i), qy, COL_W, ROW_H, "commaratio", text=interest_ratios[i], comma=i))
+                # every interval carries its own − (a hover affordance over its header):
+                # any one is removable, unlike the domain/comma last-only −
+                cells.append(CellBox(f"interest_minus:{i}", interest_left(i), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "interest_minus", comma=i))
+            # the + appends a blank 1/1 (a zero monzo) for the user to edit in the vectors row
+            cells.append(CellBox("interest_plus", ctrl_x["interest"], qy + (ROW_H - BTN) // 2, BTN, BTN, "interest_plus"))
 
     # generator ratios (aligned with the mapping rows they label) + the mapping
     # matrix and its mapped target-interval list
@@ -633,6 +646,10 @@ def build(state, settings=None, collapsed=None,
             for j in range(k):
                 for p in range(d):
                     cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "vec", text=str(target_vectors[j][p])))
+        if tile_open("vectors", "interest"):  # the user's intervals of interest: editable monzos, like the comma basis
+            for i in range(mi):
+                for p in range(d):
+                    cells.append(CellBox(f"cell:interest:{p}:{i}", interest_left(i), vec_top(p), COL_W, ROW_H, "interestcell", text=str(interest[i][p]), prime=p, comma=i))
 
     # the three value groups share an element name (for cell ids), a left-edge
     # accessor, and the operand of their just log₂ (a bare prime, or a comma/target
@@ -644,7 +661,7 @@ def build(state, settings=None, collapsed=None,
         "primes": lambda i: str(primes[i]),
         "commas": lambda i: _log_operand(comma_ratios[i]),
         "targets": lambda i: _log_operand(targets[i]),
-        "interest": lambda i: _log_operand(interest[i]),
+        "interest": lambda i: _log_operand(interest_ratios[i]),
     }
 
     # tuning rows over the primes, commas and targets (cents); each can collapse on
@@ -719,6 +736,8 @@ def build(state, settings=None, collapsed=None,
         for group in ("primes", "commas", "targets"):
             if tile_open("vectors", group):
                 bracket(f"vec:{group}", LIST_BRACKETS, group, row_y["vectors"], d * ROW_H, fit=True)
+        if mi and tile_open("vectors", "interest"):
+            bracket("vec:interest", LIST_BRACKETS, "interest", row_y["vectors"], d * ROW_H, fit=True)
     for key in ("tuning", "just", "retune"):
         if row_open(key):
             if tile_open(key, "primes"):
@@ -920,6 +939,7 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("vectors", "vec:primes", "primes", prime_left, d)
     monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc)
     monzo_list_marks("vectors", "vec:targets", "targets", target_left, k)
+    monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi)
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the

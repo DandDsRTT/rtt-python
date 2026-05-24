@@ -1034,9 +1034,14 @@ def test_empty_interest_column_is_just_a_header_and_axis():
     assert "v:interest:0" not in lids and "bus:interest:top" not in lids
 
 
+# the user enters intervals of interest as monzos (like the comma basis); these are
+# 3/2, 9/8, 10/9, 8/5 over the 2.3.5 domain, used across the populated-interest tests
+_INTEREST = ((-1, 1, 0), (-3, 2, 0), (1, -2, 1), (3, 0, -1))
+
+
 def test_populated_interest_renders_ratios_mapped_and_sizes_minus_damage():
-    cells = {c.id: c for c in _with_interest(("3/2", "9/8", "10/9", "8/5")).cells}
-    # quantities row: the interval ratios the user entered
+    cells = {c.id: c for c in _with_interest(_INTEREST).cells}
+    # quantities row: the ratio derived from each entered monzo
     assert cells["interest:0"].text == "3/2" and cells["interest:3"].text == "8/5"
     # mapping row: each interval mapped to generator coords (M . i), like the targets
     assert cells["cell:imapped:0:0"].text == "0" and cells["cell:imapped:1:0"].text == "1"  # 3/2 -> [0,1]
@@ -1048,8 +1053,36 @@ def test_populated_interest_renders_ratios_mapped_and_sizes_minus_damage():
     assert not any(c.startswith("damage:interest") for c in cells)
 
 
+def test_interest_intervals_are_editable_monzo_vectors_like_the_comma_basis():
+    # in the interval-vectors row each interval is an editable d-tall monzo column
+    # (kind "interestcell", the comma-basis editing affordance), prime exponents down
+    cells = {c.id: c for c in _with_interest(_INTEREST).cells}
+    assert cells["cell:interest:0:0"].text == "-1"  # 3/2 = [-1 1 0>: prime-2 exponent
+    assert cells["cell:interest:1:0"].text == "1" and cells["cell:interest:2:0"].text == "0"
+    assert cells["cell:interest:2:2"].text == "1"  # 10/9 = [1 -2 1>: prime-5 exponent
+    assert cells["cell:interest:0:0"].kind == "interestcell"  # editable, not a static "vec"
+    # marked as a ket list in the vectors row, like the comma basis and targets
+    assert cells["bracket:vec:interest:l"].text == "[" and "ebktop:vec:interest:0" in cells
+    assert "sep:vec:interest:1" in cells  # a rule between the monzo columns
+
+
+def test_interest_has_add_and_per_interval_remove_controls():
+    cells = {c.id: c for c in _with_interest(_INTEREST).cells}
+    assert "interest_plus" in cells  # one + appends a blank interval
+    # every interval carries its own − (unlike the domain/comma last-only −)
+    assert {"interest_minus:0", "interest_minus:1", "interest_minus:2", "interest_minus:3"} <= set(cells)
+
+
+def test_empty_but_open_interest_still_offers_the_add_control():
+    # with no intervals yet (but the column expanded), the + must be reachable to add
+    # the first one; there are no minus controls since there is nothing to remove
+    cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), interest=()).cells}
+    assert "interest_plus" in cells
+    assert not any(c.startswith("interest_minus:") for c in cells)
+
+
 def test_populated_interest_mapped_list_is_bracketed_and_ruled_like_targets():
-    cells = {c.id: c for c in _with_interest(("3/2", "9/8")).cells}
+    cells = {c.id: c for c in _with_interest(_INTEREST[:2]).cells}
     assert cells["bracket:imapped:l"].text == "[" and cells["bracket:imapped:r"].text == "]"
     assert {"ebktop:imapped:0", "ebkbrace:imapped:0", "ebktop:imapped:1"} <= set(cells)
     assert "sep:imapped:1" in cells  # a rule between the two monzo columns
@@ -1058,26 +1091,27 @@ def test_populated_interest_mapped_list_is_bracketed_and_ruled_like_targets():
 
 
 def test_populated_interest_has_per_interval_axes_and_panels():
-    lay = _with_interest(("3/2", "9/8", "10/9"))
+    lay = _with_interest(_INTEREST[:3])
     ids = {ln.id for ln in lay.lines}
     assert {"v:interest:0", "v:interest:1", "v:interest:2"} <= ids
     assert {"trunk:interest", "bus:interest:top", "bus:interest:bot", "foot:interest"} <= ids
     blocks = {b.id for b in lay.blocks}
-    assert {"block:interest", "block:imapped", "block:tuning:interest"} <= blocks
+    assert {"block:interest", "block:imapped", "block:tuning:interest", "block:vec:interest"} <= blocks
     assert "block:damage:interest" not in blocks  # no damage tile
 
 
 def test_collapsing_interest_hides_its_cells_but_keeps_the_header():
-    coll = _with_interest(("3/2", "9/8"), collapsed={"col:interest"})
+    coll = _with_interest(_INTEREST[:2], collapsed={"col:interest"})
     cids = {c.id for c in coll.cells}
-    assert not any(c.startswith(("interest:", "cell:imapped:", "tuning:interest:")) for c in cids)
+    assert not any(c.startswith(("interest:", "cell:imapped:", "cell:interest:", "tuning:interest:")) for c in cids)
     assert "header:interest" in cids and "toggle:col:interest" in cids
     # targets are unaffected by the interest column folding
     assert "cell:mapped:0:0" in cids
 
 
 def test_interest_captions_mirror_targets_without_damage_when_named():
-    cells = {c.id: c for c in _with_interest(("3/2",)).cells}  # names default on
+    cells = {c.id: c for c in _with_interest(_INTEREST[:1]).cells}  # names default on
+    assert cells["caption:vectors:interest"].text == "interval-of-interest list"
     assert cells["caption:mapping:interest"].text == "mapped interval list"
     assert cells["caption:tuning:interest"].text == "tempered interval size list"
     assert "caption:damage:interest" not in cells
@@ -1169,7 +1203,7 @@ def test_other_intervals_of_interest_column_carries_no_symbols():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["symbols"] = True
-    cells = {c.id: c for c in spreadsheet.build(base, s, interest=("3/2",)).cells}
+    cells = {c.id: c for c in spreadsheet.build(base, s, interest=((-1, 1, 0),)).cells}
     # the interest column gets no symbols at all, even with the column populated
     assert not any(c.startswith("symbol:") and c.endswith(":interest") for c in cells)
     # its caption still lines up with the symboled columns (the slot stays reserved)

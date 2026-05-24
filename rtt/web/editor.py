@@ -24,6 +24,11 @@ class Editor:
         # view choices (like the Show toggles), so they live outside the undo stack.
         self.tuning_scheme: str = service.DEFAULT_TUNING_SCHEME
         self.target_spec: str = service.DEFAULT_TARGET_SPEC
+        # "Other intervals of interest": a user-built set of intervals to watch,
+        # held as monzos (edited like the comma basis — editable vector cells).
+        # Display data the user curates, not part of the temperament, so (like the
+        # tuning/target selections) it lives outside the undo stack.
+        self.interest_monzos: list[tuple[int, ...]] = []
         self._undo_stack: list[TemperamentState] = []
         self._redo_stack: list[TemperamentState] = []
 
@@ -52,6 +57,19 @@ class Editor:
     def edit_comma_basis(self, comma_basis) -> None:
         self._snapshot()
         self.state = service.from_comma_basis(comma_basis)
+
+    def add_interest(self) -> None:
+        """Append a blank interval of interest (a zero monzo = 1/1) for the user to
+        edit, mirroring how add_comma seeds a blank comma."""
+        self.interest_monzos.append((0,) * self.state.d)
+
+    def remove_interest(self, i: int) -> None:
+        """Drop the i-th interval of interest (each one carries its own − control)."""
+        del self.interest_monzos[i]
+
+    def set_interest_monzos(self, monzos) -> None:
+        """Replace the interest set from the edited vector cells."""
+        self.interest_monzos = [tuple(int(x) for x in m) for m in monzos]
 
     def set_tuning_scheme(self, scheme: str) -> None:
         self.tuning_scheme = scheme

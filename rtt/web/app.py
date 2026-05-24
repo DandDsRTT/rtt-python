@@ -616,6 +616,20 @@ def index() -> None:
         editor.edit_comma_basis(basis)
         render()
 
+    def on_interest_change():
+        # the intervals of interest are edited as monzos in the interval-vectors row,
+        # like the comma basis; read the d-tall columns and replace the set
+        if building[0]:
+            return
+        d, mi = editor.state.d, len(editor.interest_monzos)
+        if any(f"cell:interest:{p}:{i}" not in inputs for i in range(mi) for p in range(d)):
+            return  # the interest cells aren't currently shown (folded away)
+        monzos = [[_parse_int(inputs[f"cell:interest:{p}:{i}"].value) for p in range(d)] for i in range(mi)]
+        if any(v is None for m in monzos for v in m):
+            return
+        editor.set_interest_monzos(monzos)
+        render()
+
     def act(action):
         action()
         render()
@@ -664,6 +678,9 @@ def index() -> None:
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "commacell":
                 inputs[cb.id] = ui.input(on_change=lambda e: on_comma_change()) \
+                    .props("dense borderless").classes("rtt-cellinput")
+            elif cb.kind == "interestcell":  # an editable interval-of-interest monzo component
+                inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind in ("prime", "static"):  # bordered cell; "static" is read-only (e.g. the identity)
                 with ui.element("div").classes("rtt-white"):
@@ -733,12 +750,23 @@ def index() -> None:
             elif cb.kind == "comma_plus":
                 ui.button("+", on_click=lambda: act(editor.add_comma), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
+            elif cb.kind == "interest_minus":
+                # one per interval (every interval of interest is removable); the hover
+                # zone over its header reveals a − that drops just that interval
+                i = int(cb.id.split(":", 1)[1])
+                wrap.classes("rtt-minus-zone")
+                ui.button("-", on_click=lambda _=None, idx=i: act(lambda: editor.remove_interest(idx)), color=None) \
+                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn")
+            elif cb.kind == "interest_plus":
+                ui.button("+", on_click=lambda: act(editor.add_interest), color=None) \
+                    .props("unelevated dense no-caps square").classes("rtt-btn")
         return wrap
 
     def render():
         building[0] = True
         st = editor.state
-        lay = spreadsheet.build(st, settings, collapsed, editor.tuning_scheme, editor.target_spec)
+        lay = spreadsheet.build(st, settings, collapsed, editor.tuning_scheme, editor.target_spec,
+                                interest=editor.interest_monzos)
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
 
@@ -785,6 +813,8 @@ def index() -> None:
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":
                 inputs[cb.id].value = str(st.comma_basis[cb.comma][cb.prime])
+            elif cb.kind == "interestcell":
+                inputs[cb.id].value = cb.text  # the normalized monzo component build computed
             elif cb.id in fracs:
                 num, den = _ratio_parts(cb.text) or (cb.text, "")
                 fracs[cb.id][0].set_text(num)
