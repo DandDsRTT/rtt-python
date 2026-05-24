@@ -666,6 +666,16 @@ def test_interval_vectors_show_domain_primes_as_identity_and_targets_as_monzos()
     assert cells["cell:vec:targets:0:1"].y - cells["cell:vec:targets:0:0"].y == spreadsheet.ROW_H
 
 
+def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index():
+    cells = {c.id: c for c in _layout().cells}
+    # the quantities spine holds the domain basis (the d primes) as the vectors row's
+    # row-index, stacked vertically — dual to the generators indexing the mapping rows
+    assert [cells[f"basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
+    assert cells["basis:0"].x == cells["gen:0"].x  # the same quantities spine column
+    assert cells["basis:0"].y == cells["cell:vec:primes:0:0"].y  # aligned with the top component
+    assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet.ROW_H  # stacked down its column
+
+
 # --- the commas column (the comma basis, the mapping's dual) ---
 
 def _in_commas(cid):

@@ -160,6 +160,7 @@ TILES = (
     ("block:primes", "quantities", "primes"),
     ("block:commas", "quantities", "commas"),
     ("block:targets", "quantities", "targets"),
+    ("block:vec:quantities", "vectors", "quantities"),
     ("block:vec:primes", "vectors", "primes"),
     ("block:vec:commas", "vectors", "commas"),
     ("block:vec:targets", "vectors", "targets"),
@@ -549,6 +550,12 @@ def build(state, settings=None, collapsed=None,
     # comma basis is the editable raw monzos (the mapping's dual); the targets become
     # a d x k matrix of monzo columns.
     if row_open("vectors"):
+        # the domain basis lists the interval-vectors' rows: the d primes in a vertical
+        # column in the quantities spine (the dual index, as the generators label the
+        # mapping rows). The same boxed primes the quantities row heads its columns with.
+        if tile_open("vectors", "quantities"):
+            for p in range(d):
+                cells.append(CellBox(f"basis:{p}", col_x["quantities"], vec_top(p), col_w["quantities"], ROW_H, "prime", text=str(primes[p]), prime=p))
         if tile_open("vectors", "primes"):
             for e in range(d):
                 for p in range(d):
