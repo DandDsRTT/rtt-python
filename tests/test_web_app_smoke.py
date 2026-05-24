@@ -64,6 +64,9 @@ def test_underline_html_wraps_only_the_marked_spans():
     assert app._underline_html("tuning map", ((0, 1),)) == "<u>t</u>uning map"
     # a span mid-string keeps the surrounding text intact
     assert app._underline_html("(temperament) mapping", ((14, 1),)) == "(temperament) <u>m</u>apping"
+    # a descender letter (g/j/p/q/y) is tagged so only its underline drops below the
+    # tail; non-descenders keep the normal snug underline
+    assert app._underline_html("just tuning map", ((0, 1),)) == '<u class="rtt-desc">j</u>ust tuning map'
 
 
 def test_math_html_gives_each_maths_letter_explicit_weight_and_slant():

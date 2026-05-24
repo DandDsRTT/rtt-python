@@ -123,9 +123,10 @@ _CSS = f"""
 .rtt-caption {{ width:100%; text-align:center; font-size:9px; line-height:11px; color:#333;
                overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }}
 .rtt-caption-cell {{ align-items:flex-start; }}
-/* drop the mnemonic underline below descenders so a marked j/g/p/y (e.g. the j of
-   "just tuning map") reads as underlined rather than hiding under the glyph's tail */
-.rtt-caption u {{ text-underline-position:under; }}
+/* most mnemonic underlines sit snug at the baseline; only a marked descender
+   (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
+   so it reads instead of hiding under the glyph */
+.rtt-caption u.rtt-desc {{ text-underline-position:under; }}
 .rtt-count {{ font-size:16px; color:#000; white-space:nowrap; }}
 /* the plain-text value: its EBK string in a box that hugs the text (centred by the
    cell), so a short value like 2.3.5 stays a small box and a long one overflows neatly */
@@ -448,12 +449,19 @@ def _cents_parts(text):
     return whole, frac
 
 
+_DESCENDERS = "gjpqy"  # letters whose tail dips below the baseline
+
+
 def _underline_html(text, spans):
     """``text`` with each ``(start, len)`` span wrapped in ``<u>`` — the mnemonic
-    underline marking a caption's symbol letter. All text is HTML-escaped."""
+    underline marking a caption's symbol letter. All text is HTML-escaped. A span
+    holding a descender (g/j/p/q/y) is tagged ``rtt-desc`` so only its underline is
+    dropped below the tail; the rest keep the normal snug underline."""
     out, i = [], 0
     for start, length in sorted(spans):
-        out.append(_escape(text[i:start]) + "<u>" + _escape(text[start:start + length]) + "</u>")
+        seg = text[start:start + length]
+        tag = '<u class="rtt-desc">' if any(c in _DESCENDERS for c in seg) else "<u>"
+        out.append(_escape(text[i:start]) + tag + _escape(seg) + "</u>")
         i = start + length
     out.append(_escape(text[i:]))
     return "".join(out)
