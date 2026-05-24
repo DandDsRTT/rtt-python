@@ -922,7 +922,7 @@ def build(state, settings=None, collapsed=None,
     # a matrix of monzo columns (the mapped lists, the interval-vector groups):
     # vertical rules separate the columns, and each column is marked as a ket with
     # its own top bracket + bottom brace — inset so they stop short of the rules.
-    def monzo_list_marks(rkey, name, ckey, left, n_cols):
+    def monzo_list_marks(rkey, name, ckey, left, n_cols, bordered=False):
         if not tile_open(rkey, ckey):
             return
         mark_w = COL_W - 2 * MARK_INSET
@@ -930,6 +930,8 @@ def build(state, settings=None, collapsed=None,
             mx = left(c) + MARK_INSET
             cells.append(CellBox(f"ebktop:{name}:{c}", mx, frame_top_y(rkey), mark_w, FRAME_H, "ebktop"))
             cells.append(CellBox(f"ebkbrace:{name}:{c}", mx, frame_brace_y(rkey), mark_w, BRACE_H, "ebkbrace"))
+        if bordered:  # a bordered grid's own cell borders divide the columns; adding a
+            return    # separator rule too would lay a second line over each shared border
         for c in range(1, n_cols):  # a rule on each interior column boundary
             cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, row_y[rkey], SEP_W, row_h[rkey], "vbar"))
 
@@ -937,7 +939,9 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("mapping", "mapped", "targets", target_left, k)
     monzo_list_marks("mapping", "imapped", "interest", interest_left, mi)
     monzo_list_marks("vectors", "vec:primes", "primes", prime_left, d)
-    monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc)
+    # the comma basis is the editable bordered grid (commacell), so it skips the
+    # separator rules — its cell borders already divide the comma columns
+    monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc, bordered=True)
     monzo_list_marks("vectors", "vec:targets", "targets", target_left, k)
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi)
 

@@ -816,6 +816,18 @@ def test_comma_tuning_rows_get_list_brackets_hugging_their_values():
     assert l.x < cells["tuning:comma:0"].x < r.x
 
 
+def test_comma_basis_grid_has_no_separator_rules_that_double_its_cell_borders():
+    # the comma basis is an editable BORDERED grid (the same cell as the mapping),
+    # so its cell borders already divide the columns; also drawing the monzo
+    # separator rules would lay a second line over each shared border (a visible
+    # double). The bare-label vec lists (domain basis, target list) keep theirs.
+    two = service.add_comma(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # 2 comma columns
+    cells = {c.id for c in spreadsheet.build(two).cells}
+    assert "cell:comma:0:1" in cells  # the second comma column is present...
+    assert not any(c.startswith("sep:vec:commas") for c in cells)  # ...with no separator rule
+    assert "sep:vec:primes:1" in cells  # the bare domain basis still needs its separators
+
+
 def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column():
     # a wide column fits the whole name on one line...
     assert spreadsheet._caption_lines("tempered target-interval size list", 272) == 1
