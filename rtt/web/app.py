@@ -128,11 +128,23 @@ _CSS = f"""
    so it reads instead of hiding under the glyph */
 .rtt-caption u.rtt-desc {{ text-underline-position:under; }}
 .rtt-count {{ font-size:16px; color:#000; white-space:nowrap; }}
-/* the plain-text value: its EBK string in a box that hugs the text (centred by the
-   cell), so a short value like 2.3.5 stays a small box and a long one overflows neatly */
-.rtt-ptext {{ display:inline-block; border:1px solid #888; background:#fff; color:#000;
-             font-size:12px; line-height:1.1; white-space:nowrap; padding:1px 5px;
-             font-family:'Cambria',Georgia,serif; }}
+/* a read-only plain-text value: small serif text that wraps within its column and
+   fills the cell (the tile is grown to hold every wrapped line, so it never spills).
+   No box — only the editable duals look like inputs. */
+.rtt-ptext {{ width:100%; height:100%; text-align:center; font-size:{spreadsheet.PTEXT_FONT}px;
+             line-height:{spreadsheet.PTEXT_LINE}px; color:#000; overflow-wrap:break-word;
+             white-space:normal; font-family:'Cambria',Georgia,serif; }}
+/* the two editable duals (mapping, comma basis): a white bordered input filling its
+   cell; an unparseable entry turns the border red (rtt-ptext-error) and is not applied */
+.rtt-ptextedit {{ width:100%; height:100%; }}
+.rtt-ptextedit .q-field__control {{ min-height:0 !important; height:100%;
+            background:#fff; border:1px solid #888; border-radius:2px; padding:0 3px; }}
+.rtt-ptextedit .q-field__control::before, .rtt-ptextedit .q-field__control::after {{ display:none !important; }}
+.rtt-ptextedit .q-field__native {{ font-size:{spreadsheet.PTEXT_FONT}px; color:#000; min-height:0 !important;
+            padding:0; line-height:{spreadsheet.PTEXT_EDIT_H}px; text-align:center;
+            font-family:'Cambria',Georgia,serif; }}
+.rtt-ptextedit .q-field__marginal, .rtt-ptextedit .q-field__bottom {{ display:none !important; }}
+.rtt-ptextedit.rtt-ptext-error .q-field__control {{ border-color:#d33; }}
 /* the quantity symbol above the caption: _math_html renders the base letter in the
    UI serif with explicit weight/slant (bold-italic for maps, bold-upright for
    vectors/matrices) — not a maths-font glyph, whose styling font fallback dropped */
@@ -626,6 +638,7 @@ def index() -> None:
     chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
     selects: dict = {}  # preselect cell id -> its q-select
+    ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
     temperaments = dict(presets.TEMPERAMENTS)  # name -> defining comma basis
     captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
@@ -637,7 +650,7 @@ def index() -> None:
     def drop(eid):
         """Remove an entity's element and forget every per-id handle for it."""
         els[eid].delete()
-        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects,
+        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects, ptext_inputs,
                   captions, caption_html, math_cells, math_rendered, chart_keys):
             d.pop(eid, None)
 
@@ -679,6 +692,23 @@ def index() -> None:
             return
         editor.set_interest_monzos(monzos)
         render()
+
+    def on_ptext_edit(cid, value):
+        # the editable plain-text duals: a valid EBK string drives the grid (like
+        # typing in a matrix cell); an unparseable one reddens the box and is ignored
+        if building[0]:
+            return
+        if cid == "ptext:mapping:primes":
+            ok = editor.try_edit_mapping_text(value)
+        elif cid == "ptext:vectors:commas":
+            ok = editor.try_edit_comma_basis_text(value)
+        else:
+            return
+        if ok:
+            ptext_inputs[cid].classes(remove="rtt-ptext-error")
+            render()
+        else:
+            ptext_inputs[cid].classes(add="rtt-ptext-error")
 
     def act(action):
         action()
@@ -764,8 +794,12 @@ def index() -> None:
                 selects[cb.id] = ui.select(opts, value=value, label=label,
                         on_change=lambda e, n=name: on_preselect(n, e.value)) \
                     .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
-            elif cb.kind == "ptext":
+            elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
                 labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
+            elif cb.kind == "ptextedit":  # an editable dual: typing a valid EBK string drives the grid
+                ptext_inputs[cb.id] = ui.input(value=cb.text,
+                        on_change=lambda e, cid=cb.id: on_ptext_edit(cid, e.value)) \
+                    .props("dense borderless").classes("rtt-ptextedit")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):
@@ -865,6 +899,8 @@ def index() -> None:
                 inputs[cb.id].value = str(st.comma_basis[cb.comma][cb.prime])
             elif cb.kind == "interestcell":
                 inputs[cb.id].value = cb.text  # the normalized monzo component build computed
+            elif cb.kind == "ptextedit":  # reflect the canonical string after a valid edit
+                ptext_inputs[cb.id].value = cb.text
             elif cb.id in fracs:
                 num, den = _ratio_parts(cb.text) or (cb.text, "")
                 fracs[cb.id][0].set_text(num)

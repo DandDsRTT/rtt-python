@@ -122,3 +122,33 @@ def test_interest_intervals_are_view_data_outside_undo():
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
     editor.undo()
     assert editor.interest_monzos == [(0, 0, 0)]  # the undo reverts the mapping, not the set
+
+
+def test_try_edit_mapping_text_applies_a_valid_ebk_map():
+    editor = Editor()
+    assert editor.try_edit_mapping_text("[⟨1 0 0] ⟨0 1 0] ⟨0 0 1]}") is True
+    assert editor.state.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))  # just intonation
+
+
+def test_try_edit_mapping_text_rejects_bad_input_without_changing_state():
+    editor = Editor()
+    before = editor.state.mapping
+    assert editor.try_edit_mapping_text("garbage") is False
+    assert editor.try_edit_mapping_text("[1 0 0⟩") is False  # a vector, not a map
+    assert editor.try_edit_mapping_text("⟨1 1.5 0]") is False  # a non-integer entry
+    assert editor.state.mapping == before  # an unparseable edit leaves the grid untouched
+    assert editor.can_undo is False  # ...and pushes nothing onto the undo stack
+
+
+def test_try_edit_comma_basis_text_applies_a_valid_ebk_vector():
+    editor = Editor()
+    assert editor.try_edit_comma_basis_text("[4 -4 1⟩") is True
+    assert editor.state.comma_basis == ((4, -4, 1),)
+
+
+def test_try_edit_comma_basis_text_rejects_bad_input_without_changing_state():
+    editor = Editor()
+    before = editor.state.comma_basis
+    assert editor.try_edit_comma_basis_text("nonsense") is False
+    assert editor.try_edit_comma_basis_text("⟨1 0 0]") is False  # a map, not a vector
+    assert editor.state.comma_basis == before

@@ -165,8 +165,9 @@ def test_plain_text_basis_and_ratio_quantities():
     assert pt[("quantities", "primes")] == "2.3.5"  # the domain basis, dot notation
     # the target-interval set in the brace notation the parser round-trips
     assert pt[("quantities", "targets")] == "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
-    # generators as approximate ratios (the ~ the grid shows for them)
-    assert pt[("mapping", "gens")] == "[~2/1, ~3/2]"
+    # generators as approximate ratios (the ~ the grid shows for them), heading the
+    # mapping row's quantities column
+    assert pt[("mapping", "quantities")] == "[~2/1, ~3/2]"
 
 
 def test_plain_text_mapped_list_is_a_list_of_generator_coord_vectors():
@@ -210,11 +211,37 @@ def test_plain_text_commas_column_mirrors_the_grid():
         return " ".join(f"{v:.3f}" for v in vals)
 
     assert pt[("quantities", "commas")] == "{" + ", ".join(commas) + "}"  # the comma set
-    assert pt[("mapping", "commas")] == "[4 -4 1⟩"  # the comma basis as an EBK monzo
+    # the comma basis (the editable monzo matrix) lives in the interval-vectors row
+    assert pt[("vectors", "commas")] == "[4 -4 1⟩"
+    # the mapping row's commas tile is the mapped comma list — every comma vanishes
+    assert pt[("mapping", "commas")] == "[[0 0]]"
     # comma size / error / damage are lists over the commas, like the grid's column
     assert pt[("tuning", "commas")] == f"[{cents(sizes.tempered)}]"
     assert pt[("just", "commas")] == f"[{cents(sizes.just)}]"
     assert pt[("damage", "commas")] == f"[{cents(sizes.damage)}]"
+
+
+def test_parse_mapping_reads_an_ebk_map_string():
+    assert service.parse_mapping("[⟨1 1 0] ⟨0 1 4]}") == ((1, 1, 0), (0, 1, 4))
+    assert service.parse_mapping("⟨12 19 28]") == ((12, 19, 28),)  # a single map
+    # round-trips the mapping plain text
+    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
+    assert service.parse_mapping(pt[("mapping", "primes")]) == ((1, 1, 0), (0, 1, 4))
+
+
+def test_parse_comma_basis_reads_an_ebk_vector_string():
+    assert service.parse_comma_basis("[4 -4 1⟩") == ((4, -4, 1),)
+    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
+    assert service.parse_comma_basis(pt[("vectors", "commas")]) == ((4, -4, 1),)
+
+
+def test_parse_rejects_unparseable_wrong_variance_or_non_integer():
+    assert service.parse_mapping("garbage") is None
+    assert service.parse_mapping("") is None
+    assert service.parse_mapping("[1 0 0⟩") is None  # a vector, not a map
+    assert service.parse_mapping("⟨1 1.5 0]") is None  # a non-integer entry
+    assert service.parse_comma_basis("⟨1 0 0]") is None  # a map, not a vector
+    assert service.parse_comma_basis("nonsense") is None
 
 
 def test_tuning_exposes_diamond_generator_ranges():

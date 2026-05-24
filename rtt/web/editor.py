@@ -71,6 +71,31 @@ class Editor:
         """Replace the interest set from the edited vector cells."""
         self.interest_monzos = [tuple(int(x) for x in m) for m in monzos]
 
+    def try_edit_mapping_text(self, text: str) -> bool:
+        """Parse an EBK map string and apply it as a mapping edit. Returns False
+        (leaving the state untouched) when the text is not a valid integer map, so
+        the caller can flag the input rather than mangling the temperament."""
+        matrix = service.parse_mapping(text)
+        if matrix is None:
+            return False
+        try:
+            self.edit_mapping(matrix)
+        except Exception:
+            return False
+        return True
+
+    def try_edit_comma_basis_text(self, text: str) -> bool:
+        """Parse an EBK vector string and apply it as a comma-basis edit; False
+        (state untouched) when it is not a valid integer vector list."""
+        basis = service.parse_comma_basis(text)
+        if basis is None:
+            return False
+        try:
+            self.edit_comma_basis(basis)
+        except Exception:
+            return False
+        return True
+
     def set_tuning_scheme(self, scheme: str) -> None:
         self.tuning_scheme = scheme
 

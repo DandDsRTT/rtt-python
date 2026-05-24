@@ -41,7 +41,9 @@ CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mocku
 CAPTION_LINE = 11  # px per wrapped caption line (font size + leading)
 PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
-PTEXT_H = 18  # height of the plain-text value band (the boxed EBK string) below a tile
+PTEXT_FONT = 9  # px font of the plain-text value (small, like the caption; the CSS must match)
+PTEXT_LINE = 11  # px per wrapped read-only plain-text line — the band grows by lines so it never spills
+PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch taller than a text line)
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
@@ -204,6 +206,11 @@ TILES = (
     ("block:damage:targets", "damage", "targets"),
 )
 
+# The plain-text tiles whose string is an editable input that drives the grid —
+# the two duals the grid itself lets you type into: the mapping (mapping/primes)
+# and the comma basis (vectors/commas). Every other plain-text value is read-only.
+EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas")})
+
 # Cell kinds the value-display toggles filter out. "gridded values" hides
 # everything a tile holds besides its fold toggle, name caption and plain-text
 # value box: the value numbers (including the just row's "mathexpr" log₂ form),
@@ -263,12 +270,13 @@ def _fold_glyph(is_collapsed: bool) -> str:
     return "unfold_more" if is_collapsed else "unfold_less"
 
 
-def _caption_lines(text: str, width: float) -> int:
-    """How many lines ``text`` wraps to in a ``width``-px caption at CAPTION_FONT,
-    so the tile can grow tall enough to hold it (rather than letting it spill, as a
-    narrow column's long name would). A greedy word wrap with a conservative serif
-    char-width estimate; an over-long word breaks across lines itself."""
-    max_chars = max(1, int((width - 4) / (CAPTION_FONT * 0.52)))  # -4: a little padding
+def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
+    """How many lines ``text`` wraps to in a ``width``-px box at ``font`` px, so the
+    tile can grow tall enough to hold it (rather than letting it spill, as a narrow
+    column's long name would). A greedy word wrap with a conservative serif char-width
+    estimate; an over-long word breaks across lines itself. Shared by the name
+    captions and the plain-text value boxes."""
+    max_chars = max(1, int((width - 4) / (font * 0.52)))  # -4: a little padding
     lines, cur = 1, 0
     for word in text.split():
         wlen = len(word)
@@ -456,9 +464,25 @@ def build(state, settings=None, collapsed=None,
         # longest name fits within its tile rather than spilling off a narrow column
         if not (show_captions and key in CAPTIONED_ROWS and not folded):
             return 0
-        lines = [_caption_lines(CAPTIONS[(key, c)], col_w[c]) for c in col_x
+        lines = [_wrap_lines(CAPTIONS[(key, c)], col_w[c]) for c in col_x
                  if (key, c) in CAPTIONS and col_open(c) and f"tile:{key}:{c}" not in collapsed]
         return max(lines, default=1) * CAPTION_LINE
+
+    ptext_strings = service.plain_text_values(state, tuning_scheme, target_spec) if show_ptext else {}
+
+    def ptext_height(rkey, ckey):  # an editable input is a fixed box; a read-only value wraps
+        if (rkey, ckey) in EDITABLE_PTEXT:
+            return PTEXT_EDIT_H
+        return _wrap_lines(ptext_strings[(rkey, ckey)], col_w[ckey], PTEXT_FONT) * PTEXT_LINE
+
+    def ptext_band(key, folded):
+        # like the caption band, sized to its tallest tile so a long EBK string wraps
+        # within its own tile instead of spilling past the grid
+        if not (show_ptext and not folded):
+            return 0
+        hs = [ptext_height(key, c) for c in col_x
+              if (key, c) in ptext_strings and col_open(c) and f"tile:{key}:{c}" not in collapsed]
+        return max(hs, default=0)
     y = rows_top_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
@@ -483,7 +507,7 @@ def build(state, settings=None, collapsed=None,
         # below the caption a tile reserves bands for the preselect chooser (its
         # row) and the plain-text value box, stacked in that order
         pre = PRESELECT_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
-        ptext = PTEXT_H if (show_ptext and not folded) else 0
+        ptext = ptext_band(key, folded)
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
         if charted:
@@ -868,7 +892,7 @@ def build(state, settings=None, collapsed=None,
         if show_captions:
             kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
             underlines = ((name.index(kw), 1),) if kw else ()
-            ch = _caption_lines(name, col_w[ckey]) * CAPTION_LINE  # hug this name's own lines
+            ch = _wrap_lines(name, col_w[ckey]) * CAPTION_LINE  # hug this name's own lines
             cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], ch,
                                  "caption", text=name, underlines=underlines))
 
@@ -888,15 +912,19 @@ def build(state, settings=None, collapsed=None,
             pw = min(col_w[ckey], PRESELECT_W)
             cells.append(CellBox(f"preselect:{name}", col_x[ckey], py, pw, PRESELECT_H, "preselect", text=preselect_text[name]))
 
-    # plain-text value band: each tile's value as its natural EBK string, in a box
-    # at the foot of the tile, below the caption and preselect bands (the same
-    # numbers the grid shows, written inline so the two views agree)
+    # plain-text value band: each tile's value as its natural EBK string, below the
+    # caption/preselect bands (the same numbers the grid shows, written inline). The
+    # two editable duals (mapping, comma basis) render as inputs that drive the grid;
+    # every other value is read-only. A read-only value wraps to as many lines as it
+    # needs and the tile grows to hold them, so nothing spills past its column.
     if show_ptext:
-        strings = service.plain_text_values(state, tuning_scheme, target_spec)
-        for (rkey, ckey), text in strings.items():
-            if tile_open(rkey, ckey):
-                py = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_pre[rkey]
-                cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], py, col_w[ckey], PTEXT_H, "ptext", text=text))
+        for (rkey, ckey), text in ptext_strings.items():
+            if not tile_open(rkey, ckey):
+                continue
+            py = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_pre[rkey]
+            kind = "ptextedit" if (rkey, ckey) in EDITABLE_PTEXT else "ptext"
+            h = ptext_height(rkey, ckey)
+            cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], py, col_w[ckey], h, kind, text=text))
 
     # a framed matrix's top bracket + bottom brace stand off the cells by FRAME_GAP:
     # the top bracket just above row 0 (below the toggle head), the brace a matching

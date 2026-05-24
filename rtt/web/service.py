@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.dual import dual
 from rtt.formatting import to_ebk
+from rtt.parsing import parse_temperament_data
 from rtt.generator_detempering import get_generator_detempering
 from rtt.math_utils import get_primes, pcv_to_quotient
 from rtt.parsing import parse_quotient_list
@@ -206,16 +207,22 @@ def plain_text_values(
     commas = comma_ratios(state.comma_basis)
     gens = generators(state.mapping)
     mapped = mapped_intervals(state.mapping, targets)
+    mapped_comma = mapped_commas(state.mapping, state.comma_basis)
     tun = tuning(state.mapping, scheme)  # prime maps, shared by both interval sets
     target_sizes = interval_sizes(tun, targets)
     comma_sizes = interval_sizes(tun, commas)  # comma sizes, like the grid's commas column
+    # Keyed by the tile each value group occupies: the editable duals are the mapping
+    # (a covector matrix, in the mapping row) and the comma basis (a monzo matrix, in
+    # the interval-vectors row); the rest are derived. The generator ratios head the
+    # mapping row's quantities column.
     return {
         ("quantities", "primes"): ".".join(str(p) for p in primes),
         ("quantities", "commas"): "{" + ", ".join(commas) + "}",
         ("quantities", "targets"): "{" + ", ".join(targets) + "}",
-        ("mapping", "gens"): "[" + ", ".join(f"~{g}" for g in gens) + "]",
+        ("mapping", "quantities"): "[" + ", ".join(f"~{g}" for g in gens) + "]",
+        ("vectors", "commas"): to_ebk(Temperament(state.comma_basis, Variance.COL)),
         ("mapping", "primes"): to_ebk(Temperament(state.mapping, Variance.ROW)),
-        ("mapping", "commas"): to_ebk(Temperament(state.comma_basis, Variance.COL)),
+        ("mapping", "commas"): _vector_list(mapped_comma),
         ("mapping", "targets"): _vector_list(mapped),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
         ("tuning", "commas"): _cents_list(comma_sizes.tempered),
@@ -252,6 +259,49 @@ def _cents_map(values) -> str:
 def _cents_list(values) -> str:
     """A tuning list over the targets: ``[1200.000 1901.955 …]``."""
     return "[" + " ".join(cents(v) for v in values) + "]"
+
+
+def _int_matrix_or_none(matrix) -> Matrix | None:
+    """A rectangular all-integer matrix, or None — the validity gate for an edited
+    plain-text mapping/comma-basis string (Fractions, decimals, blanks, or a ragged
+    shape are rejected so the caller can flag the input rather than apply it)."""
+    if not matrix or not all(matrix):
+        return None
+    width = len(matrix[0])
+    rows = []
+    for row in matrix:
+        if len(row) != width:
+            return None
+        if any(isinstance(x, bool) or not isinstance(x, int) for x in row):
+            return None
+        rows.append(tuple(row))
+    return tuple(rows)
+
+
+def parse_mapping(text: str) -> Matrix | None:
+    """Read an EBK *map* string (e.g. ``[⟨1 1 0] ⟨0 1 4]}``) back to a mapping
+    matrix, or None if it is unparseable, the wrong variance (a vector, not a map),
+    or not an integer matrix. The inverse of the ``("mapping", "primes")`` plain text."""
+    try:
+        t = parse_temperament_data(text)
+    except Exception:
+        return None
+    if t.variance is not Variance.ROW:
+        return None
+    return _int_matrix_or_none(t.matrix)
+
+
+def parse_comma_basis(text: str) -> Matrix | None:
+    """Read an EBK *vector* string (e.g. ``[4 -4 1⟩``) back to a comma basis, or
+    None if unparseable, the wrong variance (a map, not a vector), or non-integer.
+    The inverse of the ``("vectors", "commas")`` plain text."""
+    try:
+        t = parse_temperament_data(text)
+    except Exception:
+        return None
+    if t.variance is not Variance.COL:
+        return None
+    return _int_matrix_or_none(t.matrix)
 
 
 def expand_domain(state: TemperamentState) -> TemperamentState:

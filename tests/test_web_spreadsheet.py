@@ -663,6 +663,26 @@ def test_collapsing_hides_the_plain_text_band_with_the_tile():
     assert "ptext:mapping:targets" in tile_off  # ...but its open sibling keeps one
 
 
+def test_only_the_editable_duals_render_as_input_plain_text():
+    cells = {c.id: c for c in _with(plain_text_values=True).cells}
+    # the mapping and the comma basis — the grid's two editable duals — are inputs
+    assert cells["ptext:mapping:primes"].kind == "ptextedit"
+    assert cells["ptext:vectors:commas"].kind == "ptextedit"
+    # every other plain-text value is read-only display text, not an editable box
+    for cid in ("ptext:mapping:targets", "ptext:mapping:commas", "ptext:tuning:primes",
+                "ptext:quantities:primes", "ptext:damage:targets"):
+        assert cells[cid].kind == "ptext"
+
+
+def test_a_long_plain_text_value_wraps_within_its_column_instead_of_spilling():
+    cells = {c.id: c for c in _with(plain_text_values=True).cells}
+    pt, header = cells["ptext:tuning:targets"], cells["header:targets"]
+    assert pt.w == header.w  # the box spans exactly its column — never wider, so it can't spill
+    assert pt.h > spreadsheet.PTEXT_LINE  # the long size list wraps to more than one line...
+    assert pt.h % spreadsheet.PTEXT_LINE == 0  # ...a whole number of lines, the tile grown to fit
+    assert cells["ptext:tuning:primes"].h == spreadsheet.PTEXT_LINE  # a short value stays one line
+
+
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
     on = {c.id: c for c in _with(names=True).cells}
     off = {c.id: c for c in _with(names=False).cells}
@@ -830,9 +850,9 @@ def test_comma_basis_grid_has_no_separator_rules_that_double_its_cell_borders():
 
 def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column():
     # a wide column fits the whole name on one line...
-    assert spreadsheet._caption_lines("tempered target-interval size list", 272) == 1
+    assert spreadsheet._wrap_lines("tempered target-interval size list", 272) == 1
     # ...but the narrow one-comma column forces it to several lines
-    assert spreadsheet._caption_lines("tempered comma size list", 62) >= 3
+    assert spreadsheet._wrap_lines("tempered comma size list", 62) >= 3
 
 
 def test_a_long_caption_grows_its_tile_rather_than_spilling():
@@ -840,7 +860,7 @@ def test_a_long_caption_grows_its_tile_rather_than_spilling():
     cap = cells["caption:tuning:commas"]  # "tempered comma size list" on a ~62px column
     # the caption gets a line per wrapped line (not one fixed line), so the name
     # stays within its column instead of overflowing it
-    assert cap.h == spreadsheet._caption_lines("tempered comma size list", cap.w) * spreadsheet.CAPTION_LINE
+    assert cap.h == spreadsheet._wrap_lines("tempered comma size list", cap.w) * spreadsheet.CAPTION_LINE
     assert cap.h >= 3 * spreadsheet.CAPTION_LINE  # at least three lines tall here
     # it stays as wide as its (one-comma) column and sits below the value cell
     assert cap.w == cells["header:commas"].w
