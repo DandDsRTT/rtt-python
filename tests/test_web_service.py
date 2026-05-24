@@ -84,6 +84,18 @@ def test_mapped_target_intervals():
     assert mapped == ((1, 0, -2, 2), (0, 1, 4, -3))
 
 
+def test_mapped_commas_vanish():
+    # every comma the temperament tempers out maps through M to zero (it vanishes)
+    mapped = service.mapped_commas([[1, 1, 0], [0, 1, 4]], [[4, -4, 1]])
+    assert mapped == ((0,), (0,))  # r=2 generator coords, nc=1 comma, all zero
+
+
+def test_target_interval_monzos():
+    # the interval-vector (monzo) form of each target over the 2.3.5 domain
+    monzos = service.target_interval_monzos(("2/1", "3/2", "5/4", "6/5"), 3)
+    assert monzos == ((1, 0, 0), (-1, 1, 0), (-2, 0, 1), (1, 1, -1))
+
+
 def test_tilt_target_interval_set_is_the_domains_tilt():
     # the 5-limit default is the 6-TILT (the integer just below the next prime past 5)
     assert service.target_interval_set("TILT", (2, 3, 5)) == (

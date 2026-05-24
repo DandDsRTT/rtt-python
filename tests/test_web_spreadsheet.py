@@ -639,6 +639,31 @@ def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
     assert not any(c.startswith("caption:") for c in off)
 
 
+# --- the interval-vectors row (each column's intervals as monzos) ---
+
+def test_interval_vectors_row_sits_between_quantities_and_mapping():
+    cells = {c.id: c for c in _layout().cells}
+    assert cells["label:vectors"].text == "interval vectors"
+    assert "toggle:row:vectors" in cells  # collapsible like the other content rows
+    assert cells["label:quantities"].y < cells["label:vectors"].y < cells["label:mapping"].y
+
+
+def test_interval_vectors_show_domain_primes_as_identity_and_targets_as_monzos():
+    cells = {c.id: c for c in _layout().cells}
+    # domain primes are their own basis: the d x d identity, on the shared prime axes
+    for e in range(3):
+        for p in range(3):
+            assert cells[f"cell:vec:primes:{e}:{p}"].text == ("1" if e == p else "0")
+    assert cells["cell:vec:primes:1:0"].x == cells["prime:1"].x  # column on its prime axis
+    # each target interval as a d-tall monzo column: 2/1->[1,0,0], 3/2->[-1,1,0], 5/4->[-2,0,1]
+    assert [cells[f"cell:vec:targets:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
+    assert [cells[f"cell:vec:targets:2:{p}"].text for p in range(3)] == ["-1", "1", "0"]
+    assert [cells[f"cell:vec:targets:6:{p}"].text for p in range(3)] == ["-2", "0", "1"]
+    assert cells["cell:vec:targets:2:0"].x == cells["target:2"].x  # column on its target axis
+    # the d components stack downward, one ROW_H apart
+    assert cells["cell:vec:targets:0:1"].y - cells["cell:vec:targets:0:0"].y == spreadsheet.ROW_H
+
+
 # --- the commas column (the comma basis, the mapping's dual) ---
 
 def _in_commas(cid):
@@ -655,32 +680,32 @@ def test_commas_column_sits_between_primes_and_targets_with_its_comma_ratios():
     assert cells["prime:2"].x < cells["comma:0"].x < cells["target:0"].x
 
 
-def test_comma_basis_renders_as_vertical_monzos_in_the_mapping_row():
+def test_comma_basis_renders_as_raw_monzos_in_the_interval_vectors_row():
     cells = {c.id: c for c in _layout().cells}
-    # the comma basis sits in the mapping row's commas column as d-tall monzo columns;
+    # the raw comma basis lives in the interval-vectors row's commas column, d-tall;
     # the syntonic comma [4, -4, 1] reads top-to-bottom (prime 2, 3, 5) down its column
     assert cells["cell:comma:0:0"].text == "4"
     assert cells["cell:comma:1:0"].text == "-4"
     assert cells["cell:comma:2:0"].text == "1"
-    # the cells tile a square grid like the mapping matrix
     c00 = cells["cell:comma:0:0"]
-    assert c00.w == c00.h == spreadsheet.ROW_H
-    assert cells["cell:comma:1:0"].y == c00.y + c00.h
-    # aligned in the commas column (shares the quantities-row comma's x and the matrix top)
-    assert c00.x == cells["comma:0"].x
-    assert c00.y == cells["cell:mapping:0:0"].y  # top-aligned with the mapping matrix
+    assert c00.w == c00.h == spreadsheet.ROW_H  # square grid cells
+    assert cells["cell:comma:1:0"].y == c00.y + c00.h  # stacked down its column
+    assert c00.x == cells["comma:0"].x  # on the commas axis
+    assert c00.y == cells["cell:vec:primes:0:0"].y  # top-aligned across the vectors row
 
 
-def test_expanding_commas_grows_the_mapping_band_to_fit_the_d_tall_comma_basis():
-    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # d=3, r=2
-    full = {c.id: c for c in spreadsheet.build(base).cells}
-    coll = {c.id: c for c in spreadsheet.build(base, collapsed={"col:commas"}).cells}
-    # the comma basis is d=3 tall while the mapping matrix is r=2 tall, so it reaches lower
-    cb_bottom = full["cell:comma:2:0"].y + full["cell:comma:2:0"].h
-    m_bottom = full["cell:mapping:1:0"].y + full["cell:mapping:1:0"].h
-    assert cb_bottom > m_bottom
-    # collapsing commas lets the band shrink back, lifting the tuning rows
-    assert coll["tuning:prime:0"].y < full["tuning:prime:0"].y
+def test_mapping_row_commas_show_the_mapped_comma_basis_vanishing():
+    cells = {c.id: c for c in _layout().cells}
+    # in the mapping row the comma basis is shown MAPPED through M — it vanishes to 0,
+    # the whole point of the temperament (parallel to the mapped target-interval list)
+    assert cells["cell:mapped_comma:0:0"].text == "0"
+    assert cells["cell:mapped_comma:1:0"].text == "0"
+    # r-tall (one row per generator) and aligned with the mapped target list beside it
+    assert cells["cell:mapped_comma:0:0"].y == cells["cell:mapped:0:0"].y
+    assert cells["cell:mapped_comma:1:0"].y == cells["cell:mapping:1:0"].y
+    assert cells["cell:mapped_comma:0:0"].x == cells["comma:0"].x  # on the commas axis
+    # the raw comma basis is NOT here — it sits up in the (higher) interval-vectors row
+    assert cells["cell:comma:0:0"].y < cells["cell:mapped_comma:0:0"].y
 
 
 def test_comma_sizes_fill_the_tuning_family_rows():
@@ -726,25 +751,14 @@ def test_commas_column_has_panels_that_fold_away_and_converge_when_collapsed():
 
 def test_comma_basis_is_framed_as_a_monzo_list_spanning_its_d_tall_height():
     cells = {c.id: c for c in _layout().cells}
-    # the comma basis is a list of monzos: an enclosing [ ] plus per-column marks
-    assert cells["bracket:comma_basis:l"].text == "[" and cells["bracket:comma_basis:r"].text == "]"
-    assert "ebktop:comma_basis:0" in cells and "ebkbrace:comma_basis:0" in cells
-    cb = cells["bracket:comma_basis:l"]
+    # the comma basis (in the interval-vectors row) is a list of monzos: an enclosing
+    # [ ] plus per-column ket marks
+    assert cells["bracket:vec:commas:l"].text == "[" and cells["bracket:vec:commas:r"].text == "]"
+    assert "ebktop:vec:commas:0" in cells and "ebkbrace:vec:commas:0" in cells
+    cb = cells["bracket:vec:commas:l"]
     # the enclosing bracket spans the full d=3 tall basis
     assert cb.y <= cells["cell:comma:0:0"].y
     assert cb.y + cb.h >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].h
-
-
-def test_each_mapping_matrix_brace_hugs_its_own_height_not_the_tallest():
-    cells = {c.id: c for c in _layout().cells}
-    last_map = cells["cell:mapping:1:0"]  # the maps are r=2 tall
-    mbrace = cells["ebkbrace:primes"]
-    # the mapping brace hugs the LAST map row (one frame gap below), rather than
-    # floating at the bottom of the taller d-row comma band
-    gap = mbrace.y - (last_map.y + last_map.h)
-    assert 0 < gap <= spreadsheet.FRAME_GAP + 1
-    # the comma basis brace, hugging its d=3 rows, sits lower than the mapping brace
-    assert cells["ebkbrace:comma_basis:0"].y > mbrace.y
 
 
 def test_comma_tuning_rows_get_list_brackets_hugging_their_values():
@@ -760,16 +774,23 @@ def test_comma_tuning_rows_get_list_brackets_hugging_their_values():
 def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():
     on = {c.id: c for c in _with(names=True).cells}
     off = {c.id: c for c in _with(names=False).cells}
-    # the comma basis is captioned like the mapping, and sits below its taller (d-row)
-    # matrix — lower than the mapping caption hugging the r-row maps
-    assert on["caption:mapping:commas"].text == "comma basis"
-    assert on["caption:mapping:commas"].y > on["caption:mapping:primes"].y
+    # the raw comma basis is captioned in the interval-vectors row; the mapping row
+    # shows it mapped (vanishing), captioned to parallel the mapped target list
+    assert on["caption:vectors:commas"].text == "comma basis"
+    assert on["caption:mapping:commas"].text == "mapped comma list"
     # comma captions mirror the target captions, swapping "target-interval" for "comma"
     assert on["caption:tuning:commas"].text == "tempered comma size list"
     assert on["caption:just:commas"].text == "(just) comma size list"
     assert on["caption:retune:commas"].text == "comma error list"
     assert on["caption:damage:commas"].text == "comma damage list"
     assert not any(c.startswith("caption:") and c.endswith(":commas") for c in off)
+
+
+def test_interval_vectors_tiles_are_captioned_by_what_each_column_holds():
+    on = {c.id: c for c in _with(names=True).cells}
+    assert on["caption:vectors:primes"].text == "domain basis"  # the identity
+    assert on["caption:vectors:commas"].text == "comma basis"  # the raw monzos (the dual)
+    assert on["caption:vectors:targets"].text == "target-interval list"
 
 
 def test_commas_column_has_an_add_comma_control():

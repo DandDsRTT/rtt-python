@@ -163,7 +163,7 @@ _CSS = f"""
 .rtt-show-sub {{ margin-left:20px; }}  /* a sub-control sits indented under its parent toggle */
 """
 
-_LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "count", "mathexpr",
+_LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "vec", "count", "mathexpr",
                 "symbol", "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
@@ -356,10 +356,10 @@ def index() -> None:
 
     editor = Editor()
     settings = show_settings.defaults()  # which parts of the grid are visible
-    # commas and "other intervals of interest" start folded to strips (the mockup's
-    # default view), expandable on click; interest also starts empty until the user
-    # enters intervals they care about
-    collapsed: set = {"col:commas", "col:interest"}  # ids of folded rows/columns/tiles
+    # the commas and "other intervals of interest" columns and the interval-vectors
+    # row start folded to strips (the mockup's default view), each expandable on
+    # click; interest also starts empty until the user enters intervals
+    collapsed: set = {"col:commas", "col:interest", "row:vectors"}  # ids of folded rows/columns/tiles
     els: dict = {}  # entity id -> outer element (persists across renders)
     inputs: dict = {}  # mapping cell id -> q-input
     labels: dict = {}  # cell id -> the label whose text tracks state
@@ -392,9 +392,13 @@ def index() -> None:
         render()
 
     def on_comma_change():
-        if building[0] or not settings["temperament_boxes"]:  # comma basis lives in the mapping row
+        # the comma basis (the mapping's dual) is edited in the interval-vectors row,
+        # which is present independent of the temperament boxes
+        if building[0]:
             return
         d, nc = editor.state.d, len(editor.state.comma_basis)
+        if any(f"cell:comma:{p}:{c}" not in inputs for c in range(nc) for p in range(d)):
+            return  # the comma cells aren't currently shown (folded away)
         # the comma cells are the basis transposed (prime down the rows, comma across)
         basis = [[_parse_int(inputs[f"cell:comma:{p}:{c}"].value) for p in range(d)] for c in range(nc)]
         if any(v is None for comma in basis for v in comma):
@@ -458,7 +462,7 @@ def index() -> None:
                 _ratio(cb, approx=True)
             elif cb.kind in ("target", "commaratio"):
                 _ratio(cb, approx=False)
-            elif cb.kind == "mapped":
+            elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, monzo components)
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "count":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-count")

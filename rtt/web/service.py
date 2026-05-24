@@ -116,15 +116,33 @@ def comma_ratios(comma_basis) -> tuple[str, ...]:
     return _monzos_to_ratios(comma_basis)
 
 
-def mapped_target_intervals(mapping, ratios) -> Matrix:
-    """Each target interval mapped through ``M`` — the targets in generator coords (r x k)."""
-    mapping = _to_matrix(mapping)
+def _map_through(mapping, monzos) -> Matrix:
+    """Map each monzo through ``M`` — columns of monzos taken to generator coords."""
     d = len(mapping[0])
-    monzos = parse_quotient_list("{" + ", ".join(ratios) + "}", d)
     return tuple(
         tuple(sum(mapping[i][p] * monzo[p] for p in range(d)) for monzo in monzos)
         for i in range(len(mapping))
     )
+
+
+def mapped_target_intervals(mapping, ratios) -> Matrix:
+    """Each target interval mapped through ``M`` — the targets in generator coords (r x k)."""
+    mapping = _to_matrix(mapping)
+    monzos = parse_quotient_list("{" + ", ".join(ratios) + "}", len(mapping[0]))
+    return _map_through(mapping, monzos)
+
+
+def mapped_commas(mapping, comma_basis) -> Matrix:
+    """Each comma mapped through ``M`` — the comma basis in generator coords (r x nc).
+    Every comma the temperament tempers out maps to zero: it vanishes."""
+    mapping = _to_matrix(mapping)
+    return _map_through(mapping, _to_matrix(comma_basis))
+
+
+def target_interval_monzos(ratios, d: int) -> Matrix:
+    """Each target interval as a monzo — its interval-vector form over the d primes."""
+    monzos = parse_quotient_list("{" + ", ".join(ratios) + "}", d)
+    return tuple(tuple(int(x) for x in monzo) for monzo in monzos)
 
 
 def tuning(mapping, ratios, scheme: str = DEFAULT_TUNING_SCHEME) -> Tuning:
