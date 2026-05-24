@@ -25,9 +25,11 @@ _T = "0.25s"  # transition duration
 # drawn as an SVG whose viewBox maps 1:1 to the cell's px size (see _svg), so a
 # stroke specified as N px is exactly N px tall AND wide at any span — no scaling.
 _BR_COLOR = "#1a1a1a"
-# the value cells tile into a shared-border grid: each fills its square and draws
-# a 1px rule, so abutting cells read as one ruled spreadsheet (per the mockup)
-_CELL_BORDER = f"1px solid {_BR_COLOR}"
+# the value cells tile into a shared-border grid (a ruled spreadsheet, per the
+# mockup): each cell draws a rule and overlaps its neighbour by exactly the rule
+# width, so two abutting borders coincide as ONE line — no doubled inner rules.
+_CELL_BORDER_W = 1  # px
+_CELL_BORDER = f"{_CELL_BORDER_W}px solid {_BR_COLOR}"
 _CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
 _BR_BAR = 2  # main bar / monzo-rule / square-bracket bar thickness (px)
 _BR_SERIF_T = 1.2  # square + top bracket serif thickness — lighter than the main bar
@@ -66,9 +68,10 @@ _CSS = f"""
 .rtt-cell {{ position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
             opacity:1; transition:left {_T}, top {_T}, opacity {_T}; }}
 
-.rtt-white {{ width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center;
-             justify-content:center; background:#fff; border:{_CELL_BORDER}; color:#000;
-             font-size:{_CELL_FONT}px; }}
+.rtt-white {{ position:absolute; top:0; left:0;
+             width:calc(100% + {_CELL_BORDER_W}px); height:calc(100% + {_CELL_BORDER_W}px);
+             box-sizing:border-box; display:flex; align-items:center; justify-content:center;
+             background:#fff; border:{_CELL_BORDER}; color:#000; font-size:{_CELL_FONT}px; }}
 .rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:nowrap; }}
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; }}
@@ -90,8 +93,11 @@ _CSS = f"""
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
 .rtt-cents-int {{ font-size:10px; }}
 .rtt-cents-frac {{ font-size:7px; color:#000; }}
-.rtt-cellinput {{ width:100% !important; height:100%; min-height:0; }}
-.rtt-cellinput .q-field__control {{ width:100% !important; height:100% !important; min-height:0 !important;
+.rtt-cellinput {{ width:100% !important; height:100%; min-height:0; overflow:visible; }}
+.rtt-cellinput .q-field__inner {{ overflow:visible; }}
+.rtt-cellinput .q-field__control {{ position:absolute !important; top:0; left:0;
+            width:calc(100% + {_CELL_BORDER_W}px) !important; height:calc(100% + {_CELL_BORDER_W}px) !important;
+            max-width:none !important; min-height:0 !important;
             box-sizing:border-box; padding:0 !important; background:#fff; border:{_CELL_BORDER}; }}
 .rtt-cellinput .q-field__control::before, .rtt-cellinput .q-field__control::after {{ display:none !important; }}
 .rtt-cellinput .q-field__native {{ text-align:center; padding:0 !important; color:#000; font-size:{_CELL_FONT}px;
