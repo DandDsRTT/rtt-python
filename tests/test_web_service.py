@@ -179,3 +179,13 @@ def test_plain_text_commas_column_mirrors_the_grid():
     assert pt[("tuning", "commas")] == f"[{cents(ctun.tempered_targets)}]"
     assert pt[("just", "commas")] == f"[{cents(ctun.just_targets)}]"
     assert pt[("damage", "commas")] == f"[{cents(ctun.target_damage)}]"
+
+
+def test_tuning_exposes_diamond_generator_ranges():
+    import pytest
+
+    t = service.tuning([[1, 1, 0], [0, 1, 4]], ("2/1", "3/2", "5/4", "6/5"))
+    # Octave held pure pins the period generator; the fifth gets a real range.
+    assert t.tradeoff_generator_range[0] == pytest.approx((1200.0, 1200.0), abs=1e-6)
+    assert t.tradeoff_generator_range[1] == pytest.approx((694.786, 701.955), abs=1e-2)
+    assert t.monotone_generator_range[1] == pytest.approx((685.714, 720.0), abs=1e-2)

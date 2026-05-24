@@ -22,6 +22,7 @@ from rtt.tuning import (
     optimize_generator_tuning_map,
     optimize_tuning_map,
 )
+from rtt.tuning_ranges import get_generator_tuning_range
 
 Matrix = tuple[tuple[int, ...], ...]
 
@@ -39,6 +40,8 @@ class Tuning:
     just_targets: tuple[float, ...]  # cents, over the target intervals
     target_errors: tuple[float, ...]  # tempered - just, over the targets
     target_damage: tuple[float, ...]  # |error| (unity weight), over the targets
+    monotone_generator_range: tuple[tuple[float, float], ...] | None  # per generator; None if none exists
+    tradeoff_generator_range: tuple[tuple[float, float], ...]  # (low, high) cents per generator
 
 
 @dataclass(frozen=True)
@@ -147,6 +150,8 @@ def tuning(mapping, ratios, scheme: str = DEFAULT_TUNING_SCHEME) -> Tuning:
         just_targets=just_targets,
         target_errors=errors,
         target_damage=tuple(abs(e) for e in errors),
+        monotone_generator_range=get_generator_tuning_range(t, "monotone"),
+        tradeoff_generator_range=get_generator_tuning_range(t, "tradeoff"),
     )
 
 
