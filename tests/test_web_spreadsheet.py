@@ -286,6 +286,67 @@ def test_the_row_fold_node_clears_the_first_content_tile():
     assert node.x + node.w <= gens_block.x  # the node does not collide with the tile
 
 
+def test_each_content_tile_has_a_top_left_fold_toggle():
+    cells = {c.id: c for c in _layout().cells}
+    # every (row, column) content tile carries its own fold control, in addition
+    # to the per-row and per-column ones
+    for rkey, ckey in (("quantities", "primes"), ("quantities", "targets"),
+                       ("mapping", "gens"), ("mapping", "primes"), ("mapping", "targets"),
+                       ("tuning", "primes"), ("tuning", "targets"), ("damage", "targets")):
+        assert f"toggle:tile:{rkey}:{ckey}" in cells
+    # it sits in the tile's top-left corner: above and left of the tile's content
+    node = cells["toggle:tile:mapping:primes"]
+    first = cells["cell:mapping:0:0"]
+    assert node.x < first.x and node.y < first.y
+
+
+def test_collapsing_a_tile_hides_its_content_keeps_its_toggle_and_folds_its_panel():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    lay = spreadsheet.build(base, collapsed={"tile:mapping:primes"})
+    cells = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
+    # the matrix, its row brackets, and its top/bottom framing bands all vanish
+    assert not any(c.startswith("cell:mapping:") for c in cells)
+    assert not any(c.startswith("bracket:map:") for c in cells)
+    assert "ebktop:primes" not in cells and "ebkbrace:primes" not in cells
+    # ...the panel folds to a zero-size point so the renderer animates it away...
+    assert blocks["block:mapping"].w == 0 and blocks["block:mapping"].h == 0
+    # ...but the toggle stays so the tile can be re-expanded
+    assert "toggle:tile:mapping:primes" in cells
+
+
+def test_collapsing_a_tile_leaves_its_siblings_and_the_grid_geometry_intact():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    full = spreadsheet.build(base)
+    coll = spreadsheet.build(base, collapsed={"tile:mapping:primes"})
+    fc = {c.id: c for c in full.cells}
+    cc = {c.id: c for c in coll.cells}
+    # a sibling tile sharing the mapping row is untouched, and nothing reflows
+    assert "cell:mapped:0:0" in cc
+    assert cc["cell:mapped:0:0"].x == fc["cell:mapped:0:0"].x
+    assert coll.width == full.width and coll.height == full.height
+    # the shared prime axes still run through the now-empty intersection
+    assert {ln.id for ln in coll.lines} == {ln.id for ln in full.lines}
+
+
+def test_tile_toggle_glyph_flips_between_collapse_and_expand():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    open_ = {c.id: c for c in spreadsheet.build(base).cells}["toggle:tile:mapping:primes"]
+    shut = {c.id: c for c in spreadsheet.build(base, collapsed={"tile:mapping:primes"}).cells}["toggle:tile:mapping:primes"]
+    assert open_.text == "unfold_less"  # an open tile offers to fold in
+    assert shut.text == "unfold_more"  # a folded tile offers to expand out
+
+
+def test_collapsing_a_whole_band_removes_its_per_tile_toggles():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    # a folded row/column subsumes its tiles into the strip, so their corner
+    # toggles must not survive as orphaned boxes floating on the gridline
+    row_off = {c.id for c in spreadsheet.build(base, collapsed={"row:tuning"}).cells}
+    assert not any(c.startswith("toggle:tile:tuning:") for c in row_off)
+    col_off = {c.id for c in spreadsheet.build(base, collapsed={"col:primes"}).cells}
+    assert not any(c.endswith(":primes") and c.startswith("toggle:tile:") for c in col_off)
+
+
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
     on = {c.id: c for c in _with(names=True).cells}
     off = {c.id: c for c in _with(names=False).cells}

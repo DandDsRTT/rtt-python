@@ -58,6 +58,24 @@ CAPTIONS = {
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 FRAMED_ROWS = frozenset({"mapping"})  # multi-row matrices get a top bracket + bottom brace band
 
+# Every content tile (a row×column intersection) as (grey-panel id, row, column).
+# Each gets a grey panel and a top-left fold toggle; the panel/toggle ids stay
+# stable so the reconciling renderer can animate a single tile folding away.
+TILES = (
+    ("block:primes", "quantities", "primes"),
+    ("block:targets", "quantities", "targets"),
+    ("block:gens", "mapping", "gens"),
+    ("block:mapping", "mapping", "primes"),
+    ("block:mapped", "mapping", "targets"),
+    ("block:tuning:primes", "tuning", "primes"),
+    ("block:tuning:targets", "tuning", "targets"),
+    ("block:just:primes", "just", "primes"),
+    ("block:just:targets", "just", "targets"),
+    ("block:retune:primes", "retune", "primes"),
+    ("block:retune:targets", "retune", "targets"),
+    ("block:damage:targets", "damage", "targets"),
+)
+
 
 def _cents(value) -> str:
     return f"{value:.2f}"
@@ -191,6 +209,9 @@ def build(state, settings=None, collapsed=None) -> Layout:
     def row_open(key):
         return key in row_y and f"row:{key}" not in collapsed
 
+    def tile_open(rkey, ckey):
+        return row_open(rkey) and col_open(ckey) and f"tile:{rkey}:{ckey}" not in collapsed
+
     def prime_left(p):
         return primes_x + BRACKET_W + p * COL_W
 
@@ -223,7 +244,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
             cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
 
     # quantities row: domain primes (+ controls) and target ratios
-    if col_open("primes"):
+    if tile_open("quantities", "primes"):
         for p in range(d):
             cells.append(CellBox(f"prime:{p}", prime_left(p), quant_y, COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
         # Only the highest prime is removable (shrink_domain trims the last), so its
@@ -232,31 +253,31 @@ def build(state, settings=None, collapsed=None) -> Layout:
         if d > 1:
             cells.append(CellBox("minus", prime_left(d - 1), quant_y - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "minus"))
         cells.append(CellBox("plus", ctrl_x, quant_y + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
-    if col_open("targets"):
+    if tile_open("quantities", "targets"):
         for j in range(k):
             cells.append(CellBox(f"target:{j}", target_left(j), quant_y, COL_W, ROW_H, "target", text=targets[j]))
 
     # generator ratios (aligned with the mapping rows they label) + the mapping
     # matrix and its mapped target-interval list
     if row_open("mapping"):
-        if col_open("gens"):
+        if tile_open("mapping", "gens"):
             for i in range(r):
                 cells.append(CellBox(f"gen:{i}", gen_x, map_top(i), GEN_W, ROW_H, "genratio", text=gens[i] if i < len(gens) else "", gen=i))
         for i in range(r):
-            if col_open("primes"):
+            if tile_open("mapping", "primes"):
                 for p in range(d):
                     cells.append(CellBox(f"cell:mapping:{i}:{p}", prime_left(p), map_top(i), COL_W, ROW_H, "mapping", gen=i, prime=p))
-            if col_open("targets"):
+            if tile_open("mapping", "targets"):
                 for j in range(k):
                     cells.append(CellBox(f"cell:mapped:{i}:{j}", target_left(j), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped[i][j]), gen=i))
 
     # tuning rows over the primes and targets (cents); each can collapse on its own
     def tuning_row(key, prime_vals, target_vals):
         y = row_y[key]
-        if col_open("primes"):
+        if tile_open(key, "primes"):
             for p, v in enumerate(prime_vals):
                 cells.append(CellBox(f"{key}:prime:{p}", prime_left(p), y, COL_W, ROW_H, "tval", text=_cents(v)))
-        if col_open("targets"):
+        if tile_open(key, "targets"):
             for j, v in enumerate(target_vals):
                 cells.append(CellBox(f"{key}:target:{j}", target_left(j), y, COL_W, ROW_H, "tval", text=_cents(v)))
 
@@ -268,7 +289,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
     for key, (prime_vals, target_vals) in tuning_data.items():
         if row_open(key):
             tuning_row(key, prime_vals, target_vals)
-    if row_open("damage") and col_open("targets"):  # damage is over the targets only
+    if tile_open("damage", "targets"):  # damage is over the targets only
         for j, v in enumerate(tun.target_damage):
             cells.append(CellBox(f"damage:target:{j}", target_left(j), row_y["damage"], COL_W, ROW_H, "tval", text=_cents(v)))
 
@@ -283,18 +304,18 @@ def build(state, settings=None, collapsed=None) -> Layout:
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
 
     if row_open("mapping"):
-        if col_open("primes"):
+        if tile_open("mapping", "primes"):
             for i in range(r):
                 bracket(f"map:{i}", MAP_BRACKETS, "primes", map_top(i), ROW_H)
-        if col_open("targets"):
+        if tile_open("mapping", "targets"):
             bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H, fit=True)
     for key in ("tuning", "just", "retune"):
         if row_open(key):
-            if col_open("primes"):
+            if tile_open(key, "primes"):
                 bracket(f"{key}:map", MAP_BRACKETS, "primes", row_y[key], ROW_H)
-            if col_open("targets"):
+            if tile_open(key, "targets"):
                 bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
-    if row_open("damage") and col_open("targets"):
+    if tile_open("damage", "targets"):
         bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
 
     # Shared axes. A multi-element group is one line that fans out at the near end
@@ -355,7 +376,11 @@ def build(state, settings=None, collapsed=None) -> Layout:
     def panel(bid, ckey, rkey):
         if ckey not in col_x or rkey not in row_y:
             return
-        col_c, row_c = f"col:{ckey}" in collapsed, f"row:{rkey}" in collapsed
+        # a folded tile collapses both ways at once, so it shrinks to a point at
+        # its centre — like a row+column collapse confined to this one tile
+        tile_c = f"tile:{rkey}:{ckey}" in collapsed
+        col_c = f"col:{ckey}" in collapsed or tile_c
+        row_c = f"row:{rkey}" in collapsed or tile_c
         cw, ch, cx, cy = col_w[ckey], tile_h[rkey], col_x[ckey], tile_top[rkey]
         w, px = (0, 0) if col_c else (cw, PAD)
         h, py = (0, 0) if row_c else (ch, PAD)
@@ -363,21 +388,14 @@ def build(state, settings=None, collapsed=None) -> Layout:
         by = cy + ch / 2 if row_c else cy
         blocks.append(Block(bid, bx - px, by - py, w + 2 * px, h + 2 * py))
 
-    panel("block:primes", "primes", "quantities")
-    panel("block:targets", "targets", "quantities")
-    panel("block:gens", "gens", "mapping")
-    panel("block:mapping", "primes", "mapping")
-    panel("block:mapped", "targets", "mapping")
-    for key in ("tuning", "just", "retune"):
-        panel(f"block:{key}:primes", "primes", key)
-        panel(f"block:{key}:targets", "targets", key)
-    panel("block:damage:targets", "targets", "damage")
+    for bid, rkey, ckey in TILES:
+        panel(bid, ckey, rkey)
 
     # quantity-name captions inside each tile (below its values + bottom frame),
     # toggled by names
     if show_captions:
         for (rkey, ckey), text in CAPTIONS.items():
-            if row_open(rkey) and col_open(ckey):
+            if tile_open(rkey, ckey):
                 cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
                 cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H, "caption", text=text))
 
@@ -388,14 +406,14 @@ def build(state, settings=None, collapsed=None) -> Layout:
     map_top_y, brace_y = tile_top.get("mapping"), None
     if "mapping" in row_y:
         brace_y = row_y["mapping"] + row_h["mapping"] + FRAME_GAP
-    if row_open("mapping") and col_open("primes"):
+    if tile_open("mapping", "primes"):
         gx, gw = col_x["primes"], col_w["primes"]
         cells.append(CellBox("ebktop:primes", gx, map_top_y, gw, FRAME_H, "ebktop"))
         cells.append(CellBox("ebkbrace:primes", gx, brace_y, gw, BRACE_H, "ebkbrace"))
     # the mapped list is a row of vectors: vertical rules separate the monzo
     # columns, and each column is marked with its own top bracket and bottom
     # brace — inset so they stop short of the rules rather than touching them
-    if row_open("mapping") and col_open("targets"):
+    if tile_open("mapping", "targets"):
         mark_w = COL_W - 2 * MARK_INSET
         for j in range(k):
             mx = target_left(j) + MARK_INSET
@@ -403,5 +421,16 @@ def build(state, settings=None, collapsed=None) -> Layout:
             cells.append(CellBox(f"ebkbrace:mapped:{j}", mx, brace_y, mark_w, BRACE_H, "ebkbrace"))
         for j in range(1, k):  # a rule on each interior column boundary
             cells.append(CellBox(f"sep:mapped:{j}", target_left(j) - SEP_W / 2, row_y["mapping"], SEP_W, r * ROW_H, "vbar"))
+
+    # a per-tile fold toggle in each content tile's top-left corner (the grey
+    # panel's corner, in the PAD margin above-left of the content). Emitted last
+    # so it paints over any bracket/frame it overlaps. Present whenever the tile's
+    # row and column bands are open — it stays put when only the tile is folded,
+    # so the tile can be re-expanded.
+    for _bid, rkey, ckey in TILES:
+        if rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey):
+            glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
+            cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}", col_x[ckey] - PAD, tile_top[rkey] - PAD,
+                                 TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))
