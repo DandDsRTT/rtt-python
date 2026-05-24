@@ -96,6 +96,12 @@ _CSS = f"""
            border-radius:0 !important; padding:0 !important; box-shadow:none !important; }}
 .rtt-btn .q-btn__content {{ color:#000 !important; font-size:15px;
            font-family:'Cambria',Georgia,serif; }}
+/* the domain − is a hover affordance: an invisible zone over the removable prime's
+   header reveals the button parked at its top (above the header, clear of inputs) */
+.rtt-minus-zone {{ background:transparent; }}
+.rtt-minus-btn {{ position:absolute !important; top:0; left:50%; transform:translateX(-50%);
+           opacity:0; pointer-events:none; transition:opacity {_T}; }}
+.rtt-minus-zone:hover .rtt-minus-btn {{ opacity:1; pointer-events:auto; }}
 
 .rtt-toggle {{ width:100%; height:100%; display:flex; align-items:center; justify-content:center;
               font-size:12px !important; line-height:1; color:#666; background:#fff;
@@ -357,8 +363,12 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-toggle material-icons")
                 wrap.on("click", lambda _=None, it=item: on_toggle(it))
             elif cb.kind == "minus":
-                refs["minus"] = ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn")
+                # the zone spans the removable prime's header (the hover target); the
+                # button hides at its top and reveals on hover, above the header so it
+                # never covers the editable mapping cell below
+                wrap.classes("rtt-minus-zone")
+                ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
+                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn")
             elif cb.kind == "plus":
                 ui.button("+", on_click=lambda: act(editor.expand), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
@@ -424,8 +434,6 @@ def index() -> None:
             htmls.pop(eid, None)
             ebk_sizes.pop(eid, None)
 
-        if "minus" in refs:
-            refs["minus"].set_enabled(editor.can_shrink)
         refs["undo"].set_enabled(editor.can_undo)
         refs["redo"].set_enabled(editor.can_redo)
         building[0] = False

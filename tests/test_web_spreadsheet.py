@@ -37,6 +37,31 @@ def test_primes_sit_above_the_mapping_columns():
     assert cells["prime:0"].y < cells["cell:mapping:0:0"].y  # quantities row above mapping
 
 
+def test_minus_is_revealed_above_the_removable_prime_clear_of_its_input():
+    # only the highest prime can be dropped (service.shrink_domain trims the last),
+    # so its hover-minus rides that column — above the header, never over the
+    # editable mapping cell below it (which would block editing the column).
+    cells = {c.id: c for c in _layout().cells}
+    minus, last_prime = cells["minus"], cells["prime:2"]
+    input_below = cells["cell:mapping:0:2"]
+    assert minus.x == last_prime.x  # shares the removable column
+    assert minus.y < last_prime.y  # revealed above the header, not beside the block
+    assert minus.y + minus.h <= input_below.y  # and clear of the editable input
+
+
+def test_minus_tracks_the_new_last_prime_after_a_shrink():
+    shrunk = service.shrink_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # d=2
+    cells = {c.id: c for c in spreadsheet.build(shrunk).cells}
+    assert "prime:2" not in cells  # only primes 0 and 1 remain
+    assert cells["minus"].x == cells["prime:1"].x  # the minus follows to the new last column
+
+
+def test_a_single_prime_domain_has_no_minus_but_keeps_plus():
+    cells = {c.id for c in spreadsheet.build(service.from_mapping(((1,),))).cells}
+    assert "minus" not in cells  # nothing is removable when d == 1
+    assert {"plus", "prime:0"} <= cells  # ...but you can still expand
+
+
 def test_target_intervals_column_with_mapped_list():
     cells = {c.id: c for c in _layout().cells}
     assert cells["header:targets"].text == "target-intervals"

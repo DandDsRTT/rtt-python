@@ -22,7 +22,8 @@ PAD = 4  # px a block extends around its cells
 LABEL_W = 96  # row-label gutter width
 HEADER_H = 22  # column-header height
 GEN_W = 50  # generators column width
-CTRL_W = 52  # domain shrink/expand (-/+) control gutter, right of the primes block
+CTRL_W = 26  # domain expand (+) control gutter, just right of the primes block
+MINUS_REVEAL_H = 22  # height the removable prime's hover-minus rises above its header
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
@@ -94,7 +95,8 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # Generators belong to the temperament; domain primes and targets are always
     # present. A collapsed column folds to a strip just wide enough to keep its
     # (horizontal) title readable, so it never overflows onto its neighbours. The
-    # domain -/+ controls ride just right of the primes block when it is open.
+    # always-present domain + control rides just right of the primes block when it
+    # is open; the − is a hover affordance on the (removable) highest-prime column.
     col_header = {"gens": "generators", "primes": "domain primes", "targets": "target-intervals"}
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
     # the value cells are inset by BRACKET_W within the group.
@@ -221,8 +223,12 @@ def build(state, settings=None, collapsed=None) -> Layout:
     if col_open("primes"):
         for p in range(d):
             cells.append(CellBox(f"prime:{p}", prime_left(p), quant_y, COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
-        cells.append(CellBox("minus", ctrl_x, quant_y + 5, 20, 20, "minus"))
-        cells.append(CellBox("plus", ctrl_x + 24, quant_y + 5, 20, 20, "plus"))
+        # Only the highest prime is removable (shrink_domain trims the last), so its
+        # − rides that column as a hover affordance: a zone spanning the header that
+        # reveals the button just above it, clear of the editable mapping cell below.
+        if d > 1:
+            cells.append(CellBox("minus", prime_left(d - 1), quant_y - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "minus"))
+        cells.append(CellBox("plus", ctrl_x, quant_y + 5, 20, 20, "plus"))
     if col_open("targets"):
         for j in range(k):
             cells.append(CellBox(f"target:{j}", target_left(j), quant_y, COL_W, ROW_H, "target", text=targets[j]))
