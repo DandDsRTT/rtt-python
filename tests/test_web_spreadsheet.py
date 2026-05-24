@@ -11,6 +11,12 @@ def _with(**overrides):
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
 
 
+def _with_interest(interest, collapsed=None):
+    return spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), collapsed=collapsed, interest=interest
+    )
+
+
 def test_rows_columns_and_cells_are_present():
     ids = {c.id for c in _layout().cells}
     assert {"header:gens", "header:primes"} <= ids  # column headers
@@ -828,3 +834,73 @@ def test_counts_track_the_live_domain_after_an_expand():
     cells = {c.id: c for c in spreadsheet.build(expanded, s).cells}
     assert cells["count:primes"].text == "d = 4"  # the added prime grows the dimensionality
     assert cells["count:gens"].text == "r = 3"  # ...and meantone gains an independent generator
+
+
+def test_other_intervals_of_interest_column_is_present_right_of_targets():
+    cells = {c.id: c for c in _layout().cells}  # default build: interest defaults to empty
+    assert cells["header:interest"].text == "other intervals of interest"
+    assert "toggle:col:interest" in cells  # foldable like the other interval columns
+    assert cells["header:interest"].x > cells["header:targets"].x  # rightmost column
+
+
+def test_empty_interest_column_is_just_a_header_and_axis():
+    lay = _layout()
+    cids = {c.id for c in lay.cells}
+    # an empty set contributes no per-interval content, marks, or captions
+    assert not any(c.startswith(("interest:", "cell:imapped:")) for c in cids)
+    assert not any(c.startswith(("tuning:interest:", "just:interest:", "retune:interest:")) for c in cids)
+    assert not any("imapped" in c for c in cids)
+    assert "caption:mapping:interest" not in cids
+    # ...but the column still draws a single straight vertical axis (trunk -> foot)
+    lids = {ln.id for ln in lay.lines}
+    assert {"trunk:interest", "foot:interest"} <= lids
+    assert "v:interest:0" not in lids and "bus:interest:top" not in lids
+
+
+def test_populated_interest_renders_ratios_mapped_and_sizes_minus_damage():
+    cells = {c.id: c for c in _with_interest(("3/2", "9/8", "10/9", "8/5")).cells}
+    # quantities row: the interval ratios the user entered
+    assert cells["interest:0"].text == "3/2" and cells["interest:3"].text == "8/5"
+    # mapping row: each interval mapped to generator coords (M . i), like the targets
+    assert cells["cell:imapped:0:0"].text == "0" and cells["cell:imapped:1:0"].text == "1"  # 3/2 -> [0,1]
+    assert cells["cell:imapped:1:3"].text == "-4"  # 8/5 -> [3,-4]
+    # tempered / just / retuning size rows
+    assert {"tuning:interest:0", "just:interest:0", "retune:interest:3"} <= set(cells)
+    assert cells["just:interest:0"].text == "701.96"  # 3/2 just is a pure fifth
+    # ...but NO damage row: these are not optimization targets
+    assert not any(c.startswith("damage:interest") for c in cells)
+
+
+def test_populated_interest_mapped_list_is_bracketed_and_ruled_like_targets():
+    cells = {c.id: c for c in _with_interest(("3/2", "9/8")).cells}
+    assert cells["bracket:imapped:l"].text == "[" and cells["bracket:imapped:r"].text == "]"
+    assert {"ebktop:imapped:0", "ebkbrace:imapped:0", "ebktop:imapped:1"} <= set(cells)
+    assert "sep:imapped:1" in cells  # a rule between the two monzo columns
+    # the tempered/just/retuning rows get plain list brackets too
+    assert cells["bracket:tuning:ilist:l"].text == "[" and cells["bracket:retune:ilist:r"].text == "]"
+
+
+def test_populated_interest_has_per_interval_axes_and_panels():
+    lay = _with_interest(("3/2", "9/8", "10/9"))
+    ids = {ln.id for ln in lay.lines}
+    assert {"v:interest:0", "v:interest:1", "v:interest:2"} <= ids
+    assert {"trunk:interest", "bus:interest:top", "bus:interest:bot", "foot:interest"} <= ids
+    blocks = {b.id for b in lay.blocks}
+    assert {"block:interest", "block:imapped", "block:tuning:interest"} <= blocks
+    assert "block:damage:interest" not in blocks  # no damage tile
+
+
+def test_collapsing_interest_hides_its_cells_but_keeps_the_header():
+    coll = _with_interest(("3/2", "9/8"), collapsed={"col:interest"})
+    cids = {c.id for c in coll.cells}
+    assert not any(c.startswith(("interest:", "cell:imapped:", "tuning:interest:")) for c in cids)
+    assert "header:interest" in cids and "toggle:col:interest" in cids
+    # targets are unaffected by the interest column folding
+    assert "cell:mapped:0:0" in cids
+
+
+def test_interest_captions_mirror_targets_without_damage_when_named():
+    cells = {c.id: c for c in _with_interest(("3/2",)).cells}  # names default on
+    assert cells["caption:mapping:interest"].text == "mapped interval list"
+    assert cells["caption:tuning:interest"].text == "tempered interval size list"
+    assert "caption:damage:interest" not in cells

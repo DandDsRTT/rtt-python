@@ -332,8 +332,10 @@ def index() -> None:
 
     editor = Editor()
     settings = show_settings.defaults()  # which parts of the grid are visible
-    collapsed: set = {"col:commas"}  # ids of folded rows/columns/tiles; commas starts
-    # folded to a strip (the mockup's default view), expandable on click
+    # commas and "other intervals of interest" start folded to strips (the mockup's
+    # default view), expandable on click; interest also starts empty until the user
+    # enters intervals they care about
+    collapsed: set = {"col:commas", "col:interest"}  # ids of folded rows/columns/tiles
     els: dict = {}  # entity id -> outer element (persists across renders)
     inputs: dict = {}  # mapping cell id -> q-input
     labels: dict = {}  # cell id -> the label whose text tracks state
