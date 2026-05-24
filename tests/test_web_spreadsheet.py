@@ -1063,3 +1063,58 @@ def test_counts_row_reserves_no_symbol_slot_so_its_captions_dont_shift():
     # symbols on must not reserve a slot that would drift its captions down
     assert not any(c.startswith("symbol:counts:") for c in on)
     assert on["caption:counts:primes"].y == off["caption:counts:primes"].y
+
+
+def test_every_implemented_toggle_actually_changes_the_layout():
+    # a toggle is "implemented" (live, not greyed, in the Show panel) iff it has
+    # built content — flipping any IMPLEMENTED key from its default must visibly
+    # change the grid (cells added/removed/moved or their text/kind changed)
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+
+    def snapshot(s):
+        return {(c.id, c.x, c.y, c.w, c.h, c.kind, c.text, c.underlines)
+                for c in spreadsheet.build(base, s).cells}
+
+    default_snap = snapshot(settings.defaults())
+    for key in settings.IMPLEMENTED:
+        s = settings.defaults()
+        s[key] = not s[key]
+        assert snapshot(s) != default_snap, f"{key} is marked implemented but changes nothing"
+
+
+def test_equivalences_extend_the_symbol_line_with_the_defining_equation():
+    on = {c.id: c for c in _with(symbols=True, equivalences=True).cells}
+    sym_only = {c.id: c for c in _with(symbols=True, equivalences=False).cells}
+    # equivalences appends the "= …" continuation to the symbol, in the same cell —
+    # no separate equation cell. Glyphs match SYMBOLS (𝒕 = 𝒈𝐌, not faux-styled)
+    assert sym_only["symbol:tuning:primes"].text == "𝒕"
+    assert on["symbol:tuning:primes"].text == "𝒕 = 𝒈𝐌"
+    assert on["symbol:retune:primes"].text == "𝒓 = 𝒕 − 𝒋"
+    assert on["symbol:mapping:targets"].text == "𝐘 = 𝐌𝐓"
+    assert not any(c.startswith("equivalence:") for c in on)
+
+
+def test_equivalences_cover_derived_quantities_but_not_the_fundamentals():
+    on = {c.id: c for c in _with(symbols=True, equivalences=True).cells}
+    extended = {c.split("symbol:", 1)[1] for c in on
+                if c.startswith("symbol:") and " = " in on[c].text}
+    assert extended == {
+        "mapping:targets", "tuning:primes", "tuning:targets",
+        "just:targets", "retune:primes", "retune:targets", "damage:targets",
+    }
+    # the temperament mapping and just tuning map have no buildable continuation yet
+    # (theirs need the canonical-form / superspace features), so their symbol is bare
+    assert on["symbol:mapping:primes"].text == "𝐌"
+    assert on["symbol:just:primes"].text == "𝒋"
+
+
+def test_equivalences_alone_render_the_symbol_line_only_where_there_is_an_equation():
+    eq_only = {c.id: c for c in _with(names=False, symbols=False, equivalences=True).cells}
+    # the equation needs its left-hand side, so equivalences renders the symbol line
+    # (symbol + continuation) even with symbols and names both off...
+    assert eq_only["symbol:tuning:primes"].text == "𝒕 = 𝒈𝐌"
+    # ...but only where there is a continuation to show — a bare symbol is the
+    # symbols feature's job, so the equation-less fundamentals stay absent
+    assert "symbol:mapping:primes" not in eq_only
+    assert "symbol:just:primes" not in eq_only
+    assert not any(c.startswith("caption:") for c in eq_only)  # names is off here

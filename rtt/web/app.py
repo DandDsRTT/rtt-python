@@ -164,7 +164,7 @@ _CSS = f"""
 """
 
 _LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "count", "mathexpr",
-                "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
+                "symbol", "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
 # cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
@@ -466,7 +466,7 @@ def index() -> None:
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
-                ui.label(cb.text).classes("rtt-symbol")
+                labels[cb.id] = ui.label(cb.text).classes("rtt-symbol")  # text tracks the equivalences toggle
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 captions[cb.id] = ui.html("").classes("rtt-caption")  # content set in render()

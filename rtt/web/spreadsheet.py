@@ -127,6 +127,23 @@ MNEMONICS = {
     ("damage", "targets"): "damage",    # d
 }
 
+# Each quantity's defining equation continues its symbol (see SYMBOLS): the mockup's
+# "symbols section" from the first "=" on, appended to the symbol when equivalences
+# is on so the line reads e.g. "𝒕 = 𝒈𝐌". Glyphs match SYMBOLS — bold-italic maps,
+# bold-upright matrices (𝐓 = the target-interval matrix); operators stay upright.
+# Only terms buildable from shipped features appear, so the superspace/canonical-
+# form tails (the tuning map's "= B_Ls 𝒕_L", "𝐌 = 𝐅𝐌_c", "𝒋 = B_Ls 𝒋_L") are
+# dropped — the mapping and just tuning maps thus carry no continuation yet.
+EQUIVALENCES = {
+    ("mapping", "targets"): " = 𝐌𝐓",
+    ("tuning", "primes"): " = 𝒈𝐌",
+    ("tuning", "targets"): " = 𝒕𝐓",
+    ("just", "targets"): " = 𝒋𝐓",
+    ("retune", "primes"): " = 𝒕 − 𝒋",
+    ("retune", "targets"): " = 𝒓𝐓",
+    ("damage", "targets"): " = |𝐞|diag(𝐰)",
+}
+
 # Always-present content tiles (a row×column intersection) as (grey-panel id, row,
 # column). Each gets a grey panel and a top-left fold toggle; the panel/toggle ids
 # stay stable so the reconciling renderer can animate a single tile folding away.
@@ -221,6 +238,7 @@ def build(state, settings=None, collapsed=None,
     collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
     show_captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
     show_mnemonics = show_captions and settings["mnemonics"]  # underline a caption's symbol letter
+    show_equiv = settings["equivalences"]  # extend the symbol line with the defining equation
     show_preselects = settings["preselects"]  # the per-quantity chooser dropdowns
     show_counts = settings["counts"]
     show_ptext = settings["plain_text_values"]  # the boxed EBK string under each tile
@@ -383,8 +401,10 @@ def build(state, settings=None, collapsed=None,
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
         cap = CAPTION_H if (show_captions and key in CAPTIONED_ROWS and not folded) else 0
-        # the symbol reserves a slot above the caption for every symboled row
-        sym = SYMBOL_H if (show_symbols and key in SYMBOLED_ROWS and not folded) else 0
+        # the symbol line reserves a slot above the caption for every symboled row;
+        # equivalences extends that same line (the "= …" continuation) rather than
+        # adding a band, so it reserves the slot too even when symbols itself is off
+        sym = SYMBOL_H if ((show_symbols or show_equiv) and key in SYMBOLED_ROWS and not folded) else 0
         # below the caption a tile reserves bands for the preselect chooser (its
         # row) and the plain-text value box, stacked in that order
         pre = PRESELECT_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
@@ -707,21 +727,25 @@ def build(state, settings=None, collapsed=None,
         panel(bid, ckey, rkey)
 
     # quantity symbol + name stacked inside each tile, below its values + bottom
-    # frame: the bold symbol (toggled by symbols) on top, the long-form name
-    # (toggled by names) under it. Within a symboled row the slot is reserved for
-    # every captioned column so the names stay aligned across the row; the glyph is
-    # drawn only where one is defined (the comma columns have none yet). An empty
-    # interest column has no tiles, so it shows neither. Mnemonics underlines the
-    # caption letter that spells the symbol.
+    # frame: the symbol line (toggled by symbols) on top, the long-form name
+    # (toggled by names) under it. Equivalences extends the symbol line with the
+    # quantity's defining equation — the "= …" continuation appended to the glyph,
+    # so it reads e.g. "𝒕 = 𝒈𝐌"; turning it on shows the glyph too (the equation's
+    # left side) even when symbols itself is off. Within a symboled row the slot is
+    # reserved for every captioned column so the names stay aligned; the glyph and
+    # equation are drawn only where defined (the comma columns have none yet). An
+    # empty interest column has no tiles. Mnemonics underlines the symbol letter.
     for (rkey, ckey), name in CAPTIONS.items():
         if ckey == "interest" and not interest:
             continue
         if not tile_open(rkey, ckey):
             continue
         cy = row_y[rkey] + col_value_h(rkey, ckey) + row_frame[rkey]
-        if show_symbols and rkey in SYMBOLED_ROWS:
-            if (rkey, ckey) in SYMBOLS:
-                cells.append(CellBox(f"symbol:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], SYMBOL_H, "symbol", text=SYMBOLS[(rkey, ckey)]))
+        if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS:
+            equiv = EQUIVALENCES.get((rkey, ckey), "") if show_equiv else ""
+            glyph = SYMBOLS.get((rkey, ckey), "") if (show_symbols or equiv) else ""
+            if glyph or equiv:
+                cells.append(CellBox(f"symbol:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
             cy += SYMBOL_H
         if show_captions:
             kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
@@ -738,7 +762,7 @@ def build(state, settings=None, collapsed=None,
             if not tile_open(rkey, ckey):
                 continue
             py = row_y[rkey] + row_h[rkey] + row_frame[rkey]
-            if show_symbols and rkey in SYMBOLED_ROWS and (rkey, ckey) in CAPTIONS:
+            if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS and (rkey, ckey) in CAPTIONS:
                 py += SYMBOL_H
             if show_captions and (rkey, ckey) in CAPTIONS:
                 py += CAPTION_H
