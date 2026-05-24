@@ -108,7 +108,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
     r = len(state.mapping)
     primes = service.standard_primes(d)
     gens = service.generators(state.mapping)
-    targets = service.DEFAULT_TARGET_INTERVALS
+    targets = service.default_target_intervals(primes)
     k = len(targets)
     mapped = service.mapped_target_intervals(state.mapping, targets)
     tun = service.tuning(state.mapping, targets)

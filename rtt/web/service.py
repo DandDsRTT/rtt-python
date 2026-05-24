@@ -14,6 +14,7 @@ from rtt.dual import dual
 from rtt.generator_detempering import get_generator_detempering
 from rtt.math_utils import get_primes, pcv_to_quotient
 from rtt.parsing import parse_quotient_list
+from rtt.target_intervals import process_tilt
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
     get_just_tuning_map,
@@ -23,7 +24,6 @@ from rtt.tuning import (
 
 Matrix = tuple[tuple[int, ...], ...]
 
-DEFAULT_TARGET_INTERVALS = ("2/1", "3/2", "5/4", "6/5")
 DEFAULT_TUNING_SCHEME = "TOP"
 
 
@@ -74,6 +74,12 @@ def from_comma_basis(comma_basis) -> TemperamentState:
 def standard_primes(d: int) -> tuple[int, ...]:
     """The first ``d`` primes — the standard prime-limit domain basis (header labels)."""
     return get_primes(d)
+
+
+def default_target_intervals(domain_basis) -> tuple[str, ...]:
+    """The default target-interval set for a domain basis — its TILT — as ratio strings."""
+    quotients = process_tilt("TILT", tuple(domain_basis))
+    return tuple(f"{q.numerator}/{q.denominator}" for q in quotients)
 
 
 def generators(mapping) -> tuple[str, ...]:

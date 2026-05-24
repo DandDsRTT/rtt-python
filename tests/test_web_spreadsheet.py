@@ -65,10 +65,29 @@ def test_a_single_prime_domain_has_no_minus_but_keeps_plus():
 def test_target_intervals_column_with_mapped_list():
     cells = {c.id: c for c in _layout().cells}
     assert cells["header:targets"].text == "target-intervals"
-    assert cells["target:0"].text == "2/1" and cells["target:2"].text == "5/4"
-    # the mapped target-interval list (M . target monzo) for [[1,1,0],[0,1,4]]
-    assert cells["cell:mapped:0:0"].text == "1"
-    assert cells["cell:mapped:1:2"].text == "4"  # 5/4 -> 4 generators of the fifth
+    # each target maps through M ([[1,1,0],[0,1,4]]) into the mapped-list column below it
+    assert cells["target:0"].text == "2/1"
+    assert cells["cell:mapped:0:0"].text == "1" and cells["cell:mapped:1:0"].text == "0"  # 2/1 -> 1 octave
+    assert cells["target:6"].text == "5/4"
+    assert cells["cell:mapped:1:6"].text == "4"  # 5/4 -> 4 generators of the fifth
+
+
+def test_target_columns_default_to_the_domains_tilt():
+    cells = {c.id: c for c in _layout().cells}  # 5-limit meantone, domain 2.3.5
+    texts = [cells[f"target:{j}"].text for j in range(8)]
+    assert texts == ["2/1", "3/1", "3/2", "4/3", "5/2", "5/3", "5/4", "6/5"]  # the 6-TILT
+
+
+def test_target_set_tracks_the_domain():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # domain 2.3.5
+
+    def targets(state):
+        return {c.text for c in spreadsheet.build(state).cells if c.id.startswith("target:")}
+
+    three = targets(service.shrink_domain(base))  # drop prime 5 -> 2.3
+    five = targets(base)  # 2.3.5
+    seven = targets(service.expand_domain(base))  # add prime 7 -> 2.3.5.7
+    assert three < five < seven  # the default target set shrinks/grows with the domain
 
 
 def test_mapping_cells_form_a_square_touching_grid():

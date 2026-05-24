@@ -62,10 +62,26 @@ def test_mapped_target_intervals():
     assert mapped == ((1, 0, -2, 2), (0, 1, 4, -3))
 
 
+def test_default_target_intervals_is_the_domains_tilt():
+    # the 5-limit default is the 6-TILT (the integer just below the next prime past 5)
+    assert service.default_target_intervals((2, 3, 5)) == (
+        "2/1", "3/1", "3/2", "4/3", "5/2", "5/3", "5/4", "6/5",
+    )
+
+
+def test_default_target_intervals_tracks_the_domain():
+    # adding prime 7 grows the default to a superset (the 10-TILT); a 7-limit
+    # interval that could not appear before now does
+    five_limit = set(service.default_target_intervals((2, 3, 5)))
+    seven_limit = set(service.default_target_intervals((2, 3, 5, 7)))
+    assert five_limit < seven_limit
+    assert "7/4" in seven_limit
+
+
 def test_tuning_values_under_top():
     import pytest
 
-    t = service.tuning([[1, 1, 0], [0, 1, 4]], service.DEFAULT_TARGET_INTERVALS)
+    t = service.tuning([[1, 1, 0], [0, 1, 4]], ("2/1", "3/2", "5/4", "6/5"))
     assert t.tuning_map == pytest.approx((1201.699, 1899.263, 2790.258), abs=1e-2)
     assert t.just_map == pytest.approx((1200.0, 1901.955, 2786.314), abs=1e-2)
     assert t.retuning_map == pytest.approx((1.699, -2.692, 3.944), abs=1e-2)
