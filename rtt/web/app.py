@@ -81,6 +81,11 @@ _CSS = f"""
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
 .rtt-count {{ font-size:16px; color:#000; white-space:nowrap; }}
+/* the plain-text value: its EBK string in a box that hugs the text (centred by the
+   cell), so a short value like 2.3.5 stays a small box and a long one overflows neatly */
+.rtt-ptext {{ display:inline-block; border:1px solid #888; background:#fff; color:#000;
+             font-size:12px; line-height:1.1; white-space:nowrap; padding:1px 5px;
+             font-family:'Cambria',Georgia,serif; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
@@ -151,7 +156,8 @@ _CSS = f"""
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
 """
 
-_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "count", "mathexpr", "rowtoggle", "coltoggle", "tiletoggle"}
+_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "count", "mathexpr",
+                "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
 # cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
@@ -452,6 +458,8 @@ def index() -> None:
                 selects[cb.id] = ui.select(opts, value=value, label=label,
                         on_change=lambda e, n=name: on_preselect(n, e.value)) \
                     .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
+            elif cb.kind == "ptext":
+                labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):

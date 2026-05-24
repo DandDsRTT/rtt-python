@@ -35,6 +35,7 @@ TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (o
 CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
 PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
+PTEXT_H = 18  # height of the plain-text value band (the boxed EBK string) below a tile
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -125,9 +126,10 @@ TILES = (
 )
 
 # Cell kinds the value-display toggles filter out. "gridded values" hides
-# everything a tile holds besides its fold toggle and name caption: the value
-# numbers (including the just row's "mathexpr" log₂ form), the EBK marks framing
-# them, and the domain/comma ± controls.
+# everything a tile holds besides its fold toggle, name caption and plain-text
+# value box: the value numbers (including the just row's "mathexpr" log₂ form),
+# the EBK marks framing them, and the domain/comma ± controls. (Gridded off with
+# plain text on leaves just the inline string — the two value views are independent.)
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell",
     "tval", "mathexpr",
@@ -188,13 +190,15 @@ def build(state, settings=None, collapsed=None,
     show_captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
     show_preselects = settings["preselects"]  # the per-quantity chooser dropdowns
     show_counts = settings["counts"]
+    show_ptext = settings["plain_text_values"]  # the boxed EBK string under each tile
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
     # Value-display toggles. "gridded values" is the master switch: with it off
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
     # (see GRIDDED_KINDS at the end of build), leaving the tiles empty but for their
-    # fold toggles and name captions. "quantities" (general) narrows that to the
+    # fold toggles, name captions and (when on) plain-text value boxes. "quantities"
+    # (general) narrows that to the
     # body values (BODY_VALUE_KINDS); "domain_quantities" (specific) governs the
     # quantities row and its spine column. The just row alone has an exact closed
     # form, so "math_expressions" renders log₂ of each interval there instead of
@@ -330,7 +334,7 @@ def build(state, settings=None, collapsed=None,
     # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
-    tile_h, tile_top, row_frame = {}, {}, {}
+    tile_h, tile_top, row_frame, row_cap, row_pre = {}, {}, {}, {}, {}
     y = rows_top_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
@@ -345,15 +349,19 @@ def build(state, settings=None, collapsed=None,
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
         cap = CAPTION_H if (show_captions and key in CAPTIONED_ROWS and not folded) else 0
-        # a preselect chooser reserves a band below the caption for its row
+        # below the caption a tile reserves bands for the preselect chooser (its
+        # row) and the plain-text value box, stacked in that order
         pre = PRESELECT_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
+        ptext = PTEXT_H if (show_ptext and not folded) else 0
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
         row_y[key] = y + head + top_frame  # values sit below the toggle head and top frame
         row_frame[key] = bot_frame  # the caption sits below the bottom brace band
+        row_cap[key] = cap  # the preselect/plain-text bands sit below the caption
+        row_pre[key] = pre  # ...and the plain-text band sits below the preselect band
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = head + top_frame + row_h[key] + bot_frame + cap + pre
+        tile_h[key] = head + top_frame + row_h[key] + bot_frame + cap + pre + ptext
         y += tile_h[key] + GAP
     total_h = y
 
@@ -671,6 +679,16 @@ def build(state, settings=None, collapsed=None,
                 py += CAPTION_H
             pw = min(col_w[ckey], PRESELECT_W)
             cells.append(CellBox(f"preselect:{name}", col_x[ckey], py, pw, PRESELECT_H, "preselect", text=preselect_text[name]))
+
+    # plain-text value band: each tile's value as its natural EBK string, in a box
+    # at the foot of the tile, below the caption and preselect bands (the same
+    # numbers the grid shows, written inline so the two views agree)
+    if show_ptext:
+        strings = service.plain_text_values(state, tuning_scheme, target_spec)
+        for (rkey, ckey), text in strings.items():
+            if tile_open(rkey, ckey):
+                py = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_cap[rkey] + row_pre[rkey]
+                cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], py, col_w[ckey], PTEXT_H, "ptext", text=text))
 
     # the mapping is a column of stacked maps, so it's enclosed by a top bracket
     # and a bottom curly brace spanning the matrix, drawn in its frame bands. Both

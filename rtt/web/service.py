@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.dual import dual
+from rtt.formatting import to_ebk
 from rtt.generator_detempering import get_generator_detempering
 from rtt.math_utils import get_primes, pcv_to_quotient
 from rtt.parsing import parse_quotient_list
@@ -147,6 +148,64 @@ def tuning(mapping, ratios, scheme: str = DEFAULT_TUNING_SCHEME) -> Tuning:
         target_errors=errors,
         target_damage=tuple(abs(e) for e in errors),
     )
+
+
+def plain_text_values(
+    state: TemperamentState,
+    scheme: str = DEFAULT_TUNING_SCHEME,
+    target_spec: str = DEFAULT_TARGET_SPEC,
+) -> dict[tuple[str, str], str]:
+    """Each value group's natural plain-text form, keyed by its ``(row, column)``
+    tile (the same vocabulary the spreadsheet layout uses). The grid and this text
+    show the same numbers two ways — the EBK string is the inline notation."""
+    primes = standard_primes(state.d)
+    targets = target_interval_set(target_spec, primes)
+    commas = comma_ratios(state.comma_basis)
+    gens = generators(state.mapping)
+    mapped = mapped_target_intervals(state.mapping, targets)
+    tun = tuning(state.mapping, targets, scheme)
+    ctun = tuning(state.mapping, commas)  # comma sizes, like the grid's commas column
+    return {
+        ("quantities", "primes"): ".".join(str(p) for p in primes),
+        ("quantities", "commas"): "{" + ", ".join(commas) + "}",
+        ("quantities", "targets"): "{" + ", ".join(targets) + "}",
+        ("mapping", "gens"): "[" + ", ".join(f"~{g}" for g in gens) + "]",
+        ("mapping", "primes"): to_ebk(Temperament(state.mapping, Variance.ROW)),
+        ("mapping", "commas"): to_ebk(Temperament(state.comma_basis, Variance.COL)),
+        ("mapping", "targets"): _vector_list(mapped),
+        ("tuning", "primes"): _cents_map(tun.tuning_map),
+        ("tuning", "commas"): _cents_list(ctun.tempered_targets),
+        ("tuning", "targets"): _cents_list(tun.tempered_targets),
+        ("just", "primes"): _cents_map(tun.just_map),
+        ("just", "commas"): _cents_list(ctun.just_targets),
+        ("just", "targets"): _cents_list(tun.just_targets),
+        ("retune", "primes"): _cents_map(tun.retuning_map),
+        ("retune", "commas"): _cents_list(ctun.target_errors),
+        ("retune", "targets"): _cents_list(tun.target_errors),
+        ("damage", "commas"): _cents_list(ctun.target_damage),
+        ("damage", "targets"): _cents_list(tun.target_damage),
+    }
+
+
+def _vector_list(matrix: Matrix) -> str:
+    """A list of column vectors ``[[a b] [c d] …]`` — the mapped target-interval
+    list, each target shown in generator coordinates."""
+    cols = zip(*matrix)
+    return "[" + " ".join("[" + " ".join(str(x) for x in col) + "]" for col in cols) + "]"
+
+
+def _cents(value: float) -> str:
+    return f"{value:.2f}"  # the 2-dp the grid shows, so text and grid agree
+
+
+def _cents_map(values) -> str:
+    """A tuning covector over the primes: ``⟨1200.00 1901.95 …]``."""
+    return "⟨" + " ".join(_cents(v) for v in values) + "]"
+
+
+def _cents_list(values) -> str:
+    """A tuning list over the targets: ``[1200.00 1901.95 …]``."""
+    return "[" + " ".join(_cents(v) for v in values) + "]"
 
 
 def expand_domain(state: TemperamentState) -> TemperamentState:

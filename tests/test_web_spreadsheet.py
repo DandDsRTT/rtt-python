@@ -559,6 +559,42 @@ def test_build_honors_the_tuning_scheme():
     assert pote["tuning:prime:0"] == "1200.00"
 
 
+def test_plain_text_values_adds_a_string_band_under_each_tile():
+    on = {c.id: c for c in _with(plain_text_values=True).cells}
+    off = {c.id for c in _with(plain_text_values=False).cells}
+    assert not any(c.startswith("ptext:") for c in off)  # off by default
+    # each value group gets its natural plain-text form (from the service seam)
+    assert on["ptext:mapping:primes"].text == "[⟨1 1 0] ⟨0 1 4]}"
+    assert on["ptext:mapping:targets"].text.startswith("[[1 0]")
+    assert on["ptext:quantities:primes"].text == "2.3.5"
+    assert on["ptext:tuning:primes"].text.startswith("⟨")  # a tuning map
+    assert on["ptext:damage:targets"].text.startswith("[")  # a target list
+
+
+def test_plain_text_band_sits_below_the_caption_spanning_its_column():
+    cells = {c.id: c for c in _with(plain_text_values=True, names=True).cells}
+    pt, cap, header = cells["ptext:mapping:primes"], cells["caption:mapping:primes"], cells["header:primes"]
+    assert pt.y >= cap.y + cap.h  # the string sits below the name caption
+    assert pt.x == header.x and pt.w == header.w  # and spans the column
+
+
+def test_plain_text_band_grows_tiles_and_pushes_lower_rows_down():
+    on = {c.id: c for c in _with(plain_text_values=True).cells}
+    off = {c.id: c for c in _with(plain_text_values=False).cells}
+    assert on["label:tuning"].y > off["label:tuning"].y  # the band reserves space, lifting nothing
+
+
+def test_collapsing_hides_the_plain_text_band_with_the_tile():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["plain_text_values"] = True
+    row_off = {c.id for c in spreadsheet.build(base, s, collapsed={"row:mapping"}).cells}
+    assert not any(c.startswith("ptext:mapping:") for c in row_off)  # a folded row keeps no band
+    tile_off = {c.id for c in spreadsheet.build(base, s, collapsed={"tile:mapping:primes"}).cells}
+    assert "ptext:mapping:primes" not in tile_off  # a collapsed tile drops its band...
+    assert "ptext:mapping:targets" in tile_off  # ...but its open sibling keeps one
+
+
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
     on = {c.id: c for c in _with(names=True).cells}
     off = {c.id: c for c in _with(names=False).cells}
