@@ -176,12 +176,19 @@ def test_tuning_boxes_off_hides_the_tuning_rows():
     assert {"label:tuning", "label:just", "label:retune", "label:damage"}.isdisjoint(cells)
 
 
-def test_temperament_boxes_off_hides_mapping_and_lifts_tuning():
+def test_temperament_boxes_off_removes_mapping_and_the_domain_primes_column():
     off = {c.id: c for c in _with(temperament_boxes=False).cells}
     on = {c.id: c for c in _with().cells}
+    # the mapping quantities (matrix, mapped list, generator ratios) are gone
     assert "label:mapping" not in off
     assert not any(c.startswith(("cell:mapping:", "cell:mapped:", "gen:")) for c in off)
-    assert off["tuning:prime:0"].y < on["tuning:prime:0"].y  # tuning rises into the freed space
+    # the whole domain-primes column goes with it: its header, the prime headers,
+    # and every row's prime-side cells -- including the tuning maps over primes
+    assert "header:primes" not in off
+    assert not any(c.startswith(("prime:", "tuning:prime:", "just:prime:", "retune:prime:")) for c in off)
+    # tuning over the targets survives and rises into the freed space
+    assert "tuning:target:0" in off
+    assert off["tuning:target:0"].y < on["tuning:target:0"].y
 
 
 def test_each_collapsible_row_has_a_toggle_but_quantities_does_not():

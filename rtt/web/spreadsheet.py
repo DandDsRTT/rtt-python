@@ -198,7 +198,7 @@ def build(state, settings=None, collapsed=None,
     col_bands = (
         ("quantities", SPINE_W, True, False),
         ("gens", GEN_W, show_temp, True),
-        ("primes", 2 * BRACKET_W + d * COL_W, True, True),
+        ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc * COL_W, True, True),
         ("targets", 2 * BRACKET_W + k * COL_W, True, True),
     )
@@ -229,9 +229,9 @@ def build(state, settings=None, collapsed=None,
     total_w = x
 
     gen_x = col_x.get("gens", content_x0)
-    primes_x = col_x["primes"]
-    commas_x = col_x["commas"]
-    targets_x = col_x["targets"]
+    primes_x = col_x.get("primes")  # None when the domain-primes column is hidden
+    commas_x = col_x.get("commas")  # None when the commas column is hidden
+    targets_x = col_x.get("targets")  # None when the target-intervals column is hidden
 
     def col_open(key):
         return key in col_x and f"col:{key}" not in collapsed
