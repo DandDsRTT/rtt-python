@@ -163,7 +163,7 @@ _CSS = f"""
 .rtt-show-sub {{ margin-left:20px; }}  /* a sub-control sits indented under its parent toggle */
 """
 
-_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "count", "mathexpr",
+_LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "count", "mathexpr",
                 "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
@@ -451,7 +451,7 @@ def index() -> None:
             elif cb.kind == "commacell":
                 inputs[cb.id] = ui.input(on_change=lambda e: on_comma_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "prime":
+            elif cb.kind in ("prime", "static"):  # bordered cell; "static" is read-only (e.g. the identity)
                 with ui.element("div").classes("rtt-white"):
                     labels[cb.id] = ui.label(cb.text)
             elif cb.kind == "genratio":

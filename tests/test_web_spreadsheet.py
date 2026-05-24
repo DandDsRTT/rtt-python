@@ -27,13 +27,46 @@ def test_rows_columns_and_cells_are_present():
     assert {"minus", "plus"} <= ids  # domain controls
 
 
-def test_generator_ratios_are_shown_beside_the_mapping_rows():
+def test_generator_ratios_are_listed_in_the_quantities_column():
     cells = {c.id: c for c in _layout().cells}
     assert cells["gen:0"].text == "2/1"
     assert cells["gen:1"].text == "3/2"
-    # aligned vertically with the mapping rows they label
+    # listed vertically in the quantities spine column (not the generators column,
+    # which now holds the mapping-over-generators identity), aligned with the rows
+    assert cells["gen:0"].x == cells["header:quantities"].x
+    assert cells["gen:0"].x < cells["header:gens"].x
     assert cells["gen:0"].y == cells["cell:mapping:0:0"].y
     assert cells["gen:1"].y == cells["cell:mapping:1:0"].y
+
+
+def test_mapping_over_generators_is_shown_as_the_identity():
+    cells = {c.id: c for c in _layout().cells}
+    # the generators column at the mapping row shows M over the generators = I
+    assert cells["cell:selfmap:0:0"].text == "1"
+    assert cells["cell:selfmap:0:1"].text == "0"
+    assert cells["cell:selfmap:1:0"].text == "0"
+    assert cells["cell:selfmap:1:1"].text == "1"
+    # a stack of square cells in the generators column, aligned with the mapping rows
+    s00 = cells["cell:selfmap:0:0"]
+    assert s00.w == s00.h == spreadsheet.ROW_H
+    assert s00.y == cells["cell:mapping:0:0"].y
+    assert cells["cell:selfmap:0:1"].x == s00.x + spreadsheet.COL_W  # next column over
+    assert cells["cell:selfmap:1:0"].y == s00.y + spreadsheet.ROW_H  # next row down
+    # it sits in the generators column, left of the mapping matrix over the primes
+    assert cells["header:gens"].x <= s00.x < cells["header:primes"].x
+
+
+def test_mapping_over_generators_is_framed_like_the_mapping_matrix():
+    cells = {c.id: c for c in _layout().cells}
+    # a stack of maps: each row gets ⟨ … ] brackets, like the mapping rows
+    assert cells["bracket:selfmap:0:l"].text == "⟨" and cells["bracket:selfmap:0:r"].text == "]"
+    assert "bracket:selfmap:1:l" in cells
+    # and the whole matrix is enclosed by a top bracket and bottom curly brace
+    assert "ebktop:gens" in cells and "ebkbrace:gens" in cells
+    top, brace = cells["ebktop:gens"], cells["ebkbrace:gens"]
+    first, last = cells["cell:selfmap:0:0"], cells["cell:selfmap:1:0"]
+    assert top.y + top.h < first.y  # the top bracket sits above the matrix
+    assert brace.y > last.y + last.h  # the brace sits below it
 
 
 def test_primes_sit_above_the_mapping_columns():

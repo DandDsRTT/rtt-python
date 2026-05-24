@@ -22,7 +22,6 @@ GAP = 14  # px between row/column groups
 PAD = 4  # px a block extends around its cells
 LABEL_W = 96  # row-label gutter width
 HEADER_H = 22  # column-header height
-GEN_W = 50  # generators column width
 SPINE_W = 64  # quantities spine column width — sized to seat its "quantities"
 # header without overflowing onto the generators column; carries only the
 # column-axis vertical rule, no data cells in the default view
@@ -140,7 +139,8 @@ TILES = (
     ("block:primes", "quantities", "primes"),
     ("block:commas", "quantities", "commas"),
     ("block:targets", "quantities", "targets"),
-    ("block:gens", "mapping", "gens"),
+    ("block:gens", "mapping", "quantities"),
+    ("block:selfmap", "mapping", "gens"),
     ("block:mapping", "mapping", "primes"),
     ("block:comma_basis", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),
@@ -292,7 +292,7 @@ def build(state, settings=None, collapsed=None,
     # the value cells are inset by BRACKET_W within the group.
     col_bands = (
         ("quantities", SPINE_W, show_domain_quantities, False),
-        ("gens", GEN_W, show_temp, True),
+        ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc * COL_W, show_temp, True),
         ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
@@ -411,6 +411,9 @@ def build(state, settings=None, collapsed=None,
     def prime_left(p):
         return primes_x + BRACKET_W + p * COL_W
 
+    def gen_left(g):
+        return gen_x + BRACKET_W + g * COL_W
+
     def comma_left(c):
         return commas_x + BRACKET_W + c * COL_W
 
@@ -486,9 +489,17 @@ def build(state, settings=None, collapsed=None,
     # generator ratios (aligned with the mapping rows they label) + the mapping
     # matrix and its mapped target-interval list
     if row_open("mapping"):
+        # the generators list the mapping's rows: a vertical ratio list in the
+        # quantities spine column (the dual of the mapping-over-generators identity)
+        if tile_open("mapping", "quantities"):
+            for i in range(r):
+                cells.append(CellBox(f"gen:{i}", col_x["quantities"], map_top(i), col_w["quantities"], ROW_H, "genratio", text=gens[i] if i < len(gens) else "", gen=i))
+        # M over the generators is the identity (each generator maps to itself): a
+        # read-only stack of maps in the generators column, dual to the list above
         if tile_open("mapping", "gens"):
             for i in range(r):
-                cells.append(CellBox(f"gen:{i}", gen_x, map_top(i), GEN_W, ROW_H, "genratio", text=gens[i] if i < len(gens) else "", gen=i))
+                for j in range(r):
+                    cells.append(CellBox(f"cell:selfmap:{i}:{j}", gen_left(j), map_top(i), COL_W, ROW_H, "static", text="1" if i == j else "0"))
         for i in range(r):
             if tile_open("mapping", "primes"):
                 for p in range(d):
@@ -564,9 +575,11 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
 
     if row_open("mapping"):
-        if tile_open("mapping", "primes"):
-            for i in range(r):
-                bracket(f"map:{i}", MAP_BRACKETS, "primes", map_top(i), ROW_H)
+        # the gens identity and the primes mapping are stacks of maps: ⟨ … ] per row
+        for bid, ckey in (("selfmap", "gens"), ("map", "primes")):
+            if tile_open("mapping", ckey):
+                for i in range(r):
+                    bracket(f"{bid}:{i}", MAP_BRACKETS, ckey, map_top(i), ROW_H)
         if tile_open("mapping", "commas"):  # the comma basis is a list of monzos: a [ ] spanning d rows
             bracket("comma_basis", LIST_BRACKETS, "commas", row_y["mapping"], d * ROW_H, fit=True)
         if tile_open("mapping", "targets"):
@@ -624,10 +637,10 @@ def build(state, settings=None, collapsed=None,
         q_cx = col_x["quantities"] + col_w["quantities"] / 2
         lines.append(Line("trunk:quantities", "v", q_cx, branch_top_y, total_h - branch_top_y))
 
-    # generators column: a single vertical axis from its node down through the
-    # mapping rows (it has no per-element fan — the generators are one column).
-    gen_cx = gen_x + col_w.get("gens", GEN_W) / 2
+    # generators column: a single vertical axis from its node down to the mapping
+    # band, connecting the toggle to the identity matrix (drawn over it).
     if "mapping" in row_y:
+        gen_cx = gen_x + col_w["gens"] / 2
         gen_bot = map_top(r - 1) + ROW_H / 2 if row_open("mapping") else row_y["mapping"] + row_h["mapping"] / 2
         lines.append(Line("trunk:gens", "v", gen_cx, branch_top_y, gen_bot - branch_top_y))
 
@@ -753,10 +766,17 @@ def build(state, settings=None, collapsed=None,
     def map_brace_y(ckey):
         return row_y["mapping"] + col_value_h("mapping", ckey) + FRAME_GAP
 
-    if tile_open("mapping", "primes"):
-        gx, gw = col_x["primes"], col_w["primes"]
-        cells.append(CellBox("ebktop:primes", gx, map_top_y, gw, FRAME_H, "ebktop"))
-        cells.append(CellBox("ebkbrace:primes", gx, map_brace_y("primes"), gw, BRACE_H, "ebkbrace"))
+    # the gens identity and the primes mapping are both stacked-maps matrices, each
+    # enclosed by a top bracket + bottom brace spanning its whole column
+    def map_frame(ckey):
+        if not tile_open("mapping", ckey):
+            return
+        gx, gw = col_x[ckey], col_w[ckey]
+        cells.append(CellBox(f"ebktop:{ckey}", gx, map_top_y, gw, FRAME_H, "ebktop"))
+        cells.append(CellBox(f"ebkbrace:{ckey}", gx, map_brace_y(ckey), gw, BRACE_H, "ebkbrace"))
+
+    map_frame("gens")
+    map_frame("primes")
 
     # the mapped list and comma basis are rows/grids of vectors: vertical rules
     # separate the monzo columns, and each column is marked with its own top bracket
