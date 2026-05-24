@@ -22,6 +22,7 @@ from rtt.web.editor import Editor
 
 _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
+_PANEL_W = 330  # px width the settings drawer opens to (the Show + example columns)
 
 # One weight and colour for every EBK bracket, brace and monzo rule. Each mark is
 # drawn as an SVG whose viewBox maps 1:1 to the cell's px size (see _svg), so a
@@ -57,12 +58,36 @@ _CHART_BAR_FRAC = 0.5  # bar width as a fraction of the column it sits in
 _CHART_GRID = "#bbbbbb"  # light gridline / tick colour
 
 _CSS = f"""
-.rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:30px; font-weight:bold;
-             color:#000; margin:6px 0 8px 2px; }}
+/* the app title tile in the top-left: the name over square undo/redo buttons, on a
+   light-grey rounded card, per the mockup */
+.rtt-titletile {{ display:inline-block; background:#e0e0e0; border-radius:6px;
+                 padding:8px 14px 10px; margin:0 0 12px 0; }}
+.rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:22px; font-weight:bold;
+             color:#000; margin:0 0 6px 2px; }}
+.rtt-tile-btns {{ display:flex; gap:6px; }}
+/* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs */
 .rtt-iconbtn {{ width:30px !important; min-width:30px !important; height:30px !important;
-            min-height:30px !important; padding:0 !important; box-shadow:none !important; }}
-.rtt-iconbtn .q-icon {{ color:#777 !important; font-size:21px; }}
+            min-height:30px !important; padding:0 !important; background:#fff !important;
+            border:1px solid #000; border-radius:3px !important; box-shadow:none !important; }}
+.rtt-iconbtn .q-icon {{ color:#000 !important; font-size:19px; }}
+.rtt-iconbtn.q-btn--disable {{ border-color:#bbb; }}
 .rtt-iconbtn.q-btn--disable .q-icon {{ color:#c4c4c4 !important; }}
+/* the hamburger pinned to the window's top-left corner; it toggles the drawer and
+   stays put as the app slides right */
+.rtt-hamburger {{ position:fixed; top:8px; left:8px; z-index:1000;
+                 width:30px !important; min-width:30px !important; height:30px !important;
+                 min-height:30px !important; padding:0 !important; background:#fff !important;
+                 border:1px solid #999; border-radius:3px !important; box-shadow:none !important; }}
+.rtt-hamburger .q-icon {{ color:#333 !important; font-size:20px; }}
+/* the shell lays the drawer beside the app; opening the drawer widens it from 0,
+   which pushes the app to the right (the requested slide-over) */
+.rtt-shell {{ display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
+.rtt-drawer {{ width:0; overflow:hidden; transition:width {_T}; flex:none; }}
+.rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; }}
+.rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0;
+                    font-family:'Cambria',Georgia,serif; color:#000;
+                    padding:8px 14px 16px; min-height:100vh; }}
+.rtt-app {{ flex:none; padding-left:46px; }}  /* left gutter clears the corner hamburger */
 
 .rtt-scroll {{ overflow-x:auto; max-width:100%; }}
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
@@ -168,14 +193,28 @@ _CSS = f"""
               font-size:12px !important; line-height:1; color:#666; background:#fff;
               border:1px solid #bbb; cursor:pointer; user-select:none; }}
 .rtt-toggle:hover {{ background:#ececec; color:#000; }}
-.rtt-show-card {{ font-family:'Cambria',Georgia,serif; background:#fff; color:#000;
-                 min-width:440px; padding:14px 18px; border-radius:0; box-shadow:0 2px 12px #0003; }}
-.rtt-show-title {{ font-size:22px; font-weight:bold; margin-bottom:6px; }}
-.rtt-show-groups {{ gap:44px; align-items:flex-start; flex-wrap:nowrap; }}
-.rtt-show-grouptitle {{ font-size:13px; font-weight:bold; color:#000;
-                       margin-bottom:2px; white-space:nowrap; }}
-.rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
-.rtt-show-sub {{ margin-left:20px; }}  /* a sub-control sits indented under its parent toggle */
+/* the panel's two column headers: "Show" (the toggles) and "example" (their sample
+   renders), aligned over the grid columns the rows below use */
+.rtt-show-head {{ display:grid; grid-template-columns:160px 1fr; align-items:end;
+                 padding:2px 9px 4px 9px; }}
+.rtt-show-title {{ font-size:28px; font-weight:bold; line-height:1; }}
+.rtt-show-examplehdr {{ font-size:14px; font-weight:bold; padding-bottom:3px; }}
+/* general and specific each sit in their own rounded, lightly-bordered sub-card,
+   stacked vertically (general above specific) */
+.rtt-show-group {{ border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6;
+                  padding:6px 8px; margin-top:8px; }}
+.rtt-show-grouptitle {{ font-size:13px; font-style:italic; text-align:center;
+                       color:#000; margin-bottom:4px; }}
+/* one toggle row: the checkbox+label in the Show column, its sample in the example column */
+.rtt-show-row {{ display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }}
+.rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px;
+                                    color:#000; white-space:nowrap; }}
+/* a sub-control's checkbox sits indented under its parent toggle; only the Show
+   column indents, so the example column stays aligned with the other rows */
+.rtt-show-sub .rtt-show-item {{ margin-left:18px; }}
+.rtt-ex-cell {{ font-family:'Cambria Math','Cambria',Georgia,serif; font-size:14px; color:#000;
+               display:flex; align-items:center; min-height:24px; }}
+.rtt-ex {{ white-space:nowrap; }}
 """
 
 _LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "vec", "count", "mathexpr",
@@ -413,6 +452,92 @@ def _underline_html(text, spans):
         i = start + length
     out.append(_escape(text[i:]))
     return "".join(out)
+
+
+# The "example" column of the Show panel: one illustrative sample per toggle, read
+# from the mockup's Show legend. Most are a glyph or short string (the maps' bold-
+# italic letters, the vectors/matrices' bold-upright ones, the plain captions); the
+# few graphical samples (the gridded EBK mark, the chart, the preselect chooser) are
+# built below from the same primitives the grid uses.
+_EXAMPLE_TEXT: dict[str, str] = {
+    "names": "tuning map",
+    "symbols": "𝒕",
+    "equivalences": "𝒕 = 𝒈𝐌",
+    "plain_text_values": "[ ⟨12 19 24] }",
+    "units": "𝐩",
+    "math_expressions": "log₂3",
+    "counts": "𝑑",
+    "domain_quantities": "2.3.5",
+    "domain_units": "p₁/",
+    "temperament_boxes": "𝑀",
+    "form_controls": "canonical form",
+    "tuning_boxes": "T",
+    "generator_detempering": "D",
+    "nonstandard_domain": "prime-based",
+    "identity_objects": "𝑀ⱼ",
+}
+
+
+def _example_grid() -> str:
+    """The gridded-values sample: the ⟨12 19 24] EBK mark (angle bracket, three
+    boxed components, closing bracket) framed by the matrix top-bracket and brace —
+    the same hand-drawn marks the grid uses, shrunk to a legend sample."""
+    def box(x, text):
+        return (f'<div style="position:absolute;left:{x}px;top:11px;width:22px;height:20px;'
+                'border:1px solid #000;background:#fff;display:flex;align-items:center;'
+                f'justify-content:center;font-size:11px">{text}</div>')
+
+    def mark(x, y, w, h, svg):
+        return f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px">{svg}</div>'
+
+    return ('<div style="position:relative;width:90px;height:42px">'
+            + mark(11, 2, 66, 6, _top_bracket(66, 6))
+            + mark(0, 11, 10, 20, _angle_bracket(10, 20))
+            + box(12, "12") + box(33, "19") + box(54, "24")
+            + mark(78, 11, 10, 20, _square_bracket(10, 20, "right"))
+            + mark(11, 34, 66, 6, _brace(66, 6))
+            + '</div>')
+
+
+def _example_chart() -> str:
+    """The charts sample: a tiny signed bar sparkline — a 5 / −5 axis with a bar
+    dipping below the zero line, as the mockup's legend shows."""
+    return ('<div style="position:relative;width:84px;height:34px">'
+            '<span style="position:absolute;left:0;top:0;font-size:9px">5</span>'
+            '<span style="position:absolute;left:0;bottom:0;font-size:9px">-5</span>'
+            '<svg width="66" height="34" viewBox="0 0 66 34" '
+            'style="position:absolute;left:16px;top:0">'
+            '<line x1="2" y1="3" x2="2" y2="31" stroke="#000" stroke-width="1.4"/>'
+            '<line x1="0" y1="5" x2="6" y2="5" stroke="#000" stroke-width="1.4"/>'
+            '<line x1="0" y1="29" x2="6" y2="29" stroke="#000" stroke-width="1.4"/>'
+            '<line x1="2" y1="17" x2="62" y2="17" stroke="#000" stroke-width="1"/>'
+            '<rect x="16" y="17" width="22" height="6" fill="#000"/>'
+            '</svg></div>')
+
+
+def _example_preselect() -> str:
+    """The preselects sample: the chooser as a bordered field with a caret box."""
+    return ('<span style="display:inline-flex;align-items:stretch;font-size:10px">'
+            '<span style="border:1px solid #000;border-right:none;padding:2px 6px;'
+            'color:#555">&lt;choose form&gt;</span>'
+            '<span style="border:1px solid #000;padding:2px 4px;display:flex;'
+            'align-items:center">▼</span></span>')
+
+
+def _example_html(key: str) -> str:
+    """The example-column sample for one Show toggle, as an HTML string."""
+    if key == "gridded_values":
+        return _example_grid()
+    if key == "charts":
+        return _example_chart()
+    if key == "preselects":
+        return _example_preselect()
+    if key == "mnemonics":  # the mnemonic underlines a caption's symbol letters
+        return _underline_html("canonical mapping", ((0, 1), (10, 1)))
+    if key == "quantities":  # a generic quantity over its size: 1 above .585
+        return ('<span style="display:inline-flex;flex-direction:column;align-items:center;'
+                'line-height:1.05"><span>1</span><span style="font-size:9px">.585</span></span>')
+    return f'<span class="rtt-ex">{_escape(_EXAMPLE_TEXT[key])}</span>'
 
 
 @ui.page("/")
@@ -669,35 +794,51 @@ def index() -> None:
         refs["redo"].set_enabled(editor.can_redo)
         building[0] = False
 
-    with ui.dialog() as show_dialog, ui.card().classes("rtt-show-card"):
-        ui.label("Show").classes("rtt-show-title")
-        boxes: dict = {}  # toggle key -> checkbox, so a sub-control can bind to its parent
-        with ui.row().classes("rtt-show-groups"):
+    # the corner hamburger toggles the settings drawer, which slides the app right
+    drawer_open = [False]
+
+    def toggle_drawer():
+        drawer_open[0] = not drawer_open[0]
+        drawer.classes(add="rtt-drawer-open") if drawer_open[0] else drawer.classes(remove="rtt-drawer-open")
+
+    ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense").classes("rtt-hamburger")
+
+    with ui.element("div").classes("rtt-shell"):
+        drawer = ui.element("div").classes("rtt-drawer")
+        with drawer, ui.element("div").classes("rtt-drawer-inner"):
+            with ui.element("div").classes("rtt-show-head"):
+                ui.label("Show").classes("rtt-show-title")
+                ui.label("example").classes("rtt-show-examplehdr")
+            boxes: dict = {}  # toggle key -> checkbox, so a sub-control row can bind to its parent
             for group_name, items in show_settings.SHOW_GROUPS:
-                with ui.column().classes("rtt-show-group"):
+                with ui.element("div").classes("rtt-show-group"):
                     ui.label(group_name).classes("rtt-show-grouptitle")
                     for key, label, _ in items:
-                        box = ui.checkbox(label, value=settings[key],
-                                          on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
-                            .props("dense size=xs color=grey-8").classes("rtt-show-item")
-                        if key not in show_settings.IMPLEMENTED:
-                            box.props("disable")  # not built yet -> greyed and inert
+                        row = ui.element("div").classes("rtt-show-row")
+                        with row:
+                            box = ui.checkbox(label, value=settings[key],
+                                              on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
+                                .props("dense size=xs color=grey-8").classes("rtt-show-item")
+                            if key not in show_settings.IMPLEMENTED:
+                                box.props("disable")  # not built yet -> greyed and inert
+                            ui.html(_example_html(key)).classes("rtt-ex-cell")
                         boxes[key] = box
                         parent = show_settings.SUBCONTROLS.get(key)
-                        if parent:  # indent under the parent and show only while it is on
-                            box.classes("rtt-show-sub").bind_visibility_from(boxes[parent], "value")
+                        if parent:  # indent the row under its parent and show it only while the parent is on
+                            row.classes(add="rtt-show-sub")
+                            row.bind_visibility_from(boxes[parent], "value")
 
-    ui.label("RTT App").classes("rtt-title")
-    with ui.row().style("gap:4px; margin-bottom:10px; align-items:center"):
-        refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
-            .props("flat dense round").classes("rtt-iconbtn")
-        refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
-            .props("flat dense round").classes("rtt-iconbtn")
-        ui.button(icon="settings", on_click=show_dialog.open, color=None) \
-            .props("flat dense round").classes("rtt-iconbtn")
-    with ui.element("div").classes("rtt-scroll"):
-        with ui.element("div").classes("rtt-outer"):
-            board = ui.element("div").classes("rtt-board")
+        with ui.element("div").classes("rtt-app"):
+            with ui.element("div").classes("rtt-titletile"):
+                ui.label("D&D's RTT app").classes("rtt-title")
+                with ui.element("div").classes("rtt-tile-btns"):
+                    refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
+                        .props("flat dense").classes("rtt-iconbtn")
+                    refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
+                        .props("flat dense").classes("rtt-iconbtn")
+            with ui.element("div").classes("rtt-scroll"):
+                with ui.element("div").classes("rtt-outer"):
+                    board = ui.element("div").classes("rtt-board")
 
     def on_key(e):
         if not (e.action.keydown and e.modifiers.ctrl):

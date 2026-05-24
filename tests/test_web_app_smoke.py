@@ -9,6 +9,7 @@ import re
 import sys
 
 import rtt.web.app as app
+from rtt.web import settings as show_settings
 
 
 def _bars(svg):
@@ -81,6 +82,26 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
         assert "stroke-width" not in svg  # weight is the 1:1 viewBox, not a scaling stroke
     assert 'viewBox="0 0 16.00 16.00"' in marks["["]
     assert 'viewBox="0 0 16.00 60.00"' in marks["]2"]  # 1 row vs many: same generator
+
+
+def test_every_show_toggle_has_a_non_empty_example():
+    # the panel's "example" column illustrates each toggle (per the mockup's Show
+    # legend), so no toggle may be missing its sample render
+    keys = [key for _g, items in show_settings.SHOW_GROUPS for key, _l, _d in items]
+    for key in keys:
+        assert app._example_html(key).strip(), f"no example for {key}"
+
+
+def test_example_html_renders_each_special_sample_kind():
+    # plain glyph/text samples come through as text; the graphical ones carry their
+    # own markup — the EBK gridded mark and the chart are SVGs, the mnemonic sample
+    # underlines its symbol letters, the preselect sample shows the chooser caret
+    assert "log" in app._example_html("math_expressions")  # log₂3
+    assert "𝒕" in app._example_html("symbols")  # the bold-italic tuning-map covector
+    assert "<svg" in app._example_html("gridded_values")  # the ⟨12 19 24] EBK mini-mark
+    assert "<svg" in app._example_html("charts")  # the little sparkline
+    assert "<u>" in app._example_html("mnemonics")  # underlined mnemonic letters
+    assert "▼" in app._example_html("preselects")  # the dropdown caret
 
 
 def test_brace_is_one_filled_path_with_width_independent_end_curls():
