@@ -26,7 +26,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("preselects", "preselects", False),
             ("mnemonics", "mnemonics", False),
             ("quantities", "quantities", True),
-            ("units", "units", True),
+            ("units", "units", False),
             ("math_expressions", "math expressions", False),
         ),
     ),
