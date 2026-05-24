@@ -47,6 +47,7 @@ class CellBox:
     prime: int = -1
     comma: int = -1
     underlines: tuple[tuple[int, int], ...] = ()  # (start, len) spans of text to underline (mnemonics)
+    values: tuple[float, ...] = ()  # per-column data for a "chart" cell's bars
 
 
 @dataclass(frozen=True)

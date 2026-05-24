@@ -43,6 +43,8 @@ PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects show
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 PTEXT_H = 18  # height of the plain-text value band (the boxed EBK string) below a tile
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
+CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
+CHART_GAP = 5  # gap between a chart and the value cells below it
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -119,6 +121,7 @@ SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symb
 # multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping
 # for its spanning bracket+brace, the interval vectors for the per-column ket marks
 FRAMED_ROWS = frozenset({"mapping", "vectors"})
+CHARTED_ROWS = frozenset({"retune", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
 # column): each is a quick menu for one of the things you actually choose, riding
@@ -285,6 +288,7 @@ def build(state, settings=None, collapsed=None,
     show_preselects = settings["preselects"]  # the per-quantity chooser dropdowns
     show_counts = settings["counts"]
     show_ptext = settings["plain_text_values"]  # the boxed EBK string under each tile
+    show_charts = settings["charts"]  # per-tile bar charts above the value cells
     show_symbols = settings["symbols"]  # the in-tile quantity symbols, stacked above the captions
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
@@ -430,7 +434,7 @@ def build(state, settings=None, collapsed=None,
     # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
-    tile_h, tile_top, row_frame, row_sym, row_cap, row_pre = {}, {}, {}, {}, {}, {}
+    tile_h, tile_top, row_frame, row_sym, row_cap, row_pre, chart_top = {}, {}, {}, {}, {}, {}, {}
 
     def caption_band(key, folded):
         # the row's caption band is sized to its tallest (wrapped) caption, so the
@@ -453,6 +457,9 @@ def build(state, settings=None, collapsed=None,
         # and a taller bottom curly brace (BRACE_H, with room for its spike)
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
+        # a charted row grows a chart band (above the values, below the top frame)
+        charted = show_charts and key in CHARTED_ROWS and not folded
+        chart_band = (CHART_H + CHART_GAP) if charted else 0
         cap = caption_band(key, folded)
         # the symbol line reserves a slot above the caption for every symboled row;
         # equivalences extends that same line (the "= …" continuation) rather than
@@ -464,14 +471,16 @@ def build(state, settings=None, collapsed=None,
         ptext = PTEXT_H if (show_ptext and not folded) else 0
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
-        row_y[key] = y + head + top_frame  # values sit below the toggle head and top frame
+        if charted:
+            chart_top[key] = y + head + top_frame  # the chart sits just below the top frame
+        row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
         row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
         row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
         row_cap[key] = cap  # the preselect/plain-text bands sit below the caption
         row_pre[key] = pre  # ...and the plain-text band sits below the preselect band
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = head + top_frame + row_h[key] + bot_frame + sym + cap + pre + ptext
+        tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + pre + ptext
         y += tile_h[key] + GAP
     total_h = y
 
@@ -649,6 +658,15 @@ def build(state, settings=None, collapsed=None,
             else:
                 cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=_cents(v)))
 
+    # a charted tile draws a bar chart in the band reserved above its values; the
+    # chart spans the column group so its bars align with the value cells below.
+    # chart_top[key] exists only where a chart band was reserved (charts on, row
+    # charted, not folded), so it gates emission against the layout with no drift.
+    def chart(rkey, ckey, vals):
+        if rkey in chart_top and tile_open(rkey, ckey):
+            cells.append(CellBox(f"chart:{rkey}:{ckey}", col_x[ckey], chart_top[rkey],
+                                 col_w[ckey], CHART_H, "chart", values=tuple(vals)))
+
     tuning_data = {
         "tuning": (tun.tuning_map, ctun.tempered_targets, tun.tempered_targets, itun.tempered_targets),
         "just": (tun.just_map, ctun.just_targets, tun.just_targets, itun.just_targets),
@@ -660,9 +678,12 @@ def build(state, settings=None, collapsed=None,
             tval_row(key, "commas", comma_vals)
             tval_row(key, "targets", target_vals)
             tval_row(key, "interest", interest_vals)
+            chart(key, "primes", prime_vals)
+            chart(key, "targets", target_vals)
     if row_open("damage"):  # damage is over the commas and targets only (not the maps or interest)
         tval_row("damage", "commas", ctun.target_damage)
         tval_row("damage", "targets", tun.target_damage)
+        chart("damage", "targets", tun.target_damage)
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.

@@ -46,6 +46,15 @@ _BR_ANGLE_THIN = 0.45  # ⟨ half-width at the open tips (much lighter) — a pr
 _BR_BRACE_THICK = 1.15  # brace arm half-width: the long horizontal stroke is thick
 _BR_BRACE_THIN = 0.4  # brace end-serif half-width: the short upturn is thin
 _BR_BRACE_CUSP = 0.2  # brace central-cusp half-width: the short dip is a near point
+# A per-tile bar chart (damage, retuning) is drawn in the same 1:1 SVG box as the EBK
+# marks: a left y-axis with nice-stepped gridlines, a darker zero baseline, and one bar
+# per value column aligned to the cells below. Bars rise from the zero line for positive
+# values and drop from it for negative, so an all-positive chart (damage) reads from the
+# bottom and a signed one (retuning) reads from a centred zero.
+_CHART_PAD_T = 9  # top padding (room for the top gridline's label)
+_CHART_PAD_B = 2  # bottom padding
+_CHART_BAR_FRAC = 0.5  # bar width as a fraction of the column it sits in
+_CHART_GRID = "#bbbbbb"  # light gridline / tick colour
 
 _CSS = f"""
 .rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:30px; font-weight:bold;
@@ -324,6 +333,57 @@ def _ebk_svg(cb):
     return _vbar(cb.w, cb.h)  # "vbar"
 
 
+def _chart_ticks(lo, hi):
+    """A short list of nice round tick values spanning ``[lo, hi]`` (~4 steps)."""
+    span = hi - lo
+    if span <= 0:
+        return [0.0]
+    raw = span / 4
+    mag = 10 ** math.floor(math.log10(raw))
+    step = next(m * mag for m in (1, 2, 2.5, 5, 10) if raw <= m * mag)
+    ticks, v = [], math.floor(lo / step) * step
+    while v <= hi + step * 1e-9:
+        if v >= lo - step * 1e-9:
+            ticks.append(round(v, 6))
+        v += step
+    return ticks
+
+
+def _bar_chart(w, h, values):
+    """A bar chart filling its 1:1 px box: one bar per value, aligned to the value
+    columns below, rising/falling from a zero baseline; gridlines mark nice ticks."""
+    axis_x, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
+    vals = tuple(values)
+    vmax = max(vals + (0.0,))
+    vmin = min(vals + (0.0,))
+    if vmax == vmin:
+        vmax = vmin + 1.0
+    plot_top, plot_bot = _CHART_PAD_T, h - _CHART_PAD_B
+    span = vmax - vmin
+
+    def y_of(v):
+        return plot_top + (vmax - v) / span * (plot_bot - plot_top)
+
+    body = []
+    for tv in _chart_ticks(vmin, vmax):
+        ty = y_of(tv)
+        body.append(f'<line x1="{axis_x:.2f}" y1="{ty:.2f}" x2="{w:.2f}" y2="{ty:.2f}" '
+                    f'stroke="{_CHART_GRID}" stroke-width="0.5"/>')
+        body.append(f'<text x="{axis_x - 2:.2f}" y="{ty + 2.4:.2f}" text-anchor="end" '
+                    f'font-size="7" fill="{_BR_COLOR}">{tv:g}</text>')
+    zero_y = y_of(0)
+    body.append(f'<line x1="{axis_x:.2f}" y1="{zero_y:.2f}" x2="{w:.2f}" y2="{zero_y:.2f}" '
+                f'stroke="{_BR_COLOR}" stroke-width="1"/>')
+    body.append(_rect(axis_x, plot_top, 0.8, plot_bot - plot_top))  # vertical y-axis
+    bw = col_w * _CHART_BAR_FRAC
+    for i, v in enumerate(vals):
+        cx = axis_x + i * col_w + col_w / 2
+        yv = y_of(v)
+        top, bot = min(zero_y, yv), max(zero_y, yv)
+        body.append(_rect(cx - bw / 2, top, bw, bot - top))
+    return _svg(w, h, "".join(body))
+
+
 def _parse_int(text):
     """``text`` -> int, or None for blank/partial input (matching the old parseInt)."""
     try:
@@ -373,6 +433,7 @@ def index() -> None:
     cents: dict = {}  # cents cell id -> (whole label, fraction label), aligned on the point
     htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
     ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
+    chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
     selects: dict = {}  # preselect cell id -> its q-select
     temperaments = dict(presets.TEMPERAMENTS)  # name -> defining comma basis
@@ -384,7 +445,7 @@ def index() -> None:
     def drop(eid):
         """Remove an entity's element and forget every per-id handle for it."""
         els[eid].delete()
-        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects, captions, caption_html):
+        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects, captions, caption_html, chart_keys):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -474,6 +535,8 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-count")
             elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, monzo rule
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
+            elif cb.kind == "chart":
+                htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # bar chart drawn in render()
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
                 labels[cb.id] = ui.label(cb.text).classes("rtt-symbol")  # text tracks the equivalences toggle
@@ -569,6 +632,12 @@ def index() -> None:
                 if ebk_sizes.get(cb.id) != (cb.w, cb.h):
                     htmls[cb.id].set_content(_ebk_svg(cb))
                     ebk_sizes[cb.id] = (cb.w, cb.h)
+            elif cb.kind == "chart":
+                # redraw when the box resizes OR the underlying data changes (mapping edit)
+                key = (cb.w, cb.h, cb.values)
+                if chart_keys.get(cb.id) != key:
+                    htmls[cb.id].set_content(_bar_chart(cb.w, cb.h, cb.values))
+                    chart_keys[cb.id] = key
             elif cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":

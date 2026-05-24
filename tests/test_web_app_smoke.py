@@ -5,9 +5,16 @@ guard that the page module imports/wires cleanly and that input parsing matches
 the original app's parseInt semantics. Rendering itself is verified in a browser.
 """
 
+import re
 import sys
 
 import rtt.web.app as app
+
+
+def _bars(svg):
+    """(y, height) of each chart bar in an SVG; the thin y-axis rect is excluded by width."""
+    rects = re.findall(r'<rect x="[-\d.]+" y="([-\d.]+)" width="([\d.]+)" height="([-\d.]+)"', svg)
+    return [(float(y), float(h)) for y, wdt, h in rects if float(wdt) > 1]
 
 
 def test_app_module_exposes_entry_points():
@@ -91,3 +98,19 @@ def test_brace_is_one_filled_path_with_width_independent_end_curls():
         prefix += 1
     assert prefix > 40  # ...agree coordinate-for-coordinate over the curl...
     assert narrow != wide  # ...then diverge once the arm length differs
+
+
+def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline():
+    svg = app._bar_chart(272, 64, (0.0, 5.0, 10.0))  # all positive (damage-like)
+    assert svg.startswith("<svg") and 'viewBox="0 0 272.00 64.00"' in svg
+    bars = _bars(svg)
+    assert len(bars) == 3  # one bar per value
+    assert bars[0][1] == 0.0  # the zero value draws no bar height
+    assert bars[2][1] > bars[1][1] > 0  # a taller bar for the larger value
+
+
+def test_bar_chart_straddles_a_shared_zero_baseline_for_signed_values():
+    up, down = _bars(app._bar_chart(272, 64, (5.0, -5.0)))  # signed (retuning-like)
+    # the positive bar's bottom meets the negative bar's top at the common zero line
+    assert abs((up[0] + up[1]) - down[0]) < 0.01
+    assert up[0] < down[0]  # positive rises above the baseline, negative drops below it

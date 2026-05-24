@@ -1210,3 +1210,36 @@ def test_equivalences_alone_render_the_symbol_line_only_where_there_is_an_equati
     assert "symbol:mapping:primes" not in eq_only
     assert "symbol:just:primes" not in eq_only
     assert not any(c.startswith("caption:") for c in eq_only)  # names is off here
+
+
+def test_charts_on_adds_a_damage_bar_chart_over_the_targets():
+    on = {c.id: c for c in _with(charts=True).cells}
+    off = {c.id for c in _with(charts=False).cells}
+    assert "chart:damage:targets" not in off  # no chart cell unless charts is on
+    ch = on["chart:damage:targets"]
+    assert ch.kind == "chart"
+    # it carries the per-target damage values (one per target interval), all >= 0
+    assert len(ch.values) == 8
+    assert all(v >= 0 for v in ch.values)
+
+
+def test_the_damage_chart_sits_above_its_values_and_reserves_row_space():
+    off = {c.id: c for c in _with(charts=False).cells}
+    on = {c.id: c for c in _with(charts=True).cells}
+    ch, v0 = on["chart:damage:targets"], on["damage:target:0"]
+    assert ch.y + ch.h <= v0.y  # the chart sits fully above the value cells, clear of them
+    assert on["damage:target:0"].y > off["damage:target:0"].y  # values pushed down to make room
+    # the chart spans the target columns (so its bars can align with them)
+    assert ch.x <= on["target:0"].x and ch.x + ch.w >= on["target:7"].x + spreadsheet.COL_W
+
+
+def test_charts_on_adds_signed_retuning_charts_over_primes_and_targets():
+    on = {c.id: c for c in _with(charts=True).cells}
+    cp, ct = on["chart:retune:primes"], on["chart:retune:targets"]
+    assert cp.kind == ct.kind == "chart"
+    assert len(cp.values) == 3  # one bar per domain prime (the retuning map)
+    assert len(ct.values) == 8  # one bar per target interval (the error list)
+    assert any(v < 0 for v in ct.values)  # errors are signed, so the chart straddles zero
+    # each chart sits above its own value row, clear of it
+    assert cp.y + cp.h <= on["retune:prime:0"].y
+    assert ct.y + ct.h <= on["retune:target:0"].y
