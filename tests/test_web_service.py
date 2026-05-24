@@ -79,9 +79,14 @@ def test_comma_ratios_renders_each_comma_monzo_as_a_ratio():
     assert service.comma_ratios(((4, -4, 1), (0, 0, 0))) == ("80/81", "1/1")
 
 
-def test_mapped_target_intervals():
-    mapped = service.mapped_target_intervals([[1, 1, 0], [0, 1, 4]], ("2/1", "3/2", "5/4", "6/5"))
+def test_mapped_intervals():
+    mapped = service.mapped_intervals([[1, 1, 0], [0, 1, 4]], ("2/1", "3/2", "5/4", "6/5"))
     assert mapped == ((1, 0, -2, 2), (0, 1, 4, -3))
+
+
+def test_mapped_intervals_of_the_empty_set_is_empty_rows():
+    # one (empty) generator row per mapping row, so the r x m matrix stays well-formed
+    assert service.mapped_intervals([[1, 1, 0], [0, 1, 4]], ()) == ((), ())
 
 
 def test_mapped_commas_vanish():
@@ -119,15 +124,33 @@ def test_old_target_interval_set_is_the_odd_limit_diamond():
     assert old != service.target_interval_set("TILT", (2, 3, 5))
 
 
-def test_tuning_values_under_top():
+def test_tuning_maps_under_top():
     import pytest
 
-    t = service.tuning([[1, 1, 0], [0, 1, 4]], ("2/1", "3/2", "5/4", "6/5"))
+    # tuning() now yields only the temperament-level prime maps (no interval set)
+    t = service.tuning([[1, 1, 0], [0, 1, 4]])
+    assert t.generator_map == pytest.approx((1201.699, 697.564), abs=1e-2)
     assert t.tuning_map == pytest.approx((1201.699, 1899.263, 2790.258), abs=1e-2)
     assert t.just_map == pytest.approx((1200.0, 1901.955, 2786.314), abs=1e-2)
     assert t.retuning_map == pytest.approx((1.699, -2.692, 3.944), abs=1e-2)
-    assert t.target_damage == pytest.approx((1.699, 4.391, 0.547, 4.937), abs=1e-2)
-    assert all(d >= 0 for d in t.target_damage)  # damage is non-negative
+
+
+def test_interval_sizes_project_a_set_through_the_tuning():
+    import pytest
+
+    t = service.tuning([[1, 1, 0], [0, 1, 4]])
+    s = service.interval_sizes(t, ("2/1", "3/2", "5/4", "6/5"))
+    assert s.tempered == pytest.approx((1201.699, 697.564, 386.861, 310.704), abs=1e-2)
+    assert s.just == pytest.approx((1200.0, 701.955, 386.314, 315.641), abs=1e-2)
+    assert s.errors == pytest.approx((1.699, -4.391, 0.547, -4.937), abs=1e-2)
+    assert s.damage == pytest.approx((1.699, 4.391, 0.547, 4.937), abs=1e-2)
+    assert all(d >= 0 for d in s.damage)  # damage is non-negative
+
+
+def test_interval_sizes_of_the_empty_set_are_empty():
+    t = service.tuning([[1, 1, 0], [0, 1, 4]])
+    s = service.interval_sizes(t, ())
+    assert (s.tempered, s.just, s.errors, s.damage) == ((), (), (), ())
 
 
 def test_plain_text_mapping_is_the_ebk_string():
@@ -159,7 +182,8 @@ def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision():
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     pt = service.plain_text_values(state)
     targets = service.target_interval_set("TILT", service.standard_primes(state.d))
-    tun = service.tuning(state.mapping, targets)
+    tun = service.tuning(state.mapping)
+    sizes = service.interval_sizes(tun, targets)
 
     def cents(vals):  # the same 2-dp the grid shows, so the two views agree
         return " ".join(f"{v:.2f}" for v in vals)
@@ -169,10 +193,10 @@ def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision():
     assert pt[("just", "primes")] == f"⟨{cents(tun.just_map)}]"
     assert pt[("retune", "primes")] == f"⟨{cents(tun.retuning_map)}]"
     # the size / error / damage lists over the targets are plain lists: [ … ]
-    assert pt[("tuning", "targets")] == f"[{cents(tun.tempered_targets)}]"
-    assert pt[("just", "targets")] == f"[{cents(tun.just_targets)}]"
-    assert pt[("retune", "targets")] == f"[{cents(tun.target_errors)}]"
-    assert pt[("damage", "targets")] == f"[{cents(tun.target_damage)}]"
+    assert pt[("tuning", "targets")] == f"[{cents(sizes.tempered)}]"
+    assert pt[("just", "targets")] == f"[{cents(sizes.just)}]"
+    assert pt[("retune", "targets")] == f"[{cents(sizes.errors)}]"
+    assert pt[("damage", "targets")] == f"[{cents(sizes.damage)}]"
     assert pt[("just", "primes")].startswith("⟨1200.00 ")  # the just octave is pure
 
 
@@ -180,7 +204,7 @@ def test_plain_text_commas_column_mirrors_the_grid():
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     pt = service.plain_text_values(state)
     commas = service.comma_ratios(state.comma_basis)
-    ctun = service.tuning(state.mapping, commas)
+    sizes = service.interval_sizes(service.tuning(state.mapping), commas)
 
     def cents(vals):
         return " ".join(f"{v:.2f}" for v in vals)
@@ -188,15 +212,15 @@ def test_plain_text_commas_column_mirrors_the_grid():
     assert pt[("quantities", "commas")] == "{" + ", ".join(commas) + "}"  # the comma set
     assert pt[("mapping", "commas")] == "[4 -4 1⟩"  # the comma basis as an EBK monzo
     # comma size / error / damage are lists over the commas, like the grid's column
-    assert pt[("tuning", "commas")] == f"[{cents(ctun.tempered_targets)}]"
-    assert pt[("just", "commas")] == f"[{cents(ctun.just_targets)}]"
-    assert pt[("damage", "commas")] == f"[{cents(ctun.target_damage)}]"
+    assert pt[("tuning", "commas")] == f"[{cents(sizes.tempered)}]"
+    assert pt[("just", "commas")] == f"[{cents(sizes.just)}]"
+    assert pt[("damage", "commas")] == f"[{cents(sizes.damage)}]"
 
 
 def test_tuning_exposes_diamond_generator_ranges():
     import pytest
 
-    t = service.tuning([[1, 1, 0], [0, 1, 4]], ("2/1", "3/2", "5/4", "6/5"))
+    t = service.tuning([[1, 1, 0], [0, 1, 4]])
     # Octave held pure pins the period generator; the fifth gets a real range.
     assert t.tradeoff_generator_range[0] == pytest.approx((1200.0, 1200.0), abs=1e-6)
     assert t.tradeoff_generator_range[1] == pytest.approx((694.786, 701.955), abs=1e-2)

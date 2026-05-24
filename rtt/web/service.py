@@ -32,16 +32,29 @@ DEFAULT_TARGET_SPEC = "TILT"  # the default target-interval set family (tracks t
 
 @dataclass(frozen=True)
 class Tuning:
+    """The temperament-level tuning — prime maps and generator ranges, independent
+    of any interval set."""
+
     generator_map: tuple[float, ...]  # cents, over the generators
     tuning_map: tuple[float, ...]  # cents, over the domain primes
     just_map: tuple[float, ...]  # cents, over the domain primes
     retuning_map: tuple[float, ...]  # tempered - just, over the primes
-    tempered_targets: tuple[float, ...]  # cents, over the target intervals
-    just_targets: tuple[float, ...]  # cents, over the target intervals
-    target_errors: tuple[float, ...]  # tempered - just, over the targets
-    target_damage: tuple[float, ...]  # |error| (unity weight), over the targets
     monotone_generator_range: tuple[tuple[float, float], ...] | None  # per generator; None if none exists
     tradeoff_generator_range: tuple[tuple[float, float], ...]  # (low, high) cents per generator
+
+
+@dataclass(frozen=True)
+class IntervalSizes:
+    """An interval set's sizes under a tuning; each list runs over the intervals.
+
+    Used for every interval column (targets, commas, other intervals of interest):
+    project the set once through the shared prime maps rather than recomputing the
+    optimization per set."""
+
+    tempered: tuple[float, ...]  # cents
+    just: tuple[float, ...]  # cents
+    errors: tuple[float, ...]  # tempered - just
+    damage: tuple[float, ...]  # |error| (unity weight)
 
 
 @dataclass(frozen=True)
@@ -116,6 +129,16 @@ def comma_ratios(comma_basis) -> tuple[str, ...]:
     return _monzos_to_ratios(comma_basis)
 
 
+def _monzos(ratios, d) -> tuple:
+    """Parse a ratio list into monzos over the first ``d`` primes (``()`` if empty)."""
+    return parse_quotient_list("{" + ", ".join(ratios) + "}", d)
+
+
+def _over(prime_map, monzo):
+    """Project a monzo through a prime map (their dot product)."""
+    return sum(prime_map[p] * monzo[p] for p in range(len(prime_map)))
+
+
 def _map_through(mapping, monzos) -> Matrix:
     """Map each monzo through ``M`` — columns of monzos taken to generator coords."""
     d = len(mapping[0])
@@ -125,11 +148,12 @@ def _map_through(mapping, monzos) -> Matrix:
     )
 
 
-def mapped_target_intervals(mapping, ratios) -> Matrix:
-    """Each target interval mapped through ``M`` — the targets in generator coords (r x k)."""
+def mapped_intervals(mapping, ratios) -> Matrix:
+    """A ratio-string interval set mapped through ``M`` — the intervals in generator
+    coords (r x m). Works for any such set (targets or other intervals of interest);
+    the empty set yields one empty generator row per mapping row, keeping the shape."""
     mapping = _to_matrix(mapping)
-    monzos = parse_quotient_list("{" + ", ".join(ratios) + "}", len(mapping[0]))
-    return _map_through(mapping, monzos)
+    return _map_through(mapping, _monzos(ratios, len(mapping[0])))
 
 
 def mapped_commas(mapping, comma_basis) -> Matrix:
@@ -141,36 +165,32 @@ def mapped_commas(mapping, comma_basis) -> Matrix:
 
 def target_interval_monzos(ratios, d: int) -> Matrix:
     """Each target interval as a monzo — its interval-vector form over the d primes."""
-    monzos = parse_quotient_list("{" + ", ".join(ratios) + "}", d)
-    return tuple(tuple(int(x) for x in monzo) for monzo in monzos)
+    return tuple(tuple(int(x) for x in monzo) for monzo in _monzos(ratios, d))
 
 
-def tuning(mapping, ratios, scheme: str = DEFAULT_TUNING_SCHEME) -> Tuning:
-    """All tuning-row values (cents) for the temperament under ``scheme``."""
+def tuning(mapping, scheme: str = DEFAULT_TUNING_SCHEME) -> Tuning:
+    """The temperament's prime maps and generator ranges (cents) under ``scheme`` —
+    no interval set."""
     t = Temperament(_to_matrix(mapping), Variance.ROW)
-    d = get_d(t)
     tempered = optimize_tuning_map(t, scheme)
     just = get_just_tuning_map(t)
-    monzos = parse_quotient_list("{" + ", ".join(ratios) + "}", d)
-
-    def over(prime_map, monzo):
-        return sum(prime_map[p] * monzo[p] for p in range(d))
-
-    tempered_targets = tuple(over(tempered, m) for m in monzos)
-    just_targets = tuple(over(just, m) for m in monzos)
-    errors = tuple(t_ - j for t_, j in zip(tempered_targets, just_targets))
     return Tuning(
         generator_map=optimize_generator_tuning_map(t, scheme),
         tuning_map=tempered,
         just_map=just,
         retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
-        tempered_targets=tempered_targets,
-        just_targets=just_targets,
-        target_errors=errors,
-        target_damage=tuple(abs(e) for e in errors),
         monotone_generator_range=get_generator_tuning_range(t, "monotone"),
         tradeoff_generator_range=get_generator_tuning_range(t, "tradeoff"),
     )
+
+
+def interval_sizes(tun: Tuning, ratios) -> IntervalSizes:
+    """Project an interval set through ``tun`` — its tempered/just sizes, error, damage."""
+    monzos = _monzos(ratios, len(tun.tuning_map))
+    tempered = tuple(_over(tun.tuning_map, m) for m in monzos)
+    just = tuple(_over(tun.just_map, m) for m in monzos)
+    errors = tuple(t_ - j for t_, j in zip(tempered, just))
+    return IntervalSizes(tempered, just, errors, tuple(abs(e) for e in errors))
 
 
 def plain_text_values(
@@ -185,9 +205,10 @@ def plain_text_values(
     targets = target_interval_set(target_spec, primes)
     commas = comma_ratios(state.comma_basis)
     gens = generators(state.mapping)
-    mapped = mapped_target_intervals(state.mapping, targets)
-    tun = tuning(state.mapping, targets, scheme)
-    ctun = tuning(state.mapping, commas)  # comma sizes, like the grid's commas column
+    mapped = mapped_intervals(state.mapping, targets)
+    tun = tuning(state.mapping, scheme)  # prime maps, shared by both interval sets
+    target_sizes = interval_sizes(tun, targets)
+    comma_sizes = interval_sizes(tun, commas)  # comma sizes, like the grid's commas column
     return {
         ("quantities", "primes"): ".".join(str(p) for p in primes),
         ("quantities", "commas"): "{" + ", ".join(commas) + "}",
@@ -197,16 +218,16 @@ def plain_text_values(
         ("mapping", "commas"): to_ebk(Temperament(state.comma_basis, Variance.COL)),
         ("mapping", "targets"): _vector_list(mapped),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
-        ("tuning", "commas"): _cents_list(ctun.tempered_targets),
-        ("tuning", "targets"): _cents_list(tun.tempered_targets),
+        ("tuning", "commas"): _cents_list(comma_sizes.tempered),
+        ("tuning", "targets"): _cents_list(target_sizes.tempered),
         ("just", "primes"): _cents_map(tun.just_map),
-        ("just", "commas"): _cents_list(ctun.just_targets),
-        ("just", "targets"): _cents_list(tun.just_targets),
+        ("just", "commas"): _cents_list(comma_sizes.just),
+        ("just", "targets"): _cents_list(target_sizes.just),
         ("retune", "primes"): _cents_map(tun.retuning_map),
-        ("retune", "commas"): _cents_list(ctun.target_errors),
-        ("retune", "targets"): _cents_list(tun.target_errors),
-        ("damage", "commas"): _cents_list(ctun.target_damage),
-        ("damage", "targets"): _cents_list(tun.target_damage),
+        ("retune", "commas"): _cents_list(comma_sizes.errors),
+        ("retune", "targets"): _cents_list(target_sizes.errors),
+        ("damage", "commas"): _cents_list(comma_sizes.damage),
+        ("damage", "targets"): _cents_list(target_sizes.damage),
     }
 
 

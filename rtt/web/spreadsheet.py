@@ -316,21 +316,22 @@ def build(state, settings=None, collapsed=None,
     gens = service.generators(state.mapping)
     targets = service.target_interval_set(target_spec, primes)
     k = len(targets)
-    mapped = service.mapped_target_intervals(state.mapping, targets)
+    mapped = service.mapped_intervals(state.mapping, targets)
     target_vectors = service.target_interval_monzos(targets, d)  # k monzos, each d-tall
-    tun = service.tuning(state.mapping, targets, tuning_scheme)
+    tun = service.tuning(state.mapping, tuning_scheme)  # prime maps, shared by every interval set
+    target_sizes = service.interval_sizes(tun, targets)
     comma_ratios = service.comma_ratios(state.comma_basis)
     nc = len(comma_ratios)  # comma count shown (>= nullity when a blank comma waits)
     mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
-    ctun = service.tuning(state.mapping, comma_ratios)  # comma sizes (tempered ~0)
+    comma_sizes = service.interval_sizes(tun, comma_ratios)  # comma sizes (tempered ~0)
     # other intervals of interest: a user-supplied set (empty until they enter some),
     # sized under the same scheme; it carries no damage row and contributes tiles only
     # when populated, so an empty column adds no panels or fold toggles — just its
     # header and a single straight axis rule.
     interest = tuple(interest)
     mi = len(interest)
-    interest_mapped = service.mapped_target_intervals(state.mapping, interest)
-    itun = service.tuning(state.mapping, interest, tuning_scheme)  # interest sizes
+    interest_mapped = service.mapped_intervals(state.mapping, interest)
+    interest_sizes = service.interval_sizes(tun, interest)  # interest sizes
     interest_tiles = () if not interest else (
         ("block:interest", "quantities", "interest"),
         ("block:imapped", "mapping", "interest"),
@@ -668,9 +669,9 @@ def build(state, settings=None, collapsed=None,
                                  col_w[ckey], CHART_H, "chart", values=tuple(vals)))
 
     tuning_data = {
-        "tuning": (tun.tuning_map, ctun.tempered_targets, tun.tempered_targets, itun.tempered_targets),
-        "just": (tun.just_map, ctun.just_targets, tun.just_targets, itun.just_targets),
-        "retune": (tun.retuning_map, ctun.target_errors, tun.target_errors, itun.target_errors),
+        "tuning": (tun.tuning_map, comma_sizes.tempered, target_sizes.tempered, interest_sizes.tempered),
+        "just": (tun.just_map, comma_sizes.just, target_sizes.just, interest_sizes.just),
+        "retune": (tun.retuning_map, comma_sizes.errors, target_sizes.errors, interest_sizes.errors),
     }
     for key, (prime_vals, comma_vals, target_vals, interest_vals) in tuning_data.items():
         if row_open(key):
@@ -681,9 +682,9 @@ def build(state, settings=None, collapsed=None,
             chart(key, "primes", prime_vals)
             chart(key, "targets", target_vals)
     if row_open("damage"):  # damage is over the commas and targets only (not the maps or interest)
-        tval_row("damage", "commas", ctun.target_damage)
-        tval_row("damage", "targets", tun.target_damage)
-        chart("damage", "targets", tun.target_damage)
+        tval_row("damage", "commas", comma_sizes.damage)
+        tval_row("damage", "targets", target_sizes.damage)
+        chart("damage", "targets", target_sizes.damage)
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.

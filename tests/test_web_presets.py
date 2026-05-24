@@ -13,9 +13,8 @@ def test_every_temperament_preset_loads_to_a_state_that_tempers_out_its_comma():
 
 def test_every_tuning_scheme_preset_optimizes_to_a_finite_tuning():
     mapping = ((1, 1, 0), (0, 1, 4))  # the initial meantone
-    targets = service.target_interval_set("TILT", (2, 3, 5))
     for scheme in presets.TUNING_SCHEMES:
-        tun = service.tuning(mapping, targets, scheme)
+        tun = service.tuning(mapping, scheme)
         assert all(math.isfinite(v) for v in tun.tuning_map), scheme
 
 
