@@ -227,7 +227,7 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
     ids = {c.id for c in lay.cells}
     # no value numbers anywhere: header primes/ratios, matrix, mapped list, cents
     assert not any(c.startswith(("prime:", "target:", "gen:", "cell:mapping:",
-                                 "cell:mapped:", "comma:", "cell:comma:",
+                                 "cell:selfmap:", "cell:mapped:", "comma:", "cell:comma:",
                                  "tuning:", "just:", "retune:", "damage:"))
                    for c in ids)
     # no EBK marks (brackets, top brackets, braces, monzo rules) and no domain/comma controls
@@ -245,7 +245,7 @@ def test_general_quantities_off_hides_the_body_values_but_keeps_the_headers():
     ids = {c.id for c in _with(quantities=False).cells}
     # the body quantity values (matrix, mapped list, comma basis, generator ratios,
     # tuning cents) and their EBK marks are gone
-    assert not any(c.startswith(("gen:", "cell:mapping:", "cell:mapped:", "cell:comma:",
+    assert not any(c.startswith(("gen:", "cell:mapping:", "cell:selfmap:", "cell:mapped:", "cell:comma:",
                                  "tuning:", "just:", "retune:", "damage:")) for c in ids)
     assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
     # ...but the quantities-row headers (domain primes, comma + target ratios) and the
