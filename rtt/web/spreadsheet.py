@@ -117,6 +117,14 @@ TILES = (
     ("block:damage:targets", "damage", "targets"),
 )
 
+# Cell kinds the value-display toggles filter out. "gridded values" hides
+# everything a tile holds besides its fold toggle and name caption: the value
+# numbers, the EBK marks framing them, and the domain ± controls.
+GRIDDED_KINDS = frozenset({
+    "prime", "target", "genratio", "mapping", "mapped", "tval",
+    "bracket", "ebktop", "ebkbrace", "vbar", "minus", "plus",
+})
+
 
 def _cents(value) -> str:
     return f"{value:.2f}"
@@ -168,6 +176,12 @@ def build(state, settings=None, collapsed=None,
     # with its octave value when quantities is also on ("log₂3 = 1.585").
     show_math = settings["math_expressions"]
     show_quantities = settings["quantities"]
+    # "gridded values" is the master value-display switch: with it off (and plain-
+    # text values not yet built) every value a tile holds -- the numbers, the EBK
+    # marks framing them, the domain ± controls -- is filtered out (see GRIDDED_KINDS
+    # at the end of build), leaving the tiles empty but for their fold toggles and
+    # name captions.
+    gridded = settings["gridded_values"]
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
     header_h = HEADER_H
@@ -634,5 +648,12 @@ def build(state, settings=None, collapsed=None,
             cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
                                  col_x[ckey] - PAD + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
+
+    # Value-display filtering. The tiles (blocks) and gridlines (lines) always
+    # stand; only a tile's *contents* answer to the value-display toggles, so we
+    # drop cells by kind here rather than threading the gates through every
+    # emission above. "gridded values" off empties the tiles entirely.
+    if not gridded:
+        cells = [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))

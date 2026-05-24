@@ -183,6 +183,24 @@ def test_tuning_boxes_off_removes_the_tuning_rows_and_the_target_intervals_colum
     assert "cell:mapping:0:0" in off
 
 
+def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
+    lay = _with(gridded_values=False)
+    ids = {c.id for c in lay.cells}
+    # no value numbers anywhere: header primes/ratios, matrix, mapped list, cents
+    assert not any(c.startswith(("prime:", "target:", "gen:", "cell:mapping:",
+                                 "cell:mapped:", "tuning:", "just:", "retune:", "damage:"))
+                   for c in ids)
+    # no EBK marks (brackets, top brackets, braces, monzo rules) and no domain controls
+    assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
+    assert {"minus", "plus"}.isdisjoint(ids)
+    # ...but the tiles stand empty save their fold toggles and name captions, and
+    # the labels, headers and gridlines remain so the empty grid still reads
+    assert {"label:mapping", "header:primes", "header:targets", "toggle:row:mapping",
+            "caption:mapping:primes"} <= ids
+    assert any(b.id == "block:mapping" for b in lay.blocks)  # the grey tiles persist
+    assert any(ln.id == "v:prime:0" for ln in lay.lines)  # as do the gridlines
+
+
 def test_temperament_boxes_off_removes_mapping_and_the_domain_primes_column():
     off = {c.id: c for c in _with(temperament_boxes=False).cells}
     on = {c.id: c for c in _with().cells}

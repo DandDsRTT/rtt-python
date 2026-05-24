@@ -5,10 +5,9 @@ Mirrors the mockup's Show legend (two sections of toggles). Each entry is
 (:mod:`rtt.web.spreadsheet`) reads a settings dict to decide what to include, so
 toggling a box adds/removes content (which the reconciling renderer animates).
 
-Only the toggles with built content are wired so far (``names``, ``counts``,
-``preselects``, ``temperament_boxes``, ``tuning_boxes``, ``math_expressions``); the
-rest are shown in the panel at their default state and become live as their content
-is built.
+Toggles whose behaviour is built are listed in :data:`IMPLEMENTED` and render as
+interactive checkboxes; the rest are shown at their default state and greyed out
+until their content exists.
 """
 
 from __future__ import annotations
@@ -50,10 +49,11 @@ DEFAULTS: dict[str, bool] = {
     key: default for _, items in SHOW_GROUPS for key, _, default in items
 }
 
-# Toggles whose content the layout actually builds today; the panel disables
+# Toggles whose behaviour the layout actually builds today; the panel disables
 # (greys out) the rest until their content exists.
 IMPLEMENTED: frozenset[str] = frozenset(
-    {"names", "counts", "preselects", "temperament_boxes", "tuning_boxes", "math_expressions"}
+    {"names", "gridded_values", "quantities", "counts", "preselects",
+     "temperament_boxes", "tuning_boxes", "math_expressions"}
 )
 
 
