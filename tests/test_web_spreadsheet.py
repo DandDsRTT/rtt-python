@@ -300,6 +300,23 @@ def test_each_content_tile_has_a_top_left_fold_toggle():
     assert node.x < first.x and node.y < first.y
 
 
+def test_tile_toggle_sits_clear_of_the_tile_content_and_panel_edges():
+    lay = _layout()
+    cells = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
+    # framed tile: the toggle is fully above the matrix's top framing band, so it
+    # never overlaps the bracket or the cells
+    tog, top = cells["toggle:tile:mapping:primes"], cells["ebktop:primes"]
+    assert tog.y + tog.h <= top.y
+    # single-row tile: it clears the value row too
+    tt, v = cells["toggle:tile:tuning:primes"], cells["tuning:prime:0"]
+    assert tt.y + tt.h <= v.y
+    # and it floats inset inside its grey panel, never flush against an edge
+    panel = blocks["block:mapping"]
+    assert panel.x < tog.x and panel.y < tog.y
+    assert tog.x + tog.w < panel.x + panel.w
+
+
 def test_collapsing_a_tile_hides_its_content_keeps_its_toggle_and_folds_its_panel():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     lay = spreadsheet.build(base, collapsed={"tile:mapping:primes"})

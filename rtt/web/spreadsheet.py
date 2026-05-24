@@ -28,6 +28,7 @@ BTN = 15  # px side of a domain +/− control — half the COL_W square mapping/
 MINUS_REVEAL_H = 18  # height the removable prime's hover-minus rises above its header
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
+TOGGLE_INSET = 6  # clear grey margin around a tile's top-left corner toggle (off the edges and content)
 CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
@@ -191,6 +192,9 @@ def build(state, settings=None, collapsed=None) -> Layout:
             continue
         folded = f"row:{key}" in collapsed
         framed = key in FRAMED_ROWS and not folded
+        # an open tile reserves a head strip at the top for its corner fold toggle,
+        # so the toggle sits clear of the frame/cells (no strip when folded to a row)
+        head = 0 if folded else TOGGLE + 2 * TOGGLE_INSET - PAD
         # framing bands stand off the cells by FRAME_GAP: a top bracket (FRAME_H)
         # and a taller bottom curly brace (BRACE_H, with room for its spike)
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
@@ -198,11 +202,11 @@ def build(state, settings=None, collapsed=None) -> Layout:
         cap = CAPTION_H if (show_captions and key in CAPTIONED_ROWS and not folded) else 0
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
-        row_y[key] = y + top_frame  # values sit below the top framing band
+        row_y[key] = y + head + top_frame  # values sit below the toggle head and top frame
         row_frame[key] = bot_frame  # the caption sits below the bottom brace band
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = top_frame + row_h[key] + bot_frame + cap
+        tile_h[key] = head + top_frame + row_h[key] + bot_frame + cap
         y += tile_h[key] + GAP
     total_h = y
 
@@ -243,19 +247,21 @@ def build(state, settings=None, collapsed=None) -> Layout:
             ty = row_y[key] + (row_h[key] - TOGGLE) / 2
             cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
 
-    # quantities row: domain primes (+ controls) and target ratios
+    # quantities row: domain primes (+ controls) and target ratios (below the
+    # tile's toggle head, like every other row's values)
+    qy = row_y["quantities"]
     if tile_open("quantities", "primes"):
         for p in range(d):
-            cells.append(CellBox(f"prime:{p}", prime_left(p), quant_y, COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
+            cells.append(CellBox(f"prime:{p}", prime_left(p), qy, COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
         # Only the highest prime is removable (shrink_domain trims the last), so its
         # − rides that column as a hover affordance: a zone spanning the header that
         # reveals the button just above it, clear of the editable mapping cell below.
         if d > 1:
-            cells.append(CellBox("minus", prime_left(d - 1), quant_y - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "minus"))
-        cells.append(CellBox("plus", ctrl_x, quant_y + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
+            cells.append(CellBox("minus", prime_left(d - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "minus"))
+        cells.append(CellBox("plus", ctrl_x, qy + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
     if tile_open("quantities", "targets"):
         for j in range(k):
-            cells.append(CellBox(f"target:{j}", target_left(j), quant_y, COL_W, ROW_H, "target", text=targets[j]))
+            cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
 
     # generator ratios (aligned with the mapping rows they label) + the mapping
     # matrix and its mapped target-interval list
@@ -400,11 +406,12 @@ def build(state, settings=None, collapsed=None) -> Layout:
                 cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H, "caption", text=text))
 
     # the mapping is a column of stacked maps, so it's enclosed by a top bracket
-    # and a bottom curly brace spanning the matrix, drawn in its frame bands. The
-    # top bracket sits at the tile top (a FRAME_GAP above the cells, since row_y is
-    # inset by the frame); the brace sits a matching FRAME_GAP below the cells.
-    map_top_y, brace_y = tile_top.get("mapping"), None
+    # and a bottom curly brace spanning the matrix, drawn in its frame bands. Both
+    # stand off the cells by FRAME_GAP — the top bracket just above row 0 (below the
+    # toggle head), the brace a matching gap below the last row.
+    map_top_y, brace_y = None, None
     if "mapping" in row_y:
+        map_top_y = row_y["mapping"] - FRAME_H - FRAME_GAP
         brace_y = row_y["mapping"] + row_h["mapping"] + FRAME_GAP
     if tile_open("mapping", "primes"):
         gx, gw = col_x["primes"], col_w["primes"]
@@ -422,15 +429,16 @@ def build(state, settings=None, collapsed=None) -> Layout:
         for j in range(1, k):  # a rule on each interior column boundary
             cells.append(CellBox(f"sep:mapped:{j}", target_left(j) - SEP_W / 2, row_y["mapping"], SEP_W, r * ROW_H, "vbar"))
 
-    # a per-tile fold toggle in each content tile's top-left corner (the grey
-    # panel's corner, in the PAD margin above-left of the content). Emitted last
-    # so it paints over any bracket/frame it overlaps. Present whenever the tile's
-    # row and column bands are open — it stays put when only the tile is folded,
-    # so the tile can be re-expanded.
+    # a per-tile fold toggle inset into each content tile's top-left corner: it
+    # sits in the head strip reserved above the content, TOGGLE_INSET in from the
+    # grey panel's top-left, so it never touches an edge or overlaps the frame.
+    # Present whenever the tile's row and column bands are open — it stays put when
+    # only the tile is folded, so the tile can be re-expanded.
     for _bid, rkey, ckey in TILES:
         if rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey):
             glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
-            cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}", col_x[ckey] - PAD, tile_top[rkey] - PAD,
+            cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
+                                 col_x[ckey] - PAD + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))
