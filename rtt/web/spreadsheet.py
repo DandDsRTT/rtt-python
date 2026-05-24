@@ -183,19 +183,20 @@ def build(state, settings=None, collapsed=None,
     show_counts = settings["counts"]
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
-    # The just tuning row alone has an exact closed form (log₂ of each prime/ratio);
-    # with math expressions on it shows that instead of the cents decimal, paired
-    # with its octave value when quantities is also on ("log₂3 = 1.585").
-    show_math = settings["math_expressions"]
-    show_quantities = settings["quantities"]
-    # "gridded values" is the master value-display switch: with it off (and plain-
-    # text values not yet built) every value a tile holds -- the numbers, the EBK
-    # marks framing them, the domain ± controls -- is filtered out (see GRIDDED_KINDS
-    # at the end of build), leaving the tiles empty but for their fold toggles and
-    # name captions.
+    # Value-display toggles. "gridded values" is the master switch: with it off
+    # (and plain-text values not yet built) every value a tile holds -- the numbers,
+    # the EBK marks framing them, the domain/comma ± controls -- is filtered out
+    # (see GRIDDED_KINDS at the end of build), leaving the tiles empty but for their
+    # fold toggles and name captions. "quantities" (general) narrows that to the
+    # body values (BODY_VALUE_KINDS); "domain_quantities" (specific) governs the
+    # quantities row and its spine column. The just row alone has an exact closed
+    # form, so "math_expressions" renders log₂ of each interval there instead of
+    # cents -- paired with its octave value when "quantities" is also on
+    # ("log₂3 = 1.585").
     gridded = settings["gridded_values"]
-    gen_q = settings["quantities"]  # general "quantities": the body values (see BODY_VALUE_KINDS)
-    dom_q = settings["domain_quantities"]  # specific "quantities": the quantities row (and column)
+    show_quantities = settings["quantities"]
+    show_domain_quantities = settings["domain_quantities"]
+    show_math = settings["math_expressions"]
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
     header_h = HEADER_H
@@ -228,7 +229,7 @@ def build(state, settings=None, collapsed=None,
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
     # the value cells are inset by BRACKET_W within the group.
     col_bands = (
-        ("quantities", SPINE_W, dom_q, False),
+        ("quantities", SPINE_W, show_domain_quantities, False),
         ("gens", GEN_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc * COL_W, show_temp, True),
@@ -293,7 +294,7 @@ def build(state, settings=None, collapsed=None,
     # it (and its column, built elsewhere); the rest can fold to a strip.
     row_bands = (
         ("counts", ROW_H, show_counts, True, "counts"),
-        ("quantities", ROW_H, dom_q, False, "quantities"),
+        ("quantities", ROW_H, show_domain_quantities, False, "quantities"),
         ("mapping", map_band_rows * ROW_H, show_temp, True, "mapping"),
         ("tuning", ROW_H, show_tuning, True, "tuning"),
         ("just", ROW_H, show_tuning, True, "just tuning"),
@@ -674,7 +675,7 @@ def build(state, settings=None, collapsed=None,
     # (general) off drops just the body values and their marks.
     if not gridded:
         cells = [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
-    elif not gen_q:
+    elif not show_quantities:
         cells = [cb for cb in cells if cb.kind not in BODY_VALUE_KINDS]
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))
