@@ -190,6 +190,7 @@ def build(state, settings=None, collapsed=None,
     # name captions.
     gridded = settings["gridded_values"]
     gen_q = settings["quantities"]  # general "quantities": the body values (see BODY_VALUE_KINDS)
+    dom_q = settings["domain_quantities"]  # specific "quantities": the quantities row (and column)
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
     header_h = HEADER_H
@@ -222,7 +223,7 @@ def build(state, settings=None, collapsed=None,
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
     # the value cells are inset by BRACKET_W within the group.
     col_bands = (
-        ("quantities", SPINE_W, True, False),
+        ("quantities", SPINE_W, dom_q, False),
         ("gens", GEN_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc * COL_W, True, True),
@@ -283,10 +284,11 @@ def build(state, settings=None, collapsed=None,
 
     # Row bands top-to-bottom: (key, natural height, present, collapsible, label),
     # laid out by the same running-cursor rule as the columns. The spine
-    # quantities row is not collapsible; the rest can fold to a strip.
+    # quantities row is not collapsible, but the specific "quantities" toggle hides
+    # it (and its column, built elsewhere); the rest can fold to a strip.
     row_bands = (
         ("counts", ROW_H, show_counts, True, "counts"),
-        ("quantities", ROW_H, True, False, "quantities"),
+        ("quantities", ROW_H, dom_q, False, "quantities"),
         ("mapping", map_band_rows * ROW_H, show_temp, True, "mapping"),
         ("tuning", ROW_H, show_tuning, True, "tuning"),
         ("just", ROW_H, show_tuning, True, "just tuning"),
@@ -372,28 +374,31 @@ def build(state, settings=None, collapsed=None,
                                      "count", text=f"{sym} = {cardinality[ckey]}"))
 
     # quantities row: domain primes (+ controls) and target ratios (below the
-    # tile's toggle head, like every other row's values)
-    qy = row_y["quantities"]
-    if tile_open("quantities", "primes"):
-        for p in range(d):
-            cells.append(CellBox(f"prime:{p}", prime_left(p), qy, COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
-        # Only the highest prime is removable (shrink_domain trims the last), so its
-        # − rides that column as a hover affordance: a zone spanning the header that
-        # reveals the button just above it, clear of the editable mapping cell below.
-        if d > 1:
-            cells.append(CellBox("minus", prime_left(d - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "minus"))
-        cells.append(CellBox("plus", ctrl_x["primes"], qy + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
-    if tile_open("quantities", "commas"):
-        for c in range(nc):
-            cells.append(CellBox(f"comma:{c}", comma_left(c), qy, COL_W, ROW_H, "commaratio", text=comma_ratios[c], comma=c))
-        # commas mirror the domain controls: + always adds a (blank) comma; the −
-        # rides the last comma as a hover affordance, only when one can be removed
-        if nc > 1:
-            cells.append(CellBox("comma_minus", comma_left(nc - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "comma_minus"))
-        cells.append(CellBox("comma_plus", ctrl_x["commas"], qy + (ROW_H - BTN) // 2, BTN, BTN, "comma_plus"))
-    if tile_open("quantities", "targets"):
-        for j in range(k):
-            cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
+    # tile's toggle head, like every other row's values). The whole row -- its
+    # headers and the domain/comma ± controls riding it -- answers to the specific
+    # "quantities" toggle, which drops it from row_y via its present flag.
+    if "quantities" in row_y:
+        qy = row_y["quantities"]
+        if tile_open("quantities", "primes"):
+            for p in range(d):
+                cells.append(CellBox(f"prime:{p}", prime_left(p), qy, COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
+            # Only the highest prime is removable (shrink_domain trims the last), so its
+            # − rides that column as a hover affordance: a zone spanning the header that
+            # reveals the button just above it, clear of the editable mapping cell below.
+            if d > 1:
+                cells.append(CellBox("minus", prime_left(d - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "minus"))
+            cells.append(CellBox("plus", ctrl_x["primes"], qy + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
+        if tile_open("quantities", "commas"):
+            for c in range(nc):
+                cells.append(CellBox(f"comma:{c}", comma_left(c), qy, COL_W, ROW_H, "commaratio", text=comma_ratios[c], comma=c))
+            # commas mirror the domain controls: + always adds a (blank) comma; the −
+            # rides the last comma as a hover affordance, only when one can be removed
+            if nc > 1:
+                cells.append(CellBox("comma_minus", comma_left(nc - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "comma_minus"))
+            cells.append(CellBox("comma_plus", ctrl_x["commas"], qy + (ROW_H - BTN) // 2, BTN, BTN, "comma_plus"))
+        if tile_open("quantities", "targets"):
+            for j in range(k):
+                cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
 
     # generator ratios (aligned with the mapping rows they label) + the mapping
     # matrix and its mapped target-interval list
