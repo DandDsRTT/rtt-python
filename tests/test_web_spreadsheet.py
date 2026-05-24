@@ -241,6 +241,12 @@ def test_temperament_boxes_off_removes_mapping_and_the_domain_primes_column():
     # and every row's prime-side cells -- including the tuning maps over primes
     assert "header:primes" not in off
     assert not any(c.startswith(("prime:", "tuning:prime:", "just:prime:", "retune:prime:")) for c in off)
+    # the commas column belongs to the temperament too, so it goes as well: header,
+    # comma headers, the comma basis, and the comma-size cells across the tuning rows
+    assert "header:commas" not in off
+    assert not any(c.startswith(("comma:", "cell:comma:", "tuning:comma:", "just:comma:",
+                                 "retune:comma:", "damage:comma:")) for c in off)
+    assert {"comma_plus", "comma_minus"}.isdisjoint(off)
     # tuning over the targets survives and rises into the freed space
     assert "tuning:target:0" in off
     assert off["tuning:target:0"].y < on["tuning:target:0"].y
