@@ -134,12 +134,40 @@ def test_shared_axes_and_branching():
     assert {"vbar:mapping:left", "vbar:mapping:right", "foot:mapping"} <= ids
 
 
+def test_quantities_spine_row_has_a_horizontal_gridline():
+    lay = _layout()
+    by_id = {ln.id: ln for ln in lay.lines}
+    cells = {c.id: c for c in lay.cells}
+    assert "h:quantities" in by_id  # the spine row gets a gridline like the tuning rows
+    line, prime = by_id["h:quantities"], cells["prime:0"]
+    assert abs(line.pos - (prime.y + prime.h / 2)) < 0.51  # centred on the quantities row
+    assert line.start < prime.x  # runs in from the left, across the data columns
+    assert line.start + line.length >= cells["target:3"].x
+
+
 def test_axis_ids_are_stable_across_expand():
     before = {ln.id for ln in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4)))).lines}
     expanded = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))
     after = {ln.id for ln in spreadsheet.build(expanded).lines}
     assert before <= after  # existing prime/generator axes survive by id
     assert "v:prime:3" in after and "v:prime:3" not in before  # the added prime
+
+
+def test_quantities_spine_column_is_present_with_a_vertical_gridline():
+    lay = _layout()
+    cells = {c.id: c for c in lay.cells}
+    by_id = {ln.id: ln for ln in lay.lines}
+    # a "quantities" column header, leftmost of the data columns (before generators)
+    assert cells["header:quantities"].text == "quantities"
+    assert cells["header:quantities"].x < cells["header:gens"].x
+    # ...carrying a single vertical gridline down the grid (the column spine)
+    assert "trunk:quantities" in by_id
+    spine, header = by_id["trunk:quantities"], cells["header:quantities"]
+    assert abs(spine.pos - (header.x + header.w / 2)) < 0.51  # centred on the column
+    assert spine.start < cells["prime:0"].y  # starts above the quantities row
+    assert spine.start + spine.length >= cells["label:damage"].y  # runs past the last row
+    # the spine column is not collapsible, mirroring the spine row
+    assert "toggle:col:quantities" not in cells
 
 
 def test_tuning_boxes_off_hides_the_tuning_rows():

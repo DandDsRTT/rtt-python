@@ -23,6 +23,9 @@ PAD = 4  # px a block extends around its cells
 LABEL_W = 96  # row-label gutter width
 HEADER_H = 22  # column-header height
 GEN_W = 50  # generators column width
+SPINE_W = 64  # quantities spine column width — sized to seat its "quantities"
+# header without overflowing onto the generators column; carries only the
+# column-axis vertical rule, no data cells in the default view
 CTRL_W = 18  # domain expand (+) control gutter, just right of the primes block
 BTN = 15  # px side of a domain +/− control — half the COL_W square mapping/prime cell
 MINUS_REVEAL_H = 18  # height the removable prime's hover-minus rises above its header
@@ -119,10 +122,14 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # (horizontal) title readable, so it never overflows onto its neighbours. The
     # always-present domain + control rides just right of the primes block when it
     # is open; the − is a hover affordance on the (removable) highest-prime column.
-    col_header = {"gens": "generators", "primes": "domain primes", "targets": "target-intervals"}
+    col_header = {"quantities": "quantities", "gens": "generators",
+                  "primes": "domain primes", "targets": "target-intervals"}
+    # The leftmost quantities column is the spine: a non-collapsible header + a
+    # single vertical rule, the column-axis dual of the spine quantities row.
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
     # the value cells are inset by BRACKET_W within the group.
     col_bands = (
+        ("quantities", SPINE_W, True, False),
         ("gens", GEN_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, True, True),
         ("targets", 2 * BRACKET_W + k * COL_W, True, True),
@@ -347,6 +354,13 @@ def build(state, settings=None, collapsed=None) -> Layout:
     column_axis("primes", "prime", d, lambda p: prime_left(p) + COL_W / 2)
     column_axis("targets", "target", k, lambda j: target_left(j) + COL_W / 2)
 
+    # quantities spine column: a single vertical rule the full height of the grid
+    # (the column-axis dual of the h:quantities spine row); no per-element fan
+    # since the spine carries no data in the default view
+    if "quantities" in col_x:
+        q_cx = col_x["quantities"] + col_w["quantities"] / 2
+        lines.append(Line("trunk:quantities", "v", q_cx, branch_top_y, total_h - branch_top_y))
+
     # generators column: a single vertical axis from its node down through the
     # mapping rows (it has no per-element fan — the generators are one column).
     gen_cx = gen_x + col_w.get("gens", GEN_W) / 2
@@ -368,6 +382,12 @@ def build(state, settings=None, collapsed=None) -> Layout:
         lines.append(Line("vbar:mapping:right", "v", right_bus_x, ys[0], ys[-1] - ys[0]))
         lines.append(Line("trunk:mapping", "h", cy, node_edge, left_bus_x - node_edge))
         lines.append(Line("foot:mapping", "h", cy, right_bus_x, total_w - right_bus_x))
+
+    # the quantities spine row: a single horizontal rule across the grid (the
+    # row-axis counterpart of the quantities spine column) that the data blocks
+    # hang off; always present since the spine row never collapses
+    if "quantities" in row_y:
+        lines.append(Line("h:quantities", "h", row_y["quantities"] + row_h["quantities"] / 2, node_edge, total_w - node_edge))
 
     # tuning-family rows are each a single line (no sub-rows), present or collapsed
     for key in ("tuning", "just", "retune", "damage"):
