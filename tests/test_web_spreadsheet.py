@@ -682,6 +682,7 @@ def test_counts_on_adds_a_top_row_of_per_column_cardinalities():
     # the counts row reports each present column's set cardinality
     assert cells["count:gens"].text == "r = 2"  # rank: two generators
     assert cells["count:primes"].text == "d = 3"  # dimensionality: 2.3.5
+    assert cells["count:commas"].text == "n = 1"  # nullity: one comma (syntonic)
     assert cells["count:targets"].text == "k = 8"  # target-interval count: the 6-TILT is 8
 
 
@@ -714,6 +715,7 @@ def test_count_names_caption_each_count_only_when_names_is_on():
     on = captioned(names=True)
     assert on["caption:counts:gens"].text == "rank"
     assert on["caption:counts:primes"].text == "dimensionality"
+    assert on["caption:counts:commas"].text == "nullity"
     assert on["caption:counts:targets"].text == "target-interval count"
     assert on["caption:counts:primes"].y > on["count:primes"].y  # caption below the value
     off = captioned(names=False)

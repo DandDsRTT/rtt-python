@@ -54,6 +54,7 @@ LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 COUNTS = (
     ("gens", "r", "rank"),
     ("primes", "d", "dimensionality"),
+    ("commas", "n", "nullity"),
     ("targets", "k", "target-interval count"),
 )
 
@@ -338,7 +339,7 @@ def build(state, settings=None, collapsed=None,
 
     # counts row: each present column's set cardinality, centred over its values
     if row_open("counts"):
-        cardinality = {"gens": r, "primes": d, "targets": k}
+        cardinality = {"gens": r, "primes": d, "commas": state.n, "targets": k}
         for ckey, sym, _name in COUNTS:
             if tile_open("counts", ckey):
                 cells.append(CellBox(f"count:{ckey}", col_x[ckey], row_y["counts"], col_w[ckey], ROW_H,
