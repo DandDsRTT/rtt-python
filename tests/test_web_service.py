@@ -41,6 +41,22 @@ def test_shrink_domain_is_inverse_of_expand():
     assert (state.d, state.r, state.n) == (3, 2, 1)
 
 
+def test_add_comma_appends_a_blank_comma_to_fill_in():
+    st = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # d=3, one comma
+    added = service.add_comma(st)
+    assert added.comma_basis == ((4, -4, 1), (0, 0, 0))  # a blank monzo, ready to edit
+    assert added.d == 3  # domain unchanged
+    assert added.n == 1  # the blank comma is dependent, so rank holds until it is filled
+
+
+def test_remove_comma_drops_the_last_comma_and_reranks():
+    st = service.from_comma_basis(((4, -4, 1), (1, 0, 0)))  # d=3, n=2, r=1
+    assert (st.d, st.r, st.n) == (3, 1, 2)
+    removed = service.remove_comma(st)
+    assert removed.comma_basis == ((4, -4, 1),)  # the last comma is gone
+    assert (removed.d, removed.r, removed.n) == (3, 2, 1)  # rank rises as nullity falls
+
+
 def test_full_rank_mapping_has_zero_comma_and_zero_nullity():
     # Just intonation: nothing tempered out. The dual is a single zero comma.
     state = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
@@ -55,6 +71,12 @@ def test_standard_primes_gives_the_domain_basis_header():
 
 def test_generators_as_ratios():
     assert service.generators([[1, 1, 0], [0, 1, 4]]) == ("2/1", "3/2")
+
+
+def test_comma_ratios_renders_each_comma_monzo_as_a_ratio():
+    # the comma basis as ratio strings, mirroring service.generators for the maps
+    assert service.comma_ratios(((4, -4, 1),)) == ("80/81",)  # the syntonic comma, as-is
+    assert service.comma_ratios(((4, -4, 1), (0, 0, 0))) == ("80/81", "1/1")
 
 
 def test_mapped_target_intervals():

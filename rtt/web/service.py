@@ -82,14 +82,27 @@ def default_target_intervals(domain_basis) -> tuple[str, ...]:
     return tuple(f"{q.numerator}/{q.denominator}" for q in quotients)
 
 
-def generators(mapping) -> tuple[str, ...]:
-    """Each generator as an approximate ratio string, e.g. ``('2/1', '2/3')``."""
-    m = Temperament(_to_matrix(mapping), Variance.ROW)
+def _monzos_to_ratios(monzos) -> tuple[str, ...]:
+    """Each monzo as a ``"num/den"`` ratio string (the shared rendering for
+    generators and commas)."""
     ratios = []
-    for monzo in get_generator_detempering(m).matrix:
+    for monzo in monzos:
         quotient = pcv_to_quotient(monzo)
         ratios.append(f"{quotient.numerator}/{quotient.denominator}")
     return tuple(ratios)
+
+
+def generators(mapping) -> tuple[str, ...]:
+    """Each generator as an approximate ratio string, e.g. ``('2/1', '2/3')``."""
+    m = Temperament(_to_matrix(mapping), Variance.ROW)
+    return _monzos_to_ratios(get_generator_detempering(m).matrix)
+
+
+def comma_ratios(comma_basis) -> tuple[str, ...]:
+    """Each comma in the basis as a ratio string, e.g. ``('80/81',)`` — the
+    comma-column analogue of :func:`generators`. Rendered as-is (the canonical
+    dual's sign), so the syntonic comma reads ``80/81`` (a descending interval)."""
+    return _monzos_to_ratios(comma_basis)
 
 
 def mapped_target_intervals(mapping, ratios) -> Matrix:
@@ -139,3 +152,18 @@ def shrink_domain(state: TemperamentState) -> TemperamentState:
     """Drop the highest prime from the domain: trim each comma, then re-dual."""
     shrunk = tuple(comma[:-1] for comma in state.comma_basis)
     return from_comma_basis(shrunk)
+
+
+def add_comma(state: TemperamentState) -> TemperamentState:
+    """Append a blank comma to the basis (a zero monzo) for the user to fill in,
+    then re-dual. The zero comma is dependent, so rank holds until it is edited to
+    an independent interval — at which point nullity rises and rank falls."""
+    extended = state.comma_basis + ((0,) * state.d,)
+    return from_comma_basis(extended)
+
+
+def remove_comma(state: TemperamentState) -> TemperamentState:
+    """Drop the last comma from the basis, then re-dual — the inverse of
+    :func:`add_comma`. Raising rank as nullity falls (the temperament tempers out
+    one fewer comma). Callers guard against removing the sole comma."""
+    return from_comma_basis(state.comma_basis[:-1])
