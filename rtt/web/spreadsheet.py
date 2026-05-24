@@ -23,8 +23,9 @@ PAD = 4  # px a block extends around its cells
 LABEL_W = 96  # row-label gutter width
 HEADER_H = 22  # column-header height
 GEN_W = 50  # generators column width
-CTRL_W = 26  # domain expand (+) control gutter, just right of the primes block
-MINUS_REVEAL_H = 22  # height the removable prime's hover-minus rises above its header
+CTRL_W = 18  # domain expand (+) control gutter, just right of the primes block
+BTN = 13  # px side of a domain +/− control — half the 26px mapping/prime cell
+MINUS_REVEAL_H = 16  # height the removable prime's hover-minus rises above its header
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
@@ -230,7 +231,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         # reveals the button just above it, clear of the editable mapping cell below.
         if d > 1:
             cells.append(CellBox("minus", prime_left(d - 1), quant_y - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "minus"))
-        cells.append(CellBox("plus", ctrl_x, quant_y + 5, 20, 20, "plus"))
+        cells.append(CellBox("plus", ctrl_x, quant_y + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
     if col_open("targets"):
         for j in range(k):
             cells.append(CellBox(f"target:{j}", target_left(j), quant_y, COL_W, ROW_H, "target", text=targets[j]))
