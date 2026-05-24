@@ -80,6 +80,7 @@ _CSS = f"""
 .rtt-val {{ font-size:{_CELL_FONT}px; color:#000; }}
 .rtt-caption {{ width:100%; text-align:center; font-size:12px; color:#333; white-space:nowrap;
                font-family:'Cambria',Georgia,serif; }}
+.rtt-count {{ font-size:16px; color:#000; white-space:nowrap; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
@@ -150,7 +151,7 @@ _CSS = f"""
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
 """
 
-_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "mathexpr", "rowtoggle", "coltoggle", "tiletoggle"}
+_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "count", "mathexpr", "rowtoggle", "coltoggle", "tiletoggle"}
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
 # cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
@@ -431,6 +432,8 @@ def index() -> None:
                 _ratio(cb, approx=False)
             elif cb.kind == "mapped":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
+            elif cb.kind == "count":
+                labels[cb.id] = ui.label(cb.text).classes("rtt-count")
             elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, monzo rule
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
             elif cb.kind == "caption":

@@ -49,6 +49,14 @@ SEP_W = 2  # width of a vertical rule between monzo columns (the renderer draws 
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 
+# The counts row: each column's set cardinality, as (column key, symbol, name).
+# The symbol+value (e.g. "r = 2") is the cell; the name ("rank") is its caption.
+COUNTS = (
+    ("gens", "r", "rank"),
+    ("primes", "d", "dimensionality"),
+    ("targets", "k", "target-interval count"),
+)
+
 # Quantity-name captions shown inside each (row, column) tile when names are on.
 CAPTIONS = {
     ("mapping", "primes"): "(temperament) mapping",
@@ -65,6 +73,7 @@ CAPTIONS = {
     ("retune", "targets"): "target-interval error list",
     ("damage", "commas"): "comma damage list",
     ("damage", "targets"): "target-interval damage list",
+    **{("counts", ckey): name for ckey, _sym, name in COUNTS},
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 FRAMED_ROWS = frozenset({"mapping"})  # multi-row matrices get a top bracket + bottom brace band
@@ -84,6 +93,9 @@ PRESELECT_ROWS = frozenset(row for _, row, _ in PRESELECTS)
 # Each gets a grey panel and a top-left fold toggle; the panel/toggle ids stay
 # stable so the reconciling renderer can animate a single tile folding away.
 TILES = (
+    ("block:counts:gens", "counts", "gens"),
+    ("block:counts:primes", "counts", "primes"),
+    ("block:counts:targets", "counts", "targets"),
     ("block:primes", "quantities", "primes"),
     ("block:commas", "quantities", "commas"),
     ("block:targets", "quantities", "targets"),
@@ -147,6 +159,7 @@ def build(state, settings=None, collapsed=None,
     collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
     show_captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
     show_preselects = settings["preselects"]  # the per-quantity chooser dropdowns
+    show_counts = settings["counts"]
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
     # The just tuning row alone has an exact closed form (log₂ of each prime/ratio);
@@ -227,7 +240,7 @@ def build(state, settings=None, collapsed=None,
     # Branching (trunk/bus/verticals) starts just below the column nodes so no
     # line pokes up past them; with names hidden it starts at the very top.
     branch_top_y = col_node_y + TOGGLE
-    quant_y = branch_top_y + GAP
+    rows_top_y = branch_top_y + GAP  # top of the first row band (counts when shown, else quantities)
     # The grey tiles overhang their cells by PAD and sit over the gridlines, so the
     # *visible* fan segment runs from the bus only to the tile edge. Put each bus
     # midway between the node/foot edge and the tile edge (PAD inside the cell), so
@@ -245,6 +258,7 @@ def build(state, settings=None, collapsed=None,
     # laid out by the same running-cursor rule as the columns. The spine
     # quantities row is not collapsible; the rest can fold to a strip.
     row_bands = (
+        ("counts", ROW_H, show_counts, True, "counts"),
         ("quantities", ROW_H, True, False, "quantities"),
         ("mapping", map_band_rows * ROW_H, show_temp, True, "mapping"),
         ("tuning", ROW_H, show_tuning, True, "tuning"),
@@ -256,7 +270,7 @@ def build(state, settings=None, collapsed=None,
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
     tile_h, tile_top, row_frame = {}, {}, {}
-    y = quant_y
+    y = rows_top_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
             continue
@@ -321,6 +335,14 @@ def build(state, settings=None, collapsed=None,
             glyph = _fold_glyph(f"row:{key}" in collapsed)
             ty = row_y[key] + (row_h[key] - TOGGLE) / 2
             cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
+
+    # counts row: each present column's set cardinality, centred over its values
+    if row_open("counts"):
+        cardinality = {"gens": r, "primes": d, "targets": k}
+        for ckey, sym, _name in COUNTS:
+            if tile_open("counts", ckey):
+                cells.append(CellBox(f"count:{ckey}", col_x[ckey], row_y["counts"], col_w[ckey], ROW_H,
+                                     "count", text=f"{sym} = {cardinality[ckey]}"))
 
     # quantities row: domain primes (+ controls) and target ratios (below the
     # tile's toggle head, like every other row's values)
@@ -500,8 +522,9 @@ def build(state, settings=None, collapsed=None,
     if "quantities" in row_y:
         lines.append(Line("h:quantities", "h", row_y["quantities"] + row_h["quantities"] / 2, node_edge, total_w - node_edge))
 
-    # tuning-family rows are each a single line (no sub-rows), present or collapsed
-    for key in ("tuning", "just", "retune", "damage"):
+    # single-value rows (counts + the tuning family) are each one line (no
+    # sub-rows), present or collapsed — so a collapsed one still leaves a gridline
+    for key in ("counts", "tuning", "just", "retune", "damage"):
         if key not in row_y:
             continue
         lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge))

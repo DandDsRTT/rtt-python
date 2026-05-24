@@ -675,3 +675,69 @@ def test_math_expressions_without_quantities_show_only_the_expression():
 def test_math_expressions_is_an_interactive_toggle():
     # it now builds content, so the panel must offer it live rather than greyed out
     assert "math_expressions" in settings.IMPLEMENTED
+
+
+def test_counts_on_adds_a_top_row_of_per_column_cardinalities():
+    cells = {c.id: c for c in _with(counts=True).cells}
+    # the counts row reports each present column's set cardinality
+    assert cells["count:gens"].text == "r = 2"  # rank: two generators
+    assert cells["count:primes"].text == "d = 3"  # dimensionality: 2.3.5
+    assert cells["count:targets"].text == "k = 8"  # target-interval count: the 6-TILT is 8
+
+
+def test_counts_row_sits_at_the_top_aligned_over_its_columns():
+    cells = {c.id: c for c in _with(counts=True).cells}
+    # the counts row is the topmost data row — above the quantities (primes/targets)
+    assert cells["count:primes"].y < cells["prime:0"].y
+    assert cells["count:targets"].y < cells["target:0"].y
+    # each count spans its column, centred over the values like the header
+    for ckey in ("gens", "primes", "targets"):
+        assert cells[f"count:{ckey}"].x == cells[f"header:{ckey}"].x
+        assert cells[f"count:{ckey}"].w == cells[f"header:{ckey}"].w
+
+
+def test_counts_off_by_default_leaves_the_quantities_row_on_top():
+    # the default build target shows no counts row; quantities stays the top row
+    cells = {c.id for c in _layout().cells}
+    assert "label:counts" not in cells
+    assert not any(c.startswith("count:") for c in cells)
+
+
+def test_count_names_caption_each_count_only_when_names_is_on():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+
+    def captioned(names):
+        s = settings.defaults()
+        s["counts"], s["names"] = True, names
+        return {c.id: c for c in spreadsheet.build(base, s).cells}
+
+    on = captioned(names=True)
+    assert on["caption:counts:gens"].text == "rank"
+    assert on["caption:counts:primes"].text == "dimensionality"
+    assert on["caption:counts:targets"].text == "target-interval count"
+    assert on["caption:counts:primes"].y > on["count:primes"].y  # caption below the value
+    off = captioned(names=False)
+    assert not any(c.startswith("caption:counts:") for c in off)  # but the value cells remain
+    assert {"count:gens", "count:primes", "count:targets"} <= set(off)
+
+
+def test_counts_row_collapses_like_any_other_keeping_its_label_and_gridline():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["counts"] = True
+    full = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert "toggle:row:counts" in full  # collapsible: it has a fold toggle
+    lay = spreadsheet.build(base, s, collapsed={"row:counts"})
+    cells = {c.id: c for c in lay.cells}
+    assert not any(c.startswith("count:") for c in cells)  # the values fold away
+    assert "label:counts" in cells  # ...the label survives as a strip
+    assert {ln.id for ln in lay.lines} >= {"h:counts"}  # ...leaving a gridline through the row
+
+
+def test_counts_track_the_live_domain_after_an_expand():
+    expanded = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # 2.3.5 -> 2.3.5.7
+    s = settings.defaults()
+    s["counts"] = True
+    cells = {c.id: c for c in spreadsheet.build(expanded, s).cells}
+    assert cells["count:primes"].text == "d = 4"  # the added prime grows the dimensionality
+    assert cells["count:gens"].text == "r = 3"  # ...and meantone gains an independent generator
