@@ -50,13 +50,18 @@ LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 # Quantity-name captions shown inside each (row, column) tile when names are on.
 CAPTIONS = {
     ("mapping", "primes"): "(temperament) mapping",
+    ("mapping", "commas"): "comma basis",
     ("mapping", "targets"): "mapped target-interval list",
     ("tuning", "primes"): "tuning map",
+    ("tuning", "commas"): "tempered comma size list",
     ("tuning", "targets"): "tempered target-interval size list",
     ("just", "primes"): "just tuning map",
+    ("just", "commas"): "(just) comma size list",
     ("just", "targets"): "(just) target-interval size list",
     ("retune", "primes"): "retuning map",
+    ("retune", "commas"): "comma error list",
     ("retune", "targets"): "target-interval error list",
+    ("damage", "commas"): "comma damage list",
     ("damage", "targets"): "target-interval damage list",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
@@ -67,16 +72,22 @@ FRAMED_ROWS = frozenset({"mapping"})  # multi-row matrices get a top bracket + b
 # stable so the reconciling renderer can animate a single tile folding away.
 TILES = (
     ("block:primes", "quantities", "primes"),
+    ("block:commas", "quantities", "commas"),
     ("block:targets", "quantities", "targets"),
     ("block:gens", "mapping", "gens"),
     ("block:mapping", "mapping", "primes"),
+    ("block:comma_basis", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),
     ("block:tuning:primes", "tuning", "primes"),
+    ("block:tuning:commas", "tuning", "commas"),
     ("block:tuning:targets", "tuning", "targets"),
     ("block:just:primes", "just", "primes"),
+    ("block:just:commas", "just", "commas"),
     ("block:just:targets", "just", "targets"),
     ("block:retune:primes", "retune", "primes"),
+    ("block:retune:commas", "retune", "commas"),
     ("block:retune:targets", "retune", "targets"),
+    ("block:damage:commas", "damage", "commas"),
     ("block:damage:targets", "damage", "targets"),
 )
 
@@ -115,6 +126,9 @@ def build(state, settings=None, collapsed=None) -> Layout:
     k = len(targets)
     mapped = service.mapped_target_intervals(state.mapping, targets)
     tun = service.tuning(state.mapping, targets)
+    comma_ratios = service.comma_ratios(state.comma_basis)
+    nc = len(comma_ratios)  # comma count shown (>= nullity when a blank comma waits)
+    ctun = service.tuning(state.mapping, comma_ratios)  # comma sizes (tempered ~0)
 
     # Column bands left-to-right: (key, natural width, present, collapsible).
     # Generators belong to the temperament; domain primes and targets are always
@@ -123,7 +137,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # always-present domain + control rides just right of the primes block when it
     # is open; the − is a hover affordance on the (removable) highest-prime column.
     col_header = {"quantities": "quantities", "gens": "generators",
-                  "primes": "domain primes", "targets": "target-intervals"}
+                  "primes": "domain primes", "commas": "commas", "targets": "target-intervals"}
     # The leftmost quantities column is the spine: a non-collapsible header + a
     # single vertical rule, the column-axis dual of the spine quantities row.
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
@@ -132,6 +146,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         ("quantities", SPINE_W, True, False),
         ("gens", GEN_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, True, True),
+        ("commas", 2 * BRACKET_W + nc * COL_W, True, True),
         ("targets", 2 * BRACKET_W + k * COL_W, True, True),
     )
     # A fold-toggle node column sits between the row-label gutter and the content
@@ -142,8 +157,10 @@ def build(state, settings=None, collapsed=None) -> Layout:
     node_edge = node_x + TOGGLE  # the node's content-facing (right) edge
     content_x0 = node_x + TOGGLE + GAP
 
+    # the domain and the comma basis each ride an expand (+) control in a gutter just
+    # right of their (open) block — domain primes add a prime, commas add a comma
     col_x, col_w, col_collapsible = {}, {}, {}
-    ctrl_x = None
+    ctrl_x = {}
     x = content_x0
     for key, natural, present, collapsible in col_bands:
         if not present:
@@ -152,14 +169,15 @@ def build(state, settings=None, collapsed=None) -> Layout:
         col_w[key] = _title_w(col_header[key]) if f"col:{key}" in collapsed else natural
         col_collapsible[key] = collapsible
         x += col_w[key]
-        if key == "primes" and f"col:{key}" not in collapsed:
-            ctrl_x = x + 6
-            x = ctrl_x + CTRL_W
+        if key in ("primes", "commas") and f"col:{key}" not in collapsed:
+            ctrl_x[key] = x + 6
+            x = ctrl_x[key] + CTRL_W
         x += GAP
     total_w = x
 
     gen_x = col_x.get("gens", content_x0)
     primes_x = col_x["primes"]
+    commas_x = col_x["commas"]
     targets_x = col_x["targets"]
 
     def col_open(key):
@@ -178,12 +196,18 @@ def build(state, settings=None, collapsed=None) -> Layout:
     FAN = (GAP - PAD) / 2
     fanout_y = branch_top_y + FAN
 
+    # The comma basis is d primes tall (a column per comma), so when its tile is
+    # shown the mapping band grows from r rows (the stacked maps) to d to contain it;
+    # the shorter maps and mapped list top-align within the taller band.
+    commas_in_map = col_open("commas") and "tile:mapping:commas" not in collapsed
+    map_band_rows = d if commas_in_map else r
+
     # Row bands top-to-bottom: (key, natural height, present, collapsible, label),
     # laid out by the same running-cursor rule as the columns. The spine
     # quantities row is not collapsible; the rest can fold to a strip.
     row_bands = (
         ("quantities", ROW_H, True, False, "quantities"),
-        ("mapping", r * ROW_H, show_temp, True, "mapping"),
+        ("mapping", map_band_rows * ROW_H, show_temp, True, "mapping"),
         ("tuning", ROW_H, show_tuning, True, "tuning"),
         ("just", ROW_H, show_tuning, True, "just tuning"),
         ("retune", ROW_H, show_tuning, True, "retuning"),
@@ -226,6 +250,9 @@ def build(state, settings=None, collapsed=None) -> Layout:
     def prime_left(p):
         return primes_x + BRACKET_W + p * COL_W
 
+    def comma_left(c):
+        return commas_x + BRACKET_W + c * COL_W
+
     def target_left(j):
         return targets_x + BRACKET_W + j * COL_W
 
@@ -265,7 +292,15 @@ def build(state, settings=None, collapsed=None) -> Layout:
         # reveals the button just above it, clear of the editable mapping cell below.
         if d > 1:
             cells.append(CellBox("minus", prime_left(d - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "minus"))
-        cells.append(CellBox("plus", ctrl_x, qy + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
+        cells.append(CellBox("plus", ctrl_x["primes"], qy + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
+    if tile_open("quantities", "commas"):
+        for c in range(nc):
+            cells.append(CellBox(f"comma:{c}", comma_left(c), qy, COL_W, ROW_H, "commaratio", text=comma_ratios[c], comma=c))
+        # commas mirror the domain controls: + always adds a (blank) comma; the −
+        # rides the last comma as a hover affordance, only when one can be removed
+        if nc > 1:
+            cells.append(CellBox("comma_minus", comma_left(nc - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "comma_minus"))
+        cells.append(CellBox("comma_plus", ctrl_x["commas"], qy + (ROW_H - BTN) // 2, BTN, BTN, "comma_plus"))
     if tile_open("quantities", "targets"):
         for j in range(k):
             cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
@@ -283,28 +318,41 @@ def build(state, settings=None, collapsed=None) -> Layout:
             if tile_open("mapping", "targets"):
                 for j in range(k):
                     cells.append(CellBox(f"cell:mapped:{i}:{j}", target_left(j), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped[i][j]), gen=i))
+        # the comma basis: each comma is a d-tall monzo column (prime coefficients
+        # down the rows), editable like the mapping — its dual
+        if tile_open("mapping", "commas"):
+            for c in range(nc):
+                for p in range(d):
+                    cells.append(CellBox(f"cell:comma:{p}:{c}", comma_left(c), row_y["mapping"] + p * ROW_H, COL_W, ROW_H, "commacell", text=str(state.comma_basis[c][p]), prime=p, comma=c))
 
-    # tuning rows over the primes and targets (cents); each can collapse on its own
-    def tuning_row(key, prime_vals, target_vals):
-        y = row_y[key]
-        if tile_open(key, "primes"):
-            for p, v in enumerate(prime_vals):
-                cells.append(CellBox(f"{key}:prime:{p}", prime_left(p), y, COL_W, ROW_H, "tval", text=_cents(v)))
-        if tile_open(key, "targets"):
-            for j, v in enumerate(target_vals):
-                cells.append(CellBox(f"{key}:target:{j}", target_left(j), y, COL_W, ROW_H, "tval", text=_cents(v)))
+    # the three value groups share an element name (for cell ids) and a left-edge
+    # accessor; primes carry a map, commas and targets carry interval lists
+    group_elem = {"primes": "prime", "commas": "comma", "targets": "target"}
+    group_left = {"primes": prime_left, "commas": comma_left, "targets": target_left}
+
+    # tuning rows over the primes, commas and targets (cents); each can collapse on
+    # its own. Commas sit on the same footing as targets — they are just the dual
+    # interval set — so the comma's tempered size is ~0 (it vanishes), with a real
+    # just size and error.
+    def tval_row(key, group, vals):
+        if tile_open(key, group):
+            y = row_y[key]
+            for i, v in enumerate(vals):
+                cells.append(CellBox(f"{key}:{group_elem[group]}:{i}", group_left[group](i), y, COL_W, ROW_H, "tval", text=_cents(v)))
 
     tuning_data = {
-        "tuning": (tun.tuning_map, tun.tempered_targets),
-        "just": (tun.just_map, tun.just_targets),
-        "retune": (tun.retuning_map, tun.target_errors),
+        "tuning": (tun.tuning_map, ctun.tempered_targets, tun.tempered_targets),
+        "just": (tun.just_map, ctun.just_targets, tun.just_targets),
+        "retune": (tun.retuning_map, ctun.target_errors, tun.target_errors),
     }
-    for key, (prime_vals, target_vals) in tuning_data.items():
+    for key, (prime_vals, comma_vals, target_vals) in tuning_data.items():
         if row_open(key):
-            tuning_row(key, prime_vals, target_vals)
-    if tile_open("damage", "targets"):  # damage is over the targets only
-        for j, v in enumerate(tun.target_damage):
-            cells.append(CellBox(f"damage:target:{j}", target_left(j), row_y["damage"], COL_W, ROW_H, "tval", text=_cents(v)))
+            tval_row(key, "primes", prime_vals)
+            tval_row(key, "commas", comma_vals)
+            tval_row(key, "targets", target_vals)
+    if row_open("damage"):  # damage is over the commas and targets only (not the maps)
+        tval_row("damage", "commas", ctun.target_damage)
+        tval_row("damage", "targets", tun.target_damage)
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
@@ -320,14 +368,20 @@ def build(state, settings=None, collapsed=None) -> Layout:
         if tile_open("mapping", "primes"):
             for i in range(r):
                 bracket(f"map:{i}", MAP_BRACKETS, "primes", map_top(i), ROW_H)
+        if tile_open("mapping", "commas"):  # the comma basis is a list of monzos: a [ ] spanning d rows
+            bracket("comma_basis", LIST_BRACKETS, "commas", row_y["mapping"], d * ROW_H, fit=True)
         if tile_open("mapping", "targets"):
             bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H, fit=True)
     for key in ("tuning", "just", "retune"):
         if row_open(key):
             if tile_open(key, "primes"):
                 bracket(f"{key}:map", MAP_BRACKETS, "primes", row_y[key], ROW_H)
+            if tile_open(key, "commas"):
+                bracket(f"{key}:commalist", LIST_BRACKETS, "commas", row_y[key], ROW_H)
             if tile_open(key, "targets"):
                 bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
+    if tile_open("damage", "commas"):
+        bracket("damage:commalist", LIST_BRACKETS, "commas", row_y["damage"], ROW_H)
     if tile_open("damage", "targets"):
         bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
 
@@ -352,6 +406,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         lines.append(Line(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y))
 
     column_axis("primes", "prime", d, lambda p: prime_left(p) + COL_W / 2)
+    column_axis("commas", "comma", nc, lambda c: comma_left(c) + COL_W / 2)
     column_axis("targets", "target", k, lambda j: target_left(j) + COL_W / 2)
 
     # quantities spine column: a single vertical rule the full height of the grid
@@ -399,6 +454,18 @@ def build(state, settings=None, collapsed=None) -> Layout:
     # any collapsed axis (collapsing toward the band centre), so the renderer
     # animates it shrinking away to nothing — leaving only the band's gridline,
     # never a leftover grey strip.
+    # Value-area height of a (row, col) tile. Almost every tile is its row's height;
+    # the comma basis is the exception — d primes tall where the maps are only r —
+    # so within the (taller) mapping band each column's panel/caption/frame still
+    # hugs its own matrix rather than the band's full height.
+    def col_value_h(rkey, ckey):
+        if rkey == "mapping" and "row:mapping" not in collapsed:
+            return (d if ckey == "commas" else r) * ROW_H
+        return row_h[rkey]
+
+    def tile_height(rkey, ckey):  # full tile = head + frames + caption + values
+        return tile_h[rkey] - row_h[rkey] + col_value_h(rkey, ckey)
+
     def panel(bid, ckey, rkey):
         if ckey not in col_x or rkey not in row_y:
             return
@@ -407,7 +474,7 @@ def build(state, settings=None, collapsed=None) -> Layout:
         tile_c = f"tile:{rkey}:{ckey}" in collapsed
         col_c = f"col:{ckey}" in collapsed or tile_c
         row_c = f"row:{rkey}" in collapsed or tile_c
-        cw, ch, cx, cy = col_w[ckey], tile_h[rkey], col_x[ckey], tile_top[rkey]
+        cw, ch, cx, cy = col_w[ckey], tile_height(rkey, ckey), col_x[ckey], tile_top[rkey]
         w, px = (0, 0) if col_c else (cw, PAD)
         h, py = (0, 0) if row_c else (ch, PAD)
         bx = cx + cw / 2 if col_c else cx
@@ -422,32 +489,41 @@ def build(state, settings=None, collapsed=None) -> Layout:
     if show_captions:
         for (rkey, ckey), text in CAPTIONS.items():
             if tile_open(rkey, ckey):
-                cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
+                cy = row_y[rkey] + col_value_h(rkey, ckey) + row_frame[rkey]
                 cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], CAPTION_H, "caption", text=text))
 
     # the mapping is a column of stacked maps, so it's enclosed by a top bracket
     # and a bottom curly brace spanning the matrix, drawn in its frame bands. Both
     # stand off the cells by FRAME_GAP — the top bracket just above row 0 (below the
-    # toggle head), the brace a matching gap below the last row.
-    map_top_y, brace_y = None, None
-    if "mapping" in row_y:
-        map_top_y = row_y["mapping"] - FRAME_H - FRAME_GAP
-        brace_y = row_y["mapping"] + row_h["mapping"] + FRAME_GAP
+    # toggle head), the brace a matching gap below the last row. Each column's brace
+    # hugs its own matrix height (the comma basis runs d rows deep, the maps and
+    # mapped list only r), so they stagger within the taller band.
+    map_top_y = row_y["mapping"] - FRAME_H - FRAME_GAP if "mapping" in row_y else None
+
+    def map_brace_y(ckey):
+        return row_y["mapping"] + col_value_h("mapping", ckey) + FRAME_GAP
+
     if tile_open("mapping", "primes"):
         gx, gw = col_x["primes"], col_w["primes"]
         cells.append(CellBox("ebktop:primes", gx, map_top_y, gw, FRAME_H, "ebktop"))
-        cells.append(CellBox("ebkbrace:primes", gx, brace_y, gw, BRACE_H, "ebkbrace"))
-    # the mapped list is a row of vectors: vertical rules separate the monzo
-    # columns, and each column is marked with its own top bracket and bottom
-    # brace — inset so they stop short of the rules rather than touching them
-    if tile_open("mapping", "targets"):
+        cells.append(CellBox("ebkbrace:primes", gx, map_brace_y("primes"), gw, BRACE_H, "ebkbrace"))
+
+    # the mapped list and comma basis are rows/grids of vectors: vertical rules
+    # separate the monzo columns, and each column is marked with its own top bracket
+    # and bottom brace — inset so they stop short of the rules rather than touching.
+    def monzo_list_marks(name, ckey, left, n_cols, n_rows):
+        if not tile_open("mapping", ckey):
+            return
         mark_w = COL_W - 2 * MARK_INSET
-        for j in range(k):
-            mx = target_left(j) + MARK_INSET
-            cells.append(CellBox(f"ebktop:mapped:{j}", mx, map_top_y, mark_w, FRAME_H, "ebktop"))
-            cells.append(CellBox(f"ebkbrace:mapped:{j}", mx, brace_y, mark_w, BRACE_H, "ebkbrace"))
-        for j in range(1, k):  # a rule on each interior column boundary
-            cells.append(CellBox(f"sep:mapped:{j}", target_left(j) - SEP_W / 2, row_y["mapping"], SEP_W, r * ROW_H, "vbar"))
+        for c in range(n_cols):
+            mx = left(c) + MARK_INSET
+            cells.append(CellBox(f"ebktop:{name}:{c}", mx, map_top_y, mark_w, FRAME_H, "ebktop"))
+            cells.append(CellBox(f"ebkbrace:{name}:{c}", mx, map_brace_y(ckey), mark_w, BRACE_H, "ebkbrace"))
+        for c in range(1, n_cols):  # a rule on each interior column boundary
+            cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, row_y["mapping"], SEP_W, n_rows * ROW_H, "vbar"))
+
+    monzo_list_marks("comma_basis", "commas", comma_left, nc, d)
+    monzo_list_marks("mapped", "targets", target_left, k, r)
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the

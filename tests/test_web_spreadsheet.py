@@ -420,3 +420,152 @@ def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
     # the in-tile quantity captions appear only when names is on
     assert on["caption:mapping:primes"].text == "(temperament) mapping"
     assert not any(c.startswith("caption:") for c in off)
+
+
+# --- the commas column (the comma basis, the mapping's dual) ---
+
+def _in_commas(cid):
+    return cid.startswith(("comma:", "cell:comma:")) or cid.split(":")[0:2] in (
+        ["tuning", "comma"], ["just", "comma"], ["retune", "comma"], ["damage", "comma"])
+
+
+def test_commas_column_sits_between_primes_and_targets_with_its_comma_ratios():
+    cells = {c.id: c for c in _layout().cells}
+    assert cells["header:commas"].text == "commas"
+    assert cells["comma:0"].text == "80/81"  # the syntonic comma, as-is from the dual
+    # the commas band falls between domain primes and target-intervals
+    assert cells["header:primes"].x < cells["header:commas"].x < cells["header:targets"].x
+    assert cells["prime:2"].x < cells["comma:0"].x < cells["target:0"].x
+
+
+def test_comma_basis_renders_as_vertical_monzos_in_the_mapping_row():
+    cells = {c.id: c for c in _layout().cells}
+    # the comma basis sits in the mapping row's commas column as d-tall monzo columns;
+    # the syntonic comma [4, -4, 1] reads top-to-bottom (prime 2, 3, 5) down its column
+    assert cells["cell:comma:0:0"].text == "4"
+    assert cells["cell:comma:1:0"].text == "-4"
+    assert cells["cell:comma:2:0"].text == "1"
+    # the cells tile a square grid like the mapping matrix
+    c00 = cells["cell:comma:0:0"]
+    assert c00.w == c00.h == spreadsheet.ROW_H
+    assert cells["cell:comma:1:0"].y == c00.y + c00.h
+    # aligned in the commas column (shares the quantities-row comma's x and the matrix top)
+    assert c00.x == cells["comma:0"].x
+    assert c00.y == cells["cell:mapping:0:0"].y  # top-aligned with the mapping matrix
+
+
+def test_expanding_commas_grows_the_mapping_band_to_fit_the_d_tall_comma_basis():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # d=3, r=2
+    full = {c.id: c for c in spreadsheet.build(base).cells}
+    coll = {c.id: c for c in spreadsheet.build(base, collapsed={"col:commas"}).cells}
+    # the comma basis is d=3 tall while the mapping matrix is r=2 tall, so it reaches lower
+    cb_bottom = full["cell:comma:2:0"].y + full["cell:comma:2:0"].h
+    m_bottom = full["cell:mapping:1:0"].y + full["cell:mapping:1:0"].h
+    assert cb_bottom > m_bottom
+    # collapsing commas lets the band shrink back, lifting the tuning rows
+    assert coll["tuning:prime:0"].y < full["tuning:prime:0"].y
+
+
+def test_comma_sizes_fill_the_tuning_family_rows():
+    cells = {c.id: c for c in _layout().cells}
+    # the comma vanishes in the temperament: its tempered size is ~0
+    assert cells["tuning:comma:0"].text == "0.00"
+    # ...but it has a real just size (the syntonic comma is ~21.5 cents)
+    assert cells["just:comma:0"].text == "-21.51"
+    assert cells["retune:comma:0"].text == "21.51"
+    assert cells["damage:comma:0"].text == "21.51"
+    # comma tuning values share the comma column with the quantities-row ratio
+    assert cells["tuning:comma:0"].x == cells["comma:0"].x
+
+
+def test_commas_have_a_shared_vertical_axis_per_comma():
+    ids = {ln.id for ln in _layout().lines}
+    assert "v:comma:0" in ids  # one axis per comma, like the primes/targets
+    assert {"trunk:commas", "bus:commas:top", "bus:commas:bot", "foot:commas"} <= ids
+
+
+def test_collapsing_the_commas_column_hides_its_cells_but_keeps_the_header():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    full = spreadsheet.build(base)
+    coll = spreadsheet.build(base, collapsed={"col:commas"})
+    assert any(_in_commas(c.id) for c in full.cells)  # present when expanded
+    cids = {c.id for c in coll.cells}
+    assert not any(_in_commas(c) for c in cids)  # gone from quantities and every tuning row
+    assert "header:commas" in cids  # ...but the header survives as a strip
+    assert "toggle:col:commas" in cids  # with a re-expand toggle
+    assert coll.width < full.width  # and the board narrows
+
+
+def test_commas_column_has_panels_that_fold_away_and_converge_when_collapsed():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    lay = spreadsheet.build(base, collapsed={"col:commas"})
+    blocks = {b.id: b for b in lay.blocks}
+    by_id = {ln.id: ln for ln in lay.lines}
+    assert blocks["block:commas"].w == 0  # the quantities-row comma panel folds away
+    assert blocks["block:tuning:commas"].w == 0  # ...and each tuning row's
+    assert blocks["block:damage:commas"].w == 0
+    assert by_id["bus:commas:top"].length == 0  # the comma axis converges to one line
+
+
+def test_comma_basis_is_framed_as_a_monzo_list_spanning_its_d_tall_height():
+    cells = {c.id: c for c in _layout().cells}
+    # the comma basis is a list of monzos: an enclosing [ ] plus per-column marks
+    assert cells["bracket:comma_basis:l"].text == "[" and cells["bracket:comma_basis:r"].text == "]"
+    assert "ebktop:comma_basis:0" in cells and "ebkbrace:comma_basis:0" in cells
+    cb = cells["bracket:comma_basis:l"]
+    # the enclosing bracket spans the full d=3 tall basis
+    assert cb.y <= cells["cell:comma:0:0"].y
+    assert cb.y + cb.h >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].h
+
+
+def test_each_mapping_matrix_brace_hugs_its_own_height_not_the_tallest():
+    cells = {c.id: c for c in _layout().cells}
+    last_map = cells["cell:mapping:1:0"]  # the maps are r=2 tall
+    mbrace = cells["ebkbrace:primes"]
+    # the mapping brace hugs the LAST map row (one frame gap below), rather than
+    # floating at the bottom of the taller d-row comma band
+    gap = mbrace.y - (last_map.y + last_map.h)
+    assert 0 < gap <= spreadsheet.FRAME_GAP + 1
+    # the comma basis brace, hugging its d=3 rows, sits lower than the mapping brace
+    assert cells["ebkbrace:comma_basis:0"].y > mbrace.y
+
+
+def test_comma_tuning_rows_get_list_brackets_hugging_their_values():
+    cells = {c.id: c for c in _layout().cells}
+    # comma sizes are a list of interval sizes, bracketed like the target sizes
+    assert cells["bracket:tuning:commalist:l"].text == "[" and cells["bracket:tuning:commalist:r"].text == "]"
+    assert cells["bracket:damage:commalist:l"].text == "["
+    # the bracket pair sits just outside the comma value cells
+    l, r = cells["bracket:tuning:commalist:l"], cells["bracket:tuning:commalist:r"]
+    assert l.x < cells["tuning:comma:0"].x < r.x
+
+
+def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():
+    on = {c.id: c for c in _with(names=True).cells}
+    off = {c.id: c for c in _with(names=False).cells}
+    # the comma basis is captioned like the mapping, and sits below its taller (d-row)
+    # matrix — lower than the mapping caption hugging the r-row maps
+    assert on["caption:mapping:commas"].text == "comma basis"
+    assert on["caption:mapping:commas"].y > on["caption:mapping:primes"].y
+    # comma captions mirror the target captions, swapping "target-interval" for "comma"
+    assert on["caption:tuning:commas"].text == "tempered comma size list"
+    assert on["caption:just:commas"].text == "(just) comma size list"
+    assert on["caption:retune:commas"].text == "comma error list"
+    assert on["caption:damage:commas"].text == "comma damage list"
+    assert not any(c.startswith("caption:") and c.endswith(":commas") for c in off)
+
+
+def test_commas_column_has_an_add_comma_control():
+    cells = {c.id: c for c in _layout().cells}
+    assert "comma_plus" in cells  # always add-able, like the domain +
+    assert cells["comma_plus"].x > cells["comma:0"].x  # in the gutter right of the basis
+
+
+def test_comma_minus_rides_the_last_comma_only_when_more_than_one():
+    one = {c.id for c in _layout().cells}  # meantone exposes a single comma
+    assert "comma_minus" not in one  # the sole comma cannot be removed
+    two = service.add_comma(service.from_mapping(((1, 1, 0), (0, 1, 4))))
+    cells = {c.id: c for c in spreadsheet.build(two).cells}
+    assert "comma_minus" in cells  # ...but with two, the last is removable
+    assert cells["comma_minus"].x == cells["comma:1"].x  # rides the last comma column
+    assert cells["comma_minus"].y < cells["comma:1"].y  # revealed above its header
