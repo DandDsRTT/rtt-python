@@ -12,10 +12,9 @@ from dataclasses import dataclass
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.dual import dual
 from rtt.formatting import to_ebk
-from rtt.parsing import parse_temperament_data
 from rtt.generator_detempering import get_generator_detempering
 from rtt.math_utils import get_primes, pcv_to_quotient
-from rtt.parsing import parse_quotient_list
+from rtt.parsing import parse_quotient_list, parse_temperament_data
 from rtt.target_intervals import process_old, process_tilt
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (

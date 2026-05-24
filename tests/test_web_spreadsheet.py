@@ -680,7 +680,7 @@ def test_a_long_plain_text_value_wraps_within_its_column_instead_of_spilling():
     assert pt.w == header.w  # the box spans exactly its column — never wider, so it can't spill
     assert pt.h > spreadsheet.PTEXT_LINE  # the long size list wraps to more than one line...
     assert pt.h % spreadsheet.PTEXT_LINE == 0  # ...a whole number of lines, the tile grown to fit
-    assert cells["ptext:tuning:primes"].h == spreadsheet.PTEXT_LINE  # a short value stays one line
+    assert cells["ptext:quantities:primes"].h == spreadsheet.PTEXT_LINE  # a short value (2.3.5) stays one line
 
 
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
