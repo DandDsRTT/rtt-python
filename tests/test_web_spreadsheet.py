@@ -205,8 +205,27 @@ def test_quantities_spine_column_is_present_with_a_vertical_gridline():
     assert abs(spine.pos - (header.x + header.w / 2)) < 0.51  # centred on the column
     assert spine.start < cells["prime:0"].y  # starts above the quantities row
     assert spine.start + spine.length >= cells["label:damage"].y  # runs past the last row
-    # the spine column is not collapsible, mirroring the spine row
-    assert "toggle:col:quantities" not in cells
+    # ...and a fold toggle, like every other column
+    assert "toggle:col:quantities" in cells
+
+
+def test_generators_column_gridline_spans_the_full_height():
+    by_id = {ln.id: ln for ln in _layout().lines}
+    gens, quant = by_id["trunk:gens"], by_id["trunk:quantities"]
+    # the generators gridline runs the full grid height like the quantities spine,
+    # rather than stopping at the mapping band partway down
+    assert gens.start == quant.start
+    assert gens.length == quant.length
+
+
+def test_interval_vectors_row_has_a_horizontal_gridline():
+    lay = _layout()
+    by_id = {ln.id: ln for ln in lay.lines}
+    cells = {c.id: c for c in lay.cells}
+    assert "h:vectors" in by_id  # the interval-vectors row gets a gridline like the rest
+    line, vrow = by_id["h:vectors"], cells["label:vectors"]
+    assert vrow.y <= line.pos <= vrow.y + vrow.h  # centred on the vectors row band
+    assert line.start + line.length >= cells["header:targets"].x  # across the data columns
 
 
 def test_tuning_boxes_off_removes_the_tuning_rows_and_the_target_intervals_column():
@@ -305,11 +324,10 @@ def test_temperament_boxes_off_removes_mapping_and_the_domain_primes_column():
     assert off["tuning:target:0"].y < on["tuning:target:0"].y
 
 
-def test_each_collapsible_row_has_a_toggle_but_quantities_does_not():
+def test_every_row_including_quantities_has_a_fold_toggle():
     cells = {c.id: c for c in _layout().cells}
-    for key in ("mapping", "tuning", "just", "retune", "damage"):
-        assert f"toggle:row:{key}" in cells  # the [x]/expand control
-    assert "toggle:row:quantities" not in cells  # the spine row is not collapsible
+    for key in ("quantities", "vectors", "mapping", "tuning", "just", "retune", "damage"):
+        assert f"toggle:row:{key}" in cells  # every row gets the [x]/expand control
     assert cells["toggle:row:tuning"].x < cells["tuning:prime:0"].x  # sits left of the content
 
 

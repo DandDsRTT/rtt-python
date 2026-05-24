@@ -365,12 +365,12 @@ def build(state, settings=None, collapsed=None,
     col_header = {"quantities": "quantities", "gens": "generators",
                   "primes": "domain primes", "commas": "commas", "targets": "target-intervals",
                   "interest": "other intervals of interest"}
-    # The leftmost quantities column is the spine: a non-collapsible header + a
-    # single vertical rule, the column-axis dual of the spine quantities row.
+    # The leftmost quantities column is the spine: a header + fold toggle + a single
+    # vertical rule, the column-axis dual of the quantities spine row.
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
     # the value cells are inset by BRACKET_W within the group.
     col_bands = (
-        ("quantities", SPINE_W, show_domain_quantities, False),
+        ("quantities", SPINE_W, show_domain_quantities, True),
         ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc * COL_W, show_temp, True),
@@ -430,12 +430,12 @@ def build(state, settings=None, collapsed=None,
     fanout_y = branch_top_y + FAN
 
     # Row bands top-to-bottom: (key, natural height, present, collapsible, label),
-    # laid out by the same running-cursor rule as the columns. The spine
-    # quantities row is not collapsible, but the specific "quantities" toggle hides
-    # it (and its column, built elsewhere); the rest can fold to a strip.
+    # laid out by the same running-cursor rule as the columns. Every row folds to a
+    # strip via its toggle; the "quantities" setting additionally hides that row and
+    # its column outright.
     row_bands = (
         ("counts", ROW_H, show_counts, True, "counts"),
-        ("quantities", ROW_H, show_domain_quantities, False, "quantities"),
+        ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
         ("vectors", d * ROW_H, True, True, "interval vectors"),
         ("mapping", r * ROW_H, show_temp, True, "mapping"),
         ("tuning", ROW_H, show_tuning, True, "tuning"),
@@ -768,18 +768,16 @@ def build(state, settings=None, collapsed=None,
     column_axis("interest", "interest", mi, lambda i: interest_left(i) + COL_W / 2)
 
     # quantities spine column: a single vertical rule the full height of the grid
-    # (the column-axis dual of the h:quantities spine row); no per-element fan
-    # since the spine carries no data in the default view
+    # (the column-axis dual of the h:quantities spine row) — one spine rule, no fan
     if "quantities" in col_x:
         q_cx = col_x["quantities"] + col_w["quantities"] / 2
         lines.append(Line("trunk:quantities", "v", q_cx, branch_top_y, total_h - branch_top_y))
 
-    # generators column: a single vertical axis from its node down to the mapping
-    # band, connecting the toggle to the identity matrix (drawn over it).
-    if "mapping" in row_y:
+    # generators column: a single vertical rule the full height of the grid (like
+    # the quantities spine), connecting its toggle down through the identity matrix.
+    if "gens" in col_x:
         gen_cx = gen_x + col_w["gens"] / 2
-        gen_bot = map_top(r - 1) + ROW_H / 2 if row_open("mapping") else row_y["mapping"] + row_h["mapping"] / 2
-        lines.append(Line("trunk:gens", "v", gen_cx, branch_top_y, gen_bot - branch_top_y))
+        lines.append(Line("trunk:gens", "v", gen_cx, branch_top_y, total_h - branch_top_y))
 
     # mapping rows: the horizontal mirror of a column axis — fan out at the node
     # into one line per generator, fan back in on the right to a foot past the data.
@@ -797,14 +795,13 @@ def build(state, settings=None, collapsed=None,
         lines.append(Line("foot:mapping", "h", cy, right_bus_x, total_w - right_bus_x))
 
     # the quantities spine row: a single horizontal rule across the grid (the
-    # row-axis counterpart of the quantities spine column) that the data blocks
-    # hang off; always present since the spine row never collapses
+    # row-axis counterpart of the quantities spine column) that the data blocks hang off
     if "quantities" in row_y:
         lines.append(Line("h:quantities", "h", row_y["quantities"] + row_h["quantities"] / 2, node_edge, total_w - node_edge))
 
-    # single-value rows (counts + the tuning family) are each one line (no
-    # sub-rows), present or collapsed — so a collapsed one still leaves a gridline
-    for key in ("counts", "tuning", "just", "retune", "damage"):
+    # the remaining rows each get one horizontal rule across their band (no sub-row
+    # fan), present or collapsed — so a collapsed one still leaves a gridline
+    for key in ("counts", "vectors", "tuning", "just", "retune", "damage"):
         if key not in row_y:
             continue
         lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge))
