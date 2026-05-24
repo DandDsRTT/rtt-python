@@ -158,3 +158,32 @@ def test_bar_chart_straddles_a_shared_zero_baseline_for_signed_values():
     # the positive bar's bottom meets the negative bar's top at the common zero line
     assert abs((up[0] + up[1]) - down[0]) < 0.01
     assert up[0] < down[0]  # positive rises above the baseline, negative drops below it
+
+
+def test_range_chart_draws_a_titled_i_beam_with_min_max_labels_for_a_ranged_generator():
+    # the generator tuning-ranges chart: a tall I-beam (stem + two caps) for a generator
+    # with a range, the max/min cents labelled at its top/bottom caps
+    svg = app._range_chart(92, 96, ((1200.0, 1200.0), (685.714, 720.0)))
+    assert svg.startswith("<svg") and 'viewBox="0 0 92.00 96.00"' in svg
+    assert "tuning ranges" in svg  # the chart title, per the mockup
+    for label in ("720.00", "685.71"):  # the fifth's max (top cap) and min (bottom cap)
+        assert label in svg
+    heights = [h for _y, h in _bars(svg)]
+    assert max(heights) > 30  # the ranged generator's I-beam stem spans the plot area
+
+
+def test_range_chart_draws_only_a_flat_cap_for_a_pinned_generator():
+    # the period is pinned (octave held pure), so its [min, max] is a point — drawn as a
+    # single flat cap with one value label, not a misleading full-height range bar
+    svg = app._range_chart(92, 96, ((1200.0, 1200.0),))
+    assert "1200.00" in svg
+    heights = [h for _y, h in _bars(svg)]
+    assert heights and max(heights) < 10  # only a flat cap, no tall range stem
+
+
+def test_range_chart_shows_a_placeholder_and_no_i_beams_when_there_is_no_range():
+    # the diamond-monotone range can be empty (no monotone tuning); show a placeholder
+    svg = app._range_chart(92, 96, ())
+    assert "tuning ranges" in svg
+    assert "no range" in svg  # the placeholder text
+    assert "<rect" not in svg  # no I-beams drawn

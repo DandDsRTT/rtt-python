@@ -56,6 +56,16 @@ _CHART_PAD_T = 9  # top padding (room for the top gridline's label)
 _CHART_PAD_B = 2  # bottom padding
 _CHART_BAR_FRAC = 0.5  # bar width as a fraction of the column it sits in
 _CHART_GRID = "#bbbbbb"  # light gridline / tick colour
+# The generator tuning-ranges chart: per-generator vertical I-beam range markers drawn
+# in the same 1:1 SVG box as the EBK marks. A ranged generator is a stem with a cap at
+# top (max cents) and bottom (min), labelled at the caps; a pinned generator (the period,
+# octave held pure, so min == max) collapses to a single flat cap with one value.
+_RANGE_TITLE = "tuning ranges"  # the panel title, per the mockup
+_RANGE_CAP_W = 14  # I-beam cap width (px)
+_RANGE_MARK_W = 1.6  # I-beam stem + cap thickness (px) — constant at any height (1:1 viewBox)
+_RANGE_PLOT_T = 28  # plot-area top (below the title and the top-cap labels)
+_RANGE_PLOT_B = 18  # plot-area bottom margin (room for the bottom-cap labels)
+_RANGE_FONT = 7  # cents-label / placeholder font size
 
 _CSS = f"""
 /* the app title tile in the top-left: the name over square undo/redo buttons, on a
@@ -167,6 +177,15 @@ _CSS = f"""
             font-family:'Cambria',Georgia,serif; }}
 .rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append {{ height:20px; min-height:0 !important; }}
 .rtt-preselect .q-icon {{ font-size:15px; color:#555; }}
+/* the monotone/tradeoff range selector under the ranges chart: two compact radios
+   stacked vertically (the generators column is too narrow for them side by side),
+   with small dots and small Cambria labels */
+.rtt-rangemode {{ width:100%; display:flex; flex-direction:column; align-items:center;
+                  font-size:10px; line-height:1; }}
+.rtt-rangemode .q-radio {{ display:flex; min-height:0; font-size:9.5px; }}  /* block-level so the two stack */
+.rtt-rangemode .q-radio__inner {{ font-size:13px; }}  /* the radio dot size scales with font-size */
+.rtt-rangemode .q-radio__label {{ font-family:'Cambria',Georgia,serif; font-size:9.5px; line-height:1.1;
+                  color:#000; padding-left:2px; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
 .rtt-approx {{ font-size:13px; align-self:center; }}
@@ -441,6 +460,39 @@ def _bar_chart(w, h, values):
     return _svg(w, h, "".join(body))
 
 
+def _range_chart(w, h, ranges):
+    """The generator tuning-ranges chart filling its 1:1 px box: a titled panel with one
+    vertical I-beam per generator showing its [min, max] tuning in cents (max at the top
+    cap, min at the bottom), aligned to the generator columns below. A pinned generator
+    (min == max) draws a single flat cap; empty ``ranges`` draws a 'no range' placeholder."""
+    cx0, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
+    title = (f'<text x="{w / 2:.2f}" y="9" text-anchor="middle" font-size="8.5" '
+             f'font-weight="bold" fill="{_BR_COLOR}">{_RANGE_TITLE}</text>')
+    if not ranges:
+        return _svg(w, h, title + f'<text x="{w / 2:.2f}" y="{h / 2 + 2:.2f}" text-anchor="middle" '
+                    f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">no range</text>')
+    plot_top, plot_bot = _RANGE_PLOT_T, h - _RANGE_PLOT_B
+    mid, hw = (plot_top + plot_bot) / 2, _RANGE_MARK_W / 2
+
+    def cap(cx, y):
+        return _rect(cx - _RANGE_CAP_W / 2, y - hw, _RANGE_CAP_W, _RANGE_MARK_W)
+
+    def label(cx, y, v):
+        return (f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
+                f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">{v:.2f}</text>')
+
+    body = [title]
+    for i, (lo, hi) in enumerate(ranges):
+        cx = cx0 + i * col_w + col_w / 2
+        if hi - lo < 1e-6:  # pinned (e.g. the period): one value, no range — a single cap
+            body.append(cap(cx, mid) + label(cx, mid - 4, lo))
+        else:  # a vertical stem capped at the max (top) and min (bottom), labelled at each
+            body.append(_rect(cx - hw, plot_top, _RANGE_MARK_W, plot_bot - plot_top))
+            body.append(cap(cx, plot_top) + cap(cx, plot_bot))
+            body.append(label(cx, plot_top - 4, hi) + label(cx, plot_bot + 11, lo))
+    return _svg(w, h, "".join(body))
+
+
 def _parse_int(text):
     """``text`` -> int, or None for blank/partial input (matching the old parseInt)."""
     try:
@@ -636,9 +688,11 @@ def index() -> None:
     htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
     ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
     chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
+    range_keys: dict = {}  # range-chart cell id -> last (w, h, ranges) drawn, to redraw on resize/data change
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
     selects: dict = {}  # preselect cell id -> its q-select
     ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
+    radios: dict = {}  # range-mode cell id -> its q-radio (monotone / tradeoff)
     temperaments = dict(presets.TEMPERAMENTS)  # name -> defining comma basis
     captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
@@ -651,7 +705,7 @@ def index() -> None:
         """Remove an entity's element and forget every per-id handle for it."""
         els[eid].delete()
         for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects, ptext_inputs,
-                  captions, caption_html, math_cells, math_rendered, chart_keys):
+                  captions, caption_html, math_cells, math_rendered, chart_keys, range_keys, radios):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -732,6 +786,14 @@ def index() -> None:
             editor.set_target_spec(value)
         render()
 
+    def on_range_mode(value):
+        # which generator tuning range the ranges chart shows. A re-render echo (the radio
+        # mirroring editor.range_mode) is ignored via the building/None guards, like the preselects.
+        if building[0] or value is None:
+            return
+        editor.set_range_mode(value)
+        render()
+
     def on_toggle(item):  # fold/unfold one row, column, or tile ("row:tuning", "tile:mapping:primes")
         collapsed.discard(item) if item in collapsed else collapsed.add(item)
         render()
@@ -777,6 +839,12 @@ def index() -> None:
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
             elif cb.kind == "chart":
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # bar chart drawn in render()
+            elif cb.kind == "rangechart":
+                htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # I-beam ranges chart drawn in render()
+            elif cb.kind == "rangemode":  # the monotone/tradeoff range selector under the ranges chart
+                radios[cb.id] = ui.radio(["monotone", "tradeoff"], value=cb.text or "monotone",
+                        on_change=lambda e: on_range_mode(e.value)) \
+                    .props("dense").classes("rtt-rangemode")  # stacked vertically to fit the narrow gens column
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
                 math_cells[cb.id] = ui.html("").classes("rtt-symbol")  # content set in render()
@@ -850,7 +918,7 @@ def index() -> None:
         building[0] = True
         st = editor.state
         lay = spreadsheet.build(st, settings, collapsed, editor.tuning_scheme, editor.target_spec,
-                                interest=editor.interest_monzos)
+                                interest=editor.interest_monzos, range_mode=editor.range_mode)
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
 
@@ -893,6 +961,14 @@ def index() -> None:
                 if chart_keys.get(cb.id) != key:
                     htmls[cb.id].set_content(_bar_chart(cb.w, cb.h, cb.values))
                     chart_keys[cb.id] = key
+            elif cb.kind == "rangechart":
+                # redraw when the box resizes OR the ranges change (mapping/mode edit)
+                key = (cb.w, cb.h, cb.ranges)
+                if range_keys.get(cb.id) != key:
+                    htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges))
+                    range_keys[cb.id] = key
+            elif cb.kind == "rangemode":
+                radios[cb.id].value = cb.text  # mirror the live mode (building[0] guards the echo)
             elif cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":

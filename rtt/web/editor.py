@@ -29,6 +29,9 @@ class Editor:
         # Display data the user curates, not part of the temperament, so (like the
         # tuning/target selections) it lives outside the undo stack.
         self.interest_monzos: list[tuple[int, ...]] = []
+        # Which generator tuning range the ranges chart shows — diamond-monotone or
+        # diamond-tradeoff. A display choice like the two above, so it sits outside undo.
+        self.range_mode: str = "monotone"
         self._undo_stack: list[TemperamentState] = []
         self._redo_stack: list[TemperamentState] = []
 
@@ -101,6 +104,9 @@ class Editor:
 
     def set_target_spec(self, spec: str) -> None:
         self.target_spec = spec
+
+    def set_range_mode(self, mode: str) -> None:
+        self.range_mode = mode
 
     def expand(self) -> None:
         self._snapshot()

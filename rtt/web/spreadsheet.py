@@ -47,6 +47,9 @@ PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch tall
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
+RANGE_CHART_H = 96  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
+RANGE_MODE_H = 30  # height of the monotone/tradeoff range-mode selector (two stacked radios) below the ranges chart
+RANGE_GAP = 4  # gap between the ranges chart and its mode selector
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -291,7 +294,7 @@ def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
 
 
 def build(state, settings=None, collapsed=None,
-          tuning_scheme=None, target_spec=None, interest=()) -> Layout:
+          tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone") -> Layout:
     if settings is None:
         settings = _default_settings()
     if tuning_scheme is None:
@@ -733,6 +736,23 @@ def build(state, settings=None, collapsed=None,
         tval_row("damage", "commas", comma_sizes.damage)
         tval_row("damage", "targets", target_sizes.damage)
         chart("damage", "targets", target_sizes.damage)
+
+    # The generator tuning map tile: the generators column at the tuning row grows a
+    # ranges chart — a per-generator [min, max] I-beam (octave held pure, so the period
+    # generator pins to a point) under the selected mode, diamond-monotone or -tradeoff.
+    # A maximized-only feature gated on charts, riding the empty gens-column space below
+    # the mapping identity. The monotone range can be None (no monotone tuning exists),
+    # passed as () so the chart draws a placeholder rather than I-beams.
+    if show_charts and col_open("gens") and row_open("tuning"):
+        chosen = tun.monotone_generator_range if range_mode == "monotone" else tun.tradeoff_generator_range
+        gx, gw = col_x["gens"], col_w["gens"]
+        ry = tile_top["tuning"]
+        content_h = RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H
+        blocks.append(Block("block:gentuning", gx - PAD, ry - PAD, gw + 2 * PAD, content_h + 2 * PAD))
+        cells.append(CellBox("rangechart:tuning:gens", gx, ry, gw, RANGE_CHART_H, "rangechart",
+                             ranges=tuple(chosen) if chosen is not None else ()))
+        cells.append(CellBox("rangemode:tuning:gens", gx, ry + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
+                             "rangemode", text=range_mode))
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.

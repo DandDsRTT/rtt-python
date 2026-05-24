@@ -92,6 +92,20 @@ def test_scheme_and_target_spec_are_view_selections_outside_undo():
     assert editor.tuning_scheme == "CTE"  # undo reverts the mapping, not the scheme
 
 
+def test_range_mode_starts_monotone_and_is_a_view_selection_outside_undo():
+    # which generator tuning range the ranges chart shows (monotone vs tradeoff) is
+    # a display choice like the tuning scheme, so it starts at a default, is settable,
+    # and stays put across undo (it is not a temperament edit)
+    editor = Editor()
+    assert editor.range_mode == "monotone"
+    editor.set_range_mode("tradeoff")
+    assert editor.range_mode == "tradeoff"
+    assert editor.can_undo is False  # choosing a range mode is not an undoable edit
+    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
+    editor.undo()
+    assert editor.range_mode == "tradeoff"  # undo reverts the mapping, not the mode
+
+
 def test_cannot_shrink_below_one_dimension():
     editor = Editor()
     assert editor.can_shrink is True  # starts at d=3
