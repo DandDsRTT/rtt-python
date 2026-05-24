@@ -121,6 +121,9 @@ _CSS = f"""
 .rtt-caption {{ width:100%; text-align:center; font-size:9px; line-height:11px; color:#333;
                overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }}
 .rtt-caption-cell {{ align-items:flex-start; }}
+/* drop the mnemonic underline below descenders so a marked j/g/p/y (e.g. the j of
+   "just tuning map") reads as underlined rather than hiding under the glyph's tail */
+.rtt-caption u {{ text-underline-position:under; }}
 .rtt-count {{ font-size:16px; color:#000; white-space:nowrap; }}
 /* the plain-text value: its EBK string in a box that hugs the text (centred by the
    cell), so a short value like 2.3.5 stays a small box and a long one overflows neatly */
