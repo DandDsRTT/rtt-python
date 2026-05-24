@@ -103,9 +103,9 @@ _CSS = f"""
 .rtt-cellinput .q-field__native {{ text-align:center; padding:0 !important; color:#000; font-size:{_CELL_FONT}px;
             min-height:0; font-family:'Cambria',Georgia,serif; }}
 .rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal {{ display:none !important; }}
-/* the +/− controls are half the 26px mapping/prime cell, with that cell's border colour */
-.rtt-btn {{ width:13px !important; min-width:13px !important; height:13px !important;
-           min-height:13px !important; background:#fff !important; border:1px solid #c8c8c8 !important;
+/* the +/− controls are half the square mapping/prime cell, sharing its exact border */
+.rtt-btn {{ width:15px !important; min-width:15px !important; height:15px !important;
+           min-height:15px !important; background:#fff !important; border:{_CELL_BORDER} !important;
            border-radius:0 !important; padding:0 !important; box-shadow:none !important; }}
 /* center the glyph: Quasar's content box defaults to a tall line-height that
    overflowed the small square; pin it to the box so the flex centering can take over */
