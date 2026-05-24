@@ -214,17 +214,21 @@ def test_general_quantities_off_hides_the_body_values_but_keeps_the_headers():
     assert {"label:mapping", "header:primes", "toggle:row:mapping"} <= ids
 
 
-def test_specific_quantities_off_removes_the_quantities_row():
-    on = {c.id for c in _with().cells}
-    off = {c.id for c in _with(domain_quantities=False).cells}
-    assert "label:quantities" in on and "prime:0" in on  # present by default
-    # the quantities row -- its label, the domain-prime / target-ratio headers in
-    # it, and the domain ± controls that ride it -- is gone
-    assert "label:quantities" not in off
-    assert not any(c.startswith(("prime:", "target:")) for c in off)
-    assert {"minus", "plus"}.isdisjoint(off)
+def test_specific_quantities_off_removes_the_quantities_row_and_column():
+    on, off = _with(), _with(domain_quantities=False)
+    on_ids, off_ids = {c.id for c in on.cells}, {c.id for c in off.cells}
+    assert {"label:quantities", "prime:0", "header:quantities"} <= on_ids  # present by default
+    # the quantities ROW -- its label, the domain-prime / target-ratio headers in
+    # it, the domain ± controls riding it, and its gridline -- is gone
+    assert "label:quantities" not in off_ids
+    assert not any(c.startswith(("prime:", "target:")) for c in off_ids)
+    assert {"minus", "plus"}.isdisjoint(off_ids)
+    assert "h:quantities" not in {ln.id for ln in off.lines}
+    # the quantities spine COLUMN goes with it: its header and its vertical gridline
+    assert "header:quantities" not in off_ids
+    assert "trunk:quantities" not in {ln.id for ln in off.lines}
     # the body quantities (mapping matrix, tuning rows) are untouched
-    assert {"cell:mapping:0:0", "tuning:target:0"} <= off
+    assert {"cell:mapping:0:0", "tuning:target:0"} <= off_ids
 
 
 def test_temperament_boxes_off_removes_mapping_and_the_domain_primes_column():
