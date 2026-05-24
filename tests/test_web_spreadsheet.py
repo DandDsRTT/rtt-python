@@ -975,22 +975,21 @@ def test_math_expressions_show_the_comma_error_and_damage_as_logs():
     assert cells["damage:comma:0"].text == "1200 · log₂(81/80)\n= 21.506"
 
 
-def test_math_expressions_blank_the_tiles_with_no_closed_form():
-    # the tempered tuning row and the prime/target errors come from optimization, so
-    # they have no exact closed form — with math expressions on the WHOLE tile shows
-    # nothing: no value cells, no framing brackets, no caption, not even its panel
-    lay = _with(math_expressions=True)
-    cells = {c.id for c in lay.cells}
-    blocks = {b.id for b in lay.blocks}
+def test_math_expressions_leave_the_no_closed_form_cells_and_tiles_untouched():
+    # tempered tuning + the prime/target errors have no exact closed form, so math
+    # expressions adds nothing there: those cells keep their plain cents value, and
+    # the brackets, captions and panels of every tuning tile stay put. Math
+    # expressions only PREFIXES the closed-form cells — it never removes anything.
+    off = {c.id: c for c in _with().cells}
+    on_lay = _with(math_expressions=True)
+    on = {c.id: c for c in on_lay.cells}
     for cid in ("tuning:prime:1", "tuning:comma:0", "tuning:target:0",
-                "retune:prime:1", "retune:target:0", "damage:target:0"):
-        assert cid not in cells
-    assert not any(c.startswith("bracket:tuning:") for c in cells)  # no empty brackets
-    assert "caption:tuning:primes" not in cells  # nor a caption labelling nothing
-    assert "block:tuning:primes" not in blocks  # nor an empty grey panel
-    # the just row keeps its content, so its panel, brackets and captions stay
-    assert "block:just:primes" in blocks
-    assert "bracket:just:map:l" in cells and "caption:just:primes" in cells
+                "retune:prime:1", "damage:target:0"):
+        assert on[cid].kind == "tval"  # untouched: still the plain cents cell...
+        assert on[cid].text == off[cid].text  # ...with the same value as math off
+    # the tempered row's framing brackets, caption and grey panel all remain
+    assert {"bracket:tuning:map:l", "caption:tuning:primes"} <= set(on)
+    assert "block:tuning:primes" in {b.id for b in on_lay.blocks}
 
 
 def test_math_expressions_without_quantities_show_only_the_expression():

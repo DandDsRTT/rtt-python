@@ -328,9 +328,9 @@ def build(state, settings=None, collapsed=None,
     gridded = settings["gridded_values"]
     show_quantities = settings["quantities"]
     show_domain_quantities = settings["domain_quantities"]
-    # Math expressions replaces a tuning cell's cents decimal with its exact closed
-    # form where one exists ("1200 · log₂3 = 1901.96", the = cents kept when
-    # quantities is on); cells with no closed form (optimized values) show nothing.
+    # Math expressions PREFIXES a tuning cell's cents value with its exact closed form
+    # where one exists ("1200 · log₂3 = 1901.96", the = cents kept when quantities is
+    # on); a cell with no closed form is untouched and keeps its plain cents value.
     show_math = settings["math_expressions"]
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
@@ -717,37 +717,21 @@ def build(state, settings=None, collapsed=None,
             return _log_operand(f"{r.numerator}/{r.denominator}")
         return None
 
-    def math_emptied(key, group):
-        """A tuning tile whose values math expressions removes: its optimized values
-        have no exact closed form, so under math expressions it renders nothing at all
-        — no values, brackets, caption, or even its grey panel. (Mirrors which combos
-        closed_form_operand resolves; non-tuning rows are never emptied by math.)"""
-        if not show_math or key not in ("tuning", "just", "retune", "damage"):
-            return False
-        return not (key == "just" or (group == "commas" and key in ("retune", "damage")))
-
-    def shows_values(key, group):
-        """Whether a (row, group) tile renders its values/brackets/caption: it must be
-        open (not folded) and not emptied by math expressions."""
-        return tile_open(key, group) and not math_emptied(key, group)
-
     # tuning rows over the primes, commas and targets (cents); each can collapse on
     # its own. Commas sit on the same footing as targets — they are just the dual
-    # interval set. With math expressions on, a cell shows its exact closed form
-    # where one exists (a "mathexpr" kind the renderer swaps in for the cents cell)
-    # and NOTHING where it does not (optimized/derived values) — per Douglas: "if
-    # there's no closed form, show nothing when math expressions is checked".
+    # interval set. Math expressions only ADDS the exact closed form where one exists
+    # (a "mathexpr" kind prefixing the cents value); a cell with no closed form is
+    # untouched — it keeps its plain cents cell. Math expressions never removes a
+    # value, bracket, caption or tile: those are governed by quantities/gridded/names.
     def tval_row(key, group, vals):
-        if not shows_values(key, group):
+        if not tile_open(key, group):
             return
         y = row_y[key]
         for i, v in enumerate(vals):
             cid = f"{key}:{group_elem[group]}:{i}"
             x = group_left[group](i)
-            if show_math:
-                operand = closed_form_operand(key, group, i)
-                if operand is None:
-                    continue  # no closed form -> show nothing
+            operand = closed_form_operand(key, group, i) if show_math else None
+            if operand is not None:
                 cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, show_quantities)))
             else:
                 cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v)))
@@ -806,8 +790,6 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
 
-    # brackets follow shows_values, so a tuning group emptied by math expressions
-    # drops its (now-contentless) brackets too rather than framing empty space
     if row_open("mapping"):
         # the gens identity and the primes mapping are stacks of maps: ⟨ … ] per row
         for bid, ckey in (("selfmap", "gens"), ("map", "primes")):
@@ -828,17 +810,17 @@ def build(state, settings=None, collapsed=None,
             bracket("vec:interest", LIST_BRACKETS, "interest", row_y["vectors"], d * ROW_H, fit=True)
     for key in ("tuning", "just", "retune"):
         if row_open(key):
-            if shows_values(key, "primes"):
+            if tile_open(key, "primes"):
                 bracket(f"{key}:map", MAP_BRACKETS, "primes", row_y[key], ROW_H)
-            if shows_values(key, "commas"):
+            if tile_open(key, "commas"):
                 bracket(f"{key}:commalist", LIST_BRACKETS, "commas", row_y[key], ROW_H)
-            if shows_values(key, "targets"):
+            if tile_open(key, "targets"):
                 bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
-            if mi and shows_values(key, "interest"):
+            if mi and tile_open(key, "interest"):
                 bracket(f"{key}:ilist", LIST_BRACKETS, "interest", row_y[key], ROW_H)
-    if shows_values("damage", "commas"):
+    if tile_open("damage", "commas"):
         bracket("damage:commalist", LIST_BRACKETS, "commas", row_y["damage"], ROW_H)
-    if shows_values("damage", "targets"):
+    if tile_open("damage", "targets"):
         bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
 
     # Shared axes. A multi-element group is one line that fans out at the near end
@@ -930,8 +912,7 @@ def build(state, settings=None, collapsed=None,
         blocks.append(Block(bid, bx - px, by - py, w + 2 * px, h + 2 * py))
 
     for bid, rkey, ckey in tiles:
-        if not math_emptied(rkey, ckey):  # a math-emptied tile shows no panel either
-            panel(bid, ckey, rkey)
+        panel(bid, ckey, rkey)
 
     # quantity symbol + name stacked inside each tile, below its values + bottom
     # frame: the symbol line (toggled by symbols) on top, the long-form name
@@ -941,12 +922,11 @@ def build(state, settings=None, collapsed=None,
     # left side) even when symbols itself is off. Within a symboled row the slot is
     # reserved for every captioned column so the names stay aligned; the glyph and
     # equation are drawn only where defined (the comma columns have none yet). An
-    # empty interest column has no tiles. Mnemonics underlines the symbol letter. A
-    # tile emptied by math expressions (no closed form) shows nothing here either.
+    # empty interest column has no tiles. Mnemonics underlines the symbol letter.
     for (rkey, ckey), name in CAPTIONS.items():
         if ckey == "interest" and not interest:
             continue
-        if not shows_values(rkey, ckey):
+        if not tile_open(rkey, ckey):
             continue
         cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
         if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS:
@@ -984,11 +964,10 @@ def build(state, settings=None, collapsed=None,
     # caption/preselect bands (the same numbers the grid shows, written inline). The
     # two editable duals (mapping, comma basis) render as inputs that drive the grid;
     # every other value is read-only. A read-only value wraps to as many lines as it
-    # needs and the tile grows to hold them, so nothing spills past its column. A
-    # math-emptied tuning tile has no value to write, so it shows none.
+    # needs and the tile grows to hold them, so nothing spills past its column.
     if show_ptext:
         for (rkey, ckey), text in ptext_strings.items():
-            if not shows_values(rkey, ckey):
+            if not tile_open(rkey, ckey):
                 continue
             py = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_pre[rkey]
             kind = "ptextedit" if (rkey, ckey) in EDITABLE_PTEXT else "ptext"
