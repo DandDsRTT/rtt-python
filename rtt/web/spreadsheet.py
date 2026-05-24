@@ -21,7 +21,9 @@ COL_W = 30  # px per value column; == ROW_H so matrix cells are squares that til
 GAP = 14  # px between row/column groups
 PAD = 4  # px a block extends around its cells
 LABEL_W = 96  # row-label gutter width
-HEADER_H = 22  # column-header height
+HEADER_H = 36  # column-header height — two text lines tall, so a long collapsed
+# title (e.g. "other intervals of interest") wraps centered onto a second line
+# instead of forcing an over-wide one-line strip; short titles centre as one line
 SPINE_W = 64  # quantities spine column width — sized to seat its "quantities"
 # header without overflowing onto the generators column; carries only the
 # column-axis vertical rule, no data cells in the default view
@@ -29,6 +31,9 @@ CTRL_W = 18  # domain expand (+) control gutter, just right of the primes block
 BTN = 15  # px side of a domain +/− control — half the COL_W square mapping/prime cell
 MINUS_REVEAL_H = 18  # height the removable prime's hover-minus rises above its header
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
+TITLE_WRAP_W = 140  # cap on a collapsed column's title strip: a title wider than this
+# wraps onto the header band's second line (HEADER_H is two lines) instead of folding
+# to an over-wide one-line ribbon — e.g. "other intervals of interest"
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (off the edges and content)
 CAPTION_H = 16  # height of the quantity-name caption inside a tile (when names shown)
@@ -224,9 +229,10 @@ def _math_expr(operand: str, cents: float, show_value: bool) -> str:
 
 
 def _title_w(title: str) -> int:
-    """Approx rendered width of a 13px bold column title, so a collapsed column
-    can fold to a strip that still fits its (horizontal) title without overflow."""
-    return max(STRIP, len(title) * 8 + 10)
+    """Width of a collapsed column's title strip. A short title gets a strip just wide
+    enough for its single 13px bold line; a long one is capped at TITLE_WRAP_W so it
+    wraps to ~2 lines (matching the mockup) rather than folding to an over-wide ribbon."""
+    return max(STRIP, min(len(title) * 8 + 10, TITLE_WRAP_W))
 
 
 def _fold_glyph(is_collapsed: bool) -> str:
@@ -324,7 +330,11 @@ def build(state, settings=None, collapsed=None,
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc * COL_W, show_temp, True),
         ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
-        ("interest", 2 * BRACKET_W + mi * COL_W, show_tuning, True),
+        # an empty interest column has no cells to size it, so it takes its title's
+        # (wrapped, two-line) strip width — the narrow header the mockup shows — rather
+        # than a bare bracket-gutter stub the long title would overflow
+        ("interest", 2 * BRACKET_W + mi * COL_W if mi else _title_w(col_header["interest"]),
+         show_tuning, True),
     )
     # A fold-toggle node column sits between the row-label gutter and the content
     # (when names show); content starts past it with a clear gap so the tiles

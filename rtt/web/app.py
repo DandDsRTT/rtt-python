@@ -75,7 +75,8 @@ _CSS = f"""
              width:calc(100% + {_CELL_BORDER_W}px); height:calc(100% + {_CELL_BORDER_W}px);
              box-sizing:border-box; display:flex; align-items:center; justify-content:center;
              background:#fff; border:{_CELL_BORDER}; color:#000; font-size:{_CELL_FONT}px; }}
-.rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:nowrap; }}
+.rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:normal;
+                 width:100%; text-align:center; line-height:1.2; }}
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; }}
 .rtt-val {{ font-size:{_CELL_FONT}px; color:#000; }}

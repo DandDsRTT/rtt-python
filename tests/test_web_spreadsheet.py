@@ -362,6 +362,21 @@ def test_collapsed_column_keeps_its_title_at_a_width_that_fits_it():
     assert spreadsheet.STRIP < coll.w < full.w  # folded narrower, but wide enough to read the title
 
 
+def test_a_long_collapsed_title_caps_its_strip_so_it_wraps_short_titles_do_not():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = lambda col: {c.id: c for c in spreadsheet.build(base, collapsed={col}).cells}
+    interest = cells("col:interest")["header:interest"]
+    targets = cells("col:targets")["header:targets"]
+    # the long title keeps its full text but folds to a strip capped at TITLE_WRAP_W,
+    # so the two-line header band takes the overflow instead of a ~226px one-line ribbon
+    assert interest.text == "other intervals of interest"
+    assert interest.w == spreadsheet.TITLE_WRAP_W
+    assert interest.w < len("other intervals of interest") * 8 + 10  # narrower than one line
+    # a short title still fits on one line, so the cap leaves its strip untouched
+    assert targets.w == len("target-intervals") * 8 + 10
+    assert targets.w < spreadsheet.TITLE_WRAP_W
+
+
 def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     lay = spreadsheet.build(base, collapsed={"row:tuning"})
@@ -943,6 +958,14 @@ def test_other_intervals_of_interest_column_is_present_right_of_targets():
     assert cells["header:interest"].text == "other intervals of interest"
     assert "toggle:col:interest" in cells  # foldable like the other interval columns
     assert cells["header:interest"].x > cells["header:targets"].x  # rightmost column
+
+
+def test_empty_interest_column_takes_its_titles_wrapped_strip_width():
+    # an empty interest column has no cells to set its width, so it adopts its title's
+    # capped two-line strip width (the narrow header strip the mockup shows) rather than
+    # a bare bracket-gutter stub the long title would overflow
+    cells = {c.id: c for c in _layout().cells}  # default build => interest empty
+    assert cells["header:interest"].w == spreadsheet.TITLE_WRAP_W
 
 
 def test_empty_interest_column_is_just_a_header_and_axis():
