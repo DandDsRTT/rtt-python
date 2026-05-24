@@ -119,15 +119,19 @@ TILES = (
 
 # Cell kinds the value-display toggles filter out. "gridded values" hides
 # everything a tile holds besides its fold toggle and name caption: the value
-# numbers, the EBK marks framing them, and the domain/comma ± controls.
+# numbers (including the just row's "mathexpr" log₂ form), the EBK marks framing
+# them, and the domain/comma ± controls.
 GRIDDED_KINDS = frozenset({
-    "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell", "tval",
+    "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell",
+    "tval", "mathexpr",
     "bracket", "ebktop", "ebkbrace", "vbar", "minus", "plus", "comma_minus", "comma_plus",
 })
 # "quantities" (general) narrows that to the body quantity values and the EBK
 # marks framing them -- the matrix, mapped list, comma basis, generator ratios
 # and tuning cents -- leaving the quantities-row headers (the prime / comma /
-# target ratios) and the domain/comma controls in place.
+# target ratios) and the domain/comma controls in place. It does NOT drop the
+# just row's "mathexpr" cells: a log₂ expression is not a bare number, so it
+# stays (math_expressions' own show_value logic trims its "= value" tail instead).
 BODY_VALUE_KINDS = frozenset({
     "genratio", "mapping", "mapped", "commacell", "tval",
     "bracket", "ebktop", "ebkbrace", "vbar",

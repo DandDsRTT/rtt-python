@@ -215,6 +215,17 @@ def test_general_quantities_off_hides_the_body_values_but_keeps_the_headers():
     assert {"label:mapping", "header:primes", "toggle:row:mapping"} <= ids
 
 
+def test_gridded_values_off_also_empties_the_math_expression_cells():
+    # math expressions swap the just row's cents for "log₂…" cells (kind mathexpr);
+    # gridded values off empties the tiles, so those go too (like the cents they
+    # replace). General quantities, by contrast, only trims their "= value" tail
+    # (see test_math_expressions_without_quantities_show_only_the_expression).
+    on = {c.id for c in _with(math_expressions=True).cells}
+    off = {c.id for c in _with(math_expressions=True, gridded_values=False).cells}
+    assert any(c.startswith("just:") for c in on)  # shown when gridded values is on
+    assert not any(c.startswith("just:") for c in off)  # gone when it is off
+
+
 def test_specific_quantities_off_removes_the_quantities_row_and_column():
     on, off = _with(), _with(domain_quantities=False)
     on_ids, off_ids = {c.id for c in on.cells}, {c.id for c in off.cells}
