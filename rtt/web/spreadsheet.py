@@ -184,11 +184,15 @@ def build(state, settings=None, collapsed=None,
     ctun = service.tuning(state.mapping, comma_ratios)  # comma sizes (tempered ~0)
 
     # Column bands left-to-right: (key, natural width, present, collapsible).
-    # Generators belong to the temperament; domain primes and targets are always
-    # present. A collapsed column folds to a strip just wide enough to keep its
-    # (horizontal) title readable, so it never overflows onto its neighbours. The
-    # always-present domain + control rides just right of the primes block when it
-    # is open; the − is a hover affordance on the (removable) highest-prime column.
+    # Each set-column belongs to a box toggle: generators and the domain primes
+    # are the temperament's (shown with temperament_boxes), target-intervals are
+    # the tuning's (shown with tuning_boxes) -- turning a box off takes its whole
+    # column with it, including the other family's cells that ride in it (e.g. the
+    # tuning maps over primes, or the mapped target-interval list over targets). A
+    # collapsed column folds to a strip just wide enough to keep its (horizontal)
+    # title readable, so it never overflows onto its neighbours. The domain +
+    # control rides just right of the primes block when it is open; the − is a
+    # hover affordance on the (removable) highest-prime column.
     col_header = {"quantities": "quantities", "gens": "generators",
                   "primes": "domain primes", "commas": "commas", "targets": "target-intervals"}
     # The leftmost quantities column is the spine: a non-collapsible header + a
@@ -200,7 +204,7 @@ def build(state, settings=None, collapsed=None,
         ("gens", GEN_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc * COL_W, True, True),
-        ("targets", 2 * BRACKET_W + k * COL_W, True, True),
+        ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
     )
     # A fold-toggle node column sits between the row-label gutter and the content
     # (when names show); content starts past it with a clear gap so the tiles

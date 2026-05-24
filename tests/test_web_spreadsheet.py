@@ -170,10 +170,17 @@ def test_quantities_spine_column_is_present_with_a_vertical_gridline():
     assert "toggle:col:quantities" not in cells
 
 
-def test_tuning_boxes_off_hides_the_tuning_rows():
-    cells = {c.id for c in _with(tuning_boxes=False).cells}
-    assert not any(c.split(":")[0] in {"tuning", "just", "retune", "damage"} for c in cells)
-    assert {"label:tuning", "label:just", "label:retune", "label:damage"}.isdisjoint(cells)
+def test_tuning_boxes_off_removes_the_tuning_rows_and_the_target_intervals_column():
+    off = {c.id for c in _with(tuning_boxes=False).cells}
+    # the tuning-family rows are gone
+    assert not any(c.split(":")[0] in {"tuning", "just", "retune", "damage"} for c in off)
+    assert {"label:tuning", "label:just", "label:retune", "label:damage"}.isdisjoint(off)
+    # the target-intervals column goes with them: its header, the target headers,
+    # and the mapped target-interval list that lived in it
+    assert "header:targets" not in off
+    assert not any(c.startswith(("target:", "cell:mapped:")) for c in off)
+    # the mapping over the domain primes (temperament still on) survives
+    assert "cell:mapping:0:0" in off
 
 
 def test_temperament_boxes_off_removes_mapping_and_the_domain_primes_column():
