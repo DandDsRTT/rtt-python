@@ -32,17 +32,18 @@ _CELL_BORDER_W = 1  # px
 _CELL_BORDER = f"{_CELL_BORDER_W}px solid {_BR_COLOR}"
 _CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
 _BR_BAR = 2  # main bar / monzo-rule / square-bracket bar thickness (px)
-_BR_SERIF_T = 1.2  # square + top bracket serif thickness — lighter than the main bar
+_BR_SERIF_T = 0.9  # square + top bracket serif thickness — a thin foot, well under the bar
 _BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches) — also
 # the shared footprint width every value bracket (square AND angle) draws within
 _BR_INSET = 2.5  # gap from a bracket's open side to the value cells it hugs
 # The ⟨ and the brace are filled ribbons of varying width (see _ribbon): a
-# calligraphic pen lays a LONG stroke down THICK and a SHORT one THIN.
-_BR_ANGLE_THICK = 1.05  # ⟨ half-width at the vertex (heavier)
-_BR_ANGLE_THIN = 0.7  # ⟨ half-width at the open tips (lighter) — a subtle taper
+# calligraphic pen lays a LONG stroke down THICK and a SHORT one THIN. The thin
+# ends are kept delicate so the thick/thin taper reads clearly.
+_BR_ANGLE_THICK = 1.1  # ⟨ half-width at the vertex (heavier)
+_BR_ANGLE_THIN = 0.45  # ⟨ half-width at the open tips (much lighter) — a pronounced taper
 _BR_BRACE_THICK = 1.15  # brace arm half-width: the long horizontal stroke is thick
-_BR_BRACE_THIN = 0.55  # brace end-serif half-width: the short upturn is thin
-_BR_BRACE_CUSP = 0.3  # brace central-cusp half-width: the short dip is a near point
+_BR_BRACE_THIN = 0.4  # brace end-serif half-width: the short upturn is thin
+_BR_BRACE_CUSP = 0.2  # brace central-cusp half-width: the short dip is a near point
 
 _CSS = f"""
 .rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:30px; font-weight:bold;
@@ -225,8 +226,8 @@ def _angle_bracket(w, h):
     bx1 = w - _BR_INSET  # open tips, nearest the value cells
     bx0 = bx1 - _BR_SERIF_L  # vertex, at the far edge — width matches the square's reach
     cy = h / 2
-    vx, tx = bx0 + _BR_ANGLE_THICK, bx1 - 0.6
-    top, vertex, bot = (tx, 0.4), (vx, cy), (tx, h - 0.4)
+    vx, tx = bx0 + _BR_ANGLE_THICK, bx1 - 0.4
+    top, vertex, bot = (tx, 0.2), (vx, cy), (tx, h - 0.2)
     n = 10
     pts = [(top[0] + (vertex[0] - top[0]) * i / n, top[1] + (vertex[1] - top[1]) * i / n,
             _BR_ANGLE_THIN + (_BR_ANGLE_THICK - _BR_ANGLE_THIN) * i / n) for i in range(n + 1)]
