@@ -94,6 +94,9 @@ _CSS = f"""
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
 .rtt-cents-int {{ font-size:10px; }}
 .rtt-cents-frac {{ font-size:7px; color:#000; }}
+/* a just value's closed form (log₂3 = 1.585); wraps within the square value cell */
+.rtt-mathexpr {{ width:100%; text-align:center; font-size:7.5px; line-height:1.12; color:#000;
+                white-space:normal; overflow:hidden; }}
 .rtt-cellinput {{ width:100% !important; height:100%; min-height:0; overflow:visible; }}
 .rtt-cellinput .q-field__inner {{ overflow:visible; }}
 .rtt-cellinput .q-field__control {{ position:absolute !important; top:0; left:0;
@@ -134,7 +137,7 @@ _CSS = f"""
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px; color:#000; }}
 """
 
-_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "rowtoggle", "coltoggle", "tiletoggle"}
+_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "mathexpr", "rowtoggle", "coltoggle", "tiletoggle"}
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
 # cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
@@ -324,8 +327,15 @@ def index() -> None:
     cents: dict = {}  # cents cell id -> (whole label, fraction label), aligned on the point
     htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
     ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
+    kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
     building = [False]
     refs: dict = {}
+
+    def drop(eid):
+        """Remove an entity's element and forget every per-id handle for it."""
+        els[eid].delete()
+        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds):
+            d.pop(eid, None)
 
     def on_mapping_change():
         if building[0] or not settings["temperament_boxes"]:  # no editable matrix when hidden
@@ -403,6 +413,8 @@ def index() -> None:
                     w = ui.label(whole).classes("rtt-cents-int")
                     f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
                 cents[cb.id] = (w, f)
+            elif cb.kind == "mathexpr":  # a just value's closed form, e.g. "log₂3 = 1.585"
+                labels[cb.id] = ui.label(cb.text).classes("rtt-mathexpr")
             elif cb.kind == "colheader":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":
@@ -458,9 +470,12 @@ def index() -> None:
 
         for cb in lay.cells:
             seen.add(cb.id)
+            if cb.id in els and kinds[cb.id] != cb.kind:
+                drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
             if cb.id not in els:
                 with board:
                     els[cb.id] = _make_cell(cb)
+                kinds[cb.id] = cb.kind
             els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
             if cb.kind in _EBK_SVG_KINDS:
                 # the mark is drawn 1:1 to its px box, so redraw it whenever the box
@@ -484,14 +499,7 @@ def index() -> None:
                 labels[cb.id].set_text(cb.text)
 
         for eid in [e for e in els if e not in seen]:
-            els[eid].delete()
-            del els[eid]
-            inputs.pop(eid, None)
-            labels.pop(eid, None)
-            fracs.pop(eid, None)
-            cents.pop(eid, None)
-            htmls.pop(eid, None)
-            ebk_sizes.pop(eid, None)
+            drop(eid)
 
         refs["undo"].set_enabled(editor.can_undo)
         refs["redo"].set_enabled(editor.can_redo)

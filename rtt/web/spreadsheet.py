@@ -96,6 +96,21 @@ def _cents(value) -> str:
     return f"{value:.2f}"
 
 
+def _log_operand(ratio: str) -> str:
+    """The operand of a just interval's log₂, e.g. ``3/1`` -> ``3`` (a bare prime,
+    matching the mockup's ``log₂3``) and ``3/2`` -> ``(3/2)`` (parenthesised)."""
+    num, _, den = ratio.partition("/")
+    return num if den == "1" else f"({num}/{den})"
+
+
+def _math_expr(operand: str, cents: float, show_value: bool) -> str:
+    """A just value's closed form: ``log₂{operand}``, with ``= {octaves}`` appended
+    when the value (quantities) is also shown — e.g. ``log₂3 = 1.585``. The decimal
+    is in octaves (cents/1200) because that is what log₂ evaluates to."""
+    expr = f"log₂{operand}"
+    return f"{expr} = {cents / 1200:.3f}" if show_value else expr
+
+
 def _title_w(title: str) -> int:
     """Approx rendered width of a 13px bold column title, so a collapsed column
     can fold to a strip that still fits its (horizontal) title without overflow."""
@@ -115,6 +130,11 @@ def build(state, settings=None, collapsed=None) -> Layout:
     show_captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
+    # The just tuning row alone has an exact closed form (log₂ of each prime/ratio);
+    # with math expressions on it shows that instead of the cents decimal, paired
+    # with its octave value when quantities is also on ("log₂3 = 1.585").
+    show_math = settings["math_expressions"]
+    show_quantities = settings["quantities"]
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
     header_h = HEADER_H
@@ -325,20 +345,35 @@ def build(state, settings=None, collapsed=None) -> Layout:
                 for p in range(d):
                     cells.append(CellBox(f"cell:comma:{p}:{c}", comma_left(c), row_y["mapping"] + p * ROW_H, COL_W, ROW_H, "commacell", text=str(state.comma_basis[c][p]), prime=p, comma=c))
 
-    # the three value groups share an element name (for cell ids) and a left-edge
-    # accessor; primes carry a map, commas and targets carry interval lists
+    # the three value groups share an element name (for cell ids), a left-edge
+    # accessor, and the operand of their just log₂ (a bare prime, or a comma/target
+    # ratio); primes carry a map, commas and targets carry interval lists
     group_elem = {"primes": "prime", "commas": "comma", "targets": "target"}
     group_left = {"primes": prime_left, "commas": comma_left, "targets": target_left}
+    group_operand = {
+        "primes": lambda i: str(primes[i]),
+        "commas": lambda i: _log_operand(comma_ratios[i]),
+        "targets": lambda i: _log_operand(targets[i]),
+    }
 
     # tuning rows over the primes, commas and targets (cents); each can collapse on
     # its own. Commas sit on the same footing as targets — they are just the dual
     # interval set — so the comma's tempered size is ~0 (it vanishes), with a real
-    # just size and error.
+    # just size and error. The just row alone has an exact closed form (log₂ of each
+    # interval), so math expressions swaps its cents cells for that — paired with the
+    # octave value when quantities is also on ("log₂3 = 1.585"), the same cell id and
+    # box but a "mathexpr" kind the renderer swaps in.
     def tval_row(key, group, vals):
-        if tile_open(key, group):
-            y = row_y[key]
-            for i, v in enumerate(vals):
-                cells.append(CellBox(f"{key}:{group_elem[group]}:{i}", group_left[group](i), y, COL_W, ROW_H, "tval", text=_cents(v)))
+        if not tile_open(key, group):
+            return
+        y = row_y[key]
+        for i, v in enumerate(vals):
+            cid = f"{key}:{group_elem[group]}:{i}"
+            x = group_left[group](i)
+            if show_math and key == "just":
+                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(group_operand[group](i), v, show_quantities)))
+            else:
+                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=_cents(v)))
 
     tuning_data = {
         "tuning": (tun.tuning_map, ctun.tempered_targets, tun.tempered_targets),
