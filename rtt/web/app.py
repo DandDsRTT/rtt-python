@@ -132,11 +132,11 @@ _CSS = f"""
 .rtt-ptext {{ display:inline-block; border:1px solid #888; background:#fff; color:#000;
              font-size:12px; line-height:1.1; white-space:nowrap; padding:1px 5px;
              font-family:'Cambria',Georgia,serif; }}
-/* the quantity symbol above the caption: the glyph itself carries its weight and
-   slant (bold-italic maths letters for maps, bold-upright for vectors/matrices),
-   so Cambria Math renders it without faux styling */
+/* the quantity symbol above the caption: _math_html renders the base letter in the
+   UI serif with explicit weight/slant (bold-italic for maps, bold-upright for
+   vectors/matrices) — not a maths-font glyph, whose styling font fallback dropped */
 .rtt-symbol {{ width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
-              font-family:'Cambria Math','Cambria',Georgia,serif; }}
+              font-family:'Cambria',Georgia,serif; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
@@ -223,7 +223,7 @@ _CSS = f"""
 """
 
 _LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "vec", "count", "mathexpr",
-                "symbol", "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
+                "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
 
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
 # cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
@@ -558,6 +558,40 @@ def _example_html(key: str) -> str:
     return f'<span class="rtt-ex">{_escape(_EXAMPLE_TEXT[key])}</span>'
 
 
+def _demath(ch):
+    """A Mathematical Alphanumeric letter as ``(base_letter, bold, italic)``, or
+    None for an ordinary character. Only the bold and bold-italic blocks are used
+    (matrices/vectors and maps); other characters pass through unstyled."""
+    cp = ord(ch)
+    if 0x1D400 <= cp <= 0x1D419:  # bold capitals
+        return chr(ord("A") + cp - 0x1D400), True, False
+    if 0x1D41A <= cp <= 0x1D433:  # bold small
+        return chr(ord("a") + cp - 0x1D41A), True, False
+    if 0x1D468 <= cp <= 0x1D481:  # bold-italic capitals
+        return chr(ord("A") + cp - 0x1D468), True, True
+    if 0x1D482 <= cp <= 0x1D49B:  # bold-italic small
+        return chr(ord("a") + cp - 0x1D482), True, True
+    return None
+
+
+def _math_html(text):
+    """``text`` with each Mathematical Alphanumeric letter rendered as its base
+    letter in a span carrying explicit CSS weight/slant — so the UI serif draws a
+    correctly bold/italic glyph rather than depending on a maths font (which font
+    fallback mis-rendered). Ordinary characters pass through, HTML-escaped. Used
+    for the quantity symbols and their equivalence tails."""
+    out = []
+    for ch in text:
+        styled = _demath(ch)
+        if styled is None:
+            out.append(_escape(ch))
+            continue
+        base, bold, italic = styled
+        css = (["font-weight:700"] if bold else []) + (["font-style:italic"] if italic else [])
+        out.append(f'<span style="{";".join(css)}">{_escape(base)}</span>')
+    return "".join(out)
+
+
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
@@ -582,13 +616,16 @@ def index() -> None:
     temperaments = dict(presets.TEMPERAMENTS)  # name -> defining comma basis
     captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
+    symbol_cells: dict = {}  # symbol cell id -> the ui.html holding its styled glyph(s)
+    symbol_html: dict = {}  # symbol cell id -> last html, to rewrite on an equivalences toggle
     building = [False]
     refs: dict = {}
 
     def drop(eid):
         """Remove an entity's element and forget every per-id handle for it."""
         els[eid].delete()
-        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects, captions, caption_html, chart_keys):
+        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, kinds, selects,
+                  captions, caption_html, symbol_cells, symbol_html, chart_keys):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -699,7 +736,7 @@ def index() -> None:
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # bar chart drawn in render()
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
-                labels[cb.id] = ui.label(cb.text).classes("rtt-symbol")  # text tracks the equivalences toggle
+                symbol_cells[cb.id] = ui.html("").classes("rtt-symbol")  # content set in render()
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 captions[cb.id] = ui.html("").classes("rtt-caption")  # content set in render()
@@ -827,6 +864,11 @@ def index() -> None:
                 # mirror the live selection (tuning/target); "" leaves the temperament
                 # chooser on its placeholder. building[0] guards on_change from echoing.
                 selects[cb.id].value = cb.text or None
+            elif cb.kind == "symbol":
+                html = _math_html(cb.text)
+                if symbol_html.get(cb.id) != html:  # rewrite when an equivalences toggle changes the tail
+                    symbol_cells[cb.id].set_content(html)
+                    symbol_html[cb.id] = html
             elif cb.kind == "caption":
                 html = _underline_html(cb.text, cb.underlines)
                 if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines

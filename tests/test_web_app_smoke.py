@@ -66,6 +66,19 @@ def test_underline_html_wraps_only_the_marked_spans():
     assert app._underline_html("(temperament) mapping", ((14, 1),)) == "(temperament) <u>m</u>apping"
 
 
+def test_math_html_gives_each_maths_letter_explicit_weight_and_slant():
+    # matrices/vectors are bold-upright (weight only); maps are bold-italic (both).
+    # the base ASCII letter renders in the UI serif, not relying on a maths font.
+    assert app._math_html("𝐌") == '<span style="font-weight:700">M</span>'
+    assert app._math_html("𝒕") == '<span style="font-weight:700;font-style:italic">t</span>'
+    # a product styles each letter on its own (the comma column's 𝒕𝐂)
+    assert app._math_html("𝒕𝐂") == ('<span style="font-weight:700;font-style:italic">t</span>'
+                                      '<span style="font-weight:700">C</span>')
+    # ordinary characters (an equivalence tail's " = " and operators) pass through
+    assert app._math_html(" = 𝒈𝐌") == (' = <span style="font-weight:700;font-style:italic">g</span>'
+                                         '<span style="font-weight:700">M</span>')
+
+
 def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
     # every EBK mark is one SVG whose viewBox is the cell's own px box, so its
     # weight is a constant px count rather than a scaled stroke — that is what
