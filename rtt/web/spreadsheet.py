@@ -86,21 +86,24 @@ COUNTS = (
 COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in COUNTS)
 
 # Quantity-name captions shown inside each (row, column) tile when names are on.
+# In the comma column, the rows whose quantity the temperament zeroes out — mapped
+# (𝑀C), tempered (𝒕C) and retuned (𝒓C) — append "(made to vanish!)"; the just row
+# shows the comma's genuine untempered size, so it omits the note.
 CAPTIONS = {
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
     ("mapping", "primes"): "(temperament) mapping",
-    ("mapping", "commas"): "mapped comma basis",
+    ("mapping", "commas"): "mapped comma basis (made to vanish!)",
     ("mapping", "targets"): "mapped target interval list",
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
-    ("tuning", "commas"): "tempered comma basis interval size list",
+    ("tuning", "commas"): "tempered comma basis interval size list (made to vanish!)",
     ("tuning", "targets"): "tempered target interval size list",
     ("just", "primes"): "just tuning map",
     ("just", "commas"): "(just) comma basis interval size list",
     ("just", "targets"): "(just) target interval size list",
     ("retune", "primes"): "retuning map",
-    ("retune", "commas"): "comma basis interval retuning list",
+    ("retune", "commas"): "comma basis interval retuning list (made to vanish!)",
     ("retune", "targets"): "target interval error list",
     ("prescaling", "primes"): "complexity prescaler",
     ("complexity", "primes"): "domain prime complexity map",
