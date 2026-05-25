@@ -255,10 +255,11 @@ _CSS = f"""
 .rtt-show-row {{ display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }}
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px;
                                     color:#000; white-space:nowrap; }}
-/* a not-yet-built toggle is disabled — make that unmistakable: render its label a
-   light, italic grey (vs the crisp upright black of an active toggle), a far clearer
-   "inactive" cue than Quasar's faint default opacity dim alone */
-.rtt-show-item.disabled .q-checkbox__label {{ color:#999; font-style:italic; }}
+/* a not-yet-built toggle is disabled — make that unmistakable: render its label AND
+   its checkbox box the same light grey (vs the crisp black of an active toggle), a
+   far clearer "inactive" cue than Quasar's faint default opacity dim alone */
+.rtt-show-item.disabled .q-checkbox__label {{ color:#999; }}
+.rtt-show-item.disabled .q-checkbox__inner {{ color:#999 !important; }}
 /* a sub-control's checkbox sits indented under its parent toggle; only the Show
    column indents, so the example column stays aligned with the other rows */
 .rtt-show-sub .rtt-show-item {{ margin-left:18px; }}
