@@ -101,10 +101,24 @@ def test_generators_as_ratios():
     assert service.generators([[1, 1, 0], [0, 1, 4]]) == ("2/1", "3/2")
 
 
+def test_generators_over_a_nonstandard_domain_multiply_out_the_basis():
+    # Barbados (2.3.13/5): its detempering generators are 2/1 and the ~15/13 neutral
+    # second — read over the basis, not as prime monzos
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert service.generators(state.mapping, domain_basis=state.domain_basis) == ("2/1", "15/13")
+
+
 def test_comma_ratios_renders_each_comma_monzo_as_a_ratio():
     # the comma basis as ratio strings, mirroring service.generators for the maps
     assert service.comma_ratios(((4, -4, 1),)) == ("80/81",)  # the syntonic comma, as-is
     assert service.comma_ratios(((4, -4, 1), (0, 0, 0))) == ("80/81", "1/1")
+
+
+def test_comma_ratios_over_a_nonstandard_domain_multiply_out_the_basis():
+    # the comma monzo (2 -3 2) is over the basis 2.3.13/5, so its ratio is
+    # 2^2·3^-3·(13/5)^2 = 676/675 (the Barbados comma) — not the prime-monzo reading 100/27
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert service.comma_ratios(state.comma_basis, domain_basis=state.domain_basis) == ("676/675",)
 
 
 def test_mapped_intervals():
@@ -447,6 +461,18 @@ def test_plain_text_commas_column_mirrors_the_grid():
     # comma sizes are lists over the commas, like the grid's column
     assert pt[("tuning", "commas")] == f"[{cents(sizes.tempered)}]"
     assert pt[("just", "commas")] == f"[{cents(sizes.just)}]"
+
+
+def test_plain_text_over_a_nonstandard_domain_uses_the_basis():
+    # the plain-text view of a 2.3.13/5 temperament names the domain basis in dot
+    # notation and tunes over its elements (not the standard primes)
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pt = service.plain_text_values(state)
+    assert pt[("quantities", "primes")] == "2.3.13/5"
+    assert pt[("vectors", "commas")] == "[[2 -3 2⟩]"  # the comma monzo, basis-relative
+    tun = service.tuning(state.mapping, domain_basis=state.domain_basis)
+    cents = " ".join(f"{v:.3f}" for v in tun.tuning_map)
+    assert pt[("tuning", "primes")] == f"⟨{cents}]"
 
 
 def test_comma_basis_pending_text_splits_the_draft_for_two_tone_display():

@@ -149,27 +149,39 @@ def default_target_limit(family: str, domain_basis) -> int:
     return default_old_limit(domain) if "OLD" in family else default_tilt_limit(domain)
 
 
-def _monzos_to_ratios(monzos) -> tuple[str, ...]:
-    """Each monzo as a ``"num/den"`` ratio string (the shared rendering for
-    generators and commas)."""
+def _monzos_to_ratios(monzos, domain_basis=None) -> tuple[str, ...]:
+    """Each monzo as a ``"num/den"`` ratio string (the shared rendering for generators
+    and commas). A monzo's components are exponents on the domain basis: the standard
+    primes (``pcv_to_quotient``) or, for a nonstandard basis, its (nonprime) elements —
+    so a comma over ``2.3.13/5`` multiplies those out (676/675), not the primes (100/27)."""
+    standard = domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis)
+    elements = None if standard else tuple(Fraction(e) for e in domain_basis)
     ratios = []
     for monzo in monzos:
-        quotient = pcv_to_quotient(monzo)
+        if standard:
+            quotient = pcv_to_quotient(monzo)  # exponents on the standard primes
+        else:
+            quotient = Fraction(1)
+            for element, exponent in zip(elements, monzo):
+                quotient *= element**exponent
         ratios.append(f"{quotient.numerator}/{quotient.denominator}")
     return tuple(ratios)
 
 
-def generators(mapping) -> tuple[str, ...]:
-    """Each generator as an approximate ratio string, e.g. ``('2/1', '2/3')``."""
-    m = Temperament(_to_matrix(mapping), Variance.ROW)
-    return _monzos_to_ratios(get_generator_detempering(m).matrix)
+def generators(mapping, domain_basis=None) -> tuple[str, ...]:
+    """Each generator as an approximate ratio string, e.g. ``('2/1', '2/3')``. The
+    detempering's monzos are over the domain basis, so a nonstandard one multiplies out
+    its (nonprime) elements rather than reading the monzo over primes."""
+    m = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
+    return _monzos_to_ratios(get_generator_detempering(m).matrix, domain_basis)
 
 
-def comma_ratios(comma_basis) -> tuple[str, ...]:
+def comma_ratios(comma_basis, domain_basis=None) -> tuple[str, ...]:
     """Each comma in the basis as a ratio string, e.g. ``('80/81',)`` — the
     comma-column analogue of :func:`generators`. Rendered as-is (the canonical
-    dual's sign), so the syntonic comma reads ``80/81`` (a descending interval)."""
-    return _monzos_to_ratios(comma_basis)
+    dual's sign), so the syntonic comma reads ``80/81`` (a descending interval).
+    Over a nonstandard ``domain_basis`` the monzo is multiplied out over its elements."""
+    return _monzos_to_ratios(comma_basis, domain_basis)
 
 
 def _monzos(ratios, d) -> tuple:
@@ -364,15 +376,20 @@ def plain_text_values(
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
     show the same numbers two ways — the EBK string is the inline notation."""
-    primes = standard_primes(state.d)
-    targets = target_interval_set(target_spec, primes)
-    commas = comma_ratios(state.comma_basis)
-    mapped = mapped_intervals(state.mapping, targets)
+    db = state.domain_basis
+    targets = target_interval_set(target_spec, db)
+    commas = comma_ratios(state.comma_basis, db)
+    mapped = mapped_intervals(state.mapping, targets, db)
     mapped_comma = mapped_commas(state.mapping, state.comma_basis)
-    target_monzos = target_interval_monzos(targets, state.d)
-    tun = tuning(state.mapping, scheme)  # prime maps, shared by both interval sets
-    target_sizes = interval_sizes(tun, targets)
-    comma_sizes = interval_sizes(tun, commas)  # comma sizes, like the grid's commas column
+    target_monzos = target_interval_monzos(targets, state.d, db)
+    tun = tuning(state.mapping, scheme, db)  # maps over the domain elements, shared by both sets
+    target_sizes = interval_sizes(tun, targets, db)
+    comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
+    # the mapping's EBK is the editable dual; a nonstandard domain prefixes its basis
+    # (e.g. "2.3.13/5 [⟨…]}") so the string still parses back to the same temperament
+    mapping_ebk = to_ebk(Temperament(state.mapping, Variance.ROW, db))
+    if not is_standard_prime_limit_domain_basis(db):
+        mapping_ebk = ".".join(str(e) for e in db) + " " + mapping_ebk
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
     # monzo lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
@@ -380,10 +397,10 @@ def plain_text_values(
     # quantities-row ratios get a per-column plain text in the layout, not here; the
     # generators (mapping/quantities) carry no plain-text form.
     return {
-        ("quantities", "primes"): ".".join(str(p) for p in primes),
+        ("quantities", "primes"): ".".join(str(e) for e in db),
         ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
         ("vectors", "targets"): _ket_list(target_monzos, "⟩"),
-        ("mapping", "primes"): to_ebk(Temperament(state.mapping, Variance.ROW)),
+        ("mapping", "primes"): mapping_ebk,
         ("mapping", "commas"): _ket_list(zip(*mapped_comma), "}"),
         ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
         ("tuning", "gens"): _cents_genmap(tun.generator_map),
