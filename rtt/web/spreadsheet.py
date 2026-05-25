@@ -456,14 +456,13 @@ def build(state, settings=None, collapsed=None,
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
         ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
-        # The interest column's long title needs its two-line strip width as a FLOOR:
-        # never let the value cells (few intervals: 32 + mi·COL_W) shrink the column
-        # below it, or adding the first interval would shrink the column and rewrap the
-        # title onto a third line. Holding this floor also keeps the column width — and
-        # so the captions wrapped within it, and the board height — steady as intervals
-        # are added, until the cells genuinely outgrow the title.
-        ("interest", max(2 * BRACKET_W + mi * COL_W, _title_w(col_header["interest"])),
-         show_tuning, True),
+        # The interest column's tiles hug their content (32 + mi·COL_W) — no empty
+        # padding. Its long two-line title would not fit that narrow width, so the
+        # HEADER alone floats wider (see col_head_w below): since interest is the
+        # rightmost column, the header overhangs to the right (into the header band
+        # above the + gutter) without crowding any neighbour. The captions wrap within
+        # the (content) column width, and the board height is independent of either.
+        ("interest", 2 * BRACKET_W + mi * COL_W, show_tuning, True),
     )
     # A fold-toggle node column sits between the row-label gutter and the content
     # (when names show); content starts past it with a clear gap so the tiles
@@ -491,6 +490,15 @@ def build(state, settings=None, collapsed=None,
             x = ctrl_x[key] + CTRL_W
         x += GAP
     total_w = x
+
+    # Header width per column. Normally the header spans its column; the rightmost
+    # column (interest) is the exception — its tiles hug a few narrow cells but its
+    # long title needs more room, so its header floats out to the title width and
+    # overhangs to the right (only the rightmost column may, with no neighbour there).
+    col_head_w = dict(col_w)
+    if "interest" in col_x:
+        col_head_w["interest"] = max(col_w["interest"], _title_w(col_header["interest"]))
+        total_w = max(total_w, col_x["interest"] + col_head_w["interest"] + PAD)
 
     primes_x = col_x.get("primes")  # None when the domain-primes column is hidden
     commas_x = col_x.get("commas")  # None when the commas column is hidden
@@ -535,10 +543,14 @@ def build(state, settings=None, collapsed=None,
 
     def caption_band(key, folded):
         # the row's caption band is sized to its tallest (wrapped) caption, so the
-        # longest name fits within its tile rather than spilling off a narrow column
+        # longest name fits within its tile rather than spilling off a narrow column.
+        # Captions wrap within the header width (col_head_w), not the content width, so
+        # the interest column's caption tracks its (steady) header rather than its
+        # content — keeping this band, and the board height, independent of how many
+        # intervals of interest are present.
         if not (show_captions and key in CAPTIONED_ROWS and not folded):
             return 0
-        lines = [_wrap_lines(CAPTIONS[(key, c)], col_w[c]) for c in col_x
+        lines = [_wrap_lines(CAPTIONS[(key, c)], col_head_w[c]) for c in col_x
                  if (key, c) in CAPTIONS and col_open(c) and f"tile:{key}:{c}" not in collapsed]
         return max(lines, default=1) * CAPTION_LINE
 
@@ -627,10 +639,12 @@ def build(state, settings=None, collapsed=None,
     # column headers (always shown; a collapsed column keeps its title) plus a
     # fold toggle in the header band for collapsible ones
     for key in col_x:
-        cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=col_header[key]))
+        cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_head_w[key], HEADER_H, "colheader", text=col_header[key]))
         if col_collapsible[key]:
             glyph = _fold_glyph(f"col:{key}" in collapsed)
-            tx = col_x[key] + (col_w[key] - TOGGLE) / 2  # centered under the header text
+            # the fold toggle sits on the column's gridline (its content centre), so it
+            # stays aligned with the trunk even when the interest header floats wider
+            tx = col_x[key] + (col_w[key] - TOGGLE) / 2
             cells.append(CellBox(f"toggle:col:{key}", tx, col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
 
     # row labels (always shown; a collapsed row keeps its label as the strip)
@@ -1043,8 +1057,11 @@ def build(state, settings=None, collapsed=None,
         if show_captions:
             kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
             underlines = ((name.index(kw), 1),) if kw else ()
-            ch = _wrap_lines(name, col_w[ckey]) * CAPTION_LINE  # hug this name's own lines
-            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], ch,
+            # wrap within the header width (col_head_w): for interest this is its
+            # steady header, not its content, so the caption stays put as intervals
+            # are added and overhangs the narrow tiles to the right, like the header
+            ch = _wrap_lines(name, col_head_w[ckey]) * CAPTION_LINE  # hug this name's own lines
+            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_head_w[ckey], ch,
                                  "caption", text=name, underlines=underlines))
 
     # preselect chooser dropdowns, in the reserved band below each governing tile
