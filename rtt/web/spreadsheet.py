@@ -85,6 +85,7 @@ CAPTIONS = {
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma list",
     ("mapping", "targets"): "mapped target-interval list",
+    ("projection", "primes"): "projection matrix",
     ("tuning", "primes"): "tuning map",
     ("tuning", "commas"): "tempered comma size list",
     ("tuning", "targets"): "tempered target-interval size list",
@@ -129,8 +130,9 @@ SYMBOLS = {
 }
 SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symbol slot
 # multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping
-# for its spanning bracket+brace, the interval vectors for the per-column ket marks
-FRAMED_ROWS = frozenset({"mapping", "vectors"})
+# for its spanning bracket+brace, the interval vectors for the per-column ket marks,
+# the projection for its spanning bracket+brace (like the mapping)
+FRAMED_ROWS = frozenset({"mapping", "vectors", "projection"})
 CHARTED_ROWS = frozenset({"retune", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
@@ -195,6 +197,7 @@ TILES = (
     ("block:mapping", "mapping", "primes"),
     ("block:mapped_comma", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),
+    ("block:projection", "projection", "primes"),
     ("block:tuning:primes", "tuning", "primes"),
     ("block:tuning:commas", "tuning", "commas"),
     ("block:tuning:targets", "tuning", "targets"),
@@ -316,6 +319,7 @@ def build(state, settings=None, collapsed=None,
     show_symbols = settings["symbols"]  # the in-tile quantity symbols, stacked above the captions
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
+    show_projection = settings["projection"]  # the (stubbed) tuning-projection matrix box
     # Value-display toggles. "gridded values" is the master switch: with it off
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
@@ -456,6 +460,9 @@ def build(state, settings=None, collapsed=None,
         ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
         ("vectors", d * ROW_H, True, True, "interval vectors"),
         ("mapping", r * ROW_H, show_temp, True, "mapping"),
+        # the (stubbed) projection matrix is d x d over the domain primes, so it stands
+        # d rows tall like the interval-vectors row; a sub-control of the tuning boxes
+        ("projection", d * ROW_H, show_tuning and show_projection, True, "projection"),
         ("tuning", ROW_H, show_tuning, True, "tuning"),
         ("just", ROW_H, show_tuning, True, "just tuning"),
         ("retune", ROW_H, show_tuning, True, "retuning"),
@@ -653,6 +660,16 @@ def build(state, settings=None, collapsed=None,
                 for c in range(nc):
                     cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", comma_left(c), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_commas[i][c]), gen=i))
 
+    # the projection matrix: a d x d operator over the domain primes, shown as a stack
+    # of maps like the mapping matrix. STUBBED for now — the real tuning-projection
+    # computation (P = GM, projecting just intonation onto the tempered tuning) is
+    # deferred, so the d x d identity stands in as a read-only placeholder.
+    if row_open("projection") and tile_open("projection", "primes"):
+        for i in range(d):
+            for p in range(d):
+                cells.append(CellBox(f"cell:proj:{i}:{p}", prime_left(p), row_y["projection"] + i * ROW_H,
+                                     COL_W, ROW_H, "static", text="1" if i == p else "0"))
+
     # interval-vectors row: each column's intervals as monzos (d-tall columns over
     # the domain primes), on the same prime/comma/target axes as the quantities row.
     # The domain primes are their own basis, so they read as the d x d identity; the
@@ -801,6 +818,9 @@ def build(state, settings=None, collapsed=None,
             bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H, fit=True)
         if mi and tile_open("mapping", "interest"):  # interest mapped list, like the targets
             bracket("imapped", LIST_BRACKETS, "interest", row_y["mapping"], r * ROW_H, fit=True)
+    if row_open("projection") and tile_open("projection", "primes"):  # a stack of d maps: ⟨ … ] per row
+        for i in range(d):
+            bracket(f"proj:{i}", MAP_BRACKETS, "primes", row_y["projection"] + i * ROW_H, ROW_H)
     if row_open("vectors"):  # each group is a list of monzos: a [ ] spanning the d components
         for group in ("primes", "commas", "targets"):
             if tile_open("vectors", group):
@@ -884,8 +904,9 @@ def build(state, settings=None, collapsed=None,
         lines.append(Line("h:quantities", "h", row_y["quantities"] + row_h["quantities"] / 2, node_edge, total_w - node_edge))
 
     # the remaining rows each get one horizontal rule across their band (no sub-row
-    # fan), present or collapsed — so a collapsed one still leaves a gridline
-    for key in ("counts", "vectors", "tuning", "just", "retune", "damage"):
+    # fan), present or collapsed — so a collapsed one still leaves a gridline. The
+    # projection matrix takes a single centred rule like the (also d-tall) vectors row.
+    for key in ("counts", "vectors", "projection", "tuning", "just", "retune", "damage"):
         if key not in row_y:
             continue
         lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge))
@@ -982,17 +1003,19 @@ def build(state, settings=None, collapsed=None,
     def frame_brace_y(rkey):
         return row_y[rkey] + row_h[rkey] + FRAME_GAP
 
-    # the gens identity and the primes mapping are both stacked-maps matrices, each
-    # enclosed by a top bracket + bottom brace spanning its whole column
-    def map_frame(ckey):
-        if not tile_open("mapping", ckey):
+    # a stacked-maps matrix (the gens identity, the primes mapping, the projection) is
+    # enclosed by a top bracket + bottom brace spanning its whole column. ``name`` keys
+    # the marks' ids independently of the column, so several such matrices can coexist.
+    def matrix_frame(rkey, ckey, name):
+        if not tile_open(rkey, ckey):
             return
         gx, gw = col_x[ckey], col_w[ckey]
-        cells.append(CellBox(f"ebktop:{ckey}", gx, frame_top_y("mapping"), gw, FRAME_H, "ebktop"))
-        cells.append(CellBox(f"ebkbrace:{ckey}", gx, frame_brace_y("mapping"), gw, BRACE_H, "ebkbrace"))
+        cells.append(CellBox(f"ebktop:{name}", gx, frame_top_y(rkey), gw, FRAME_H, "ebktop"))
+        cells.append(CellBox(f"ebkbrace:{name}", gx, frame_brace_y(rkey), gw, BRACE_H, "ebkbrace"))
 
-    map_frame("gens")
-    map_frame("primes")
+    matrix_frame("mapping", "gens", "gens")
+    matrix_frame("mapping", "primes", "primes")
+    matrix_frame("projection", "primes", "proj")
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is
     # marked top + bottom — inset so they stop short of the rules. The foot tells the
