@@ -326,12 +326,17 @@ def test_specific_quantities_off_removes_the_quantities_row_and_column():
     assert {"cell:mapping:0:0", "tuning:target:0"} <= off_ids
 
 
-def test_temperament_boxes_off_removes_mapping_and_the_domain_primes_column():
+def test_temperament_boxes_off_removes_the_mapping_and_vectors_rows_and_domain_columns():
     off = {c.id: c for c in _with(temperament_boxes=False).cells}
     on = {c.id: c for c in _with().cells}
     # the mapping quantities (matrix, mapped list, generator ratios) are gone
     assert "label:mapping" not in off
     assert not any(c.startswith(("cell:mapping:", "cell:mapped:", "gen:")) for c in off)
+    # the interval-vectors row is the temperament's too -- its monzos are read over the
+    # domain basis -- so it goes with the domain rather than lingering as a lone row when
+    # every specific box is off (it owned no toggle before, so it was the sole survivor)
+    assert "label:vectors" not in off
+    assert not any(c.startswith("cell:vec:") for c in off)
     # the whole domain-primes column goes with it: its header, the prime headers,
     # and every row's prime-side cells -- including the tuning maps over primes
     assert "header:primes" not in off
