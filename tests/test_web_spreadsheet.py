@@ -1219,7 +1219,7 @@ def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_one
     assert underlined("caption:retune:targets") == "e"  # target-interval error list -> e
     assert underlined("caption:damage:targets") == "d"  # target-interval damage list -> d
     # size/list tiles whose symbol letter isn't a word-initial in their name stay
-    # unmarked: the mapped list (𝐘), the tempered (𝐚) and just (𝐨) size lists
+    # unmarked: the mapped list (𝑌), the tempered (𝐚) and just (𝐨) size lists
     assert on["caption:mapping:targets"].underlines == ()
     assert on["caption:tuning:targets"].underlines == ()
     assert on["caption:just:targets"].underlines == ()
@@ -1230,8 +1230,8 @@ def test_symbols_toggles_in_tile_symbol_glyphs_above_the_names():
     off = {c.id: c for c in _with(symbols=False).cells}
     # each quantity's bold symbol shows only when symbols is on: bold-upright for
     # the matrices/lists, bold-italic for the maps (covectors)
-    assert on["symbol:mapping:primes"].text == "𝐌"  # mapping matrix
-    assert on["symbol:mapping:targets"].text == "𝐘"  # mapped list (= MT)
+    assert on["symbol:mapping:primes"].text == "𝑀"  # mapping matrix
+    assert on["symbol:mapping:targets"].text == "𝑌"  # mapped list (= MT)
     assert on["symbol:tuning:primes"].text == "𝒕"  # tuning map
     assert on["symbol:tuning:targets"].text == "𝐚"  # tempered target sizes
     assert on["symbol:damage:targets"].text == "𝐝"  # damage list
@@ -1263,13 +1263,13 @@ def test_folding_a_row_drops_its_symbols_with_the_rest_of_its_content():
 
 def test_comma_column_symbols_are_map_times_basis_products():
     on = {c.id: c for c in _with(symbols=True, names=True).cells}
-    # the comma basis 𝐂 lives in the interval-vectors row; the comma column has no
+    # the comma basis 𝐶 lives in the interval-vectors row; the comma column has no
     # dedicated letters, so the rest are products of the maps and that basis
-    assert on["symbol:vectors:commas"].text == "𝐂"    # comma basis
-    assert on["symbol:mapping:commas"].text == "𝐌𝐂"   # mapped comma list
-    assert on["symbol:tuning:commas"].text == "𝒕𝐂"    # tempered comma sizes
-    assert on["symbol:just:commas"].text == "𝒋𝐂"      # just comma sizes
-    assert on["symbol:retune:commas"].text == "𝒓𝐂"    # comma errors
+    assert on["symbol:vectors:commas"].text == "𝐶"    # comma basis
+    assert on["symbol:mapping:commas"].text == "𝑀𝐶"   # mapped comma list
+    assert on["symbol:tuning:commas"].text == "𝒕𝐶"    # tempered comma sizes
+    assert on["symbol:just:commas"].text == "𝒋𝐶"      # just comma sizes
+    assert on["symbol:retune:commas"].text == "𝒓𝐶"    # comma errors
     # comma damage is |error|, with no clean product form, so it carries no symbol
     assert "symbol:damage:commas" not in on
     # the comma symbol still aligns with the prime symbol in the same row
@@ -1323,11 +1323,11 @@ def test_equivalences_extend_the_symbol_line_with_the_defining_equation():
     on = {c.id: c for c in _with(symbols=True, equivalences=True).cells}
     sym_only = {c.id: c for c in _with(symbols=True, equivalences=False).cells}
     # equivalences appends the "= …" continuation to the symbol, in the same cell —
-    # no separate equation cell. Glyphs match SYMBOLS (𝒕 = 𝒈𝐌, not faux-styled)
+    # no separate equation cell. Glyphs match SYMBOLS (𝒕 = 𝒈𝑀, not faux-styled)
     assert sym_only["symbol:tuning:primes"].text == "𝒕"
-    assert on["symbol:tuning:primes"].text == "𝒕 = 𝒈𝐌"
+    assert on["symbol:tuning:primes"].text == "𝒕 = 𝒈𝑀"
     assert on["symbol:retune:primes"].text == "𝒓 = 𝒕 − 𝒋"
-    assert on["symbol:mapping:targets"].text == "𝐘 = 𝐌𝐓"
+    assert on["symbol:mapping:targets"].text == "𝑌 = 𝑀𝑇"
     assert not any(c.startswith("equivalence:") for c in on)
 
 
@@ -1341,7 +1341,7 @@ def test_equivalences_cover_derived_quantities_but_not_the_fundamentals():
     }
     # the temperament mapping and just tuning map have no buildable continuation yet
     # (theirs need the canonical-form / superspace features), so their symbol is bare
-    assert on["symbol:mapping:primes"].text == "𝐌"
+    assert on["symbol:mapping:primes"].text == "𝑀"
     assert on["symbol:just:primes"].text == "𝒋"
 
 
@@ -1349,7 +1349,7 @@ def test_equivalences_alone_render_the_symbol_line_only_where_there_is_an_equati
     eq_only = {c.id: c for c in _with(names=False, symbols=False, equivalences=True).cells}
     # the equation needs its left-hand side, so equivalences renders the symbol line
     # (symbol + continuation) even with symbols and names both off...
-    assert eq_only["symbol:tuning:primes"].text == "𝒕 = 𝒈𝐌"
+    assert eq_only["symbol:tuning:primes"].text == "𝒕 = 𝒈𝑀"
     # ...but only where there is a continuation to show — a bare symbol is the
     # symbols feature's job, so the equation-less fundamentals stay absent
     assert "symbol:mapping:primes" not in eq_only

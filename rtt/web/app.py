@@ -591,7 +591,7 @@ def _underline_html(text, spans):
 _EXAMPLE_TEXT: dict[str, str] = {
     "names": "tuning map",
     "symbols": "𝒕",
-    "equivalences": "𝒕 = 𝒈𝐌",
+    "equivalences": "𝒕 = 𝒈𝑀",
     "plain_text_values": "[ ⟨12 19 24] }",
     "units": "𝐩",
     "math_expressions": "log₂3",

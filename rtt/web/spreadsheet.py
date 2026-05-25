@@ -106,25 +106,25 @@ CAPTIONS = {
     ("retune", "interest"): "interval error list",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
-# The bold quantity symbol shown above each name when symbols is on: bold-italic
-# for the maps (covectors), bold-upright for the vectors and matrices. The comma
-# column has no dedicated letters — everything but the basis 𝐂 (in the interval-
-# vectors row) is a product with it: the mapped comma list 𝐌𝐂 and the comma sizes
-# 𝒕𝐂, 𝒋𝐂, 𝒓𝐂. The comma damage list (|error|, no product form) and the "other
-# intervals of interest" column carry no symbol.
+# The quantity symbol shown above each name when symbols is on: bold-italic for the
+# maps (covectors), bold-upright for the vector size-lists, math-italic (non-bold)
+# for the matrices. The comma column has no dedicated letters — everything but the
+# basis 𝐶 (in the interval-vectors row) is a product with it: the mapped comma list
+# 𝑀𝐶 and the comma sizes 𝒕𝐶, 𝒋𝐶, 𝒓𝐶. The comma damage list (|error|, no product
+# form) and the "other intervals of interest" column carry no symbol.
 SYMBOLS = {
-    ("vectors", "commas"): "𝐂",
-    ("mapping", "primes"): "𝐌",
-    ("mapping", "commas"): "𝐌𝐂",
-    ("mapping", "targets"): "𝐘",
+    ("vectors", "commas"): "𝐶",
+    ("mapping", "primes"): "𝑀",
+    ("mapping", "commas"): "𝑀𝐶",
+    ("mapping", "targets"): "𝑌",
     ("tuning", "primes"): "𝒕",
-    ("tuning", "commas"): "𝒕𝐂",
+    ("tuning", "commas"): "𝒕𝐶",
     ("tuning", "targets"): "𝐚",
     ("just", "primes"): "𝒋",
-    ("just", "commas"): "𝒋𝐂",
+    ("just", "commas"): "𝒋𝐶",
     ("just", "targets"): "𝐨",
     ("retune", "primes"): "𝒓",
-    ("retune", "commas"): "𝒓𝐂",
+    ("retune", "commas"): "𝒓𝐶",
     ("retune", "targets"): "𝐞",
     ("damage", "targets"): "𝐝",
 }
@@ -150,10 +150,10 @@ PRESELECT_ROWS = frozenset(row for _, row, _ in PRESELECTS)
 # SYMBOLS) — a memory aid linking the name to its symbol (e.g. "tuning map" -> t,
 # "target-interval damage list" -> d). Each entry names the word whose first letter
 # is underlined; keep these in step with SYMBOLS. A tile whose symbol letter is not
-# a word-initial in its name carries no underline — the mapped list (𝐘), and the
+# a word-initial in its name carries no underline — the mapped list (𝑌), and the
 # tempered (𝐚), just (𝐨) and other size lists.
 MNEMONICS = {
-    ("mapping", "primes"): "mapping",   # 𝐌
+    ("mapping", "primes"): "mapping",   # 𝑀
     ("tuning", "primes"): "tuning",     # 𝒕
     ("just", "primes"): "just",         # 𝒋
     ("retune", "primes"): "retuning",   # 𝒓
@@ -163,18 +163,18 @@ MNEMONICS = {
 
 # Each quantity's defining equation continues its symbol (see SYMBOLS): the mockup's
 # "symbols section" from the first "=" on, appended to the symbol when equivalences
-# is on so the line reads e.g. "𝒕 = 𝒈𝐌". Glyphs match SYMBOLS — bold-italic maps,
-# bold-upright matrices (𝐓 = the target-interval matrix); operators stay upright.
+# is on so the line reads e.g. "𝒕 = 𝒈𝑀". Glyphs match SYMBOLS — bold-italic maps,
+# math-italic matrices (𝑇 = the target-interval matrix); operators stay upright.
 # Only terms buildable from shipped features appear, so the superspace/canonical-
-# form tails (the tuning map's "= B_Ls 𝒕_L", "𝐌 = 𝐅𝐌_c", "𝒋 = B_Ls 𝒋_L") are
+# form tails (the tuning map's "= B_Ls 𝒕_L", "𝑀 = 𝐅𝑀_c", "𝒋 = B_Ls 𝒋_L") are
 # dropped — the mapping and just tuning maps thus carry no continuation yet.
 EQUIVALENCES = {
-    ("mapping", "targets"): " = 𝐌𝐓",
-    ("tuning", "primes"): " = 𝒈𝐌",
-    ("tuning", "targets"): " = 𝒕𝐓",
-    ("just", "targets"): " = 𝒋𝐓",
+    ("mapping", "targets"): " = 𝑀𝑇",
+    ("tuning", "primes"): " = 𝒈𝑀",
+    ("tuning", "targets"): " = 𝒕𝑇",
+    ("just", "targets"): " = 𝒋𝑇",
     ("retune", "primes"): " = 𝒕 − 𝒋",
-    ("retune", "targets"): " = 𝒓𝐓",
+    ("retune", "targets"): " = 𝒓𝑇",
     ("damage", "targets"): " = |𝐞|diag(𝐰)",
 }
 
@@ -938,7 +938,7 @@ def build(state, settings=None, collapsed=None,
     # frame: the symbol line (toggled by symbols) on top, the long-form name
     # (toggled by names) under it. Equivalences extends the symbol line with the
     # quantity's defining equation — the "= …" continuation appended to the glyph,
-    # so it reads e.g. "𝒕 = 𝒈𝐌"; turning it on shows the glyph too (the equation's
+    # so it reads e.g. "𝒕 = 𝒈𝑀"; turning it on shows the glyph too (the equation's
     # left side) even when symbols itself is off. Within a symboled row the slot is
     # reserved for every captioned column so the names stay aligned; the glyph and
     # equation are drawn only where defined (the comma columns have none yet). An
