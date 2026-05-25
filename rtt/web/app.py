@@ -35,6 +35,7 @@ def _split_target_spec(spec: str) -> tuple[str, str]:
 _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 _PANEL_W = 330  # px width the settings drawer opens to (the Show + example columns)
+_RAIL_W = 40  # px width of the permanent left rail (hamburger + the rotated app title)
 
 # One weight and colour for every EBK bracket, brace and monzo rule. Each mark is
 # drawn as an SVG whose viewBox maps 1:1 to the cell's px size (see _svg), so a
@@ -86,14 +87,14 @@ _RANGE_FONT = 7  # cents-label / placeholder font size
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a"}  # cyan tuning rows, khaki temperament columns
 
 _CSS = f"""
-/* the app title tile, absolutely placed in the grid's empty top-left corner cell
-   (left of the master toggle, above the row labels): the name over square undo/redo
-   buttons on a light-grey rounded card, per the mockup. max-width keeps it clear of
-   the master toggle at the node column. */
-.rtt-titletile {{ position:absolute; top:0; left:0; z-index:5; max-width:104px;
-                 background:#e0e0e0; border-radius:5px; padding:4px 6px 5px; }}
-.rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:12px; font-weight:bold;
-             color:#000; margin:0 0 3px 0; white-space:nowrap; }}
+/* the grid's empty top-left corner cell now holds only the undo/redo buttons (the app
+   title moved to the left rail). It fills the corner exactly — LABEL_W wide so its right
+   edge meets the row-label column, HEADER_H tall so its bottom meets the column-header row
+   — i.e. aligned with both the row titles and the column titles. Square (no radius), on the
+   same light grey as the rail and pane; the buttons centre within it. */
+.rtt-titletile {{ position:absolute; top:0; left:0; z-index:5; box-sizing:border-box;
+                 width:{spreadsheet.LABEL_W}px; height:{spreadsheet.HEADER_H}px; background:#e0e0e0;
+                 display:flex; align-items:center; justify-content:center; }}
 .rtt-tile-btns {{ display:flex; gap:3px; }}
 /* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs */
 .rtt-iconbtn {{ width:18px !important; min-width:18px !important; height:18px !important;
@@ -107,31 +108,33 @@ _CSS = f"""
    reads unmistakably inactive, matching the #999 of a disabled toggle. */
 .rtt-iconbtn.disabled {{ border-color:#bbb !important; }}
 .rtt-iconbtn.disabled .q-icon {{ color:#999 !important; }}
-/* the hamburger docked at the shell's top-left (absolute, so it rides the layout, not
-   the viewport): when the drawer is closed it sits just left of the grid's title tile;
-   when the drawer opens it lands inside the settings pane's reserved top strip */
-.rtt-hamburger {{ position:absolute; top:7px; left:8px; z-index:1000;
-                 width:28px !important; min-width:28px !important; height:28px !important;
+/* the left rail: a permanent light-grey column down the screen's left edge holding the
+   hamburger (top) and, under it, the app title turned a quarter-turn. align-self:flex-start
+   keeps it short (it sizes to its content) while its width reserves the gutter the grid sits
+   clear of. The rail stays #e0e0e0 whether the pane is open or closed, and sits to the LEFT
+   of the pane, so opening the pane never moves the title. */
+.rtt-rail {{ flex:none; align-self:flex-start; width:{_RAIL_W}px; background:#e0e0e0;
+            display:flex; flex-direction:column; align-items:center; gap:10px; padding:7px 0 14px; }}
+/* the app title, turned a quarter-turn (writing-mode) so it reads top-to-bottom down the
+   rail. Noticeably larger than the 13px row/column titles, yet narrow enough to fit the rail. */
+.rtt-sidetitle {{ writing-mode:vertical-rl; font-family:'Cambria',Georgia,serif; font-size:22px;
+                 font-weight:bold; color:#000; white-space:nowrap; line-height:1; }}
+/* the hamburger, parked at the top of the rail */
+.rtt-hamburger {{ width:28px !important; min-width:28px !important; height:28px !important;
                  min-height:28px !important; padding:0 !important; background:#fff !important;
                  border:1px solid #999; border-radius:3px !important; box-shadow:none !important; }}
 .rtt-hamburger .q-icon {{ color:#333 !important; font-size:19px; }}
-/* the shell lays the drawer beside the app; opening the drawer widens it from 0,
-   which pushes the app to the right (the requested slide-over). position:relative so
-   the docked hamburger (absolute) anchors to the shell's top-left, not the viewport */
+/* the shell lays the rail, the (collapsible) pane and the app in a row; opening the pane
+   widens it from 0, which pushes the app to the right (the requested slide-over) */
 .rtt-shell {{ position:relative; display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
 .rtt-drawer {{ width:0; overflow:hidden; transition:width {_T}; flex:none; }}
 .rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; }}
-/* the pane reserves a top strip (padding-top) so the docked hamburger sits within it,
-   above the Show/example header, when the drawer is open */
 .rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0;
                     font-family:'Cambria',Georgia,serif; color:#000;
-                    padding:40px 14px 16px; min-height:100vh; }}
-/* the app fills the space right of the drawer; min-width:0 lets a wide grid scroll
-   inside its own .rtt-scroll rather than widening (and horizontally scrolling) the page */
-.rtt-app {{ flex:1 1 0; min-width:0; padding-left:40px; transition:padding-left {_T}; }}  /* left gutter clears the docked hamburger when the drawer is closed */
-/* with the drawer open the hamburger rides inside the pane, so the app needs no gutter —
-   drop it (animated, in step with the drawer) so the grid sits flush against the pane */
-.rtt-drawer.rtt-drawer-open ~ .rtt-app {{ padding-left:0; }}
+                    padding:16px 14px 16px; min-height:100vh; }}
+/* the app fills the space right of the rail (and the pane when open); min-width:0 lets a
+   wide grid scroll inside its own .rtt-scroll rather than widening the page */
+.rtt-app {{ flex:1 1 0; min-width:0; }}
 
 .rtt-scroll {{ overflow-x:auto; max-width:100%; }}
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
@@ -1340,9 +1343,11 @@ def index() -> None:
         drawer.classes(add="rtt-drawer-open") if drawer_open[0] else drawer.classes(remove="rtt-drawer-open")
 
     with ui.element("div").classes("rtt-shell"):
-        # the hamburger docks at the shell's top-left (absolute): left of the grid when the
-        # drawer is closed, inside the pane's reserved top strip when the drawer is open
-        ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense").classes("rtt-hamburger")
+        # the left rail: the hamburger on top, the app title rotated a quarter-turn below it.
+        # The rail is left of the pane, so opening the pane never moves the title.
+        with ui.element("div").classes("rtt-rail"):
+            ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense").classes("rtt-hamburger")
+            ui.label("D&D's RTT app").classes("rtt-sidetitle")
         drawer = ui.element("div").classes("rtt-drawer")
         with drawer, ui.element("div").classes("rtt-drawer-inner"):
             with ui.element("div").classes("rtt-show-head"):
@@ -1372,11 +1377,10 @@ def index() -> None:
             with ui.element("div").classes("rtt-scroll"):
                 with ui.element("div").classes("rtt-outer"):
                     board = ui.element("div").classes("rtt-board")
-                    # the title tile rides in the grid's empty top-left corner cell (left of
-                    # the master toggle, above the row labels), absolutely placed, per the mockup
+                    # the corner cell (top-left of the grid, above the row labels) holds just
+                    # the undo/redo buttons now — the app title moved to the left rail
                     with board:
                         with ui.element("div").classes("rtt-titletile"):
-                            ui.label("D&D's RTT app").classes("rtt-title")
                             with ui.element("div").classes("rtt-tile-btns"):
                                 refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
                                     .props("flat dense").classes("rtt-iconbtn")
