@@ -2289,3 +2289,83 @@ def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
     assert on["symbol:damage:targets"].text == "𝐝 = |𝐞|diag(𝒘)"
 
 
+# --- audio rows (hear just & mapped intervals) -------------------------------
+
+def _audio(**overrides):
+    # the audio rows are a sub-control of the tuning boxes, so enable that parent too
+    return _with(tuning_boxes=True, audio=True, **overrides)
+
+
+def test_audio_is_a_tuning_boxes_subcontrol():
+    keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
+    assert "audio" in keys
+    assert settings.SUBCONTROLS["audio"] == "tuning_boxes"
+    assert settings.defaults()["audio"] is False
+
+
+def test_audio_adds_two_rows_between_counts_and_quantities():
+    cells = {c.id: c for c in _audio(counts=True).cells}
+    assert cells["label:just_audio"].text == "just audio"
+    assert cells["label:mapped_audio"].text == "mapped audio"
+    # ordered: counts, then just audio, then mapped audio, then quantities
+    ys = [cells[f"label:{k}"].y for k in ("counts", "just_audio", "mapped_audio", "quantities")]
+    assert ys == sorted(ys)
+
+
+def test_audio_rows_need_both_audio_and_tuning_boxes():
+    assert "label:just_audio" not in {c.id for c in _with(tuning_boxes=True, audio=False).cells}
+    assert "label:just_audio" not in {c.id for c in _with(tuning_boxes=False, audio=True).cells}
+
+
+def test_audio_speakers_carry_the_just_and_mapped_cents():
+    # one speaker per pitch; its cents (in .values) match the displayed size of the
+    # corresponding tuning (mapped) / just-tuning row cell, so the ear hears the grid
+    cells = {c.id: c for c in _audio().cells}
+    for group in ("prime", "comma", "target"):
+        spk = cells[f"speaker:mapped_audio:{group}:0"]
+        assert spk.kind == "speaker"
+        assert service.cents(spk.values[0]) == cells[f"tuning:{group}:0"].text  # mapped == tempered
+        assert service.cents(cells[f"speaker:just_audio:{group}:0"].values[0]) == cells[f"just:{group}:0"].text
+
+
+def test_mapped_audio_sounds_generators_but_just_audio_has_no_generator_pitch():
+    # the mapped row carries the generator tuning map (like the tuning row); a generator
+    # has no just size, so the just-audio row has no generator speaker
+    cells = {c.id: c for c in _audio().cells}
+    assert service.cents(cells["speaker:mapped_audio:gen:0"].values[0]) == cells["tuning:gen:0"].text
+    assert "speaker:just_audio:gen:0" not in cells
+
+
+def test_audio_tiles_carry_per_tile_arpeggiate_and_chord():
+    lay = _audio()
+    cells = {c.id: c for c in lay.cells}
+    # each tile's arp/chord sound the whole tile's pitch list (every speaker in it)
+    k = len([c for c in cells if c.startswith("speaker:mapped_audio:target:")])
+    tile_pitches = tuple(cells[f"speaker:mapped_audio:target:{j}"].values[0] for j in range(k))
+    arp, chord = cells["arp:mapped_audio:targets"], cells["chord:mapped_audio:targets"]
+    assert (arp.kind, chord.kind) == ("arp", "chord")
+    assert arp.values == tile_pitches == chord.values
+    # the strip sits below the speaker band, inside the tile's grey panel
+    panel = next(b for b in lay.blocks if b.id == "block:mapped_audio:targets")
+    assert arp.y > cells["speaker:mapped_audio:target:0"].y
+    assert panel.y <= arp.y and arp.y + arp.h <= panel.y + panel.h
+
+
+def _audio_colormap():
+    s = settings.defaults()
+    s["tuning_colorization"] = s["temperament_colorization"] = s["audio"] = True
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=((-1, 1, 0),))
+
+
+def test_audio_rows_colorize_just_cyan_and_mapped_green():
+    # just audio is pure tuning → cyan; mapped audio is tuning ⊓ temperament → green
+    lay = _audio_colormap()
+    cells = {c.id: c for c in lay.cells}
+    C, G = {"tuning"}, {"temperament", "tuning"}
+    at = lambda cid: _color_at(lay, *_mid(cells, cid))
+    for g in ("prime", "comma", "target", "interest"):
+        assert at(f"speaker:just_audio:{g}:0") == C
+    for g in ("gen", "prime", "comma", "target", "interest"):
+        assert at(f"speaker:mapped_audio:{g}:0") == G
+
+

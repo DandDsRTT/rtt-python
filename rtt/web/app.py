@@ -839,6 +839,8 @@ def _example_html(key: str) -> str:
     if key in ("temperament_colorization", "tuning_colorization"):  # a swatch of the wash colour
         color = _TINTS[key.split("_")[0]]  # one source of truth: the swatch == the actual wash
         return f'<span style="display:inline-block;width:36px;height:14px;background:{color}"></span>'
+    if key == "audio":  # a speaker glyph — the per-pitch play button the audio rows carry
+        return '<span class="material-icons" style="font-size:18px">volume_up</span>'
     if key == "tuning_ranges":  # the tuning-range I-beam (min/max generator bars)
         return ('<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'
                 '<rect x="6" y="2" width="2" height="16" fill="#000"/>'

@@ -55,6 +55,7 @@ CHART_GAP = 5  # gap between a chart and the value cells below it
 RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
 RANGE_MODE_H = 13  # height of the monotone/tradeoff range-mode selector (one row of square indicators) below the chart
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
+AUDIO_STRIP_H = RANGE_GAP + BTN  # per-tile arpeggiate/chord strip nested at an audio tile's bottom
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -184,6 +185,13 @@ COLORIZE_REGIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
      ("tuning", "just", "retune", "damage")),
     ("tuning", ("targets",),
      ("quantities", "vectors", "mapping", "tuning", "just", "retune", "damage")),
+    # the audio rows (their own band, since they sit far above the tuning rows and a
+    # bounding box spanning both would swallow everything between): cyan over BOTH audio
+    # rows full width; yellow over the mapped row's value columns only, so just audio
+    # reads pure cyan and mapped audio reads green (cyan ⊓ yellow), spine staying cyan.
+    ("tuning", ("quantities", "gens", "primes", "commas", "targets", "interest"),
+     ("just_audio", "mapped_audio")),
+    ("temperament", ("gens", "primes", "commas", "targets", "interest"), ("mapped_audio",)),
 )
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
@@ -314,6 +322,21 @@ TILES = (
     ("block:complexity:targets", "complexity", "targets"),
     ("block:weight:targets", "weight", "targets"),
     ("block:damage:targets", "damage", "targets"),
+)
+
+# The audio rows' tiles mirror the just / tuning rows they sound: just_audio (the JI
+# sizes) over primes/commas/targets, mapped_audio (the tempered sizes) over those plus
+# the generators (whose tuned size the tuning row also carries; a generator has no just
+# size, so just_audio has no generators tile). The interest column's audio tiles are
+# appended dynamically in build() like its other tiles.
+AUDIO_TILES = (
+    ("block:just_audio:primes", "just_audio", "primes"),
+    ("block:just_audio:commas", "just_audio", "commas"),
+    ("block:just_audio:targets", "just_audio", "targets"),
+    ("block:mapped_audio:gens", "mapped_audio", "gens"),
+    ("block:mapped_audio:primes", "mapped_audio", "primes"),
+    ("block:mapped_audio:commas", "mapped_audio", "commas"),
+    ("block:mapped_audio:targets", "mapped_audio", "targets"),
 )
 
 # The domain-units tiles (shown with the specific `domain_units` toggle): the units
@@ -511,6 +534,9 @@ def build(state, settings=None, collapsed=None,
     # alt. complexity is a sub-control of weighting: it adds the prescaler dropdown to box 𝐋
     # (the prescaling matrix), so it only applies while that region shows
     show_alt_complexity = show_weighting and settings["alt_complexity"]
+    # audio is likewise a sub-control of tuning boxes: it adds the just/mapped audio rows
+    # that sound the interval sizes, so it only applies while the tuning region shows
+    show_audio = show_tuning and settings["audio"]
     # Value-display toggles. "gridded values" is the master switch: with it off
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
@@ -588,10 +614,12 @@ def build(state, settings=None, collapsed=None,
         ("block:retune:interest", "retune", "interest"),
         ("block:urow:interest", "units", "interest"),  # the units row's /1 over the interest column
         ("block:complexity:interest", "complexity", "interest"),
+        ("block:just_audio:interest", "just_audio", "interest"),
+        ("block:mapped_audio:interest", "mapped_audio", "interest"),
     )
     # the optimization power rides one tile over the targets column (guarded by panel()
     # and the toggle loop, so it adds nothing unless the optimization row is present)
-    tiles = (COUNTS_TILES + TILES + UNITS_TILES + interest_tiles
+    tiles = (COUNTS_TILES + TILES + AUDIO_TILES + UNITS_TILES + interest_tiles
              + (("block:optimization", "optimization", "targets"),))
     # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
     # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
@@ -750,6 +778,8 @@ def build(state, settings=None, collapsed=None,
     # its column outright.
     row_bands = (
         ("counts", ROW_H, show_counts, True, "counts"),
+        ("just_audio", ROW_H, show_audio, True, "just audio"),
+        ("mapped_audio", ROW_H, show_audio, True, "mapped audio"),
         ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
         ("units", ROW_H, show_domain_units, True, "units"),
         ("vectors", d * ROW_H, True, True, "interval vectors"),
@@ -843,6 +873,8 @@ def build(state, settings=None, collapsed=None,
             tile_h[key] += presc_extra
         if key == "complexity":  # room for the alt.-complexity norm chooser below the list
             tile_h[key] += norm_extra
+        if key in ("just_audio", "mapped_audio"):  # room for the per-tile arp/chord strip below the speakers
+            tile_h[key] += AUDIO_STRIP_H
         y += tile_h[key] + GAP
     total_h = y
 
@@ -1134,6 +1166,36 @@ def build(state, settings=None, collapsed=None,
     # counterpart of the tuning map over the primes), so the generators get a tuning tile too
     if row_open("tuning"):
         tval_row("tuning", "gens", tun.generator_map)
+
+    # the audio rows: a speaker button per pitch, sounding the just (just_audio) or
+    # tempered (mapped_audio) cents of each interval — the same data the just / tuning
+    # rows display, so the ear and the eye agree. mapped_audio also sounds the generators
+    # (their tuned size, as the tuning row's genmap does); a generator has no just size.
+    def audio_tile(key, group, vals):
+        if not tile_open(key, group):
+            return
+        vals = tuple(vals)
+        for i, v in enumerate(vals):  # one speaker per pitch, aligned under the value columns
+            cells.append(CellBox(f"speaker:{key}:{group_elem[group]}:{i}", group_left[group](i),
+                                 row_y[key], COL_W, ROW_H, "speaker", values=(v,)))
+        # the per-tile arpeggiate + chord pair, centred in the strip reserved at the tile bottom;
+        # each sounds the whole tile's pitch list (arp sequentially, chord together)
+        cx, cw = content_box(group)
+        sx, sy = cx + (cw - 2 * BTN) / 2, tile_top[key] + tile_h[key] - BTN
+        cells.append(CellBox(f"arp:{key}:{group}", sx, sy, BTN, BTN, "arp", values=vals))
+        cells.append(CellBox(f"chord:{key}:{group}", sx + BTN, sy, BTN, BTN, "chord", values=vals))
+
+    if row_open("just_audio"):
+        audio_tile("just_audio", "primes", tun.just_map)
+        audio_tile("just_audio", "commas", comma_sizes.just)
+        audio_tile("just_audio", "targets", target_sizes.just)
+        audio_tile("just_audio", "interest", interest_sizes.just)
+    if row_open("mapped_audio"):
+        audio_tile("mapped_audio", "gens", tun.generator_map)
+        audio_tile("mapped_audio", "primes", tun.tuning_map)
+        audio_tile("mapped_audio", "commas", comma_sizes.tempered)
+        audio_tile("mapped_audio", "targets", target_sizes.tempered)
+        audio_tile("mapped_audio", "interest", interest_sizes.tempered)
     if tile_open("prescaling", "primes"):  # the d×d prescaler: diagonal weights, 0 off it
         for i in range(d):
             for p in range(d):
