@@ -268,11 +268,12 @@ _CSS = f"""
 .rtt-symbol {{ width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
               font-family:'Cambria',Georgia,serif; }}
 /* the per-box "units: …" line below the caption, and the domain-units row/col labels.
-   The unit VALUE is set in a single-story-g sans face (the mockup's distinct unit
-   style — Cambria's bold g is double-story); the per-box "units:" label keeps the
-   serif body face via .rtt-units-pre. */
+   The unit VALUE is set in a single-story-g sans face (the mockup's distinct unit style):
+   Corbel (the ClearType sans companion to the body Cambria) has a single-story g —
+   Cambria, Calibri, Verdana, Segoe UI all draw a double-story g, so they're excluded.
+   The per-box "units:" label keeps the serif body face via .rtt-units-pre. */
 .rtt-units {{ width:100%; text-align:center; font-size:10px; color:#333; line-height:1;
-            white-space:nowrap; font-family:'Calibri','Trebuchet MS',sans-serif; }}
+            white-space:nowrap; font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }}
 .rtt-units-pre {{ font-family:'Cambria',Georgia,serif; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
@@ -952,16 +953,42 @@ def _math_html(text):
     return "".join(out)
 
 
+_UNIT_PLAIN = set("¢/ ")  # within a unit value, the cent sign, the fraction slash and
+# spaces stay un-bold; the variable symbols (g, p and the placeholder 1, with subscripts)
+# are bold — consistently in the per-box line AND the units row/col
+
+
+def _bold_units(value):
+    """A unit value with its variable symbols bold (the unit letters g/p and the
+    placeholder 1, plus any subscript), leaving the cent sign ¢ and the ``/`` separator
+    un-bold. Bolds maximal runs of variable characters so e.g. ``g₁/`` → ``<b>g₁</b>/``,
+    ``¢/p`` → ``¢/<b>p</b>``. All text HTML-escaped."""
+    out, run = [], []
+
+    def flush():
+        if run:
+            out.append(f"<b>{_escape(''.join(run))}</b>")
+            run.clear()
+
+    for ch in value:
+        if ch in _UNIT_PLAIN:
+            flush()
+            out.append(_escape(ch))
+        else:
+            run.append(ch)
+    flush()
+    return "".join(out)
+
+
 def _units_html(text):
     """A unit label (kind ``units``). The value's face — a single-story-g sans — comes
-    from the ``.rtt-units`` class; here we only mark up the structure: a per-box line
-    (``units: g/p``) keeps its ``units:`` label in the serif body face and sets the value
-    bold, while a bare domain-units coordinate label (``g₁/``, ``/p₁``, ``¢/``) is the
-    plain value. All text HTML-escaped."""
+    from the ``.rtt-units`` class; the variable symbols are bold (see :func:`_bold_units`).
+    A per-box line (``units: g/p``) keeps its ``units:`` label in the serif body face; a
+    bare domain-units coordinate label (``g₁/``, ``/p₁``, ``¢/``) is just the bolded value."""
     prefix = "units: "
     if text.startswith(prefix):
-        return f'<span class="rtt-units-pre">{prefix}</span><b>{_escape(text[len(prefix):])}</b>'
-    return _escape(text)
+        return f'<span class="rtt-units-pre">{prefix}</span>{_bold_units(text[len(prefix):])}'
+    return _bold_units(text)
 
 
 @ui.page("/")

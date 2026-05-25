@@ -183,15 +183,19 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
     assert 'viewBox="0 0 16.00 60.00"' in marks["]2"]  # 1 row vs many: same generator
 
 
-def test_units_html_splits_a_per_box_line_and_passes_a_bare_label_through():
-    # a per-box "units: …" line keeps "units:" in the serif label face (.rtt-units-pre)
-    # and sets the value bold; the value's single-story-g sans face comes from .rtt-units
+def test_units_html_bolds_variables_but_not_cents_or_slash():
+    # the variable symbols (g, p, the placeholder 1, with subscripts) are bold; the cent
+    # sign ¢ and the "/" separator stay un-bold — consistently in the per-box line and the
+    # units row/col. A per-box line also keeps "units:" in the serif label face.
     per_box = app._units_html("units: g/p")
-    assert '<span class="rtt-units-pre">units: </span>' in per_box
-    assert "<b>g/p</b>" in per_box
-    # a bare domain-units coordinate label is the plain value — no prefix span, no bold
-    assert app._units_html("g₁/") == "g₁/"
-    assert app._units_html("/p₁") == "/p₁"
+    assert per_box == '<span class="rtt-units-pre">units: </span><b>g</b>/<b>p</b>'
+    assert app._units_html("units: ¢/g") == '<span class="rtt-units-pre">units: </span>¢/<b>g</b>'
+    assert app._units_html("units: ¢") == '<span class="rtt-units-pre">units: </span>¢'
+    # bare domain-units coordinate labels: variables bold, ¢ and / plain, the "1" placeholder bold
+    assert app._units_html("g₁/") == "<b>g₁</b>/"
+    assert app._units_html("/p₁") == "/<b>p₁</b>"
+    assert app._units_html("¢/") == "¢/"
+    assert app._units_html("/1") == "/<b>1</b>"
 
 
 def test_shared_axis_gridlines_render_two_pixels_thick():
