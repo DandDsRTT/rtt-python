@@ -112,7 +112,8 @@ _CSS = f"""
    hamburger (top) and, under it, the app title turned a quarter-turn. It sits to the LEFT of
    the pane and stays #e0e0e0 whether the pane is open or closed, so opening the pane never
    moves the title. It carries no align-self, so the pane group (align-items:stretch) makes it
-   as tall as the pane — its grey runs as far down as the settings, not just to the title's foot. */
+   as tall as that group: the main app (grid) when the pane is collapsed, the settings pane
+   when it's open — so the bar always matches whatever it stands beside. */
 .rtt-rail {{ flex:none; width:{_RAIL_W}px; background:#e0e0e0;
             display:flex; flex-direction:column; align-items:center; gap:10px; padding:7px 0 14px; }}
 /* the app title, turned a quarter-turn (writing-mode) so it reads top-to-bottom down the
@@ -126,13 +127,19 @@ _CSS = f"""
 .rtt-hamburger .q-icon {{ color:#333 !important; font-size:19px; }}
 /* the shell lays the rail+pane group and the app in a row */
 .rtt-shell {{ position:relative; display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
-/* the rail and the pane form one group. align-self:flex-start keeps the group off the much
-   taller grid (so it's only as tall as the pane's settings, not the whole page); the default
-   align-items:stretch then makes the rail as tall as the pane so the two greys bottom-align.
-   Opening the pane widens this group, pushing the app right (the requested slide-over). */
-.rtt-panelgroup {{ display:flex; flex-wrap:nowrap; align-self:flex-start; }}
-.rtt-drawer {{ width:0; overflow:hidden; transition:width {_T}; flex:none; }}
-.rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; }}
+/* the rail and the pane form one group whose default align-self:stretch makes it (and the
+   rail inside it, via align-items:stretch) as tall as the shell's tallest child. The COLLAPSED
+   drawer is height:0 (below), so it adds no height and the only other child is the grid — the
+   bar therefore matches the main app. With the pane OPEN the :has rule flips the group to
+   align-self:flex-start so it hugs its content, and the now-full-height drawer makes the rail
+   match the settings pane. Opening the pane widens this group, pushing the app right. */
+.rtt-panelgroup {{ display:flex; flex-wrap:nowrap; align-self:stretch; }}
+.rtt-panelgroup:has(.rtt-drawer-open) {{ align-self:flex-start; }}
+/* height:0 when closed so the hidden pane contributes no height to the group (otherwise a tall
+   settings list would stretch the closed bar past the shorter grid); it regains its content
+   height when open */
+.rtt-drawer {{ width:0; height:0; overflow:hidden; transition:width {_T}; flex:none; }}
+.rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; height:auto; }}
 /* the pane hugs its settings boxes — no min-height (a forced 100vh ran past the foot of the
    screen and added a scrollbar) */
 .rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0;
