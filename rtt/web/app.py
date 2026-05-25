@@ -117,10 +117,14 @@ window.rttAudio = (function () {
       const t0 = ac.currentTime + 0.03, gain = 0.5 / Math.max(1, arr.length);
       arr.forEach(function (c) { tone(ac, c, t0, 1.1, gain); });
     },
-    arp: function (cents) {  // arpeggiate: one after another, in displayed order (root first)
-      const ac = context(), arr = withRoot(cents);
-      let t = ac.currentTime + 0.03;
-      arr.forEach(function (c) { tone(ac, c, t, 0.42, 0.4); t += 0.34; });
+    arp: function (cents) {  // arpeggiate the pitches in order; 1/1 (if on) drones UNDERNEATH
+      const ac = context();
+      const arr = Array.prototype.slice.call(cents);  // the pitches only — root is not a step
+      const t0 = ac.currentTime + 0.03, step = 0.34, dur = 0.42;
+      arr.forEach(function (c, i) { tone(ac, c, t0 + i * step, dur, 0.4); });
+      if (s.includeRoot && arr.length) {  // one held root under the whole run, not an extra note
+        tone(ac, 0, t0, (arr.length - 1) * step + dur, 0.4);
+      }
     }
   };
 })();
@@ -377,7 +381,7 @@ _CSS = f"""
            min-height:0 !important; padding:0 !important; box-shadow:none !important;
            background:transparent !important; color:#000 !important; }}
 .rtt-audio-btn .q-btn__content {{ min-height:0; padding:0; }}
-.rtt-audio-btn .material-icons {{ font-size:15px; }}
+.rtt-audio-btn .q-icon, .rtt-audio-btn .material-icons {{ font-size:15px; color:#444 !important; }}
 /* the (provisional) audio control cell: waveform chooser over the include-1/1 checkbox,
    stacked in the spine across both audio rows */
 .rtt-audio-controls {{ display:flex; flex-direction:column; gap:2px; width:100%; height:100%;
@@ -904,7 +908,7 @@ def _example_html(key: str) -> str:
         color = _TINTS[key.split("_")[0]]  # one source of truth: the swatch == the actual wash
         return f'<span style="display:inline-block;width:36px;height:14px;background:{color}"></span>'
     if key == "audio":  # a speaker glyph — the per-pitch play button the audio rows carry
-        return '<span class="material-icons" style="font-size:18px">volume_up</span>'
+        return '<span class="material-icons" style="font-size:18px;color:#444">volume_up</span>'
     if key == "tuning_ranges":  # the tuning-range I-beam (min/max generator bars)
         return ('<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'
                 '<rect x="6" y="2" width="2" height="16" fill="#000"/>'
@@ -1346,16 +1350,20 @@ def index() -> None:
                 icon = {"speaker": "volume_up", "arp": "playlist_play", "chord": "library_music"}[cb.kind]
                 fn = "arp" if cb.kind == "arp" else "play"  # speaker & chord sound together; arp in sequence
                 pitches = ",".join(f"{float(v):.6f}" for v in cb.values)
-                ui.button(icon=icon).props("flat dense round").classes("rtt-audio-btn") \
+                # color=None drops Quasar's default primary (blue): the app is greyscale,
+                # leaving colour to the yellow/cyan/magenta colorization
+                ui.button(icon=icon, color=None).props("flat dense round").classes("rtt-audio-btn") \
                     .on("click", js_handler=f"() => window.rttAudio.{fn}([{pitches}])")
             elif cb.kind == "audio_controls":  # PROVISIONAL: waveform chooser + include-1/1
-                # global client-side audio params — push straight to the engine, no grid state
+                # global client-side audio params — push straight to the engine, no grid state.
+                # grey (not the default blue): the app stays greyscale outside the colorization
                 with ui.element("div").classes("rtt-audio-controls"):
                     ui.select(["sine", "triangle", "sawtooth", "square"], value="sine",
                               on_change=lambda e: ui.run_javascript(f"window.rttAudio.setWaveform({e.value!r})")) \
-                        .props("dense options-dense borderless").classes("rtt-audio-wave")
+                        .props("dense options-dense borderless color=grey-9").classes("rtt-audio-wave")
                     ui.checkbox("1/1", on_change=lambda e: ui.run_javascript(
-                        f"window.rttAudio.setIncludeRoot({str(bool(e.value)).lower()})")).classes("rtt-audio-root")
+                        f"window.rttAudio.setIncludeRoot({str(bool(e.value)).lower()})")) \
+                        .props("color=grey-9").classes("rtt-audio-root")
         return wrap
 
     def render():
