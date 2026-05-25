@@ -1437,6 +1437,63 @@ def test_equivalences_alone_render_the_symbol_line_only_where_there_is_an_equati
     assert not any(c.startswith("caption:") for c in eq_only)  # names is off here
 
 
+def test_optimization_on_shows_the_power_below_the_damage_row():
+    on = {c.id: c for c in _with(optimization=True).cells}
+    # the optimization power p of the current tuning (TOP, a minimax scheme => ∞),
+    # rendered like a count: the math-italic symbol, " = ", and its value
+    assert on["optimization:power"].text == "\U0001D45D = ∞"  # 𝑝 = ∞
+    # it rides the target-intervals column (the tuning's own column) ...
+    assert on["optimization:power"].x == on["header:targets"].x
+    assert on["optimization:power"].w == on["header:targets"].w
+    # ... in a new row at the bottom of the tuning boxes, below the damage row
+    assert on["optimization:power"].y > on["damage:target:0"].y
+    assert "label:optimization" in on
+
+
+def test_optimization_is_an_interactive_toggle():
+    # it now builds content, so the panel must offer it live rather than greyed out
+    assert "optimization" in settings.IMPLEMENTED
+
+
+def test_optimization_power_reflects_the_current_tuning_scheme():
+    # the surfaced power is the *current* tuning's, not a constant: a least-squares
+    # (miniRMS) scheme reads p = 2 where the default minimax TOP reads p = ∞
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"] = True
+    ls = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="least squares").cells}
+    assert ls["optimization:power"].text == "\U0001D45D = 2"  # 𝑝 = 2
+
+
+def test_optimization_needs_its_parent_tuning_boxes():
+    # optimization is a sub-control of tuning boxes: with the tuning region hidden
+    # there is nothing to annotate, so the power row stays away even when toggled on
+    cells = {c.id for c in _with(optimization=True, tuning_boxes=False).cells}
+    assert "optimization:power" not in cells
+    assert "label:optimization" not in cells
+
+
+def test_optimization_power_sits_on_a_grey_panel():
+    # like every value tile, the power rides a grey panel (never a bare floating number)
+    lay = _with(optimization=True)
+    panel = {b.id: b for b in lay.blocks}.get("block:optimization")
+    assert panel is not None
+    assert panel.w > 0 and panel.h > 0
+
+
+def test_optimization_row_collapses_keeping_its_label_and_gridline():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"] = True
+    full = {c.id for c in spreadsheet.build(base, s).cells}
+    assert "toggle:row:optimization" in full  # collapsible: it has a fold toggle
+    lay = spreadsheet.build(base, s, collapsed={"row:optimization"})
+    cells = {c.id for c in lay.cells}
+    assert "optimization:power" not in cells  # the value folds away
+    assert "label:optimization" in cells  # ...the label survives as a strip
+    assert {ln.id for ln in lay.lines} >= {"h:optimization"}  # ...leaving a gridline
+
+
 def test_charts_on_adds_a_damage_bar_chart_over_the_targets():
     on = {c.id: c for c in _with(charts=True).cells}
     off = {c.id for c in _with(charts=False).cells}

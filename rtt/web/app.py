@@ -926,7 +926,7 @@ def index() -> None:
                 _ratio(cb, approx=False)
             elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, monzo components)
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
-            elif cb.kind == "count":
+            elif cb.kind in ("count", "optimization"):  # a scalar "symbol = value" (𝑑 = 3, 𝑝 = ∞)
                 math_cells[cb.id] = ui.html("").classes("rtt-count")  # content set in render()
             elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, monzo rule
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
@@ -1110,8 +1110,8 @@ def index() -> None:
                 # mirror the live selection (tuning/target); "" leaves the temperament
                 # chooser on its placeholder. building[0] guards on_change from echoing.
                 selects[cb.id].value = cb.text or None
-            elif cb.kind in ("symbol", "count"):  # math-styled text: symbols, their
-                html = _math_html(cb.text)        # equivalence tails, the counts' italic variables
+            elif cb.kind in ("symbol", "count", "optimization"):  # math-styled text: symbols, their
+                html = _math_html(cb.text)        # equivalence tails, the counts' and power's italic variables
                 if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
                     math_cells[cb.id].set_content(html)
                     math_rendered[cb.id] = html

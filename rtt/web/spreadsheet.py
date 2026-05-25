@@ -272,6 +272,14 @@ def _math_expr(operand: str, value: float, show_value: bool) -> str:
     return f"{expr}\n= {service.cents(value)}" if show_value else expr
 
 
+def _format_power(power: float) -> str:
+    """The optimization power as shown beside ``𝑝``: ``∞`` for a minimax scheme, else
+    the bare integer (``2``, ``1``) — or the decimal for an unusual fractional power."""
+    if power == float("inf"):
+        return "∞"
+    return str(int(power)) if power == int(power) else str(power)
+
+
 def _title_w(title: str) -> int:
     """Width of a collapsed column's title strip: wide enough for the widest line of its
     title at 13px bold, with a STRIP floor. A multi-word title carries explicit "\\n"
@@ -348,6 +356,9 @@ def build(state, settings=None, collapsed=None,
     show_symbols = settings["symbols"]  # the in-tile quantity symbols, stacked above the captions
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
+    # optimization is a sub-control of tuning boxes: it annotates the tuning region with
+    # the scheme's optimization power, so it only applies while that region shows
+    show_optimization = show_tuning and settings["optimization"]
     # Value-display toggles. "gridded values" is the master switch: with it off
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
@@ -405,7 +416,9 @@ def build(state, settings=None, collapsed=None,
         ("block:just:interest", "just", "interest"),
         ("block:retune:interest", "retune", "interest"),
     )
-    tiles = COUNTS_TILES + TILES + interest_tiles
+    # the optimization power rides one tile over the targets column (guarded by panel()
+    # and the toggle loop, so it adds nothing unless the optimization row is present)
+    tiles = COUNTS_TILES + TILES + interest_tiles + (("block:optimization", "optimization", "targets"),)
 
     # Column bands left-to-right: (key, natural width, present, collapsible).
     # Each set-column belongs to a box toggle: generators, the domain primes and
@@ -500,6 +513,7 @@ def build(state, settings=None, collapsed=None,
         ("just", ROW_H, show_tuning, True, "just tuning"),
         ("retune", ROW_H, show_tuning, True, "retuning"),
         ("damage", ROW_H, show_tuning, True, "damage"),
+        ("optimization", ROW_H, show_optimization, True, "optimization"),
     )
     # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
@@ -827,6 +841,15 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox("rangemode:tuning:gens", gx, ry + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                              "rangemode", text=range_mode))
 
+    # the optimization power 𝑝 of the current tuning, annotating the bottom of the
+    # tuning boxes (the scheme's Lp-norm order: ∞ minimax, 2 least-squares, 1 average).
+    # It rides the target-intervals column — the tuning's own column, whose damage list
+    # the optimization minimizes — and reads like a count: "𝑝 = ∞".
+    if tile_open("optimization", "targets"):
+        power = _format_power(service.optimization_power(tuning_scheme))
+        cells.append(CellBox("optimization:power", col_x["targets"], row_y["optimization"],
+                             col_w["targets"], ROW_H, "optimization", text=f"{_mathit('p')} = {power}"))
+
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
     def bracket(bid, glyphs, group_key, y, h, *, fit=False):
@@ -933,7 +956,7 @@ def build(state, settings=None, collapsed=None,
 
     # the remaining rows each get one horizontal rule across their band (no sub-row
     # fan), present or collapsed — so a collapsed one still leaves a gridline
-    for key in ("counts", "vectors", "tuning", "just", "retune", "damage"):
+    for key in ("counts", "vectors", "tuning", "just", "retune", "damage", "optimization"):
         if key not in row_y:
             continue
         lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge))
