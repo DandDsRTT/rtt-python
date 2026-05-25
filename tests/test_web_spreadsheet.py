@@ -540,6 +540,60 @@ def test_collapsing_a_whole_band_removes_its_per_tile_toggles():
     assert not any(c.endswith(":primes") and c.startswith("toggle:tile:") for c in col_off)
 
 
+def test_master_toggle_sits_in_the_top_left_node_corner():
+    cells = {c.id: c for c in _layout().cells}
+    master = cells["toggle:all"]
+    # it shares the row toggles' x (the node column) and the column toggles' y (the
+    # node row), so it lands in the corner where the two toggle lines converge
+    assert master.x == cells["toggle:row:mapping"].x
+    assert master.y == cells["toggle:col:primes"].y
+    # and it is the top-left of the cross: above every row toggle, left of every column one
+    assert master.y < cells["toggle:row:mapping"].y
+    assert master.x < cells["toggle:col:primes"].x
+
+
+def _foldable(layout):
+    return {c.id.split("toggle:", 1)[1] for c in layout.cells
+            if c.kind in ("rowtoggle", "coltoggle")}
+
+
+def test_master_toggle_glyph_reflects_whether_the_whole_grid_is_collapsed():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    open_grid = {c.id: c for c in spreadsheet.build(base).cells}["toggle:all"]
+    assert open_grid.text == "unfold_less"  # something's open -> offer collapse-all
+    every = _foldable(spreadsheet.build(base))
+    shut_grid = {c.id: c for c in spreadsheet.build(base, collapsed=every).cells}["toggle:all"]
+    assert shut_grid.text == "unfold_more"  # all folded -> offer expand-all
+
+
+def test_toggle_all_collapses_every_band_when_any_is_open():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    lay = spreadsheet.build(base)  # fully open
+    after = spreadsheet.toggle_all_collapsed(lay, set())
+    assert after == _foldable(lay)  # exactly every present row & column, nothing more
+    assert {"row:mapping", "col:primes", "col:targets"} <= after
+
+
+def test_toggle_all_expands_everything_when_fully_collapsed():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    lay = spreadsheet.build(base)
+    every = _foldable(lay)
+    # already fully folded (with a stray individually-folded tile too) -> expand clears it all
+    assert spreadsheet.toggle_all_collapsed(lay, every | {"tile:mapping:primes"}) == set()
+
+
+def test_collapsing_all_folds_the_whole_grid_down_to_its_strips():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    full = spreadsheet.build(base)
+    shut = spreadsheet.build(base, collapsed=spreadsheet.toggle_all_collapsed(full, set()))
+    # no content survives: every value group has folded into its row/column strip
+    assert not any(c.id.startswith(("cell:", "tuning:", "just:", "retune:", "damage:", "prime:"))
+                   for c in shut.cells)
+    assert shut.width < full.width and shut.height < full.height  # the board shrinks to the strips
+    # labels, headers and the master toggle persist so the grid can be re-expanded
+    assert {c.id for c in shut.cells} >= {"label:mapping", "header:primes", "toggle:all"}
+
+
 def test_preselects_off_shows_no_chooser_dropdowns():
     cells = {c.id for c in _with(preselects=False).cells}
     assert not any(c.startswith("preselect:") for c in cells)

@@ -284,7 +284,7 @@ _CSS = f"""
 """
 
 _LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "vec",
-                "rowtoggle", "coltoggle", "tiletoggle", "ptext"}
+                "rowtoggle", "coltoggle", "tiletoggle", "alltoggle", "ptext"}
 
 # A math-expression cell stacks 1–2 lines ("1200 · log₂(3/2)" over "= 701.96") in a
 # narrow value square, so each line's font is scaled down to fit the cell width.
@@ -776,6 +776,7 @@ def index() -> None:
     math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
     math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
     building = [False]
+    last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
 
     def drop(eid):
@@ -884,6 +885,12 @@ def index() -> None:
         collapsed.discard(item) if item in collapsed else collapsed.add(item)
         render()
 
+    def on_toggle_all():  # the master node-corner toggle: fold the whole grid, or expand it all back
+        new = spreadsheet.toggle_all_collapsed(last_lay[0], collapsed)
+        collapsed.clear()
+        collapsed.update(new)
+        render()
+
     def _ratio(cb, approx):
         """A ratio rendered as a stacked fraction (with a ~ prefix when approximate)."""
         parts = _ratio_parts(cb.text)
@@ -970,6 +977,9 @@ def index() -> None:
                 item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
                 labels[cb.id] = ui.label(cb.text).classes("rtt-toggle material-icons")
                 wrap.on("click", lambda _=None, it=item: on_toggle(it))
+            elif cb.kind == "alltoggle":  # the master expand/collapse-all control in the node corner
+                labels[cb.id] = ui.label(cb.text).classes("rtt-toggle material-icons")
+                wrap.on("click", lambda _=None: on_toggle_all())
             elif cb.kind == "minus":
                 # the zone spans the removable prime's header (the hover target); the
                 # button hides at its top and reveals on hover, above the header so it
@@ -1012,6 +1022,7 @@ def index() -> None:
         lay = spreadsheet.build(st, settings, collapsed, editor.tuning_scheme, editor.target_spec,
                                 interest=editor.interest_monzos, range_mode=editor.range_mode,
                                 pending_comma=editor.pending_comma)
+        last_lay[0] = lay  # the master toggle reads this layout's foldable bands on click
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
 

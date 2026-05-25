@@ -287,6 +287,26 @@ def _fold_glyph(is_collapsed: bool) -> str:
     return "unfold_more" if is_collapsed else "unfold_less"
 
 
+def _foldable_ids(cells) -> set:
+    """The row/column fold-ids present among ``cells`` ("row:tuning", "col:targets")
+    — the bands the master expand/collapse-all toggle acts on. Tiles are omitted: a
+    folded row or column already subsumes its tiles, so collapsing every band folds
+    the whole grid. Derived from the emitted toggles so it can't drift from them."""
+    return {c.id.split("toggle:", 1)[1] for c in cells
+            if c.kind in ("rowtoggle", "coltoggle")}
+
+
+def toggle_all_collapsed(layout, collapsed) -> set:
+    """The next ``collapsed`` set when the master expand/collapse-all toggle fires:
+    expand everything (clear the set) when every foldable band is already collapsed,
+    otherwise collapse every row and column. Pure — the app stores the result and
+    re-renders. Operates on the just-built ``layout`` so it tracks the visible grid."""
+    foldable = _foldable_ids(layout.cells)
+    if foldable and foldable <= collapsed:
+        return set()
+    return set(collapsed) | foldable
+
+
 def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
     """How many lines ``text`` wraps to in a ``width``-px box at ``font`` px, so the
     tile can grow tall enough to hold it (rather than letting it spill, as a narrow
@@ -595,6 +615,15 @@ def build(state, settings=None, collapsed=None,
             glyph = _fold_glyph(f"row:{key}" in collapsed)
             ty = row_y[key] + (row_h[key] - TOGGLE) / 2
             cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
+
+    # the master expand/collapse-all toggle, in the corner where the row-toggle column
+    # (node_x) meets the column-toggle row (col_node_y). Its glyph mirrors the whole
+    # grid: out-chevrons to expand when every foldable row and column is already
+    # collapsed, in-chevrons to collapse otherwise.
+    foldable = _foldable_ids(cells)  # the row/col toggles emitted just above
+    all_collapsed = bool(foldable) and foldable <= collapsed
+    cells.append(CellBox("toggle:all", node_x, col_node_y, TOGGLE, TOGGLE, "alltoggle",
+                         text=_fold_glyph(all_collapsed)))
 
     # counts row: each present column's set cardinality, centred over its values
     if row_open("counts"):
