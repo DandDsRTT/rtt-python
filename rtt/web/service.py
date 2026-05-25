@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from rtt.dimensions import get_d, get_n, get_r
+from rtt.domain_basis import get_domain_basis
 from rtt.dual import dual
 from rtt.formatting import to_ebk
 from rtt.generator_detempering import get_generator_detempering
@@ -73,29 +74,45 @@ class TemperamentState:
     d: int
     r: int
     n: int
+    domain_basis: tuple  # the d basis elements (ints / Fractions); standard primes by default
 
 
 def _to_matrix(rows) -> Matrix:
     return tuple(tuple(int(x) for x in row) for row in rows)
 
 
-def _state(mapping: Matrix, comma_basis: Matrix) -> TemperamentState:
-    m = Temperament(mapping, Variance.ROW)
-    return TemperamentState(mapping, comma_basis, get_d(m), get_r(m), get_n(m))
+def _state(mapping: Matrix, comma_basis: Matrix, domain_basis=None) -> TemperamentState:
+    m = Temperament(mapping, Variance.ROW, domain_basis)
+    return TemperamentState(
+        mapping, comma_basis, get_d(m), get_r(m), get_n(m), tuple(get_domain_basis(m))
+    )
 
 
-def from_mapping(mapping) -> TemperamentState:
-    """State whose source of truth is ``mapping``; comma basis is its dual."""
+def from_mapping(mapping, domain_basis=None) -> TemperamentState:
+    """State whose source of truth is ``mapping``; comma basis is its dual.
+
+    ``domain_basis`` (a tuple of basis elements, possibly nonprime) names a
+    nonstandard domain; ``None`` is the standard prime limit."""
     mapping = _to_matrix(mapping)
-    comma_basis = dual(Temperament(mapping, Variance.ROW)).matrix
-    return _state(mapping, comma_basis)
+    comma_basis = dual(Temperament(mapping, Variance.ROW, domain_basis)).matrix
+    return _state(mapping, comma_basis, domain_basis)
 
 
-def from_comma_basis(comma_basis) -> TemperamentState:
+def from_comma_basis(comma_basis, domain_basis=None) -> TemperamentState:
     """State whose source of truth is ``comma_basis``; mapping is its dual."""
     comma_basis = _to_matrix(comma_basis)
-    mapping = dual(Temperament(comma_basis, Variance.COL)).matrix
-    return _state(mapping, comma_basis)
+    mapping = dual(Temperament(comma_basis, Variance.COL, domain_basis)).matrix
+    return _state(mapping, comma_basis, domain_basis)
+
+
+def from_temperament_data(ebk: str) -> TemperamentState:
+    """State parsed from an EBK string, honouring an optional domain-basis prefix
+    (e.g. ``"2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"``). A map string is taken as the mapping,
+    a vector string as the comma basis; the dual is computed as usual."""
+    t = parse_temperament_data(ebk)
+    if t.variance is Variance.ROW:
+        return from_mapping(t.matrix, t.domain_basis)
+    return from_comma_basis(t.matrix, t.domain_basis)
 
 
 def standard_primes(d: int) -> tuple[int, ...]:

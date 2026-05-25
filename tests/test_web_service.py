@@ -1,4 +1,5 @@
 import math
+from fractions import Fraction
 
 from rtt.web import service
 
@@ -18,6 +19,29 @@ def test_from_mapping_computes_canonical_comma_basis():
     assert state.mapping == ((1, 1, 0), (0, 1, 4))
     assert state.comma_basis == ((4, -4, 1),)
     assert (state.d, state.r, state.n) == (3, 2, 1)
+
+
+def test_from_mapping_records_standard_prime_domain_basis():
+    # a standard prime-limit temperament records its domain basis as the first d primes,
+    # so the service layer always has a concrete basis (never None) to work from
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    assert state.domain_basis == (2, 3, 5)
+
+
+def test_from_temperament_data_reads_a_nonstandard_domain_basis():
+    # BARBADOS over the 2.3.13/5 subgroup: the domain basis is recorded verbatim
+    # (13/5 is a nonprime element) and the dims come from the d=3 mapping
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert state.domain_basis == (2, 3, Fraction(13, 5))
+    assert state.mapping == ((1, 2, 2), (0, -2, -3))
+    assert (state.d, state.r, state.n) == (3, 2, 1)
+
+
+def test_from_temperament_data_reads_a_standard_temperament_too():
+    # with no domain prefix it is an ordinary prime-limit temperament
+    state = service.from_temperament_data("[⟨1 1 0] ⟨0 1 4]}")
+    assert state.domain_basis == (2, 3, 5)
+    assert state.mapping == ((1, 1, 0), (0, 1, 4))
 
 
 def test_from_mapping_preserves_noncanonical_input():
