@@ -1612,6 +1612,56 @@ def test_equivalences_alone_render_the_symbol_line_only_where_there_is_an_equati
     assert not any(c.startswith("caption:") for c in eq_only)  # names is off here
 
 
+def test_units_annotate_each_box_with_its_unit_string():
+    on = {c.id: c for c in _with(units=True, names=True).cells}
+    off = {c.id: c for c in _with(units=False).cells}
+    # the per-box units line, parallel to the symbol/caption, reads "units: <value>"
+    # with the unit symbols bold-upright (g→𝐠, p→𝐩) and cents the plain ¢ (the mockup)
+    assert on["units:tuning:gens"].text == "units: ¢/\U0001D420"    # generator tuning map ¢/g
+    assert on["units:tuning:primes"].text == "units: ¢/\U0001D429"  # (prime) tuning map ¢/p
+    assert on["units:mapping:primes"].text == "units: \U0001D420/\U0001D429"  # mapping matrix g/p
+    assert on["units:mapping:targets"].text == "units: \U0001D420"  # mapped target list g
+    assert on["units:vectors:targets"].text == "units: \U0001D429"  # target-interval list p
+    assert on["units:damage:targets"].text == "units: ¢"            # damage list ¢
+    # nothing rendered when units is off
+    assert not any(c.startswith("units:") for c in off)
+    # the units line sits below the name caption for the same box
+    assert on["units:tuning:primes"].y > on["caption:tuning:primes"].y
+
+
+def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels():
+    on = {c.id: c for c in _with(domain_units=True).cells}
+    off = {c.id: c for c in _with(domain_units=False).cells}
+    # the units COLUMN (a spine column right after quantities) labels each row's
+    # coordinate: the interval-vectors basis in primes (pᵢ/), the mapping in
+    # generators (gᵢ/), and the cents tuning rows as ¢/
+    assert on["ucol:vectors:0"].text == "p₁/"   # p₁/
+    assert on["ucol:vectors:2"].text == "p₃/"   # p₃/
+    assert on["ucol:mapping:0"].text == "g₁/"   # g₁/
+    assert on["ucol:tuning"].text == "¢/"
+    assert on["ucol:damage"].text == "¢/"
+    # the units ROW (a spine row right after quantities) labels each column's
+    # coordinate: /gᵢ over the generators, /pᵢ over the domain primes, /1 over the
+    # ratio columns (commas, targets)
+    assert on["urow:gens:0"].text == "/g₁"      # /g₁
+    assert on["urow:primes:0"].text == "/p₁"    # /p₁
+    assert on["urow:primes:2"].text == "/p₃"    # /p₃
+    assert on["urow:targets:0"].text == "/1"
+    # the labels line up with the coordinates they annotate
+    assert on["urow:primes:0"].x == on["prime:0"].x   # /p₁ under the first prime column
+    assert on["ucol:vectors:0"].y == on["basis:0"].y  # p₁/ beside the first basis prime
+    assert on["ucol:mapping:0"].y == on["gen:0"].y    # g₁/ beside the first generator
+    # header + label for the new band
+    assert "header:units" in on and "label:units" in on
+    # none of it when the toggle is off
+    assert not any(c.startswith(("ucol:", "urow:")) for c in off)
+    assert "header:units" not in off and "label:units" not in off
+    # geometry: the units column sits between quantities and generators; the units
+    # row sits between the quantities row and the interval-vectors row
+    assert on["header:quantities"].x < on["header:units"].x < on["header:gens"].x
+    assert on["label:quantities"].y < on["label:units"].y < on["label:vectors"].y
+
+
 def test_optimization_on_shows_the_power_below_the_damage_row():
     on = {c.id: c for c in _with(optimization=True).cells}
     # the optimization power p of the current tuning (TOP, a minimax scheme => ∞),

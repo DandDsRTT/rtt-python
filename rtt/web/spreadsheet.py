@@ -49,6 +49,7 @@ PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box
 PTEXT_H = 13  # px height of a one-line read-only plain-text value
 PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch taller than a text line)
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
+UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when units shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
 RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
@@ -219,6 +220,41 @@ EQUIVALENCES = {
     ("damage", "targets"): " = |𝐞|diag(𝒘)",
 }
 
+# Each box's "units:" annotation (the mockup's per-box unit line, shown below the name
+# caption when the general `units` toggle is on). The value reads as a fraction of base
+# units — bold-upright generators 𝐠 and primes 𝐩 (rendered via _math_html, so the
+# Mathematical-Bold code points carry the weight), and the plain cent sign ¢. The
+# units follow from the quantity's row and column: the interval-vector lists are in
+# primes (𝐩); the mapping matrix is generators-per-prime (𝐠/𝐩) and its mapped lists
+# generators (𝐠); the tuning-family maps are cents-per-coordinate (¢/𝐠 over generators,
+# ¢/𝐩 over primes) and their applied size lists plain cents (¢). Keys mirror CAPTIONS,
+# so every box with a name also carries a unit (the emission rides the caption loop).
+_G, _P = "\U0001D420", "\U0001D429"  # 𝐠, 𝐩 (Mathematical Bold small g / p)
+UNITS = {
+    ("vectors", "commas"): _P,
+    ("vectors", "targets"): _P,
+    ("vectors", "interest"): _P,
+    ("mapping", "primes"): f"{_G}/{_P}",
+    ("mapping", "commas"): _G,
+    ("mapping", "targets"): _G,
+    ("mapping", "interest"): _G,
+    ("tuning", "gens"): f"¢/{_G}",
+    ("tuning", "primes"): f"¢/{_P}",
+    ("tuning", "commas"): "¢",
+    ("tuning", "targets"): "¢",
+    ("tuning", "interest"): "¢",
+    ("just", "primes"): f"¢/{_P}",
+    ("just", "commas"): "¢",
+    ("just", "targets"): "¢",
+    ("just", "interest"): "¢",
+    ("retune", "primes"): f"¢/{_P}",
+    ("retune", "commas"): "¢",
+    ("retune", "targets"): "¢",
+    ("retune", "interest"): "¢",
+    ("damage", "targets"): "¢",
+}
+UNITED_ROWS = frozenset(row for row, _ in UNITS)  # rows that reserve a units-line slot
+
 # Always-present content tiles (a row×column intersection) as (grey-panel id, row,
 # column). Each gets a grey panel and a top-left fold toggle; the panel/toggle ids
 # stay stable so the reconciling renderer can animate a single tile folding away.
@@ -247,6 +283,25 @@ TILES = (
     ("block:retune:commas", "retune", "commas"),
     ("block:retune:targets", "retune", "targets"),
     ("block:damage:targets", "damage", "targets"),
+)
+
+# The domain-units tiles (shown with the specific `domain_units` toggle): the units
+# COLUMN holds each row's coordinate-unit labels (the basis primes pᵢ/, the mapping
+# generators gᵢ/, the cents tuning rows ¢/); the units ROW holds each column's labels
+# (/gᵢ, /pᵢ, /1). They ride the same grey-panel + fold-toggle machinery as TILES, and
+# only render when both their row and column bands are present (i.e. the toggle is on).
+# The interest column's units-row tile is appended dynamically (like its other tiles).
+UNITS_TILES = (
+    ("block:ucol:vectors", "vectors", "units"),
+    ("block:ucol:mapping", "mapping", "units"),
+    ("block:ucol:tuning", "tuning", "units"),
+    ("block:ucol:just", "just", "units"),
+    ("block:ucol:retune", "retune", "units"),
+    ("block:ucol:damage", "damage", "units"),
+    ("block:urow:gens", "units", "gens"),
+    ("block:urow:primes", "units", "primes"),
+    ("block:urow:commas", "units", "commas"),
+    ("block:urow:targets", "units", "targets"),
 )
 
 # The plain-text tiles whose string is an editable input that drives the grid —
@@ -288,6 +343,15 @@ def _mathit(letter: str) -> str:
     Show panel's example. ``h`` is the one hole in the block — it maps to the
     Planck-constant glyph ``ℎ`` instead of an undefined code point."""
     return "ℎ" if letter == "h" else chr(0x1D44E + ord(letter) - ord("a"))
+
+
+_SUBSCRIPTS = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+
+
+def _sub(n: int) -> str:
+    """``n`` as Unicode subscript digits (e.g. ``1`` -> ``₁``), for the domain-units
+    coordinate labels (p₁/, /g₂) that index each prime/generator."""
+    return str(n).translate(_SUBSCRIPTS)
 
 
 def _log_operand(ratio: str) -> str:
@@ -389,6 +453,8 @@ def build(state, settings=None, collapsed=None,
     show_charts = settings["charts"]  # per-tile bar charts above the value cells
     show_ranges = settings["tuning_ranges"]  # the generator tuning-ranges I-beam chart (in the gens box)
     show_symbols = settings["symbols"]  # the in-tile quantity symbols, stacked above the captions
+    show_units = settings["units"]  # the in-tile "units: …" line, below each box's caption
+    show_domain_units = settings["domain_units"]  # the units row (spine) + units column
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
     # optimization is a sub-control of tuning boxes: it annotates the tuning region with
@@ -450,10 +516,12 @@ def build(state, settings=None, collapsed=None,
         ("block:tuning:interest", "tuning", "interest"),
         ("block:just:interest", "just", "interest"),
         ("block:retune:interest", "retune", "interest"),
+        ("block:urow:interest", "units", "interest"),  # the units row's /1 over the interest column
     )
     # the optimization power rides one tile over the targets column (guarded by panel()
     # and the toggle loop, so it adds nothing unless the optimization row is present)
-    tiles = COUNTS_TILES + TILES + interest_tiles + (("block:optimization", "optimization", "targets"),)
+    tiles = (COUNTS_TILES + TILES + UNITS_TILES + interest_tiles
+             + (("block:optimization", "optimization", "targets"),))
     # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
     # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
     # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
@@ -470,15 +538,18 @@ def build(state, settings=None, collapsed=None,
     # its (horizontal) title readable, so it never overflows onto its neighbours.
     # The domain/comma + controls ride just right of their blocks when open; each −
     # is a hover affordance on the removable highest-prime / last-comma column.
-    col_header = {"quantities": "quantities", "gens": "generators",
+    col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
                   "primes": "domain\nprimes", "commas": "commas", "targets": "target\nintervals",
                   "interest": "other intervals\nof interest"}
     # The leftmost quantities column is the spine: a header + fold toggle + a single
-    # vertical rule, the column-axis dual of the quantities spine row.
+    # vertical rule, the column-axis dual of the quantities spine row. The units column
+    # (the specific `domain_units` toggle) is a second spine column right after it,
+    # carrying each row's coordinate-unit labels (pᵢ/, gᵢ/, ¢/).
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
     # the value cells are inset by BRACKET_W within the group.
     col_bands = (
         ("quantities", SPINE_W, show_domain_quantities, True),
+        ("units", SPINE_W, show_domain_units, True),
         ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
@@ -597,6 +668,7 @@ def build(state, settings=None, collapsed=None,
     row_bands = (
         ("counts", ROW_H, show_counts, True, "counts"),
         ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
+        ("units", ROW_H, show_domain_units, True, "units"),
         ("vectors", d * ROW_H, True, True, "interval vectors"),
         ("mapping", r * ROW_H, show_temp, True, "mapping"),
         ("tuning", ROW_H, show_tuning, True, "tuning"),
@@ -608,7 +680,7 @@ def build(state, settings=None, collapsed=None,
     # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
-    tile_h, tile_top, row_frame, row_sym, row_cap, row_ptext, chart_top = {}, {}, {}, {}, {}, {}, {}
+    tile_h, tile_top, row_frame, row_sym, row_cap, row_units, row_ptext, chart_top = {}, {}, {}, {}, {}, {}, {}, {}
 
     def caption_band(key, folded):
         # the row's caption band is sized to its tallest (wrapped) caption, so the longest
@@ -656,7 +728,10 @@ def build(state, settings=None, collapsed=None,
         # equivalences extends that same line (the "= …" continuation) rather than
         # adding a band, so it reserves the slot too even when symbols itself is off
         sym = SYMBOL_H if ((show_symbols or show_equiv) and key in SYMBOLED_ROWS and not folded) else 0
-        # below the caption a tile reserves bands for the plain-text value box and
+        # the units line reserves a slot below the caption (above the plain-text box)
+        # for every united row, like the symbol slot above the caption
+        uni = UNIT_H if (show_units and key in UNITED_ROWS and not folded) else 0
+        # below the caption/units a tile reserves bands for the plain-text value box and
         # the preselect chooser (its row), stacked in that order
         pre = PRESELECT_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
         ptext = ptext_band(key, folded)
@@ -667,11 +742,12 @@ def build(state, settings=None, collapsed=None,
         row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
         row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
         row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
-        row_cap[key] = cap  # the plain-text box and preselect chooser sit below the caption
+        row_cap[key] = cap  # the units line and plain-text box sit below the caption
+        row_units[key] = uni  # the plain-text box and preselect chooser sit below the units line
         row_ptext[key] = ptext  # the plain-text band, with the preselect chooser below it
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + pre + ptext
+        tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext
         # the tuning row reserves the nested ranges box below its values: this grows EVERY
         # tile in the row to the same height (so the row is one uniform band) and pushes the
         # rows below clear of it
@@ -748,6 +824,42 @@ def build(state, settings=None, collapsed=None,
             if tile_open("counts", ckey):
                 cells.append(CellBox(f"count:{ckey}", col_x[ckey], row_y["counts"], col_w[ckey], ROW_H,
                                      "count", text=f"{_mathit(sym)} = {cardinality[ckey]}"))
+
+    # units row + column (the specific `domain_units` toggle): coordinate-unit labels.
+    # The units COLUMN labels each row's coordinate — the interval-vectors basis in
+    # primes (pᵢ/), the mapping in generators (gᵢ/), the cents tuning rows as ¢/. The
+    # units ROW labels each column's coordinate — /gᵢ over generators, /pᵢ over the
+    # domain primes, /1 over the ratio columns. Each rides its own grey tile
+    # (UNITS_TILES), so tile_open gates emission against the live layout.
+    if tile_open("vectors", "units"):
+        for p in range(d):
+            cells.append(CellBox(f"ucol:vectors:{p}", col_x["units"], vec_top(p), col_w["units"], ROW_H,
+                                 "units", text=f"p{_sub(p + 1)}/"))
+    if tile_open("mapping", "units"):
+        for i in range(r):
+            cells.append(CellBox(f"ucol:mapping:{i}", col_x["units"], map_top(i), col_w["units"], ROW_H,
+                                 "units", text=f"g{_sub(i + 1)}/"))
+    for key in ("tuning", "just", "retune", "damage"):
+        if tile_open(key, "units"):
+            cells.append(CellBox(f"ucol:{key}", col_x["units"], row_y[key], col_w["units"], ROW_H,
+                                 "units", text="¢/"))
+    if "units" in row_y:
+        uy = row_y["units"]
+        if tile_open("units", "gens"):
+            for g in range(r):
+                cells.append(CellBox(f"urow:gens:{g}", gen_left(g), uy, COL_W, ROW_H, "units", text=f"/g{_sub(g + 1)}"))
+        if tile_open("units", "primes"):
+            for p in range(d):
+                cells.append(CellBox(f"urow:primes:{p}", prime_left(p), uy, COL_W, ROW_H, "units", text=f"/p{_sub(p + 1)}"))
+        if tile_open("units", "commas"):
+            for c in range(nc):
+                cells.append(CellBox(f"urow:commas:{c}", comma_left(c), uy, COL_W, ROW_H, "units", text="/1"))
+        if tile_open("units", "targets"):
+            for j in range(k):
+                cells.append(CellBox(f"urow:targets:{j}", target_left(j), uy, COL_W, ROW_H, "units", text="/1"))
+        if tile_open("units", "interest"):
+            for ii in range(mi):
+                cells.append(CellBox(f"urow:interest:{ii}", interest_left(ii), uy, COL_W, ROW_H, "units", text="/1"))
 
     # quantities row: domain primes (+ controls) and target ratios (below the
     # tile's toggle head, like every other row's values). The whole row -- its
@@ -1034,6 +1146,12 @@ def build(state, settings=None, collapsed=None,
         q_cx = col_x["quantities"] + col_w["quantities"] / 2
         lines.append(Line("trunk:quantities", "v", q_cx, branch_top_y, total_h - branch_top_y))
 
+    # units spine column: the same single full-height rule as the quantities spine —
+    # it carries the coordinate-unit labels, no value fan
+    if "units" in col_x:
+        u_cx = col_x["units"] + col_w["units"] / 2
+        lines.append(Line("trunk:units", "v", u_cx, branch_top_y, total_h - branch_top_y))
+
     # generators column: a single vertical rule the full height of the grid, like the
     # quantities spine — it indexes the mapping rows and backs the rank count and the
     # tuning-ranges chart when those are shown.
@@ -1063,7 +1181,7 @@ def build(state, settings=None, collapsed=None,
 
     # the remaining rows each get one horizontal rule across their band (no sub-row
     # fan), present or collapsed — so a collapsed one still leaves a gridline
-    for key in ("counts", "vectors", "tuning", "just", "retune", "damage", "optimization"):
+    for key in ("counts", "units", "vectors", "tuning", "just", "retune", "damage", "optimization"):
         if key not in row_y:
             continue
         lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge))
@@ -1161,11 +1279,17 @@ def build(state, settings=None, collapsed=None,
             ch = _wrap_lines(name, col_w[ckey]) * CAPTION_LINE
             cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], ch,
                                  "caption", text=name, underlines=underlines))
+        # the "units: …" line sits below the caption band (independent of names/symbols),
+        # reading the box's entry from UNITS — bold-upright unit glyphs via _math_html
+        if show_units and (rkey, ckey) in UNITS:
+            uy = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey]
+            cells.append(CellBox(f"units:{rkey}:{ckey}", col_x[ckey], uy, col_w[ckey], UNIT_H,
+                                 "units", text=f"units: {UNITS[(rkey, ckey)]}"))
 
-    # the plain-text box sits directly below the symbol/caption stack; the preselect
+    # the plain-text box sits directly below the symbol/caption/units stack; the preselect
     # chooser rides one plain-text band lower (so preselects appear under plain text).
     def ptext_band_y(rkey):
-        return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey]
+        return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_units[rkey]
 
     # preselect chooser dropdowns, in the reserved band below each governing tile's
     # plain-text box. The tuning/target choosers carry the live selection; the

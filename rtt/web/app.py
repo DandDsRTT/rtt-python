@@ -217,11 +217,15 @@ _CSS = f"""
    vectors/matrices) — not a maths-font glyph, whose styling font fallback dropped */
 .rtt-symbol {{ width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
               font-family:'Cambria',Georgia,serif; }}
+/* the per-box "units: …" line below the caption, and the domain-units row/col labels:
+   small centred serif, the unit glyphs styled by _math_html (bold-upright g/p) */
+.rtt-units {{ width:100%; text-align:center; font-size:10px; color:#333; line-height:1;
+            white-space:nowrap; font-family:'Cambria',Georgia,serif; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
-/* the symbol + caption hold off their fade-in until the tile has finished expanding */
-.rtt-caption-cell, .rtt-symbol-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
+/* the symbol + caption (and the units line) hold off their fade-in until the tile has expanded */
+.rtt-caption-cell, .rtt-symbol-cell, .rtt-units-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
 /* the preselect chooser dropdowns: a compact bordered q-select that fills its
    PRESELECT_H cell, with a thin grey rule and a small caret — like the mockup */
 .rtt-preselect {{ width:100%; }}
@@ -1104,6 +1108,9 @@ def index() -> None:
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
                 math_cells[cb.id] = ui.html("").classes("rtt-symbol")  # content set in render()
+            elif cb.kind == "units":  # the per-box units line and the domain-units row/col labels
+                wrap.classes("rtt-units-cell")
+                math_cells[cb.id] = ui.html("").classes("rtt-units")  # content set in render()
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 captions[cb.id] = ui.html("").classes("rtt-caption")  # content set in render()
@@ -1322,8 +1329,8 @@ def index() -> None:
                     sel.value = family
                 else:  # tuning
                     selects[cb.id].value = cb.text or None
-            elif cb.kind in ("symbol", "count", "optimization"):  # math-styled text: symbols, their
-                html = _math_html(cb.text)        # equivalence tails, the counts' and power's italic variables
+            elif cb.kind in ("symbol", "count", "optimization", "units"):  # math-styled text: symbols, their
+                html = _math_html(cb.text)        # equivalence tails, the counts'/power's italic variables, units
                 if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
                     math_cells[cb.id].set_content(html)
                     math_rendered[cb.id] = html
