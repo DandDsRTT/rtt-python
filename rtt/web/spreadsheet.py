@@ -88,6 +88,7 @@ CAPTIONS = {
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma list",
     ("mapping", "targets"): "mapped target interval list",
+    ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
     ("tuning", "commas"): "tempered comma size list",
     ("tuning", "targets"): "tempered target interval size list",
@@ -119,6 +120,7 @@ SYMBOLS = {
     ("mapping", "primes"): "𝑀",
     ("mapping", "commas"): "𝑀𝐶",
     ("mapping", "targets"): "𝑌",
+    ("tuning", "gens"): "𝒈",
     ("tuning", "primes"): "𝒕",
     ("tuning", "commas"): "𝒕𝐶",
     ("tuning", "targets"): "𝐚",
@@ -163,6 +165,7 @@ PRESELECT_ROWS = frozenset(row for _, row, _ in PRESELECTS)
 # tempered (𝐚), just (𝐨) and other size lists.
 MNEMONICS = {
     ("mapping", "primes"): "mapping",   # 𝑀
+    ("tuning", "gens"): "generator",    # 𝒈
     ("tuning", "primes"): "tuning",     # 𝒕
     ("just", "primes"): "just",         # 𝒋
     ("retune", "primes"): "retuning",   # 𝒓
@@ -205,6 +208,7 @@ TILES = (
     ("block:mapping", "mapping", "primes"),
     ("block:mapped_comma", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),
+    ("block:tuning:gens", "tuning", "gens"),
     ("block:tuning:primes", "tuning", "primes"),
     ("block:tuning:commas", "tuning", "commas"),
     ("block:tuning:targets", "tuning", "targets"),
@@ -602,6 +606,9 @@ def build(state, settings=None, collapsed=None,
     def interest_left(i):
         return interest_x + BRACKET_W + i * COL_W
 
+    def gen_left(g):  # the g-th generator column in the generators box (its tuning-map cells)
+        return col_x["gens"] + BRACKET_W + g * COL_W
+
     def map_top(i):
         return row_y["mapping"] + i * ROW_H
 
@@ -753,8 +760,8 @@ def build(state, settings=None, collapsed=None,
     # the three value groups share an element name (for cell ids), a left-edge
     # accessor, and the operand of their just log₂ (a bare prime, or a comma/target
     # ratio); primes carry a map, commas and targets carry interval lists
-    group_elem = {"primes": "prime", "commas": "comma", "targets": "target", "interest": "interest"}
-    group_left = {"primes": prime_left, "commas": comma_left, "targets": target_left,
+    group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target", "interest": "interest"}
+    group_left = {"gens": gen_left, "primes": prime_left, "commas": comma_left, "targets": target_left,
                   "interest": interest_left}
     group_ratio = {  # the just interval ratio each value group is taken over
         "primes": lambda i: f"{primes[i]}/1",
@@ -819,26 +826,31 @@ def build(state, settings=None, collapsed=None,
             tval_row(key, "interest", interest_vals)
             chart(key, "primes", prime_vals)
             chart(key, "targets", target_vals)
+    # the generator tuning map: the tuning row's map over the generators (the gens-column
+    # counterpart of the tuning map over the primes), so the generators get a tuning tile too
+    if row_open("tuning"):
+        tval_row("tuning", "gens", tun.generator_map)
     if row_open("damage"):  # damage is over the commas and targets only (not the maps or interest)
         tval_row("damage", "commas", comma_sizes.damage)
         tval_row("damage", "targets", target_sizes.damage)
         chart("damage", "targets", target_sizes.damage)
 
-    # The generator tuning map tile: the generators column at the tuning row grows a
-    # ranges chart — a per-generator [min, max] I-beam (octave held pure, so the period
-    # generator pins to a point) under the selected mode, diamond-monotone or -tradeoff.
-    # The tuning-ranges box's content (the mockup's "controls in box g"), riding the empty
-    # gens-column space below the mapping row. The monotone range can be None (no
-    # monotone tuning exists), passed as () so the chart draws a placeholder rather than I-beams.
-    if show_ranges and col_open("gens") and row_open("tuning"):
+    # The generator tuning-ranges chart nests at the BOTTOM of the generator tuning map
+    # tile (below its values and caption), a per-generator [min, max] I-beam (octave held
+    # pure, so the period generator pins to a point) under the selected mode, diamond-
+    # monotone or -tradeoff. Gated on the tuning_ranges toggle; the tile's own panel is
+    # extended to enclose it (see gtm_extra in the panel loop), so it sits inside the tile
+    # rather than floating. The monotone range can be None (no monotone tuning exists),
+    # passed as () so the chart draws a placeholder rather than I-beams.
+    gtm_chart = show_ranges and tile_open("tuning", "gens")
+    gtm_extra = (RANGE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
+    if gtm_chart:
         chosen = tun.monotone_generator_range if range_mode == "monotone" else tun.tradeoff_generator_range
         gx, gw = col_x["gens"], col_w["gens"]
-        ry = tile_top["tuning"]
-        content_h = RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H
-        blocks.append(Block("block:gentuning", gx - PAD, ry - PAD, gw + 2 * PAD, content_h + 2 * PAD))
-        cells.append(CellBox("rangechart:tuning:gens", gx, ry, gw, RANGE_CHART_H, "rangechart",
+        cy = tile_top["tuning"] + tile_h["tuning"] + RANGE_GAP  # below the tile's values + caption
+        cells.append(CellBox("rangechart:tuning:gens", gx, cy, gw, RANGE_CHART_H, "rangechart",
                              ranges=tuple(chosen) if chosen is not None else ()))
-        cells.append(CellBox("rangemode:tuning:gens", gx, ry + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
+        cells.append(CellBox("rangemode:tuning:gens", gx, cy + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                              "rangemode", text=range_mode))
 
     # the optimization power 𝑝 of the current tuning, annotating the bottom of the
@@ -877,6 +889,8 @@ def build(state, settings=None, collapsed=None,
                 bracket(f"vec:{group}", LIST_BRACKETS, group, row_y["vectors"], d * ROW_H, fit=True)
         if mi and tile_open("vectors", "interest"):
             bracket("vec:interest", LIST_BRACKETS, "interest", row_y["vectors"], d * ROW_H, fit=True)
+    if tile_open("tuning", "gens"):  # the generator tuning map is a map: ⟨ … ] over the generators
+        bracket("tuning:genmap", MAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
     for key in ("tuning", "just", "retune"):
         if row_open(key):
             if tile_open(key, "primes"):
@@ -974,32 +988,34 @@ def build(state, settings=None, collapsed=None,
                 return group
         return ""
 
-    def panel_rect(ckey, rkey, pad):
+    def panel_rect(ckey, rkey, pad, extra_h=0):
         # a folded tile collapses both ways at once, so it shrinks to a point at
         # its centre — like a row+column collapse confined to this one tile. ``pad``
         # is how far the rect overhangs its cells (PAD for the grey tile, a wider
-        # WASH_PAD for the colorization wash behind it).
+        # WASH_PAD for the colorization wash behind it). ``extra_h`` grows the panel
+        # past its row band — the generator tuning map tile uses it to enclose the
+        # ranges chart nested below its values.
         tile_c = f"tile:{rkey}:{ckey}" in collapsed
         col_c = f"col:{ckey}" in collapsed or tile_c
         row_c = f"row:{rkey}" in collapsed or tile_c
-        cw, ch, cx, cy = col_w[ckey], tile_h[rkey], col_x[ckey], tile_top[rkey]
+        cw, ch, cx, cy = col_w[ckey], tile_h[rkey] + extra_h, col_x[ckey], tile_top[rkey]
         w, px = (0, 0) if col_c else (cw, pad)
         h, py = (0, 0) if row_c else (ch, pad)
         bx = cx + cw / 2 if col_c else cx
         by = cy + ch / 2 if row_c else cy
         return bx - px, by - py, w + 2 * px, h + 2 * py
 
-    def panel(bid, ckey, rkey):
+    def panel(bid, ckey, rkey, extra_h=0):
         if ckey not in col_x or rkey not in row_y:
             return
         group = tile_tint(rkey)  # "" unless this tile's group is being colorized
         if group:  # the wash sits behind the grey tile, showing through the gaps around it
-            wx, wy, ww, wh = panel_rect(ckey, rkey, WASH_PAD)
+            wx, wy, ww, wh = panel_rect(ckey, rkey, WASH_PAD, extra_h)
             blocks.append(Block(f"wash:{rkey}:{ckey}", wx, wy, ww, wh, tint=group))
-        blocks.append(Block(bid, *panel_rect(ckey, rkey, PAD)))
+        blocks.append(Block(bid, *panel_rect(ckey, rkey, PAD, extra_h)))
 
     for bid, rkey, ckey in tiles:
-        panel(bid, ckey, rkey)
+        panel(bid, ckey, rkey, gtm_extra if (rkey, ckey) == ("tuning", "gens") else 0)
 
     # quantity symbol + name stacked inside each tile, below its values + bottom
     # frame: the symbol line (toggled by symbols) on top, the long-form name

@@ -1527,6 +1527,23 @@ def test_charts_on_adds_signed_retuning_charts_over_primes_and_targets():
     assert ct.y + ct.h <= on["retune:target:0"].y
 
 
+def test_generator_tuning_map_tile_shows_the_generator_map_cents_in_the_default_view():
+    # the generator tuning map (the tuning row over the generators) is a default-view
+    # tile, like the tuning map over the primes — present without any toggle
+    st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    tun = service.tuning(st.mapping)
+    cells = {c.id: c for c in _layout().cells}  # default settings (charts off)
+    assert cells["tuning:gen:0"].text == service.cents(tun.generator_map[0])
+    assert cells["tuning:gen:1"].text == service.cents(tun.generator_map[1])
+    # one cents cell per generator, in the generators column, one COL_W apart
+    assert cells["header:gens"].x <= cells["tuning:gen:0"].x < cells["header:primes"].x
+    assert cells["tuning:gen:1"].x == cells["tuning:gen:0"].x + spreadsheet.COL_W
+    assert cells["tuning:gen:0"].y == cells["tuning:prime:0"].y  # in the tuning row
+    # framed as a map (⟨ … ]) like the other tuning maps, and named by its caption
+    assert cells["bracket:tuning:genmap:l"].text == "⟨" and cells["bracket:tuning:genmap:r"].text == "]"
+    assert cells["caption:tuning:gens"].text == "generator tuning map"
+
+
 def test_tuning_ranges_on_adds_a_generator_tuning_range_chart_in_the_generators_column():
     # the generator tuning map tile (the generators column at the tuning row) grows a
     # ranges chart when tuning ranges is on — a maximized-only feature, so it is absent
@@ -1582,12 +1599,13 @@ def test_range_chart_draws_a_placeholder_when_no_monotone_range_exists():
     assert ch.ranges == ()
 
 
-def test_range_chart_rides_the_tuning_row_below_the_mapping_row():
+def test_range_chart_nests_below_the_generator_map_values_inside_the_tile():
     on = {c.id: c for c in _with(tuning_ranges=True).cells}
     ch = on["rangechart:tuning:gens"]
-    # it occupies the otherwise-empty generators-column space at the tuning row...
-    assert ch.y <= on["tuning:prime:0"].y  # anchored at the top of the tuning row band
-    # ...below the mapping row (whose generators-column tile is empty), so they never overlap
+    # the chart sits below the generator-map values (nested at the bottom of the tile),
+    # not floating over them
+    assert ch.y > on["tuning:gen:0"].y
+    # ...and below the mapping row (whose generators-column tile is empty), so they never overlap
     mapping_bottom = on["cell:mapping:1:0"].y + spreadsheet.ROW_H
     assert ch.y >= mapping_bottom
 
@@ -1603,15 +1621,18 @@ def test_range_mode_selector_sits_below_the_chart_and_carries_the_current_mode()
     assert sel.y >= ch.y + ch.h  # below the chart, clear of it
 
 
-def test_generator_tuning_map_tile_has_a_grey_panel_behind_its_chart_and_selector():
+def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector():
     lay = _with(tuning_ranges=True)
     cells = {c.id: c for c in lay.cells}
-    blocks = {b.id: b for b in lay.blocks}
-    pan = blocks["block:gentuning"]  # the grey tile backing, like every other tile
-    ch, sel = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
+    pan = {b.id: b for b in lay.blocks}["block:tuning:gens"]  # the tile's OWN panel, extended
+    v, ch, sel = cells["tuning:gen:0"], cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
     assert pan.x <= ch.x and pan.x + pan.w >= ch.x + ch.w  # encloses the chart horizontally
-    assert pan.y <= ch.y and pan.y + pan.h >= sel.y + sel.h  # and the chart + selector vertically
-    assert "block:gentuning" not in {b.id for b in _with(tuning_ranges=False).blocks}  # tuning-ranges-only
+    assert pan.y <= v.y  # starts at/above the generator-map values...
+    assert pan.y + pan.h >= sel.y + sel.h  # ...and extends down past the nested chart + selector
+    # the panel is a normal default-view tile too (present without the chart), just shorter,
+    # and there is no separate floating panel
+    assert "block:tuning:gens" in {b.id for b in _with(tuning_ranges=False).blocks}
+    assert "block:gentuning" not in {b.id for b in lay.blocks}
 
 
 def test_tuning_colorization_washes_every_tuning_tile():
