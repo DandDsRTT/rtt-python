@@ -316,6 +316,7 @@ def build(state, settings=None, collapsed=None,
     show_counts = settings["counts"]
     show_ptext = settings["plain_text_values"]  # the boxed EBK string under each tile
     show_charts = settings["charts"]  # per-tile bar charts above the value cells
+    show_ranges = settings["tuning_ranges"]  # the generator tuning-ranges I-beam chart (in the gens box)
     show_symbols = settings["symbols"]  # the in-tile quantity symbols, stacked above the captions
     show_temp = settings["temperament_boxes"]
     show_tuning = settings["tuning_boxes"]
@@ -782,10 +783,10 @@ def build(state, settings=None, collapsed=None,
     # The generator tuning map tile: the generators column at the tuning row grows a
     # ranges chart — a per-generator [min, max] I-beam (octave held pure, so the period
     # generator pins to a point) under the selected mode, diamond-monotone or -tradeoff.
-    # A maximized-only feature gated on charts, riding the empty gens-column space below
-    # the mapping identity. The monotone range can be None (no monotone tuning exists),
-    # passed as () so the chart draws a placeholder rather than I-beams.
-    if show_charts and col_open("gens") and row_open("tuning"):
+    # The tuning-ranges box's content (the mockup's "controls in box g"), riding the empty
+    # gens-column space below the mapping identity. The monotone range can be None (no
+    # monotone tuning exists), passed as () so the chart draws a placeholder rather than I-beams.
+    if show_ranges and col_open("gens") and row_open("tuning"):
         chosen = tun.monotone_generator_range if range_mode == "monotone" else tun.tradeoff_generator_range
         gx, gw = col_x["gens"], col_w["gens"]
         ry = tile_top["tuning"]

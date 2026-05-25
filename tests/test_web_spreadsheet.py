@@ -1390,23 +1390,33 @@ def test_charts_on_adds_signed_retuning_charts_over_primes_and_targets():
     assert ct.y + ct.h <= on["retune:target:0"].y
 
 
-def test_charts_on_adds_a_generator_tuning_range_chart_in_the_generators_column():
+def test_tuning_ranges_on_adds_a_generator_tuning_range_chart_in_the_generators_column():
     # the generator tuning map tile (the generators column at the tuning row) grows a
-    # ranges chart when charts is on — a maximized-only feature, so it is absent by
-    # default (keeping the default view unchanged)
-    on = {c.id: c for c in _with(charts=True).cells}
-    off = {c.id for c in _with(charts=False).cells}
-    assert "rangechart:tuning:gens" not in off  # no chart cell unless charts is on
+    # ranges chart when tuning ranges is on — a maximized-only feature, so it is absent
+    # by default (keeping the default view unchanged)
+    on = {c.id: c for c in _with(tuning_ranges=True).cells}
+    off = {c.id for c in _with(tuning_ranges=False).cells}
+    assert "rangechart:tuning:gens" not in off  # no chart cell unless tuning ranges is on
     ch = on["rangechart:tuning:gens"]
     assert ch.kind == "rangechart"
     # it spans the generators column (so its per-generator I-beams align with the cells)
     assert ch.x == on["header:gens"].x and ch.w == on["header:gens"].w
 
 
+def test_the_ranges_chart_answers_to_tuning_ranges_not_charts():
+    # the ranges chart is the tuning-ranges box's content (mockup: "controls in box g"),
+    # not the (bar-)charts toggle's: turning charts on alone must not summon it, and
+    # tuning ranges drives it on its own
+    charts_only = {c.id for c in _with(charts=True, tuning_ranges=False).cells}
+    ranges_only = {c.id for c in _with(charts=False, tuning_ranges=True).cells}
+    assert "rangechart:tuning:gens" not in charts_only
+    assert "rangechart:tuning:gens" in ranges_only
+
+
 def test_generator_tuning_range_chart_carries_the_monotone_ranges_by_default():
     st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     tun = service.tuning(st.mapping)  # ranges are interval-set-independent (the OLD diamond)
-    ch = {c.id: c for c in _with(charts=True).cells}["rangechart:tuning:gens"]
+    ch = {c.id: c for c in _with(tuning_ranges=True).cells}["rangechart:tuning:gens"]
     # default mode is monotone: one (low, high) cents pair per generator
     assert ch.ranges == tun.monotone_generator_range
     assert len(ch.ranges) == 2  # rank 2: period + one free generator
@@ -1418,7 +1428,7 @@ def test_range_mode_tradeoff_switches_the_chart_to_the_tradeoff_range():
     st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     tun = service.tuning(st.mapping)  # ranges are interval-set-independent (the OLD diamond)
     s = settings.defaults()
-    s["charts"] = True
+    s["tuning_ranges"] = True
     ch = {c.id: c for c in spreadsheet.build(st, s, range_mode="tradeoff").cells}["rangechart:tuning:gens"]
     assert ch.ranges == tun.tradeoff_generator_range
     assert ch.ranges != tun.monotone_generator_range  # the two modes give different ranges
@@ -1430,13 +1440,13 @@ def test_range_chart_draws_a_placeholder_when_no_monotone_range_exists():
     st = service.from_mapping(((1, 0, -1), (0, 1, -1)))
     assert service.tuning(st.mapping).monotone_generator_range is None
     s = settings.defaults()
-    s["charts"] = True
+    s["tuning_ranges"] = True
     ch = {c.id: c for c in spreadsheet.build(st, s, range_mode="monotone").cells}["rangechart:tuning:gens"]
     assert ch.ranges == ()
 
 
 def test_range_chart_rides_the_tuning_row_clear_of_the_mapping_identity():
-    on = {c.id: c for c in _with(charts=True).cells}
+    on = {c.id: c for c in _with(tuning_ranges=True).cells}
     ch = on["rangechart:tuning:gens"]
     # it occupies the otherwise-empty generators-column space at the tuning row...
     assert ch.y <= on["tuning:prime:0"].y  # anchored at the top of the tuning row band
@@ -1447,9 +1457,9 @@ def test_range_chart_rides_the_tuning_row_clear_of_the_mapping_identity():
 
 
 def test_range_mode_selector_sits_below_the_chart_and_carries_the_current_mode():
-    on = {c.id: c for c in _with(charts=True).cells}
-    off = {c.id for c in _with(charts=False).cells}
-    assert "rangemode:tuning:gens" not in off  # the selector rides the chart, charts-only
+    on = {c.id: c for c in _with(tuning_ranges=True).cells}
+    off = {c.id for c in _with(tuning_ranges=False).cells}
+    assert "rangemode:tuning:gens" not in off  # the selector rides the chart, tuning-ranges-only
     sel, ch = on["rangemode:tuning:gens"], on["rangechart:tuning:gens"]
     assert sel.kind == "rangemode"
     assert sel.text == "monotone"  # the live mode (default), so the renderer can preselect it
@@ -1458,14 +1468,14 @@ def test_range_mode_selector_sits_below_the_chart_and_carries_the_current_mode()
 
 
 def test_generator_tuning_map_tile_has_a_grey_panel_behind_its_chart_and_selector():
-    lay = _with(charts=True)
+    lay = _with(tuning_ranges=True)
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
     pan = blocks["block:gentuning"]  # the grey tile backing, like every other tile
     ch, sel = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
     assert pan.x <= ch.x and pan.x + pan.w >= ch.x + ch.w  # encloses the chart horizontally
     assert pan.y <= ch.y and pan.y + pan.h >= sel.y + sel.h  # and the chart + selector vertically
-    assert "block:gentuning" not in {b.id for b in _with(charts=False).blocks}  # charts-only
+    assert "block:gentuning" not in {b.id for b in _with(tuning_ranges=False).blocks}  # tuning-ranges-only
 
 
 # --- the projection box (a tuning-boxes sub-control; stubbed for now) ---
