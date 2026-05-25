@@ -386,6 +386,13 @@ def _sub(n: int) -> str:
     return str(n).translate(_SUBSCRIPTS)
 
 
+def _ratio_str(element) -> str:
+    """A domain element as a ``"num/den"`` ratio: a prime ``p`` -> ``"p/1"``, a nonprime
+    element (a Fraction like ``13/5``) -> ``"13/5"`` — the operand its just log₂ is taken over."""
+    fraction = Fraction(element)
+    return f"{fraction.numerator}/{fraction.denominator}"
+
+
 def _log_operand(ratio: str) -> str:
     """The operand of a just interval's log₂, e.g. ``3/1`` -> ``3`` (a bare prime,
     matching the mockup's ``log₂3``) and ``3/2`` -> ``(3/2)`` (parenthesised)."""
@@ -525,19 +532,25 @@ def build(state, settings=None, collapsed=None,
     header_h = HEADER_H
     d = state.d
     r = len(state.mapping)
-    primes = service.standard_primes(d)
-    gens = service.generators(state.mapping)
-    targets = service.target_interval_set(target_spec, primes)
+    # the d domain elements: the standard primes, or a nonstandard subgroup's (possibly
+    # nonprime) basis. Every interval set is read over this basis (so 13/5 keeps its 13).
+    elements = state.domain_basis
+    # trait 7: the nonstandard-domain box, when shown, reads the temperament in its prime
+    # superspace ("prime-based"); this coincides with the neutral mode on a standard domain,
+    # so it is harmless until that box is enabled.
+    approach = "prime-based" if settings.get("nonstandard_domain") else ""
+    gens = service.generators(state.mapping, elements)
+    targets = service.target_interval_set(target_spec, elements)
     k = len(targets)
-    mapped = service.mapped_intervals(state.mapping, targets)
-    target_vectors = service.target_interval_monzos(targets, d)  # k monzos, each d-tall
-    tun = service.tuning(state.mapping, tuning_scheme)  # prime maps, shared by every interval set
-    target_sizes = service.interval_sizes(tun, targets)
+    mapped = service.mapped_intervals(state.mapping, targets, elements)
+    target_vectors = service.target_interval_monzos(targets, d, elements)  # k monzos, each d-tall
+    tun = service.tuning(state.mapping, tuning_scheme, elements, approach)  # maps over the elements
+    target_sizes = service.interval_sizes(tun, targets, elements)
     target_weights = service.interval_weights(state.mapping, tuning_scheme, targets)  # the damage row's diag(𝒘)
-    comma_ratios = service.comma_ratios(state.comma_basis)
+    comma_ratios = service.comma_ratios(state.comma_basis, elements)
     nc = len(comma_ratios)  # the real commas (those that define the temperament)
     mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
-    comma_sizes = service.interval_sizes(tun, comma_ratios)  # comma sizes (tempered ~0)
+    comma_sizes = service.interval_sizes(tun, comma_ratios, elements)  # comma sizes (tempered ~0)
     # a comma being added is shown as a pending draft column to the right of the real
     # ones: blank red cells and a "?" quantity until it is a valid independent comma
     # (then it commits and the mapping re-ranks). It is not a real comma, so it does
@@ -552,14 +565,14 @@ def build(state, settings=None, collapsed=None,
     # panels or fold toggles — just its header and a single straight axis rule.
     interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in interest)
     mi = len(interest)
-    interest_ratios = service.comma_ratios(interest)  # monzo -> "num/den" (the shared renderer)
-    interest_mapped = service.mapped_intervals(state.mapping, interest_ratios)
-    interest_sizes = service.interval_sizes(tun, interest_ratios)
+    interest_ratios = service.comma_ratios(interest, elements)  # monzo -> "num/den" (shared renderer)
+    interest_mapped = service.mapped_intervals(state.mapping, interest_ratios, elements)
+    interest_sizes = service.interval_sizes(tun, interest_ratios, elements)
     # the complexity row norms each interval's prescaled monzo (𝒄): a covector over the
-    # primes (the domain-prime complexity map — each prime's complexity, log₂(prime) for the
-    # default log-prime norm), a list over the comma / target / interest interval sets.
+    # domain elements (each element's complexity, log₂ of it for the default log-prime
+    # norm), a list over the comma / target / interest interval sets.
     complexities = {
-        "primes": service.interval_complexities(state.mapping, tuning_scheme, tuple(f"{p}/1" for p in primes)),
+        "primes": service.interval_complexities(state.mapping, tuning_scheme, tuple(_ratio_str(e) for e in elements)),
         "commas": service.interval_complexities(state.mapping, tuning_scheme, comma_ratios),
         "targets": service.interval_complexities(state.mapping, tuning_scheme, targets),
         "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios),
@@ -597,8 +610,11 @@ def build(state, settings=None, collapsed=None,
     # its (horizontal) title readable, so it never overflows onto its neighbours.
     # The domain/comma + controls ride just right of their blocks when open; each −
     # is a hover affordance on the removable highest-prime / last-comma column.
+    # the domain column reads "domain elements" over a nonstandard subgroup (whose basis
+    # may be nonprime) and "domain primes" over a standard prime limit (per the mockup note)
+    domain_title = "domain\nprimes" if service.is_standard_domain(elements) else "domain\nelements"
     col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
-                  "primes": "domain\nprimes", "commas": "commas", "targets": "target\nintervals",
+                  "primes": domain_title, "commas": "commas", "targets": "target\nintervals",
                   "interest": "other intervals\nof interest"}
     # The leftmost quantities column is the spine: a header + fold toggle + a single
     # vertical rule, the column-axis dual of the quantities spine row. The units column
@@ -954,7 +970,7 @@ def build(state, settings=None, collapsed=None,
         qy = row_y["quantities"]
         if tile_open("quantities", "primes"):
             for p in range(d):
-                cells.append(CellBox(f"prime:{p}", prime_left(p), qy, COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
+                cells.append(CellBox(f"prime:{p}", prime_left(p), qy, COL_W, ROW_H, "prime", text=str(elements[p]), prime=p))
             # Only the highest prime is removable (shrink_domain trims the last), so its
             # − rides that column as a hover affordance: a zone spanning the header that
             # reveals the button just above it, clear of the editable mapping cell below.
@@ -1026,7 +1042,7 @@ def build(state, settings=None, collapsed=None,
         if tile_open("vectors", "quantities"):
             bx = col_x["quantities"] + (col_w["quantities"] - COL_W) / 2  # square, centred in the spine
             for p in range(d):
-                cells.append(CellBox(f"basis:{p}", bx, vec_top(p), COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
+                cells.append(CellBox(f"basis:{p}", bx, vec_top(p), COL_W, ROW_H, "prime", text=str(elements[p]), prime=p))
             if d > 1:  # the highest prime is the removable one (shrink trims the last)
                 cells.append(CellBox("basis_minus", col_x["quantities"], vec_top(d - 1), col_w["quantities"], ROW_H, "basis_minus"))
             cells.append(CellBox("basis_plus", bx + (COL_W - BTN) / 2, vec_top(d) + FRAME_GAP, BTN, BTN, "plus"))
@@ -1055,7 +1071,7 @@ def build(state, settings=None, collapsed=None,
     group_left = {"gens": gen_left, "primes": prime_left, "commas": comma_left, "targets": target_left,
                   "interest": interest_left}
     group_ratio = {  # the just interval ratio each value group is taken over
-        "primes": lambda i: f"{primes[i]}/1",
+        "primes": lambda i: _ratio_str(elements[i]),  # a prime "p/1", or a nonprime element "n/d"
         "commas": lambda i: comma_ratios[i],
         "targets": lambda i: targets[i],
         "interest": lambda i: interest_ratios[i],

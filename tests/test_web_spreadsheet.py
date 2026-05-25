@@ -27,6 +27,23 @@ def test_rows_columns_and_cells_are_present():
     assert {"minus", "plus"} <= ids  # domain controls
 
 
+def test_build_renders_a_nonstandard_domain_in_its_elements():
+    # a loaded 2.3.13/5 temperament shows its (nonprime) elements in the grid, renames
+    # the domain header, and reads its quantities over the basis — not the 2,3,5 the grid
+    # would otherwise default to
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    cells = {c.id: c for c in spreadsheet.build(state).cells}
+    assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "13/5"]
+    assert cells["header:primes"].text == "domain\nelements"
+    assert cells["gen:1"].text == "15/13"  # the Barbados generator, read over the basis
+
+
+def test_standard_domain_header_still_reads_domain_primes():
+    cells = {c.id: c for c in _layout().cells}
+    assert cells["header:primes"].text == "domain\nprimes"
+    assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "5"]
+
+
 def test_generator_ratios_are_listed_in_the_quantities_column():
     cells = {c.id: c for c in _layout().cells}
     assert cells["gen:0"].text == "2/1"
