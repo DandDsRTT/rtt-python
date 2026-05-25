@@ -11,7 +11,6 @@ in-process; domain expand/shrink and undo are available. No HTTP layer.
 from __future__ import annotations
 
 import math
-import re
 import sys
 from html import escape as _escape
 from pathlib import Path
@@ -23,14 +22,6 @@ from rtt.web import service
 from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
 from rtt.web.editor import Editor
-
-
-def _split_target_spec(spec: str) -> tuple[str, str]:
-    """Split a target spec into its optional numeric limit and family: ``"9-TILT"``
-    -> ``("9", "TILT")``, ``"OLD"`` -> ``("", "OLD")``. Drives the target chooser's
-    number field + TILT/OLD select."""
-    match = re.match(r"(\d*)-?(TILT|OLD)", spec or "")
-    return (match.group(1), match.group(2)) if match else ("", "TILT")
 
 _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
@@ -1117,13 +1108,13 @@ def index() -> None:
             elif cb.kind == "preselect":
                 name = cb.id.split(":", 1)[1]  # temperament / tuning / target
                 if name == "target":
-                    # a numeric limit override beside the TILT/OLD family select
-                    limit, family = _split_target_spec(cb.text)
+                    # a numeric limit override beside the TILT/OLD family select, seeded
+                    # from the editor's live target family + (optional) manual limit
                     with ui.element("div").classes("rtt-preselect-target"):
-                        num = ui.number(value=int(limit) if limit else None, min=2,
+                        num = ui.number(value=editor.target_limit, min=2,
                                 on_change=lambda e: on_target_change()) \
                             .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
-                        sel = ui.select(list(presets.TARGET_SETS), value=family,
+                        sel = ui.select(list(presets.TARGET_SETS), value=editor.target_family,
                                 on_change=lambda e: on_target_change()) \
                             .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
                                    f"popup-content-style=width:{cb.w - 23}px").classes("rtt-preselect")  # field = cell − square − gap
@@ -1321,9 +1312,10 @@ def index() -> None:
                     selects[cb.id].value = presets.identify(editor.state) or ""
                 elif cb.id == "preselect:target":
                     num, sel = selects[cb.id]
-                    limit, family = _split_target_spec(cb.text)
+                    family = editor.target_family
                     # always show the number in use: the manual limit, or the domain default
-                    num.value = int(limit) if limit else \
+                    limit = editor.target_limit
+                    num.value = limit if limit is not None else \
                         service.default_target_limit(family, service.standard_primes(editor.state.d))
                     sel.value = family
                 else:  # tuning
