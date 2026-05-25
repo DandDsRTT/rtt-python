@@ -969,6 +969,19 @@ def build(state, settings=None, collapsed=None,
         return ((rkey, ckey) in declared_tiles and row_open(rkey) and col_open(ckey)
                 and f"tile:{rkey}:{ckey}" not in collapsed)
 
+    def cell_unit(rkey, ckey, *, gen=None, prime=None):
+        # the per-value unit shown beneath a gridded cell when units is on: the tile's
+        # unit (UNITS) with its g/p variables subscripted by this cell's generator/prime
+        # index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped list g₁.
+        if not show_units:
+            return ""
+        u = UNITS.get((rkey, ckey), "")
+        if gen is not None:
+            u = u.replace("g", f"g{_sub(gen + 1)}")
+        if prime is not None:
+            u = u.replace("p", f"p{_sub(prime + 1)}")
+        return u
+
     def prime_left(p):
         return primes_x + BRACKET_W + p * COL_W
 
@@ -1124,18 +1137,18 @@ def build(state, settings=None, collapsed=None,
         for i in range(r):
             if tile_open("mapping", "primes"):
                 for p in range(d):
-                    cells.append(CellBox(f"cell:mapping:{i}:{p}", prime_left(p), map_top(i), COL_W, ROW_H, "mapping", gen=i, prime=p))
+                    cells.append(CellBox(f"cell:mapping:{i}:{p}", prime_left(p), map_top(i), COL_W, ROW_H, "mapping", gen=i, prime=p, unit=cell_unit("mapping", "primes", gen=i, prime=p)))
             if tile_open("mapping", "targets"):
                 for j in range(k):
-                    cells.append(CellBox(f"cell:mapped:{i}:{j}", target_left(j), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped[i][j]), gen=i))
+                    cells.append(CellBox(f"cell:mapped:{i}:{j}", target_left(j), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped[i][j]), gen=i, unit=cell_unit("mapping", "targets", gen=i)))
             if tile_open("mapping", "interest"):  # interest mapped through M, like the targets
                 for ii in range(mi):
-                    cells.append(CellBox(f"cell:imapped:{i}:{ii}", interest_left(ii), map_top(i), COL_W, ROW_H, "mapped", text=str(interest_mapped[i][ii]), gen=i))
+                    cells.append(CellBox(f"cell:imapped:{i}:{ii}", interest_left(ii), map_top(i), COL_W, ROW_H, "mapped", text=str(interest_mapped[i][ii]), gen=i, unit=cell_unit("mapping", "interest", gen=i)))
             # the comma basis mapped through M — it vanishes to 0 (parallel to the
             # mapped target list); the raw basis lives in the interval-vectors row
             if tile_open("mapping", "commas"):
                 for c in range(nc):
-                    cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", comma_left(c), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_commas[i][c]), gen=i))
+                    cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", comma_left(c), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_commas[i][c]), gen=i, unit=cell_unit("mapping", "commas", gen=i)))
 
     # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
     # read-only maps over the primes, framed like the mapping matrix one row above it
@@ -1164,20 +1177,20 @@ def build(state, settings=None, collapsed=None,
         if tile_open("vectors", "commas"):
             for c in range(nc):
                 for p in range(d):
-                    cells.append(CellBox(f"cell:comma:{p}:{c}", comma_left(c), vec_top(p), COL_W, ROW_H, "commacell", text=str(state.comma_basis[c][p]), prime=p, comma=c))
+                    cells.append(CellBox(f"cell:comma:{p}:{c}", comma_left(c), vec_top(p), COL_W, ROW_H, "commacell", text=str(state.comma_basis[c][p]), prime=p, comma=c, unit=cell_unit("vectors", "commas", prime=p)))
             if pending is not None:  # the draft column: blank, red-outlined cells the user fills in
                 for p in range(d):
                     v = pending[p]
                     cells.append(CellBox(f"cell:comma:{p}:{nc}", comma_left(nc), vec_top(p), COL_W, ROW_H, "commacell",
-                                         text="" if v is None else str(v), prime=p, comma=nc, pending=True))
+                                         text="" if v is None else str(v), prime=p, comma=nc, pending=True, unit=cell_unit("vectors", "commas", prime=p)))
         if tile_open("vectors", "targets"):
             for j in range(k):
                 for p in range(d):
-                    cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "vec", text=str(target_vectors[j][p])))
+                    cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "vec", text=str(target_vectors[j][p]), unit=cell_unit("vectors", "targets", prime=p)))
         if tile_open("vectors", "interest"):  # the user's intervals of interest: editable monzos, like the comma basis
             for i in range(mi):
                 for p in range(d):
-                    cells.append(CellBox(f"cell:interest:{p}:{i}", interest_left(i), vec_top(p), COL_W, ROW_H, "interestcell", text=str(interest[i][p]), prime=p, comma=i))
+                    cells.append(CellBox(f"cell:interest:{p}:{i}", interest_left(i), vec_top(p), COL_W, ROW_H, "interestcell", text=str(interest[i][p]), prime=p, comma=i, unit=cell_unit("vectors", "interest", prime=p)))
 
     # the three value groups share an element name (for cell ids), a left-edge
     # accessor, and the operand of their just log₂ (a bare prime, or a comma/target
@@ -1215,14 +1228,17 @@ def build(state, settings=None, collapsed=None,
         if not tile_open(key, group):
             return
         y = row_y[key]
+        # the tuning-family unit is cents per the column's coordinate: over the generators
+        # it's ¢/gᵢ, over the primes ¢/pᵢ, over the (dimensionless) interval columns plain ¢
         for i, v in enumerate(vals):
             cid = f"{key}:{group_elem[group]}:{i}"
             x = group_left[group](i)
+            u = cell_unit(key, group, gen=i if group == "gens" else None, prime=i if group == "primes" else None)
             operand = closed_form_operand(key, group, i) if show_math else None
             if operand is not None:
-                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, show_quantities)))
+                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, show_quantities), unit=u))
             else:
-                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v)))
+                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v), unit=u))
 
     # a charted tile draws a bar chart in the band reserved above its values; the
     # chart spans the column group so its bars align with the value cells below.

@@ -54,6 +54,8 @@ class CellBox:
     pending: bool = False  # a not-yet-valid comma draft cell — rendered blank and red-outlined
     blank: bool = False  # a value cell kept (its box/brackets stay) but emptied of its
     # number -- how "quantities" off shows the bare gridded structure
+    unit: str = ""  # the cell's per-value unit (e.g. "g₁/p₁"), shown small beneath the value
+    # when the general `units` toggle is on -- the tile's unit with its variables indexed
 
 
 @dataclass(frozen=True)

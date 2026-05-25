@@ -1997,6 +1997,23 @@ def test_units_annotate_each_box_with_its_unit_string():
     assert on["units:tuning:primes"].y > on["caption:tuning:primes"].y
 
 
+def test_units_carry_a_per_value_unit_on_each_gridded_cell():
+    on = {c.id: c for c in _with(units=True).cells}
+    off = {c.id: c for c in _with(units=False).cells}
+    # each gridded value cell carries its coordinate-specialized unit: the tile's unit
+    # with its variables subscripted by the cell's generator/prime index (the mockup's
+    # g/p mapping tile reads g₁/p₁ in its top-left cell)
+    assert on["cell:mapping:0:0"].unit == "g₁/p₁"
+    assert on["cell:mapping:1:2"].unit == "g₂/p₃"   # generator 2 over prime 3
+    assert on["tuning:prime:0"].unit == "¢/p₁"       # tuning map over primes: cents per prime
+    assert on["tuning:gen:0"].unit == "¢/g₁"         # generator tuning map: cents per generator
+    assert on["tuning:target:0"].unit == "¢"         # a size list: plain cents, no index
+    assert on["cell:mapped:0:0"].unit == "g₁"        # mapped target list: generators (gen index)
+    assert on["cell:vec:targets:0:0"].unit == "p₁"   # interval vector: prime component
+    # the unit is absent when units is off
+    assert all(not c.unit for c in off.values())
+
+
 def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels():
     on = {c.id: c for c in _with(domain_units=True).cells}
     off = {c.id: c for c in _with(domain_units=False).cells}

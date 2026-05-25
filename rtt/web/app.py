@@ -278,6 +278,14 @@ _CSS = f"""
 .rtt-units {{ width:100%; text-align:center; font-size:10px; color:#333; line-height:1;
             white-space:nowrap; font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }}
 .rtt-units-pre {{ font-family:'Cambria',Georgia,serif; }}
+/* the per-value unit (the `units` toggle): a tiny line tucked at the bottom of a value
+   cell, in the same single-story-g sans as the other units. The cell adds bottom padding
+   (border-box, so it stays its square size) which lifts the flex-centred value up, so the
+   value + unit pair sits centred — like the cents int-over-fraction stack. */
+.rtt-cellunit {{ position:absolute; left:0; right:0; bottom:1px; text-align:center;
+            font-size:6px; line-height:1; color:#555; white-space:nowrap; pointer-events:none;
+            font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }}
+.rtt-cell-united {{ box-sizing:border-box; padding-bottom:7px; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
@@ -1038,6 +1046,8 @@ def index() -> None:
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
     math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
     math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
+    cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
+    cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
@@ -1047,7 +1057,7 @@ def index() -> None:
         els[eid].delete()
         for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, exprs, expr_state, kinds,
                   selects, ptext_inputs, captions, caption_html, math_cells, math_rendered,
-                  chart_keys, range_keys, audio_keys, rangeopts):
+                  cell_units, cell_unit_text, chart_keys, range_keys, audio_keys, rangeopts):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -1506,6 +1516,23 @@ def index() -> None:
                     caption_html[cb.id] = html
             elif cb.kind in _LABEL_KINDS:
                 labels[cb.id].set_text(cb.text)
+
+            # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
+            # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
+            # this adds/updates/removes the overlay as the toggle (or the domain) changes.
+            if cb.unit:
+                if cb.id not in cell_units:
+                    with els[cb.id]:
+                        cell_units[cb.id] = ui.html("").classes("rtt-cellunit")
+                    els[cb.id].classes(add="rtt-cell-united")
+                if cell_unit_text.get(cb.id) != cb.unit:
+                    cell_units[cb.id].set_content(_bold_units(cb.unit))
+                    cell_unit_text[cb.id] = cb.unit
+            elif cb.id in cell_units:
+                cell_units[cb.id].delete()
+                cell_units.pop(cb.id, None)
+                cell_unit_text.pop(cb.id, None)
+                els[cb.id].classes(remove="rtt-cell-united")
 
         for eid in [e for e in els if e not in seen]:
             drop(eid)
