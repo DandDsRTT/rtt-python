@@ -190,6 +190,15 @@ def test_shared_axes_and_branching():
     assert {"vbar:mapping:left", "vbar:mapping:right", "foot:mapping"} <= ids
 
 
+def test_adjacent_tiles_keep_a_twelve_px_minimum_gap():
+    # the minimum whitespace between two grey tiles is GAP - 2*PAD; the design doubles it
+    # from 6px to 12px so the (now 2px-thick) gridlines threading the gap keep their room
+    blocks = {b.id: b for b in _layout().blocks}
+    top, bot = blocks["block:tuning:targets"], blocks["block:just:targets"]
+    assert (top.x, top.w) == (bot.x, bot.w)  # the same column, stacked vertically
+    assert bot.y - (top.y + top.h) == 12  # the visible gap between the two tiles
+
+
 def test_quantities_spine_row_has_a_horizontal_gridline():
     lay = _layout()
     by_id = {ln.id: ln for ln in lay.lines}

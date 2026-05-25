@@ -39,6 +39,7 @@ _PENDING_COLOR = "#e53935"  # red for a pending comma's draft cells, brackets an
 _CELL_BORDER_W = 1  # px
 _CELL_BORDER = f"{_CELL_BORDER_W}px solid {_BR_COLOR}"
 _CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
+_LINE_W = 2  # px thickness of the shared-axis gridlines (.rtt-line) the cells sit on
 _BR_BAR = 2  # main bar / monzo-rule / square-bracket bar thickness (px)
 _BR_SERIF_T = 0.9  # square + top bracket serif thickness — a thin foot, well under the bar
 _BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches) — also
@@ -200,8 +201,8 @@ _CSS = f"""
 
 .rtt-line {{ position:absolute; z-index:1; opacity:1; transition:left {_T}, top {_T},
             width {_T}, height {_T}, opacity {_T}; }}
-.rtt-line-v {{ border-left:1px solid #e0e0e0; width:0; }}
-.rtt-line-h {{ border-top:1px solid #e0e0e0; height:0; }}
+.rtt-line-v {{ border-left:{_LINE_W}px solid #e0e0e0; width:0; }}
+.rtt-line-h {{ border-top:{_LINE_W}px solid #e0e0e0; height:0; }}
 /* a colorization wash: a colour band behind the grey tiles (below the gridlines too)
    filling a colorized group's row/column background. Each group's band has a white
    base on a LOWER layer (z-index:-1) than its darken colour layer (z-index:0), so the

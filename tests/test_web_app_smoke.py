@@ -194,6 +194,14 @@ def test_units_html_splits_a_per_box_line_and_passes_a_bare_label_through():
     assert app._units_html("/p₁") == "/p₁"
 
 
+def test_shared_axis_gridlines_render_two_pixels_thick():
+    # the shared coordinate axes (.rtt-line, the rules the cells sit on, threading the
+    # gaps between tiles) are the board's gridlines; doubled from 1px to 2px so they read
+    # clearly. Both orientations carry the same #e0e0e0 weight.
+    assert "border-left:2px solid #e0e0e0" in app._CSS  # the vertical gridlines
+    assert "border-top:2px solid #e0e0e0" in app._CSS   # the horizontal gridlines
+
+
 def test_every_show_toggle_has_a_non_empty_example():
     # the panel's "example" column illustrates each toggle (per the mockup's Show
     # legend), so no toggle may be missing its sample render

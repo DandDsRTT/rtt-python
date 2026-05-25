@@ -21,7 +21,7 @@ from rtt.web.settings import defaults as _default_settings
 ROW_H = 30  # px per row / matrix-entry height
 COL_W = 30  # px per value column; == ROW_H so matrix cells are squares that tile
 # the column (a shared-border grid, per the mockup); cents stack int-over-frac to fit
-GAP = 14  # px between row/column groups
+GAP = 20  # px between row/column groups (the visible gap between two grey tiles is GAP - 2*PAD)
 PAD = 4  # px a block extends around its cells
 WASH_PAD = GAP / 2  # px a colorization wash extends around its cells — wide enough that
 # adjacent washed tiles' rects meet across the gap, so the colour reads as one
