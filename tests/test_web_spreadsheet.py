@@ -1050,6 +1050,19 @@ def test_the_pending_comma_columns_ket_marks_are_flagged_for_red():
     assert not cells["ebktop:vec:commas:0"].pending
 
 
+def test_the_comma_basis_plain_text_reddens_while_a_comma_is_pending():
+    # the editable comma-basis EBK string also flags pending so its characters redden
+    # to match the gridded draft; the mapping's string (and the resting state) do not
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["plain_text_values"] = True
+    drafting = {c.id: c for c in spreadsheet.build(base, s, pending_comma=[None, None, None]).cells}
+    assert drafting["ptext:vectors:commas"].pending
+    assert not drafting["ptext:mapping:primes"].pending  # only the comma basis reddens
+    resting = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert not resting["ptext:vectors:commas"].pending  # no draft -> normal black string
+
+
 # --- math expressions: the just row's exact log₂ closed forms ---
 
 def test_math_expressions_render_the_just_tuning_primes_as_logs():

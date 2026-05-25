@@ -1135,8 +1135,10 @@ def build(state, settings=None, collapsed=None,
             if not tile_open(rkey, ckey):
                 continue
             kind = "ptextedit" if (rkey, ckey) in EDITABLE_PTEXT else "ptext"
+            # while a comma is pending the comma-basis string reddens to match the grid
+            pend = pending is not None and (rkey, ckey) == ("vectors", "commas")
             cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], ptext_band_y(rkey),
-                                 col_w[ckey], ptext_height(rkey, ckey), kind, text=text))
+                                 col_w[ckey], ptext_height(rkey, ckey), kind, text=text, pending=pend))
         # the quantities-row ratios get their plain text per column, directly below
         # each ratio (the mockup), one inline "n/d" per cell — not packed into a set
         for ckey, left, ratios in (("commas", comma_left, comma_ratios), ("targets", target_left, targets)):

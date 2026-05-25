@@ -260,10 +260,15 @@ _CSS = f"""
             min-height:0; font-family:'Cambria',Georgia,serif; }}
 .rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal {{ display:none !important; }}
 /* a pending comma's draft cells: red-outlined and empty until the user types a valid
-   independent comma, at which point it commits and reverts to a normal black cell */
+   independent comma, at which point it commits and reverts to a normal black cell. The
+   typed entries are red too, matching the brackets, the "?" quantity, and the plain text */
 .rtt-cellinput.rtt-pending .q-field__control {{ border-color:{_PENDING_COLOR} !important; }}
+.rtt-cellinput.rtt-pending .q-field__native {{ color:{_PENDING_COLOR} !important; }}
 /* a pending comma's "?" quantity, in the same red as its draft cells/brackets */
 .rtt-pending-q {{ color:{_PENDING_COLOR} !important; }}
+/* the comma basis plain text while a comma is pending: the whole editable string
+   reddens (still editable) so the ⟨…] characters match the gridded draft */
+.rtt-ptextedit.rtt-pending .q-field__native {{ color:{_PENDING_COLOR} !important; }}
 /* the +/− controls are half the square mapping/prime cell, sharing its exact border */
 .rtt-btn {{ width:15px !important; min-width:15px !important; height:15px !important;
            min-height:15px !important; background:#fff !important; border:{_CELL_BORDER} !important;
@@ -1234,6 +1239,8 @@ def index() -> None:
             elif cb.kind == "ptextedit":  # reflect the canonical string + its shrink-to-fit font
                 ptext_inputs[cb.id].value = cb.text
                 ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
+                ptext_inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                            remove="" if cb.pending else "rtt-pending")
             elif cb.kind == "mathexpr":
                 # redraw (with refit fonts) whenever the expression text or cell width changes
                 if expr_state.get(cb.id) != (cb.text, cb.w):
