@@ -973,6 +973,71 @@ def test_weight_caption_mnemonic_underlines_its_symbol_letter():
     assert cap.underlines == ((cap.text.index("weight"), 1),)
 
 
+def test_weighting_on_adds_a_complexity_row_over_every_interval_column():
+    off = {c.id for c in _with(weighting=False).cells}
+    on = {c.id: c for c in _with(weighting=True).cells}
+    assert "complexity:target:0" not in off  # no complexity row unless weighting is on
+    mapping = ((1, 1, 0), (0, 1, 4))
+    scheme = service.DEFAULT_TUNING_SCHEME
+    targets = service.target_interval_set(service.DEFAULT_TARGET_SPEC, service.standard_primes(3))
+    tx = service.interval_complexities(mapping, scheme, targets)
+    assert on["complexity:target:0"].text == service.cents(tx[0])
+    assert on["complexity:target:7"].text == service.cents(tx[7])
+    # the comma basis interval complexity list, over the commas column
+    cx = service.interval_complexities(mapping, scheme, ("80/81",))
+    assert on["complexity:comma:0"].text == service.cents(cx[0])
+    # the domain prime complexity map, over the primes: the complexity of each prime
+    px = service.interval_complexities(mapping, scheme, ("2/1", "3/1", "5/1"))
+    assert on["complexity:prime:0"].text == service.cents(px[0])  # log2(2) = 1.000
+    assert on["complexity:prime:2"].text == service.cents(px[2])  # log2(5) = 2.322
+
+
+def test_complexity_row_sits_between_retuning_and_weight():
+    on = {c.id: c for c in _with(weighting=True).cells}
+    assert on["retune:target:0"].y < on["complexity:target:0"].y < on["weight:target:0"].y
+
+
+def test_complexity_over_primes_is_a_map_the_rest_are_lists():
+    cells = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        {**settings.defaults(), "weighting": True}, interest=((-3, 2, 0),),
+    ).cells}
+    # the domain-prime complexity is a covector ⟨ … ] (a map), like the tuning map
+    assert cells["bracket:complexity:map:l"].text == "⟨" and cells["bracket:complexity:map:r"].text == "]"
+    # the comma / target / interest complexities are plain [ … ] lists
+    assert cells["bracket:complexity:commalist:l"].text == "["
+    assert cells["bracket:complexity:list:l"].text == "[" and cells["bracket:complexity:list:r"].text == "]"
+    assert cells["bracket:complexity:ilist:l"].text == "["
+
+
+def test_complexity_is_not_charted():
+    # only retuning/weight/damage grow bar charts; complexity does not (the mockup
+    # shows the chart in the weight box, not the complexity boxes)
+    on = {c.id for c in _with(weighting=True, charts=True).cells}
+    assert not any(c.startswith("chart:complexity") for c in on)
+
+
+def test_complexity_row_carries_its_symbol_and_captions():
+    cells = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        {**settings.defaults(), "weighting": True, "symbols": True, "names": True},
+        interest=((-3, 2, 0),),
+    ).cells}
+    assert cells["symbol:complexity:primes"].text == "𝒄"  # bold italic, the complexity box
+    assert cells["symbol:complexity:targets"].text == "𝒄"
+    assert cells["caption:complexity:primes"].text == "domain prime complexity map"
+    assert cells["caption:complexity:commas"].text == "comma basis interval complexity list"
+    assert cells["caption:complexity:targets"].text == "target interval complexity list"
+    assert cells["caption:complexity:interest"].text == "complexity"  # terse, like the interest column's others
+
+
+def test_complexity_caption_mnemonic_underlines_its_symbol_letter():
+    cells = {c.id: c for c in _with(weighting=True, names=True, mnemonics=True).cells}
+    cap = cells["caption:complexity:targets"]
+    # the 'c' of "complexity" is underlined (its symbol 𝒄)
+    assert cap.underlines == ((cap.text.index("complexity"), 1),)
+
+
 def test_weight_equivalence_reflects_the_schemes_damage_slope():
     # the weight = complexity / 1 / 1-over-complexity by the scheme's slope, so the
     # equivalence tells the truth about the live scheme rather than a fixed headline

@@ -24,6 +24,7 @@ from rtt.target_intervals import (
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
     _damage_weights,
+    get_complexity,
     get_just_tuning_map,
     optimize_generator_tuning_map,
     optimize_tuning_map,
@@ -214,14 +215,35 @@ def interval_sizes(tun: Tuning, ratios) -> IntervalSizes:
     return IntervalSizes(tempered, just, errors, tuple(abs(e) for e in errors))
 
 
+def _temperament_spec_monzos(mapping, scheme, ratios):
+    """The (Temperament, resolved spec, monzos-over-the-domain) triple the complexity and
+    weight projections share — both norm a set of monzos through the scheme's complexity."""
+    t = Temperament(_to_matrix(mapping), Variance.ROW)
+    return t, resolve_tuning_scheme(scheme), _monzos(ratios, get_d(t))
+
+
+def interval_complexities(
+    mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=()
+) -> tuple[float, ...]:
+    """Each interval's complexity under ``scheme``'s complexity norm — the (pre-transformed)
+    norm of its monzo (log-prime/Tenney by default). Independent of the damage slope, which
+    only decides how complexity becomes a weight."""
+    t, spec, monzos = _temperament_spec_monzos(mapping, scheme, ratios)
+    return tuple(
+        get_complexity(
+            m, t, spec.complexity_norm_power, spec.complexity_log_prime_power,
+            spec.complexity_prime_power, spec.complexity_size_factor, spec.nonprime_basis_approach,
+        )
+        for m in monzos
+    )
+
+
 def interval_weights(
     mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=()
 ) -> tuple[float, ...]:
     """Each interval's damage weight under ``scheme``: 1 (unity weight), its complexity,
     or 1/complexity, picked by the scheme's damage-weight slope."""
-    t = Temperament(_to_matrix(mapping), Variance.ROW)
-    spec = resolve_tuning_scheme(scheme)
-    monzos = _monzos(ratios, get_d(t))
+    t, spec, monzos = _temperament_spec_monzos(mapping, scheme, ratios)
     return tuple(float(w) for w in _damage_weights(monzos, t, spec))
 
 

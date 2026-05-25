@@ -101,6 +101,9 @@ CAPTIONS = {
     ("retune", "primes"): "retuning map",
     ("retune", "commas"): "comma error list",
     ("retune", "targets"): "target interval error list",
+    ("complexity", "primes"): "domain prime complexity map",
+    ("complexity", "commas"): "comma basis interval complexity list",
+    ("complexity", "targets"): "target interval complexity list",
     ("weight", "targets"): "target interval weight list",
     ("damage", "targets"): "target interval damage list",
     **{("counts", ckey): name for ckey, _sym, name in COUNTS},
@@ -116,6 +119,7 @@ CAPTIONS = {
     ("tuning", "interest"): "tempered",
     ("just", "interest"): "just",
     ("retune", "interest"): "errors",
+    ("complexity", "interest"): "complexity",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # The quantity symbol shown above each name when symbols is on. Styling: the maps
@@ -142,6 +146,10 @@ SYMBOLS = {
     ("retune", "primes"): "𝒓",
     ("retune", "commas"): "𝒓C",
     ("retune", "targets"): "𝐞",
+    ("complexity", "primes"): "𝒄",  # the complexity map/list (bold italic)
+    ("complexity", "commas"): "𝒄",
+    ("complexity", "targets"): "𝒄",
+    ("complexity", "interest"): "𝒄",
     ("weight", "targets"): "𝒘",  # bold italic, as in the damage row's diag(𝒘)
     ("damage", "targets"): "𝐝",
 }
@@ -199,6 +207,10 @@ MNEMONICS = {
     ("just", "primes"): "just",         # 𝒋
     ("retune", "primes"): "retuning",   # 𝒓
     ("retune", "targets"): "error",     # 𝐞
+    ("complexity", "primes"): "complexity",   # 𝒄
+    ("complexity", "commas"): "complexity",
+    ("complexity", "targets"): "complexity",
+    ("complexity", "interest"): "complexity",
     ("weight", "targets"): "weight",    # 𝒘
     ("damage", "targets"): "damage",    # 𝐝
 }
@@ -294,6 +306,9 @@ TILES = (
     ("block:retune:primes", "retune", "primes"),
     ("block:retune:commas", "retune", "commas"),
     ("block:retune:targets", "retune", "targets"),
+    ("block:complexity:primes", "complexity", "primes"),
+    ("block:complexity:commas", "complexity", "commas"),
+    ("block:complexity:targets", "complexity", "targets"),
     ("block:weight:targets", "weight", "targets"),
     ("block:damage:targets", "damage", "targets"),
 )
@@ -527,6 +542,15 @@ def build(state, settings=None, collapsed=None,
     interest_ratios = service.comma_ratios(interest)  # monzo -> "num/den" (the shared renderer)
     interest_mapped = service.mapped_intervals(state.mapping, interest_ratios)
     interest_sizes = service.interval_sizes(tun, interest_ratios)
+    # the complexity row norms each interval's prescaled monzo (𝒄): a covector over the
+    # primes (the domain-prime complexity map — each prime's complexity, log₂(prime) for the
+    # default log-prime norm), a list over the comma / target / interest interval sets.
+    complexities = {
+        "primes": service.interval_complexities(state.mapping, tuning_scheme, tuple(f"{p}/1" for p in primes)),
+        "commas": service.interval_complexities(state.mapping, tuning_scheme, comma_ratios),
+        "targets": service.interval_complexities(state.mapping, tuning_scheme, targets),
+        "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios),
+    }
     interest_tiles = () if not interest else (
         ("block:vec:interest", "vectors", "interest"),
         ("block:interest", "quantities", "interest"),
@@ -535,6 +559,7 @@ def build(state, settings=None, collapsed=None,
         ("block:just:interest", "just", "interest"),
         ("block:retune:interest", "retune", "interest"),
         ("block:urow:interest", "units", "interest"),  # the units row's /1 over the interest column
+        ("block:complexity:interest", "complexity", "interest"),
     )
     # the optimization power rides one tile over the targets column (guarded by panel()
     # and the toggle loop, so it adds nothing unless the optimization row is present)
@@ -692,6 +717,7 @@ def build(state, settings=None, collapsed=None,
         ("tuning", ROW_H, show_tuning, True, "tuning"),
         ("just", ROW_H, show_tuning, True, "just tuning"),
         ("retune", ROW_H, show_tuning, True, "retuning"),
+        ("complexity", ROW_H, show_weighting, True, "complexity"),
         ("weight", ROW_H, show_weighting, True, "weight"),
         ("damage", ROW_H, show_tuning, True, "damage"),
         ("optimization", ROW_H, show_optimization, True, "optimization"),
@@ -1053,6 +1079,9 @@ def build(state, settings=None, collapsed=None,
     # counterpart of the tuning map over the primes), so the generators get a tuning tile too
     if row_open("tuning"):
         tval_row("tuning", "gens", tun.generator_map)
+    if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
+        for group in ("primes", "commas", "targets", "interest"):
+            tval_row("complexity", group, complexities[group])
     if row_open("weight"):  # weight is over the targets only, like damage (it scales them)
         tval_row("weight", "targets", target_weights)
         chart("weight", "targets", target_weights)
@@ -1120,7 +1149,7 @@ def build(state, settings=None, collapsed=None,
             bracket("vec:interest", LIST_BRACKETS, "interest", row_y["vectors"], d * ROW_H, fit=True)
     if tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
         bracket("tuning:genmap", GENMAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
-    for key in ("tuning", "just", "retune"):
+    for key in ("tuning", "just", "retune", "complexity"):
         if row_open(key):
             if tile_open(key, "primes"):
                 bracket(f"{key}:map", MAP_BRACKETS, "primes", row_y[key], ROW_H)

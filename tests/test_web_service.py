@@ -186,6 +186,22 @@ def test_interval_weights_of_the_empty_set_are_empty():
     assert service.interval_weights([[1, 1, 0], [0, 1, 4]], "minimax-S", ()) == ()
 
 
+def test_interval_complexities_norm_each_intervals_prescaled_monzo():
+    import pytest
+
+    mapping = [[1, 1, 0], [0, 1, 4]]  # meantone over 2.3.5
+    ratios = ("2/1", "3/2", "5/4")
+    # default log-prime taxicab complexity: sum of |monzo[i]| * log2(prime_i).
+    # Independent of the damage slope (slope weights damage; complexity is the norm itself).
+    expected = (1.0, 2.585, 4.322)
+    assert service.interval_complexities(mapping, "minimax-S", ratios) == pytest.approx(expected, abs=1e-3)
+    assert service.interval_complexities(mapping, "minimax-C", ratios) == pytest.approx(expected, abs=1e-3)
+
+
+def test_interval_complexities_of_the_empty_set_are_empty():
+    assert service.interval_complexities([[1, 1, 0], [0, 1, 4]], "minimax-S", ()) == ()
+
+
 def test_plain_text_mapping_is_the_ebk_string():
     # the mapping tile's plain-text value is the temperament's EBK string: a list
     # of per-generator maps, ⟨ … ] inside, enclosed by the rank-count [ … }
