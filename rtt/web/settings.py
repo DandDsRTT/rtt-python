@@ -81,7 +81,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
     {"names", "symbols", "mnemonics", "equivalences", "gridded_values", "plain_text_values",
      "quantities", "domain_quantities", "units", "domain_units", "counts", "preselects",
      "temperament_boxes", "tuning_boxes", "math_expressions", "charts", "tuning_ranges",
-     "tuning_colorization", "temperament_colorization"}
+     "tuning_colorization", "temperament_colorization", "weighting"}
 )
 
 

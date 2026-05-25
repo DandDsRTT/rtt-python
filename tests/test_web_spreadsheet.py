@@ -1072,6 +1072,12 @@ def test_prescaling_matrix_carries_its_symbol_and_caption():
     assert cells["caption:prescaling:primes"].text == "complexity prescaler"
 
 
+def test_weighting_is_implemented_now_that_its_region_builds():
+    # the weighting toggle builds content (the prescaling/complexity/weight rows), so the
+    # Show panel must offer it live rather than greyed out
+    assert "weighting" in settings.IMPLEMENTED
+
+
 def test_weight_equivalence_reflects_the_schemes_damage_slope():
     # the weight = complexity / 1 / 1-over-complexity by the scheme's slope, so the
     # equivalence tells the truth about the live scheme rather than a fixed headline
