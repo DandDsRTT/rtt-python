@@ -2199,6 +2199,30 @@ def test_held_intervals_render_as_an_interval_list_like_the_targets():
     assert not any(c.startswith(("held:", "cell:vec:held:")) for c in bare)
 
 
+def test_generator_detempering_column_holds_the_d_matrix():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["generator_detempering"] = True
+    lay = spreadsheet.build(base, s)
+    cells = {c.id: c for c in lay.cells}
+    off = {c.id for c in _with(generator_detempering=False).cells}
+    # the column appears only when toggled, riding between the domain primes and commas
+    assert "header:detempering" in cells
+    assert "header:detempering" not in off
+    assert cells["header:primes"].x < cells["header:detempering"].x < cells["header:commas"].x
+    # D for 5-limit meantone: the octave [1 0 0⟩ and the fifth [-1 1 0⟩, as vector columns
+    assert [cells[f"cell:vec:detempering:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
+    assert [cells[f"cell:vec:detempering:1:{p}"].text for p in range(3)] == ["-1", "1", "0"]
+    # framed as a vector list (an enclosing bracket), riding its own gridline axis
+    assert "bracket:vec:detempering:l" in cells
+    assert "trunk:detempering" in {ln.id for ln in lay.lines}
+
+
+def test_generator_detempering_toggle_is_implemented():
+    # the column is built, so its Show toggle is live (interactive, not a greyed stub)
+    assert "generator_detempering" in settings.IMPLEMENTED
+
+
 def test_charts_on_adds_a_damage_bar_chart_over_the_targets():
     on = {c.id: c for c in _with(charts=True).cells}
     off = {c.id for c in _with(charts=False).cells}

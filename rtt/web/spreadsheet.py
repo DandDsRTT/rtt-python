@@ -116,6 +116,7 @@ CAPTIONS = {
     ("canon", "gens"): "generator form matrix",
     ("canon", "primes"): "canonical mapping",
     ("vectors", "held"): "held-interval basis",
+    ("vectors", "detempering"): "generator detempering",
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
     ("mapping", "targets"): "mapped target interval list",
@@ -318,6 +319,7 @@ UNITS = {
     ("vectors", "commas"): "p",
     ("vectors", "targets"): "p",
     ("vectors", "held"): "p",
+    ("vectors", "detempering"): "p",
     ("vectors", "interest"): "p",
     ("mapping", "primes"): "g/p",
     ("mapping", "commas"): "g",
@@ -631,6 +633,8 @@ def build(state, settings=None, collapsed=None,
     # mapped audio rows between counts and quantities. Their per-column tiles still ride the
     # column boxes (targets/interest need tuning boxes; primes/commas/gens need temperament).
     show_audio = settings["audio"]
+    # the generator-detempering column (the matrix D) is an independent box toggle
+    show_detempering = settings["generator_detempering"]
     # Value-display toggles. "gridded values" is the master switch: with it off
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
@@ -725,10 +729,15 @@ def build(state, settings=None, collapsed=None,
         ("block:held", "quantities", "held"),
         ("block:vec:held", "vectors", "held"),
     )
+    # the generator-detempering column holds the matrix D — one JI interval (a vector) per
+    # generator that tempers to it (the mapping's right-inverse), framed like the comma
+    # basis / target list. An independent box toggle, riding between domain primes and commas.
+    detempering_vectors = service.generator_detempering(state.mapping) if show_detempering else ()
+    detempering_tiles = (("block:vec:detempering", "vectors", "detempering"),) if show_detempering else ()
     # the optimization power rides one tile over the targets column (guarded by panel()
     # and the toggle loop, so it adds nothing unless the optimization row is present)
     tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + TILES + AUDIO_TILES + UNITS_TILES
-             + interest_tiles + held_tiles
+             + interest_tiles + held_tiles + detempering_tiles
              + (("block:optimization", "optimization", "targets"),))
     # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
     # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
@@ -750,7 +759,8 @@ def build(state, settings=None, collapsed=None,
     # may be nonprime) and "domain primes" over a standard prime limit (per the mockup note)
     domain_title = "domain\nprimes" if service.is_standard_domain(elements) else "domain\nelements"
     col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
-                  "primes": domain_title, "commas": "commas",
+                  "primes": domain_title, "detempering": "generator\ndetempering",
+                  "commas": "commas",
                   "held": "held\nintervals", "targets": "target\nintervals",
                   "interest": "other intervals\nof interest"}
     # The leftmost quantities column is the spine: a header + fold toggle + a single
@@ -764,6 +774,7 @@ def build(state, settings=None, collapsed=None,
         ("units", SPINE_W, show_domain_units, True),
         ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
+        ("detempering", 2 * BRACKET_W + r * COL_W, show_detempering, True),
         ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
         ("held", 2 * BRACKET_W + nh * COL_W, show_optimization, True),
         ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
@@ -889,6 +900,7 @@ def build(state, settings=None, collapsed=None,
     targets_x = content_x.get("targets")  # None when the target intervals column is hidden
     interest_x = content_x.get("interest")  # None when the interest column is hidden
     held_x = content_x.get("held")  # None when the held-intervals column is hidden
+    detempering_x = content_x.get("detempering")  # None when the generator-detempering column is hidden
 
     def col_open(key):
         return key in col_x and f"col:{key}" not in collapsed
@@ -1073,6 +1085,9 @@ def build(state, settings=None, collapsed=None,
 
     def held_left(i):
         return held_x + BRACKET_W + i * COL_W
+
+    def detempering_left(i):  # the i-th generator detempering column
+        return detempering_x + BRACKET_W + i * COL_W
 
     def gen_left(g):  # the g-th generator column in the generators box (its tuning-map cells)
         return content_x["gens"] + BRACKET_W + g * COL_W
@@ -1280,6 +1295,10 @@ def build(state, settings=None, collapsed=None,
             for i in range(nh):
                 for p in range(d):
                     cells.append(CellBox(f"cell:vec:held:{i}:{p}", held_left(i), vec_top(p), COL_W, ROW_H, "vec", text=str(held_vectors[i][p]), unit=cell_unit("vectors", "held", prime=p)))
+        if tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
+            for i in range(r):
+                for p in range(d):
+                    cells.append(CellBox(f"cell:vec:detempering:{i}:{p}", detempering_left(i), vec_top(p), COL_W, ROW_H, "vec", text=str(detempering_vectors[i][p]), unit=cell_unit("vectors", "detempering", prime=p)))
         if tile_open("vectors", "interest"):  # the user's intervals of interest: editable monzos, like the comma basis
             for i in range(mi):
                 for p in range(d):
@@ -1487,6 +1506,8 @@ def build(state, settings=None, collapsed=None,
             bracket("vec:interest", LIST_BRACKETS, "interest", row_y["vectors"], d * ROW_H, fit=True)
         if nh and tile_open("vectors", "held"):
             bracket("vec:held", LIST_BRACKETS, "held", row_y["vectors"], d * ROW_H, fit=True)
+        if tile_open("vectors", "detempering"):
+            bracket("vec:detempering", LIST_BRACKETS, "detempering", row_y["vectors"], d * ROW_H, fit=True)
     if tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
         bracket("tuning:genmap", GENMAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
     for key in ("tuning", "just", "retune", "complexity"):
@@ -1534,6 +1555,7 @@ def build(state, settings=None, collapsed=None,
     column_axis("targets", "target", k, lambda j: target_left(j) + COL_W / 2)
     column_axis("interest", "interest", mi, lambda i: interest_left(i) + COL_W / 2)
     column_axis("held", "held", nh, lambda i: held_left(i) + COL_W / 2)
+    column_axis("detempering", "detempering", r, lambda i: detempering_left(i) + COL_W / 2)
 
     # quantities spine column: a single vertical rule the full height of the grid
     # (the column-axis dual of the h:quantities spine row) — one spine rule, no fan
@@ -1795,6 +1817,7 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle")
     monzo_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
+    monzo_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the

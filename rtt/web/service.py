@@ -183,6 +183,14 @@ def generators(mapping, domain_basis=None) -> tuple[str, ...]:
     return _monzos_to_ratios(get_generator_detempering(m).matrix, domain_basis)
 
 
+def generator_detempering(mapping) -> Matrix:
+    """The generator detempering ``D``: one JI interval per generator that tempers to it
+    (the mapping's right-inverse), as ``r`` vectors over the ``d`` primes. The vector form
+    of :func:`generators` — for 5-limit meantone, the octave and fifth ``((1,0,0),(-1,1,0))``."""
+    m = Temperament(_to_matrix(mapping), Variance.ROW)
+    return _to_matrix(get_generator_detempering(m).matrix)
+
+
 def comma_ratios(comma_basis, domain_basis=None) -> tuple[str, ...]:
     """Each comma in the basis as a ratio string, e.g. ``('80/81',)`` — the
     comma-column analogue of :func:`generators`. Rendered as-is (the canonical

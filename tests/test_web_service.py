@@ -108,6 +108,13 @@ def test_generators_over_a_nonstandard_domain_multiply_out_the_basis():
     assert service.generators(state.mapping, domain_basis=state.domain_basis) == ("2/1", "15/13")
 
 
+def test_generator_detempering_vectors():
+    # the generator detempering D: one JI interval (as a vector) per generator that
+    # tempers to it — the mapping's right-inverse, r vectors over the d primes. For
+    # 5-limit meantone the generators are the octave 2/1 and the fifth 3/2.
+    assert service.generator_detempering([[1, 1, 0], [0, 1, 4]]) == ((1, 0, 0), (-1, 1, 0))
+
+
 def test_held_intervals_come_from_the_tuning_scheme():
     # the held intervals (tuned exactly justly) are trait 0 of the tuning scheme,
     # surfaced as ratios. The shipped minimax-S (TOP) holds nothing; a held-octave
