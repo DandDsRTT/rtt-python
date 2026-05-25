@@ -118,6 +118,7 @@ CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # damage list (|error|, no product form) and the "other intervals of interest" carry none.
 SYMBOLS = {
     ("vectors", "commas"): "C",
+    ("vectors", "targets"): "T",
     ("mapping", "primes"): "𝑀",
     ("mapping", "commas"): "𝑀C",
     ("mapping", "targets"): "Y",

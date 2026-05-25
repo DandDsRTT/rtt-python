@@ -1302,13 +1302,16 @@ def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_one
 def test_symbols_toggles_in_tile_symbol_glyphs_above_the_names():
     on = {c.id: c for c in _with(symbols=True, names=True).cells}
     off = {c.id: c for c in _with(symbols=False).cells}
-    # each quantity's bold symbol shows only when symbols is on: bold-upright for
-    # the matrices/lists, bold-italic for the maps (covectors)
-    assert on["symbol:mapping:primes"].text == "𝑀"  # mapping matrix
-    assert on["symbol:mapping:targets"].text == "Y"  # mapped list (= MT)
-    assert on["symbol:tuning:primes"].text == "𝒕"  # tuning map
-    assert on["symbol:tuning:targets"].text == "𝐚"  # tempered target sizes
-    assert on["symbol:damage:targets"].text == "𝐝"  # damage list
+    # styling per the convention: the mapping 𝑀 is math-italic; the interval
+    # lists/bases (Y, comma basis C, target list T) are upright non-bold; the maps
+    # are bold-italic; the size-lists bold-upright
+    assert on["symbol:mapping:primes"].text == "𝑀"  # mapping matrix (italic)
+    assert on["symbol:mapping:targets"].text == "Y"  # mapped target list (upright)
+    assert on["symbol:vectors:targets"].text == "T"  # target-interval list (upright)
+    assert on["symbol:vectors:commas"].text == "C"  # comma basis (upright)
+    assert on["symbol:tuning:primes"].text == "𝒕"  # tuning map (bold-italic)
+    assert on["symbol:tuning:targets"].text == "𝐚"  # tempered target sizes (bold-upright)
+    assert on["symbol:damage:targets"].text == "𝐝"  # damage list (bold-upright)
     assert not any(c.startswith("symbol:") for c in off)
     # the symbol stacks directly above the name caption for the same quantity
     assert on["symbol:mapping:primes"].y < on["caption:mapping:primes"].y
