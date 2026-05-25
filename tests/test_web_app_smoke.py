@@ -7,6 +7,7 @@ the original app's parseInt semantics. Rendering itself is verified in a browser
 
 import re
 import sys
+from pathlib import Path
 
 import rtt.web.app as app
 from rtt.web import settings as show_settings
@@ -31,6 +32,26 @@ def test_main_runs_server_with_reload_enabled(monkeypatch):
     assert captured["reload"] is True  # hot-reload: edits are picked up without a manual restart
     assert captured["port"] == 8137  # default dev port when no argv override is given
     assert captured["show"] is False
+
+
+def test_main_excludes_agent_worktrees_from_hot_reload(monkeypatch):
+    # The user keeps this instance running to use the app; agent worktrees live in
+    # .claude/worktrees/ inside the repo, so their constant edits sit under the
+    # reload watcher's root and would refresh the user's browser endlessly. main()
+    # adds that subtree to uvicorn's reload excludes. It must be an ABSOLUTE path —
+    # uvicorn matches dir-excludes by Path containment, so a relative path silently
+    # fails to match the watcher's absolute change events — and the NiceGUI defaults
+    # must survive (so .pyc/.swp/dotfiles stay ignored too).
+    captured = {}
+    monkeypatch.setattr(sys, "argv", ["app.py"])
+    monkeypatch.setattr(app.ui, "run", lambda **kwargs: captured.update(kwargs))
+    app.main()
+    excludes = [e.strip() for e in captured["uvicorn_reload_excludes"].split(",")]
+    worktrees = Path(app.__file__).resolve().parents[2] / ".claude" / "worktrees"
+    assert worktrees.is_absolute()
+    assert str(worktrees) in excludes
+    for default in (".*", ".py[cod]", ".sw.*", "~*"):
+        assert default in excludes
 
 
 def test_parse_int_accepts_integers_and_rejects_partial_input():

@@ -1192,9 +1192,16 @@ def index() -> None:
 
 def main() -> None:
     import sys
+    from pathlib import Path
 
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8137
-    ui.run(title="RTT", reload=True, show=False, port=port)
+    # Hot-reload watches the whole launch tree; agent worktrees under
+    # .claude/worktrees/ churn constantly and would refresh this instance endlessly.
+    # Exclude that subtree. uvicorn matches dir-excludes by path containment against
+    # absolute change events, so a relative path would silently never match.
+    worktrees = Path(__file__).resolve().parents[2] / ".claude" / "worktrees"
+    ui.run(title="RTT", reload=True, show=False, port=port,
+           uvicorn_reload_excludes=f".*, .py[cod], .sw.*, ~*, {worktrees}")
 
 
 if __name__ in {"__main__", "__mp_main__"}:
