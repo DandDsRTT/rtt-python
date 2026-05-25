@@ -3,20 +3,22 @@
 The RTT monolith is a microtonal/RTT engine with a NiceGUI web front end
 (`rtt/web/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`).
 
-## Web app port: 8137 — never 8188
+## Web app port: 8137 is the user's — agents launch on their own port
 
-On this machine the RTT web app **must** serve on port **8137**.
+Port **8137** belongs to the **human user**: they keep `python app.py` running there to
+actually use the app. It is also the app's canonical default (`rtt.web.app.main()`), which
+`tests/test_web_app_smoke.py` locks — keep that green. Do **not** change the default.
 
-- The canonical launch (`python app.py` → `rtt.web.app.main()`) already defaults to
-  **8137**. Prefer it, or pass an explicit port — but see the prohibition below.
-- **Never bind port 8188.** It is reserved for **ComfyUI** (used by the sibling
-  Origenerator project). If RTT squats 8188, ComfyUI cannot start and its clients fail
-  with HTTP 404 + websocket "Disconnected" — it breaks the ComfyUI/Origenerator
-  integration.
-- This applies to **every** launch, including ad-hoc preview/run harness commands that
-  call `ui.run(port=...)` directly and bypass `main()`. If a per-worktree preview needs
-  its own port (to avoid colliding with another worktree's instance), pick any free port
-  **except 8188** — and steer clear of 8189, which is one fat-finger away. When in doubt,
-  defer to `main()` / 8137.
+**Never launch a server on 8137 yourself.** When any agent starts the app to verify a
+change — `python app.py`, an ad-hoc `ui.run(port=...)`, a preview/run harness, or an
+integration test — a second instance on 8137 collides with the user's running session and
+refreshes their browser constantly, making the app unusable for them. This is the single
+biggest way agents disrupt the user. So, for **every** agent-initiated launch:
 
-`tests/test_web_app_smoke.py` locks the 8137 default; keep it green.
+- **Use a separate free port** — default to the **8200+** range, one per worktree so
+  parallel sessions don't fight. **Never 8137** (the user's), **never 8188** (reserved for
+  **ComfyUI** in the sibling Origenerator project — squatting it 404s ComfyUI's clients and
+  breaks its websocket), and **avoid 8189** (one fat-finger from 8188).
+- **Pass `reload=False`.** Hot-reload watches the whole repo tree — worktrees included — so
+  a `reload=True` agent instance churns on every edit (yours and other agents') and orphans
+  workers that keep the port bound. Agents relaunch deliberately; they don't need reload.
