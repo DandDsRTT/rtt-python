@@ -82,7 +82,7 @@ _RANGE_PLOT_B = 12  # plot-area bottom margin (room for the bottom-cap label)
 _RANGE_FONT = 7  # cents-label / placeholder font size
 
 # Colorization wash colours, keyed by the box-group name the layout tags a wash with
-# (spreadsheet.COLORIZE_GROUP_ROWS). These are the mockup's saturated box-group tones;
+# (spreadsheet.COLORIZE_REGIONS). These are the mockup's saturated box-group tones;
 # a wash sits behind the grey tiles so the colour reads through the gaps around them.
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a"}  # cyan tuning rows, khaki temperament columns
 
