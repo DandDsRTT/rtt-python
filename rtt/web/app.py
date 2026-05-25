@@ -232,9 +232,10 @@ _CSS = f"""
 .rtt-select-popup .q-item {{ min-height:22px; padding:1px 8px; font-size:11px; }}
 .rtt-select-popup .q-item__label {{ font-size:11px; white-space:normal;
               font-family:'Cambria',Georgia,serif; }}
-/* greyscale the selection: the chosen item's text and the hover/keyboard highlight
-   read grey, not Quasar's primary blue */
-.rtt-select-popup .q-item--active {{ color:#222 !important; }}
+/* greyscale the selection (no Quasar primary blue): the chosen item keeps a steady
+   light-grey wash so it stays visible, lighter than the darker grey hover/keyboard
+   highlight (the focus-helper, at Quasar's own hover/focus opacity) */
+.rtt-select-popup .q-item--active {{ color:#000 !important; background:#ededed; }}
 .rtt-select-popup .q-focus-helper {{ background:#000 !important; }}
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
 .rtt-preselect-target {{ width:100%; height:20px; display:flex; gap:3px; align-items:center; }}
