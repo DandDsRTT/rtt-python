@@ -40,6 +40,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
         "specific boxes & controls",
         (
             ("counts", "counts", False),
+            ("audio", "audio", False),
             ("domain_quantities", "quantities", True),
             ("domain_units", "units", False),
             ("temperament_boxes", "temperament boxes", True),
@@ -54,7 +55,6 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("alt_complexity", "alt. complexity", False),
             ("projection", "projection", False),
             ("tuning_colorization", "colorization", False),
-            ("audio", "audio", False),
             ("generator_detempering", "generator detempering", False),
             ("nonstandard_domain", "nonstandard domain", False),
             ("identity_objects", "identity objects", False),
@@ -79,7 +79,6 @@ SUBCONTROLS: dict[str, str] = {
     "alt_complexity": "weighting",  # controls in boxes 𝐋 and 𝒄
     "projection": "tuning_boxes",
     "tuning_colorization": "tuning_boxes",
-    "audio": "tuning_boxes",  # the just/mapped audio rows sound the tuning, so they ride the tuning region
 }
 
 # Toggles whose behaviour the layout actually builds today; the panel disables

@@ -2361,15 +2361,24 @@ def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
 # --- audio rows (hear just & mapped intervals) -------------------------------
 
 def _audio(**overrides):
-    # the audio rows are a sub-control of the tuning boxes, so enable that parent too
-    return _with(tuning_boxes=True, audio=True, **overrides)
+    # tuning boxes default on, so the target-interval column (and its audio tile) is present
+    return _with(audio=True, **overrides)
 
 
-def test_audio_is_a_tuning_boxes_subcontrol():
-    keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
-    assert "audio" in keys
-    assert settings.SUBCONTROLS["audio"] == "tuning_boxes"
+def test_audio_is_a_top_level_toggle_between_counts_and_quantities():
+    # audio is NOT nested under tuning boxes; it is a top-level Show toggle sitting between
+    # counts and quantities, matching where its rows land in the grid
+    assert "audio" not in settings.SUBCONTROLS
+    keys = [k for k, *_ in dict(settings.SHOW_GROUPS)["specific boxes & controls"]]
+    assert keys[keys.index("counts") + 1] == "audio"
+    assert keys[keys.index("audio") + 1] == "domain_quantities"  # the "quantities" toggle
     assert settings.defaults()["audio"] is False
+
+
+def test_audio_rows_depend_only_on_the_audio_toggle():
+    # top-level: the rows appear whenever audio is on, independent of the tuning boxes
+    assert "label:just_audio" in {c.id for c in _with(audio=True, tuning_boxes=False).cells}
+    assert "label:just_audio" not in {c.id for c in _with(audio=False).cells}
 
 
 def test_audio_adds_two_rows_between_counts_and_quantities():
@@ -2379,11 +2388,6 @@ def test_audio_adds_two_rows_between_counts_and_quantities():
     # ordered: counts, then just audio, then mapped audio, then quantities
     ys = [cells[f"label:{k}"].y for k in ("counts", "just_audio", "mapped_audio", "quantities")]
     assert ys == sorted(ys)
-
-
-def test_audio_rows_need_both_audio_and_tuning_boxes():
-    assert "label:just_audio" not in {c.id for c in _with(tuning_boxes=True, audio=False).cells}
-    assert "label:just_audio" not in {c.id for c in _with(tuning_boxes=False, audio=True).cells}
 
 
 def test_audio_speakers_carry_the_just_and_mapped_cents():

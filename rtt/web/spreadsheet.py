@@ -552,9 +552,10 @@ def build(state, settings=None, collapsed=None,
     # alt. complexity is a sub-control of weighting: it adds the prescaler dropdown to box 𝐋
     # (the prescaling matrix), so it only applies while that region shows
     show_alt_complexity = show_weighting and settings["alt_complexity"]
-    # audio is likewise a sub-control of tuning boxes: it adds the just/mapped audio rows
-    # that sound the interval sizes, so it only applies while the tuning region shows
-    show_audio = show_tuning and settings["audio"]
+    # audio is a top-level toggle (not nested under the tuning boxes): it adds the just /
+    # mapped audio rows between counts and quantities. Their per-column tiles still ride the
+    # column boxes (targets/interest need tuning boxes; primes/commas/gens need temperament).
+    show_audio = settings["audio"]
     # Value-display toggles. "gridded values" is the master switch: with it off
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
