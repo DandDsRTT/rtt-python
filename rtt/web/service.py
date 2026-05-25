@@ -8,9 +8,15 @@ a temperament's mapping and its dual comma basis (kept in sync) plus dimensions.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from fractions import Fraction
 
 from rtt.dimensions import get_d, get_n, get_r
-from rtt.domain_basis import get_domain_basis
+from rtt.domain_basis import (
+    express_quotients_in_domain_basis,
+    filter_target_intervals_for_nonstandard_domain_basis,
+    get_domain_basis,
+    is_standard_prime_limit_domain_basis,
+)
 from rtt.dual import dual
 from rtt.formatting import to_ebk
 from rtt.generator_detempering import get_generator_detempering
@@ -129,6 +135,10 @@ def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
     """
     domain = tuple(domain_basis)
     quotients = process_old(spec, domain) if "OLD" in spec else process_tilt(spec, domain)
+    if not is_standard_prime_limit_domain_basis(domain):
+        # a nonstandard subgroup can't voice every interval the prime-limit triangle spans
+        # (e.g. 5/4 over 2.3.13/5, where 5 isn't reachable) — keep only those it contains
+        quotients = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain)
     return tuple(f"{q.numerator}/{q.denominator}" for q in quotients)
 
 
@@ -167,6 +177,15 @@ def _monzos(ratios, d) -> tuple:
     return parse_quotient_list("{" + ", ".join(ratios) + "}", d)
 
 
+def _interval_monzos(ratios, domain_basis, d) -> tuple:
+    """Each ratio as a monzo over the domain basis: parsed over the first ``d`` primes for a
+    standard basis, or expressed over the (possibly nonprime) elements for a nonstandard one
+    (so e.g. ``13/5`` keeps its 13 over ``2.3.13/5`` instead of being truncated to the d primes)."""
+    if domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis):
+        return _monzos(ratios, d)
+    return express_quotients_in_domain_basis(tuple(Fraction(r) for r in ratios), tuple(domain_basis))
+
+
 def _over(prime_map, monzo):
     """Project a monzo through a prime map (their dot product)."""
     return sum(prime_map[p] * monzo[p] for p in range(len(prime_map)))
@@ -181,12 +200,13 @@ def _map_through(mapping, monzos) -> Matrix:
     )
 
 
-def mapped_intervals(mapping, ratios) -> Matrix:
+def mapped_intervals(mapping, ratios, domain_basis=None) -> Matrix:
     """A ratio-string interval set mapped through ``M`` — the intervals in generator
     coords (r x m). Works for any such set (targets or other intervals of interest);
-    the empty set yields one empty generator row per mapping row, keeping the shape."""
+    the empty set yields one empty generator row per mapping row, keeping the shape.
+    Over a nonstandard ``domain_basis`` each ratio is expressed in that basis first."""
     mapping = _to_matrix(mapping)
-    return _map_through(mapping, _monzos(ratios, len(mapping[0])))
+    return _map_through(mapping, _interval_monzos(ratios, domain_basis, len(mapping[0])))
 
 
 def mapped_commas(mapping, comma_basis) -> Matrix:
@@ -196,9 +216,10 @@ def mapped_commas(mapping, comma_basis) -> Matrix:
     return _map_through(mapping, _to_matrix(comma_basis))
 
 
-def target_interval_monzos(ratios, d: int) -> Matrix:
-    """Each target interval as a monzo — its interval-vector form over the d primes."""
-    return tuple(tuple(int(x) for x in monzo) for monzo in _monzos(ratios, d))
+def target_interval_monzos(ratios, d: int, domain_basis=None) -> Matrix:
+    """Each target interval as a monzo — its interval-vector form over the d domain
+    elements (expressed in the basis when it is nonstandard)."""
+    return tuple(tuple(int(x) for x in monzo) for monzo in _interval_monzos(ratios, domain_basis, d))
 
 
 def tuning(
@@ -234,9 +255,11 @@ def optimization_power(scheme: str = DEFAULT_TUNING_SCHEME) -> float:
     return resolve_tuning_scheme(scheme).optimization_power
 
 
-def interval_sizes(tun: Tuning, ratios) -> IntervalSizes:
-    """Project an interval set through ``tun`` — its tempered/just sizes, error, damage."""
-    monzos = _monzos(ratios, len(tun.tuning_map))
+def interval_sizes(tun: Tuning, ratios, domain_basis=None) -> IntervalSizes:
+    """Project an interval set through ``tun`` — its tempered/just sizes, error, damage.
+    Over a nonstandard ``domain_basis`` each ratio is expressed in that basis (matching the
+    basis ``tun`` runs over)."""
+    monzos = _interval_monzos(ratios, domain_basis, len(tun.tuning_map))
     tempered = tuple(_over(tun.tuning_map, m) for m in monzos)
     just = tuple(_over(tun.just_map, m) for m in monzos)
     errors = tuple(t_ - j for t_, j in zip(tempered, just))

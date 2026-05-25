@@ -112,6 +112,16 @@ def test_mapped_intervals():
     assert mapped == ((1, 0, -2, 2), (0, 1, 4, -3))
 
 
+def test_mapped_intervals_over_a_nonstandard_domain_express_in_the_basis():
+    # mapping the basis elements (unit monzos over 2.3.13/5) through M reproduces M itself,
+    # which only holds if the ratios are expressed in the nonprime basis
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    mapped = service.mapped_intervals(
+        state.mapping, ("2/1", "3/1", "13/5"), domain_basis=state.domain_basis
+    )
+    assert mapped == state.mapping
+
+
 def test_mapped_intervals_of_the_empty_set_is_empty_rows():
     # one (empty) generator row per mapping row, so the r x m matrix stays well-formed
     assert service.mapped_intervals([[1, 1, 0], [0, 1, 4]], ()) == ((), ())
@@ -129,6 +139,15 @@ def test_target_interval_monzos():
     assert monzos == ((1, 0, 0), (-1, 1, 0), (-2, 0, 1), (1, 1, -1))
 
 
+def test_target_interval_monzos_over_a_nonstandard_domain():
+    # the basis elements of 2.3.13/5 are the identity monzos over that basis
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    monzos = service.target_interval_monzos(
+        ("2/1", "3/1", "13/5"), state.d, domain_basis=state.domain_basis
+    )
+    assert monzos == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+
+
 def test_tilt_target_interval_set_is_the_domains_tilt():
     # the 5-limit default is the 6-TILT (the integer just below the next prime past 5)
     assert service.target_interval_set("TILT", (2, 3, 5)) == (
@@ -143,6 +162,18 @@ def test_tilt_target_interval_set_tracks_the_domain():
     seven_limit = set(service.target_interval_set("TILT", (2, 3, 5, 7)))
     assert five_limit < seven_limit
     assert "7/4" in seven_limit
+
+
+def test_target_interval_set_filters_to_a_nonstandard_subgroup():
+    # over 2.3.13/5 only intervals that lie in the subgroup survive: 5/4 (a pure-5
+    # interval, 5 unreachable) is dropped, while 3/2 and 13/5 remain
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    targets = service.target_interval_set("TILT", state.domain_basis)
+    assert "5/4" not in targets and "7/3" not in targets
+    assert "3/2" in targets and "13/5" in targets
+    # every survivor is expressible as an integer monzo over the (nonprime) basis
+    monzos = service.target_interval_monzos(targets, state.d, domain_basis=state.domain_basis)
+    assert len(monzos) == len(targets)
 
 
 def test_old_target_interval_set_is_the_odd_limit_diamond():
@@ -218,6 +249,19 @@ def test_interval_sizes_project_a_set_through_the_tuning():
     assert s.errors == pytest.approx((1.699, -4.391, 0.547, -4.937), abs=1e-2)
     assert s.damage == pytest.approx((1.699, 4.391, 0.547, 4.937), abs=1e-2)
     assert all(d >= 0 for d in s.damage)  # damage is non-negative
+
+
+def test_interval_sizes_over_a_nonstandard_domain_express_intervals_in_the_basis():
+    import pytest
+
+    # over 2.3.13/5 a basis element is a unit monzo, so its tempered/just size must equal
+    # the corresponding map entry — only true if the ratio is expressed in the (nonprime)
+    # basis, not parsed over standard primes (where 13/5 would lose its 13)
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    tun = service.tuning(state.mapping, domain_basis=state.domain_basis)
+    s = service.interval_sizes(tun, ("2/1", "3/1", "13/5"), domain_basis=state.domain_basis)
+    assert s.tempered == pytest.approx(tun.tuning_map, abs=1e-6)
+    assert s.just == pytest.approx(tun.just_map, abs=1e-6)
 
 
 def test_interval_sizes_of_the_empty_set_are_empty():
