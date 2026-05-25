@@ -100,8 +100,13 @@ _CSS = f"""
             min-height:18px !important; padding:0 !important; background:#fff !important;
             border:1px solid #000; border-radius:2px !important; box-shadow:none !important; }}
 .rtt-iconbtn .q-icon {{ color:#000 !important; font-size:13px; }}
-.rtt-iconbtn.q-btn--disable {{ border-color:#bbb; }}
-.rtt-iconbtn.q-btn--disable .q-icon {{ color:#c4c4c4 !important; }}
+/* a disabled undo/redo button greys out like the disabled Show toggles. NiceGUI marks a
+   set_enabled(False) button with the generic `.disabled` class (NOT Quasar's
+   q-btn--disable), so target that: grey the icon AND border to #999/#bbb, well off the
+   crisp black of an active button — so against Quasar's own disabled fade the button
+   reads unmistakably inactive, matching the #999 of a disabled toggle. */
+.rtt-iconbtn.disabled {{ border-color:#bbb !important; }}
+.rtt-iconbtn.disabled .q-icon {{ color:#999 !important; }}
 /* the hamburger docked at the shell's top-left (absolute, so it rides the layout, not
    the viewport): when the drawer is closed it sits just left of the grid's title tile;
    when the drawer opens it lands inside the settings pane's reserved top strip */
@@ -123,7 +128,10 @@ _CSS = f"""
                     padding:40px 14px 16px; min-height:100vh; }}
 /* the app fills the space right of the drawer; min-width:0 lets a wide grid scroll
    inside its own .rtt-scroll rather than widening (and horizontally scrolling) the page */
-.rtt-app {{ flex:1 1 0; min-width:0; padding-left:40px; }}  /* left gutter clears the docked hamburger when the drawer is closed */
+.rtt-app {{ flex:1 1 0; min-width:0; padding-left:40px; transition:padding-left {_T}; }}  /* left gutter clears the docked hamburger when the drawer is closed */
+/* with the drawer open the hamburger rides inside the pane, so the app needs no gutter —
+   drop it (animated, in step with the drawer) so the grid sits flush against the pane */
+.rtt-drawer.rtt-drawer-open ~ .rtt-app {{ padding-left:0; }}
 
 .rtt-scroll {{ overflow-x:auto; max-width:100%; }}
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
@@ -295,12 +303,13 @@ _CSS = f"""
               font-size:12px !important; line-height:1; color:#666; background:#fff;
               border:1px solid #bbb; cursor:pointer; user-select:none; }}
 .rtt-toggle:hover {{ background:#ececec; color:#000; }}
-/* the panel's two column headers: "Show" (the toggles) and "example" (their sample
-   renders), aligned over the grid columns the rows below use */
-.rtt-show-head {{ display:grid; grid-template-columns:160px 1fr; align-items:end;
+/* the panel's two column headers: "show" (the toggles) and "example" (their sample
+   renders), aligned over the grid columns the rows below use. Both share one font and
+   sit on a common baseline so the two words line up. */
+.rtt-show-head {{ display:grid; grid-template-columns:160px 1fr; align-items:baseline;
                  padding:2px 9px 4px 9px; }}
-.rtt-show-title {{ font-size:14px; font-weight:bold; line-height:1; }}
-.rtt-show-examplehdr {{ font-size:14px; font-weight:bold; padding-bottom:3px; }}
+.rtt-show-title {{ font-size:14px; font-weight:bold; }}
+.rtt-show-examplehdr {{ font-size:14px; font-weight:bold; }}
 /* general and specific each sit in their own rounded, lightly-bordered sub-card,
    stacked vertically (general above specific) */
 .rtt-show-group {{ border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6;
@@ -843,6 +852,8 @@ def _math_html(text):
 def index() -> None:
     ui.add_css(_CSS)
     ui.query("body").style("background:#fff")
+    # trim NiceGUI's default 16px content padding to a slim margin around the whole app
+    ui.query(".nicegui-content").style("padding:6px")
 
     editor = Editor()
     settings = show_settings.defaults()  # which parts of the grid are visible
@@ -1303,7 +1314,7 @@ def index() -> None:
         drawer = ui.element("div").classes("rtt-drawer")
         with drawer, ui.element("div").classes("rtt-drawer-inner"):
             with ui.element("div").classes("rtt-show-head"):
-                ui.label("Show").classes("rtt-show-title")
+                ui.label("show").classes("rtt-show-title")
                 ui.label("example").classes("rtt-show-examplehdr")
             boxes: dict = {}  # toggle key -> checkbox, so a sub-control row can bind to its parent
             for group_name, items in show_settings.SHOW_GROUPS:
