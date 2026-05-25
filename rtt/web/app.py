@@ -109,11 +109,11 @@ _CSS = f"""
 .rtt-iconbtn.disabled {{ border-color:#bbb !important; }}
 .rtt-iconbtn.disabled .q-icon {{ color:#999 !important; }}
 /* the left rail: a permanent light-grey column down the screen's left edge holding the
-   hamburger (top) and, under it, the app title turned a quarter-turn. align-self:flex-start
-   keeps it short (it sizes to its content) while its width reserves the gutter the grid sits
-   clear of. The rail stays #e0e0e0 whether the pane is open or closed, and sits to the LEFT
-   of the pane, so opening the pane never moves the title. */
-.rtt-rail {{ flex:none; align-self:flex-start; width:{_RAIL_W}px; background:#e0e0e0;
+   hamburger (top) and, under it, the app title turned a quarter-turn. It sits to the LEFT of
+   the pane and stays #e0e0e0 whether the pane is open or closed, so opening the pane never
+   moves the title. It carries no align-self, so the pane group (align-items:stretch) makes it
+   as tall as the pane — its grey runs as far down as the settings, not just to the title's foot. */
+.rtt-rail {{ flex:none; width:{_RAIL_W}px; background:#e0e0e0;
             display:flex; flex-direction:column; align-items:center; gap:10px; padding:7px 0 14px; }}
 /* the app title, turned a quarter-turn (writing-mode) so it reads top-to-bottom down the
    rail. Noticeably larger than the 13px row/column titles, yet narrow enough to fit the rail. */
@@ -124,16 +124,21 @@ _CSS = f"""
                  min-height:28px !important; padding:0 !important; background:#fff !important;
                  border:1px solid #999; border-radius:3px !important; box-shadow:none !important; }}
 .rtt-hamburger .q-icon {{ color:#333 !important; font-size:19px; }}
-/* the shell lays the rail, the (collapsible) pane and the app in a row; opening the pane
-   widens it from 0, which pushes the app to the right (the requested slide-over) */
+/* the shell lays the rail+pane group and the app in a row */
 .rtt-shell {{ position:relative; display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
+/* the rail and the pane form one group. align-self:flex-start keeps the group off the much
+   taller grid (so it's only as tall as the pane's settings, not the whole page); the default
+   align-items:stretch then makes the rail as tall as the pane so the two greys bottom-align.
+   Opening the pane widens this group, pushing the app right (the requested slide-over). */
+.rtt-panelgroup {{ display:flex; flex-wrap:nowrap; align-self:flex-start; }}
 .rtt-drawer {{ width:0; overflow:hidden; transition:width {_T}; flex:none; }}
 .rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; }}
+/* the pane hugs its settings boxes — no min-height (a forced 100vh ran past the foot of the
+   screen and added a scrollbar) */
 .rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0;
-                    font-family:'Cambria',Georgia,serif; color:#000;
-                    padding:16px 14px 16px; min-height:100vh; }}
-/* the app fills the space right of the rail (and the pane when open); min-width:0 lets a
-   wide grid scroll inside its own .rtt-scroll rather than widening the page */
+                    font-family:'Cambria',Georgia,serif; color:#000; padding:8px 14px 16px; }}
+/* the app fills the space right of the rail+pane group; min-width:0 lets a wide grid scroll
+   inside its own .rtt-scroll rather than widening the page */
 .rtt-app {{ flex:1 1 0; min-width:0; }}
 
 .rtt-scroll {{ overflow-x:auto; max-width:100%; }}
@@ -332,7 +337,7 @@ _CSS = f"""
    renders), aligned over the grid columns the rows below use. Both share one font and
    sit on a common baseline so the two words line up. */
 .rtt-show-head {{ display:grid; grid-template-columns:160px 1fr; align-items:baseline;
-                 padding:2px 9px 4px 9px; }}
+                 padding:0 9px 2px 9px; }}
 .rtt-show-title {{ font-size:14px; font-weight:bold; }}
 .rtt-show-examplehdr {{ font-size:14px; font-weight:bold; }}
 /* general and specific each sit in their own rounded, lightly-bordered sub-card,
@@ -1343,35 +1348,38 @@ def index() -> None:
         drawer.classes(add="rtt-drawer-open") if drawer_open[0] else drawer.classes(remove="rtt-drawer-open")
 
     with ui.element("div").classes("rtt-shell"):
-        # the left rail: the hamburger on top, the app title rotated a quarter-turn below it.
-        # The rail is left of the pane, so opening the pane never moves the title.
-        with ui.element("div").classes("rtt-rail"):
-            ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense").classes("rtt-hamburger")
-            ui.label("D&D's RTT app").classes("rtt-sidetitle")
-        drawer = ui.element("div").classes("rtt-drawer")
-        with drawer, ui.element("div").classes("rtt-drawer-inner"):
-            with ui.element("div").classes("rtt-show-head"):
-                ui.label("show").classes("rtt-show-title")
-                ui.label("example").classes("rtt-show-examplehdr")
-            boxes: dict = {}  # toggle key -> checkbox, so a sub-control row can bind to its parent
-            for group_name, items in show_settings.SHOW_GROUPS:
-                with ui.element("div").classes("rtt-show-group"):
-                    ui.label(group_name).classes("rtt-show-grouptitle")
-                    for key, label, _ in items:
-                        row = ui.element("div").classes("rtt-show-row")
-                        with row:
-                            box = ui.checkbox(label, value=settings[key],
-                                              on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
-                                .props("dense size=xs color=grey-8").classes("rtt-show-item")
-                            example = ui.html(_example_html(key)).classes("rtt-ex-cell")
-                            if key not in show_settings.IMPLEMENTED:
-                                box.props("disable")  # not built yet -> greyed and inert
-                                example.classes(add="rtt-ex-disabled")  # ...and its sample greys to match
-                        boxes[key] = box
-                        parent = show_settings.SUBCONTROLS.get(key)
-                        if parent:  # indent the row under its parent and show it only while the parent is on
-                            row.classes(add="rtt-show-sub")
-                            row.bind_visibility_from(boxes[parent], "value")
+        # the rail and the settings pane share one group so the rail's grey stretches to the
+        # pane's height; the app sits to the group's right
+        with ui.element("div").classes("rtt-panelgroup"):
+            # the left rail: the hamburger on top, the app title rotated a quarter-turn below it.
+            # The rail is left of the pane, so opening the pane never moves the title.
+            with ui.element("div").classes("rtt-rail"):
+                ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense").classes("rtt-hamburger")
+                ui.label("D&D's RTT app").classes("rtt-sidetitle")
+            drawer = ui.element("div").classes("rtt-drawer")
+            with drawer, ui.element("div").classes("rtt-drawer-inner"):
+                with ui.element("div").classes("rtt-show-head"):
+                    ui.label("show").classes("rtt-show-title")
+                    ui.label("example").classes("rtt-show-examplehdr")
+                boxes: dict = {}  # toggle key -> checkbox, so a sub-control row can bind to its parent
+                for group_name, items in show_settings.SHOW_GROUPS:
+                    with ui.element("div").classes("rtt-show-group"):
+                        ui.label(group_name).classes("rtt-show-grouptitle")
+                        for key, label, _ in items:
+                            row = ui.element("div").classes("rtt-show-row")
+                            with row:
+                                box = ui.checkbox(label, value=settings[key],
+                                                  on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
+                                    .props("dense size=xs color=grey-8").classes("rtt-show-item")
+                                example = ui.html(_example_html(key)).classes("rtt-ex-cell")
+                                if key not in show_settings.IMPLEMENTED:
+                                    box.props("disable")  # not built yet -> greyed and inert
+                                    example.classes(add="rtt-ex-disabled")  # ...and its sample greys to match
+                            boxes[key] = box
+                            parent = show_settings.SUBCONTROLS.get(key)
+                            if parent:  # indent the row under its parent and show it only while the parent is on
+                                row.classes(add="rtt-show-sub")
+                                row.bind_visibility_from(boxes[parent], "value")
 
         with ui.element("div").classes("rtt-app"):
             with ui.element("div").classes("rtt-scroll"):
