@@ -225,8 +225,15 @@ _CSS = f"""
 .rtt-preselect .q-icon {{ font-size:15px; color:#555; }}
 /* each chooser's dropdown popup matches the field's Cambria text, with compact items */
 .rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
+/* compact items; a long name (e.g. a systematic tuning) wraps within the field
+   width rather than widening the popup past the field it drops from */
 .rtt-select-popup .q-item {{ min-height:22px; padding:1px 8px; font-size:11px; }}
-.rtt-select-popup .q-item__label {{ font-size:11px; font-family:'Cambria',Georgia,serif; }}
+.rtt-select-popup .q-item__label {{ font-size:11px; white-space:normal;
+              font-family:'Cambria',Georgia,serif; }}
+/* greyscale the selection: the chosen item's text and the hover/keyboard highlight
+   read grey, not Quasar's primary blue */
+.rtt-select-popup .q-item--active {{ color:#222 !important; }}
+.rtt-select-popup .q-focus-helper {{ background:#000 !important; }}
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
 .rtt-preselect-target {{ width:100%; height:20px; display:flex; gap:3px; align-items:center; }}
 .rtt-preselect-target .rtt-preselect-num {{ flex:0 0 20px; }}  /* square: matches the 20px height */
@@ -1094,7 +1101,8 @@ def index() -> None:
                             .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
                         sel = ui.select(list(presets.TARGET_SETS), value=family,
                                 on_change=lambda e: on_target_change()) \
-                            .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup").classes("rtt-preselect")
+                            .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
+                                   f"popup-content-style=width:{cb.w - 23}px").classes("rtt-preselect")  # field = cell − square − gap
                     selects[cb.id] = (num, sel)
                 elif name == "temperament":
                     # a normal dropdown: the chosen preset shows in the box; the ""
@@ -1103,11 +1111,13 @@ def index() -> None:
                     options = {"": "choose temperament", **presets.temperament_options()}
                     selects[cb.id] = ui.select(options, value=presets.identify(editor.state) or "",
                             on_change=lambda e: on_preselect("temperament", e.value)) \
-                        .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup").classes("rtt-preselect")
+                        .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
+                               f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
                 else:  # tuning — systematic scheme names
                     selects[cb.id] = ui.select(list(presets.TUNING_SCHEMES), value=editor.tuning_scheme,
                             on_change=lambda e: on_preselect("tuning", e.value)) \
-                        .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup").classes("rtt-preselect")
+                        .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
+                               f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
             elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
                 labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
             elif cb.kind == "ptextedit":  # an editable dual: typing a valid EBK string drives the grid
