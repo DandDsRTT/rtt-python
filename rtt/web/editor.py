@@ -20,18 +20,16 @@ INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))  # meantone, matching the original app
 
 class Editor:
     def __init__(self) -> None:
-        self.state: TemperamentState = service.from_mapping(INITIAL_MAPPING)
+        self._state: TemperamentState = service.from_mapping(INITIAL_MAPPING)
         # Display/analysis selections: which tuning scheme and target interval set
         # the derived rows are shown under. Unlike the temperament itself, these are
         # view choices (like the Show toggles), so they live outside the undo stack.
         self.tuning_scheme: str = service.DEFAULT_TUNING_SCHEME
         # The target set is a family ("TILT"/"OLD") plus an optional manual limit N.
-        # The limit is *weakly held*: it applies only while the domain (d) is the one
-        # it was set for, so changing the domain reverts to that domain's default — see
-        # the target_spec property.
+        # The limit is *weakly held*: any domain (d) change forgets it (see the state
+        # setter), so the set reverts to the new domain's default rather than resurrecting.
         self.target_family: str = service.DEFAULT_TARGET_SPEC
         self.target_limit: int | None = None
-        self._target_limit_d: int | None = None
         # "Other intervals of interest": a user-built set of intervals to watch,
         # held as monzos (edited like the comma basis — editable vector cells).
         # Display data the user curates, not part of the temperament, so (like the
@@ -49,6 +47,18 @@ class Editor:
         self._redo_stack: list[TemperamentState] = []
 
     @property
+    def state(self) -> TemperamentState:
+        return self._state
+
+    @state.setter
+    def state(self, new_state: TemperamentState) -> None:
+        # a domain (d) change forgets the weakly-held manual target limit, so the set
+        # reverts to the new domain's default — and does not resurrect if d comes back
+        if new_state.d != self._state.d:
+            self.target_limit = None
+        self._state = new_state
+
+    @property
     def can_undo(self) -> bool:
         return bool(self._undo_stack)
 
@@ -58,9 +68,10 @@ class Editor:
 
     @property
     def target_spec(self) -> str:
-        """The active target spec: the manual ``"N-family"`` while its domain still
-        holds, otherwise the bare family (so the set tracks the domain's default)."""
-        if self.target_limit is not None and self.state.d == self._target_limit_d:
+        """The active target spec: ``"N-family"`` when a manual limit is set, else the
+        bare family (so the set tracks the domain's default). A domain change clears the
+        manual limit (see the state setter), so it never resurrects."""
+        if self.target_limit is not None:
             return f"{self.target_limit}-{self.target_family}"
         return self.target_family
 
@@ -127,14 +138,12 @@ class Editor:
         self.tuning_scheme = scheme
 
     def set_target_spec(self, spec: str) -> None:
-        """Set the target family and (optional) manual limit from a spec like
-        ``"9-TILT"`` or ``"OLD"``. A manual limit is stamped with the current domain,
-        so it is weakly held — the next domain change reverts to that domain's default."""
+        """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
+        or ``"OLD"``. A manual limit is weakly held — the next domain change forgets it."""
         match = re.match(r"(\d*)-?(TILT|OLD)", spec)
         n, family = (match.group(1), match.group(2)) if match else ("", self.target_family)
         self.target_family = family
         self.target_limit = int(n) if n else None
-        self._target_limit_d = self.state.d if n else None
 
     def set_range_mode(self, mode: str) -> None:
         self.range_mode = mode

@@ -223,15 +223,19 @@ _CSS = f"""
             min-height:0 !important; padding:0; line-height:20px; font-family:'Cambria',Georgia,serif; }}
 .rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append {{ height:20px; min-height:0 !important; }}
 .rtt-preselect .q-icon {{ font-size:15px; color:#555; }}
-/* the target chooser pairs a numeric limit override with the TILT/OLD family select */
+/* each chooser's dropdown popup matches the field's Cambria text, with compact items */
+.rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
+.rtt-select-popup .q-item {{ min-height:22px; padding:1px 8px; font-size:11px; }}
+.rtt-select-popup .q-item__label {{ font-size:11px; font-family:'Cambria',Georgia,serif; }}
+/* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
 .rtt-preselect-target {{ width:100%; height:20px; display:flex; gap:3px; align-items:center; }}
-.rtt-preselect-target .rtt-preselect-num {{ flex:0 0 44px; }}
+.rtt-preselect-target .rtt-preselect-num {{ flex:0 0 20px; }}  /* square: matches the 20px height */
 .rtt-preselect-target .rtt-preselect {{ flex:1 1 auto; width:auto; }}
 .rtt-preselect-num .q-field__control {{ min-height:0 !important; height:20px;
-            background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 5px; }}
+            background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }}
 .rtt-preselect-num .q-field__control::before, .rtt-preselect-num .q-field__control::after {{ display:none !important; }}
 .rtt-preselect-num .q-field__native {{ font-size:11px; color:#000; min-height:0 !important; padding:0;
-            line-height:20px; font-family:'Cambria',Georgia,serif; }}
+            line-height:20px; text-align:center; font-family:'Cambria',Georgia,serif; }}
 .rtt-preselect-num .q-field__native::-webkit-inner-spin-button {{ -webkit-appearance:none; margin:0; }}
 .rtt-preselect-num .q-field__marginal, .rtt-preselect-num .q-field__append {{ display:none !important; }}
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
@@ -1087,7 +1091,7 @@ def index() -> None:
                             .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
                         sel = ui.select(list(presets.TARGET_SETS), value=family,
                                 on_change=lambda e: on_target_change()) \
-                            .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
+                            .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup").classes("rtt-preselect")
                     selects[cb.id] = (num, sel)
                 elif name == "temperament":
                     # a normal dropdown: the chosen preset shows in the box; the ""
@@ -1096,11 +1100,11 @@ def index() -> None:
                     options = {"": "choose temperament", **presets.temperament_options()}
                     selects[cb.id] = ui.select(options, value=presets.identify(editor.state) or "",
                             on_change=lambda e: on_preselect("temperament", e.value)) \
-                        .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
+                        .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup").classes("rtt-preselect")
                 else:  # tuning — systematic scheme names
                     selects[cb.id] = ui.select(list(presets.TUNING_SCHEMES), value=editor.tuning_scheme,
                             on_change=lambda e: on_preselect("tuning", e.value)) \
-                        .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
+                        .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup").classes("rtt-preselect")
             elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
                 labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
             elif cb.kind == "ptextedit":  # an editable dual: typing a valid EBK string drives the grid

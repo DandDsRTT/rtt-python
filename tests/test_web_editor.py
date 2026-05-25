@@ -124,6 +124,16 @@ def test_a_manual_target_limit_is_weakly_held_and_reverts_when_the_domain_change
     assert editor.target_spec == "OLD"  # ...reverts to the bare family (domain default)
 
 
+def test_a_manual_target_limit_does_not_resurrect_when_the_domain_returns():
+    # the manual limit is forgotten on the FIRST domain change, so round-tripping
+    # back to the original domain shows that domain's default, not the old choice
+    editor = Editor()  # 5-limit meantone (d=3)
+    editor.set_target_spec("7-TILT")
+    editor.edit_comma_basis([[-5, 2, 2, -1], [-10, 1, 0, 3]])  # 7-limit Miracle (d=4)
+    editor.edit_comma_basis([[-4, 4, -1]])  # back to a 5-limit temperament (d=3)
+    assert editor.target_spec == "TILT"  # the 5-limit default, NOT the stale 7-TILT
+
+
 def test_setting_a_bare_family_clears_any_manual_limit():
     editor = Editor()
     editor.set_target_spec("9-TILT")

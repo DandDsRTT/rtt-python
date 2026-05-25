@@ -44,7 +44,7 @@ CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mocku
 CAPTION_LINE = 10  # px per wrapped caption line (font size + leading); == .rtt-caption line-height
 PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
-TARGET_PRESELECT_W = 156  # wider: the target chooser also seats a numeric limit field
+TARGET_PRESELECT_W = 132  # wider: the target chooser seats a square limit field + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
 # always fits on ONE line within its column (a long tuning row just gets smaller text)
 PTEXT_H = 13  # px height of a one-line read-only plain-text value
