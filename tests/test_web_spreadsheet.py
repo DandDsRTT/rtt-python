@@ -1598,9 +1598,20 @@ def test_generator_tuning_map_tile_shows_the_generator_map_cents_in_the_default_
     assert cells["header:gens"].x <= cells["tuning:gen:0"].x < cells["header:primes"].x
     assert cells["tuning:gen:1"].x == cells["tuning:gen:0"].x + spreadsheet.COL_W
     assert cells["tuning:gen:0"].y == cells["tuning:prime:0"].y  # in the tuning row
-    # framed as a map (⟨ … ]) like the other tuning maps, and named by its caption
-    assert cells["bracket:tuning:genmap:l"].text == "⟨" and cells["bracket:tuning:genmap:r"].text == "]"
+    # framed { … ] (a curly open, square close) per the mockup — distinct from the
+    # ⟨ … ] prime maps — and named by its caption
+    assert cells["bracket:tuning:genmap:l"].text == "{" and cells["bracket:tuning:genmap:r"].text == "]"
     assert cells["caption:tuning:gens"].text == "generator tuning map"
+
+
+def test_generator_tuning_map_gets_a_plain_text_value_band():
+    # like every other tile, the generator tuning map shows its plain-text value when
+    # plain text values is on — the { … ] curly map string from the service
+    st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    on = {c.id: c for c in _with(plain_text_values=True).cells}
+    assert "ptext:tuning:gens" in on
+    assert on["ptext:tuning:gens"].text == service.plain_text_values(st)[("tuning", "gens")]
+    assert on["ptext:tuning:gens"].text.startswith("{") and on["ptext:tuning:gens"].text.endswith("]")
 
 
 def test_tuning_ranges_on_adds_a_generator_tuning_range_chart_in_the_generators_column():

@@ -243,6 +243,7 @@ def plain_text_values(
         ("mapping", "primes"): to_ebk(Temperament(state.mapping, Variance.ROW)),
         ("mapping", "commas"): _ket_list(zip(*mapped_comma), "}"),
         ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
+        ("tuning", "gens"): _cents_genmap(tun.generator_map),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
         ("tuning", "commas"): _cents_list(comma_sizes.tempered),
         ("tuning", "targets"): _cents_list(target_sizes.tempered),
@@ -277,6 +278,12 @@ def _cents_map(values) -> str:
 def _cents_list(values) -> str:
     """A tuning list over the targets: ``[1200.000 1901.955 …]``."""
     return "[" + " ".join(cents(v) for v in values) + "]"
+
+
+def _cents_genmap(values) -> str:
+    """The generator tuning map: ``{1201.699 697.564]`` — curly open, square close,
+    per the mockup (distinct from the primes' covector ``⟨ … ]``)."""
+    return "{" + " ".join(cents(v) for v in values) + "]"
 
 
 def _int_matrix_or_none(matrix) -> Matrix | None:

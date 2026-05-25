@@ -477,6 +477,34 @@ def _brace(w, h):
     return _svg(w, h, _ribbon(pts))
 
 
+def _curly_bracket(w, h):
+    """A left curly brace ``{`` for the generator tuning map's frame (it reads ``{ … ]`` —
+    curly open, square close — per the mockup). The matrix brace (:func:`_brace`) turned a
+    quarter-turn: ONE variable-width ribbon with a vertical spine, the two ends curling
+    toward the value cells (thin tips) and a central cusp poking to the far edge (a thin
+    near-point). Shares the value brackets' oblong footprint, so the cusp sits where a ``⟨``
+    vertex would. The curls keep a fixed shape; only the spine grows with the cell height."""
+    cy = h / 2
+    end_y, serif_dy, cusp_dy = 2.0, 3.2, 5.5
+    span = end_y + serif_dy + cusp_dy + 1.0  # the curls plus a reserved minimal spine
+    if span > cy:  # too short to fit full curls — shrink them together to fit
+        s = cy / span
+        end_y, serif_dy, cusp_dy = end_y * s, serif_dy * s, cusp_dy * s
+    tip_x = w - _BR_INSET  # the end-tips curl in toward the value cells
+    cusp_x = tip_x - _BR_SERIF_L  # the cusp pokes to the far edge (width matches the ⟨ reach)
+    arm_x = (tip_x + cusp_x) / 2  # the spine runs midway between
+    thick, thin, cusp = _BR_BRACE_THICK, _BR_BRACE_THIN, _BR_BRACE_CUSP
+    n = 10
+    pts = _qbez((tip_x, end_y), (arm_x, end_y), (arm_x, end_y + serif_dy), thin, thick, n)
+    pts.append((arm_x, cy - cusp_dy, thick))
+    pts += _qbez((arm_x, cy - cusp_dy), (arm_x, cy), (cusp_x, cy), thick, cusp, n, skip_first=True)
+    pts += _qbez((cusp_x, cy), (arm_x, cy), (arm_x, cy + cusp_dy), cusp, thick, n, skip_first=True)
+    pts.append((arm_x, h - end_y - serif_dy, thick))
+    pts += _qbez((arm_x, h - end_y - serif_dy), (arm_x, h - end_y), (tip_x, h - end_y),
+                 thick, thin, n, skip_first=True)
+    return _svg(w, h, _ribbon(pts))
+
+
 def _angle_foot(w, h):
     """The ket's ``⟩`` turned a quarter-turn to close a raw (untempered) monzo column:
     a shallow downward chevron from the top corners to a centre vertex, the calligraphic
@@ -507,6 +535,8 @@ def _ebk_svg(cb):
     if cb.kind == "bracket":
         if cb.text == "⟨":
             return _angle_bracket(cb.w, cb.h)
+        if cb.text == "{":
+            return _curly_bracket(cb.w, cb.h)
         return _square_bracket(cb.w, cb.h, "left" if cb.text == "[" else "right")
     if cb.kind == "ebktop":
         return _top_bracket(cb.w, cb.h)

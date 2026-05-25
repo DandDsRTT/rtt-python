@@ -222,6 +222,16 @@ def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision():
     assert pt[("just", "primes")].startswith("⟨1200.000 ")  # the just octave is pure
 
 
+def test_plain_text_generator_tuning_map_uses_curly_open_square_close():
+    # the generator tuning map reads { … ] (curly open, square close) per the mockup —
+    # distinct from the prime maps' ⟨ … ] — at the same 3-dp the grid shows
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    pt = service.plain_text_values(state)
+    tun = service.tuning(state.mapping)
+    cents = " ".join(f"{v:.3f}" for v in tun.generator_map)
+    assert pt[("tuning", "gens")] == "{" + cents + "]"
+
+
 def test_plain_text_commas_column_mirrors_the_grid():
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     pt = service.plain_text_values(state)

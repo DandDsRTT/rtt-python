@@ -214,6 +214,25 @@ def test_brace_is_one_filled_path_with_width_independent_end_curls():
     assert narrow != wide  # ...then diverge once the arm length differs
 
 
+def test_curly_bracket_is_one_filled_ribbon_within_its_footprint():
+    # the generator tuning map's { is a vertical calligraphic brace (the matrix brace
+    # turned a quarter-turn): one filled ribbon, no stroke, staying inside its oblong
+    svg = app._curly_bracket(16, 30)
+    assert svg.startswith("<svg") and 'viewBox="0 0 16.00 30.00"' in svg
+    assert svg.count("<path") == 1 and "stroke" not in svg
+    assert f'fill="{app._BR_COLOR}"' in svg
+    pts = re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", svg)
+    xs, ys = [float(x) for x, _y in pts], [float(y) for _x, y in pts]
+    assert 0 <= min(xs) and max(xs) <= 16  # within the bracket-gutter width
+    assert 0 <= min(ys) and max(ys) <= 30  # and the cell height
+
+
+def test_ebk_svg_routes_the_curly_open_brace_to_the_curly_bracket():
+    from rtt.web.layout import CellBox
+    cb = CellBox("bracket:tuning:genmap:l", 0, 0, 16, 30, "bracket", text="{")
+    assert app._ebk_svg(cb) == app._curly_bracket(16, 30)  # not the square/angle renderer
+
+
 def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline():
     svg = app._bar_chart(272, 64, (0.0, 5.0, 10.0))  # all positive (damage-like)
     assert svg.startswith("<svg") and 'viewBox="0 0 272.00 64.00"' in svg

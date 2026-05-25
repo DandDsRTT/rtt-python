@@ -68,6 +68,7 @@ SEP_W = 2  # width of a vertical rule between monzo columns (the renderer draws 
 # as thick as a square bracket's main bar; this is just the cell it centres in)
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
+GENMAP_BRACKETS = ("{", "]")  # { … ] for the generator tuning map (per the mockup)
 
 # The counts row: each column's set cardinality, as (column key, symbol, name).
 # The symbol+value (e.g. "r = 2", the symbol rendered math-italic via _mathit) is
@@ -928,8 +929,8 @@ def build(state, settings=None, collapsed=None,
                 bracket(f"vec:{group}", LIST_BRACKETS, group, row_y["vectors"], d * ROW_H, fit=True)
         if mi and tile_open("vectors", "interest"):
             bracket("vec:interest", LIST_BRACKETS, "interest", row_y["vectors"], d * ROW_H, fit=True)
-    if tile_open("tuning", "gens"):  # the generator tuning map is a map: ⟨ … ] over the generators
-        bracket("tuning:genmap", MAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
+    if tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
+        bracket("tuning:genmap", GENMAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
     for key in ("tuning", "just", "retune"):
         if row_open(key):
             if tile_open(key, "primes"):
