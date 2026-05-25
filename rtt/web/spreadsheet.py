@@ -83,7 +83,6 @@ COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in CO
 
 # Quantity-name captions shown inside each (row, column) tile when names are on.
 CAPTIONS = {
-    ("vectors", "primes"): "domain basis",
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
     ("mapping", "primes"): "(temperament) mapping",
@@ -205,7 +204,6 @@ TILES = (
     ("block:commas", "quantities", "commas"),
     ("block:targets", "quantities", "targets"),
     ("block:vec:quantities", "vectors", "quantities"),
-    ("block:vec:primes", "vectors", "primes"),
     ("block:vec:commas", "vectors", "commas"),
     ("block:vec:targets", "vectors", "targets"),
     ("block:gens", "mapping", "quantities"),
@@ -722,9 +720,8 @@ def build(state, settings=None, collapsed=None,
 
     # interval-vectors row: each column's intervals as monzos (d-tall columns over
     # the domain primes), on the same prime/comma/target axes as the quantities row.
-    # The domain primes are their own basis, so they read as the d x d identity; the
-    # comma basis is the editable raw monzos (the mapping's dual); the targets become
-    # a d x k matrix of monzo columns.
+    # The comma basis is the editable raw monzos (the mapping's dual); the targets
+    # become a d x k matrix of monzo columns.
     if row_open("vectors"):
         # the domain basis lists the interval-vectors' rows: the d primes as boxed
         # COL_W squares (the same the quantities row heads its columns with) stacked
@@ -738,10 +735,6 @@ def build(state, settings=None, collapsed=None,
             if d > 1:  # the highest prime is the removable one (shrink trims the last)
                 cells.append(CellBox("basis_minus", col_x["quantities"], vec_top(d - 1), col_w["quantities"], ROW_H, "basis_minus"))
             cells.append(CellBox("basis_plus", bx + (COL_W - BTN) / 2, vec_top(d) + FRAME_GAP, BTN, BTN, "plus"))
-        if tile_open("vectors", "primes"):
-            for e in range(d):
-                for p in range(d):
-                    cells.append(CellBox(f"cell:vec:primes:{e}:{p}", prime_left(e), vec_top(p), COL_W, ROW_H, "vec", text=("1" if e == p else "0")))
         if tile_open("vectors", "commas"):
             for c in range(nc):
                 for p in range(d):
@@ -1127,7 +1120,6 @@ def build(state, settings=None, collapsed=None,
     # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
     # (commacell), so it skips the separator rules (its cell borders divide the columns);
     # nc_shown includes the pending draft column so it gets its ket marks too.
-    monzo_list_marks("vectors", "vec:primes", "primes", prime_left, d, foot="ebkangle")
     monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc_shown, foot="ebkangle", bordered=True)
     monzo_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle")

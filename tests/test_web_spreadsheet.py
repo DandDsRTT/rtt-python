@@ -739,13 +739,8 @@ def test_interval_vectors_row_sits_between_quantities_and_mapping():
     assert cells["label:quantities"].y < cells["label:vectors"].y < cells["label:mapping"].y
 
 
-def test_interval_vectors_show_domain_primes_as_identity_and_targets_as_monzos():
+def test_interval_vectors_show_targets_as_monzos():
     cells = {c.id: c for c in _layout().cells}
-    # domain primes are their own basis: the d x d identity, on the shared prime axes
-    for e in range(3):
-        for p in range(3):
-            assert cells[f"cell:vec:primes:{e}:{p}"].text == ("1" if e == p else "0")
-    assert cells["cell:vec:primes:1:0"].x == cells["prime:1"].x  # column on its prime axis
     # each target interval as a d-tall monzo column: 2/1->[1,0,0], 3/2->[-1,1,0], 5/4->[-2,0,1]
     assert [cells[f"cell:vec:targets:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
     assert [cells[f"cell:vec:targets:2:{p}"].text for p in range(3)] == ["-1", "1", "0"]
@@ -753,6 +748,18 @@ def test_interval_vectors_show_domain_primes_as_identity_and_targets_as_monzos()
     assert cells["cell:vec:targets:2:0"].x == cells["target:2"].x  # column on its target axis
     # the d components stack downward, one ROW_H apart
     assert cells["cell:vec:targets:0:1"].y - cells["cell:vec:targets:0:0"].y == spreadsheet.ROW_H
+
+
+def test_interval_vectors_domain_primes_identity_is_deferred_to_identity_objects():
+    # the domain primes as monzos over themselves are the d x d identity — an
+    # "identity object" the grid won't show until the identity_objects setting is
+    # built (the basis is already listed down the quantities spine). Until then the
+    # primes column carries no tile at the interval-vectors row: no cells, ket marks,
+    # separators, fold toggle or caption.
+    cells = {c.id for c in _with(names=True).cells}
+    assert not any(c.startswith(("cell:vec:primes", "ebktop:vec:primes",
+                                 "ebkangle:vec:primes", "sep:vec:primes")) for c in cells)
+    assert {"toggle:tile:vectors:primes", "caption:vectors:primes"}.isdisjoint(cells)
 
 
 def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index():
@@ -764,7 +771,7 @@ def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index():
     assert cells["basis:0"].w == spreadsheet.COL_W == cells["prime:0"].w
     gen0 = cells["gen:0"]  # the generators span the full spine; the basis is centred in it
     assert cells["basis:0"].x + cells["basis:0"].w / 2 == gen0.x + gen0.w / 2
-    assert cells["basis:0"].y == cells["cell:vec:primes:0:0"].y  # aligned with the top component
+    assert cells["basis:0"].y == cells["cell:comma:0:0"].y  # aligned with the top component
     assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet.ROW_H  # stacked down its column
 
 
@@ -811,7 +818,7 @@ def test_comma_basis_renders_as_raw_monzos_in_the_interval_vectors_row():
     assert c00.w == c00.h == spreadsheet.ROW_H  # square grid cells
     assert cells["cell:comma:1:0"].y == c00.y + c00.h  # stacked down its column
     assert c00.x == cells["comma:0"].x  # on the commas axis
-    assert c00.y == cells["cell:vec:primes:0:0"].y  # top-aligned across the vectors row
+    assert c00.y == cells["cell:vec:targets:0:0"].y  # top-aligned across the vectors row
 
 
 def test_mapping_row_commas_show_the_mapped_comma_basis_vanishing():
@@ -902,7 +909,7 @@ def test_untempered_monzo_columns_get_angle_feet_while_mapped_lists_keep_braces(
     cells = {c.id: c for c in _layout().cells}
     # the interval-vectors row holds RAW (untempered) monzos — each column is a ket,
     # so its foot is the angle ⟩ (drawn as a down-chevron), not the curly brace
-    for group in ("primes", "commas", "targets"):
+    for group in ("commas", "targets"):
         assert f"ebkangle:vec:{group}:0" in cells       # the ket's angle foot
         assert f"ebkbrace:vec:{group}:0" not in cells   # never the curly brace
         assert f"ebktop:vec:{group}:0" in cells         # the square top ([) is unchanged
@@ -924,12 +931,12 @@ def test_comma_basis_grid_has_no_separator_rules_that_double_its_cell_borders():
     # the comma basis is an editable BORDERED grid (the same cell as the mapping),
     # so its cell borders already divide the columns; also drawing the monzo
     # separator rules would lay a second line over each shared border (a visible
-    # double). The bare-label vec lists (domain basis, target list) keep theirs.
+    # double). The bare-label target-list vecs keep theirs.
     two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real comma columns
     cells = {c.id for c in spreadsheet.build(two).cells}
     assert "cell:comma:0:1" in cells  # the second comma column is present...
     assert not any(c.startswith("sep:vec:commas") for c in cells)  # ...with no separator rule
-    assert "sep:vec:primes:1" in cells  # the bare domain basis still needs its separators
+    assert "sep:vec:targets:1" in cells  # the bare target-list vecs still need their separators
 
 
 def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column():
@@ -969,7 +976,6 @@ def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():
 
 def test_interval_vectors_tiles_are_captioned_by_what_each_column_holds():
     on = {c.id: c for c in _with(names=True).cells}
-    assert on["caption:vectors:primes"].text == "domain basis"  # the identity
     assert on["caption:vectors:commas"].text == "comma basis"  # the raw monzos (the dual)
     assert on["caption:vectors:targets"].text == "target interval list"
 
