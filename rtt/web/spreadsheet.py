@@ -1185,17 +1185,24 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox(f"arp:{key}:{group}", sx, sy, BTN, BTN, "arp", values=vals))
         cells.append(CellBox(f"chord:{key}:{group}", sx + BTN, sy, BTN, BTN, "chord", values=vals))
 
+    # Source the pitches from tuning_data so the audio rows stay in lockstep with the just /
+    # tuning rows they sound (one source of truth for "what those rows contain").
+    list_groups = ("primes", "commas", "targets", "interest")  # tuning_data's tuple order
     if row_open("just_audio"):
-        audio_tile("just_audio", "primes", tun.just_map)
-        audio_tile("just_audio", "commas", comma_sizes.just)
-        audio_tile("just_audio", "targets", target_sizes.just)
-        audio_tile("just_audio", "interest", interest_sizes.just)
+        for group, vals in zip(list_groups, tuning_data["just"]):
+            audio_tile("just_audio", group, vals)
     if row_open("mapped_audio"):
-        audio_tile("mapped_audio", "gens", tun.generator_map)
-        audio_tile("mapped_audio", "primes", tun.tuning_map)
-        audio_tile("mapped_audio", "commas", comma_sizes.tempered)
-        audio_tile("mapped_audio", "targets", target_sizes.tempered)
-        audio_tile("mapped_audio", "interest", interest_sizes.tempered)
+        audio_tile("mapped_audio", "gens", tun.generator_map)  # the genmap, as the tuning row carries
+        for group, vals in zip(list_groups, tuning_data["tuning"]):
+            audio_tile("mapped_audio", group, vals)
+    # the audio control cell (PROVISIONAL placement, pending Douglas's call): the waveform
+    # chooser + the include-1/1 checkbox, riding the quantities spine across both audio
+    # rows. They are global client-side audio params (no grid state), so it carries no data.
+    if row_open("just_audio") and row_open("mapped_audio") and col_open("quantities"):
+        cx, cw = col_x["quantities"], col_w["quantities"]
+        cy = row_y["just_audio"]
+        ch = row_y["mapped_audio"] + ROW_H - cy
+        cells.append(CellBox("audio:controls", cx, cy, cw, ch, "audio_controls"))
     if tile_open("prescaling", "primes"):  # the d×d prescaler: diagonal weights, 0 off it
         for i in range(d):
             for p in range(d):

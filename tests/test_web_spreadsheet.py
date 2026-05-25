@@ -2369,3 +2369,16 @@ def test_audio_rows_colorize_just_cyan_and_mapped_green():
         assert at(f"speaker:mapped_audio:{g}:0") == G
 
 
+def test_audio_control_cell_spans_both_rows_in_the_spine():
+    # the waveform + include-1/1 controls ride one cell in the quantities spine, spanning
+    # both audio rows (provisional placement). Present only while the audio rows are
+    cells = {c.id: c for c in _audio().cells}
+    ctrl = cells["audio:controls"]
+    assert ctrl.kind == "audio_controls"
+    assert ctrl.x == cells["label:quantities"].x or ctrl.x > 0  # rides the spine, left of the tiles
+    assert ctrl.y <= cells["speaker:just_audio:target:0"].y           # spans from the first audio row...
+    top = cells["speaker:mapped_audio:target:0"].y
+    assert top < ctrl.y + ctrl.h                                       # ...down through the second
+    assert "audio:controls" not in {c.id for c in _with(audio=False).cells}
+
+

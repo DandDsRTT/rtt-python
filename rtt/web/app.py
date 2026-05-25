@@ -77,6 +77,55 @@ _RANGE_FONT = 7  # cents-label / placeholder font size
 # a wash sits behind the grey tiles so the colour reads through the gaps around them.
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a"}  # cyan tuning rows, khaki temperament columns
 
+_AUDIO_KINDS = {"speaker", "arp", "chord"}  # the audio rows' play buttons (client-side Web Audio)
+
+# The Web Audio engine the audio rows drive, injected once per page. The speaker / arp /
+# chord buttons call window.rttAudio.{play,arp}([cents…]) from a CLIENT-side click handler
+# (no server round-trip), so playback is immediate. A pitch's frequency is base · 2^(¢/1200)
+# with 1/1 = middle C; "include 1/1" prepends the 0¢ root so a lone speaker sounds the actual
+# interval, not just its top note. play() sounds together (chord / single), arp() in sequence.
+_AUDIO_JS = """
+window.rttAudio = (function () {
+  let ctx = null;
+  const s = { waveform: 'sine', includeRoot: false, base: 261.6255653005986 };
+  function context() {
+    if (!ctx) { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+    if (ctx.state === 'suspended') { ctx.resume(); }
+    return ctx;
+  }
+  function withRoot(cents) {
+    const a = Array.prototype.slice.call(cents);
+    return s.includeRoot ? [0].concat(a) : a;
+  }
+  function tone(ac, cents, t0, dur, gain) {
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = s.waveform;
+    osc.frequency.value = s.base * Math.pow(2, cents / 1200);
+    const atk = 0.012, rel = 0.09, hold = Math.max(atk, dur - rel);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain, t0 + atk);
+    g.gain.setValueAtTime(gain, t0 + hold);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(ac.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+  return {
+    setWaveform: function (w) { s.waveform = w; },
+    setIncludeRoot: function (b) { s.includeRoot = !!b; },
+    play: function (cents) {  // chord / single pitch: all voices together
+      const ac = context(), arr = withRoot(cents);
+      const t0 = ac.currentTime + 0.03, gain = 0.5 / Math.max(1, arr.length);
+      arr.forEach(function (c) { tone(ac, c, t0, 1.1, gain); });
+    },
+    arp: function (cents) {  // arpeggiate: one after another, in displayed order (root first)
+      const ac = context(), arr = withRoot(cents);
+      let t = ac.currentTime + 0.03;
+      arr.forEach(function (c) { tone(ac, c, t, 0.42, 0.4); t += 0.34; });
+    }
+  };
+})();
+"""
+
 _CSS = f"""
 /* the grid's empty top-left corner cell now holds only the undo/redo buttons (the app
    title moved to the left rail). It fills the corner exactly — LABEL_W wide so its right
@@ -321,6 +370,19 @@ _CSS = f"""
    overflowed the small square; pin it to the box so the flex centering can take over */
 .rtt-btn .q-btn__content {{ color:#000 !important; font-size:13px; line-height:1; min-height:0;
            font-family:'Cambria',Georgia,serif; }}
+/* the audio rows' play buttons (speaker per pitch; per-tile arpeggiate + chord). Flat and
+   transparent so the cyan/green wash shows through; the icon fills the (square) cell. */
+.rtt-audio-btn {{ width:100% !important; height:100% !important; min-width:0 !important;
+           min-height:0 !important; padding:0 !important; box-shadow:none !important;
+           background:transparent !important; color:#000 !important; }}
+.rtt-audio-btn .q-btn__content {{ min-height:0; padding:0; }}
+.rtt-audio-btn .material-icons {{ font-size:15px; }}
+/* the (provisional) audio control cell: waveform chooser over the include-1/1 checkbox,
+   stacked in the spine across both audio rows */
+.rtt-audio-controls {{ display:flex; flex-direction:column; gap:2px; width:100%; height:100%;
+           justify-content:center; align-items:flex-start; font-size:11px; padding:0 2px; }}
+.rtt-audio-controls .q-field, .rtt-audio-controls .q-checkbox {{ font-size:11px; }}
+.rtt-audio-controls .q-checkbox__label {{ font-size:11px; }}
 /* the domain − is a hover affordance: an invisible zone over the removable prime's
    header reveals the button parked at its top (above the header, clear of inputs). The
    zone sits above the prime cells (z-index) so a column added via + can't paint over it
@@ -903,6 +965,7 @@ def _units_html(text):
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
+    ui.add_body_html(f"<script>{_AUDIO_JS}</script>")  # the audio rows' Web Audio engine
     ui.query("body").style("background:#fff")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
@@ -922,6 +985,7 @@ def index() -> None:
     ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
     chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
     range_keys: dict = {}  # range-chart cell id -> last (w, h, ranges) drawn, to redraw on resize/data change
+    audio_keys: dict = {}  # speaker/arp/chord cell id -> last cents tuple, to rebuild its click handler on change
     exprs: dict = {}  # math-expression cell id -> the ui.html holding its stacked lines
     expr_state: dict = {}  # math-expression cell id -> last (text, w) rendered, to redraw on change
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
@@ -941,7 +1005,7 @@ def index() -> None:
         els[eid].delete()
         for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, exprs, expr_state, kinds,
                   selects, ptext_inputs, captions, caption_html, math_cells, math_rendered,
-                  chart_keys, range_keys, rangeopts):
+                  chart_keys, range_keys, audio_keys, rangeopts):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -1240,6 +1304,20 @@ def index() -> None:
             elif cb.kind == "interest_plus":
                 ui.button("+", on_click=lambda: act(editor.add_interest), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
+            elif cb.kind in _AUDIO_KINDS:  # a play button: sound its cents via the client-side engine
+                icon = {"speaker": "volume_up", "arp": "playlist_play", "chord": "library_music"}[cb.kind]
+                fn = "arp" if cb.kind == "arp" else "play"  # speaker & chord sound together; arp in sequence
+                pitches = ",".join(f"{float(v):.6f}" for v in cb.values)
+                ui.button(icon=icon).props("flat dense round").classes("rtt-audio-btn") \
+                    .on("click", js_handler=f"() => window.rttAudio.{fn}([{pitches}])")
+            elif cb.kind == "audio_controls":  # PROVISIONAL: waveform chooser + include-1/1
+                # global client-side audio params — push straight to the engine, no grid state
+                with ui.element("div").classes("rtt-audio-controls"):
+                    ui.select(["sine", "triangle", "sawtooth", "square"], value="sine",
+                              on_change=lambda e: ui.run_javascript(f"window.rttAudio.setWaveform({e.value!r})")) \
+                        .props("dense options-dense borderless").classes("rtt-audio-wave")
+                    ui.checkbox("1/1", on_change=lambda e: ui.run_javascript(
+                        f"window.rttAudio.setIncludeRoot({str(bool(e.value)).lower()})")).classes("rtt-audio-root")
         return wrap
 
     def render():
@@ -1284,10 +1362,14 @@ def index() -> None:
             seen.add(cb.id)
             if cb.id in els and kinds[cb.id] != cb.kind:
                 drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
+            if cb.kind in _AUDIO_KINDS and cb.id in els and audio_keys.get(cb.id) != cb.values:
+                drop(cb.id)  # cents changed -> rebuild so the baked-in click handler sounds the new pitch
             if cb.id not in els:
                 with board:
                     els[cb.id] = _make_cell(cb)
                 kinds[cb.id] = cb.kind
+                if cb.kind in _AUDIO_KINDS:
+                    audio_keys[cb.id] = cb.values
             els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
             if cb.kind in _EBK_SVG_KINDS:
                 # the mark is drawn 1:1 to its px box, so redraw it whenever the box
