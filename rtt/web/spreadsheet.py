@@ -11,6 +11,7 @@ and out. Reuses the entity types in :mod:`rtt.web.layout`.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from fractions import Fraction
 
 from rtt.web import service
@@ -240,15 +241,15 @@ GRIDDED_KINDS = frozenset({
     "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus",
 })
-# "quantities" (general) narrows that to the body quantity values and the EBK
-# marks framing them -- the matrix, mapped list, comma basis, generator ratios
-# and tuning cents -- leaving the quantities-row headers (the prime / comma /
-# target ratios) and the domain/comma controls in place. It does NOT drop the
-# just row's "mathexpr" cells: a log₂ expression is not a bare number, so it
-# stays (math_expressions' own show_value logic trims its "= value" tail instead).
-BODY_VALUE_KINDS = frozenset({
+# "quantities" (general) is gentler than gridded values: it keeps every cell box
+# AND the EBK marks framing them, and only *blanks the numbers* of the body
+# quantity values -- the matrix, mapped list, comma basis, generator ratios,
+# tuning cents, and the static / plain-text-vector / other-interval value cells --
+# so the bare gridded structure remains. (The quantities-row header ratios answer
+# to "domain_quantities"; the just row's "mathexpr" log₂ form is not a bare number,
+# so math_expressions' own show_value logic trims it.)
+BLANKED_NUMBER_KINDS = frozenset({
     "genratio", "mapping", "mapped", "commacell", "static", "vec", "tval", "interestcell",
-    "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar",
 })
 
 
@@ -368,10 +369,10 @@ def build(state, settings=None, collapsed=None,
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
     # (see GRIDDED_KINDS at the end of build), leaving the tiles empty but for their
-    # fold toggles, name captions and (when on) plain-text value boxes. "quantities"
-    # (general) narrows that to the
-    # body values (BODY_VALUE_KINDS); "domain_quantities" (specific) governs the
-    # quantities row and its spine column.
+    # fold toggles, name captions and (when on) plain-text value boxes.
+    # "quantities" (general) is gentler -- it keeps the boxes and EBK marks and only
+    # blanks the body numbers (BLANKED_NUMBER_KINDS); "domain_quantities" (specific)
+    # governs the quantities row and its spine column.
     gridded = settings["gridded_values"]
     show_quantities = settings["quantities"]
     show_domain_quantities = settings["domain_quantities"]
@@ -1137,13 +1138,15 @@ def build(state, settings=None, collapsed=None,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     # Value-display filtering. The tiles (blocks) and gridlines (lines) always
-    # stand; only a tile's *contents* answer to the value-display toggles, so we
-    # drop cells by kind here rather than threading the gates through every
-    # emission above. "gridded values" off empties the tiles entirely; "quantities"
-    # (general) off drops just the body values and their marks.
+    # stand; only a tile's *contents* answer to the value-display toggles, applied
+    # here by kind rather than threaded through every emission above. "gridded
+    # values" off drops them outright -- numbers, boxes, EBK marks, controls -- so
+    # the tiles go empty. "quantities" (general) off is gentler: it keeps the boxes
+    # and marks and only blanks the body numbers, baring the gridded structure.
     if not gridded:
         cells = [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
     elif not show_quantities:
-        cells = [cb for cb in cells if cb.kind not in BODY_VALUE_KINDS]
+        cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
+                 for cb in cells]
 
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))

@@ -241,18 +241,24 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
     assert any(ln.id == "v:prime:0" for ln in lay.lines)  # as do the gridlines
 
 
-def test_general_quantities_off_hides_the_body_values_but_keeps_the_headers():
-    ids = {c.id for c in _with(quantities=False).cells}
-    # the body quantity values (matrix, mapped list, comma basis, interval-vectors
-    # monzos, generator ratios, tuning cents) and their EBK marks are gone
-    assert not any(c.startswith(("gen:", "cell:mapping:", "cell:mapped:",
-                                 "cell:vec:", "cell:comma:",
-                                 "tuning:", "just:", "retune:", "damage:")) for c in ids)
-    assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
-    # ...but the quantities-row headers (domain primes, comma + target ratios) and the
-    # domain/comma controls remain -- those answer to 'gridded values'/the boxes, not this
-    assert {"prime:0", "comma:0", "target:0", "plus", "minus", "comma_plus"} <= ids
-    assert {"label:mapping", "header:primes", "toggle:row:mapping"} <= ids
+def test_general_quantities_off_blanks_the_body_numbers_keeping_boxes_and_brackets():
+    on = {c.id: c for c in _with().cells}
+    off = {c.id: c for c in _with(quantities=False).cells}
+    # the body value cells are still present -- their boxes stay -- but emptied of
+    # their numbers (blank flag set, text cleared). Unlike gridded values off, which
+    # removes them outright.
+    body = ("cell:mapping:0:0", "cell:mapped:0:0", "cell:comma:0:0", "tuning:prime:0", "gen:0")
+    for cid in body:
+        assert cid in off and not on[cid].blank  # present in both; carries its value when on
+        assert off[cid].blank and off[cid].text == ""  # kept (box stays) but blanked when off
+    # the text-bearing cells held a real number when on (matrix/comma inputs read state)
+    assert on["cell:mapped:0:0"].text and on["gen:0"].text and on["tuning:prime:0"].text
+    # the EBK marks framing them stay (this is the whole difference from gridded off)
+    assert any(c.startswith("bracket:") for c in off)
+    assert "ebktop:primes" in off and "ebkbrace:primes" in off
+    # quantities-row headers and the domain/comma controls are untouched
+    assert {"prime:0", "comma:0", "target:0", "plus", "minus", "comma_plus"} <= set(off)
+    assert {"label:mapping", "header:primes", "toggle:row:mapping"} <= set(off)
 
 
 def test_gridded_values_off_also_empties_the_math_expression_cells():

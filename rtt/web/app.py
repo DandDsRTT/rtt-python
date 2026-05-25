@@ -1137,13 +1137,13 @@ def index() -> None:
             elif cb.kind == "rangemode":
                 radios[cb.id].value = cb.text  # mirror the live mode (building[0] guards the echo)
             elif cb.kind == "mapping":
-                inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
+                inputs[cb.id].value = "" if cb.blank else str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":
                 if cb.pending:  # the draft column: show the typed component (blank if None), red-outlined
                     v = editor.pending_comma[cb.prime] if editor.pending_comma is not None else None
                     inputs[cb.id].value = "" if v is None else str(v)
                 else:
-                    inputs[cb.id].value = str(st.comma_basis[cb.comma][cb.prime])
+                    inputs[cb.id].value = "" if cb.blank else str(st.comma_basis[cb.comma][cb.prime])
                 inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
                                       remove="" if cb.pending else "rtt-pending")
             elif cb.kind == "interestcell":
