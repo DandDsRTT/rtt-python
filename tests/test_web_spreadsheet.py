@@ -1452,7 +1452,7 @@ def test_equivalences_cover_derived_quantities_but_not_the_fundamentals():
     extended = {c.split("symbol:", 1)[1] for c in on
                 if c.startswith("symbol:") and " = " in on[c].text}
     assert extended == {
-        "mapping:targets", "tuning:primes", "tuning:targets",
+        "mapping:commas", "mapping:targets", "tuning:primes", "tuning:targets",
         "just:targets", "retune:primes", "retune:targets", "damage:targets",
     }
     # the temperament mapping and just tuning map have no buildable continuation yet
@@ -1707,3 +1707,11 @@ def test_a_folded_tuning_row_shrinks_its_wash_to_the_collapsed_strip():
     # white base with it), so no full-height cyan strip is left behind
     assert folded["wash:tuning"].h < open_h
     assert folded["washbase:tuning"].h == folded["wash:tuning"].h
+
+
+def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
+    on = {c.id: c for c in _with(symbols=True, equivalences=True).cells}
+    # the mapped comma basis is exactly the zero matrix
+    assert on["symbol:mapping:commas"].text == "𝑀C = O"
+    # the damage weight w is bold-italic (matching the maps), not bold-upright
+    assert on["symbol:damage:targets"].text == "𝐝 = |𝐞|diag(𝒘)"

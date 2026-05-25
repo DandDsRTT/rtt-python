@@ -183,15 +183,17 @@ MNEMONICS = {
 # operators stay upright.
 # Only terms buildable from shipped features appear, so the superspace/canonical-
 # form tails (the tuning map's "= B_Ls 𝒕_L", "𝑀 = 𝐅𝑀_c", "𝒋 = B_Ls 𝒋_L") are
-# dropped — the mapping and just tuning maps thus carry no continuation yet.
+# dropped — the mapping over primes and the just tuning map thus carry no
+# continuation yet; the mapped comma basis instead vanishes to the zero matrix.
 EQUIVALENCES = {
+    ("mapping", "commas"): " = O",
     ("mapping", "targets"): " = 𝑀T",
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",
     ("just", "targets"): " = 𝒋T",
     ("retune", "primes"): " = 𝒕 − 𝒋",
     ("retune", "targets"): " = 𝒓T",
-    ("damage", "targets"): " = |𝐞|diag(𝐰)",
+    ("damage", "targets"): " = |𝐞|diag(𝒘)",
 }
 
 # Always-present content tiles (a row×column intersection) as (grey-panel id, row,
