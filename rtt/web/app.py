@@ -85,38 +85,44 @@ _RANGE_FONT = 7  # cents-label / placeholder font size
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a"}  # cyan tuning rows, khaki temperament columns
 
 _CSS = f"""
-/* the app title tile in the top-left: the name over square undo/redo buttons, on a
-   light-grey rounded card, per the mockup */
-.rtt-titletile {{ display:inline-block; background:#e0e0e0; border-radius:6px;
-                 padding:8px 14px 10px; margin:0 0 12px 0; }}
-.rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:22px; font-weight:bold;
-             color:#000; margin:0 0 6px 2px; }}
-.rtt-tile-btns {{ display:flex; gap:6px; }}
+/* the app title tile, absolutely placed in the grid's empty top-left corner cell
+   (left of the master toggle, above the row labels): the name over square undo/redo
+   buttons on a light-grey rounded card, per the mockup. max-width keeps it clear of
+   the master toggle at the node column. */
+.rtt-titletile {{ position:absolute; top:0; left:0; z-index:5; max-width:104px;
+                 background:#e0e0e0; border-radius:5px; padding:4px 6px 5px; }}
+.rtt-title {{ font-family:'Cambria',Georgia,serif; font-size:12px; font-weight:bold;
+             color:#000; margin:0 0 3px 0; white-space:nowrap; }}
+.rtt-tile-btns {{ display:flex; gap:3px; }}
 /* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs */
-.rtt-iconbtn {{ width:30px !important; min-width:30px !important; height:30px !important;
-            min-height:30px !important; padding:0 !important; background:#fff !important;
-            border:1px solid #000; border-radius:3px !important; box-shadow:none !important; }}
-.rtt-iconbtn .q-icon {{ color:#000 !important; font-size:19px; }}
+.rtt-iconbtn {{ width:18px !important; min-width:18px !important; height:18px !important;
+            min-height:18px !important; padding:0 !important; background:#fff !important;
+            border:1px solid #000; border-radius:2px !important; box-shadow:none !important; }}
+.rtt-iconbtn .q-icon {{ color:#000 !important; font-size:13px; }}
 .rtt-iconbtn.q-btn--disable {{ border-color:#bbb; }}
 .rtt-iconbtn.q-btn--disable .q-icon {{ color:#c4c4c4 !important; }}
-/* the hamburger pinned to the window's top-left corner; it toggles the drawer and
-   stays put as the app slides right */
-.rtt-hamburger {{ position:fixed; top:8px; left:8px; z-index:1000;
-                 width:30px !important; min-width:30px !important; height:30px !important;
-                 min-height:30px !important; padding:0 !important; background:#fff !important;
+/* the hamburger docked at the shell's top-left (absolute, so it rides the layout, not
+   the viewport): when the drawer is closed it sits just left of the grid's title tile;
+   when the drawer opens it lands inside the settings pane's reserved top strip */
+.rtt-hamburger {{ position:absolute; top:7px; left:8px; z-index:1000;
+                 width:28px !important; min-width:28px !important; height:28px !important;
+                 min-height:28px !important; padding:0 !important; background:#fff !important;
                  border:1px solid #999; border-radius:3px !important; box-shadow:none !important; }}
-.rtt-hamburger .q-icon {{ color:#333 !important; font-size:20px; }}
+.rtt-hamburger .q-icon {{ color:#333 !important; font-size:19px; }}
 /* the shell lays the drawer beside the app; opening the drawer widens it from 0,
-   which pushes the app to the right (the requested slide-over) */
-.rtt-shell {{ display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
+   which pushes the app to the right (the requested slide-over). position:relative so
+   the docked hamburger (absolute) anchors to the shell's top-left, not the viewport */
+.rtt-shell {{ position:relative; display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
 .rtt-drawer {{ width:0; overflow:hidden; transition:width {_T}; flex:none; }}
 .rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; }}
+/* the pane reserves a top strip (padding-top) so the docked hamburger sits within it,
+   above the Show/example header, when the drawer is open */
 .rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0;
                     font-family:'Cambria',Georgia,serif; color:#000;
-                    padding:8px 14px 16px; min-height:100vh; }}
+                    padding:40px 14px 16px; min-height:100vh; }}
 /* the app fills the space right of the drawer; min-width:0 lets a wide grid scroll
    inside its own .rtt-scroll rather than widening (and horizontally scrolling) the page */
-.rtt-app {{ flex:1 1 0; min-width:0; padding-left:46px; }}  /* left gutter clears the corner hamburger */
+.rtt-app {{ flex:1 1 0; min-width:0; padding-left:40px; }}  /* left gutter clears the docked hamburger when the drawer is closed */
 
 .rtt-scroll {{ overflow-x:auto; max-width:100%; }}
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
@@ -285,7 +291,7 @@ _CSS = f"""
    renders), aligned over the grid columns the rows below use */
 .rtt-show-head {{ display:grid; grid-template-columns:160px 1fr; align-items:end;
                  padding:2px 9px 4px 9px; }}
-.rtt-show-title {{ font-size:28px; font-weight:bold; line-height:1; }}
+.rtt-show-title {{ font-size:14px; font-weight:bold; line-height:1; }}
 .rtt-show-examplehdr {{ font-size:14px; font-weight:bold; padding-bottom:3px; }}
 /* general and specific each sit in their own rounded, lightly-bordered sub-card,
    stacked vertically (general above specific) */
@@ -1273,9 +1279,10 @@ def index() -> None:
         drawer_open[0] = not drawer_open[0]
         drawer.classes(add="rtt-drawer-open") if drawer_open[0] else drawer.classes(remove="rtt-drawer-open")
 
-    ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense").classes("rtt-hamburger")
-
     with ui.element("div").classes("rtt-shell"):
+        # the hamburger docks at the shell's top-left (absolute): left of the grid when the
+        # drawer is closed, inside the pane's reserved top strip when the drawer is open
+        ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense").classes("rtt-hamburger")
         drawer = ui.element("div").classes("rtt-drawer")
         with drawer, ui.element("div").classes("rtt-drawer-inner"):
             with ui.element("div").classes("rtt-show-head"):
@@ -1302,16 +1309,19 @@ def index() -> None:
                             row.bind_visibility_from(boxes[parent], "value")
 
         with ui.element("div").classes("rtt-app"):
-            with ui.element("div").classes("rtt-titletile"):
-                ui.label("D&D's RTT app").classes("rtt-title")
-                with ui.element("div").classes("rtt-tile-btns"):
-                    refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
-                        .props("flat dense").classes("rtt-iconbtn")
-                    refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
-                        .props("flat dense").classes("rtt-iconbtn")
             with ui.element("div").classes("rtt-scroll"):
                 with ui.element("div").classes("rtt-outer"):
                     board = ui.element("div").classes("rtt-board")
+                    # the title tile rides in the grid's empty top-left corner cell (left of
+                    # the master toggle, above the row labels), absolutely placed, per the mockup
+                    with board:
+                        with ui.element("div").classes("rtt-titletile"):
+                            ui.label("D&D's RTT app").classes("rtt-title")
+                            with ui.element("div").classes("rtt-tile-btns"):
+                                refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
+                                    .props("flat dense").classes("rtt-iconbtn")
+                                refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
+                                    .props("flat dense").classes("rtt-iconbtn")
 
     def on_key(e):
         if not (e.action.keydown and e.modifiers.ctrl):
