@@ -73,10 +73,10 @@ _CHART_GRID = "#bbbbbb"  # light gridline / tick colour
 # top (max cents) and bottom (min), labelled at the caps; a pinned generator (the period,
 # octave held pure, so min == max) collapses to a single flat cap with one value.
 _RANGE_TITLE = "tuning ranges"  # the panel title, per the mockup
-_RANGE_CAP_W = 14  # I-beam cap width (px)
+_RANGE_CAP_W = 14  # I-beam cap width (px); the live-tuning tick is a shorter bar
 _RANGE_MARK_W = 1.6  # I-beam stem + cap thickness (px) — constant at any height (1:1 viewBox)
-_RANGE_PLOT_T = 28  # plot-area top (below the title and the top-cap labels)
-_RANGE_PLOT_B = 18  # plot-area bottom margin (room for the bottom-cap labels)
+_RANGE_PLOT_T = 20  # plot-area top (below the title and the top-cap labels)
+_RANGE_PLOT_B = 13  # plot-area bottom margin (room for the bottom-cap labels)
 _RANGE_FONT = 7  # cents-label / placeholder font size
 
 # Colorization wash colours, keyed by the box-group name the layout tags a wash with
@@ -125,7 +125,7 @@ _CSS = f"""
    own layers (the white wash bases), not the page behind it */
 .rtt-board {{ position:relative; isolation:isolate; transition:width {_T}, height {_T}; }}
 @keyframes rtt-in {{ from {{ opacity:0; }} to {{ opacity:1; }} }}
-.rtt-line, .rtt-block, .rtt-cell, .rtt-wash, .rtt-washbase {{ animation:rtt-in {_T} ease; }}
+.rtt-line, .rtt-block, .rtt-block-boxed, .rtt-cell, .rtt-wash, .rtt-washbase {{ animation:rtt-in {_T} ease; }}
 
 .rtt-line {{ position:absolute; z-index:1; opacity:1; transition:left {_T}, top {_T},
             width {_T}, height {_T}, opacity {_T}; }}
@@ -140,6 +140,11 @@ _CSS = f"""
 .rtt-washbase {{ background:#fff; }}
 .rtt-wash {{ mix-blend-mode:darken; }}
 .rtt-block {{ position:absolute; z-index:2; background:#e0e0e0; opacity:1;
+             transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
+/* the nested tuning-ranges box: a thin-bordered frame on the generator tuning map tile
+   (per the mockup), above the grey tile but below the chart/selector cells */
+.rtt-block-boxed {{ position:absolute; z-index:2; background:#e8e8e8; border:1px solid #8a8a8a;
+             border-radius:3px; opacity:1;
              transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
 .rtt-cell {{ position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
             opacity:1; transition:left {_T}, top {_T}, opacity {_T}; }}
@@ -214,15 +219,14 @@ _CSS = f"""
             line-height:20px; font-family:'Cambria',Georgia,serif; }}
 .rtt-preselect-num .q-field__native::-webkit-inner-spin-button {{ -webkit-appearance:none; margin:0; }}
 .rtt-preselect-num .q-field__marginal, .rtt-preselect-num .q-field__append {{ display:none !important; }}
-/* the monotone/tradeoff range selector under the ranges chart: two compact radios
-   stacked vertically (the generators column is too narrow for them side by side),
-   with small dots and small Cambria labels */
-.rtt-rangemode {{ width:100%; display:flex; flex-direction:column; align-items:center;
-                  font-size:10px; line-height:1; }}
-.rtt-rangemode .q-radio {{ display:flex; min-height:0; font-size:9.5px; }}  /* block-level so the two stack */
-.rtt-rangemode .q-radio__inner {{ font-size:13px; }}  /* the radio dot size scales with font-size */
-.rtt-rangemode .q-radio__label {{ font-family:'Cambria',Georgia,serif; font-size:9.5px; line-height:1.1;
-                  color:#000; padding-left:2px; }}
+/* the monotone/tradeoff range selector under the ranges chart: two square indicators
+   side by side (filled = selected), per the mockup, with small Cambria labels */
+.rtt-rangemode {{ width:100%; display:flex; flex-direction:row; align-items:center;
+                  justify-content:center; gap:6px; line-height:1; }}
+.rtt-rangeopt {{ display:flex; align-items:center; gap:2px; cursor:pointer; user-select:none; }}
+.rtt-rangebox {{ width:9px; height:9px; border:1px solid #555; background:#fff; box-sizing:border-box; }}
+.rtt-rangeopt-on .rtt-rangebox {{ background:#000; }}  /* the selected mode's square is filled */
+.rtt-rangelabel {{ font-family:'Cambria',Georgia,serif; font-size:8.5px; color:#000; white-space:nowrap; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
 .rtt-approx {{ font-size:13px; align-self:center; }}
@@ -564,11 +568,12 @@ def _bar_chart(w, h, values):
     return _svg(w, h, "".join(body))
 
 
-def _range_chart(w, h, ranges):
+def _range_chart(w, h, ranges, tunings=()):
     """The generator tuning-ranges chart filling its 1:1 px box: a titled panel with one
     vertical I-beam per generator showing its [min, max] tuning in cents (max at the top
-    cap, min at the bottom), aligned to the generator columns below. A pinned generator
-    (min == max) draws a single flat cap; empty ``ranges`` draws a 'no range' placeholder."""
+    cap, min at the bottom), with a shorter tick marking where the live tuning falls within
+    that range. A pinned generator (min == max) draws a single flat cap; empty ``ranges``
+    draws a 'no range' placeholder."""
     cx0, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
     title = (f'<text x="{w / 2:.2f}" y="9" text-anchor="middle" font-size="8.5" '
              f'font-weight="bold" fill="{_BR_COLOR}">{_RANGE_TITLE}</text>')
@@ -577,9 +582,10 @@ def _range_chart(w, h, ranges):
                     f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">no range</text>')
     plot_top, plot_bot = _RANGE_PLOT_T, h - _RANGE_PLOT_B
     mid, hw = (plot_top + plot_bot) / 2, _RANGE_MARK_W / 2
+    cap_half, tick_half = _RANGE_CAP_W / 2, _RANGE_CAP_W / 2 - 3  # the live-tuning tick is shorter
 
-    def cap(cx, y):
-        return _rect(cx - _RANGE_CAP_W / 2, y - hw, _RANGE_CAP_W, _RANGE_MARK_W)
+    def bar(cx, y, half):
+        return _rect(cx - half, y - hw, 2 * half, _RANGE_MARK_W)
 
     def label(cx, y, v):
         return (f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
@@ -589,11 +595,15 @@ def _range_chart(w, h, ranges):
     for i, (lo, hi) in enumerate(ranges):
         cx = cx0 + i * col_w + col_w / 2
         if hi - lo < 1e-6:  # pinned (e.g. the period): one value, no range — a single cap
-            body.append(cap(cx, mid) + label(cx, mid - 4, lo))
-        else:  # a vertical stem capped at the max (top) and min (bottom), labelled at each
-            body.append(_rect(cx - hw, plot_top, _RANGE_MARK_W, plot_bot - plot_top))
-            body.append(cap(cx, plot_top) + cap(cx, plot_bot))
-            body.append(label(cx, plot_top - 4, hi) + label(cx, plot_bot + 11, lo))
+            body.append(bar(cx, mid, cap_half) + label(cx, mid - 4, lo))
+            continue
+        # a vertical stem capped at the max (top) and min (bottom), labelled at each
+        body.append(_rect(cx - hw, plot_top, _RANGE_MARK_W, plot_bot - plot_top))
+        body.append(bar(cx, plot_top, cap_half) + bar(cx, plot_bot, cap_half))
+        body.append(label(cx, plot_top - 4, hi) + label(cx, plot_bot + 11, lo))
+        if i < len(tunings):  # the live tuning, ticked where it falls within [min, max]
+            frac = min(1.0, max(0.0, (hi - tunings[i]) / (hi - lo)))
+            body.append(bar(cx, plot_top + frac * (plot_bot - plot_top), tick_half))
     return _svg(w, h, "".join(body))
 
 
@@ -806,7 +816,7 @@ def index() -> None:
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
     selects: dict = {}  # preselect cell id -> its q-select
     ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
-    radios: dict = {}  # range-mode cell id -> its q-radio (monotone / tradeoff)
+    rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
     captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
     math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
@@ -820,7 +830,7 @@ def index() -> None:
         els[eid].delete()
         for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, exprs, expr_state, kinds,
                   selects, ptext_inputs, captions, caption_html, math_cells, math_rendered,
-                  chart_keys, range_keys, radios):
+                  chart_keys, range_keys, rangeopts):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -989,9 +999,16 @@ def index() -> None:
             elif cb.kind == "rangechart":
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # I-beam ranges chart drawn in render()
             elif cb.kind == "rangemode":  # the monotone/tradeoff range selector under the ranges chart
-                radios[cb.id] = ui.radio(["monotone", "tradeoff"], value=cb.text or "monotone",
-                        on_change=lambda e: on_range_mode(e.value)) \
-                    .props("dense").classes("rtt-rangemode")  # stacked vertically to fit the narrow gens column
+                wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
+                opts = {}
+                for mode in ("monotone", "tradeoff"):
+                    opt = ui.element("div").classes("rtt-rangeopt")
+                    with opt:
+                        ui.element("span").classes("rtt-rangebox")  # the square (filled when selected)
+                        ui.label(mode).classes("rtt-rangelabel")
+                    opt.on("click", lambda _=None, m=mode: on_range_mode(m))
+                    opts[mode] = opt
+                rangeopts[cb.id] = opts
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
                 math_cells[cb.id] = ui.html("").classes("rtt-symbol")  # content set in render()
@@ -1108,11 +1125,14 @@ def index() -> None:
         for bl in lay.blocks:
             seen.add(bl.id)
             if bl.id not in els:
-                # a block is a plain grey tile (tint ""), a colorization wash's white
-                # base (tint "base"), or its coloured layer (tint = group name). The
-                # tint is fixed for a block's lifetime, so the class is chosen once.
+                # a block is a thin-bordered box (boxed, the nested tuning-ranges frame), a
+                # plain grey tile (tint ""), a colorization wash's white base (tint "base"),
+                # or its coloured layer (tint = group name). Fixed for the block's lifetime,
+                # so the class is chosen once.
                 with board:
-                    cls = "rtt-washbase" if bl.tint == "base" else "rtt-wash" if bl.tint else "rtt-block"
+                    cls = ("rtt-block-boxed" if bl.boxed
+                           else "rtt-washbase" if bl.tint == "base"
+                           else "rtt-wash" if bl.tint else "rtt-block")
                     els[bl.id] = ui.element("div").classes(cls).props(f'data-eid="{bl.id}"')
             style = f"left:{bl.x}px; top:{bl.y}px; width:{bl.w}px; height:{bl.h}px"
             if bl.tint in _TINTS:  # the coloured layer (the base draws white from CSS)
@@ -1141,13 +1161,15 @@ def index() -> None:
                     htmls[cb.id].set_content(_bar_chart(cb.w, cb.h, cb.values))
                     chart_keys[cb.id] = key
             elif cb.kind == "rangechart":
-                # redraw when the box resizes OR the ranges change (mapping/mode edit)
-                key = (cb.w, cb.h, cb.ranges)
+                # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit)
+                key = (cb.w, cb.h, cb.ranges, cb.values)
                 if range_keys.get(cb.id) != key:
-                    htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges))
+                    htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges, cb.values))
                     range_keys[cb.id] = key
-            elif cb.kind == "rangemode":
-                radios[cb.id].value = cb.text  # mirror the live mode (building[0] guards the echo)
+            elif cb.kind == "rangemode":  # fill the live mode's square (the other's is hollow)
+                for mode, opt in rangeopts[cb.id].items():
+                    (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
+                     else opt.classes(remove="rtt-rangeopt-on"))
             elif cb.kind == "mapping":
                 inputs[cb.id].value = "" if cb.blank else str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":

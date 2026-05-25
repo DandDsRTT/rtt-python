@@ -242,6 +242,17 @@ def test_range_chart_draws_a_titled_i_beam_with_min_max_labels_for_a_ranged_gene
     assert max(heights) > 30  # the ranged generator's I-beam stem spans the plot area
 
 
+def test_range_chart_ticks_the_live_tuning_within_a_generators_range():
+    # the live generator tuning is marked as a horizontal tick between the min/max caps,
+    # at its proportional position within the range (here ~2/3 of the way down)
+    marks = sorted(y for y, h in _bars(app._range_chart(92, 96, ((685.714, 720.0),), (697.0,))) if h < 4)
+    assert len(marks) == 3  # max cap (top), live-tuning tick (interior), min cap (bottom)
+    assert marks[0] < marks[1] < marks[2]  # the tick sits strictly between the two bounds
+    # with no live tuning supplied (the bare helper), only the two range caps are drawn
+    plain = sorted(y for y, h in _bars(app._range_chart(92, 96, ((685.714, 720.0),))) if h < 4)
+    assert len(plain) == 2
+
+
 def test_range_chart_draws_only_a_flat_cap_for_a_pinned_generator():
     # the period is pinned (octave held pure), so its [min, max] is a point — drawn as a
     # single flat cap with one value label, not a misleading full-height range bar

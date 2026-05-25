@@ -52,9 +52,9 @@ PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch tall
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
-RANGE_CHART_H = 96  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
-RANGE_MODE_H = 30  # height of the monotone/tradeoff range-mode selector (two stacked radios) below the ranges chart
-RANGE_GAP = 4  # gap between the ranges chart and its mode selector
+RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
+RANGE_MODE_H = 16  # height of the monotone/tradeoff range-mode selector (one row of square indicators) below the chart
+RANGE_GAP = 3  # gap between the ranges chart and its mode selector
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -871,14 +871,17 @@ def build(state, settings=None, collapsed=None,
     # rather than floating. The monotone range can be None (no monotone tuning exists),
     # passed as () so the chart draws a placeholder rather than I-beams. gtm_chart/gtm_extra
     # were computed up front (so the tuning row could reserve the box's height).
+    gtm_box = None  # (x, y, w, h) of the bordered box framing the chart + selector
     if gtm_chart:
         chosen = tun.monotone_generator_range if range_mode == "monotone" else tun.tradeoff_generator_range
         gx, gw = col_x["gens"], col_w["gens"]
         cy = tile_top["tuning"] + tile_h["tuning"] + RANGE_GAP  # below the tile's values + caption
         cells.append(CellBox("rangechart:tuning:gens", gx, cy, gw, RANGE_CHART_H, "rangechart",
-                             ranges=tuple(chosen) if chosen is not None else ()))
+                             ranges=tuple(chosen) if chosen is not None else (),
+                             values=tuple(tun.generator_map)))  # the live tuning, marked within each range
         cells.append(CellBox("rangemode:tuning:gens", gx, cy + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                              "rangemode", text=range_mode))
+        gtm_box = (gx, cy, gw, RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
 
     # the optimization power 𝑝 of the current tuning, annotating the bottom of the
     # tuning boxes (the scheme's Lp-norm order: ∞ minimax, 2 least-squares, 1 average).
@@ -1027,6 +1030,10 @@ def build(state, settings=None, collapsed=None,
 
     for bid, rkey, ckey in tiles:
         panel(bid, ckey, rkey, gtm_extra if (rkey, ckey) == ("tuning", "gens") else 0)
+    # the nested tuning-ranges box: a thin-bordered frame around the chart + selector,
+    # appended after the tile panels so it layers on top of the generator tuning map tile
+    if gtm_box is not None:
+        blocks.append(Block("block:tuning:rangesbox", *gtm_box, boxed=True))
 
     # Colorization washes. The mockup paints the whole background of a colorized
     # group's boxes (the grey tiles float on top), so a colorized ROW gets a full-width

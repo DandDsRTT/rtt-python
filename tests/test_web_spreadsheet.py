@@ -1694,6 +1694,23 @@ def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector():
     assert "block:gentuning" not in {b.id for b in lay.blocks}
 
 
+def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector():
+    # the mockup frames the tuning-ranges section (title + I-beams + mode selector) in a
+    # thin-bordered box nested in the generator tuning map tile; the layout emits a boxed
+    # Block enclosing the chart and selector
+    lay = _with(tuning_ranges=True)
+    boxes = {b.id: b for b in lay.blocks}
+    cells = {c.id: c for c in lay.cells}
+    assert "block:tuning:rangesbox" in boxes
+    box = boxes["block:tuning:rangesbox"]
+    assert box.boxed is True  # a bordered box, not a plain grey tile
+    ch, sel = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
+    assert box.x <= ch.x and box.x + box.w >= ch.x + ch.w  # encloses them horizontally
+    assert box.y <= ch.y and box.y + box.h >= sel.y + sel.h  # and the chart + selector vertically
+    # gone when the ranges box is off
+    assert "block:tuning:rangesbox" not in {b.id for b in _with(tuning_ranges=False).blocks}
+
+
 def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it():
     # the ranges box (chart + selector) nests below the generator-map values and extends
     # the tuning tile downward; that extra height must be reserved in the tuning row so the

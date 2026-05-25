@@ -33,6 +33,7 @@ class Block:
     w: float
     h: float
     tint: str = ""  # colour-group name for a colorization wash ("tuning"); "" for a plain grey tile
+    boxed: bool = False  # render a thin-bordered box (the nested tuning-ranges box) rather than a plain tile
 
 
 @dataclass(frozen=True)
