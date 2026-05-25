@@ -1058,7 +1058,9 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
 
     def _make_cell(cb):
-        wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"')
+        # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
+        # letting the User-fixture render tests locate a cell by its stable id
+        wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
         with wrap:
             if cb.kind == "mapping":
                 inputs[cb.id] = ui.input(on_change=lambda e: on_mapping_change()) \
@@ -1391,9 +1393,9 @@ def index() -> None:
                         with ui.element("div").classes("rtt-titletile"):
                             with ui.element("div").classes("rtt-tile-btns"):
                                 refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
-                                    .props("flat dense").classes("rtt-iconbtn")
+                                    .props("flat dense").classes("rtt-iconbtn").mark("undo")
                                 refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
-                                    .props("flat dense").classes("rtt-iconbtn")
+                                    .props("flat dense").classes("rtt-iconbtn").mark("redo")
 
     def on_key(e):
         if not (e.action.keydown and e.modifiers.ctrl):
