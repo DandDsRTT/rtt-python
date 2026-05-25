@@ -205,7 +205,7 @@ def _optimization_power_from_name(name: str) -> float:
 def optimize_generator_tuning_map(
     t: Temperament, spec: TuningSchemeSpec | str
 ) -> tuple[float, ...]:
-    """The generator tuning map minimizing target-interval damage under the scheme.
+    """The generator tuning map minimizing target interval damage under the scheme.
 
     ``spec`` may be a :class:`TuningSchemeSpec`, a systematic tuning-scheme name string,
     or a historical scheme name (e.g. ``"TOP"``, ``"TE"``, ``"CTE"``)."""
@@ -436,7 +436,7 @@ def _evaluate_damages(
 def resolve_target_intervals(
     target_spec: str, t: Temperament, d: int
 ) -> tuple[tuple[int, ...], ...]:
-    """Resolve a target-interval spec to monzos: an explicit ``{...}`` quotient list, a
+    """Resolve a target interval spec to monzos: an explicit ``{...}`` quotient list, a
     TILT/OLD named scheme, or ``"primes"`` (the identity).
 
     Over a nonstandard domain basis the resolved quotients are filtered to those that lie

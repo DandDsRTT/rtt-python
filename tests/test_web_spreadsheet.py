@@ -138,7 +138,7 @@ def test_mapping_cells_form_a_square_touching_grid():
     assert cells["cell:mapping:0:1"].x == c00.x + c00.w
     assert cells["cell:mapping:0:2"].x == c00.x + 2 * c00.w
     assert cells["cell:mapping:1:0"].y == c00.y + c00.h
-    # the mapped target-interval list sits on the same square columns
+    # the mapped target interval list sits on the same square columns
     m00 = cells["cell:mapped:0:0"]
     assert m00.w == m00.h == spreadsheet.ROW_H
     assert cells["cell:mapped:0:1"].x == m00.x + m00.w
@@ -234,7 +234,7 @@ def test_tuning_boxes_off_removes_the_tuning_rows_and_the_target_intervals_colum
     assert not any(c.split(":")[0] in {"tuning", "just", "retune", "damage"} for c in off)
     assert {"label:tuning", "label:just", "label:retune", "label:damage"}.isdisjoint(off)
     # the target intervals column goes with them: its header, the target headers,
-    # and the mapped target-interval list that lived in it
+    # and the mapped target interval list that lived in it
     assert "header:targets" not in off
     assert not any(c.startswith(("target:", "cell:mapped:")) for c in off)
     # the mapping over the domain primes (temperament still on) survives
@@ -428,7 +428,7 @@ def test_the_mapping_matrix_is_framed_top_and_bottom():
 
 def test_mapped_list_rules_its_monzo_columns_apart_clear_of_the_marks():
     cells = {c.id: c for c in _layout().cells}
-    # the mapped target-interval list separates its monzo columns with vertical
+    # the mapped target interval list separates its monzo columns with vertical
     # bars, and the per-column top/bottom marks are inset so they never touch one
     assert "sep:mapped:1" in cells  # a bar between columns 0 and 1
     sep, first = cells["sep:mapped:1"], cells["cell:mapped:0:0"]
@@ -571,7 +571,7 @@ def test_preselects_on_adds_the_three_chooser_dropdowns_under_their_tiles():
     # the temperament chooser sits under the mapping matrix, aligned to its column
     temp, matrix = cells["preselect:temperament"], cells["cell:mapping:0:0"]
     assert temp.y > matrix.y and temp.x == cells["header:primes"].x
-    # the target chooser sits under the target-interval list (quantities row)
+    # the target chooser sits under the target interval list (quantities row)
     assert cells["preselect:target"].x == cells["header:targets"].x
 
 
@@ -776,7 +776,7 @@ def test_comma_basis_renders_as_raw_monzos_in_the_interval_vectors_row():
 def test_mapping_row_commas_show_the_mapped_comma_basis_vanishing():
     cells = {c.id: c for c in _layout().cells}
     # in the mapping row the comma basis is shown MAPPED through M — it vanishes to 0,
-    # the whole point of the temperament (parallel to the mapped target-interval list)
+    # the whole point of the temperament (parallel to the mapped target interval list)
     assert cells["cell:mapped_comma:0:0"].text == "0"
     assert cells["cell:mapped_comma:1:0"].text == "0"
     # r-tall (one row per generator) and aligned with the mapped target list beside it
@@ -877,7 +877,7 @@ def test_comma_basis_grid_has_no_separator_rules_that_double_its_cell_borders():
 
 def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column():
     # a wide column fits the whole name on one line...
-    assert spreadsheet._wrap_lines("tempered target-interval size list", 272) == 1
+    assert spreadsheet._wrap_lines("tempered target interval size list", 272) == 1
     # ...but the narrow one-comma column forces it to several lines
     assert spreadsheet._wrap_lines("tempered comma size list", 62) >= 3
 
@@ -901,7 +901,7 @@ def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():
     # shows it mapped (vanishing), captioned to parallel the mapped target list
     assert on["caption:vectors:commas"].text == "comma basis"
     assert on["caption:mapping:commas"].text == "mapped comma list"
-    # comma captions mirror the target captions, swapping "target-interval" for "comma"
+    # comma captions mirror the target captions, swapping "target interval" for "comma"
     assert on["caption:tuning:commas"].text == "tempered comma size list"
     assert on["caption:just:commas"].text == "(just) comma size list"
     assert on["caption:retune:commas"].text == "comma error list"
@@ -913,7 +913,7 @@ def test_interval_vectors_tiles_are_captioned_by_what_each_column_holds():
     on = {c.id: c for c in _with(names=True).cells}
     assert on["caption:vectors:primes"].text == "domain basis"  # the identity
     assert on["caption:vectors:commas"].text == "comma basis"  # the raw monzos (the dual)
-    assert on["caption:vectors:targets"].text == "target-interval list"
+    assert on["caption:vectors:targets"].text == "target interval list"
 
 
 def test_commas_column_has_an_add_comma_control():
@@ -1006,7 +1006,7 @@ def test_counts_on_adds_a_top_row_of_per_column_cardinalities():
     assert cells["count:gens"].text == "\U0001D45F = 2"  # 𝑟 rank: two generators
     assert cells["count:primes"].text == "\U0001D451 = 3"  # 𝑑 dimensionality: 2.3.5
     assert cells["count:commas"].text == "\U0001D45B = 1"  # 𝑛 nullity: one comma (syntonic)
-    assert cells["count:targets"].text == "\U0001D458 = 8"  # 𝑘 target-interval count: the 6-TILT is 8
+    assert cells["count:targets"].text == "\U0001D458 = 8"  # 𝑘 target interval count: the 6-TILT is 8
 
 
 def test_counts_row_sits_at_the_top_aligned_over_its_columns():
@@ -1039,7 +1039,7 @@ def test_count_names_caption_each_count_only_when_names_is_on():
     assert on["caption:counts:gens"].text == "rank"
     assert on["caption:counts:primes"].text == "dimensionality"
     assert on["caption:counts:commas"].text == "nullity"
-    assert on["caption:counts:targets"].text == "target-interval count"
+    assert on["caption:counts:targets"].text == "target interval count"
     assert on["caption:counts:primes"].y > on["count:primes"].y  # caption below the value
     off = captioned(names=False)
     assert not any(c.startswith("caption:counts:") for c in off)  # but the value cells remain
@@ -1188,7 +1188,7 @@ def test_collapsing_interest_hides_its_cells_but_keeps_the_header():
 
 def test_interest_captions_mirror_targets_without_damage_when_named():
     cells = {c.id: c for c in _with_interest(_INTEREST[:1]).cells}  # names default on
-    assert cells["caption:vectors:interest"].text == "interval-of-interest list"
+    assert cells["caption:vectors:interest"].text == "interval of interest list"
     assert cells["caption:mapping:interest"].text == "mapped interval list"
     assert cells["caption:tuning:interest"].text == "tempered interval size list"
     assert "caption:damage:interest" not in cells
@@ -1216,8 +1216,8 @@ def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_one
     assert underlined("caption:tuning:primes") == "t"  # tuning map -> t
     assert underlined("caption:just:primes") == "j"  # just tuning map -> j
     assert underlined("caption:retune:primes") == "r"  # retuning map -> r
-    assert underlined("caption:retune:targets") == "e"  # target-interval error list -> e
-    assert underlined("caption:damage:targets") == "d"  # target-interval damage list -> d
+    assert underlined("caption:retune:targets") == "e"  # target interval error list -> e
+    assert underlined("caption:damage:targets") == "d"  # target interval damage list -> d
     # size/list tiles whose symbol letter isn't a word-initial in their name stay
     # unmarked: the mapped list (𝑌), the tempered (𝐚) and just (𝐨) size lists
     assert on["caption:mapping:targets"].underlines == ()

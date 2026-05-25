@@ -70,7 +70,7 @@ COUNTS = (
     ("gens", "r", "rank"),
     ("primes", "d", "dimensionality"),
     ("commas", "n", "nullity"),
-    ("targets", "k", "target-interval count"),
+    ("targets", "k", "target interval count"),
 )
 # The counts row's grey panels + fold toggles, derived from COUNTS so they track
 # its columns automatically — every count cell is guaranteed a backing tile, with
@@ -81,25 +81,25 @@ COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in CO
 CAPTIONS = {
     ("vectors", "primes"): "domain basis",
     ("vectors", "commas"): "comma basis",
-    ("vectors", "targets"): "target-interval list",
+    ("vectors", "targets"): "target interval list",
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma list",
-    ("mapping", "targets"): "mapped target-interval list",
+    ("mapping", "targets"): "mapped target interval list",
     ("projection", "primes"): "projection matrix",
     ("tuning", "primes"): "tuning map",
     ("tuning", "commas"): "tempered comma size list",
-    ("tuning", "targets"): "tempered target-interval size list",
+    ("tuning", "targets"): "tempered target interval size list",
     ("just", "primes"): "just tuning map",
     ("just", "commas"): "(just) comma size list",
-    ("just", "targets"): "(just) target-interval size list",
+    ("just", "targets"): "(just) target interval size list",
     ("retune", "primes"): "retuning map",
     ("retune", "commas"): "comma error list",
-    ("retune", "targets"): "target-interval error list",
+    ("retune", "targets"): "target interval error list",
     ("damage", "commas"): "comma damage list",
-    ("damage", "targets"): "target-interval damage list",
+    ("damage", "targets"): "target interval damage list",
     **{("counts", ckey): name for ckey, _sym, name in COUNTS},
     # other intervals of interest mirror the targets, minus the damage row
-    ("vectors", "interest"): "interval-of-interest list",
+    ("vectors", "interest"): "interval of interest list",
     ("mapping", "interest"): "mapped interval list",
     ("tuning", "interest"): "tempered interval size list",
     ("just", "interest"): "(just) interval size list",
@@ -138,7 +138,7 @@ CHARTED_ROWS = frozenset({"retune", "damage"})  # rows that grow a bar-chart ban
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
 # column): each is a quick menu for one of the things you actually choose, riding
 # under its governing tile — the temperament under the mapping matrix, the tuning
-# scheme under the tuning map, the target-interval set under the target list.
+# scheme under the tuning map, the target interval set under the target list.
 PRESELECTS = (
     ("temperament", "mapping", "primes"),
     ("tuning", "tuning", "primes"),
@@ -148,7 +148,7 @@ PRESELECT_ROWS = frozenset(row for _, row, _ in PRESELECTS)
 
 # Mnemonics: underline the caption letter that spells the tile's symbol (see
 # SYMBOLS) — a memory aid linking the name to its symbol (e.g. "tuning map" -> t,
-# "target-interval damage list" -> d). Each entry names the word whose first letter
+# "target interval damage list" -> d). Each entry names the word whose first letter
 # is underlined; keep these in step with SYMBOLS. A tile whose symbol letter is not
 # a word-initial in its name carries no underline — the mapped list (𝑌), and the
 # tempered (𝐚), just (𝐨) and other size lists.
@@ -164,7 +164,7 @@ MNEMONICS = {
 # Each quantity's defining equation continues its symbol (see SYMBOLS): the mockup's
 # "symbols section" from the first "=" on, appended to the symbol when equivalences
 # is on so the line reads e.g. "𝒕 = 𝒈𝑀". Glyphs match SYMBOLS — bold-italic maps,
-# math-italic matrices (𝑇 = the target-interval matrix); operators stay upright.
+# math-italic matrices (𝑇 = the target interval matrix); operators stay upright.
 # Only terms buildable from shipped features appear, so the superspace/canonical-
 # form tails (the tuning map's "= B_Ls 𝒕_L", "𝑀 = 𝐅𝑀_c", "𝒋 = B_Ls 𝒋_L") are
 # dropped — the mapping and just tuning maps thus carry no continuation yet.
@@ -378,7 +378,7 @@ def build(state, settings=None, collapsed=None,
     # the commas are the temperament's (shown with temperament_boxes), target-
     # intervals are the tuning's (shown with tuning_boxes) -- turning a box off
     # takes its whole column with it, including the other family's cells that ride
-    # in it (e.g. the tuning maps over primes, or the mapped target-interval list
+    # in it (e.g. the tuning maps over primes, or the mapped target interval list
     # over targets). A collapsed column folds to a strip just wide enough to keep
     # its (horizontal) title readable, so it never overflows onto its neighbours.
     # The domain/comma + controls ride just right of their blocks when open; each −
@@ -631,7 +631,7 @@ def build(state, settings=None, collapsed=None,
             cells.append(CellBox("interest_plus", ctrl_x["interest"], qy + (ROW_H - BTN) // 2, BTN, BTN, "interest_plus"))
 
     # generator ratios (aligned with the mapping rows they label) + the mapping
-    # matrix and its mapped target-interval list
+    # matrix and its mapped target interval list
     if row_open("mapping"):
         # the generators list the mapping's rows: a vertical ratio list in the
         # quantities spine column (the dual of the mapping-over-generators identity)

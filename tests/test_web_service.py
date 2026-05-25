@@ -163,7 +163,7 @@ def test_plain_text_mapping_is_the_ebk_string():
 def test_plain_text_basis_and_ratio_quantities():
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
     assert pt[("quantities", "primes")] == "2.3.5"  # the domain basis, dot notation
-    # the target-interval set in the brace notation the parser round-trips
+    # the target interval set in the brace notation the parser round-trips
     assert pt[("quantities", "targets")] == "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
     # generators as approximate ratios (the ~ the grid shows for them), heading the
     # mapping row's quantities column
@@ -172,7 +172,7 @@ def test_plain_text_basis_and_ratio_quantities():
 
 def test_plain_text_mapped_list_is_a_list_of_generator_coord_vectors():
     # each target mapped into generator coords becomes one [ … ] vector, the whole
-    # set wrapped in an outer [ … ] (the mockup's "mapped target-interval list")
+    # set wrapped in an outer [ … ] (the mockup's "mapped target interval list")
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
     assert pt[("mapping", "targets")] == (
         "[[1 0] [1 1] [0 1] [1 -1] [-1 4] [-1 3] [-2 4] [2 -3]]"

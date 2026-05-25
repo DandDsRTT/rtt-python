@@ -27,7 +27,7 @@ from rtt.tuning_ranges import get_generator_tuning_range
 Matrix = tuple[tuple[int, ...], ...]
 
 DEFAULT_TUNING_SCHEME = "TOP"
-DEFAULT_TARGET_SPEC = "TILT"  # the default target-interval set family (tracks the domain)
+DEFAULT_TARGET_SPEC = "TILT"  # the default target interval set family (tracks the domain)
 
 
 @dataclass(frozen=True)
@@ -95,7 +95,7 @@ def standard_primes(d: int) -> tuple[int, ...]:
 
 
 def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
-    """Resolve a target-interval set spec against a domain basis, as ratio strings.
+    """Resolve a target interval set spec against a domain basis, as ratio strings.
 
     ``spec`` selects the family — a truncated integer-limit triangle (``"TILT"`` /
     ``"N-TILT"``) or an odd-limit diamond (``"OLD"`` / ``"N-OLD"``). With no explicit
@@ -238,7 +238,7 @@ def plain_text_values(
 
 
 def _vector_list(matrix: Matrix) -> str:
-    """A list of column vectors ``[[a b] [c d] …]`` — the mapped target-interval
+    """A list of column vectors ``[[a b] [c d] …]`` — the mapped target interval
     list, each target shown in generator coordinates."""
     cols = zip(*matrix)
     return "[" + " ".join("[" + " ".join(str(x) for x in col) + "]" for col in cols) + "]"

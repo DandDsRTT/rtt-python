@@ -9,7 +9,7 @@ three things you actually *choose* (the rest of the grid is derived):
   the same nullspace either way).
 * :data:`TUNING_SCHEMES` — historical tuning-scheme names understood by the
   tuning optimizer (see :data:`rtt.tuning._ORIGINAL_NAME_SCHEMES`).
-* :data:`TARGET_SETS` — target-interval set specs the service can resolve against
+* :data:`TARGET_SETS` — target interval set specs the service can resolve against
   the current domain (see :func:`rtt.web.service.target_interval_set`).
 
 These are deliberately short starter menus; the design intends a fuller curated

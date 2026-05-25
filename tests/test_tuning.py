@@ -31,7 +31,7 @@ TEN_TILT = (
 )
 
 # (optimization_power, damage_weight_slope, log_prime_power [5a], norm_power [4], expected)
-# Mirrors tests.m 2588-2624: meantone optimized over the sixTilt target-interval set
+# Mirrors tests.m 2588-2624: meantone optimized over the sixTilt target interval set
 # across all three powers, three damage-weight slopes, and complexity-trait variants.
 EXPLICIT_CASES = [
     (inf, "unityWeight", 1, 1, (1200.000, 696.578)),

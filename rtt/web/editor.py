@@ -3,7 +3,7 @@
 Holds the current :class:`~rtt.web.service.TemperamentState` plus undo/redo
 stacks, and exposes the user actions (edit either matrix, expand/shrink the
 domain, undo, redo). It also tracks the two view selections that the derived rows
-are shown under — the tuning scheme and the target-interval set spec — which sit
+are shown under — the tuning scheme and the target interval set spec — which sit
 outside undo because they are display choices, not temperament edits. The NiceGUI
 layer is thin glue over this; all of it is unit-testable without a UI.
 """
@@ -19,7 +19,7 @@ INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))  # meantone, matching the original app
 class Editor:
     def __init__(self) -> None:
         self.state: TemperamentState = service.from_mapping(INITIAL_MAPPING)
-        # Display/analysis selections: which tuning scheme and target-interval set
+        # Display/analysis selections: which tuning scheme and target interval set
         # the derived rows are shown under. Unlike the temperament itself, these are
         # view choices (like the Show toggles), so they live outside the undo stack.
         self.tuning_scheme: str = service.DEFAULT_TUNING_SCHEME

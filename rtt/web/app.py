@@ -876,7 +876,7 @@ def index() -> None:
             elif cb.kind == "commacell":
                 inputs[cb.id] = ui.input(on_change=lambda e: on_comma_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "interestcell":  # an editable interval-of-interest monzo component
+            elif cb.kind == "interestcell":  # an editable interval of interest monzo component
                 inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind in ("prime", "static"):  # bordered cell; "static" is read-only (e.g. the identity)

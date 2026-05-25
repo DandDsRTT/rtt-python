@@ -50,7 +50,7 @@ def get_otonal_chord(harmonics: tuple[int, ...]) -> tuple[Fraction, ...]:
 
 
 def process_tilt(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
-    """Resolve a TILT target-interval spec (``"TILT"`` or ``"N-TILT"``) to its quotients.
+    """Resolve a TILT target interval spec (``"TILT"`` or ``"N-TILT"``) to its quotients.
     With no explicit limit, default to the integer just below the next prime past the
     domain basis's greatest numerator."""
     spec = target_spec.replace("truncated integer limit triangle", "TILT")
@@ -63,7 +63,7 @@ def process_tilt(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
 
 
 def process_old(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
-    """Resolve an OLD target-interval spec (``"OLD"`` or ``"N-OLD"``) to its quotients.
+    """Resolve an OLD target interval spec (``"OLD"`` or ``"N-OLD"``) to its quotients.
     With no explicit limit, default to the odd just below the next prime past the domain
     basis's greatest odd part."""
     spec = target_spec.replace("odd limit diamond", "OLD")
