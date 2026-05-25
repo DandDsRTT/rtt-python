@@ -499,12 +499,9 @@ def parse_mapping_state(text: str) -> TemperamentState | None:
     the ``("mapping", "primes")`` plain text, which carries that prefix when nonstandard."""
     try:
         t = parse_temperament_data(text)
-        if t.variance is not Variance.ROW:
+        if t.variance is not Variance.ROW or _int_matrix_or_none(t.matrix) is None:
             return None
-        matrix = _int_matrix_or_none(t.matrix)
-        if matrix is None:
-            return None
-        return from_mapping(matrix, t.domain_basis)
+        return from_temperament_data(text)
     except Exception:
         return None
 
