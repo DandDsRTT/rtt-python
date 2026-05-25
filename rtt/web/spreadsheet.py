@@ -150,24 +150,23 @@ FRAMED_ROWS = frozenset({"mapping", "vectors"})
 CHARTED_ROWS = frozenset({"retune", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 
 # Box-group colorization (the mockup's coloured washes behind the grey tiles): a
-# group's "{group}_colorization" setting, when on, paints a colour wash behind that
-# group's boxes, showing through the gaps around the grey tiles. Per the mockup each
-# group claims both whole ROWS (washed full width) AND whole COLUMNS (washed full
-# height) — temperament is the mapping/interval-vectors rows and the domain
-# (generators/primes/commas) columns; tuning is the tuning-map rows and the
-# target-interval columns. Each group's rows/columns are emitted as ONE continuous
-# band (bridging the +control gutters), and where two groups' bands cross the colours
-# blend: a cyan tuning band over a yellow temperament band darkens to the mockup's
-# green (the tuning maps over the domain primes/commas, the mapped lists over the
-# targets). The renderer maps the group name to its CSS colour.
-COLORIZE_GROUP_ROWS: dict[str, frozenset[str]] = {
-    "temperament": frozenset({"vectors", "mapping"}),
-    "tuning": frozenset({"tuning", "just", "retune", "damage"}),
-}
-COLORIZE_GROUP_COLS: dict[str, frozenset[str]] = {
-    "temperament": frozenset({"gens", "primes", "commas"}),
-    "tuning": frozenset({"targets", "interest"}),
-}
+# group's "{group}_colorization" setting, when on, paints colour behind that group's
+# boxes, showing through the gaps around the grey tiles. The mockup colours specific
+# rectangular regions (not whole rows/columns uniformly), so each entry is
+# ``(group, columns, rows)`` and renders as ONE band — the bounding box of its present
+# columns × rows. TEMPERAMENT (yellow) washes the domain columns down to where their
+# content ends — the generators + quantities spine to the mapping row, the primes/commas
+# to the retuning row — plus the target/interest columns across the tuning rows. TUNING
+# (cyan) washes the tuning-map rows over the prime/comma/target columns. Where a tuning
+# band crosses a temperament band the darken blend yields green (the tuning maps over the
+# domain); the damage row and the interest column never read as plain cyan.
+COLORIZE_REGIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
+    ("temperament", ("quantities", "gens"), ("quantities", "vectors", "mapping")),
+    ("temperament", ("primes", "commas"),
+     ("quantities", "vectors", "mapping", "tuning", "just", "retune")),
+    ("temperament", ("targets", "interest"), ("tuning", "just", "retune")),
+    ("tuning", ("primes", "commas", "targets"), ("tuning", "just", "retune")),
+)
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
 # column): each is a quick menu for one of the things you actually choose, riding
@@ -1082,35 +1081,27 @@ def build(state, settings=None, collapsed=None,
     if gtm_box is not None:
         blocks.append(Block("block:tuning:rangesbox", *gtm_box, boxed=True))
 
-    # Colorization washes. Per the mockup each colorized group fills the whole
-    # background of its rows (ONE full-width band) AND its columns (ONE full-height
-    # band) — single continuous bands, so the +control gutters between columns are
-    # washed too, not skipped. A band is a white base plus the group's colour at
-    # mix-blend-mode:darken (see app.py); the base sits a layer BELOW the colour so
-    # that wherever two groups' colour bands cross, the darken composes the way the
-    # mockup's palette does *regardless of paint order* — a cyan tuning band over a
-    # yellow temperament band darkens to green (the tuning maps over the domain
-    # primes/commas, the mapped lists over the targets). Bands overhang by WASH_PAD and
-    # span the current (possibly folded) extent of their rows/columns.
+    # Colorization washes. Each region in COLORIZE_REGIONS renders as ONE band — the
+    # bounding box of its present columns × rows — drawn as a white base plus the
+    # group's colour at mix-blend-mode:darken (see app.py). The base sits a layer BELOW
+    # the colour (z-index), so wherever two groups' colour bands cross the darken
+    # composes regardless of paint order: a cyan tuning band over a yellow temperament
+    # band darkens to the mockup's green. A band spans the current (possibly folded)
+    # extent of its rows/columns and overhangs by WASH_PAD (bridging the +control gutters).
     if col_x and row_y:
-        full_l = min(col_x.values()) - WASH_PAD
-        full_r = max(col_x[c] + col_w[c] for c in col_x) + WASH_PAD
-        full_t = min(tile_top.values()) - WASH_PAD
-        full_b = max(tile_top[rk] + tile_h[rk] for rk in tile_top) + WASH_PAD
         bands = []  # (id, x, y, w, h, group)
-        for group in sorted(COLORIZE_GROUP_ROWS.keys() | COLORIZE_GROUP_COLS.keys()):
+        for idx, (group, rcols, rrows) in enumerate(COLORIZE_REGIONS):
             if not settings.get(f"{group}_colorization"):
                 continue
-            grows = [rk for rk in COLORIZE_GROUP_ROWS.get(group, ()) if rk in row_y]
-            if grows:  # one full-width band spanning the group's rows
-                top = min(tile_top[rk] for rk in grows) - WASH_PAD
-                bot = max(tile_top[rk] + tile_h[rk] for rk in grows) + WASH_PAD
-                bands.append((f"row:{group}", full_l, top, full_r - full_l, bot - top, group))
-            gcols = [ck for ck in COLORIZE_GROUP_COLS.get(group, ()) if ck in col_x]
-            if gcols:  # one full-height band spanning the group's columns
-                lft = min(col_x[ck] for ck in gcols) - WASH_PAD
-                rgt = max(col_x[ck] + col_w[ck] for ck in gcols) + WASH_PAD
-                bands.append((f"col:{group}", lft, full_t, rgt - lft, full_b - full_t, group))
+            cs = [c for c in rcols if c in col_x]
+            rs = [r for r in rrows if r in row_y]
+            if not cs or not rs:
+                continue
+            x0 = min(col_x[c] for c in cs) - WASH_PAD
+            x1 = max(col_x[c] + col_w[c] for c in cs) + WASH_PAD
+            y0 = min(tile_top[r] for r in rs) - WASH_PAD
+            y1 = max(tile_top[r] + tile_h[r] for r in rs) + WASH_PAD
+            bands.append((f"{group}:{idx}", x0, y0, x1 - x0, y1 - y0, group))
         for bid, x, y, w, h, _ in bands:  # white bases (a layer below the colour bands)
             blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
         for bid, x, y, w, h, group in bands:  # the darken colour bands over them
