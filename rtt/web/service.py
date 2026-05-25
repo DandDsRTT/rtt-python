@@ -27,7 +27,7 @@ from rtt.tuning_ranges import get_generator_tuning_range
 
 Matrix = tuple[tuple[int, ...], ...]
 
-DEFAULT_TUNING_SCHEME = "TOP"
+DEFAULT_TUNING_SCHEME = "minimax-S"  # systematic name for TOP (the as-shipped scheme)
 DEFAULT_TARGET_SPEC = "TILT"  # the default target interval set family (tracks the domain)
 
 

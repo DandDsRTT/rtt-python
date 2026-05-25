@@ -43,6 +43,7 @@ CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mocku
 CAPTION_LINE = 10  # px per wrapped caption line (font size + leading); == .rtt-caption line-height
 PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
+TARGET_PRESELECT_W = 156  # wider: the target chooser also seats a numeric limit field
 PTEXT_FONT = 9  # px font of the plain-text value (small, like the caption; the CSS must match)
 PTEXT_LINE = 11  # px per wrapped read-only plain-text line — the band grows by lines so it never spills
 PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch taller than a text line)
@@ -1064,7 +1065,7 @@ def build(state, settings=None, collapsed=None,
                 py += SYMBOL_H
             if show_captions and (rkey, ckey) in CAPTIONS:
                 py += row_cap[rkey]
-            pw = min(col_w[ckey], PRESELECT_W)
+            pw = min(col_w[ckey], TARGET_PRESELECT_W if name == "target" else PRESELECT_W)
             cells.append(CellBox(f"preselect:{name}", col_x[ckey], py, pw, PRESELECT_H, "preselect", text=preselect_text[name]))
 
     # plain-text value band: each tile's value as its natural EBK string, below the

@@ -639,6 +639,13 @@ def test_preselect_dropdown_clears_the_row_below_it():
     assert drop.y + drop.h <= next_row.y  # the reserved band keeps it off the next row
 
 
+def test_target_chooser_is_wider_to_seat_its_numeric_override():
+    # the target chooser carries a numeric limit field beside the TILT/OLD select,
+    # so it reserves more width than the single-control tuning chooser
+    cells = {c.id: c for c in _with(preselects=True).cells}
+    assert cells["preselect:target"].w > cells["preselect:tuning"].w
+
+
 def test_build_honors_the_target_interval_spec():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5
     tilt = {c.text for c in spreadsheet.build(base, target_spec="TILT").cells if c.id.startswith("target:")}

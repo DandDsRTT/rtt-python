@@ -11,14 +11,24 @@ in-process; domain expand/shrink and undo are available. No HTTP layer.
 from __future__ import annotations
 
 import math
+import re
 from html import escape as _escape
 
 from nicegui import ui
 
 from rtt.web import presets
+from rtt.web import service
 from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
 from rtt.web.editor import Editor
+
+
+def _split_target_spec(spec: str) -> tuple[str, str]:
+    """Split a target spec into its optional numeric limit and family: ``"9-TILT"``
+    -> ``("9", "TILT")``, ``"OLD"`` -> ``("", "OLD")``. Drives the target chooser's
+    number field + TILT/OLD select."""
+    match = re.match(r"(\d*)-?(TILT|OLD)", spec or "")
+    return (match.group(1), match.group(2)) if match else ("", "TILT")
 
 _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
@@ -194,6 +204,17 @@ _CSS = f"""
             font-family:'Cambria',Georgia,serif; }}
 .rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append {{ height:20px; min-height:0 !important; }}
 .rtt-preselect .q-icon {{ font-size:15px; color:#555; }}
+/* the target chooser pairs a numeric limit override with the TILT/OLD family select */
+.rtt-preselect-target {{ width:100%; height:20px; display:flex; gap:3px; align-items:center; }}
+.rtt-preselect-target .rtt-preselect-num {{ flex:0 0 44px; }}
+.rtt-preselect-target .rtt-preselect {{ flex:1 1 auto; width:auto; }}
+.rtt-preselect-num .q-field__control {{ min-height:0 !important; height:20px;
+            background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 5px; }}
+.rtt-preselect-num .q-field__control::before, .rtt-preselect-num .q-field__control::after {{ display:none !important; }}
+.rtt-preselect-num .q-field__native {{ font-size:11px; color:#000; min-height:0 !important; padding:0;
+            line-height:20px; font-family:'Cambria',Georgia,serif; }}
+.rtt-preselect-num .q-field__native::-webkit-inner-spin-button {{ -webkit-appearance:none; margin:0; }}
+.rtt-preselect-num .q-field__marginal, .rtt-preselect-num .q-field__append {{ display:none !important; }}
 /* the monotone/tradeoff range selector under the ranges chart: two compact radios
    stacked vertically (the generators column is too narrow for them side by side),
    with small dots and small Cambria labels */
@@ -776,7 +797,6 @@ def index() -> None:
     selects: dict = {}  # preselect cell id -> its q-select
     ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
     radios: dict = {}  # range-mode cell id -> its q-radio (monotone / tradeoff)
-    temperaments = dict(presets.TEMPERAMENTS)  # name -> defining comma basis
     captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
     math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
@@ -866,17 +886,35 @@ def index() -> None:
         render()  # the reconciling renderer animates the affected rows/columns in or out
 
     def on_preselect(name, value):
-        # the temperament chooser loads a mapping (an undoable edit); the tuning and
-        # target choosers set the view selections. A programmatic reset to None (after
-        # a temperament load) or a re-render echo is ignored via building/None guards.
-        if building[0] or value is None:
+        # the temperament chooser loads a mapping (an undoable edit); the tuning chooser
+        # sets the view scheme. A re-render echo is ignored via the building guard.
+        if building[0]:
             return
         if name == "temperament":
-            editor.edit_comma_basis(temperaments[value])
-        elif name == "tuning":
+            if value in presets.TEMPERAMENT_COMMAS:
+                editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
+            render()  # inert divider rows re-render too, snapping back to the live temperament
+        elif name == "tuning" and value is not None:
             editor.set_tuning_scheme(value)
-        elif name == "target":
-            editor.set_target_spec(value)
+            render()
+
+    def on_target_change():
+        # the target chooser is a numeric limit + a TILT/OLD family; compose them into
+        # a spec ("9-TILT", or just "TILT" when the limit is blank). An incomplete or
+        # out-of-range limit (one that resolves to no intervals) is held without
+        # disturbing the grid, mirroring how a half-typed mapping cell is ignored.
+        if building[0]:
+            return
+        num, sel = selects["preselect:target"]
+        family = sel.value or "TILT"
+        spec = f"{int(num.value)}-{family}" if num.value else family
+        try:
+            valid = bool(service.target_interval_set(spec, service.standard_primes(editor.state.d)))
+        except Exception:
+            valid = False
+        if not valid:
+            return
+        editor.set_target_spec(spec)
         render()
 
     def on_range_mode(value):
@@ -952,15 +990,27 @@ def index() -> None:
                 captions[cb.id] = ui.html("").classes("rtt-caption")  # content set in render()
             elif cb.kind == "preselect":
                 name = cb.id.split(":", 1)[1]  # temperament / tuning / target
-                if name == "temperament":
-                    opts, value, label = list(temperaments), None, "choose temperament"
-                elif name == "tuning":
-                    opts, value, label = list(presets.TUNING_SCHEMES), editor.tuning_scheme, None
-                else:  # target
-                    opts, value, label = list(presets.TARGET_SETS), editor.target_spec, None
-                selects[cb.id] = ui.select(opts, value=value, label=label,
-                        on_change=lambda e, n=name: on_preselect(n, e.value)) \
-                    .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
+                if name == "target":
+                    # a numeric limit override beside the TILT/OLD family select
+                    limit, family = _split_target_spec(cb.text)
+                    with ui.element("div").classes("rtt-preselect-target"):
+                        num = ui.number(value=int(limit) if limit else None, min=2,
+                                placeholder="auto", on_change=lambda e: on_target_change()) \
+                            .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
+                        sel = ui.select(list(presets.TARGET_SETS), value=family,
+                                on_change=lambda e: on_target_change()) \
+                            .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
+                    selects[cb.id] = (num, sel)
+                elif name == "temperament":
+                    # grouped by prime limit; shows the matched preset (or its placeholder)
+                    selects[cb.id] = ui.select(presets.temperament_options(),
+                            value=presets.identify(editor.state), label="choose temperament",
+                            on_change=lambda e: on_preselect("temperament", e.value)) \
+                        .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
+                else:  # tuning — systematic scheme names
+                    selects[cb.id] = ui.select(list(presets.TUNING_SCHEMES), value=editor.tuning_scheme,
+                            on_change=lambda e: on_preselect("tuning", e.value)) \
+                        .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
             elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
                 labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
             elif cb.kind == "ptextedit":  # an editable dual: typing a valid EBK string drives the grid
@@ -1114,9 +1164,18 @@ def index() -> None:
                 cents[cb.id][0].set_text(whole)
                 cents[cb.id][1].set_text(f".{frac}" if frac else "")
             elif cb.kind == "preselect":
-                # mirror the live selection (tuning/target); "" leaves the temperament
-                # chooser on its placeholder. building[0] guards on_change from echoing.
-                selects[cb.id].value = cb.text or None
+                # mirror the live selection: the temperament chooser shows the matched
+                # preset (or its placeholder), the target chooser splits into limit +
+                # family, the tuning chooser shows its scheme. building[0] guards echoes.
+                if cb.id == "preselect:temperament":
+                    selects[cb.id].value = presets.identify(editor.state)
+                elif cb.id == "preselect:target":
+                    num, sel = selects[cb.id]
+                    limit, family = _split_target_spec(cb.text)
+                    num.value = int(limit) if limit else None
+                    sel.value = family
+                else:  # tuning
+                    selects[cb.id].value = cb.text or None
             elif cb.kind in ("symbol", "count", "optimization"):  # math-styled text: symbols, their
                 html = _math_html(cb.text)        # equivalence tails, the counts' and power's italic variables
                 if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
