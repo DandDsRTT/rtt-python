@@ -82,7 +82,7 @@ _RANGE_FONT = 7  # cents-label / placeholder font size
 # Colorization wash colours, keyed by the box-group name the layout tags a wash with
 # (spreadsheet.COLORIZE_GROUP_ROWS). These are the mockup's saturated box-group tones;
 # a wash sits behind the grey tiles so the colour reads through the gaps around them.
-_TINTS = {"tuning": "#9acdcd"}  # cyan — the tuning/just/retuning/damage boxes
+_TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a"}  # cyan tuning rows, khaki temperament columns
 
 _CSS = f"""
 /* the app title tile in the top-left: the name over square undo/redo buttons, on a
@@ -731,8 +731,8 @@ def _example_html(key: str) -> str:
     if key == "quantities":  # a generic quantity over its size: 1 above .585
         return ('<span style="display:inline-flex;flex-direction:column;align-items:center;'
                 'line-height:1.05"><span>1</span><span style="font-size:9px">.585</span></span>')
-    if key in ("temperament_colorization", "tuning_colorization"):  # a colour swatch
-        color = "#e2e08c" if key == "temperament_colorization" else "#bfe7e4"
+    if key in ("temperament_colorization", "tuning_colorization"):  # a swatch of the wash colour
+        color = _TINTS[key.split("_")[0]]  # one source of truth: the swatch == the actual wash
         return f'<span style="display:inline-block;width:36px;height:14px;background:{color}"></span>'
     if key == "tuning_ranges":  # the tuning-range I-beam (min/max generator bars)
         return ('<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'

@@ -190,9 +190,10 @@ def test_example_html_renders_each_special_sample_kind():
     assert "<svg" in app._example_html("charts")  # the little sparkline
     assert "<u>" in app._example_html("mnemonics")  # underlined mnemonic letters
     assert "▼" in app._example_html("preselects")  # the dropdown caret
-    # the stubbed box subcontrols: colorization is a colour swatch, tuning ranges an I-beam
-    assert "background:#" in app._example_html("temperament_colorization")
-    assert "background:#" in app._example_html("tuning_colorization")
+    # the colorization subcontrols preview a swatch of their actual wash colour (one
+    # source of truth with _TINTS); tuning ranges previews an I-beam
+    assert app._TINTS["temperament"] in app._example_html("temperament_colorization")
+    assert app._TINTS["tuning"] in app._example_html("tuning_colorization")
     assert "<svg" in app._example_html("tuning_ranges")  # the min/max I-beam
 
 

@@ -1743,3 +1743,46 @@ def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
     assert on["symbol:mapping:commas"].text == "𝑀C = 𝑂"
     # the damage weight w is bold-italic (matching the maps), not bold-upright
     assert on["symbol:damage:targets"].text == "𝐝 = |𝐞|diag(𝒘)"
+
+
+def test_temperament_colorization_washes_the_temperament_columns():
+    # temperament is a COLUMN group (the mockup washes the domain primes / generators /
+    # commas columns yellow, full height): one full-height wash + white base per column
+    ids = {b.id for b in _with(temperament_colorization=True).blocks}
+    assert {"wash:col:gens", "wash:col:primes", "wash:col:commas"} <= ids
+    assert {"washbase:col:gens", "washbase:col:primes", "washbase:col:commas"} <= ids
+
+
+def test_a_temperament_column_wash_is_a_full_height_band_over_a_white_base():
+    lay = _with(temperament_colorization=True)
+    blocks = {b.id: b for b in lay.blocks}
+    cells = {c.id: c for c in lay.cells}
+    wash, base = blocks["wash:col:primes"], blocks["washbase:col:primes"]
+    assert wash.tint == "temperament"  # the colour layer (renderer → khaki, drawn darken)
+    assert base.tint == "base"  # the white base it darkens over
+    assert (base.x, base.y, base.w, base.h) == (wash.x, wash.y, wash.w, wash.h)  # coincident
+    # the band runs the full row height (above the topmost tile, below the bottommost)
+    tiles = [b for b in lay.blocks if b.id.startswith("block:")]
+    assert wash.y <= min(t.y for t in tiles) and wash.y + wash.h >= max(t.y + t.h for t in tiles)
+    # but only the primes column's width — it brackets the primes header, and is
+    # narrower than the whole grid (a column band, not a full-width row band)
+    hp = cells["header:primes"]
+    assert wash.x <= hp.x and wash.x + wash.w >= hp.x + hp.w
+    assert wash.w < max(t.x + t.w for t in tiles) - min(t.x for t in tiles)
+
+
+def test_tuning_rows_and_temperament_columns_cross_to_blend_green():
+    # both on: a cyan tuning ROW band and a yellow temperament COLUMN band overlap at the
+    # tuning-map-over-primes cell, where the renderer's darken blends them to the mockup's
+    # green. Assert the two bands' rectangles actually intersect (the colour is a CSS blend).
+    blocks = {b.id: b for b in _with(tuning_colorization=True, temperament_colorization=True).blocks}
+    row, col = blocks["wash:tuning"], blocks["wash:col:primes"]
+    assert row.x < col.x + col.w and col.x < row.x + row.w  # x ranges overlap
+    assert row.y < col.y + col.h and col.y < row.y + row.h  # y ranges overlap
+
+
+def test_temperament_colorization_off_by_default_and_scoped_to_its_columns():
+    assert not any(b.id.startswith(("wash:col:", "washbase:col:")) for b in _layout().blocks)
+    cols = {b.id.split(":")[2] for b in _with(temperament_colorization=True).blocks
+            if b.id.startswith("wash:col:")}
+    assert cols == {"gens", "primes", "commas"}
