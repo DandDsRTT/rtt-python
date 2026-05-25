@@ -675,10 +675,22 @@ def test_plain_text_values_adds_a_string_band_under_each_tile():
     assert not any(c.startswith("ptext:") for c in off)  # off by default
     # each value group gets its natural plain-text form (from the service seam)
     assert on["ptext:mapping:primes"].text == "[⟨1 1 0] ⟨0 1 4]}"
-    assert on["ptext:mapping:targets"].text.startswith("[[1 0]")
+    assert on["ptext:mapping:targets"].text.startswith("[[1 0}")  # generator-coord vectors (close })
+    assert on["ptext:vectors:commas"].text == "[[4 -4 1⟩]"  # comma basis: monzo list, outer [ ]
+    assert on["ptext:vectors:primes"].text.startswith("[[1 0 0⟩")  # the interval-vectors row
     assert on["ptext:quantities:primes"].text == "2.3.5"
     assert on["ptext:tuning:primes"].text.startswith("⟨")  # a tuning map
-    assert on["ptext:damage:targets"].text.startswith("[")  # a target list
+
+
+def test_quantities_ratios_get_per_column_plain_text_below_each_ratio():
+    cells = {c.id: c for c in _with(plain_text_values=True).cells}
+    # the target ratios get one inline "n/d" per column, directly below each ratio cell
+    assert cells["ptext:quantities:targets:0"].text == "2/1"
+    assert cells["ptext:quantities:targets:2"].text == "3/2"
+    assert cells["ptext:quantities:commas:0"].text == "80/81"
+    # each sits in its own column, aligned under the ratio above it
+    assert cells["ptext:quantities:targets:0"].x == cells["target:0"].x
+    assert cells["ptext:quantities:targets:0"].y > cells["target:0"].y
 
 
 def test_plain_text_band_sits_below_the_caption_spanning_its_column():
@@ -716,13 +728,16 @@ def test_only_the_editable_duals_render_as_input_plain_text():
         assert cells[cid].kind == "ptext"
 
 
-def test_a_long_plain_text_value_wraps_within_its_column_instead_of_spilling():
+def test_plain_text_values_are_a_single_line_within_their_column():
     cells = {c.id: c for c in _with(plain_text_values=True).cells}
-    pt, header = cells["ptext:tuning:targets"], cells["header:targets"]
-    assert pt.w == header.w  # the box spans exactly its column — never wider, so it can't spill
-    assert pt.h > spreadsheet.PTEXT_LINE  # the long size list wraps to more than one line...
-    assert pt.h % spreadsheet.PTEXT_LINE == 0  # ...a whole number of lines, the tile grown to fit
-    assert cells["ptext:quantities:primes"].h == spreadsheet.PTEXT_LINE  # a short value (2.3.5) stays one line
+    # every read-only value is one line tall and no wider than its column — the app
+    # shrinks the font to fit, so a long tuning row never wraps or spills
+    long, header = cells["ptext:tuning:targets"], cells["header:targets"]
+    assert long.h == spreadsheet.PTEXT_H  # one line, even for the longest size list...
+    assert long.w == header.w  # ...spanning exactly its column, never wider
+    assert cells["ptext:just:targets"].h == spreadsheet.PTEXT_H
+    # the editable duals are one (slightly taller) input line
+    assert cells["ptext:mapping:primes"].h == spreadsheet.PTEXT_EDIT_H
 
 
 def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():

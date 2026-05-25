@@ -165,20 +165,19 @@ _CSS = f"""
    so it reads instead of hiding under the glyph */
 .rtt-caption u.rtt-desc {{ text-underline-position:under; }}
 .rtt-count {{ font-size:16px; color:#000; white-space:nowrap; }}
-/* a read-only plain-text value: small serif text that wraps within its column and
-   fills the cell (the tile is grown to hold every wrapped line, so it never spills).
-   No box — only the editable duals look like inputs. */
-.rtt-ptext {{ width:100%; height:100%; text-align:center; font-size:{spreadsheet.PTEXT_FONT}px;
-             line-height:{spreadsheet.PTEXT_LINE}px; color:#000; overflow-wrap:break-word;
-             white-space:normal; font-family:'Cambria',Georgia,serif; }}
+/* a read-only plain-text value: serif text on ONE line, no box. Its font-size is set
+   inline per box (shrunk to fit its column), so a long value never wraps or spills. */
+.rtt-ptext {{ width:100%; text-align:center; color:#000; white-space:nowrap; line-height:1;
+             font-family:'Cambria',Georgia,serif; }}
 /* the two editable duals (mapping, comma basis): a white bordered input filling its
-   cell; an unparseable entry turns the border red (rtt-ptext-error) and is not applied */
+   cell; an unparseable entry turns the border red (rtt-ptext-error) and is not applied.
+   Its font-size is set inline per box too, so the value stays on one line. */
 .rtt-ptextedit {{ width:100%; height:100%; }}
 .rtt-ptextedit .q-field__control {{ min-height:0 !important; height:100%;
             background:#fff; border:1px solid #888; border-radius:2px; padding:0 3px; }}
 .rtt-ptextedit .q-field__control::before, .rtt-ptextedit .q-field__control::after {{ display:none !important; }}
-.rtt-ptextedit .q-field__native {{ font-size:{spreadsheet.PTEXT_FONT}px; color:#000; min-height:0 !important;
-            padding:0; line-height:{spreadsheet.PTEXT_EDIT_H}px; text-align:center;
+.rtt-ptextedit .q-field__native {{ color:#000; min-height:0 !important; padding:0; text-align:center;
+            line-height:{spreadsheet.PTEXT_EDIT_H}px; white-space:nowrap; font-size:inherit !important;
             font-family:'Cambria',Georgia,serif; }}
 .rtt-ptextedit .q-field__marginal, .rtt-ptextedit .q-field__bottom {{ display:none !important; }}
 .rtt-ptextedit.rtt-ptext-error .q-field__control {{ border-color:#d33; }}
@@ -311,7 +310,7 @@ _CSS = f"""
 """
 
 _LABEL_KINDS = {"prime", "static", "colheader", "rowlabel", "mapped", "vec",
-                "rowtoggle", "coltoggle", "tiletoggle", "alltoggle", "ptext"}
+                "rowtoggle", "coltoggle", "tiletoggle", "alltoggle"}  # "ptext" has its own font-sync branch
 
 # A math-expression cell stacks 1–2 lines ("1200 · log₂(3/2)" over "= 701.96") in a
 # narrow value square, so each line's font is scaled down to fit the cell width.
@@ -320,12 +319,15 @@ _EXPR_MIN_FONT = 3.5  # px — the floor for the longest target-ratio expression
 _EXPR_CHAR_W = 0.5  # a glyph's width as a fraction of font size (serif average), for the fit
 
 
-def _fit_font(line: str, width: float) -> float:
-    """Largest font (capped) at which ``line`` fits ``width`` px on one line."""
+def _fit_font(line: str, width: float, max_font: float = _EXPR_MAX_FONT,
+              min_font: float = _EXPR_MIN_FONT, char_w: float = _EXPR_CHAR_W) -> float:
+    """Largest font (capped at ``max_font``, floored at ``min_font``) at which ``line``
+    fits ``width`` px on one line. Shared by the math-expression cells and the
+    plain-text value boxes (which pass their own bounds)."""
     if not line:
-        return _EXPR_MAX_FONT
-    fit = (width - 2) / (len(line) * _EXPR_CHAR_W)
-    return max(_EXPR_MIN_FONT, min(_EXPR_MAX_FONT, fit))
+        return max_font
+    fit = (width - 2) / (len(line) * char_w)
+    return max(min_font, min(max_font, fit))
 
 
 def _mathexpr_html(text: str, width: float) -> str:
@@ -613,6 +615,14 @@ def _cents_parts(text):
     """Split a cents value like ``"1899.260"`` into a big whole part and small fraction."""
     whole, _, frac = str(text).partition(".")
     return whole, frac
+
+
+def _ptext_font(text, width):
+    """The largest font (px, capped at PTEXT_MAX_FONT) at which ``text`` still fits on
+    ONE line within a ``width``-px box — so a long value (a tuning row) shrinks rather
+    than wrapping or spilling. Shares _fit_font with the math cells, at the plain-text
+    bounds (0.58·font is a conservative serif estimate for digit-dense EBK strings)."""
+    return round(_fit_font(text, width, max_font=spreadsheet.PTEXT_MAX_FONT, min_font=5.0, char_w=0.58), 1)
 
 
 _DESCENDERS = "gjpqy"  # letters whose tail dips below the baseline
@@ -1148,8 +1158,12 @@ def index() -> None:
                                       remove="" if cb.pending else "rtt-pending")
             elif cb.kind == "interestcell":
                 inputs[cb.id].value = cb.text  # the normalized monzo component build computed
-            elif cb.kind == "ptextedit":  # reflect the canonical string after a valid edit
+            elif cb.kind == "ptext":  # read-only value: keep its text and shrink-to-fit font in sync
+                labels[cb.id].set_text(cb.text)
+                labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
+            elif cb.kind == "ptextedit":  # reflect the canonical string + its shrink-to-fit font
                 ptext_inputs[cb.id].value = cb.text
+                ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
             elif cb.kind == "mathexpr":
                 # redraw (with refit fonts) whenever the expression text or cell width changes
                 if expr_state.get(cb.id) != (cb.text, cb.w):

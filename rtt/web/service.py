@@ -215,22 +215,25 @@ def plain_text_values(
     gens = generators(state.mapping)
     mapped = mapped_intervals(state.mapping, targets)
     mapped_comma = mapped_commas(state.mapping, state.comma_basis)
+    domain_basis = tuple(tuple(1 if i == p else 0 for i in range(state.d)) for p in range(state.d))
+    target_monzos = target_interval_monzos(targets, state.d)
     tun = tuning(state.mapping, scheme)  # prime maps, shared by both interval sets
     target_sizes = interval_sizes(tun, targets)
     comma_sizes = interval_sizes(tun, commas)  # comma sizes, like the grid's commas column
-    # Keyed by the tile each value group occupies: the editable duals are the mapping
-    # (a covector matrix, in the mapping row) and the comma basis (a monzo matrix, in
-    # the interval-vectors row); the rest are derived. The generator ratios head the
-    # mapping row's quantities column.
+    # Keyed by the tile each value group occupies. The interval-vectors row holds the
+    # monzo lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
+    # and the mapped lists (generator-coordinate vectors, close }). The editable duals
+    # are the mapping (mapping/primes) and the comma basis (vectors/commas). The
+    # quantities-row ratios get a per-column plain text in the layout, not here.
     return {
         ("quantities", "primes"): ".".join(str(p) for p in primes),
-        ("quantities", "commas"): "{" + ", ".join(commas) + "}",
-        ("quantities", "targets"): "{" + ", ".join(targets) + "}",
         ("mapping", "quantities"): "[" + ", ".join(f"~{g}" for g in gens) + "]",
-        ("vectors", "commas"): to_ebk(Temperament(state.comma_basis, Variance.COL)),
+        ("vectors", "primes"): _ket_list(domain_basis, "⟩"),
+        ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
+        ("vectors", "targets"): _ket_list(target_monzos, "⟩"),
         ("mapping", "primes"): to_ebk(Temperament(state.mapping, Variance.ROW)),
-        ("mapping", "commas"): _vector_list(mapped_comma),
-        ("mapping", "targets"): _vector_list(mapped),
+        ("mapping", "commas"): _ket_list(zip(*mapped_comma), "}"),
+        ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
         ("tuning", "commas"): _cents_list(comma_sizes.tempered),
         ("tuning", "targets"): _cents_list(target_sizes.tempered),
@@ -244,11 +247,11 @@ def plain_text_values(
     }
 
 
-def _vector_list(matrix: Matrix) -> str:
-    """A list of column vectors ``[[a b] [c d] …]`` — the mapped target interval
-    list, each target shown in generator coordinates."""
-    cols = zip(*matrix)
-    return "[" + " ".join("[" + " ".join(str(x) for x in col) + "]" for col in cols) + "]"
+def _ket_list(vectors, close: str) -> str:
+    """A bracketed list of column vectors: ``[[1 0 0⟩ [0 1 0⟩]`` for monzos (close
+    ``⟩``), ``[[1 0} [0 1}]`` for generator-coordinate vectors (close ``}``). The
+    outer ``[ ]`` wraps the whole list (even a single vector)."""
+    return "[" + " ".join("[" + " ".join(str(x) for x in v) + close for v in vectors) + "]"
 
 
 def cents(value: float) -> str:

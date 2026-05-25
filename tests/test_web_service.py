@@ -167,19 +167,29 @@ def test_plain_text_mapping_is_the_ebk_string():
 def test_plain_text_basis_and_ratio_quantities():
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
     assert pt[("quantities", "primes")] == "2.3.5"  # the domain basis, dot notation
-    # the target interval set in the brace notation the parser round-trips
-    assert pt[("quantities", "targets")] == "{2/1, 3/1, 3/2, 4/3, 5/2, 5/3, 5/4, 6/5}"
     # generators as approximate ratios (the ~ the grid shows for them), heading the
     # mapping row's quantities column
     assert pt[("mapping", "quantities")] == "[~2/1, ~3/2]"
+    # the per-ratio quantity sets (commas, targets) are placed per column by the
+    # layout, directly below each ratio — they are not packed into one brace-set here
+    assert ("quantities", "commas") not in pt
+    assert ("quantities", "targets") not in pt
+
+
+def test_plain_text_interval_vectors_are_monzo_lists():
+    # the interval-vectors row shows each basis as a list of monzos (close ⟩),
+    # wrapped in an outer [ … ]
+    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
+    assert pt[("vectors", "primes")] == "[[1 0 0⟩ [0 1 0⟩ [0 0 1⟩]"  # domain basis = identity
+    assert pt[("vectors", "targets")].startswith("[[1 0 0⟩ [0 1 0⟩ [-1 1 0⟩")  # target monzos
 
 
 def test_plain_text_mapped_list_is_a_list_of_generator_coord_vectors():
-    # each target mapped into generator coords becomes one [ … ] vector, the whole
-    # set wrapped in an outer [ … ] (the mockup's "mapped target interval list")
+    # each target mapped into generator coords becomes one [ … } vector (the } marks
+    # generator coordinates), the whole set wrapped in an outer [ … ]
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
     assert pt[("mapping", "targets")] == (
-        "[[1 0] [1 1] [0 1] [1 -1] [-1 4] [-1 3] [-2 4] [2 -3]]"
+        "[[1 0} [1 1} [0 1} [1 -1} [-1 4} [-1 3} [-2 4} [2 -3}]"
     )
 
 
@@ -214,11 +224,12 @@ def test_plain_text_commas_column_mirrors_the_grid():
     def cents(vals):
         return " ".join(f"{v:.3f}" for v in vals)
 
-    assert pt[("quantities", "commas")] == "{" + ", ".join(commas) + "}"  # the comma set
-    # the comma basis (the editable monzo matrix) lives in the interval-vectors row
-    assert pt[("vectors", "commas")] == "[4 -4 1⟩"
-    # the mapping row's commas tile is the mapped comma list — every comma vanishes
-    assert pt[("mapping", "commas")] == "[[0 0]]"
+    # the comma basis (the editable monzo matrix) lives in the interval-vectors row,
+    # a list of monzos wrapped in an outer [ … ]
+    assert pt[("vectors", "commas")] == "[[4 -4 1⟩]"
+    # the mapping row's commas tile is the mapped comma list — every comma vanishes,
+    # shown in generator coords (close })
+    assert pt[("mapping", "commas")] == "[[0 0}]"
     # comma sizes are lists over the commas, like the grid's column
     assert pt[("tuning", "commas")] == f"[{cents(sizes.tempered)}]"
     assert pt[("just", "commas")] == f"[{cents(sizes.just)}]"

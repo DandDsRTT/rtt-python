@@ -45,8 +45,9 @@ CAPTION_LINE = 10  # px per wrapped caption line (font size + leading); == .rtt-
 PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 TARGET_PRESELECT_W = 156  # wider: the target chooser also seats a numeric limit field
-PTEXT_FONT = 9  # px font of the plain-text value (small, like the caption; the CSS must match)
-PTEXT_LINE = 11  # px per wrapped read-only plain-text line — the band grows by lines so it never spills
+PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
+# always fits on ONE line within its column (a long tuning row just gets smaller text)
+PTEXT_H = 13  # px height of a one-line read-only plain-text value
 PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch taller than a text line)
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
@@ -230,6 +231,10 @@ TILES = (
 # the two duals the grid itself lets you type into: the mapping (mapping/primes)
 # and the comma basis (vectors/commas). Every other plain-text value is read-only.
 EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas")})
+EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band holds an input
+# Rows that carry a plain-text band (every value row; the counts row has none). The
+# quantities row's ratios are placed per column, the rest as one EBK string per tile.
+PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "retune", "damage"})
 
 # Cell kinds the value-display toggles filter out. "gridded values" hides
 # everything a tile holds besides its fold toggle, name caption and plain-text
@@ -539,19 +544,15 @@ def build(state, settings=None, collapsed=None,
 
     ptext_strings = service.plain_text_values(state, tuning_scheme, target_spec) if show_ptext else {}
 
-    def ptext_height(rkey, ckey):  # an editable input is a fixed box; a read-only value wraps
-        if (rkey, ckey) in EDITABLE_PTEXT:
-            return PTEXT_EDIT_H
-        return _wrap_lines(ptext_strings[(rkey, ckey)], col_w[ckey], PTEXT_FONT) * PTEXT_LINE
+    def ptext_height(rkey, ckey):  # one line; the app shrinks the font to fit the box width
+        return PTEXT_EDIT_H if (rkey, ckey) in EDITABLE_PTEXT else PTEXT_H
 
     def ptext_band(key, folded):
-        # like the caption band, sized to its tallest tile so a long EBK string wraps
-        # within its own tile instead of spilling past the grid
-        if not (show_ptext and not folded):
+        # a single-line band for every value row's plain text (taller for the rows whose
+        # band holds an editable input); the font auto-fits so nothing wraps or spills
+        if not (show_ptext and key in PTEXT_ROWS and not folded):
             return 0
-        hs = [ptext_height(key, c) for c in col_x
-              if (key, c) in ptext_strings and col_open(c) and f"tile:{key}:{c}" not in collapsed]
-        return max(hs, default=0)
+        return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
     y = rows_top_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
@@ -1067,16 +1068,25 @@ def build(state, settings=None, collapsed=None,
     # plain-text value band: each tile's value as its natural EBK string, below the
     # caption/preselect bands (the same numbers the grid shows, written inline). The
     # two editable duals (mapping, comma basis) render as inputs that drive the grid;
-    # every other value is read-only. A read-only value wraps to as many lines as it
-    # needs and the tile grows to hold them, so nothing spills past its column.
+    # every other value is read-only. The app shrinks each box's font so the value
+    # always fits on one line, so nothing wraps or spills past its column.
+    def ptext_band_y(rkey):
+        return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_pre[rkey]
+
     if show_ptext:
         for (rkey, ckey), text in ptext_strings.items():
             if not tile_open(rkey, ckey):
                 continue
-            py = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_pre[rkey]
             kind = "ptextedit" if (rkey, ckey) in EDITABLE_PTEXT else "ptext"
-            h = ptext_height(rkey, ckey)
-            cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], py, col_w[ckey], h, kind, text=text))
+            cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], ptext_band_y(rkey),
+                                 col_w[ckey], ptext_height(rkey, ckey), kind, text=text))
+        # the quantities-row ratios get their plain text per column, directly below
+        # each ratio (the mockup), one inline "n/d" per cell — not packed into a set
+        for ckey, left, ratios in (("commas", comma_left, comma_ratios), ("targets", target_left, targets)):
+            if tile_open("quantities", ckey):
+                qy = ptext_band_y("quantities")
+                for i, ratio in enumerate(ratios):
+                    cells.append(CellBox(f"ptext:quantities:{ckey}:{i}", left(i), qy, COL_W, PTEXT_H, "ptext", text=ratio))
 
     # a framed matrix's top bracket + bottom brace stand off the cells by FRAME_GAP:
     # the top bracket just above row 0 (below the toggle head), the brace a matching
