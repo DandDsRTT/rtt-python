@@ -268,6 +268,9 @@ _CSS = f"""
 .rtt-show-sub .rtt-show-item {{ margin-left:18px; }}
 .rtt-ex-cell {{ font-family:'Cambria',Georgia,serif; font-size:14px; color:#000;
                display:flex; align-items:center; min-height:24px; }}
+/* a disabled toggle's sample greys to match its label — color for the glyph examples,
+   plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
+.rtt-ex-cell.rtt-ex-disabled {{ color:#999; opacity:0.75; }}
 .rtt-ex {{ white-space:nowrap; }}
 """
 
@@ -1126,9 +1129,10 @@ def index() -> None:
                             box = ui.checkbox(label, value=settings[key],
                                               on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
                                 .props("dense size=xs color=grey-8").classes("rtt-show-item")
+                            example = ui.html(_example_html(key)).classes("rtt-ex-cell")
                             if key not in show_settings.IMPLEMENTED:
                                 box.props("disable")  # not built yet -> greyed and inert
-                            ui.html(_example_html(key)).classes("rtt-ex-cell")
+                                example.classes(add="rtt-ex-disabled")  # ...and its sample greys to match
                         boxes[key] = box
                         parent = show_settings.SUBCONTROLS.get(key)
                         if parent:  # indent the row under its parent and show it only while the parent is on
