@@ -100,6 +100,11 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
         assert svg.startswith("<svg") and f'fill="{app._BR_COLOR}"' in svg
         assert "stroke-width" not in svg  # weight is the 1:1 viewBox, not a scaling stroke
     assert marks["angle"].count("<path") == 1 and "stroke" not in marks["angle"]  # one filled chevron
+    # the down-chevron foot fits inside its oblong like every other mark — its whole
+    # footprint (stroke included) stays within the 7px-tall box, never overshooting
+    import re
+    ys = [float(y) for _x, y in re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", app._angle_foot(14, 7))]
+    assert 0 <= min(ys) and max(ys) <= 7
     assert 'viewBox="0 0 16.00 16.00"' in marks["["]
     assert 'viewBox="0 0 16.00 60.00"' in marks["]2"]  # 1 row vs many: same generator
 

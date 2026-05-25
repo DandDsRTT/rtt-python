@@ -732,7 +732,7 @@ def test_interval_vectors_basis_has_vertical_domain_controls():
     # the domain controls of the quantities row, oriented vertically: a + below the
     # stack to add a prime, a − on the highest (bottom) prime to remove one
     plus, minus, top, bot = cells["basis_plus"], cells["basis_minus"], cells["basis:0"], cells["basis:2"]
-    assert plus.y > bot.y  # + sits below the whole stack
+    assert plus.y >= bot.y + bot.h  # + sits below the whole stack, clear of the last box (no overlap)
     assert abs((plus.x + plus.w / 2) - (top.x + top.w / 2)) < 1  # centred under the basis column
     assert minus.y <= bot.y + spreadsheet.ROW_H and minus.y + minus.h > bot.y  # − rides the highest prime
 

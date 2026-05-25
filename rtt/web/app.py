@@ -431,7 +431,10 @@ def _angle_foot(w, h):
     thus reads ``[ … ⟩`` down its column — square top, angle foot — telling it apart
     from a tempered column, which closes with the curly brace (:func:`_brace`)."""
     cx = w / 2
-    ty, vy = 0.8, h - 0.8  # open tips near the top corners, vertex near the bottom
+    # the vertex's outer (thick) edge must land inside the box, not poke past it, so
+    # the chevron's footprint matches the other marks' shared short dimension — hence
+    # the vertex centreline sits a thick-half-width-plus-margin up from the bottom
+    ty, vy = 0.85, h - 0.5 - _BR_ANGLE_THICK
     left, vertex, right = (0.8, ty), (cx, vy), (w - 0.8, ty)
     n = 8
     pts = [(left[0] + (vertex[0] - left[0]) * i / n, left[1] + (vertex[1] - left[1]) * i / n,

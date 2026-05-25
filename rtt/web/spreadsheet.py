@@ -688,7 +688,7 @@ def build(state, settings=None, collapsed=None,
                 cells.append(CellBox(f"basis:{p}", bx, vec_top(p), COL_W, ROW_H, "prime", text=str(primes[p]), prime=p))
             if d > 1:  # the highest prime is the removable one (shrink trims the last)
                 cells.append(CellBox("basis_minus", col_x["quantities"], vec_top(d - 1), col_w["quantities"], ROW_H, "basis_minus"))
-            cells.append(CellBox("basis_plus", bx + (COL_W - BTN) / 2, vec_top(d) + (GAP - BTN) // 2, BTN, BTN, "plus"))
+            cells.append(CellBox("basis_plus", bx + (COL_W - BTN) / 2, vec_top(d) + FRAME_GAP, BTN, BTN, "plus"))
         if tile_open("vectors", "primes"):
             for e in range(d):
                 for p in range(d):
