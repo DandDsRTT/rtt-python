@@ -239,33 +239,32 @@ EQUIVALENCES = {
 }
 
 # Each box's "units:" annotation (the mockup's per-box unit line, shown below the name
-# caption when the general `units` toggle is on). The value reads as a fraction of base
-# units — bold-upright generators 𝐠 and primes 𝐩 (rendered via _math_html, so the
-# Mathematical-Bold code points carry the weight), and the plain cent sign ¢. The
-# units follow from the quantity's row and column: the interval-vector lists are in
-# primes (𝐩); the mapping matrix is generators-per-prime (𝐠/𝐩) and its mapped lists
-# generators (𝐠); the tuning-family maps are cents-per-coordinate (¢/𝐠 over generators,
-# ¢/𝐩 over primes) and their applied size lists plain cents (¢). Keys mirror CAPTIONS,
-# so every box with a name also carries a unit (the emission rides the caption loop).
-_G, _P = "\U0001D420", "\U0001D429"  # 𝐠, 𝐩 (Mathematical Bold small g / p)
+# caption when the general `units` toggle is on). The value is plain ASCII — a fraction
+# of base units (generators g, primes p, cents ¢) — which the view (app._units_html and
+# the .rtt-units CSS) sets bold in a single-story-g sans face, the mockup's distinct unit
+# style. The units follow from the quantity's row and column: the interval-vector lists
+# are in primes (p); the mapping matrix is generators-per-prime (g/p) and its mapped
+# lists generators (g); the tuning-family maps are cents-per-coordinate (¢/g over
+# generators, ¢/p over primes) and their applied size lists plain cents (¢). Keys mirror
+# CAPTIONS, so every box with a name also carries a unit (the emission rides the caption loop).
 UNITS = {
-    ("vectors", "commas"): _P,
-    ("vectors", "targets"): _P,
-    ("vectors", "interest"): _P,
-    ("mapping", "primes"): f"{_G}/{_P}",
-    ("mapping", "commas"): _G,
-    ("mapping", "targets"): _G,
-    ("mapping", "interest"): _G,
-    ("tuning", "gens"): f"¢/{_G}",
-    ("tuning", "primes"): f"¢/{_P}",
+    ("vectors", "commas"): "p",
+    ("vectors", "targets"): "p",
+    ("vectors", "interest"): "p",
+    ("mapping", "primes"): "g/p",
+    ("mapping", "commas"): "g",
+    ("mapping", "targets"): "g",
+    ("mapping", "interest"): "g",
+    ("tuning", "gens"): "¢/g",
+    ("tuning", "primes"): "¢/p",
     ("tuning", "commas"): "¢",
     ("tuning", "targets"): "¢",
     ("tuning", "interest"): "¢",
-    ("just", "primes"): f"¢/{_P}",
+    ("just", "primes"): "¢/p",
     ("just", "commas"): "¢",
     ("just", "targets"): "¢",
     ("just", "interest"): "¢",
-    ("retune", "primes"): f"¢/{_P}",
+    ("retune", "primes"): "¢/p",
     ("retune", "commas"): "¢",
     ("retune", "targets"): "¢",
     ("retune", "interest"): "¢",

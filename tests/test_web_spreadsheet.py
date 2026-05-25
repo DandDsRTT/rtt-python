@@ -1887,13 +1887,14 @@ def test_units_annotate_each_box_with_its_unit_string():
     on = {c.id: c for c in _with(units=True, names=True).cells}
     off = {c.id: c for c in _with(units=False).cells}
     # the per-box units line, parallel to the symbol/caption, reads "units: <value>"
-    # with the unit symbols bold-upright (g→𝐠, p→𝐩) and cents the plain ¢ (the mockup)
-    assert on["units:tuning:gens"].text == "units: ¢/\U0001D420"    # generator tuning map ¢/g
-    assert on["units:tuning:primes"].text == "units: ¢/\U0001D429"  # (prime) tuning map ¢/p
-    assert on["units:mapping:primes"].text == "units: \U0001D420/\U0001D429"  # mapping matrix g/p
-    assert on["units:mapping:targets"].text == "units: \U0001D420"  # mapped target list g
-    assert on["units:vectors:targets"].text == "units: \U0001D429"  # target-interval list p
-    assert on["units:damage:targets"].text == "units: ¢"            # damage list ¢
+    # in plain ASCII (g/p/¢) — the view styles the value bold in a single-story-g
+    # sans face, keeping "units:" in the serif body face (see app._units_html)
+    assert on["units:tuning:gens"].text == "units: ¢/g"    # generator tuning map ¢/g
+    assert on["units:tuning:primes"].text == "units: ¢/p"  # (prime) tuning map ¢/p
+    assert on["units:mapping:primes"].text == "units: g/p"  # mapping matrix g/p
+    assert on["units:mapping:targets"].text == "units: g"  # mapped target list g
+    assert on["units:vectors:targets"].text == "units: p"  # target-interval list p
+    assert on["units:damage:targets"].text == "units: ¢"   # damage list ¢
     # nothing rendered when units is off
     assert not any(c.startswith("units:") for c in off)
     # the units line sits below the name caption for the same box

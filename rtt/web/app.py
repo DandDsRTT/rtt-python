@@ -217,10 +217,13 @@ _CSS = f"""
    vectors/matrices) — not a maths-font glyph, whose styling font fallback dropped */
 .rtt-symbol {{ width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
               font-family:'Cambria',Georgia,serif; }}
-/* the per-box "units: …" line below the caption, and the domain-units row/col labels:
-   small centred serif, the unit glyphs styled by _math_html (bold-upright g/p) */
+/* the per-box "units: …" line below the caption, and the domain-units row/col labels.
+   The unit VALUE is set in a single-story-g sans face (the mockup's distinct unit
+   style — Cambria's bold g is double-story); the per-box "units:" label keeps the
+   serif body face via .rtt-units-pre. */
 .rtt-units {{ width:100%; text-align:center; font-size:10px; color:#333; line-height:1;
-            white-space:nowrap; font-family:'Cambria',Georgia,serif; }}
+            white-space:nowrap; font-family:'Calibri','Trebuchet MS',sans-serif; }}
+.rtt-units-pre {{ font-family:'Cambria',Georgia,serif; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
@@ -883,6 +886,18 @@ def _math_html(text):
     return "".join(out)
 
 
+def _units_html(text):
+    """A unit label (kind ``units``). The value's face — a single-story-g sans — comes
+    from the ``.rtt-units`` class; here we only mark up the structure: a per-box line
+    (``units: g/p``) keeps its ``units:`` label in the serif body face and sets the value
+    bold, while a bare domain-units coordinate label (``g₁/``, ``/p₁``, ``¢/``) is the
+    plain value. All text HTML-escaped."""
+    prefix = "units: "
+    if text.startswith(prefix):
+        return f'<span class="rtt-units-pre">{prefix}</span><b>{_escape(text[len(prefix):])}</b>'
+    return _escape(text)
+
+
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
@@ -1350,8 +1365,10 @@ def index() -> None:
                     selects[cb.id].value = cb.text or None
             elif cb.kind == "control_select":  # mirror the live alt.-complexity choice
                 selects[cb.id].value = cb.text or None
-            elif cb.kind in ("symbol", "count", "optimization", "units"):  # math-styled text: symbols, their
-                html = _math_html(cb.text)        # equivalence tails, the counts'/power's italic variables, units
+            elif cb.kind in ("symbol", "count", "optimization", "units"):  # text rendered as HTML:
+                # symbols/equivalence tails/counts/power go through _math_html (styled math
+                # glyphs); units use _units_html (a single-story-g sans value, serif label)
+                html = _units_html(cb.text) if cb.kind == "units" else _math_html(cb.text)
                 if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
                     math_cells[cb.id].set_content(html)
                     math_rendered[cb.id] = html

@@ -183,6 +183,17 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
     assert 'viewBox="0 0 16.00 60.00"' in marks["]2"]  # 1 row vs many: same generator
 
 
+def test_units_html_splits_a_per_box_line_and_passes_a_bare_label_through():
+    # a per-box "units: …" line keeps "units:" in the serif label face (.rtt-units-pre)
+    # and sets the value bold; the value's single-story-g sans face comes from .rtt-units
+    per_box = app._units_html("units: g/p")
+    assert '<span class="rtt-units-pre">units: </span>' in per_box
+    assert "<b>g/p</b>" in per_box
+    # a bare domain-units coordinate label is the plain value — no prefix span, no bold
+    assert app._units_html("g₁/") == "g₁/"
+    assert app._units_html("/p₁") == "/p₁"
+
+
 def test_every_show_toggle_has_a_non_empty_example():
     # the panel's "example" column illustrates each toggle (per the mockup's Show
     # legend), so no toggle may be missing its sample render
