@@ -289,11 +289,16 @@ _CSS = f"""
    typed entries are red too, matching the brackets, the "?" quantity, and the plain text */
 .rtt-cellinput.rtt-pending .q-field__control {{ border-color:{_PENDING_COLOR} !important; }}
 .rtt-cellinput.rtt-pending .q-field__native {{ color:{_PENDING_COLOR} !important; }}
-/* a pending comma's "?" quantity, in the same red as its draft cells/brackets */
+/* a pending comma's "?" quantity (and the draft vector in the plain text), in the same
+   red as its draft cells/brackets */
 .rtt-pending-q {{ color:{_PENDING_COLOR} !important; }}
-/* the comma basis plain text while a comma is pending: the whole editable string
-   reddens (still editable) so the ⟨…] characters match the gridded draft */
-.rtt-ptextedit.rtt-pending .q-field__native {{ color:{_PENDING_COLOR} !important; }}
+/* the comma basis plain text while a comma is pending: not an editable input (which is
+   one colour) but a static box matching the input's frame, holding the committed commas
+   in black and the red draft vector — you edit the draft in the red grid cells */
+.rtt-ptextpending {{ width:100%; height:100%; box-sizing:border-box; display:flex;
+            align-items:center; justify-content:center; background:#fff; border:1px solid #888;
+            border-radius:2px; padding:0 3px; color:#000; white-space:nowrap; overflow:hidden;
+            font-family:'Cambria',Georgia,serif; }}
 /* the +/− controls are half the square mapping/prime cell, sharing its exact border */
 .rtt-btn {{ width:15px !important; min-width:15px !important; height:15px !important;
            min-height:15px !important; background:#fff !important; border:{_CELL_BORDER} !important;
@@ -1127,6 +1132,9 @@ def index() -> None:
                 ptext_inputs[cb.id] = ui.input(value=cb.text,
                         on_change=lambda e, cid=cb.id: on_ptext_edit(cid, e.value)) \
                     .props("dense borderless").classes("rtt-ptextedit")
+            elif cb.kind == "ptextpending":  # comma basis mid-draft: a static two-tone box (the
+                # draft is typed into the red grid cells, not here), content set in render()
+                htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
                 with ui.element("div").classes("rtt-tval"):
@@ -1270,8 +1278,12 @@ def index() -> None:
             elif cb.kind == "ptextedit":  # reflect the canonical string + its shrink-to-fit font
                 ptext_inputs[cb.id].value = cb.text
                 ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
-                ptext_inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                            remove="" if cb.pending else "rtt-pending")
+            elif cb.kind == "ptextpending":  # comma basis with a draft comma: two-tone, the
+                # committed commas black and the draft vector red (same red as its grid cells)
+                prefix, draft, suffix = service.comma_basis_pending_text(st.comma_basis, editor.pending_comma)
+                htmls[cb.id].set_content(
+                    f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
+                htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
             elif cb.kind == "mathexpr":
                 # redraw (with refit fonts) whenever the expression text or cell width changes
                 if expr_state.get(cb.id) != (cb.text, cb.w):

@@ -264,6 +264,16 @@ def _ket_list(vectors, close: str) -> str:
     return "[" + " ".join("[" + " ".join(str(x) for x in v) + close for v in vectors) + "]"
 
 
+def comma_basis_pending_text(comma_basis, pending) -> tuple[str, str, str]:
+    """Split the comma-basis plain text for the two-tone draft display: the committed
+    commas and the wrapping ``[ … ]`` stay black, the in-progress draft vector reddens.
+    Returns ``(black_prefix, red_draft_ket, black_suffix)``. The draft ket shows the
+    entered components only (``None`` blanks omitted): ``[4, None, 1] -> "[4 1⟩"``."""
+    committed = _ket_list(comma_basis, "⟩")  # e.g. "[[4 -4 1⟩]" — drop its close ] to reopen
+    draft = "[" + " ".join(str(x) for x in pending if x is not None) + "⟩"
+    return committed[:-1] + " ", draft, "]"
+
+
 def cents(value: float) -> str:
     """A cents quantity at the 3-dp the grid and plain-text views share, so the
     two displays always agree."""

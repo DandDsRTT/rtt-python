@@ -252,6 +252,20 @@ def test_plain_text_commas_column_mirrors_the_grid():
     assert pt[("just", "commas")] == f"[{cents(sizes.just)}]"
 
 
+def test_comma_basis_pending_text_splits_the_draft_for_two_tone_display():
+    # while a comma is being added the comma-basis string is shown two-tone: the
+    # committed commas (and the wrapping brackets) stay black, the draft vector reddens.
+    # The helper returns (black prefix, red draft ket, black suffix); the draft shows the
+    # entered components only (blanks omitted), e.g. (4, _, 1) -> "[4 1⟩".
+    prefix, draft, suffix = service.comma_basis_pending_text(((4, -4, 1),), [4, None, 1])
+    assert (prefix, draft, suffix) == ("[[4 -4 1⟩ ", "[4 1⟩", "]")
+    assert prefix + draft + suffix == "[[4 -4 1⟩ [4 1⟩]"  # the full string, reassembled
+    # a brand-new (all-blank) draft is just an empty ket
+    assert service.comma_basis_pending_text(((4, -4, 1),), [None, None, None])[1] == "[⟩"
+    # a second committed comma extends the black prefix; the draft is still its own ket
+    assert service.comma_basis_pending_text(((4, -4, 1), (4, -5, 1)), [None, None, None])[0] == "[[4 -4 1⟩ [4 -5 1⟩ "
+
+
 def test_parse_mapping_reads_an_ebk_map_string():
     assert service.parse_mapping("[⟨1 1 0] ⟨0 1 4]}") == ((1, 1, 0), (0, 1, 4))
     assert service.parse_mapping("⟨12 19 28]") == ((12, 19, 28),)  # a single map

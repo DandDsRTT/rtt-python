@@ -1059,17 +1059,19 @@ def test_the_pending_comma_columns_ket_marks_are_flagged_for_red():
     assert not cells["ebktop:vec:commas:0"].pending
 
 
-def test_the_comma_basis_plain_text_reddens_while_a_comma_is_pending():
-    # the editable comma-basis EBK string also flags pending so its characters redden
-    # to match the gridded draft; the mapping's string (and the resting state) do not
+def test_the_comma_basis_plain_text_becomes_a_two_tone_draft_box_while_pending():
+    # while a comma is pending the comma-basis plain text can't be a single-colour input
+    # (it must show the committed commas black and the draft vector red), so it flips to a
+    # static two-tone "ptextpending" box; the mapping keeps its editable text box, and once
+    # there's no draft the comma basis returns to an editable box too.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["plain_text_values"] = True
     drafting = {c.id: c for c in spreadsheet.build(base, s, pending_comma=[None, None, None]).cells}
-    assert drafting["ptext:vectors:commas"].pending
-    assert not drafting["ptext:mapping:primes"].pending  # only the comma basis reddens
+    assert drafting["ptext:vectors:commas"].kind == "ptextpending"
+    assert drafting["ptext:mapping:primes"].kind == "ptextedit"  # the mapping is untouched
     resting = {c.id: c for c in spreadsheet.build(base, s).cells}
-    assert not resting["ptext:vectors:commas"].pending  # no draft -> normal black string
+    assert resting["ptext:vectors:commas"].kind == "ptextedit"  # no draft -> editable again
 
 
 # --- math expressions: the just row's exact log₂ closed forms ---

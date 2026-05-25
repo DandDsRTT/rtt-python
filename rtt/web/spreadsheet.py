@@ -1157,11 +1157,17 @@ def build(state, settings=None, collapsed=None,
         for (rkey, ckey), text in ptext_strings.items():
             if not tile_open(rkey, ckey):
                 continue
-            kind = "ptextedit" if (rkey, ckey) in EDITABLE_PTEXT else "ptext"
-            # while a comma is pending the comma-basis string reddens to match the grid
-            pend = pending is not None and (rkey, ckey) == ("vectors", "commas")
+            # the comma basis flips to a static two-tone box while a comma is pending (the
+            # committed commas black, the draft vector red — a single-colour input can't do
+            # that); the mapping and read-only values keep their normal kinds.
+            if pending is not None and (rkey, ckey) == ("vectors", "commas"):
+                kind = "ptextpending"
+            elif (rkey, ckey) in EDITABLE_PTEXT:
+                kind = "ptextedit"
+            else:
+                kind = "ptext"
             cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], ptext_band_y(rkey),
-                                 col_w[ckey], ptext_height(rkey, ckey), kind, text=text, pending=pend))
+                                 col_w[ckey], ptext_height(rkey, ckey), kind, text=text))
         # the quantities-row ratios get their plain text per column, directly below
         # each ratio (the mockup), one inline "n/d" per cell — not packed into a set
         for ckey, left, ratios in (("commas", comma_left, comma_ratios), ("targets", target_left, targets)):
