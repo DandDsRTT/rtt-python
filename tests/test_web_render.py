@@ -41,6 +41,10 @@ _FEATURE_CELLS = [
     ("preselects", "preselect:temperament"),         # the chooser dropdowns (q-select)
     ("charts", "chart:retune:targets"),              # a per-tile bar-chart SVG
     ("tuning ranges", "rangechart:tuning:gens"),     # the generator-range I-beam chart SVG
+    # "units" labels BOTH the general and specific toggles, so one click flips both on:
+    # the per-box "units: …" line below the caption AND the domain-units row/col labels
+    # (all kind "units", _math_html). The fixture catches an ERROR log in either branch.
+    ("units", "units:mapping:primes"),               # the per-box "units: g/p" line
 ]
 
 
