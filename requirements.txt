@@ -2,6 +2,7 @@ sympy
 numpy
 scipy
 pytest
+pytest-asyncio  # drives the in-process NiceGUI render tests (the User fixture is async)
 
 # web UI (monolith front end)
 nicegui
