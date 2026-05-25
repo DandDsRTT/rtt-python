@@ -439,6 +439,11 @@ def build(state, settings=None, collapsed=None,
     # the optimization power rides one tile over the targets column (guarded by panel()
     # and the toggle loop, so it adds nothing unless the optimization row is present)
     tiles = COUNTS_TILES + TILES + interest_tiles + (("block:optimization", "optimization", "targets"),)
+    # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
+    # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
+    # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
+    # for a stray hardcoded column list to keep drawing a tile that no longer exists.
+    declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in tiles}
 
     # Column bands left-to-right: (key, natural width, present, collapsible).
     # Each set-column belongs to a box toggle: generators, the domain primes and
@@ -625,8 +630,9 @@ def build(state, settings=None, collapsed=None,
     def row_open(key):
         return key in row_y and f"row:{key}" not in collapsed
 
-    def tile_open(rkey, ckey):
-        return row_open(rkey) and col_open(ckey) and f"tile:{rkey}:{ckey}" not in collapsed
+    def tile_open(rkey, ckey):  # a real tile, whose row + column are open and not folded
+        return ((rkey, ckey) in declared_tiles and row_open(rkey) and col_open(ckey)
+                and f"tile:{rkey}:{ckey}" not in collapsed)
 
     def prime_left(p):
         return primes_x + BRACKET_W + p * COL_W
@@ -726,7 +732,10 @@ def build(state, settings=None, collapsed=None,
                 # every interval carries its own − (a hover affordance over its header):
                 # any one is removable, unlike the domain/comma last-only −
                 cells.append(CellBox(f"interest_minus:{i}", interest_left(i), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "interest_minus", comma=i))
-            # the + appends a blank 1/1 (a zero monzo) for the user to edit in the vectors row
+        # the + is a column control, not tile content: an empty-but-open interest column
+        # has no tile yet, so it rides col_open (not tile_open) so the first interval can
+        # be added. It appends a blank 1/1 (a zero monzo) to edit in the vectors row.
+        if col_open("interest") and row_open("quantities"):
             cells.append(CellBox("interest_plus", ctrl_x["interest"], qy + (ROW_H - BTN) // 2, BTN, BTN, "interest_plus"))
 
     # generator ratios (aligned with the mapping rows they label) + the mapping
@@ -914,7 +923,7 @@ def build(state, settings=None, collapsed=None,
         if mi and tile_open("mapping", "interest"):  # interest mapped list, like the targets
             bracket("imapped", LIST_BRACKETS, "interest", row_y["mapping"], r * ROW_H, fit=True)
     if row_open("vectors"):  # each group is a list of monzos: a [ ] spanning the d components
-        for group in ("primes", "commas", "targets"):
+        for group in ("commas", "targets"):
             if tile_open("vectors", group):
                 bracket(f"vec:{group}", LIST_BRACKETS, group, row_y["vectors"], d * ROW_H, fit=True)
         if mi and tile_open("vectors", "interest"):

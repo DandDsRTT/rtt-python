@@ -775,11 +775,12 @@ def test_interval_vectors_domain_primes_identity_is_deferred_to_identity_objects
     # the domain primes as monzos over themselves are the d x d identity — an
     # "identity object" the grid won't show until the identity_objects setting is
     # built (the basis is already listed down the quantities spine). Until then the
-    # primes column carries no tile at the interval-vectors row: no cells, ket marks,
-    # separators, fold toggle or caption.
+    # primes column carries NOTHING at the interval-vectors row: no cells, ket marks,
+    # separators, the enclosing [ ] bracket, fold toggle or caption.
     cells = {c.id for c in _with(names=True).cells}
     assert not any(c.startswith(("cell:vec:primes", "ebktop:vec:primes",
-                                 "ebkangle:vec:primes", "sep:vec:primes")) for c in cells)
+                                 "ebkangle:vec:primes", "sep:vec:primes",
+                                 "bracket:vec:primes")) for c in cells)
     assert {"toggle:tile:vectors:primes", "caption:vectors:primes"}.isdisjoint(cells)
 
 
