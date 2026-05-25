@@ -111,9 +111,9 @@ _CSS = f"""
 /* the left rail: a permanent light-grey column down the screen's left edge holding the
    hamburger (top) and, under it, the app title turned a quarter-turn. It sits to the LEFT of
    the pane and stays #e0e0e0 whether the pane is open or closed, so opening the pane never
-   moves the title. It carries no align-self, so the pane group (align-items:stretch) makes it
-   as tall as that group: the main app (grid) when the pane is collapsed, the settings pane
-   when it's open — so the bar always matches whatever it stands beside. */
+   moves the title. It carries no align-self, so the pane group (align-items:stretch) makes it as
+   tall as the group: the main app (grid) when the pane is collapsed, and the taller of the grid
+   and the settings when the pane is open — so the bar always matches whatever it stands beside. */
 .rtt-rail {{ flex:none; width:{_RAIL_W}px; background:#e0e0e0;
             display:flex; flex-direction:column; align-items:center; gap:10px; padding:7px 0 14px; }}
 /* the app title, turned a quarter-turn (writing-mode) so it reads top-to-bottom down the
@@ -127,23 +127,24 @@ _CSS = f"""
 .rtt-hamburger .q-icon {{ color:#333 !important; font-size:19px; }}
 /* the shell lays the rail+pane group and the app in a row */
 .rtt-shell {{ position:relative; display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
-/* the rail and the pane form one group whose default align-self:stretch makes it (and the
-   rail inside it, via align-items:stretch) as tall as the shell's tallest child. The COLLAPSED
-   drawer is height:0 (below), so it adds no height and the only other child is the grid — the
-   bar therefore matches the main app. With the pane OPEN the :has rule flips the group to
-   align-self:flex-start so it hugs its content, and the now-full-height drawer makes the rail
-   match the settings pane. Opening the pane widens this group, pushing the app right. */
+/* the rail+pane group is always align-self:stretch, so it — and the rail inside it (via
+   align-items:stretch) — is as tall as the shell's tallest child. A COLLAPSED drawer is 0fr
+   (zero height, below), so it adds nothing and the group matches the grid → the bar matches the
+   main app. An OPEN drawer adds the settings' height, so the group grows to the taller of the
+   grid and the settings. Opening the pane widens this group, pushing the app right. */
 .rtt-panelgroup {{ display:flex; flex-wrap:nowrap; align-self:stretch; }}
-.rtt-panelgroup:has(.rtt-drawer-open) {{ align-self:flex-start; }}
-/* height:0 when closed so the hidden pane contributes no height to the group (otherwise a tall
-   settings list would stretch the closed bar past the shorter grid); it regains its content
-   height when open */
-.rtt-drawer {{ width:0; height:0; overflow:hidden; transition:width {_T}; flex:none; }}
-.rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; height:auto; }}
+/* the drawer animates BOTH its width (the slide-over) and its height (grid-template-rows 0fr->1fr,
+   which grows/shrinks the pane to its content height), so opening/closing glides instead of the
+   pane popping to full height. align-self:flex-start stops the group stretching the drawer, which
+   would defeat the content-based fr sizing; a 0fr drawer contributes no height (see above). */
+.rtt-drawer {{ display:grid; grid-template-rows:0fr; align-self:flex-start; width:0; overflow:hidden;
+              transition:width {_T}, grid-template-rows {_T}; flex:none; }}
+.rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; grid-template-rows:1fr; }}
 /* the pane hugs its settings boxes — no min-height (a forced 100vh ran past the foot of the
-   screen and added a scrollbar) */
-.rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0;
-                    font-family:'Cambria',Georgia,serif; color:#000; padding:8px 14px 16px; }}
+   screen and added a scrollbar). overflow:hidden + min-height:0 let the drawer's grid-rows
+   animation clip and grow it smoothly. */
+.rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0; overflow:hidden;
+                    min-height:0; font-family:'Cambria',Georgia,serif; color:#000; padding:8px 14px 16px; }}
 /* the app fills the space right of the rail+pane group; min-width:0 lets a wide grid scroll
    inside its own .rtt-scroll rather than widening the page */
 .rtt-app {{ flex:1 1 0; min-width:0; }}
