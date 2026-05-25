@@ -21,6 +21,7 @@ from rtt.tuning import (
     get_just_tuning_map,
     optimize_generator_tuning_map,
     optimize_tuning_map,
+    resolve_tuning_scheme,
 )
 from rtt.tuning_ranges import get_generator_tuning_range
 
@@ -182,6 +183,13 @@ def tuning(mapping, scheme: str = DEFAULT_TUNING_SCHEME) -> Tuning:
         monotone_generator_range=get_generator_tuning_range(t, "monotone"),
         tradeoff_generator_range=get_generator_tuning_range(t, "tradeoff"),
     )
+
+
+def optimization_power(scheme: str = DEFAULT_TUNING_SCHEME) -> float:
+    """The optimization power ``p`` the tuning scheme minimizes: the order of the Lp
+    norm taken over the damages — ∞ for a minimax scheme, 2 for least-squares
+    (miniRMS), 1 for miniaverage."""
+    return resolve_tuning_scheme(scheme).optimization_power
 
 
 def interval_sizes(tun: Tuning, ratios) -> IntervalSizes:

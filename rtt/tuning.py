@@ -189,6 +189,14 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
     )
 
 
+def resolve_tuning_scheme(spec: TuningSchemeSpec | str) -> TuningSchemeSpec:
+    """A scheme given as a :class:`TuningSchemeSpec`, a systematic name, or a historical
+    name (e.g. ``"TOP"``, ``"TE"``, ``"CTE"``) resolved to a :class:`TuningSchemeSpec`."""
+    if isinstance(spec, str):
+        return tuning_scheme_from_systematic_name(_ORIGINAL_NAME_SCHEMES.get(spec, spec))
+    return spec
+
+
 def _optimization_power_from_name(name: str) -> float:
     """The optimization power (trait 2) a systematic name encodes: ``minimax`` = ∞,
     ``miniRMS`` = 2, ``miniaverage`` = 1, ``mini-N-mean`` = N."""
@@ -209,8 +217,7 @@ def optimize_generator_tuning_map(
 
     ``spec`` may be a :class:`TuningSchemeSpec`, a systematic tuning-scheme name string,
     or a historical scheme name (e.g. ``"TOP"``, ``"TE"``, ``"CTE"``)."""
-    if isinstance(spec, str):
-        spec = tuning_scheme_from_systematic_name(_ORIGINAL_NAME_SCHEMES.get(spec, spec))
+    spec = resolve_tuning_scheme(spec)
 
     # trait 7, prime-based: re-express the temperament over its simplest prime-only basis,
     # optimize there, then map the generators back to the original (nonprime) basis.
@@ -422,8 +429,7 @@ def _evaluate_damages(
 ) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
     """The (target monzos, per-target damages, mean power) for a given tuning map: each
     damage is the scheme's weight times the absolute mistuning of that target."""
-    if isinstance(spec, str):
-        spec = tuning_scheme_from_systematic_name(_ORIGINAL_NAME_SCHEMES.get(spec, spec))
+    spec = resolve_tuning_scheme(spec)
     d = get_d(t)
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
     monzos, weights, power = _optimization_setup(t, spec, d)

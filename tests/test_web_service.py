@@ -1,4 +1,16 @@
+import math
+
 from rtt.web import service
+
+
+def test_optimization_power_is_the_schemes_lp_norm_order():
+    # the optimization power p is trait 2 of the tuning scheme: the order of the
+    # Lp norm minimized over the damages. TOP (the shipped default) is a minimax
+    # scheme, so p = ∞; miniRMS is least-squares (p = 2); miniaverage is p = 1.
+    assert service.optimization_power("TOP") == math.inf
+    assert service.optimization_power() == math.inf  # defaults to the shipped scheme (TOP)
+    assert service.optimization_power("least squares") == 2
+    assert service.optimization_power("miniaverage-U") == 1
 
 
 def test_from_mapping_computes_canonical_comma_basis():
