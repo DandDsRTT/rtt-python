@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
+from rtt.canonicalization import canonical_ma
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.domain_basis import (
     express_quotients_in_domain_basis,
@@ -232,6 +233,13 @@ def mapped_commas(mapping, comma_basis) -> Matrix:
     Every comma the temperament tempers out maps to zero: it vanishes."""
     mapping = _to_matrix(mapping)
     return _map_through(mapping, _to_matrix(comma_basis))
+
+
+def canonical_mapping(mapping) -> Matrix:
+    """The canonical form of ``M`` — defactored, then Hermite Normal Form — as shown
+    in the ``canonical mapping`` form box. May differ from the stored matrix (which the
+    user can enter in any equivalent form)."""
+    return _to_matrix(canonical_ma(_to_matrix(mapping)))
 
 
 def target_interval_monzos(ratios, d: int, domain_basis=None) -> Matrix:

@@ -147,6 +147,15 @@ def test_mapped_commas_vanish():
     assert mapped == ((0,), (0,))  # r=2 generator coords, nc=1 comma, all zero
 
 
+def test_canonical_mapping_defactors_and_hnfs():
+    # the canonical form of the mapping (defactored, then Hermite Normal Form) — the
+    # row content of the "canonical mapping" form box; it can differ from the stored
+    # matrix, e.g. ((1,1,0),(0,1,4)) canonicalizes to ((1,0,-4),(0,1,4))
+    assert service.canonical_mapping([[1, 1, 0], [0, 1, 4]]) == ((1, 0, -4), (0, 1, 4))
+    # an already-canonical mapping is returned unchanged
+    assert service.canonical_mapping([[1, 0, -4], [0, 1, 4]]) == ((1, 0, -4), (0, 1, 4))
+
+
 def test_target_interval_monzos():
     # the interval-vector (monzo) form of each target over the 2.3.5 domain
     monzos = service.target_interval_monzos(("2/1", "3/2", "5/4", "6/5"), 3)
