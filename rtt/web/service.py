@@ -224,7 +224,6 @@ def plain_text_values(
     primes = standard_primes(state.d)
     targets = target_interval_set(target_spec, primes)
     commas = comma_ratios(state.comma_basis)
-    gens = generators(state.mapping)
     mapped = mapped_intervals(state.mapping, targets)
     mapped_comma = mapped_commas(state.mapping, state.comma_basis)
     domain_basis = tuple(tuple(1 if i == p else 0 for i in range(state.d)) for p in range(state.d))
@@ -236,10 +235,10 @@ def plain_text_values(
     # monzo lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
     # are the mapping (mapping/primes) and the comma basis (vectors/commas). The
-    # quantities-row ratios get a per-column plain text in the layout, not here.
+    # quantities-row ratios get a per-column plain text in the layout, not here; the
+    # generators (mapping/quantities) carry no plain-text form.
     return {
         ("quantities", "primes"): ".".join(str(p) for p in primes),
-        ("mapping", "quantities"): "[" + ", ".join(f"~{g}" for g in gens) + "]",
         ("vectors", "primes"): _ket_list(domain_basis, "⟩"),
         ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
         ("vectors", "targets"): _ket_list(target_monzos, "⟩"),

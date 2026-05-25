@@ -175,9 +175,8 @@ def test_plain_text_mapping_is_the_ebk_string():
 def test_plain_text_basis_and_ratio_quantities():
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
     assert pt[("quantities", "primes")] == "2.3.5"  # the domain basis, dot notation
-    # generators as approximate ratios (the ~ the grid shows for them), heading the
-    # mapping row's quantities column
-    assert pt[("mapping", "quantities")] == "[~2/1, ~3/2]"
+    # the generators carry no plain-text form (the mapping/quantities tile stays bare)
+    assert ("mapping", "quantities") not in pt
     # the per-ratio quantity sets (commas, targets) are placed per column by the
     # layout, directly below each ratio — they are not packed into one brace-set here
     assert ("quantities", "commas") not in pt
