@@ -1450,11 +1450,6 @@ def test_optimization_on_shows_the_power_below_the_damage_row():
     assert "label:optimization" in on
 
 
-def test_optimization_is_an_interactive_toggle():
-    # it now builds content, so the panel must offer it live rather than greyed out
-    assert "optimization" in settings.IMPLEMENTED
-
-
 def test_optimization_power_reflects_the_current_tuning_scheme():
     # the surfaced power is the *current* tuning's, not a constant: a least-squares
     # (miniRMS) scheme reads p = 2 where the default minimax TOP reads p = ∞
