@@ -1869,59 +1869,47 @@ def _mid(cells, cid):
     return c.x + c.w / 2, c.y + c.h / 2
 
 
-def test_temperament_washes_the_domain_yellow_incl_the_top_left_corner():
-    lay = _with(tuning_colorization=True, temperament_colorization=True)
-    cells = {c.id: c for c in lay.cells}
-    # the top-left corner (quantities row × quantities spine column) is yellow
-    spine_x = cells["header:quantities"].x + cells["header:quantities"].w / 2
-    _, q_y = _mid(cells, "prime:0")  # the quantities row's y
-    assert _color_at(lay, spine_x, q_y) == {"temperament"}
-    # the domain primes and the mapping (over generators and primes) are yellow
-    assert _color_at(lay, *_mid(cells, "prime:0")) == {"temperament"}          # quantities × primes
-    assert _color_at(lay, *_mid(cells, "cell:mapping:0:0")) == {"temperament"}  # mapping × primes
-    gens_x = cells["header:gens"].x + cells["header:gens"].w / 2
-    _, mapping_y = _mid(cells, "cell:mapping:0:0")
-    assert _color_at(lay, gens_x, mapping_y) == {"temperament"}  # mapping × generators
-
-
-def test_tuning_maps_over_the_domain_blend_green():
-    lay = _with(tuning_colorization=True, temperament_colorization=True)
-    cells = {c.id: c for c in lay.cells}
-    # the tuning/just/retuning maps over the domain primes/commas and the target sizes are
-    # green (a cyan tuning band crossing a yellow temperament band)
-    for cid in ("tuning:prime:0", "retune:prime:0", "tuning:comma:0", "tuning:target:0"):
-        assert _color_at(lay, *_mid(cells, cid)) == {"temperament", "tuning"}, cid
-
-
-def test_generators_below_mapping_and_the_damage_row_stay_uncoloured():
-    lay = _with(tuning_colorization=True, temperament_colorization=True)
-    cells = {c.id: c for c in lay.cells}
-    # the generators column carries no wash below the mapping row (not yellow/green there)
-    gens_x = cells["header:gens"].x + cells["header:gens"].w / 2
-    _, tuning_y = _mid(cells, "tuning:prime:0")
-    assert _color_at(lay, gens_x, tuning_y) == set()
-    # the domain colour stops at retuning, so the damage row is outside the region
-    assert _color_at(lay, *_mid(cells, "damage:target:0")) == set()
-
-
-def test_other_intervals_column_is_never_cyan():
+def _colormap_layout():
     s = settings.defaults()
     s["tuning_colorization"] = True
     s["temperament_colorization"] = True
-    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=((-1, 1, 0),))
-    cells = {c.id: c for c in lay.cells}
-    # other-intervals reads yellow (temperament) in the tuning rows, never plain cyan
-    assert _color_at(lay, *_mid(cells, "tuning:interest:0")) == {"temperament"}
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=((-1, 1, 0),))
 
 
-def test_target_intervals_column_is_cyan_in_the_upper_rows():
-    # the mockup's target-intervals column reads CYAN in the quantities/vectors/mapping
-    # rows; it only goes green where the tuning rows cross it
-    lay = _with(tuning_colorization=True, temperament_colorization=True)
+def test_colorization_matches_the_mockup_cell_map():
+    # the exact per-cell colour map: Y=temperament(yellow), C=tuning(cyan), G=both(green
+    # via darken), N=uncoloured — probed by which colour bands cover each cell's centre.
+    lay = _colormap_layout()
     cells = {c.id: c for c in lay.cells}
-    assert _color_at(lay, *_mid(cells, "target:0")) == {"tuning"}         # quantities × targets
-    assert _color_at(lay, *_mid(cells, "cell:mapped:0:0")) == {"tuning"}  # mapping × targets (mapped list)
-    assert _color_at(lay, *_mid(cells, "tuning:target:0")) == {"temperament", "tuning"}  # green
+    Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
+    at = lambda cid: _color_at(lay, *_mid(cells, cid))
+    def col_row(col, row_cid):  # a cell with no tile: the column header's x, the row cell's y
+        h = cells[f"header:{col}"]
+        return _color_at(lay, h.x + h.w / 2, _mid(cells, row_cid)[1])
+    # quantities + interval-vectors rows: domain YELLOW, targets CYAN, other-intervals blank
+    assert col_row("quantities", "prime:0") == Y           # quantities × spine (top-left corner)
+    assert at("prime:0") == Y                               # quantities × primes
+    assert at("target:0") == C                              # quantities × targets
+    assert col_row("interest", "prime:0") == N              # quantities × other-intervals
+    assert col_row("primes", "basis:0") == Y                # interval-vectors × primes (basis:0 sits in the vectors row)
+    assert at("cell:vec:targets:0:0") == C                  # interval-vectors × targets (target monzos)
+    # mapping row: domain YELLOW, targets GREEN, other-intervals YELLOW
+    assert at("cell:mapping:0:0") == Y                      # mapping × primes
+    assert col_row("gens", "cell:mapping:0:0") == Y         # mapping × generators
+    assert at("cell:mapped:0:0") == G                       # mapping × targets (mapped list)
+    assert at("cell:imapped:0:0") == Y                      # mapping × other-intervals
+    # tuning / just / retuning rows: spine + generators CYAN, everything else GREEN
+    for r in ("tuning", "just", "retune"):
+        assert col_row("quantities", f"{r}:prime:0") == C   # × spine
+        assert col_row("gens", f"{r}:prime:0") == C         # × generators
+        assert at(f"{r}:prime:0") == G                      # × primes
+        assert at(f"{r}:comma:0") == G                      # × commas
+        assert at(f"{r}:target:0") == G                     # × targets
+        assert at(f"{r}:interest:0") == G                   # × other-intervals
+    # the entire damage row is CYAN
+    assert col_row("quantities", "damage:target:0") == C    # × spine
+    assert col_row("primes", "damage:target:0") == C        # × primes
+    assert at("damage:target:0") == C                       # × targets
 
 
 def test_colorization_off_by_default_and_renders_as_base_plus_darken_bands():
@@ -1936,14 +1924,14 @@ def test_colorization_off_by_default_and_renders_as_base_plus_darken_bands():
     assert all(b.tint == "" for b in blocks if b.id.startswith("block:"))  # grey tiles untinted
 
 
-def test_collapsing_the_tuning_rows_shrinks_the_tuning_band():
+def test_collapsing_the_tuning_rows_shrinks_the_tuning_row_band():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["tuning_colorization"] = True
-    open_band = [b for b in spreadsheet.build(base, s).blocks if b.tint == "tuning"][0]
-    folded = spreadsheet.build(base, s, collapsed={"row:tuning", "row:just", "row:retune"})
-    folded_band = [b for b in folded.blocks if b.tint == "tuning"][0]
-    assert folded_band.h < open_band.h  # the band tracks its rows' (collapsed) extent
+    open_band = max((b for b in spreadsheet.build(base, s).blocks if b.tint == "tuning"), key=lambda b: b.w)
+    folded = spreadsheet.build(base, s, collapsed={"row:tuning", "row:just", "row:retune", "row:damage"})
+    folded_band = max((b for b in folded.blocks if b.tint == "tuning"), key=lambda b: b.w)
+    assert folded_band.h < open_band.h  # the full-width tuning rows band tracks its (collapsed) rows
 
 
 def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():

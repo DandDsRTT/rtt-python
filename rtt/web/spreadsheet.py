@@ -152,23 +152,24 @@ CHARTED_ROWS = frozenset({"retune", "damage"})  # rows that grow a bar-chart ban
 # group's "{group}_colorization" setting, when on, paints colour behind that group's
 # boxes, showing through the gaps around the grey tiles. The mockup colours specific
 # rectangular regions, so each entry is ``(group, columns, rows)`` and renders as ONE
-# band — the bounding box of its present columns × rows. The mockup's column headers
-# fix the scheme: the domain columns (generators / domain primes / commas) read YELLOW
-# (temperament) and the target-intervals column reads CYAN (tuning). So:
-#   TEMPERAMENT (yellow) = the generators + quantities-spine down to the mapping row, the
-#     domain primes/commas down to the retuning row, and (as ROWS crossing the cyan target
-#     column → green) the tuning rows over targets and the other-intervals column.
-#   TUNING (cyan) = the target-intervals column (down to retuning) and (as ROWS crossing
-#     the yellow domain columns → green) the tuning rows over primes/commas.
-# Crossings darken to green; the damage row stays uncoloured, generators carry no wash
-# below mapping, and the other-intervals column reads yellow (never plain cyan).
+# band — the bounding box of its present columns × rows. TUNING (cyan) is the
+# tuning/just/retuning/damage ROWS (full width) plus the target-intervals COLUMN (full
+# height). TEMPERAMENT (yellow) is the domain columns + the mapping row by content
+# extent: generators + the quantities spine down to the mapping row; domain primes/commas
+# through the retuning row; the target/interest columns from the mapping row through
+# retuning. Where a cyan band crosses a yellow band the darken blend yields green — the
+# tuning maps over the domain, the mapped/size lists over the targets. (So e.g. the whole
+# damage row and the tuning rows over the spine/generators read plain cyan; the mapping
+# row over the targets reads green and over the other-intervals reads yellow.)
 COLORIZE_REGIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
     ("temperament", ("quantities", "gens"), ("quantities", "vectors", "mapping")),
     ("temperament", ("primes", "commas"),
      ("quantities", "vectors", "mapping", "tuning", "just", "retune")),
-    ("temperament", ("targets", "interest"), ("tuning", "just", "retune")),
-    ("tuning", ("targets",), ("quantities", "vectors", "mapping", "tuning", "just", "retune")),
-    ("tuning", ("primes", "commas"), ("tuning", "just", "retune")),
+    ("temperament", ("targets", "interest"), ("mapping", "tuning", "just", "retune")),
+    ("tuning", ("quantities", "gens", "primes", "commas", "targets", "interest"),
+     ("tuning", "just", "retune", "damage")),
+    ("tuning", ("targets",),
+     ("quantities", "vectors", "mapping", "tuning", "just", "retune", "damage")),
 )
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
