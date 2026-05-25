@@ -1031,6 +1031,14 @@ def index() -> None:
         editor.set_target_spec(spec)
         render()
 
+    def on_prescaler(value):
+        # the alt.-complexity prescaler dropdown (box 𝐋): swap the complexity prescaler,
+        # which re-weights and retunes. The re-render echo is ignored via the guards.
+        if building[0] or value is None:
+            return
+        editor.set_complexity_prescaler(value)
+        render()
+
     def on_range_mode(value):
         # which generator tuning range the ranges chart shows. A re-render echo (the radio
         # mirroring editor.range_mode) is ignored via the building/None guards, like the preselects.
@@ -1139,11 +1147,17 @@ def index() -> None:
                             on_change=lambda e: on_preselect("temperament", e.value)) \
                         .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
                                f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
-                else:  # tuning — systematic scheme names
-                    selects[cb.id] = ui.select(list(presets.TUNING_SCHEMES), value=editor.tuning_scheme,
+                else:  # tuning — systematic scheme names; a control-refined scheme has no name
+                    scheme = editor.tuning_scheme if isinstance(editor.tuning_scheme, str) else None
+                    selects[cb.id] = ui.select(list(presets.TUNING_SCHEMES), value=scheme,
                             on_change=lambda e: on_preselect("tuning", e.value)) \
                         .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
                                f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
+            elif cb.kind == "prescaler_select":  # the alt.-complexity prescaler dropdown (box 𝐋)
+                selects[cb.id] = ui.select(list(service.PRESCALERS), value=cb.text or None,
+                        on_change=lambda e: on_prescaler(e.value)) \
+                    .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
+                           f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
             elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
                 labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
             elif cb.kind == "ptextedit":  # an editable dual: typing a valid EBK string drives the grid
@@ -1331,6 +1345,8 @@ def index() -> None:
                     sel.value = family
                 else:  # tuning
                     selects[cb.id].value = cb.text or None
+            elif cb.kind == "prescaler_select":  # mirror the live prescaler (alt. complexity)
+                selects[cb.id].value = cb.text or None
             elif cb.kind in ("symbol", "count", "optimization", "units"):  # math-styled text: symbols, their
                 html = _math_html(cb.text)        # equivalence tails, the counts'/power's italic variables, units
                 if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change

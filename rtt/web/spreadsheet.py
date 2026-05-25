@@ -502,6 +502,9 @@ def build(state, settings=None, collapsed=None,
     # prescaling -> complexity -> weight rows that feed the damage row, so it too only
     # applies while the tuning region (and its target column) shows
     show_weighting = show_tuning and settings["weighting"]
+    # alt. complexity is a sub-control of weighting: it adds the prescaler dropdown to box 𝐋
+    # (the prescaling matrix), so it only applies while that region shows
+    show_alt_complexity = show_weighting and settings["alt_complexity"]
     # Value-display toggles. "gridded values" is the master switch: with it off
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
@@ -703,6 +706,11 @@ def build(state, settings=None, collapsed=None,
     gtm_chart = (show_ranges and show_tuning and "row:tuning" not in collapsed
                  and col_open("gens") and "tile:tuning:gens" not in collapsed)
     gtm_extra = (RANGE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
+    # the alt.-complexity prescaler dropdown nests at the bottom of the prescaling matrix
+    # tile (box 𝐋), like the ranges box in the gens tile; its height is reserved in that row
+    presc_ctrl = (show_alt_complexity and "row:prescaling" not in collapsed
+                  and col_open("primes") and "tile:prescaling:primes" not in collapsed)
+    presc_extra = (RANGE_GAP + PRESELECT_H) if presc_ctrl else 0
 
     header_y = 0
     col_node_y = header_h + (GAP - TOGGLE) / 2  # the column toggle sits just under the header text
@@ -812,6 +820,8 @@ def build(state, settings=None, collapsed=None,
         # rows below clear of it
         if key == "tuning":
             tile_h[key] += gtm_extra
+        if key == "prescaling":  # room for the alt.-complexity prescaler dropdown below the matrix
+            tile_h[key] += presc_extra
         y += tile_h[key] + GAP
     total_h = y
 
@@ -1099,6 +1109,10 @@ def build(state, settings=None, collapsed=None,
                 value = prescaler[i] if i == p else 0.0
                 cells.append(CellBox(f"cell:prescaling:{i}:{p}", prime_left(p), row_y["prescaling"] + i * ROW_H,
                                      COL_W, ROW_H, "mapped", text=_prescale_text(value)))
+    if presc_ctrl:  # the alt.-complexity prescaler dropdown, nested at the bottom of box 𝐋
+        py = tile_top["prescaling"] + tile_h["prescaling"] - presc_extra + RANGE_GAP
+        cells.append(CellBox("control:prescaler", col_x["primes"], py, col_w["primes"], PRESELECT_H,
+                             "prescaler_select", text=service.prescaler_of(tuning_scheme)))
     if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
         for group in ("primes", "commas", "targets", "interest"):
             tval_row("complexity", group, complexities[group])
@@ -1373,7 +1387,10 @@ def build(state, settings=None, collapsed=None,
     # temperament chooser is a placeholder (it loads, not mirrors). These are controls,
     # so they ride the tile whether or not math expressions has emptied its values.
     if show_preselects:
-        preselect_text = {"temperament": "", "tuning": tuning_scheme, "target": target_spec}
+        # the tuning chooser shows the scheme name; a scheme refined by the alt.-complexity
+        # control is a resolved spec (no preset name), so it shows blank rather than a repr
+        preselect_text = {"temperament": "", "target": target_spec,
+                          "tuning": tuning_scheme if isinstance(tuning_scheme, str) else ""}
         for name, rkey, ckey in PRESELECTS:
             if not tile_open(rkey, ckey):
                 continue

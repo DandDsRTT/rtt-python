@@ -137,6 +137,12 @@ class Editor:
     def set_tuning_scheme(self, scheme: str) -> None:
         self.tuning_scheme = scheme
 
+    def set_complexity_prescaler(self, prescaler: str) -> None:
+        """Swap the complexity prescaler (the alt.-complexity control in box 𝐋), which
+        re-weights damage and so retunes. Holds the refined scheme as a resolved spec
+        (the service/layout take a spec anywhere a scheme name is taken)."""
+        self.tuning_scheme = service.scheme_with_prescaler(self.tuning_scheme, prescaler)
+
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
         or ``"OLD"``. A manual limit is weakly held — the next domain change forgets it."""

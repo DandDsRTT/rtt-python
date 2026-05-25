@@ -7,7 +7,7 @@ a temperament's mapping and its dual comma basis (kept in sync) plus dimensions.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.dual import dual
@@ -252,6 +252,35 @@ def damage_weight_slope(scheme: str = DEFAULT_TUNING_SCHEME) -> str:
     """The scheme's damage-weight slope — ``"unityWeight"``, ``"complexityWeight"`` or
     ``"simplicityWeight"`` — i.e. whether each weight is 1, its complexity, or 1/complexity."""
     return resolve_tuning_scheme(scheme).damage_weight_slope
+
+
+# The three predefined complexity prescalers the alt.-complexity control offers, as the
+# (log-prime power, prime power) traits each sets — identity (count), Tenney, Benedetti.
+PRESCALERS = {"identity": (0, 0), "log-prime": (1, 0), "prime": (0, 1)}
+
+
+def scheme_with_prescaler(scheme, prescaler: str):
+    """``scheme`` with its complexity prescaler swapped to ``prescaler`` (one of
+    :data:`PRESCALERS`), keeping its optimization power, target and damage slope. Returns a
+    resolved spec (which the service/layout accept anywhere a scheme name is taken)."""
+    log_prime_power, prime_power = PRESCALERS[prescaler]
+    return replace(
+        resolve_tuning_scheme(scheme),
+        complexity_log_prime_power=log_prime_power,
+        complexity_prime_power=prime_power,
+        complexity_size_factor=0,
+    )
+
+
+def prescaler_of(scheme) -> str:
+    """Which of :data:`PRESCALERS` ``scheme`` currently uses (by its complexity traits) —
+    so the control can show the live selection. Defaults to ``"log-prime"``."""
+    spec = resolve_tuning_scheme(scheme)
+    traits = (1 if spec.complexity_log_prime_power else 0, 1 if spec.complexity_prime_power else 0)
+    for name, t in PRESCALERS.items():
+        if t == traits:
+            return name
+    return "log-prime"
 
 
 def complexity_prescaler(mapping, scheme: str = DEFAULT_TUNING_SCHEME) -> tuple[float, ...]:

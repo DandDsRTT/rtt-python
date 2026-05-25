@@ -5,7 +5,7 @@ test_web_integration.py; here we pin the Editor's own state-machine contract:
 the initial state, undo availability, and the shrink guard.
 """
 
-from rtt.web import service
+from rtt.web import service, settings, spreadsheet
 from rtt.web.editor import INITIAL_MAPPING, Editor
 
 
@@ -21,6 +21,20 @@ def test_an_edit_enables_undo():
     editor = Editor()
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
     assert editor.can_undo is True
+
+
+def test_set_complexity_prescaler_swaps_the_weighting_prescaler_into_the_layout():
+    editor = Editor()
+    assert service.prescaler_of(editor.tuning_scheme) == "log-prime"  # the default (Tenney)
+    editor.set_complexity_prescaler("prime")  # the alt.-complexity control (box 𝐋)
+    assert service.prescaler_of(editor.tuning_scheme) == "prime"
+    # and the swap flows into the prescaling matrix: sopfr's diagonal IS the primes
+    lay = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True},
+                            tuning_scheme=editor.tuning_scheme)
+    diag = {c.id: c.text for c in lay.cells if c.id.startswith("cell:prescaling:") and c.id[-3] == c.id[-1]}
+    assert diag["cell:prescaling:0:0"] == "2"
+    assert diag["cell:prescaling:1:1"] == "3"
+    assert diag["cell:prescaling:2:2"] == "5"
 
 
 def test_redo_restores_an_undone_action():

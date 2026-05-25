@@ -1078,6 +1078,31 @@ def test_weighting_is_implemented_now_that_its_region_builds():
     assert "weighting" in settings.IMPLEMENTED
 
 
+def test_alt_complexity_adds_a_prescaler_dropdown_to_the_prescaling_box():
+    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
+    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    assert "control:prescaler" not in off  # no control unless alt. complexity is on
+    ctrl = on["control:prescaler"]
+    assert ctrl.kind == "prescaler_select"
+    assert ctrl.text == "log-prime"  # the default scheme's current prescaler (Tenney)
+    # it rides below the prescaling matrix (box 𝐋), spanning the primes column
+    assert ctrl.y > on["cell:prescaling:2:2"].y
+    assert ctrl.x == on["header:primes"].x and ctrl.w == on["header:primes"].w
+
+
+def test_alt_complexity_control_needs_weighting_and_the_primes_column():
+    # the prescaler control lives in box 𝐋 (the prescaling matrix over the primes), so it
+    # is gone if weighting is off or the temperament (primes) boxes are hidden
+    assert "control:prescaler" not in {c.id for c in _with(weighting=False, alt_complexity=True).cells}
+    assert "control:prescaler" not in {
+        c.id for c in _with(weighting=True, alt_complexity=True, temperament_boxes=False).cells
+    }
+
+
+def test_alt_complexity_is_implemented_now_that_its_prescaler_control_builds():
+    assert "alt_complexity" in settings.IMPLEMENTED
+
+
 def test_weighting_subcontrols_are_registered_under_weighting():
     # all-interval (a control in box 𝐓) and alt. complexity (controls in boxes 𝐋 and 𝒄)
     # are sub-controls of weighting, so the panel indents them and shows them only while
@@ -1741,9 +1766,9 @@ def test_counts_row_reserves_no_symbol_slot_so_its_captions_dont_shift():
 
 
 def test_every_implemented_toggle_actually_changes_the_layout():
-    # a toggle is "implemented" (live, not greyed, in the Show panel) iff it has
-    # built content — flipping any IMPLEMENTED key from its default must visibly
-    # change the grid (cells added/removed/moved or their text/kind changed)
+    # a toggle is "implemented" (live, not greyed, in the Show panel) iff it has built
+    # content — with its parent chain on, flipping the toggle must visibly change the grid
+    # (cells/blocks added/removed/moved or their text/kind changed)
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
     def snapshot(s):
@@ -1756,11 +1781,20 @@ def test_every_implemented_toggle_actually_changes_the_layout():
             frozenset((b.id, b.x, b.y, b.w, b.h, b.tint) for b in lay.blocks),
         )
 
-    default_snap = snapshot(settings.defaults())
-    for key in settings.IMPLEMENTED:
+    def with_parents_on(key):
+        # a sub-control only takes effect while its parent chain is on (e.g. alt. complexity
+        # needs weighting, which needs tuning boxes), so enable that chain before flipping it
         s = settings.defaults()
-        s[key] = not s[key]
-        assert snapshot(s) != default_snap, f"{key} is marked implemented but changes nothing"
+        parent = settings.SUBCONTROLS.get(key)
+        while parent:
+            s[parent] = True
+            parent = settings.SUBCONTROLS.get(parent)
+        return s
+
+    for key in settings.IMPLEMENTED:
+        on, off = with_parents_on(key), with_parents_on(key)
+        on[key], off[key] = True, False
+        assert snapshot(on) != snapshot(off), f"{key} is marked implemented but changes nothing"
 
 
 def test_equivalences_extend_the_symbol_line_with_the_defining_equation():

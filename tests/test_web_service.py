@@ -202,6 +202,31 @@ def test_interval_complexities_of_the_empty_set_are_empty():
     assert service.interval_complexities([[1, 1, 0], [0, 1, 4]], "minimax-S", ()) == ()
 
 
+def test_scheme_with_prescaler_swaps_the_prescaler_preserving_the_rest():
+    import pytest
+
+    m = [[1, 1, 0], [0, 1, 4]]
+    # swapping the prescaler changes the prescaler diagonal: log-prime -> prime (diag prime),
+    # -> identity (diag 1)
+    assert service.complexity_prescaler(m, service.scheme_with_prescaler("minimax-S", "prime")) == pytest.approx((2.0, 3.0, 5.0))
+    assert service.complexity_prescaler(m, service.scheme_with_prescaler("minimax-S", "identity")) == pytest.approx((1.0, 1.0, 1.0))
+    assert service.complexity_prescaler(m, service.scheme_with_prescaler("minimax-S", "log-prime")) == pytest.approx((1.0, 1.585, 2.322), abs=1e-3)
+    # the optimization power and damage slope ride along unchanged
+    assert service.damage_weight_slope(service.scheme_with_prescaler("miniRMS-C", "prime")) == "complexityWeight"
+    assert service.optimization_power(service.scheme_with_prescaler("miniRMS-C", "prime")) == 2
+    # round trip: keeping the same (log-prime) prescaler yields the identical tuning
+    same = service.scheme_with_prescaler("minimax-S", "log-prime")
+    assert service.tuning(m, same).tuning_map == pytest.approx(service.tuning(m, "minimax-S").tuning_map, abs=1e-6)
+
+
+def test_prescaler_of_reports_the_schemes_current_prescaler():
+    assert service.prescaler_of("minimax-S") == "log-prime"  # the default (Tenney)
+    assert service.prescaler_of("minimax-sopfr-S") == "prime"  # Benedetti
+    assert service.prescaler_of("minimax-copfr-S") == "identity"  # unweighted count
+    # it round-trips with scheme_with_prescaler
+    assert service.prescaler_of(service.scheme_with_prescaler("minimax-S", "prime")) == "prime"
+
+
 def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
     import pytest
 
