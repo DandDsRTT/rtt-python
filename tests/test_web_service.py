@@ -202,6 +202,16 @@ def test_interval_complexities_of_the_empty_set_are_empty():
     assert service.interval_complexities([[1, 1, 0], [0, 1, 4]], "minimax-S", ()) == ()
 
 
+def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
+    import pytest
+
+    mapping = [[1, 1, 0], [0, 1, 4]]  # 2.3.5 domain
+    # the default log-prime prescaler L = diag(log2(prime))
+    assert service.complexity_prescaler(mapping, "minimax-S") == pytest.approx((1.0, 1.585, 2.322), abs=1e-3)
+    # sopfr (Benedetti) prescaler weights each prime by the prime itself
+    assert service.complexity_prescaler(mapping, "minimax-sopfr-S") == pytest.approx((2.0, 3.0, 5.0), abs=1e-3)
+
+
 def test_plain_text_mapping_is_the_ebk_string():
     # the mapping tile's plain-text value is the temperament's EBK string: a list
     # of per-generator maps, ⟨ … ] inside, enclosed by the rank-count [ … }

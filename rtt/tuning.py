@@ -641,20 +641,15 @@ def _minisum(tempered: np.ndarray, just: np.ndarray, rank: int) -> np.ndarray:
     return result.x[:rank]
 
 
-def get_complexity(
-    pcv: tuple,
+def get_complexity_prescaler(
     t: Temperament,
-    norm_power,  # trait 4
     log_prime_power,  # trait 5a
     prime_power,  # trait 5b
-    size_factor,  # trait 5c
     nonprime_basis_approach: str,  # trait 7
-) -> float:
-    """An interval's complexity: a (pre-transformed) norm of its monzo.
-
-    A nonzero ``size_factor`` augments the pre-transformed monzo with one extra entry
-    (the size-weighted sum, ``size_factor`` times the interval's log size), then divides
-    the norm by ``1 + size_factor`` — the Weil/lils family of complexities."""
+) -> list[float]:
+    """The diagonal of the complexity prescaler L: each domain basis element's pre-norm
+    weight, log2(prime)**a · prime**b (log-prime by default, a=1, b=0). An interval's
+    complexity is a norm of L applied to its monzo, so this is the matrix that defines it."""
     diagonal = []
     for q in get_domain_basis(t):
         fraction = Fraction(q)
@@ -669,6 +664,24 @@ def get_complexity(
         if prime_power > 0:
             weight *= base**prime_power
         diagonal.append(weight)
+    return diagonal
+
+
+def get_complexity(
+    pcv: tuple,
+    t: Temperament,
+    norm_power,  # trait 4
+    log_prime_power,  # trait 5a
+    prime_power,  # trait 5b
+    size_factor,  # trait 5c
+    nonprime_basis_approach: str,  # trait 7
+) -> float:
+    """An interval's complexity: a (pre-transformed) norm of its monzo.
+
+    A nonzero ``size_factor`` augments the pre-transformed monzo with one extra entry
+    (the size-weighted sum, ``size_factor`` times the interval's log size), then divides
+    the norm by ``1 + size_factor`` — the Weil/lils family of complexities."""
+    diagonal = get_complexity_prescaler(t, log_prime_power, prime_power, nonprime_basis_approach)
     transformed = [w * x for w, x in zip(diagonal, pcv)]
     if size_factor != 0:
         transformed.append(size_factor * sum(transformed))

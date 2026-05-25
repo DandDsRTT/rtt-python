@@ -25,6 +25,7 @@ from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
     _damage_weights,
     get_complexity,
+    get_complexity_prescaler,
     get_just_tuning_map,
     optimize_generator_tuning_map,
     optimize_tuning_map,
@@ -251,6 +252,18 @@ def damage_weight_slope(scheme: str = DEFAULT_TUNING_SCHEME) -> str:
     """The scheme's damage-weight slope — ``"unityWeight"``, ``"complexityWeight"`` or
     ``"simplicityWeight"`` — i.e. whether each weight is 1, its complexity, or 1/complexity."""
     return resolve_tuning_scheme(scheme).damage_weight_slope
+
+
+def complexity_prescaler(mapping, scheme: str = DEFAULT_TUNING_SCHEME) -> tuple[float, ...]:
+    """The diagonal of the complexity prescaler L — each domain prime's pre-norm weight
+    (log2(prime) for the default log-prime norm). The L matrix is diag of this."""
+    t = Temperament(_to_matrix(mapping), Variance.ROW)
+    spec = resolve_tuning_scheme(scheme)
+    return tuple(
+        get_complexity_prescaler(
+            t, spec.complexity_log_prime_power, spec.complexity_prime_power, spec.nonprime_basis_approach
+        )
+    )
 
 
 def plain_text_values(
