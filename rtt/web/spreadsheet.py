@@ -297,7 +297,8 @@ def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
 
 
 def build(state, settings=None, collapsed=None,
-          tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone") -> Layout:
+          tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
+          pending_comma=None) -> Layout:
     if settings is None:
         settings = _default_settings()
     if tuning_scheme is None:
@@ -345,9 +346,15 @@ def build(state, settings=None, collapsed=None,
     tun = service.tuning(state.mapping, tuning_scheme)  # prime maps, shared by every interval set
     target_sizes = service.interval_sizes(tun, targets)
     comma_ratios = service.comma_ratios(state.comma_basis)
-    nc = len(comma_ratios)  # comma count shown (>= nullity when a blank comma waits)
+    nc = len(comma_ratios)  # the real commas (those that define the temperament)
     mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
     comma_sizes = service.interval_sizes(tun, comma_ratios)  # comma sizes (tempered ~0)
+    # a comma being added is shown as a pending draft column to the right of the real
+    # ones: blank red cells and a "?" quantity until it is a valid independent comma
+    # (then it commits and the mapping re-ranks). It is not a real comma, so it does
+    # not enter the nullity, the mapping, or the sizes — only the displayed column count.
+    pending = list(pending_comma) if pending_comma is not None else None
+    nc_shown = nc + (1 if pending is not None else 0)
     # other intervals of interest: a user-built set held as monzos and edited like
     # the comma basis (editable vector cells). Normalize each monzo to the current d
     # (pad/trim) so a domain change can't misalign them, then derive the ratios the
@@ -390,7 +397,7 @@ def build(state, settings=None, collapsed=None,
         ("quantities", SPINE_W, show_domain_quantities, True),
         ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
-        ("commas", 2 * BRACKET_W + nc * COL_W, show_temp, True),
+        ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
         ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
         # The interest column's long title needs its two-line strip width as a FLOOR:
         # never let the value cells (few intervals: 32 + mi·COL_W) shrink the column
@@ -604,10 +611,13 @@ def build(state, settings=None, collapsed=None,
         if tile_open("quantities", "commas"):
             for c in range(nc):
                 cells.append(CellBox(f"comma:{c}", comma_left(c), qy, COL_W, ROW_H, "commaratio", text=comma_ratios[c], comma=c))
-            # commas mirror the domain controls: + always adds a (blank) comma; the −
-            # rides the last comma as a hover affordance, only when one can be removed
-            if nc > 1:
-                cells.append(CellBox("comma_minus", comma_left(nc - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "comma_minus"))
+            if pending is not None:  # the draft has no ratio yet — a "?" in a distinct id so
+                # it is removed (not restructured from "?" label to fraction) when it commits
+                cells.append(CellBox("comma:pending", comma_left(nc), qy, COL_W, ROW_H, "commaratio", text="?", comma=nc, pending=True))
+            # commas mirror the domain controls: + starts a (pending) comma; the − rides
+            # the last column — cancelling the draft, or dropping a real comma when >1
+            if pending is not None or nc > 1:
+                cells.append(CellBox("comma_minus", comma_left(nc_shown - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "comma_minus"))
             cells.append(CellBox("comma_plus", ctrl_x["commas"], qy + (ROW_H - BTN) // 2, BTN, BTN, "comma_plus"))
         if tile_open("quantities", "targets"):
             for j in range(k):
@@ -672,6 +682,11 @@ def build(state, settings=None, collapsed=None,
             for c in range(nc):
                 for p in range(d):
                     cells.append(CellBox(f"cell:comma:{p}:{c}", comma_left(c), vec_top(p), COL_W, ROW_H, "commacell", text=str(state.comma_basis[c][p]), prime=p, comma=c))
+            if pending is not None:  # the draft column: blank, red-outlined cells the user fills in
+                for p in range(d):
+                    v = pending[p]
+                    cells.append(CellBox(f"cell:comma:{p}:{nc}", comma_left(nc), vec_top(p), COL_W, ROW_H, "commacell",
+                                         text="" if v is None else str(v), prime=p, comma=nc, pending=True))
         if tile_open("vectors", "targets"):
             for j in range(k):
                 for p in range(d):
@@ -839,7 +854,7 @@ def build(state, settings=None, collapsed=None,
         lines.append(Line(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y))
 
     column_axis("primes", "prime", d, lambda p: prime_left(p) + COL_W / 2)
-    column_axis("commas", "comma", nc, lambda c: comma_left(c) + COL_W / 2)
+    column_axis("commas", "comma", nc_shown, lambda c: comma_left(c) + COL_W / 2)
     column_axis("targets", "target", k, lambda j: target_left(j) + COL_W / 2)
     column_axis("interest", "interest", mi, lambda i: interest_left(i) + COL_W / 2)
 
@@ -1009,9 +1024,10 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("mapping", "imapped", "interest", interest_left, mi)
     # the interval-vectors row holds raw (untempered) monzos, so every column is a
     # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
-    # (commacell), so it skips the separator rules (its cell borders divide the columns).
+    # (commacell), so it skips the separator rules (its cell borders divide the columns);
+    # nc_shown includes the pending draft column so it gets its ket marks too.
     monzo_list_marks("vectors", "vec:primes", "primes", prime_left, d, foot="ebkangle")
-    monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc, foot="ebkangle", bordered=True)
+    monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc_shown, foot="ebkangle", bordered=True)
     monzo_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle")
 

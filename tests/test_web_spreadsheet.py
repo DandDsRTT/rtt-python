@@ -848,7 +848,7 @@ def test_comma_basis_grid_has_no_separator_rules_that_double_its_cell_borders():
     # so its cell borders already divide the columns; also drawing the monzo
     # separator rules would lay a second line over each shared border (a visible
     # double). The bare-label vec lists (domain basis, target list) keep theirs.
-    two = service.add_comma(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # 2 comma columns
+    two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real comma columns
     cells = {c.id for c in spreadsheet.build(two).cells}
     assert "cell:comma:0:1" in cells  # the second comma column is present...
     assert not any(c.startswith("sep:vec:commas") for c in cells)  # ...with no separator rule
@@ -905,11 +905,36 @@ def test_commas_column_has_an_add_comma_control():
 def test_comma_minus_rides_the_last_comma_only_when_more_than_one():
     one = {c.id for c in _layout().cells}  # meantone exposes a single comma
     assert "comma_minus" not in one  # the sole comma cannot be removed
-    two = service.add_comma(service.from_mapping(((1, 1, 0), (0, 1, 4))))
+    two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real (independent) commas
     cells = {c.id: c for c in spreadsheet.build(two).cells}
     assert "comma_minus" in cells  # ...but with two, the last is removable
     assert cells["comma_minus"].x == cells["comma:1"].x  # rides the last comma column
     assert cells["comma_minus"].y < cells["comma:1"].y  # revealed above its header
+
+
+def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 1 real comma, mapping r=2
+    cells = {c.id: c for c in spreadsheet.build(base, pending_comma=[None, None, None]).cells}
+    assert cells["comma:0"].text == "80/81"  # the real comma stays
+    # a draft column rides to its right: a "?" quantity and blank, red-flagged monzo cells
+    assert cells["comma:pending"].text == "?" and cells["comma:pending"].pending
+    assert cells["comma:pending"].x > cells["comma:0"].x
+    assert cells["cell:comma:0:1"].text == "" and cells["cell:comma:0:1"].pending
+    # the mapping is untouched (the draft is not yet a real comma): still 2 rows, no 3rd
+    assert "cell:mapping:1:0" in cells and "cell:mapping:2:0" not in cells
+    # the draft has no size cells (undefined until valid)
+    assert "tuning:comma:1" not in cells
+    # the − rides the draft column (to cancel it)
+    assert cells["comma_minus"].x == cells["comma:pending"].x
+
+
+def test_a_partly_typed_pending_comma_shows_its_entered_components():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = {c.id: c for c in spreadsheet.build(base, pending_comma=[4, None, 1]).cells}
+    assert cells["cell:comma:0:1"].text == "4"   # typed
+    assert cells["cell:comma:1:1"].text == ""    # still blank
+    assert cells["cell:comma:2:1"].text == "1"
+    assert all(cells[f"cell:comma:{p}:1"].pending for p in range(3))
 
 
 # --- math expressions: the just row's exact log₂ closed forms ---

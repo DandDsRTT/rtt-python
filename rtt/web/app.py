@@ -213,6 +213,9 @@ _CSS = f"""
 .rtt-cellinput .q-field__native {{ text-align:center; padding:0 !important; color:#000; font-size:{_CELL_FONT}px;
             min-height:0; font-family:'Cambria',Georgia,serif; }}
 .rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal {{ display:none !important; }}
+/* a pending comma's draft cells: red-outlined and empty until the user types a valid
+   independent comma, at which point it commits and reverts to a normal black cell */
+.rtt-cellinput.rtt-pending .q-field__control {{ border-color:#e53935 !important; }}
 /* the +/− controls are half the square mapping/prime cell, sharing its exact border */
 .rtt-btn {{ width:15px !important; min-width:15px !important; height:15px !important;
            min-height:15px !important; background:#fff !important; border:{_CELL_BORDER} !important;
@@ -787,6 +790,14 @@ def index() -> None:
         if building[0]:
             return
         d, nc = editor.state.d, len(editor.state.comma_basis)
+        if editor.pending_comma is not None:
+            # the draft column rides at index nc; hand its cells to the editor, which
+            # commits (and re-ranks) once they form a valid independent comma
+            if any(f"cell:comma:{p}:{nc}" not in inputs for p in range(d)):
+                return  # the draft cells aren't shown (folded away)
+            editor.set_pending_comma([_parse_int(inputs[f"cell:comma:{p}:{nc}"].value) for p in range(d)])
+            render()
+            return
         if any(f"cell:comma:{p}:{c}" not in inputs for c in range(nc) for p in range(d)):
             return  # the comma cells aren't currently shown (folded away)
         # the comma cells are the basis transposed (prime down the rows, comma across)
@@ -987,7 +998,8 @@ def index() -> None:
         building[0] = True
         st = editor.state
         lay = spreadsheet.build(st, settings, collapsed, editor.tuning_scheme, editor.target_spec,
-                                interest=editor.interest_monzos, range_mode=editor.range_mode)
+                                interest=editor.interest_monzos, range_mode=editor.range_mode,
+                                pending_comma=editor.pending_comma)
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
 
@@ -1041,7 +1053,13 @@ def index() -> None:
             elif cb.kind == "mapping":
                 inputs[cb.id].value = str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":
-                inputs[cb.id].value = str(st.comma_basis[cb.comma][cb.prime])
+                if cb.pending:  # the draft column: show the typed component (blank if None), red-outlined
+                    v = editor.pending_comma[cb.prime] if editor.pending_comma is not None else None
+                    inputs[cb.id].value = "" if v is None else str(v)
+                else:
+                    inputs[cb.id].value = str(st.comma_basis[cb.comma][cb.prime])
+                inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                      remove="" if cb.pending else "rtt-pending")
             elif cb.kind == "interestcell":
                 inputs[cb.id].value = cb.text  # the normalized monzo component build computed
             elif cb.kind == "ptextedit":  # reflect the canonical string after a valid edit

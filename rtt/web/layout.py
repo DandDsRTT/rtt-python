@@ -49,6 +49,7 @@ class CellBox:
     underlines: tuple[tuple[int, int], ...] = ()  # (start, len) spans of text to underline (mnemonics)
     values: tuple[float, ...] = ()  # per-column data for a "chart" cell's bars
     ranges: tuple[tuple[float, float], ...] = ()  # per-generator (low, high) for a "rangechart" cell's I-beams
+    pending: bool = False  # a not-yet-valid comma draft cell — rendered blank and red-outlined
 
 
 @dataclass(frozen=True)

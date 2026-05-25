@@ -32,6 +32,11 @@ class Editor:
         # Which generator tuning range the ranges chart shows — diamond-monotone or
         # diamond-tradeoff. A display choice like the two above, so it sits outside undo.
         self.range_mode: str = "monotone"
+        # A comma being added but not yet valid: a draft monzo (d components, each an
+        # int or None while blank). It is NOT part of the temperament — the mapping is
+        # untouched — until it is filled in with a comma independent of the basis, so
+        # d = r + n always holds for the real commas; the draft is shown apart.
+        self.pending_comma: list[int | None] | None = None
         self._undo_stack: list[TemperamentState] = []
         self._redo_stack: list[TemperamentState] = []
 
@@ -50,15 +55,18 @@ class Editor:
 
     @property
     def can_remove_comma(self) -> bool:
-        """Whether a comma can be dropped without emptying the basis."""
-        return len(self.state.comma_basis) > 1
+        """Whether the comma − is live: it cancels a pending draft, or (with none)
+        drops a real comma without emptying the basis."""
+        return self.pending_comma is not None or len(self.state.comma_basis) > 1
 
     def edit_mapping(self, mapping) -> None:
         self._snapshot()
+        self.pending_comma = None  # a temperament edit abandons any in-progress comma draft
         self.state = service.from_mapping(mapping)
 
     def edit_comma_basis(self, comma_basis) -> None:
         self._snapshot()
+        self.pending_comma = None
         self.state = service.from_comma_basis(comma_basis)
 
     def add_interest(self) -> None:
@@ -110,17 +118,38 @@ class Editor:
 
     def expand(self) -> None:
         self._snapshot()
+        self.pending_comma = None  # the draft's length is tied to the old domain
         self.state = service.expand_domain(self.state)
 
     def shrink(self) -> None:
         self._snapshot()
+        self.pending_comma = None
         self.state = service.shrink_domain(self.state)
 
     def add_comma(self) -> None:
-        self._snapshot()
-        self.state = service.add_comma(self.state)
+        """Begin a pending comma: a blank draft column for the user to fill in. It is
+        not part of the temperament (the mapping is unchanged) and not an undoable
+        edit until it commits — see set_pending_comma."""
+        self.pending_comma = [None] * self.state.d
+
+    def set_pending_comma(self, values) -> None:
+        """Hold the draft comma's edited components. Once all are filled and the comma
+        is independent of the basis (so it genuinely raises the nullity), commit it —
+        re-dualing to a mapping with one fewer row — and clear the draft. An
+        incomplete or dependent draft is kept as-is (shown pending), changing nothing."""
+        self.pending_comma = list(values)
+        if any(v is None for v in values):
+            return  # still being typed in
+        extended = service.from_comma_basis(self.state.comma_basis + (tuple(int(v) for v in values),))
+        if extended.n > self.state.n:  # an independent new comma re-ranks the temperament
+            self._snapshot()
+            self.state = extended
+            self.pending_comma = None
 
     def remove_comma(self) -> None:
+        if self.pending_comma is not None:
+            self.pending_comma = None  # cancel the draft (not an undoable edit)
+            return
         self._snapshot()
         self.state = service.remove_comma(self.state)
 

@@ -50,21 +50,54 @@ def test_undo_with_empty_stack_is_a_noop():
     assert editor.state.mapping == INITIAL_MAPPING
 
 
-def test_add_comma_then_remove_comma_round_trips_through_undo_state():
+def test_add_comma_starts_a_blank_pending_draft_without_touching_the_temperament():
     editor = Editor()
-    assert editor.state.comma_basis == ((4, -4, 1),)
+    assert editor.pending_comma is None
     editor.add_comma()
-    assert editor.state.comma_basis == ((4, -4, 1), (0, 0, 0))  # a blank comma to fill
-    assert editor.can_undo is True  # the add is undoable
+    assert editor.pending_comma == [None, None, None]  # a blank d-length draft
+    assert editor.state.comma_basis == ((4, -4, 1),)  # the temperament is unchanged...
+    assert editor.state.r == 2  # ...the mapping keeps its rows...
+    assert editor.can_undo is False  # ...and starting a draft is not an undoable edit
+
+
+def test_filling_the_pending_comma_with_an_independent_comma_commits_and_reranks():
+    editor = Editor()
+    editor.add_comma()
+    editor.set_pending_comma([4, -5, 1])  # an independent second comma
+    assert editor.pending_comma is None  # committed, no longer pending
+    assert editor.state.comma_basis == ((4, -4, 1), (4, -5, 1))
+    assert (editor.state.r, editor.state.n) == (1, 2)  # the mapping dropped a row (d = r + n)
+    assert editor.can_undo is True  # the commit is the undoable edit
+
+
+def test_incomplete_or_dependent_pending_comma_is_held_not_committed():
+    editor = Editor()
+    editor.add_comma()
+    editor.set_pending_comma([4, None, 1])  # still being typed
+    assert editor.pending_comma == [4, None, 1] and editor.state.r == 2  # held, no re-rank
+    editor.set_pending_comma([8, -8, 2])  # complete but dependent (2x the existing comma)
+    assert editor.pending_comma == [8, -8, 2] and editor.state.r == 2  # not a new comma -> held
+
+
+def test_removing_a_pending_comma_cancels_the_draft():
+    editor = Editor()
+    assert editor.can_remove_comma is False  # the sole real comma cannot be removed
+    editor.add_comma()
+    assert editor.can_remove_comma is True  # ...but a pending draft can be cancelled
     editor.remove_comma()
-    assert editor.state.comma_basis == ((4, -4, 1),)
+    assert editor.pending_comma is None
+    assert editor.state.comma_basis == ((4, -4, 1),)  # unchanged
+    assert editor.can_undo is False  # cancelling a draft is not an undoable edit
 
 
-def test_cannot_remove_the_sole_comma():
-    editor = Editor()  # meantone exposes a single comma
-    assert editor.can_remove_comma is False  # removing it would empty the basis
+def test_removing_a_real_comma_drops_the_last_when_no_draft_is_pending():
+    editor = Editor()
     editor.add_comma()
-    assert editor.can_remove_comma is True  # ...but with two, the last can go
+    editor.set_pending_comma([4, -5, 1])  # commit a 2nd comma -> 2 real, no pending
+    assert editor.pending_comma is None and len(editor.state.comma_basis) == 2
+    editor.remove_comma()  # no draft -> drop the last real comma
+    assert editor.state.comma_basis == ((4, -4, 1),)
+    assert editor.state.r == 2  # the mapping regained its row
 
 
 def test_editor_starts_with_default_tuning_scheme_and_target_spec():

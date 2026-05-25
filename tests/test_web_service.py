@@ -41,14 +41,6 @@ def test_shrink_domain_is_inverse_of_expand():
     assert (state.d, state.r, state.n) == (3, 2, 1)
 
 
-def test_add_comma_appends_a_blank_comma_to_fill_in():
-    st = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # d=3, one comma
-    added = service.add_comma(st)
-    assert added.comma_basis == ((4, -4, 1), (0, 0, 0))  # a blank monzo, ready to edit
-    assert added.d == 3  # domain unchanged
-    assert added.n == 1  # the blank comma is dependent, so rank holds until it is filled
-
-
 def test_remove_comma_drops_the_last_comma_and_reranks():
     st = service.from_comma_basis(((4, -4, 1), (1, 0, 0)))  # d=3, n=2, r=1
     assert (st.d, st.r, st.n) == (3, 1, 2)

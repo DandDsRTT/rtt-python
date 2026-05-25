@@ -315,16 +315,10 @@ def shrink_domain(state: TemperamentState) -> TemperamentState:
     return from_comma_basis(shrunk)
 
 
-def add_comma(state: TemperamentState) -> TemperamentState:
-    """Append a blank comma to the basis (a zero monzo) for the user to fill in,
-    then re-dual. The zero comma is dependent, so rank holds until it is edited to
-    an independent interval — at which point nullity rises and rank falls."""
-    extended = state.comma_basis + ((0,) * state.d,)
-    return from_comma_basis(extended)
-
-
 def remove_comma(state: TemperamentState) -> TemperamentState:
-    """Drop the last comma from the basis, then re-dual — the inverse of
-    :func:`add_comma`. Raising rank as nullity falls (the temperament tempers out
-    one fewer comma). Callers guard against removing the sole comma."""
+    """Drop the last comma from the basis, then re-dual — raising rank as nullity
+    falls (the temperament tempers out one fewer comma). Adding a comma is the
+    Editor's job (it stages a pending draft and commits it once valid), not a service
+    primitive, since an arbitrary blank comma would be dependent and re-rank nothing.
+    Callers guard against removing the sole comma."""
     return from_comma_basis(state.comma_basis[:-1])
