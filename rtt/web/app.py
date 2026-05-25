@@ -243,8 +243,11 @@ _CSS = f"""
 .rtt-rangemode {{ width:100%; display:flex; flex-direction:row; align-items:center;
                   justify-content:center; gap:4px; line-height:1; overflow:hidden; }}
 .rtt-rangeopt {{ display:flex; align-items:center; gap:2px; cursor:pointer; user-select:none; }}
-.rtt-rangebox {{ width:7px; height:7px; flex:none; border:1px solid #555; background:#fff; box-sizing:border-box; }}
-.rtt-rangeopt-on .rtt-rangebox {{ background:#000; border-color:#000; }}  /* selected = a solid black square */
+.rtt-rangebox {{ width:8px; height:8px; flex:none; border:1px solid #555; background:#fff;
+                box-sizing:border-box; position:relative; }}
+/* selected = a square "radio": the ring stays and a smaller filled square sits centred
+   inside it (like a radio dot, but square) — not a solid fill */
+.rtt-rangeopt-on .rtt-rangebox::after {{ content:""; position:absolute; inset:1px; background:#000; }}
 .rtt-rangelabel {{ font-family:'Cambria',Georgia,serif; font-size:7.5px; color:#000; white-space:nowrap; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
