@@ -1426,7 +1426,8 @@ def _reload_excludes(worktrees: Path) -> str:
 def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8137
     worktrees = Path(__file__).resolve().parents[2] / ".claude" / "worktrees"
-    ui.run(title="RTT", reload=True, show=False, port=port,
+    ui.run(title="D&D's RTT App", favicon="https://github.com/DandDsRTT.png",
+           reload=True, show=False, port=port,
            uvicorn_reload_excludes=_reload_excludes(worktrees))
 
 

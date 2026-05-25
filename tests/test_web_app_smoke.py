@@ -34,6 +34,18 @@ def test_main_runs_server_with_reload_enabled(monkeypatch):
     assert captured["show"] is False
 
 
+def test_main_sets_browser_tab_title_and_org_favicon(monkeypatch):
+    # the browser tab reads "D&D's RTT App" and shows the DandDsRTT GitHub org avatar;
+    # NiceGUI takes a remote URL for favicon verbatim, and github.com/<org>.png is the
+    # canonical redirect to the org's current icon, so the tab always matches the org.
+    captured = {}
+    monkeypatch.setattr(sys, "argv", ["app.py"])
+    monkeypatch.setattr(app.ui, "run", lambda **kwargs: captured.update(kwargs))
+    app.main()
+    assert captured["title"] == "D&D's RTT App"
+    assert captured["favicon"] == "https://github.com/DandDsRTT.png"
+
+
 def test_main_passes_crash_safe_reload_excludes(monkeypatch):
     # main() wires _reload_excludes into ui.run. The user keeps this instance running to
     # use the app; agent worktrees live in .claude/worktrees/ inside the repo, so their
