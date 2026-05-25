@@ -1238,15 +1238,15 @@ def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column():
     # a wide column fits the whole name on one line...
     assert spreadsheet._wrap_lines("tempered target interval size list", 272) == 1
     # ...but the narrow one-comma column forces it to several lines
-    assert spreadsheet._wrap_lines("tempered comma size list", 62) >= 3
+    assert spreadsheet._wrap_lines("tempered comma basis interval size list", 62) >= 3
 
 
 def test_a_long_caption_grows_its_tile_rather_than_spilling():
     cells = {c.id: c for c in _with(names=True).cells}
-    cap = cells["caption:tuning:commas"]  # "tempered comma size list" on a ~62px column
+    cap = cells["caption:tuning:commas"]  # "tempered comma basis interval size list" on a ~62px column
     # the caption gets a line per wrapped line (not one fixed line), so the name
     # stays within its column instead of overflowing it
-    assert cap.h == spreadsheet._wrap_lines("tempered comma size list", cap.w) * spreadsheet.CAPTION_LINE
+    assert cap.h == spreadsheet._wrap_lines("tempered comma basis interval size list", cap.w) * spreadsheet.CAPTION_LINE
     assert cap.h >= 3 * spreadsheet.CAPTION_LINE  # at least three lines tall here
     # it stays as wide as its (one-comma) column and sits below the value cell
     assert cap.w == cells["header:commas"].w
@@ -1259,12 +1259,14 @@ def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():
     # the raw comma basis is captioned in the interval-vectors row; the mapping row
     # shows it mapped (vanishing), captioned to parallel the mapped target list
     assert on["caption:vectors:commas"].text == "comma basis"
-    assert on["caption:mapping:commas"].text == "mapped comma list"
-    # comma captions mirror the target captions, swapping "target interval" for "comma"
-    # (damage is the exception — a target-only row, with no comma tile to caption)
-    assert on["caption:tuning:commas"].text == "tempered comma size list"
-    assert on["caption:just:commas"].text == "(just) comma size list"
-    assert on["caption:retune:commas"].text == "comma error list"
+    assert on["caption:mapping:commas"].text == "mapped comma basis"
+    # comma captions mirror the target captions, swapping "target interval" for "comma
+    # basis interval"; the retuning row says "retuning" (its symbol is 𝒓C) where the
+    # targets' dedicated error vector 𝐞 reads "error". (damage is the exception — a
+    # target-only row, with no comma tile to caption)
+    assert on["caption:tuning:commas"].text == "tempered comma basis interval size list"
+    assert on["caption:just:commas"].text == "(just) comma basis interval size list"
+    assert on["caption:retune:commas"].text == "comma basis interval retuning list"
     assert "caption:damage:commas" not in on
     assert not any(c.startswith("caption:") and c.endswith(":commas") for c in off)
 
@@ -1779,10 +1781,10 @@ def test_comma_column_symbols_are_map_times_basis_products():
     # the comma basis C lives in the interval-vectors row; the comma column has no
     # dedicated letters, so the rest are products of the maps and that basis
     assert on["symbol:vectors:commas"].text == "C"    # comma basis
-    assert on["symbol:mapping:commas"].text == "𝑀C"   # mapped comma list
+    assert on["symbol:mapping:commas"].text == "𝑀C"   # mapped comma basis
     assert on["symbol:tuning:commas"].text == "𝒕C"    # tempered comma sizes
     assert on["symbol:just:commas"].text == "𝒋C"      # just comma sizes
-    assert on["symbol:retune:commas"].text == "𝒓C"    # comma errors
+    assert on["symbol:retune:commas"].text == "𝒓C"    # comma retunings
     # the comma symbol still aligns with the prime symbol in the same row
     assert on["symbol:tuning:commas"].y == on["symbol:tuning:primes"].y
 

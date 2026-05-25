@@ -89,17 +89,17 @@ CAPTIONS = {
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
     ("mapping", "primes"): "(temperament) mapping",
-    ("mapping", "commas"): "mapped comma list",
+    ("mapping", "commas"): "mapped comma basis",
     ("mapping", "targets"): "mapped target interval list",
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
-    ("tuning", "commas"): "tempered comma size list",
+    ("tuning", "commas"): "tempered comma basis interval size list",
     ("tuning", "targets"): "tempered target interval size list",
     ("just", "primes"): "just tuning map",
-    ("just", "commas"): "(just) comma size list",
+    ("just", "commas"): "(just) comma basis interval size list",
     ("just", "targets"): "(just) target interval size list",
     ("retune", "primes"): "retuning map",
-    ("retune", "commas"): "comma error list",
+    ("retune", "commas"): "comma basis interval retuning list",
     ("retune", "targets"): "target interval error list",
     ("prescaling", "primes"): "complexity prescaler",
     ("complexity", "primes"): "domain prime complexity map",
@@ -128,7 +128,7 @@ CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # 𝐞 𝐝); the mapping 𝑀 is math-italic; the interval lists/bases — mapped target list
 # Y, comma basis C, target list T — are upright, non-bold. The comma column has no
 # dedicated letters — everything but the basis C (in the interval-vectors row) is a
-# product with it: the mapped comma list 𝑀C and the comma sizes 𝒕C, 𝒋C, 𝒓C (damage is
+# product with it: the mapped comma basis 𝑀C and the comma sizes 𝒕C, 𝒋C, 𝒓C (damage is
 # a target-only row, so the comma column ends there). The "other intervals of
 # interest" carry none.
 SYMBOLS = {
@@ -1206,7 +1206,7 @@ def build(state, settings=None, collapsed=None,
         if tile_open("mapping", "primes"):
             for i in range(r):
                 bracket(f"map:{i}", MAP_BRACKETS, "primes", map_top(i), ROW_H)
-        if tile_open("mapping", "commas"):  # the mapped (vanishing) comma list: a [ ] over r rows
+        if tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
             bracket("mapped_comma", LIST_BRACKETS, "commas", row_y["mapping"], r * ROW_H, fit=True)
         if tile_open("mapping", "targets"):
             bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H, fit=True)

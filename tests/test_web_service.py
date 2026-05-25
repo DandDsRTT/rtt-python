@@ -455,7 +455,7 @@ def test_plain_text_commas_column_mirrors_the_grid():
     # the comma basis (the editable monzo matrix) lives in the interval-vectors row,
     # a list of monzos wrapped in an outer [ … ]
     assert pt[("vectors", "commas")] == "[[4 -4 1⟩]"
-    # the mapping row's commas tile is the mapped comma list — every comma vanishes,
+    # the mapping row's commas tile is the mapped comma basis — every comma vanishes,
     # shown in generator coords (close })
     assert pt[("mapping", "commas")] == "[[0 0}]"
     # comma sizes are lists over the commas, like the grid's column
