@@ -515,6 +515,15 @@ def build(state, settings=None, collapsed=None,
     def col_open(key):
         return key in col_x and f"col:{key}" not in collapsed
 
+    # The generator tuning-ranges box (the chart + its mode selector) nests at the bottom
+    # of the generator tuning map tile when tuning_ranges is on. Its extra height is
+    # reserved in the tuning row (below) so the rows beneath drop clear of it rather than
+    # the box spilling across them. Determinable up front: it rides the open, uncollapsed
+    # gens tile of the (present, unfolded) tuning row.
+    gtm_chart = (show_ranges and show_tuning and "row:tuning" not in collapsed
+                 and col_open("gens") and "tile:tuning:gens" not in collapsed)
+    gtm_extra = (RANGE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
+
     header_y = 0
     col_node_y = header_h + (GAP - TOGGLE) / 2  # the column toggle sits just under the header text
     # Branching (trunk/bus/verticals) starts just below the column nodes so no
@@ -609,7 +618,8 @@ def build(state, settings=None, collapsed=None,
         row_label[key] = label
         row_collapsible[key] = collapsible
         tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + pre + ptext
-        y += tile_h[key] + GAP
+        # the tuning row reserves the nested ranges box below its tile, so following rows clear it
+        y += tile_h[key] + GAP + (gtm_extra if key == "tuning" else 0)
     total_h = y
 
     def row_open(key):
@@ -859,9 +869,8 @@ def build(state, settings=None, collapsed=None,
     # monotone or -tradeoff. Gated on the tuning_ranges toggle; the tile's own panel is
     # extended to enclose it (see gtm_extra in the panel loop), so it sits inside the tile
     # rather than floating. The monotone range can be None (no monotone tuning exists),
-    # passed as () so the chart draws a placeholder rather than I-beams.
-    gtm_chart = show_ranges and tile_open("tuning", "gens")
-    gtm_extra = (RANGE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
+    # passed as () so the chart draws a placeholder rather than I-beams. gtm_chart/gtm_extra
+    # were computed up front (so the tuning row could reserve the box's height).
     if gtm_chart:
         chosen = tun.monotone_generator_range if range_mode == "monotone" else tun.tradeoff_generator_range
         gx, gw = col_x["gens"], col_w["gens"]

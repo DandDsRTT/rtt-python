@@ -1694,6 +1694,21 @@ def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector():
     assert "block:gentuning" not in {b.id for b in lay.blocks}
 
 
+def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it():
+    # the ranges box (chart + selector) nests below the generator-map values and extends
+    # the tuning tile downward; that extra height must be reserved in the tuning row so the
+    # just/retuning/damage rows drop below the whole box instead of it spilling across them
+    lay = _with(tuning_ranges=True)
+    cells = {c.id: c for c in lay.cells}
+    panel = {b.id: b for b in lay.blocks}["block:tuning:gens"]  # the extended generator-tuning-map tile
+    box_bottom = panel.y + panel.h
+    for nxt in ("just:prime:0", "retune:prime:0", "damage:target:0"):
+        assert cells[nxt].y >= box_bottom, f"{nxt} overlaps the ranges box"
+    # and turning the box on must push those rows DOWN versus off (space is reserved, not stolen)
+    off = {c.id: c for c in _with(tuning_ranges=False).cells}
+    assert cells["just:prime:0"].y > off["just:prime:0"].y
+
+
 def test_tuning_colorization_washes_every_tuning_row():
     # a full-width colour band backs each tuning/just/retuning/damage row (the mockup's
     # cyan box group): one wash + white base per row, spanning the whole row background
