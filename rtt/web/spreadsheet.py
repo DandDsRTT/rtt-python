@@ -873,8 +873,8 @@ def build(state, settings=None, collapsed=None,
         if key == "just":
             return _log_operand(group_ratio[group](i))
         if group == "commas" and key == "retune":
-            r = 1 / Fraction(comma_ratios[i])
-            return _log_operand(f"{r.numerator}/{r.denominator}")
+            recip = 1 / Fraction(comma_ratios[i])
+            return _log_operand(f"{recip.numerator}/{recip.denominator}")
         return None
 
     # tuning rows over the primes, commas and targets (cents); each can collapse on
