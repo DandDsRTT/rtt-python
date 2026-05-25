@@ -22,6 +22,9 @@ COL_W = 30  # px per value column; == ROW_H so matrix cells are squares that til
 # the column (a shared-border grid, per the mockup); cents stack int-over-frac to fit
 GAP = 14  # px between row/column groups
 PAD = 4  # px a block extends around its cells
+WASH_PAD = GAP / 2  # px a colorization wash extends around its cells — wide enough that
+# adjacent washed tiles' rects meet across the gap, so the colour reads as one
+# continuous band behind the grey tiles (which overhang only by the smaller PAD)
 LABEL_W = 96  # row-label gutter width
 HEADER_H = 36  # column-header height — two text lines tall, so a multi-word title
 # stacks centered onto a second line (via explicit "\n" breaks in col_header, e.g.
@@ -132,6 +135,14 @@ SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symb
 # for its spanning bracket+brace, the interval vectors for the per-column ket marks
 FRAMED_ROWS = frozenset({"mapping", "vectors"})
 CHARTED_ROWS = frozenset({"retune", "damage"})  # rows that grow a bar-chart band above their values when charts shown
+
+# Box-group colorization (the mockup's coloured washes behind the grey tiles): a
+# group's "{group}_colorization" setting, when on, paints a colour wash behind every
+# tile in that group, showing through the gaps around the grey tiles. A tile belongs
+# to a group by its quantity row; the renderer maps the group name to its CSS colour.
+COLORIZE_GROUP_ROWS: dict[str, frozenset[str]] = {
+    "tuning": frozenset({"tuning", "just", "retune", "damage"}),
+}
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
 # column): each is a quick menu for one of the things you actually choose, riding
@@ -903,20 +914,37 @@ def build(state, settings=None, collapsed=None,
     # animates it shrinking away to nothing — leaving only the band's gridline,
     # never a leftover grey strip. Every tile is simply its row band's full height
     # (the d-tall monzo matrices live in the d-tall interval-vectors row).
-    def panel(bid, ckey, rkey):
-        if ckey not in col_x or rkey not in row_y:
-            return
+    def tile_tint(rkey):
+        # the colour-group whose colorization is on and whose rows include this tile,
+        # or "" — so a tile in the tuning rows washes cyan when tuning_colorization is on
+        for group, rows in COLORIZE_GROUP_ROWS.items():
+            if rkey in rows and settings.get(f"{group}_colorization"):
+                return group
+        return ""
+
+    def panel_rect(ckey, rkey, pad):
         # a folded tile collapses both ways at once, so it shrinks to a point at
-        # its centre — like a row+column collapse confined to this one tile
+        # its centre — like a row+column collapse confined to this one tile. ``pad``
+        # is how far the rect overhangs its cells (PAD for the grey tile, a wider
+        # WASH_PAD for the colorization wash behind it).
         tile_c = f"tile:{rkey}:{ckey}" in collapsed
         col_c = f"col:{ckey}" in collapsed or tile_c
         row_c = f"row:{rkey}" in collapsed or tile_c
         cw, ch, cx, cy = col_w[ckey], tile_h[rkey], col_x[ckey], tile_top[rkey]
-        w, px = (0, 0) if col_c else (cw, PAD)
-        h, py = (0, 0) if row_c else (ch, PAD)
+        w, px = (0, 0) if col_c else (cw, pad)
+        h, py = (0, 0) if row_c else (ch, pad)
         bx = cx + cw / 2 if col_c else cx
         by = cy + ch / 2 if row_c else cy
-        blocks.append(Block(bid, bx - px, by - py, w + 2 * px, h + 2 * py))
+        return bx - px, by - py, w + 2 * px, h + 2 * py
+
+    def panel(bid, ckey, rkey):
+        if ckey not in col_x or rkey not in row_y:
+            return
+        group = tile_tint(rkey)  # "" unless this tile's group is being colorized
+        if group:  # the wash sits behind the grey tile, showing through the gaps around it
+            wx, wy, ww, wh = panel_rect(ckey, rkey, WASH_PAD)
+            blocks.append(Block(f"wash:{rkey}:{ckey}", wx, wy, ww, wh, tint=group))
+        blocks.append(Block(bid, *panel_rect(ckey, rkey, PAD)))
 
     for bid, rkey, ckey in tiles:
         panel(bid, ckey, rkey)

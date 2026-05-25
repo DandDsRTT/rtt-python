@@ -32,6 +32,7 @@ class Block:
     y: float
     w: float
     h: float
+    tint: str = ""  # colour-group name for a colorization wash ("tuning"); "" for a plain grey tile
 
 
 @dataclass(frozen=True)

@@ -1329,8 +1329,14 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
     def snapshot(s):
-        return {(c.id, c.x, c.y, c.w, c.h, c.kind, c.text, c.underlines)
-                for c in spreadsheet.build(base, s).cells}
+        # capture both cells and blocks: most toggles add/move cells, but colorization
+        # is expressed purely through blocks (the colour washes), so a cells-only
+        # snapshot would call it a no-op
+        lay = spreadsheet.build(base, s)
+        return (
+            frozenset((c.id, c.x, c.y, c.w, c.h, c.kind, c.text, c.underlines) for c in lay.cells),
+            frozenset((b.id, b.x, b.y, b.w, b.h, b.tint) for b in lay.blocks),
+        )
 
     default_snap = snapshot(settings.defaults())
     for key in settings.IMPLEMENTED:
@@ -1495,3 +1501,42 @@ def test_generator_tuning_map_tile_has_a_grey_panel_behind_its_chart_and_selecto
     assert pan.x <= ch.x and pan.x + pan.w >= ch.x + ch.w  # encloses the chart horizontally
     assert pan.y <= ch.y and pan.y + pan.h >= sel.y + sel.h  # and the chart + selector vertically
     assert "block:gentuning" not in {b.id for b in _with(tuning_ranges=False).blocks}  # tuning-ranges-only
+
+
+def test_tuning_colorization_washes_every_tuning_tile():
+    # a colour wash sits behind each tuning/just/retuning/damage tile (the mockup's
+    # cyan box group): one wash block per tile, regardless of its column
+    ids = {b.id for b in _with(tuning_colorization=True).blocks}
+    assert {"wash:tuning:primes", "wash:tuning:commas", "wash:tuning:targets"} <= ids
+    assert {"wash:just:targets", "wash:retune:targets"} <= ids
+    assert {"wash:damage:commas", "wash:damage:targets"} <= ids
+
+
+def test_a_wash_is_tagged_with_its_group_and_sits_behind_and_around_its_tile():
+    blocks = {b.id: b for b in _with(tuning_colorization=True).blocks}
+    wash, tile = blocks["wash:tuning:targets"], blocks["block:tuning:targets"]
+    assert wash.tint == "tuning"  # the renderer maps this group name to its CSS colour
+    assert tile.tint == ""  # the grey tile itself is not tinted — it floats on the wash
+    # the wash overhangs the tile on every side, so the colour shows in the gaps
+    assert wash.x < tile.x and wash.y < tile.y
+    assert wash.x + wash.w > tile.x + tile.w
+    assert wash.y + wash.h > tile.y + tile.h
+
+
+def test_colorization_off_means_no_wash_and_only_tuning_rows_wash_when_on():
+    assert not any(b.id.startswith("wash:") for b in _layout().blocks)  # off by default
+    # with it on, only the tuning quantity rows wash; the temperament/vector/quantity
+    # tiles stay plain grey (their own colorization is a separate, still-stubbed toggle)
+    rows = {b.id.split(":")[1] for b in _with(tuning_colorization=True).blocks
+            if b.id.startswith("wash:")}
+    assert rows == {"tuning", "just", "retune", "damage"}
+
+
+def test_a_folded_tuning_row_folds_its_wash_too():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["tuning_colorization"] = True
+    blocks = {b.id: b for b in spreadsheet.build(base, s, collapsed={"row:tuning"}).blocks}
+    # the wash persists (so the renderer can animate it) but folds to nothing with its
+    # tile, leaving no leftover cyan strip across the collapsed row
+    assert blocks["wash:tuning:targets"].h == 0

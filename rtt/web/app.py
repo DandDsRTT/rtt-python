@@ -67,6 +67,11 @@ _RANGE_PLOT_T = 28  # plot-area top (below the title and the top-cap labels)
 _RANGE_PLOT_B = 18  # plot-area bottom margin (room for the bottom-cap labels)
 _RANGE_FONT = 7  # cents-label / placeholder font size
 
+# Colorization wash colours, keyed by the box-group name the layout tags a wash with
+# (spreadsheet.COLORIZE_GROUP_ROWS). These are the mockup's saturated box-group tones;
+# a wash sits behind the grey tiles so the colour reads through the gaps around them.
+_TINTS = {"tuning": "#9acdcd"}  # cyan — the tuning/just/retuning/damage boxes
+
 _CSS = f"""
 /* the app title tile in the top-left: the name over square undo/redo buttons, on a
    light-grey rounded card, per the mockup */
@@ -106,12 +111,16 @@ _CSS = f"""
               font-family:'Cambria',Georgia,serif; }}
 .rtt-board {{ position:relative; transition:width {_T}, height {_T}; }}
 @keyframes rtt-in {{ from {{ opacity:0; }} to {{ opacity:1; }} }}
-.rtt-line, .rtt-block, .rtt-cell {{ animation:rtt-in {_T} ease; }}
+.rtt-line, .rtt-block, .rtt-cell, .rtt-wash {{ animation:rtt-in {_T} ease; }}
 
 .rtt-line {{ position:absolute; z-index:1; opacity:1; transition:left {_T}, top {_T},
             width {_T}, height {_T}, opacity {_T}; }}
 .rtt-line-v {{ border-left:1px solid #e0e0e0; width:0; }}
 .rtt-line-h {{ border-top:1px solid #e0e0e0; height:0; }}
+/* a colorization wash: a coloured rectangle behind the grey tiles (below the
+   gridlines too), so the box-group's colour shows through the gaps around them */
+.rtt-wash {{ position:absolute; z-index:0; opacity:1;
+            transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
 .rtt-block {{ position:absolute; z-index:2; background:#e0e0e0; opacity:1;
              transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
 .rtt-cell {{ position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
@@ -1020,9 +1029,15 @@ def index() -> None:
         for bl in lay.blocks:
             seen.add(bl.id)
             if bl.id not in els:
+                # a block is either a plain grey tile or a colorization wash (its id and
+                # tint are fixed for its lifetime, so the class is chosen once at creation)
                 with board:
-                    els[bl.id] = ui.element("div").classes("rtt-block").props(f'data-eid="{bl.id}"')
-            els[bl.id].style(f"left:{bl.x}px; top:{bl.y}px; width:{bl.w}px; height:{bl.h}px")
+                    cls = "rtt-wash" if bl.tint else "rtt-block"
+                    els[bl.id] = ui.element("div").classes(cls).props(f'data-eid="{bl.id}"')
+            style = f"left:{bl.x}px; top:{bl.y}px; width:{bl.w}px; height:{bl.h}px"
+            if bl.tint:
+                style += f"; background:{_TINTS[bl.tint]}"
+            els[bl.id].style(style)
 
         for cb in lay.cells:
             seen.add(cb.id)
