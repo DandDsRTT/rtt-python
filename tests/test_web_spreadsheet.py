@@ -1083,11 +1083,25 @@ def test_alt_complexity_adds_a_prescaler_dropdown_to_the_prescaling_box():
     on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
     assert "control:prescaler" not in off  # no control unless alt. complexity is on
     ctrl = on["control:prescaler"]
-    assert ctrl.kind == "prescaler_select"
+    assert ctrl.kind == "control_select"
     assert ctrl.text == "log-prime"  # the default scheme's current prescaler (Tenney)
+    assert ctrl.values == ("identity", "log-prime", "prime")  # the chooser's options
     # it rides below the prescaling matrix (box 𝐋), spanning the primes column
     assert ctrl.y > on["cell:prescaling:2:2"].y
     assert ctrl.x == on["header:primes"].x and ctrl.w == on["header:primes"].w
+
+
+def test_alt_complexity_adds_a_norm_chooser_to_the_complexity_box():
+    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
+    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    assert "control:norm" not in off
+    ctrl = on["control:norm"]
+    assert ctrl.kind == "control_select"
+    assert ctrl.text == "taxicab"  # the default scheme's q=1 norm
+    assert ctrl.values == ("taxicab", "Euclidean")
+    # it rides below the complexity list (box 𝒄), spanning the targets column
+    assert ctrl.y > on["complexity:target:0"].y
+    assert ctrl.x == on["header:targets"].x and ctrl.w == on["header:targets"].w
 
 
 def test_alt_complexity_control_needs_weighting_and_the_primes_column():

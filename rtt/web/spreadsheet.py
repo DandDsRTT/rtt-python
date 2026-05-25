@@ -706,11 +706,16 @@ def build(state, settings=None, collapsed=None,
     gtm_chart = (show_ranges and show_tuning and "row:tuning" not in collapsed
                  and col_open("gens") and "tile:tuning:gens" not in collapsed)
     gtm_extra = (RANGE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
-    # the alt.-complexity prescaler dropdown nests at the bottom of the prescaling matrix
-    # tile (box 𝐋), like the ranges box in the gens tile; its height is reserved in that row
+    # the alt.-complexity controls nest at the bottom of their matrix/list tiles (like the
+    # ranges box in the gens tile): the prescaler chooser under the prescaling matrix (box 𝐋,
+    # over the primes) and the complexity-norm chooser under the complexity list (box 𝒄, over
+    # the targets). Each tile's height is reserved up front so the rows below drop clear.
     presc_ctrl = (show_alt_complexity and "row:prescaling" not in collapsed
                   and col_open("primes") and "tile:prescaling:primes" not in collapsed)
     presc_extra = (RANGE_GAP + PRESELECT_H) if presc_ctrl else 0
+    norm_ctrl = (show_alt_complexity and "row:complexity" not in collapsed
+                 and col_open("targets") and "tile:complexity:targets" not in collapsed)
+    norm_extra = (RANGE_GAP + PRESELECT_H) if norm_ctrl else 0
 
     header_y = 0
     col_node_y = header_h + (GAP - TOGGLE) / 2  # the column toggle sits just under the header text
@@ -822,6 +827,8 @@ def build(state, settings=None, collapsed=None,
             tile_h[key] += gtm_extra
         if key == "prescaling":  # room for the alt.-complexity prescaler dropdown below the matrix
             tile_h[key] += presc_extra
+        if key == "complexity":  # room for the alt.-complexity norm chooser below the list
+            tile_h[key] += norm_extra
         y += tile_h[key] + GAP
     total_h = y
 
@@ -1109,10 +1116,16 @@ def build(state, settings=None, collapsed=None,
                 value = prescaler[i] if i == p else 0.0
                 cells.append(CellBox(f"cell:prescaling:{i}:{p}", prime_left(p), row_y["prescaling"] + i * ROW_H,
                                      COL_W, ROW_H, "mapped", text=_prescale_text(value)))
-    if presc_ctrl:  # the alt.-complexity prescaler dropdown, nested at the bottom of box 𝐋
+    if presc_ctrl:  # the alt.-complexity prescaler chooser, nested at the bottom of box 𝐋
         py = tile_top["prescaling"] + tile_h["prescaling"] - presc_extra + RANGE_GAP
         cells.append(CellBox("control:prescaler", col_x["primes"], py, col_w["primes"], PRESELECT_H,
-                             "prescaler_select", text=service.prescaler_of(tuning_scheme)))
+                             "control_select", text=service.prescaler_of(tuning_scheme),
+                             values=tuple(service.PRESCALERS)))
+    if norm_ctrl:  # the alt.-complexity complexity-norm chooser, nested at the bottom of box 𝒄
+        py = tile_top["complexity"] + tile_h["complexity"] - norm_extra + RANGE_GAP
+        cells.append(CellBox("control:norm", col_x["targets"], py, col_w["targets"], PRESELECT_H,
+                             "control_select", text="Euclidean" if service.is_euclidean(tuning_scheme) else "taxicab",
+                             values=("taxicab", "Euclidean")))
     if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
         for group in ("primes", "commas", "targets", "interest"):
             tval_row("complexity", group, complexities[group])

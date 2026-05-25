@@ -1031,12 +1031,15 @@ def index() -> None:
         editor.set_target_spec(spec)
         render()
 
-    def on_prescaler(value):
-        # the alt.-complexity prescaler dropdown (box 𝐋): swap the complexity prescaler,
-        # which re-weights and retunes. The re-render echo is ignored via the guards.
+    def on_control_select(cid, value):
+        # the alt.-complexity choosers (box 𝐋 prescaler, box 𝒄 complexity norm): each swaps a
+        # complexity trait, re-weighting and retuning. The re-render echo is ignored via the guards.
         if building[0] or value is None:
             return
-        editor.set_complexity_prescaler(value)
+        if cid == "control:prescaler":
+            editor.set_complexity_prescaler(value)
+        elif cid == "control:norm":
+            editor.set_complexity_euclidean(value == "Euclidean")
         render()
 
     def on_range_mode(value):
@@ -1153,9 +1156,9 @@ def index() -> None:
                             on_change=lambda e: on_preselect("tuning", e.value)) \
                         .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
                                f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
-            elif cb.kind == "prescaler_select":  # the alt.-complexity prescaler dropdown (box 𝐋)
-                selects[cb.id] = ui.select(list(service.PRESCALERS), value=cb.text or None,
-                        on_change=lambda e: on_prescaler(e.value)) \
+            elif cb.kind == "control_select":  # an alt.-complexity chooser (prescaler / complexity norm)
+                selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
+                        on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
                     .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
                            f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
             elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
@@ -1345,7 +1348,7 @@ def index() -> None:
                     sel.value = family
                 else:  # tuning
                     selects[cb.id].value = cb.text or None
-            elif cb.kind == "prescaler_select":  # mirror the live prescaler (alt. complexity)
+            elif cb.kind == "control_select":  # mirror the live alt.-complexity choice
                 selects[cb.id].value = cb.text or None
             elif cb.kind in ("symbol", "count", "optimization", "units"):  # math-styled text: symbols, their
                 html = _math_html(cb.text)        # equivalence tails, the counts'/power's italic variables, units

@@ -272,6 +272,17 @@ def scheme_with_prescaler(scheme, prescaler: str):
     )
 
 
+def scheme_with_norm(scheme, euclidean: bool):
+    """``scheme`` with its complexity norm power set to 2 (Euclidean) or 1 (taxicab) — the
+    alt.-complexity control in box 𝒄 — keeping everything else. Returns a resolved spec."""
+    return replace(resolve_tuning_scheme(scheme), complexity_norm_power=2.0 if euclidean else 1.0)
+
+
+def is_euclidean(scheme) -> bool:
+    """Whether ``scheme`` uses the Euclidean (q=2) complexity norm rather than taxicab (q=1)."""
+    return resolve_tuning_scheme(scheme).complexity_norm_power == 2
+
+
 def prescaler_of(scheme) -> str:
     """Which of :data:`PRESCALERS` ``scheme`` currently uses (by its complexity traits) —
     so the control can show the live selection. Defaults to ``"log-prime"``."""

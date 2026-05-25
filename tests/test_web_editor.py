@@ -37,6 +37,15 @@ def test_set_complexity_prescaler_swaps_the_weighting_prescaler_into_the_layout(
     assert diag["cell:prescaling:2:2"] == "5"
 
 
+def test_set_complexity_euclidean_switches_the_complexity_norm():
+    editor = Editor()
+    assert service.is_euclidean(editor.tuning_scheme) is False  # taxicab default
+    editor.set_complexity_euclidean(True)  # the alt.-complexity control (box 𝒄)
+    assert service.is_euclidean(editor.tuning_scheme) is True
+    editor.set_complexity_euclidean(False)
+    assert service.is_euclidean(editor.tuning_scheme) is False
+
+
 def test_redo_restores_an_undone_action():
     editor = Editor()
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])

@@ -143,6 +143,11 @@ class Editor:
         (the service/layout take a spec anywhere a scheme name is taken)."""
         self.tuning_scheme = service.scheme_with_prescaler(self.tuning_scheme, prescaler)
 
+    def set_complexity_euclidean(self, euclidean: bool) -> None:
+        """Switch the complexity norm between Euclidean (q=2) and taxicab (q=1) — the
+        alt.-complexity control in box 𝒄 — which likewise re-weights and retunes."""
+        self.tuning_scheme = service.scheme_with_norm(self.tuning_scheme, euclidean)
+
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
         or ``"OLD"``. A manual limit is weakly held — the next domain change forgets it."""

@@ -219,6 +219,26 @@ def test_scheme_with_prescaler_swaps_the_prescaler_preserving_the_rest():
     assert service.tuning(m, same).tuning_map == pytest.approx(service.tuning(m, "minimax-S").tuning_map, abs=1e-6)
 
 
+def test_scheme_with_norm_switches_taxicab_and_euclidean_complexity():
+    import pytest
+
+    m = [[1, 1, 0], [0, 1, 4]]  # 2.3.5
+    # taxicab (default, q=1): complexity of 3/2 = |−1|·log2 2 + |1|·log2 3 = 2.585
+    assert service.interval_complexities(m, "minimax-S", ("3/2",))[0] == pytest.approx(2.585, abs=1e-3)
+    eucl = service.scheme_with_norm("minimax-S", True)
+    # Euclidean (q=2): sqrt(1^2 + log2(3)^2) = sqrt(1 + 2.512) = 1.874
+    assert service.interval_complexities(m, eucl, ("3/2",))[0] == pytest.approx(1.874, abs=1e-3)
+    # it preserves the prescaler and damage slope, only changing the norm power
+    assert service.prescaler_of(eucl) == "log-prime"
+    assert service.damage_weight_slope(eucl) == "simplicityWeight"
+
+
+def test_is_euclidean_reports_the_complexity_norm_power():
+    assert service.is_euclidean("minimax-S") is False   # taxicab (q=1)
+    assert service.is_euclidean("minimax-ES") is True    # Euclidean (q=2)
+    assert service.is_euclidean(service.scheme_with_norm("minimax-S", True)) is True
+
+
 def test_prescaler_of_reports_the_schemes_current_prescaler():
     assert service.prescaler_of("minimax-S") == "log-prime"  # the default (Tenney)
     assert service.prescaler_of("minimax-sopfr-S") == "prime"  # Benedetti
