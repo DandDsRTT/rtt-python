@@ -23,6 +23,7 @@ from rtt.target_intervals import (
 )
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
+    _damage_weights,
     get_just_tuning_map,
     optimize_generator_tuning_map,
     optimize_tuning_map,
@@ -211,6 +212,17 @@ def interval_sizes(tun: Tuning, ratios) -> IntervalSizes:
     just = tuple(_over(tun.just_map, m) for m in monzos)
     errors = tuple(t_ - j for t_, j in zip(tempered, just))
     return IntervalSizes(tempered, just, errors, tuple(abs(e) for e in errors))
+
+
+def interval_weights(
+    mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=()
+) -> tuple[float, ...]:
+    """Each interval's damage weight under ``scheme``: 1 (unity weight), its complexity,
+    or 1/complexity, picked by the scheme's damage-weight slope."""
+    t = Temperament(_to_matrix(mapping), Variance.ROW)
+    spec = resolve_tuning_scheme(scheme)
+    monzos = _monzos(ratios, get_d(t))
+    return tuple(float(w) for w in _damage_weights(monzos, t, spec))
 
 
 def plain_text_values(

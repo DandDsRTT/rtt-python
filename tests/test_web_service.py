@@ -165,6 +165,27 @@ def test_interval_sizes_of_the_empty_set_are_empty():
     assert (s.tempered, s.just, s.errors, s.damage) == ((), (), (), ())
 
 
+def test_interval_weights_follow_the_schemes_damage_slope():
+    import pytest
+
+    mapping = [[1, 1, 0], [0, 1, 4]]  # meantone over 2.3.5
+    ratios = ("2/1", "3/2", "5/4")
+    # default log-prime (taxicab) complexities: log2 of each interval's primes
+    complexities = (1.0, 2.585, 4.322)
+    # unity weight -> every weight is 1
+    assert service.interval_weights(mapping, "minimax-U", ratios) == pytest.approx((1.0, 1.0, 1.0))
+    # complexity weight -> the weight IS the complexity
+    assert service.interval_weights(mapping, "minimax-C", ratios) == pytest.approx(complexities, abs=1e-3)
+    # simplicity weight (the shipped default's slope) -> 1 / complexity
+    assert service.interval_weights(mapping, "minimax-S", ratios) == pytest.approx(
+        tuple(1 / c for c in complexities), abs=1e-3
+    )
+
+
+def test_interval_weights_of_the_empty_set_are_empty():
+    assert service.interval_weights([[1, 1, 0], [0, 1, 4]], "minimax-S", ()) == ()
+
+
 def test_plain_text_mapping_is_the_ebk_string():
     # the mapping tile's plain-text value is the temperament's EBK string: a list
     # of per-generator maps, ⟨ … ] inside, enclosed by the rank-count [ … }
