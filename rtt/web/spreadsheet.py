@@ -98,7 +98,6 @@ CAPTIONS = {
     ("retune", "primes"): "retuning map",
     ("retune", "commas"): "comma error list",
     ("retune", "targets"): "target interval error list",
-    ("damage", "commas"): "comma damage list",
     ("damage", "targets"): "target interval damage list",
     **{("counts", ckey): name for ckey, _sym, name in COUNTS},
     # other intervals of interest mirror the targets, minus the damage row
@@ -114,8 +113,9 @@ CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # 𝐞 𝐝); the mapping 𝑀 is math-italic; the interval lists/bases — mapped target list
 # Y, comma basis C, target list T — are upright, non-bold. The comma column has no
 # dedicated letters — everything but the basis C (in the interval-vectors row) is a
-# product with it: the mapped comma list 𝑀C and the comma sizes 𝒕C, 𝒋C, 𝒓C. The comma
-# damage list (|error|, no product form) and the "other intervals of interest" carry none.
+# product with it: the mapped comma list 𝑀C and the comma sizes 𝒕C, 𝒋C, 𝒓C (damage is
+# a target-only row, so the comma column ends there). The "other intervals of
+# interest" carry none.
 SYMBOLS = {
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
@@ -221,7 +221,6 @@ TILES = (
     ("block:retune:primes", "retune", "primes"),
     ("block:retune:commas", "retune", "commas"),
     ("block:retune:targets", "retune", "targets"),
-    ("block:damage:commas", "damage", "commas"),
     ("block:damage:targets", "damage", "targets"),
 )
 
@@ -777,14 +776,12 @@ def build(state, settings=None, collapsed=None,
         """The operand ``R`` of a cell's exact closed form ``1200 · log₂R``, or None
         when the value has no closed form. A just size IS ``1200·log₂`` of its
         interval. A comma vanishes in the temperament, so its retuning is the negated
-        just size and its damage that size's magnitude — both exact logs of the
-        inverted/oriented comma. The tempered sizes and the prime/target errors come
-        from optimization, so they have none."""
+        just size — the exact log of the inverted comma. The tempered sizes and the
+        prime/target errors come from optimization, so they have none."""
         if key == "just":
             return _log_operand(group_ratio[group](i))
-        if group == "commas" and key in ("retune", "damage"):
-            comma = Fraction(comma_ratios[i])
-            r = 1 / comma if key == "retune" else max(comma, 1 / comma)
+        if group == "commas" and key == "retune":
+            r = 1 / Fraction(comma_ratios[i])
             return _log_operand(f"{r.numerator}/{r.denominator}")
         return None
 
@@ -833,8 +830,7 @@ def build(state, settings=None, collapsed=None,
     # counterpart of the tuning map over the primes), so the generators get a tuning tile too
     if row_open("tuning"):
         tval_row("tuning", "gens", tun.generator_map)
-    if row_open("damage"):  # damage is over the commas and targets only (not the maps or interest)
-        tval_row("damage", "commas", comma_sizes.damage)
+    if row_open("damage"):  # damage is over the targets only (the tuning's own column)
         tval_row("damage", "targets", target_sizes.damage)
         chart("damage", "targets", target_sizes.damage)
 
@@ -904,8 +900,6 @@ def build(state, settings=None, collapsed=None,
                 bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
             if mi and tile_open(key, "interest"):
                 bracket(f"{key}:ilist", LIST_BRACKETS, "interest", row_y[key], ROW_H)
-    if tile_open("damage", "commas"):
-        bracket("damage:commalist", LIST_BRACKETS, "commas", row_y["damage"], ROW_H)
     if tile_open("damage", "targets"):
         bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
 

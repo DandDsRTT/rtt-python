@@ -240,7 +240,6 @@ def plain_text_values(
         ("retune", "primes"): _cents_map(tun.retuning_map),
         ("retune", "commas"): _cents_list(comma_sizes.errors),
         ("retune", "targets"): _cents_list(target_sizes.errors),
-        ("damage", "commas"): _cents_list(comma_sizes.damage),
         ("damage", "targets"): _cents_list(target_sizes.damage),
     }
 

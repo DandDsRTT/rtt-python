@@ -219,10 +219,9 @@ def test_plain_text_commas_column_mirrors_the_grid():
     assert pt[("vectors", "commas")] == "[4 -4 1⟩"
     # the mapping row's commas tile is the mapped comma list — every comma vanishes
     assert pt[("mapping", "commas")] == "[[0 0]]"
-    # comma size / error / damage are lists over the commas, like the grid's column
+    # comma sizes are lists over the commas, like the grid's column
     assert pt[("tuning", "commas")] == f"[{cents(sizes.tempered)}]"
     assert pt[("just", "commas")] == f"[{cents(sizes.just)}]"
-    assert pt[("damage", "commas")] == f"[{cents(sizes.damage)}]"
 
 
 def test_parse_mapping_reads_an_ebk_map_string():

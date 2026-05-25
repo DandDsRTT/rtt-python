@@ -297,7 +297,7 @@ def test_temperament_boxes_off_removes_mapping_and_the_domain_primes_column():
     # comma headers, the comma basis, and the comma-size cells across the tuning rows
     assert "header:commas" not in off
     assert not any(c.startswith(("comma:", "cell:comma:", "tuning:comma:", "just:comma:",
-                                 "retune:comma:", "damage:comma:")) for c in off)
+                                 "retune:comma:")) for c in off)
     assert {"comma_plus", "comma_minus"}.isdisjoint(off)
     # tuning over the targets survives and rises into the freed space
     assert "tuning:target:0" in off
@@ -781,7 +781,7 @@ def test_interval_vectors_basis_minus_is_absent_when_the_domain_cannot_shrink():
 
 def _in_commas(cid):
     return cid.startswith(("comma:", "cell:comma:")) or cid.split(":")[0:2] in (
-        ["tuning", "comma"], ["just", "comma"], ["retune", "comma"], ["damage", "comma"])
+        ["tuning", "comma"], ["just", "comma"], ["retune", "comma"])
 
 
 def test_commas_column_sits_between_primes_and_targets_with_its_comma_ratios():
@@ -828,9 +828,27 @@ def test_comma_sizes_fill_the_tuning_family_rows():
     # ...but it has a real just size (the syntonic comma is ~21.5 cents)
     assert cells["just:comma:0"].text == "-21.506"
     assert cells["retune:comma:0"].text == "21.506"
-    assert cells["damage:comma:0"].text == "21.506"
     # comma tuning values share the comma column with the quantities-row ratio
     assert cells["tuning:comma:0"].x == cells["comma:0"].x
+
+
+def test_damage_row_has_no_commas_tile():
+    # the damage row exists only over the targets (the tuning's own column) — there is
+    # NO comma damage tile; it was never in the mockup. Commas still carry tempered,
+    # just and error sizes, but damage is a target-interval quantity only.
+    lay = _with(names=True, symbols=True, plain_text_values=True, charts=True)
+    cells = {c.id for c in lay.cells}
+    blocks = {b.id for b in lay.blocks}
+    # the target damage tile is intact (the row still exists)...
+    assert "damage:target:0" in cells and "block:damage:targets" in blocks
+    # ...but nothing of a comma damage tile remains
+    assert not any(c.startswith("damage:comma") for c in cells)  # no value cells
+    assert "caption:damage:commas" not in cells                  # no name caption
+    assert "symbol:damage:commas" not in cells                   # no symbol slot
+    assert {"bracket:damage:commalist:l", "bracket:damage:commalist:r"}.isdisjoint(cells)
+    assert "toggle:tile:damage:commas" not in cells              # no fold toggle
+    assert "ptext:damage:commas" not in cells                    # no plain-text box
+    assert "block:damage:commas" not in blocks                   # no grey panel
 
 
 def test_commas_have_a_shared_vertical_axis_per_comma():
@@ -858,7 +876,6 @@ def test_commas_column_has_panels_that_fold_away_and_converge_when_collapsed():
     by_id = {ln.id: ln for ln in lay.lines}
     assert blocks["block:commas"].w == 0  # the quantities-row comma panel folds away
     assert blocks["block:tuning:commas"].w == 0  # ...and each tuning row's
-    assert blocks["block:damage:commas"].w == 0
     assert by_id["bus:commas:top"].length == 0  # the comma axis converges to one line
 
 
@@ -891,7 +908,6 @@ def test_comma_tuning_rows_get_list_brackets_hugging_their_values():
     cells = {c.id: c for c in _layout().cells}
     # comma sizes are a list of interval sizes, bracketed like the target sizes
     assert cells["bracket:tuning:commalist:l"].text == "[" and cells["bracket:tuning:commalist:r"].text == "]"
-    assert cells["bracket:damage:commalist:l"].text == "["
     # the bracket pair sits just outside the comma value cells
     l, r = cells["bracket:tuning:commalist:l"], cells["bracket:tuning:commalist:r"]
     assert l.x < cells["tuning:comma:0"].x < r.x
@@ -936,10 +952,11 @@ def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():
     assert on["caption:vectors:commas"].text == "comma basis"
     assert on["caption:mapping:commas"].text == "mapped comma list"
     # comma captions mirror the target captions, swapping "target interval" for "comma"
+    # (damage is the exception — a target-only row, with no comma tile to caption)
     assert on["caption:tuning:commas"].text == "tempered comma size list"
     assert on["caption:just:commas"].text == "(just) comma size list"
     assert on["caption:retune:commas"].text == "comma error list"
-    assert on["caption:damage:commas"].text == "comma damage list"
+    assert "caption:damage:commas" not in on
     assert not any(c.startswith("caption:") and c.endswith(":commas") for c in off)
 
 
@@ -1020,13 +1037,12 @@ def test_math_expressions_render_the_just_comma_sizes_as_logs():
     assert cells["just:comma:0"].text == "1200 · log₂(80/81)\n= -21.506"
 
 
-def test_math_expressions_show_the_comma_error_and_damage_as_logs():
-    # a comma vanishes in the temperament (its tempered size is 0), so its retuning
-    # is the negated just size and its damage that magnitude — both exact logs of the
-    # inverted comma (80/81 -> 81/80), unlike the optimized prime/target errors
+def test_math_expressions_show_the_comma_error_as_a_log():
+    # a comma vanishes in the temperament (its tempered size is 0), so its retuning is
+    # the negated just size — an exact log of the inverted comma (80/81 -> 81/80),
+    # unlike the optimized prime/target errors
     cells = {c.id: c for c in _with(math_expressions=True).cells}
     assert cells["retune:comma:0"].text == "1200 · log₂(81/80)\n= 21.506"
-    assert cells["damage:comma:0"].text == "1200 · log₂(81/80)\n= 21.506"
 
 
 def test_math_expressions_leave_the_no_closed_form_cells_and_tiles_untouched():
@@ -1347,8 +1363,6 @@ def test_comma_column_symbols_are_map_times_basis_products():
     assert on["symbol:tuning:commas"].text == "𝒕C"    # tempered comma sizes
     assert on["symbol:just:commas"].text == "𝒋C"      # just comma sizes
     assert on["symbol:retune:commas"].text == "𝒓C"    # comma errors
-    # comma damage is |error|, with no clean product form, so it carries no symbol
-    assert "symbol:damage:commas" not in on
     # the comma symbol still aligns with the prime symbol in the same row
     assert on["symbol:tuning:commas"].y == on["symbol:tuning:primes"].y
 
