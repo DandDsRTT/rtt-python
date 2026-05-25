@@ -103,7 +103,11 @@ def test_quantities_row_pluses_sit_inside_their_tiles_with_equal_margins():
     # horizontal echo of the interval-vectors basis +, which sits below its stack. The +
     # sits FRAME_GAP off the last value AND the tile overhangs it the same FRAME_GAP, so
     # its two margins match; it must NOT float out past (or sit flush against) the edge.
-    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), interest=((-1, 1, 0),))
+    # Names off, so every tile hugs its content (a long caption widens its tile, which
+    # detaches the + from the far edge — covered by the caption-widening test instead).
+    opts = settings.defaults()
+    opts["names"] = False
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), opts, interest=((-1, 1, 0),))
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
     for plus_id, last_cell, panel in (("plus", "prime:2", "block:primes"),
@@ -1308,16 +1312,37 @@ def test_caption_line_estimate_wraps_a_long_name_in_a_narrow_column():
     assert spreadsheet._wrap_lines("tempered comma basis interval size list (made to vanish!)", 62) >= 3
 
 
-def test_a_long_caption_grows_its_tile_rather_than_spilling():
-    cells = {c.id: c for c in _with(names=True).cells}
-    cap = cells["caption:tuning:commas"]  # "tempered comma basis interval size list (made to vanish!)" on a ~62px column
-    # the caption gets a line per wrapped line (not one fixed line), so the name
-    # stays within its column instead of overflowing it
-    assert cap.h == spreadsheet._wrap_lines("tempered comma basis interval size list (made to vanish!)", cap.w) * spreadsheet.CAPTION_LINE
-    assert cap.h >= 3 * spreadsheet.CAPTION_LINE  # at least three lines tall here
-    # it stays as wide as its (one-comma) column and sits below the value cell
-    assert cap.w == cells["header:commas"].w
-    assert cap.y >= cells["tuning:comma:0"].y + spreadsheet.ROW_H
+def test_a_long_caption_widens_its_tile_to_stay_within_two_lines():
+    lay = _with(names=True)
+    cells = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
+    name = "tempered comma basis interval size list (made to vanish!)"
+    cap = cells["caption:tuning:commas"]
+    # the name never wraps past two lines: the column is floored wide enough to hold it,
+    # rather than the font shrinking or the name spilling tall down a narrow column
+    assert spreadsheet._wrap_lines(name, cap.w) <= spreadsheet.MAX_CAPTION_LINES
+    assert cap.h == spreadsheet._wrap_lines(name, cap.w) * spreadsheet.CAPTION_LINE
+    assert cap.h <= spreadsheet.MAX_CAPTION_LINES * spreadsheet.CAPTION_LINE
+    # the tile widened to make that fit: the commas column is wider than its lone value
+    # cell + brackets alone would make it (a narrow one-comma content width)
+    content_w = 2 * spreadsheet.BRACKET_W + spreadsheet.COL_W
+    assert cells["header:commas"].w > content_w
+    assert cap.w == cells["header:commas"].w  # the caption spans the (widened) column
+    assert cap.y >= cells["tuning:comma:0"].y + spreadsheet.ROW_H  # below the value cell
+    # the grey tile widened with it, so the caption sits within the tile, never beyond it
+    panel = blocks["block:tuning:commas"]
+    assert panel.x <= cap.x and cap.x + cap.w <= panel.x + panel.w
+
+
+def test_min_width_for_lines_floors_a_column_to_keep_a_name_within_two_lines():
+    # the inverse of _wrap_lines: the smallest width at which the name fits in two lines.
+    # at that width the wrap fits; a narrow one-comma column would overflow it.
+    for name in ("tempered comma basis interval size list (made to vanish!)",
+                 "comma basis interval retuning list (made to vanish!)",
+                 "(just) comma basis interval size list"):
+        w = spreadsheet._min_width_for_lines(name, 2)
+        assert spreadsheet._wrap_lines(name, w) <= 2
+        assert spreadsheet._wrap_lines(name, 2 * spreadsheet.BRACKET_W + spreadsheet.COL_W) > 2
 
 
 def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():

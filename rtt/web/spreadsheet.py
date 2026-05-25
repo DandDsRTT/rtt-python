@@ -41,6 +41,11 @@ TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (o
 CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mockup —
 # ~0.2 of the cell height; the CSS .rtt-caption must use the same size)
 CAPTION_LINE = 10  # px per wrapped caption line (font size + leading); == .rtt-caption line-height
+CAPTION_CHAR_W = 0.52  # serif glyph width as a fraction of the font size: a conservative
+# (slightly wide) estimate for the greedy caption wrap, so the reservation never falls
+# short of the browser's render. Its inverse floors a column wide enough to keep its
+# captions within MAX_CAPTION_LINES rather than scaling the font or spilling.
+MAX_CAPTION_LINES = 2  # a name wraps to at most this many lines; a longer one widens its tile
 PRESELECT_H = 20  # height of a preselect chooser dropdown (when preselects shown)
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 TARGET_PRESELECT_W = 132  # wider: the target chooser seats a square limit field + the family select
@@ -489,15 +494,12 @@ def toggle_all_collapsed(layout, collapsed) -> set:
     return set(collapsed) | foldable
 
 
-def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
-    """How many lines ``text`` wraps to in a ``width``-px box at ``font`` px, so the
-    tile can grow tall enough to hold it (rather than letting it spill, as a narrow
-    column's long name would). A greedy word wrap with a conservative serif char-width
-    estimate; an over-long word breaks across lines itself. Shared by the name
-    captions and the plain-text value boxes."""
-    max_chars = max(1, int((width - 4) / (font * 0.52)))  # -4: a little padding
+def _wrap_chars(words: list[str], max_chars: int) -> int:
+    """Greedy line count packing ``words`` into lines of at most ``max_chars`` chars
+    (an over-long word breaks across lines itself). The character-budget core shared
+    by :func:`_wrap_lines` and its inverse :func:`_min_width_for_lines`."""
     lines, cur = 1, 0
-    for word in text.split():
+    for word in words:
         wlen = len(word)
         if cur and cur + 1 + wlen > max_chars:  # word won't fit on the current line
             lines, cur = lines + 1, 0
@@ -507,6 +509,29 @@ def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
         else:
             cur += (1 if cur else 0) + wlen
     return lines
+
+
+def _chars_per_line(width: float, font: float = CAPTION_FONT) -> int:
+    return max(1, int((width - 4) / (font * CAPTION_CHAR_W)))  # -4: a little padding
+
+
+def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
+    """How many lines ``text`` wraps to in a ``width``-px box at ``font`` px, so the
+    tile can reserve the height to hold it. A greedy word wrap with a conservative
+    serif char-width estimate. Shared by the name captions and the plain-text boxes."""
+    return _wrap_chars(text.split(), _chars_per_line(width, font))
+
+
+def _min_width_for_lines(text: str, max_lines: int, font: float = CAPTION_FONT) -> int:
+    """Smallest box width (px) at which ``text`` wraps to at most ``max_lines`` lines —
+    the inverse of :func:`_wrap_lines` in the same char-width model. Floors a column
+    wide enough that its captions stay within two lines, widening the tile rather than
+    scaling the font or letting a long name spill."""
+    words = text.split()
+    for chars in range(1, len(text) + 1):  # smallest per-line char budget that fits
+        if _wrap_chars(words, chars) <= max_lines:
+            return int(chars * font * CAPTION_CHAR_W + 4) + 1  # invert _chars_per_line (round up)
+    return int(len(text) * font * CAPTION_CHAR_W + 4) + 1
 
 
 def _bus_span(positions):
@@ -692,10 +717,46 @@ def build(state, settings=None, collapsed=None,
     node_edge = node_x + TOGGLE  # the node's content-facing (right) edge
     content_x0 = node_x + TOGGLE + GAP
 
+    # Row bands top-to-bottom: (key, natural height, present, collapsible, label), laid
+    # out below by the same running-cursor rule as the columns. Defined here, ahead of
+    # that layout, so each column's width can reserve room for its present rows' captions.
+    row_bands = (
+        ("counts", ROW_H, show_counts, True, "counts"),
+        ("just_audio", ROW_H, show_audio, True, "just audio"),
+        ("mapped_audio", ROW_H, show_audio, True, "mapped audio"),
+        ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
+        ("units", ROW_H, show_domain_units, True, "units"),
+        ("vectors", d * ROW_H, show_temp, True, "interval vectors"),
+        ("canon", rc * ROW_H, show_form, True, "canonical mapping"),
+        ("mapping", r * ROW_H, show_temp, True, "mapping"),
+        ("tuning", ROW_H, show_tuning, True, "tuning"),
+        ("just", ROW_H, show_tuning, True, "just tuning"),
+        ("retune", ROW_H, show_tuning, True, "retuning"),
+        ("prescaling", d * ROW_H, show_weighting, True, "complexity prescaling"),
+        ("complexity", ROW_H, show_weighting, True, "complexity"),
+        ("weight", ROW_H, show_weighting, True, "weight"),
+        ("damage", ROW_H, show_tuning, True, "damage"),
+        ("optimization", ROW_H, show_optimization, True, "optimization"),
+    )
+    # the present rows that carry an in-tile caption; a column is floored wide enough to
+    # keep each of these within MAX_CAPTION_LINES (see _caption_floor in the loop)
+    present_caption_rows = frozenset(
+        key for key, _h, present, _c, _l in row_bands if present and key in CAPTIONED_ROWS)
+
+    def _caption_floor(key):
+        # the width an open column needs so its captions stay within MAX_CAPTION_LINES,
+        # widening the tile rather than scaling the font or letting a long name spill;
+        # zero when names are hidden (no caption renders) so the column keeps its content size
+        if not show_captions:
+            return 0
+        return max((_min_width_for_lines(CAPTIONS[(rk, key)], MAX_CAPTION_LINES)
+                    for rk in present_caption_rows
+                    if (rk, key) in CAPTIONS and (rk, key) in declared_tiles), default=0)
+
     # the domain, the comma basis and the interest set each ride an expand (+) control
     # just inside the right of their (open) tile — domain primes add a prime, commas
     # add a comma, interest adds a blank interval to edit
-    col_x, col_w, content_w, col_collapsible = {}, {}, {}, {}
+    col_x, col_w, content_w, col_collapsible, tile_w = {}, {}, {}, {}, {}
     ctrl_x = {}
     plus_cols = set()  # columns whose + rides inside the tile (the tile overhangs it a margin)
     x = content_x0
@@ -703,18 +764,18 @@ def build(state, settings=None, collapsed=None,
         if not present:
             continue
         collapsed_col = f"col:{key}" in collapsed
-        # The content (value cells + their bracket gutters) is the natural width. Every
-        # column's footprint is floored at its title: a wide title reserves the room and
-        # the narrower content is centred within it (see content_x below). For most
-        # columns the content already outruns the title, so the footprint equals the
-        # content and the margin is zero; only a stubby column under a long title (e.g.
-        # a few "other intervals of interest") actually centres. A collapsed column folds
-        # to its title strip; its hidden content then matches that strip.
+        # The content (value cells + their bracket gutters) is the natural width. The grey
+        # tile is the content width, or wider where a long caption needs the room (tile_w);
+        # the footprint (col_w) is floored at the tile and the title — a wide title or a
+        # caption-widened tile reserves room and the narrower content is centred within it
+        # (see content_x/tile_x below). For most columns content already outruns both, so
+        # all three coincide. A collapsed column folds to its title strip.
         if collapsed_col:
-            col_w[key] = content_w[key] = _title_w(col_header[key])
+            col_w[key] = content_w[key] = tile_w[key] = _title_w(col_header[key])
         else:
-            col_w[key] = max(natural, _title_w(col_header[key]))
             content_w[key] = natural
+            tile_w[key] = max(natural, _caption_floor(key))  # the panel widens for a long name
+            col_w[key] = max(tile_w[key], _title_w(col_header[key]))
         col_collapsible[key] = collapsible
         # a +-bearing column (an open domain/comma/interest set with cells) carries an
         # in-tile +; its tile overhangs the content an extra FRAME_GAP on EACH side, so the
@@ -739,14 +800,24 @@ def build(state, settings=None, collapsed=None,
     total_w = x
 
     # Content is centred within each footprint: the margin is (footprint − content) / 2,
-    # which is zero for the common case (content at least as wide as the title) so
-    # content_x == col_x there, and positive only where a long title reserves extra width.
+    # which is zero for the common case (content at least as wide as the title and any
+    # caption) so content_x == col_x there, and positive where a long title or a caption-
+    # widened tile reserves extra width around the narrower content.
     content_x = {key: col_x[key] + (col_w[key] - content_w[key]) / 2 for key in col_x}
+    # the grey tile is centred in the footprint too: as wide as the content, or wider where
+    # a long caption widened it (then col_w == tile_w). A title-only-wide column keeps a
+    # content-narrow tile centred under its wide header; content is centred within the tile.
+    tile_x = {key: col_x[key] + (col_w[key] - tile_w[key]) / 2 for key in col_x}
 
     def content_box(key):
-        # the (x, width) of a column's actual content — the tiles and the brackets/axes
-        # that hug them, centred within the (possibly wider, title-reserving) footprint
+        # the (x, width) of a column's actual content — the value cells and the brackets/
+        # axes that hug them, centred within the (possibly wider) tile and footprint
         return content_x[key], content_w[key]
+
+    def tile_box(key):
+        # the (x, width) of a column's grey tile/panel — the content width, or the caption-
+        # widened width — centred within the footprint; the caption stack rides this width
+        return tile_x[key], tile_w[key]
 
     def tile_pad(key):
         # how far a tile's grey panel overhangs its content on each side: PAD normally, plus
@@ -793,28 +864,9 @@ def build(state, settings=None, collapsed=None,
     # the inner (bus->tile) and outer (node->bus) segments are equal: (GAP-PAD)/2.
     FAN = (GAP - PAD) / 2
 
-    # Row bands top-to-bottom: (key, natural height, present, collapsible, label),
-    # laid out by the same running-cursor rule as the columns. Every row folds to a
-    # strip via its toggle; the "quantities" setting additionally hides that row and
-    # its column outright.
-    row_bands = (
-        ("counts", ROW_H, show_counts, True, "counts"),
-        ("just_audio", ROW_H, show_audio, True, "just audio"),
-        ("mapped_audio", ROW_H, show_audio, True, "mapped audio"),
-        ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
-        ("units", ROW_H, show_domain_units, True, "units"),
-        ("vectors", d * ROW_H, show_temp, True, "interval vectors"),
-        ("canon", rc * ROW_H, show_form, True, "canonical mapping"),
-        ("mapping", r * ROW_H, show_temp, True, "mapping"),
-        ("tuning", ROW_H, show_tuning, True, "tuning"),
-        ("just", ROW_H, show_tuning, True, "just tuning"),
-        ("retune", ROW_H, show_tuning, True, "retuning"),
-        ("prescaling", d * ROW_H, show_weighting, True, "complexity prescaling"),
-        ("complexity", ROW_H, show_weighting, True, "complexity"),
-        ("weight", ROW_H, show_weighting, True, "weight"),
-        ("damage", ROW_H, show_tuning, True, "damage"),
-        ("optimization", ROW_H, show_optimization, True, "optimization"),
-    )
+    # row_bands (the top-to-bottom band list) is defined above, ahead of the column
+    # widths so they can reserve room for each present row's caption. Every row folds to
+    # a strip via its toggle; "quantities" additionally hides that row and its column.
     # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
@@ -1429,7 +1481,7 @@ def build(state, settings=None, collapsed=None,
         tile_c = f"tile:{rkey}:{ckey}" in collapsed
         col_c = f"col:{ckey}" in collapsed or tile_c
         row_c = f"row:{rkey}" in collapsed or tile_c
-        cx, cw = content_box(ckey)  # hug the cells; interest's tiles are narrower than its footprint
+        cx, cw = tile_box(ckey)  # the tile widens for a long caption; content centres within it
         ch, cy = tile_h[rkey], tile_top[rkey]
         w, px = (0, 0) if col_c else (cw, tile_pad(ckey))
         h, py = (0, 0) if row_c else (ch, PAD)
