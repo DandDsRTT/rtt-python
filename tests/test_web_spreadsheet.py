@@ -915,6 +915,80 @@ def test_damage_row_has_no_commas_tile():
     assert "block:damage:commas" not in blocks                   # no grey panel
 
 
+def test_weighting_on_adds_a_weight_row_over_the_targets():
+    off = {c.id for c in _with(weighting=False).cells}
+    on = {c.id: c for c in _with(weighting=True).cells}
+    assert "weight:target:0" not in off  # no weight row unless weighting is on
+    assert "weight:target:0" in on
+    # one weight value per target interval, the scheme's per-target damage weight
+    # at the grid's shared precision
+    targets = service.target_interval_set(
+        service.DEFAULT_TARGET_SPEC, service.standard_primes(3)
+    )
+    weights = service.interval_weights(
+        ((1, 1, 0), (0, 1, 4)), service.DEFAULT_TUNING_SCHEME, targets
+    )
+    assert len(weights) == 8
+    assert on["weight:target:0"].text == service.cents(weights[0])
+    assert on["weight:target:7"].text == service.cents(weights[7])
+
+
+def test_weight_row_sits_between_retuning_and_damage():
+    on = {c.id: c for c in _with(weighting=True).cells}
+    # the weighting region computes prescaling -> complexity -> weight -> damage,
+    # so the weight row lands just above damage (and below retuning)
+    assert on["retune:target:0"].y < on["weight:target:0"].y < on["damage:target:0"].y
+
+
+def test_weight_row_value_list_is_bracketed_like_the_other_tuning_lists():
+    cells = {c.id: c for c in _with(weighting=True).cells}
+    # a [ … ] list over the targets, like damage (the weight list it scales)
+    assert cells["bracket:weight:l"].text == "[" and cells["bracket:weight:r"].text == "]"
+    assert cells["bracket:weight:l"].x < cells["weight:target:0"].x < cells["bracket:weight:r"].x
+
+
+def test_charts_on_adds_a_weight_bar_chart_over_the_targets():
+    on = {c.id: c for c in _with(weighting=True, charts=True).cells}
+    off = {c.id for c in _with(weighting=True, charts=False).cells}
+    assert "chart:weight:targets" not in off  # no chart cell unless charts is on
+    ch = on["chart:weight:targets"]
+    assert ch.kind == "chart"
+    assert len(ch.values) == 8  # one bar per target interval (the weight list)
+    assert all(v >= 0 for v in ch.values)  # weights are non-negative
+    assert ch.y + ch.h <= on["weight:target:0"].y  # the chart sits above its values
+
+
+def test_weight_row_carries_its_symbol_and_caption():
+    on = {c.id: c for c in _with(weighting=True, symbols=True, names=True).cells}
+    # 𝒘 (bold italic, the same glyph the damage equivalence's diag(𝒘) uses)
+    assert on["symbol:weight:targets"].text == "𝒘"
+    assert spreadsheet.EQUIVALENCES[("damage", "targets")].endswith("diag(𝒘)")  # same 𝒘
+    assert on["caption:weight:targets"].text == "target interval weight list"
+
+
+def test_weight_caption_mnemonic_underlines_its_symbol_letter():
+    on = {c.id: c for c in _with(weighting=True, names=True, mnemonics=True).cells}
+    cap = on["caption:weight:targets"]
+    # the 'w' of "weight" is underlined (its symbol 𝒘), like damage underlines "damage"
+    assert cap.underlines == ((cap.text.index("weight"), 1),)
+
+
+def test_weight_equivalence_reflects_the_schemes_damage_slope():
+    # the weight = complexity / 1 / 1-over-complexity by the scheme's slope, so the
+    # equivalence tells the truth about the live scheme rather than a fixed headline
+    def equiv(scheme):
+        lay = spreadsheet.build(
+            service.from_mapping(((1, 1, 0), (0, 1, 4))),
+            {**settings.defaults(), "weighting": True, "symbols": True, "equivalences": True},
+            tuning_scheme=scheme,
+        )
+        return {c.id: c for c in lay.cells}["symbol:weight:targets"].text
+
+    assert equiv("minimax-C") == "𝒘 = 𝒄"      # complexity weight
+    assert equiv("minimax-U") == "𝒘 = 1"      # unity weight
+    assert equiv("minimax-S") == "𝒘 = 1/𝒄"    # simplicity weight (the shipped default)
+
+
 def test_commas_have_a_shared_vertical_axis_per_comma():
     ids = {ln.id for ln in _layout().lines}
     assert "v:comma:0" in ids  # one axis per comma, like the primes/targets

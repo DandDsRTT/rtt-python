@@ -225,6 +225,12 @@ def interval_weights(
     return tuple(float(w) for w in _damage_weights(monzos, t, spec))
 
 
+def damage_weight_slope(scheme: str = DEFAULT_TUNING_SCHEME) -> str:
+    """The scheme's damage-weight slope — ``"unityWeight"``, ``"complexityWeight"`` or
+    ``"simplicityWeight"`` — i.e. whether each weight is 1, its complexity, or 1/complexity."""
+    return resolve_tuning_scheme(scheme).damage_weight_slope
+
+
 def plain_text_values(
     state: TemperamentState,
     scheme: str = DEFAULT_TUNING_SCHEME,

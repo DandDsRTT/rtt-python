@@ -101,6 +101,7 @@ CAPTIONS = {
     ("retune", "primes"): "retuning map",
     ("retune", "commas"): "comma error list",
     ("retune", "targets"): "target interval error list",
+    ("weight", "targets"): "target interval weight list",
     ("damage", "targets"): "target interval damage list",
     **{("counts", ckey): name for ckey, _sym, name in COUNTS},
     # Other intervals of interest mirror the targets' rows (minus damage), but with terse
@@ -141,13 +142,14 @@ SYMBOLS = {
     ("retune", "primes"): "𝒓",
     ("retune", "commas"): "𝒓C",
     ("retune", "targets"): "𝐞",
+    ("weight", "targets"): "𝒘",  # bold italic, as in the damage row's diag(𝒘)
     ("damage", "targets"): "𝐝",
 }
 SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symbol slot
 # multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping
 # for its spanning bracket+brace, the interval vectors for the per-column ket marks
 FRAMED_ROWS = frozenset({"mapping", "vectors"})
-CHARTED_ROWS = frozenset({"retune", "damage"})  # rows that grow a bar-chart band above their values when charts shown
+CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 
 # Box-group colorization (the mockup's coloured washes behind the grey tiles): a
 # group's "{group}_colorization" setting, when on, paints colour behind that group's
@@ -197,6 +199,7 @@ MNEMONICS = {
     ("just", "primes"): "just",         # 𝒋
     ("retune", "primes"): "retuning",   # 𝒓
     ("retune", "targets"): "error",     # 𝐞
+    ("weight", "targets"): "weight",    # 𝒘
     ("damage", "targets"): "damage",    # 𝐝
 }
 
@@ -255,6 +258,15 @@ UNITS = {
 }
 UNITED_ROWS = frozenset(row for row, _ in UNITS)  # rows that reserve a units-line slot
 
+# The weight row's equivalence is scheme-dependent: the weight is the complexity, unity,
+# or its reciprocal by the scheme's damage-weight slope (see service.damage_weight_slope),
+# so build() picks the right-hand side from this map rather than a fixed headline.
+WEIGHT_EQUIVALENCE_BY_SLOPE = {
+    "complexityWeight": " = 𝒄",
+    "unityWeight": " = 1",
+    "simplicityWeight": " = 1/𝒄",
+}
+
 # Always-present content tiles (a row×column intersection) as (grey-panel id, row,
 # column). Each gets a grey panel and a top-left fold toggle; the panel/toggle ids
 # stay stable so the reconciling renderer can animate a single tile folding away.
@@ -282,6 +294,7 @@ TILES = (
     ("block:retune:primes", "retune", "primes"),
     ("block:retune:commas", "retune", "commas"),
     ("block:retune:targets", "retune", "targets"),
+    ("block:weight:targets", "weight", "targets"),
     ("block:damage:targets", "damage", "targets"),
 )
 
@@ -460,6 +473,10 @@ def build(state, settings=None, collapsed=None,
     # optimization is a sub-control of tuning boxes: it annotates the tuning region with
     # the scheme's optimization power, so it only applies while that region shows
     show_optimization = show_tuning and settings["optimization"]
+    # weighting is likewise a sub-control of tuning boxes: it opens the complexity-
+    # prescaling -> complexity -> weight rows that feed the damage row, so it too only
+    # applies while the tuning region (and its target column) shows
+    show_weighting = show_tuning and settings["weighting"]
     # Value-display toggles. "gridded values" is the master switch: with it off
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
@@ -488,6 +505,7 @@ def build(state, settings=None, collapsed=None,
     target_vectors = service.target_interval_monzos(targets, d)  # k monzos, each d-tall
     tun = service.tuning(state.mapping, tuning_scheme)  # prime maps, shared by every interval set
     target_sizes = service.interval_sizes(tun, targets)
+    target_weights = service.interval_weights(state.mapping, tuning_scheme, targets)  # the damage row's diag(𝒘)
     comma_ratios = service.comma_ratios(state.comma_basis)
     nc = len(comma_ratios)  # the real commas (those that define the temperament)
     mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
@@ -674,6 +692,7 @@ def build(state, settings=None, collapsed=None,
         ("tuning", ROW_H, show_tuning, True, "tuning"),
         ("just", ROW_H, show_tuning, True, "just tuning"),
         ("retune", ROW_H, show_tuning, True, "retuning"),
+        ("weight", ROW_H, show_weighting, True, "weight"),
         ("damage", ROW_H, show_tuning, True, "damage"),
         ("optimization", ROW_H, show_optimization, True, "optimization"),
     )
@@ -1034,6 +1053,9 @@ def build(state, settings=None, collapsed=None,
     # counterpart of the tuning map over the primes), so the generators get a tuning tile too
     if row_open("tuning"):
         tval_row("tuning", "gens", tun.generator_map)
+    if row_open("weight"):  # weight is over the targets only, like damage (it scales them)
+        tval_row("weight", "targets", target_weights)
+        chart("weight", "targets", target_weights)
     if row_open("damage"):  # damage is over the targets only (the tuning's own column)
         tval_row("damage", "targets", target_sizes.damage)
         chart("damage", "targets", target_sizes.damage)
@@ -1108,6 +1130,8 @@ def build(state, settings=None, collapsed=None,
                 bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
             if mi and tile_open(key, "interest"):
                 bracket(f"{key}:ilist", LIST_BRACKETS, "interest", row_y[key], ROW_H)
+    if tile_open("weight", "targets"):
+        bracket("weight", LIST_BRACKETS, "targets", row_y["weight"], ROW_H)
     if tile_open("damage", "targets"):
         bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
 
@@ -1259,6 +1283,10 @@ def build(state, settings=None, collapsed=None,
     # reserved for every captioned column so the names stay aligned; the glyph and
     # equation are drawn only where defined (the comma columns have none yet). An
     # empty interest column has no tiles. Mnemonics underlines the symbol letter.
+    # The weight row's equivalence is the one scheme-dependent equation (𝒘 = 𝒄 / 1 / 1/𝒄),
+    # so it is resolved per build from the live scheme's slope rather than baked in.
+    equivalences = {**EQUIVALENCES,
+                    ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[service.damage_weight_slope(tuning_scheme)]}
     for (rkey, ckey), name in CAPTIONS.items():
         if ckey == "interest" and not interest:
             continue
@@ -1266,7 +1294,7 @@ def build(state, settings=None, collapsed=None,
             continue
         cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
         if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS:
-            equiv = EQUIVALENCES.get((rkey, ckey), "") if show_equiv else ""
+            equiv = equivalences.get((rkey, ckey), "") if show_equiv else ""
             glyph = SYMBOLS.get((rkey, ckey), "") if (show_symbols or equiv) else ""
             if glyph or equiv:
                 cells.append(CellBox(f"symbol:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
