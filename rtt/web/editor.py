@@ -76,9 +76,16 @@ class Editor:
         return self.target_family
 
     @property
+    def can_expand(self) -> bool:
+        """Whether the domain + applies: only a standard prime limit walks to the next
+        prime (a nonstandard subgroup isn't a prime sequence, so the control is inert)."""
+        return service.is_standard_domain(self.state.domain_basis)
+
+    @property
     def can_shrink(self) -> bool:
-        """Whether the domain can lose a prime without collapsing to nothing."""
-        return self.state.d > 1
+        """Whether the domain − applies: a standard prime limit with a prime to spare
+        (a nonstandard subgroup isn't walked by the prime ± controls)."""
+        return self.can_expand and self.state.d > 1
 
     @property
     def can_remove_comma(self) -> bool:
@@ -86,15 +93,17 @@ class Editor:
         drops a real comma without emptying the basis."""
         return self.pending_comma is not None or len(self.state.comma_basis) > 1
 
-    def edit_mapping(self, mapping) -> None:
-        self._snapshot()
-        self.pending_comma = None  # a temperament edit abandons any in-progress comma draft
-        self.state = service.from_mapping(mapping)
-
-    def edit_comma_basis(self, comma_basis) -> None:
+    def _apply(self, state: TemperamentState) -> None:
+        """Make a temperament edit: snapshot for undo, abandon any comma draft, set state."""
         self._snapshot()
         self.pending_comma = None
-        self.state = service.from_comma_basis(comma_basis)
+        self.state = state
+
+    def edit_mapping(self, mapping) -> None:
+        self._apply(service.from_mapping(mapping))
+
+    def edit_comma_basis(self, comma_basis) -> None:
+        self._apply(service.from_comma_basis(comma_basis))
 
     def add_interest(self) -> None:
         """Append a blank interval of interest (a zero monzo = 1/1) for the user to
@@ -110,16 +119,14 @@ class Editor:
         self.interest_monzos = [tuple(int(x) for x in m) for m in monzos]
 
     def try_edit_mapping_text(self, text: str) -> bool:
-        """Parse an EBK map string and apply it as a mapping edit. Returns False
-        (leaving the state untouched) when the text is not a valid integer map, so
-        the caller can flag the input rather than mangling the temperament."""
-        matrix = service.parse_mapping(text)
-        if matrix is None:
+        """Parse an EBK map string (honouring a domain-basis prefix, so a nonstandard
+        temperament can be typed in) and apply it. Returns False (leaving the state
+        untouched) when the text is not a valid integer map, so the caller can flag the
+        input rather than mangling the temperament."""
+        state = service.parse_mapping_state(text)
+        if state is None:
             return False
-        try:
-            self.edit_mapping(matrix)
-        except Exception:
-            return False
+        self._apply(state)
         return True
 
     def try_edit_comma_basis_text(self, text: str) -> bool:
@@ -160,11 +167,15 @@ class Editor:
         self.range_mode = mode
 
     def expand(self) -> None:
+        if not self.can_expand:
+            return  # the prime walk doesn't apply to a nonstandard subgroup
         self._snapshot()
         self.pending_comma = None  # the draft's length is tied to the old domain
         self.state = service.expand_domain(self.state)
 
     def shrink(self) -> None:
+        if not self.can_shrink:
+            return
         self._snapshot()
         self.pending_comma = None
         self.state = service.shrink_domain(self.state)

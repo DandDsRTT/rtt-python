@@ -5,6 +5,8 @@ test_web_integration.py; here we pin the Editor's own state-machine contract:
 the initial state, undo availability, and the shrink guard.
 """
 
+from fractions import Fraction
+
 from rtt.web import service, settings, spreadsheet
 from rtt.web.editor import INITIAL_MAPPING, Editor
 
@@ -189,6 +191,26 @@ def test_range_mode_starts_monotone_and_is_a_view_selection_outside_undo():
     assert editor.range_mode == "tradeoff"  # undo reverts the mapping, not the mode
 
 
+def test_domain_expand_shrink_are_inert_on_a_nonstandard_domain():
+    # the domain +/- walk the standard primes, which doesn't apply to a nonprime
+    # subgroup — they must leave a nonstandard temperament untouched, never silently
+    # reverting it to a prime limit
+    editor = Editor()
+    editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    before = editor.state
+    assert editor.can_shrink is False and editor.can_expand is False
+    editor.expand()
+    editor.shrink()
+    assert editor.state is before  # unchanged by either control
+
+
+def test_standard_domain_can_still_expand():
+    editor = Editor()  # 2.3.5
+    assert editor.can_expand is True
+    editor.expand()
+    assert editor.state.d == 4 and editor.state.domain_basis == (2, 3, 5, 7)
+
+
 def test_cannot_shrink_below_one_dimension():
     editor = Editor()
     assert editor.can_shrink is True  # starts at d=3
@@ -225,6 +247,16 @@ def test_try_edit_mapping_text_applies_a_valid_ebk_map():
     editor = Editor()
     assert editor.try_edit_mapping_text("[⟨1 0 0] ⟨0 1 0] ⟨0 0 1]}") is True
     assert editor.state.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))  # just intonation
+
+
+def test_try_edit_mapping_text_loads_a_nonstandard_domain_from_its_prefix():
+    # the mapping box round-trips the prefixed EBK that plain_text_values now emits, so
+    # typing a domain prefix loads that nonstandard temperament (Barbados over 2.3.13/5)
+    editor = Editor()
+    assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+    assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
+    assert editor.state.mapping == ((1, 2, 2), (0, -2, -3))
+    assert editor.can_undo is True
 
 
 def test_try_edit_mapping_text_rejects_bad_input_without_changing_state():

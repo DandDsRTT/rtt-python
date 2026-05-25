@@ -126,6 +126,12 @@ def standard_primes(d: int) -> tuple[int, ...]:
     return get_primes(d)
 
 
+def is_standard_domain(domain_basis) -> bool:
+    """Whether a domain basis is a standard prime limit (the first d primes) — so the
+    prime-walking domain ± controls apply, as opposed to a nonstandard subgroup."""
+    return is_standard_prime_limit_domain_basis(tuple(domain_basis))
+
+
 def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
     """Resolve a target interval set spec against a domain basis, as ratio strings.
 
@@ -484,6 +490,23 @@ def parse_mapping(text: str) -> Matrix | None:
     if t.variance is not Variance.ROW:
         return None
     return _int_matrix_or_none(t.matrix)
+
+
+def parse_mapping_state(text: str) -> TemperamentState | None:
+    """Parse an EBK *map* string into a full state, honouring an optional domain-basis
+    prefix (e.g. ``"2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"`` -> a nonstandard temperament).
+    None if unparseable, the wrong variance, or not an integer matrix. The inverse of
+    the ``("mapping", "primes")`` plain text, which carries that prefix when nonstandard."""
+    try:
+        t = parse_temperament_data(text)
+        if t.variance is not Variance.ROW:
+            return None
+        matrix = _int_matrix_or_none(t.matrix)
+        if matrix is None:
+            return None
+        return from_mapping(matrix, t.domain_basis)
+    except Exception:
+        return None
 
 
 def parse_comma_basis(text: str) -> Matrix | None:
