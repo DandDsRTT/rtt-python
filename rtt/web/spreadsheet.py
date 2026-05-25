@@ -561,7 +561,7 @@ def build(state, settings=None, collapsed=None,
     # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
-    tile_h, tile_top, row_frame, row_sym, row_cap, row_pre, chart_top = {}, {}, {}, {}, {}, {}, {}
+    tile_h, tile_top, row_frame, row_sym, row_cap, row_ptext, chart_top = {}, {}, {}, {}, {}, {}, {}
 
     def caption_band(key, folded):
         # the row's caption band is sized to its tallest (wrapped) caption, so the
@@ -608,8 +608,8 @@ def build(state, settings=None, collapsed=None,
         # equivalences extends that same line (the "= …" continuation) rather than
         # adding a band, so it reserves the slot too even when symbols itself is off
         sym = SYMBOL_H if ((show_symbols or show_equiv) and key in SYMBOLED_ROWS and not folded) else 0
-        # below the caption a tile reserves bands for the preselect chooser (its
-        # row) and the plain-text value box, stacked in that order
+        # below the caption a tile reserves bands for the plain-text value box and
+        # the preselect chooser (its row), stacked in that order
         pre = PRESELECT_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
         ptext = ptext_band(key, folded)
         row_h[key] = STRIP if folded else natural
@@ -619,8 +619,8 @@ def build(state, settings=None, collapsed=None,
         row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
         row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
         row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
-        row_cap[key] = cap  # the preselect/plain-text bands sit below the caption
-        row_pre[key] = pre  # ...and the plain-text band sits below the preselect band
+        row_cap[key] = cap  # the plain-text box and preselect chooser sit below the caption
+        row_ptext[key] = ptext  # the plain-text band, with the preselect chooser below it
         row_label[key] = label
         row_collapsible[key] = collapsible
         tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + pre + ptext
@@ -1104,32 +1104,28 @@ def build(state, settings=None, collapsed=None,
             cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_head_w[ckey], ch,
                                  "caption", text=name, underlines=underlines))
 
-    # preselect chooser dropdowns, in the reserved band below each governing tile
-    # (and below its caption when names show). The tuning/target choosers carry the
-    # live selection; the temperament chooser is a placeholder (it loads, not mirrors).
-    # These are controls, so they ride the tile whether or not math expressions has
-    # emptied its values — you can still pick a tuning while viewing closed forms.
+    # the plain-text box sits directly below the symbol/caption stack; the preselect
+    # chooser rides one plain-text band lower (so preselects appear under plain text).
+    def ptext_band_y(rkey):
+        return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey]
+
+    # preselect chooser dropdowns, in the reserved band below each governing tile's
+    # plain-text box. The tuning/target choosers carry the live selection; the
+    # temperament chooser is a placeholder (it loads, not mirrors). These are controls,
+    # so they ride the tile whether or not math expressions has emptied its values.
     if show_preselects:
         preselect_text = {"temperament": "", "tuning": tuning_scheme, "target": target_spec}
         for name, rkey, ckey in PRESELECTS:
             if not tile_open(rkey, ckey):
                 continue
-            py = row_y[rkey] + row_h[rkey] + row_frame[rkey]
-            if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS and (rkey, ckey) in CAPTIONS:
-                py += SYMBOL_H
-            if show_captions and (rkey, ckey) in CAPTIONS:
-                py += row_cap[rkey]
+            py = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
             pw = min(col_w[ckey], TARGET_PRESELECT_W if name == "target" else PRESELECT_W)
             cells.append(CellBox(f"preselect:{name}", col_x[ckey], py, pw, PRESELECT_H, "preselect", text=preselect_text[name]))
 
-    # plain-text value band: each tile's value as its natural EBK string, below the
-    # caption/preselect bands (the same numbers the grid shows, written inline). The
-    # two editable duals (mapping, comma basis) render as inputs that drive the grid;
-    # every other value is read-only. The app shrinks each box's font so the value
-    # always fits on one line, so nothing wraps or spills past its column.
-    def ptext_band_y(rkey):
-        return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_pre[rkey]
-
+    # plain-text value band: each tile's value as its natural EBK string, directly
+    # below the symbol/caption stack (above the preselect chooser). The two editable
+    # duals (mapping, comma basis) render as inputs that drive the grid; every other
+    # value is read-only. The app shrinks each box's font so the value fits one line.
     if show_ptext:
         for (rkey, ckey), text in ptext_strings.items():
             if not tile_open(rkey, ckey):

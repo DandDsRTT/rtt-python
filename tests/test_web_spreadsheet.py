@@ -645,6 +645,15 @@ def test_preselect_dropdown_clears_the_row_below_it():
     assert drop.y + drop.h <= next_row.y  # the reserved band keeps it off the next row
 
 
+def test_preselect_chooser_sits_below_the_plain_text_band():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["preselects"], s["plain_text_values"] = True, True
+    cells = {c.id: c for c in spreadsheet.build(base, s).cells}
+    chooser, ptext = cells["preselect:tuning"], cells["ptext:tuning:primes"]
+    assert chooser.y >= ptext.y + ptext.h  # the chooser rides beneath the plain-text box
+
+
 def test_target_chooser_is_wider_to_seat_its_numeric_override():
     # the target chooser carries a numeric limit field beside the TILT/OLD select,
     # so it reserves more width than the single-control tuning chooser
