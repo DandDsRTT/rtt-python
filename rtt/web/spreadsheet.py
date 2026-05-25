@@ -1117,8 +1117,13 @@ def build(state, settings=None, collapsed=None,
             rs = [r for r in rrows if r in row_y]
             if not cs or not rs:
                 continue
-            x0 = min(col_x[c] for c in cs) - WASH_PAD
-            x1 = max(col_x[c] + col_w[c] for c in cs) + WASH_PAD
+            # Overhang past the footprint by WASH_PAD — plus, on a +-bearing edge column, the
+            # extra FRAME_GAP its tile claims (tile_pad over PAD): that column's neighbour sits
+            # that much farther across the gutter, so the wash must reach as far to still meet
+            # the adjacent band rather than leaving a grey strip beside the + tile.
+            left, right = min(cs, key=col_x.get), max(cs, key=lambda c: col_x[c] + col_w[c])
+            x0 = col_x[left] - WASH_PAD - (tile_pad(left) - PAD)
+            x1 = col_x[right] + col_w[right] + WASH_PAD + (tile_pad(right) - PAD)
             y0 = min(tile_top[r] for r in rs) - WASH_PAD
             y1 = max(tile_top[r] + tile_h[r] for r in rs) + WASH_PAD
             bands.append((f"{group}:{idx}", x0, y0, x1 - x0, y1 - y0, group))

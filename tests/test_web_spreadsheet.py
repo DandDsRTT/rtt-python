@@ -1917,6 +1917,24 @@ def test_colorization_matches_the_mockup_cell_map():
     assert at("damage:target:0") == C                       # × targets
 
 
+def test_temperament_wash_bridges_the_plus_column_gutters():
+    # the domain primes and commas tiles carry an in-tile +, so their footprint runs a
+    # FRAME_GAP wider on each side than the bare content. The temperament wash must reach
+    # across that wider gutter, or a grey strip shows left of primes and right of commas
+    # in the top three rows (it can't in the tuning rows — the full-width cyan band there
+    # underlies the gutters). Probe each gutter's midpoint at the quantities/vectors/mapping
+    # row heights and require the wash to cover it.
+    lay = _colormap_layout()
+    cells = {c.id: c for c in lay.cells}
+    h = lambda k: cells[f"header:{k}"]
+    left_gutter = (h("gens").x + h("gens").w + h("primes").x) / 2     # between gens and primes
+    right_gutter = (h("commas").x + h("commas").w + h("targets").x) / 2  # between commas and targets
+    for row_cid in ("prime:0", "basis:0", "cell:mapping:0:0"):  # quantities, vectors, mapping rows
+        y = _mid(cells, row_cid)[1]
+        assert "temperament" in _color_at(lay, left_gutter, y)   # no grey gap left of primes
+        assert "temperament" in _color_at(lay, right_gutter, y)  # no grey gap right of commas
+
+
 def test_colorization_off_by_default_and_renders_as_base_plus_darken_bands():
     assert not any(b.id.startswith(("wash:", "washbase:")) for b in _layout().blocks)  # off by default
     blocks = _with(tuning_colorization=True).blocks
