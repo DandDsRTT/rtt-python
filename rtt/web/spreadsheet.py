@@ -151,17 +151,22 @@ CHARTED_ROWS = frozenset({"retune", "damage"})  # rows that grow a bar-chart ban
 
 # Box-group colorization (the mockup's coloured washes behind the grey tiles): a
 # group's "{group}_colorization" setting, when on, paints a colour wash behind that
-# group's boxes, showing through the gaps around the grey tiles. A group claims whole
-# ROWS (washed full width) and/or whole COLUMNS (washed full height); where a row band
-# and a column band cross, the colours blend (see the wash emission / app.py). tuning
-# is its quantity rows; temperament is the domain columns (so the tuning maps over the
-# domain primes/commas sit at a tuning-row × temperament-column crossing — cyan ⊓
-# yellow = green). The renderer maps the group name to its CSS colour.
+# group's boxes, showing through the gaps around the grey tiles. Per the mockup each
+# group claims both whole ROWS (washed full width) AND whole COLUMNS (washed full
+# height) — temperament is the mapping/interval-vectors rows and the domain
+# (generators/primes/commas) columns; tuning is the tuning-map rows and the
+# target-interval columns. Each group's rows/columns are emitted as ONE continuous
+# band (bridging the +control gutters), and where two groups' bands cross the colours
+# blend: a cyan tuning band over a yellow temperament band darkens to the mockup's
+# green (the tuning maps over the domain primes/commas, the mapped lists over the
+# targets). The renderer maps the group name to its CSS colour.
 COLORIZE_GROUP_ROWS: dict[str, frozenset[str]] = {
+    "temperament": frozenset({"vectors", "mapping"}),
     "tuning": frozenset({"tuning", "just", "retune", "damage"}),
 }
 COLORIZE_GROUP_COLS: dict[str, frozenset[str]] = {
     "temperament": frozenset({"gens", "primes", "commas"}),
+    "tuning": frozenset({"targets", "interest"}),
 }
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
@@ -1062,33 +1067,39 @@ def build(state, settings=None, collapsed=None,
     if gtm_box is not None:
         blocks.append(Block("block:tuning:rangesbox", *gtm_box, boxed=True))
 
-    # Colorization washes. The mockup paints the whole background of a colorized
-    # group's boxes (the grey tiles float on top), so a colorized ROW gets a full-width
-    # band and a colorized COLUMN a full-height band — not per-tile patches. A band is a
-    # white base plus the group's colour drawn at mix-blend-mode:darken (see app.py).
-    # ALL bases are emitted before ALL colour layers, so a cyan row band crossing a
-    # yellow column band composes the way the mockup's palette does: the opaque white
-    # bases paint first, then the darken colour layers min together — cyan ⊓ yellow =
-    # green at the tuning-maps-over-primes/commas cells. Bands overhang by WASH_PAD so a
-    # group's adjacent rows/columns read as one block; each folds to a strip with its row/column.
+    # Colorization washes. Per the mockup each colorized group fills the whole
+    # background of its rows (ONE full-width band) AND its columns (ONE full-height
+    # band) — single continuous bands, so the +control gutters between columns are
+    # washed too, not skipped. A band is a white base plus the group's colour at
+    # mix-blend-mode:darken (see app.py); the base sits a layer BELOW the colour so
+    # that wherever two groups' colour bands cross, the darken composes the way the
+    # mockup's palette does *regardless of paint order* — a cyan tuning band over a
+    # yellow temperament band darkens to green (the tuning maps over the domain
+    # primes/commas, the mapped lists over the targets). Bands overhang by WASH_PAD and
+    # span the current (possibly folded) extent of their rows/columns.
     if col_x and row_y:
-        row_l = min(col_x.values()) - WASH_PAD
-        row_r = max(col_x[c] + col_w[c] for c in col_x) + WASH_PAD
-        col_t = min(tile_top.values()) - WASH_PAD
-        col_b = max(tile_top[r] + tile_h[r] for r in tile_top) + WASH_PAD
-        washes = []  # (id-suffix, x, y, w, h, group)
-        for group, rows in COLORIZE_GROUP_ROWS.items():
-            if settings.get(f"{group}_colorization"):
-                washes += [(rk, row_l, tile_top[rk] - WASH_PAD, row_r - row_l,
-                            tile_h[rk] + 2 * WASH_PAD, group) for rk in rows if rk in row_y]
-        for group, cols in COLORIZE_GROUP_COLS.items():
-            if settings.get(f"{group}_colorization"):
-                washes += [(f"col:{ck}", col_x[ck] - WASH_PAD, col_t, col_w[ck] + 2 * WASH_PAD,
-                            col_b - col_t, group) for ck in cols if ck in col_x]
-        for suffix, x, y, w, h, _ in washes:  # every white base first (painted underneath)
-            blocks.append(Block(f"washbase:{suffix}", x, y, w, h, tint="base"))
-        for suffix, x, y, w, h, group in washes:  # then the darken colour layers over them
-            blocks.append(Block(f"wash:{suffix}", x, y, w, h, tint=group))
+        full_l = min(col_x.values()) - WASH_PAD
+        full_r = max(col_x[c] + col_w[c] for c in col_x) + WASH_PAD
+        full_t = min(tile_top.values()) - WASH_PAD
+        full_b = max(tile_top[rk] + tile_h[rk] for rk in tile_top) + WASH_PAD
+        bands = []  # (id, x, y, w, h, group)
+        for group in sorted(COLORIZE_GROUP_ROWS.keys() | COLORIZE_GROUP_COLS.keys()):
+            if not settings.get(f"{group}_colorization"):
+                continue
+            grows = [rk for rk in COLORIZE_GROUP_ROWS.get(group, ()) if rk in row_y]
+            if grows:  # one full-width band spanning the group's rows
+                top = min(tile_top[rk] for rk in grows) - WASH_PAD
+                bot = max(tile_top[rk] + tile_h[rk] for rk in grows) + WASH_PAD
+                bands.append((f"row:{group}", full_l, top, full_r - full_l, bot - top, group))
+            gcols = [ck for ck in COLORIZE_GROUP_COLS.get(group, ()) if ck in col_x]
+            if gcols:  # one full-height band spanning the group's columns
+                lft = min(col_x[ck] for ck in gcols) - WASH_PAD
+                rgt = max(col_x[ck] + col_w[ck] for ck in gcols) + WASH_PAD
+                bands.append((f"col:{group}", lft, full_t, rgt - lft, full_b - full_t, group))
+        for bid, x, y, w, h, _ in bands:  # white bases (a layer below the colour bands)
+            blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
+        for bid, x, y, w, h, group in bands:  # the darken colour bands over them
+            blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
 
     # quantity symbol + name stacked inside each tile, below its values + bottom
     # frame: the symbol line (toggled by symbols) on top, the long-form name

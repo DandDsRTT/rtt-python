@@ -146,14 +146,16 @@ _CSS = f"""
             width {_T}, height {_T}, opacity {_T}; }}
 .rtt-line-v {{ border-left:1px solid #e0e0e0; width:0; }}
 .rtt-line-h {{ border-top:1px solid #e0e0e0; height:0; }}
-/* a colorization wash: a full-width colour band behind the grey tiles (below the
-   gridlines too) that fills the whole background of a colorized group's rows. The
-   white base sits under the colour, which is drawn at mix-blend-mode:darken so
-   overlapping group bands combine like the mockup's palette (cyan ⊓ yellow = green). */
-.rtt-washbase, .rtt-wash {{ position:absolute; z-index:0; opacity:1;
+/* a colorization wash: a colour band behind the grey tiles (below the gridlines too)
+   filling a colorized group's row/column background. Each group's band has a white
+   base on a LOWER layer (z-index:-1) than its darken colour layer (z-index:0), so the
+   opaque bases can never cover another group's colour — wherever two colour bands
+   cross, the darken min's them over white into the mockup's blend (cyan ⊓ yellow =
+   green), independent of which group was toggled on first. */
+.rtt-washbase, .rtt-wash {{ position:absolute; opacity:1;
             transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
-.rtt-washbase {{ background:#fff; }}
-.rtt-wash {{ mix-blend-mode:darken; }}
+.rtt-washbase {{ z-index:-1; background:#fff; }}
+.rtt-wash {{ z-index:0; mix-blend-mode:darken; }}
 .rtt-block {{ position:absolute; z-index:2; background:#e0e0e0; opacity:1;
              transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
 /* the nested tuning-ranges box: a thin-bordered frame on the generator tuning map tile

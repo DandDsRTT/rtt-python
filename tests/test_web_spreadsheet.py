@@ -1793,47 +1793,87 @@ def test_tuning_ranges_box_grows_every_tile_in_the_tuning_row_uniformly():
     assert gens_h > off["block:tuning:primes"].h
 
 
-def test_tuning_colorization_washes_every_tuning_row():
-    # a full-width colour band backs each tuning/just/retuning/damage row (the mockup's
-    # cyan box group): one wash + white base per row, spanning the whole row background
-    ids = {b.id for b in _with(tuning_colorization=True).blocks}
-    assert {"wash:tuning", "wash:just", "wash:retune", "wash:damage"} <= ids
-    assert {"washbase:tuning", "washbase:just", "washbase:retune", "washbase:damage"} <= ids
+def _overlap(a, b):
+    return a.x < b.x + b.w and b.x < a.x + a.w and a.y < b.y + b.h and b.y < a.y + a.h
 
 
-def test_a_wash_is_a_full_width_band_over_a_white_base_below_the_grey_tiles():
+def test_each_colorized_group_bands_its_rows_and_its_columns():
+    # per the mockup a group washes BOTH its rows (one full-width band) and its columns
+    # (one full-height band). tuning = the tuning-map rows + the target columns;
+    # temperament = the mapping/interval-vector rows + the domain columns.
+    tun = {b.id for b in _with(tuning_colorization=True).blocks}
+    assert {"wash:row:tuning", "wash:col:tuning"} <= tun
+    assert {"washbase:row:tuning", "washbase:col:tuning"} <= tun
+    tmp = {b.id for b in _with(temperament_colorization=True).blocks}
+    assert {"wash:row:temperament", "wash:col:temperament"} <= tmp
+    assert {"washbase:row:temperament", "washbase:col:temperament"} <= tmp
+
+
+def test_a_colour_band_is_tagged_and_sits_over_a_coincident_white_base():
     blocks = {b.id: b for b in _with(tuning_colorization=True).blocks}
-    wash, base = blocks["wash:tuning"], blocks["washbase:tuning"]
+    wash, base = blocks["wash:row:tuning"], blocks["washbase:row:tuning"]
     assert wash.tint == "tuning"  # the colour layer (renderer → CSS colour, drawn darken)
-    assert base.tint == "base"  # the white base it darkens over, so groups combine to green
+    assert base.tint == "base"  # the white base it darkens over, so crossings combine to green
     assert (base.x, base.y, base.w, base.h) == (wash.x, wash.y, wash.w, wash.h)  # coincident
     assert blocks["block:tuning:targets"].tint == ""  # grey tiles aren't tinted — they float on the band
-    # the band runs the full column width (over the primes tile AND the targets tile,
-    # not just one column) and overhangs the row vertically
-    left, right = blocks["block:tuning:primes"], blocks["block:tuning:targets"]
-    assert wash.x < left.x and wash.x + wash.w > right.x + right.w
-    assert wash.y < left.y and wash.y + wash.h > left.y + left.h
 
 
-def test_colorization_off_means_no_wash_and_only_tuning_rows_wash_when_on():
+def test_a_row_band_is_full_width_and_spans_its_group_rows():
+    lay = _with(tuning_colorization=True)
+    blocks = {b.id: b for b in lay.blocks}
+    band = blocks["wash:row:tuning"]
+    tiles = [b for b in lay.blocks if b.id.startswith("block:")]
+    # full width: from before the leftmost tile to past the rightmost (over every column)
+    assert band.x <= min(t.x for t in tiles) and band.x + band.w >= max(t.x + t.w for t in tiles)
+    # vertically spans the tuning rows (the tuning tile down to the damage tile), not the upper rows
+    assert band.y <= blocks["block:tuning:targets"].y
+    assert band.y + band.h >= blocks["block:damage:targets"].y + blocks["block:damage:targets"].h
+    assert band.y > blocks["block:mapping"].y  # starts below the (temperament) mapping row
+
+
+def test_a_column_band_is_full_height_and_bridges_the_control_gutter():
+    # the temperament column band is ONE continuous band over the domain columns, so the
+    # +control gutter between the primes and commas columns is washed too, not skipped
+    lay = _with(temperament_colorization=True)
+    blocks = {b.id: b for b in lay.blocks}
+    cells = {c.id: c for c in lay.cells}
+    band = blocks["wash:col:temperament"]
+    hg, hc = cells["header:gens"], cells["header:commas"]
+    assert band.x <= hg.x and band.x + band.w >= hc.x + hc.w  # brackets gens THROUGH commas
+    tiles = [b for b in lay.blocks if b.id.startswith("block:")]
+    assert band.y <= min(t.y for t in tiles) and band.y + band.h >= max(t.y + t.h for t in tiles)  # full height
+    assert band.x + band.w < cells["header:targets"].x  # but stops before the (cyan) targets column
+
+
+def test_cross_group_bands_overlap_so_the_darken_blends_green():
+    # the headline of the colorization scheme: where a cyan band crosses a yellow band the
+    # renderer's mix-blend-mode:darken min's them to green. Assert the crossing rectangles
+    # actually overlap (the colour itself is a CSS blend we can't read here).
+    blocks = {b.id: b for b in _with(tuning_colorization=True, temperament_colorization=True).blocks}
+    # cyan tuning ROWS over yellow temperament COLUMNS (the tuning maps over the domain)
+    assert _overlap(blocks["wash:row:tuning"], blocks["wash:col:temperament"])
+    # yellow temperament ROWS over cyan tuning COLUMNS (the mapped lists over the targets)
+    assert _overlap(blocks["wash:row:temperament"], blocks["wash:col:tuning"])
+
+
+def test_colorization_off_by_default_and_each_group_scoped_to_two_bands():
     assert not any(b.id.startswith(("wash:", "washbase:")) for b in _layout().blocks)  # off by default
-    # with it on, only the tuning quantity rows wash; the temperament/vector/quantity
-    # rows stay plain (their own colorization is a separate, still-stubbed toggle)
-    rows = {b.id.split(":")[1] for b in _with(tuning_colorization=True).blocks
-            if b.id.startswith("wash:")}
-    assert rows == {"tuning", "just", "retune", "damage"}
+    tun = {b.id for b in _with(tuning_colorization=True).blocks if b.id.startswith("wash:")}
+    assert tun == {"wash:row:tuning", "wash:col:tuning"}  # only tuning's two bands
+    tmp = {b.id for b in _with(temperament_colorization=True).blocks if b.id.startswith("wash:")}
+    assert tmp == {"wash:row:temperament", "wash:col:temperament"}  # only temperament's two bands
 
 
-def test_a_folded_tuning_row_shrinks_its_wash_to_the_collapsed_strip():
+def test_collapsing_the_tuning_rows_shrinks_the_tuning_row_band():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["tuning_colorization"] = True
-    open_h = {b.id: b for b in spreadsheet.build(base, s).blocks}["wash:tuning"].h
-    folded = {b.id: b for b in spreadsheet.build(base, s, collapsed={"row:tuning"}).blocks}
-    # the band tracks its row: collapsing the row shrinks the band to the strip (and its
-    # white base with it), so no full-height cyan strip is left behind
-    assert folded["wash:tuning"].h < open_h
-    assert folded["washbase:tuning"].h == folded["wash:tuning"].h
+    open_h = {b.id: b for b in spreadsheet.build(base, s).blocks}["wash:row:tuning"].h
+    folded = spreadsheet.build(base, s, collapsed={"row:tuning", "row:just", "row:retune", "row:damage"})
+    fb = {b.id: b for b in folded.blocks}
+    # the band tracks its rows: collapsing them shrinks it (and its white base) to strips
+    assert fb["wash:row:tuning"].h < open_h
+    assert fb["washbase:row:tuning"].h == fb["wash:row:tuning"].h
 
 
 def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
@@ -1844,44 +1884,3 @@ def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
     assert on["symbol:damage:targets"].text == "𝐝 = |𝐞|diag(𝒘)"
 
 
-def test_temperament_colorization_washes_the_temperament_columns():
-    # temperament is a COLUMN group (the mockup washes the domain primes / generators /
-    # commas columns yellow, full height): one full-height wash + white base per column
-    ids = {b.id for b in _with(temperament_colorization=True).blocks}
-    assert {"wash:col:gens", "wash:col:primes", "wash:col:commas"} <= ids
-    assert {"washbase:col:gens", "washbase:col:primes", "washbase:col:commas"} <= ids
-
-
-def test_a_temperament_column_wash_is_a_full_height_band_over_a_white_base():
-    lay = _with(temperament_colorization=True)
-    blocks = {b.id: b for b in lay.blocks}
-    cells = {c.id: c for c in lay.cells}
-    wash, base = blocks["wash:col:primes"], blocks["washbase:col:primes"]
-    assert wash.tint == "temperament"  # the colour layer (renderer → khaki, drawn darken)
-    assert base.tint == "base"  # the white base it darkens over
-    assert (base.x, base.y, base.w, base.h) == (wash.x, wash.y, wash.w, wash.h)  # coincident
-    # the band runs the full row height (above the topmost tile, below the bottommost)
-    tiles = [b for b in lay.blocks if b.id.startswith("block:")]
-    assert wash.y <= min(t.y for t in tiles) and wash.y + wash.h >= max(t.y + t.h for t in tiles)
-    # but only the primes column's width — it brackets the primes header, and is
-    # narrower than the whole grid (a column band, not a full-width row band)
-    hp = cells["header:primes"]
-    assert wash.x <= hp.x and wash.x + wash.w >= hp.x + hp.w
-    assert wash.w < max(t.x + t.w for t in tiles) - min(t.x for t in tiles)
-
-
-def test_tuning_rows_and_temperament_columns_cross_to_blend_green():
-    # both on: a cyan tuning ROW band and a yellow temperament COLUMN band overlap at the
-    # tuning-map-over-primes cell, where the renderer's darken blends them to the mockup's
-    # green. Assert the two bands' rectangles actually intersect (the colour is a CSS blend).
-    blocks = {b.id: b for b in _with(tuning_colorization=True, temperament_colorization=True).blocks}
-    row, col = blocks["wash:tuning"], blocks["wash:col:primes"]
-    assert row.x < col.x + col.w and col.x < row.x + row.w  # x ranges overlap
-    assert row.y < col.y + col.h and col.y < row.y + row.h  # y ranges overlap
-
-
-def test_temperament_colorization_off_by_default_and_scoped_to_its_columns():
-    assert not any(b.id.startswith(("wash:col:", "washbase:col:")) for b in _layout().blocks)
-    cols = {b.id.split(":")[2] for b in _with(temperament_colorization=True).blocks
-            if b.id.startswith("wash:col:")}
-    assert cols == {"gens", "primes", "commas"}
