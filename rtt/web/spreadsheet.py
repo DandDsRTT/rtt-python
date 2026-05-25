@@ -101,6 +101,7 @@ CAPTIONS = {
     ("retune", "primes"): "retuning map",
     ("retune", "commas"): "comma error list",
     ("retune", "targets"): "target interval error list",
+    ("prescaling", "primes"): "complexity prescaler",
     ("complexity", "primes"): "domain prime complexity map",
     ("complexity", "commas"): "comma basis interval complexity list",
     ("complexity", "targets"): "target interval complexity list",
@@ -146,6 +147,7 @@ SYMBOLS = {
     ("retune", "primes"): "𝒓",
     ("retune", "commas"): "𝒓C",
     ("retune", "targets"): "𝐞",
+    ("prescaling", "primes"): "𝑋",  # the complexity prescaler matrix (math italic, like 𝑀)
     ("complexity", "primes"): "𝒄",  # the complexity map/list (bold italic)
     ("complexity", "commas"): "𝒄",
     ("complexity", "targets"): "𝒄",
@@ -155,8 +157,9 @@ SYMBOLS = {
 }
 SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symbol slot
 # multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping
-# for its spanning bracket+brace, the interval vectors for the per-column ket marks
-FRAMED_ROWS = frozenset({"mapping", "vectors"})
+# and the complexity-prescaling matrix for their spanning bracket+brace, the interval
+# vectors for the per-column ket marks
+FRAMED_ROWS = frozenset({"mapping", "vectors", "prescaling"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 
 # Box-group colorization (the mockup's coloured washes behind the grey tiles): a
@@ -306,6 +309,7 @@ TILES = (
     ("block:retune:primes", "retune", "primes"),
     ("block:retune:commas", "retune", "commas"),
     ("block:retune:targets", "retune", "targets"),
+    ("block:prescaling:primes", "prescaling", "primes"),
     ("block:complexity:primes", "complexity", "primes"),
     ("block:complexity:commas", "complexity", "commas"),
     ("block:complexity:targets", "complexity", "targets"),
@@ -397,6 +401,12 @@ def _math_expr(operand: str, value: float, show_value: bool) -> str:
     value (quantities) off, only the expression shows."""
     expr = f"1200 · log₂{operand}"
     return f"{expr}\n= {service.cents(value)}" if show_value else expr
+
+
+def _prescale_text(value: float) -> str:
+    """A complexity-prescaler matrix entry: a whole number bare (the 0 off-diagonal, and
+    log₂2 = 1), else the 3-dp value (log₂3 = 1.585) — keeping the mostly-zero matrix clean."""
+    return str(int(value)) if value == int(value) else service.cents(value)
 
 
 def _format_power(power: float) -> str:
@@ -551,6 +561,9 @@ def build(state, settings=None, collapsed=None,
         "targets": service.interval_complexities(state.mapping, tuning_scheme, targets),
         "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios),
     }
+    # the prescaler 𝑋: a d×d diagonal matrix over the primes (diag = each prime's pre-norm
+    # weight, the values the complexity map norms). log-prime by default: diag(log₂ prime).
+    prescaler = service.complexity_prescaler(state.mapping, tuning_scheme)
     interest_tiles = () if not interest else (
         ("block:vec:interest", "vectors", "interest"),
         ("block:interest", "quantities", "interest"),
@@ -717,6 +730,7 @@ def build(state, settings=None, collapsed=None,
         ("tuning", ROW_H, show_tuning, True, "tuning"),
         ("just", ROW_H, show_tuning, True, "just tuning"),
         ("retune", ROW_H, show_tuning, True, "retuning"),
+        ("prescaling", d * ROW_H, show_weighting, True, "complexity prescaling"),
         ("complexity", ROW_H, show_weighting, True, "complexity"),
         ("weight", ROW_H, show_weighting, True, "weight"),
         ("damage", ROW_H, show_tuning, True, "damage"),
@@ -1079,6 +1093,12 @@ def build(state, settings=None, collapsed=None,
     # counterpart of the tuning map over the primes), so the generators get a tuning tile too
     if row_open("tuning"):
         tval_row("tuning", "gens", tun.generator_map)
+    if tile_open("prescaling", "primes"):  # the d×d prescaler: diagonal weights, 0 off it
+        for i in range(d):
+            for p in range(d):
+                value = prescaler[i] if i == p else 0.0
+                cells.append(CellBox(f"cell:prescaling:{i}:{p}", prime_left(p), row_y["prescaling"] + i * ROW_H,
+                                     COL_W, ROW_H, "mapped", text=_prescale_text(value)))
     if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
         for group in ("primes", "commas", "targets", "interest"):
             tval_row("complexity", group, complexities[group])
@@ -1397,16 +1417,17 @@ def build(state, settings=None, collapsed=None,
     def frame_brace_y(rkey):
         return row_y[rkey] + row_h[rkey] + FRAME_GAP
 
-    # the primes mapping is a stacked-maps matrix, enclosed by a top bracket + bottom
-    # brace spanning its whole column
-    def map_frame(ckey):
-        if not tile_open("mapping", ckey):
+    # a matrix tile (the primes mapping, the complexity prescaler) is enclosed by a top
+    # bracket + bottom brace spanning its whole column. ``bid`` keeps each frame's ids stable.
+    def matrix_frame(rkey, ckey, bid):
+        if not tile_open(rkey, ckey):
             return
         gx, gw = col_x[ckey], col_w[ckey]
-        cells.append(CellBox(f"ebktop:{ckey}", gx, frame_top_y("mapping"), gw, FRAME_H, "ebktop"))
-        cells.append(CellBox(f"ebkbrace:{ckey}", gx, frame_brace_y("mapping"), gw, BRACE_H, "ebkbrace"))
+        cells.append(CellBox(f"ebktop:{bid}", gx, frame_top_y(rkey), gw, FRAME_H, "ebktop"))
+        cells.append(CellBox(f"ebkbrace:{bid}", gx, frame_brace_y(rkey), gw, BRACE_H, "ebkbrace"))
 
-    map_frame("primes")
+    matrix_frame("mapping", "primes", "primes")
+    matrix_frame("prescaling", "primes", "prescaling")
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is
     # marked top + bottom — inset so they stop short of the rules. The foot tells the

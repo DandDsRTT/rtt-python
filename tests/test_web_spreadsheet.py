@@ -1038,6 +1038,40 @@ def test_complexity_caption_mnemonic_underlines_its_symbol_letter():
     assert cap.underlines == ((cap.text.index("complexity"), 1),)
 
 
+def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
+    on = {c.id: c for c in _with(weighting=True).cells}
+    off = {c.id for c in _with(weighting=False).cells}
+    assert "cell:prescaling:0:0" not in off  # no prescaling matrix unless weighting is on
+    pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)), service.DEFAULT_TUNING_SCHEME)
+    # a d×d diagonal matrix over the primes: the prescaler weights on the diagonal, 0 off it
+    assert on["cell:prescaling:0:0"].text == "1"               # log2(2) = 1, shown bare
+    assert on["cell:prescaling:1:1"].text == service.cents(pre[1])  # log2(3) = 1.585
+    assert on["cell:prescaling:2:2"].text == service.cents(pre[2])  # log2(5) = 2.322
+    assert on["cell:prescaling:0:1"].text == "0"               # off-diagonal entry
+    # column p sits under prime p; rows stack one ROW_H apart (a d-tall matrix)
+    assert on["cell:prescaling:0:0"].x == on["prime:0"].x
+    assert on["cell:prescaling:1:1"].x == on["prime:1"].x
+    assert on["cell:prescaling:1:0"].y == on["cell:prescaling:0:0"].y + spreadsheet.ROW_H
+
+
+def test_prescaling_row_sits_between_retuning_and_complexity():
+    on = {c.id: c for c in _with(weighting=True).cells}
+    assert on["retune:prime:0"].y < on["cell:prescaling:0:0"].y < on["complexity:prime:0"].y
+
+
+def test_prescaling_matrix_is_framed_like_the_mapping():
+    on = {c.id for c in _with(weighting=True).cells}
+    assert {"ebktop:prescaling", "ebkbrace:prescaling"} <= on  # top bracket + bottom brace
+    # the mapping's own frame keeps its stable ids
+    assert {"ebktop:primes", "ebkbrace:primes"} <= on
+
+
+def test_prescaling_matrix_carries_its_symbol_and_caption():
+    cells = {c.id: c for c in _with(weighting=True, symbols=True, names=True).cells}
+    assert cells["symbol:prescaling:primes"].text == "𝑋"  # math italic, the prescaler matrix (X = L)
+    assert cells["caption:prescaling:primes"].text == "complexity prescaler"
+
+
 def test_weight_equivalence_reflects_the_schemes_damage_slope():
     # the weight = complexity / 1 / 1-over-complexity by the scheme's slope, so the
     # equivalence tells the truth about the live scheme rather than a fixed headline
