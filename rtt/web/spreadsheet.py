@@ -23,9 +23,9 @@ COL_W = 30  # px per value column; == ROW_H so matrix cells are squares that til
 GAP = 14  # px between row/column groups
 PAD = 4  # px a block extends around its cells
 LABEL_W = 96  # row-label gutter width
-HEADER_H = 36  # column-header height — two text lines tall, so a long collapsed
-# title (e.g. "other intervals of interest") wraps centered onto a second line
-# instead of forcing an over-wide one-line strip; short titles centre as one line
+HEADER_H = 36  # column-header height — two text lines tall, so a multi-word title
+# stacks centered onto a second line (via explicit "\n" breaks in col_header, e.g.
+# "domain" / "primes"); single-word titles centre as one line
 SPINE_W = 64  # quantities spine column width — sized to seat its "quantities"
 # header without overflowing onto the generators column; carries only the
 # column-axis vertical rule, no data cells in the default view
@@ -33,9 +33,6 @@ CTRL_W = 18  # domain expand (+) control gutter, just right of the primes block
 BTN = 15  # px side of a domain +/− control — half the COL_W square mapping/prime cell
 MINUS_REVEAL_H = 18  # height the removable prime's hover-minus rises above its header
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
-TITLE_WRAP_W = 140  # cap on a collapsed column's title strip: a title wider than this
-# wraps onto the header band's second line (HEADER_H is two lines) instead of folding
-# to an over-wide one-line ribbon — e.g. "other intervals of interest"
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (off the edges and content)
 CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mockup —
@@ -266,10 +263,12 @@ def _math_expr(operand: str, value: float, show_value: bool) -> str:
 
 
 def _title_w(title: str) -> int:
-    """Width of a collapsed column's title strip. A short title gets a strip just wide
-    enough for its single 13px bold line; a long one is capped at TITLE_WRAP_W so it
-    wraps to ~2 lines (matching the mockup) rather than folding to an over-wide ribbon."""
-    return max(STRIP, min(len(title) * 8 + 10, TITLE_WRAP_W))
+    """Width of a collapsed column's title strip: wide enough for the widest line of its
+    title at 13px bold, with a STRIP floor. A multi-word title carries explicit "\\n"
+    breaks (col_header), so it stacks within a strip sized to its longest word-run rather
+    than folding to an over-wide one-line ribbon."""
+    widest = max(len(line) for line in title.splitlines())
+    return max(STRIP, widest * 8 + 10)
 
 
 def _fold_glyph(is_collapsed: bool) -> str:
@@ -381,8 +380,8 @@ def build(state, settings=None, collapsed=None,
     # The domain/comma + controls ride just right of their blocks when open; each −
     # is a hover affordance on the removable highest-prime / last-comma column.
     col_header = {"quantities": "quantities", "gens": "generators",
-                  "primes": "domain primes", "commas": "commas", "targets": "target-intervals",
-                  "interest": "other intervals of interest"}
+                  "primes": "domain\nprimes", "commas": "commas", "targets": "target\nintervals",
+                  "interest": "other intervals\nof interest"}
     # The leftmost quantities column is the spine: a header + fold toggle + a single
     # vertical rule, the column-axis dual of the quantities spine row.
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
@@ -429,7 +428,7 @@ def build(state, settings=None, collapsed=None,
     gen_x = col_x.get("gens", content_x0)
     primes_x = col_x.get("primes")  # None when the domain-primes column is hidden
     commas_x = col_x.get("commas")  # None when the commas column is hidden
-    targets_x = col_x.get("targets")  # None when the target-intervals column is hidden
+    targets_x = col_x.get("targets")  # None when the target intervals column is hidden
     interest_x = col_x.get("interest")  # None when the interest column is hidden
 
     def col_open(key):

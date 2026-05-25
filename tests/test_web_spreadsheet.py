@@ -103,7 +103,7 @@ def test_a_single_prime_domain_has_no_minus_but_keeps_plus():
 
 def test_target_intervals_column_with_mapped_list():
     cells = {c.id: c for c in _layout().cells}
-    assert cells["header:targets"].text == "target-intervals"
+    assert cells["header:targets"].text == "target\nintervals"
     # each target maps through M ([[1,1,0],[0,1,4]]) into the mapped-list column below it
     assert cells["target:0"].text == "2/1"
     assert cells["cell:mapped:0:0"].text == "1" and cells["cell:mapped:1:0"].text == "0"  # 2/1 -> 1 octave
@@ -233,7 +233,7 @@ def test_tuning_boxes_off_removes_the_tuning_rows_and_the_target_intervals_colum
     # the tuning-family rows are gone
     assert not any(c.split(":")[0] in {"tuning", "just", "retune", "damage"} for c in off)
     assert {"label:tuning", "label:just", "label:retune", "label:damage"}.isdisjoint(off)
-    # the target-intervals column goes with them: its header, the target headers,
+    # the target intervals column goes with them: its header, the target headers,
     # and the mapped target-interval list that lived in it
     assert "header:targets" not in off
     assert not any(c.startswith(("target:", "cell:mapped:")) for c in off)
@@ -376,23 +376,18 @@ def test_collapsed_column_keeps_its_title_at_a_width_that_fits_it():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     coll = {c.id: c for c in spreadsheet.build(base, collapsed={"col:targets"}).cells}["header:targets"]
     full = {c.id: c for c in spreadsheet.build(base).cells}["header:targets"]
-    assert coll.text == "target-intervals"  # the title stays put (not blanked, not rotated)
+    assert coll.text == "target\nintervals"  # the title stays put (not blanked, not rotated)
     assert spreadsheet.STRIP < coll.w < full.w  # folded narrower, but wide enough to read the title
 
 
-def test_a_long_collapsed_title_caps_its_strip_so_it_wraps_short_titles_do_not():
+def test_a_collapsed_multiline_title_strip_fits_its_widest_line():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    cells = lambda col: {c.id: c for c in spreadsheet.build(base, collapsed={col}).cells}
-    interest = cells("col:interest")["header:interest"]
-    targets = cells("col:targets")["header:targets"]
-    # the long title keeps its full text but folds to a strip capped at TITLE_WRAP_W,
-    # so the two-line header band takes the overflow instead of a ~226px one-line ribbon
-    assert interest.text == "other intervals of interest"
-    assert interest.w == spreadsheet.TITLE_WRAP_W
-    assert interest.w < len("other intervals of interest") * 8 + 10  # narrower than one line
-    # a short title still fits on one line, so the cap leaves its strip untouched
-    assert targets.w == len("target-intervals") * 8 + 10
-    assert targets.w < spreadsheet.TITLE_WRAP_W
+    interest = {c.id: c for c in spreadsheet.build(base, collapsed={"col:interest"}).cells}["header:interest"]
+    # the title keeps its full (explicitly "\n"-broken) text and folds to a strip sized to
+    # its widest line, so a three-word title stacks instead of forcing a ~226px one-line ribbon
+    assert interest.text == "other intervals\nof interest"
+    assert interest.w == len("other intervals") * 8 + 10  # the widest line, not all 27 chars
+    assert interest.w < len("other intervals of interest") * 8 + 10  # far narrower than one line
 
 
 def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline():
@@ -600,7 +595,7 @@ def test_preselect_choosers_follow_their_columns_when_temperament_is_hidden():
     # temperament takes both choosers with the column
     assert "preselect:temperament" not in cells
     assert "preselect:tuning" not in cells
-    # the target chooser rides the tuning-owned target-intervals column, so it stays
+    # the target chooser rides the tuning-owned target intervals column, so it stays
     assert "preselect:target" in cells
 
 
@@ -759,7 +754,7 @@ def test_commas_column_sits_between_primes_and_targets_with_its_comma_ratios():
     cells = {c.id: c for c in _layout().cells}
     assert cells["header:commas"].text == "commas"
     assert cells["comma:0"].text == "80/81"  # the syntonic comma, as-is from the dual
-    # the commas band falls between domain primes and target-intervals
+    # the commas band falls between domain primes and target intervals
     assert cells["header:primes"].x < cells["header:commas"].x < cells["header:targets"].x
     assert cells["prime:2"].x < cells["comma:0"].x < cells["target:0"].x
 
@@ -1089,17 +1084,17 @@ def test_every_count_sits_on_its_own_grey_panel():
 
 def test_other_intervals_of_interest_column_is_present_right_of_targets():
     cells = {c.id: c for c in _layout().cells}  # default build: interest defaults to empty
-    assert cells["header:interest"].text == "other intervals of interest"
+    assert cells["header:interest"].text == "other intervals\nof interest"
     assert "toggle:col:interest" in cells  # foldable like the other interval columns
     assert cells["header:interest"].x > cells["header:targets"].x  # rightmost column
 
 
 def test_empty_interest_column_takes_its_titles_wrapped_strip_width():
     # an empty interest column has no cells to set its width, so it adopts its title's
-    # capped two-line strip width (the narrow header strip the mockup shows) rather than
-    # a bare bracket-gutter stub the long title would overflow
+    # strip width — the widest line of its two-line header (the narrow header strip the
+    # mockup shows) rather than a bare bracket-gutter stub the long title would overflow
     cells = {c.id: c for c in _layout().cells}  # default build => interest empty
-    assert cells["header:interest"].w == spreadsheet.TITLE_WRAP_W
+    assert cells["header:interest"].w == len("other intervals") * 8 + 10
 
 
 def test_empty_interest_column_is_just_a_header_and_axis():

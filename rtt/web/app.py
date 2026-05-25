@@ -121,10 +121,10 @@ _CSS = f"""
              width:calc(100% + {_CELL_BORDER_W}px); height:calc(100% + {_CELL_BORDER_W}px);
              box-sizing:border-box; display:flex; align-items:center; justify-content:center;
              background:#fff; border:{_CELL_BORDER}; color:#000; font-size:{_CELL_FONT}px; }}
-/* balance evens a wrapped title (e.g. "other intervals" / "of interest") instead of
-   orphaning its last word; the tight line-height keeps the two lines close */
-.rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:normal;
-                 width:100%; text-align:center; line-height:1.1; text-wrap:balance; }}
+/* titles carry explicit "\n" breaks (col_header) so a multi-word header stacks to two
+   lines (e.g. "domain" / "primes"); pre-line honors them. Tight line-height keeps them close. */
+.rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:pre-line;
+                 width:100%; text-align:center; line-height:1.1; }}
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; line-height:1.1; }}
 .rtt-val {{ font-size:{_CELL_FONT}px; color:#000; }}
