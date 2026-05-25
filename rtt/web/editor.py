@@ -10,6 +10,8 @@ layer is thin glue over this; all of it is unit-testable without a UI.
 
 from __future__ import annotations
 
+import re
+
 from rtt.web import service
 from rtt.web.service import TemperamentState
 
@@ -23,7 +25,13 @@ class Editor:
         # the derived rows are shown under. Unlike the temperament itself, these are
         # view choices (like the Show toggles), so they live outside the undo stack.
         self.tuning_scheme: str = service.DEFAULT_TUNING_SCHEME
-        self.target_spec: str = service.DEFAULT_TARGET_SPEC
+        # The target set is a family ("TILT"/"OLD") plus an optional manual limit N.
+        # The limit is *weakly held*: it applies only while the domain (d) is the one
+        # it was set for, so changing the domain reverts to that domain's default — see
+        # the target_spec property.
+        self.target_family: str = service.DEFAULT_TARGET_SPEC
+        self.target_limit: int | None = None
+        self._target_limit_d: int | None = None
         # "Other intervals of interest": a user-built set of intervals to watch,
         # held as monzos (edited like the comma basis — editable vector cells).
         # Display data the user curates, not part of the temperament, so (like the
@@ -47,6 +55,14 @@ class Editor:
     @property
     def can_redo(self) -> bool:
         return bool(self._redo_stack)
+
+    @property
+    def target_spec(self) -> str:
+        """The active target spec: the manual ``"N-family"`` while its domain still
+        holds, otherwise the bare family (so the set tracks the domain's default)."""
+        if self.target_limit is not None and self.state.d == self._target_limit_d:
+            return f"{self.target_limit}-{self.target_family}"
+        return self.target_family
 
     @property
     def can_shrink(self) -> bool:
@@ -111,7 +127,14 @@ class Editor:
         self.tuning_scheme = scheme
 
     def set_target_spec(self, spec: str) -> None:
-        self.target_spec = spec
+        """Set the target family and (optional) manual limit from a spec like
+        ``"9-TILT"`` or ``"OLD"``. A manual limit is stamped with the current domain,
+        so it is weakly held — the next domain change reverts to that domain's default."""
+        match = re.match(r"(\d*)-?(TILT|OLD)", spec)
+        n, family = (match.group(1), match.group(2)) if match else ("", self.target_family)
+        self.target_family = family
+        self.target_limit = int(n) if n else None
+        self._target_limit_d = self.state.d if n else None
 
     def set_range_mode(self, mode: str) -> None:
         self.range_mode = mode

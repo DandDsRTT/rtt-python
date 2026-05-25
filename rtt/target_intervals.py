@@ -49,30 +49,36 @@ def get_otonal_chord(harmonics: tuple[int, ...]) -> tuple[Fraction, ...]:
     )
 
 
+def default_tilt_limit(domain_basis: tuple) -> int:
+    """The default TILT integer limit for a domain: the integer just below the next
+    prime past the domain basis's greatest numerator."""
+    greatest = max(Fraction(q).numerator for q in domain_basis)
+    return int(sp.nextprime(greatest)) - 1
+
+
+def default_old_limit(domain_basis: tuple) -> int:
+    """The default OLD odd limit for a domain: the odd just below the next prime past
+    the domain basis's greatest odd part."""
+    greatest = max(_odd_part(Fraction(q).numerator) for q in domain_basis)
+    return int(sp.nextprime(greatest)) - 2
+
+
 def process_tilt(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
     """Resolve a TILT target interval spec (``"TILT"`` or ``"N-TILT"``) to its quotients.
-    With no explicit limit, default to the integer just below the next prime past the
-    domain basis's greatest numerator."""
+    With no explicit limit, default to :func:`default_tilt_limit`."""
     spec = target_spec.replace("truncated integer limit triangle", "TILT")
     match = re.search(r"(\d*)-?TILT", spec)
     given = match.group(1) if match else ""
-    if given:
-        return get_tilt(int(given))
-    greatest = max(Fraction(q).numerator for q in domain_basis)
-    return get_tilt(int(sp.nextprime(greatest)) - 1)
+    return get_tilt(int(given) if given else default_tilt_limit(domain_basis))
 
 
 def process_old(target_spec: str, domain_basis: tuple) -> tuple[Fraction, ...]:
     """Resolve an OLD target interval spec (``"OLD"`` or ``"N-OLD"``) to its quotients.
-    With no explicit limit, default to the odd just below the next prime past the domain
-    basis's greatest odd part."""
+    With no explicit limit, default to :func:`default_old_limit`."""
     spec = target_spec.replace("odd limit diamond", "OLD")
     match = re.search(r"(\d*)-?OLD", spec)
     given = match.group(1) if match else ""
-    if given:
-        return get_old(int(given))
-    greatest = max(_odd_part(Fraction(q).numerator) for q in domain_basis)
-    return get_old(int(sp.nextprime(greatest)) - 2)
+    return get_old(int(given) if given else default_old_limit(domain_basis))
 
 
 def _odd_part(n: int) -> int:

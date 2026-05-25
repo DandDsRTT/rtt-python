@@ -15,7 +15,12 @@ from rtt.formatting import to_ebk
 from rtt.generator_detempering import get_generator_detempering
 from rtt.math_utils import get_primes, pcv_to_quotient
 from rtt.parsing import parse_quotient_list, parse_temperament_data
-from rtt.target_intervals import process_old, process_tilt
+from rtt.target_intervals import (
+    default_old_limit,
+    default_tilt_limit,
+    process_old,
+    process_tilt,
+)
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
     get_just_tuning_map,
@@ -105,6 +110,13 @@ def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
     domain = tuple(domain_basis)
     quotients = process_old(spec, domain) if "OLD" in spec else process_tilt(spec, domain)
     return tuple(f"{q.numerator}/{q.denominator}" for q in quotients)
+
+
+def default_target_limit(family: str, domain_basis) -> int:
+    """The limit a bare TILT/OLD family resolves to for this domain — the number the
+    target chooser shows when no manual limit is set (so it never reads as 'auto')."""
+    domain = tuple(domain_basis)
+    return default_old_limit(domain) if "OLD" in family else default_tilt_limit(domain)
 
 
 def _monzos_to_ratios(monzos) -> tuple[str, ...]:

@@ -128,6 +128,14 @@ def test_old_target_interval_set_is_the_odd_limit_diamond():
     assert old != service.target_interval_set("TILT", (2, 3, 5))
 
 
+def test_default_target_limit_is_the_number_a_bare_family_resolves_to():
+    # 2.3.5: TILT defaults to the 6-TILT, OLD to the 5-OLD (so the chooser shows a
+    # real number, not "auto"); both grow with the domain
+    assert service.default_target_limit("TILT", (2, 3, 5)) == 6
+    assert service.default_target_limit("OLD", (2, 3, 5)) == 5
+    assert service.default_target_limit("TILT", (2, 3, 5, 7)) == 10
+
+
 def test_tuning_maps_under_top():
     import pytest
 

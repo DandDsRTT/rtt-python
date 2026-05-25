@@ -114,6 +114,23 @@ def test_selecting_a_tuning_scheme_and_target_spec_updates_them():
     assert editor.target_spec == "OLD"
 
 
+def test_a_manual_target_limit_is_weakly_held_and_reverts_when_the_domain_changes():
+    editor = Editor()  # domain 2.3.5
+    editor.set_target_spec("9-TILT")
+    assert editor.target_spec == "9-TILT"  # the manual limit holds within its domain
+    editor.set_target_spec("11-OLD")
+    assert editor.target_spec == "11-OLD"  # switching family keeps a manual limit
+    editor.expand()  # domain 2.3.5.7 — a domain change
+    assert editor.target_spec == "OLD"  # ...reverts to the bare family (domain default)
+
+
+def test_setting_a_bare_family_clears_any_manual_limit():
+    editor = Editor()
+    editor.set_target_spec("9-TILT")
+    editor.set_target_spec("OLD")  # no number -> domain-tracked default
+    assert editor.target_spec == "OLD"
+
+
 def test_scheme_and_target_spec_are_view_selections_outside_undo():
     # they are display/analysis choices, not temperament edits, so they neither
     # push onto the undo stack nor get reverted by undoing a temperament change

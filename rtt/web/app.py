@@ -199,8 +199,6 @@ _CSS = f"""
 .rtt-preselect .q-field__control::before, .rtt-preselect .q-field__control::after {{ display:none !important; }}
 .rtt-preselect .q-field__native, .rtt-preselect .q-field__input {{ font-size:11px; color:#000;
             min-height:0 !important; padding:0; line-height:20px; font-family:'Cambria',Georgia,serif; }}
-.rtt-preselect .q-field__label {{ font-size:11px; color:#888; top:0; transform:none; line-height:20px;
-            font-family:'Cambria',Georgia,serif; }}
 .rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append {{ height:20px; min-height:0 !important; }}
 .rtt-preselect .q-icon {{ font-size:15px; color:#555; }}
 /* the target chooser pairs a numeric limit override with the TILT/OLD family select */
@@ -1005,16 +1003,18 @@ def index() -> None:
                     limit, family = _split_target_spec(cb.text)
                     with ui.element("div").classes("rtt-preselect-target"):
                         num = ui.number(value=int(limit) if limit else None, min=2,
-                                placeholder="auto", on_change=lambda e: on_target_change()) \
+                                on_change=lambda e: on_target_change()) \
                             .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
                         sel = ui.select(list(presets.TARGET_SETS), value=family,
                                 on_change=lambda e: on_target_change()) \
                             .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
                     selects[cb.id] = (num, sel)
                 elif name == "temperament":
-                    # grouped by prime limit; shows the matched preset (or its placeholder)
-                    selects[cb.id] = ui.select(presets.temperament_options(),
-                            value=presets.identify(editor.state), label="choose temperament",
+                    # a normal dropdown: the chosen preset shows in the box; the ""
+                    # sentinel ("choose temperament") shows only when none matches.
+                    # Grouped by prime limit (divider rows) in the open list.
+                    options = {"": "choose temperament", **presets.temperament_options()}
+                    selects[cb.id] = ui.select(options, value=presets.identify(editor.state) or "",
                             on_change=lambda e: on_preselect("temperament", e.value)) \
                         .props("dense options-dense borderless hide-bottom-space").classes("rtt-preselect")
                 else:  # tuning — systematic scheme names
@@ -1182,11 +1182,13 @@ def index() -> None:
                 # preset (or its placeholder), the target chooser splits into limit +
                 # family, the tuning chooser shows its scheme. building[0] guards echoes.
                 if cb.id == "preselect:temperament":
-                    selects[cb.id].value = presets.identify(editor.state)
+                    selects[cb.id].value = presets.identify(editor.state) or ""
                 elif cb.id == "preselect:target":
                     num, sel = selects[cb.id]
                     limit, family = _split_target_spec(cb.text)
-                    num.value = int(limit) if limit else None
+                    # always show the number in use: the manual limit, or the domain default
+                    num.value = int(limit) if limit else \
+                        service.default_target_limit(family, service.standard_primes(editor.state.d))
                     sel.value = family
                 else:  # tuning
                     selects[cb.id].value = cb.text or None
