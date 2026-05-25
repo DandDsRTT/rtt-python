@@ -34,24 +34,65 @@ def test_main_runs_server_with_reload_enabled(monkeypatch):
     assert captured["show"] is False
 
 
-def test_main_excludes_agent_worktrees_from_hot_reload(monkeypatch):
-    # The user keeps this instance running to use the app; agent worktrees live in
-    # .claude/worktrees/ inside the repo, so their constant edits sit under the
-    # reload watcher's root and would refresh the user's browser endlessly. main()
-    # adds that subtree to uvicorn's reload excludes. It must be an ABSOLUTE path —
-    # uvicorn matches dir-excludes by Path containment, so a relative path silently
-    # fails to match the watcher's absolute change events — and the NiceGUI defaults
-    # must survive (so .pyc/.swp/dotfiles stay ignored too).
+def test_main_passes_crash_safe_reload_excludes(monkeypatch):
+    # main() wires _reload_excludes into ui.run. The user keeps this instance running to
+    # use the app; agent worktrees live in .claude/worktrees/ inside the repo, so their
+    # constant edits sit under the reload watcher's root and would refresh the user's
+    # browser endlessly — main() excludes that subtree. NiceGUI's default ignore globs
+    # must survive, and every ABSOLUTE entry must be an existing directory: uvicorn globs
+    # any non-dir exclude relative to cwd, and on Python 3.14 pathlib raises
+    # NotImplementedError for an absolute glob pattern, so an absolute path to a missing
+    # dir would crash the server at startup. The worktrees subtree is therefore added
+    # exactly when it exists (an existing dir uvicorn turns into an exclude_dir).
     captured = {}
     monkeypatch.setattr(sys, "argv", ["app.py"])
     monkeypatch.setattr(app.ui, "run", lambda **kwargs: captured.update(kwargs))
     app.main()
     excludes = [e.strip() for e in captured["uvicorn_reload_excludes"].split(",")]
-    worktrees = Path(app.__file__).resolve().parents[2] / ".claude" / "worktrees"
-    assert worktrees.is_absolute()
-    assert str(worktrees) in excludes
     for default in (".*", ".py[cod]", ".sw.*", "~*"):
         assert default in excludes
+    for e in excludes:
+        if Path(e).is_absolute():
+            assert Path(e).is_dir(), f"absolute exclude {e!r} must be an existing dir (else Py3.14 glob crash)"
+    worktrees = Path(app.__file__).resolve().parents[2] / ".claude" / "worktrees"
+    assert (str(worktrees) in excludes) == worktrees.is_dir()
+
+
+def test_reload_excludes_omits_worktrees_when_missing(tmp_path):
+    # When the agent-worktrees subtree doesn't exist, main() must NOT hand uvicorn an
+    # absolute path for it: uvicorn globs any exclude that isn't an existing dir relative
+    # to cwd, and on Python 3.14 pathlib raises NotImplementedError for an absolute glob
+    # pattern — which crashed the server at startup. With no worktrees there's nothing to
+    # skip, so only NiceGUI's default ignore globs remain.
+    missing = tmp_path / ".claude" / "worktrees"  # never created
+    excludes = [e.strip() for e in app._reload_excludes(missing).split(",")]
+    assert str(missing) not in excludes
+    for default in (".*", ".py[cod]", ".sw.*", "~*"):
+        assert default in excludes
+
+
+def test_reload_excludes_filter_skips_worktrees_but_reloads_source(tmp_path):
+    # Exercise the excludes through uvicorn's REAL reload pipeline (not a monkeypatched
+    # ui.run): build a fake repo whose .claude/worktrees/ holds an agent worktree, run the
+    # helper's output the way NiceGUI does (comma-split + strip, then append sys.prefix),
+    # and hand it to the actual uvicorn Config + FileFilter. Constructing the Config is the
+    # Python 3.14 crash site (it globs each exclude) — it must NOT raise — and the filter
+    # must drop a change under the worktree while still reloading on a main-source edit.
+    from uvicorn.config import Config
+    from uvicorn.supervisors.watchfilesreload import FileFilter
+
+    repo = tmp_path
+    worktrees = repo / ".claude" / "worktrees"
+    (worktrees / "wt1" / "rtt" / "web").mkdir(parents=True)
+    (repo / "rtt" / "web").mkdir(parents=True)
+
+    excludes = [e.strip() for e in app._reload_excludes(worktrees).split(",")] + [sys.prefix]
+    config = Config("rtt.web.app:app", reload=True,
+                    reload_excludes=excludes, reload_dirs=[str(repo)])  # must not raise on Py3.14
+    file_filter = FileFilter(config)
+
+    assert file_filter(worktrees / "wt1" / "rtt" / "web" / "app.py") is False  # agent edit: no reload
+    assert file_filter(repo / "rtt" / "web" / "app.py") is True  # main-repo source edit: reloads
 
 
 def test_parse_int_accepts_integers_and_rejects_partial_input():

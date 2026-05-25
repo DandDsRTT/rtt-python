@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import math
 import re
+import sys
 from html import escape as _escape
+from pathlib import Path
 
 from nicegui import ui
 
@@ -1272,18 +1274,26 @@ def index() -> None:
     render()
 
 
-def main() -> None:
-    import sys
-    from pathlib import Path
+def _reload_excludes(worktrees: Path) -> str:
+    """The uvicorn ``reload_excludes`` string: NiceGUI's default ignore globs plus the
+    agent-worktrees subtree, but only when it exists. An existing directory becomes a
+    watchfiles ``exclude_dir`` (every change under it is dropped by path-parent
+    containment), the only way to ignore a subtree of unknown depth — uvicorn's glob
+    matcher has no ``**`` and a relative dir never matches the absolute change paths. The
+    path must therefore be absolute AND exist: uvicorn globs any non-dir exclude relative
+    to cwd, and on Python 3.14 pathlib rejects an absolute glob pattern
+    (NotImplementedError), crashing the server at startup. Absent, there's nothing to skip."""
+    excludes = [".*", ".py[cod]", ".sw.*", "~*"]
+    if worktrees.is_dir():
+        excludes.append(str(worktrees))
+    return ", ".join(excludes)
 
+
+def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8137
-    # Hot-reload watches the whole launch tree; agent worktrees under
-    # .claude/worktrees/ churn constantly and would refresh this instance endlessly.
-    # Exclude that subtree. uvicorn matches dir-excludes by path containment against
-    # absolute change events, so a relative path would silently never match.
     worktrees = Path(__file__).resolve().parents[2] / ".claude" / "worktrees"
     ui.run(title="RTT", reload=True, show=False, port=port,
-           uvicorn_reload_excludes=f".*, .py[cod], .sw.*, ~*, {worktrees}")
+           uvicorn_reload_excludes=_reload_excludes(worktrees))
 
 
 if __name__ in {"__main__", "__mp_main__"}:
