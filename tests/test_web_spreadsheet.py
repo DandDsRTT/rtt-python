@@ -81,6 +81,23 @@ def test_a_single_prime_domain_has_no_minus_but_keeps_plus():
     assert {"plus", "prime:0"} <= cells  # ...but you can still expand
 
 
+def test_quantities_row_pluses_sit_inside_their_tiles():
+    # the domain/comma/interest + ride just inside their tile, FRAME_GAP past the last
+    # value cell and centred on the row — the horizontal echo of the interval-vectors
+    # basis +, which sits below its stack. They must NOT float out past the tile's edge.
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), interest=((-1, 1, 0),))
+    cells = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
+    for plus_id, last_cell, panel in (("plus", "prime:2", "block:primes"),
+                                      ("comma_plus", "comma:0", "block:commas"),
+                                      ("interest_plus", "interest:0", "block:interest")):
+        p, last, tile = cells[plus_id], cells[last_cell], blocks[panel]
+        assert p.x >= last.x + last.w  # sits right of the last value, clear of it (no overlap)
+        assert tile.x <= p.x and p.x + p.w <= tile.x + tile.w  # ...but within the tile, not floating out
+        assert tile.y <= p.y and p.y + p.h <= tile.y + tile.h  # vertically inside the tile too
+        assert abs((p.y + p.h / 2) - (last.y + last.h / 2)) < 1  # centred on the row
+
+
 def test_target_intervals_column_with_mapped_list():
     cells = {c.id: c for c in _layout().cells}
     assert cells["header:targets"].text == "target\nintervals"

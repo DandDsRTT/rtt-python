@@ -33,7 +33,6 @@ HEADER_H = 36  # column-header height — two text lines tall, so a multi-word t
 SPINE_W = 64  # quantities spine column width — sized to seat its "quantities"
 # header without overflowing onto the generators column; carries only the
 # column-axis vertical rule, no data cells in the default view
-CTRL_W = 18  # domain expand (+) control gutter, just right of the primes block
 BTN = 15  # px side of a domain +/− control — half the COL_W square mapping/prime cell
 MINUS_REVEAL_H = 18  # height the removable prime's hover-minus rises above its header
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
@@ -495,7 +494,7 @@ def build(state, settings=None, collapsed=None,
     content_x0 = node_x + TOGGLE + GAP
 
     # the domain, the comma basis and the interest set each ride an expand (+) control
-    # in a gutter just right of their (open) block — domain primes add a prime, commas
+    # just inside the right of their (open) tile — domain primes add a prime, commas
     # add a comma, interest adds a blank interval to edit
     col_x, col_w, content_w, col_collapsible = {}, {}, {}, {}
     ctrl_x = {}
@@ -520,14 +519,14 @@ def build(state, settings=None, collapsed=None,
         col_collapsible[key] = collapsible
         x += col_w[key]
         if key in ("primes", "commas", "interest") and not collapsed_col:
-            # the + rides just right of the (centred) content — or on the gridline when the
-            # column holds no cells yet (an empty interest set) — never stranded out in the
-            # title's reserved margin
+            # the + rides just inside the tile, FRAME_GAP past the last value cell — the
+            # horizontal echo of the interval-vectors basis + (which sits below its stack).
+            # An empty column (an interest set with no intervals yet) has no cell to sit
+            # past, so its lone + centres on the column gridline instead.
             gridline = col_x[key] + col_w[key] / 2
             content_right = col_x[key] + (col_w[key] + content_w[key]) / 2
             has_cells = content_w[key] > 2 * BRACKET_W
-            ctrl_x[key] = content_right + 6 if has_cells else gridline - BTN / 2
-            x = max(x, ctrl_x[key] + CTRL_W)
+            ctrl_x[key] = content_right - BRACKET_W + FRAME_GAP if has_cells else gridline - BTN / 2
         x += GAP
     total_w = x
 
@@ -766,9 +765,10 @@ def build(state, settings=None, collapsed=None,
                 # every interval carries its own − (a hover affordance over its header):
                 # any one is removable, unlike the domain/comma last-only −
                 cells.append(CellBox(f"interest_minus:{i}", interest_left(i), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "interest_minus", comma=i))
-        # the + is a column control, not tile content: an empty-but-open interest column
-        # has no tile yet, so it rides col_open (not tile_open) so the first interval can
-        # be added. It appends a blank 1/1 (a zero monzo) to edit in the vectors row.
+        # the + rides col_open, not tile_open: an empty-but-open interest column declares
+        # no tile yet, but must still show its + so the first interval can be added (a blank
+        # 1/1 — a zero monzo — to edit in the vectors row). With intervals present ctrl_x
+        # seats it inside the tile like the domain/comma +; empty, it centres on the gridline.
         if col_open("interest") and row_open("quantities"):
             cells.append(CellBox("interest_plus", ctrl_x["interest"], qy + (ROW_H - BTN) // 2, BTN, BTN, "interest_plus"))
 
@@ -1087,7 +1087,7 @@ def build(state, settings=None, collapsed=None,
     # the colour (z-index), so wherever two groups' colour bands cross the darken
     # composes regardless of paint order: a cyan tuning band over a yellow temperament
     # band darkens to the mockup's green. A band spans the current (possibly folded)
-    # extent of its rows/columns and overhangs by WASH_PAD (bridging the +control gutters).
+    # extent of its rows/columns and overhangs by WASH_PAD (bridging the inter-column gaps).
     if col_x and row_y:
         bands = []  # (id, x, y, w, h, group)
         for idx, (group, rcols, rrows) in enumerate(COLORIZE_REGIONS):
