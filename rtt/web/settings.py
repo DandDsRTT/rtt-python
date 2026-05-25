@@ -49,6 +49,8 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("optimization", "optimization", False),
             ("tuning_ranges", "tuning ranges", False),
             ("weighting", "weighting", False),
+            ("all_interval", "all-interval", False),
+            ("alt_complexity", "alt. complexity", False),
             ("projection", "projection", False),
             ("tuning_colorization", "colorization", False),
             ("generator_detempering", "generator detempering", False),
@@ -71,6 +73,8 @@ SUBCONTROLS: dict[str, str] = {
     "optimization": "tuning_boxes",
     "tuning_ranges": "tuning_boxes",
     "weighting": "tuning_boxes",
+    "all_interval": "weighting",  # a control in box 𝐓 (nested under weighting)
+    "alt_complexity": "weighting",  # controls in boxes 𝐋 and 𝒄
     "projection": "tuning_boxes",
     "tuning_colorization": "tuning_boxes",
 }

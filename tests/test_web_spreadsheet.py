@@ -1078,6 +1078,16 @@ def test_weighting_is_implemented_now_that_its_region_builds():
     assert "weighting" in settings.IMPLEMENTED
 
 
+def test_weighting_subcontrols_are_registered_under_weighting():
+    # all-interval (a control in box 𝐓) and alt. complexity (controls in boxes 𝐋 and 𝒄)
+    # are sub-controls of weighting, so the panel indents them and shows them only while
+    # weighting is on
+    keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
+    assert {"all_interval", "alt_complexity"} <= keys
+    assert settings.SUBCONTROLS["all_interval"] == "weighting"
+    assert settings.SUBCONTROLS["alt_complexity"] == "weighting"
+
+
 def test_weight_equivalence_reflects_the_schemes_damage_slope():
     # the weight = complexity / 1 / 1-over-complexity by the scheme's slope, so the
     # equivalence tells the truth about the live scheme rather than a fixed headline

@@ -763,6 +763,8 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "tuning_boxes": "T",
     "optimization": "𝑝",
     "weighting": "𝒘",
+    "all_interval": "minimax-S",
+    "alt_complexity": "E-lp",
     "projection": "𝑃",
     "generator_detempering": "D",
     "nonstandard_domain": "prime-based",
