@@ -1914,14 +1914,25 @@ def test_other_intervals_column_is_never_cyan():
     assert _color_at(lay, *_mid(cells, "tuning:interest:0")) == {"temperament"}
 
 
-def test_colorization_off_by_default_and_renders_as_base_plus_darken_band():
+def test_target_intervals_column_is_cyan_in_the_upper_rows():
+    # the mockup's target-intervals column reads CYAN in the quantities/vectors/mapping
+    # rows; it only goes green where the tuning rows cross it
+    lay = _with(tuning_colorization=True, temperament_colorization=True)
+    cells = {c.id: c for c in lay.cells}
+    assert _color_at(lay, *_mid(cells, "target:0")) == {"tuning"}         # quantities × targets
+    assert _color_at(lay, *_mid(cells, "cell:mapped:0:0")) == {"tuning"}  # mapping × targets (mapped list)
+    assert _color_at(lay, *_mid(cells, "tuning:target:0")) == {"temperament", "tuning"}  # green
+
+
+def test_colorization_off_by_default_and_renders_as_base_plus_darken_bands():
     assert not any(b.id.startswith(("wash:", "washbase:")) for b in _layout().blocks)  # off by default
     blocks = _with(tuning_colorization=True).blocks
-    washes = [b for b in blocks if b.tint == "tuning"]
-    bases = [b for b in blocks if b.tint == "base"]
-    assert len(washes) == len(bases) == 1  # tuning paints one region band
-    assert (bases[0].x, bases[0].y, bases[0].w, bases[0].h) == \
-           (washes[0].x, washes[0].y, washes[0].w, washes[0].h)  # base coincident with colour
+    washes = {b.id.split(":", 1)[1]: b for b in blocks if b.tint == "tuning"}
+    bases = {b.id.split(":", 1)[1]: b for b in blocks if b.tint == "base"}
+    assert washes and set(washes) == set(bases)  # one white base per colour band
+    for k, w in washes.items():
+        b = bases[k]
+        assert (b.x, b.y, b.w, b.h) == (w.x, w.y, w.w, w.h)  # base coincident with its colour band
     assert all(b.tint == "" for b in blocks if b.id.startswith("block:"))  # grey tiles untinted
 
 
