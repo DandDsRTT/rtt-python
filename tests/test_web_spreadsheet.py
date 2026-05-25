@@ -1356,6 +1356,23 @@ def test_interest_title_is_centred_on_the_gridline_and_the_column_never_narrows_
     assert lines["v:interest:0"].pos == trunk.pos  # the single interval's axis is the trunk
 
 
+def test_per_tile_fold_toggle_hugs_its_tile_not_the_footprint_margin():
+    # general (not interest-only): a per-tile fold toggle is anchored to its tile's own
+    # top-left corner. For a narrow column centred under a wide title (interest) that
+    # means the toggle stays on the tile, not floated out to the footprint's left edge in
+    # the reserved title margin. An ordinary column's toggle is unaffected (margin zero).
+    lay = _with_interest(_INTEREST[:1])
+    cells = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
+    for toggle_id, block_id in (("toggle:tile:vectors:interest", "block:vec:interest"),
+                                ("toggle:tile:mapping:primes", "block:mapping")):
+        toggle, tile = cells[toggle_id], blocks[block_id]
+        assert toggle.x == tile.x + spreadsheet.TOGGLE_INSET  # hugs the tile's corner
+        assert tile.x <= toggle.x <= tile.x + tile.w          # ...so it sits within the tile
+    # the interest toggle is well right of the footprint's left edge (its title margin)
+    assert cells["toggle:tile:vectors:interest"].x > cells["header:interest"].x
+
+
 def test_populated_interest_mapped_list_is_bracketed_and_ruled_like_targets():
     cells = {c.id: c for c in _with_interest(_INTEREST[:2]).cells}
     assert cells["bracket:imapped:l"].text == "[" and cells["bracket:imapped:r"].text == "]"

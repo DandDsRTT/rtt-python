@@ -498,52 +498,54 @@ def build(state, settings=None, collapsed=None,
     # the domain, the comma basis and the interest set each ride an expand (+) control
     # in a gutter just right of their (open) block — domain primes add a prime, commas
     # add a comma, interest adds a blank interval to edit
-    col_x, col_w, col_collapsible = {}, {}, {}
+    col_x, col_w, content_w, col_collapsible = {}, {}, {}, {}
     ctrl_x = {}
     x = content_x0
     for key, natural, present, collapsible in col_bands:
         if not present:
             continue
         col_x[key] = x
-        if key == "interest":
-            # The footprint never shrinks below the (two-line) title: reserve
-            # max(content, title) so the title centres over the whole column and the
-            # narrower tiles centre on the same gridline (the centring is applied below).
-            # The title never collapses, so a folded interest column keeps this width too.
+        collapsed_col = f"col:{key}" in collapsed
+        # The content (value cells + their bracket gutters) is the natural width. Every
+        # column's footprint is floored at its title: a wide title reserves the room and
+        # the narrower content is centred within it (see content_x below). For most
+        # columns the content already outruns the title, so the footprint equals the
+        # content and the margin is zero; only a stubby column under a long title (e.g.
+        # a few "other intervals of interest") actually centres. A collapsed column folds
+        # to its title strip; its hidden content then matches that strip.
+        if collapsed_col:
+            col_w[key] = content_w[key] = _title_w(col_header[key])
+        else:
             col_w[key] = max(natural, _title_w(col_header[key]))
-        else:  # a collapsed column shrinks to its title strip
-            col_w[key] = _title_w(col_header[key]) if f"col:{key}" in collapsed else natural
+            content_w[key] = natural
         col_collapsible[key] = collapsible
         x += col_w[key]
-        if key in ("primes", "commas", "interest") and f"col:{key}" not in collapsed:
-            if key == "interest":
-                # the + rides just right of the (centred) tiles — or on the gridline when
-                # the set is empty — not out at the far edge of the title-wide footprint
-                gridline = col_x[key] + col_w[key] / 2
-                ctrl_x[key] = gridline + (2 * BRACKET_W + mi * COL_W) / 2 + 6 if mi else gridline - BTN / 2
-                x = max(x, ctrl_x[key] + BTN)
-            else:
-                ctrl_x[key] = x + 6
-                x = ctrl_x[key] + CTRL_W
+        if key in ("primes", "commas", "interest") and not collapsed_col:
+            # the + rides just right of the (centred) content — or on the gridline when the
+            # column holds no cells yet (an empty interest set) — never stranded out in the
+            # title's reserved margin
+            gridline = col_x[key] + col_w[key] / 2
+            content_right = col_x[key] + (col_w[key] + content_w[key]) / 2
+            has_cells = content_w[key] > 2 * BRACKET_W
+            ctrl_x[key] = content_right + 6 if has_cells else gridline - BTN / 2
+            x = max(x, ctrl_x[key] + CTRL_W)
         x += GAP
     total_w = x
 
-    primes_x = col_x.get("primes")  # None when the domain-primes column is hidden
-    commas_x = col_x.get("commas")  # None when the commas column is hidden
-    targets_x = col_x.get("targets")  # None when the target intervals column is hidden
-    interest_content_w = 2 * BRACKET_W + mi * COL_W  # the tiles' own width (gutters + cells)
-    # the tiles centre within the title-wide footprint, so the gridline runs down the
-    # column centre and the narrow content sits symmetrically under the centred title
-    interest_x = (col_x["interest"] + (col_w["interest"] - interest_content_w) / 2
-                  if "interest" in col_x else None)  # content-left; None when hidden
+    # Content is centred within each footprint: the margin is (footprint − content) / 2,
+    # which is zero for the common case (content at least as wide as the title) so
+    # content_x == col_x there, and positive only where a long title reserves extra width.
+    content_x = {key: col_x[key] + (col_w[key] - content_w[key]) / 2 for key in col_x}
 
     def content_box(key):
         # the (x, width) of a column's actual content — the tiles and the brackets/axes
-        # that hug them. It equals the column box for every column except interest, whose
-        # narrower content is centred inside its (wider) title-reserving footprint.
-        if key == "interest":
-            return interest_x, interest_content_w
-        return col_x[key], col_w[key]
+        # that hug them, centred within the (possibly wider, title-reserving) footprint
+        return content_x[key], content_w[key]
+
+    primes_x = content_x.get("primes")  # centred content-left; None when the column is hidden
+    commas_x = content_x.get("commas")  # None when the commas column is hidden
+    targets_x = content_x.get("targets")  # None when the target intervals column is hidden
+    interest_x = content_x.get("interest")  # None when the interest column is hidden
 
     def col_open(key):
         return key in col_x and f"col:{key}" not in collapsed
@@ -680,7 +682,7 @@ def build(state, settings=None, collapsed=None,
         return interest_x + BRACKET_W + i * COL_W
 
     def gen_left(g):  # the g-th generator column in the generators box (its tuning-map cells)
-        return col_x["gens"] + BRACKET_W + g * COL_W
+        return content_x["gens"] + BRACKET_W + g * COL_W
 
     def map_top(i):
         return row_y["mapping"] + i * ROW_H
@@ -1249,7 +1251,7 @@ def build(state, settings=None, collapsed=None,
         if rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey):
             glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
             cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
-                                 col_x[ckey] - PAD + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
+                                 content_x[ckey] - PAD + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     # Value-display filtering. The tiles (blocks) and gridlines (lines) always
