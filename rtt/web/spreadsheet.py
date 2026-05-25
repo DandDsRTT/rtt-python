@@ -503,11 +503,11 @@ def build(state, settings=None, collapsed=None,
     # add a comma, interest adds a blank interval to edit
     col_x, col_w, content_w, col_collapsible = {}, {}, {}, {}
     ctrl_x = {}
+    plus_cols = set()  # columns whose + rides inside the tile (the tile overhangs it a margin)
     x = content_x0
     for key, natural, present, collapsible in col_bands:
         if not present:
             continue
-        col_x[key] = x
         collapsed_col = f"col:{key}" in collapsed
         # The content (value cells + their bracket gutters) is the natural width. Every
         # column's footprint is floored at its title: a wide title reserves the room and
@@ -522,16 +522,25 @@ def build(state, settings=None, collapsed=None,
             col_w[key] = max(natural, _title_w(col_header[key]))
             content_w[key] = natural
         col_collapsible[key] = collapsible
+        # a +-bearing column (an open domain/comma/interest set with cells) carries an
+        # in-tile +; its tile overhangs the content an extra FRAME_GAP on EACH side, so the
+        # + clears the edge by the same gap it sits off the cells and the tile stays centred
+        # on the gridline. Reserve that overhang on both sides (panel_rect draws it).
+        in_tile_plus = (key in ("primes", "commas", "interest") and not collapsed_col
+                        and content_w[key] > 2 * BRACKET_W)
+        if in_tile_plus:
+            x += FRAME_GAP  # the left overhang
+        col_x[key] = x
         x += col_w[key]
         if key in ("primes", "commas", "interest") and not collapsed_col:
-            # the + rides just inside the tile, FRAME_GAP past the last value cell — the
-            # horizontal echo of the interval-vectors basis + (which sits below its stack).
-            # An empty column (an interest set with no intervals yet) has no cell to sit
-            # past, so its lone + centres on the column gridline instead.
             gridline = col_x[key] + col_w[key] / 2
             content_right = col_x[key] + (col_w[key] + content_w[key]) / 2
-            has_cells = content_w[key] > 2 * BRACKET_W
-            ctrl_x[key] = content_right - BRACKET_W + FRAME_GAP if has_cells else gridline - BTN / 2
+            # the + rides FRAME_GAP past the last value cell — or, for an empty column (an
+            # interest set with no intervals yet), centres on the gridline as the lone control
+            ctrl_x[key] = content_right - BRACKET_W + FRAME_GAP if in_tile_plus else gridline - BTN / 2
+        if in_tile_plus:
+            plus_cols.add(key)
+            x += FRAME_GAP  # the right overhang, so the next column still clears the tile
         x += GAP
     total_w = x
 
@@ -544,6 +553,12 @@ def build(state, settings=None, collapsed=None,
         # the (x, width) of a column's actual content — the tiles and the brackets/axes
         # that hug them, centred within the (possibly wider, title-reserving) footprint
         return content_x[key], content_w[key]
+
+    def tile_pad(key):
+        # how far a tile's grey panel overhangs its content on each side: PAD normally, plus
+        # an extra FRAME_GAP for a +-bearing column so its + clears the edge by the same gap
+        # it sits off the cells (kept equal both sides → the tile stays centred on the gridline)
+        return PAD + (FRAME_GAP if key in plus_cols else 0)
 
     primes_x = content_x.get("primes")  # centred content-left; None when the column is hidden
     commas_x = content_x.get("commas")  # None when the commas column is hidden
@@ -1068,7 +1083,7 @@ def build(state, settings=None, collapsed=None,
         row_c = f"row:{rkey}" in collapsed or tile_c
         cx, cw = content_box(ckey)  # hug the cells; interest's tiles are narrower than its footprint
         ch, cy = tile_h[rkey], tile_top[rkey]
-        w, px = (0, 0) if col_c else (cw, PAD)
+        w, px = (0, 0) if col_c else (cw, tile_pad(ckey))
         h, py = (0, 0) if row_c else (ch, PAD)
         bx = cx + cw / 2 if col_c else cx
         by = cy + ch / 2 if row_c else cy
@@ -1247,7 +1262,7 @@ def build(state, settings=None, collapsed=None,
         if rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey):
             glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
             cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
-                                 content_x[ckey] - PAD + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
+                                 content_x[ckey] - tile_pad(ckey) + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     # Value-display filtering. The tiles (blocks) and gridlines (lines) always

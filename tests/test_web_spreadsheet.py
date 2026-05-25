@@ -81,10 +81,11 @@ def test_a_single_prime_domain_has_no_minus_but_keeps_plus():
     assert {"plus", "prime:0"} <= cells  # ...but you can still expand
 
 
-def test_quantities_row_pluses_sit_inside_their_tiles():
-    # the domain/comma/interest + ride just inside their tile, FRAME_GAP past the last
-    # value cell and centred on the row — the horizontal echo of the interval-vectors
-    # basis +, which sits below its stack. They must NOT float out past the tile's edge.
+def test_quantities_row_pluses_sit_inside_their_tiles_with_equal_margins():
+    # the domain/comma/interest + ride just inside their tile, centred on the row — the
+    # horizontal echo of the interval-vectors basis +, which sits below its stack. The +
+    # sits FRAME_GAP off the last value AND the tile overhangs it the same FRAME_GAP, so
+    # its two margins match; it must NOT float out past (or sit flush against) the edge.
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), interest=((-1, 1, 0),))
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
@@ -92,10 +93,12 @@ def test_quantities_row_pluses_sit_inside_their_tiles():
                                       ("comma_plus", "comma:0", "block:commas"),
                                       ("interest_plus", "interest:0", "block:interest")):
         p, last, tile = cells[plus_id], cells[last_cell], blocks[panel]
-        assert p.x >= last.x + last.w  # sits right of the last value, clear of it (no overlap)
-        assert tile.x <= p.x and p.x + p.w <= tile.x + tile.w  # ...but within the tile, not floating out
-        assert tile.y <= p.y and p.y + p.h <= tile.y + tile.h  # vertically inside the tile too
+        assert tile.y <= p.y and p.y + p.h <= tile.y + tile.h  # inside the tile vertically
         assert abs((p.y + p.h / 2) - (last.y + last.h / 2)) < 1  # centred on the row
+        left = p.x - (last.x + last.w)  # gap from the last value box
+        right = (tile.x + tile.w) - (p.x + p.w)  # gap to the tile's right edge
+        assert left == spreadsheet.FRAME_GAP  # FRAME_GAP off the values (matches the basis +)
+        assert abs(right - left) < 0.01  # and an equal margin to the edge (not flush, not floating)
 
 
 def test_target_intervals_column_with_mapped_list():
@@ -1341,7 +1344,9 @@ def test_interest_tiles_hug_their_content_not_the_title_strip():
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
     content_w = 2 * spreadsheet.BRACKET_W + 1 * spreadsheet.COL_W  # the two gutters + one cell
-    assert blocks["block:interest"].w == content_w + 2 * spreadsheet.PAD  # tile hugs content...
+    # the tile hugs that content — its PAD plus the FRAME_GAP its +-control overhangs each side —
+    # rather than ballooning out to the wide title
+    assert blocks["block:interest"].w == content_w + 2 * spreadsheet.PAD + 2 * spreadsheet.FRAME_GAP
     assert cells["header:interest"].w > blocks["block:interest"].w  # ...while the header floats wider
     assert cells["header:interest"].w == len("other intervals") * 8 + 10  # to its title-strip width
 
