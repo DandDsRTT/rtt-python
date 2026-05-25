@@ -724,11 +724,10 @@ def build(state, settings=None, collapsed=None,
     branch_top_y = col_node_y + TOGGLE
     rows_top_y = branch_top_y + GAP  # top of the first row band (counts when shown, else quantities)
     # The grey tiles overhang their cells by PAD and sit over the gridlines, so the
-    # *visible* fan segment runs from the bus only to the tile edge. Put each bus
+    # *visible* fan segment runs from a bus only to the tile edge. FAN places each bus
     # midway between the node/foot edge and the tile edge (PAD inside the cell), so
     # the inner (bus->tile) and outer (node->bus) segments are equal: (GAP-PAD)/2.
     FAN = (GAP - PAD) / 2
-    fanout_y = branch_top_y + FAN
 
     # Row bands top-to-bottom: (key, natural height, present, collapsible, label),
     # laid out by the same running-cursor rule as the columns. Every row folds to a
@@ -831,6 +830,16 @@ def build(state, settings=None, collapsed=None,
             tile_h[key] += norm_extra
         y += tile_h[key] + GAP
     total_h = y
+
+    # Each multi-element column runs a single trunk down to the fan-out bus, where it
+    # splits into one line per element. The bus sits centred in the whitespace of a GAP
+    # between row bands -- by default the gap above the first row band (FAN below the
+    # branch top). But the counts row shows one value per column (a cardinality), so when
+    # it's present the trunk stays single through it and the split drops to the gap below
+    # the counts tile, centred between that tile and the row beneath it.
+    fanout_y = branch_top_y + FAN
+    if "counts" in row_y:
+        fanout_y = tile_top["counts"] + tile_h["counts"] + GAP / 2
 
     def row_open(key):
         return key in row_y and f"row:{key}" not in collapsed

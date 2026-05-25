@@ -1409,6 +1409,23 @@ def test_counts_row_sits_at_the_top_aligned_over_its_columns():
         assert cells[f"count:{ckey}"].w == cells[f"header:{ckey}"].w
 
 
+def test_counts_present_drops_the_column_fan_out_below_the_counts_row():
+    # counts shows one value per column (a cardinality), so a column's gridline stays
+    # a single trunk through the counts row and only splits into per-element lines
+    # BELOW it -- unlike the counts-absent case, where it splits above the top row.
+    lay = _with(counts=True)
+    by_id = {ln.id: ln for ln in lay.lines}
+    cells = {c.id: c for c in lay.cells}
+    fan = by_id["bus:primes:top"].pos  # the y where the per-prime lines fan out
+    count = cells["count:primes"]
+    assert fan > count.y + count.h  # the fan-out sits below the counts row...
+    assert fan < cells["prime:0"].y  # ...and above the quantities (per-prime) values
+    # the trunk runs unbroken from the top down to that fan-out (through counts)
+    trunk = by_id["trunk:primes"]
+    assert trunk.start + trunk.length == fan
+    assert by_id["v:prime:0"].start == fan  # the per-prime lines begin at the fan-out
+
+
 def test_counts_off_by_default_leaves_the_quantities_row_on_top():
     # the default build target shows no counts row; quantities stays the top row
     cells = {c.id for c in _layout().cells}
