@@ -1630,40 +1630,44 @@ def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector():
     assert "block:gentuning" not in {b.id for b in lay.blocks}
 
 
-def test_tuning_colorization_washes_every_tuning_tile():
-    # a colour wash sits behind each tuning/just/retuning/damage tile (the mockup's
-    # cyan box group): one wash block per tile, regardless of its column
+def test_tuning_colorization_washes_every_tuning_row():
+    # a full-width colour band backs each tuning/just/retuning/damage row (the mockup's
+    # cyan box group): one wash + white base per row, spanning the whole row background
     ids = {b.id for b in _with(tuning_colorization=True).blocks}
-    assert {"wash:tuning:primes", "wash:tuning:commas", "wash:tuning:targets"} <= ids
-    assert {"wash:just:targets", "wash:retune:targets"} <= ids
-    assert {"wash:damage:commas", "wash:damage:targets"} <= ids
+    assert {"wash:tuning", "wash:just", "wash:retune", "wash:damage"} <= ids
+    assert {"washbase:tuning", "washbase:just", "washbase:retune", "washbase:damage"} <= ids
 
 
-def test_a_wash_is_tagged_with_its_group_and_sits_behind_and_around_its_tile():
+def test_a_wash_is_a_full_width_band_over_a_white_base_below_the_grey_tiles():
     blocks = {b.id: b for b in _with(tuning_colorization=True).blocks}
-    wash, tile = blocks["wash:tuning:targets"], blocks["block:tuning:targets"]
-    assert wash.tint == "tuning"  # the renderer maps this group name to its CSS colour
-    assert tile.tint == ""  # the grey tile itself is not tinted — it floats on the wash
-    # the wash overhangs the tile on every side, so the colour shows in the gaps
-    assert wash.x < tile.x and wash.y < tile.y
-    assert wash.x + wash.w > tile.x + tile.w
-    assert wash.y + wash.h > tile.y + tile.h
+    wash, base = blocks["wash:tuning"], blocks["washbase:tuning"]
+    assert wash.tint == "tuning"  # the colour layer (renderer → CSS colour, drawn darken)
+    assert base.tint == "base"  # the white base it darkens over, so groups combine to green
+    assert (base.x, base.y, base.w, base.h) == (wash.x, wash.y, wash.w, wash.h)  # coincident
+    assert blocks["block:tuning:targets"].tint == ""  # grey tiles aren't tinted — they float on the band
+    # the band runs the full column width (over the primes tile AND the targets tile,
+    # not just one column) and overhangs the row vertically
+    left, right = blocks["block:tuning:primes"], blocks["block:tuning:targets"]
+    assert wash.x < left.x and wash.x + wash.w > right.x + right.w
+    assert wash.y < left.y and wash.y + wash.h > left.y + left.h
 
 
 def test_colorization_off_means_no_wash_and_only_tuning_rows_wash_when_on():
-    assert not any(b.id.startswith("wash:") for b in _layout().blocks)  # off by default
+    assert not any(b.id.startswith(("wash:", "washbase:")) for b in _layout().blocks)  # off by default
     # with it on, only the tuning quantity rows wash; the temperament/vector/quantity
-    # tiles stay plain grey (their own colorization is a separate, still-stubbed toggle)
+    # rows stay plain (their own colorization is a separate, still-stubbed toggle)
     rows = {b.id.split(":")[1] for b in _with(tuning_colorization=True).blocks
             if b.id.startswith("wash:")}
     assert rows == {"tuning", "just", "retune", "damage"}
 
 
-def test_a_folded_tuning_row_folds_its_wash_too():
+def test_a_folded_tuning_row_shrinks_its_wash_to_the_collapsed_strip():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["tuning_colorization"] = True
-    blocks = {b.id: b for b in spreadsheet.build(base, s, collapsed={"row:tuning"}).blocks}
-    # the wash persists (so the renderer can animate it) but folds to nothing with its
-    # tile, leaving no leftover cyan strip across the collapsed row
-    assert blocks["wash:tuning:targets"].h == 0
+    open_h = {b.id: b for b in spreadsheet.build(base, s).blocks}["wash:tuning"].h
+    folded = {b.id: b for b in spreadsheet.build(base, s, collapsed={"row:tuning"}).blocks}
+    # the band tracks its row: collapsing the row shrinks the band to the strip (and its
+    # white base with it), so no full-height cyan strip is left behind
+    assert folded["wash:tuning"].h < open_h
+    assert folded["washbase:tuning"].h == folded["wash:tuning"].h

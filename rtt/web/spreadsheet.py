@@ -980,27 +980,17 @@ def build(state, settings=None, collapsed=None,
     # animates it shrinking away to nothing — leaving only the band's gridline,
     # never a leftover grey strip. Every tile is simply its row band's full height
     # (the d-tall monzo matrices live in the d-tall interval-vectors row).
-    def tile_tint(rkey):
-        # the colour-group whose colorization is on and whose rows include this tile,
-        # or "" — so a tile in the tuning rows washes cyan when tuning_colorization is on
-        for group, rows in COLORIZE_GROUP_ROWS.items():
-            if rkey in rows and settings.get(f"{group}_colorization"):
-                return group
-        return ""
-
-    def panel_rect(ckey, rkey, pad, extra_h=0):
-        # a folded tile collapses both ways at once, so it shrinks to a point at
-        # its centre — like a row+column collapse confined to this one tile. ``pad``
-        # is how far the rect overhangs its cells (PAD for the grey tile, a wider
-        # WASH_PAD for the colorization wash behind it). ``extra_h`` grows the panel
-        # past its row band — the generator tuning map tile uses it to enclose the
-        # ranges chart nested below its values.
+    def panel_rect(ckey, rkey, extra_h=0):
+        # a folded tile collapses both ways at once, so it shrinks to a point at its
+        # centre — like a row+column collapse confined to this one tile. ``extra_h``
+        # grows the panel past its row band — the generator tuning map tile uses it to
+        # enclose the ranges chart nested below its values.
         tile_c = f"tile:{rkey}:{ckey}" in collapsed
         col_c = f"col:{ckey}" in collapsed or tile_c
         row_c = f"row:{rkey}" in collapsed or tile_c
         cw, ch, cx, cy = col_w[ckey], tile_h[rkey] + extra_h, col_x[ckey], tile_top[rkey]
-        w, px = (0, 0) if col_c else (cw, pad)
-        h, py = (0, 0) if row_c else (ch, pad)
+        w, px = (0, 0) if col_c else (cw, PAD)
+        h, py = (0, 0) if row_c else (ch, PAD)
         bx = cx + cw / 2 if col_c else cx
         by = cy + ch / 2 if row_c else cy
         return bx - px, by - py, w + 2 * px, h + 2 * py
@@ -1008,14 +998,31 @@ def build(state, settings=None, collapsed=None,
     def panel(bid, ckey, rkey, extra_h=0):
         if ckey not in col_x or rkey not in row_y:
             return
-        group = tile_tint(rkey)  # "" unless this tile's group is being colorized
-        if group:  # the wash sits behind the grey tile, showing through the gaps around it
-            wx, wy, ww, wh = panel_rect(ckey, rkey, WASH_PAD, extra_h)
-            blocks.append(Block(f"wash:{rkey}:{ckey}", wx, wy, ww, wh, tint=group))
-        blocks.append(Block(bid, *panel_rect(ckey, rkey, PAD, extra_h)))
+        blocks.append(Block(bid, *panel_rect(ckey, rkey, extra_h)))
 
     for bid, rkey, ckey in tiles:
         panel(bid, ckey, rkey, gtm_extra if (rkey, ckey) == ("tuning", "gens") else 0)
+
+    # Colorization washes. The mockup paints the whole background of a colorized
+    # group's rows (the grey tiles float on top), so each such row gets a full-width
+    # colour band — not a per-tile patch. A band is a white base plus the group's
+    # colour drawn at mix-blend-mode:darken (see app.py), so where two groups' bands
+    # cross — a future yellow temperament band over this cyan tuning one — the darken
+    # (component-wise min) yields the mockup's combined tone: cyan ⊓ yellow = green.
+    # Bands span the full column run and overhang by WASH_PAD so a group's adjacent
+    # rows read as one continuous block; each folds to a strip with its row.
+    if col_x:
+        wash_l = min(col_x.values()) - WASH_PAD
+        wash_r = max(col_x[c] + col_w[c] for c in col_x) + WASH_PAD
+        for group, rows in COLORIZE_GROUP_ROWS.items():
+            if not settings.get(f"{group}_colorization"):
+                continue
+            for rkey in rows:
+                if rkey not in row_y:
+                    continue
+                wy, wh = tile_top[rkey] - WASH_PAD, tile_h[rkey] + 2 * WASH_PAD
+                blocks.append(Block(f"washbase:{rkey}", wash_l, wy, wash_r - wash_l, wh, tint="base"))
+                blocks.append(Block(f"wash:{rkey}", wash_l, wy, wash_r - wash_l, wh, tint=group))
 
     # quantity symbol + name stacked inside each tile, below its values + bottom
     # frame: the symbol line (toggled by symbols) on top, the long-form name

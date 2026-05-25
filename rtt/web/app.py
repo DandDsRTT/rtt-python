@@ -109,18 +109,24 @@ _CSS = f"""
 .rtt-scroll {{ overflow-x:auto; max-width:100%; }}
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
               font-family:'Cambria',Georgia,serif; }}
-.rtt-board {{ position:relative; transition:width {_T}, height {_T}; }}
+/* isolate the board so the washes' mix-blend-mode composes only with the board's
+   own layers (the white wash bases), not the page behind it */
+.rtt-board {{ position:relative; isolation:isolate; transition:width {_T}, height {_T}; }}
 @keyframes rtt-in {{ from {{ opacity:0; }} to {{ opacity:1; }} }}
-.rtt-line, .rtt-block, .rtt-cell, .rtt-wash {{ animation:rtt-in {_T} ease; }}
+.rtt-line, .rtt-block, .rtt-cell, .rtt-wash, .rtt-washbase {{ animation:rtt-in {_T} ease; }}
 
 .rtt-line {{ position:absolute; z-index:1; opacity:1; transition:left {_T}, top {_T},
             width {_T}, height {_T}, opacity {_T}; }}
 .rtt-line-v {{ border-left:1px solid #e0e0e0; width:0; }}
 .rtt-line-h {{ border-top:1px solid #e0e0e0; height:0; }}
-/* a colorization wash: a coloured rectangle behind the grey tiles (below the
-   gridlines too), so the box-group's colour shows through the gaps around them */
-.rtt-wash {{ position:absolute; z-index:0; opacity:1;
+/* a colorization wash: a full-width colour band behind the grey tiles (below the
+   gridlines too) that fills the whole background of a colorized group's rows. The
+   white base sits under the colour, which is drawn at mix-blend-mode:darken so
+   overlapping group bands combine like the mockup's palette (cyan ⊓ yellow = green). */
+.rtt-washbase, .rtt-wash {{ position:absolute; z-index:0; opacity:1;
             transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
+.rtt-washbase {{ background:#fff; }}
+.rtt-wash {{ mix-blend-mode:darken; }}
 .rtt-block {{ position:absolute; z-index:2; background:#e0e0e0; opacity:1;
              transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
 .rtt-cell {{ position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
@@ -1040,13 +1046,14 @@ def index() -> None:
         for bl in lay.blocks:
             seen.add(bl.id)
             if bl.id not in els:
-                # a block is either a plain grey tile or a colorization wash (its id and
-                # tint are fixed for its lifetime, so the class is chosen once at creation)
+                # a block is a plain grey tile (tint ""), a colorization wash's white
+                # base (tint "base"), or its coloured layer (tint = group name). The
+                # tint is fixed for a block's lifetime, so the class is chosen once.
                 with board:
-                    cls = "rtt-wash" if bl.tint else "rtt-block"
+                    cls = "rtt-washbase" if bl.tint == "base" else "rtt-wash" if bl.tint else "rtt-block"
                     els[bl.id] = ui.element("div").classes(cls).props(f'data-eid="{bl.id}"')
             style = f"left:{bl.x}px; top:{bl.y}px; width:{bl.w}px; height:{bl.h}px"
-            if bl.tint:
+            if bl.tint in _TINTS:  # the coloured layer (the base draws white from CSS)
                 style += f"; background:{_TINTS[bl.tint]}"
             els[bl.id].style(style)
 
