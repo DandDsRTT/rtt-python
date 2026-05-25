@@ -190,6 +190,32 @@ def test_shared_axes_and_branching():
     assert {"vbar:mapping:left", "vbar:mapping:right", "foot:mapping"} <= ids
 
 
+def test_convergence_buses_reach_the_outer_sub_lines_far_edges():
+    # the buses rejoining the per-element sub-gridlines span the FULL extent of the outer
+    # sub-lines -- half a line-width past each centre -- so the join corners stay solid at
+    # the far (rejoin) end too, not just the near (fan-out) end. (At 1px the shortfall was
+    # invisible; at 2px the far corner dropped a square.)
+    by = {ln.id: ln for ln in _layout().lines}  # 2.3.5 -> primes fan to 3 columns
+    half = spreadsheet.LINE_W / 2
+    v0, vlast = by["v:prime:0"], by["v:prime:2"]
+    for bus_id in ("bus:primes:top", "bus:primes:bot"):
+        bus = by[bus_id]
+        assert bus.start == v0.pos - half  # from half a width before the first sub-line...
+        assert bus.start + bus.length == vlast.pos + half  # ...to half past the last
+
+
+def test_mapping_rejoin_bars_span_the_full_generator_fan():
+    # the vertical bars closing the mapping rows reach half a line-width past the outer
+    # generator rows, like the column buses, so the far (right-hand) rejoin corner stays solid
+    by = {ln.id: ln for ln in _layout().lines}  # rank-2 -> 2 generator rows
+    half = spreadsheet.LINE_W / 2
+    g0, glast = by["h:gen:0"], by["h:gen:1"]
+    for bar_id in ("vbar:mapping:left", "vbar:mapping:right"):
+        bar = by[bar_id]
+        assert bar.start == g0.pos - half
+        assert bar.start + bar.length == glast.pos + half
+
+
 def test_adjacent_tiles_keep_a_twelve_px_minimum_gap():
     # the minimum whitespace between two grey tiles is GAP - 2*PAD; the design doubles it
     # from 6px to 12px so the (now 2px-thick) gridlines threading the gap keep their room

@@ -11,6 +11,8 @@ from pathlib import Path
 
 import rtt.web.app as app
 from rtt.web import settings as show_settings
+from rtt.web import spreadsheet
+from rtt.web.layout import Line
 
 
 def _bars(svg):
@@ -196,6 +198,19 @@ def test_units_html_bolds_variables_but_not_cents_or_slash():
     assert app._units_html("/p₁") == "/<b>p₁</b>"
     assert app._units_html("¢/") == "¢/"
     assert app._units_html("/1") == "/<b>1</b>"
+
+
+def test_line_style_centres_the_rule_on_its_coordinate():
+    # a gridline's W-px border grows off one edge of its zero-size box, so the renderer
+    # offsets the box by half the width to seat the rule centred on its coordinate -- the
+    # toggle-node / cell-column centre -- rather than leaning a full width off to one side
+    half = spreadsheet.LINE_W / 2
+    v = app._line_style(Line("trunk:x", "v", 100, 50, 200))
+    assert f"left:{100 - half}px" in v  # centred on x=100, not flush at 100
+    assert "top:50px" in v and "height:200px" in v  # the length runs unchanged
+    h = app._line_style(Line("h:x", "h", 60, 10, 300))
+    assert f"top:{60 - half}px" in h  # centred on y=60
+    assert "left:10px" in h and "width:300px" in h
 
 
 def test_shared_axis_gridlines_render_two_pixels_thick():

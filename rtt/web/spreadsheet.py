@@ -67,6 +67,9 @@ VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
 MARK_INSET = 8  # inset of a mapped column's top/bottom mark, so it clears the rules
 SEP_W = 2  # width of a vertical rule between monzo columns (the renderer draws it
 # as thick as a square bracket's main bar; this is just the cell it centres in)
+LINE_W = 2  # px thickness of the shared-axis gridlines: the renderer's .rtt-line border
+# weight, and here the overlap by which a convergence bus reaches past its outer sub-lines
+# so the rejoin corners stay solid (the cells sit centred on these rules)
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 GENMAP_BRACKETS = ("{", "]")  # { … ] for the generator tuning map (per the mockup)
@@ -504,6 +507,15 @@ def _wrap_lines(text: str, width: float, font: float = CAPTION_FONT) -> int:
         else:
             cur += (1 if cur else 0) + wlen
     return lines
+
+
+def _bus_span(positions):
+    """The (start, length) of a convergence bus across fanned sub-lines at ``positions``.
+    It reaches half a line-width past the outer sub-lines so the rejoin corners stay solid
+    at LINE_W; when the sub-lines coincide (a collapsed column or a single element) it
+    degenerates to a zero-length point so the merged axis reads as one straight rule."""
+    ext = LINE_W if positions[-1] != positions[0] else 0
+    return positions[0] - ext / 2, (positions[-1] - positions[0]) + ext
 
 
 def build(state, settings=None, collapsed=None,
@@ -1345,8 +1357,9 @@ def build(state, settings=None, collapsed=None,
         xs = [cx] * n if f"col:{key}" in collapsed else [center_open(i) for i in range(n)]
         for i in range(n):
             lines.append(Line(f"v:{prefix}:{i}", "v", xs[i], fanout_y, bot_bus_y - fanout_y))
-        lines.append(Line(f"bus:{key}:top", "h", fanout_y, xs[0], xs[-1] - xs[0]))
-        lines.append(Line(f"bus:{key}:bot", "h", bot_bus_y, xs[0], xs[-1] - xs[0]))
+        bx, bw = _bus_span(xs)
+        lines.append(Line(f"bus:{key}:top", "h", fanout_y, bx, bw))
+        lines.append(Line(f"bus:{key}:bot", "h", bot_bus_y, bx, bw))
         lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y))
         lines.append(Line(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y))
 
@@ -1384,8 +1397,9 @@ def build(state, settings=None, collapsed=None,
         left_bus_x = node_edge + FAN if (r > 1 and not folded) else node_edge
         for i in range(r):
             lines.append(Line(f"h:gen:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x))
-        lines.append(Line("vbar:mapping:left", "v", left_bus_x, ys[0], ys[-1] - ys[0]))
-        lines.append(Line("vbar:mapping:right", "v", right_bus_x, ys[0], ys[-1] - ys[0]))
+        bus_y, bus_h = _bus_span(ys)
+        lines.append(Line("vbar:mapping:left", "v", left_bus_x, bus_y, bus_h))
+        lines.append(Line("vbar:mapping:right", "v", right_bus_x, bus_y, bus_h))
         lines.append(Line("trunk:mapping", "h", cy, node_edge, left_bus_x - node_edge))
         lines.append(Line("foot:mapping", "h", cy, right_bus_x, total_w - right_bus_x))
 
