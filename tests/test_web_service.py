@@ -187,8 +187,8 @@ def test_plain_text_interval_vectors_are_monzo_lists():
     # the interval-vectors row shows each basis as a list of monzos (close ⟩),
     # wrapped in an outer [ … ]
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
-    assert pt[("vectors", "primes")] == "[[1 0 0⟩ [0 1 0⟩ [0 0 1⟩]"  # domain basis = identity
     assert pt[("vectors", "targets")].startswith("[[1 0 0⟩ [0 1 0⟩ [-1 1 0⟩")  # target monzos
+    assert ("vectors", "primes") not in pt  # the domain-basis identity is deferred to identity_objects
 
 
 def test_plain_text_mapped_list_is_a_list_of_generator_coord_vectors():

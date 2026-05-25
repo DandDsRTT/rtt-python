@@ -677,7 +677,6 @@ def test_plain_text_values_adds_a_string_band_under_each_tile():
     assert on["ptext:mapping:primes"].text == "[⟨1 1 0] ⟨0 1 4]}"
     assert on["ptext:mapping:targets"].text.startswith("[[1 0}")  # generator-coord vectors (close })
     assert on["ptext:vectors:commas"].text == "[[4 -4 1⟩]"  # comma basis: monzo list, outer [ ]
-    assert on["ptext:vectors:primes"].text.startswith("[[1 0 0⟩")  # the interval-vectors row
     assert on["ptext:quantities:primes"].text == "2.3.5"
     assert on["ptext:tuning:primes"].text.startswith("⟨")  # a tuning map
 

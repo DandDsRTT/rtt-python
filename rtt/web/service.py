@@ -226,7 +226,6 @@ def plain_text_values(
     commas = comma_ratios(state.comma_basis)
     mapped = mapped_intervals(state.mapping, targets)
     mapped_comma = mapped_commas(state.mapping, state.comma_basis)
-    domain_basis = tuple(tuple(1 if i == p else 0 for i in range(state.d)) for p in range(state.d))
     target_monzos = target_interval_monzos(targets, state.d)
     tun = tuning(state.mapping, scheme)  # prime maps, shared by both interval sets
     target_sizes = interval_sizes(tun, targets)
@@ -239,7 +238,6 @@ def plain_text_values(
     # generators (mapping/quantities) carry no plain-text form.
     return {
         ("quantities", "primes"): ".".join(str(p) for p in primes),
-        ("vectors", "primes"): _ket_list(domain_basis, "⟩"),
         ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
         ("vectors", "targets"): _ket_list(target_monzos, "⟩"),
         ("mapping", "primes"): to_ebk(Temperament(state.mapping, Variance.ROW)),
