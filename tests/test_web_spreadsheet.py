@@ -31,42 +31,22 @@ def test_generator_ratios_are_listed_in_the_quantities_column():
     cells = {c.id: c for c in _layout().cells}
     assert cells["gen:0"].text == "2/1"
     assert cells["gen:1"].text == "3/2"
-    # listed vertically in the quantities spine column (not the generators column,
-    # which now holds the mapping-over-generators identity), aligned with the rows
+    # listed vertically in the quantities spine column (left of the generators
+    # column), aligned with the mapping rows they label
     assert cells["gen:0"].x == cells["header:quantities"].x
     assert cells["gen:0"].x < cells["header:gens"].x
     assert cells["gen:0"].y == cells["cell:mapping:0:0"].y
     assert cells["gen:1"].y == cells["cell:mapping:1:0"].y
 
 
-def test_mapping_over_generators_is_shown_as_the_identity():
-    cells = {c.id: c for c in _layout().cells}
-    # the generators column at the mapping row shows M over the generators = I
-    assert cells["cell:selfmap:0:0"].text == "1"
-    assert cells["cell:selfmap:0:1"].text == "0"
-    assert cells["cell:selfmap:1:0"].text == "0"
-    assert cells["cell:selfmap:1:1"].text == "1"
-    # a stack of square cells in the generators column, aligned with the mapping rows
-    s00 = cells["cell:selfmap:0:0"]
-    assert s00.w == s00.h == spreadsheet.ROW_H
-    assert s00.y == cells["cell:mapping:0:0"].y
-    assert cells["cell:selfmap:0:1"].x == s00.x + spreadsheet.COL_W  # next column over
-    assert cells["cell:selfmap:1:0"].y == s00.y + spreadsheet.ROW_H  # next row down
-    # it sits in the generators column, left of the mapping matrix over the primes
-    assert cells["header:gens"].x <= s00.x < cells["header:primes"].x
-
-
-def test_mapping_over_generators_is_framed_like_the_mapping_matrix():
-    cells = {c.id: c for c in _layout().cells}
-    # a stack of maps: each row gets ⟨ … ] brackets, like the mapping rows
-    assert cells["bracket:selfmap:0:l"].text == "⟨" and cells["bracket:selfmap:0:r"].text == "]"
-    assert "bracket:selfmap:1:l" in cells
-    # and the whole matrix is enclosed by a top bracket and bottom curly brace
-    assert "ebktop:gens" in cells and "ebkbrace:gens" in cells
-    top, brace = cells["ebktop:gens"], cells["ebkbrace:gens"]
-    first, last = cells["cell:selfmap:0:0"], cells["cell:selfmap:1:0"]
-    assert top.y + top.h < first.y  # the top bracket sits above the matrix
-    assert brace.y > last.y + last.h  # the brace sits below it
+def test_mapping_over_generators_identity_is_deferred_to_identity_objects():
+    # M over its own generators is the identity — an "identity object" the grid
+    # won't show until the identity_objects setting is built. Until then the
+    # generators column carries no tile at the mapping row (no cells, brackets,
+    # framing marks or fold toggle).
+    cells = {c.id for c in _layout().cells}
+    assert not any(c.startswith(("cell:selfmap", "bracket:selfmap")) for c in cells)
+    assert {"ebktop:gens", "ebkbrace:gens", "toggle:tile:mapping:gens"}.isdisjoint(cells)
 
 
 def test_primes_sit_above_the_mapping_columns():
@@ -247,7 +227,7 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
     # no value numbers anywhere: header primes/ratios, matrix, mapped list, cents,
     # interval-vectors monzos
     assert not any(c.startswith(("prime:", "target:", "gen:", "cell:mapping:",
-                                 "cell:selfmap:", "cell:mapped:", "cell:vec:", "comma:", "cell:comma:",
+                                 "cell:mapped:", "cell:vec:", "comma:", "cell:comma:",
                                  "tuning:", "just:", "retune:", "damage:"))
                    for c in ids)
     # no EBK marks (brackets, top brackets, braces, monzo rules) and no domain/comma controls
@@ -265,7 +245,7 @@ def test_general_quantities_off_hides_the_body_values_but_keeps_the_headers():
     ids = {c.id for c in _with(quantities=False).cells}
     # the body quantity values (matrix, mapped list, comma basis, interval-vectors
     # monzos, generator ratios, tuning cents) and their EBK marks are gone
-    assert not any(c.startswith(("gen:", "cell:mapping:", "cell:selfmap:", "cell:mapped:",
+    assert not any(c.startswith(("gen:", "cell:mapping:", "cell:mapped:",
                                  "cell:vec:", "cell:comma:",
                                  "tuning:", "just:", "retune:", "damage:")) for c in ids)
     assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
@@ -487,7 +467,7 @@ def test_each_content_tile_has_a_top_left_fold_toggle():
     # every (row, column) content tile carries its own fold control, in addition
     # to the per-row and per-column ones
     for rkey, ckey in (("quantities", "primes"), ("quantities", "targets"),
-                       ("mapping", "gens"), ("mapping", "primes"), ("mapping", "targets"),
+                       ("mapping", "primes"), ("mapping", "targets"),
                        ("tuning", "primes"), ("tuning", "targets"), ("damage", "targets")):
         assert f"toggle:tile:{rkey}:{ckey}" in cells
     # it sits in the tile's top-left corner: above and left of the tile's content
@@ -1460,15 +1440,14 @@ def test_range_chart_draws_a_placeholder_when_no_monotone_range_exists():
     assert ch.ranges == ()
 
 
-def test_range_chart_rides_the_tuning_row_clear_of_the_mapping_identity():
+def test_range_chart_rides_the_tuning_row_below_the_mapping_row():
     on = {c.id: c for c in _with(tuning_ranges=True).cells}
     ch = on["rangechart:tuning:gens"]
     # it occupies the otherwise-empty generators-column space at the tuning row...
     assert ch.y <= on["tuning:prime:0"].y  # anchored at the top of the tuning row band
-    # ...below the mapping-over-generators identity that shares the generators column,
-    # so the two never overlap
-    identity_bottom = on["cell:selfmap:1:0"].y + spreadsheet.ROW_H
-    assert ch.y >= identity_bottom
+    # ...below the mapping row (whose generators-column tile is empty), so they never overlap
+    mapping_bottom = on["cell:mapping:1:0"].y + spreadsheet.ROW_H
+    assert ch.y >= mapping_bottom
 
 
 def test_range_mode_selector_sits_below_the_chart_and_carries_the_current_mode():
