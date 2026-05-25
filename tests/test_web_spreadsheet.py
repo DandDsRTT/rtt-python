@@ -1300,9 +1300,10 @@ def test_empty_but_open_interest_still_offers_the_add_control():
 def test_adding_intervals_of_interest_neither_shrinks_the_header_nor_reflows_the_board():
     # regression: the long title floats the interest HEADER out to its two-line strip
     # width; the few-interval value cells must not shrink that header (which would
-    # rewrap the title onto a third line), and — because the captions wrap within that
-    # header width, not the content — the board height must not change as intervals are
-    # added (an interest set is curated display data, not a layout dimension)
+    # rewrap the title onto a third line). And the board height must not change as
+    # intervals are added: the captions are terse one-liners (so they never wrap taller
+    # in a narrow column), and an empty set reserves no caption band at all — an interest
+    # set is curated display data, not a layout dimension.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     builds = [spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * n) for n in range(5)]
     widths = [{c.id: c for c in lay.cells}["header:interest"].w for lay in builds]
@@ -1353,12 +1354,23 @@ def test_collapsing_interest_hides_its_cells_but_keeps_the_header():
     assert "cell:mapped:0:0" in cids
 
 
-def test_interest_captions_mirror_targets_without_damage_when_named():
+def test_interest_captions_are_terse_one_liners_that_never_reflow_the_board():
+    # the interest column is narrow (a few curated intervals), so its captions are terse
+    # one-liners rather than the targets column's verbose "...target interval... list"
+    # names. A long name would wrap to more lines as the column narrows and fewer as it
+    # widens, so the caption band — and the whole board — would grow and shrink as
+    # intervals are added (the regression below). Keeping every caption to a single line
+    # even at the one-interval (narrowest) width makes the band height constant instead.
     cells = {c.id: c for c in _with_interest(_INTEREST[:1]).cells}  # names default on
-    assert cells["caption:vectors:interest"].text == "interval of interest list"
-    assert cells["caption:mapping:interest"].text == "mapped interval list"
-    assert cells["caption:tuning:interest"].text == "tempered interval size list"
-    assert "caption:damage:interest" not in cells
+    assert cells["caption:vectors:interest"].text == "intervals"
+    assert cells["caption:mapping:interest"].text == "mapped"
+    assert cells["caption:tuning:interest"].text == "tempered"
+    assert cells["caption:just:interest"].text == "just"
+    assert cells["caption:retune:interest"].text == "errors"
+    assert "caption:damage:interest" not in cells  # no damage row, like the column's tiles
+    narrowest = 2 * spreadsheet.BRACKET_W + spreadsheet.COL_W  # one-interval content width
+    for rkey in ("vectors", "mapping", "tuning", "just", "retune"):
+        assert spreadsheet._wrap_lines(cells[f"caption:{rkey}:interest"].text, narrowest) == 1
 
 
 def test_mnemonics_underline_the_symbol_letter_within_the_name_captions():

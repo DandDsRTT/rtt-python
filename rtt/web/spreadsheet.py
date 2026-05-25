@@ -103,12 +103,18 @@ CAPTIONS = {
     ("retune", "targets"): "target interval error list",
     ("damage", "targets"): "target interval damage list",
     **{("counts", ckey): name for ckey, _sym, name in COUNTS},
-    # other intervals of interest mirror the targets, minus the damage row
-    ("vectors", "interest"): "interval of interest list",
-    ("mapping", "interest"): "mapped interval list",
-    ("tuning", "interest"): "tempered interval size list",
-    ("just", "interest"): "(just) interval size list",
-    ("retune", "interest"): "interval error list",
+    # Other intervals of interest mirror the targets' rows (minus damage), but with terse
+    # one-word captions, not the verbose "...target interval... list" names. This column
+    # is narrow (a few user-curated intervals) and grows/shrinks as intervals are added; a
+    # long caption would wrap to more lines in the narrow state and fewer in the wide one,
+    # reflowing the whole board. A single word stays one line at any width, so the caption
+    # band — and the board height — is constant. The left row label and column title carry
+    # the full context ("tuning" / "just tuning" rows under "other intervals of interest").
+    ("vectors", "interest"): "intervals",
+    ("mapping", "interest"): "mapped",
+    ("tuning", "interest"): "tempered",
+    ("just", "interest"): "just",
+    ("retune", "interest"): "errors",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # The quantity symbol shown above each name when symbols is on. Styling: the maps
@@ -495,7 +501,11 @@ def build(state, settings=None, collapsed=None,
         if not present:
             continue
         col_x[key] = x
-        col_w[key] = _title_w(col_header[key]) if f"col:{key}" in collapsed else natural
+        # interest keeps its content width even when collapsed (its title never
+        # collapses — it rides the always-wide header below), so its gridline stays
+        # put on expand instead of jumping from a title-strip centre to the content
+        collapse_to_strip = f"col:{key}" in collapsed and key != "interest"
+        col_w[key] = _title_w(col_header[key]) if collapse_to_strip else natural
         col_collapsible[key] = collapsible
         x += col_w[key]
         if key in ("primes", "commas", "interest") and f"col:{key}" not in collapsed:
@@ -564,16 +574,17 @@ def build(state, settings=None, collapsed=None,
     tile_h, tile_top, row_frame, row_sym, row_cap, row_ptext, chart_top = {}, {}, {}, {}, {}, {}, {}
 
     def caption_band(key, folded):
-        # the row's caption band is sized to its tallest (wrapped) caption, so the
-        # longest name fits within its tile rather than spilling off a narrow column.
-        # Captions wrap within the header width (col_head_w), not the content width, so
-        # the interest column's caption tracks its (steady) header rather than its
-        # content — keeping this band, and the board height, independent of how many
-        # intervals of interest are present.
+        # the row's caption band is sized to its tallest (wrapped) caption, so the longest
+        # name fits within its tile rather than spilling off a narrow column. Only columns
+        # that actually render a tile here count: an empty interest column declares no
+        # tile, so it reserves no caption height (its captions would otherwise wrap tall in
+        # the bare bracket-gutter stub and inflate the empty board). Each caption wraps
+        # within its own tile's content width.
         if not (show_captions and key in CAPTIONED_ROWS and not folded):
             return 0
-        lines = [_wrap_lines(CAPTIONS[(key, c)], col_head_w[c]) for c in col_x
-                 if (key, c) in CAPTIONS and col_open(c) and f"tile:{key}:{c}" not in collapsed]
+        lines = [_wrap_lines(CAPTIONS[(key, c)], col_w[c]) for c in col_x
+                 if (key, c) in CAPTIONS and (key, c) in declared_tiles
+                 and col_open(c) and f"tile:{key}:{c}" not in collapsed]
         return max(lines, default=1) * CAPTION_LINE
 
     ptext_strings = service.plain_text_values(state, tuning_scheme, target_spec) if show_ptext else {}
@@ -1103,11 +1114,10 @@ def build(state, settings=None, collapsed=None,
         if show_captions:
             kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
             underlines = ((name.index(kw), 1),) if kw else ()
-            # wrap within the header width (col_head_w): for interest this is its
-            # steady header, not its content, so the caption stays put as intervals
-            # are added and overhangs the narrow tiles to the right, like the header
-            ch = _wrap_lines(name, col_head_w[ckey]) * CAPTION_LINE  # hug this name's own lines
-            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_head_w[ckey], ch,
+            # the caption hugs its tile's content width (so it never overhangs into
+            # empty space); a name wraps within that width
+            ch = _wrap_lines(name, col_w[ckey]) * CAPTION_LINE
+            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], ch,
                                  "caption", text=name, underlines=underlines))
 
     # the plain-text box sits directly below the symbol/caption stack; the preselect
