@@ -463,6 +463,33 @@ def test_the_mapping_matrix_is_framed_top_and_bottom():
     assert {"ebktop:mapped:0", "ebkbrace:mapped:0"} <= set(cells)
 
 
+def test_form_box_shows_the_canonical_mapping_over_the_primes():
+    # the "form" toggle adds a "canonical mapping" row whose primes tile holds M in
+    # canonical form (defactored + HNF) — for ((1,1,0),(0,1,4)) that is
+    # ((1,0,-4),(0,1,4)), distinct from the stored matrix in the mapping row
+    cells = {c.id: c for c in _with(form=True).cells}
+    assert cells["cell:canon:0:0"].text == "1"
+    assert cells["cell:canon:0:2"].text == "-4"
+    assert cells["cell:canon:1:1"].text == "1"
+    assert cells["cell:canon:1:2"].text == "4"
+    # off by default the row adds nothing
+    assert not any(c.id.startswith("cell:canon:") for c in _layout().cells)
+
+
+def test_canonical_mapping_row_is_framed_like_the_mapping_above_it():
+    cells = {c.id: c for c in _with(form=True).cells}
+    # a stack of maps (⟨ … ] per row), enclosed by its own top bracket + bottom brace
+    assert cells["bracket:canon:map:0:l"].text == "⟨" and cells["bracket:canon:map:0:r"].text == "]"
+    assert "ebktop:canon" in cells and "ebkbrace:canon" in cells
+    assert cells["ebktop:canon"].y < cells["cell:canon:0:0"].y    # top bracket above row 0
+    assert cells["ebkbrace:canon"].y > cells["cell:canon:1:0"].y  # brace below the last row
+    # captioned, and seated between the interval-vectors and mapping matrices
+    assert cells["caption:canon:primes"].text == "canonical mapping"
+    assert cells["basis:0"].y < cells["cell:canon:0:0"].y < cells["cell:mapping:0:0"].y
+    # the mapping keeps its own frame (the canonical frame doesn't steal its ids)
+    assert "ebktop:primes" in cells and cells["ebktop:primes"].y > cells["cell:canon:1:0"].y
+
+
 def test_mapped_list_rules_its_monzo_columns_apart_clear_of_the_marks():
     cells = {c.id: c for c in _layout().cells}
     # the mapped target interval list separates its monzo columns with vertical

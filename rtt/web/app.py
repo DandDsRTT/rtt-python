@@ -826,6 +826,7 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "domain_units": "p₁/",
     "temperament_boxes": "𝑀",
     "form_controls": "canonical form",
+    "form": "𝐹",
     "tuning_boxes": "T",
     "optimization": "𝑝",
     "weighting": "𝒘",

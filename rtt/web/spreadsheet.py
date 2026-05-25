@@ -92,6 +92,7 @@ COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in CO
 CAPTIONS = {
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
+    ("canon", "primes"): "canonical mapping",
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
     ("mapping", "targets"): "mapped target interval list",
@@ -160,10 +161,10 @@ SYMBOLS = {
     ("damage", "targets"): "𝐝",
 }
 SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symbol slot
-# multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping
-# and the complexity-prescaling matrix for their spanning bracket+brace, the interval
-# vectors for the per-column ket marks
-FRAMED_ROWS = frozenset({"mapping", "vectors", "prescaling"})
+# multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping,
+# the canonical mapping and the complexity-prescaling matrix for their spanning
+# bracket+brace, the interval vectors for the per-column ket marks
+FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 
 # Box-group colorization (the mockup's coloured washes behind the grey tiles): a
@@ -305,6 +306,7 @@ TILES = (
     ("block:vec:quantities", "vectors", "quantities"),
     ("block:vec:commas", "vectors", "commas"),
     ("block:vec:targets", "vectors", "targets"),
+    ("block:canon", "canon", "primes"),
     ("block:gens", "mapping", "quantities"),
     ("block:mapping", "mapping", "primes"),
     ("block:mapped_comma", "mapping", "commas"),
@@ -526,6 +528,7 @@ def build(state, settings=None, collapsed=None,
     show_units = settings["units"]  # the in-tile "units: …" line, below each box's caption
     show_domain_units = settings["domain_units"]  # the units row (spine) + units column
     show_temp = settings["temperament_boxes"]
+    show_form = settings["form"]  # the canonical-mapping form box (its own row)
     show_tuning = settings["tuning_boxes"]
     # optimization is a sub-control of tuning boxes: it annotates the tuning region with
     # the scheme's optimization power, so it only applies while that region shows
@@ -571,6 +574,8 @@ def build(state, settings=None, collapsed=None,
     targets = service.target_interval_set(target_spec, elements)
     k = len(targets)
     mapped = service.mapped_intervals(state.mapping, targets, elements)
+    canon_mapping = service.canonical_mapping(state.mapping)  # M defactored + HNF (the form box)
+    rc = len(canon_mapping)  # canonical rank (== r for a valid temperament)
     target_vectors = service.target_interval_monzos(targets, d, elements)  # k monzos, each d-tall
     tun = service.tuning(state.mapping, tuning_scheme, elements, approach)  # maps over the elements
     target_sizes = service.interval_sizes(tun, targets, elements)
@@ -786,6 +791,7 @@ def build(state, settings=None, collapsed=None,
         ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
         ("units", ROW_H, show_domain_units, True, "units"),
         ("vectors", d * ROW_H, show_temp, True, "interval vectors"),
+        ("canon", rc * ROW_H, show_form, True, "canonical mapping"),
         ("mapping", r * ROW_H, show_temp, True, "mapping"),
         ("tuning", ROW_H, show_tuning, True, "tuning"),
         ("just", ROW_H, show_tuning, True, "just tuning"),
@@ -915,6 +921,9 @@ def build(state, settings=None, collapsed=None,
 
     def map_top(i):
         return row_y["mapping"] + i * ROW_H
+
+    def canon_top(i):  # the y of canonical-mapping row i (the r stacked canonical maps)
+        return row_y["canon"] + i * ROW_H
 
     def vec_top(p):  # the y of monzo component p in the d-tall interval-vectors row
         return row_y["vectors"] + p * ROW_H
@@ -1062,6 +1071,13 @@ def build(state, settings=None, collapsed=None,
             if tile_open("mapping", "commas"):
                 for c in range(nc):
                     cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", comma_left(c), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_commas[i][c]), gen=i))
+
+    # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
+    # read-only maps over the primes, framed like the mapping matrix one row above it
+    if row_open("canon") and tile_open("canon", "primes"):
+        for i in range(rc):
+            for p in range(d):
+                cells.append(CellBox(f"cell:canon:{i}:{p}", prime_left(p), canon_top(i), COL_W, ROW_H, "mapped", text=str(canon_mapping[i][p])))
 
     # interval-vectors row: each column's intervals as monzos (d-tall columns over
     # the domain primes), on the same prime/comma/target axes as the quantities row.
@@ -1273,6 +1289,9 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
 
+    if row_open("canon") and tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
+        for i in range(rc):
+            bracket(f"canon:map:{i}", MAP_BRACKETS, "primes", canon_top(i), ROW_H)
     if row_open("mapping"):
         # the primes mapping is a stack of maps: ⟨ … ] per row
         if tile_open("mapping", "primes"):
@@ -1377,7 +1396,7 @@ def build(state, settings=None, collapsed=None,
 
     # the remaining rows each get one horizontal rule across their band (no sub-row
     # fan), present or collapsed — so a collapsed one still leaves a gridline
-    for key in ("counts", "units", "vectors", "tuning", "just", "retune", "damage", "optimization"):
+    for key in ("counts", "units", "vectors", "canon", "tuning", "just", "retune", "damage", "optimization"):
         if key not in row_y:
             continue
         lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge))
@@ -1543,8 +1562,9 @@ def build(state, settings=None, collapsed=None,
     def frame_brace_y(rkey):
         return row_y[rkey] + row_h[rkey] + FRAME_GAP
 
-    # a matrix tile (the primes mapping, the complexity prescaler) is enclosed by a top
-    # bracket + bottom brace spanning its whole column. ``bid`` keeps each frame's ids stable.
+    # a matrix tile (the primes mapping, the canonical mapping, the complexity prescaler)
+    # is enclosed by a top bracket + bottom brace spanning its whole column. ``bid`` keeps
+    # each frame's ids stable so two framed rows over the same column never collide.
     def matrix_frame(rkey, ckey, bid):
         if not tile_open(rkey, ckey):
             return
@@ -1553,6 +1573,7 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox(f"ebkbrace:{bid}", gx, frame_brace_y(rkey), gw, BRACE_H, "ebkbrace"))
 
     matrix_frame("mapping", "primes", "primes")
+    matrix_frame("canon", "primes", "canon")
     matrix_frame("prescaling", "primes", "prescaling")
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is
