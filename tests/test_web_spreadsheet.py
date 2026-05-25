@@ -1740,6 +1740,6 @@ def test_a_folded_tuning_row_shrinks_its_wash_to_the_collapsed_strip():
 def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
     on = {c.id: c for c in _with(symbols=True, equivalences=True).cells}
     # the mapped comma basis is exactly the zero matrix
-    assert on["symbol:mapping:commas"].text == "𝑀C = O"
+    assert on["symbol:mapping:commas"].text == "𝑀C = 𝑂"
     # the damage weight w is bold-italic (matching the maps), not bold-upright
     assert on["symbol:damage:targets"].text == "𝐝 = |𝐞|diag(𝒘)"

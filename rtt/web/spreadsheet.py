@@ -187,7 +187,7 @@ MNEMONICS = {
 # dropped — the mapping over primes and the just tuning map thus carry no
 # continuation yet; the mapped comma basis instead vanishes to the zero matrix.
 EQUIVALENCES = {
-    ("mapping", "commas"): " = O",
+    ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",
