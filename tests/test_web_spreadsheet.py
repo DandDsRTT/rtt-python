@@ -1042,6 +1042,14 @@ def test_a_partly_typed_pending_comma_shows_its_entered_components():
     assert all(cells[f"cell:comma:{p}:1"].pending for p in range(3))
 
 
+def test_the_pending_comma_columns_ket_marks_are_flagged_for_red():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 1 real comma + a pending draft (col 1)
+    cells = {c.id: c for c in spreadsheet.build(base, pending_comma=[None, None, None]).cells}
+    # the draft column's EBK ket marks render red (like its cells); the real comma's don't
+    assert cells["ebktop:vec:commas:1"].pending and cells["ebkangle:vec:commas:1"].pending
+    assert not cells["ebktop:vec:commas:0"].pending
+
+
 # --- math expressions: the just row's exact log₂ closed forms ---
 
 def test_math_expressions_render_the_just_tuning_primes_as_logs():

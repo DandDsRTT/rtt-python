@@ -1170,14 +1170,15 @@ def build(state, settings=None, collapsed=None,
     # two apart: a tempered/mapped column (generator coords) closes with a curly brace,
     # a raw (untempered) monzo is a ket and closes with the angle ⟩ (a down-chevron).
     # A bordered grid skips the rules — its own cell borders already divide the columns.
-    def monzo_list_marks(rkey, name, ckey, left, n_cols, foot="ebkbrace", bordered=False):
+    def monzo_list_marks(rkey, name, ckey, left, n_cols, foot="ebkbrace", bordered=False, pending_col=-1):
         if not tile_open(rkey, ckey):
             return
         mark_w = COL_W - 2 * MARK_INSET
         for c in range(n_cols):
             mx = left(c) + MARK_INSET
-            cells.append(CellBox(f"ebktop:{name}:{c}", mx, frame_top_y(rkey), mark_w, FRAME_H, "ebktop"))
-            cells.append(CellBox(f"{foot}:{name}:{c}", mx, frame_brace_y(rkey), mark_w, BRACE_H, foot))
+            pend = (c == pending_col)  # the draft column's ket marks render red, like its cells
+            cells.append(CellBox(f"ebktop:{name}:{c}", mx, frame_top_y(rkey), mark_w, FRAME_H, "ebktop", pending=pend))
+            cells.append(CellBox(f"{foot}:{name}:{c}", mx, frame_brace_y(rkey), mark_w, BRACE_H, foot, pending=pend))
         if bordered:  # a bordered grid's own cell borders divide the columns; adding a
             return    # separator rule too would lay a second line over each shared border
         for c in range(1, n_cols):  # a rule on each interior column boundary
@@ -1190,7 +1191,8 @@ def build(state, settings=None, collapsed=None,
     # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
     # (commacell), so it skips the separator rules (its cell borders divide the columns);
     # nc_shown includes the pending draft column so it gets its ket marks too.
-    monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc_shown, foot="ebkangle", bordered=True)
+    monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc_shown, foot="ebkangle", bordered=True,
+                     pending_col=(nc if pending is not None else -1))
     monzo_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle")
 

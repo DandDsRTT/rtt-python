@@ -40,6 +40,7 @@ _PANEL_W = 330  # px width the settings drawer opens to (the Show + example colu
 # drawn as an SVG whose viewBox maps 1:1 to the cell's px size (see _svg), so a
 # stroke specified as N px is exactly N px tall AND wide at any span — no scaling.
 _BR_COLOR = "#1a1a1a"
+_PENDING_COLOR = "#e53935"  # red for a pending comma's draft cells, brackets and "?"
 # the value cells tile into a shared-border grid (a ruled spreadsheet, per the
 # mockup): each cell draws a rule and overlaps its neighbour by exactly the rule
 # width, so two abutting borders coincide as ONE line — no doubled inner rules.
@@ -260,7 +261,9 @@ _CSS = f"""
 .rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal {{ display:none !important; }}
 /* a pending comma's draft cells: red-outlined and empty until the user types a valid
    independent comma, at which point it commits and reverts to a normal black cell */
-.rtt-cellinput.rtt-pending .q-field__control {{ border-color:#e53935 !important; }}
+.rtt-cellinput.rtt-pending .q-field__control {{ border-color:{_PENDING_COLOR} !important; }}
+/* a pending comma's "?" quantity, in the same red as its draft cells/brackets */
+.rtt-pending-q {{ color:{_PENDING_COLOR} !important; }}
 /* the +/− controls are half the square mapping/prime cell, sharing its exact border */
 .rtt-btn {{ width:15px !important; min-width:15px !important; height:15px !important;
            min-height:15px !important; background:#fff !important; border:{_CELL_BORDER} !important;
@@ -537,20 +540,24 @@ def _vbar(w, h):
 
 
 def _ebk_svg(cb):
-    """The SVG for one EBK cell, generated from its current px box (cb.w, cb.h)."""
+    """The SVG for one EBK cell, generated from its current px box (cb.w, cb.h). A
+    pending comma's marks are recoloured red to match its draft cells."""
     if cb.kind == "bracket":
         if cb.text == "⟨":
-            return _angle_bracket(cb.w, cb.h)
-        if cb.text == "{":
-            return _curly_bracket(cb.w, cb.h)
-        return _square_bracket(cb.w, cb.h, "left" if cb.text == "[" else "right")
-    if cb.kind == "ebktop":
-        return _top_bracket(cb.w, cb.h)
-    if cb.kind == "ebkbrace":
-        return _brace(cb.w, cb.h)
-    if cb.kind == "ebkangle":
-        return _angle_foot(cb.w, cb.h)
-    return _vbar(cb.w, cb.h)  # "vbar"
+            svg = _angle_bracket(cb.w, cb.h)
+        elif cb.text == "{":
+            svg = _curly_bracket(cb.w, cb.h)
+        else:
+            svg = _square_bracket(cb.w, cb.h, "left" if cb.text == "[" else "right")
+    elif cb.kind == "ebktop":
+        svg = _top_bracket(cb.w, cb.h)
+    elif cb.kind == "ebkbrace":
+        svg = _brace(cb.w, cb.h)
+    elif cb.kind == "ebkangle":
+        svg = _angle_foot(cb.w, cb.h)
+    else:
+        svg = _vbar(cb.w, cb.h)  # "vbar"
+    return svg.replace(_BR_COLOR, _PENDING_COLOR) if cb.pending else svg
 
 
 def _chart_ticks(lo, hi):
@@ -1022,6 +1029,8 @@ def index() -> None:
                     labels[cb.id] = ui.label(cb.text)
             elif cb.kind == "genratio":
                 _ratio(cb, approx=True)
+            elif cb.kind == "commaratio" and cb.pending:  # the draft comma's "?" quantity, red
+                labels[cb.id] = ui.label(cb.text).classes("rtt-val rtt-pending-q")
             elif cb.kind in ("target", "commaratio"):
                 _ratio(cb, approx=False)
             elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, monzo components)
@@ -1186,10 +1195,11 @@ def index() -> None:
             els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
             if cb.kind in _EBK_SVG_KINDS:
                 # the mark is drawn 1:1 to its px box, so redraw it whenever the box
-                # changes size (e.g. the brace/top bracket as the domain grows)
-                if ebk_sizes.get(cb.id) != (cb.w, cb.h):
+                # changes size (e.g. the brace/top bracket as the domain grows) or its
+                # pending (red) state flips (a draft comma's marks committing to black)
+                if ebk_sizes.get(cb.id) != (cb.w, cb.h, cb.pending):
                     htmls[cb.id].set_content(_ebk_svg(cb))
-                    ebk_sizes[cb.id] = (cb.w, cb.h)
+                    ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
             elif cb.kind == "chart":
                 # redraw when the box resizes OR the underlying data changes (mapping edit)
                 key = (cb.w, cb.h, cb.values)
