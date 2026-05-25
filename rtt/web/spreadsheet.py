@@ -480,12 +480,11 @@ def build(state, settings=None, collapsed=None,
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
         ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
-        # The interest column's tiles hug their content (32 + mi·COL_W) — no empty
-        # padding. Its long two-line title would not fit that narrow width, so the
-        # HEADER alone floats wider (see col_head_w below): since interest is the
-        # rightmost column, the header overhangs to the right (into the header band
-        # above the + gutter) without crowding any neighbour. The captions wrap within
-        # the (content) column width, and the board height is independent of either.
+        # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
+        # padding. Its long two-line title needs more room, so the column's *footprint*
+        # is floored at the title width (see the loop below) and the narrow content is
+        # centred within it: the title centres over the whole column on its gridline, and
+        # the tiles centre on that same gridline. The board height is independent of mi.
         ("interest", 2 * BRACKET_W + mi * COL_W, show_tuning, True),
     )
     # A fold-toggle node column sits between the row-label gutter and the content
@@ -506,32 +505,45 @@ def build(state, settings=None, collapsed=None,
         if not present:
             continue
         col_x[key] = x
-        # interest keeps its content width even when collapsed (its title never
-        # collapses — it rides the always-wide header below), so its gridline stays
-        # put on expand instead of jumping from a title-strip centre to the content
-        collapse_to_strip = f"col:{key}" in collapsed and key != "interest"
-        col_w[key] = _title_w(col_header[key]) if collapse_to_strip else natural
+        if key == "interest":
+            # The footprint never shrinks below the (two-line) title: reserve
+            # max(content, title) so the title centres over the whole column and the
+            # narrower tiles centre on the same gridline (the centring is applied below).
+            # The title never collapses, so a folded interest column keeps this width too.
+            col_w[key] = max(natural, _title_w(col_header[key]))
+        else:  # a collapsed column shrinks to its title strip
+            col_w[key] = _title_w(col_header[key]) if f"col:{key}" in collapsed else natural
         col_collapsible[key] = collapsible
         x += col_w[key]
         if key in ("primes", "commas", "interest") and f"col:{key}" not in collapsed:
-            ctrl_x[key] = x + 6
-            x = ctrl_x[key] + CTRL_W
+            if key == "interest":
+                # the + rides just right of the (centred) tiles — or on the gridline when
+                # the set is empty — not out at the far edge of the title-wide footprint
+                gridline = col_x[key] + col_w[key] / 2
+                ctrl_x[key] = gridline + (2 * BRACKET_W + mi * COL_W) / 2 + 6 if mi else gridline - BTN / 2
+                x = max(x, ctrl_x[key] + BTN)
+            else:
+                ctrl_x[key] = x + 6
+                x = ctrl_x[key] + CTRL_W
         x += GAP
     total_w = x
-
-    # Header width per column. Normally the header spans its column; the rightmost
-    # column (interest) is the exception — its tiles hug a few narrow cells but its
-    # long title needs more room, so its header floats out to the title width and
-    # overhangs to the right (only the rightmost column may, with no neighbour there).
-    col_head_w = dict(col_w)
-    if "interest" in col_x:
-        col_head_w["interest"] = max(col_w["interest"], _title_w(col_header["interest"]))
-        total_w = max(total_w, col_x["interest"] + col_head_w["interest"] + PAD)
 
     primes_x = col_x.get("primes")  # None when the domain-primes column is hidden
     commas_x = col_x.get("commas")  # None when the commas column is hidden
     targets_x = col_x.get("targets")  # None when the target intervals column is hidden
-    interest_x = col_x.get("interest")  # None when the interest column is hidden
+    interest_content_w = 2 * BRACKET_W + mi * COL_W  # the tiles' own width (gutters + cells)
+    # the tiles centre within the title-wide footprint, so the gridline runs down the
+    # column centre and the narrow content sits symmetrically under the centred title
+    interest_x = (col_x["interest"] + (col_w["interest"] - interest_content_w) / 2
+                  if "interest" in col_x else None)  # content-left; None when hidden
+
+    def content_box(key):
+        # the (x, width) of a column's actual content — the tiles and the brackets/axes
+        # that hug them. It equals the column box for every column except interest, whose
+        # narrower content is centred inside its (wider) title-reserving footprint.
+        if key == "interest":
+            return interest_x, interest_content_w
+        return col_x[key], col_w[key]
 
     def col_open(key):
         return key in col_x and f"col:{key}" not in collapsed
@@ -683,7 +695,7 @@ def build(state, settings=None, collapsed=None,
     # column headers (always shown; a collapsed column keeps its title) plus a
     # fold toggle in the header band for collapsible ones
     for key in col_x:
-        cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_head_w[key], HEADER_H, "colheader", text=col_header[key]))
+        cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=col_header[key]))
         if col_collapsible[key]:
             glyph = _fold_glyph(f"col:{key}" in collapsed)
             # the fold toggle sits on the column's gridline (its content centre), so it
@@ -929,7 +941,7 @@ def build(state, settings=None, collapsed=None,
     def bracket(bid, glyphs, group_key, y, h, *, fit=False):
         # value brackets are short and centred in their row (so stacked rows keep a
         # gap); the enclosing mapped-list [ ] passes fit=True to span the matrix.
-        gx, gw = col_x[group_key], col_w[group_key]
+        gx, gw = content_box(group_key)  # hug the cells (interest's content, not its footprint)
         by, bh = (y, h) if fit else (y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H)
         cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
@@ -1048,7 +1060,8 @@ def build(state, settings=None, collapsed=None,
         tile_c = f"tile:{rkey}:{ckey}" in collapsed
         col_c = f"col:{ckey}" in collapsed or tile_c
         row_c = f"row:{rkey}" in collapsed or tile_c
-        cw, ch, cx, cy = col_w[ckey], tile_h[rkey], col_x[ckey], tile_top[rkey]
+        cx, cw = content_box(ckey)  # hug the cells; interest's tiles are narrower than its footprint
+        ch, cy = tile_h[rkey], tile_top[rkey]
         w, px = (0, 0) if col_c else (cw, PAD)
         h, py = (0, 0) if row_c else (ch, PAD)
         bx = cx + cw / 2 if col_c else cx

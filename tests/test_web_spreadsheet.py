@@ -1317,8 +1317,9 @@ def test_adding_intervals_of_interest_neither_shrinks_the_header_nor_reflows_the
 
 def test_interest_tiles_hug_their_content_not_the_title_strip():
     # the grey tiles and value cells hug the few narrow intervals — no empty padding out
-    # to the wide title. Only the header (and the captions under it) float to the title
-    # width and overhang to the right, since interest is the rightmost column.
+    # to the wide title. The header still reserves the wider title width as the column's
+    # footprint; the tile is narrower than it and sits centred within (see the centring
+    # test below), so the header is wider than the tile.
     lay = _with_interest(_INTEREST[:1])  # a single interval
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
@@ -1326,6 +1327,33 @@ def test_interest_tiles_hug_their_content_not_the_title_strip():
     assert blocks["block:interest"].w == content_w + 2 * spreadsheet.PAD  # tile hugs content...
     assert cells["header:interest"].w > blocks["block:interest"].w  # ...while the header floats wider
     assert cells["header:interest"].w == len("other intervals") * 8 + 10  # to its title-strip width
+
+
+def test_interest_title_is_centred_on_the_gridline_and_the_column_never_narrows_below_it():
+    # the column reserves at least its two-line title's width as its footprint, with the
+    # gridline down the centre and the title centred on it — never overhanging to one side
+    # the way a right-floated header would. The tiles may be narrower than the title; they
+    # sit centred on that same gridline. Footprint stays at the title width until the cells
+    # outgrow it, so the gridline (and title) hold still as the first few intervals appear.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    title_w = spreadsheet._title_w("other intervals\nof interest")
+    for mi in range(5):
+        lay = spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * mi)
+        cells = {c.id: c for c in lay.cells}
+        lines = {ln.id: ln for ln in lay.lines}
+        header, trunk = cells["header:interest"], lines["trunk:interest"]
+        assert header.w >= title_w  # footprint never narrower than the title
+        assert header.x + header.w / 2 == trunk.pos  # title centred on the gridline
+    # a single interval: the tile is narrower than the title yet centred on the gridline,
+    # and the lone interval's own axis coincides with the trunk
+    one = _with_interest(_INTEREST[:1])
+    cells = {c.id: c for c in one.cells}
+    lines = {ln.id: ln for ln in one.lines}
+    block = {b.id: b for b in one.blocks}["block:interest"]
+    trunk = lines["trunk:interest"]
+    assert block.w < title_w  # the tile is allowed to be smaller than the title
+    assert block.x + block.w / 2 == trunk.pos  # ...and is centred on the same gridline
+    assert lines["v:interest:0"].pos == trunk.pos  # the single interval's axis is the trunk
 
 
 def test_populated_interest_mapped_list_is_bracketed_and_ruled_like_targets():
