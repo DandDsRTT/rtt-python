@@ -1293,7 +1293,7 @@ def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_one
     assert underlined("caption:retune:targets") == "e"  # target interval error list -> e
     assert underlined("caption:damage:targets") == "d"  # target interval damage list -> d
     # size/list tiles whose symbol letter isn't a word-initial in their name stay
-    # unmarked: the mapped list (𝑌), the tempered (𝐚) and just (𝐨) size lists
+    # unmarked: the mapped list (Y), the tempered (𝐚) and just (𝐨) size lists
     assert on["caption:mapping:targets"].underlines == ()
     assert on["caption:tuning:targets"].underlines == ()
     assert on["caption:just:targets"].underlines == ()
@@ -1305,7 +1305,7 @@ def test_symbols_toggles_in_tile_symbol_glyphs_above_the_names():
     # each quantity's bold symbol shows only when symbols is on: bold-upright for
     # the matrices/lists, bold-italic for the maps (covectors)
     assert on["symbol:mapping:primes"].text == "𝑀"  # mapping matrix
-    assert on["symbol:mapping:targets"].text == "𝑌"  # mapped list (= MT)
+    assert on["symbol:mapping:targets"].text == "Y"  # mapped list (= MT)
     assert on["symbol:tuning:primes"].text == "𝒕"  # tuning map
     assert on["symbol:tuning:targets"].text == "𝐚"  # tempered target sizes
     assert on["symbol:damage:targets"].text == "𝐝"  # damage list
@@ -1337,13 +1337,13 @@ def test_folding_a_row_drops_its_symbols_with_the_rest_of_its_content():
 
 def test_comma_column_symbols_are_map_times_basis_products():
     on = {c.id: c for c in _with(symbols=True, names=True).cells}
-    # the comma basis 𝐶 lives in the interval-vectors row; the comma column has no
+    # the comma basis C lives in the interval-vectors row; the comma column has no
     # dedicated letters, so the rest are products of the maps and that basis
-    assert on["symbol:vectors:commas"].text == "𝐶"    # comma basis
-    assert on["symbol:mapping:commas"].text == "𝑀𝐶"   # mapped comma list
-    assert on["symbol:tuning:commas"].text == "𝒕𝐶"    # tempered comma sizes
-    assert on["symbol:just:commas"].text == "𝒋𝐶"      # just comma sizes
-    assert on["symbol:retune:commas"].text == "𝒓𝐶"    # comma errors
+    assert on["symbol:vectors:commas"].text == "C"    # comma basis
+    assert on["symbol:mapping:commas"].text == "𝑀C"   # mapped comma list
+    assert on["symbol:tuning:commas"].text == "𝒕C"    # tempered comma sizes
+    assert on["symbol:just:commas"].text == "𝒋C"      # just comma sizes
+    assert on["symbol:retune:commas"].text == "𝒓C"    # comma errors
     # comma damage is |error|, with no clean product form, so it carries no symbol
     assert "symbol:damage:commas" not in on
     # the comma symbol still aligns with the prime symbol in the same row
@@ -1407,7 +1407,7 @@ def test_equivalences_extend_the_symbol_line_with_the_defining_equation():
     assert sym_only["symbol:tuning:primes"].text == "𝒕"
     assert on["symbol:tuning:primes"].text == "𝒕 = 𝒈𝑀"
     assert on["symbol:retune:primes"].text == "𝒓 = 𝒕 − 𝒋"
-    assert on["symbol:mapping:targets"].text == "𝑌 = 𝑀𝑇"
+    assert on["symbol:mapping:targets"].text == "Y = 𝑀T"
     assert not any(c.startswith("equivalence:") for c in on)
 
 
