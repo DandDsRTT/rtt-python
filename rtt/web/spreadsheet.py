@@ -393,10 +393,13 @@ def build(state, settings=None, collapsed=None,
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc * COL_W, show_temp, True),
         ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
-        # an empty interest column has no cells to size it, so it takes its title's
-        # (wrapped, two-line) strip width — the narrow header the mockup shows — rather
-        # than a bare bracket-gutter stub the long title would overflow
-        ("interest", 2 * BRACKET_W + mi * COL_W if mi else _title_w(col_header["interest"]),
+        # The interest column's long title needs its two-line strip width as a FLOOR:
+        # never let the value cells (few intervals: 32 + mi·COL_W) shrink the column
+        # below it, or adding the first interval would shrink the column and rewrap the
+        # title onto a third line. Holding this floor also keeps the column width — and
+        # so the captions wrapped within it, and the board height — steady as intervals
+        # are added, until the cells genuinely outgrow the title.
+        ("interest", max(2 * BRACKET_W + mi * COL_W, _title_w(col_header["interest"])),
          show_tuning, True),
     )
     # A fold-toggle node column sits between the row-label gutter and the content

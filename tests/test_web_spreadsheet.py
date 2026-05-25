@@ -1158,6 +1158,21 @@ def test_empty_but_open_interest_still_offers_the_add_control():
     assert not any(c.startswith("interest_minus:") for c in cells)
 
 
+def test_adding_intervals_of_interest_neither_shrinks_the_column_nor_reflows_the_board():
+    # regression: the long title gives the interest column a wide (two-line) empty
+    # strip; the value cells of a few intervals must not shrink it below that floor
+    # (which would rewrap the title onto a third line), and — because the captions
+    # wrap within the column width — the board height must not change as intervals
+    # are added (an interest set is curated display data, not a layout dimension)
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    builds = [spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * n) for n in range(5)]
+    widths = [{c.id: c for c in lay.cells}["header:interest"].w for lay in builds]
+    heights = [lay.height for lay in builds]
+    assert widths == sorted(widths)  # monotonic: adding an interval never narrows the column
+    assert min(widths) == widths[0]  # ...and never dips below the empty (title-strip) width
+    assert len(set(heights)) == 1  # the board height is unaffected by the interval count
+
+
 def test_populated_interest_mapped_list_is_bracketed_and_ruled_like_targets():
     cells = {c.id: c for c in _with_interest(_INTEREST[:2]).cells}
     assert cells["bracket:imapped:l"].text == "[" and cells["bracket:imapped:r"].text == "]"
