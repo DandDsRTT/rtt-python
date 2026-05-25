@@ -92,6 +92,20 @@ COUNTS = (
 # no second list to keep in sync.
 COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in COUNTS)
 
+# The optimization sub-control's interval-list columns carry counts too, just like
+# COUNTS: the held-interval count h. Kept separate because these columns are
+# conditional (present only with the optimization box), so build() folds them into the
+# counts machinery only when shown rather than always, as COUNTS is.
+OPTIMIZATION_COUNTS = (
+    ("held", "h", "held-interval count"),
+)
+# Their backing tiles, like COUNTS_TILES. Declared unconditionally — each is inert
+# (no panel, toggle or cell) until its column exists, since tile_open gates on the
+# column being present (which only happens while the optimization box is shown).
+OPTIMIZATION_COUNTS_TILES = tuple(
+    (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in OPTIMIZATION_COUNTS
+)
+
 # Quantity-name captions shown inside each (row, column) tile when names are on.
 # In the comma column, the rows whose quantity the temperament zeroes out — mapped
 # (𝑀C), tempered (𝒕C) and retuned (𝒓C) — append "(made to vanish!)"; the just row
@@ -101,6 +115,7 @@ CAPTIONS = {
     ("vectors", "targets"): "target interval list",
     ("canon", "gens"): "generator form matrix",
     ("canon", "primes"): "canonical mapping",
+    ("vectors", "held"): "held-interval basis",
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
     ("mapping", "targets"): "mapped target interval list",
@@ -120,7 +135,7 @@ CAPTIONS = {
     ("complexity", "targets"): "target interval complexity list",
     ("weight", "targets"): "target interval weight list",
     ("damage", "targets"): "target interval damage list",
-    **{("counts", ckey): name for ckey, _sym, name in COUNTS},
+    **{("counts", ckey): name for ckey, _sym, name in COUNTS + OPTIMIZATION_COUNTS},
     # Other intervals of interest mirror the targets' rows (minus damage), but with terse
     # one-word captions, not the verbose "...target interval... list" names. This column
     # is narrow (a few user-curated intervals) and grows/shrinks as intervals are added; a
@@ -302,6 +317,7 @@ EQUIVALENCES = {
 UNITS = {
     ("vectors", "commas"): "p",
     ("vectors", "targets"): "p",
+    ("vectors", "held"): "p",
     ("vectors", "interest"): "p",
     ("mapping", "primes"): "g/p",
     ("mapping", "commas"): "g",
@@ -698,9 +714,21 @@ def build(state, settings=None, collapsed=None,
         ("block:just_audio:interest", "just_audio", "interest"),
         ("block:mapped_audio:interest", "mapped_audio", "interest"),
     )
+    # the optimization sub-control adds its interval-list columns: the held-interval
+    # constraints (count h), an interval-list column shaped like the targets, drawn from
+    # the current tuning scheme. Empty for the shipped minimax-S (which holds nothing), so
+    # like an empty interest column it then declares no tiles — just a header and axis.
+    held = service.held_intervals(tuning_scheme, d) if show_optimization else ()
+    nh = len(held)
+    held_vectors = service.target_interval_monzos(held, d)
+    held_tiles = () if not held else (
+        ("block:held", "quantities", "held"),
+        ("block:vec:held", "vectors", "held"),
+    )
     # the optimization power rides one tile over the targets column (guarded by panel()
     # and the toggle loop, so it adds nothing unless the optimization row is present)
-    tiles = (COUNTS_TILES + TILES + AUDIO_TILES + UNITS_TILES + interest_tiles
+    tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + TILES + AUDIO_TILES + UNITS_TILES
+             + interest_tiles + held_tiles
              + (("block:optimization", "optimization", "targets"),))
     # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
     # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
@@ -722,7 +750,8 @@ def build(state, settings=None, collapsed=None,
     # may be nonprime) and "domain primes" over a standard prime limit (per the mockup note)
     domain_title = "domain\nprimes" if service.is_standard_domain(elements) else "domain\nelements"
     col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
-                  "primes": domain_title, "commas": "commas", "targets": "target\nintervals",
+                  "primes": domain_title, "commas": "commas",
+                  "held": "held\nintervals", "targets": "target\nintervals",
                   "interest": "other intervals\nof interest"}
     # The leftmost quantities column is the spine: a header + fold toggle + a single
     # vertical rule, the column-axis dual of the quantities spine row. The units column
@@ -736,6 +765,7 @@ def build(state, settings=None, collapsed=None,
         ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
+        ("held", 2 * BRACKET_W + nh * COL_W, show_optimization, True),
         ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
         # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
         # padding. Its long two-line title needs more room, so the column's *footprint*
@@ -858,6 +888,7 @@ def build(state, settings=None, collapsed=None,
     commas_x = content_x.get("commas")  # None when the commas column is hidden
     targets_x = content_x.get("targets")  # None when the target intervals column is hidden
     interest_x = content_x.get("interest")  # None when the interest column is hidden
+    held_x = content_x.get("held")  # None when the held-intervals column is hidden
 
     def col_open(key):
         return key in col_x and f"col:{key}" not in collapsed
@@ -1040,6 +1071,9 @@ def build(state, settings=None, collapsed=None,
     def interest_left(i):
         return interest_x + BRACKET_W + i * COL_W
 
+    def held_left(i):
+        return held_x + BRACKET_W + i * COL_W
+
     def gen_left(g):  # the g-th generator column in the generators box (its tuning-map cells)
         return content_x["gens"] + BRACKET_W + g * COL_W
 
@@ -1087,8 +1121,8 @@ def build(state, settings=None, collapsed=None,
 
     # counts row: each present column's set cardinality, centred over its values
     if row_open("counts"):
-        cardinality = {"gens": r, "primes": d, "commas": state.n, "targets": k}
-        for ckey, sym, _name in COUNTS:
+        cardinality = {"gens": r, "primes": d, "commas": state.n, "targets": k, "held": nh}
+        for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS:
             if tile_open("counts", ckey):
                 cells.append(CellBox(f"count:{ckey}", col_x[ckey], row_y["counts"], col_w[ckey], ROW_H,
                                      "count", text=f"{_mathit(sym)} = {cardinality[ckey]}"))
@@ -1158,6 +1192,9 @@ def build(state, settings=None, collapsed=None,
         if tile_open("quantities", "targets"):
             for j in range(k):
                 cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
+        if tile_open("quantities", "held"):  # the held-interval constraints, as ratios (read-only)
+            for i in range(nh):
+                cells.append(CellBox(f"held:{i}", held_left(i), qy, COL_W, ROW_H, "target", text=held[i]))
         if tile_open("quantities", "interest"):  # the user's other intervals of interest
             for i in range(mi):
                 # the derived ratio (read-only, from the monzo) heads each column, like a comma's
@@ -1239,6 +1276,10 @@ def build(state, settings=None, collapsed=None,
             for j in range(k):
                 for p in range(d):
                     cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "vec", text=str(target_vectors[j][p]), unit=cell_unit("vectors", "targets", prime=p)))
+        if tile_open("vectors", "held"):  # the held basis as vectors, like the target interval list
+            for i in range(nh):
+                for p in range(d):
+                    cells.append(CellBox(f"cell:vec:held:{i}:{p}", held_left(i), vec_top(p), COL_W, ROW_H, "vec", text=str(held_vectors[i][p]), unit=cell_unit("vectors", "held", prime=p)))
         if tile_open("vectors", "interest"):  # the user's intervals of interest: editable monzos, like the comma basis
             for i in range(mi):
                 for p in range(d):
@@ -1444,6 +1485,8 @@ def build(state, settings=None, collapsed=None,
                 bracket(f"vec:{group}", LIST_BRACKETS, group, row_y["vectors"], d * ROW_H, fit=True)
         if mi and tile_open("vectors", "interest"):
             bracket("vec:interest", LIST_BRACKETS, "interest", row_y["vectors"], d * ROW_H, fit=True)
+        if nh and tile_open("vectors", "held"):
+            bracket("vec:held", LIST_BRACKETS, "held", row_y["vectors"], d * ROW_H, fit=True)
     if tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
         bracket("tuning:genmap", GENMAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
     for key in ("tuning", "just", "retune", "complexity"):
@@ -1490,6 +1533,7 @@ def build(state, settings=None, collapsed=None,
     column_axis("commas", "comma", nc_shown, lambda c: comma_left(c) + COL_W / 2)
     column_axis("targets", "target", k, lambda j: target_left(j) + COL_W / 2)
     column_axis("interest", "interest", mi, lambda i: interest_left(i) + COL_W / 2)
+    column_axis("held", "held", nh, lambda i: held_left(i) + COL_W / 2)
 
     # quantities spine column: a single vertical rule the full height of the grid
     # (the column-axis dual of the h:quantities spine row) — one spine rule, no fan
@@ -1750,6 +1794,7 @@ def build(state, settings=None, collapsed=None,
                      pending_col=(nc if pending is not None else -1))
     monzo_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle")
+    monzo_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the

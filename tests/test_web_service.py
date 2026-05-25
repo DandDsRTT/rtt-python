@@ -108,6 +108,15 @@ def test_generators_over_a_nonstandard_domain_multiply_out_the_basis():
     assert service.generators(state.mapping, domain_basis=state.domain_basis) == ("2/1", "15/13")
 
 
+def test_held_intervals_come_from_the_tuning_scheme():
+    # the held intervals (tuned exactly justly) are trait 0 of the tuning scheme,
+    # surfaced as ratios. The shipped minimax-S (TOP) holds nothing; a held-octave
+    # scheme like CTE holds the octave.
+    assert service.held_intervals("TOP", 3) == ()
+    assert service.held_intervals() == ()  # defaults to the shipped scheme (TOP)
+    assert service.held_intervals("CTE", 3) == ("2/1",)
+
+
 def test_comma_ratios_renders_each_comma_monzo_as_a_ratio():
     # the comma basis as ratio strings, mirroring service.generators for the maps
     assert service.comma_ratios(((4, -4, 1),)) == ("80/81",)  # the syntonic comma, as-is

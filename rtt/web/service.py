@@ -301,6 +301,16 @@ def optimization_power(scheme: str = DEFAULT_TUNING_SCHEME) -> float:
     return resolve_tuning_scheme(scheme).optimization_power
 
 
+def held_intervals(scheme: str = DEFAULT_TUNING_SCHEME, d: int = 3) -> tuple[str, ...]:
+    """The intervals the scheme tunes exactly justly (trait 0), as ratio strings — the
+    optimization's held-interval constraints. The shipped minimax-S (TOP) holds nothing;
+    a held-octave scheme (e.g. CTE) holds ``2/1``. ``"octave"`` reads as the prime 2."""
+    held = resolve_tuning_scheme(scheme).held_intervals
+    if not held:
+        return ()
+    return _monzos_to_ratios(parse_quotient_list(held.replace("octave", "2"), d))
+
+
 def interval_sizes(tun: Tuning, ratios, domain_basis=None) -> IntervalSizes:
     """Project an interval set through ``tun`` — its tempered/just sizes, error, damage.
     Over a nonstandard ``domain_basis`` each ratio is expressed in that basis (matching the
