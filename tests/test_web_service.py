@@ -171,6 +171,43 @@ def test_tuning_maps_under_top():
     assert t.retuning_map == pytest.approx((1.699, -2.692, 3.944), abs=1e-2)
 
 
+def test_tuning_threads_an_explicit_standard_basis_like_the_default():
+    # passing the resolved standard primes is identical to passing nothing
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    assert (
+        service.tuning(state.mapping, domain_basis=state.domain_basis).generator_map
+        == service.tuning(state.mapping).generator_map
+    )
+
+
+def test_tuning_over_a_nonstandard_domain_uses_the_basis_elements():
+    import pytest
+
+    # over 2.3.13/5 the just map is the size of each (possibly nonprime) element,
+    # and the maps run over the d=3 elements / r=2 generators
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    t = service.tuning(state.mapping, domain_basis=state.domain_basis)
+    assert len(t.generator_map) == state.r and len(t.tuning_map) == state.d
+    assert t.just_map == pytest.approx(
+        (1200.0, 1901.955, 1200.0 * math.log2(13 / 5)), abs=1e-2
+    )
+
+
+def test_tuning_mode_changes_the_nonstandard_optimum():
+    import pytest
+
+    # 2.7/3.11/3 over the default TILT, minimax-C: the neutral and nonprime-based
+    # approaches give different optimal generators (library tests.m 3733-3762)
+    state = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]")
+    neutral = service.tuning(state.mapping, "TILT minimax-C", domain_basis=state.domain_basis)
+    nonprime = service.tuning(
+        state.mapping, "TILT minimax-C", domain_basis=state.domain_basis,
+        nonprime_approach="nonprime-based",
+    )
+    assert neutral.generator_map == pytest.approx((1194.291, 135.186), abs=1e-2)
+    assert nonprime.generator_map == pytest.approx((1192.399, 133.768), abs=1e-2)
+
+
 def test_interval_sizes_project_a_set_through_the_tuning():
     import pytest
 

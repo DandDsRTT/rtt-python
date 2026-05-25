@@ -201,14 +201,24 @@ def target_interval_monzos(ratios, d: int) -> Matrix:
     return tuple(tuple(int(x) for x in monzo) for monzo in _monzos(ratios, d))
 
 
-def tuning(mapping, scheme: str = DEFAULT_TUNING_SCHEME) -> Tuning:
-    """The temperament's prime maps and generator ranges (cents) under ``scheme`` —
-    no interval set."""
-    t = Temperament(_to_matrix(mapping), Variance.ROW)
-    tempered = optimize_tuning_map(t, scheme)
+def tuning(
+    mapping,
+    scheme: str = DEFAULT_TUNING_SCHEME,
+    domain_basis=None,
+    nonprime_approach: str = "",
+) -> Tuning:
+    """The temperament's maps and generator ranges (cents) under ``scheme`` — no
+    interval set. Over a nonstandard ``domain_basis`` the maps run over its (possibly
+    nonprime) elements; ``nonprime_approach`` ("" neutral, "nonprime-based",
+    "prime-based") picks how the optimization treats a nonprime basis (trait 7)."""
+    t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
+    spec = resolve_tuning_scheme(scheme)
+    if nonprime_approach:
+        spec = replace(spec, nonprime_basis_approach=nonprime_approach)
+    tempered = optimize_tuning_map(t, spec)
     just = get_just_tuning_map(t)
     return Tuning(
-        generator_map=optimize_generator_tuning_map(t, scheme),
+        generator_map=optimize_generator_tuning_map(t, spec),
         tuning_map=tempered,
         just_map=just,
         retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
