@@ -1767,6 +1767,20 @@ def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it():
     assert cells["just:prime:0"].y > off["just:prime:0"].y
 
 
+def test_tuning_ranges_box_grows_every_tile_in_the_tuning_row_uniformly():
+    # the box extends the generator-tuning-map tile; its sibling tuning-row tiles
+    # (primes/commas/targets) grow to the SAME height, so the row is one uniform band
+    # rather than one tall tile beside short ones
+    lay = _with(tuning_ranges=True)
+    blocks = {b.id: b for b in lay.blocks}
+    gens_h = blocks["block:tuning:gens"].h
+    for sib in ("block:tuning:primes", "block:tuning:commas", "block:tuning:targets"):
+        assert blocks[sib].h == gens_h, f"{sib} did not grow to match the ranges tile"
+    # and the whole row is taller than with the box off (the box reserves real height)
+    off = {b.id: b for b in _with(tuning_ranges=False).blocks}
+    assert gens_h > off["block:tuning:primes"].h
+
+
 def test_tuning_colorization_washes_every_tuning_row():
     # a full-width colour band backs each tuning/just/retuning/damage row (the mockup's
     # cyan box group): one wash + white base per row, spanning the whole row background

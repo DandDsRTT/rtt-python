@@ -76,8 +76,8 @@ _CHART_GRID = "#bbbbbb"  # light gridline / tick colour
 _RANGE_TITLE = "tuning ranges"  # the panel title, per the mockup
 _RANGE_CAP_W = 14  # I-beam cap width (px); the live-tuning tick is a shorter bar
 _RANGE_MARK_W = 1.6  # I-beam stem + cap thickness (px) — constant at any height (1:1 viewBox)
-_RANGE_PLOT_T = 20  # plot-area top (below the title and the top-cap labels)
-_RANGE_PLOT_B = 13  # plot-area bottom margin (room for the bottom-cap labels)
+_RANGE_PLOT_T = 25  # plot-area top (below the title + top-cap label; spaced off the title)
+_RANGE_PLOT_B = 12  # plot-area bottom margin (room for the bottom-cap label)
 _RANGE_FONT = 7  # cents-label / placeholder font size
 
 # Colorization wash colours, keyed by the box-group name the layout tags a wash with
@@ -159,7 +159,7 @@ _CSS = f"""
 /* the nested tuning-ranges box: a thin-bordered frame on the generator tuning map tile
    (per the mockup), above the grey tile but below the chart/selector cells */
 .rtt-block-boxed {{ position:absolute; z-index:2; background:#e8e8e8; border:1px solid #8a8a8a;
-             border-radius:3px; opacity:1;
+             opacity:1;
              transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
 .rtt-cell {{ position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
             opacity:1; transition:left {_T}, top {_T}, opacity {_T}; }}
@@ -244,7 +244,7 @@ _CSS = f"""
                   justify-content:center; gap:6px; line-height:1; }}
 .rtt-rangeopt {{ display:flex; align-items:center; gap:2px; cursor:pointer; user-select:none; }}
 .rtt-rangebox {{ width:9px; height:9px; border:1px solid #555; background:#fff; box-sizing:border-box; }}
-.rtt-rangeopt-on .rtt-rangebox {{ background:#000; }}  /* the selected mode's square is filled */
+.rtt-rangeopt-on .rtt-rangebox {{ background:#000; border-color:#000; }}  /* selected = a solid black square */
 .rtt-rangelabel {{ font-family:'Cambria',Georgia,serif; font-size:8.5px; color:#000; white-space:nowrap; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
@@ -650,7 +650,7 @@ def _range_chart(w, h, ranges, tunings=()):
 
     def label(cx, y, v):
         return (f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
-                f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">{v:.2f}</text>')
+                f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">{v:.3f}</text>')
 
     body = [title]
     for i, (lo, hi) in enumerate(ranges):
@@ -661,7 +661,7 @@ def _range_chart(w, h, ranges, tunings=()):
         # a vertical stem capped at the max (top) and min (bottom), labelled at each
         body.append(_rect(cx - hw, plot_top, _RANGE_MARK_W, plot_bot - plot_top))
         body.append(bar(cx, plot_top, cap_half) + bar(cx, plot_bot, cap_half))
-        body.append(label(cx, plot_top - 4, hi) + label(cx, plot_bot + 11, lo))
+        body.append(label(cx, plot_top - 4, hi) + label(cx, plot_bot + 9, lo))
         if i < len(tunings):  # the live tuning, ticked where it falls within [min, max]
             frac = min(1.0, max(0.0, (hi - tunings[i]) / (hi - lo)))
             body.append(bar(cx, plot_top + frac * (plot_bot - plot_top), tick_half))

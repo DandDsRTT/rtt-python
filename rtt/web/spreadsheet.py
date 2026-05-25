@@ -53,8 +53,8 @@ SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when sym
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
 RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
-RANGE_MODE_H = 16  # height of the monotone/tradeoff range-mode selector (one row of square indicators) below the chart
-RANGE_GAP = 3  # gap between the ranges chart and its mode selector
+RANGE_MODE_H = 13  # height of the monotone/tradeoff range-mode selector (one row of square indicators) below the chart
+RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -624,8 +624,12 @@ def build(state, settings=None, collapsed=None,
         row_label[key] = label
         row_collapsible[key] = collapsible
         tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + pre + ptext
-        # the tuning row reserves the nested ranges box below its tile, so following rows clear it
-        y += tile_h[key] + GAP + (gtm_extra if key == "tuning" else 0)
+        # the tuning row reserves the nested ranges box below its values: this grows EVERY
+        # tile in the row to the same height (so the row is one uniform band) and pushes the
+        # rows below clear of it
+        if key == "tuning":
+            tile_h[key] += gtm_extra
+        y += tile_h[key] + GAP
     total_h = y
 
     def row_open(key):
@@ -885,7 +889,9 @@ def build(state, settings=None, collapsed=None,
     if gtm_chart:
         chosen = tun.monotone_generator_range if range_mode == "monotone" else tun.tradeoff_generator_range
         gx, gw = col_x["gens"], col_w["gens"]
-        cy = tile_top["tuning"] + tile_h["tuning"] + RANGE_GAP  # below the tile's values + caption
+        # the chart nests below the tile's values + caption (tile_h now includes gtm_extra
+        # for the box itself, so back it out to find the values' bottom)
+        cy = tile_top["tuning"] + tile_h["tuning"] - gtm_extra + RANGE_GAP
         cells.append(CellBox("rangechart:tuning:gens", gx, cy, gw, RANGE_CHART_H, "rangechart",
                              ranges=tuple(chosen) if chosen is not None else (),
                              values=tuple(tun.generator_map)))  # the live tuning, marked within each range
@@ -1018,28 +1024,28 @@ def build(state, settings=None, collapsed=None,
     # animates it shrinking away to nothing — leaving only the band's gridline,
     # never a leftover grey strip. Every tile is simply its row band's full height
     # (the d-tall monzo matrices live in the d-tall interval-vectors row).
-    def panel_rect(ckey, rkey, extra_h=0):
+    def panel_rect(ckey, rkey):
         # a folded tile collapses both ways at once, so it shrinks to a point at its
-        # centre — like a row+column collapse confined to this one tile. ``extra_h``
-        # grows the panel past its row band — the generator tuning map tile uses it to
-        # enclose the ranges chart nested below its values.
+        # centre — like a row+column collapse confined to this one tile. tile_h already
+        # includes the tuning row's ranges-box reservation, so every tile in that row
+        # gets the same (extended) height here.
         tile_c = f"tile:{rkey}:{ckey}" in collapsed
         col_c = f"col:{ckey}" in collapsed or tile_c
         row_c = f"row:{rkey}" in collapsed or tile_c
-        cw, ch, cx, cy = col_w[ckey], tile_h[rkey] + extra_h, col_x[ckey], tile_top[rkey]
+        cw, ch, cx, cy = col_w[ckey], tile_h[rkey], col_x[ckey], tile_top[rkey]
         w, px = (0, 0) if col_c else (cw, PAD)
         h, py = (0, 0) if row_c else (ch, PAD)
         bx = cx + cw / 2 if col_c else cx
         by = cy + ch / 2 if row_c else cy
         return bx - px, by - py, w + 2 * px, h + 2 * py
 
-    def panel(bid, ckey, rkey, extra_h=0):
+    def panel(bid, ckey, rkey):
         if ckey not in col_x or rkey not in row_y:
             return
-        blocks.append(Block(bid, *panel_rect(ckey, rkey, extra_h)))
+        blocks.append(Block(bid, *panel_rect(ckey, rkey)))
 
     for bid, rkey, ckey in tiles:
-        panel(bid, ckey, rkey, gtm_extra if (rkey, ckey) == ("tuning", "gens") else 0)
+        panel(bid, ckey, rkey)
     # the nested tuning-ranges box: a thin-bordered frame around the chart + selector,
     # appended after the tile panels so it layers on top of the generator tuning map tile
     if gtm_box is not None:
