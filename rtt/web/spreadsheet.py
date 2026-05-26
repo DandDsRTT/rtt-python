@@ -1576,10 +1576,11 @@ def build(state, settings=None, collapsed=None,
         if show_captions:
             kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
             underlines = ((name.index(kw), 1),) if kw else ()
-            # the caption hugs its tile's content width (so it never overhangs into
-            # empty space); a name wraps within that width
-            ch = _wrap_lines(name, col_w[ckey]) * CAPTION_LINE
-            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], ch,
+            # the caption spans the row's whole caption band (row_cap — the tallest wrapped
+            # name in the row), and the CSS centres the text within it. So a one-line name
+            # sits centred (half a blank line above and below) against a two-line sibling,
+            # rather than hugging the cells with all the slack below.
+            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], row_cap[rkey],
                                  "caption", text=name, underlines=underlines))
         # the "units: …" line sits below the caption band (independent of names/symbols),
         # reading the box's entry from UNITS — bold-upright unit glyphs via _math_html

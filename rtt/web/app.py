@@ -237,13 +237,14 @@ _CSS = f"""
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; line-height:1.1; }}
 .rtt-val {{ font-size:{_CELL_FONT}px; color:#000; }}
-/* the in-tile quantity name: small (≈0.2 of the cell, per the mockup) and wrapping
-   within its column — the tile is sized tall enough to hold every wrapped line, so
-   a long name on a narrow column never spills out of bounds. It top-aligns in its
-   band so short names hug the cells when a sibling column's name wraps taller. */
-.rtt-caption {{ width:100%; text-align:center; font-size:9px; line-height:10px; color:#333;
-               overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }}
-.rtt-caption-cell {{ align-items:flex-start; }}
+/* the in-tile quantity name: small (≈0.2 of the cell, per the mockup), capped at two
+   lines (the column is widened to fit) and balanced across them by text-wrap:balance —
+   an even split, not a long first line and a single trailing word. It centres in the
+   row's caption band (the cell is the band's full height), so a one-line name sits
+   half a line below a two-line sibling's top rather than hugging the cells. */
+.rtt-caption {{ width:100%; text-align:center; text-wrap:balance; font-size:9px; line-height:10px;
+               color:#333; overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }}
+.rtt-caption-cell {{ align-items:center; }}
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
    so it reads instead of hiding under the glyph */

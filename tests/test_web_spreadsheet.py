@@ -1345,6 +1345,20 @@ def test_min_width_for_lines_floors_a_column_to_keep_a_name_within_two_lines():
         assert spreadsheet._wrap_lines(name, 2 * spreadsheet.BRACKET_W + spreadsheet.COL_W) > 2
 
 
+def test_short_captions_span_the_full_band_so_css_can_centre_them():
+    # in a row mixing one- and two-line names, every caption cell is the row's full
+    # caption-band height (the tallest name's), aligned at the band top — so the CSS can
+    # vertically centre a short name (half a blank line above and below) against a taller
+    # sibling, rather than the short name hugging the cells with all the slack below.
+    cells = {c.id: c for c in _with(names=True).cells}
+    short = cells["caption:tuning:primes"]  # "tuning map" — one line in its column
+    tall = cells["caption:tuning:commas"]   # "tempered ... (made to vanish!)" — two lines
+    assert spreadsheet._wrap_lines(short.text, short.w) == 1
+    assert spreadsheet._wrap_lines(tall.text, tall.w) == 2
+    assert short.h == tall.h == spreadsheet._wrap_lines(tall.text, tall.w) * spreadsheet.CAPTION_LINE
+    assert short.y == tall.y  # both start at the band top; the CSS centres within the band
+
+
 def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():
     on = {c.id: c for c in _with(names=True).cells}
     off = {c.id: c for c in _with(names=False).cells}
