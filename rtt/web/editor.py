@@ -35,6 +35,10 @@ class Editor:
         # Display data the user curates, not part of the temperament, so (like the
         # tuning/target selections) it lives outside the undo stack.
         self.interest_monzos: list[tuple[int, ...]] = []
+        # Held intervals: the optimization's held-just constraints, a user-built set of
+        # monzos edited in the held-intervals column (like the intervals of interest). The
+        # tuning holds each exactly just; a display/constraint choice, so outside undo.
+        self.held_monzos: list[tuple[int, ...]] = []
         # Which generator tuning range the ranges chart shows — diamond-monotone or
         # diamond-tradeoff. A display choice like the two above, so it sits outside undo.
         self.range_mode: str = "monotone"
@@ -127,6 +131,19 @@ class Editor:
     def set_interest_monzos(self, monzos) -> None:
         """Replace the interest set from the edited vector cells."""
         self.interest_monzos = [tuple(int(x) for x in m) for m in monzos]
+
+    def add_held(self) -> None:
+        """Append a blank held interval (a zero monzo = 1/1) for the user to fill in —
+        the held-intervals column's + control, mirroring add_interest."""
+        self.held_monzos.append((0,) * self.state.d)
+
+    def remove_held(self, i: int) -> None:
+        """Drop the i-th held interval (each one carries its own − control)."""
+        del self.held_monzos[i]
+
+    def set_held_monzos(self, monzos) -> None:
+        """Replace the held-interval set from the edited vector cells."""
+        self.held_monzos = [tuple(int(x) for x in m) for m in monzos]
 
     def try_edit_mapping_text(self, text: str) -> bool:
         """Parse an EBK map string (honouring a domain-basis prefix, so a nonstandard

@@ -281,15 +281,22 @@ def tuning(
     scheme: str = DEFAULT_TUNING_SCHEME,
     domain_basis=None,
     nonprime_approach: str = "",
+    held=(),
 ) -> Tuning:
     """The temperament's maps and generator ranges (cents) under ``scheme`` — no
     interval set. Over a nonstandard ``domain_basis`` the maps run over its (possibly
     nonprime) elements; ``nonprime_approach`` ("" neutral, "nonprime-based",
-    "prime-based") picks how the optimization treats a nonprime basis (trait 7)."""
+    "prime-based") picks how the optimization treats a nonprime basis (trait 7).
+    ``held`` is the user's held-interval constraints (ratio strings from the held column):
+    the optimization holds each exactly just, on top of any the scheme itself holds."""
     t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
     if nonprime_approach:
         spec = replace(spec, nonprime_basis_approach=nonprime_approach)
+    if held:  # fold the user's held intervals into the scheme's own (its bare tokens, brace-free)
+        own = (spec.held_intervals or "").strip().strip("{}").strip()
+        parts = ([own] if own else []) + [r for r in held]
+        spec = replace(spec, held_intervals="{" + ", ".join(parts) + "}")
     tempered = optimize_tuning_map(t, spec)
     just = get_just_tuning_map(t)
     return Tuning(

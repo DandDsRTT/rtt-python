@@ -1263,6 +1263,20 @@ def index() -> None:
         editor.set_interest_monzos(monzos)
         render()
 
+    def on_held_change():
+        # the held intervals are edited as monzos in the interval-vectors row, like the
+        # intervals of interest; read the d-tall columns and replace the held set
+        if building[0]:
+            return
+        d, nh = editor.state.d, len(editor.held_monzos)
+        if any(f"cell:held:{p}:{i}" not in inputs for i in range(nh) for p in range(d)):
+            return  # the held cells aren't currently shown (folded away / optimization off)
+        monzos = [[_parse_int(inputs[f"cell:held:{p}:{i}"].value) for p in range(d)] for i in range(nh)]
+        if any(v is None for m in monzos for v in m):
+            return
+        editor.set_held_monzos(monzos)
+        render()
+
     def on_ptext_edit(cid, value):
         # the editable plain-text duals: a valid EBK string drives the grid (like
         # typing in a matrix cell); an unparseable one reddens the box and is ignored
@@ -1391,6 +1405,10 @@ def index() -> None:
             elif cb.kind == "interestcell":  # an editable interval of interest monzo component
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
+                    .props("dense borderless").classes("rtt-cellinput")
+            elif cb.kind == "heldcell":  # an editable held-interval monzo component (constrains the tuning)
+                wrap.classes("rtt-cell-input")
+                inputs[cb.id] = ui.input(on_change=lambda e: on_held_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind in ("prime", "formcell"):  # a read-only bordered cell (domain prime / form-matrix entry)
                 with ui.element("div").classes("rtt-white"):
@@ -1533,6 +1551,13 @@ def index() -> None:
             elif cb.kind == "interest_plus":
                 ui.button("+", on_click=lambda: act(editor.add_interest), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
+            elif cb.kind == "held_minus":  # one per held interval; its − drops just that one
+                wrap.classes("rtt-minus-zone")
+                ui.button("-", on_click=lambda _=None, idx=cb.comma: act(lambda: editor.remove_held(idx)), color=None) \
+                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn")
+            elif cb.kind == "held_plus":
+                ui.button("+", on_click=lambda: act(editor.add_held), color=None) \
+                    .props("unelevated dense no-caps square").classes("rtt-btn")
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
@@ -1561,7 +1586,7 @@ def index() -> None:
         st = editor.state
         lay = spreadsheet.build(st, settings, collapsed, editor.tuning_scheme, editor.target_spec,
                                 interest=editor.interest_monzos, range_mode=editor.range_mode,
-                                pending_comma=editor.pending_comma)
+                                pending_comma=editor.pending_comma, held_monzos=editor.held_monzos)
         last_lay[0] = lay  # the master toggle reads this layout's foldable bands on click
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
@@ -1639,6 +1664,8 @@ def index() -> None:
                                       remove="" if cb.pending else "rtt-pending")
             elif cb.kind == "interestcell":
                 inputs[cb.id].value = cb.text  # the normalized monzo component build computed
+            elif cb.kind == "heldcell":
+                inputs[cb.id].value = cb.text  # the normalized held monzo component build computed
             elif cb.kind == "ptext":  # read-only value: keep its text and shrink-to-fit font in sync
                 labels[cb.id].set_text(cb.text)
                 labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")

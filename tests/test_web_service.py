@@ -115,6 +115,20 @@ def test_generator_detempering_vectors():
     assert service.generator_detempering([[1, 1, 0], [0, 1, 4]]) == ((1, 0, 0), (-1, 1, 0))
 
 
+def test_tuning_holds_user_specified_intervals_just():
+    # the held-intervals column feeds service.tuning: an interval passed as held comes out
+    # tuned exactly justly (zero error), the whole tuning reoptimized around the constraint
+    tun = service.tuning([[1, 1, 0], [0, 1, 4]], held=("3/2",))
+    fifth = (-1, 1, 0)  # 3/2
+    tempered = sum(tun.tuning_map[p] * fifth[p] for p in range(3))
+    just = sum(tun.just_map[p] * fifth[p] for p in range(3))
+    assert abs(tempered - just) < 1e-6
+    # without the constraint the default minimax tuning does NOT hold the fifth pure
+    free = service.tuning([[1, 1, 0], [0, 1, 4]])
+    assert abs(sum(free.tuning_map[p] * fifth[p] for p in range(3))
+               - sum(free.just_map[p] * fifth[p] for p in range(3))) > 1e-6
+
+
 def test_held_intervals_come_from_the_tuning_scheme():
     # the held intervals (tuned exactly justly) are trait 0 of the tuning scheme,
     # surfaced as ratios. The shipped minimax-S (TOP) holds nothing; a held-octave

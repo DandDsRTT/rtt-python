@@ -2266,7 +2266,7 @@ def test_optimization_power_nests_inside_the_damage_tile_panel():
     assert panel.y <= pw.y and pw.y + pw.h <= panel.y + panel.h
 
 
-def test_optimization_on_adds_a_held_intervals_column():
+def test_optimization_on_adds_an_addable_held_intervals_column():
     on = {c.id: c for c in _with(optimization=True).cells}
     off = {c.id for c in _with(optimization=False).cells}
     # the optimization box's held-interval constraints get their own column...
@@ -2274,37 +2274,29 @@ def test_optimization_on_adds_a_held_intervals_column():
     assert "header:held" not in off
     # ...riding between the commas and the target-intervals columns (per the mockup)
     assert on["header:commas"].x < on["header:held"].x < on["header:targets"].x
+    # ...and a + to add the first held interval even when the column is empty, exactly
+    # like the other-intervals-of-interest column
+    assert "held_plus" in on
+    assert "held_plus" not in off
 
 
-def test_optimization_held_interval_count():
-    # the held-interval count h rides the counts row over the held column, like the
-    # rank/nullity counts. The shipped minimax-S holds nothing (h = 0); a held-octave
-    # scheme (CTE) holds the octave (h = 1).
-    on = {c.id: c for c in _with(optimization=True, counts=True).cells}
-    assert on["count:held"].text == "ℎ = 0"  # ℎ = 0 (the math-italic h is the Planck glyph)
-    assert "count:held" not in {c.id for c in _with(optimization=True, counts=False).cells}
+def test_held_intervals_are_a_user_editable_counted_interval_list():
+    # the held column is a user-edited monzo list (like the intervals of interest): each
+    # held interval heads its column as a derived ratio, with EDITABLE monzo cells below
+    # and its own − to remove it; the held count h tracks how many there are
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["optimization"], s["counts"] = True, True
-    cte = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="CTE").cells}
-    assert cte["count:held"].text == "ℎ = 1"  # ℎ = 1 — CTE holds the octave just
-
-
-def test_held_intervals_render_as_an_interval_list_like_the_targets():
-    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    s = settings.defaults()
-    s["optimization"] = True
-    lay = spreadsheet.build(base, s, tuning_scheme="CTE")  # CTE holds the octave
-    cells = {c.id: c for c in lay.cells}
-    # the held octave heads its column as a ratio (quantities row)...
-    assert cells["held:0"].text == "2/1"
-    # ...and fills the interval-vectors column as its vector [1 0 0⟩, like a target
-    assert [cells[f"cell:vec:held:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
-    # the column rides its own gridline axis like every other column
-    assert "trunk:held" in {ln.id for ln in lay.lines}
-    # with nothing held (the default minimax-S), the column is bare — no interval tiles
-    bare = {c.id for c in _with(optimization=True).cells}
-    assert not any(c.startswith(("held:", "cell:vec:held:")) for c in bare)
+    cells = {c.id: c for c in spreadsheet.build(base, s, held_monzos=[(-1, 1, 0)]).cells}
+    assert cells["held:0"].text == "3/2"               # the derived ratio (3/2) heads the column
+    assert cells["cell:held:0:0"].kind == "heldcell"   # the monzo cells are editable inputs
+    assert [cells[f"cell:held:{p}:0"].text for p in range(3)] == ["-1", "1", "0"]
+    assert "held_minus:0" in cells                     # each held interval is removable
+    assert cells["count:held"].text == "ℎ = 1"         # h = 1 (Planck-glyph math-italic h)
+    # empty by default: no held interval tiles, count h = 0
+    empty = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert empty["count:held"].text == "ℎ = 0"
+    assert not any(c.startswith(("held:", "cell:held:")) for c in empty)
 
 
 def test_generator_detempering_column_holds_the_d_matrix():

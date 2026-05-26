@@ -120,6 +120,15 @@ async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
     assert _cell_text(user, "cell:mapped:1:6") == "4"  # back to meantone's mapped list
 
 
+async def test_optimization_renders_the_held_column_and_its_add_control(user: User) -> None:
+    # enabling optimization shows the held column with a + (rendered even when empty) for
+    # adding the first held interval — driving the held_plus render branch. The editable
+    # heldcell branch mirrors the intervals-of-interest cell; the fixture catches any error.
+    await _enable(user, "optimization")
+    await user.should_see(marker="header:held")
+    await user.should_see(marker="held_plus")
+
+
 async def test_enabling_audio_renders_speakers_and_control_banks(user: User) -> None:
     # one click adds the two audio rows. Each pitch is a real speaker button, and each tile
     # carries its four-control bank (waveform / play-mode / hold / 1-1) as glyph elements —

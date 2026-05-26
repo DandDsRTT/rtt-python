@@ -452,10 +452,10 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
 # plain text on leaves just the inline string — the two value views are independent.)
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell",
-    "vec", "tval", "mathexpr", "interestcell", "formcell",
+    "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar",
     "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
-    "interest_minus", "interest_plus",
+    "interest_minus", "interest_plus", "held_minus", "held_plus",
 })
 # "quantities" (general) is gentler than gridded values: it keeps every cell box
 # AND the EBK marks framing them, and only *blanks the numbers* of the body
@@ -465,7 +465,7 @@ GRIDDED_KINDS = frozenset({
 # to "domain_quantities"; the just row's "mathexpr" log₂ form is not a bare number,
 # so math_expressions' own show_value logic trims it.)
 BLANKED_NUMBER_KINDS = frozenset({
-    "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell", "formcell",
+    "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell", "formcell", "heldcell",
 })
 
 
@@ -622,7 +622,7 @@ def _bus_span(positions):
 
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
-          pending_comma=None) -> Layout:
+          pending_comma=None, held_monzos=()) -> Layout:
     if settings is None:
         settings = _default_settings()
     if tuning_scheme is None:
@@ -696,7 +696,13 @@ def build(state, settings=None, collapsed=None,
     rc = len(canon_mapping)  # canonical rank (== r for a valid temperament)
     form_M = service.form_matrix(state.mapping)  # F: the generator form matrix (r×r), F·M = canonical
     target_vectors = service.target_interval_monzos(targets, d, elements)  # k monzos, each d-tall
-    tun = service.tuning(state.mapping, tuning_scheme, elements, approach)  # maps over the elements
+    # held intervals: the optimization box's held-just constraints — user-edited monzos in the
+    # held column (like the intervals of interest). The tuning holds each exactly just, so
+    # they are folded into service.tuning below. Present only with the optimization sub-control.
+    held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in held_monzos) if show_optimization else ()
+    nh = len(held)
+    held_ratios = service.comma_ratios(held, elements)  # monzo -> "num/den" (the shared renderer)
+    tun = service.tuning(state.mapping, tuning_scheme, elements, approach, held=held_ratios)  # maps over the elements
     target_sizes = service.interval_sizes(tun, targets, elements)
     target_weights = service.interval_weights(state.mapping, tuning_scheme, targets)  # the damage row's diag(𝒘)
     comma_ratios = service.comma_ratios(state.comma_basis, elements)
@@ -745,13 +751,9 @@ def build(state, settings=None, collapsed=None,
         ("block:just_audio:interest", "just_audio", "interest"),
         ("block:mapped_audio:interest", "mapped_audio", "interest"),
     )
-    # the optimization sub-control adds its interval-list columns: the held-interval
-    # constraints (count h), an interval-list column shaped like the targets, drawn from
-    # the current tuning scheme. Empty for the shipped minimax-S (which holds nothing), so
-    # like an empty interest column it then declares no tiles — just a header and axis.
-    held = service.held_intervals(tuning_scheme, d) if show_optimization else ()
-    nh = len(held)
-    held_vectors = service.target_interval_monzos(held, d)
+    # the held-interval column's tiles (computed above): a user-editable interval list, like
+    # the intervals of interest. Empty by default, so — like an empty interest column — it
+    # then declares no tiles, only its header, axis and the + control to add the first one.
     held_tiles = () if not held else (
         ("block:held", "quantities", "held"),
         ("block:vec:held", "vectors", "held"),
@@ -892,7 +894,7 @@ def build(state, settings=None, collapsed=None,
         # + on the panel's right edge (seated below). Reserve an extra FRAME_GAP of tile
         # overhang on EACH side, so the + clears the edge and the tile stays centred on the
         # gridline (panel_rect draws the overhang).
-        in_tile_plus = (key in ("primes", "commas", "interest") and not collapsed_col
+        in_tile_plus = (key in ("primes", "commas", "interest", "held") and not collapsed_col
                         and content_w[key] > 2 * BRACKET_W)
         if in_tile_plus:
             x += FRAME_GAP  # the left overhang
@@ -940,7 +942,7 @@ def build(state, settings=None, collapsed=None,
     # widened column (commas) keeps it on the edge rather than drifting it inward with the
     # re-centred content. Equals the old content-relative seat wherever tile == content (every
     # un-widened column). An empty interest set has no cells, so its lone + centres on the gridline.
-    for key in ("primes", "commas", "interest"):
+    for key in ("primes", "commas", "interest", "held"):
         if not col_open(key):
             continue
         if key in plus_cols:
@@ -1255,9 +1257,16 @@ def build(state, settings=None, collapsed=None,
         if tile_open("quantities", "targets"):
             for j in range(k):
                 cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
-        if tile_open("quantities", "held"):  # the held-interval constraints, as ratios (read-only)
+        if tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
             for i in range(nh):
-                cells.append(CellBox(f"held:{i}", held_left(i), qy, COL_W, ROW_H, "target", text=held[i]))
+                # the derived ratio (read-only, from the editable monzo) heads each column
+                cells.append(CellBox(f"held:{i}", held_left(i), qy, COL_W, ROW_H, "commaratio", text=held_ratios[i], comma=i))
+                # each held interval carries its own − (a hover affordance over its header)
+                cells.append(CellBox(f"held_minus:{i}", held_left(i), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "held_minus", comma=i))
+        # the held + rides col_open (like interest's): an empty-but-open held column shows its
+        # + so the first held interval can be added, even with no tile yet
+        if col_open("held") and row_open("quantities"):
+            cells.append(CellBox("held_plus", ctrl_x["held"], qy + (ROW_H - BTN) // 2, BTN, BTN, "held_plus"))
         if tile_open("quantities", "interest"):  # the user's other intervals of interest
             for i in range(mi):
                 # the derived ratio (read-only, from the monzo) heads each column, like a comma's
@@ -1339,10 +1348,10 @@ def build(state, settings=None, collapsed=None,
             for j in range(k):
                 for p in range(d):
                     cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "vec", text=str(target_vectors[j][p]), unit=cell_unit("vectors", "targets", prime=p)))
-        if tile_open("vectors", "held"):  # the held basis as vectors, like the target interval list
+        if tile_open("vectors", "held"):  # the held intervals as editable monzos, like the intervals of interest
             for i in range(nh):
                 for p in range(d):
-                    cells.append(CellBox(f"cell:vec:held:{i}:{p}", held_left(i), vec_top(p), COL_W, ROW_H, "vec", text=str(held_vectors[i][p]), unit=cell_unit("vectors", "held", prime=p)))
+                    cells.append(CellBox(f"cell:held:{p}:{i}", held_left(i), vec_top(p), COL_W, ROW_H, "heldcell", text=str(held[i][p]), prime=p, comma=i, unit=cell_unit("vectors", "held", prime=p)))
         if tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
             for i in range(r):
                 for p in range(d):
