@@ -461,12 +461,26 @@ def test_collapsed_column_keeps_its_title_at_a_width_that_fits_it():
 
 def test_a_collapsed_multiline_title_strip_fits_its_widest_line():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    interest = {c.id: c for c in spreadsheet.build(base, collapsed={"col:interest"}).cells}["header:interest"]
-    # the title keeps its full (explicitly "\n"-broken) text and folds to a strip sized to
-    # its widest line, so a three-word title stacks instead of forcing a ~226px one-line ribbon
+    # a populated interest column (open wider than its title) folds to its title strip: sized
+    # to the widest "\n"-broken line, so a three-word title stacks instead of a ~226px ribbon
+    interest = {c.id: c for c in spreadsheet.build(
+        base, collapsed={"col:interest"}, interest=[(0, 0, 0)] * 5).cells}["header:interest"]
     assert interest.text == "other intervals\nof interest"
     assert interest.w == len("other intervals") * 8 + 10  # the widest line, not all 27 chars
     assert interest.w < len("other intervals of interest") * 8 + 10  # far narrower than one line
+
+
+def test_collapsing_a_spine_column_never_widens_it():
+    # a spine (quantities/units) is one COL_W wide open — narrower than its long title, which
+    # overhangs it. Collapsing it must NOT balloon it out to the title's strip width: collapsing
+    # a column should never make it wider. It stays a COL_W strip with the title still overhanging.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults(); s["domain_units"] = True
+    opened = {c.id: c for c in spreadsheet.build(base, s).cells}
+    collapsed = {c.id: c for c in spreadsheet.build(base, s, collapsed={"col:quantities", "col:units"}).cells}
+    for key in ("quantities", "units"):
+        assert collapsed[f"header:{key}"].w <= opened[f"header:{key}"].w  # collapse never widens
+        assert collapsed[f"header:{key}"].w == spreadsheet.COL_W  # ...stays a single-COL_W strip
 
 
 def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline():

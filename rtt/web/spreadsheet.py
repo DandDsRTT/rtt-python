@@ -782,8 +782,8 @@ def build(state, settings=None, collapsed=None,
     # intervals are the tuning's (shown with tuning_boxes) -- turning a box off
     # takes its whole column with it, including the other family's cells that ride
     # in it (e.g. the tuning maps over primes, or the mapped target interval list
-    # over targets). A collapsed column folds to a strip just wide enough to keep
-    # its (horizontal) title readable, so it never overflows onto its neighbours.
+    # over targets). A collapsed column folds to a strip sized to read its title, but never
+    # wider than it was open — so collapsing a column only ever narrows it (see col_w below).
     # The domain/comma + controls ride just right of their blocks when open; each −
     # is a hover affordance on the removable highest-prime / last-comma column.
     # the domain column reads "domain elements" over a nonstandard subgroup (whose basis
@@ -872,17 +872,21 @@ def build(state, settings=None, collapsed=None,
         if not present:
             continue
         collapsed_col = f"col:{key}" in collapsed
+        hug_w = max(natural, _caption_floor(key))  # the open footprint: hugs content (+ caption room)
         # The content (value cells + their bracket gutters) is the natural width. The column
         # footprint (col_w) hugs that content, or widens where a long caption needs the room;
         # it does NOT reserve room for a wider title. A title wider than its column (the
         # "quantities"/"units" spines, the long interest header) overhangs it instead, rendered
         # without wrapping and centred on the column gridline. The grey tile fills the footprint,
-        # with content centred within it (see content_x). A collapsed column folds to a strip.
+        # with content centred within it (see content_x).
         if collapsed_col:
-            col_w[key] = content_w[key] = _title_w(col_header[key])
+            # Folded to a title strip — sized to read the (widest line of the) title, but capped
+            # at the open footprint so collapsing never WIDENS a column: one already narrower than
+            # its title (a spine) keeps its width, the title overhanging, instead of ballooning out.
+            col_w[key] = content_w[key] = min(hug_w, _title_w(col_header[key]))
         else:
             content_w[key] = natural
-            col_w[key] = max(natural, _caption_floor(key))  # the footprint widens for a long name
+            col_w[key] = hug_w  # the footprint widens for a long caption
         col_collapsible[key] = collapsible
         # a +-bearing column (an open domain/comma/interest set with cells) carries an in-tile
         # + on the panel's right edge (seated below). Reserve an extra FRAME_GAP of tile
