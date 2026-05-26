@@ -59,6 +59,7 @@ RANGE_MODE_H = 13  # height of the monotone/tradeoff range-mode selector (one ro
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
 OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
+OPT_PAD_B = 4  # bottom margin below the captions (the box hugs the contents vertically too)
 OPT_PAD_L = 8  # left margin for the title and the control group (off the box's left edge)
 OPT_PAD_R = 8  # right margin: the box border hugs the controls, leaving only this margin
 OPT_TITLE_GAP = 6  # bottom margin under the title, before the control row
@@ -1061,9 +1062,9 @@ def build(state, settings=None, collapsed=None,
     # the optimization box: a title strip over two value-over-label columns (the objective
     # ⟪𝐝⟫ₚ and the editable power 𝑝, each a value above its symbol; the power also captioned
     # "optimization power") plus the optimize button, all packed left. Its height = a title
-    # inset + the title + a title gap + the value row + the symbol row + a two-line caption band.
+    # inset + the title + a title gap + the value row + the symbol row + a one-line caption + pad.
     opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
-                  + 2 * CAPTION_LINE) if opt_ctrl else 0)
+                  + CAPTION_LINE + OPT_PAD_B) if opt_ctrl else 0)
     slope_ctrl = (show_alt_complexity and "row:weight" not in collapsed
                   and col_open("targets") and "tile:weight:targets" not in collapsed)
     slope_extra = (RANGE_GAP + PRESELECT_H) if slope_ctrl else 0
@@ -1687,8 +1688,8 @@ def build(state, settings=None, collapsed=None,
         title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
         content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP  # a gap below the title
         sym_top = content_top + ROW_H            # the symbol/hint row, under the values
-        cap_top = sym_top + SYMBOL_H             # the caption row, under the symbols
-        body_h = ROW_H + SYMBOL_H + 2 * CAPTION_LINE  # the value+symbol+caption stack height
+        cap_top = sym_top + SYMBOL_H             # the caption row (one line), under the symbols
+        body_h = ROW_H + SYMBOL_H + CAPTION_LINE + OPT_PAD_B  # value + symbol + one-line caption + pad
         # the three controls, packed close at the left (a tight gridded row): min damage | ∞ | optimize
         obj_x = ox + OPT_PAD_L
         pow_x = obj_x + COL_W + OPT_COL_GAP
@@ -1711,13 +1712,13 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
                              "symbol", text="𝑝"))
         cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
-                             OPT_POW_CAP_W, 2 * CAPTION_LINE, "caption", text="optimization power"))
+                             OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power"))
         # the optimize button: a normal ROW_H-tall rectangle wide enough to seat the "double-click
         # to lock" hint on one line beneath it. It single-clicks to optimize once, double-clicks to
         # lock auto-optimize; app.py owns that behaviour + the lock visual
         cells.append(CellBox("optimization:button", btn_x, content_top, OPT_BTN_W, ROW_H, "optimize",
                              text="optimize"))
-        cells.append(CellBox("optimization:button:hint", btn_x, sym_top, OPT_BTN_W, 2 * CAPTION_LINE,
+        cells.append(CellBox("optimization:button:hint", btn_x, sym_top, OPT_BTN_W, CAPTION_LINE,
                              "caption", text="double-click to lock"))
         opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
 

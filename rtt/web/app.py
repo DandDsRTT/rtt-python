@@ -464,9 +464,10 @@ _CSS = f"""
    overflowing into the gutters) like the column title, rather than wrapping tall */
 .rtt-caption-overhang {{ white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }}
 .rtt-caption-cell {{ align-items:center; }}
-/* the optimization box's captions ("optimization power", "double-click to lock") stay on ONE
-   line (centred under their control, overflowing the empty rows below if need be) */
-.rtt-opt-cap {{ white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }}
+/* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power", "double-click
+   to lock") stay on ONE line — centred under their control, overflowing sideways if need be —
+   so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
+.rtt-opt-1line {{ white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }}
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
    so it reads instead of hiding under the glyph */
@@ -1640,7 +1641,9 @@ def index() -> None:
                 rangeopts[cb.id] = opts
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
-                math_cells[cb.id] = ui.html("").classes("rtt-symbol")  # content set in render()
+                # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off)
+                cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
+                math_cells[cb.id] = ui.html("").classes(cls)  # content set in render()
             elif cb.kind == "units":  # the per-box units line and the domain-units row/col labels
                 wrap.classes("rtt-units-cell")
                 math_cells[cb.id] = ui.html("").classes("rtt-units")  # content set in render()
@@ -1648,7 +1651,7 @@ def index() -> None:
                 wrap.classes("rtt-caption-cell")
                 cls = "rtt-caption"
                 if cb.id.startswith("optimization:"):
-                    cls += " rtt-opt-cap"  # the optimization box's captions stay on one line (no wrap)
+                    cls += " rtt-opt-1line"  # the optimization box's captions stay on one line (no wrap)
                 elif cb.id.endswith(":interest"):
                     cls += " rtt-caption-overhang"  # single-line overhang (the narrow column)
                 captions[cb.id] = ui.html("").classes(cls)  # content set in render()

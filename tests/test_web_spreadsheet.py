@@ -2453,6 +2453,10 @@ def test_optimization_box_lays_out_objective_power_and_button_in_columns():
     assert on["optimization:button"].h == on["optimization:objective"].h
     assert on["optimization:button:hint"].text == "double-click to lock"
     assert on["optimization:button:hint"].y > on["optimization:button"].y
+    # the captions occupy a single line (so "optimization power" sits right under 𝑝, not a
+    # two-line band that floats it lower), and so does the hint
+    assert on["optimization:power:caption"].h == spreadsheet.CAPTION_LINE
+    assert on["optimization:button:hint"].h == spreadsheet.CAPTION_LINE
     # the title sits inside the box (below its top border) with a gap before the controls
     assert on["optimization:title"].y > box.y
     assert on["optimization:objective"].y > on["optimization:title"].y + on["optimization:title"].h
