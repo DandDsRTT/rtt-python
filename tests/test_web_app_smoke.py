@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import rtt.web.app as app
+from rtt.web import service
 from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
 from rtt.web.layout import Line
@@ -222,6 +223,22 @@ def test_shared_axis_gridlines_render_two_pixels_thick():
     assert "border-top:2px solid #e0e0e0" in app._CSS   # the horizontal gridlines
 
 
+def test_curtain_rects_cover_the_frozen_bands_to_the_board_edge():
+    # the occlusion curtains hide the scrolling body where it slides under the frozen
+    # title bands. Each anchors at the board's top-left and reaches out over the #c0c0c0
+    # margin (_PAD) so nothing leaks past the band edges: the top curtain spans the whole
+    # width down to the column-title band's bottom, the left curtain the whole height out
+    # to the row-title band's right, the corner just the overlap of both.
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))))
+    P = app._PAD
+    rects = app._curtain_rects(lay)
+    for x, y, _w, _h in rects.values():
+        assert (x, y) == (-P, -P)
+    assert rects["top"][2:] == (lay.width + 2 * P, lay.freeze_y + P)
+    assert rects["left"][2:] == (lay.freeze_x + P, lay.height + 2 * P)
+    assert rects["corner"][2:] == (lay.freeze_x + P, lay.freeze_y + P)
+
+
 def _css_rule(selector):
     """The declaration body of the first `selector { ... }` block in the page CSS."""
     m = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", app._CSS)
@@ -239,6 +256,64 @@ def test_left_rail_height_tracks_the_settings_drawer_not_the_taller_grid():
     rule = _css_rule(".rtt-panelgroup")
     assert "align-self:flex-start" in rule
     assert "stretch" not in rule  # never re-stretch to the shell (the grid) height
+
+
+def _z(selector):
+    m = re.search(r"z-index:(\d+)", _css_rule(selector))
+    assert m, f"no z-index in {selector}"
+    return int(m.group(1))
+
+
+def test_scroll_pane_scrolls_within_the_viewport_so_titles_can_freeze():
+    # the grid pane scrolls on BOTH axes inside itself, bounded to the viewport height, so
+    # the vertical scroll is internal (not the page) — the prerequisite for pinning titles
+    # to the pane's top/left edges rather than letting them scroll off with the page.
+    rule = _css_rule(".rtt-scroll")
+    assert "overflow:auto" in rule
+    assert "max-height" in rule and "vh" in rule
+
+
+def test_shell_is_viewport_bounded_so_the_grid_pane_scrolls_internally():
+    # the rail+app shell sits in a flex-column (.nicegui-content, align-items:flex-start), so
+    # it would otherwise take the grid's full content width and push the HORIZONTAL scroll onto
+    # the page — letting the frozen row titles scroll off. Capped to the viewport (max-width)
+    # with min-width:0 it stays put and .rtt-scroll scrolls the grid within it instead.
+    rule = _css_rule(".rtt-shell")
+    assert "min-width:0" in rule
+    assert "max-width:100%" in rule
+
+
+def test_frozen_titles_counter_translate_by_the_scroll_offset():
+    # each band counter-translates by the scroll offset the pane publishes (--rtt-sx/--rtt-sy):
+    # column titles ride the vertical offset (pinned to the top), row titles the horizontal
+    # (pinned to the left), the corner both.
+    assert "translateY(var(--rtt-sy" in _css_rule(".rtt-frz-col")
+    assert "translateX(var(--rtt-sx" in _css_rule(".rtt-frz-row")
+    cnr = _css_rule(".rtt-frz-cnr")
+    assert "var(--rtt-sx" in cnr and "var(--rtt-sy" in cnr
+
+
+def test_frozen_panes_stack_above_the_scrolling_body():
+    # the body (.rtt-cell) scrolls UNDER the curtains; each title sits just above its
+    # curtain; and where two bands overlap the later band wins (corner over sides over
+    # columns), so a title scrolling into another band tucks beneath it.
+    assert _z(".rtt-cell") < _z(".rtt-curtain-top") < _z(".rtt-frz-col") < _z(".rtt-curtain-left")
+    assert _z(".rtt-curtain-left") < _z(".rtt-frz-row") < _z(".rtt-curtain-corner") < _z(".rtt-frz-cnr")
+
+
+def test_curtains_are_opaque_and_match_the_board_margin():
+    # an opaque #c0c0c0 fill (the board's own margin colour) so the body is hidden, not
+    # showing through behind the title text, as it scrolls beneath the band
+    assert "background:#c0c0c0" in _css_rule(".rtt-curtain")
+
+
+def test_scroll_sync_script_publishes_the_scroll_offset():
+    # a document-level (capture-phase) scroll listener republishes the pane's scrollLeft/
+    # scrollTop as the --rtt-sx/--rtt-sy custom properties the frozen layers translate by
+    js = app._FREEZE_JS
+    assert "--rtt-sx" in js and "--rtt-sy" in js
+    assert "scrollLeft" in js and "scrollTop" in js
+    assert "rtt-scroll" in js
 
 
 def test_every_show_toggle_has_a_non_empty_example():

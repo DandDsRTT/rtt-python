@@ -200,6 +200,33 @@ async def test_undo_button_reverts_a_settings_change(user: User) -> None:
     await user.should_not_see(marker="chart:retune:targets")  # charts off again
 
 
+# --- tier 4: frozen title bands (the panes pinned while the body scrolls) ---
+
+def _marker_classes(user: User, marker: str) -> list[str]:
+    return next(iter(user.find(marker=marker).elements))._classes
+
+
+@pytest.mark.parametrize("marker, frozen_class", [
+    ("header:gens", "rtt-frz-col"),       # a column title — pinned against vertical scroll
+    ("toggle:col:targets", "rtt-frz-col"),  # its fold toggle, pinned with it
+    ("label:tuning", "rtt-frz-row"),      # a row title — pinned against horizontal scroll
+    ("toggle:row:tuning", "rtt-frz-row"),   # its fold toggle, pinned with it
+    ("toggle:all", "rtt-frz-cnr"),        # the master toggle — pinned in the corner of both
+    ("titletile", "rtt-frz-cnr"),         # the undo/redo corner tile, pinned in both
+])
+async def test_titles_and_toggles_carry_their_freeze_class(user: User, marker: str, frozen_class: str) -> None:
+    await user.open("/")
+    assert frozen_class in _marker_classes(user, marker)
+
+
+@pytest.mark.parametrize("name", ["top", "left", "corner"])
+async def test_occlusion_curtain_is_rendered(user: User, name: str) -> None:
+    # the three opaque curtains back the frozen bands so the scrolling body is hidden
+    # beneath them rather than showing through the gaps between titles
+    await user.open("/")
+    assert f"rtt-curtain-{name}" in _marker_classes(user, f"curtain:{name}")
+
+
 async def test_state_persists_across_a_refresh(user: User) -> None:
     # the document is persisted on each render and reloaded when the page opens, so a refresh
     # (a fresh open of "/") restores exactly where the user left off

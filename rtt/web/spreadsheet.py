@@ -2096,4 +2096,5 @@ def build(state, settings=None, collapsed=None,
         cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
                  for cb in cells]
 
-    return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells))
+    return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells),
+                  freeze_x=node_edge, freeze_y=branch_top_y)

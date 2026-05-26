@@ -266,13 +266,29 @@ window.rttAudio = (function () {
 })();
 """
 
+# Frozen title bands: republish the grid pane's scroll offset as the --rtt-sx/--rtt-sy custom
+# properties the .rtt-frz-* / .rtt-curtain-* layers counter-translate by (set on the pane, so
+# its descendants inherit them). A scroll event doesn't bubble, so we listen on document in the
+# CAPTURE phase — that catches it from whichever .rtt-scroll pane fired it, and survives the pane
+# being (re)created after this script runs.
+_FREEZE_JS = """
+document.addEventListener('scroll', function (e) {
+  var el = e.target;
+  if (el && el.classList && el.classList.contains('rtt-scroll')) {
+    el.style.setProperty('--rtt-sx', el.scrollLeft + 'px');
+    el.style.setProperty('--rtt-sy', el.scrollTop + 'px');
+  }
+}, true);
+"""
+
 _CSS = f"""
 /* the grid's empty top-left corner cell now holds only the undo/redo buttons (the app
    title moved to the left rail). It fills the corner exactly — LABEL_W wide so its right
    edge meets the row-label column, HEADER_H tall so its bottom meets the column-header row
    — i.e. aligned with both the row titles and the column titles. Square (no radius), on the
-   same light grey as the rail and pane; the buttons centre within it. */
-.rtt-titletile {{ position:absolute; top:0; left:0; z-index:5; box-sizing:border-box;
+   same light grey as the rail and pane; the buttons centre within it. It is frozen in the
+   corner (.rtt-frz-cnr) like the master toggle, which also supplies its stacking. */
+.rtt-titletile {{ position:absolute; top:0; left:0; box-sizing:border-box;
                  width:{spreadsheet.LABEL_W}px; height:{spreadsheet.HEADER_H}px; background:#e0e0e0;
                  display:flex; align-items:center; justify-content:center; }}
 .rtt-tile-btns {{ display:flex; gap:3px; }}
@@ -306,8 +322,12 @@ _CSS = f"""
                  min-height:28px !important; padding:0 !important; background:#fff !important;
                  border:1px solid #999; border-radius:3px !important; box-shadow:none !important; }}
 .rtt-hamburger .q-icon {{ color:#333 !important; font-size:19px; }}
-/* the shell lays the rail+pane group and the app in a row */
-.rtt-shell {{ position:relative; display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
+/* the shell lays the rail+pane group and the app in a row. min-width:0 + max-width:100% keep
+   it from growing to the grid's content width inside the flex-column .nicegui-content: capped
+   to the viewport, a wide grid scrolls HORIZONTALLY inside .rtt-scroll (so the frozen row
+   titles stay pinned) rather than widening the page. */
+.rtt-shell {{ position:relative; display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start;
+             min-width:0; max-width:100%; }}
 /* the rail+pane group hugs its own content (align-self:flex-start), so its height — and the
    rail's, via align-items:stretch — is the drawer's height, NOT the shell's tallest child.
    A COLLAPSED drawer is 0fr (zero height, below), so the group falls to the rail's own
@@ -333,7 +353,10 @@ _CSS = f"""
    inside its own .rtt-scroll rather than widening the page */
 .rtt-app {{ flex:1 1 0; min-width:0; }}
 
-.rtt-scroll {{ overflow-x:auto; max-width:100%; }}
+/* the grid pane scrolls on both axes WITHIN itself, capped to the viewport height (the
+   page's 6px top+bottom padding = 12px), so the vertical scroll is internal rather than the
+   page's — that lets the title bands pin to the pane's own top/left edges (see .rtt-frz-*). */
+.rtt-scroll {{ overflow:auto; max-width:100%; max-height:calc(100vh - 12px); }}
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
               font-family:'Cambria',Georgia,serif; }}
 /* isolate the board so the washes' mix-blend-mode composes only with the board's
@@ -365,6 +388,23 @@ _CSS = f"""
              transition:left {_T}, top {_T}, width {_T}, height {_T}, opacity {_T}; }}
 .rtt-cell {{ position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
             opacity:1; transition:left {_T}, top {_T}, opacity {_T}; }}
+/* Frozen title bands. The grid pane (.rtt-scroll) publishes its scroll offset as the
+   --rtt-sx/--rtt-sy custom properties (see _FREEZE_JS); each frozen layer counter-translates
+   by it so it stays pinned while the body (z 3) scrolls beneath: column titles + their fold
+   toggles to the top (Y), row titles + their toggles to the left (X), the corner (title tile
+   + master toggle) to both. Opaque #c0c0c0 curtains — the board's own margin colour — back
+   each band so the body is hidden rather than showing through the gaps between titles. The
+   stack interleaves curtain-then-titles per axis and rises corner > side > top, so a title
+   scrolling into a crossing band tucks under that band's curtain. These come after .rtt-cell
+   so their z-index wins over the body cell they're added to. */
+.rtt-curtain {{ position:absolute; left:0; top:0; background:#c0c0c0;
+               transition:width {_T}, height {_T}; }}
+.rtt-curtain-top {{ z-index:4; transform:translateY(var(--rtt-sy,0px)); }}
+.rtt-frz-col {{ z-index:5; transform:translateY(var(--rtt-sy,0px)); }}
+.rtt-curtain-left {{ z-index:6; transform:translateX(var(--rtt-sx,0px)); }}
+.rtt-frz-row {{ z-index:7; transform:translateX(var(--rtt-sx,0px)); }}
+.rtt-curtain-corner {{ z-index:8; transform:translate(var(--rtt-sx,0px),var(--rtt-sy,0px)); }}
+.rtt-frz-cnr {{ z-index:9; transform:translate(var(--rtt-sx,0px),var(--rtt-sy,0px)); }}
 
 .rtt-white {{ position:absolute; top:0; left:0;
              width:calc(100% + {_CELL_BORDER_W}px); height:calc(100% + {_CELL_BORDER_W}px);
@@ -632,6 +672,14 @@ _CSS = f"""
 
 _LABEL_KINDS = {"prime", "formcell", "colheader", "rowlabel", "mapped", "vec",
                 "rowtoggle", "coltoggle", "tiletoggle", "alltoggle"}  # "ptext" has its own font-sync branch
+
+# The frozen title bands: a column title (and its fold toggle) stays pinned to the top
+# while the body scrolls vertically; a row title (and its toggle) stays pinned to the
+# left while it scrolls horizontally; the master corner toggle (and the undo/redo title
+# tile) stays pinned to both. The per-tile toggles are NOT frozen — they ride the body.
+_FREEZE_CLASS = {"colheader": "rtt-frz-col", "coltoggle": "rtt-frz-col",
+                 "rowlabel": "rtt-frz-row", "rowtoggle": "rtt-frz-row",
+                 "alltoggle": "rtt-frz-cnr"}
 
 # A math-expression cell stacks 1–2 lines ("1200 · log₂(3/2)" over "= 701.96") in a
 # narrow value square, so each line's font is scaled down to fit the cell width.
@@ -1213,6 +1261,21 @@ def _units_html(text):
     return _bold_units(text)
 
 
+def _curtain_rects(lay) -> dict[str, tuple[float, float, float, float]]:
+    """The three opaque occlusion curtains as ``(x, y, w, h)`` board-space rects. A curtain
+    hides the scrolling body where it slides under a frozen title band: the ``top`` one spans
+    the full width down to the column-title band's bottom (``freeze_y``), the ``left`` one the
+    full height out to the row-title band's right (``freeze_x``), the ``corner`` just their
+    overlap. Each anchors at the board's top-left and is grown by ``_PAD`` over the #c0c0c0
+    margin so the body is hidden right to the board's edge with no leak past the bands."""
+    fx, fy, w, h, p = lay.freeze_x, lay.freeze_y, lay.width, lay.height, _PAD
+    return {
+        "top": (-p, -p, w + 2 * p, fy + p),
+        "left": (-p, -p, fx + p, h + 2 * p),
+        "corner": (-p, -p, fx + p, fy + p),
+    }
+
+
 def _line_style(ln) -> str:
     """Absolute-position CSS for one gridline rule (a zero-size div carrying a single
     border). The border grows off one edge, so shift the box back by half the line width
@@ -1228,6 +1291,8 @@ def index() -> None:
     ui.add_css(_CSS)
     # the audio rows' Web Audio engine + its glyph variants (shared markup for click redraws)
     ui.add_body_html(f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>")
+    # keep the frozen title bands pinned to the scrolling grid pane (see _FREEZE_JS)
+    ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
     ui.query("body").style("background:#fff")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
@@ -1268,6 +1333,7 @@ def index() -> None:
     math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
     cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
     cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
+    curtains: dict = {}  # curtain name -> the opaque div occluding the body under a frozen band
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
@@ -1493,6 +1559,8 @@ def index() -> None:
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
+        if cb.kind in _FREEZE_CLASS:  # a title/toggle in a frozen band stays pinned while the body scrolls
+            wrap.classes(_FREEZE_CLASS[cb.kind])
         with wrap:
             if cb.kind == "mapping":
                 wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
@@ -1716,6 +1784,8 @@ def index() -> None:
                                 generator_tuning=editor.effective_generator_tuning())
         last_lay[0] = lay  # the master toggle reads this layout's foldable bands on click
         board.style(f"width:{lay.width}px; height:{lay.height}px")
+        for name, (x, y, w, h) in _curtain_rects(lay).items():
+            curtains[name].style(f"left:{x}px; top:{y}px; width:{w}px; height:{h}px")
         seen = set()
 
         for ln in lay.lines:
@@ -1952,7 +2022,7 @@ def index() -> None:
                     # the corner cell (top-left of the grid, above the row labels) holds just
                     # the undo/redo buttons now — the app title moved to the left rail
                     with board:
-                        with ui.element("div").classes("rtt-titletile"):
+                        with ui.element("div").classes("rtt-titletile rtt-frz-cnr").mark("titletile"):
                             with ui.element("div").classes("rtt-tile-btns"):
                                 refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
                                     .props("flat dense").classes("rtt-iconbtn").mark("undo")
@@ -1962,6 +2032,11 @@ def index() -> None:
                                 # as-shipped defaults — itself an undoable action
                                 refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: act(editor.reset), color=None) \
                                     .props("flat dense").classes("rtt-iconbtn").mark("reset")
+                        # opaque #c0c0c0 curtains that occlude the scrolling body under the
+                        # frozen title bands; each pins to the band it backs (sized in render)
+                        for name in ("top", "left", "corner"):
+                            curtains[name] = ui.element("div").classes(f"rtt-curtain rtt-curtain-{name}") \
+                                .mark(f"curtain:{name}")
 
     def on_key(e):
         if not (e.action.keydown and e.modifiers.ctrl):

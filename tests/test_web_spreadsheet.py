@@ -27,6 +27,47 @@ def test_rows_columns_and_cells_are_present():
     assert {"minus", "plus"} <= ids  # domain controls
 
 
+def test_freeze_boundaries_sit_at_the_title_band_edges():
+    # the layout publishes where the frozen title bands end: freeze_y is the bottom
+    # of the column-title + column-toggle band, freeze_x the right of the row-title +
+    # row-toggle band. The renderer pins everything within those bands and scrolls the
+    # rest under them, so these must land exactly on the band edges.
+    lay = _layout()
+    assert lay.freeze_y == spreadsheet.HEADER_H + (spreadsheet.GAP - spreadsheet.TOGGLE) / 2 + spreadsheet.TOGGLE
+    assert lay.freeze_x == spreadsheet.LABEL_W + spreadsheet.GAP + spreadsheet.TOGGLE
+
+
+def _assert_freeze_partition(lay):
+    # the frozen bands partition the board: column titles + their toggles lie wholly
+    # above freeze_y, row titles + their toggles wholly left of freeze_x, the master
+    # toggle in the corner of both. Every other cell — and every grey tile / wash —
+    # clears both bands, so the renderer's occlusion curtains never mask live content.
+    top, left = {"colheader", "coltoggle"}, {"rowlabel", "rowtoggle"}
+    for cb in lay.cells:
+        if cb.kind in top:
+            assert cb.y + cb.h <= lay.freeze_y
+        elif cb.kind in left:
+            assert cb.x + cb.w <= lay.freeze_x
+        elif cb.kind == "alltoggle":
+            assert cb.y + cb.h <= lay.freeze_y and cb.x + cb.w <= lay.freeze_x
+        else:
+            assert cb.x >= lay.freeze_x and cb.y >= lay.freeze_y
+    for bl in lay.blocks:
+        assert bl.x >= lay.freeze_x and bl.y >= lay.freeze_y
+
+
+def test_freeze_bands_hold_exactly_the_titles_and_toggles():
+    _assert_freeze_partition(_layout())
+
+
+def test_freeze_bands_survive_collapsing_rows_and_columns():
+    # collapsing folds rows/columns to a STRIP but keeps their title + toggle in the
+    # band; the partition must still hold so the frozen panes stay correct when folded.
+    collapsed = {"row:tuning", "row:mapping", "col:targets", "col:primes"}
+    _assert_freeze_partition(spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), collapsed=collapsed))
+
+
 def test_build_renders_a_nonstandard_domain_in_its_elements():
     # a loaded 2.3.13/5 temperament shows its (nonprime) elements in the grid, renames
     # the domain header, and reads its quantities over the basis — not the 2,3,5 the grid

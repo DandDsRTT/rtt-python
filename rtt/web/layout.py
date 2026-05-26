@@ -70,3 +70,5 @@ class Layout:
     lines: tuple[Line, ...]
     blocks: tuple[Block, ...]
     cells: tuple[CellBox, ...]
+    freeze_x: float  # right edge of the row-title + row-toggle band (frozen against horizontal scroll)
+    freeze_y: float  # bottom edge of the column-title + column-toggle band (frozen against vertical scroll)
