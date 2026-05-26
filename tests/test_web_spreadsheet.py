@@ -2339,6 +2339,21 @@ def test_held_intervals_are_a_user_editable_counted_interval_list():
     assert not any(c.startswith(("held:", "cell:held:")) for c in empty)
 
 
+def test_held_intervals_show_across_the_rows_like_the_other_intervals():
+    # the held column is a full interval list (not just quantities + vectors): mapped through
+    # M and sized across the tuning/just/retuning rows, like the other-intervals column
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"] = True
+    cells = {c.id: c for c in spreadsheet.build(base, s, held_monzos=[(-1, 1, 0)]).cells}
+    assert "cell:hmapped:0:0" in cells   # M·held in the mapping row
+    assert "tuning:held:0" in cells      # tempered size
+    assert "just:held:0" in cells        # just size
+    assert "retune:held:0" in cells      # error
+    # the held fifth is tuned exactly just, so its error reads ~0
+    assert abs(float(cells["retune:held:0"].text)) < 1e-3
+
+
 def test_generator_detempering_column_holds_the_d_matrix():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()

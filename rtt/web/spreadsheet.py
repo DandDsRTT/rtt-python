@@ -151,6 +151,12 @@ CAPTIONS = {
     ("retune", "interest"): "errors",
     ("prescaling", "interest"): "prescaled",
     ("complexity", "interest"): "complexity",
+    # the held column mirrors the intervals-of-interest rows with the same terse captions
+    ("mapping", "held"): "mapped",
+    ("tuning", "held"): "tempered",
+    ("just", "held"): "just",
+    ("retune", "held"): "errors",
+    ("complexity", "held"): "complexity",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # The quantity symbol shown above each name when symbols is on. Styling: the maps
@@ -348,6 +354,12 @@ UNITS = {
     ("complexity", "targets"): "(C)",
     ("complexity", "interest"): "(C)",
     ("weight", "targets"): "(C)",
+    # the held column mirrors the interest column's per-row units
+    ("mapping", "held"): "g",
+    ("tuning", "held"): "¢",
+    ("just", "held"): "¢",
+    ("retune", "held"): "¢",
+    ("complexity", "held"): "(C)",
 }
 UNITED_ROWS = frozenset(row for row, _ in UNITS)  # rows that reserve a units-line slot
 
@@ -712,6 +724,8 @@ def build(state, settings=None, collapsed=None,
     else:
         tun = service.tuning(state.mapping, tuning_scheme, elements, approach, held=held_ratios)
     target_sizes = service.interval_sizes(tun, targets, elements)
+    held_mapped = service.mapped_intervals(state.mapping, held_ratios, elements)  # M·held (gen coords)
+    held_sizes = service.interval_sizes(tun, held_ratios, elements)  # tempered/just/error sizes
     target_weights = service.interval_weights(state.mapping, tuning_scheme, targets)  # the damage row's diag(𝒘)
     comma_ratios = service.comma_ratios(state.comma_basis, elements)
     nc = len(comma_ratios)  # the real commas (those that define the temperament)
@@ -742,6 +756,7 @@ def build(state, settings=None, collapsed=None,
         "commas": service.interval_complexities(state.mapping, tuning_scheme, comma_ratios),
         "targets": service.interval_complexities(state.mapping, tuning_scheme, targets),
         "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios),
+        "held": service.interval_complexities(state.mapping, tuning_scheme, held_ratios),
     }
     # the prescaler 𝑋: a d×d diagonal matrix over the primes (diag = each prime's pre-norm
     # weight, the values the complexity map norms). log-prime by default: diag(log₂ prime).
@@ -765,6 +780,11 @@ def build(state, settings=None, collapsed=None,
     held_tiles = () if not held else (
         ("block:held", "quantities", "held"),
         ("block:vec:held", "vectors", "held"),
+        ("block:hmapped", "mapping", "held"),       # M·held in generator coords
+        ("block:tuning:held", "tuning", "held"),    # tempered sizes (= just, since held)
+        ("block:just:held", "just", "held"),        # just sizes
+        ("block:retune:held", "retune", "held"),    # errors (≈ 0, since held just)
+        ("block:complexity:held", "complexity", "held"),
     )
     # The optimization box's other mockup column — unchanged-intervals (count u) — is
     # deferred to the projection feature: the unchanged-interval basis is U = nullspace(P − I),
@@ -1312,6 +1332,9 @@ def build(state, settings=None, collapsed=None,
             if tile_open("mapping", "interest"):  # interest mapped through M, like the targets
                 for ii in range(mi):
                     cells.append(CellBox(f"cell:imapped:{i}:{ii}", interest_left(ii), map_top(i), COL_W, ROW_H, "mapped", text=str(interest_mapped[i][ii]), gen=i, unit=cell_unit("mapping", "interest", gen=i)))
+            if tile_open("mapping", "held"):  # held mapped through M, like the targets / interest
+                for hi in range(nh):
+                    cells.append(CellBox(f"cell:hmapped:{i}:{hi}", held_left(hi), map_top(i), COL_W, ROW_H, "mapped", text=str(held_mapped[i][hi]), gen=i, unit=cell_unit("mapping", "held", gen=i)))
             # the comma basis mapped through M — it vanishes to 0 (parallel to the
             # mapped target list); the raw basis lives in the interval-vectors row
             if tile_open("mapping", "commas"):
@@ -1377,14 +1400,16 @@ def build(state, settings=None, collapsed=None,
     # the three value groups share an element name (for cell ids), a left-edge
     # accessor, and the operand of their just log₂ (a bare prime, or a comma/target
     # ratio); primes carry a map, commas and targets carry interval lists
-    group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target", "interest": "interest"}
+    group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
+                  "interest": "interest", "held": "held"}
     group_left = {"gens": gen_left, "primes": prime_left, "commas": comma_left, "targets": target_left,
-                  "interest": interest_left}
+                  "interest": interest_left, "held": held_left}
     group_ratio = {  # the just interval ratio each value group is taken over
         "primes": lambda i: _ratio_str(elements[i]),  # a prime "p/1", or a nonprime element "n/d"
         "commas": lambda i: comma_ratios[i],
         "targets": lambda i: targets[i],
         "interest": lambda i: interest_ratios[i],
+        "held": lambda i: held_ratios[i],
     }
 
     def closed_form_operand(key, group, i):
@@ -1432,16 +1457,17 @@ def build(state, settings=None, collapsed=None,
                                  col_w[ckey], CHART_H, "chart", values=tuple(vals), indicator=indicator))
 
     tuning_data = {
-        "tuning": (tun.tuning_map, comma_sizes.tempered, target_sizes.tempered, interest_sizes.tempered),
-        "just": (tun.just_map, comma_sizes.just, target_sizes.just, interest_sizes.just),
-        "retune": (tun.retuning_map, comma_sizes.errors, target_sizes.errors, interest_sizes.errors),
+        "tuning": (tun.tuning_map, comma_sizes.tempered, target_sizes.tempered, interest_sizes.tempered, held_sizes.tempered),
+        "just": (tun.just_map, comma_sizes.just, target_sizes.just, interest_sizes.just, held_sizes.just),
+        "retune": (tun.retuning_map, comma_sizes.errors, target_sizes.errors, interest_sizes.errors, held_sizes.errors),
     }
-    for key, (prime_vals, comma_vals, target_vals, interest_vals) in tuning_data.items():
+    for key, (prime_vals, comma_vals, target_vals, interest_vals, held_vals) in tuning_data.items():
         if row_open(key):
             tval_row(key, "primes", prime_vals)
             tval_row(key, "commas", comma_vals)
             tval_row(key, "targets", target_vals)
             tval_row(key, "interest", interest_vals)
+            tval_row(key, "held", held_vals)
             chart(key, "primes", prime_vals)
             chart(key, "targets", target_vals)
     # the generator tuning map: the tuning row's map over the generators (the gens-column
@@ -1514,7 +1540,7 @@ def build(state, settings=None, collapsed=None,
                              "control_select", text="Euclidean" if service.is_euclidean(tuning_scheme) else "taxicab",
                              values=("taxicab", "Euclidean")))
     if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
-        for group in ("primes", "commas", "targets", "interest"):
+        for group in ("primes", "commas", "targets", "interest", "held"):
             tval_row("complexity", group, complexities[group])
     if row_open("weight"):  # weight is over the targets only, like damage (it scales them)
         tval_row("weight", "targets", target_weights)
@@ -1601,6 +1627,8 @@ def build(state, settings=None, collapsed=None,
             bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H, fit=True)
         if mi and tile_open("mapping", "interest"):  # interest mapped list, like the targets
             bracket("imapped", LIST_BRACKETS, "interest", row_y["mapping"], r * ROW_H, fit=True)
+        if nh and tile_open("mapping", "held"):  # held mapped list, like the targets / interest
+            bracket("hmapped", LIST_BRACKETS, "held", row_y["mapping"], r * ROW_H, fit=True)
     if row_open("vectors"):  # each group is a list of monzos: a [ ] spanning the d components
         for group in ("commas", "targets"):
             if tile_open("vectors", group):
@@ -1623,6 +1651,8 @@ def build(state, settings=None, collapsed=None,
                 bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
             if mi and tile_open(key, "interest"):
                 bracket(f"{key}:ilist", LIST_BRACKETS, "interest", row_y[key], ROW_H)
+            if nh and tile_open(key, "held"):
+                bracket(f"{key}:hlist", LIST_BRACKETS, "held", row_y[key], ROW_H)
     if tile_open("weight", "targets"):
         bracket("weight", LIST_BRACKETS, "targets", row_y["weight"], ROW_H)
     if tile_open("damage", "targets"):
@@ -1913,6 +1943,7 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("mapping", "mapped_comma", "commas", comma_left, nc)
     monzo_list_marks("mapping", "mapped", "targets", target_left, k)
     monzo_list_marks("mapping", "imapped", "interest", interest_left, mi)
+    monzo_list_marks("mapping", "hmapped", "held", held_left, nh)
     # the interval-vectors row holds raw (untempered) monzos, so every column is a
     # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
     # (commacell), so it skips the separator rules (its cell borders divide the columns);
