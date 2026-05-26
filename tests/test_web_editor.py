@@ -96,6 +96,22 @@ def test_set_weight_slope_swaps_the_damage_weight_slope():
     assert weights and all(w == "1.000" for w in weights)
 
 
+def test_the_weighting_choosers_are_undoable_like_every_other_change():
+    # the weight-slope / predefined-complexity / ignore-diminuator choosers are document
+    # changes like the other alt.-complexity controls, so they join the one undo history
+    editor = Editor()
+    editor.set_weight_slope("unity-weight")
+    assert editor.can_undo is True
+    editor.undo()
+    assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"
+    editor.set_complexity_name("sopfr")
+    editor.undo()
+    assert service.complexity_name_of(editor.tuning_scheme) == "lp"  # reverted
+    editor.set_diminuator_ignored(True)
+    editor.undo()
+    assert service.diminuator_ignored(editor.tuning_scheme) is False  # reverted
+
+
 def test_redo_restores_an_undone_action():
     editor = Editor()
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])

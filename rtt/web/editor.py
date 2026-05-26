@@ -299,17 +299,20 @@ class Editor:
     def set_weight_slope(self, slope: str) -> None:
         """Swap the damage-weight slope (the weight box's chooser in box 𝒘) — whether each
         target's weight is its complexity, 1, or 1/complexity — which retunes accordingly."""
+        self._snapshot()
         self.tuning_scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
 
     def set_complexity_name(self, name: str) -> None:
         """Set the whole complexity shape from the predefined-complexities master chooser (box
         𝒄) — prescaler, size factor and norm at once, overriding the box 𝐋/𝒄 fine controls —
         which re-weights and retunes."""
+        self._snapshot()
         self.tuning_scheme = service.scheme_with_complexity(self.tuning_scheme, name)
 
     def set_diminuator_ignored(self, ignored: bool) -> None:
         """Toggle the size factor (the box 𝐋 "ignore diminuator" checkbox) — the integer-limit
         shear that turns lp into lils — which re-weights and retunes."""
+        self._snapshot()
         self.tuning_scheme = service.scheme_with_diminuator(self.tuning_scheme, ignored)
 
     def set_target_spec(self, spec: str) -> None:
