@@ -200,31 +200,31 @@ async def test_undo_button_reverts_a_settings_change(user: User) -> None:
     await user.should_not_see(marker="chart:retune:targets")  # charts off again
 
 
-# --- tier 4: frozen title bands (the panes pinned while the body scrolls) ---
+# --- tier 4: frozen split panes (titles pinned while only the body scrolls) ---
 
-def _marker_classes(user: User, marker: str) -> list[str]:
-    return next(iter(user.find(marker=marker).elements))._classes
+def _renders_inside(user: User, cell_marker: str, region_marker: str) -> bool:
+    """True if the cell's wrap is a descendant of the region (corner / title strip / body pane)."""
+    cell = next(iter(user.find(marker=cell_marker).elements))
+    region = next(iter(user.find(marker=region_marker).elements))
+    slot = cell.parent_slot
+    while slot is not None:
+        if slot.parent is region:
+            return True
+        slot = slot.parent.parent_slot
+    return False
 
 
-@pytest.mark.parametrize("marker, frozen_class", [
-    ("header:gens", "rtt-frz-col"),       # a column title — pinned against vertical scroll
-    ("toggle:col:targets", "rtt-frz-col"),  # its fold toggle, pinned with it
-    ("label:tuning", "rtt-frz-row"),      # a row title — pinned against horizontal scroll
-    ("toggle:row:tuning", "rtt-frz-row"),   # its fold toggle, pinned with it
-    ("toggle:all", "rtt-frz-cnr"),        # the master toggle — pinned in the corner of both
-    ("titletile", "rtt-frz-cnr"),         # the undo/redo corner tile, pinned in both
+@pytest.mark.parametrize("cell, region", [
+    ("header:gens", "colhead"),          # a column title -> the top strip (pinned vertically)
+    ("toggle:col:targets", "colhead"),   # its fold toggle rides the same strip
+    ("label:tuning", "rowhead"),         # a row title -> the left strip (pinned horizontally)
+    ("toggle:row:tuning", "rowhead"),    # its fold toggle rides the same strip
+    ("toggle:all", "corner"),            # the master toggle -> the fixed corner
+    ("cell:mapping:0:0", "bodyscroll"),  # a body cell -> the (only) scrolling pane
 ])
-async def test_titles_and_toggles_carry_their_freeze_class(user: User, marker: str, frozen_class: str) -> None:
+async def test_each_cell_renders_into_its_frozen_pane(user: User, cell: str, region: str) -> None:
     await user.open("/")
-    assert frozen_class in _marker_classes(user, marker)
-
-
-@pytest.mark.parametrize("name", ["top", "left", "corner"])
-async def test_occlusion_curtain_is_rendered(user: User, name: str) -> None:
-    # the three opaque curtains back the frozen bands so the scrolling body is hidden
-    # beneath them rather than showing through the gaps between titles
-    await user.open("/")
-    assert f"rtt-curtain-{name}" in _marker_classes(user, f"curtain:{name}")
+    assert _renders_inside(user, cell, region)
 
 
 async def test_state_persists_across_a_refresh(user: User) -> None:
