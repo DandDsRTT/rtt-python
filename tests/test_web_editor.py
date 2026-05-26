@@ -50,10 +50,10 @@ def test_set_complexity_prescaler_swaps_the_weighting_prescaler_into_the_layout(
     # and the swap flows into the prescaling matrix: sopfr's diagonal IS the primes
     lay = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True},
                             tuning_scheme=editor.tuning_scheme)
-    diag = {c.id: c.text for c in lay.cells if c.id.startswith("cell:prescaling:") and c.id[-3] == c.id[-1]}
-    assert diag["cell:prescaling:0:0"] == "2"
-    assert diag["cell:prescaling:1:1"] == "3"
-    assert diag["cell:prescaling:2:2"] == "5"
+    on = {c.id: c.text for c in lay.cells}
+    assert on["cell:prescaling:primes:0:0"] == "2"  # the diagonal (row i, prime column i)
+    assert on["cell:prescaling:primes:1:1"] == "3"
+    assert on["cell:prescaling:primes:2:2"] == "5"
 
 
 def test_set_complexity_euclidean_switches_the_complexity_norm():

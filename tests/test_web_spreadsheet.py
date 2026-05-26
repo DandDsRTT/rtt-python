@@ -1156,17 +1156,19 @@ def test_complexity_caption_mnemonic_underlines_its_symbol_letter():
 def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
     on = {c.id: c for c in _with(weighting=True).cells}
     off = {c.id for c in _with(weighting=False).cells}
-    assert "cell:prescaling:0:0" not in off  # no prescaling matrix unless weighting is on
+    assert "cell:prescaling:primes:0:0" not in off  # no prescaling matrix unless weighting is on
     pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)), service.DEFAULT_TUNING_SCHEME)
-    # a d×d diagonal matrix over the primes: the prescaler weights on the diagonal, 0 off it
-    assert on["cell:prescaling:0:0"].text == "1"               # log2(2) = 1, shown bare
-    assert on["cell:prescaling:1:1"].text == service.cents(pre[1])  # log2(3) = 1.585
-    assert on["cell:prescaling:2:2"].text == service.cents(pre[2])  # log2(5) = 2.322
-    assert on["cell:prescaling:0:1"].text == "0"               # off-diagonal entry
+    # a d×d diagonal matrix over the primes: the prescaler weights on the diagonal, 0 off it,
+    # in the int/frac gridded cell (tval) like every other numeric matrix value
+    assert on["cell:prescaling:primes:0:0"].kind == "tval"
+    assert on["cell:prescaling:primes:0:0"].text == "1"               # log2(2) = 1, shown bare
+    assert on["cell:prescaling:primes:1:1"].text == service.cents(pre[1])  # log2(3) = 1.585
+    assert on["cell:prescaling:primes:2:2"].text == service.cents(pre[2])  # log2(5) = 2.322
+    assert on["cell:prescaling:primes:0:1"].text == "0"               # off-diagonal entry
     # column p sits under prime p; rows stack one ROW_H apart (a d-tall matrix)
-    assert on["cell:prescaling:0:0"].x == on["prime:0"].x
-    assert on["cell:prescaling:1:1"].x == on["prime:1"].x
-    assert on["cell:prescaling:1:0"].y == on["cell:prescaling:0:0"].y + spreadsheet.ROW_H
+    assert on["cell:prescaling:primes:0:0"].x == on["prime:0"].x
+    assert on["cell:prescaling:primes:1:1"].x == on["prime:1"].x
+    assert on["cell:prescaling:primes:1:0"].y == on["cell:prescaling:primes:0:0"].y + spreadsheet.ROW_H
 
 
 def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
@@ -1185,9 +1187,28 @@ def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
         assert on[f"caption:complexity:{col}"].underlines == (), col
 
 
+def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors():
+    lay = _with(weighting=True)
+    on = {c.id: c for c in lay.cells}
+    blocks = {b.id for b in lay.blocks}
+    pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)))  # (1, 1.585, 2.322)
+    _t = spreadsheet._prescale_text
+    # over the commas: L applied to the comma basis 80/81 = [4,-4,1], a d-tall column rendered
+    # as int/frac gridded cells (its taxicab norm 4+6.34+2.322 is the comma's complexity)
+    for i, comp in enumerate((4, -4, 1)):
+        cell = on[f"cell:prescaling:commas:{i}:0"]
+        assert cell.text == _t(pre[i] * comp)
+        assert cell.kind == "tval"
+    # the comma + target prescaling tiles exist with panels and matrix frames, like the primes one
+    assert {"block:prescaling:commas", "block:prescaling:targets"} <= blocks
+    assert {"ebktop:prescaling:commas", "ebkbrace:prescaling:commas",
+            "ebktop:prescaling:targets", "ebkbrace:prescaling:targets"} <= set(on)
+    assert "cell:prescaling:targets:0:0" in on  # the target column is populated too
+
+
 def test_prescaling_row_sits_between_retuning_and_complexity():
     on = {c.id: c for c in _with(weighting=True).cells}
-    assert on["retune:prime:0"].y < on["cell:prescaling:0:0"].y < on["complexity:prime:0"].y
+    assert on["retune:prime:0"].y < on["cell:prescaling:primes:0:0"].y < on["complexity:prime:0"].y
 
 
 def test_every_present_row_and_column_has_a_gridline():
@@ -1239,7 +1260,7 @@ def test_alt_complexity_adds_a_prescaler_dropdown_to_the_prescaling_box():
     assert ctrl.text == "log-prime"  # the default scheme's current prescaler (Tenney)
     assert ctrl.values == ("identity", "log-prime", "prime")  # the chooser's options
     # it rides below the prescaling matrix (box 𝐋), spanning the primes column
-    assert ctrl.y > on["cell:prescaling:2:2"].y
+    assert ctrl.y > on["cell:prescaling:primes:2:2"].y
     assert ctrl.x == on["header:primes"].x and ctrl.w == on["header:primes"].w
 
 

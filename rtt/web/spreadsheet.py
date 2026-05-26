@@ -131,6 +131,8 @@ CAPTIONS = {
     ("retune", "commas"): "comma basis interval retuning list (made to vanish!)",
     ("retune", "targets"): "target interval error list",
     ("prescaling", "primes"): "complexity prescaler",
+    ("prescaling", "commas"): "complexity prescaled comma basis",
+    ("prescaling", "targets"): "complexity prescaled target interval list",
     ("complexity", "primes"): "domain prime complexity map",
     ("complexity", "commas"): "comma basis interval complexity list",
     ("complexity", "targets"): "target interval complexity list",
@@ -149,6 +151,7 @@ CAPTIONS = {
     ("tuning", "interest"): "tempered",
     ("just", "interest"): "just",
     ("retune", "interest"): "errors",
+    ("prescaling", "interest"): "prescaled",
     ("complexity", "interest"): "complexity",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
@@ -377,6 +380,8 @@ TILES = (
     ("block:retune:commas", "retune", "commas"),
     ("block:retune:targets", "retune", "targets"),
     ("block:prescaling:primes", "prescaling", "primes"),
+    ("block:prescaling:commas", "prescaling", "commas"),
+    ("block:prescaling:targets", "prescaling", "targets"),
     ("block:complexity:primes", "complexity", "primes"),
     ("block:complexity:commas", "complexity", "commas"),
     ("block:complexity:targets", "complexity", "targets"),
@@ -710,6 +715,7 @@ def build(state, settings=None, collapsed=None,
         ("block:just:interest", "just", "interest"),
         ("block:retune:interest", "retune", "interest"),
         ("block:urow:interest", "units", "interest"),  # the units row's /1 over the interest column
+        ("block:prescaling:interest", "prescaling", "interest"),
         ("block:complexity:interest", "complexity", "interest"),
         ("block:just_audio:interest", "just_audio", "interest"),
         ("block:mapped_audio:interest", "mapped_audio", "interest"),
@@ -1415,12 +1421,24 @@ def build(state, settings=None, collapsed=None,
         audio_tile("mapped_audio", "gens", tun.generator_map)  # the genmap, as the tuning row carries
         for group, vals in zip(list_groups, tuning_data["tuning"]):
             audio_tile("mapped_audio", group, vals)
-    if tile_open("prescaling", "primes"):  # the d×d prescaler: diagonal weights, 0 off it
-        for i in range(d):
-            for p in range(d):
-                value = prescaler[i] if i == p else 0.0
-                cells.append(CellBox(f"cell:prescaling:{i}:{p}", prime_left(p), row_y["prescaling"] + i * ROW_H,
-                                     COL_W, ROW_H, "mapped", text=_prescale_text(value)))
+    # the prescaling row applies the prescaler L to each column group's vectors: over the
+    # primes it is the d×d diagonal (L·eₚ — the prescaler matrix itself), over the comma /
+    # target / interest sets it is L·vector (each component scaled by the diagonal), a d-tall
+    # matrix per group like the interval-vectors row. Rendered as int/frac gridded cells.
+    prescale_vectors = {
+        "primes": tuple(tuple(1 if i == p else 0 for i in range(d)) for p in range(d)),
+        "commas": state.comma_basis,
+        "targets": target_vectors,
+        "interest": interest,
+    }
+    for group in ("primes", "commas", "targets", "interest"):
+        if not tile_open("prescaling", group):
+            continue
+        left = group_left[group]
+        for c, vec in enumerate(prescale_vectors[group]):
+            for i in range(d):
+                cells.append(CellBox(f"cell:prescaling:{group}:{i}:{c}", left(c), row_y["prescaling"] + i * ROW_H,
+                                     COL_W, ROW_H, "tval", text=_prescale_text(prescaler[i] * vec[i])))
     if presc_ctrl:  # the alt.-complexity prescaler chooser, nested at the bottom of box 𝐋
         py = tile_top["prescaling"] + tile_h["prescaling"] - presc_extra + RANGE_GAP
         cells.append(CellBox("control:prescaler", col_x["primes"], py, col_w["primes"], PRESELECT_H,
@@ -1776,6 +1794,9 @@ def build(state, settings=None, collapsed=None,
     matrix_frame("canon", "primes", "canon")
     matrix_frame("canon", "gens", "form")
     matrix_frame("prescaling", "primes", "prescaling")
+    matrix_frame("prescaling", "commas", "prescaling:commas")
+    matrix_frame("prescaling", "targets", "prescaling:targets")
+    matrix_frame("prescaling", "interest", "prescaling:interest")
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is
     # marked top + bottom — inset so they stop short of the rules. The foot tells the
