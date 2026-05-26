@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import rtt.web.app as app
+from rtt.web import service
 from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
 from rtt.web.layout import Line
@@ -499,3 +500,26 @@ def test_mathexpr_font_shrinks_for_longer_expressions():
 def test_fit_font_is_clamped_between_the_min_and_max():
     assert app._fit_font("x", 30) == app._EXPR_MAX_FONT  # a tiny line caps at the max
     assert app._fit_font("x" * 100, 30) == app._EXPR_MIN_FONT  # a huge line floors at the min
+
+
+def test_plain_text_font_shrinks_to_fit_with_no_readability_floor():
+    # the plain-text contract is fit-on-ONE-line, so the sizer has NO readability floor:
+    # the denser the value the smaller the font (a prescaling ket-matrix at a high prime
+    # limit shrinks well past any legible floor), while a short value grows to the cap.
+    dense = app._ptext_font("9.999 " * 40, 120)    # ~240 chars in a narrow box
+    denser = app._ptext_font("9.999 " * 80, 120)   # twice as long → smaller still
+    assert denser < dense < 5.0                     # keeps shrinking past the old 5px floor
+    assert app._ptext_font("1 0 0", 120) == spreadsheet.PTEXT_MAX_FONT  # short value hits the cap
+    assert app._ptext_font("x" * 9, 30) <= spreadsheet.PTEXT_MAX_FONT   # never exceeds the cap
+
+
+def test_dense_prescaling_plain_text_fits_its_cell():
+    # the reported overflow: the complexity-prescaler and prescaled-target-list tiles hold
+    # the densest plain text (a d×k ket-matrix linearised onto one line). Each must fit its
+    # real cell width at the sizer's font — no spill off the tile's right edge.
+    s = show_settings.defaults()
+    s.update(plain_text_values=True, weighting=True)
+    cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s).cells}
+    for cid in ("ptext:prescaling:primes", "ptext:prescaling:targets"):
+        c = cells[cid]
+        assert len(c.text) * 0.58 * app._ptext_font(c.text, c.w) <= c.w, cid

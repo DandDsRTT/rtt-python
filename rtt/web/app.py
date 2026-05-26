@@ -1134,11 +1134,15 @@ def _cents_parts(text):
 
 
 def _ptext_font(text, width):
-    """The largest font (px, capped at PTEXT_MAX_FONT) at which ``text`` still fits on
-    ONE line within a ``width``-px box — so a long value (a tuning row) shrinks rather
-    than wrapping or spilling. Shares _fit_font with the math cells, at the plain-text
-    bounds (0.58·font is a conservative serif estimate for digit-dense EBK strings)."""
-    return round(_fit_font(text, width, max_font=spreadsheet.PTEXT_MAX_FONT, min_font=5.0, char_w=0.58), 1)
+    """The largest font (px, capped at PTEXT_MAX_FONT) at which ``text`` fits on ONE line
+    within a ``width``-px box. The plain-text contract is fit-on-one-line, so there is NO
+    readability floor: a dense value (a prescaling ket-matrix at a high prime limit) keeps
+    shrinking until it fits rather than spilling, and a short one grows to the cap. Shares
+    _fit_font with the math cells (0.58·font is a conservative serif estimate for digit-dense
+    EBK strings, leaving real-glyph margin). Truncated (not rounded) to 0.1px so the chosen
+    size never rounds back up past the fit and spills."""
+    fit = _fit_font(text, width, max_font=spreadsheet.PTEXT_MAX_FONT, min_font=0.0, char_w=0.58)
+    return int(fit * 10) / 10
 
 
 _DESCENDERS = "gjpqy"  # letters whose tail dips below the baseline

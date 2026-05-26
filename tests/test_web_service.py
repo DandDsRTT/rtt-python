@@ -666,8 +666,9 @@ def test_plain_text_weighting_rows_mirror_the_grid():
     assert pt[("complexity", "targets")].startswith("[") and pt[("complexity", "targets")].endswith("]")
     # the per-target weight list (simplicity-weighted by default → 1/complexity)
     assert pt[("weight", "targets")].startswith("[") and pt[("weight", "targets")].endswith("]")
-    # the prescaling row is L applied to each vector set, a ket list: L·[4,-4,1] = [4,-6.34,2.322]
-    assert pt[("prescaling", "commas")] == "[[4.000 -6.340 2.322⟩]"
+    # the prescaling row is L applied to each vector set, a ket list: L·[4,-4,1] = [4,-6.34,2.322].
+    # The string shows the SAME numbers as the grid — whole numbers bare (4, not 4.000)
+    assert pt[("prescaling", "commas")] == "[[4 -6.340 2.322⟩]"
 
 
 def test_plain_text_over_a_nonstandard_domain_uses_the_basis():

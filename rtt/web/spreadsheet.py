@@ -564,12 +564,6 @@ def _math_expr(operand: str, value: float, show_value: bool) -> str:
     return f"{expr}\n= {service.cents(value)}" if show_value else expr
 
 
-def _prescale_text(value: float) -> str:
-    """A complexity-prescaler matrix entry: a whole number bare (the 0 off-diagonal, and
-    log₂2 = 1), else the 3-dp value (log₂3 = 1.585) — keeping the mostly-zero matrix clean."""
-    return str(int(value)) if value == int(value) else service.cents(value)
-
-
 def _format_power(power: float) -> str:
     """The optimization power as shown beside ``𝑝``: ``∞`` for a minimax scheme, else
     the bare integer (``2``, ``1``) — or the decimal for an unusual fractional power."""
@@ -1602,7 +1596,7 @@ def build(state, settings=None, collapsed=None,
         for c, vec in enumerate(prescale_vectors[group]):
             for i in range(d):
                 cells.append(CellBox(f"cell:prescaling:{group}:{i}:{c}", left(c), row_y["prescaling"] + i * ROW_H,
-                                     COL_W, ROW_H, "tval", text=_prescale_text(prescaler[i] * vec[i]), unit=u))
+                                     COL_W, ROW_H, "tval", text=service.prescale_text(prescaler[i] * vec[i]), unit=u))
     if lbox_ctrl:  # box 𝐋's controls nest at the bottom of the prescaling matrix: the prescaler
         # chooser, then the "ignore diminuator" checkbox (the size-factor / integer-limit shear)
         py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP

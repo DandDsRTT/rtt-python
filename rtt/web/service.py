@@ -645,9 +645,9 @@ def plain_text_values(
         ("retune", "commas"): _cents_list(comma_sizes.errors),
         ("retune", "targets"): _cents_list(target_sizes.errors),
         ("damage", "targets"): _cents_list(target_sizes.damage),
-        ("prescaling", "primes"): _cents_ket_list(_prescaled(prime_units)),
-        ("prescaling", "commas"): _cents_ket_list(_prescaled(state.comma_basis)),
-        ("prescaling", "targets"): _cents_ket_list(_prescaled(target_monzos)),
+        ("prescaling", "primes"): _prescale_ket_list(_prescaled(prime_units)),
+        ("prescaling", "commas"): _prescale_ket_list(_prescaled(state.comma_basis)),
+        ("prescaling", "targets"): _prescale_ket_list(_prescaled(target_monzos)),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
         ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas)),
         ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets)),
@@ -667,10 +667,10 @@ def plain_text_values(
             ("retune", "held"): _cents_list(held_sizes.errors),
             ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios)),
         })
-    # the other-intervals-of-interest column is a loose collection, not a basis: its
-    # vectors and mapped images stand alone (each its own ket, space-separated, no outer
-    # [ … ] wrap — wrap=False), unlike the comma/target/held matrices. The size rows are
-    # ordinary lists, and prescaling mirrors its still-matrix grid tile (a wrapped ket list).
+    # the other-intervals-of-interest column is a loose collection, not a basis, so every
+    # row is unwrapped (wrap=False): its vectors and mapped images stand alone (each its own
+    # ket, space-separated, no outer [ … ]), unlike the comma/target/held matrices; the size
+    # rows drop their [ … ] too, and prescaling lists each prescaled vector as its own ket.
     if interest:
         interest_ratios = comma_ratios(interest, db)
         interest_mapped = mapped_intervals(state.mapping, interest_ratios, db)
@@ -681,7 +681,7 @@ def plain_text_values(
             ("tuning", "interest"): _cents_list(interest_sizes.tempered, wrap=False),
             ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
             ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
-            ("prescaling", "interest"): _cents_ket_list(_prescaled(interest), wrap=False),
+            ("prescaling", "interest"): _prescale_ket_list(_prescaled(interest), wrap=False),
             ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios), wrap=False),
         })
     return values
@@ -696,10 +696,12 @@ def _ket_list(vectors, close: str, wrap: bool = True) -> str:
     return f"[{kets}]" if wrap else kets
 
 
-def _cents_ket_list(vectors, wrap: bool = True) -> str:
-    """A ket list of float (grid-precision) column vectors — ``[[4.000 -6.340 2.322⟩]`` —
-    for the weighting prescaling matrices (the prescaled vectors L·v)."""
-    kets = " ".join("[" + " ".join(cents(x) for x in v) + "⟩" for v in vectors)
+def _prescale_ket_list(vectors, wrap: bool = True) -> str:
+    """A ket list of complexity-prescaler matrix columns — ``[[4 -6.340 2.322⟩]`` — for the
+    weighting prescaling matrices (the prescaled vectors L·v). Formats each entry with
+    prescale_text, so the string shows exactly the grid's numbers (whole numbers bare,
+    else 3-dp) rather than a denser all-3-dp form."""
+    kets = " ".join("[" + " ".join(prescale_text(x) for x in v) + "⟩" for v in vectors)
     return f"[{kets}]" if wrap else kets
 
 
@@ -717,6 +719,15 @@ def cents(value: float) -> str:
     """A cents quantity at the 3-dp the grid and plain-text views share, so the
     two displays always agree."""
     return f"{value:.3f}"
+
+
+def prescale_text(value: float) -> str:
+    """A complexity-prescaler matrix entry as BOTH the grid cell and the plain-text view
+    render it: a whole number bare (the mostly-0 off-diagonal, and the log₂2 = 1 of an
+    identity prescaler), else the 3-dp cents value (log₂3 = 1.585) — keeping the mostly-zero
+    matrix clean. One formatter for both views, so the prescaling grid and its EBK string
+    can't disagree."""
+    return str(int(value)) if value == int(value) else cents(value)
 
 
 def _cents_map(values) -> str:
