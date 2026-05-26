@@ -2223,6 +2223,12 @@ def test_generator_detempering_toggle_is_implemented():
     assert "generator_detempering" in settings.IMPLEMENTED
 
 
+def test_optimization_toggle_is_implemented():
+    # the power line + held-intervals column are built, so the toggle is live. (Its third
+    # mockup column, unchanged-intervals, is deferred to the projection feature.)
+    assert "optimization" in settings.IMPLEMENTED
+
+
 def test_charts_on_adds_a_damage_bar_chart_over_the_targets():
     on = {c.id: c for c in _with(charts=True).cells}
     off = {c.id for c in _with(charts=False).cells}

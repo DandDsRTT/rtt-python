@@ -729,6 +729,11 @@ def build(state, settings=None, collapsed=None,
         ("block:held", "quantities", "held"),
         ("block:vec:held", "vectors", "held"),
     )
+    # The optimization box's other mockup column — unchanged-intervals (count u) — is
+    # deferred to the projection feature: the unchanged-interval basis is U = nullspace(P − I),
+    # the projection P's eigenvalue-1 eigenvectors (en.xen.wiki/w/Projection#The_unchanged-interval_basis),
+    # so it can't be built until projection lands. Until then the box ships with the held
+    # column above plus the power line below (held intervals are a subset of the unchanged ones).
     # the generator-detempering column holds the matrix D — one JI interval (a vector) per
     # generator that tempers to it (the mapping's right-inverse), framed like the comma
     # basis / target list. An independent box toggle, riding between domain primes and commas.
