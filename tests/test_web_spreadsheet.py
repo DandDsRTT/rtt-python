@@ -1334,6 +1334,15 @@ def test_prescaling_matrix_carries_its_symbol_and_caption():
     assert cells["caption:prescaling:primes"].text == "complexity prescaler"
 
 
+def test_complexity_prescaler_caption_mnemonic_marks_the_x_in_complexity():
+    cells = {c.id: c for c in _with(weighting=True, names=True, mnemonics=True).cells}
+    cap = cells["caption:prescaling:primes"]
+    # the prescaler's symbol 𝑋 has no word-initial X in "complexity prescaler"; unlike the
+    # word-initial mnemonics, it marks the x mid-word in "compleXity"
+    assert cap.text == "complexity prescaler"
+    assert cap.underlines == ((cap.text.index("x"), 1),)
+
+
 def test_weighting_is_implemented_now_that_its_region_builds():
     # the weighting toggle builds content (the prescaling/complexity/weight rows), so the
     # Show panel must offer it live rather than greyed out
@@ -2073,6 +2082,19 @@ def test_mnemonics_mark_each_quantitys_symbol_letter_and_skip_the_symbolless_one
     assert on["caption:just:targets"].underlines == ()
 
 
+def test_interval_basis_captions_underline_their_symbol_letters():
+    on = {c.id: c for c in _with(names=True, mnemonics=True).cells}
+
+    def underlined(cid):
+        c = on[cid]
+        return "".join(c.text[s:s + n] for s, n in c.underlines)
+
+    # the input interval bases in the vectors row carry single-letter symbols whose
+    # letter leads their caption: the comma basis C and the target interval list T
+    assert underlined("caption:vectors:commas") == "c"   # comma basis -> C
+    assert underlined("caption:vectors:targets") == "t"  # target interval list -> T
+
+
 def test_symbols_toggles_in_tile_symbol_glyphs_above_the_names():
     on = {c.id: c for c in _with(symbols=True, names=True).cells}
     off = {c.id: c for c in _with(symbols=False).cells}
@@ -2481,6 +2503,13 @@ def test_held_column_captions_are_full_held_interval_names():
     assert on["caption:retune:held"].text == "held interval basis interval retuning list"
     assert on["caption:prescaling:held"].text == "complexity prescaled held interval basis"
     assert on["caption:complexity:held"].text == "held interval basis interval complexity list"
+
+
+def test_held_interval_basis_caption_mnemonic_underlines_its_symbol_letter():
+    on = _held(names=True, mnemonics=True)
+    cap = on["caption:vectors:held"]
+    # the held interval basis H underlines the h of "held" (like the comma basis C -> c)
+    assert cap.underlines == ((cap.text.index("held"), 1),)
 
 
 def test_held_column_equivalences_show_the_held_just_identities():

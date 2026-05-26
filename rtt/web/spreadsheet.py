@@ -289,17 +289,24 @@ FORM_CHOOSER_ROWS = frozenset(row for _, row, _ in FORM_CHOOSERS)
 
 # Mnemonics: underline the caption letter that spells the tile's symbol (see
 # SYMBOLS) — a memory aid linking the name to its symbol (e.g. "tuning map" -> t,
-# "target interval damage list" -> d). Each entry names the word whose first letter
-# is underlined; keep these in step with SYMBOLS. A tile whose symbol letter is not
-# a word-initial in its name carries no underline — the mapped list (Y), and the
-# tempered (𝐚), just (𝐨) and other size lists.
+# "target interval damage list" -> d). Each value is a substring of the caption whose
+# first letter — found at the substring's first occurrence — is the one underlined.
+# That letter is usually a word-initial (so the value is that word), but it may fall
+# mid-word: the complexity prescaler's symbol 𝑋 marks the x in "compleXity", so its
+# value is the bare "x". Keep these in step with SYMBOLS. Symbols with no meaningful
+# letter in their caption carry no entry — the abstract size-list letters of the
+# mapped list (Y), the tempered (𝐚) and just (𝐨) lists.
 MNEMONICS = {
+    ("vectors", "commas"): "comma",     # C
+    ("vectors", "targets"): "target",   # T
+    ("vectors", "held"): "held",        # H
     ("mapping", "primes"): "mapping",   # 𝑀
     ("tuning", "gens"): "generator",    # 𝒈
     ("tuning", "primes"): "tuning",     # 𝒕
     ("just", "primes"): "just",         # 𝒋
     ("retune", "primes"): "retuning",   # 𝒓
     ("retune", "targets"): "error",     # 𝐞
+    ("prescaling", "primes"): "x",      # 𝑋 — the x mid-word in "compleXity"
     ("complexity", "targets"): "complexity",  # 𝒄 — only the target list carries the symbol
     ("weight", "targets"): "weight",    # 𝒘
     ("damage", "targets"): "damage",    # 𝐝
