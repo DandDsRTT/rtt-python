@@ -338,6 +338,18 @@ UNITS = {
     ("retune", "targets"): "¢",
     ("retune", "interest"): "¢",
     ("damage", "targets"): "¢",
+    # the weighting region (per the mockup): the prescaler matrix L is octaves per basis
+    # element (oct/b), L applied to a vector set is plain octaves (oct); complexity is in
+    # complexity units (C) — a map over the primes (C)/b, a list elsewhere (C); weight too.
+    ("prescaling", "primes"): "oct/b",
+    ("prescaling", "commas"): "oct",
+    ("prescaling", "targets"): "oct",
+    ("prescaling", "interest"): "oct",
+    ("complexity", "primes"): "(C)/b",
+    ("complexity", "commas"): "(C)",
+    ("complexity", "targets"): "(C)",
+    ("complexity", "interest"): "(C)",
+    ("weight", "targets"): "(C)",
 }
 UNITED_ROWS = frozenset(row for row, _ in UNITS)  # rows that reserve a units-line slot
 
@@ -416,6 +428,9 @@ UNITS_TILES = (
     ("block:ucol:tuning", "tuning", "units"),
     ("block:ucol:just", "just", "units"),
     ("block:ucol:retune", "retune", "units"),
+    ("block:ucol:prescaling", "prescaling", "units"),
+    ("block:ucol:complexity", "complexity", "units"),
+    ("block:ucol:weight", "weight", "units"),
     ("block:ucol:damage", "damage", "units"),
     ("block:urow:gens", "units", "gens"),
     ("block:urow:primes", "units", "primes"),
@@ -1167,6 +1182,16 @@ def build(state, settings=None, collapsed=None,
         if tile_open(key, "units"):
             cells.append(CellBox(f"ucol:{key}", col_x["units"], row_y[key], col_w["units"], ROW_H,
                                  "units", text="¢/"))
+    # the weighting rows' units-column labels: the prescaler is octaves (one per matrix row,
+    # like the d-tall interval vectors), complexity and weight are complexity units (C)/
+    if tile_open("prescaling", "units"):
+        for i in range(d):
+            cells.append(CellBox(f"ucol:prescaling:{i}", col_x["units"], row_y["prescaling"] + i * ROW_H,
+                                 col_w["units"], ROW_H, "units", text="oct/"))
+    for key in ("complexity", "weight"):
+        if tile_open(key, "units"):
+            cells.append(CellBox(f"ucol:{key}", col_x["units"], row_y[key], col_w["units"], ROW_H,
+                                 "units", text="(C)/"))
     if "units" in row_y:
         uy = row_y["units"]
         if tile_open("units", "gens"):
@@ -1435,10 +1460,11 @@ def build(state, settings=None, collapsed=None,
         if not tile_open("prescaling", group):
             continue
         left = group_left[group]
+        u = cell_unit("prescaling", group)
         for c, vec in enumerate(prescale_vectors[group]):
             for i in range(d):
                 cells.append(CellBox(f"cell:prescaling:{group}:{i}:{c}", left(c), row_y["prescaling"] + i * ROW_H,
-                                     COL_W, ROW_H, "tval", text=_prescale_text(prescaler[i] * vec[i])))
+                                     COL_W, ROW_H, "tval", text=_prescale_text(prescaler[i] * vec[i]), unit=u))
     if presc_ctrl:  # the alt.-complexity prescaler chooser, nested at the bottom of box 𝐋
         py = tile_top["prescaling"] + tile_h["prescaling"] - presc_extra + RANGE_GAP
         cells.append(CellBox("control:prescaler", col_x["primes"], py, col_w["primes"], PRESELECT_H,

@@ -1206,6 +1206,24 @@ def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors():
     assert "cell:prescaling:targets:0:0" in on  # the target column is populated too
 
 
+def test_weighting_rows_show_their_units_line_when_units_on():
+    cells = {c.id: c for c in _with(weighting=True, units=True).cells}
+    # the per-box "units:" line below each caption, per the mockup
+    assert cells["units:prescaling:primes"].text == "units: oct/b"   # the prescaler matrix L
+    assert cells["units:prescaling:targets"].text == "units: oct"     # L applied to a vector set
+    assert cells["units:complexity:primes"].text == "units: (C)/b"    # the domain-prime complexity map
+    assert cells["units:complexity:targets"].text == "units: (C)"     # a complexity list
+    assert cells["units:weight:targets"].text == "units: (C)"
+
+
+def test_weighting_rows_have_units_column_tiles_when_domain_units_on():
+    cells = {c.id: c for c in _with(weighting=True, domain_units=True).cells}
+    # the units-column (spine) marginal label per weighting row, like the tuning rows' ¢/
+    assert cells["ucol:prescaling:0"].text == "oct/"   # one per matrix row (d-tall)
+    assert cells["ucol:complexity"].text == "(C)/"
+    assert cells["ucol:weight"].text == "(C)/"
+
+
 def test_prescaling_row_sits_between_retuning_and_complexity():
     on = {c.id: c for c in _with(weighting=True).cells}
     assert on["retune:prime:0"].y < on["cell:prescaling:primes:0:0"].y < on["complexity:prime:0"].y
