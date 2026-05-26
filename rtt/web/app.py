@@ -1314,16 +1314,18 @@ def _math_html(text):
     return "".join(out)
 
 
-_UNIT_PLAIN = set("¢/ ")  # within a unit value, the cent sign, the fraction slash and
-# spaces stay un-bold; the variable symbols (g, p and the placeholder 1, with subscripts)
-# are bold — consistently in the per-box line AND the units row/col
+# Within a unit value these tokens stay un-bold: the units of interval size — the cent
+# sign ¢ and the spelled-out "oct" (octaves) — plus the fraction slash and spaces. The
+# variable symbols (g, p, b and the placeholder 1, with subscripts) are bold —
+# consistently in the per-box line AND the units row/col.
+_UNIT_PLAIN = ("oct", "¢", "/", " ")
 
 
 def _bold_units(value):
-    """A unit value with its variable symbols bold (the unit letters g/p and the
-    placeholder 1, plus any subscript), leaving the cent sign ¢ and the ``/`` separator
-    un-bold. Bolds maximal runs of variable characters so e.g. ``g₁/`` → ``<b>g₁</b>/``,
-    ``¢/p`` → ``¢/<b>p</b>``. All text HTML-escaped."""
+    """A unit value with its variable symbols bold (the unit letters g/p/b and the
+    placeholder 1, plus any subscript), leaving the units ¢ and ``oct`` and the ``/``
+    separator un-bold. Bolds maximal runs of variable characters so e.g. ``g₁/`` →
+    ``<b>g₁</b>/``, ``oct/b`` → ``oct/<b>b</b>``. All text HTML-escaped."""
     out, run = [], []
 
     def flush():
@@ -1331,12 +1333,16 @@ def _bold_units(value):
             out.append(f"<b>{_escape(''.join(run))}</b>")
             run.clear()
 
-    for ch in value:
-        if ch in _UNIT_PLAIN:
+    i = 0
+    while i < len(value):
+        plain = next((t for t in _UNIT_PLAIN if value.startswith(t, i)), None)
+        if plain is not None:
             flush()
-            out.append(_escape(ch))
+            out.append(_escape(plain))
+            i += len(plain)
         else:
-            run.append(ch)
+            run.append(value[i])
+            i += 1
     flush()
     return "".join(out)
 

@@ -187,18 +187,23 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
     assert 'viewBox="0 0 16.00 60.00"' in marks["]2"]  # 1 row vs many: same generator
 
 
-def test_units_html_bolds_variables_but_not_cents_or_slash():
-    # the variable symbols (g, p, the placeholder 1, with subscripts) are bold; the cent
-    # sign ¢ and the "/" separator stay un-bold — consistently in the per-box line and the
-    # units row/col. A per-box line also keeps "units:" in the serif label face.
+def test_units_html_bolds_variables_but_not_cents_oct_or_slash():
+    # the variable symbols (g, p, b, the placeholder 1, with subscripts) are bold; the
+    # units of interval size — the cent sign ¢ and the spelled-out "oct" (octaves) — and
+    # the "/" separator stay un-bold, consistently in the per-box line and the units
+    # row/col. A per-box line also keeps "units:" in the serif label face.
     per_box = app._units_html("units: g/p")
     assert per_box == '<span class="rtt-units-pre">units: </span><b>g</b>/<b>p</b>'
     assert app._units_html("units: ¢/g") == '<span class="rtt-units-pre">units: </span>¢/<b>g</b>'
     assert app._units_html("units: ¢") == '<span class="rtt-units-pre">units: </span>¢'
-    # bare domain-units coordinate labels: variables bold, ¢ and / plain, the "1" placeholder bold
+    # "oct" is a unit like ¢, so it stays un-bold; the basis-element "b" denominator is bold
+    assert app._units_html("units: oct") == '<span class="rtt-units-pre">units: </span>oct'
+    assert app._units_html("units: oct/b") == '<span class="rtt-units-pre">units: </span>oct/<b>b</b>'
+    # bare domain-units coordinate labels: variables bold, ¢/oct and / plain, the "1" placeholder bold
     assert app._units_html("g₁/") == "<b>g₁</b>/"
     assert app._units_html("/p₁") == "/<b>p₁</b>"
     assert app._units_html("¢/") == "¢/"
+    assert app._units_html("oct/") == "oct/"
     assert app._units_html("/1") == "/<b>1</b>"
 
 
