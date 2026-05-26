@@ -137,12 +137,15 @@ CAPTIONS = {
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
     ("tuning", "commas"): "tempered comma basis interval size list (made to vanish!)",
+    ("tuning", "detempering"): "tempered generator detempering tuning map",
     ("tuning", "targets"): "tempered target interval size list",
     ("just", "primes"): "just tuning map",
     ("just", "commas"): "(just) comma basis interval size list",
+    ("just", "detempering"): "(just) generator detempering interval size list",
     ("just", "targets"): "(just) target interval size list",
     ("retune", "primes"): "retuning map",
     ("retune", "commas"): "comma basis interval retuning list (made to vanish!)",
+    ("retune", "detempering"): "generator detempering interval retuning list",
     ("retune", "targets"): "target interval error list",
     ("prescaling", "primes"): "complexity prescaler",
     ("prescaling", "commas"): "complexity prescaled comma basis",
@@ -197,12 +200,15 @@ SYMBOLS = {
     ("tuning", "gens"): "𝒈",
     ("tuning", "primes"): "𝒕",
     ("tuning", "commas"): "𝒕C",
+    ("tuning", "detempering"): "𝒕D",
     ("tuning", "targets"): "𝐚",
     ("just", "primes"): "𝒋",
     ("just", "commas"): "𝒋C",
+    ("just", "detempering"): "𝒋D",
     ("just", "targets"): "𝐨",
     ("retune", "primes"): "𝒓",
     ("retune", "commas"): "𝒓C",
+    ("retune", "detempering"): "𝒓D",
     ("retune", "targets"): "𝐞",
     ("prescaling", "primes"): "𝑋",  # the complexity prescaler matrix (math italic, like 𝑀)
     # the held interval column mirrors the comma column: the basis H lives in the
@@ -261,6 +267,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("tuning", "gens"): frozenset({"G"}),              # 𝒈 (the generator tuning map)
     ("tuning", "primes"): frozenset({"G", "M"}),       # 𝒕 = 𝒈𝑀
     ("tuning", "commas"): frozenset({"G", "M", "C"}),  # 𝒕C
+    ("tuning", "detempering"): frozenset({"G", "M"}),  # 𝒕D = 𝒈 (the tempered family carries G𝑀)
     ("tuning", "targets"): frozenset({"G", "M"}),      # 𝐚 = 𝒈𝑀T
     ("tuning", "interest"): frozenset({"G", "M"}),
     # the just sizes carry no G/𝑀; only the comma column has C (the just size of the commas)
@@ -268,6 +275,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # the retuning/error chain 𝒓 = 𝒕 − 𝒋 keeps 𝒕's G and M; the comma column adds C
     ("retune", "primes"): frozenset({"G", "M"}),       # 𝒓 = 𝒈𝑀 − 𝒋
     ("retune", "commas"): frozenset({"G", "M", "C"}),  # 𝒓C
+    ("retune", "detempering"): frozenset({"G", "M"}),  # 𝒓D (keeps 𝒕D's G𝑀, like the other retunings)
     ("retune", "targets"): frozenset({"G", "M"}),      # 𝐞 = 𝒓T
     ("retune", "interest"): frozenset({"G", "M"}),
     ("damage", "targets"): frozenset({"G", "M"}),      # 𝐝 = |𝐞|diag(𝒘), via 𝐞
@@ -341,6 +349,7 @@ EQUIVALENCES = {
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "detempering"): " = 𝐼",  # M·D = the identity (D is M's right-inverse)
     ("mapping", "targets"): " = 𝑀T",
+    ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",
     ("just", "targets"): " = 𝒋T",
@@ -377,14 +386,17 @@ UNITS = {
     ("tuning", "gens"): "¢/g",
     ("tuning", "primes"): "¢/p",
     ("tuning", "commas"): "¢",
+    ("tuning", "detempering"): "¢",
     ("tuning", "targets"): "¢",
     ("tuning", "interest"): "¢",
     ("just", "primes"): "¢/p",
     ("just", "commas"): "¢",
+    ("just", "detempering"): "¢",
     ("just", "targets"): "¢",
     ("just", "interest"): "¢",
     ("retune", "primes"): "¢/p",
     ("retune", "commas"): "¢",
+    ("retune", "detempering"): "¢",
     ("retune", "targets"): "¢",
     ("retune", "interest"): "¢",
     ("damage", "targets"): "¢",
@@ -846,9 +858,16 @@ def build(state, settings=None, collapsed=None,
     # basis / target list. An independent box toggle, riding between domain primes and commas.
     detempering_vectors = service.generator_detempering(state.mapping) if show_detempering else ()
     mapped_detempering = service.mapped_detempering(state.mapping) if show_detempering else ()  # M·D = I
+    # the detempering intervals' sizes under the tuning: the tempered sizes ARE the generator
+    # tuning map (𝒕D = 𝒈, since each D tempers to its generator), with just and retuning sizes
+    # like any interval set. gens is the detempering as ratio strings (service.generators = D).
+    detempering_sizes = service.interval_sizes(tun, gens, elements) if show_detempering else None
     detempering_tiles = (
         ("block:vec:detempering", "vectors", "detempering"),
         ("block:mapped_detempering", "mapping", "detempering"),
+        ("block:tuning:detempering", "tuning", "detempering"),
+        ("block:just:detempering", "just", "detempering"),
+        ("block:retune:detempering", "retune", "detempering"),
     ) if show_detempering else ()
     # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
     # tile (see opt_box below), not in a tile/row of their own
@@ -1483,15 +1502,16 @@ def build(state, settings=None, collapsed=None,
     # accessor, and the operand of their just log₂ (a bare prime, or a comma/target
     # ratio); primes carry a map, commas and targets carry interval lists
     group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
-                  "interest": "interest", "held": "held"}
+                  "interest": "interest", "held": "held", "detempering": "detempering"}
     group_left = {"gens": gen_left, "primes": prime_left, "commas": comma_left, "targets": target_left,
-                  "interest": interest_left, "held": held_left}
+                  "interest": interest_left, "held": held_left, "detempering": detempering_left}
     group_ratio = {  # the just interval ratio each value group is taken over
         "primes": lambda i: _ratio_str(elements[i]),  # a prime "p/1", or a nonprime element "n/d"
         "commas": lambda i: comma_ratios[i],
         "targets": lambda i: targets[i],
         "interest": lambda i: interest_ratios[i],
         "held": lambda i: held_ratios[i],
+        "detempering": lambda i: gens[i],  # the detempering interval as a ratio (service.generators = D)
     }
 
     def closed_form_operand(key, group, i):
@@ -1557,6 +1577,16 @@ def build(state, settings=None, collapsed=None,
     # counterpart of the tuning map over the primes), so the generators get a tuning tile too
     if row_open("tuning"):
         tval_row("tuning", "gens", tun.generator_map)
+    # the detempering column's size rows: tempering the detempering intervals recovers the
+    # generators, so its tuning row IS the generator tuning map (𝒕D = 𝒈); its just and
+    # retuning sizes are ordinary interval lists (𝒋D, 𝒓D), the latter charted like the targets.
+    if show_detempering:
+        for key, vals in (("tuning", detempering_sizes.tempered),
+                          ("just", detempering_sizes.just),
+                          ("retune", detempering_sizes.errors)):
+            if row_open(key):
+                tval_row(key, "detempering", vals)
+        chart("retune", "detempering", detempering_sizes.errors)
 
     # the audio rows: a speaker button per pitch, sounding the just (just_audio) or
     # tempered (mapped_audio) cents of each interval — the same data the just / tuning
@@ -1769,6 +1799,10 @@ def build(state, settings=None, collapsed=None,
             bracket("vec:detempering", LIST_BRACKETS, "detempering", row_y["vectors"], d * ROW_H, fit=True)
     if tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
         bracket("tuning:genmap", GENMAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
+    # the detempering tuning row IS the generator tuning map (𝒕D = 𝒈), so it too is framed
+    # { … ]; its just/retune rows are ordinary interval lists, framed below with the rest
+    if tile_open("tuning", "detempering"):
+        bracket("tuning:detempering", GENMAP_BRACKETS, "detempering", row_y["tuning"], ROW_H)
     for key in ("tuning", "just", "retune", "complexity"):
         if row_open(key):
             if tile_open(key, "primes"):
@@ -1781,6 +1815,10 @@ def build(state, settings=None, collapsed=None,
             # collection of standalone values, not a [ … ] list (per the mockup)
             if nh and tile_open(key, "held"):
                 bracket(f"{key}:hlist", LIST_BRACKETS, "held", row_y[key], ROW_H)
+            # detempering's just/retune/complexity sizes are ordinary lists; its tuning row
+            # is the genmap, bracketed { … ] above (so it's skipped here)
+            if key != "tuning" and tile_open(key, "detempering"):
+                bracket(f"{key}:detemperinglist", LIST_BRACKETS, "detempering", row_y[key], ROW_H)
     if tile_open("weight", "targets"):
         bracket("weight", LIST_BRACKETS, "targets", row_y["weight"], ROW_H)
     if tile_open("damage", "targets"):

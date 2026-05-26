@@ -621,6 +621,8 @@ def plain_text_values(
         tun = tuning(state.mapping, scheme, db, held=held_ratios)  # maps over the domain elements
     target_sizes = interval_sizes(tun, targets, db)
     comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
+    detemper_ratios = generators(state.mapping, db)  # the detempering as ratios (= service.generators)
+    detemper_sizes = interval_sizes(tun, detemper_ratios, db)  # tempered = the genmap, plus just/error
     # the weighting region: complexity (a covector over the primes, lists elsewhere), the
     # per-target weight list, and the prescaling matrices (L applied to each vector set, as
     # ket lists). Complexity over the primes is the complexity of each domain basis element.
@@ -647,12 +649,17 @@ def plain_text_values(
         ("tuning", "gens"): _cents_genmap(tun.generator_map),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
         ("tuning", "commas"): _cents_list(comma_sizes.tempered),
+        # the detempering's tempered sizes ARE the generator tuning map (𝒕D = 𝒈), shown
+        # genmap-style ({ ]); its just and retuning sizes are ordinary cents lists
+        ("tuning", "detempering"): _cents_genmap(detemper_sizes.tempered),
         ("tuning", "targets"): _cents_list(target_sizes.tempered),
         ("just", "primes"): _cents_map(tun.just_map),
         ("just", "commas"): _cents_list(comma_sizes.just),
+        ("just", "detempering"): _cents_list(detemper_sizes.just),
         ("just", "targets"): _cents_list(target_sizes.just),
         ("retune", "primes"): _cents_map(tun.retuning_map),
         ("retune", "commas"): _cents_list(comma_sizes.errors),
+        ("retune", "detempering"): _cents_list(detemper_sizes.errors),
         ("retune", "targets"): _cents_list(target_sizes.errors),
         ("damage", "targets"): _cents_list(target_sizes.damage),
         ("prescaling", "primes"): _prescale_ket_list(_prescaled(prime_units)),

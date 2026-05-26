@@ -2716,6 +2716,49 @@ def test_generator_detempering_mapping_row_plain_text():
     assert cells["ptext:mapping:detempering"].text == "[[1 0} [0 1}]"
 
 
+def test_generator_detempering_tuning_row_equals_the_genmap():
+    # tempering the detempering intervals recovers the generator sizes (𝒕D = 𝒈), so the
+    # detempering column's tuning row matches the generator tuning map cell-for-cell — and
+    # is framed { ] like the genmap, not as a plain interval-size list
+    cells = {c.id: c for c in _with(generator_detempering=True).cells}
+    genmap = [cells[f"tuning:gen:{i}"].text for i in range(2)]
+    assert [cells[f"tuning:detempering:{i}"].text for i in range(2)] == genmap
+    assert cells["bracket:tuning:detempering:l"].text == "{"
+
+
+def test_generator_detempering_size_rows_are_just_and_retuning_lists():
+    cells = {c.id: c for c in _with(generator_detempering=True, units=True).cells}
+    # just sizes of the octave (2/1) and fifth (3/2) detemperings: 1200 and 701.955
+    assert [cells[f"just:detempering:{i}"].text for i in range(2)] == ["1200.000", "701.955"]
+    # just and retune are ordinary interval-size lists ([ ]), one value per generator
+    assert cells["bracket:just:detemperinglist:l"].text == "["
+    assert cells["bracket:retune:detemperinglist:l"].text == "["
+    assert {f"retune:detempering:{i}" for i in range(2)} <= set(cells)
+    # captions per the mockup; every size row is in cents
+    assert cells["caption:tuning:detempering"].text == "tempered generator detempering tuning map"
+    assert cells["caption:just:detempering"].text == "(just) generator detempering interval size list"
+    assert cells["caption:retune:detempering"].text == "generator detempering interval retuning list"
+    for key in ("tuning", "just", "retune"):
+        assert cells[f"units:{key}:detempering"].text == "units: ¢"
+
+
+def test_generator_detempering_size_row_symbols():
+    # 𝒕D = 𝒈 (its tempered sizes are the generator tuning map); 𝒋D / 𝒓D carry no continuation
+    eq = {c.id: c for c in _with(generator_detempering=True, symbols=True, equivalences=True).cells}
+    assert eq["symbol:tuning:detempering"].text == "𝒕D = 𝒈"
+    assert eq["symbol:just:detempering"].text == "𝒋D"
+    assert eq["symbol:retune:detempering"].text == "𝒓D"
+
+
+def test_generator_detempering_size_rows_plain_text():
+    cells = {c.id: c for c in _with(generator_detempering=True, plain_text_values=True).cells}
+    # the tuning row is the generator tuning map, so its plain text matches the genmap's ({ ])
+    assert cells["ptext:tuning:detempering"].text == cells["ptext:tuning:gens"].text
+    # just/retune are ordinary cents lists ([ ]); just sizes are the octave + fifth
+    assert cells["ptext:just:detempering"].text == "[1200.000 701.955]"
+    assert cells["ptext:retune:detempering"].text.startswith("[")
+
+
 def test_generator_detempering_toggle_is_implemented():
     # the column is built, so its Show toggle is live (interactive, not a greyed stub)
     assert "generator_detempering" in settings.IMPLEMENTED
