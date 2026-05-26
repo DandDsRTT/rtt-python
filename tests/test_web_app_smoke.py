@@ -251,6 +251,18 @@ def test_only_the_body_pane_scrolls_so_the_scrollbar_sits_by_the_body():
     assert "overflow:hidden" in _css_rule(".rtt-frame")
 
 
+def test_column_title_strip_bleeds_into_the_right_margin_so_an_overhanging_title_shows():
+    # Column titles overhang their content-hugging columns, centred on the gridline (a title
+    # wider than its column spills into the gaps/margins; the column is never widened to seat
+    # it — see spreadsheet col_w). The RIGHTMOST column's title (e.g. the narrow intervals-of-
+    # interest column's "other intervals\nof interest") overhangs the board's right CONTENT edge
+    # into the frame's _PAD margin. So the colhead strip must extend that far — right:-_PAD —
+    # so its overflow:hidden clips at the FRAME edge, not the grid's content edge; otherwise the
+    # title's tail is cut (the split-pane rebuild regressed this by clipping at right:0). The
+    # left edge stays clipped at the corner (the frozen row labels) via the inline left:freeze_x.
+    assert f"right:-{app._PAD}px" in _css_rule(".rtt-colhead")
+
+
 def test_shell_is_viewport_bounded_so_the_body_pane_scrolls_internally():
     # the rail+app shell sits in a flex-column (.nicegui-content, align-items:flex-start), so
     # it would otherwise take the grid's full content width and push the HORIZONTAL scroll onto

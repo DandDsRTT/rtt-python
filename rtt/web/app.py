@@ -423,7 +423,13 @@ _CSS = f"""
    seam nor the scrollbar appears merely from adding a row/column — only from actually scrolling. */
 .rtt-corner {{ position:absolute; left:0; top:0; z-index:3; background:#c0c0c0; box-sizing:border-box;
               border-right:1px solid transparent; border-bottom:1px solid transparent; }}
-.rtt-colhead {{ position:absolute; top:0; right:0; z-index:2; overflow:hidden; background:#c0c0c0;
+/* the column-title strip bleeds _PAD past the grid's right CONTENT edge into the frame margin
+   (right:-_PAD), so a rightmost column's title — which overhangs its content-hugging column,
+   centred on the gridline (see spreadsheet col_w) — clips at the FRAME edge, not the content
+   edge: its overhanging tail spills into the margin as it did before the split-pane rebuild
+   (which had the board inside a _PAD-padded outer). Its left edge is pinned at the corner
+   (left:freeze_x, set in render) so a title never overruns the frozen row labels. */
+.rtt-colhead {{ position:absolute; top:0; right:-{_PAD}px; z-index:2; overflow:hidden; background:#c0c0c0;
                box-sizing:border-box; border-bottom:1px solid transparent; }}
 .rtt-rowhead {{ position:absolute; left:0; bottom:0; z-index:2; overflow:hidden; background:#c0c0c0;
                box-sizing:border-box; border-right:1px solid transparent; }}
