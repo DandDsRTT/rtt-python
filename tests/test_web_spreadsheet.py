@@ -2354,27 +2354,29 @@ def test_optimization_needs_its_parent_tuning_boxes():
 
 
 def test_optimization_box_lays_out_objective_power_and_button_in_columns():
-    on = {c.id: c for c in _with(optimization=True).cells}
-    # objective and power are side-by-side value-over-label columns, the optimize button right
+    lay = _with(optimization=True)
+    on = {c.id: c for c in lay.cells}
+    box = {b.id: b for b in lay.blocks}["block:optimization:box"]
+    # the three controls sit on one row, left to right: objective | power | optimize button
     assert on["optimization:objective"].x < on["optimization:power"].x < on["optimization:button"].x
-    assert on["optimization:objective"].y == on["optimization:power"].y  # same (value) row
-    # within each column the value sits above its symbol; the power adds a caption below
+    assert on["optimization:objective"].y == on["optimization:power"].y == on["optimization:button"].y
+    # within each column the value/control sits above its symbol/label
     assert on["optimization:objective"].y < on["optimization:objective:symbol"].y
     assert (on["optimization:power"].y < on["optimization:power:symbol"].y
             < on["optimization:power:caption"].y)
-    # the min-damage objective is a static gridded box matching the editable power field —
-    # both tight boxes (centred in their columns), the same width, narrower than their column
-    assert on["optimization:objective"].w == on["optimization:power"].w
-    assert on["optimization:objective"].w < on["optimization:objective:symbol"].w  # box < its column
-    assert on["optimization:power"].x > on["optimization:power:symbol"].x  # centred over its 𝑝 label
+    # the controls are PACKED LEFT (left-justified): a small gap between them and the group near
+    # the left edge — not centred in wide thirds (which left large gaps between them)
+    assert on["optimization:objective"].x < box.x + 0.2 * box.w  # group starts near the left edge
+    gap = on["optimization:power"].x - (on["optimization:objective"].x + on["optimization:objective"].w)
+    assert 0 < gap < 20  # the objective and power are close, not spread apart
     # the optimize button is a normal rectangle the same height as the value boxes (the p input),
     # not a giant full-height button, with a "double-click to lock" hint beneath it
     assert on["optimization:button"].h == on["optimization:objective"].h
     assert on["optimization:button:hint"].text == "double-click to lock"
     assert on["optimization:button:hint"].y > on["optimization:button"].y
-    # the title sits inside the box (below its top border), not awkwardly on it
-    box = {b.id: b for b in _with(optimization=True).blocks}["block:optimization:box"]
+    # the title sits inside the box (below its top border) with a gap before the controls
     assert on["optimization:title"].y > box.y
+    assert on["optimization:objective"].y > on["optimization:title"].y + on["optimization:title"].h
     assert "optimization:button" not in {c.id for c in _with(optimization=False).cells}
 
 

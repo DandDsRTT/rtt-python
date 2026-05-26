@@ -501,12 +501,9 @@ _CSS = f"""
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
 .rtt-cents-int {{ font-size:10px; }}
 .rtt-cents-frac {{ font-size:7px; color:#000; }}
-/* the optimization objective's min-damage value: a static (non-interactive) gridded box
-   matching the editable power field beside it — a white, bordered box holding the cents value
-   (int over frac), sized to read like the ∞ input rather than a bare grid number */
-.rtt-opt-value {{ border:{_CELL_BORDER}; background:#fff; box-sizing:border-box; height:100%; }}
-.rtt-opt-value .rtt-cents-int {{ font-size:13px; }}
-.rtt-opt-value .rtt-cents-frac {{ font-size:8px; }}
+/* the optimization objective's min-damage value: read-only, so NOT boxed (no white editable
+   box) — just a plain gridded cents value (int over frac), left-justified under its ⟪𝐝⟫ₚ symbol */
+.rtt-opt-value {{ align-items:flex-start; }}
 /* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
    line's font is scaled (inline) to fit the narrow value square, so it never overflows.
    No fixed height (like .rtt-tval): the cell centres it, and when a per-cell unit is
@@ -547,16 +544,20 @@ _CSS = f"""
    overflowed the small square; pin it to the box so the flex centering can take over */
 .rtt-btn .q-btn__content {{ color:#000 !important; font-size:13px; line-height:1; min-height:0;
            font-family:'Cambria',Georgia,serif; }}
-/* the optimize button fills its half of the optimization box (not the 15px +/− square);
-   .rtt-optimize-locked marks the auto-optimize lock (double-clicked on) by inverting it */
+/* the optimize button fills its cell (a normal rectangle hugging the word); its text is the
+   same size as the optimization power number (the ∞ box, _CELL_FONT). .rtt-optimize-locked
+   marks the auto-optimize lock (double-clicked on) by inverting it */
 .rtt-optimize {{ width:100% !important; min-width:0 !important; height:100% !important; }}
-.rtt-optimize .q-btn__content {{ font-size:11px; }}
+.rtt-optimize .q-btn__content {{ font-size:{_CELL_FONT}px; }}
 .rtt-optimize-locked {{ background:#000 !important; }}
 .rtt-optimize-locked .q-btn__content {{ color:#fff !important; }}
+/* the optimization box's labels (its ⟪𝐝⟫ₚ / 𝑝 symbols and its captions) are left-justified
+   under their left-packed controls, overriding the centred .rtt-symbol / .rtt-caption base */
+.rtt-opt-label {{ text-align:left !important; }}
 /* an in-tile box title (the optimization box's "optimization" header): left-aligned at the
    top-left of the box (its cell otherwise centres it), padded off the left border */
 .rtt-boxtitle {{ font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
-                 color:#000; width:100%; text-align:left; padding-left:3px; }}
+                 color:#000; width:100%; text-align:left; padding-left:8px; }}
 /* the audio rows' speaker buttons (one per pitch). Flat and transparent so the cyan/green
    wash shows through; the icon fills the (square) cell. .rtt-spk-on highlights it while sounding. */
 .rtt-audio-btn {{ width:100% !important; height:100% !important; min-width:0 !important;
@@ -1540,13 +1541,17 @@ def index() -> None:
                 rangeopts[cb.id] = opts
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
-                math_cells[cb.id] = ui.html("").classes("rtt-symbol")  # content set in render()
+                # the optimization box's symbols are left-justified under their left-packed controls
+                cls = "rtt-symbol rtt-opt-label" if cb.id.startswith("optimization:") else "rtt-symbol"
+                math_cells[cb.id] = ui.html("").classes(cls)  # content set in render()
             elif cb.kind == "units":  # the per-box units line and the domain-units row/col labels
                 wrap.classes("rtt-units-cell")
                 math_cells[cb.id] = ui.html("").classes("rtt-units")  # content set in render()
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
-                captions[cb.id] = ui.html("").classes("rtt-caption")  # content set in render()
+                # the optimization box's captions/hint are left-justified (not centred like tile names)
+                cls = "rtt-caption rtt-opt-label" if cb.id.startswith("optimization:") else "rtt-caption"
+                captions[cb.id] = ui.html("").classes(cls)  # content set in render()
             elif cb.kind == "preselect":
                 name = cb.id.split(":", 1)[1]  # temperament / tuning / target
                 if name == "target":
