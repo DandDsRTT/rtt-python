@@ -175,36 +175,59 @@ SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symb
 FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 
-# Box-group colorization (the mockup's coloured washes behind the grey tiles): a
-# group's "{group}_colorization" setting, when on, paints colour behind that group's
-# boxes, showing through the gaps around the grey tiles. The mockup colours specific
-# rectangular regions, so each entry is ``(group, columns, rows)`` and renders as ONE
-# band — the bounding box of its present columns × rows. TUNING (cyan) is the
-# tuning/just/retuning/damage ROWS (full width) plus the target-intervals COLUMN (full
-# height). TEMPERAMENT (yellow) is the domain columns + the mapping row by content
-# extent: generators + the quantities spine down to the mapping row; domain primes/commas
-# through the retuning row; the target/interest columns from the mapping row through
-# retuning. Where a cyan band crosses a yellow band the darken blend yields green — the
-# tuning maps over the domain, the mapped/size lists over the targets. (So e.g. the whole
-# damage row and the tuning rows over the spine/generators read plain cyan; the mapping
-# row over the targets reads green and over the other-intervals reads yellow.)
-COLORIZE_REGIONS: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
-    ("temperament", ("quantities", "gens"), ("quantities", "vectors", "mapping")),
-    ("temperament", ("primes", "commas"),
-     ("quantities", "vectors", "mapping", "tuning", "just", "retune")),
-    ("temperament", ("targets", "interest"), ("mapping", "tuning", "just", "retune")),
-    ("tuning", ("quantities", "gens", "primes", "commas", "targets", "interest"),
-     ("tuning", "just", "retune", "damage")),
-    ("tuning", ("targets",),
-     ("quantities", "vectors", "mapping", "tuning", "just", "retune", "damage")),
-    # the audio rows (their own band, since they sit far above the tuning rows and a
-    # bounding box spanning both would swallow everything between): cyan over BOTH audio
-    # rows full width; yellow over the mapped row's value columns only, so just audio
-    # reads pure cyan and mapped audio reads green (cyan ⊓ yellow), spine staying cyan.
-    ("tuning", ("quantities", "gens", "primes", "commas", "targets", "interest"),
-     ("just_audio", "mapped_audio")),
-    ("temperament", ("gens", "primes", "commas", "targets", "interest"), ("mapped_audio",)),
-)
+# Content-derived colorization (the mockup's coloured washes behind the grey tiles): a
+# group's "{group}_colorization" setting, when on, paints colour behind the tiles whose
+# quantity is built from that group's fundamental object, showing through the gaps around
+# the grey tiles. Each quantity is a product of fundamental objects; a tile is washed by
+# whichever *colour-bearing* objects are multiplied into it:
+#   "G" — the generator embedding (and the generator tuning map 𝒈, which tunes G) → tuning (cyan)
+#   "M" — the (temperament) mapping                                                → temperament (yellow)
+#   "C" — the comma basis                                                           → temperament (yellow)
+# Everything else is colourless: the domain basis (the primes), the target list T, the
+# just tuning map 𝒋, the complexity prescaler 𝑋 and the weight 𝒘. A tile carrying both a
+# tuning and a temperament object reads green (the darken blend of the two washes) — e.g.
+# the tempered map 𝒕 = 𝒈𝑀 (G·M), and the whole error/damage chain 𝐞 = (𝒈𝑀 − 𝒋)T, whose
+# 𝒈𝑀 term keeps its G and M even though 𝒓 is a difference. CELL_FACTORS lists only the
+# colour-bearing factors of each tile; a (row, col) absent here carries no wash. Keys
+# match TILES / AUDIO_TILES. The generators (mapping × spine) are G itself — the more
+# fundamental cyan object, since 𝒈 tunes them.
+_FACTOR_GROUP = {"G": "tuning", "M": "temperament", "C": "temperament"}
+CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
+    # interval-vectors / quantities headers: the comma basis IS C; primes/targets/interest are colourless
+    ("quantities", "commas"): frozenset({"C"}),        # the comma ratios = C
+    ("vectors", "commas"): frozenset({"C"}),           # the comma monzos = C
+    # the generators are the generator embedding G (𝒈's basis)
+    ("mapping", "quantities"): frozenset({"G"}),       # the generators (G)
+    # the mapping matrix and its mapped lists are 𝑀 (the mapped comma basis 𝑀C also has C)
+    ("mapping", "primes"): frozenset({"M"}),           # 𝑀
+    ("mapping", "commas"): frozenset({"M", "C"}),      # 𝑀C
+    ("mapping", "targets"): frozenset({"M"}),          # Y = 𝑀T
+    ("mapping", "interest"): frozenset({"M"}),         # 𝑀·interest
+    ("canon", "primes"): frozenset({"M"}),             # the canonical mapping (𝑀 = 𝐅𝑀_c): still the 𝑀 family
+    # the generator tuning map 𝒈 = G; the tempered family 𝒕 = 𝒈𝑀 etc. carry G and M (green)
+    ("tuning", "gens"): frozenset({"G"}),              # 𝒈 (the generator tuning map)
+    ("tuning", "primes"): frozenset({"G", "M"}),       # 𝒕 = 𝒈𝑀
+    ("tuning", "commas"): frozenset({"G", "M", "C"}),  # 𝒕C
+    ("tuning", "targets"): frozenset({"G", "M"}),      # 𝐚 = 𝒈𝑀T
+    ("tuning", "interest"): frozenset({"G", "M"}),
+    # the just sizes carry no G/𝑀; only the comma column has C (the just size of the commas)
+    ("just", "commas"): frozenset({"C"}),              # 𝒋C
+    # the retuning/error chain 𝒓 = 𝒕 − 𝒋 keeps 𝒕's G and M; the comma column adds C
+    ("retune", "primes"): frozenset({"G", "M"}),       # 𝒓 = 𝒈𝑀 − 𝒋
+    ("retune", "commas"): frozenset({"G", "M", "C"}),  # 𝒓C
+    ("retune", "targets"): frozenset({"G", "M"}),      # 𝐞 = 𝒓T
+    ("retune", "interest"): frozenset({"G", "M"}),
+    ("damage", "targets"): frozenset({"G", "M"}),      # 𝐝 = |𝐞|diag(𝒘), via 𝐞
+    # complexity over the comma basis norms C → temperament; over primes/targets it's colourless
+    ("complexity", "commas"): frozenset({"C"}),        # 𝒄 of the comma basis (norm of 𝑋C)
+    # the audio rows mirror the just (colourless; comma column C) and tempered (G·M) sizes they sound
+    ("just_audio", "commas"): frozenset({"C"}),
+    ("mapped_audio", "gens"): frozenset({"G"}),        # the genmap, as the tuning row carries
+    ("mapped_audio", "primes"): frozenset({"G", "M"}),
+    ("mapped_audio", "commas"): frozenset({"G", "M", "C"}),
+    ("mapped_audio", "targets"): frozenset({"G", "M"}),
+    ("mapped_audio", "interest"): frozenset({"G", "M"}),
+}
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
 # column): each is a quick menu for one of the things you actually choose, riding
@@ -1540,32 +1563,25 @@ def build(state, settings=None, collapsed=None,
     if gtm_box is not None:
         blocks.append(Block("block:tuning:rangesbox", *gtm_box, boxed=True))
 
-    # Colorization washes. Each region in COLORIZE_REGIONS renders as ONE band — the
-    # bounding box of its present columns × rows — drawn as a white base plus the
-    # group's colour at mix-blend-mode:darken (see app.py). The base sits a layer BELOW
-    # the colour (z-index), so wherever two groups' colour bands cross the darken
-    # composes regardless of paint order: a cyan tuning band over a yellow temperament
-    # band darkens to the mockup's green. A band spans the current (possibly folded)
-    # extent of its rows/columns and overhangs by WASH_PAD (bridging the inter-column gaps).
+    # Colorization washes. Each colour-bearing tile (CELL_FACTORS) renders one band per
+    # group — a white base plus the group's colour at mix-blend-mode:darken (see app.py).
+    # The base sits a layer BELOW the colour (z-index), so where a tile carries both groups
+    # the two colour bands darken-compose regardless of paint order: cyan over yellow gives
+    # the mockup's green. Each band hugs its tile's (possibly folded) extent and overhangs
+    # by WASH_PAD — plus, on a +-bearing column, the extra FRAME_GAP its tile claims
+    # (tile_pad over PAD) — so a run of same-coloured tiles meets across the inter-tile gaps
+    # and reads as one continuous band rather than leaving grey strips between them.
     if col_x and row_y:
         bands = []  # (id, x, y, w, h, group)
-        for idx, (group, rcols, rrows) in enumerate(COLORIZE_REGIONS):
-            if not settings.get(f"{group}_colorization"):
+        for (rkey, ckey), factors in CELL_FACTORS.items():
+            if (rkey, ckey) not in declared_tiles or rkey not in row_y or ckey not in col_x:
                 continue
-            cs = [c for c in rcols if c in col_x]
-            rs = [r for r in rrows if r in row_y]
-            if not cs or not rs:
-                continue
-            # Overhang past the footprint by WASH_PAD — plus, on a +-bearing edge column, the
-            # extra FRAME_GAP its tile claims (tile_pad over PAD): that column's neighbour sits
-            # that much farther across the gutter, so the wash must reach as far to still meet
-            # the adjacent band rather than leaving a grey strip beside the + tile.
-            left, right = min(cs, key=col_x.get), max(cs, key=lambda c: col_x[c] + col_w[c])
-            x0 = col_x[left] - WASH_PAD - (tile_pad(left) - PAD)
-            x1 = col_x[right] + col_w[right] + WASH_PAD + (tile_pad(right) - PAD)
-            y0 = min(tile_top[r] for r in rs) - WASH_PAD
-            y1 = max(tile_top[r] + tile_h[r] for r in rs) + WASH_PAD
-            bands.append((f"{group}:{idx}", x0, y0, x1 - x0, y1 - y0, group))
+            pad = tile_pad(ckey) - PAD
+            x, w = col_x[ckey] - WASH_PAD - pad, col_w[ckey] + 2 * (WASH_PAD + pad)
+            y, h = tile_top[rkey] - WASH_PAD, tile_h[rkey] + 2 * WASH_PAD
+            for group in {_FACTOR_GROUP[f] for f in factors}:
+                if settings.get(f"{group}_colorization"):
+                    bands.append((f"{group}:{rkey}:{ckey}", x, y, w, h, group))
         for bid, x, y, w, h, _ in bands:  # white bases (a layer below the colour bands)
             blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
         for bid, x, y, w, h, group in bands:  # the darken colour bands over them

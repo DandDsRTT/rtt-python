@@ -2358,58 +2358,80 @@ def _colormap_layout():
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=((-1, 1, 0),))
 
 
-def test_colorization_matches_the_mockup_cell_map():
-    # the exact per-cell colour map: Y=temperament(yellow), C=tuning(cyan), G=both(green
-    # via darken), N=uncoloured — probed by which colour bands cover each cell's centre.
+def test_colorization_follows_the_content_map():
+    # colour by algebraic content: a tile is tinted by which fundamental objects are
+    # multiplied into its quantity — the generator embedding G (and the generator tuning
+    # map 𝒈, which tunes G) → tuning (cyan); the mapping 𝑀 or the comma basis C →
+    # temperament (yellow); both → green (the darken blend). The target list T, the just
+    # tuning map 𝒋, the prescaler 𝑋 and the weight 𝒘 are colourless.
     lay = _colormap_layout()
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    def col_row(col, row_cid):  # a cell with no tile: the column header's x, the row cell's y
-        h = cells[f"header:{col}"]
-        return _color_at(lay, h.x + h.w / 2, _mid(cells, row_cid)[1])
-    # quantities + interval-vectors rows: domain YELLOW, targets CYAN, other-intervals blank
-    assert col_row("quantities", "prime:0") == Y           # quantities × spine (top-left corner)
-    assert at("prime:0") == Y                               # quantities × primes
-    assert at("target:0") == C                              # quantities × targets
-    assert col_row("interest", "prime:0") == N              # quantities × other-intervals
-    assert col_row("primes", "basis:0") == Y                # interval-vectors × primes (basis:0 sits in the vectors row)
-    assert at("cell:vec:targets:0:0") == C                  # interval-vectors × targets (target monzos)
-    # mapping row: domain YELLOW, targets GREEN, other-intervals YELLOW
-    assert at("cell:mapping:0:0") == Y                      # mapping × primes
-    assert col_row("gens", "cell:mapping:0:0") == Y         # mapping × generators
-    assert at("cell:mapped:0:0") == G                       # mapping × targets (mapped list)
-    assert at("cell:imapped:0:0") == Y                      # mapping × other-intervals
-    # tuning / just / retuning rows: spine + generators CYAN, everything else GREEN
-    for r in ("tuning", "just", "retune"):
-        assert col_row("quantities", f"{r}:prime:0") == C   # × spine
-        assert col_row("gens", f"{r}:prime:0") == C         # × generators
-        assert at(f"{r}:prime:0") == G                      # × primes
-        assert at(f"{r}:comma:0") == G                      # × commas
-        assert at(f"{r}:target:0") == G                     # × targets
-        assert at(f"{r}:interest:0") == G                   # × other-intervals
-    # the entire damage row is CYAN
-    assert col_row("quantities", "damage:target:0") == C    # × spine
-    assert col_row("primes", "damage:target:0") == C        # × primes
-    assert at("damage:target:0") == C                       # × targets
+    # quantities + interval-vectors rows: only the comma basis (C) is coloured (yellow);
+    # the domain primes, the targets (T) and the other-intervals carry no colour
+    assert at("comma:0") == Y                  # quantities × commas (the comma ratios are C)
+    assert at("cell:comma:0:0") == Y           # interval-vectors × commas (the comma monzos)
+    assert at("prime:0") == N                  # quantities × primes (the domain basis)
+    assert at("target:0") == N                 # quantities × targets (T)
+    assert at("interest:0") == N               # quantities × other-intervals
+    assert at("basis:0") == N                  # interval-vectors × spine (the domain basis)
+    assert at("cell:vec:targets:0:0") == N     # interval-vectors × targets (the target monzos)
+    assert at("cell:interest:0:0") == N        # interval-vectors × other-intervals
+    # the generators are the generator embedding G → tuning (cyan)
+    assert at("gen:0") == C                     # mapping × spine (the generators G)
+    # the mapping matrix and its mapped lists are pure 𝑀 (and 𝑀C) → temperament (yellow)
+    assert at("cell:mapping:0:0") == Y          # mapping × primes (𝑀)
+    assert at("cell:mapped_comma:0:0") == Y     # mapping × commas (𝑀C)
+    assert at("cell:mapped:0:0") == Y           # mapping × targets (Y = 𝑀T)
+    assert at("cell:imapped:0:0") == Y          # mapping × other-intervals (𝑀·interest)
+    # the tempered family 𝒕 = 𝒈𝑀 carries both G and 𝑀 → green; the bare genmap 𝒈 is cyan.
+    # the retuning row 𝒓 = 𝒕 − 𝒋 keeps the 𝒈𝑀 term's G and 𝑀 (a difference still has them)
+    assert at("tuning:gen:0") == C              # tuning × generators (𝒈, the generator tuning map)
+    for col in ("prime", "comma", "target", "interest"):
+        assert at(f"tuning:{col}:0") == G       # 𝒕 / 𝒕C / 𝐚 = 𝒈𝑀(…)
+        assert at(f"retune:{col}:0") == G       # 𝒓 / 𝒓C / 𝐞 = (𝒈𝑀 − 𝒋)(…)
+    # the just sizes carry no G/𝑀; only the comma column has C (the just size of the commas)
+    assert at("just:prime:0") == N              # just × primes (𝒋)
+    assert at("just:comma:0") == Y              # just × commas (𝒋C)
+    assert at("just:target:0") == N             # just × targets (𝐨 = 𝒋T)
+    assert at("just:interest:0") == N           # just × other-intervals
+    # the damage row rides the error chain 𝐞 = (𝒈𝑀 − 𝒋)T → green
+    assert at("damage:target:0") == G           # damage × targets (𝐝 = |𝐞|diag(𝒘))
 
 
-def test_temperament_wash_bridges_the_plus_column_gutters():
-    # the domain primes and commas tiles carry an in-tile +, so their footprint runs a
-    # FRAME_GAP wider on each side than the bare content. The temperament wash must reach
-    # across that wider gutter, or a grey strip shows left of primes and right of commas
-    # in the top three rows (it can't in the tuning rows — the full-width cyan band there
-    # underlies the gutters). Probe each gutter's midpoint at the quantities/vectors/mapping
-    # row heights and require the wash to cover it.
+def test_off_by_default_rows_colorize_by_content_too():
+    # the rows hidden by default follow the same content rule when revealed: the canonical
+    # mapping is the 𝑀 family (𝑀 = 𝐅𝑀_c → yellow), and the complexity of the comma basis
+    # norms C (→ yellow). Both ride a temperament wash; neither carries G, so neither greens.
+    s = settings.defaults()
+    s["temperament_colorization"] = True
+    s["form"] = True       # reveal the canonical-mapping row
+    s["weighting"] = True  # reveal the complexity row (a tuning-boxes sub-control)
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+    cells = {c.id: c for c in lay.cells}
+    at = lambda cid: _color_at(lay, *_mid(cells, cid))
+    assert at("cell:canon:0:0") == {"temperament"}      # the canonical mapping (𝑀 family)
+    assert at("complexity:comma:0") == {"temperament"}  # 𝒄 of the comma basis (norm of 𝑋C)
+
+
+def test_washes_bridge_the_plus_column_gutters():
+    # the domain primes and commas tiles carry an in-tile +, so each tile's footprint runs
+    # a FRAME_GAP wider on each side than its bare content. A wash on such a column must
+    # reach across that wider gutter to meet its same-coloured neighbour, or a grey strip
+    # shows beside the + tile. In the mapping row the mapping 𝑀, mapped comma basis 𝑀C and
+    # mapped list 𝑀T are all temperament (yellow); in the tuning row the tempered comma
+    # sizes 𝒕C and target sizes 𝐚 are both green. Probe each gutter's midpoint.
     lay = _colormap_layout()
     cells = {c.id: c for c in lay.cells}
     h = lambda k: cells[f"header:{k}"]
-    left_gutter = (h("gens").x + h("gens").w + h("primes").x) / 2     # between gens and primes
-    right_gutter = (h("commas").x + h("commas").w + h("targets").x) / 2  # between commas and targets
-    for row_cid in ("prime:0", "basis:0", "cell:mapping:0:0"):  # quantities, vectors, mapping rows
-        y = _mid(cells, row_cid)[1]
-        assert "temperament" in _color_at(lay, left_gutter, y)   # no grey gap left of primes
-        assert "temperament" in _color_at(lay, right_gutter, y)  # no grey gap right of commas
+    primes_commas = (h("primes").x + h("primes").w + h("commas").x) / 2    # 𝑀 | 𝑀C
+    commas_targets = (h("commas").x + h("commas").w + h("targets").x) / 2  # 𝑀C | 𝑀T  /  𝒕C | 𝐚
+    map_y = _mid(cells, "cell:mapping:0:0")[1]
+    tun_y = _mid(cells, "tuning:prime:0")[1]
+    assert "temperament" in _color_at(lay, primes_commas, map_y)               # 𝑀 meets 𝑀C
+    assert "temperament" in _color_at(lay, commas_targets, map_y)              # 𝑀C meets 𝑀T
+    assert {"temperament", "tuning"} <= _color_at(lay, commas_targets, tun_y)  # 𝒕C meets 𝐚 (green)
 
 
 def test_colorization_off_by_default_and_renders_as_base_plus_darken_bands():
@@ -2463,6 +2485,18 @@ def test_audio_rows_depend_only_on_the_audio_toggle():
     # top-level: the rows appear whenever audio is on, independent of the tuning boxes
     assert "label:just_audio" in {c.id for c in _with(audio=True, tuning_boxes=False).cells}
     assert "label:just_audio" not in {c.id for c in _with(audio=False).cells}
+
+
+def test_form_colorization_is_a_greyed_form_subcontrol():
+    # form colorization completes the M/G/F colour trio alongside temperament (𝑀) and
+    # tuning (G) colorization, but its content — the form matrix 𝐹 — isn't a built tile
+    # yet, so it rides as a greyed stub: registered and indented under the form controls,
+    # default off, and NOT implemented (no wash to paint), like the other deferred controls.
+    keys = {k for _g, items in settings.SHOW_GROUPS for k, *_ in items}
+    assert "form_colorization" in keys
+    assert settings.SUBCONTROLS["form_colorization"] == "form_controls"
+    assert settings.defaults()["form_colorization"] is False
+    assert "form_colorization" not in settings.IMPLEMENTED
 
 
 def test_audio_adds_two_rows_between_counts_and_quantities():
@@ -2535,16 +2569,21 @@ def _audio_colormap():
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=((-1, 1, 0),))
 
 
-def test_audio_rows_colorize_just_cyan_and_mapped_green():
-    # just audio is pure tuning → cyan; mapped audio is tuning ⊓ temperament → green
+def test_audio_rows_colorize_by_content_like_the_rows_they_sound():
+    # the audio rows mirror the rows they sound. just audio plays the just sizes 𝒋 (no
+    # G/𝑀 → colourless), except the comma column — the just size of the comma basis 𝒋C
+    # (C → yellow). mapped audio plays the tempered sizes: the generator tuning map 𝒈
+    # (G → cyan) over the generators, and 𝒕 = 𝒈𝑀 (G·M → green) over the value columns.
     lay = _audio_colormap()
     cells = {c.id: c for c in lay.cells}
-    C, G = {"tuning"}, {"temperament", "tuning"}
+    Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
+    assert at("speaker:just_audio:comma:0") == Y           # 𝒋C
+    for g in ("prime", "target", "interest"):
+        assert at(f"speaker:just_audio:{g}:0") == N         # 𝒋 / 𝐨: no G/𝑀/C
+    assert at("speaker:mapped_audio:gen:0") == C            # 𝒈 (the generator tuning map)
     for g in ("prime", "comma", "target", "interest"):
-        assert at(f"speaker:just_audio:{g}:0") == C
-    for g in ("gen", "prime", "comma", "target", "interest"):
-        assert at(f"speaker:mapped_audio:{g}:0") == G
+        assert at(f"speaker:mapped_audio:{g}:0") == G       # 𝒕 = 𝒈𝑀
 
 
 def test_every_audio_tile_gets_its_own_bank():

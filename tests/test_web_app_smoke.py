@@ -241,9 +241,14 @@ def test_example_html_renders_each_special_sample_kind():
     assert "<u>" in app._example_html("mnemonics")  # underlined mnemonic letters
     assert "▼" in app._example_html("preselects")  # the dropdown caret
     # the colorization subcontrols preview a swatch of their actual wash colour (one
-    # source of truth with _TINTS); tuning ranges previews an I-beam
-    assert app._TINTS["temperament"] in app._example_html("temperament_colorization")
-    assert app._TINTS["tuning"] in app._example_html("tuning_colorization")
+    # source of truth with _TINTS), stamped with the fundamental matrix that drives it:
+    # 𝑀 (mapping) for temperament, 𝐺 (generator embedding) for tuning, 𝐹 (form) for form
+    for key, letter, group in (("temperament_colorization", "𝑀", "temperament"),
+                               ("tuning_colorization", "𝐺", "tuning"),
+                               ("form_colorization", "𝐹", "form")):
+        html = app._example_html(key)
+        assert app._TINTS[group] in html        # the swatch is the real wash colour...
+        assert app._math_html(letter) in html   # ...stamped with its matrix letter
     assert "<svg" in app._example_html("tuning_ranges")  # the min/max I-beam
 
 

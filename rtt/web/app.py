@@ -73,12 +73,14 @@ _RANGE_PLOT_T = 25  # plot-area top (below the title + top-cap label; spaced off
 _RANGE_PLOT_B = 12  # plot-area bottom margin (room for the bottom-cap label)
 _RANGE_FONT = 7  # cents-label / placeholder font size
 
-# Colorization wash colours, keyed by the box-group name the layout tags a wash with
-# (spreadsheet.COLORIZE_REGIONS). These are the mockup's saturated box-group tones;
-# a wash sits behind the grey tiles so the colour reads through the gaps around them.
-_TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a", "form": "#cd9acd"}  # cyan tuning, khaki
-# temperament, magenta form. The form WASH is deferred (no COLORIZE_REGIONS entry yet); this
-# palette entry feeds the greyed form-colorization swatch in the Show panel for now.
+# Colorization wash colours, keyed by the group the layout tags a wash with
+# (spreadsheet.CELL_FACTORS via _FACTOR_GROUP); a wash sits behind the grey tiles so the
+# colour reads through the gaps around them. The three are the muted-channel trio — each
+# dims ONE RGB channel to 0x9a — so their darken blends stay clean (tuning ⊓ temperament =
+# #9acd9a, the mockup's green). cyan = tuning (the generator embedding G), khaki =
+# temperament (the mapping 𝑀 / comma basis C), magenta = form (the form matrix 𝐹 — its
+# wash is deferred; the palette entry feeds the greyed Show-panel swatch for now).
+_TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a", "form": "#cd9acd"}
 
 _AUDIO_KINDS = {"speaker"}  # cells whose baked cents rebuild when the tuning changes
 _AUDIO_CTRLS = {"audio_wave", "audio_mode", "audio_hold", "audio_root"}  # the per-tile bank controls
@@ -1044,9 +1046,13 @@ def _example_html(key: str) -> str:
     if key == "quantities":  # a generic quantity over its size: 1 above .585
         return ('<span style="display:inline-flex;flex-direction:column;align-items:center;'
                 'line-height:1.05"><span>1</span><span style="font-size:9px">.585</span></span>')
-    if key in ("temperament_colorization", "tuning_colorization", "form_colorization"):  # a swatch of the wash colour
-        color = _TINTS[key.split("_")[0]]  # one source of truth: the swatch == the actual wash
-        return f'<span style="display:inline-block;width:36px;height:14px;background:{color}"></span>'
+    if key in ("temperament_colorization", "tuning_colorization", "form_colorization"):
+        # a swatch of the actual wash colour (one source of truth with _TINTS), stamped with
+        # the fundamental matrix that drives it: 𝑀 (mapping), 𝐺 (generator embedding), 𝐹 (form)
+        group = key.split("_")[0]
+        letter = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}[group]
+        return (f'<span style="display:inline-flex;align-items:center;justify-content:center;'
+                f'width:36px;height:14px;background:{_TINTS[group]}">{_math_html(letter)}</span>')
     if key == "audio":  # a speaker glyph — the per-pitch play button the audio rows carry
         return '<span class="material-icons" style="font-size:18px;color:#444">volume_up</span>'
     if key == "tuning_ranges":  # the tuning-range I-beam (min/max generator bars)
