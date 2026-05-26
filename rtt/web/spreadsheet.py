@@ -445,7 +445,8 @@ EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas")})
 EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band holds an input
 # Rows that carry a plain-text band (every value row; the counts row has none). The
 # quantities row's ratios are placed per column, the rest as one EBK string per tile.
-PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "retune", "damage"})
+PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "retune", "damage",
+                        "prescaling", "complexity", "weight"})
 
 # Cell kinds the value-display toggles filter out. "gridded values" hides
 # everything a tile holds besides its fold toggle, name caption and plain-text

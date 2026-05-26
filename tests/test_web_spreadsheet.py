@@ -1224,6 +1224,12 @@ def test_weighting_rows_have_units_column_tiles_when_domain_units_on():
     assert cells["ucol:weight"].text == "(C)/"
 
 
+def test_weighting_rows_render_a_plain_text_box_when_plain_text_on():
+    cells = {c.id for c in _with(weighting=True, plain_text_values=True).cells}
+    assert {"ptext:weight:targets", "ptext:complexity:primes", "ptext:complexity:targets",
+            "ptext:prescaling:primes"} <= cells
+
+
 def test_prescaling_row_sits_between_retuning_and_complexity():
     on = {c.id: c for c in _with(weighting=True).cells}
     assert on["retune:prime:0"].y < on["cell:prescaling:primes:0:0"].y < on["complexity:prime:0"].y

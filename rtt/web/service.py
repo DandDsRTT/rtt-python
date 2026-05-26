@@ -442,6 +442,15 @@ def plain_text_values(
     mapping_ebk = to_ebk(Temperament(state.mapping, Variance.ROW, db))
     if not is_standard_prime_limit_domain_basis(db):
         mapping_ebk = ".".join(str(e) for e in db) + " " + mapping_ebk
+    # the weighting region: complexity (a covector over the primes, lists elsewhere), the
+    # per-target weight list, and the prescaling matrices (L applied to each vector set, as
+    # ket lists). Complexity over the primes is the complexity of each domain basis element.
+    prime_ratios = tuple(f"{p}/1" for p in standard_primes(state.d))
+    prescaler = complexity_prescaler(state.mapping, scheme)
+    prime_units = tuple(tuple(1 if i == p else 0 for i in range(state.d)) for p in range(state.d))
+
+    def _prescaled(vectors):
+        return tuple(tuple(prescaler[i] * v[i] for i in range(state.d)) for v in vectors)
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
     # monzo lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
@@ -466,6 +475,13 @@ def plain_text_values(
         ("retune", "commas"): _cents_list(comma_sizes.errors),
         ("retune", "targets"): _cents_list(target_sizes.errors),
         ("damage", "targets"): _cents_list(target_sizes.damage),
+        ("prescaling", "primes"): _cents_ket_list(_prescaled(prime_units)),
+        ("prescaling", "commas"): _cents_ket_list(_prescaled(state.comma_basis)),
+        ("prescaling", "targets"): _cents_ket_list(_prescaled(target_monzos)),
+        ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
+        ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas)),
+        ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets)),
+        ("weight", "targets"): _cents_list(interval_weights(state.mapping, scheme, targets)),
     }
 
 
@@ -474,6 +490,12 @@ def _ket_list(vectors, close: str) -> str:
     ``⟩``), ``[[1 0} [0 1}]`` for generator-coordinate vectors (close ``}``). The
     outer ``[ ]`` wraps the whole list (even a single vector)."""
     return "[" + " ".join("[" + " ".join(str(x) for x in v) + close for v in vectors) + "]"
+
+
+def _cents_ket_list(vectors) -> str:
+    """A ket list of float (grid-precision) column vectors — ``[[4.000 -6.340 2.322⟩]`` —
+    for the weighting prescaling matrices (the prescaled vectors L·v)."""
+    return "[" + " ".join("[" + " ".join(cents(x) for x in v) + "⟩" for v in vectors) + "]"
 
 
 def comma_basis_pending_text(comma_basis, pending) -> tuple[str, str, str]:

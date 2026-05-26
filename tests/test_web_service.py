@@ -503,6 +503,20 @@ def test_plain_text_commas_column_mirrors_the_grid():
     assert pt[("just", "commas")] == f"[{cents(sizes.just)}]"
 
 
+def test_plain_text_weighting_rows_mirror_the_grid():
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    pt = service.plain_text_values(state)
+    # complexity: a covector ⟨ … ] over the primes (their log-prime complexities), a
+    # list [ … ] over the commas (the comma's complexity is its prescaled monzo's norm)
+    assert pt[("complexity", "primes")] == "⟨1.000 1.585 2.322]"
+    assert pt[("complexity", "commas")] == "[12.662]"
+    assert pt[("complexity", "targets")].startswith("[") and pt[("complexity", "targets")].endswith("]")
+    # the per-target weight list (simplicity-weighted by default → 1/complexity)
+    assert pt[("weight", "targets")].startswith("[") and pt[("weight", "targets")].endswith("]")
+    # the prescaling row is L applied to each vector set, a ket list: L·[4,-4,1] = [4,-6.34,2.322]
+    assert pt[("prescaling", "commas")] == "[[4.000 -6.340 2.322⟩]"
+
+
 def test_plain_text_over_a_nonstandard_domain_uses_the_basis():
     # the plain-text view of a 2.3.13/5 temperament names the domain basis in dot
     # notation and tunes over its elements (not the standard primes)
