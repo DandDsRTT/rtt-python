@@ -2281,15 +2281,19 @@ def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels():
 
 def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
     # per the mockup, the optimization controls live INSIDE the target-interval damage list
-    # tile as a bordered, titled box — not a separate row — carrying the minimized-damage
-    # objective ⟨𝐝⟩ₚ, the editable power 𝑝, and the optimize button.
+    # tile as a bordered, titled box — not a separate row — laid out as two value-over-label
+    # columns (the objective ⟪𝐝⟫ₚ and the editable power 𝑝) with the optimize button at right.
     lay = _with(optimization=True)
     on = {c.id: c for c in lay.cells}
     assert on["optimization:title"].text == "optimization"
-    assert on["optimization:objective"].text.startswith("⟨")        # the ⟨𝐝⟩ₚ objective field
-    assert " = " in on["optimization:objective"].text
-    assert on["optimization:power"].kind == "powerinput"            # the power is an editable field
+    # the objective: a cents value over the symbol ⟪𝐝⟫ₚ (double-angle brackets, power subscript)
+    assert on["optimization:objective"].kind == "tval"
+    assert on["optimization:objective:symbol"].text == "⟪𝐝⟫ₚ"
+    # the power: an editable field over the symbol 𝑝 and the "optimization power" caption
+    assert on["optimization:power"].kind == "powerinput"            # the power is editable
     assert on["optimization:power"].text == "∞"                     # ...showing the current Lp order
+    assert on["optimization:power:symbol"].text == "𝑝"
+    assert on["optimization:power:caption"].text == "optimization power"
     assert on["optimization:button"].text == "optimize"
     # the box sits below the damage values, in the target-intervals column
     assert on["optimization:title"].y > on["damage:target:0"].y
@@ -2317,12 +2321,15 @@ def test_optimization_needs_its_parent_tuning_boxes():
     assert "optimization:title" not in cells
 
 
-def test_optimize_button_sits_right_of_the_stacked_objective_and_power():
+def test_optimization_box_lays_out_objective_power_and_button_in_columns():
     on = {c.id: c for c in _with(optimization=True).cells}
-    # objective ⟨𝐝⟩ₚ over the editable power 𝑝 on the left; the optimize button to their right
-    assert on["optimization:objective"].y < on["optimization:power"].y   # objective above power
-    assert on["optimization:objective"].x == on["optimization:power"].x  # ...same (left) column
-    assert on["optimization:button"].x > on["optimization:power"].x      # button to the right
+    # objective and power are side-by-side value-over-label columns, the optimize button right
+    assert on["optimization:objective"].x < on["optimization:power"].x < on["optimization:button"].x
+    assert on["optimization:objective"].y == on["optimization:power"].y  # same (value) row
+    # within each column the value sits above its symbol; the power adds a caption below
+    assert on["optimization:objective"].y < on["optimization:objective:symbol"].y
+    assert (on["optimization:power"].y < on["optimization:power:symbol"].y
+            < on["optimization:power:caption"].y)
     assert "optimization:button" not in {c.id for c in _with(optimization=False).cells}
 
 

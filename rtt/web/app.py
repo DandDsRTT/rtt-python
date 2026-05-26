@@ -1512,7 +1512,7 @@ def index() -> None:
                 _ratio(cb, approx=False)
             elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, monzo components)
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
-            elif cb.kind in ("count", "optimization"):  # a scalar "symbol = value" (𝑑 = 3, 𝑝 = ∞)
+            elif cb.kind == "count":  # a scalar "symbol = value" (the counts row's 𝑑 = 3 etc.)
                 math_cells[cb.id] = ui.html("").classes("rtt-count")  # content set in render()
             elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, monzo rule
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
@@ -1662,10 +1662,12 @@ def index() -> None:
                 opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
             elif cb.kind == "boxtitle":  # an in-tile box title (e.g. "optimization")
                 labels[cb.id] = ui.label(cb.text).classes("rtt-boxtitle")
-            elif cb.kind == "powerinput":  # the editable optimization power 𝑝 (∞ / 2 / 1)
+            elif cb.kind == "powerinput":  # the editable optimization power (∞ / 2 / 1). The 𝑝
+                # label rides as a separate symbol cell below it (the value-over-label mockup
+                # layout), so the field itself shows only the value, in the bordered cell-input box
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_power_change()) \
-                    .props('dense borderless prefix="𝑝 ="').classes("rtt-cellinput")
+                    .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
@@ -1828,8 +1830,8 @@ def index() -> None:
                 checks[cb.id].value = cb.checked
             elif cb.kind == "formchooser":  # a one-shot action: snap back to the placeholder
                 selects[cb.id].value = ""
-            elif cb.kind in ("symbol", "count", "optimization", "units"):  # text rendered as HTML:
-                # symbols/equivalence tails/counts/power go through _math_html (styled math
+            elif cb.kind in ("symbol", "count", "units"):  # text rendered as HTML:
+                # symbols/equivalence tails/counts go through _math_html (styled math
                 # glyphs); units use _units_html (a single-story-g sans value, serif label)
                 html = _units_html(cb.text) if cb.kind == "units" else _math_html(cb.text)
                 if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change

@@ -140,6 +140,11 @@ async def test_optimization_renders_the_optimize_button(user: User) -> None:
     # catches any error rendering the new "optimize" cell branch.
     await _enable(user, "optimization")
     await user.should_see(marker="optimization:button")
+    # the box's value-over-label cells render too: the objective value + its ⟪𝐝⟫ₚ symbol,
+    # the editable power, and the power's symbol + "optimization power" caption
+    for marker in ("optimization:objective", "optimization:objective:symbol",
+                   "optimization:power", "optimization:power:symbol", "optimization:power:caption"):
+        await user.should_see(marker=marker)
 
 
 async def test_optimization_renders_the_held_column_and_its_add_control(user: User) -> None:

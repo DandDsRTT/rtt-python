@@ -1022,9 +1022,11 @@ def build(state, settings=None, collapsed=None,
     # sub-control. Reserve their height up front so the board stays clear below the tile.
     opt_ctrl = (show_optimization and "row:damage" not in collapsed
                 and col_open("targets") and "tile:damage:targets" not in collapsed)
-    # the optimization box: a title strip over two rows (objective ⟨d⟩ₚ + power 𝑝 on the
-    # left, the optimize button spanning them on the right)
-    opt_extra = (RANGE_GAP + OPT_TITLE_H + 2 * ROW_H) if opt_ctrl else 0
+    # the optimization box: a title strip over two value-over-label columns (the objective
+    # ⟪𝐝⟫ₚ and the editable power 𝑝, each a cents/∞ value above its symbol; the power also
+    # captioned "optimization power") with the optimize button spanning them on the right.
+    # Its height = title + value row + symbol row + a two-line caption band.
+    opt_extra = (RANGE_GAP + OPT_TITLE_H + ROW_H + SYMBOL_H + 2 * CAPTION_LINE) if opt_ctrl else 0
     slope_ctrl = (show_alt_complexity and "row:weight" not in collapsed
                   and col_open("targets") and "tile:weight:targets" not in collapsed)
     slope_extra = (RANGE_GAP + PRESELECT_H) if slope_ctrl else 0
@@ -1626,29 +1628,45 @@ def build(state, settings=None, collapsed=None,
 
     # the optimization box, nested at the BOTTOM of the target-interval damage list tile (the
     # tuning's own column, whose damages it minimizes): a bordered box titled "optimization"
-    # holding the minimized-damage objective ⟨𝐝⟩ₚ and the editable power 𝑝 stacked on the left,
-    # with the optimize button spanning them on the right. The damage tile's panel grows by
-    # opt_extra (above) to enclose it; the box's own border is the opt_box block (panel loop).
+    # holding, per the mockup, two value-over-label columns — the minimized-damage objective
+    # (its cents value over the symbol ⟪𝐝⟫ₚ) and the editable power (∞ over 𝑝 over the caption
+    # "optimization power") — with the optimize button spanning them on the right. The values,
+    # symbol and caption reuse the grid's own tile vocabulary (tval / symbol / caption), so the
+    # box reads as a mini-tile. The damage tile's panel grows by opt_extra to enclose it; the
+    # box's own border is the opt_box block (panel loop).
     opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
     if opt_ctrl:
         ox, ow = col_x["targets"], col_w["targets"]
         box_top = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
-        half, content_top = ow / 2, box_top + OPT_TITLE_H
+        content_top = box_top + OPT_TITLE_H
+        sym_top = content_top + ROW_H            # the symbol row, under the values
+        cap_top = sym_top + SYMBOL_H             # the caption row, under the symbols
+        body_h = ROW_H + SYMBOL_H + 2 * CAPTION_LINE  # the value+symbol+caption stack height
+        # three columns: objective | power | optimize button (a touch wider, per the mockup)
+        cw = ow * 0.3
+        obj_x, pow_x, btn_x = ox, ox + cw, ox + 2 * cw
         objective = _lp_objective(target_sizes.damage, service.optimization_power(tuning_scheme))
         power = _format_power(service.optimization_power(tuning_scheme))
         cells.append(CellBox("optimization:title", ox, box_top, ow, OPT_TITLE_H, "boxtitle",
                              text="optimization"))
-        cells.append(CellBox("optimization:objective", ox, content_top, half, ROW_H, "optimization",
-                             text=f"⟨𝐝⟩ₚ = {service.cents(objective)}"))
-        # the power is an editable field (∞ minimax, 2 miniRMS, 1 miniaverage); app.py renders
-        # the input with a 𝑝 label and routes edits to editor.set_optimization_power
-        cells.append(CellBox("optimization:power", ox, content_top + ROW_H, half, ROW_H, "powerinput",
+        # the objective: its cents value over the symbol ⟪𝐝⟫ₚ (the Lp norm the tuning minimizes)
+        cells.append(CellBox("optimization:objective", obj_x, content_top, cw, ROW_H, "tval",
+                             text=service.cents(objective)))
+        cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, cw, SYMBOL_H, "symbol",
+                             text="⟪𝐝⟫ₚ"))
+        # the power: an editable field (∞ minimax, 2 miniRMS, 1 miniaverage) over the symbol 𝑝
+        # and the caption "optimization power"; app.py routes edits to set_optimization_power
+        cells.append(CellBox("optimization:power", pow_x, content_top, cw, ROW_H, "powerinput",
                              text=power))
+        cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, cw, SYMBOL_H, "symbol",
+                             text="𝑝"))
+        cells.append(CellBox("optimization:power:caption", pow_x, cap_top, cw, 2 * CAPTION_LINE,
+                             "caption", text="optimization power"))
         # the button single-clicks to optimize once, double-clicks to lock auto-optimize;
         # app.py owns that behaviour and the lock visual, reading the editor
-        cells.append(CellBox("optimization:button", ox + half, content_top, half, 2 * ROW_H, "optimize",
+        cells.append(CellBox("optimization:button", btn_x, content_top, ow - 2 * cw, body_h, "optimize",
                              text="optimize"))
-        opt_box = (ox, box_top, ow, OPT_TITLE_H + 2 * ROW_H)
+        opt_box = (ox, box_top, ow, OPT_TITLE_H + body_h)
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
