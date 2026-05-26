@@ -588,13 +588,15 @@ def plain_text_values(
     scheme: str = DEFAULT_TUNING_SCHEME,
     target_spec: str = DEFAULT_TARGET_SPEC,
     held=(),
+    interest=(),
     generator_tuning=None,
 ) -> dict[tuple[str, str], str]:
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
     show the same numbers two ways — the EBK string is the inline notation. ``held``
-    (the held interval monzos) and ``generator_tuning`` (a frozen manual tuning) are
-    threaded into the same tuning the grid builds, so the two views can't diverge."""
+    (the held interval monzos), ``interest`` (the other-intervals-of-interest monzos)
+    and ``generator_tuning`` (a frozen manual tuning) are threaded into the same tuning
+    the grid builds, so the two views can't diverge."""
     db = state.domain_basis
     targets = target_interval_set(target_spec, db)
     commas = comma_ratios(state.comma_basis, db)
@@ -665,20 +667,40 @@ def plain_text_values(
             ("retune", "held"): _cents_list(held_sizes.errors),
             ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios)),
         })
+    # the other-intervals-of-interest column is a loose collection, not a basis: its
+    # vectors and mapped images stand alone (each its own ket, space-separated, no outer
+    # [ … ] wrap — wrap=False), unlike the comma/target/held matrices. The size rows are
+    # ordinary lists, and prescaling mirrors its still-matrix grid tile (a wrapped ket list).
+    if interest:
+        interest_ratios = comma_ratios(interest, db)
+        interest_mapped = mapped_intervals(state.mapping, interest_ratios, db)
+        interest_sizes = interval_sizes(tun, interest_ratios, db)
+        values.update({
+            ("vectors", "interest"): _ket_list(interest, "⟩", wrap=False),
+            ("mapping", "interest"): _ket_list(zip(*interest_mapped), "}", wrap=False),
+            ("tuning", "interest"): _cents_list(interest_sizes.tempered),
+            ("just", "interest"): _cents_list(interest_sizes.just),
+            ("retune", "interest"): _cents_list(interest_sizes.errors),
+            ("prescaling", "interest"): _cents_ket_list(_prescaled(interest)),
+            ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios)),
+        })
     return values
 
 
-def _ket_list(vectors, close: str) -> str:
-    """A bracketed list of column vectors: ``[[1 0 0⟩ [0 1 0⟩]`` for monzos (close
-    ``⟩``), ``[[1 0} [0 1}]`` for generator-coordinate vectors (close ``}``). The
-    outer ``[ ]`` wraps the whole list (even a single vector)."""
-    return "[" + " ".join("[" + " ".join(str(x) for x in v) + close for v in vectors) + "]"
+def _ket_list(vectors, close: str, wrap: bool = True) -> str:
+    """A list of column vectors: ``[[1 0 0⟩ [0 1 0⟩]`` for monzos (close ``⟩``),
+    ``[[1 0} [0 1}]`` for generator-coordinate vectors (close ``}``). The outer ``[ ]``
+    wraps the whole list (a matrix presentation, even a single vector); ``wrap=False``
+    drops it for the intervals-of-interest column, whose intervals stand alone."""
+    kets = " ".join("[" + " ".join(str(x) for x in v) + close for v in vectors)
+    return f"[{kets}]" if wrap else kets
 
 
-def _cents_ket_list(vectors) -> str:
+def _cents_ket_list(vectors, wrap: bool = True) -> str:
     """A ket list of float (grid-precision) column vectors — ``[[4.000 -6.340 2.322⟩]`` —
     for the weighting prescaling matrices (the prescaled vectors L·v)."""
-    return "[" + " ".join("[" + " ".join(cents(x) for x in v) + "⟩" for v in vectors) + "]"
+    kets = " ".join("[" + " ".join(cents(x) for x in v) + "⟩" for v in vectors)
+    return f"[{kets}]" if wrap else kets
 
 
 def comma_basis_pending_text(comma_basis, pending) -> tuple[str, str, str]:

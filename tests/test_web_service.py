@@ -626,6 +626,35 @@ def test_plain_text_held_column_mirrors_the_grid():
     assert ("vectors", "held") not in service.plain_text_values(state)
 
 
+def test_plain_text_interest_column_is_standalone_kets_not_a_matrix():
+    # the other-intervals-of-interest column is a loose collection, not a basis/matrix:
+    # each interval stands alone as its own ket, space-separated, with NO outer [ … ]
+    # wrapping (unlike the comma basis, target list and held basis, which are matrices).
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    interest = [(-1, 1, 0), (-3, 2, 0), (1, -2, 1), (3, 0, -1)]  # 3/2, 9/8, 10/9, 8/5
+    pt = service.plain_text_values(state, interest=interest)
+    interest_ratios = service.comma_ratios(interest)
+    tun = service.tuning(state.mapping)
+    sizes = service.interval_sizes(tun, interest_ratios)
+
+    def cents(vals):
+        return " ".join(f"{v:.3f}" for v in vals)
+
+    # interval vectors: standalone kets (close ⟩), space-separated, no outer wrapping
+    assert pt[("vectors", "interest")] == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"
+    # mapped into generator coords (close }), again standalone — not a bracketed matrix
+    assert pt[("mapping", "interest")] == "[0 1} [-1 2} [-1 2} [3 -4}"
+    # the size rows are ordinary lists over the intervals, like the targets column
+    assert pt[("tuning", "interest")] == f"[{cents(sizes.tempered)}]"
+    assert pt[("just", "interest")] == f"[{cents(sizes.just)}]"
+    assert pt[("retune", "interest")] == f"[{cents(sizes.errors)}]"
+    assert pt[("complexity", "interest")].startswith("[") and pt[("complexity", "interest")].endswith("]")
+    # prescaling mirrors its (still-matrix) grid tile: a wrapped ket list, like the targets
+    assert pt[("prescaling", "interest")].startswith("[[") and pt[("prescaling", "interest")].endswith("⟩]")
+    # no interest entries when the column is empty
+    assert ("vectors", "interest") not in service.plain_text_values(state)
+
+
 def test_plain_text_weighting_rows_mirror_the_grid():
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     pt = service.plain_text_values(state)

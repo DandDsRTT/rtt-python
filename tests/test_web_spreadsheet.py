@@ -1905,6 +1905,20 @@ def test_populated_interest_renders_ratios_mapped_and_sizes_minus_damage():
     assert not any(c.startswith("damage:interest") for c in cells)
 
 
+def test_populated_interest_renders_plain_text_for_all_its_value_tiles():
+    # regression: plain text was missing for the entire interest column. Every value tile
+    # the default view shows should carry its band, and the vectors/mapped rows read as
+    # standalone kets — no outer [ … ] wrapping (the column is a collection, not a matrix).
+    s = settings.defaults()
+    s["plain_text_values"] = True
+    cells = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=_INTEREST).cells}
+    assert cells["ptext:vectors:interest"].text == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"
+    assert cells["ptext:mapping:interest"].text == "[0 1} [-1 2} [-1 2} [3 -4}"
+    assert {"ptext:tuning:interest", "ptext:just:interest", "ptext:retune:interest"} <= set(cells)
+    assert cells["ptext:just:interest"].text.startswith("[") and cells["ptext:just:interest"].text.endswith("]")
+
+
 def test_interest_intervals_are_editable_monzo_vectors_like_the_comma_basis():
     # in the interval-vectors row each interval is an editable d-tall monzo column
     # (kind "interestcell", the comma-basis editing affordance), prime exponents down
@@ -1913,9 +1927,26 @@ def test_interest_intervals_are_editable_monzo_vectors_like_the_comma_basis():
     assert cells["cell:interest:1:0"].text == "1" and cells["cell:interest:2:0"].text == "0"
     assert cells["cell:interest:2:2"].text == "1"  # 10/9 = [1 -2 1>: prime-5 exponent
     assert cells["cell:interest:0:0"].kind == "interestcell"  # editable, not a static "vec"
-    # marked as a ket list in the vectors row, like the comma basis and targets
-    assert cells["bracket:vec:interest:l"].text == "[" and "ebktop:vec:interest:0" in cells
-    assert "sep:vec:interest:1" in cells  # a rule between the monzo columns
+    # each interval stands alone as its own ket (per-column ⟨ top + ⟩ angle foot), UNLIKE
+    # the comma basis / target list: no outer [ … ] wrapping it into a matrix, and no
+    # separator rules between the columns — just space (per the mockup)
+    assert {"ebktop:vec:interest:0", "ebkangle:vec:interest:0",
+            "ebktop:vec:interest:1", "ebkangle:vec:interest:1"} <= set(cells)
+    assert "bracket:vec:interest:l" not in cells and "bracket:vec:interest:r" not in cells
+    assert not any(c.startswith("sep:vec:interest:") for c in cells)
+
+
+def test_interest_vector_cells_are_separated_boxes_not_a_contiguous_grid():
+    # the mockup renders each interval's ket as its own bordered box with space around it,
+    # not a contiguous matrix grid. So the interest vector cells are inset within their
+    # COL_W column slot, leaving a horizontal gap between adjacent kets — while staying
+    # centred on the slot, so the per-column marks and the column axis still line up.
+    cells = {c.id: c for c in _with_interest(_INTEREST).cells}
+    c0, c1 = cells["cell:interest:0:0"], cells["cell:interest:0:1"]
+    m0 = cells["cell:imapped:0:0"]  # the mapped cell spans the full COL_W slot
+    assert c0.w < m0.w                              # the ket box is inset (narrower than the slot)
+    assert c0.x + c0.w < c1.x                       # a real gap between adjacent kets
+    assert c0.x + c0.w / 2 == m0.x + m0.w / 2       # ...but centred on the same slot
 
 
 def test_interest_has_add_and_per_interval_remove_controls():
@@ -2004,12 +2035,17 @@ def test_per_tile_fold_toggle_hugs_its_tile_corner():
         assert tile.x <= toggle.x <= tile.x + tile.w          # ...so it sits within the tile
 
 
-def test_populated_interest_mapped_list_is_bracketed_and_ruled_like_targets():
+def test_populated_interest_mapped_list_is_standalone_columns_not_a_matrix():
+    # the mapped row mirrors the vectors row: each interval's generator-coord image stands
+    # alone (per-column top + brace ⟩ foot), with NO outer [ … ] wrapping it into a matrix
+    # and NO separator rules between columns — just space (per the mockup)
     cells = {c.id: c for c in _with_interest(_INTEREST[:2]).cells}
-    assert cells["bracket:imapped:l"].text == "[" and cells["bracket:imapped:r"].text == "]"
-    assert {"ebktop:imapped:0", "ebkbrace:imapped:0", "ebktop:imapped:1"} <= set(cells)
-    assert "sep:imapped:1" in cells  # a rule between the two monzo columns
-    # the tempered/just/retuning rows get plain list brackets too
+    assert {"ebktop:imapped:0", "ebkbrace:imapped:0",
+            "ebktop:imapped:1", "ebkbrace:imapped:1"} <= set(cells)
+    assert "bracket:imapped:l" not in cells and "bracket:imapped:r" not in cells
+    assert not any(c.startswith("sep:imapped:") for c in cells)
+    # the tempered/just/retuning size rows DO keep their plain list brackets (they are
+    # single-row [ … ] lists over the intervals, not stacked column vectors)
     assert cells["bracket:tuning:ilist:l"].text == "[" and cells["bracket:retune:ilist:r"].text == "]"
 
 
