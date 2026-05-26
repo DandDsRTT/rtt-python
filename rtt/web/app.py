@@ -279,8 +279,13 @@ window.rttFreeze = (function () {
   var supported = CSS.supports('animation-timeline', 'scroll()');
   function updateMax(frame) {
     var bs = frame.querySelector('.rtt-bodyscroll'); if (!bs) return;
-    frame.style.setProperty('--rtt-maxx', (bs.scrollWidth - bs.clientWidth) + 'px');
-    frame.style.setProperty('--rtt-maxy', (bs.scrollHeight - bs.clientHeight) + 'px');
+    var board = bs.firstElementChild, cw = bs.clientWidth, ch = bs.clientHeight;
+    // ALWAYS leave a screenful of blank space past the grid (to the right and below) so the body
+    // is always scrollable. Adding a row/col then just consumes blank — it never makes the body
+    // newly scrollable, so it never pops a scrollbar; the view simply expands to fit the grid.
+    if (board) { board.style.paddingRight = cw + 'px'; board.style.paddingBottom = ch + 'px'; }
+    frame.style.setProperty('--rtt-maxx', (bs.scrollWidth - cw) + 'px');
+    frame.style.setProperty('--rtt-maxy', (bs.scrollHeight - ch) + 'px');
   }
   function sync(frame) {
     var bs = frame.querySelector('.rtt-bodyscroll'); if (!bs) return;
@@ -294,6 +299,18 @@ window.rttFreeze = (function () {
     }
   });
   function refreshAll() { var fs = document.querySelectorAll('.rtt-frame'); for (var i = 0; i < fs.length; i++) updateMax(fs[i]); }
+  // surface the seam + scrollbar ONLY when scrolling. The seam persists while the body is held
+  // scrolled off-origin on that axis (scrolled-x/y); the scrollbar thumb shows while actively
+  // scrolling and fades shortly after (scrolling). These are class toggles only — they never
+  // reposition the frozen titles (that is the compositor scroll-timeline / sync), so no bobble.
+  function onScroll(frame, bs) {
+    frame.classList.toggle('rtt-scrolled-x', bs.scrollLeft > 0);
+    frame.classList.toggle('rtt-scrolled-y', bs.scrollTop > 0);
+    frame.classList.add('rtt-scrolling');
+    clearTimeout(frame.__rttIdle);
+    frame.__rttIdle = setTimeout(function () { frame.classList.remove('rtt-scrolling'); }, 700);
+    if (!supported) sync(frame);
+  }
   function attach() {
     var frames = document.querySelectorAll('.rtt-frame');
     for (var i = 0; i < frames.length; i++) {
@@ -301,7 +318,7 @@ window.rttFreeze = (function () {
       if (f.__rttBound || !bs) continue;
       f.__rttBound = true;
       ro.observe(bs); if (bs.firstElementChild) ro.observe(bs.firstElementChild);
-      if (!supported) bs.addEventListener('scroll', (function (fr) { return function () { sync(fr); }; })(f), { passive: true });
+      bs.addEventListener('scroll', (function (fr, b) { return function () { onScroll(fr, b); }; })(f, bs), { passive: true });
     }
   }
   // NiceGUI applies the frame's inline size a tick after the elements appear, so the body's
@@ -399,18 +416,36 @@ _CSS = f"""
              max-width:100%; max-height:calc(100vh - 12px); font-family:'Cambria',Georgia,serif; }}
 /* the grid area, inset by _PAD so the #c0c0c0 frame reads as a margin around the grid */
 .rtt-grid {{ position:absolute; inset:{_PAD}px; }}
+/* the frozen panes carry the seam on their body-facing edges, but it stays INVISIBLE until the
+   body is scrolled on that axis: scrolled-y reveals the horizontal seam below the column titles,
+   scrolled-x the vertical seam right of the row titles (classes toggled in _FREEZE_JS). Borders
+   are always 1px (just the colour changes) so revealing the seam shifts nothing. So neither the
+   seam nor the scrollbar appears merely from adding a row/column — only from actually scrolling. */
 .rtt-corner {{ position:absolute; left:0; top:0; z-index:3; background:#c0c0c0; box-sizing:border-box;
-              border-right:1px solid {_SEAM}; border-bottom:1px solid {_SEAM}; }}
+              border-right:1px solid transparent; border-bottom:1px solid transparent; }}
 .rtt-colhead {{ position:absolute; top:0; right:0; z-index:2; overflow:hidden; background:#c0c0c0;
-               box-sizing:border-box; border-bottom:1px solid {_SEAM}; }}
+               box-sizing:border-box; border-bottom:1px solid transparent; }}
 .rtt-rowhead {{ position:absolute; left:0; bottom:0; z-index:2; overflow:hidden; background:#c0c0c0;
-               box-sizing:border-box; border-right:1px solid {_SEAM}; }}
-.rtt-bodyscroll {{ position:absolute; right:0; bottom:0; z-index:1; overflow:auto; }}
+               box-sizing:border-box; border-right:1px solid transparent; }}
+.rtt-frame.rtt-scrolled-y .rtt-colhead, .rtt-frame.rtt-scrolled-y .rtt-corner {{ border-bottom-color:{_SEAM}; }}
+.rtt-frame.rtt-scrolled-x .rtt-rowhead, .rtt-frame.rtt-scrolled-x .rtt-corner {{ border-right-color:{_SEAM}; }}
+/* the body is the only scroller. Blank space past the grid (set in _FREEZE_JS) keeps it always
+   scrollable, so the scrollbar gutter is always reserved (no shift) — but the thumb is invisible
+   at rest and only colours WHILE scrolling (.rtt-scrolling), so the scrollbar, like the seam,
+   shows only when the user actually scrolls. */
+.rtt-bodyscroll {{ position:absolute; right:0; bottom:0; z-index:1; overflow:auto;
+                  scrollbar-width:thin; scrollbar-color:transparent transparent; }}
+.rtt-bodyscroll::-webkit-scrollbar {{ width:9px; height:9px; }}
+.rtt-bodyscroll::-webkit-scrollbar-thumb {{ background:transparent; border-radius:5px; }}
+.rtt-frame.rtt-scrolling .rtt-bodyscroll {{ scrollbar-color:#aeaeae transparent; }}
+.rtt-frame.rtt-scrolling .rtt-bodyscroll::-webkit-scrollbar-thumb {{ background:#aeaeae; }}
 .rtt-colhead-inner {{ position:absolute; top:0; }}
 .rtt-rowhead-inner {{ position:absolute; left:0; }}
-/* isolate the board so the washes' mix-blend-mode composes only with the board's
-   own layers (the white wash bases), not the page behind it */
-.rtt-board {{ position:absolute; isolation:isolate; transition:width {_T}, height {_T}; }}
+/* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
+   (the white wash bases), not the page behind it. content-box so the blank-space padding
+   (_FREEZE_JS) ADDS to the scrollable size rather than eating into the grid's width/height. */
+.rtt-board {{ position:absolute; box-sizing:content-box; isolation:isolate;
+             transition:width {_T}, height {_T}; }}
 @keyframes rtt-in {{ from {{ opacity:0; }} to {{ opacity:1; }} }}
 .rtt-line, .rtt-block, .rtt-block-boxed, .rtt-cell, .rtt-wash, .rtt-washbase {{ animation:rtt-in {_T} ease; }}
 

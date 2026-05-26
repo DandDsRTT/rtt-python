@@ -272,24 +272,32 @@ def test_title_strips_track_the_body_scroll_on_the_compositor():
     assert "var(--rtt-maxx" in css and "var(--rtt-maxy" in css
 
 
-def test_a_seam_rule_divides_the_frozen_panes_from_the_body():
-    # a thin grey rule on the body-facing edges of the corner + strips
-    assert f"border-bottom:1px solid {app._SEAM}" in _css_rule(".rtt-colhead")
-    assert f"border-right:1px solid {app._SEAM}" in _css_rule(".rtt-rowhead")
-    corner = _css_rule(".rtt-corner")
-    assert f"border-right:1px solid {app._SEAM}" in corner
-    assert f"border-bottom:1px solid {app._SEAM}" in corner
+def test_seam_and_scrollbar_appear_only_while_scrolled():
+    # the seam edges are transparent at rest and take the grey only when the body is scrolled on
+    # that axis; the scrollbar thumb is invisible at rest and colours only while scrolling. So
+    # neither shows merely because a row/col was added — only when the user actually scrolls.
+    css = app._CSS
+    assert "border-bottom:1px solid transparent" in css  # column-title seam, hidden at rest
+    assert "border-right:1px solid transparent" in css   # row-title seam, hidden at rest
+    assert ".rtt-frame.rtt-scrolled-y .rtt-colhead" in css and f"border-bottom-color:{app._SEAM}" in css
+    assert ".rtt-frame.rtt-scrolled-x .rtt-rowhead" in css and f"border-right-color:{app._SEAM}" in css
+    assert "scrollbar-color:transparent transparent" in css  # invisible scrollbar at rest
+    assert ".rtt-frame.rtt-scrolling .rtt-bodyscroll" in css  # coloured only while scrolling
 
 
-def test_freeze_sync_publishes_max_scroll_and_falls_back_without_scroll_timelines():
-    # the support script keeps the body's max scroll current (for the keyframes) via a
-    # ResizeObserver — never on scroll — and, only where scroll-driven animations are
-    # unsupported, syncs the strips from a scroll listener instead.
+def test_freeze_sync_keeps_blank_space_and_gates_the_chrome_on_scroll():
+    # the support script keeps the body's max scroll current via a ResizeObserver (never on
+    # scroll); pads the board with a screenful of blank so the body is ALWAYS scrollable (adding
+    # a row/col never newly triggers a scrollbar); toggles the seam/scrollbar classes on scroll;
+    # and, only without scroll-driven animations, syncs the strips from the scroll listener.
     js = app._FREEZE_JS
     assert "--rtt-maxx" in js and "--rtt-maxy" in js
     assert "ResizeObserver" in js
-    assert "animation-timeline" in js  # the support gate guarding the fallback
-    assert "scrollLeft" in js and "scrollTop" in js  # the fallback sync
+    assert "paddingRight" in js and "paddingBottom" in js  # the always-present blank space
+    assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js  # seam gating
+    assert "rtt-scrolling" in js  # scrollbar gating
+    assert "animation-timeline" in js  # the support gate guarding the fallback sync
+    assert "scrollLeft" in js and "scrollTop" in js
 
 
 def test_every_show_toggle_has_a_non_empty_example():
