@@ -60,7 +60,6 @@ CHART_GAP = 5  # gap between a chart and the value cells below it
 RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
 RANGE_MODE_H = 13  # height of the monotone/tradeoff range-mode selector (one row of square indicators) below the chart
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
-AUDIO_STRIP_H = RANGE_GAP + BTN  # per-tile arpeggiate/chord strip nested at an audio tile's bottom
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -950,8 +949,6 @@ def build(state, settings=None, collapsed=None,
             tile_h[key] += presc_extra
         if key == "complexity":  # room for the alt.-complexity norm chooser below the list
             tile_h[key] += norm_extra
-        if key in ("just_audio", "mapped_audio"):  # room for the per-tile arp/chord strip below the speakers
-            tile_h[key] += AUDIO_STRIP_H
         y += tile_h[key] + GAP
     total_h = y
 
@@ -1284,15 +1281,20 @@ def build(state, settings=None, collapsed=None,
         if not tile_open(key, group):
             return
         vals = tuple(vals)
-        for i, v in enumerate(vals):  # one speaker per pitch, aligned under the value columns
+        # one speaker per pitch, aligned under the value columns. Each carries the WHOLE
+        # tile's cents list (not just its own) so the play-mode can arp/chord the tile, and
+        # text = the tile key it shares with the bank controls (so the engine can pair them).
+        for i in range(len(vals)):
             cells.append(CellBox(f"speaker:{key}:{group_elem[group]}:{i}", group_left[group](i),
-                                 row_y[key], COL_W, ROW_H, "speaker", values=(v,)))
-        # the per-tile arpeggiate + chord pair, centred in the strip reserved at the tile bottom;
-        # each sounds the whole tile's pitch list (arp sequentially, chord together)
+                                 row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals))
+        # the per-tile control bank in the head strip's top-right (mirroring the fold toggle
+        # top-left): waveform / play-mode / hold-loop / include-1/1, each a TOGGLE square.
         cx, cw = content_box(group)
-        sx, sy = cx + (cw - 2 * BTN) / 2, tile_top[key] + tile_h[key] - BTN
-        cells.append(CellBox(f"arp:{key}:{group}", sx, sy, BTN, BTN, "arp", values=vals))
-        cells.append(CellBox(f"chord:{key}:{group}", sx + BTN, sy, BTN, BTN, "chord", values=vals))
+        right = cx + cw + tile_pad(group) - TOGGLE_INSET
+        by, step = tile_top[key] - PAD + TOGGLE_INSET, TOGGLE + TOGGLE_INSET
+        left0 = right - (4 * TOGGLE + 3 * TOGGLE_INSET)
+        for j, ctrl in enumerate(("wave", "mode", "hold", "root")):
+            cells.append(CellBox(f"{ctrl}:{key}:{group}", left0 + j * step, by, TOGGLE, TOGGLE, f"audio_{ctrl}"))
 
     # Source the pitches from tuning_data so the audio rows stay in lockstep with the just /
     # tuning rows they sound (one source of truth for "what those rows contain").
@@ -1304,14 +1306,6 @@ def build(state, settings=None, collapsed=None,
         audio_tile("mapped_audio", "gens", tun.generator_map)  # the genmap, as the tuning row carries
         for group, vals in zip(list_groups, tuning_data["tuning"]):
             audio_tile("mapped_audio", group, vals)
-    # the audio control cell (PROVISIONAL placement, pending Douglas's call): the waveform
-    # chooser + the include-1/1 checkbox, riding the quantities spine across both audio
-    # rows. They are global client-side audio params (no grid state), so it carries no data.
-    if row_open("just_audio") and row_open("mapped_audio") and col_open("quantities"):
-        cx, cw = col_x["quantities"], col_w["quantities"]
-        cy = row_y["just_audio"]
-        ch = row_y["mapped_audio"] + ROW_H - cy
-        cells.append(CellBox("audio:controls", cx, cy, cw, ch, "audio_controls"))
     if tile_open("prescaling", "primes"):  # the d×d prescaler: diagonal weights, 0 off it
         for i in range(d):
             for p in range(d):

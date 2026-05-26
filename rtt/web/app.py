@@ -10,6 +10,7 @@ in-process; domain expand/shrink and undo are available. No HTTP layer.
 
 from __future__ import annotations
 
+import json
 import math
 import sys
 from html import escape as _escape
@@ -77,56 +78,173 @@ _RANGE_FONT = 7  # cents-label / placeholder font size
 # a wash sits behind the grey tiles so the colour reads through the gaps around them.
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a"}  # cyan tuning rows, khaki temperament columns
 
-_AUDIO_KINDS = {"speaker", "arp", "chord"}  # the audio rows' play buttons (client-side Web Audio)
+_AUDIO_KINDS = {"speaker"}  # cells whose baked cents rebuild when the tuning changes
+_AUDIO_CTRLS = {"audio_wave", "audio_mode", "audio_hold", "audio_root"}  # the per-tile bank controls
 
-# The Web Audio engine the audio rows drive, injected once per page. The speaker / arp /
-# chord buttons call window.rttAudio.{play,arp}([cents…]) from a CLIENT-side click handler
-# (no server round-trip), so playback is immediate. A pitch's frequency is base · 2^(¢/1200)
-# with 1/1 = middle C; "include 1/1" prepends the 0¢ root so a lone speaker sounds the actual
-# interval, not just its top note. play() sounds together (chord / single), arp() in sequence.
+
+def _wave_svg(kind: str) -> str:
+    """A small waveform glyph (sine/square/triangle/sawtooth) for the bank's waveform control."""
+    paths = {"sine": "M1,6 Q3,1 5.5,6 T11,6", "square": "M1,9 V3 H6 V9 H11 V3",
+             "triangle": "M1,9 L3.5,3 L6,9 L8.5,3 L11,9", "sawtooth": "M1,9 L6,3 L6,9 L11,3 L11,9"}
+    return (f'<svg viewBox="0 0 12 12" class="rtt-audio-glyph"><path d="{paths[kind]}" '
+            f'fill="none" stroke="currentColor" stroke-width="1.1"/></svg>')
+
+
+def _mode_svg(filled) -> str:
+    """A 3×3 grid glyph with the given (row, col) cells filled — the play-mode control."""
+    rects = [f'<rect x="{1 + c * 3.7:.1f}" y="{1 + r * 3.7:.1f}" width="2.6" height="2.6" '
+             f'fill="{"currentColor" if (r, c) in filled else "none"}" stroke="currentColor" '
+             f'stroke-width="0.5"/>' for r in range(3) for c in range(3)]
+    return f'<svg viewBox="0 0 12 12" class="rtt-audio-glyph">{"".join(rects)}</svg>'
+
+
+# the four play modes' 3×3 glyphs: 1 one-off (centre), 2 arpeggiate (bottom-left→top-right
+# diagonal), 3 chord (centre column), 4 rolled chord (diagonal + the bottom-right triangle)
+_MODE_FILLS = (
+    frozenset({(1, 1)}),
+    frozenset({(2, 0), (1, 1), (0, 2)}),
+    frozenset({(0, 1), (1, 1), (2, 1)}),
+    frozenset({(2, 0), (1, 1), (0, 2), (1, 2), (2, 1), (2, 2)}),
+)
+# Glyph variants the bank cycles through. Generated once in Python and shared with the JS
+# (injected as rttAudio.glyphs) so the click-side redraw uses the very same markup.
+_AUDIO_GLYPHS = {
+    "wave": [_wave_svg(w) for w in ("sine", "square", "triangle", "sawtooth")],
+    "mode": [_mode_svg(f) for f in _MODE_FILLS],
+    "lock": ['<span class="material-icons rtt-audio-glyph">lock_open</span>',
+             '<span class="material-icons rtt-audio-glyph">lock</span>'],
+    "root": '<span class="rtt-audio-rootglyph">1/1</span>',
+}
+
+# The Web Audio engine. Each audio tile owns independent state (waveform, play-mode, hold/loop,
+# include-1/1), keyed by tile id; the bank controls cycle it and redraw their glyph client-side,
+# and a speaker calls rttAudio.hit(tile, idx, [cents…]) to sound per that state — all CLIENT-side
+# (no server round-trip). 1/1 (root) sounds UNDERNEATH as a drone; playing notes' speakers
+# highlight. freq = 261.626·2^(¢/1200) (1/1 = middle C). Modes (0..3): one-off, arpeggiate from
+# the clicked note, chord, rolled chord; hold sustains (mode 0 stacks notes) or loops (2 & 4).
 _AUDIO_JS = """
 window.rttAudio = (function () {
   let ctx = null;
-  const s = { waveform: 'sine', includeRoot: false, base: 261.6255653005986 };
-  function context() {
-    if (!ctx) { ctx = new (window.AudioContext || window.webkitAudioContext)(); }
-    if (ctx.state === 'suspended') { ctx.resume(); }
+  const WAVES = ['sine', 'square', 'triangle', 'sawtooth'], BASE = 261.6255653005986, STEP = 0.34;
+  const tiles = {};
+  const api = { glyphs: null };
+  function actx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
     return ctx;
   }
-  function withRoot(cents) {
-    const a = Array.prototype.slice.call(cents);
-    return s.includeRoot ? [0].concat(a) : a;
+  function st(tile) {
+    if (!tiles[tile]) tiles[tile] = { wave: 0, mode: 0, hold: false, root: false, stop: null, held: {} };
+    return tiles[tile];
   }
-  function tone(ac, cents, t0, dur, gain) {
-    const osc = ac.createOscillator(), g = ac.createGain();
-    osc.type = s.waveform;
-    osc.frequency.value = s.base * Math.pow(2, cents / 1200);
-    const atk = 0.012, rel = 0.09, hold = Math.max(atk, dur - rel);
-    g.gain.setValueAtTime(0.0001, t0);
-    g.gain.exponentialRampToValueAtTime(gain, t0 + atk);
-    g.gain.setValueAtTime(gain, t0 + hold);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    osc.connect(g); g.connect(ac.destination);
-    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  function spk(tile, idx) {
+    return document.querySelector('.rtt-spk[data-audio="' + tile + '"][data-idx="' + idx + '"]');
   }
-  return {
-    setWaveform: function (w) { s.waveform = w; },
-    setIncludeRoot: function (b) { s.includeRoot = !!b; },
-    play: function (cents) {  // chord / single pitch: all voices together
-      const ac = context(), arr = withRoot(cents);
-      const t0 = ac.currentTime + 0.03, gain = 0.5 / Math.max(1, arr.length);
-      arr.forEach(function (c) { tone(ac, c, t0, 1.1, gain); });
-    },
-    arp: function (cents) {  // arpeggiate the pitches in order; 1/1 (if on) drones UNDERNEATH
-      const ac = context();
-      const arr = Array.prototype.slice.call(cents);  // the pitches only — root is not a step
-      const t0 = ac.currentTime + 0.03, step = 0.34, dur = 0.42;
-      arr.forEach(function (c, i) { tone(ac, c, t0 + i * step, dur, 0.4); });
-      if (s.includeRoot && arr.length) {  // one held root under the whole run, not an extra note
-        tone(ac, 0, t0, (arr.length - 1) * step + dur, 0.4);
+  function hl(tile, idx, on) { const e = spk(tile, idx); if (e) e.classList.toggle('rtt-spk-on', on); }
+  function clearHl(tile) {
+    const es = document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"]');
+    for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-spk-on');
+  }
+  function vgain(n) { return 0.45 / Math.max(1, n); }
+  // start one oscillator; returns a release() that fades it out (and clears its highlight)
+  function voice(tile, idx, cents, gain) {
+    const ac = actx(), o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+    o.type = WAVES[st(tile).wave];
+    o.frequency.value = BASE * Math.pow(2, cents / 1200);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
+    o.connect(g); g.connect(ac.destination); o.start(t);
+    if (idx >= 0) hl(tile, idx, true);
+    let done = false;
+    return function () {
+      if (done) return; done = true;
+      const r = actx().currentTime;
+      g.gain.cancelScheduledValues(r);
+      g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), r);
+      g.gain.exponentialRampToValueAtTime(0.0001, r + 0.09);
+      o.stop(r + 0.12);
+      if (idx >= 0) setTimeout(function () { hl(tile, idx, false); }, 110);
+    };
+  }
+  // sound a set of {idx,cents} together (+ optional root drone); returns a stop()
+  function together(tile, items, root) {
+    const g = vgain(items.length + (root ? 1 : 0)), rels = [];
+    for (let i = 0; i < items.length; i++) rels.push(voice(tile, items[i].idx, items[i].cents, g));
+    if (root) rels.push(voice(tile, -1, 0, g));
+    return function () { for (let i = 0; i < rels.length; i++) rels[i](); };
+  }
+  // sequence `order` (indices) one per STEP. roll=true keeps notes ringing (rolled chord);
+  // arp releases each before the next. loop repeats. root drones underneath. returns stop().
+  function sequence(tile, order, cents, root, roll, loop) {
+    const g = vgain(roll ? order.length + (root ? 1 : 0) : 2), timers = [];
+    let rels = [], rootRel = root ? voice(tile, -1, 0, g) : null, stopped = false;
+    function pass() {
+      if (stopped) return;
+      rels = [];
+      for (let k = 0; k < order.length; k++) {
+        timers.push(setTimeout(function (k) {
+          if (stopped) return;
+          const rel = voice(tile, order[k], cents[order[k]], g);
+          rels.push(rel);
+          if (!roll) setTimeout(rel, STEP * 1000 * 0.85);  // arp: release before the next note
+          if (k === order.length - 1 && loop) {
+            timers.push(setTimeout(function () {
+              if (stopped) return;
+              for (let i = 0; i < rels.length; i++) rels[i]();  // end the pass, then repeat
+              pass();
+            }, roll ? 520 : STEP * 1000));
+          } else if (k === order.length - 1 && roll && !loop) {
+            timers.push(setTimeout(function () { for (let i = 0; i < rels.length; i++) rels[i](); }, 900));
+          }
+        }.bind(null, k), k * STEP * 1000));
       }
     }
+    pass();
+    return function () {
+      stopped = true;
+      for (let i = 0; i < timers.length; i++) clearTimeout(timers[i]);
+      for (let i = 0; i < rels.length; i++) rels[i]();
+      if (rootRel) rootRel();
+      clearHl(tile);
+    };
+  }
+  function ctrlEl(tile, ctrl) {
+    return document.querySelector('[data-actrl="' + ctrl + '"][data-audio="' + tile + '"]');
+  }
+  api.hit = function (tile, idx, cents) {
+    const s = st(tile);
+    if (s.mode === 0) {                                   // one-off / hold-stack
+      if (!s.hold) { const stop = together(tile, [{ idx: idx, cents: cents[idx] }], s.root); setTimeout(stop, 650); return; }
+      if (s.held[idx]) { s.held[idx](); delete s.held[idx]; }   // click a held note off
+      else { s.held[idx] = together(tile, [{ idx: idx, cents: cents[idx] }], s.root); }
+      return;
+    }
+    if (s.stop) { s.stop(); s.stop = null; if (s.hold) return; }  // hold/loop: a second click stops it
+    if (s.mode === 1) {                                   // arpeggiate, from the clicked note, wrapping
+      const order = []; for (let k = 0; k < cents.length; k++) order.push((idx + k) % cents.length);
+      s.stop = sequence(tile, order, cents, s.root, false, s.hold);
+      if (!s.hold) s.stop = null;
+    } else if (s.mode === 2) {                            // chord: all together
+      const items = []; for (let i = 0; i < cents.length; i++) items.push({ idx: i, cents: cents[i] });
+      const stop = together(tile, items, s.root);
+      if (s.hold) s.stop = stop; else setTimeout(stop, 1000);
+    } else {                                              // rolled chord
+      const order = []; for (let i = 0; i < cents.length; i++) order.push(i);
+      s.stop = sequence(tile, order, cents, s.root, true, s.hold);
+      if (!s.hold) s.stop = null;
+    }
   };
+  function stopAll(tile) { const s = st(tile); if (s.stop) { s.stop(); s.stop = null; }
+    for (const k in s.held) s.held[k](); s.held = {}; clearHl(tile); }
+  api.cycleWave = function (tile) { const s = st(tile); s.wave = (s.wave + 1) % 4;
+    const e = ctrlEl(tile, 'wave'); if (e) e.innerHTML = api.glyphs.wave[s.wave]; };
+  api.cycleMode = function (tile) { const s = st(tile); stopAll(tile); s.mode = (s.mode + 1) % 4;
+    const e = ctrlEl(tile, 'mode'); if (e) e.innerHTML = api.glyphs.mode[s.mode]; };
+  api.toggleHold = function (tile) { const s = st(tile); stopAll(tile); s.hold = !s.hold;
+    const e = ctrlEl(tile, 'hold'); if (e) { e.innerHTML = api.glyphs.lock[s.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', s.hold); } };
+  api.toggleRoot = function (tile) { const s = st(tile); s.root = !s.root;
+    const e = ctrlEl(tile, 'root'); if (e) e.classList.toggle('rtt-audio-on', s.root); };
+  return api;
 })();
 """
 
@@ -390,19 +508,24 @@ _CSS = f"""
    overflowed the small square; pin it to the box so the flex centering can take over */
 .rtt-btn .q-btn__content {{ color:#000 !important; font-size:13px; line-height:1; min-height:0;
            font-family:'Cambria',Georgia,serif; }}
-/* the audio rows' play buttons (speaker per pitch; per-tile arpeggiate + chord). Flat and
-   transparent so the cyan/green wash shows through; the icon fills the (square) cell. */
+/* the audio rows' speaker buttons (one per pitch). Flat and transparent so the cyan/green
+   wash shows through; the icon fills the (square) cell. .rtt-spk-on highlights it while sounding. */
 .rtt-audio-btn {{ width:100% !important; height:100% !important; min-width:0 !important;
            min-height:0 !important; padding:0 !important; box-shadow:none !important;
-           background:transparent !important; color:#000 !important; }}
+           background:transparent !important; color:#444 !important; }}
 .rtt-audio-btn .q-btn__content {{ min-height:0; padding:0; }}
 .rtt-audio-btn .q-icon, .rtt-audio-btn .material-icons {{ font-size:15px; color:#444 !important; }}
-/* the (provisional) audio control cell: waveform chooser over the include-1/1 checkbox,
-   stacked in the spine across both audio rows */
-.rtt-audio-controls {{ display:flex; flex-direction:column; gap:2px; width:100%; height:100%;
-           justify-content:center; align-items:flex-start; font-size:11px; padding:0 2px; }}
-.rtt-audio-controls .q-field, .rtt-audio-controls .q-checkbox {{ font-size:11px; }}
-.rtt-audio-controls .q-checkbox__label {{ font-size:11px; }}
+.rtt-spk-on .q-icon, .rtt-spk-on .material-icons {{ color:#000 !important; }}
+.rtt-spk-on {{ background:#bdbdbd !important; border-radius:3px; }}
+/* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
+   12px box as the fold toggle; .rtt-audio-on marks the active hold/1-1 (greyscale, not blue). */
+.rtt-audio-ctrl {{ width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+           color:#666; cursor:pointer; user-select:none; }}
+.rtt-audio-ctrl:hover {{ color:#000; }}
+.rtt-audio-ctrl.rtt-audio-on {{ background:#666; color:#fff; border-radius:2px; }}
+.rtt-audio-glyph {{ width:12px; height:12px; display:block; }}
+.material-icons.rtt-audio-glyph {{ font-size:12px; width:auto; height:auto; }}
+.rtt-audio-rootglyph {{ font-size:8px; font-family:'Cambria',Georgia,serif; line-height:1; }}
 /* the domain − is a hover affordance: an invisible zone over the removable prime's
    header reveals the button parked at its top (above the header, clear of inputs). The
    zone sits above the prime cells (z-index) so a column added via + can't paint over it
@@ -1022,7 +1145,8 @@ def _line_style(ln) -> str:
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
-    ui.add_body_html(f"<script>{_AUDIO_JS}</script>")  # the audio rows' Web Audio engine
+    # the audio rows' Web Audio engine + its glyph variants (shared markup for click redraws)
+    ui.add_body_html(f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>")
     ui.query("body").style("background:#fff")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
@@ -1366,24 +1490,27 @@ def index() -> None:
             elif cb.kind == "interest_plus":
                 ui.button("+", on_click=lambda: act(editor.add_interest), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
-            elif cb.kind in _AUDIO_KINDS:  # a play button: sound its cents via the client-side engine
-                icon = {"speaker": "volume_up", "arp": "playlist_play", "chord": "library_music"}[cb.kind]
-                fn = "arp" if cb.kind == "arp" else "play"  # speaker & chord sound together; arp in sequence
-                pitches = ",".join(f"{float(v):.6f}" for v in cb.values)
+            elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
+                tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
+                idx = int(cb.id.rsplit(":", 1)[1])
+                pitches = ",".join(f"{float(v):.6f}" for v in cb.values)  # the whole tile (for arp/chord)
                 # color=None drops Quasar's default primary (blue): the app is greyscale,
-                # leaving colour to the yellow/cyan/magenta colorization
-                ui.button(icon=icon, color=None).props("flat dense round").classes("rtt-audio-btn") \
-                    .on("click", js_handler=f"() => window.rttAudio.{fn}([{pitches}])")
-            elif cb.kind == "audio_controls":  # PROVISIONAL: waveform chooser + include-1/1
-                # global client-side audio params — push straight to the engine, no grid state.
-                # grey (not the default blue): the app stays greyscale outside the colorization
-                with ui.element("div").classes("rtt-audio-controls"):
-                    ui.select(["sine", "triangle", "sawtooth", "square"], value="sine",
-                              on_change=lambda e: ui.run_javascript(f"window.rttAudio.setWaveform({e.value!r})")) \
-                        .props("dense options-dense borderless color=grey-9").classes("rtt-audio-wave")
-                    ui.checkbox("1/1", on_change=lambda e: ui.run_javascript(
-                        f"window.rttAudio.setIncludeRoot({str(bool(e.value)).lower()})")) \
-                        .props("color=grey-9").classes("rtt-audio-root")
+                # leaving colour to the yellow/cyan/magenta colorization. .rtt-spk + the data
+                # attrs let the engine highlight this speaker while it sounds.
+                ui.button(icon="volume_up", color=None) \
+                    .props(f'flat dense round data-audio="{tile}" data-idx="{idx}"') \
+                    .classes("rtt-audio-btn rtt-spk") \
+                    .on("click", js_handler=f"() => window.rttAudio.hit('{tile}', {idx}, [{pitches}])")
+            elif cb.kind in _AUDIO_CTRLS:  # a bank control: cycles its state + glyph client-side
+                tile = cb.id.split(":", 1)[1]      # "<row>:<group>"
+                ctrl = cb.kind.split("_", 1)[1]     # wave | mode | hold | root
+                glyph = {"wave": _AUDIO_GLYPHS["wave"][0], "mode": _AUDIO_GLYPHS["mode"][0],
+                         "hold": _AUDIO_GLYPHS["lock"][0], "root": _AUDIO_GLYPHS["root"]}[ctrl]
+                fn = {"wave": "cycleWave", "mode": "cycleMode",
+                      "hold": "toggleHold", "root": "toggleRoot"}[ctrl]
+                ui.html(glyph).classes("rtt-audio-ctrl") \
+                    .props(f'data-audio="{tile}" data-actrl="{ctrl}"') \
+                    .on("click", js_handler=f"() => window.rttAudio.{fn}('{tile}')")
         return wrap
 
     def render():

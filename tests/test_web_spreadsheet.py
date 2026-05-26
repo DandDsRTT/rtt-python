@@ -2460,15 +2460,16 @@ def test_audio_adds_two_rows_between_counts_and_quantities():
     assert ys == sorted(ys)
 
 
-def test_audio_speakers_carry_the_just_and_mapped_cents():
-    # one speaker per pitch; its cents (in .values) match the displayed size of the
-    # corresponding tuning (mapped) / just-tuning row cell, so the ear hears the grid
+def test_audio_speakers_carry_the_whole_tiles_pitch_list():
+    # every speaker carries its tile's full cents list (so arp/chord modes can sound the
+    # whole tile); the list matches the displayed tuning (mapped) / just-tuning row sizes
     cells = {c.id: c for c in _audio().cells}
-    for group in ("prime", "comma", "target"):
-        spk = cells[f"speaker:mapped_audio:{group}:0"]
-        assert spk.kind == "speaker"
-        assert service.cents(spk.values[0]) == cells[f"tuning:{group}:0"].text  # mapped == tempered
-        assert service.cents(cells[f"speaker:just_audio:{group}:0"].values[0]) == cells[f"just:{group}:0"].text
+    k = len([c for c in cells if c.startswith("speaker:mapped_audio:target:")])
+    spk = cells["speaker:mapped_audio:target:0"]
+    assert spk.kind == "speaker"
+    assert [service.cents(v) for v in spk.values] == [cells[f"tuning:target:{j}"].text for j in range(k)]
+    just = cells["speaker:just_audio:target:0"]
+    assert [service.cents(v) for v in just.values] == [cells[f"just:target:{j}"].text for j in range(k)]
 
 
 def test_mapped_audio_sounds_generators_but_just_audio_has_no_generator_pitch():
@@ -2479,19 +2480,18 @@ def test_mapped_audio_sounds_generators_but_just_audio_has_no_generator_pitch():
     assert "speaker:just_audio:gen:0" not in cells
 
 
-def test_audio_tiles_carry_per_tile_arpeggiate_and_chord():
-    lay = _audio()
-    cells = {c.id: c for c in lay.cells}
-    # each tile's arp/chord sound the whole tile's pitch list (every speaker in it)
-    k = len([c for c in cells if c.startswith("speaker:mapped_audio:target:")])
-    tile_pitches = tuple(cells[f"speaker:mapped_audio:target:{j}"].values[0] for j in range(k))
-    arp, chord = cells["arp:mapped_audio:targets"], cells["chord:mapped_audio:targets"]
-    assert (arp.kind, chord.kind) == ("arp", "chord")
-    assert arp.values == tile_pitches == chord.values
-    # the strip sits below the speaker band, inside the tile's grey panel
-    panel = next(b for b in lay.blocks if b.id == "block:mapped_audio:targets")
-    assert arp.y > cells["speaker:mapped_audio:target:0"].y
-    assert panel.y <= arp.y and arp.y + arp.h <= panel.y + panel.h
+def test_audio_tiles_carry_a_control_bank_in_the_top_right():
+    # each tile gets a bank of four TOGGLE-sized controls in the head strip, mirroring the
+    # fold toggle (top-left): waveform, play-mode, hold/loop, include-1/1 — left to right
+    cells = {c.id: c for c in _audio().cells}
+    fold = cells["toggle:tile:mapped_audio:targets"]
+    bank = [cells[f"{c}:mapped_audio:targets"] for c in ("wave", "mode", "hold", "root")]
+    assert [b.kind for b in bank] == ["audio_wave", "audio_mode", "audio_hold", "audio_root"]
+    for b in bank:
+        assert (b.y, b.w, b.h) == (fold.y, fold.w, fold.h)  # TOGGLE-sized, in the head strip
+        assert b.x > fold.x                                  # right of the fold toggle
+    assert [b.x for b in bank] == sorted(b.x for b in bank)  # ordered left to right
+    assert bank[0].y < cells["speaker:mapped_audio:target:0"].y  # above the speaker band
 
 
 def _audio_colormap():
@@ -2512,16 +2512,11 @@ def test_audio_rows_colorize_just_cyan_and_mapped_green():
         assert at(f"speaker:mapped_audio:{g}:0") == G
 
 
-def test_audio_control_cell_spans_both_rows_in_the_spine():
-    # the waveform + include-1/1 controls ride one cell in the quantities spine, spanning
-    # both audio rows (provisional placement). Present only while the audio rows are
-    cells = {c.id: c for c in _audio().cells}
-    ctrl = cells["audio:controls"]
-    assert ctrl.kind == "audio_controls"
-    assert ctrl.x == cells["label:quantities"].x or ctrl.x > 0  # rides the spine, left of the tiles
-    assert ctrl.y <= cells["speaker:just_audio:target:0"].y           # spans from the first audio row...
-    top = cells["speaker:mapped_audio:target:0"].y
-    assert top < ctrl.y + ctrl.h                                       # ...down through the second
-    assert "audio:controls" not in {c.id for c in _with(audio=False).cells}
+def test_every_audio_tile_gets_its_own_bank():
+    # the bank is per-tile (independent waveform/mode/hold/root), on every audio tile
+    cells = {c.id for c in _audio_colormap().cells}  # has primes/commas/targets/interest + gens
+    for tile in ("just_audio:primes", "just_audio:commas", "just_audio:targets", "just_audio:interest",
+                 "mapped_audio:gens", "mapped_audio:primes", "mapped_audio:targets"):
+        assert {f"wave:{tile}", f"mode:{tile}", f"hold:{tile}", f"root:{tile}"} <= cells
 
 

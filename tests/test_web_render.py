@@ -100,19 +100,11 @@ async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
     assert _cell_text(user, "cell:mapped:1:6") == "4"  # back to meantone's mapped list
 
 
-async def test_enabling_audio_renders_the_play_buttons(user: User) -> None:
-    # audio is a tuning-boxes sub-control (on by default), so one click adds the two audio
-    # rows; each tile gets per-pitch speakers plus a per-tile arpeggiate + chord. Verify a
-    # real button renders inside each cell wrap (a missing _make_cell branch leaves it empty).
+async def test_enabling_audio_renders_speakers_and_control_banks(user: User) -> None:
+    # one click adds the two audio rows. Each pitch is a real speaker button, and each tile
+    # carries its four-control bank (waveform / play-mode / hold / 1-1) as glyph elements —
+    # a missing _make_cell branch would leave an empty wrap (and IndexError in _cell_child).
     await _enable(user, "audio")
-    for cid in ("speaker:mapped_audio:target:0", "arp:just_audio:targets", "chord:mapped_audio:targets"):
-        await user.should_see(marker=cid)
-        assert isinstance(_cell_child(user, cid), ui.button)
-
-
-async def test_audio_controls_offer_waveform_and_root(user: User) -> None:
-    # the provisional control cell renders a waveform chooser + an include-1/1 checkbox
-    await _enable(user, "audio")
-    await user.should_see(marker="audio:controls")
-    user.find(kind=ui.select)                    # the waveform/timbre chooser (asserts >=1)
-    user.find(kind=ui.checkbox, content="1/1")   # the include-1/1 checkbox
+    assert isinstance(_cell_child(user, "speaker:mapped_audio:target:0"), ui.button)
+    for ctrl in ("wave", "mode", "hold", "root"):
+        assert isinstance(_cell_child(user, f"{ctrl}:mapped_audio:targets"), ui.html)
