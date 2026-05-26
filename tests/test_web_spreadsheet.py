@@ -1139,8 +1139,7 @@ def test_complexity_row_carries_its_symbol_and_captions():
         {**settings.defaults(), "weighting": True, "symbols": True, "names": True},
         interest=((-3, 2, 0),),
     ).cells}
-    assert cells["symbol:complexity:primes"].text == "𝒄"  # bold italic, the complexity box
-    assert cells["symbol:complexity:targets"].text == "𝒄"
+    assert cells["symbol:complexity:targets"].text == "𝒄"  # only the target list carries the symbol
     assert cells["caption:complexity:primes"].text == "domain prime complexity map"
     assert cells["caption:complexity:commas"].text == "comma basis interval complexity list"
     assert cells["caption:complexity:targets"].text == "target interval complexity list"
@@ -1168,6 +1167,22 @@ def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
     assert on["cell:prescaling:0:0"].x == on["prime:0"].x
     assert on["cell:prescaling:1:1"].x == on["prime:1"].x
     assert on["cell:prescaling:1:0"].y == on["cell:prescaling:0:0"].y + spreadsheet.ROW_H
+
+
+def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
+    lay = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        {**settings.defaults(), "weighting": True, "symbols": True, "names": True, "mnemonics": True},
+        interest=((-3, 2, 0),),
+    )
+    on = {c.id: c for c in lay.cells}
+    # only the target-interval complexity list carries the 𝒄 symbol and its mnemonic underline
+    assert on["symbol:complexity:targets"].text == "𝒄"
+    assert on["caption:complexity:targets"].underlines != ()
+    # the domain-prime map, comma list and interest complexity carry neither
+    for col in ("primes", "commas", "interest"):
+        assert f"symbol:complexity:{col}" not in on, col
+        assert on[f"caption:complexity:{col}"].underlines == (), col
 
 
 def test_prescaling_row_sits_between_retuning_and_complexity():

@@ -177,10 +177,9 @@ SYMBOLS = {
     ("retune", "commas"): "𝒓C",
     ("retune", "targets"): "𝐞",
     ("prescaling", "primes"): "𝑋",  # the complexity prescaler matrix (math italic, like 𝑀)
-    ("complexity", "primes"): "𝒄",  # the complexity map/list (bold italic)
-    ("complexity", "commas"): "𝒄",
+    # only the target-interval complexity list carries the bare 𝒄 symbol; the domain-prime
+    # map, comma list and interest complexity are derived auxiliaries and carry none
     ("complexity", "targets"): "𝒄",
-    ("complexity", "interest"): "𝒄",
     ("weight", "targets"): "𝒘",  # bold italic, as in the damage row's diag(𝒘)
     ("damage", "targets"): "𝐝",
 }
@@ -278,10 +277,7 @@ MNEMONICS = {
     ("just", "primes"): "just",         # 𝒋
     ("retune", "primes"): "retuning",   # 𝒓
     ("retune", "targets"): "error",     # 𝐞
-    ("complexity", "primes"): "complexity",   # 𝒄
-    ("complexity", "commas"): "complexity",
-    ("complexity", "targets"): "complexity",
-    ("complexity", "interest"): "complexity",
+    ("complexity", "targets"): "complexity",  # 𝒄 — only the target list carries the symbol
     ("weight", "targets"): "weight",    # 𝒘
     ("damage", "targets"): "damage",    # 𝐝
 }
