@@ -1855,9 +1855,16 @@ def build(state, settings=None, collapsed=None,
     # animates the merge into a single straight gridline.
     bot_bus_y = total_h - FAN
 
+    # the columns that fan into one rule per element — recorded by column_axis as it runs, so
+    # the spine loop below can skip EXACTLY these. A single source of truth: a fanned column
+    # therefore can never ALSO be drawn a full-height centre trunk (which left a spurious
+    # gridline down a 2+-element column when a hand-kept fan list drifted from these calls).
+    fanned_columns = set()
+
     def column_axis(key, prefix, n, center_open):
         if key not in col_x:
             return
+        fanned_columns.add(key)
         cx = col_x[key] + col_w[key] / 2
         if n == 0:  # an empty interval set (interest, before any are entered) is one straight axis
             lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y))
@@ -1872,7 +1879,6 @@ def build(state, settings=None, collapsed=None,
         lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y))
         lines.append(Line(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y))
 
-    FAN_COLUMNS = ("primes", "commas", "targets", "interest")  # the data columns that fan
     column_axis("primes", "prime", d, lambda p: prime_left(p) + COL_W / 2)
     column_axis("commas", "comma", nc_shown, lambda c: comma_left(c) + COL_W / 2)
     column_axis("targets", "target", k, lambda j: target_left(j) + COL_W / 2)
@@ -1880,13 +1886,14 @@ def build(state, settings=None, collapsed=None,
     column_axis("held", "held", nh, lambda i: held_left(i) + COL_W / 2)
     column_axis("detempering", "detempering", r, lambda i: detempering_left(i) + COL_W / 2)
 
-    # every other present column is a spine: a single full-height trunk rule. Derived from
-    # col_x (not a hand-kept list) so a column can never lack its gridline — the quantities
-    # and units spines (carrying the row labels / coordinate units, no value fan) and the
-    # generators column (it indexes the mapping rows and backs the rank count + ranges chart).
-    # The fanned data columns above already emitted their own trunk inside column_axis.
+    # every NON-fanning present column is a spine: a single full-height trunk rule. Both ends
+    # are derived, not hand-kept — the columns come from col_x (so a column can never lack its
+    # gridline) and the fanned ones are excluded via fanned_columns (filled by the column_axis
+    # calls above), so a fanned column never doubles up a centre trunk on top of its fan. The
+    # spines are the quantities/units row-label + coordinate columns and the generators column
+    # (it indexes the mapping rows and backs the rank count + ranges chart).
     for key in col_x:
-        if key in FAN_COLUMNS:
+        if key in fanned_columns:
             continue
         cx = col_x[key] + col_w[key] / 2
         lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, total_h - branch_top_y))

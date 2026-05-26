@@ -2813,6 +2813,33 @@ def test_generator_detempering_audio_rows_sound_each_generator():
     assert [round(v, 3) for v in vals] == [1200.0, 701.955]
 
 
+def test_generator_detempering_column_fans_without_a_centre_trunk():
+    # the detempering column fans into one vertical rule per generator; it must own exactly
+    # ONE trunk (its short fan stem above the data), never a second full-height one down the
+    # centre between the two generator rules — that was a spurious middle gridline
+    lay = _with(generator_detempering=True)
+    assert sum(1 for ln in lay.lines if ln.id == "trunk:detempering") == 1
+    assert sum(1 for ln in lay.lines if ln.id.startswith("v:detempering:")) == 2
+
+
+def test_gridline_ids_are_unique_across_fanning_and_spine_columns():
+    # every gridline id must be unique (the reconciling renderer keys on ids). A fanned
+    # column — one rule per element, drawn by column_axis — must NEVER also get a full-height
+    # spine trunk at its centre: that duplicated "trunk:<col>" and drew a spurious middle
+    # gridline through a 2+-element column (the detempering / held bug, when those columns
+    # were added to column_axis but not the spine loop's skip-set). Build with every fanning
+    # column populated to guard the whole class structurally.
+    lay = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        {**settings.defaults(), "generator_detempering": True, "optimization": True},
+        interest=((-1, 1, 0), (2, 0, -1)),
+        held_monzos=((1, 0, 0), (-1, 1, 0)),
+    )
+    ids = [ln.id for ln in lay.lines]
+    dupes = sorted({i for i in ids if ids.count(i) > 1})
+    assert dupes == [], f"duplicate gridline ids: {dupes}"
+
+
 def test_generator_detempering_toggle_is_implemented():
     # the column is built, so its Show toggle is live (interactive, not a greyed stub)
     assert "generator_detempering" in settings.IMPLEMENTED
