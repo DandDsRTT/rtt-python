@@ -506,13 +506,24 @@ def test_plain_text_font_shrinks_to_fit_with_no_readability_floor():
     assert app._ptext_font("x" * 9, 30) <= spreadsheet.PTEXT_MAX_FONT   # never exceeds the cap
 
 
+def test_plain_text_font_is_glyph_aware_not_uniform_width():
+    # width is summed from real per-glyph widths, not length×constant: a punctuation/space-
+    # heavy value (narrow glyphs) fits a bigger font than a digit-dense value of the SAME
+    # length, so a sparse string like a prescaling ket-matrix uses the room it actually has.
+    sparse = "0 0 0 0 0 0 0 0 0 0"   # zeros split by (narrow) spaces
+    dense = "0000000000000000000"    # all (wide) digits, identical length
+    assert len(sparse) == len(dense)
+    assert app._ptext_font(sparse, 40) > app._ptext_font(dense, 40)
+
+
 def test_dense_prescaling_plain_text_fits_its_cell():
     # the reported overflow: the complexity-prescaler and prescaled-target-list tiles hold
     # the densest plain text (a d×k ket-matrix linearised onto one line). Each must fit its
-    # real cell width at the sizer's font — no spill off the tile's right edge.
+    # cell width at the sizer's font — no spill off the tile's right edge. The estimated
+    # width (glyph-aware, calibrated >= the real render) fitting guarantees the render fits.
     s = show_settings.defaults()
     s.update(plain_text_values=True, weighting=True)
     cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s).cells}
     for cid in ("ptext:prescaling:primes", "ptext:prescaling:targets"):
         c = cells[cid]
-        assert len(c.text) * 0.58 * app._ptext_font(c.text, c.w) <= c.w, cid
+        assert app._ptext_units(c.text) * app._ptext_font(c.text, c.w) <= c.w, cid

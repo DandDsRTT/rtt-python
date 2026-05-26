@@ -1051,16 +1051,39 @@ def _cents_parts(text):
     return whole, frac
 
 
+# Per-glyph widths (in em — font-size multiples) for the .rtt-ptext face, used to estimate a
+# plain-text value's width without a browser. An EBK string mixes wide digits with narrow
+# punctuation and spaces, so a single average char width over-shrinks a punctuation-heavy
+# value (e.g. a prescaling ket-matrix, mostly 0s, dots and spaces); summing the real glyphs
+# lets each value fill its box. These are Cambria em-widths rounded up with a ~5% margin, so
+# the estimate never falls short of the render and the value never spills. 0.59 (the widest
+# glyph, a digit) is the fallback for any character not listed.
+_PTEXT_DEFAULT_EM = 0.59
+_PTEXT_GLYPH_EM = {
+    **{d: 0.59 for d in "0123456789"},
+    ".": 0.22, "-": 0.35, "/": 0.52, " ": 0.24,
+    "[": 0.37, "]": 0.37, "{": 0.41, "}": 0.41, "⟨": 0.38, "⟩": 0.38,
+}
+
+
+def _ptext_units(text):
+    """``text``'s width in em (font-size multiples), summed from the real per-glyph widths —
+    so a punctuation-heavy value is estimated narrower than a digit-dense one of the same
+    length, and each sizes to fill its box."""
+    return sum(_PTEXT_GLYPH_EM.get(c, _PTEXT_DEFAULT_EM) for c in text)
+
+
 def _ptext_font(text, width):
     """The largest font (px, capped at PTEXT_MAX_FONT) at which ``text`` fits on ONE line
     within a ``width``-px box. The plain-text contract is fit-on-one-line, so there is NO
     readability floor: a dense value (a prescaling ket-matrix at a high prime limit) keeps
-    shrinking until it fits rather than spilling, and a short one grows to the cap. Shares
-    _fit_font with the math cells (0.58·font is a conservative serif estimate for digit-dense
-    EBK strings, leaving real-glyph margin). Truncated (not rounded) to 0.1px so the chosen
-    size never rounds back up past the fit and spills."""
-    fit = _fit_font(text, width, max_font=spreadsheet.PTEXT_MAX_FONT, min_font=0.0, char_w=0.58)
-    return int(fit * 10) / 10
+    shrinking until it fits rather than spilling, and a short one grows to the cap. Width is
+    estimated per glyph (_ptext_units) rather than by a uniform char width, so punctuation-
+    heavy strings use the room they actually have. Truncated (not rounded) to 0.1px so the
+    chosen size never rounds back up past the fit and spills."""
+    units = _ptext_units(text)
+    fit = (width - 2) / units if units else spreadsheet.PTEXT_MAX_FONT
+    return int(min(spreadsheet.PTEXT_MAX_FONT, fit) * 10) / 10
 
 
 _DESCENDERS = "gjpqy"  # letters whose tail dips below the baseline
