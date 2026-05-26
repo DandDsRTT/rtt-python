@@ -861,17 +861,19 @@ def _ebk_svg(cb):
 
 
 def _chart_ticks(lo, hi):
-    """A short list of nice round tick values spanning ``[lo, hi]`` (~4 steps)."""
+    """Nice round tick values enclosing ``[lo, hi]``: rounded down to a tick at/below
+    ``lo`` and up to the first tick strictly *above* ``hi`` (~4-5 steps). A chart scaled
+    to span the returned ticks therefore always shows a gridline past its tallest bar."""
     span = hi - lo
     if span <= 0:
-        return [0.0]
+        return [lo, lo + 1.0]
     raw = span / 4
     mag = 10 ** math.floor(math.log10(raw))
     step = next(m * mag for m in (1, 2, 2.5, 5, 10) if raw <= m * mag)
+    stop = (math.floor(hi / step) + 1) * step  # first tick strictly above the top value
     ticks, v = [], math.floor(lo / step) * step
-    while v <= hi + step * 1e-9:
-        if v >= lo - step * 1e-9:
-            ticks.append(round(v, 6))
+    while v <= stop + step * 1e-9:
+        ticks.append(round(v, 6))
         v += step
     return ticks
 
@@ -884,18 +886,16 @@ def _bar_chart(w, h, values, indicator=None, indicator_label=""):
     ⟪𝐝⟫ label whose subscript is ``indicator_label`` (the scheme's Lp power ∞ / 2 / 1)."""
     axis_x, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
     vals = tuple(values)
-    vmax = max(vals + (0.0,))
-    vmin = min(vals + (0.0,))
-    if vmax == vmin:
-        vmax = vmin + 1.0
+    ticks = _chart_ticks(min(vals + (0.0,)), max(vals + (0.0,)))  # 0 in range: baseline shows
+    axis_lo, axis_hi = ticks[0], ticks[-1]  # the axis spans the ticks, so the top one clears the bars
     plot_top, plot_bot = _CHART_PAD_T, h - _CHART_PAD_B
-    span = vmax - vmin
+    span = axis_hi - axis_lo
 
     def y_of(v):
-        return plot_top + (vmax - v) / span * (plot_bot - plot_top)
+        return plot_top + (axis_hi - v) / span * (plot_bot - plot_top)
 
     body = []
-    for tv in _chart_ticks(vmin, vmax):
+    for tv in ticks:
         ty = y_of(tv)
         body.append(f'<line x1="{axis_x:.2f}" y1="{ty:.2f}" x2="{w:.2f}" y2="{ty:.2f}" '
                     f'stroke="{_CHART_GRID}" stroke-width="0.5"/>')

@@ -317,6 +317,17 @@ def test_bar_chart_draws_one_scaled_bar_per_value_from_the_baseline():
     assert bars[2][1] > bars[1][1] > 0  # a taller bar for the larger value
 
 
+def test_bar_chart_extends_its_axis_past_the_tallest_bar_for_a_top_gridline():
+    # standard chart practice: the value axis runs one nice step past the data so a
+    # gridline always sits ABOVE the tallest bar (the bar must never reach the top edge)
+    svg = app._bar_chart(272, 64, (0.0, 5.0, 10.0))
+    bar_tops = [y for y, ht in _bars(svg) if ht > 0]  # the drawn bars' top edges
+    gridlines = [float(y) for y in re.findall(
+        rf'<line x1="[\d.]+" y1="([\d.]+)"[^>]*stroke="{app._CHART_GRID}"', svg)]
+    assert gridlines and bar_tops
+    assert min(gridlines) < min(bar_tops)  # the top gridline is above the tallest bar
+
+
 def test_bar_chart_straddles_a_shared_zero_baseline_for_signed_values():
     up, down = _bars(app._bar_chart(272, 64, (5.0, -5.0)))  # signed (retuning-like)
     # the positive bar's bottom meets the negative bar's top at the common zero line
