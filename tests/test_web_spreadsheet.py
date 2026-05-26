@@ -520,6 +520,20 @@ def test_canonical_mapping_row_is_framed_like_the_mapping_above_it():
     assert "ebktop:primes" in cells and cells["ebktop:primes"].y > cells["cell:canon:1:0"].y
 
 
+def test_form_box_shows_the_generator_form_matrix_over_the_gens():
+    cells = {c.id: c for c in _with(form=True).cells}
+    # F (generator form matrix, r×r) renders in the canon row's gens column as a
+    # bordered grid: for ((1,1,0),(0,1,4)), F = ((1,-1),(0,1))
+    assert cells["cell:form:0:0"].text == "1" and cells["cell:form:0:1"].text == "-1"
+    assert cells["cell:form:1:0"].text == "0" and cells["cell:form:1:1"].text == "1"
+    assert cells["cell:form:0:0"].kind == "formcell"  # a read-only bordered cell
+    # framed { … ] per row (the generator-map brackets) plus an enclosing top bracket/brace
+    assert cells["bracket:form:map:0:l"].text == "{" and cells["bracket:form:map:0:r"].text == "]"
+    assert "ebktop:form" in cells and "ebkbrace:form" in cells
+    # the form box adds nothing while the toggle is off
+    assert not any(c.id.startswith("cell:form:") for c in _layout().cells)
+
+
 def test_mapped_list_rules_its_monzo_columns_apart_clear_of_the_marks():
     cells = {c.id: c for c in _layout().cells}
     # the mapped target interval list separates its monzo columns with vertical

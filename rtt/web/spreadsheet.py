@@ -100,6 +100,7 @@ COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in CO
 CAPTIONS = {
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
+    ("canon", "gens"): "generator form matrix",
     ("canon", "primes"): "canonical mapping",
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
@@ -314,6 +315,7 @@ TILES = (
     ("block:vec:quantities", "vectors", "quantities"),
     ("block:vec:commas", "vectors", "commas"),
     ("block:vec:targets", "vectors", "targets"),
+    ("block:form", "canon", "gens"),
     ("block:canon", "canon", "primes"),
     ("block:gens", "mapping", "quantities"),
     ("block:mapping", "mapping", "primes"),
@@ -387,7 +389,7 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
 # plain text on leaves just the inline string — the two value views are independent.)
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell",
-    "vec", "tval", "mathexpr", "interestcell",
+    "vec", "tval", "mathexpr", "interestcell", "formcell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar",
     "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus",
@@ -400,7 +402,7 @@ GRIDDED_KINDS = frozenset({
 # to "domain_quantities"; the just row's "mathexpr" log₂ form is not a bare number,
 # so math_expressions' own show_value logic trims it.)
 BLANKED_NUMBER_KINDS = frozenset({
-    "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell",
+    "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell", "formcell",
 })
 
 
@@ -614,6 +616,7 @@ def build(state, settings=None, collapsed=None,
     mapped = service.mapped_intervals(state.mapping, targets, elements)
     canon_mapping = service.canonical_mapping(state.mapping)  # M defactored + HNF (the form box)
     rc = len(canon_mapping)  # canonical rank (== r for a valid temperament)
+    form_M = service.form_matrix(state.mapping)  # F: the generator form matrix (r×r), F·M = canonical
     target_vectors = service.target_interval_monzos(targets, d, elements)  # k monzos, each d-tall
     tun = service.tuning(state.mapping, tuning_scheme, elements, approach)  # maps over the elements
     target_sizes = service.interval_sizes(tun, targets, elements)
@@ -1151,11 +1154,17 @@ def build(state, settings=None, collapsed=None,
                     cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", comma_left(c), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_commas[i][c]), gen=i, unit=cell_unit("mapping", "commas", gen=i)))
 
     # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
-    # read-only maps over the primes, framed like the mapping matrix one row above it
-    if row_open("canon") and tile_open("canon", "primes"):
-        for i in range(rc):
-            for p in range(d):
-                cells.append(CellBox(f"cell:canon:{i}:{p}", prime_left(p), canon_top(i), COL_W, ROW_H, "mapped", text=str(canon_mapping[i][p])))
+    # read-only maps over the primes, framed like the mapping matrix one row above it; the
+    # generator form matrix F (units 𝒈/𝒈) rides its gens column as a bordered r×r grid
+    if row_open("canon"):
+        if tile_open("canon", "primes"):
+            for i in range(rc):
+                for p in range(d):
+                    cells.append(CellBox(f"cell:canon:{i}:{p}", prime_left(p), canon_top(i), COL_W, ROW_H, "mapped", text=str(canon_mapping[i][p])))
+        if tile_open("canon", "gens"):
+            for i in range(len(form_M)):
+                for j in range(len(form_M)):
+                    cells.append(CellBox(f"cell:form:{i}:{j}", gen_left(j), canon_top(i), COL_W, ROW_H, "formcell", text=str(form_M[i][j])))
 
     # interval-vectors row: each column's intervals as monzos (d-tall columns over
     # the domain primes), on the same prime/comma/target axes as the quantities row.
@@ -1373,6 +1382,9 @@ def build(state, settings=None, collapsed=None,
     if row_open("canon") and tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
         for i in range(rc):
             bracket(f"canon:map:{i}", MAP_BRACKETS, "primes", canon_top(i), ROW_H)
+    if row_open("canon") and tile_open("canon", "gens"):  # the generator form matrix: { … ] per row
+        for i in range(len(form_M)):
+            bracket(f"form:map:{i}", GENMAP_BRACKETS, "gens", canon_top(i), ROW_H)
     if row_open("mapping"):
         # the primes mapping is a stack of maps: ⟨ … ] per row
         if tile_open("mapping", "primes"):
@@ -1658,6 +1670,7 @@ def build(state, settings=None, collapsed=None,
 
     matrix_frame("mapping", "primes", "primes")
     matrix_frame("canon", "primes", "canon")
+    matrix_frame("canon", "gens", "form")
     matrix_frame("prescaling", "primes", "prescaling")
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is

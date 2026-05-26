@@ -156,6 +156,14 @@ def test_canonical_mapping_defactors_and_hnfs():
     assert service.canonical_mapping([[1, 0, -4], [0, 1, 4]]) == ((1, 0, -4), (0, 1, 4))
 
 
+def test_form_matrix_is_the_generator_change_of_basis_to_canonical():
+    # the generator form matrix F: the unimodular r×r matrix with F·M = canonical(M).
+    # For ((1,1,0),(0,1,4)) — canonical ((1,0,-4),(0,1,4)) — F = ((1,-1),(0,1)).
+    assert service.form_matrix([[1, 1, 0], [0, 1, 4]]) == ((1, -1), (0, 1))
+    # an already-canonical mapping has F = the identity
+    assert service.form_matrix([[1, 0, -4], [0, 1, 4]]) == ((1, 0), (0, 1))
+
+
 def test_target_interval_monzos():
     # the interval-vector (monzo) form of each target over the 2.3.5 domain
     monzos = service.target_interval_monzos(("2/1", "3/2", "5/4", "6/5"), 3)

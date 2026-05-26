@@ -454,7 +454,7 @@ _CSS = f"""
 .rtt-ex {{ white-space:nowrap; }}
 """
 
-_LABEL_KINDS = {"prime", "colheader", "rowlabel", "mapped", "vec",
+_LABEL_KINDS = {"prime", "formcell", "colheader", "rowlabel", "mapped", "vec",
                 "rowtoggle", "coltoggle", "tiletoggle", "alltoggle"}  # "ptext" has its own font-sync branch
 
 # A math-expression cell stacks 1–2 lines ("1200 · log₂(3/2)" over "= 701.96") in a
@@ -1231,7 +1231,7 @@ def index() -> None:
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "prime":  # a read-only bordered cell (the domain-prime label)
+            elif cb.kind in ("prime", "formcell"):  # a read-only bordered cell (domain prime / form-matrix entry)
                 with ui.element("div").classes("rtt-white"):
                     labels[cb.id] = ui.label(cb.text)
             elif cb.kind == "genratio":

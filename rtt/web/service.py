@@ -242,6 +242,20 @@ def canonical_mapping(mapping) -> Matrix:
     return _to_matrix(canonical_ma(_to_matrix(mapping)))
 
 
+def form_matrix(mapping) -> Matrix:
+    """The generator form matrix ``F``: the unimodular r×r change of generator basis with
+    ``F·M = canonical(M)``. Computed as ``F = canonical(M)·Dᵀ`` where ``D`` is the
+    generator detempering (its rows the generators as monzos), since ``M·Dᵀ = I``."""
+    m = _to_matrix(mapping)
+    canon = canonical_ma(m)
+    detemper = get_generator_detempering(Temperament(m, Variance.ROW)).matrix
+    return tuple(
+        tuple(sum(canon[i][p] * detemper[j][p] for p in range(len(m[0])))
+              for j in range(len(detemper)))
+        for i in range(len(canon))
+    )
+
+
 def target_interval_monzos(ratios, d: int, domain_basis=None) -> Matrix:
     """Each target interval as a monzo — its interval-vector form over the d domain
     elements (expressed in the basis when it is nonstandard)."""
