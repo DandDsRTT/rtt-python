@@ -298,3 +298,22 @@ def test_try_edit_comma_basis_text_rejects_bad_input_without_changing_state():
     assert editor.try_edit_comma_basis_text("nonsense") is False
     assert editor.try_edit_comma_basis_text("⟨1 0 0]") is False  # a map, not a vector
     assert editor.state.comma_basis == before
+
+
+def test_optimize_button_freezes_the_tuning_and_lock_toggles_auto():
+    editor = Editor()
+    # default: lock off, nothing frozen yet -> the grid shows the auto optimum (None)
+    assert editor.optimize_locked is False
+    assert editor.effective_generator_tuning() is None
+    # single click optimizes once: the generator tuning freezes at the current optimum
+    editor.optimize()
+    frozen = editor.effective_generator_tuning()
+    assert frozen is not None and len(frozen) == editor.state.r
+    # double click locks auto-optimize on -> back to the auto optimum (None)
+    editor.toggle_optimize_lock()
+    assert editor.optimize_locked is True
+    assert editor.effective_generator_tuning() is None
+    # double click again unlocks -> freezes at the optimum again
+    editor.toggle_optimize_lock()
+    assert editor.optimize_locked is False
+    assert editor.effective_generator_tuning() is not None

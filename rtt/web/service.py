@@ -309,6 +309,26 @@ def tuning(
     )
 
 
+def tuning_from_generators(mapping, generators, domain_basis=None) -> Tuning:
+    """The Tuning produced by a manually-set generator tuning (cents per generator):
+    ``tuning_map = generators · mapping``, rather than the scheme's optimum. Used when the
+    optimize lock is off and the user has frozen/edited the generator tuning. Just map and
+    generator ranges are temperament properties, computed as for the optimum."""
+    t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
+    m = _to_matrix(mapping)
+    d = len(m[0])
+    tempered = tuple(sum(generators[i] * m[i][p] for i in range(len(m))) for p in range(d))
+    just = get_just_tuning_map(t)
+    return Tuning(
+        generator_map=tuple(generators),
+        tuning_map=tempered,
+        just_map=just,
+        retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
+        monotone_generator_range=get_generator_tuning_range(t, "monotone"),
+        tradeoff_generator_range=get_generator_tuning_range(t, "tradeoff"),
+    )
+
+
 def optimization_power(scheme: str = DEFAULT_TUNING_SCHEME) -> float:
     """The optimization power ``p`` the tuning scheme minimizes: the order of the Lp
     norm taken over the damages — ∞ for a minimax scheme, 2 for least-squares

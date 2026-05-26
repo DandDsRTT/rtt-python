@@ -42,6 +42,13 @@ class Editor:
         # Which generator tuning range the ranges chart shows — diamond-monotone or
         # diamond-tradeoff. A display choice like the two above, so it sits outside undo.
         self.range_mode: str = "monotone"
+        # The optimize button's state. ``optimize_locked`` on = auto-optimize every change
+        # (the always-optimal default behaviour). Off (single-click action) = the tuning is
+        # frozen at ``generator_tuning`` (the last optimum) and stays put under edits until
+        # re-optimized. ``generator_tuning`` is None until first frozen (so the load shows
+        # the optimum). A display/constraint choice, so it lives outside the undo stack.
+        self.optimize_locked: bool = False
+        self.generator_tuning: tuple[float, ...] | None = None
         # A comma being added but not yet valid: a draft monzo (d components, each an
         # int or None while blank). It is NOT part of the temperament — the mapping is
         # untouched — until it is filled in with a comma independent of the basis, so
@@ -144,6 +151,29 @@ class Editor:
     def set_held_monzos(self, monzos) -> None:
         """Replace the held-interval set from the edited vector cells."""
         self.held_monzos = [tuple(int(x) for x in m) for m in monzos]
+
+    def optimize(self) -> None:
+        """The optimize button's single click: freeze the generator tuning at the scheme's
+        current optimum (respecting any held intervals). With the lock off, the frozen tuning
+        then stays put as the temperament/scheme change, until optimized again."""
+        held = service.comma_ratios(self.held_monzos) if self.held_monzos else ()
+        self.generator_tuning = service.tuning(
+            self.state.mapping, self.tuning_scheme, held=held
+        ).generator_map
+
+    def toggle_optimize_lock(self) -> None:
+        """The optimize button's double click: toggle auto-optimize. Locked on, the tuning
+        recomputes to the optimum on every change; unlocking freezes it at the current optimum."""
+        self.optimize_locked = not self.optimize_locked
+        if self.optimize_locked:
+            self.generator_tuning = None  # auto: recompute the optimum on every change
+        else:
+            self.optimize()  # unlocking freezes at the current optimum
+
+    def effective_generator_tuning(self) -> tuple[float, ...] | None:
+        """The generator tuning the grid should display: None (recompute the optimum) while
+        the lock is on or nothing has been frozen yet; else the frozen manual tuning."""
+        return None if self.optimize_locked else self.generator_tuning
 
     def try_edit_mapping_text(self, text: str) -> bool:
         """Parse an EBK map string (honouring a domain-basis prefix, so a nonstandard

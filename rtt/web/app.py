@@ -523,6 +523,12 @@ _CSS = f"""
    overflowed the small square; pin it to the box so the flex centering can take over */
 .rtt-btn .q-btn__content {{ color:#000 !important; font-size:13px; line-height:1; min-height:0;
            font-family:'Cambria',Georgia,serif; }}
+/* the optimize button fills its half of the optimization box (not the 15px +/− square);
+   .rtt-optimize-locked marks the auto-optimize lock (double-clicked on) by inverting it */
+.rtt-optimize {{ width:100% !important; min-width:0 !important; height:100% !important; }}
+.rtt-optimize .q-btn__content {{ font-size:11px; }}
+.rtt-optimize-locked {{ background:#000 !important; }}
+.rtt-optimize-locked .q-btn__content {{ color:#fff !important; }}
 /* the audio rows' speaker buttons (one per pitch). Flat and transparent so the cyan/green
    wash shows through; the icon fills the (square) cell. .rtt-spk-on highlights it while sounding. */
 .rtt-audio-btn {{ width:100% !important; height:100% !important; min-width:0 !important;
@@ -1198,6 +1204,7 @@ def index() -> None:
     selects: dict = {}  # preselect cell id -> its q-select
     ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
     rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
+    opt_buttons: dict = {}  # optimize-button cell id -> its ui.button (for the auto-lock visual)
     captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
     math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
@@ -1213,7 +1220,8 @@ def index() -> None:
         els[eid].delete()
         for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, exprs, expr_state, kinds,
                   selects, ptext_inputs, captions, caption_html, math_cells, math_rendered,
-                  cell_units, cell_unit_text, chart_keys, range_keys, audio_keys, rangeopts):
+                  cell_units, cell_unit_text, chart_keys, range_keys, audio_keys, rangeopts,
+                  opt_buttons):
             d.pop(eid, None)
 
     def on_mapping_change():
@@ -1558,6 +1566,13 @@ def index() -> None:
             elif cb.kind == "held_plus":
                 ui.button("+", on_click=lambda: act(editor.add_held), color=None) \
                     .props("unelevated dense no-caps square").classes("rtt-btn")
+            elif cb.kind == "optimize":
+                # single click optimizes once (freeze at the optimum); double click toggles
+                # the auto-optimize lock. A double-click also fires its two single clicks, but
+                # optimize() is idempotent, so a double-click's net effect is the lock toggle.
+                opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: act(editor.optimize), color=None) \
+                    .props("unelevated dense no-caps").classes("rtt-btn rtt-optimize")
+                opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
@@ -1586,7 +1601,8 @@ def index() -> None:
         st = editor.state
         lay = spreadsheet.build(st, settings, collapsed, editor.tuning_scheme, editor.target_spec,
                                 interest=editor.interest_monzos, range_mode=editor.range_mode,
-                                pending_comma=editor.pending_comma, held_monzos=editor.held_monzos)
+                                pending_comma=editor.pending_comma, held_monzos=editor.held_monzos,
+                                generator_tuning=editor.effective_generator_tuning())
         last_lay[0] = lay  # the master toggle reads this layout's foldable bands on click
         board.style(f"width:{lay.width}px; height:{lay.height}px")
         seen = set()
@@ -1652,6 +1668,9 @@ def index() -> None:
                 for mode, opt in rangeopts[cb.id].items():
                     (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
                      else opt.classes(remove="rtt-rangeopt-on"))
+            elif cb.kind == "optimize":  # mark the button when its auto-optimize lock is on
+                (opt_buttons[cb.id].classes(add="rtt-optimize-locked") if editor.optimize_locked
+                 else opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
             elif cb.kind == "mapping":
                 inputs[cb.id].value = "" if cb.blank else str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":

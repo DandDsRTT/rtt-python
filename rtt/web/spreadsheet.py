@@ -455,7 +455,7 @@ GRIDDED_KINDS = frozenset({
     "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar",
     "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
-    "interest_minus", "interest_plus", "held_minus", "held_plus",
+    "interest_minus", "interest_plus", "held_minus", "held_plus", "optimize",
 })
 # "quantities" (general) is gentler than gridded values: it keeps every cell box
 # AND the EBK marks framing them, and only *blanks the numbers* of the body
@@ -622,7 +622,7 @@ def _bus_span(positions):
 
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
-          pending_comma=None, held_monzos=()) -> Layout:
+          pending_comma=None, held_monzos=(), generator_tuning=None) -> Layout:
     if settings is None:
         settings = _default_settings()
     if tuning_scheme is None:
@@ -702,7 +702,13 @@ def build(state, settings=None, collapsed=None,
     held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in held_monzos) if show_optimization else ()
     nh = len(held)
     held_ratios = service.comma_ratios(held, elements)  # monzo -> "num/den" (the shared renderer)
-    tun = service.tuning(state.mapping, tuning_scheme, elements, approach, held=held_ratios)  # maps over the elements
+    # a frozen manual generator tuning (optimize lock off) drives the maps directly; otherwise
+    # the scheme's optimum (holding the held intervals just). A stale tuning whose generator
+    # count no longer matches the mapping (a rank change) falls back to the optimum.
+    if generator_tuning is not None and len(generator_tuning) == len(state.mapping):
+        tun = service.tuning_from_generators(state.mapping, generator_tuning, elements)
+    else:
+        tun = service.tuning(state.mapping, tuning_scheme, elements, approach, held=held_ratios)
     target_sizes = service.interval_sizes(tun, targets, elements)
     target_weights = service.interval_weights(state.mapping, tuning_scheme, targets)  # the damage row's diag(𝒘)
     comma_ratios = service.comma_ratios(state.comma_basis, elements)
@@ -1543,8 +1549,14 @@ def build(state, settings=None, collapsed=None,
     if opt_ctrl:
         power = _format_power(service.optimization_power(tuning_scheme))
         oy = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
-        cells.append(CellBox("optimization:power", col_x["targets"], oy,
-                             col_w["targets"], ROW_H, "optimization", text=f"{_mathit('p')} = {power}"))
+        ox, ow = col_x["targets"], col_w["targets"]
+        # the power 𝑝 on the left, the optimize button on the right (per the mockup). The
+        # button single-clicks to optimize once and double-clicks to lock auto-optimize;
+        # app.py owns that behaviour and the lock visual, reading the editor.
+        cells.append(CellBox("optimization:power", ox, oy, ow / 2, ROW_H, "optimization",
+                             text=f"{_mathit('p')} = {power}"))
+        cells.append(CellBox("optimization:button", ox + ow / 2, oy, ow / 2, ROW_H, "optimize",
+                             text="optimize"))
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.

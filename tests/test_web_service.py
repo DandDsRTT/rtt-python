@@ -115,6 +115,17 @@ def test_generator_detempering_vectors():
     assert service.generator_detempering([[1, 1, 0], [0, 1, 4]]) == ((1, 0, 0), (-1, 1, 0))
 
 
+def test_tuning_from_generators_applies_a_manual_generator_tuning():
+    # a manually-set generator tuning gives tuning_map = generators · mapping (not the
+    # scheme optimum) — what the optimize button freezes when its auto-lock is off. For
+    # 5-limit meantone with a pure octave + pure fifth (1200, 701.955):
+    tun = service.tuning_from_generators([[1, 1, 0], [0, 1, 4]], (1200.0, 701.955))
+    assert tun.generator_map == (1200.0, 701.955)
+    assert abs(tun.tuning_map[0] - 1200.0) < 1e-6        # prime 2 = the octave generator
+    assert abs(tun.tuning_map[1] - 1901.955) < 1e-6      # prime 3 = octave + fifth
+    assert abs(tun.tuning_map[2] - 4 * 701.955) < 1e-6   # prime 5 = 4 fifths
+
+
 def test_tuning_holds_user_specified_intervals_just():
     # the held-intervals column feeds service.tuning: an interval passed as held comes out
     # tuned exactly justly (zero error), the whole tuning reoptimized around the constraint

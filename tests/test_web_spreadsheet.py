@@ -2243,6 +2243,28 @@ def test_optimization_needs_its_parent_tuning_boxes():
     assert "optimization:power" not in cells
 
 
+def test_optimization_box_has_an_optimize_button():
+    on = {c.id: c for c in _with(optimization=True).cells}
+    # the optimize button sits in the damage tile beside the power 𝑝 (same row, to its right)
+    assert on["optimization:button"].text == "optimize"
+    assert on["optimization:power"].y == on["optimization:button"].y
+    assert on["optimization:power"].x < on["optimization:button"].x
+    # no button when optimization is off
+    assert "optimization:button" not in {c.id for c in _with(optimization=False).cells}
+
+
+def test_a_manual_generator_tuning_drives_the_displayed_maps():
+    # a frozen manual generator tuning (optimize lock off) drives the tuning maps directly,
+    # not the scheme optimum: a pure octave + fifth tunes prime 2 to exactly 1200 cents
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    manual = {c.id: c for c in spreadsheet.build(base, s, generator_tuning=(1200.0, 701.955)).cells}
+    assert manual["tuning:prime:0"].text == "1200.000"          # prime 2 = the pure octave
+    # the default optimum (TOP) stretches the octave, so it differs
+    auto = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert auto["tuning:prime:0"].text != "1200.000"
+
+
 def test_optimization_draws_the_minimized_damage_indicator_on_the_chart():
     # optimization adds a horizontal indicator at the minimized-damage level (the
     # objective ⟨d⟩ₚ: max damage for the default minimax) to the damage chart

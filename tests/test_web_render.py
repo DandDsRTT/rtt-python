@@ -120,6 +120,14 @@ async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
     assert _cell_text(user, "cell:mapped:1:6") == "4"  # back to meantone's mapped list
 
 
+async def test_optimization_renders_the_optimize_button(user: User) -> None:
+    # the optimize button renders in the damage tile when optimization is on (its single/
+    # double-click optimize+lock behaviour is covered by the editor tests). The fixture
+    # catches any error rendering the new "optimize" cell branch.
+    await _enable(user, "optimization")
+    await user.should_see(marker="optimization:button")
+
+
 async def test_optimization_renders_the_held_column_and_its_add_control(user: User) -> None:
     # enabling optimization shows the held column with a + (rendered even when empty) for
     # adding the first held interval — driving the held_plus render branch. The editable
