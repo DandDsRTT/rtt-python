@@ -288,6 +288,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("mapped_audio", "gens"): frozenset({"G"}),        # the genmap, as the tuning row carries
     ("mapped_audio", "primes"): frozenset({"G", "M"}),
     ("mapped_audio", "commas"): frozenset({"G", "M", "C"}),
+    ("mapped_audio", "detempering"): frozenset({"G", "M"}),  # sounds 𝒕D (the tempered family)
     ("mapped_audio", "targets"): frozenset({"G", "M"}),
     ("mapped_audio", "interest"): frozenset({"G", "M"}),
 }
@@ -876,6 +877,9 @@ def build(state, settings=None, collapsed=None,
         ("block:retune:detempering", "retune", "detempering"),
         ("block:prescaling:detempering", "prescaling", "detempering"),
         ("block:complexity:detempering", "complexity", "detempering"),
+        ("block:urow:detempering", "units", "detempering"),
+        ("block:just_audio:detempering", "just_audio", "detempering"),
+        ("block:mapped_audio:detempering", "mapped_audio", "detempering"),
     ) if show_detempering else ()
     # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
     # tile (see opt_box below), not in a tile/row of their own
@@ -1353,6 +1357,9 @@ def build(state, settings=None, collapsed=None,
         if tile_open("units", "commas"):
             for c in range(nc):
                 cells.append(CellBox(f"urow:commas:{c}", comma_left(c), uy, COL_W, ROW_H, "units", text="/1"))
+        if tile_open("units", "detempering"):  # each detempering generator is a ratio column
+            for i in range(r):
+                cells.append(CellBox(f"urow:detempering:{i}", detempering_left(i), uy, COL_W, ROW_H, "units", text="/1"))
         if tile_open("units", "targets"):
             for j in range(k):
                 cells.append(CellBox(f"urow:targets:{j}", target_left(j), uy, COL_W, ROW_H, "units", text="/1"))
@@ -1630,10 +1637,14 @@ def build(state, settings=None, collapsed=None,
     if row_open("just_audio"):
         for group, vals in zip(list_groups, tuning_data["just"]):
             audio_tile("just_audio", group, vals)
+        if show_detempering:  # sound the detempering intervals' JI sizes, like the commas
+            audio_tile("just_audio", "detempering", detempering_sizes.just)
     if row_open("mapped_audio"):
         audio_tile("mapped_audio", "gens", tun.generator_map)  # the genmap, as the tuning row carries
         for group, vals in zip(list_groups, tuning_data["tuning"]):
             audio_tile("mapped_audio", group, vals)
+        if show_detempering:  # their tempered sizes (= the generators' tuned sizes, 𝒕D = 𝒈)
+            audio_tile("mapped_audio", "detempering", detempering_sizes.tempered)
     # the prescaling row applies the prescaler L to each column group's vectors: over the
     # primes it is the d×d diagonal (L·eₚ — the prescaler matrix itself), over the comma /
     # target / interest sets it is L·vector (each component scaled by the diagonal), a d-tall

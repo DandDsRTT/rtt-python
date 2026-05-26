@@ -2795,6 +2795,24 @@ def test_generator_detempering_complexity_row_lists_each_complexity():
     assert cells["units:complexity:detempering"].text == "units: (C)"
 
 
+def test_generator_detempering_units_row_labels_each_generator():
+    # the units row labels each detempering column /1 (a dimensionless ratio column), like
+    # the commas and targets
+    cells = {c.id: c for c in _with(generator_detempering=True, domain_units=True).cells}
+    assert [cells[f"urow:detempering:{i}"].text for i in range(2)] == ["/1", "/1"]
+
+
+def test_generator_detempering_audio_rows_sound_each_generator():
+    # like the commas/targets, the detempering column gets audio: just_audio sounds the JI
+    # sizes of its intervals, mapped_audio their tempered sizes (= the generators' sizes)
+    cells = {c.id: c for c in _with(generator_detempering=True, audio=True).cells}
+    assert {f"speaker:just_audio:detempering:{i}" for i in range(2)} <= set(cells)
+    assert {f"speaker:mapped_audio:detempering:{i}" for i in range(2)} <= set(cells)
+    # each speaker carries the whole tile's cents (for arp/chord play): the JI octave + fifth
+    vals = cells["speaker:just_audio:detempering:0"].values
+    assert [round(v, 3) for v in vals] == [1200.0, 701.955]
+
+
 def test_generator_detempering_toggle_is_implemented():
     # the column is built, so its Show toggle is live (interactive, not a greyed stub)
     assert "generator_detempering" in settings.IMPLEMENTED
