@@ -440,6 +440,10 @@ _CSS = f"""
             min-height:0 !important; padding:0; line-height:20px; font-family:'Cambria',Georgia,serif; }}
 .rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append {{ height:20px; min-height:0 !important; }}
 .rtt-preselect .q-icon {{ font-size:15px; color:#555; }}
+.rtt-control-check {{ width:100%; height:20px; }}
+.rtt-control-check .q-checkbox__inner {{ font-size:18px; color:#555; }}  /* the box glyph size */
+.rtt-control-check .q-checkbox__label {{ font-size:11px; color:#000; padding-left:3px;
+            line-height:20px; font-family:'Cambria',Georgia,serif; }}
 /* each chooser's dropdown popup matches the field's Cambria text, with compact items */
 .rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
 /* compact items; a long name (e.g. a systematic tuning) wraps within the field
@@ -1208,6 +1212,7 @@ def index() -> None:
     expr_state: dict = {}  # math-expression cell id -> last (text, w) rendered, to redraw on change
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
     selects: dict = {}  # preselect cell id -> its q-select
+    checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "ignore diminuator")
     ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
     rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
     opt_buttons: dict = {}  # optimize-button cell id -> its ui.button (for the auto-lock visual)
@@ -1378,14 +1383,23 @@ def index() -> None:
         render()
 
     def on_control_select(cid, value):
-        # the alt.-complexity choosers (box 𝐋 prescaler, box 𝒄 complexity norm): each swaps a
-        # complexity trait, re-weighting and retuning. The re-render echo is ignored via the guards.
+        # the alt.-complexity choosers (box 𝐋 prescaler, box 𝒄 complexity norm, box 𝒘 weight
+        # slope): each swaps a scheme trait, re-weighting and retuning. The re-render echo is
+        # ignored via the guards.
         if building[0] or value is None:
             return
         if cid == "control:prescaler":
             editor.set_complexity_prescaler(value)
         elif cid == "control:norm":
             editor.set_complexity_euclidean(value == "Euclidean")
+        elif cid == "control:slope":
+            editor.set_weight_slope(value)
+        elif cid == "control:complexity":
+            if value == "custom":  # a display-only state (a shape off the preset list): no-op
+                return
+            editor.set_complexity_name(value)
+        elif cid == "control:diminuator":  # the checkbox passes a bool (ignore the diminuator?)
+            editor.set_diminuator_ignored(bool(value))
         render()
 
     def on_range_mode(value):
@@ -1509,11 +1523,15 @@ def index() -> None:
                             on_change=lambda e: on_preselect("tuning", e.value)) \
                         .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
                                f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
-            elif cb.kind == "control_select":  # an alt.-complexity chooser (prescaler / complexity norm)
+            elif cb.kind == "control_select":  # an alt.-complexity chooser (prescaler / norm / weight slope)
                 selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
                     .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
                            f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
+            elif cb.kind == "control_check":  # the box-𝐋 "ignore diminuator" checkbox (size factor)
+                checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
+                        on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
+                    .props("dense").classes("rtt-control-check")
             elif cb.kind == "formchooser":  # the <choose form> control: canonicalizes its matrix on select
                 name = cb.id.split(":", 1)[1]  # mapping / comma_basis
                 selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
@@ -1759,6 +1777,8 @@ def index() -> None:
                     selects[cb.id].value = cb.text or None
             elif cb.kind == "control_select":  # mirror the live alt.-complexity choice
                 selects[cb.id].value = cb.text or None
+            elif cb.kind == "control_check":  # mirror the live "ignore diminuator" state
+                checks[cb.id].value = cb.checked
             elif cb.kind == "formchooser":  # a one-shot action: snap back to the placeholder
                 selects[cb.id].value = ""
             elif cb.kind in ("symbol", "count", "optimization", "units"):  # text rendered as HTML:

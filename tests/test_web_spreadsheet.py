@@ -1356,6 +1356,46 @@ def test_alt_complexity_adds_a_norm_chooser_to_the_complexity_box():
     assert ctrl.x == on["header:targets"].x and ctrl.w == on["header:targets"].w
 
 
+def test_alt_complexity_adds_a_predefined_complexity_chooser_above_the_norm_chooser():
+    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
+    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    assert "control:complexity" not in off  # no control unless alt. complexity is on
+    ctrl = on["control:complexity"]
+    assert ctrl.kind == "control_select"
+    assert ctrl.text == "lp"  # the default scheme's complexity (log-prime taxicab, Tenney)
+    # the predefined complexities + Euclidean variants, plus the inert "custom" shown off-preset
+    assert ctrl.values == tuple(service.COMPLEXITY_NAMES) + ("custom",)
+    # the master chooser rides below the complexity list (box 𝒄), ABOVE the norm chooser it overrides
+    assert on["complexity:target:0"].y < ctrl.y < on["control:norm"].y
+    assert ctrl.x == on["header:targets"].x and ctrl.w == on["header:targets"].w
+
+
+def test_alt_complexity_adds_an_ignore_diminuator_checkbox_below_the_prescaler():
+    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
+    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    assert "control:diminuator" not in off  # no control unless alt. complexity is on
+    ctrl = on["control:diminuator"]
+    assert ctrl.kind == "control_check"
+    assert ctrl.text == "ignore diminuator"
+    assert ctrl.checked is False  # the default scheme is lp, which uses the diminuator
+    # the checkbox rides in box 𝐋 (the prescaling matrix over the primes), below the prescaler
+    assert ctrl.y > on["control:prescaler"].y
+    assert ctrl.x == on["header:primes"].x and ctrl.w == on["header:primes"].w
+
+
+def test_alt_complexity_adds_a_weight_slope_chooser_to_the_weight_box():
+    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
+    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    assert "control:slope" not in off  # no control unless alt. complexity is on
+    ctrl = on["control:slope"]
+    assert ctrl.kind == "control_select"
+    assert ctrl.text == "simplicity-weight"  # the default scheme's damage-weight slope (TOP)
+    assert ctrl.values == ("complexity-weight", "unity-weight", "simplicity-weight")
+    # it rides below the weight list (box 𝒘), spanning the targets column
+    assert ctrl.y > on["weight:target:0"].y
+    assert ctrl.x == on["header:targets"].x and ctrl.w == on["header:targets"].w
+
+
 def test_alt_complexity_control_needs_weighting_and_the_primes_column():
     # the prescaler control lives in box 𝐋 (the prescaling matrix over the primes), so it
     # is gone if weighting is off or the temperament (primes) boxes are hidden

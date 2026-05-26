@@ -217,6 +217,22 @@ class Editor:
         minimax, 2 for miniRMS, 1 for miniaverage. Re-solves the tuning under the new Lp norm."""
         self.tuning_scheme = service.scheme_with_power(self.tuning_scheme, power)
 
+    def set_weight_slope(self, slope: str) -> None:
+        """Swap the damage-weight slope (the weight box's chooser in box 𝒘) — whether each
+        target's weight is its complexity, 1, or 1/complexity — which retunes accordingly."""
+        self.tuning_scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
+
+    def set_complexity_name(self, name: str) -> None:
+        """Set the whole complexity shape from the predefined-complexities master chooser (box
+        𝒄) — prescaler, size factor and norm at once, overriding the box 𝐋/𝒄 fine controls —
+        which re-weights and retunes."""
+        self.tuning_scheme = service.scheme_with_complexity(self.tuning_scheme, name)
+
+    def set_diminuator_ignored(self, ignored: bool) -> None:
+        """Toggle the size factor (the box 𝐋 "ignore diminuator" checkbox) — the integer-limit
+        shear that turns lp into lils — which re-weights and retunes."""
+        self.tuning_scheme = service.scheme_with_diminuator(self.tuning_scheme, ignored)
+
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
         or ``"OLD"``. A manual limit is weakly held — the next domain change forgets it."""

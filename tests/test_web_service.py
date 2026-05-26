@@ -431,6 +431,78 @@ def test_prescaler_of_reports_the_schemes_current_prescaler():
     assert service.prescaler_of(service.scheme_with_prescaler("minimax-S", "prime")) == "prime"
 
 
+def test_scheme_with_weight_slope_swaps_the_damage_slope_preserving_the_rest():
+    # the weight box's "damage weight slope" chooser: swap how complexity becomes a weight
+    # (unity 𝒘=1, complexity 𝒘=𝒄, simplicity 𝒘=1/𝒄) without disturbing the complexity itself.
+    assert service.damage_weight_slope(service.scheme_with_weight_slope("minimax-S", "unity-weight")) == "unityWeight"
+    assert service.damage_weight_slope(service.scheme_with_weight_slope("minimax-S", "complexity-weight")) == "complexityWeight"
+    assert service.damage_weight_slope(service.scheme_with_weight_slope("minimax-U", "simplicity-weight")) == "simplicityWeight"
+    # the prescaler, norm and optimization power ride along unchanged
+    swapped = service.scheme_with_weight_slope("minimax-sopfr-ES", "unity-weight")
+    assert service.prescaler_of(swapped) == "prime"  # sopfr kept
+    assert service.is_euclidean(swapped) is True      # E kept
+    assert service.optimization_power(swapped) == math.inf
+
+
+def test_weight_slope_of_reports_the_schemes_current_slope():
+    assert service.weight_slope_of("minimax-S") == "simplicity-weight"  # the shipped default (TOP)
+    assert service.weight_slope_of("minimax-U") == "unity-weight"
+    assert service.weight_slope_of("minimax-C") == "complexity-weight"
+    # it round-trips with scheme_with_weight_slope
+    assert service.weight_slope_of(service.scheme_with_weight_slope("minimax-S", "unity-weight")) == "unity-weight"
+
+
+def test_scheme_with_complexity_sets_the_prescaler_norm_and_size_factor():
+    # the predefined-complexities master chooser sets the whole complexity shape at once:
+    # the prescaler (log-prime/prime/identity) and the norm power (taxicab/Euclidean).
+    copfr = service.scheme_with_complexity("minimax-S", "copfr")  # unweighted count
+    assert service.prescaler_of(copfr) == "identity" and service.is_euclidean(copfr) is False
+    assert service.prescaler_of(service.scheme_with_complexity("minimax-S", "sopfr")) == "prime"  # Benedetti
+    lpe = service.scheme_with_complexity("minimax-S", "lp-E")  # Tenney-Euclidean
+    assert service.prescaler_of(lpe) == "log-prime" and service.is_euclidean(lpe) is True
+    # the optimization power and damage slope ride along unchanged
+    assert service.optimization_power(service.scheme_with_complexity("miniRMS-C", "copfr")) == 2
+    assert service.damage_weight_slope(service.scheme_with_complexity("miniRMS-C", "copfr")) == "complexityWeight"
+
+
+def test_scheme_with_complexity_lols_holds_the_octave_others_clear_it():
+    # lols (log-odd-limit) is lils plus a held octave (trait 0); selecting it tunes 2/1 just
+    assert service.held_intervals(service.scheme_with_complexity("minimax-S", "lols")) == ("2/1",)
+    assert service.held_intervals(service.scheme_with_complexity("minimax-S", "lols-E")) == ("2/1",)
+    # lils does NOT hold the octave
+    assert service.held_intervals(service.scheme_with_complexity("minimax-S", "lils")) == ()
+    # a non-lols complexity clears a previously-held octave (the held interval is its own)
+    assert service.held_intervals(service.scheme_with_complexity("held-octave minimax-ES", "lp")) == ()
+
+
+def test_complexity_name_of_reports_the_named_complexity_else_custom():
+    assert service.complexity_name_of("minimax-S") == "lp"    # the default (log-prime taxicab)
+    assert service.complexity_name_of("minimax-ES") == "lp-E"  # Tenney-Euclidean
+    assert service.complexity_name_of("minimax-copfr-S") == "copfr"
+    assert service.complexity_name_of("minimax-sopfr-S") == "sopfr"
+    assert service.complexity_name_of("minimax-lils-S") == "lils"
+    assert service.complexity_name_of("minimax-lols-S") == "lols"  # lils + held octave
+    # it round-trips with scheme_with_complexity
+    assert service.complexity_name_of(service.scheme_with_complexity("minimax-S", "sopfr-E")) == "sopfr-E"
+    # an lp shape that also holds the octave is no named complexity (lp clears the octave): custom
+    assert service.complexity_name_of("held-octave minimax-S") == "custom"
+
+
+def test_scheme_with_diminuator_toggles_the_size_factor_between_lp_and_lils():
+    # the box-𝐋 "ignore diminuator" checkbox (the size-factor trait 5c): ignoring the diminuator
+    # (the lesser of num/den) replaces it with the numinator — the integer-limit/lils behavior.
+    assert service.diminuator_ignored("minimax-S") is False  # lp (default) uses the diminuator
+    ignored = service.scheme_with_diminuator("minimax-S", True)  # lp -> lils
+    assert service.diminuator_ignored(ignored) is True
+    assert service.complexity_name_of(ignored) == "lils"
+    # un-ignoring returns lils -> lp
+    kept = service.scheme_with_diminuator("minimax-lils-S", False)
+    assert service.diminuator_ignored(kept) is False and service.complexity_name_of(kept) == "lp"
+    # the prescaler, norm and damage slope ride along unchanged
+    on_sopfr = service.scheme_with_diminuator("minimax-sopfr-ES", True)
+    assert service.prescaler_of(on_sopfr) == "prime" and service.is_euclidean(on_sopfr) is True
+
+
 def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
     import pytest
 

@@ -65,6 +65,37 @@ def test_set_complexity_euclidean_switches_the_complexity_norm():
     assert service.is_euclidean(editor.tuning_scheme) is False
 
 
+def test_set_complexity_name_sets_the_whole_complexity_shape():
+    editor = Editor()
+    assert service.complexity_name_of(editor.tuning_scheme) == "lp"  # default (Tenney)
+    editor.set_complexity_name("sopfr")  # the predefined-complexities master chooser (box 𝒄)
+    assert service.complexity_name_of(editor.tuning_scheme) == "sopfr"
+    assert service.prescaler_of(editor.tuning_scheme) == "prime"  # sopfr's prescaler flowed in
+    editor.set_complexity_name("lols")  # holds the octave just
+    assert service.held_intervals(editor.tuning_scheme) == ("2/1",)
+
+
+def test_set_diminuator_ignored_toggles_the_size_factor():
+    editor = Editor()
+    assert service.diminuator_ignored(editor.tuning_scheme) is False  # lp default uses it
+    editor.set_diminuator_ignored(True)  # the box-𝐋 "ignore diminuator" checkbox: lp -> lils
+    assert service.diminuator_ignored(editor.tuning_scheme) is True
+    editor.set_diminuator_ignored(False)
+    assert service.diminuator_ignored(editor.tuning_scheme) is False
+
+
+def test_set_weight_slope_swaps_the_damage_weight_slope():
+    editor = Editor()
+    assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"  # TOP default
+    editor.set_weight_slope("unity-weight")  # the weight box's damage-weight-slope chooser
+    assert service.weight_slope_of(editor.tuning_scheme) == "unity-weight"
+    # the swap re-weights the targets: unity weight makes every target weight 1
+    lay = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True},
+                            tuning_scheme=editor.tuning_scheme)
+    weights = [c.text for c in lay.cells if c.id.startswith("weight:target:")]
+    assert weights and all(w == "1.000" for w in weights)
+
+
 def test_redo_restores_an_undone_action():
     editor = Editor()
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])

@@ -54,6 +54,7 @@ class CellBox:
     indicator: float | None = None  # a "chart" cell's horizontal indicator level (the optimization
     # objective ⟨d⟩ₚ on the damage chart), drawn as a line across the plot when set
     pending: bool = False  # a not-yet-valid comma draft cell — rendered blank and red-outlined
+    checked: bool = False  # a "control_check" checkbox's state (the box-𝐋 "ignore diminuator")
     blank: bool = False  # a value cell kept (its box/brackets stay) but emptied of its
     # number -- how "quantities" off shows the bare gridded structure
     unit: str = ""  # the cell's per-value unit (e.g. "g₁/p₁"), shown small beneath the value

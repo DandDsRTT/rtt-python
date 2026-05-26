@@ -32,6 +32,7 @@ from rtt.target_intervals import (
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
     _damage_weights,
+    complexity_name_traits,
     get_complexity,
     get_complexity_prescaler,
     get_just_tuning_map,
@@ -399,6 +400,33 @@ def damage_weight_slope(scheme: str = DEFAULT_TUNING_SCHEME) -> str:
 # (log-prime power, prime power) traits each sets — identity (count), Tenney, Benedetti.
 PRESCALERS = {"identity": (0, 0), "log-prime": (1, 0), "prime": (0, 1)}
 
+# The damage-weight slopes the weight box's chooser offers, mapping each display name to the
+# spec's slope trait (trait 3): whether each weight is the complexity, 1, or 1/complexity.
+WEIGHT_SLOPES = {
+    "complexity-weight": "complexityWeight",
+    "unity-weight": "unityWeight",
+    "simplicity-weight": "simplicityWeight",
+}
+
+# The predefined complexities the master chooser in box 𝒄 offers, each mapping its display
+# name to the systematic interval-complexity token whose traits it sets (prescaler + size
+# factor + norm power). It is the master that overrides the box 𝐋 prescaler and box 𝒄 norm:
+# copfr (count), lp (log-product/Tenney), sopfr (Benedetti), lils (log-integer-limit/Weil),
+# lols (log-odd-limit/Kees), and the Euclidean (q=2) variant of each. lols/lols-E also hold
+# the octave just (the only ones that touch trait 0); see :func:`scheme_with_complexity`.
+COMPLEXITY_NAMES = {
+    "copfr": "copfr",
+    "lp": "lp",
+    "sopfr": "sopfr",
+    "lils": "lils",
+    "lols": "lols",
+    "copfr-E": "E-copfr",
+    "lp-E": "E-lp",
+    "sopfr-E": "E-sopfr",
+    "lils-E": "E-lils",
+    "lols-E": "E-lols",
+}
+
 
 def scheme_with_prescaler(scheme, prescaler: str):
     """``scheme`` with its complexity prescaler swapped to ``prescaler`` (one of
@@ -429,6 +457,70 @@ def scheme_with_power(scheme, power: float):
 def is_euclidean(scheme) -> bool:
     """Whether ``scheme`` uses the Euclidean (q=2) complexity norm rather than taxicab (q=1)."""
     return resolve_tuning_scheme(scheme).complexity_norm_power == 2
+
+
+def scheme_with_weight_slope(scheme, slope: str):
+    """``scheme`` with its damage-weight slope swapped to ``slope`` (a :data:`WEIGHT_SLOPES`
+    key) — the weight box's chooser — keeping the complexity and optimization power. Returns
+    a resolved spec (taken anywhere a scheme name is)."""
+    return replace(resolve_tuning_scheme(scheme), damage_weight_slope=WEIGHT_SLOPES[slope])
+
+
+def weight_slope_of(scheme) -> str:
+    """Which of :data:`WEIGHT_SLOPES` ``scheme`` currently uses (by its damage-weight slope)
+    — so the control can show the live selection."""
+    slope = resolve_tuning_scheme(scheme).damage_weight_slope
+    for name, internal in WEIGHT_SLOPES.items():
+        if internal == slope:
+            return name
+    raise ValueError(f"unknown damage weight slope: {slope!r}")
+
+
+def scheme_with_complexity(scheme, name: str):
+    """``scheme`` with its whole complexity shape set to the predefined complexity ``name``
+    (a :data:`COMPLEXITY_NAMES` key) — the master chooser in box 𝒄, which overrides the box 𝐋
+    prescaler and box 𝒄 norm. lols/lols-E hold the octave just (log-odd-limit); every other
+    name clears the held octave, since the held interval is the complexity's own (trait 0).
+    Keeps the optimization power and damage slope. Returns a resolved spec."""
+    traits = complexity_name_traits(COMPLEXITY_NAMES[name])
+    held = traits.pop("held_intervals", None)  # only lols/ols inject one; set it explicitly so
+    return replace(resolve_tuning_scheme(scheme), held_intervals=held, **traits)  # non-lols clears it
+
+
+def _complexity_signature(spec) -> tuple:
+    """The traits that distinguish the predefined complexities: norm power, prescaler powers,
+    size factor, and whether the octave is held (lols vs lils). Two schemes share a complexity
+    name iff they share this signature."""
+    return (
+        spec.complexity_norm_power, spec.complexity_log_prime_power,
+        spec.complexity_prime_power, spec.complexity_size_factor,
+        spec.held_intervals == "octave",
+    )
+
+
+def complexity_name_of(scheme) -> str:
+    """Which of :data:`COMPLEXITY_NAMES` ``scheme`` currently matches — so the master chooser
+    can show the live selection — or ``"custom"`` when the complexity shape (set by the box 𝐋
+    prescaler / box 𝒄 norm / diminuator controls) is no named preset."""
+    sig = _complexity_signature(resolve_tuning_scheme(scheme))
+    for name in COMPLEXITY_NAMES:
+        if _complexity_signature(scheme_with_complexity(scheme, name)) == sig:
+            return name
+    return "custom"
+
+
+def scheme_with_diminuator(scheme, ignored: bool):
+    """``scheme`` with its size factor (trait 5c) set — the box 𝐋 "ignore diminuator" checkbox.
+    Ignoring the diminuator (the lesser of a ratio's num/den) replaces it with the numinator:
+    the integer-limit "shear" that turns lp into lils (and copfr/sopfr into their limit forms).
+    Keeps everything else. Returns a resolved spec."""
+    return replace(resolve_tuning_scheme(scheme), complexity_size_factor=1 if ignored else 0)
+
+
+def diminuator_ignored(scheme) -> bool:
+    """Whether ``scheme`` ignores the diminuator (carries the size factor) — so the box 𝐋
+    checkbox can show the live state. False for log-product (lp), True for log-integer-limit (lils)."""
+    return resolve_tuning_scheme(scheme).complexity_size_factor != 0
 
 
 def prescaler_of(scheme) -> str:

@@ -989,15 +989,19 @@ def build(state, settings=None, collapsed=None,
                  and col_open("gens") and "tile:tuning:gens" not in collapsed)
     gtm_extra = (RANGE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
     # the alt.-complexity controls nest at the bottom of their matrix/list tiles (like the
-    # ranges box in the gens tile): the prescaler chooser under the prescaling matrix (box 𝐋,
-    # over the primes) and the complexity-norm chooser under the complexity list (box 𝒄, over
-    # the targets). Each tile's height is reserved up front so the rows below drop clear.
-    presc_ctrl = (show_alt_complexity and "row:prescaling" not in collapsed
-                  and col_open("primes") and "tile:prescaling:primes" not in collapsed)
-    presc_extra = (RANGE_GAP + PRESELECT_H) if presc_ctrl else 0
-    norm_ctrl = (show_alt_complexity and "row:complexity" not in collapsed
+    # ranges box in the gens tile): box 𝐋 (the prescaling matrix over the primes) stacks the
+    # prescaler chooser then the "ignore diminuator" checkbox, box 𝒄 (the complexity list over
+    # the targets) stacks the predefined-complexity chooser then the norm chooser, and box 𝒘
+    # (the weight list over the targets) carries the weight-slope chooser. Each tile reserves
+    # its choosers' height up front so the rows below drop clear.
+    lbox_ctrl = (show_alt_complexity and "row:prescaling" not in collapsed
+                 and col_open("primes") and "tile:prescaling:primes" not in collapsed)
+    lbox_extra = 2 * (RANGE_GAP + PRESELECT_H) if lbox_ctrl else 0
+    # box 𝒄 stacks two choosers below the complexity list: the predefined-complexity master and
+    # the norm chooser it overrides, so it reserves two preselect bands.
+    cbox_ctrl = (show_alt_complexity and "row:complexity" not in collapsed
                  and col_open("targets") and "tile:complexity:targets" not in collapsed)
-    norm_extra = (RANGE_GAP + PRESELECT_H) if norm_ctrl else 0
+    cbox_extra = 2 * (RANGE_GAP + PRESELECT_H) if cbox_ctrl else 0
     # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target-interval
     # damage list tile (like the ranges box in the gens tile), gated on the optimization
     # sub-control. Reserve their height up front so the board stays clear below the tile.
@@ -1006,14 +1010,18 @@ def build(state, settings=None, collapsed=None,
     # the optimization box: a title strip over two rows (objective ⟨d⟩ₚ + power 𝑝 on the
     # left, the optimize button spanning them on the right)
     opt_extra = (RANGE_GAP + OPT_TITLE_H + 2 * ROW_H) if opt_ctrl else 0
+    slope_ctrl = (show_alt_complexity and "row:weight" not in collapsed
+                  and col_open("targets") and "tile:weight:targets" not in collapsed)
+    slope_extra = (RANGE_GAP + PRESELECT_H) if slope_ctrl else 0
     # Each of these nested controls lives at the bottom of ONE tile of its row (keyed here by
     # row -> (owning column, reserved height)). Its height is reserved across the whole row's
     # tile_h so the rows below clear it, but only the OWNING tile actually grows to enclose it
     # — sibling tiles hug their own content height (see tile_height, used by the panels/washes).
     tile_extra = {
         "tuning": ("gens", gtm_extra),       # the generator tuning-ranges chart (box in the genmap)
-        "prescaling": ("primes", presc_extra),  # the alt-complexity prescaler chooser (box 𝐋)
-        "complexity": ("targets", norm_extra),  # the alt-complexity norm chooser (box 𝒄)
+        "prescaling": ("primes", lbox_extra),  # box 𝐋: the prescaler chooser + diminuator checkbox
+        "complexity": ("targets", cbox_extra),  # box 𝒄: the predefined-complexity + norm choosers
+        "weight": ("targets", slope_extra),  # box 𝒘: the weight-slope chooser
         "damage": ("targets", opt_extra),    # the optimization controls under the damage list
     }
 
@@ -1531,15 +1539,26 @@ def build(state, settings=None, collapsed=None,
             for i in range(d):
                 cells.append(CellBox(f"cell:prescaling:{group}:{i}:{c}", left(c), row_y["prescaling"] + i * ROW_H,
                                      COL_W, ROW_H, "tval", text=_prescale_text(prescaler[i] * vec[i]), unit=u))
-    if presc_ctrl:  # the alt.-complexity prescaler chooser, nested at the bottom of box 𝐋
-        py = tile_top["prescaling"] + tile_h["prescaling"] - presc_extra + RANGE_GAP
+    if lbox_ctrl:  # box 𝐋's controls nest at the bottom of the prescaling matrix: the prescaler
+        # chooser, then the "ignore diminuator" checkbox (the size-factor / integer-limit shear)
+        py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
         cells.append(CellBox("control:prescaler", col_x["primes"], py, col_w["primes"], PRESELECT_H,
                              "control_select", text=service.prescaler_of(tuning_scheme),
                              values=tuple(service.PRESCALERS)))
-    if norm_ctrl:  # the alt.-complexity complexity-norm chooser, nested at the bottom of box 𝒄
-        py = tile_top["complexity"] + tile_h["complexity"] - norm_extra + RANGE_GAP
-        cells.append(CellBox("control:norm", col_x["targets"], py, col_w["targets"], PRESELECT_H,
-                             "control_select", text="Euclidean" if service.is_euclidean(tuning_scheme) else "taxicab",
+        cells.append(CellBox("control:diminuator", col_x["primes"], py + PRESELECT_H + RANGE_GAP,
+                             col_w["primes"], PRESELECT_H, "control_check", text="ignore diminuator",
+                             checked=service.diminuator_ignored(tuning_scheme)))
+    if cbox_ctrl:  # box 𝒄's choosers nest at the bottom of the complexity list: the predefined-
+        # complexity master chooser, then the norm chooser it overrides, stacked in that order
+        cy = tile_top["complexity"] + tile_h["complexity"] - cbox_extra + RANGE_GAP
+        # "custom" is always an option (the reconciler keeps a control_select's options fixed),
+        # shown when the fine controls leave the shape off the preset list; selecting it is inert
+        cells.append(CellBox("control:complexity", col_x["targets"], cy, col_w["targets"], PRESELECT_H,
+                             "control_select", text=service.complexity_name_of(tuning_scheme),
+                             values=tuple(service.COMPLEXITY_NAMES) + ("custom",)))
+        cells.append(CellBox("control:norm", col_x["targets"], cy + PRESELECT_H + RANGE_GAP,
+                             col_w["targets"], PRESELECT_H, "control_select",
+                             text="Euclidean" if service.is_euclidean(tuning_scheme) else "taxicab",
                              values=("taxicab", "Euclidean")))
     if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
         for group in ("primes", "commas", "targets", "interest", "held"):
@@ -1547,6 +1566,11 @@ def build(state, settings=None, collapsed=None,
     if row_open("weight"):  # weight is over the targets only, like damage (it scales them)
         tval_row("weight", "targets", target_weights)
         chart("weight", "targets", target_weights)
+    if slope_ctrl:  # the alt.-complexity weight-slope chooser, nested at the bottom of box 𝒘
+        py = tile_top["weight"] + tile_h["weight"] - slope_extra + RANGE_GAP
+        cells.append(CellBox("control:slope", col_x["targets"], py, col_w["targets"], PRESELECT_H,
+                             "control_select", text=service.weight_slope_of(tuning_scheme),
+                             values=tuple(service.WEIGHT_SLOPES)))
     if row_open("damage"):  # damage is over the targets only (the tuning's own column)
         tval_row("damage", "targets", target_sizes.damage)
         # optimization adds the horizontal minimized-damage indicator (the objective ⟨d⟩ₚ
