@@ -483,6 +483,20 @@ def test_collapsing_a_spine_column_never_widens_it():
         assert collapsed[f"header:{key}"].w == spreadsheet.COL_W  # ...stays a single-COL_W strip
 
 
+def test_a_nested_tile_control_does_not_stretch_its_sibling_tiles():
+    # the generator tuning-ranges chart nests at the bottom of the gens tile of the tuning
+    # row. Its height must grow ONLY that tile, never stretch the prime/target tuning tiles
+    # (which hold no chart) to match — a tile hugs its own content height. So collapsing the
+    # gens column (removing the chart) leaves the sibling tiles' height untouched.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults(); s["tuning_ranges"] = True
+    on = {b.id: b for b in spreadsheet.build(base, s).blocks}
+    assert on["block:tuning:gens"].h > on["block:tuning:primes"].h  # only the gens tile grows
+    assert on["block:tuning:primes"].h == on["block:tuning:targets"].h  # chart-less siblings agree
+    coll = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:gens"}).blocks}
+    assert coll["block:tuning:primes"].h == on["block:tuning:primes"].h  # collapse doesn't resize them
+
+
 def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     lay = spreadsheet.build(base, collapsed={"row:tuning"})
@@ -2533,20 +2547,6 @@ def test_tuning_ranges_box_reserves_row_height_so_following_rows_clear_it():
     # and turning the box on must push those rows DOWN versus off (space is reserved, not stolen)
     off = {c.id: c for c in _with(tuning_ranges=False).cells}
     assert cells["just:prime:0"].y > off["just:prime:0"].y
-
-
-def test_tuning_ranges_box_grows_every_tile_in_the_tuning_row_uniformly():
-    # the box extends the generator-tuning-map tile; its sibling tuning-row tiles
-    # (primes/commas/targets) grow to the SAME height, so the row is one uniform band
-    # rather than one tall tile beside short ones
-    lay = _with(tuning_ranges=True)
-    blocks = {b.id: b for b in lay.blocks}
-    gens_h = blocks["block:tuning:gens"].h
-    for sib in ("block:tuning:primes", "block:tuning:commas", "block:tuning:targets"):
-        assert blocks[sib].h == gens_h, f"{sib} did not grow to match the ranges tile"
-    # and the whole row is taller than with the box off (the box reserves real height)
-    off = {b.id: b for b in _with(tuning_ranges=False).blocks}
-    assert gens_h > off["block:tuning:primes"].h
 
 
 def _color_at(lay, x, y):
