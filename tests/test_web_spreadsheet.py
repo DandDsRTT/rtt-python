@@ -2508,6 +2508,27 @@ def test_audio_tiles_carry_a_control_bank_in_the_top_right():
     assert bank[0].y < cells["speaker:mapped_audio:target:0"].y  # above the speaker band
 
 
+def test_caption_widened_commas_tile_keeps_its_controls_on_the_panel_edges():
+    # Regression: the commas column's long captions ("...comma basis...(made to vanish!)")
+    # widen its grey tile well past its narrow one-comma content, so the content centres
+    # within the wider tile. The per-tile fold toggle (top-left) and the audio control bank
+    # (top-right) must anchor to the PANEL's corners, not to that centred content — anchoring
+    # to content drifts both inward by half the widening, reading as centred rather than
+    # left/right-justified. The bug showed only here because commas is the one column whose
+    # caption outruns its content; wide-content columns (targets) hid it (tile == content).
+    cells = {c.id: c for c in _with(names=True, audio=True).cells}
+    blocks = {b.id: b for b in _with(names=True, audio=True).blocks}
+    narrow = {b.id: b for b in _with(names=False, audio=True).blocks}
+    inset = spreadsheet.TOGGLE_INSET
+    for row in ("just_audio", "mapped_audio"):
+        panel = blocks[f"block:{row}:commas"]
+        assert panel.w > narrow[f"block:{row}:commas"].w  # the caption really did widen it
+        fold = cells[f"toggle:tile:{row}:commas"]
+        root = cells[f"root:{row}:commas"]  # the rightmost control in the four-wide bank
+        assert fold.x == panel.x + inset                     # fold hugs the panel's left edge
+        assert root.x + root.w == panel.x + panel.w - inset  # bank hugs the panel's right edge
+
+
 def _audio_colormap():
     s = settings.defaults()
     s["tuning_colorization"] = s["temperament_colorization"] = s["audio"] = True

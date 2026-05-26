@@ -1304,7 +1304,9 @@ def build(state, settings=None, collapsed=None,
                                  row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals))
         # the per-tile control bank in the head strip's top-right (mirroring the fold toggle
         # top-left): waveform / play-mode / hold-loop / include-1/1, each a TOGGLE square.
-        cx, cw = content_box(group)
+        # Anchored to the grey panel's right edge (tile_box), not the centred content — so a
+        # caption-widened tile keeps the bank on its edge rather than drifting it inward.
+        cx, cw = tile_box(group)
         right = cx + cw + tile_pad(group) - TOGGLE_INSET
         by, step = tile_top[key] - PAD + TOGGLE_INSET, TOGGLE + TOGGLE_INSET
         left0 = right - (4 * TOGGLE + 3 * TOGGLE_INSET)
@@ -1727,13 +1729,15 @@ def build(state, settings=None, collapsed=None,
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the
     # grey panel's top-left, so it never touches an edge or overlaps the frame.
+    # Anchored to the grey panel's left edge (tile_x), not the centred content — so a
+    # caption-widened tile keeps the toggle on its edge rather than drifting it inward.
     # Present whenever the tile's row and column bands are open — it stays put when
     # only the tile is folded, so the tile can be re-expanded.
     for _bid, rkey, ckey in tiles:
         if rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey):
             glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
             cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
-                                 content_x[ckey] - tile_pad(ckey) + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
+                                 tile_x[ckey] - tile_pad(ckey) + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     # Value-display filtering. The tiles (blocks) and gridlines (lines) always
