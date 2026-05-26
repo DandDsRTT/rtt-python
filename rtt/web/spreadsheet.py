@@ -1030,16 +1030,15 @@ def build(state, settings=None, collapsed=None,
     slope_ctrl = (show_alt_complexity and "row:weight" not in collapsed
                   and col_open("targets") and "tile:weight:targets" not in collapsed)
     slope_extra = (RANGE_GAP + PRESELECT_H) if slope_ctrl else 0
-    # Each of these nested controls lives at the bottom of ONE tile of its row (keyed here by
-    # row -> (owning column, reserved height)). Its height is reserved across the whole row's
-    # tile_h so the rows below clear it, but only the OWNING tile actually grows to enclose it
-    # — sibling tiles hug their own content height (see tile_height, used by the panels/washes).
+    # Each of these nested controls lives at the bottom of one tile of its row, but its reserved
+    # height (keyed here by row) is added to the whole row's tile_h: the rows below drop clear of
+    # it AND every tile in the row grows to the same height, so the row stays one uniform band.
     tile_extra = {
-        "tuning": ("gens", gtm_extra),       # the generator tuning-ranges chart (box in the genmap)
-        "prescaling": ("primes", lbox_extra),  # box 𝐋: the prescaler chooser + diminuator checkbox
-        "complexity": ("targets", cbox_extra),  # box 𝒄: the predefined-complexity + norm choosers
-        "weight": ("targets", slope_extra),  # box 𝒘: the weight-slope chooser
-        "damage": ("targets", opt_extra),    # the optimization controls under the damage list
+        "tuning": gtm_extra,        # the generator tuning-ranges chart (box in the genmap)
+        "prescaling": lbox_extra,   # box 𝐋: the prescaler chooser + diminuator checkbox
+        "complexity": cbox_extra,   # box 𝒄: the predefined-complexity + norm choosers
+        "weight": slope_extra,      # box 𝒘: the weight-slope chooser
+        "damage": opt_extra,        # the optimization controls under the damage list
     }
 
     header_y = 0
@@ -1139,9 +1138,9 @@ def build(state, settings=None, collapsed=None,
         row_collapsible[key] = collapsible
         tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
         # a row with a nested tile-control (ranges chart, alt-complexity chooser, optimization
-        # block) reserves its height here so the rows below drop clear of it; the control's
-        # owning tile grows to enclose it while its siblings stay at base height (see tile_height)
-        tile_h[key] += tile_extra.get(key, (None, 0))[1]
+        # block) adds its reserved height here, so the rows below drop clear of it and every
+        # tile in the row grows to the same height (the row stays one uniform band)
+        tile_h[key] += tile_extra.get(key, 0)
         y += tile_h[key] + GAP
     total_h = y
 
@@ -1798,16 +1797,9 @@ def build(state, settings=None, collapsed=None,
     # #e0e0e0 panels behind each content group. A panel folds to zero size along
     # any collapsed axis (collapsing toward the band centre), so the renderer
     # animates it shrinking away to nothing — leaving only the band's gridline,
-    # never a leftover grey strip. Every tile is simply its row band's full height
-    # (the d-tall monzo matrices live in the d-tall interval-vectors row).
-    def tile_height(rkey, ckey):
-        # the grey panel's height: the row's tile_h, minus any nested-control reservation that
-        # belongs to a DIFFERENT tile. tile_h reserves that control's height across the whole row
-        # (so the rows below clear it), but only its owning tile encloses it — siblings hug their
-        # own content height, so one tile's chart/chooser never stretches the rest of the row.
-        owner_col, extra = tile_extra.get(rkey, (None, 0))
-        return tile_h[rkey] if ckey == owner_col else tile_h[rkey] - extra
-
+    # never a leftover grey strip. Every tile is simply its row band's full height — a row with
+    # a nested control (chart/chooser) is one uniform band: tile_h already includes that control's
+    # reservation, so every tile in the row gets the same (extended) height here.
     def panel_rect(ckey, rkey):
         # a folded tile collapses both ways at once, so it shrinks to a point at its
         # centre — like a row+column collapse confined to this one tile.
@@ -1815,7 +1807,7 @@ def build(state, settings=None, collapsed=None,
         col_c = f"col:{ckey}" in collapsed or tile_c
         row_c = f"row:{rkey}" in collapsed or tile_c
         cx, cw = tile_box(ckey)  # the tile widens for a long caption; content centres within it
-        ch, cy = tile_height(rkey, ckey), tile_top[rkey]
+        ch, cy = tile_h[rkey], tile_top[rkey]
         w, px = (0, 0) if col_c else (cw, tile_pad(ckey))
         h, py = (0, 0) if row_c else (ch, PAD)
         bx = cx + cw / 2 if col_c else cx
@@ -1853,7 +1845,7 @@ def build(state, settings=None, collapsed=None,
                 continue
             pad = tile_pad(ckey) - PAD
             x, w = col_x[ckey] - WASH_PAD - pad, col_w[ckey] + 2 * (WASH_PAD + pad)
-            y, h = tile_top[rkey] - WASH_PAD, tile_height(rkey, ckey) + 2 * WASH_PAD
+            y, h = tile_top[rkey] - WASH_PAD, tile_h[rkey] + 2 * WASH_PAD
             for group in {_FACTOR_GROUP[f] for f in factors}:
                 if settings.get(f"{group}_colorization"):
                     bands.append((f"{group}:{rkey}:{ckey}", x, y, w, h, group))

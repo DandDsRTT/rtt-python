@@ -483,18 +483,28 @@ def test_collapsing_a_spine_column_never_widens_it():
         assert collapsed[f"header:{key}"].w == spreadsheet.COL_W  # ...stays a single-COL_W strip
 
 
-def test_a_nested_tile_control_does_not_stretch_its_sibling_tiles():
-    # the generator tuning-ranges chart nests at the bottom of the gens tile of the tuning
-    # row. Its height must grow ONLY that tile, never stretch the prime/target tuning tiles
-    # (which hold no chart) to match — a tile hugs its own content height. So collapsing the
-    # gens column (removing the chart) leaves the sibling tiles' height untouched.
+def test_a_rows_nested_control_grows_every_tile_in_that_row_uniformly():
+    # A nested in-tile control (the generator tuning-ranges chart, box 𝐋's prescaler chooser,
+    # box 𝒄's norm chooser) extends its OWNING tile downward. The grid stays uniform: every
+    # sibling tile in that row grows to the same height, so the row is one band rather than
+    # one tall tile beside short ones.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    s = settings.defaults(); s["tuning_ranges"] = True
-    on = {b.id: b for b in spreadsheet.build(base, s).blocks}
-    assert on["block:tuning:gens"].h > on["block:tuning:primes"].h  # only the gens tile grows
-    assert on["block:tuning:primes"].h == on["block:tuning:targets"].h  # chart-less siblings agree
-    coll = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:gens"}).blocks}
-    assert coll["block:tuning:primes"].h == on["block:tuning:primes"].h  # collapse doesn't resize them
+    ranges = settings.defaults(); ranges["tuning_ranges"] = True
+    on = {b.id: b for b in spreadsheet.build(base, ranges).blocks}
+    gens = on["block:tuning:gens"].h  # the tile carrying the ranges chart
+    for sib in ("block:tuning:primes", "block:tuning:commas", "block:tuning:targets"):
+        assert on[sib].h == gens, sib  # chart-less siblings match the charted tile
+    off = {b.id: b for b in spreadsheet.build(base).blocks}
+    assert gens > off["block:tuning:primes"].h  # the chart reserves real height (not zeroed away)
+
+    alt = settings.defaults(); alt["weighting"] = True; alt["alt_complexity"] = True
+    aon = {b.id: b for b in spreadsheet.build(base, alt).blocks}
+    presc = aon["block:prescaling:primes"].h  # box 𝐋 extends the prescaling row's primes tile
+    for sib in ("block:prescaling:commas", "block:prescaling:targets"):
+        assert aon[sib].h == presc, sib
+    comp = aon["block:complexity:targets"].h  # box 𝒄 extends the complexity row's targets tile
+    for sib in ("block:complexity:primes", "block:complexity:commas"):
+        assert aon[sib].h == comp, sib
 
 
 def test_collapsing_a_column_does_not_shrink_its_rows_caption_band():
