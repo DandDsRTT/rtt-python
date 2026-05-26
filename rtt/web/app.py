@@ -279,14 +279,20 @@ _CSS = f"""
 .rtt-units {{ width:100%; text-align:center; font-size:10px; color:#333; line-height:1;
             white-space:nowrap; font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }}
 .rtt-units-pre {{ font-family:'Cambria',Georgia,serif; }}
-/* the per-value unit (the `units` toggle): a tiny line tucked at the bottom of a value
-   cell, in the same single-story-g sans as the other units. The cell adds bottom padding
-   (border-box, so it stays its square size) which lifts the flex-centred value up, so the
-   value + unit pair sits centred — like the cents int-over-fraction stack. */
-.rtt-cellunit {{ position:absolute; left:0; right:0; bottom:1px; text-align:center;
-            font-size:6px; line-height:1; color:#555; white-space:nowrap; pointer-events:none;
+/* the per-value unit (the `units` toggle): a tiny line in the same single-story-g sans,
+   stacked right beneath the value so the value + unit read as one centred pair — like the
+   cents int-over-fraction stack, the unit hugging its value rather than floating away. */
+.rtt-cellunit {{ font-size:6px; line-height:1; color:#555; white-space:nowrap; text-align:center;
             font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }}
-.rtt-cell-united {{ box-sizing:border-box; padding-bottom:7px; }}
+/* a read-only value cell simply stacks [value, unit] in a centred column; the value's
+   line-height is tightened so the value + unit pair fits the square and stays centred */
+.rtt-cell-united:not(.rtt-cell-input) {{ flex-direction:column; line-height:1; }}
+.rtt-cell-united:not(.rtt-cell-input) .rtt-val {{ line-height:1; }}
+/* an editable value cell keeps its full-size white input box (border stays on the input)
+   and overlays the unit INSIDE it, with the number nudged up to clear the unit */
+.rtt-cell-united.rtt-cell-input .rtt-cellunit {{ position:absolute; left:0; right:0; bottom:2.5px;
+            pointer-events:none; z-index:1; }}
+.rtt-cell-united.rtt-cell-input .rtt-cellinput .q-field__native {{ padding-bottom:11px !important; }}
 /* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
@@ -1214,12 +1220,15 @@ def index() -> None:
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
         with wrap:
             if cb.kind == "mapping":
+                wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
                 inputs[cb.id] = ui.input(on_change=lambda e: on_mapping_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "commacell":
+                wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_comma_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "interestcell":  # an editable interval of interest monzo component
+                wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "prime":  # a read-only bordered cell (the domain-prime label)
