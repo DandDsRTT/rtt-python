@@ -265,6 +265,18 @@ def test_quantities_spine_column_is_present_with_a_vertical_gridline():
     assert "toggle:col:quantities" in cells
 
 
+def test_spine_columns_hug_their_col_w_content_not_the_long_title():
+    # the quantities and units spine columns each carry only a single COL_W-wide index per
+    # row (the domain basis square / generator ratio; the per-row unit label), so their
+    # footprint hugs that COL_W content. The long "quantities"/"units" titles are wider than
+    # the column and overhang it (rendered without wrapping) rather than setting its width.
+    cells = {c.id: c for c in _with(domain_units=True).cells}
+    assert cells["header:quantities"].w == spreadsheet.COL_W
+    assert cells["header:units"].w == spreadsheet.COL_W
+    assert cells["header:quantities"].w < spreadsheet._title_w("quantities")
+    assert cells["header:units"].w < spreadsheet._title_w("units")
+
+
 def test_generators_column_gridline_spans_the_full_height():
     by_id = {ln.id: ln for ln in _layout().lines}
     gens, quant = by_id["trunk:gens"], by_id["trunk:quantities"]
@@ -1748,12 +1760,14 @@ def test_other_intervals_of_interest_column_is_present_right_of_targets():
     assert cells["header:interest"].x > cells["header:targets"].x  # rightmost column
 
 
-def test_empty_interest_column_takes_its_titles_wrapped_strip_width():
-    # an empty interest column has no cells to set its width, so it adopts its title's
-    # strip width — the widest line of its two-line header (the narrow header strip the
-    # mockup shows) rather than a bare bracket-gutter stub the long title would overflow
+def test_empty_interest_columns_footprint_hugs_its_content_the_title_overhangs():
+    # the footprint hugs the column's content — for an empty interest column that is just
+    # its two bracket gutters (no intervals yet). The long two-line title is wider than
+    # that and overhangs the column (rendered without wrapping), rather than forcing the
+    # footprint out to the title's strip width and leaving the narrow content adrift in it.
     cells = {c.id: c for c in _layout().cells}  # default build => interest empty
-    assert cells["header:interest"].w == len("other intervals") * 8 + 10
+    assert cells["header:interest"].w == 2 * spreadsheet.BRACKET_W
+    assert cells["header:interest"].w < spreadsheet._title_w("other intervals\nof interest")
 
 
 def test_empty_interest_column_is_just_a_header_and_axis():
@@ -1833,37 +1847,36 @@ def test_adding_intervals_of_interest_neither_shrinks_the_header_nor_reflows_the
     assert len(set(heights)) == 1  # the board height is unaffected by the interval count
 
 
-def test_interest_tiles_hug_their_content_not_the_title_strip():
-    # the grey tiles and value cells hug the few narrow intervals — no empty padding out
-    # to the wide title. The header still reserves the wider title width as the column's
-    # footprint; the tile is narrower than it and sits centred within (see the centring
-    # test below), so the header is wider than the tile.
+def test_interest_tiles_and_footprint_hug_their_content_the_title_overhangs():
+    # the grey tiles, value cells AND the column footprint hug the few narrow intervals —
+    # no empty padding out to the wide title. The two-line title is wider than the column
+    # and overhangs it (rendered without wrapping), rather than the footprint reserving the
+    # title's width and leaving the narrow tile adrift in it.
     lay = _with_interest(_INTEREST[:1])  # a single interval
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
     content_w = 2 * spreadsheet.BRACKET_W + 1 * spreadsheet.COL_W  # the two gutters + one cell
-    # the tile hugs that content — its PAD plus the FRAME_GAP its +-control overhangs each side —
-    # rather than ballooning out to the wide title
+    # the tile hugs that content — its PAD plus the FRAME_GAP its +-control overhangs each side
     assert blocks["block:interest"].w == content_w + 2 * spreadsheet.PAD + 2 * spreadsheet.FRAME_GAP
-    assert cells["header:interest"].w > blocks["block:interest"].w  # ...while the header floats wider
-    assert cells["header:interest"].w == len("other intervals") * 8 + 10  # to its title-strip width
+    # the footprint hugs the content too (no title reservation); the title overhangs it
+    assert cells["header:interest"].w == content_w
+    assert cells["header:interest"].w < spreadsheet._title_w("other intervals\nof interest")
 
 
-def test_interest_title_is_centred_on_the_gridline_and_the_column_never_narrows_below_it():
-    # the column reserves at least its two-line title's width as its footprint, with the
-    # gridline down the centre and the title centred on it — never overhanging to one side
-    # the way a right-floated header would. The tiles may be narrower than the title; they
-    # sit centred on that same gridline. Footprint stays at the title width until the cells
-    # outgrow it, so the gridline (and title) hold still as the first few intervals appear.
+def test_interest_title_overhangs_symmetrically_centred_on_the_gridline():
+    # the footprint hugs the content (narrower than the two-line title) with the gridline
+    # down its centre and the header box centred on it — so the wider title overflows the
+    # box symmetrically (centred on the gridline), never floated to one side the way a
+    # right-aligned header would. The tiles sit centred on that same gridline.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     title_w = spreadsheet._title_w("other intervals\nof interest")
-    for mi in range(5):
+    for mi in range(4):  # a handful of intervals: content stays narrower than the title
         lay = spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * mi)
         cells = {c.id: c for c in lay.cells}
         lines = {ln.id: ln for ln in lay.lines}
         header, trunk = cells["header:interest"], lines["trunk:interest"]
-        assert header.w >= title_w  # footprint never narrower than the title
-        assert header.x + header.w / 2 == trunk.pos  # title centred on the gridline
+        assert header.w < title_w  # footprint hugs content, narrower than the title
+        assert header.x + header.w / 2 == trunk.pos  # header centred on the gridline => title overhangs evenly
     # a single interval: the tile is narrower than the title yet centred on the gridline,
     # and the lone interval's own axis coincides with the trunk
     one = _with_interest(_INTEREST[:1])
@@ -1876,11 +1889,9 @@ def test_interest_title_is_centred_on_the_gridline_and_the_column_never_narrows_
     assert lines["v:interest:0"].pos == trunk.pos  # the single interval's axis is the trunk
 
 
-def test_per_tile_fold_toggle_hugs_its_tile_not_the_footprint_margin():
-    # general (not interest-only): a per-tile fold toggle is anchored to its tile's own
-    # top-left corner. For a narrow column centred under a wide title (interest) that
-    # means the toggle stays on the tile, not floated out to the footprint's left edge in
-    # the reserved title margin. An ordinary column's toggle is unaffected (margin zero).
+def test_per_tile_fold_toggle_hugs_its_tile_corner():
+    # a per-tile fold toggle is anchored to its tile's own top-left corner — for a narrow
+    # column whose title overhangs (interest) as much as for an ordinary one (primes).
     lay = _with_interest(_INTEREST[:1])
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
@@ -1889,8 +1900,6 @@ def test_per_tile_fold_toggle_hugs_its_tile_not_the_footprint_margin():
         toggle, tile = cells[toggle_id], blocks[block_id]
         assert toggle.x == tile.x + spreadsheet.TOGGLE_INSET  # hugs the tile's corner
         assert tile.x <= toggle.x <= tile.x + tile.w          # ...so it sits within the tile
-    # the interest toggle is well right of the footprint's left edge (its title margin)
-    assert cells["toggle:tile:vectors:interest"].x > cells["header:interest"].x
 
 
 def test_populated_interest_mapped_list_is_bracketed_and_ruled_like_targets():

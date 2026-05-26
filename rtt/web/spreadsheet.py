@@ -30,9 +30,6 @@ LABEL_W = 96  # row-label gutter width
 HEADER_H = 36  # column-header height — two text lines tall, so a multi-word title
 # stacks centered onto a second line (via explicit "\n" breaks in col_header, e.g.
 # "domain" / "primes"); single-word titles centre as one line
-SPINE_W = 64  # quantities spine column width — sized to seat its "quantities"
-# header without overflowing onto the generators column; carries only the
-# column-axis vertical rule, no data cells in the default view
 BTN = 15  # px side of a domain +/− control — half the COL_W square mapping/prime cell
 MINUS_REVEAL_H = 18  # height the removable prime's hover-minus rises above its header
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
@@ -789,12 +786,14 @@ def build(state, settings=None, collapsed=None,
     # The leftmost quantities column is the spine: a header + fold toggle + a single
     # vertical rule, the column-axis dual of the quantities spine row. The units column
     # (the specific `domain_units` toggle) is a second spine column right after it,
-    # carrying each row's coordinate-unit labels (pᵢ/, gᵢ/, ¢/).
+    # carrying each row's coordinate-unit labels (pᵢ/, gᵢ/, ¢/). Each spine holds a single
+    # COL_W-wide index per row (a basis square / generator ratio; a unit label) and so is
+    # one COL_W wide — its longer header overhangs it (see the col_w hug-content rule above).
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
     # the value cells are inset by BRACKET_W within the group.
     col_bands = (
-        ("quantities", SPINE_W, show_domain_quantities, True),
-        ("units", SPINE_W, show_domain_units, True),
+        ("quantities", COL_W, show_domain_quantities, True),
+        ("units", COL_W, show_domain_units, True),
         ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
         ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
         ("detempering", 2 * BRACKET_W + r * COL_W, show_detempering, True),
@@ -855,7 +854,7 @@ def build(state, settings=None, collapsed=None,
     # the domain, the comma basis and the interest set each ride an expand (+) control
     # just inside the right of their (open) tile — domain primes add a prime, commas
     # add a comma, interest adds a blank interval to edit
-    col_x, col_w, content_w, col_collapsible, tile_w = {}, {}, {}, {}, {}
+    col_x, col_w, content_w, col_collapsible = {}, {}, {}, {}
     ctrl_x = {}
     plus_cols = set()  # columns whose + rides inside the tile (the tile overhangs it a margin)
     x = content_x0
@@ -863,18 +862,17 @@ def build(state, settings=None, collapsed=None,
         if not present:
             continue
         collapsed_col = f"col:{key}" in collapsed
-        # The content (value cells + their bracket gutters) is the natural width. The grey
-        # tile is the content width, or wider where a long caption needs the room (tile_w);
-        # the footprint (col_w) is floored at the tile and the title — a wide title or a
-        # caption-widened tile reserves room and the narrower content is centred within it
-        # (see content_x/tile_x below). For most columns content already outruns both, so
-        # all three coincide. A collapsed column folds to its title strip.
+        # The content (value cells + their bracket gutters) is the natural width. The column
+        # footprint (col_w) hugs that content, or widens where a long caption needs the room;
+        # it does NOT reserve room for a wider title. A title wider than its column (the
+        # "quantities"/"units" spines, the long interest header) overhangs it instead, rendered
+        # without wrapping and centred on the column gridline. The grey tile fills the footprint,
+        # with content centred within it (see content_x). A collapsed column folds to a strip.
         if collapsed_col:
-            col_w[key] = content_w[key] = tile_w[key] = _title_w(col_header[key])
+            col_w[key] = content_w[key] = _title_w(col_header[key])
         else:
             content_w[key] = natural
-            tile_w[key] = max(natural, _caption_floor(key))  # the panel widens for a long name
-            col_w[key] = max(tile_w[key], _title_w(col_header[key]))
+            col_w[key] = max(natural, _caption_floor(key))  # the footprint widens for a long name
         col_collapsible[key] = collapsible
         # a +-bearing column (an open domain/comma/interest set with cells) carries an in-tile
         # + on the panel's right edge (seated below). Reserve an extra FRAME_GAP of tile
@@ -893,14 +891,9 @@ def build(state, settings=None, collapsed=None,
     total_w = x
 
     # Content is centred within each footprint: the margin is (footprint − content) / 2,
-    # which is zero for the common case (content at least as wide as the title and any
-    # caption) so content_x == col_x there, and positive where a long title or a caption-
-    # widened tile reserves extra width around the narrower content.
+    # zero for the common case (content fills the column) and positive only where a long
+    # caption widened the footprint, reserving even margins around the narrower content.
     content_x = {key: col_x[key] + (col_w[key] - content_w[key]) / 2 for key in col_x}
-    # the grey tile is centred in the footprint too: as wide as the content, or wider where
-    # a long caption widened it (then col_w == tile_w). A title-only-wide column keeps a
-    # content-narrow tile centred under its wide header; content is centred within the tile.
-    tile_x = {key: col_x[key] + (col_w[key] - tile_w[key]) / 2 for key in col_x}
 
     def content_box(key):
         # the (x, width) of a column's actual content — the value cells and the brackets/
@@ -908,9 +901,9 @@ def build(state, settings=None, collapsed=None,
         return content_x[key], content_w[key]
 
     def tile_box(key):
-        # the (x, width) of a column's grey tile/panel — the content width, or the caption-
-        # widened width — centred within the footprint; the caption stack rides this width
-        return tile_x[key], tile_w[key]
+        # the (x, width) of a column's grey tile/panel: the full footprint (the panel fills it
+        # and overhangs by tile_pad). The caption stack rides this width; content centres within.
+        return col_x[key], col_w[key]
 
     def tile_pad(key):
         # how far a tile's grey panel overhangs its content on each side: PAD normally, plus
@@ -1861,7 +1854,7 @@ def build(state, settings=None, collapsed=None,
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the
     # grey panel's top-left, so it never touches an edge or overlaps the frame.
-    # Anchored to the grey panel's left edge (tile_x), not the centred content — so a
+    # Anchored to the grey panel's left edge (col_x), not the centred content — so a
     # caption-widened tile keeps the toggle on its edge rather than drifting it inward.
     # Present whenever the tile's row and column bands are open — it stays put when
     # only the tile is folded, so the tile can be re-expanded.
@@ -1869,7 +1862,7 @@ def build(state, settings=None, collapsed=None,
         if rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey):
             glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
             cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
-                                 tile_x[ckey] - tile_pad(ckey) + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
+                                 col_x[ckey] - tile_pad(ckey) + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     # Value-display filtering. The tiles (blocks) and gridlines (lines) always

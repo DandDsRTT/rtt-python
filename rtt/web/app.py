@@ -357,9 +357,14 @@ _CSS = f"""
              box-sizing:border-box; display:flex; align-items:center; justify-content:center;
              background:#fff; border:{_CELL_BORDER}; color:#000; font-size:{_CELL_FONT}px; }}
 /* titles carry explicit "\n" breaks (col_header) so a multi-word header stacks to two
-   lines (e.g. "domain" / "primes"); pre-line honors them. Tight line-height keeps them close. */
-.rtt-colheader {{ font-size:13px; font-weight:bold; color:#000; white-space:pre-line;
-                 width:100%; text-align:center; line-height:1.1; }}
+   lines (e.g. "domain" / "primes"); `pre` honors them AND never auto-wraps, so a title
+   wider than its (content-hugging) column overflows it rather than rewrapping. It is
+   absolutely centred on the cell (= the column gridline) so that overflow spills EVENLY
+   to both sides — a balanced overhang into the gaps, not clamped against one neighbour the
+   way a flow-positioned flex child is. Tight line-height keeps the stacked lines close. */
+.rtt-colheader {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                 font-size:13px; font-weight:bold; color:#000; white-space:pre;
+                 text-align:center; line-height:1.1; }}
 .rtt-rowlabel {{ font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; line-height:1.1; }}
 .rtt-val {{ font-size:{_CELL_FONT}px; color:#000; }}
