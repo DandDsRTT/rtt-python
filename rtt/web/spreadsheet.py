@@ -57,6 +57,7 @@ CHART_GAP = 5  # gap between a chart and the value cells below it
 RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
 RANGE_MODE_H = 13  # height of the monotone/tradeoff range-mode selector (one row of square indicators) below the chart
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
+OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -456,6 +457,7 @@ GRIDDED_KINDS = frozenset({
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar",
     "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus", "held_minus", "held_plus", "optimize",
+    "boxtitle", "powerinput",
 })
 # "quantities" (general) is gentler than gridded values: it keeps every cell box
 # AND the EBK marks framing them, and only *blanks the numbers* of the body
@@ -980,7 +982,9 @@ def build(state, settings=None, collapsed=None,
     # sub-control. Reserve their height up front so the board stays clear below the tile.
     opt_ctrl = (show_optimization and "row:damage" not in collapsed
                 and col_open("targets") and "tile:damage:targets" not in collapsed)
-    opt_extra = (RANGE_GAP + ROW_H) if opt_ctrl else 0
+    # the optimization box: a title strip over two rows (objective ⟨d⟩ₚ + power 𝑝 on the
+    # left, the optimize button spanning them on the right)
+    opt_extra = (RANGE_GAP + OPT_TITLE_H + 2 * ROW_H) if opt_ctrl else 0
     # Each of these nested controls lives at the bottom of ONE tile of its row (keyed here by
     # row -> (owning column, reserved height)). Its height is reserved across the whole row's
     # tile_h so the rows below clear it, but only the OWNING tile actually grows to enclose it
@@ -1544,22 +1548,31 @@ def build(state, settings=None, collapsed=None,
                              "rangemode", text=range_mode))
         gtm_box = (gx, cy, gw, RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
 
-    # the optimization power 𝑝 of the current tuning (the scheme's Lp-norm order: ∞ minimax,
-    # 2 least-squares, 1 average), nested at the BOTTOM of the target-interval damage list
-    # tile — the tuning's own column, whose damages the optimization minimizes. Reads like a
-    # count: "𝑝 = ∞". The damage tile's panel grows by opt_extra (above) to enclose it, so it
-    # sits inside the tile rather than in a row of its own (which the mockup has no trace of).
+    # the optimization box, nested at the BOTTOM of the target-interval damage list tile (the
+    # tuning's own column, whose damages it minimizes): a bordered box titled "optimization"
+    # holding the minimized-damage objective ⟨𝐝⟩ₚ and the editable power 𝑝 stacked on the left,
+    # with the optimize button spanning them on the right. The damage tile's panel grows by
+    # opt_extra (above) to enclose it; the box's own border is the opt_box block (panel loop).
+    opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
     if opt_ctrl:
-        power = _format_power(service.optimization_power(tuning_scheme))
-        oy = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
         ox, ow = col_x["targets"], col_w["targets"]
-        # the power 𝑝 on the left, the optimize button on the right (per the mockup). The
-        # button single-clicks to optimize once and double-clicks to lock auto-optimize;
-        # app.py owns that behaviour and the lock visual, reading the editor.
-        cells.append(CellBox("optimization:power", ox, oy, ow / 2, ROW_H, "optimization",
-                             text=f"{_mathit('p')} = {power}"))
-        cells.append(CellBox("optimization:button", ox + ow / 2, oy, ow / 2, ROW_H, "optimize",
+        box_top = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
+        half, content_top = ow / 2, box_top + OPT_TITLE_H
+        objective = _lp_objective(target_sizes.damage, service.optimization_power(tuning_scheme))
+        power = _format_power(service.optimization_power(tuning_scheme))
+        cells.append(CellBox("optimization:title", ox, box_top, ow, OPT_TITLE_H, "boxtitle",
+                             text="optimization"))
+        cells.append(CellBox("optimization:objective", ox, content_top, half, ROW_H, "optimization",
+                             text=f"⟨𝐝⟩ₚ = {service.cents(objective)}"))
+        # the power is an editable field (∞ minimax, 2 miniRMS, 1 miniaverage); app.py renders
+        # the input with a 𝑝 label and routes edits to editor.set_optimization_power
+        cells.append(CellBox("optimization:power", ox, content_top + ROW_H, half, ROW_H, "powerinput",
+                             text=power))
+        # the button single-clicks to optimize once, double-clicks to lock auto-optimize;
+        # app.py owns that behaviour and the lock visual, reading the editor
+        cells.append(CellBox("optimization:button", ox + half, content_top, half, 2 * ROW_H, "optimize",
                              text="optimize"))
+        opt_box = (ox, box_top, ow, OPT_TITLE_H + 2 * ROW_H)
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
@@ -1722,6 +1735,9 @@ def build(state, settings=None, collapsed=None,
     # appended after the tile panels so it layers on top of the generator tuning map tile
     if gtm_box is not None:
         blocks.append(Block("block:tuning:rangesbox", *gtm_box, boxed=True))
+    # the optimization box's thin border, around its title + objective/power/button
+    if opt_box is not None:
+        blocks.append(Block("block:optimization:box", *opt_box, boxed=True))
 
     # Colorization washes. Each colour-bearing tile (CELL_FACTORS) renders one band per
     # group — a white base plus the group's colour at mix-blend-mode:darken (see app.py).

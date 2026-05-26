@@ -212,6 +212,11 @@ class Editor:
         alt.-complexity control in box 𝒄 — which likewise re-weights and retunes."""
         self.tuning_scheme = service.scheme_with_norm(self.tuning_scheme, euclidean)
 
+    def set_optimization_power(self, power: float) -> None:
+        """Set the optimization power 𝑝 (the editable field in the optimization box): ∞ for
+        minimax, 2 for miniRMS, 1 for miniaverage. Re-solves the tuning under the new Lp norm."""
+        self.tuning_scheme = service.scheme_with_power(self.tuning_scheme, power)
+
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
         or ``"OLD"``. A manual limit is weakly held — the next domain change forgets it."""

@@ -62,6 +62,7 @@ _CHART_PAD_T = 9  # top padding (room for the top gridline's label)
 _CHART_PAD_B = 2  # bottom padding
 _CHART_BAR_FRAC = 0.5  # bar width as a fraction of the column it sits in
 _CHART_GRID = "#bbbbbb"  # light gridline / tick colour
+_CHART_INDICATOR = "#888888"  # the minimized-damage indicator line (a solid lighter grey, labelled)
 # The generator tuning-ranges chart: per-generator vertical I-beam range markers drawn
 # in the same 1:1 SVG box as the EBK marks. A ranged generator is a stem with a cap at
 # top (max cents) and bottom (min), labelled at the caps; a pinned generator (the period,
@@ -529,6 +530,9 @@ _CSS = f"""
 .rtt-optimize .q-btn__content {{ font-size:11px; }}
 .rtt-optimize-locked {{ background:#000 !important; }}
 .rtt-optimize-locked .q-btn__content {{ color:#fff !important; }}
+/* an in-tile box title (the optimization box's "optimization" header) */
+.rtt-boxtitle {{ font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
+                 color:#000; padding-left:2px; }}
 /* the audio rows' speaker buttons (one per pitch). Flat and transparent so the cyan/green
    wash shows through; the icon fills the (square) cell. .rtt-spk-on highlights it while sounding. */
 .rtt-audio-btn {{ width:100% !important; height:100% !important; min-width:0 !important;
@@ -886,10 +890,12 @@ def _bar_chart(w, h, values, indicator=None):
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
         body.append(_rect(cx - bw / 2, top, bw, bot - top))
-    if indicator is not None:  # the minimized-damage level, a dashed line across the plot
+    if indicator is not None:  # the minimized-damage level: a solid lighter-grey line, labelled ⟨d⟩
         iy = y_of(indicator)
         body.append(f'<line x1="{axis_x:.2f}" y1="{iy:.2f}" x2="{w:.2f}" y2="{iy:.2f}" '
-                    f'stroke="{_BR_COLOR}" stroke-width="1" stroke-dasharray="3 2"/>')
+                    f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>')
+        body.append(f'<text x="{axis_x + 2:.2f}" y="{iy - 2:.2f}" font-size="7" '
+                    f'fill="{_CHART_INDICATOR}">⟨d⟩</text>')
     return _svg(w, h, "".join(body))
 
 
@@ -1285,6 +1291,23 @@ def index() -> None:
         editor.set_held_monzos(monzos)
         render()
 
+    def on_power_change():
+        # the editable optimization power 𝑝: ∞ / inf / max -> minimax, else a positive number
+        if building[0] or "optimization:power" not in inputs:
+            return
+        raw = str(inputs["optimization:power"].value).strip().lower()
+        if raw in ("∞", "inf", "max", "minimax"):
+            power = float("inf")
+        else:
+            try:
+                power = float(raw)
+            except ValueError:
+                return  # leave the scheme unchanged on unparseable input
+            if power <= 0:
+                return
+        editor.set_optimization_power(power)
+        render()
+
     def on_ptext_edit(cid, value):
         # the editable plain-text duals: a valid EBK string drives the grid (like
         # typing in a matrix cell); an unparseable one reddens the box and is ignored
@@ -1573,6 +1596,12 @@ def index() -> None:
                 opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: act(editor.optimize), color=None) \
                     .props("unelevated dense no-caps").classes("rtt-btn rtt-optimize")
                 opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
+            elif cb.kind == "boxtitle":  # an in-tile box title (e.g. "optimization")
+                labels[cb.id] = ui.label(cb.text).classes("rtt-boxtitle")
+            elif cb.kind == "powerinput":  # the editable optimization power 𝑝 (∞ / 2 / 1)
+                wrap.classes("rtt-cell-input")
+                inputs[cb.id] = ui.input(on_change=lambda e: on_power_change()) \
+                    .props('dense borderless prefix="𝑝 ="').classes("rtt-cellinput")
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
@@ -1671,6 +1700,8 @@ def index() -> None:
             elif cb.kind == "optimize":  # mark the button when its auto-optimize lock is on
                 (opt_buttons[cb.id].classes(add="rtt-optimize-locked") if editor.optimize_locked
                  else opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
+            elif cb.kind == "powerinput":  # reflect the live optimization power (∞ / 2 / 1)
+                inputs[cb.id].value = cb.text
             elif cb.kind == "mapping":
                 inputs[cb.id].value = "" if cb.blank else str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":

@@ -419,6 +419,13 @@ def scheme_with_norm(scheme, euclidean: bool):
     return replace(resolve_tuning_scheme(scheme), complexity_norm_power=2.0 if euclidean else 1.0)
 
 
+def scheme_with_power(scheme, power: float):
+    """``scheme`` with its optimization power set to ``power`` — the editable 𝑝 field in the
+    optimization box (∞ minimax, 2 miniRMS, 1 miniaverage) — keeping everything else. Returns
+    a resolved spec (accepted anywhere a scheme name is)."""
+    return replace(resolve_tuning_scheme(scheme), optimization_power=float(power))
+
+
 def is_euclidean(scheme) -> bool:
     """Whether ``scheme`` uses the Euclidean (q=2) complexity norm rather than taxicab (q=1)."""
     return resolve_tuning_scheme(scheme).complexity_norm_power == 2

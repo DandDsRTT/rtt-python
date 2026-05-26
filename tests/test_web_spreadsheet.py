@@ -2224,46 +2224,50 @@ def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels():
     assert on["label:quantities"].y < on["label:units"].y < on["label:vectors"].y
 
 
-def test_optimization_power_rides_the_bottom_of_the_damage_tile():
-    # per the mockup, the optimization power 𝑝 (TOP, a minimax scheme ⇒ ∞) lives INSIDE
-    # the target-interval damage list tile, at its bottom — there is NO separate
-    # optimization row. It reads like a count: the math-italic symbol, " = ", its value.
+def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
+    # per the mockup, the optimization controls live INSIDE the target-interval damage list
+    # tile as a bordered, titled box — not a separate row — carrying the minimized-damage
+    # objective ⟨𝐝⟩ₚ, the editable power 𝑝, and the optimize button.
     lay = _with(optimization=True)
     on = {c.id: c for c in lay.cells}
-    assert on["optimization:power"].text == "\U0001D45D = ∞"  # 𝑝 = ∞
-    # it sits below the damage values, in the target-intervals column
-    assert on["optimization:power"].y > on["damage:target:0"].y
-    assert on["optimization:power"].x == on["header:targets"].x
-    # ...and there is no separate optimization row (no label, fold toggle or gridline)
+    assert on["optimization:title"].text == "optimization"
+    assert on["optimization:objective"].text.startswith("⟨")        # the ⟨𝐝⟩ₚ objective field
+    assert " = " in on["optimization:objective"].text
+    assert on["optimization:power"].kind == "powerinput"            # the power is an editable field
+    assert on["optimization:power"].text == "∞"                     # ...showing the current Lp order
+    assert on["optimization:button"].text == "optimize"
+    # the box sits below the damage values, in the target-intervals column
+    assert on["optimization:title"].y > on["damage:target:0"].y
+    assert on["optimization:title"].x == on["header:targets"].x
+    # ...and there is no separate optimization row
     assert "label:optimization" not in on
-    assert "toggle:row:optimization" not in on
     assert "h:optimization" not in {ln.id for ln in lay.lines}
 
 
-def test_optimization_power_reflects_the_current_tuning_scheme():
-    # the surfaced power is the *current* tuning's, not a constant: a least-squares
-    # (miniRMS) scheme reads p = 2 where the default minimax TOP reads p = ∞
+def test_optimization_power_field_reflects_the_current_scheme():
+    # the power field shows the *current* scheme's Lp order: ∞ for minimax (TOP), 2 for
+    # least-squares (miniRMS)
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["optimization"] = True
     ls = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="least squares").cells}
-    assert ls["optimization:power"].text == "\U0001D45D = 2"  # 𝑝 = 2
+    assert ls["optimization:power"].text == "2"  # miniRMS ⇒ p = 2
 
 
 def test_optimization_needs_its_parent_tuning_boxes():
     # optimization is a sub-control of tuning boxes: with the tuning region hidden
-    # there is nothing to annotate, so the power stays away even when toggled on
+    # there is nothing to annotate, so the box stays away even when toggled on
     cells = {c.id for c in _with(optimization=True, tuning_boxes=False).cells}
     assert "optimization:power" not in cells
+    assert "optimization:title" not in cells
 
 
-def test_optimization_box_has_an_optimize_button():
+def test_optimize_button_sits_right_of_the_stacked_objective_and_power():
     on = {c.id: c for c in _with(optimization=True).cells}
-    # the optimize button sits in the damage tile beside the power 𝑝 (same row, to its right)
-    assert on["optimization:button"].text == "optimize"
-    assert on["optimization:power"].y == on["optimization:button"].y
-    assert on["optimization:power"].x < on["optimization:button"].x
-    # no button when optimization is off
+    # objective ⟨𝐝⟩ₚ over the editable power 𝑝 on the left; the optimize button to their right
+    assert on["optimization:objective"].y < on["optimization:power"].y   # objective above power
+    assert on["optimization:objective"].x == on["optimization:power"].x  # ...same (left) column
+    assert on["optimization:button"].x > on["optimization:power"].x      # button to the right
     assert "optimization:button" not in {c.id for c in _with(optimization=False).cells}
 
 
@@ -2291,15 +2295,15 @@ def test_optimization_draws_the_minimized_damage_indicator_on_the_chart():
     assert off["chart:damage:targets"].indicator is None
 
 
-def test_optimization_power_nests_inside_the_damage_tile_panel():
-    # no separate optimization panel — the power rides within the damage×targets tile,
-    # which grows to enclose it (so it is never a bare floating number)
+def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile():
+    # the optimization box is a thin-bordered frame (like the tuning-ranges box) nested
+    # inside the damage×targets tile's grey panel, which grows to enclose it
     lay = _with(optimization=True)
     blocks = {b.id: b for b in lay.blocks}
-    assert "block:optimization" not in blocks
-    pw = {c.id: c for c in lay.cells}["optimization:power"]
+    box = blocks["block:optimization:box"]
+    assert box.boxed
     panel = blocks["block:damage:targets"]
-    assert panel.y <= pw.y and pw.y + pw.h <= panel.y + panel.h
+    assert panel.y <= box.y and box.y + box.h <= panel.y + panel.h
 
 
 def test_optimization_on_adds_an_addable_held_intervals_column():
