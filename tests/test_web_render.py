@@ -214,17 +214,24 @@ def _renders_inside(user: User, cell_marker: str, region_marker: str) -> bool:
     return False
 
 
-@pytest.mark.parametrize("cell, region", [
-    ("header:gens", "colhead"),          # a column title -> the top strip (pinned vertically)
-    ("toggle:col:targets", "colhead"),   # its fold toggle rides the same strip
-    ("label:tuning", "rowhead"),         # a row title -> the left strip (pinned horizontally)
-    ("toggle:row:tuning", "rowhead"),    # its fold toggle rides the same strip
-    ("toggle:all", "corner"),            # the master toggle -> the fixed corner
-    ("cell:mapping:0:0", "bodyscroll"),  # a body cell -> the (only) scrolling pane
+@pytest.mark.parametrize("cell, band", [
+    ("header:gens", "colband"),        # a column title -> the column band (sticky to the top)
+    ("toggle:col:targets", "colband"),  # its fold toggle rides the same band
+    ("label:tuning", "rowband"),       # a row title -> the row band (sticky to the left)
+    ("toggle:row:tuning", "rowband"),   # its fold toggle rides the same band
+    ("toggle:all", "corner"),          # the master toggle -> the corner band
 ])
-async def test_each_cell_renders_into_its_frozen_pane(user: User, cell: str, region: str) -> None:
+async def test_each_title_renders_into_its_sticky_band(user: User, cell: str, band: str) -> None:
     await user.open("/")
-    assert _renders_inside(user, cell, region)
+    assert _renders_inside(user, cell, band)
+
+
+async def test_body_cells_render_on_the_board_under_no_band(user: User) -> None:
+    # a value cell sits on the board itself (the page-scrolled body), beneath none of the bands
+    await user.open("/")
+    assert _renders_inside(user, "cell:mapping:0:0", "board")
+    for band in ("colband", "rowband", "corner"):
+        assert not _renders_inside(user, "cell:mapping:0:0", band)
 
 
 async def test_state_persists_across_a_refresh(user: User) -> None:

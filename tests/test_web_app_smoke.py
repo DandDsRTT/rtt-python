@@ -247,75 +247,63 @@ def test_left_rail_height_tracks_the_settings_drawer_not_the_taller_grid():
     assert "stretch" not in rule  # never re-stretch to the shell (the grid) height
 
 
-def test_only_the_body_pane_scrolls_so_the_scrollbar_sits_by_the_body():
-    # the four panes are DISJOINT; only the body pane scrolls (overflow:auto), so its scrollbar
-    # is the only one and sits beside/below the body — never alongside the frozen title strips,
-    # which clip (overflow:hidden). The frame itself clips so nothing leaks past the viewport.
-    assert "overflow:auto" in _css_rule(".rtt-bodyscroll")
-    assert "overflow:hidden" in _css_rule(".rtt-colhead")
-    assert "overflow:hidden" in _css_rule(".rtt-rowhead")
-    assert "overflow:hidden" in _css_rule(".rtt-frame")
+def _z(selector):
+    m = re.search(r"z-index:(\d+)", _css_rule(selector))
+    assert m, f"no z-index in {selector}"
+    return int(m.group(1))
 
 
-def test_column_title_strip_bleeds_into_the_right_margin_so_an_overhanging_title_shows():
-    # Column titles overhang their content-hugging columns, centred on the gridline (a title
-    # wider than its column spills into the gaps/margins; the column is never widened to seat
-    # it — see spreadsheet col_w). The RIGHTMOST column's title (e.g. the narrow intervals-of-
-    # interest column's "other intervals\nof interest") overhangs the board's right CONTENT edge
-    # into the frame's _PAD margin. So the colhead strip must extend that far — right:-_PAD —
-    # so its overflow:hidden clips at the FRAME edge, not the grid's content edge; otherwise the
-    # title's tail is cut (the split-pane rebuild regressed this by clipping at right:0). The
-    # left edge stays clipped at the corner (the frozen row labels) via the inline left:freeze_x.
-    assert f"right:-{app._PAD}px" in _css_rule(".rtt-colhead")
+def test_titles_freeze_with_sticky_bands_pinned_to_the_window():
+    # the three title bands are position:sticky, so the browser pins them to the window edges as
+    # the page scrolls (no JS on the scroll path, no bobble): the column band to the top, the row
+    # band to the left, the corner to both. They stack above the body, corner above the sides.
+    col, row, cnr = _css_rule(".rtt-colband"), _css_rule(".rtt-rowband"), _css_rule(".rtt-cornerband")
+    assert "position:sticky" in col and "top:0" in col        # column band pinned to the top
+    assert "position:sticky" in row and "left:0" in row       # row band pinned to the left
+    assert "position:sticky" in cnr and "top:0" in cnr and "left:0" in cnr  # corner pinned to both
+    assert _z(".rtt-cell") < _z(".rtt-colband") < _z(".rtt-rowband") < _z(".rtt-cornerband")
 
 
-def test_shell_is_viewport_bounded_so_the_body_pane_scrolls_internally():
-    # the rail+app shell sits in a flex-column (.nicegui-content, align-items:flex-start), so
-    # it would otherwise take the grid's full content width and push the HORIZONTAL scroll onto
-    # the page — letting the frozen row titles scroll off. Capped to the viewport (max-width)
-    # with min-width:0 it stays put and the body pane scrolls the grid within it instead.
-    rule = _css_rule(".rtt-shell")
-    assert "min-width:0" in rule
-    assert "max-width:100%" in rule
+def test_bands_are_opaque_and_pass_clicks_through_off_the_band():
+    # the band wrapper spans the whole board but lets clicks fall through to the body
+    # (pointer-events:none); the sticky inner re-enables them and is opaque #c0c0c0, so the body
+    # is hidden behind the titles as it scrolls under them
+    assert "pointer-events:none" in _css_rule(".rtt-band")
+    assert "pointer-events:auto" in app._CSS  # the band inners re-enable clicks
+    # the column band must NOT clip, so a rightmost column's title (which overhangs its
+    # content-hugging column, centred on the gridline) spills into the .rtt-outer margin
+    assert "overflow" not in _css_rule(".rtt-colband")
 
 
-def test_title_strips_track_the_body_scroll_on_the_compositor():
-    # jank-free pinning: the body publishes named scroll timelines, hoisted to the grid so the
-    # sibling strips can read them; each strip-inner rides one and is translated to the body's
-    # max scroll (--rtt-maxx/maxy) — a compositor scroll-driven animation, no per-frame JS.
+def test_grid_grows_the_page_rather_than_being_capped_to_the_window():
+    # the grid lays out at natural size (max-content) and neither the app nor the shell is
+    # width-capped, so a grid bigger than the window grows the page (the page is the scroller)
+    # and spills off the edges — adding a row/col expands the view, never a fixed-box scrollbar.
+    assert "width:max-content" in _css_rule(".rtt-outer")
+    assert "flex:0 0 auto" in _css_rule(".rtt-app")
+    assert "max-width" not in _css_rule(".rtt-shell")  # never capped to the viewport
+
+
+def test_seam_appears_only_when_the_page_is_scrolled():
+    # each band's body-facing edge is transparent until the page is scrolled on that axis, when
+    # the board gains rtt-scrolled-x/y (see _FREEZE_JS) and the edge takes the grey seam; the
+    # border is always 1px so revealing it shifts nothing.
     css = app._CSS
-    assert "scroll-timeline-name: --rtt-tlx, --rtt-tly" in css
-    assert "timeline-scope: --rtt-tlx, --rtt-tly" in css
-    assert "animation-timeline: --rtt-tlx" in css and "animation-timeline: --rtt-tly" in css
-    assert "var(--rtt-maxx" in css and "var(--rtt-maxy" in css
+    assert "border-bottom:1px solid transparent" in css  # column-band seam, hidden at rest
+    assert "border-right:1px solid transparent" in css   # row-band seam, hidden at rest
+    assert ".rtt-board.rtt-scrolled-y .rtt-colband" in css and f"border-bottom-color:{app._SEAM}" in css
+    assert ".rtt-board.rtt-scrolled-x .rtt-rowband" in css and f"border-right-color:{app._SEAM}" in css
 
 
-def test_seam_and_scrollbar_appear_only_while_scrolled():
-    # the seam edges are transparent at rest and take the grey only when the body is scrolled on
-    # that axis; the scrollbar thumb is invisible at rest and colours only while scrolling. So
-    # neither shows merely because a row/col was added — only when the user actually scrolls.
-    css = app._CSS
-    assert "border-bottom:1px solid transparent" in css  # column-title seam, hidden at rest
-    assert "border-right:1px solid transparent" in css   # row-title seam, hidden at rest
-    assert ".rtt-frame.rtt-scrolled-y .rtt-colhead" in css and f"border-bottom-color:{app._SEAM}" in css
-    assert ".rtt-frame.rtt-scrolled-x .rtt-rowhead" in css and f"border-right-color:{app._SEAM}" in css
-    assert "scrollbar-color:transparent transparent" in css  # invisible scrollbar at rest
-    assert ".rtt-frame.rtt-scrolling .rtt-bodyscroll" in css  # coloured only while scrolling
-
-
-def test_freeze_sync_keeps_blank_space_and_gates_the_chrome_on_scroll():
-    # the support script keeps the body's max scroll current via a ResizeObserver (never on
-    # scroll); pads the board with a screenful of blank so the body is ALWAYS scrollable (adding
-    # a row/col never newly triggers a scrollbar); toggles the seam/scrollbar classes on scroll;
-    # and, only without scroll-driven animations, syncs the strips from the scroll listener.
+def test_freeze_script_toggles_the_seam_on_page_scroll_only():
+    # the only JS is a capture-phase scroll listener that toggles rtt-scrolled-x/y on the board
+    # from its viewport rect (a band is "stuck" once the board's edge passes the viewport edge).
+    # It never moves the titles — position:sticky does that — so there is no bobble.
     js = app._FREEZE_JS
-    assert "--rtt-maxx" in js and "--rtt-maxy" in js
-    assert "ResizeObserver" in js
-    assert "paddingRight" in js and "paddingBottom" in js  # the always-present blank space
-    assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js  # seam gating
-    assert "rtt-scrolling" in js  # scrollbar gating
-    assert "animation-timeline" in js  # the support gate guarding the fallback sync
-    assert "scrollLeft" in js and "scrollTop" in js
+    assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js
+    assert "getBoundingClientRect" in js
+    assert "addEventListener('scroll'" in js
+    assert "ResizeObserver" not in js and "scroll-timeline" not in js  # no fixed-box machinery
 
 
 def test_every_show_toggle_has_a_non_empty_example():
