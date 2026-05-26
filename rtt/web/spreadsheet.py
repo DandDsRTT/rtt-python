@@ -151,12 +151,14 @@ CAPTIONS = {
     ("retune", "interest"): "errors",
     ("prescaling", "interest"): "prescaled",
     ("complexity", "interest"): "complexity",
-    # the held column mirrors the intervals-of-interest rows with the same terse captions
-    ("mapping", "held"): "mapped",
-    ("tuning", "held"): "tempered",
-    ("just", "held"): "just",
-    ("retune", "held"): "errors",
-    ("complexity", "held"): "complexity",
+    # the held column is the optimization's held-just constraint set: like the comma basis
+    # (special intervals the temperament treats specially), it carries full descriptive
+    # names — mirroring the target-interval column ("held-interval …" for "target interval …")
+    ("mapping", "held"): "mapped held-interval basis",
+    ("tuning", "held"): "tempered held-interval size list",
+    ("just", "held"): "(just) held-interval size list",
+    ("retune", "held"): "held-interval error list",
+    ("complexity", "held"): "held-interval complexity list",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # The quantity symbol shown above each name when symbols is on. Styling: the maps
@@ -184,6 +186,15 @@ SYMBOLS = {
     ("retune", "commas"): "𝒓C",
     ("retune", "targets"): "𝐞",
     ("prescaling", "primes"): "𝑋",  # the complexity prescaler matrix (math italic, like 𝑀)
+    # the held-interval column mirrors the comma column: the basis H lives in the
+    # interval-vectors row, and everything else is a product with it — the mapped held
+    # basis 𝑀H and the held sizes 𝒕H, 𝒋H, 𝒓H (the held complexity is a derived auxiliary,
+    # so like the comma complexity it carries none)
+    ("vectors", "held"): "H",
+    ("mapping", "held"): "𝑀H",
+    ("tuning", "held"): "𝒕H",
+    ("just", "held"): "𝒋H",
+    ("retune", "held"): "𝒓H",
     # only the target-interval complexity list carries the bare 𝒄 symbol; the domain-prime
     # map, comma list and interest complexity are derived auxiliaries and carry none
     ("complexity", "targets"): "𝒄",
@@ -307,6 +318,10 @@ EQUIVALENCES = {
     ("retune", "primes"): " = 𝒕 − 𝒋",
     ("retune", "targets"): " = 𝒓T",
     ("damage", "targets"): " = |𝐞|diag(𝒘)",
+    # the held intervals are tuned exactly just: the tempered size equals the just size,
+    # so the retuning error vanishes to the zero list
+    ("tuning", "held"): " = 𝒋H",
+    ("retune", "held"): " = 𝟎",
 }
 
 # Each box's "units:" annotation (the mockup's per-box unit line, shown below the name
@@ -1061,7 +1076,11 @@ def build(state, settings=None, collapsed=None,
                  if (key, c) in CAPTIONS and (key, c) in declared_tiles]
         return max(lines, default=1) * CAPTION_LINE
 
-    ptext_strings = service.plain_text_values(state, tuning_scheme, target_spec) if show_ptext else {}
+    # pass the held intervals + any frozen manual tuning so the plain text builds the SAME
+    # tuning the grid does (held-just sizes, frozen-tuning maps) — the two views can't diverge
+    ptext_strings = (service.plain_text_values(state, tuning_scheme, target_spec,
+                                               held=held, generator_tuning=generator_tuning)
+                     if show_ptext else {})
 
     def ptext_height(rkey, ckey):  # one line; the app shrinks the font to fit the box width
         return PTEXT_EDIT_H if (rkey, ckey) in EDITABLE_PTEXT else PTEXT_H

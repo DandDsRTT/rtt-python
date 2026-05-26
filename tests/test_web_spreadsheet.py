@@ -2426,6 +2426,55 @@ def test_held_intervals_show_across_the_rows_like_the_other_intervals():
     assert abs(float(cells["retune:held:0"].text)) < 1e-3
 
 
+def _held(**overrides):
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"] = True
+    s.update(overrides)
+    return {c.id: c for c in spreadsheet.build(base, s, held_monzos=[(-1, 1, 0)]).cells}
+
+
+def test_held_column_symbols_are_map_times_basis_products():
+    on = _held(symbols=True, names=True)
+    # the held-interval basis H lives in the interval-vectors row; like the comma column,
+    # the held column has no dedicated letters — the rest are products of the maps and H
+    assert on["symbol:vectors:held"].text == "H"     # held-interval basis
+    assert on["symbol:mapping:held"].text == "𝑀H"    # mapped held-interval basis
+    assert on["symbol:tuning:held"].text == "𝒕H"     # tempered held sizes
+    assert on["symbol:just:held"].text == "𝒋H"       # just held sizes
+    assert on["symbol:retune:held"].text == "𝒓H"     # held retunings (errors)
+
+
+def test_held_column_captions_are_full_held_interval_names():
+    on = _held(names=True, weighting=True)  # weighting opens the complexity row
+    # full descriptive names, mirroring the target-interval column (not the terse
+    # one-word captions of the other-intervals-of-interest column)
+    assert on["caption:vectors:held"].text == "held-interval basis"
+    assert on["caption:mapping:held"].text == "mapped held-interval basis"
+    assert on["caption:tuning:held"].text == "tempered held-interval size list"
+    assert on["caption:just:held"].text == "(just) held-interval size list"
+    assert on["caption:retune:held"].text == "held-interval error list"
+    assert on["caption:complexity:held"].text == "held-interval complexity list"
+
+
+def test_held_column_equivalences_show_the_held_just_identities():
+    on = _held(symbols=True, equivalences=True)
+    # held intervals are tuned exactly just: the tempered size equals the just size,
+    # and so the retuning error vanishes to the zero list
+    assert on["symbol:tuning:held"].text == "𝒕H = 𝒋H"
+    assert on["symbol:retune:held"].text == "𝒓H = 𝟎"
+
+
+def test_held_column_shows_plain_text_values():
+    on = _held(plain_text_values=True)
+    # the held column's tiles get plain-text EBK boxes like every other value tile
+    assert on["ptext:vectors:held"].text == "[[-1 1 0⟩]"   # the held basis (monzo list)
+    assert on["ptext:mapping:held"].text == "[[0 1}]"      # mapped into generator coords
+    assert "ptext:tuning:held" in on and "ptext:just:held" in on
+    # held just ⇒ the retuning error vanishes
+    assert abs(float(on["ptext:retune:held"].text.strip("[]"))) < 1e-3
+
+
 def test_generator_detempering_column_holds_the_d_matrix():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()

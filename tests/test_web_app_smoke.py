@@ -152,6 +152,7 @@ def test_math_html_gives_each_maths_letter_explicit_weight_and_slant():
     assert app._math_html("𝐚") == '<span style="font-weight:700">a</span>'  # bold vector list
     assert app._math_html("𝒕") == '<span style="font-weight:700;font-style:italic">t</span>'  # bold-italic map
     assert app._math_html("𝑀") == '<span style="font-style:italic">M</span>'  # italic mapping
+    assert app._math_html("𝟎") == '<span style="font-weight:700">0</span>'  # bold zero (the held-error vanishing)
     assert app._math_html("Y") == "Y"  # an upright list passes through, unstyled
     # a product styles each letter on its own (the comma column's 𝒕C: bold-italic map + upright basis)
     assert app._math_html("𝒕C") == '<span style="font-weight:700;font-style:italic">t</span>C'

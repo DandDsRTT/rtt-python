@@ -1125,11 +1125,14 @@ def _example_html(key: str) -> str:
 
 
 def _demath(ch):
-    """A Mathematical Alphanumeric letter as ``(base_letter, bold, italic)``, or
-    None for an ordinary character. Covers the bold, italic and bold-italic blocks
-    — the maps (bold-italic), matrices/vectors (bold-upright) and the counts' plain
-    italic variables; other characters pass through unstyled."""
+    """A Mathematical Alphanumeric letter (or bold digit) as ``(base, bold, italic)``,
+    or None for an ordinary character. Covers the bold, italic and bold-italic letter
+    blocks — the maps (bold-italic), matrices/vectors (bold-upright) and the counts'
+    plain italic variables — plus the bold digits (the zero list 𝟎 the held-interval
+    errors vanish to); other characters pass through unstyled."""
     cp = ord(ch)
+    if 0x1D7CE <= cp <= 0x1D7D7:  # bold digits 𝟎–𝟗
+        return chr(ord("0") + cp - 0x1D7CE), True, False
     if 0x1D400 <= cp <= 0x1D419:  # bold capitals
         return chr(ord("A") + cp - 0x1D400), True, False
     if 0x1D41A <= cp <= 0x1D433:  # bold small

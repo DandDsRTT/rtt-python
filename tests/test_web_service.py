@@ -600,6 +600,32 @@ def test_plain_text_commas_column_mirrors_the_grid():
     assert pt[("just", "commas")] == f"[{cents(sizes.just)}]"
 
 
+def test_plain_text_held_column_mirrors_the_grid():
+    # the held-interval column gets plain text like the comma column, with the tuning
+    # computed under the held-just constraint so the two views agree
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    held = [(-1, 1, 0)]  # the fifth 3/2, held exactly just
+    pt = service.plain_text_values(state, held=held)
+    held_ratios = service.comma_ratios(held)
+    tun = service.tuning(state.mapping, held=held_ratios)
+    sizes = service.interval_sizes(tun, held_ratios)
+
+    def cents(vals):
+        return " ".join(f"{v:.3f}" for v in vals)
+
+    # the held-interval basis lives in the interval-vectors row (monzos, close ⟩)
+    assert pt[("vectors", "held")] == "[[-1 1 0⟩]"
+    # mapped into generator coords (close }) — the fifth is one generator
+    assert pt[("mapping", "held")] == "[[0 1}]"
+    # the held sizes are lists over the held intervals, matching the held-constrained grid
+    assert pt[("tuning", "held")] == f"[{cents(sizes.tempered)}]"
+    assert pt[("just", "held")] == f"[{cents(sizes.just)}]"
+    assert pt[("retune", "held")] == f"[{cents(sizes.errors)}]"
+    assert abs(float(pt[("retune", "held")].strip("[]"))) < 1e-3  # held just ⇒ no error
+    # no held entries when none are held
+    assert ("vectors", "held") not in service.plain_text_values(state)
+
+
 def test_plain_text_weighting_rows_mirror_the_grid():
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     pt = service.plain_text_values(state)

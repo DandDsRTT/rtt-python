@@ -587,17 +587,27 @@ def plain_text_values(
     state: TemperamentState,
     scheme: str = DEFAULT_TUNING_SCHEME,
     target_spec: str = DEFAULT_TARGET_SPEC,
+    held=(),
+    generator_tuning=None,
 ) -> dict[tuple[str, str], str]:
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
-    show the same numbers two ways — the EBK string is the inline notation."""
+    show the same numbers two ways — the EBK string is the inline notation. ``held``
+    (the held-interval monzos) and ``generator_tuning`` (a frozen manual tuning) are
+    threaded into the same tuning the grid builds, so the two views can't diverge."""
     db = state.domain_basis
     targets = target_interval_set(target_spec, db)
     commas = comma_ratios(state.comma_basis, db)
     mapped = mapped_intervals(state.mapping, targets, db)
     mapped_comma = mapped_commas(state.mapping, state.comma_basis)
     target_monzos = target_interval_monzos(targets, state.d, db)
-    tun = tuning(state.mapping, scheme, db)  # maps over the domain elements, shared by both sets
+    held_ratios = comma_ratios(held, db) if held else ()
+    # match the grid's tuning exactly: a frozen manual generator tuning (optimize lock off)
+    # drives the maps directly; otherwise the scheme's optimum holding the held intervals just
+    if generator_tuning is not None and len(generator_tuning) == len(state.mapping):
+        tun = tuning_from_generators(state.mapping, generator_tuning, db)
+    else:
+        tun = tuning(state.mapping, scheme, db, held=held_ratios)  # maps over the domain elements
     target_sizes = interval_sizes(tun, targets, db)
     comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
     # the weighting region: complexity (a covector over the primes, lists elsewhere), the
@@ -615,7 +625,7 @@ def plain_text_values(
     # are the mapping (mapping/primes) and the comma basis (vectors/commas). The
     # quantities-row ratios get a per-column plain text in the layout, not here; the
     # generators (mapping/quantities) carry no plain-text form.
-    return {
+    values = {
         ("quantities", "primes"): ".".join(str(e) for e in db),
         ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
         ("vectors", "targets"): _ket_list(target_monzos, "⟩"),
@@ -641,6 +651,21 @@ def plain_text_values(
         ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets)),
         ("weight", "targets"): _cents_list(interval_weights(state.mapping, scheme, targets)),
     }
+    # the held-interval column mirrors the comma column: the basis as a monzo list, mapped
+    # into generator coords, then the held-just sizes/errors and complexity. Added only when
+    # the user has held intervals (an empty set declares no held tiles, like the commas).
+    if held:
+        held_sizes = interval_sizes(tun, held_ratios, db)
+        held_mapped = mapped_intervals(state.mapping, held_ratios, db)
+        values.update({
+            ("vectors", "held"): _ket_list(held, "⟩"),
+            ("mapping", "held"): _ket_list(zip(*held_mapped), "}"),
+            ("tuning", "held"): _cents_list(held_sizes.tempered),
+            ("just", "held"): _cents_list(held_sizes.just),
+            ("retune", "held"): _cents_list(held_sizes.errors),
+            ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios)),
+        })
+    return values
 
 
 def _ket_list(vectors, close: str) -> str:
