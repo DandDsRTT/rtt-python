@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
-from rtt.canonicalization import canonical_ma
+from rtt.canonicalization import canonical_ca, canonical_ma
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.domain_basis import (
     express_quotients_in_domain_basis,
@@ -240,6 +240,12 @@ def canonical_mapping(mapping) -> Matrix:
     in the ``canonical mapping`` form box. May differ from the stored matrix (which the
     user can enter in any equivalent form)."""
     return _to_matrix(canonical_ma(_to_matrix(mapping)))
+
+
+def canonical_comma_basis(comma_basis) -> Matrix:
+    """The canonical form of a comma basis (the comma-column analogue of
+    :func:`canonical_mapping`) — for the comma-basis box's ``<choose form>`` control."""
+    return _to_matrix(canonical_ca(_to_matrix(comma_basis)))
 
 
 def form_matrix(mapping) -> Matrix:

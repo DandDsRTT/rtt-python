@@ -105,6 +105,16 @@ class Editor:
     def edit_comma_basis(self, comma_basis) -> None:
         self._apply(service.from_comma_basis(comma_basis))
 
+    def canonicalize_mapping(self) -> None:
+        """Re-store the mapping in canonical form (the mapping box's ``<choose form>``
+        control) — an undoable edit, so an equivalent generating set can be normalized."""
+        self.edit_mapping(service.canonical_mapping(self.state.mapping))
+
+    def canonicalize_comma_basis(self) -> None:
+        """Re-store the comma basis in canonical form (the comma-basis box's
+        ``<choose form>`` control) — an undoable edit, like :meth:`canonicalize_mapping`."""
+        self.edit_comma_basis(service.canonical_comma_basis(self.state.comma_basis))
+
     def add_interest(self) -> None:
         """Append a blank interval of interest (a zero monzo = 1/1) for the user to
         edit, mirroring how add_comma seeds a blank comma."""

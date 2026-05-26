@@ -534,6 +534,20 @@ def test_form_box_shows_the_generator_form_matrix_over_the_gens():
     assert not any(c.id.startswith("cell:form:") for c in _layout().cells)
 
 
+def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis_boxes():
+    cells = {c.id: c for c in _with(form_controls=True).cells}
+    # a "<choose form>" chooser rides in the mapping box and the comma-basis box
+    assert cells["formchooser:mapping"].kind == "formchooser"
+    assert cells["formchooser:comma_basis"].kind == "formchooser"
+    # each over its box's column (mapping over the primes, comma basis over the commas)
+    assert cells["formchooser:mapping"].x == cells["header:primes"].x
+    assert cells["formchooser:comma_basis"].x == cells["header:commas"].x
+    # seated below the tile's value rows, never over the matrix
+    assert cells["formchooser:mapping"].y > cells["cell:mapping:1:0"].y
+    # the control adds nothing while form_controls is off
+    assert not any(c.id.startswith("formchooser:") for c in _layout().cells)
+
+
 def test_mapped_list_rules_its_monzo_columns_apart_clear_of_the_marks():
     cells = {c.id: c for c in _layout().cells}
     # the mapped target interval list separates its monzo columns with vertical

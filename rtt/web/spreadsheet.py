@@ -217,6 +217,15 @@ PRESELECTS = (
 )
 PRESELECT_ROWS = frozenset(row for _, row, _ in PRESELECTS)
 
+# The "<choose form>" chooser (settings["form_controls"]) as (name, row, column): a
+# control in the mapping and comma-basis boxes that re-stores that matrix in canonical
+# form (an undoable edit). Rides below the tile, like a preselect chooser.
+FORM_CHOOSERS = (
+    ("mapping", "mapping", "primes"),
+    ("comma_basis", "vectors", "commas"),
+)
+FORM_CHOOSER_ROWS = frozenset(row for _, row, _ in FORM_CHOOSERS)
+
 # Mnemonics: underline the caption letter that spells the tile's symbol (see
 # SYMBOLS) — a memory aid linking the name to its symbol (e.g. "tuning map" -> t,
 # "target interval damage list" -> d). Each entry names the word whose first letter
@@ -567,6 +576,7 @@ def build(state, settings=None, collapsed=None,
     show_domain_units = settings["domain_units"]  # the units row (spine) + units column
     show_temp = settings["temperament_boxes"]
     show_form = settings["form"]  # the canonical-mapping form box (its own row)
+    show_form_controls = settings["form_controls"]  # the <choose form> choosers in the mapping/comma-basis boxes
     show_tuning = settings["tuning_boxes"]
     # optimization is a sub-control of tuning boxes: it annotates the tuning region with
     # the scheme's optimization power, so it only applies while that region shows
@@ -873,6 +883,7 @@ def build(state, settings=None, collapsed=None,
     # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
     tile_h, tile_top, row_frame, row_sym, row_cap, row_units, row_ptext, chart_top = {}, {}, {}, {}, {}, {}, {}, {}
+    row_pre = {}  # the preselect band height, so the <choose form> chooser can stack below it
 
     def caption_band(key, folded):
         # the row's caption band is sized to its tallest (wrapped) caption, so the longest
@@ -926,6 +937,9 @@ def build(state, settings=None, collapsed=None,
         # below the caption/units a tile reserves bands for the plain-text value box and
         # the preselect chooser (its row), stacked in that order
         pre = PRESELECT_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
+        # the <choose form> chooser rides one band below the preselect chooser, in the
+        # mapping and comma-basis boxes, when form controls are shown
+        formctrl = PRESELECT_H if (show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
         ptext = ptext_band(key, folded)
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
@@ -937,9 +951,10 @@ def build(state, settings=None, collapsed=None,
         row_cap[key] = cap  # the units line and plain-text box sit below the caption
         row_units[key] = uni  # the plain-text box and preselect chooser sit below the units line
         row_ptext[key] = ptext  # the plain-text band, with the preselect chooser below it
+        row_pre[key] = pre  # the preselect band, with the <choose form> chooser below it
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext
+        tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
         # the tuning row reserves the nested ranges box below its values: this grows EVERY
         # tile in the row to the same height (so the row is one uniform band) and pushes the
         # rows below clear of it
@@ -1615,6 +1630,17 @@ def build(state, settings=None, collapsed=None,
             py = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
             pw = min(col_w[ckey], TARGET_PRESELECT_W if name == "target" else PRESELECT_W)
             cells.append(CellBox(f"preselect:{name}", col_x[ckey], py, pw, PRESELECT_H, "preselect", text=preselect_text[name]))
+
+    # the <choose form> chooser, one band below the preselect chooser: it canonicalizes
+    # the mapping / comma basis it rides (an undoable edit). A control, so it ignores the
+    # value-display toggles, like the preselect choosers.
+    if show_form_controls:
+        for name, rkey, ckey in FORM_CHOOSERS:
+            if not tile_open(rkey, ckey):
+                continue
+            fy = ptext_band_y(rkey) + row_ptext[rkey] + row_pre[rkey]  # below the preselect band
+            cells.append(CellBox(f"formchooser:{name}", col_x[ckey],
+                                 fy, min(col_w[ckey], PRESELECT_W), PRESELECT_H, "formchooser"))
 
     # plain-text value band: each tile's value as its natural EBK string, directly
     # below the symbol/caption stack (above the preselect chooser). The two editable

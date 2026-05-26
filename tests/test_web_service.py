@@ -164,6 +164,13 @@ def test_form_matrix_is_the_generator_change_of_basis_to_canonical():
     assert service.form_matrix([[1, 0, -4], [0, 1, 4]]) == ((1, 0), (0, 1))
 
 
+def test_canonical_comma_basis_defactors_and_canonicalizes():
+    # the comma-basis analogue of canonical_mapping: a non-saturated basis (the syntonic
+    # comma doubled) canonicalizes back to the saturated, sign-normalized form
+    assert service.canonical_comma_basis([[-8, 8, -2]]) == ((4, -4, 1),)
+    assert service.canonical_comma_basis([[4, -4, 1]]) == ((4, -4, 1),)
+
+
 def test_target_interval_monzos():
     # the interval-vector (monzo) form of each target over the 2.3.5 domain
     monzos = service.target_interval_monzos(("2/1", "3/2", "5/4", "6/5"), 3)

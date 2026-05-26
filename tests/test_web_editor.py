@@ -25,6 +25,23 @@ def test_an_edit_enables_undo():
     assert editor.can_undo is True
 
 
+def test_canonicalize_mapping_restores_canonical_form_undoably():
+    editor = Editor()  # starts at meantone ((1,1,0),(0,1,4)), a non-canonical generating set
+    editor.canonicalize_mapping()
+    assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))  # the canonical form
+    editor.undo()
+    assert editor.state.mapping == INITIAL_MAPPING  # the form choice is an undoable edit
+
+
+def test_canonicalize_comma_basis_restores_canonical_form_undoably():
+    editor = Editor()
+    editor.edit_comma_basis([[-8, 8, -2]])  # a non-saturated basis (the syntonic comma doubled)
+    editor.canonicalize_comma_basis()
+    assert editor.state.comma_basis == ((4, -4, 1),)  # defactored + canonicalized
+    editor.undo()
+    assert editor.state.comma_basis == ((-8, 8, -2),)  # undoable
+
+
 def test_set_complexity_prescaler_swaps_the_weighting_prescaler_into_the_layout():
     editor = Editor()
     assert service.prescaler_of(editor.tuning_scheme) == "log-prime"  # the default (Tenney)

@@ -76,7 +76,9 @@ _RANGE_FONT = 7  # cents-label / placeholder font size
 # Colorization wash colours, keyed by the box-group name the layout tags a wash with
 # (spreadsheet.COLORIZE_REGIONS). These are the mockup's saturated box-group tones;
 # a wash sits behind the grey tiles so the colour reads through the gaps around them.
-_TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a"}  # cyan tuning rows, khaki temperament columns
+_TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a", "form": "#cd9acd"}  # cyan tuning, khaki
+# temperament, magenta form. The form WASH is deferred (no COLORIZE_REGIONS entry yet); this
+# palette entry feeds the greyed form-colorization swatch in the Show panel for now.
 
 _AUDIO_KINDS = {"speaker"}  # cells whose baked cents rebuild when the tuning changes
 _AUDIO_CTRLS = {"audio_wave", "audio_mode", "audio_hold", "audio_root"}  # the per-tile bank controls
@@ -1042,7 +1044,7 @@ def _example_html(key: str) -> str:
     if key == "quantities":  # a generic quantity over its size: 1 above .585
         return ('<span style="display:inline-flex;flex-direction:column;align-items:center;'
                 'line-height:1.05"><span>1</span><span style="font-size:9px">.585</span></span>')
-    if key in ("temperament_colorization", "tuning_colorization"):  # a swatch of the wash colour
+    if key in ("temperament_colorization", "tuning_colorization", "form_colorization"):  # a swatch of the wash colour
         color = _TINTS[key.split("_")[0]]  # one source of truth: the swatch == the actual wash
         return f'<span style="display:inline-block;width:36px;height:14px;background:{color}"></span>'
     if key == "audio":  # a speaker glyph — the per-pitch play button the audio rows carry
@@ -1276,6 +1278,18 @@ def index() -> None:
             editor.set_tuning_scheme(value)
             render()
 
+    def on_form_choose(name, value):
+        # the <choose form> control: selecting "canonical" re-stores that matrix in
+        # canonical form (an undoable edit). The select snaps back to its placeholder on
+        # the re-render. building[0] guards the echo from that reset.
+        if building[0] or value != "canonical":
+            return
+        if name == "mapping":
+            editor.canonicalize_mapping()
+        elif name == "comma_basis":
+            editor.canonicalize_comma_basis()
+        render()
+
     def on_target_change():
         # the target chooser is a numeric limit + a TILT/OLD family; compose them into
         # a spec ("9-TILT", or just "TILT" when the limit is blank). An incomplete or
@@ -1426,6 +1440,12 @@ def index() -> None:
             elif cb.kind == "control_select":  # an alt.-complexity chooser (prescaler / complexity norm)
                 selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
+                    .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
+                           f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
+            elif cb.kind == "formchooser":  # the <choose form> control: canonicalizes its matrix on select
+                name = cb.id.split(":", 1)[1]  # mapping / comma_basis
+                selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
+                        on_change=lambda e, n=name: on_form_choose(n, e.value)) \
                     .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
                            f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
             elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
@@ -1639,6 +1659,8 @@ def index() -> None:
                     selects[cb.id].value = cb.text or None
             elif cb.kind == "control_select":  # mirror the live alt.-complexity choice
                 selects[cb.id].value = cb.text or None
+            elif cb.kind == "formchooser":  # a one-shot action: snap back to the placeholder
+                selects[cb.id].value = ""
             elif cb.kind in ("symbol", "count", "optimization", "units"):  # text rendered as HTML:
                 # symbols/equivalence tails/counts/power go through _math_html (styled math
                 # glyphs); units use _units_html (a single-story-g sans value, serif label)
