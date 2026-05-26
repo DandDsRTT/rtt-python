@@ -475,8 +475,10 @@ _CSS = f"""
 .rtt-cents-int {{ font-size:10px; }}
 .rtt-cents-frac {{ font-size:7px; color:#000; }}
 /* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
-   line's font is scaled (inline) to fit the narrow value square, so it never overflows */
-.rtt-mathexpr {{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; }}
+   line's font is scaled (inline) to fit the narrow value square, so it never overflows.
+   No fixed height (like .rtt-tval): the cell centres it, and when a per-cell unit is
+   added the value+unit hug as one pair — height:100% would float the unit to the bottom. */
+.rtt-mathexpr {{ width:100%; display:flex; align-items:center; justify-content:center; }}
 .rtt-mathexpr-stack {{ display:flex; flex-direction:column; align-items:center; justify-content:center;
                       line-height:1.15; color:#000; white-space:nowrap; }}
 .rtt-cellinput {{ width:100% !important; height:100%; min-height:0; overflow:visible; }}
