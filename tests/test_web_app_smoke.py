@@ -221,6 +221,25 @@ def test_shared_axis_gridlines_render_two_pixels_thick():
     assert "border-top:2px solid #e0e0e0" in app._CSS   # the horizontal gridlines
 
 
+def _css_rule(selector):
+    """The declaration body of the first `selector { ... }` block in the page CSS."""
+    m = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", app._CSS)
+    assert m, f"no CSS rule for {selector}"
+    return m.group(1)
+
+
+def test_left_rail_height_tracks_the_settings_drawer_not_the_taller_grid():
+    # The app-title rail and the settings drawer share .rtt-panelgroup; the rail (no
+    # align-self) stretches to that group's height. The group must hug its content
+    # (align-self:flex-start) so its height — and the rail's — tracks the drawer, i.e. the
+    # open settings panel. With align-self:stretch the group instead grew to the shell's
+    # tallest child, so a grid taller than the settings dragged the rail down to the grid's
+    # full height rather than matching the panel beside it.
+    rule = _css_rule(".rtt-panelgroup")
+    assert "align-self:flex-start" in rule
+    assert "stretch" not in rule  # never re-stretch to the shell (the grid) height
+
+
 def test_every_show_toggle_has_a_non_empty_example():
     # the panel's "example" column illustrates each toggle (per the mockup's Show
     # legend), so no toggle may be missing its sample render

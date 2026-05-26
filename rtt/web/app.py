@@ -274,12 +274,13 @@ _CSS = f"""
    reads unmistakably inactive, matching the #999 of a disabled toggle. */
 .rtt-iconbtn.disabled {{ border-color:#bbb !important; }}
 .rtt-iconbtn.disabled .q-icon {{ color:#999 !important; }}
-/* the left rail: a permanent light-grey column down the screen's left edge holding the
-   hamburger (top) and, under it, the app title turned a quarter-turn. It sits to the LEFT of
-   the pane and stays #e0e0e0 whether the pane is open or closed, so opening the pane never
-   moves the title. It carries no align-self, so the pane group (align-items:stretch) makes it as
-   tall as the group: the main app (grid) when the pane is collapsed, and the taller of the grid
-   and the settings when the pane is open — so the bar always matches whatever it stands beside. */
+/* the left rail: a light-grey column at the screen's left edge holding the hamburger (top)
+   and, under it, the app title turned a quarter-turn. It sits to the LEFT of the pane and
+   stays #e0e0e0 whether the pane is open or closed, so opening the pane never moves the
+   title. It carries no align-self, so the pane group (align-items:stretch) makes it as tall
+   as the group — and the group hugs the drawer (below), so the rail matches the settings
+   panel's height: a short title tab when the pane is collapsed, the full panel height when
+   it is open, regardless of how much taller the grid beside it runs. */
 .rtt-rail {{ flex:none; width:{_RAIL_W}px; background:#e0e0e0;
             display:flex; flex-direction:column; align-items:center; gap:10px; padding:7px 0 14px; }}
 /* the app title, turned a quarter-turn (writing-mode) so it reads top-to-bottom down the
@@ -293,12 +294,15 @@ _CSS = f"""
 .rtt-hamburger .q-icon {{ color:#333 !important; font-size:19px; }}
 /* the shell lays the rail+pane group and the app in a row */
 .rtt-shell {{ position:relative; display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
-/* the rail+pane group is always align-self:stretch, so it — and the rail inside it (via
-   align-items:stretch) — is as tall as the shell's tallest child. A COLLAPSED drawer is 0fr
-   (zero height, below), so it adds nothing and the group matches the grid → the bar matches the
-   main app. An OPEN drawer adds the settings' height, so the group grows to the taller of the
-   grid and the settings. Opening the pane widens this group, pushing the app right. */
-.rtt-panelgroup {{ display:flex; flex-wrap:nowrap; align-self:stretch; }}
+/* the rail+pane group hugs its own content (align-self:flex-start), so its height — and the
+   rail's, via align-items:stretch — is the drawer's height, NOT the shell's tallest child.
+   A COLLAPSED drawer is 0fr (zero height, below), so the group falls to the rail's own
+   content → a short title tab. An OPEN drawer is the settings' height, so the group (and the
+   rail) match the panel exactly, even when the grid beside it runs much taller. (Were this
+   align-self:stretch, the group would take the shell's full height and a tall grid would
+   drag the rail down to the grid's height.) Opening the pane widens this group, pushing the
+   app right. */
+.rtt-panelgroup {{ display:flex; flex-wrap:nowrap; align-self:flex-start; }}
 /* the drawer animates BOTH its width (the slide-over) and its height (grid-template-rows 0fr->1fr,
    which grows/shrinks the pane to its content height), so opening/closing glides instead of the
    pane popping to full height. align-self:flex-start stops the group stretching the drawer, which
