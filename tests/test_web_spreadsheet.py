@@ -2371,12 +2371,12 @@ def test_colorization_follows_the_content_map():
     # quantities + interval-vectors rows: only the comma basis (C) is coloured (yellow);
     # the domain primes, the targets (T) and the other-intervals carry no colour
     assert at("comma:0") == Y                  # quantities × commas (the comma ratios are C)
-    assert at("cell:comma:0:0") == Y           # interval-vectors × commas (the comma monzos)
+    assert at("cell:comma:0:0") == Y           # interval-vectors × commas (the comma basis vectors)
     assert at("prime:0") == N                  # quantities × primes (the domain basis)
     assert at("target:0") == N                 # quantities × targets (T)
     assert at("interest:0") == N               # quantities × other-intervals
     assert at("basis:0") == N                  # interval-vectors × spine (the domain basis)
-    assert at("cell:vec:targets:0:0") == N     # interval-vectors × targets (the target monzos)
+    assert at("cell:vec:targets:0:0") == N     # interval-vectors × targets (the target vectors)
     assert at("cell:interest:0:0") == N        # interval-vectors × other-intervals
     # the generators are the generator embedding G → tuning (cyan)
     assert at("gen:0") == C                     # mapping × spine (the generators G)

@@ -195,7 +195,7 @@ _FACTOR_GROUP = {"G": "tuning", "M": "temperament", "C": "temperament"}
 CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # interval-vectors / quantities headers: the comma basis IS C; primes/targets/interest are colourless
     ("quantities", "commas"): frozenset({"C"}),        # the comma ratios = C
-    ("vectors", "commas"): frozenset({"C"}),           # the comma monzos = C
+    ("vectors", "commas"): frozenset({"C"}),           # the comma basis vectors = C
     # the generators are the generator embedding G (𝒈's basis)
     ("mapping", "quantities"): frozenset({"G"}),       # the generators (G)
     # the mapping matrix and its mapped lists are 𝑀 (the mapped comma basis 𝑀C also has C)
