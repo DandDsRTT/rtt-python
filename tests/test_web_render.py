@@ -46,6 +46,7 @@ _FEATURE_CELLS = [
     # the per-box "units: …" line below the caption AND the domain-units row/col labels
     # (all kind "units", _math_html). The fixture catches an ERROR log in either branch.
     ("units", "units:mapping:primes"),               # the per-box "units: g/p" line
+    ("optimization", "optimization:power"),          # the Lp-norm power line (𝑝 = ∞), _math_html
 ]
 
 
@@ -59,6 +60,15 @@ async def test_enabling_math_expressions_renders_the_closed_form(user: User) -> 
     # the just row's cents cells become "1200 · log₂…" closed-form cells (kind mathexpr)
     await _enable(user, "math expressions")
     await user.should_see(content="log₂")
+
+
+async def test_enabling_generator_detempering_renders_the_column(user: User) -> None:
+    # the generator-detempering D column. Its value cells are interval vectors (kind "vec"),
+    # which — like every interval-vector cell — the user harness can't locate, so assert the
+    # column header and lean on the fixture's ERROR-log guard to catch any fault rendering the
+    # D matrix's cells, brackets or ket marks.
+    await _enable(user, "generator detempering")
+    await user.should_see(marker="header:detempering")
 
 
 async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> None:
