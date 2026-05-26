@@ -132,6 +132,7 @@ CAPTIONS = {
     ("vectors", "detempering"): "generator detempering",
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
+    ("mapping", "detempering"): "mapped generator detempering",
     ("mapping", "targets"): "mapped target interval list",
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
@@ -191,6 +192,7 @@ SYMBOLS = {
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
     ("mapping", "primes"): "𝑀",
     ("mapping", "commas"): "𝑀C",
+    ("mapping", "detempering"): "𝑀D",
     ("mapping", "targets"): "Y",
     ("tuning", "gens"): "𝒈",
     ("tuning", "primes"): "𝒕",
@@ -251,6 +253,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # the mapping matrix and its mapped lists are 𝑀 (the mapped comma basis 𝑀C also has C)
     ("mapping", "primes"): frozenset({"M"}),           # 𝑀
     ("mapping", "commas"): frozenset({"M", "C"}),      # 𝑀C
+    ("mapping", "detempering"): frozenset({"M"}),      # 𝑀D (D is colourless, like the target list)
     ("mapping", "targets"): frozenset({"M"}),          # Y = 𝑀T
     ("mapping", "interest"): frozenset({"M"}),         # 𝑀·interest
     ("canon", "primes"): frozenset({"M"}),             # the canonical mapping (𝑀 = 𝐅𝑀_c): still the 𝑀 family
@@ -336,6 +339,7 @@ MNEMONICS = {
 # continuation yet; the mapped comma basis instead vanishes to the zero matrix.
 EQUIVALENCES = {
     ("mapping", "commas"): " = 𝑂",
+    ("mapping", "detempering"): " = 𝐼",  # M·D = the identity (D is M's right-inverse)
     ("mapping", "targets"): " = 𝑀T",
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",
@@ -367,6 +371,7 @@ UNITS = {
     ("vectors", "interest"): "p",
     ("mapping", "primes"): "g/p",
     ("mapping", "commas"): "g",
+    ("mapping", "detempering"): "g",
     ("mapping", "targets"): "g",
     ("mapping", "interest"): "g",
     ("tuning", "gens"): "¢/g",
@@ -840,7 +845,11 @@ def build(state, settings=None, collapsed=None,
     # generator that tempers to it (the mapping's right-inverse), framed like the comma
     # basis / target list. An independent box toggle, riding between domain primes and commas.
     detempering_vectors = service.generator_detempering(state.mapping) if show_detempering else ()
-    detempering_tiles = (("block:vec:detempering", "vectors", "detempering"),) if show_detempering else ()
+    mapped_detempering = service.mapped_detempering(state.mapping) if show_detempering else ()  # M·D = I
+    detempering_tiles = (
+        ("block:vec:detempering", "vectors", "detempering"),
+        ("block:mapped_detempering", "mapping", "detempering"),
+    ) if show_detempering else ()
     # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
     # tile (see opt_box below), not in a tile/row of their own
     tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + TILES + AUDIO_TILES + UNITS_TILES
@@ -1406,6 +1415,11 @@ def build(state, settings=None, collapsed=None,
             if tile_open("mapping", "commas"):
                 for c in range(nc):
                     cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", comma_left(c), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_commas[i][c]), gen=i, unit=cell_unit("mapping", "commas", gen=i)))
+            # the detempering mapped through M — it is the identity (M·D = I), the dual of
+            # the comma basis vanishing; the raw detempering D lives in the interval-vectors row
+            if tile_open("mapping", "detempering"):
+                for j in range(r):
+                    cells.append(CellBox(f"cell:mapped_detempering:{i}:{j}", detempering_left(j), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_detempering[i][j]), gen=i, unit=cell_unit("mapping", "detempering", gen=i)))
 
     # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
     # read-only maps over the primes, framed like the mapping matrix one row above it; the
@@ -1736,6 +1750,8 @@ def build(state, settings=None, collapsed=None,
                 bracket(f"map:{i}", MAP_BRACKETS, "primes", map_top(i), ROW_H)
         if tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
             bracket("mapped_comma", LIST_BRACKETS, "commas", row_y["mapping"], r * ROW_H, fit=True)
+        if tile_open("mapping", "detempering"):  # M·D = I: a [ ] over r rows, like the mapped commas
+            bracket("mapped_detempering", LIST_BRACKETS, "detempering", row_y["mapping"], r * ROW_H, fit=True)
         if tile_open("mapping", "targets"):
             bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H, fit=True)
         # the interest mapped images stand alone (no outer [ … ]), mirroring the vectors row
@@ -2051,6 +2067,7 @@ def build(state, settings=None, collapsed=None,
             cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, row_y[rkey], SEP_W, row_h[rkey], "vbar"))
 
     monzo_list_marks("mapping", "mapped_comma", "commas", comma_left, nc)
+    monzo_list_marks("mapping", "mapped_detempering", "detempering", detempering_left, r)
     monzo_list_marks("mapping", "mapped", "targets", target_left, k)
     # the interest column's mapped images stand alone — no separator rules between columns
     monzo_list_marks("mapping", "imapped", "interest", interest_left, mi, separators=False)

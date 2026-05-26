@@ -115,6 +115,13 @@ def test_generator_detempering_vectors():
     assert service.generator_detempering([[1, 1, 0], [0, 1, 4]]) == ((1, 0, 0), (-1, 1, 0))
 
 
+def test_mapped_detempering_is_the_identity():
+    # M·D: mapping the detempering generators back through M recovers the generators
+    # themselves (D is M's right-inverse), so M·D = I — the dual of the comma basis
+    # vanishing under the mapping (M·C = O). An r×r matrix in generator coordinates.
+    assert service.mapped_detempering([[1, 1, 0], [0, 1, 4]]) == ((1, 0), (0, 1))
+
+
 def test_tuning_from_generators_applies_a_manual_generator_tuning():
     # a manually-set generator tuning gives tuning_map = generators · mapping (not the
     # scheme optimum) — what the optimize button freezes when its auto-lock is off. For

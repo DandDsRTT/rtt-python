@@ -204,6 +204,15 @@ def generator_detempering(mapping) -> Matrix:
     return _to_matrix(get_generator_detempering(m).matrix)
 
 
+def mapped_detempering(mapping) -> Matrix:
+    """The generator detempering ``D`` mapped through ``M`` — ``M·D`` in generator
+    coordinates (r×r). Each detempering generator maps back to its own generator (D is
+    M's right-inverse), so this is the identity: the dual of the comma basis vanishing
+    (:func:`mapped_commas`), the temperament's two right/left-inverse relations side by side."""
+    m = _to_matrix(mapping)
+    return _map_through(m, generator_detempering(m))
+
+
 def comma_ratios(comma_basis, domain_basis=None) -> tuple[str, ...]:
     """Each comma in the basis as a ratio string, e.g. ``('80/81',)`` — the
     comma-column analogue of :func:`generators`. Rendered as-is (the canonical
@@ -633,6 +642,7 @@ def plain_text_values(
         ("vectors", "targets"): _ket_list(target_monzos, "⟩"),
         ("mapping", "primes"): mapping_ebk(state),
         ("mapping", "commas"): _ket_list(zip(*mapped_comma), "}"),
+        ("mapping", "detempering"): _ket_list(zip(*mapped_detempering(state.mapping)), "}"),
         ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
         ("tuning", "gens"): _cents_genmap(tun.generator_map),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
