@@ -56,6 +56,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("alt_complexity", "alt. complexity", False),
             ("projection", "projection", False),
             ("tuning_colorization", "colorization", False),
+            ("interest", "other intervals\nof interest", True),
             ("generator_detempering", "generator detempering", False),
             ("nonstandard_domain", "nonstandard domain", False),
             ("identity_objects", "identity objects", False),
@@ -91,7 +92,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
      "quantities", "domain_quantities", "units", "domain_units", "counts", "preselects",
      "temperament_boxes", "tuning_boxes", "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting", "alt_complexity", "audio",
-     "form", "form_controls", "generator_detempering", "optimization"}
+     "form", "form_controls", "generator_detempering", "optimization", "interest"}
 )
 
 

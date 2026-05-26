@@ -2936,6 +2936,39 @@ def test_form_colorization_is_a_greyed_form_subcontrol():
     assert "form_colorization" not in settings.IMPLEMENTED
 
 
+def test_interest_is_a_top_level_toggle_after_the_tuning_boxes_group():
+    # "other intervals of interest" is a standalone grey column (not part of the cyan
+    # tuning region), so it owns a top-level toggle: built (implemented), default on, and
+    # NOT a sub-control of tuning boxes. It sits just after the tuning boxes group (its
+    # last sub-control, colorization) and before generator detempering, mirroring the grid
+    # where the interest column lands just right of the target intervals.
+    items = dict(settings.SHOW_GROUPS)["specific boxes & controls"]
+    keys = [k for k, *_ in items]
+    assert keys[keys.index("tuning_colorization") + 1] == "interest"
+    assert keys[keys.index("interest") + 1] == "generator_detempering"
+    assert "interest" not in settings.SUBCONTROLS
+    assert "interest" in settings.IMPLEMENTED
+    assert settings.defaults()["interest"] is True
+    # its label is the column's full name, wrapped onto two lines (it won't fit the
+    # panel's narrow label column on one)
+    label = dict((k, lbl) for k, lbl, _d in items)["interest"]
+    assert label == "other intervals\nof interest"
+
+
+def test_interest_column_follows_its_own_toggle_not_tuning_boxes():
+    # the interest column used to ride the tuning boxes toggle; now it has its own. Turning
+    # tuning boxes off drops the cyan tuning columns but leaves the interest column standing.
+    off_tuning = {c.id for c in _with(tuning_boxes=False).cells}
+    assert "header:targets" not in off_tuning  # the tuning column goes...
+    assert "header:interest" in off_tuning      # ...the interest column stays
+    # and its own toggle hides it — header, axis and content — even when populated
+    s = settings.defaults(); s["interest"] = False
+    off_interest = {c.id for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=_INTEREST).cells}
+    assert "header:interest" not in off_interest
+    assert not any(c.startswith(("interest:", "cell:interest:", "cell:imapped:")) for c in off_interest)
+
+
 def test_audio_adds_two_rows_between_counts_and_quantities():
     cells = {c.id: c for c in _audio(counts=True).cells}
     assert cells["label:just_audio"].text == "just audio"

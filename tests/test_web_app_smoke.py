@@ -272,6 +272,20 @@ def test_example_html_renders_each_special_sample_kind():
     assert "<svg" in app._example_html("tuning_ranges")  # the min/max I-beam
 
 
+def test_interest_example_is_the_bold_interval_symbol():
+    # the mockup labels each interval-of-interest 𝐢 (bold upright, like the vectors), so
+    # the toggle's example shows that same glyph
+    assert app._math_html("𝐢") in app._example_html("interest")
+
+
+def test_show_toggle_labels_wrap_long_names_onto_two_lines():
+    # most toggle labels are short and fit the narrow label column on one line, but "other
+    # intervals of interest" needs two — the label honours its embedded newline (pre-line)
+    # instead of clipping/overflowing as nowrap would
+    rule = _css_rule(".rtt-show-item .q-checkbox__label")
+    assert "white-space:pre-line" in rule
+
+
 def test_brace_is_one_filled_path_with_width_independent_end_curls():
     # the brace is ONE filled variable-width ribbon computed from the width — no
     # composite pieces (so no seams/overshoot). Only the arm length tracks the

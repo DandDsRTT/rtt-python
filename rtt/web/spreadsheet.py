@@ -709,10 +709,15 @@ def build(state, settings=None, collapsed=None,
     show_alt_complexity = show_weighting and settings["alt_complexity"]
     # audio is a top-level toggle (not nested under the tuning boxes): it adds the just /
     # mapped audio rows between counts and quantities. Their per-column tiles still ride the
-    # column boxes (targets/interest need tuning boxes; primes/commas/gens need temperament).
+    # column boxes (targets need tuning boxes; interest needs interest; primes/commas/gens
+    # need temperament).
     show_audio = settings["audio"]
     # the generator-detempering column (the matrix D) is an independent box toggle
     show_detempering = settings["generator_detempering"]
+    # the other-intervals-of-interest column is its own box toggle too: a standalone grey
+    # column (a user-built interval list to inspect), independent of the cyan tuning boxes
+    # whose target column it merely sits beside
+    show_interest = settings["interest"]
     # Value-display toggles. "gridded values" is the master switch: with it off
     # (and plain-text values not yet built) every value a tile holds -- the numbers,
     # the EBK marks framing them, the domain/comma ± controls -- is filtered out
@@ -851,7 +856,8 @@ def build(state, settings=None, collapsed=None,
     # Column bands left-to-right: (key, natural width, present, collapsible).
     # Each set-column belongs to a box toggle: generators, the domain primes and
     # the commas are the temperament's (shown with temperament_boxes), target-
-    # intervals are the tuning's (shown with tuning_boxes) -- turning a box off
+    # intervals are the tuning's (shown with tuning_boxes), and the other-intervals-
+    # of-interest column has its own (shown with interest) -- turning a box off
     # takes its whole column with it, including the other family's cells that ride
     # in it (e.g. the tuning maps over primes, or the mapped target interval list
     # over targets). A collapsed column folds to a strip sized to read its title, but never
@@ -888,7 +894,7 @@ def build(state, settings=None, collapsed=None,
         # is floored at the title width (see the loop below) and the narrow content is
         # centred within it: the title centres over the whole column on its gridline, and
         # the tiles centre on that same gridline. The board height is independent of mi.
-        ("interest", 2 * BRACKET_W + mi * COL_W, show_tuning, True),
+        ("interest", 2 * BRACKET_W + mi * COL_W, show_interest, True),
     )
     # A fold-toggle node column sits between the row-label gutter and the content
     # (when names show); content starts past it with a clear gap so the tiles
