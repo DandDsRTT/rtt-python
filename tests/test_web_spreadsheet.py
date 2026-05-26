@@ -2395,8 +2395,9 @@ def test_colorization_follows_the_content_map():
     assert at("basis:0") == N                  # interval-vectors × spine (the domain basis)
     assert at("cell:vec:targets:0:0") == N     # interval-vectors × targets (the target vectors)
     assert at("cell:interest:0:0") == N        # interval-vectors × other-intervals
-    # the generators are the generator embedding G → tuning (cyan)
-    assert at("gen:0") == C                     # mapping × spine (the generators G)
+    # the generators in the spine are the generator basis — an input, carrying neither the
+    # tuning map 𝒈 nor the embedding G — so they're colourless, like the domain primes
+    assert at("gen:0") == N                     # mapping × spine (the generator ratios)
     # the mapping matrix and its mapped lists are pure 𝑀 (and 𝑀C) → temperament (yellow)
     assert at("cell:mapping:0:0") == Y          # mapping × primes (𝑀)
     assert at("cell:mapped_comma:0:0") == Y     # mapping × commas (𝑀C)
@@ -2463,14 +2464,21 @@ def test_colorization_off_by_default_and_renders_as_base_plus_darken_bands():
     assert all(b.tint == "" for b in blocks if b.id.startswith("block:"))  # grey tiles untinted
 
 
-def test_collapsing_the_tuning_rows_shrinks_the_tuning_row_band():
+def test_collapsing_a_tile_removes_its_colorization():
+    # colour goes away with the content: a folded tile shows NO wash, rather than lingering
+    # as a coloured strip behind the collapsed band. Holds whether the tile is folded on its
+    # own, or via its row or column.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["tuning_colorization"] = True
-    open_band = max((b for b in spreadsheet.build(base, s).blocks if b.tint == "tuning"), key=lambda b: b.w)
-    folded = spreadsheet.build(base, s, collapsed={"row:tuning", "row:just", "row:retune", "row:damage"})
-    folded_band = max((b for b in folded.blocks if b.tint == "tuning"), key=lambda b: b.w)
-    assert folded_band.h < open_band.h  # the full-width tuning rows band tracks its (collapsed) rows
+    s["tuning_colorization"] = s["temperament_colorization"] = True
+    open_ids = {b.id for b in spreadsheet.build(base, s).blocks if b.tint in ("tuning", "temperament")}
+    assert "wash:tuning:tuning:targets" in open_ids       # tempered target sizes 𝐚 (green → cyan layer)
+    assert "wash:temperament:mapping:primes" in open_ids  # the mapping 𝑀 (yellow)
+    folded = spreadsheet.build(base, s, collapsed={"row:tuning", "tile:mapping:primes"})
+    folded_ids = {b.id for b in folded.blocks if b.tint in ("tuning", "temperament")}
+    assert "wash:tuning:tuning:targets" not in folded_ids       # row folded → its tiles' washes vanish
+    assert "wash:temperament:mapping:primes" not in folded_ids  # tile folded → its own wash vanishes
+    assert "wash:temperament:vectors:commas" in folded_ids      # an untouched tile keeps its wash
 
 
 def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():

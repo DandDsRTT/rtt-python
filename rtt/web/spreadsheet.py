@@ -189,15 +189,15 @@ CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar
 # the tempered map 𝒕 = 𝒈𝑀 (G·M), and the whole error/damage chain 𝐞 = (𝒈𝑀 − 𝒋)T, whose
 # 𝒈𝑀 term keeps its G and M even though 𝒓 is a difference. CELL_FACTORS lists only the
 # colour-bearing factors of each tile; a (row, col) absent here carries no wash. Keys
-# match TILES / AUDIO_TILES. The generators (mapping × spine) are G itself — the more
-# fundamental cyan object, since 𝒈 tunes them.
+# match TILES / AUDIO_TILES. NB the generators shown in the spine (mapping × quantities)
+# are the generator *basis* — a chosen input, neither the embedding G nor the tuning map 𝒈
+# — so they're uncoloured, like the domain primes; among built tiles only 𝒈 (the genmap,
+# and the 𝒈𝑀 it feeds) is cyan, while the embedding G awaits the deferred form box (𝐹).
 _FACTOR_GROUP = {"G": "tuning", "M": "temperament", "C": "temperament"}
 CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # interval-vectors / quantities headers: the comma basis IS C; primes/targets/interest are colourless
     ("quantities", "commas"): frozenset({"C"}),        # the comma ratios = C
     ("vectors", "commas"): frozenset({"C"}),           # the comma basis vectors = C
-    # the generators are the generator embedding G (𝒈's basis)
-    ("mapping", "quantities"): frozenset({"G"}),       # the generators (G)
     # the mapping matrix and its mapped lists are 𝑀 (the mapped comma basis 𝑀C also has C)
     ("mapping", "primes"): frozenset({"M"}),           # 𝑀
     ("mapping", "commas"): frozenset({"M", "C"}),      # 𝑀C
@@ -1575,14 +1575,15 @@ def build(state, settings=None, collapsed=None,
     # group — a white base plus the group's colour at mix-blend-mode:darken (see app.py).
     # The base sits a layer BELOW the colour (z-index), so where a tile carries both groups
     # the two colour bands darken-compose regardless of paint order: cyan over yellow gives
-    # the mockup's green. Each band hugs its tile's (possibly folded) extent and overhangs
-    # by WASH_PAD — plus, on a +-bearing column, the extra FRAME_GAP its tile claims
-    # (tile_pad over PAD) — so a run of same-coloured tiles meets across the inter-tile gaps
-    # and reads as one continuous band rather than leaving grey strips between them.
+    # the mockup's green. Each band hugs its (open) tile's extent and overhangs by WASH_PAD
+    # — plus, on a +-bearing column, the extra FRAME_GAP its tile claims (tile_pad over PAD)
+    # — so a run of same-coloured tiles meets across the inter-tile gaps and reads as one
+    # continuous band rather than leaving grey strips between them. A folded tile (by its own
+    # toggle, its row or its column) is not open, so its colour goes away with its content.
     if col_x and row_y:
         bands = []  # (id, x, y, w, h, group)
         for (rkey, ckey), factors in CELL_FACTORS.items():
-            if (rkey, ckey) not in declared_tiles or rkey not in row_y or ckey not in col_x:
+            if not tile_open(rkey, ckey):
                 continue
             pad = tile_pad(ckey) - PAD
             x, w = col_x[ckey] - WASH_PAD - pad, col_w[ckey] + 2 * (WASH_PAD + pad)
