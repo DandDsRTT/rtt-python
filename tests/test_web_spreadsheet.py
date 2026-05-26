@@ -1362,6 +1362,23 @@ def test_a_long_caption_widens_its_tile_to_stay_within_two_lines():
     assert panel.x <= cap.x and cap.x + cap.w <= panel.x + panel.w
 
 
+def test_a_long_caption_keeps_the_add_control_on_the_widened_tiles_edge():
+    # Companion to test_quantities_row_pluses_sit_inside_their_tiles_with_equal_margins (which
+    # runs names-off): with names ON, the commas captions widen its tile past its lone comma, so
+    # the content re-centres in the wider tile. The add-a-comma "+" must stay on the tile's right
+    # edge (FRAME_GAP in, panel-relative) rather than drift inward with the centred content — the
+    # same edge the fold toggle and audio bank hug. The un-widened primes "+" is the control: it
+    # already sits at its (content == tile) edge, so the panel-relative rule leaves it put.
+    cells = {c.id: c for c in _with(names=True).cells}
+    blocks = {b.id: b for b in _with(names=True).blocks}
+    narrow = {b.id: b for b in _with(names=False).blocks}
+    assert blocks["block:commas"].w > narrow["block:commas"].w   # commas tile widened by its caption
+    assert blocks["block:primes"].w == narrow["block:primes"].w  # primes tile did not widen
+    for plus_id, col in (("comma_plus", "commas"), ("plus", "primes")):
+        plus, panel = cells[plus_id], blocks[f"block:{col}"]
+        assert plus.x + plus.w == panel.x + panel.w - spreadsheet.FRAME_GAP  # hugs the panel's right edge
+
+
 def test_min_width_for_lines_floors_a_column_to_keep_a_name_within_two_lines():
     # the inverse of _wrap_lines: the smallest width at which the name fits in two lines.
     # at that width the wrap fits; a narrow one-comma column would overflow it.

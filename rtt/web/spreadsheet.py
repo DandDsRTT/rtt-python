@@ -812,22 +812,16 @@ def build(state, settings=None, collapsed=None,
             tile_w[key] = max(natural, _caption_floor(key))  # the panel widens for a long name
             col_w[key] = max(tile_w[key], _title_w(col_header[key]))
         col_collapsible[key] = collapsible
-        # a +-bearing column (an open domain/comma/interest set with cells) carries an
-        # in-tile +; its tile overhangs the content an extra FRAME_GAP on EACH side, so the
-        # + clears the edge by the same gap it sits off the cells and the tile stays centred
-        # on the gridline. Reserve that overhang on both sides (panel_rect draws it).
+        # a +-bearing column (an open domain/comma/interest set with cells) carries an in-tile
+        # + on the panel's right edge (seated below). Reserve an extra FRAME_GAP of tile
+        # overhang on EACH side, so the + clears the edge and the tile stays centred on the
+        # gridline (panel_rect draws the overhang).
         in_tile_plus = (key in ("primes", "commas", "interest") and not collapsed_col
                         and content_w[key] > 2 * BRACKET_W)
         if in_tile_plus:
             x += FRAME_GAP  # the left overhang
         col_x[key] = x
         x += col_w[key]
-        if key in ("primes", "commas", "interest") and not collapsed_col:
-            gridline = col_x[key] + col_w[key] / 2
-            content_right = col_x[key] + (col_w[key] + content_w[key]) / 2
-            # the + rides FRAME_GAP past the last value cell — or, for an empty column (an
-            # interest set with no intervals yet), centres on the gridline as the lone control
-            ctrl_x[key] = content_right - BRACKET_W + FRAME_GAP if in_tile_plus else gridline - BTN / 2
         if in_tile_plus:
             plus_cols.add(key)
             x += FRAME_GAP  # the right overhang, so the next column still clears the tile
@@ -856,8 +850,8 @@ def build(state, settings=None, collapsed=None,
 
     def tile_pad(key):
         # how far a tile's grey panel overhangs its content on each side: PAD normally, plus
-        # an extra FRAME_GAP for a +-bearing column so its + clears the edge by the same gap
-        # it sits off the cells (kept equal both sides → the tile stays centred on the gridline)
+        # an extra FRAME_GAP for a +-bearing column so its + clears the panel's right edge
+        # (kept equal both sides → the tile stays centred on the gridline)
         return PAD + (FRAME_GAP if key in plus_cols else 0)
 
     primes_x = content_x.get("primes")  # centred content-left; None when the column is hidden
@@ -867,6 +861,20 @@ def build(state, settings=None, collapsed=None,
 
     def col_open(key):
         return key in col_x and f"col:{key}" not in collapsed
+
+    # the in-tile + (add a prime / comma / interest interval) rides the right edge of its grey
+    # panel — FRAME_GAP in, panel-relative like the fold toggle and audio bank — so a caption-
+    # widened column (commas) keeps it on the edge rather than drifting it inward with the
+    # re-centred content. Equals the old content-relative seat wherever tile == content (every
+    # un-widened column). An empty interest set has no cells, so its lone + centres on the gridline.
+    for key in ("primes", "commas", "interest"):
+        if not col_open(key):
+            continue
+        if key in plus_cols:
+            tx, tw = tile_box(key)
+            ctrl_x[key] = tx + tw + tile_pad(key) - FRAME_GAP - BTN
+        else:
+            ctrl_x[key] = col_x[key] + col_w[key] / 2 - BTN / 2
 
     # The generator tuning-ranges box (the chart + its mode selector) nests at the bottom
     # of the generator tuning map tile when tuning_ranges is on. Its extra height is
