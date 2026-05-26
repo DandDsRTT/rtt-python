@@ -2511,6 +2511,9 @@ def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile():
     assert box.boxed
     panel = blocks["block:damage:targets"]
     assert panel.y <= box.y and box.y + box.h <= panel.y + panel.h
+    # the box HUGS its contents — it is clearly narrower than the full target column (panel),
+    # not stretched to span it
+    assert box.w < panel.w - 30
 
 
 def test_optimization_on_adds_an_addable_held_intervals_column():

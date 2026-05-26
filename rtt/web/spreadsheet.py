@@ -60,14 +60,15 @@ RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the val
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
 OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
 OPT_PAD_L = 8  # left margin for the title and the control group (off the box's left edge)
+OPT_PAD_R = 8  # right margin: the box border hugs the controls, leaving only this margin
 OPT_TITLE_GAP = 6  # bottom margin under the title, before the control row
-OPT_COL_GAP = 10  # gap between the three left-packed controls (the min-damage / ∞ / optimize row)
-# The three controls are packed close at the LEFT (not spread across the box). The min-damage
-# value and the ∞ field are ordinary COL_W gridded cells (their contents centred); their wider
-# symbols/captions centre under them and overflow into the empty space on the rows below — so
-# the controls themselves stay tight even though "optimization power" etc. are wide.
-OPT_BTN_W = 76   # optimize button — a normal rectangle hugging the word at the cell font size
-OPT_CAP_W = 58   # width reserved for the box's captions (centred under their control, two lines)
+OPT_COL_GAP = 8  # gap between the three left-packed controls (the min-damage / ∞ / optimize row)
+# The three controls are packed close at the LEFT, and the box border HUGS them (it is sized to
+# the contents, not the full target column). The min-damage value and the ∞ field are ordinary
+# COL_W gridded cells (contents centred); their symbols/captions centre under them and overflow
+# into the empty space on the rows below. The captions stay on ONE line each.
+OPT_BTN_W = 94   # optimize button — wide enough to seat "double-click to lock" on one line beneath it
+OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred under the ∞ cell)
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -1677,7 +1678,7 @@ def build(state, settings=None, collapsed=None,
     # controls themselves stay tight. The damage tile's panel grows by opt_extra to enclose it.
     opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
     if opt_ctrl:
-        ox, ow = col_x["targets"], col_w["targets"]
+        ox = col_x["targets"]
         box_top = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
         title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
         content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP  # a gap below the title
@@ -1688,33 +1689,33 @@ def build(state, settings=None, collapsed=None,
         obj_x = ox + OPT_PAD_L
         pow_x = obj_x + COL_W + OPT_COL_GAP
         btn_x = pow_x + COL_W + OPT_COL_GAP
-        cap_off = (COL_W - OPT_CAP_W) / 2        # centres a caption under its COL_W control
+        box_w = (btn_x + OPT_BTN_W + OPT_PAD_R) - ox  # the box HUGS the controls (not the full column)
         objective = _lp_objective(target_sizes.damage, service.optimization_power(tuning_scheme))
         power = _format_power(service.optimization_power(tuning_scheme))
-        cells.append(CellBox("optimization:title", ox, title_top, ow, OPT_TITLE_H, "boxtitle",
+        cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
                              text="optimization"))
         # the objective: the minimized-damage value (read-only, so unboxed — a plain centred gridded
-        # value) over the symbol ⟪𝐝⟫ₚ (the Lp norm the tuning minimizes)
+        # value, the same COL_W cell as any damage value) over the symbol ⟪𝐝⟫ₚ
         cells.append(CellBox("optimization:objective", obj_x, content_top, COL_W, ROW_H, "tval",
                              text=service.cents(objective)))
         cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, COL_W, SYMBOL_H,
                              "symbol", text="⟪𝐝⟫ₚ"))
-        # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) over the symbol 𝑝 and
-        # the caption "optimization power" (centred under the cell); app.py routes edits to it
+        # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — another COL_W gridded
+        # cell — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it)
         cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
                              "powerinput", text=power))
         cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
                              "symbol", text="𝑝"))
-        cells.append(CellBox("optimization:power:caption", pow_x + cap_off, cap_top, OPT_CAP_W,
-                             2 * CAPTION_LINE, "caption", text="optimization power"))
-        # the optimize button: a normal rectangle hugging the word (the same ROW_H height as the
-        # ∞ cell), with a "double-click to lock" hint centred beneath it. It single-clicks to
-        # optimize once, double-clicks to lock auto-optimize; app.py owns that + the lock visual
+        cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
+                             OPT_POW_CAP_W, 2 * CAPTION_LINE, "caption", text="optimization power"))
+        # the optimize button: a normal ROW_H-tall rectangle wide enough to seat the "double-click
+        # to lock" hint on one line beneath it. It single-clicks to optimize once, double-clicks to
+        # lock auto-optimize; app.py owns that behaviour + the lock visual
         cells.append(CellBox("optimization:button", btn_x, content_top, OPT_BTN_W, ROW_H, "optimize",
                              text="optimize"))
-        cells.append(CellBox("optimization:button:hint", btn_x + (OPT_BTN_W - OPT_CAP_W) / 2, sym_top,
-                             OPT_CAP_W, 2 * CAPTION_LINE, "caption", text="double-click to lock"))
-        opt_box = (ox, box_top, ow, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
+        cells.append(CellBox("optimization:button:hint", btn_x, sym_top, OPT_BTN_W, 2 * CAPTION_LINE,
+                             "caption", text="double-click to lock"))
+        opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
