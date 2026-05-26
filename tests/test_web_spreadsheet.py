@@ -497,6 +497,21 @@ def test_a_nested_tile_control_does_not_stretch_its_sibling_tiles():
     assert coll["block:tuning:primes"].h == on["block:tuning:primes"].h  # collapse doesn't resize them
 
 
+def test_collapsing_a_column_does_not_shrink_its_rows_caption_band():
+    # the row's caption band is sized to its tallest caption, but it must NOT depend on which
+    # columns are open: collapsing a column (hiding its caption) must not drop the band and
+    # shrink the row's other tiles. The "generator tuning map" caption wraps to two lines in the
+    # narrow gens column while the sibling tuning captions fit one line, so with the commas
+    # column also collapsed the gens caption is the band's sole two-liner — exactly the case
+    # where the old code shrank the prime/target tiles on collapsing generators.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    without_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:commas"}).blocks}
+    with_gens = {b.id: b for b in spreadsheet.build(base, s, collapsed={"col:commas", "col:gens"}).blocks}
+    for sib in ("block:tuning:primes", "block:tuning:targets"):
+        assert with_gens[sib].h == without_gens[sib].h, f"{sib} shrank when the gens column collapsed"
+
+
 def test_collapsing_a_row_folds_its_panel_away_and_leaves_a_gridline():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     lay = spreadsheet.build(base, collapsed={"row:tuning"})

@@ -894,7 +894,7 @@ def build(state, settings=None, collapsed=None,
     # the domain, the comma basis and the interest set each ride an expand (+) control
     # just inside the right of their (open) tile — domain primes add a prime, commas
     # add a comma, interest adds a blank interval to edit
-    col_x, col_w, content_w, col_collapsible = {}, {}, {}, {}
+    col_x, col_w, content_w, col_collapsible, open_col_w = {}, {}, {}, {}, {}
     ctrl_x = {}
     plus_cols = set()  # columns whose + rides inside the tile (the tile overhangs it a margin)
     x = content_x0
@@ -903,6 +903,7 @@ def build(state, settings=None, collapsed=None,
             continue
         collapsed_col = f"col:{key}" in collapsed
         hug_w = max(natural, _caption_floor(key))  # the open footprint: hugs content (+ caption room)
+        open_col_w[key] = hug_w  # the width it has (or would have) OPEN — collapse-independent, for caption wrapping
         # The content (value cells + their bracket gutters) is the natural width. The column
         # footprint (col_w) hugs that content, or widens where a long caption needs the room;
         # it does NOT reserve room for a wider title. A title wider than its column (the
@@ -1040,15 +1041,16 @@ def build(state, settings=None, collapsed=None,
     def caption_band(key, folded):
         # the row's caption band is sized to its tallest (wrapped) caption, so the longest
         # name fits within its tile rather than spilling off a narrow column. Only columns
-        # that actually render a tile here count: an empty interest column declares no
+        # that actually declare a tile here count: an empty interest column declares no
         # tile, so it reserves no caption height (its captions would otherwise wrap tall in
-        # the bare bracket-gutter stub and inflate the empty board). Each caption wraps
-        # within its own tile's content width.
+        # the bare bracket-gutter stub and inflate the empty board). Each caption wraps at
+        # its column's OPEN width — collapse-independent — so collapsing a column (hiding its
+        # caption) never drops the band and shrinks the row's other tiles. A folded ROW shows
+        # no captions at all.
         if not (show_captions and key in CAPTIONED_ROWS and not folded):
             return 0
-        lines = [_wrap_lines(CAPTIONS[(key, c)], col_w[c]) for c in col_x
-                 if (key, c) in CAPTIONS and (key, c) in declared_tiles
-                 and col_open(c) and f"tile:{key}:{c}" not in collapsed]
+        lines = [_wrap_lines(CAPTIONS[(key, c)], open_col_w[c]) for c in col_x
+                 if (key, c) in CAPTIONS and (key, c) in declared_tiles]
         return max(lines, default=1) * CAPTION_LINE
 
     ptext_strings = service.plain_text_values(state, tuning_scheme, target_spec) if show_ptext else {}
