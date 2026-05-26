@@ -1461,10 +1461,11 @@ def build(state, settings=None, collapsed=None,
     # chart spans the column group so its bars align with the value cells below.
     # chart_top[key] exists only where a chart band was reserved (charts on, row
     # charted, not folded), so it gates emission against the layout with no drift.
-    def chart(rkey, ckey, vals, indicator=None):
+    def chart(rkey, ckey, vals, indicator=None, indicator_label=""):
         if rkey in chart_top and tile_open(rkey, ckey):
             cells.append(CellBox(f"chart:{rkey}:{ckey}", col_x[ckey], chart_top[rkey],
-                                 col_w[ckey], CHART_H, "chart", values=tuple(vals), indicator=indicator))
+                                 col_w[ckey], CHART_H, "chart", values=tuple(vals),
+                                 indicator=indicator, indicator_label=indicator_label))
 
     tuning_data = {
         "tuning": (tun.tuning_map, comma_sizes.tempered, target_sizes.tempered, interest_sizes.tempered, held_sizes.tempered),
@@ -1573,10 +1574,14 @@ def build(state, settings=None, collapsed=None,
                              values=tuple(service.WEIGHT_SLOPES)))
     if row_open("damage"):  # damage is over the targets only (the tuning's own column)
         tval_row("damage", "targets", target_sizes.damage)
-        # optimization adds the horizontal minimized-damage indicator (the objective ⟨d⟩ₚ
-        # the tuning minimizes) across the damage chart; off, the chart is plain bars
-        objective = _lp_objective(target_sizes.damage, service.optimization_power(tuning_scheme))
-        chart("damage", "targets", target_sizes.damage, indicator=objective if show_optimization else None)
+        # optimization adds the horizontal minimized-damage indicator (the objective ⟪𝐝⟫ₚ
+        # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
+        # (∞ / 2 / 1); off, the chart is plain bars
+        power = service.optimization_power(tuning_scheme)
+        objective = _lp_objective(target_sizes.damage, power)
+        chart("damage", "targets", target_sizes.damage,
+              indicator=objective if show_optimization else None,
+              indicator_label=_format_power(power) if show_optimization else "")
 
     # The generator tuning-ranges chart nests at the BOTTOM of the generator tuning map
     # tile (below its values and caption), a per-generator [min, max] I-beam (octave held

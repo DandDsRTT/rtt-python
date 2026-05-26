@@ -2340,7 +2340,7 @@ def test_a_manual_generator_tuning_drives_the_displayed_maps():
 
 def test_optimization_draws_the_minimized_damage_indicator_on_the_chart():
     # optimization adds a horizontal indicator at the minimized-damage level (the
-    # objective ⟨d⟩ₚ: max damage for the default minimax) to the damage chart
+    # objective ⟪𝐝⟫ₚ: max damage for the default minimax) to the damage chart
     on = {c.id: c for c in _with(optimization=True, charts=True).cells}
     chart = on["chart:damage:targets"]
     assert chart.indicator is not None
@@ -2348,6 +2348,23 @@ def test_optimization_draws_the_minimized_damage_indicator_on_the_chart():
     # ...and there is no indicator without optimization
     off = {c.id: c for c in _with(optimization=False, charts=True).cells}
     assert off["chart:damage:targets"].indicator is None
+
+
+def test_optimization_indicator_carries_the_power_as_its_subscript_label():
+    # the damage chart's minimized-damage line is labelled ⟪𝐝⟫ with the scheme's Lp order
+    # as the subscript — ∞ for the default minimax — carried as the bare power so the
+    # renderer can draw the (bold 𝐝, double-angle) label breaking the line.
+    on = {c.id: c for c in _with(optimization=True, charts=True).cells}
+    assert on["chart:damage:targets"].indicator_label == "∞"
+    # a miniRMS (least-squares) scheme subscripts it with 2
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"], s["charts"] = True, True
+    rms = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="least squares").cells}
+    assert rms["chart:damage:targets"].indicator_label == "2"
+    # ...and no label on a non-optimization chart (or with optimization off)
+    off = {c.id: c for c in _with(optimization=False, charts=True).cells}
+    assert off["chart:damage:targets"].indicator_label == ""
 
 
 def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile():

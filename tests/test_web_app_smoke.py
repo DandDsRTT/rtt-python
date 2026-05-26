@@ -323,6 +323,22 @@ def test_bar_chart_straddles_a_shared_zero_baseline_for_signed_values():
     assert up[0] < down[0]  # positive rises above the baseline, negative drops below it
 
 
+def test_bar_chart_indicator_line_is_broken_by_its_power_labelled_objective():
+    # the minimized-damage indicator: a solid grey line BROKEN by its ⟪𝐝⟫ label (the label
+    # sits in a gap in the line), the scheme's Lp power as the subscript
+    svg = app._bar_chart(272, 64, (0.0, 10.0, 26.385), indicator=26.385, indicator_label="∞")
+    # the line is drawn in two segments (a stub left of the label, the rest to its right),
+    # leaving the gap the label fills — not one unbroken rule
+    assert svg.count(f'stroke="{app._CHART_INDICATOR}"') == 2
+    # the label reads ⟪𝐝⟫ with the power (∞) as a subscript, the 𝐝 bold
+    assert "⟪" in svg and "⟫" in svg and "∞" in svg
+    assert 'font-weight="bold"' in svg
+    # ...and a plain chart (no indicator) draws no such line or label
+    plain = app._bar_chart(272, 64, (0.0, 10.0, 26.385))
+    assert f'stroke="{app._CHART_INDICATOR}"' not in plain
+    assert "⟪" not in plain
+
+
 def test_range_chart_draws_a_titled_i_beam_with_min_max_labels_for_a_ranged_generator():
     # the generator tuning-ranges chart: a tall I-beam (stem + two caps) for a generator
     # with a range, the max/min cents labelled at its top/bottom caps

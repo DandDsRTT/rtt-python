@@ -876,11 +876,12 @@ def _chart_ticks(lo, hi):
     return ticks
 
 
-def _bar_chart(w, h, values, indicator=None):
+def _bar_chart(w, h, values, indicator=None, indicator_label=""):
     """A bar chart filling its 1:1 px box: one bar per value, aligned to the value
     columns below, rising/falling from a zero baseline; gridlines mark nice ticks. When
-    ``indicator`` is set (the optimization objective ⟨d⟩ₚ on the damage chart), a dashed
-    horizontal line marks that minimized-damage level across the plot."""
+    ``indicator`` is set (the optimization objective ⟪𝐝⟫ₚ on the damage chart), a solid
+    lighter-grey line marks that minimized-damage level across the plot, broken by a
+    ⟪𝐝⟫ label whose subscript is ``indicator_label`` (the scheme's Lp power ∞ / 2 / 1)."""
     axis_x, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
     vals = tuple(values)
     vmax = max(vals + (0.0,))
@@ -910,12 +911,23 @@ def _bar_chart(w, h, values, indicator=None):
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
         body.append(_rect(cx - bw / 2, top, bw, bot - top))
-    if indicator is not None:  # the minimized-damage level: a solid lighter-grey line, labelled ⟨d⟩
+    if indicator is not None:  # the minimized-damage level: a solid lighter-grey line BROKEN
+        # by its ⟪𝐝⟫ label (a short stub from the axis, then the label in a gap, then the
+        # rest of the rule), the scheme's Lp power as the label's subscript
         iy = y_of(indicator)
-        body.append(f'<line x1="{axis_x:.2f}" y1="{iy:.2f}" x2="{w:.2f}" y2="{iy:.2f}" '
+        lbl_font, sub_font, stub = 9, 6, 8
+        # estimate the label's width so the rule gaps just around it (⟪𝐝⟫ + the subscript)
+        lbl_w = 3 * lbl_font * 0.62 + len(indicator_label) * sub_font * 0.62 + 3
+        lx = axis_x + stub
+        body.append(f'<line x1="{axis_x:.2f}" y1="{iy:.2f}" x2="{lx - 2:.2f}" y2="{iy:.2f}" '
                     f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>')
-        body.append(f'<text x="{axis_x + 2:.2f}" y="{iy - 2:.2f}" font-size="7" '
-                    f'fill="{_CHART_INDICATOR}">⟨d⟩</text>')
+        body.append(f'<line x1="{lx + lbl_w + 2:.2f}" y1="{iy:.2f}" x2="{w:.2f}" y2="{iy:.2f}" '
+                    f'stroke="{_CHART_INDICATOR}" stroke-width="1.5"/>')
+        sub = (f'<tspan font-size="{sub_font}" dy="2">{_escape(indicator_label)}</tspan>'
+               if indicator_label else "")
+        body.append(f'<text x="{lx:.2f}" y="{iy + lbl_font * 0.34:.2f}" font-size="{lbl_font}" '
+                    f'fill="{_CHART_INDICATOR}"><tspan>⟪</tspan>'
+                    f'<tspan font-weight="bold">d</tspan><tspan>⟫</tspan>{sub}</text>')
     return _svg(w, h, "".join(body))
 
 
@@ -1732,9 +1744,10 @@ def index() -> None:
                     ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
             elif cb.kind == "chart":
                 # redraw when the box resizes OR the underlying data / indicator changes
-                key = (cb.w, cb.h, cb.values, cb.indicator)
+                key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
                 if chart_keys.get(cb.id) != key:
-                    htmls[cb.id].set_content(_bar_chart(cb.w, cb.h, cb.values, cb.indicator))
+                    htmls[cb.id].set_content(
+                        _bar_chart(cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label))
                     chart_keys[cb.id] = key
             elif cb.kind == "rangechart":
                 # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit)
