@@ -1080,7 +1080,7 @@ def test_comma_sizes_fill_the_tuning_family_rows():
 def test_damage_row_has_no_commas_tile():
     # the damage row exists only over the targets (the tuning's own column) — there is
     # NO comma damage tile; it was never in the mockup. Commas still carry tempered,
-    # just and error sizes, but damage is a target-interval quantity only.
+    # just and error sizes, but damage is a target interval quantity only.
     lay = _with(names=True, symbols=True, plain_text_values=True, charts=True)
     cells = {c.id for c in lay.cells}
     blocks = {b.id for b in lay.blocks}
@@ -1243,7 +1243,7 @@ def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
         interest=((-3, 2, 0),),
     )
     on = {c.id: c for c in lay.cells}
-    # only the target-interval complexity list carries the 𝒄 symbol and its mnemonic underline
+    # only the target interval complexity list carries the 𝒄 symbol and its mnemonic underline
     assert on["symbol:complexity:targets"].text == "𝒄"
     assert on["caption:complexity:targets"].underlines != ()
     # the domain-prime map, comma list and interest complexity carry neither
@@ -2081,7 +2081,7 @@ def test_symbols_toggles_in_tile_symbol_glyphs_above_the_names():
     # are bold-italic; the size-lists bold-upright
     assert on["symbol:mapping:primes"].text == "𝑀"  # mapping matrix (italic)
     assert on["symbol:mapping:targets"].text == "Y"  # mapped target list (upright)
-    assert on["symbol:vectors:targets"].text == "T"  # target-interval list (upright)
+    assert on["symbol:vectors:targets"].text == "T"  # target interval list (upright)
     assert on["symbol:vectors:commas"].text == "C"  # comma basis (upright)
     assert on["symbol:tuning:primes"].text == "𝒕"  # tuning map (bold-italic)
     assert on["symbol:tuning:targets"].text == "𝐚"  # tempered target sizes (bold-upright)
@@ -2231,7 +2231,7 @@ def test_units_annotate_each_box_with_its_unit_string():
     assert on["units:tuning:primes"].text == "units: ¢/p"  # (prime) tuning map ¢/p
     assert on["units:mapping:primes"].text == "units: g/p"  # mapping matrix g/p
     assert on["units:mapping:targets"].text == "units: g"  # mapped target list g
-    assert on["units:vectors:targets"].text == "units: p"  # target-interval list p
+    assert on["units:vectors:targets"].text == "units: p"  # target interval list p
     assert on["units:damage:targets"].text == "units: ¢"   # damage list ¢
     # nothing rendered when units is off
     assert not any(c.startswith("units:") for c in off)
@@ -2290,7 +2290,7 @@ def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels():
 
 
 def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
-    # per the mockup, the optimization controls live INSIDE the target-interval damage list
+    # per the mockup, the optimization controls live INSIDE the target interval damage list
     # tile as a bordered, titled box — not a separate row — laid out as two value-over-label
     # columns (the objective ⟪𝐝⟫ₚ and the editable power 𝑝) with the optimize button at right.
     lay = _with(optimization=True)
@@ -2305,7 +2305,7 @@ def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
     assert on["optimization:power:symbol"].text == "𝑝"
     assert on["optimization:power:caption"].text == "optimization power"
     assert on["optimization:button"].text == "optimize"
-    # the box sits below the damage values, in the target-intervals column
+    # the box sits below the damage values, in the target intervals column
     assert on["optimization:title"].y > on["damage:target:0"].y
     assert on["optimization:title"].x == on["header:targets"].x
     # ...and there is no separate optimization row
@@ -2401,7 +2401,7 @@ def test_optimization_on_adds_an_addable_held_intervals_column():
     # the optimization box's held interval constraints get their own column...
     assert "header:held" in on
     assert "header:held" not in off
-    # ...riding between the commas and the target-intervals columns (per the mockup)
+    # ...riding between the commas and the target intervals columns (per the mockup)
     assert on["header:commas"].x < on["header:held"].x < on["header:targets"].x
     # ...and a + to add the first held interval even when the column is empty, exactly
     # like the other-intervals-of-interest column
@@ -2464,7 +2464,7 @@ def test_held_column_symbols_are_map_times_basis_products():
 
 def test_held_column_captions_are_full_held_interval_names():
     on = _held(names=True, weighting=True)  # weighting opens the complexity row
-    # full descriptive names, mirroring the target-interval column (not the terse
+    # full descriptive names, mirroring the target interval column (not the terse
     # one-word captions of the other-intervals-of-interest column)
     assert on["caption:vectors:held"].text == "held interval basis"
     assert on["caption:mapping:held"].text == "mapped held interval basis"
@@ -2842,7 +2842,7 @@ def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
 # --- audio rows (hear just & mapped intervals) -------------------------------
 
 def _audio(**overrides):
-    # tuning boxes default on, so the target-interval column (and its audio tile) is present
+    # tuning boxes default on, so the target interval column (and its audio tile) is present
     return _with(audio=True, **overrides)
 
 

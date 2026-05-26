@@ -153,7 +153,7 @@ CAPTIONS = {
     ("complexity", "interest"): "complexity",
     # the held column is the optimization's held-just constraint set: like the comma basis
     # (special intervals the temperament treats specially), it carries full descriptive
-    # names — mirroring the target-interval column ("held interval …" for "target interval …")
+    # names — mirroring the target interval column ("held interval …" for "target interval …")
     ("mapping", "held"): "mapped held interval basis",
     ("tuning", "held"): "tempered held interval size list",
     ("just", "held"): "(just) held interval size list",
@@ -195,7 +195,7 @@ SYMBOLS = {
     ("tuning", "held"): "𝒕H",
     ("just", "held"): "𝒋H",
     ("retune", "held"): "𝒓H",
-    # only the target-interval complexity list carries the bare 𝒄 symbol; the domain-prime
+    # only the target interval complexity list carries the bare 𝒄 symbol; the domain-prime
     # map, comma list and interest complexity are derived auxiliaries and carry none
     ("complexity", "targets"): "𝒄",
     ("weight", "targets"): "𝒘",  # bold italic, as in the damage row's diag(𝒘)
@@ -303,7 +303,7 @@ MNEMONICS = {
 # Each quantity's defining equation continues its symbol (see SYMBOLS): the mockup's
 # "symbols section" from the first "=" on, appended to the symbol when equivalences
 # is on so the line reads e.g. "𝒕 = 𝒈𝑀". Glyphs match SYMBOLS — bold-italic maps,
-# math-italic mapping 𝑀, upright interval lists (T = the target-interval list);
+# math-italic mapping 𝑀, upright interval lists (T = the target interval list);
 # operators stay upright.
 # Only terms buildable from shipped features appear, so the superspace/canonical-
 # form tails (the tuning map's "= B_Ls 𝒕_L", "𝑀 = 𝐅𝑀_c", "𝒋 = B_Ls 𝒋_L") are
@@ -1017,7 +1017,7 @@ def build(state, settings=None, collapsed=None,
     cbox_ctrl = (show_alt_complexity and "row:complexity" not in collapsed
                  and col_open("targets") and "tile:complexity:targets" not in collapsed)
     cbox_extra = 2 * (RANGE_GAP + PRESELECT_H) if cbox_ctrl else 0
-    # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target-interval
+    # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target interval
     # damage list tile (like the ranges box in the gens tile), gated on the optimization
     # sub-control. Reserve their height up front so the board stays clear below the tile.
     opt_ctrl = (show_optimization and "row:damage" not in collapsed
@@ -1625,7 +1625,7 @@ def build(state, settings=None, collapsed=None,
                              "rangemode", text=range_mode))
         gtm_box = (gx, cy, gw, RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
 
-    # the optimization box, nested at the BOTTOM of the target-interval damage list tile (the
+    # the optimization box, nested at the BOTTOM of the target interval damage list tile (the
     # tuning's own column, whose damages it minimizes): a bordered box titled "optimization"
     # holding, per the mockup, two value-over-label columns — the minimized-damage objective
     # (its cents value over the symbol ⟪𝐝⟫ₚ) and the editable power (∞ over 𝑝 over the caption
