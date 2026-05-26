@@ -58,6 +58,9 @@ RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title 
 RANGE_MODE_H = 13  # height of the monotone/tradeoff range-mode selector (one row of square indicators) below the chart
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
+OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
+OPT_POWER_W = 32  # width of the (roughly square) editable power field, centred in its column —
+# a tight box like the mockup's, not a full-column-width input
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -1032,8 +1035,8 @@ def build(state, settings=None, collapsed=None,
     # the optimization box: a title strip over two value-over-label columns (the objective
     # ⟪𝐝⟫ₚ and the editable power 𝑝, each a cents/∞ value above its symbol; the power also
     # captioned "optimization power") with the optimize button spanning them on the right.
-    # Its height = title + value row + symbol row + a two-line caption band.
-    opt_extra = (RANGE_GAP + OPT_TITLE_H + ROW_H + SYMBOL_H + 2 * CAPTION_LINE) if opt_ctrl else 0
+    # Its height = a title inset + the title + value row + symbol row + a two-line caption band.
+    opt_extra = (RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + ROW_H + SYMBOL_H + 2 * CAPTION_LINE) if opt_ctrl else 0
     slope_ctrl = (show_alt_complexity and "row:weight" not in collapsed
                   and col_open("targets") and "tile:weight:targets" not in collapsed)
     slope_extra = (RANGE_GAP + PRESELECT_H) if slope_ctrl else 0
@@ -1648,7 +1651,8 @@ def build(state, settings=None, collapsed=None,
     if opt_ctrl:
         ox, ow = col_x["targets"], col_w["targets"]
         box_top = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
-        content_top = box_top + OPT_TITLE_H
+        title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
+        content_top = title_top + OPT_TITLE_H
         sym_top = content_top + ROW_H            # the symbol row, under the values
         cap_top = sym_top + SYMBOL_H             # the caption row, under the symbols
         body_h = ROW_H + SYMBOL_H + 2 * CAPTION_LINE  # the value+symbol+caption stack height
@@ -1657,17 +1661,18 @@ def build(state, settings=None, collapsed=None,
         obj_x, pow_x, btn_x = ox, ox + cw, ox + 2 * cw
         objective = _lp_objective(target_sizes.damage, service.optimization_power(tuning_scheme))
         power = _format_power(service.optimization_power(tuning_scheme))
-        cells.append(CellBox("optimization:title", ox, box_top, ow, OPT_TITLE_H, "boxtitle",
+        cells.append(CellBox("optimization:title", ox, title_top, ow, OPT_TITLE_H, "boxtitle",
                              text="optimization"))
         # the objective: its cents value over the symbol ⟪𝐝⟫ₚ (the Lp norm the tuning minimizes)
         cells.append(CellBox("optimization:objective", obj_x, content_top, cw, ROW_H, "tval",
                              text=service.cents(objective)))
         cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, cw, SYMBOL_H, "symbol",
                              text="⟪𝐝⟫ₚ"))
-        # the power: an editable field (∞ minimax, 2 miniRMS, 1 miniaverage) over the symbol 𝑝
-        # and the caption "optimization power"; app.py routes edits to set_optimization_power
-        cells.append(CellBox("optimization:power", pow_x, content_top, cw, ROW_H, "powerinput",
-                             text=power))
+        # the power: a tight, roughly square editable field (∞ minimax, 2 miniRMS, 1 miniaverage)
+        # centred in its column, over the symbol 𝑝 and the caption "optimization power"; app.py
+        # routes edits to set_optimization_power
+        cells.append(CellBox("optimization:power", pow_x + (cw - OPT_POWER_W) / 2, content_top,
+                             OPT_POWER_W, ROW_H, "powerinput", text=power))
         cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, cw, SYMBOL_H, "symbol",
                              text="𝑝"))
         cells.append(CellBox("optimization:power:caption", pow_x, cap_top, cw, 2 * CAPTION_LINE,
@@ -1676,7 +1681,7 @@ def build(state, settings=None, collapsed=None,
         # app.py owns that behaviour and the lock visual, reading the editor
         cells.append(CellBox("optimization:button", btn_x, content_top, ow - 2 * cw, body_h, "optimize",
                              text="optimize"))
-        opt_box = (ox, box_top, ow, OPT_TITLE_H + body_h)
+        opt_box = (ox, box_top, ow, OPT_PAD_T + OPT_TITLE_H + body_h)
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.

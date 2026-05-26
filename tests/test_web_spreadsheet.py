@@ -2340,6 +2340,13 @@ def test_optimization_box_lays_out_objective_power_and_button_in_columns():
     assert on["optimization:objective"].y < on["optimization:objective:symbol"].y
     assert (on["optimization:power"].y < on["optimization:power:symbol"].y
             < on["optimization:power:caption"].y)
+    # the editable power field is a tight box (centred in its column), not a full-width input,
+    # matching the mockup's small ∞ box — narrower than the objective value cell beside it
+    assert on["optimization:power"].w < on["optimization:objective"].w
+    assert on["optimization:power"].x > on["optimization:power:symbol"].x  # centred over its 𝑝 label
+    # the title sits inside the box (below its top border), not awkwardly on it
+    box = {b.id: b for b in _with(optimization=True).blocks}["block:optimization:box"]
+    assert on["optimization:title"].y > box.y
     assert "optimization:button" not in {c.id for c in _with(optimization=False).cells}
 
 

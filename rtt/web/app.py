@@ -501,6 +501,10 @@ _CSS = f"""
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
 .rtt-cents-int {{ font-size:10px; }}
 .rtt-cents-frac {{ font-size:7px; color:#000; }}
+/* the optimization objective's value, enlarged to a focal readout (the mockup shows it as
+   prominent as its ⟪𝐝⟫ₚ symbol), the fraction kept proportionally smaller */
+.rtt-opt-value .rtt-cents-int {{ font-size:15px; }}
+.rtt-opt-value .rtt-cents-frac {{ font-size:9px; }}
 /* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
    line's font is scaled (inline) to fit the narrow value square, so it never overflows.
    No fixed height (like .rtt-tval): the cell centres it, and when a per-cell unit is
@@ -547,9 +551,10 @@ _CSS = f"""
 .rtt-optimize .q-btn__content {{ font-size:11px; }}
 .rtt-optimize-locked {{ background:#000 !important; }}
 .rtt-optimize-locked .q-btn__content {{ color:#fff !important; }}
-/* an in-tile box title (the optimization box's "optimization" header) */
+/* an in-tile box title (the optimization box's "optimization" header): left-aligned at the
+   top-left of the box (its cell otherwise centres it), padded off the left border */
 .rtt-boxtitle {{ font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
-                 color:#000; padding-left:2px; }}
+                 color:#000; width:100%; text-align:left; padding-left:3px; }}
 /* the audio rows' speaker buttons (one per pitch). Flat and transparent so the cyan/green
    wash shows through; the icon fills the (square) cell. .rtt-spk-on highlights it while sounding. */
 .rtt-audio-btn {{ width:100% !important; height:100% !important; min-width:0 !important;
@@ -1595,7 +1600,10 @@ def index() -> None:
                 htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
-                with ui.element("div").classes("rtt-tval"):
+                # the optimization objective value is shown larger (a focal readout, like the
+                # mockup), so its tval carries an extra class that bumps the int/frac font
+                tval_cls = "rtt-tval rtt-opt-value" if cb.id == "optimization:objective" else "rtt-tval"
+                with ui.element("div").classes(tval_cls):
                     w = ui.label(whole).classes("rtt-cents-int")
                     f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
                 cents[cb.id] = (w, f)
