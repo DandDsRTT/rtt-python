@@ -91,11 +91,11 @@ COUNTS = (
 COUNTS_TILES = tuple((f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in COUNTS)
 
 # The optimization sub-control's interval-list columns carry counts too, just like
-# COUNTS: the held-interval count h. Kept separate because these columns are
+# COUNTS: the held interval count h. Kept separate because these columns are
 # conditional (present only with the optimization box), so build() folds them into the
 # counts machinery only when shown rather than always, as COUNTS is.
 OPTIMIZATION_COUNTS = (
-    ("held", "h", "held-interval count"),
+    ("held", "h", "held interval count"),
 )
 # Their backing tiles, like COUNTS_TILES. Declared unconditionally — each is inert
 # (no panel, toggle or cell) until its column exists, since tile_open gates on the
@@ -113,7 +113,7 @@ CAPTIONS = {
     ("vectors", "targets"): "target interval list",
     ("canon", "gens"): "generator form matrix",
     ("canon", "primes"): "canonical mapping",
-    ("vectors", "held"): "held-interval basis",
+    ("vectors", "held"): "held interval basis",
     ("vectors", "detempering"): "generator detempering",
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
@@ -153,12 +153,12 @@ CAPTIONS = {
     ("complexity", "interest"): "complexity",
     # the held column is the optimization's held-just constraint set: like the comma basis
     # (special intervals the temperament treats specially), it carries full descriptive
-    # names — mirroring the target-interval column ("held-interval …" for "target interval …")
-    ("mapping", "held"): "mapped held-interval basis",
-    ("tuning", "held"): "tempered held-interval size list",
-    ("just", "held"): "(just) held-interval size list",
-    ("retune", "held"): "held-interval error list",
-    ("complexity", "held"): "held-interval complexity list",
+    # names — mirroring the target-interval column ("held interval …" for "target interval …")
+    ("mapping", "held"): "mapped held interval basis",
+    ("tuning", "held"): "tempered held interval size list",
+    ("just", "held"): "(just) held interval size list",
+    ("retune", "held"): "held interval error list",
+    ("complexity", "held"): "held interval complexity list",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # The quantity symbol shown above each name when symbols is on. Styling: the maps
@@ -186,7 +186,7 @@ SYMBOLS = {
     ("retune", "commas"): "𝒓C",
     ("retune", "targets"): "𝐞",
     ("prescaling", "primes"): "𝑋",  # the complexity prescaler matrix (math italic, like 𝑀)
-    # the held-interval column mirrors the comma column: the basis H lives in the
+    # the held interval column mirrors the comma column: the basis H lives in the
     # interval-vectors row, and everything else is a product with it — the mapped held
     # basis 𝑀H and the held sizes 𝒕H, 𝒋H, 𝒓H (the held complexity is a derived auxiliary,
     # so like the comma complexity it carries none)
@@ -789,7 +789,7 @@ def build(state, settings=None, collapsed=None,
         ("block:just_audio:interest", "just_audio", "interest"),
         ("block:mapped_audio:interest", "mapped_audio", "interest"),
     )
-    # the held-interval column's tiles (computed above): a user-editable interval list, like
+    # the held interval column's tiles (computed above): a user-editable interval list, like
     # the intervals of interest. Empty by default, so — like an empty interest column — it
     # then declares no tiles, only its header, axis and the + control to add the first one.
     held_tiles = () if not held else (
@@ -801,8 +801,8 @@ def build(state, settings=None, collapsed=None,
         ("block:retune:held", "retune", "held"),    # errors (≈ 0, since held just)
         ("block:complexity:held", "complexity", "held"),
     )
-    # The optimization box's other mockup column — unchanged-intervals (count u) — is
-    # deferred to the projection feature: the unchanged-interval basis is U = nullspace(P − I),
+    # The optimization box's other mockup column — unchanged intervals (count u) — is
+    # deferred to the projection feature: the unchanged interval basis is U = nullspace(P − I),
     # the projection P's eigenvalue-1 eigenvectors (en.xen.wiki/w/Projection#The_unchanged-interval_basis),
     # so it can't be built until projection lands. Until then the box ships with the held
     # column above plus the power line below (held intervals are a subset of the unchanged ones).
@@ -975,7 +975,7 @@ def build(state, settings=None, collapsed=None,
     commas_x = content_x.get("commas")  # None when the commas column is hidden
     targets_x = content_x.get("targets")  # None when the target intervals column is hidden
     interest_x = content_x.get("interest")  # None when the interest column is hidden
-    held_x = content_x.get("held")  # None when the held-intervals column is hidden
+    held_x = content_x.get("held")  # None when the held intervals column is hidden
     detempering_x = content_x.get("detempering")  # None when the generator-detempering column is hidden
 
     def col_open(key):

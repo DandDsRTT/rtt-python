@@ -2398,7 +2398,7 @@ def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile():
 def test_optimization_on_adds_an_addable_held_intervals_column():
     on = {c.id: c for c in _with(optimization=True).cells}
     off = {c.id for c in _with(optimization=False).cells}
-    # the optimization box's held-interval constraints get their own column...
+    # the optimization box's held interval constraints get their own column...
     assert "header:held" in on
     assert "header:held" not in off
     # ...riding between the commas and the target-intervals columns (per the mockup)
@@ -2453,10 +2453,10 @@ def _held(**overrides):
 
 def test_held_column_symbols_are_map_times_basis_products():
     on = _held(symbols=True, names=True)
-    # the held-interval basis H lives in the interval-vectors row; like the comma column,
+    # the held interval basis H lives in the interval-vectors row; like the comma column,
     # the held column has no dedicated letters — the rest are products of the maps and H
-    assert on["symbol:vectors:held"].text == "H"     # held-interval basis
-    assert on["symbol:mapping:held"].text == "𝑀H"    # mapped held-interval basis
+    assert on["symbol:vectors:held"].text == "H"     # held interval basis
+    assert on["symbol:mapping:held"].text == "𝑀H"    # mapped held interval basis
     assert on["symbol:tuning:held"].text == "𝒕H"     # tempered held sizes
     assert on["symbol:just:held"].text == "𝒋H"       # just held sizes
     assert on["symbol:retune:held"].text == "𝒓H"     # held retunings (errors)
@@ -2466,12 +2466,12 @@ def test_held_column_captions_are_full_held_interval_names():
     on = _held(names=True, weighting=True)  # weighting opens the complexity row
     # full descriptive names, mirroring the target-interval column (not the terse
     # one-word captions of the other-intervals-of-interest column)
-    assert on["caption:vectors:held"].text == "held-interval basis"
-    assert on["caption:mapping:held"].text == "mapped held-interval basis"
-    assert on["caption:tuning:held"].text == "tempered held-interval size list"
-    assert on["caption:just:held"].text == "(just) held-interval size list"
-    assert on["caption:retune:held"].text == "held-interval error list"
-    assert on["caption:complexity:held"].text == "held-interval complexity list"
+    assert on["caption:vectors:held"].text == "held interval basis"
+    assert on["caption:mapping:held"].text == "mapped held interval basis"
+    assert on["caption:tuning:held"].text == "tempered held interval size list"
+    assert on["caption:just:held"].text == "(just) held interval size list"
+    assert on["caption:retune:held"].text == "held interval error list"
+    assert on["caption:complexity:held"].text == "held interval complexity list"
 
 
 def test_held_column_equivalences_show_the_held_just_identities():
@@ -2517,8 +2517,8 @@ def test_generator_detempering_toggle_is_implemented():
 
 
 def test_optimization_toggle_is_implemented():
-    # the power line + held-intervals column are built, so the toggle is live. (Its third
-    # mockup column, unchanged-intervals, is deferred to the projection feature.)
+    # the power line + held intervals column are built, so the toggle is live. (Its third
+    # mockup column, unchanged intervals, is deferred to the projection feature.)
     assert "optimization" in settings.IMPLEMENTED
 
 

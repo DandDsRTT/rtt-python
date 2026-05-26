@@ -300,7 +300,7 @@ def tuning(
     interval set. Over a nonstandard ``domain_basis`` the maps run over its (possibly
     nonprime) elements; ``nonprime_approach`` ("" neutral, "nonprime-based",
     "prime-based") picks how the optimization treats a nonprime basis (trait 7).
-    ``held`` is the user's held-interval constraints (ratio strings from the held column):
+    ``held`` is the user's held interval constraints (ratio strings from the held column):
     the optimization holds each exactly just, on top of any the scheme itself holds."""
     t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
@@ -351,7 +351,7 @@ def optimization_power(scheme: str = DEFAULT_TUNING_SCHEME) -> float:
 
 def held_intervals(scheme: str = DEFAULT_TUNING_SCHEME, d: int = 3) -> tuple[str, ...]:
     """The intervals the scheme tunes exactly justly (trait 0), as ratio strings — the
-    optimization's held-interval constraints. The shipped minimax-S (TOP) holds nothing;
+    optimization's held interval constraints. The shipped minimax-S (TOP) holds nothing;
     a held-octave scheme (e.g. CTE) holds ``2/1``. ``"octave"`` reads as the prime 2."""
     held = resolve_tuning_scheme(scheme).held_intervals
     if not held:
@@ -593,7 +593,7 @@ def plain_text_values(
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
     show the same numbers two ways — the EBK string is the inline notation. ``held``
-    (the held-interval monzos) and ``generator_tuning`` (a frozen manual tuning) are
+    (the held interval monzos) and ``generator_tuning`` (a frozen manual tuning) are
     threaded into the same tuning the grid builds, so the two views can't diverge."""
     db = state.domain_basis
     targets = target_interval_set(target_spec, db)
@@ -651,7 +651,7 @@ def plain_text_values(
         ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets)),
         ("weight", "targets"): _cents_list(interval_weights(state.mapping, scheme, targets)),
     }
-    # the held-interval column mirrors the comma column: the basis as a monzo list, mapped
+    # the held interval column mirrors the comma column: the basis as a monzo list, mapped
     # into generator coords, then the held-just sizes/errors and complexity. Added only when
     # the user has held intervals (an empty set declares no held tiles, like the commas).
     if held:

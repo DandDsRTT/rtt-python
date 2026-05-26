@@ -1128,7 +1128,7 @@ def _demath(ch):
     """A Mathematical Alphanumeric letter (or bold digit) as ``(base, bold, italic)``,
     or None for an ordinary character. Covers the bold, italic and bold-italic letter
     blocks — the maps (bold-italic), matrices/vectors (bold-upright) and the counts'
-    plain italic variables — plus the bold digits (the zero list 𝟎 the held-interval
+    plain italic variables — plus the bold digits (the zero list 𝟎 the held interval
     errors vanish to); other characters pass through unstyled."""
     cp = ord(ch)
     if 0x1D7CE <= cp <= 0x1D7D7:  # bold digits 𝟎–𝟗
@@ -1497,7 +1497,7 @@ def index() -> None:
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "heldcell":  # an editable held-interval monzo component (constrains the tuning)
+            elif cb.kind == "heldcell":  # an editable held interval monzo component (constrains the tuning)
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_held_change()) \
                     .props("dense borderless").classes("rtt-cellinput")

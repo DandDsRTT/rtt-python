@@ -206,7 +206,7 @@ class Editor:
 
     def add_held(self) -> None:
         """Append a blank held interval (a zero monzo = 1/1) for the user to fill in —
-        the held-intervals column's + control, mirroring add_interest."""
+        the held intervals column's + control, mirroring add_interest."""
         self._snapshot()
         self.held_monzos.append((0,) * self.state.d)
 
@@ -216,7 +216,7 @@ class Editor:
         del self.held_monzos[i]
 
     def set_held_monzos(self, monzos) -> None:
-        """Replace the held-interval set from the edited vector cells."""
+        """Replace the held interval set from the edited vector cells."""
         self._snapshot()
         self.held_monzos = [tuple(int(x) for x in m) for m in monzos]
 

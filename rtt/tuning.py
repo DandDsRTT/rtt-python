@@ -53,7 +53,7 @@ _SLOPE_BY_LETTER = {
 
 
 def _complexity_traits_from_name(name: str) -> dict:
-    """The complexity traits (4, 5a, 5b, 5c) and any held-interval injection an interval-
+    """The complexity traits (4, 5a, 5b, 5c) and any held interval injection an interval-
     complexity name encodes, following source.m's sequential dash-delimited token overrides.
 
     ``E`` = Euclidean (norm power 2); ``copfr`` = unweighted, ``lopfr``/``lp``/[blank] =

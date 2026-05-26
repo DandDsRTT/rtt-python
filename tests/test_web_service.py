@@ -127,7 +127,7 @@ def test_tuning_from_generators_applies_a_manual_generator_tuning():
 
 
 def test_tuning_holds_user_specified_intervals_just():
-    # the held-intervals column feeds service.tuning: an interval passed as held comes out
+    # the held intervals column feeds service.tuning: an interval passed as held comes out
     # tuned exactly justly (zero error), the whole tuning reoptimized around the constraint
     tun = service.tuning([[1, 1, 0], [0, 1, 4]], held=("3/2",))
     fifth = (-1, 1, 0)  # 3/2
@@ -601,7 +601,7 @@ def test_plain_text_commas_column_mirrors_the_grid():
 
 
 def test_plain_text_held_column_mirrors_the_grid():
-    # the held-interval column gets plain text like the comma column, with the tuning
+    # the held interval column gets plain text like the comma column, with the tuning
     # computed under the held-just constraint so the two views agree
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     held = [(-1, 1, 0)]  # the fifth 3/2, held exactly just
@@ -613,7 +613,7 @@ def test_plain_text_held_column_mirrors_the_grid():
     def cents(vals):
         return " ".join(f"{v:.3f}" for v in vals)
 
-    # the held-interval basis lives in the interval-vectors row (monzos, close ⟩)
+    # the held interval basis lives in the interval-vectors row (monzos, close ⟩)
     assert pt[("vectors", "held")] == "[[-1 1 0⟩]"
     # mapped into generator coords (close }) — the fifth is one generator
     assert pt[("mapping", "held")] == "[[0 1}]"
