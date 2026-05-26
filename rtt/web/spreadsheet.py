@@ -863,6 +863,7 @@ def build(state, settings=None, collapsed=None,
     # like any interval set. gens is the detempering as ratio strings (service.generators = D).
     detempering_sizes = service.interval_sizes(tun, gens, elements) if show_detempering else None
     detempering_tiles = (
+        ("block:detempering", "quantities", "detempering"),
         ("block:vec:detempering", "vectors", "detempering"),
         ("block:mapped_detempering", "mapping", "detempering"),
         ("block:tuning:detempering", "tuning", "detempering"),
@@ -1381,6 +1382,9 @@ def build(state, settings=None, collapsed=None,
             if pending is not None or nc > 1:
                 cells.append(CellBox("comma_minus", comma_left(nc_shown - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "comma_minus"))
             cells.append(CellBox("comma_plus", ctrl_x["commas"], qy + (ROW_H - BTN) // 2, BTN, BTN, "comma_plus"))
+        if tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
+            for i in range(r):                       # derived from M like the comma ratios — no ± control)
+                cells.append(CellBox(f"detempering:{i}", detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=gens[i]))
         if tile_open("quantities", "targets"):
             for j in range(k):
                 cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
@@ -2049,7 +2053,7 @@ def build(state, settings=None, collapsed=None,
         # each ratio (the mockup), one inline "n/d" per cell — not packed into a set. The held
         # column (its ratios derived like the commas') carries its own, alongside commas/targets.
         for ckey, left, ratios in (("commas", comma_left, comma_ratios), ("targets", target_left, targets),
-                                   ("held", held_left, held_ratios)):
+                                   ("held", held_left, held_ratios), ("detempering", detempering_left, gens)):
             if tile_open("quantities", ckey):
                 qy = ptext_band_y("quantities")
                 for i, ratio in enumerate(ratios):

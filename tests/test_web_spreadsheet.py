@@ -2759,6 +2759,20 @@ def test_generator_detempering_size_rows_plain_text():
     assert cells["ptext:retune:detempering"].text.startswith("[")
 
 
+def test_generator_detempering_quantities_row_shows_the_generator_ratios():
+    # the detempering column's quantities row heads each generator with its JI ratio — the
+    # octave 2/1 and the fifth 3/2 (the values the generator spine also shows), read-only
+    cells = {c.id: c for c in _with(generator_detempering=True).cells}
+    assert [cells[f"detempering:{i}"].text for i in range(2)] == ["2/1", "3/2"]
+    # exact interval ratios (commaratio kind), like the comma / held / interest ratio headers
+    assert cells["detempering:0"].kind == "commaratio"
+
+
+def test_generator_detempering_quantities_plain_text():
+    cells = {c.id: c for c in _with(generator_detempering=True, plain_text_values=True).cells}
+    assert [cells[f"ptext:quantities:detempering:{i}"].text for i in range(2)] == ["2/1", "3/2"]
+
+
 def test_generator_detempering_toggle_is_implemented():
     # the column is built, so its Show toggle is live (interactive, not a greyed stub)
     assert "generator_detempering" in settings.IMPLEMENTED
