@@ -623,6 +623,7 @@ def plain_text_values(
     comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
     detemper_ratios = generators(state.mapping, db)  # the detempering as ratios (= service.generators)
     detemper_sizes = interval_sizes(tun, detemper_ratios, db)  # tempered = the genmap, plus just/error
+    detemper_monzos = generator_detempering(state.mapping)  # D's vectors, for the prescaling matrix
     # the weighting region: complexity (a covector over the primes, lists elsewhere), the
     # per-target weight list, and the prescaling matrices (L applied to each vector set, as
     # ket lists). Complexity over the primes is the complexity of each domain basis element.
@@ -664,9 +665,11 @@ def plain_text_values(
         ("damage", "targets"): _cents_list(target_sizes.damage),
         ("prescaling", "primes"): _prescale_ket_list(_prescaled(prime_units)),
         ("prescaling", "commas"): _prescale_ket_list(_prescaled(state.comma_basis)),
+        ("prescaling", "detempering"): _prescale_ket_list(_prescaled(detemper_monzos)),
         ("prescaling", "targets"): _prescale_ket_list(_prescaled(target_monzos)),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
         ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas)),
+        ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios)),
         ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets)),
         ("weight", "targets"): _cents_list(interval_weights(state.mapping, scheme, targets)),
     }

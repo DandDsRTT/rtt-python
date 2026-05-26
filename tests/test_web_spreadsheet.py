@@ -2773,6 +2773,28 @@ def test_generator_detempering_quantities_plain_text():
     assert [cells[f"ptext:quantities:detempering:{i}"].text for i in range(2)] == ["2/1", "3/2"]
 
 
+def test_generator_detempering_prescaling_row_scales_each_vector():
+    # box 𝐋 applies the complexity prescaler to each detempering vector (L·D): the octave
+    # [1 0 0⟩ and the fifth [-1 1 0⟩ scaled by diag(log₂2, log₂3, log₂5) = (1, 1.585, …)
+    cells = {c.id: c for c in _with(generator_detempering=True, weighting=True, units=True).cells}
+    assert [cells[f"cell:prescaling:detempering:{i}:0"].text for i in range(3)] == ["1", "0", "0"]
+    assert [cells[f"cell:prescaling:detempering:{i}:1"].text for i in range(3)] == ["-1", "1.585", "0"]
+    # framed as a matrix (top bracket + brace), captioned + in octaves like the comma basis's
+    assert "ebktop:prescaling:detempering" in cells
+    assert cells["caption:prescaling:detempering"].text == "complexity prescaled generator detempering"
+    assert cells["units:prescaling:detempering"].text == "units: oct"
+
+
+def test_generator_detempering_complexity_row_lists_each_complexity():
+    # the complexity of each detempering interval: the octave (1.000) and the fifth (2.585,
+    # = log₂2 + log₂3 under the default Tenney norm), framed as an interval-size list
+    cells = {c.id: c for c in _with(generator_detempering=True, weighting=True, units=True).cells}
+    assert [cells[f"complexity:detempering:{i}"].text for i in range(2)] == ["1.000", "2.585"]
+    assert cells["bracket:complexity:detemperinglist:l"].text == "["
+    assert cells["caption:complexity:detempering"].text == "generator detempering complexity list"
+    assert cells["units:complexity:detempering"].text == "units: (C)"
+
+
 def test_generator_detempering_toggle_is_implemented():
     # the column is built, so its Show toggle is live (interactive, not a greyed stub)
     assert "generator_detempering" in settings.IMPLEMENTED

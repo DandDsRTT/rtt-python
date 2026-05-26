@@ -149,9 +149,11 @@ CAPTIONS = {
     ("retune", "targets"): "target interval error list",
     ("prescaling", "primes"): "complexity prescaler",
     ("prescaling", "commas"): "complexity prescaled comma basis",
+    ("prescaling", "detempering"): "complexity prescaled generator detempering",
     ("prescaling", "targets"): "complexity prescaled target interval list",
     ("complexity", "primes"): "domain prime complexity map",
     ("complexity", "commas"): "comma basis interval complexity list",
+    ("complexity", "detempering"): "generator detempering complexity list",
     ("complexity", "targets"): "target interval complexity list",
     ("weight", "targets"): "target interval weight list",
     ("damage", "targets"): "target interval damage list",
@@ -405,10 +407,12 @@ UNITS = {
     # complexity units (C) — a map over the primes (C)/b, a list elsewhere (C); weight too.
     ("prescaling", "primes"): "oct/b",
     ("prescaling", "commas"): "oct",
+    ("prescaling", "detempering"): "oct",
     ("prescaling", "targets"): "oct",
     ("prescaling", "interest"): "oct",
     ("complexity", "primes"): "(C)/b",
     ("complexity", "commas"): "(C)",
+    ("complexity", "detempering"): "(C)",
     ("complexity", "targets"): "(C)",
     ("complexity", "interest"): "(C)",
     ("weight", "targets"): "(C)",
@@ -815,6 +819,7 @@ def build(state, settings=None, collapsed=None,
         "targets": service.interval_complexities(state.mapping, tuning_scheme, targets),
         "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios),
         "held": service.interval_complexities(state.mapping, tuning_scheme, held_ratios),
+        "detempering": service.interval_complexities(state.mapping, tuning_scheme, gens),
     }
     # the prescaler 𝑋: a d×d diagonal matrix over the primes (diag = each prime's pre-norm
     # weight, the values the complexity map norms). log-prime by default: diag(log₂ prime).
@@ -869,6 +874,8 @@ def build(state, settings=None, collapsed=None,
         ("block:tuning:detempering", "tuning", "detempering"),
         ("block:just:detempering", "just", "detempering"),
         ("block:retune:detempering", "retune", "detempering"),
+        ("block:prescaling:detempering", "prescaling", "detempering"),
+        ("block:complexity:detempering", "complexity", "detempering"),
     ) if show_detempering else ()
     # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
     # tile (see opt_box below), not in a tile/row of their own
@@ -1637,8 +1644,9 @@ def build(state, settings=None, collapsed=None,
         "targets": target_vectors,
         "interest": interest,
         "held": held,
+        "detempering": detempering_vectors,
     }
-    for group in ("primes", "commas", "targets", "interest", "held"):
+    for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
         if not tile_open("prescaling", group):
             continue
         left = group_left[group]
@@ -1669,7 +1677,7 @@ def build(state, settings=None, collapsed=None,
                              text="Euclidean" if service.is_euclidean(tuning_scheme) else "taxicab",
                              values=("taxicab", "Euclidean")))
     if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
-        for group in ("primes", "commas", "targets", "interest", "held"):
+        for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
             tval_row("complexity", group, complexities[group])
     if row_open("weight"):  # weight is over the targets only, like damage (it scales them)
         tval_row("weight", "targets", target_weights)
@@ -2083,6 +2091,7 @@ def build(state, settings=None, collapsed=None,
     matrix_frame("canon", "gens", "form")
     matrix_frame("prescaling", "primes", "prescaling")
     matrix_frame("prescaling", "commas", "prescaling:commas")
+    matrix_frame("prescaling", "detempering", "prescaling:detempering")
     matrix_frame("prescaling", "targets", "prescaling:targets")
     # the interest prescaling is NOT framed as a matrix — its columns stand alone (see the
     # monzo_list_marks call below), like the rest of the interest column
