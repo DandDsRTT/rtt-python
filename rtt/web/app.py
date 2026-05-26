@@ -541,9 +541,6 @@ _CSS = f"""
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
 .rtt-cents-int {{ font-size:10px; }}
 .rtt-cents-frac {{ font-size:7px; color:#000; }}
-/* the optimization objective's min-damage value: read-only, so NOT boxed (no white editable
-   box) — just a plain gridded cents value (int over frac), left-justified under its ⟪𝐝⟫ₚ symbol */
-.rtt-opt-value {{ align-items:flex-start; }}
 /* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
    line's font is scaled (inline) to fit the narrow value square, so it never overflows.
    No fixed height (like .rtt-tval): the cell centres it, and when a per-cell unit is
@@ -591,9 +588,6 @@ _CSS = f"""
 .rtt-optimize .q-btn__content {{ font-size:{_CELL_FONT}px; }}
 .rtt-optimize-locked {{ background:#000 !important; }}
 .rtt-optimize-locked .q-btn__content {{ color:#fff !important; }}
-/* the optimization box's labels (its ⟪𝐝⟫ₚ / 𝑝 symbols and its captions) are left-justified
-   under their left-packed controls, overriding the centred .rtt-symbol / .rtt-caption base */
-.rtt-opt-label {{ text-align:left !important; }}
 /* an in-tile box title (the optimization box's "optimization" header): left-aligned at the
    top-left of the box (its cell otherwise centres it), padded off the left border */
 .rtt-boxtitle {{ font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
@@ -1610,17 +1604,13 @@ def index() -> None:
                 rangeopts[cb.id] = opts
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
-                # the optimization box's symbols are left-justified under their left-packed controls
-                cls = "rtt-symbol rtt-opt-label" if cb.id.startswith("optimization:") else "rtt-symbol"
-                math_cells[cb.id] = ui.html("").classes(cls)  # content set in render()
+                math_cells[cb.id] = ui.html("").classes("rtt-symbol")  # content set in render()
             elif cb.kind == "units":  # the per-box units line and the domain-units row/col labels
                 wrap.classes("rtt-units-cell")
                 math_cells[cb.id] = ui.html("").classes("rtt-units")  # content set in render()
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
-                # the optimization box's captions/hint are left-justified (not centred like tile names)
-                cls = "rtt-caption rtt-opt-label" if cb.id.startswith("optimization:") else "rtt-caption"
-                captions[cb.id] = ui.html("").classes(cls)  # content set in render()
+                captions[cb.id] = ui.html("").classes("rtt-caption")  # content set in render()
             elif cb.kind == "preselect":
                 name = cb.id.split(":", 1)[1]  # temperament / tuning / target
                 if name == "target":
@@ -1676,10 +1666,7 @@ def index() -> None:
                 htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
             elif cb.kind == "tval":
                 whole, frac = _cents_parts(cb.text)
-                # the optimization objective value is shown larger (a focal readout, like the
-                # mockup), so its tval carries an extra class that bumps the int/frac font
-                tval_cls = "rtt-tval rtt-opt-value" if cb.id == "optimization:objective" else "rtt-tval"
-                with ui.element("div").classes(tval_cls):
+                with ui.element("div").classes("rtt-tval"):
                     w = ui.label(whole).classes("rtt-cents-int")
                     f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
                 cents[cb.id] = (w, f)

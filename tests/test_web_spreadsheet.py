@@ -2441,11 +2441,15 @@ def test_optimization_box_lays_out_objective_power_and_button_in_columns():
     assert on["optimization:objective"].y < on["optimization:objective:symbol"].y
     assert (on["optimization:power"].y < on["optimization:power:symbol"].y
             < on["optimization:power:caption"].y)
-    # the controls are PACKED LEFT (left-justified): a small gap between them and the group near
-    # the left edge — not centred in wide thirds (which left large gaps between them)
+    # the min-damage and the power are ordinary gridded cells (COL_W wide); their contents are
+    # centred like any other value cell (not stretched/left-justified within the control)
+    assert on["optimization:objective"].w == spreadsheet.COL_W
+    assert on["optimization:power"].w == spreadsheet.COL_W
+    # the controls are PACKED LEFT (the whole group is left-justified): a small gap between them
+    # and the group near the left edge — not centred in wide thirds (which left large gaps)
     assert on["optimization:objective"].x < box.x + 0.2 * box.w  # group starts near the left edge
     gap = on["optimization:power"].x - (on["optimization:objective"].x + on["optimization:objective"].w)
-    assert 0 < gap < 20  # the objective and power are close, not spread apart
+    assert 0 < gap < 20  # the objective and power cells are close, not spread apart
     # the optimize button is a normal rectangle the same height as the value boxes (the p input),
     # not a giant full-height button, with a "double-click to lock" hint beneath it
     assert on["optimization:button"].h == on["optimization:objective"].h
