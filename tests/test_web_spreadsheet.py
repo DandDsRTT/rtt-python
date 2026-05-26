@@ -2683,6 +2683,17 @@ def test_generator_detempering_column_holds_the_d_matrix():
     assert "trunk:detempering" in {ln.id for ln in lay.lines}
 
 
+def test_generator_detempering_vectors_tile_carries_the_D_symbol():
+    # the mockup labels the D matrix with the symbol "D" above its caption, like the comma
+    # basis's C and the target list's T in the same interval-vectors row
+    cells = {c.id: c for c in _with(generator_detempering=True, symbols=True).cells}
+    assert cells["symbol:vectors:detempering"].text == "D"
+    # mnemonics underlines the d of "detempering" (its symbol D), like the comma basis C -> c
+    named = {c.id: c for c in _with(generator_detempering=True, names=True, mnemonics=True).cells}
+    cap = named["caption:vectors:detempering"]
+    assert cap.underlines == ((cap.text.index("detempering"), 1),)
+
+
 def test_generator_detempering_toggle_is_implemented():
     # the column is built, so its Show toggle is live (interactive, not a greyed stub)
     assert "generator_detempering" in settings.IMPLEMENTED

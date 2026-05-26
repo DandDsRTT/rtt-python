@@ -188,6 +188,7 @@ CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 SYMBOLS = {
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
+    ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
     ("mapping", "primes"): "𝑀",
     ("mapping", "commas"): "𝑀C",
     ("mapping", "targets"): "Y",
@@ -311,6 +312,7 @@ MNEMONICS = {
     ("vectors", "commas"): "comma",     # C
     ("vectors", "targets"): "target",   # T
     ("vectors", "held"): "held",        # H
+    ("vectors", "detempering"): "detempering",  # D
     ("mapping", "primes"): "mapping",   # 𝑀
     ("tuning", "gens"): "generator",    # 𝒈
     ("tuning", "primes"): "tuning",     # 𝒕
