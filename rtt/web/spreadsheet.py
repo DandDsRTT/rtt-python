@@ -330,9 +330,10 @@ EQUIVALENCES = {
     ("retune", "primes"): " = 𝒕 − 𝒋",
     ("retune", "targets"): " = 𝒓T",
     ("damage", "targets"): " = |𝐞|diag(𝒘)",
-    # the held intervals are tuned exactly just: the tempered size equals the just size,
-    # so the retuning error vanishes to the zero list
+    # the held intervals are tuned exactly just: the tempered size equals the just size (and
+    # vice versa — the just row carries the inverse identity), so the retuning error vanishes
     ("tuning", "held"): " = 𝒋H",
+    ("just", "held"): " = 𝒕H",
     ("retune", "held"): " = 𝟎",
 }
 
@@ -1970,8 +1971,10 @@ def build(state, settings=None, collapsed=None,
             cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], ptext_band_y(rkey),
                                  col_w[ckey], ptext_height(rkey, ckey), kind, text=text))
         # the quantities-row ratios get their plain text per column, directly below
-        # each ratio (the mockup), one inline "n/d" per cell — not packed into a set
-        for ckey, left, ratios in (("commas", comma_left, comma_ratios), ("targets", target_left, targets)):
+        # each ratio (the mockup), one inline "n/d" per cell — not packed into a set. The held
+        # column (its ratios derived like the commas') carries its own, alongside commas/targets.
+        for ckey, left, ratios in (("commas", comma_left, comma_ratios), ("targets", target_left, targets),
+                                   ("held", held_left, held_ratios)):
             if tile_open("quantities", ckey):
                 qy = ptext_band_y("quantities")
                 for i, ratio in enumerate(ratios):

@@ -2514,9 +2514,11 @@ def test_held_interval_basis_caption_mnemonic_underlines_its_symbol_letter():
 
 def test_held_column_equivalences_show_the_held_just_identities():
     on = _held(symbols=True, equivalences=True)
-    # held intervals are tuned exactly just: the tempered size equals the just size,
-    # and so the retuning error vanishes to the zero list
+    # held intervals are tuned exactly just: the tempered size equals the just size (and the
+    # just size equals the tempered — the inverse identity, shown on the just row just below),
+    # so the retuning error vanishes to the zero list
     assert on["symbol:tuning:held"].text == "𝒕H = 𝒋H"
+    assert on["symbol:just:held"].text == "𝒋H = 𝒕H"
     assert on["symbol:retune:held"].text == "𝒓H = 𝟎"
 
 
@@ -2528,6 +2530,9 @@ def test_held_column_shows_plain_text_values():
     assert "ptext:tuning:held" in on and "ptext:just:held" in on
     # held just ⇒ the retuning error vanishes
     assert abs(float(on["ptext:retune:held"].text.strip("[]"))) < 1e-3
+    # the quantities tile (the ratio heading the column) gets per-column plain text too,
+    # like the commas / targets columns
+    assert on["ptext:quantities:held:0"].text == "3/2"
 
 
 def test_held_column_has_the_full_interval_column_tile_set():
