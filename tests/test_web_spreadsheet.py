@@ -1175,6 +1175,27 @@ def test_prescaling_row_sits_between_retuning_and_complexity():
     assert on["retune:prime:0"].y < on["cell:prescaling:0:0"].y < on["complexity:prime:0"].y
 
 
+def test_every_present_row_and_column_has_a_gridline():
+    # structural guarantee (derived from the live row_y/col_x, not a hand-maintained list):
+    # no present row or column can be missing its gridline — the bug that left the weighting
+    # rows bare. Exercise the busiest grid (weighting + its controls + an interest column).
+    lay = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        {**settings.defaults(), "weighting": True, "alt_complexity": True},
+        interest=((-3, 2, 0),),
+    )
+    line_ids = {ln.id for ln in lay.lines}
+    rows = {c.id.split("label:", 1)[1] for c in lay.cells if c.id.startswith("label:")}
+    for key in rows:
+        if key == "mapping":
+            assert "h:gen:0" in line_ids  # the mapping fans into per-generator rules instead
+        else:
+            assert f"h:{key}" in line_ids, f"row {key!r} has no gridline"
+    cols = {c.id.split("header:", 1)[1] for c in lay.cells if c.id.startswith("header:")}
+    for key in cols:
+        assert f"trunk:{key}" in line_ids, f"column {key!r} has no gridline"
+
+
 def test_prescaling_matrix_is_framed_like_the_mapping():
     on = {c.id for c in _with(weighting=True).cells}
     assert {"ebktop:prescaling", "ebkbrace:prescaling"} <= on  # top bracket + bottom brace

@@ -1555,6 +1555,7 @@ def build(state, settings=None, collapsed=None,
         lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y))
         lines.append(Line(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y))
 
+    FAN_COLUMNS = ("primes", "commas", "targets", "interest")  # the data columns that fan
     column_axis("primes", "prime", d, lambda p: prime_left(p) + COL_W / 2)
     column_axis("commas", "comma", nc_shown, lambda c: comma_left(c) + COL_W / 2)
     column_axis("targets", "target", k, lambda j: target_left(j) + COL_W / 2)
@@ -1562,24 +1563,16 @@ def build(state, settings=None, collapsed=None,
     column_axis("held", "held", nh, lambda i: held_left(i) + COL_W / 2)
     column_axis("detempering", "detempering", r, lambda i: detempering_left(i) + COL_W / 2)
 
-    # quantities spine column: a single vertical rule the full height of the grid
-    # (the column-axis dual of the h:quantities spine row) — one spine rule, no fan
-    if "quantities" in col_x:
-        q_cx = col_x["quantities"] + col_w["quantities"] / 2
-        lines.append(Line("trunk:quantities", "v", q_cx, branch_top_y, total_h - branch_top_y))
-
-    # units spine column: the same single full-height rule as the quantities spine —
-    # it carries the coordinate-unit labels, no value fan
-    if "units" in col_x:
-        u_cx = col_x["units"] + col_w["units"] / 2
-        lines.append(Line("trunk:units", "v", u_cx, branch_top_y, total_h - branch_top_y))
-
-    # generators column: a single vertical rule the full height of the grid, like the
-    # quantities spine — it indexes the mapping rows and backs the rank count and the
-    # tuning-ranges chart when those are shown.
-    if "gens" in col_x:
-        gen_cx = col_x["gens"] + col_w["gens"] / 2
-        lines.append(Line("trunk:gens", "v", gen_cx, branch_top_y, total_h - branch_top_y))
+    # every other present column is a spine: a single full-height trunk rule. Derived from
+    # col_x (not a hand-kept list) so a column can never lack its gridline — the quantities
+    # and units spines (carrying the row labels / coordinate units, no value fan) and the
+    # generators column (it indexes the mapping rows and backs the rank count + ranges chart).
+    # The fanned data columns above already emitted their own trunk inside column_axis.
+    for key in col_x:
+        if key in FAN_COLUMNS:
+            continue
+        cx = col_x[key] + col_w[key] / 2
+        lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, total_h - branch_top_y))
 
     # mapping rows: the horizontal mirror of a column axis — fan out at the node
     # into one line per generator, fan back in on the right to a foot past the data.
@@ -1597,15 +1590,12 @@ def build(state, settings=None, collapsed=None,
         lines.append(Line("trunk:mapping", "h", cy, node_edge, left_bus_x - node_edge))
         lines.append(Line("foot:mapping", "h", cy, right_bus_x, total_w - right_bus_x))
 
-    # the quantities spine row: a single horizontal rule across the grid (the
-    # row-axis counterpart of the quantities spine column) that the data blocks hang off
-    if "quantities" in row_y:
-        lines.append(Line("h:quantities", "h", row_y["quantities"] + row_h["quantities"] / 2, node_edge, total_w - node_edge))
-
-    # the remaining rows each get one horizontal rule across their band (no sub-row
-    # fan), present or collapsed — so a collapsed one still leaves a gridline
-    for key in ("counts", "units", "vectors", "canon", "tuning", "just", "retune", "damage", "optimization"):
-        if key not in row_y:
+    # every present row except the mapping (which fans into per-generator rules above) gets
+    # ONE horizontal rule across its band. Derived from row_y (not a hand-kept list) so a row
+    # can never lack its gridline — present or collapsed (a folded row still leaves its rule).
+    # Covers the quantities/units spine rows and the d-tall vectors/prescaling matrices alike.
+    for key in row_y:
+        if key == "mapping":
             continue
         lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge))
 
