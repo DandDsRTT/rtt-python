@@ -2229,6 +2229,18 @@ def test_optimization_needs_its_parent_tuning_boxes():
     assert "optimization:power" not in cells
 
 
+def test_optimization_draws_the_minimized_damage_indicator_on_the_chart():
+    # optimization adds a horizontal indicator at the minimized-damage level (the
+    # objective ⟨d⟩ₚ: max damage for the default minimax) to the damage chart
+    on = {c.id: c for c in _with(optimization=True, charts=True).cells}
+    chart = on["chart:damage:targets"]
+    assert chart.indicator is not None
+    assert chart.indicator == max(chart.values)  # minimax: the minimized maximum damage
+    # ...and there is no indicator without optimization
+    off = {c.id: c for c in _with(optimization=False, charts=True).cells}
+    assert off["chart:damage:targets"].indicator is None
+
+
 def test_optimization_power_nests_inside_the_damage_tile_panel():
     # no separate optimization panel — the power rides within the damage×targets tile,
     # which grows to enclose it (so it is never a bare floating number)

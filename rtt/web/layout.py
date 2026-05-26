@@ -51,6 +51,8 @@ class CellBox:
     underlines: tuple[tuple[int, int], ...] = ()  # (start, len) spans of text to underline (mnemonics)
     values: tuple[float, ...] = ()  # per-column data for a "chart" cell's bars
     ranges: tuple[tuple[float, float], ...] = ()  # per-generator (low, high) for a "rangechart" cell's I-beams
+    indicator: float | None = None  # a "chart" cell's horizontal indicator level (the optimization
+    # objective ⟨d⟩ₚ on the damage chart), drawn as a line across the plot when set
     pending: bool = False  # a not-yet-valid comma draft cell — rendered blank and red-outlined
     blank: bool = False  # a value cell kept (its box/brackets stay) but emptied of its
     # number -- how "quantities" off shows the bare gridded structure

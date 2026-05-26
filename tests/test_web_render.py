@@ -71,6 +71,15 @@ async def test_enabling_generator_detempering_renders_the_column(user: User) -> 
     await user.should_see(marker="header:detempering")
 
 
+async def test_optimization_with_charts_renders_the_damage_indicator(user: User) -> None:
+    # optimization + charts: the damage chart gains the minimized-damage indicator line.
+    # Drive that _bar_chart(indicator=…) branch and confirm the chart still renders.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="charts").click()
+    user.find(kind=ui.checkbox, content="optimization").click()
+    await user.should_see(marker="chart:damage:targets")
+
+
 async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> None:
     # both colorization sub-toggles share the label "colorization", so one click matches
     # and flips both on. They paint wash blocks behind the tiles — drive that branch and

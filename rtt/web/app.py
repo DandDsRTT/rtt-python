@@ -846,9 +846,11 @@ def _chart_ticks(lo, hi):
     return ticks
 
 
-def _bar_chart(w, h, values):
+def _bar_chart(w, h, values, indicator=None):
     """A bar chart filling its 1:1 px box: one bar per value, aligned to the value
-    columns below, rising/falling from a zero baseline; gridlines mark nice ticks."""
+    columns below, rising/falling from a zero baseline; gridlines mark nice ticks. When
+    ``indicator`` is set (the optimization objective ⟨d⟩ₚ on the damage chart), a dashed
+    horizontal line marks that minimized-damage level across the plot."""
     axis_x, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
     vals = tuple(values)
     vmax = max(vals + (0.0,))
@@ -878,6 +880,10 @@ def _bar_chart(w, h, values):
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
         body.append(_rect(cx - bw / 2, top, bw, bot - top))
+    if indicator is not None:  # the minimized-damage level, a dashed line across the plot
+        iy = y_of(indicator)
+        body.append(f'<line x1="{axis_x:.2f}" y1="{iy:.2f}" x2="{w:.2f}" y2="{iy:.2f}" '
+                    f'stroke="{_BR_COLOR}" stroke-width="1" stroke-dasharray="3 2"/>')
     return _svg(w, h, "".join(body))
 
 
@@ -1606,10 +1612,10 @@ def index() -> None:
                     htmls[cb.id].set_content(_ebk_svg(cb))
                     ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
             elif cb.kind == "chart":
-                # redraw when the box resizes OR the underlying data changes (mapping edit)
-                key = (cb.w, cb.h, cb.values)
+                # redraw when the box resizes OR the underlying data / indicator changes
+                key = (cb.w, cb.h, cb.values, cb.indicator)
                 if chart_keys.get(cb.id) != key:
-                    htmls[cb.id].set_content(_bar_chart(cb.w, cb.h, cb.values))
+                    htmls[cb.id].set_content(_bar_chart(cb.w, cb.h, cb.values, cb.indicator))
                     chart_keys[cb.id] = key
             elif cb.kind == "rangechart":
                 # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit)
