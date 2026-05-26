@@ -151,20 +151,19 @@ CAPTIONS = {
     ("weight", "targets"): "target interval weight list",
     ("damage", "targets"): "target interval damage list",
     **{("counts", ckey): name for ckey, _sym, name in COUNTS + OPTIMIZATION_COUNTS},
-    # Other intervals of interest mirror the targets' rows (minus damage), but with terse
-    # one-word captions, not the verbose "...target interval... list" names. This column
-    # is narrow (a few user-curated intervals) and grows/shrinks as intervals are added; a
-    # long caption would wrap to more lines in the narrow state and fewer in the wide one,
-    # reflowing the whole board. A single word stays one line at any width, so the caption
-    # band — and the board height — is constant. The left row label and column title carry
-    # the full context ("tuning" / "just tuning" rows under "other intervals of interest").
-    ("vectors", "interest"): "intervals",
-    ("mapping", "interest"): "mapped",
-    ("tuning", "interest"): "tempered",
-    ("just", "interest"): "just",
-    ("retune", "interest"): "errors",
-    ("prescaling", "interest"): "prescaled",
-    ("complexity", "interest"): "complexity",
+    # Other intervals of interest carry the mockup's own descriptive names — distinct from
+    # the targets column's "...target interval... list" phrasing. This column is narrow (a
+    # few user-curated intervals), so a wrapped caption would grow/shrink the caption band —
+    # and the whole board — as intervals are added. To avoid that, the interest captions
+    # OVERHANG a single line (like the column title): centred and overflowing the column,
+    # and counted as one line by caption_band so the band height stays constant.
+    ("vectors", "interest"): "intervals of interest",
+    ("mapping", "interest"): "mapped intervals",
+    ("tuning", "interest"): "tempered interval sizes",
+    ("just", "interest"): "(just) interval sizes",
+    ("retune", "interest"): "interval retunings",
+    ("prescaling", "interest"): "complexity prescaled intervals",
+    ("complexity", "interest"): "interval complexities",
     # the held column is the optimization's held-just constraint set: like the comma basis
     # (special intervals the temperament treats specially), it carries full descriptive names
     # mirroring the comma column ("held interval basis" in place of "comma basis"), but without
@@ -937,6 +936,8 @@ def build(state, settings=None, collapsed=None,
         # zero when names are hidden (no caption renders) so the column keeps its content size
         if not show_captions:
             return 0
+        if key == "interest":
+            return 0  # interest captions overhang a single line (see CAPTIONS) — never widen the column
         return max((_min_width_for_lines(CAPTIONS[(rk, key)], MAX_CAPTION_LINES)
                     for rk in present_caption_rows
                     if (rk, key) in CAPTIONS and (rk, key) in declared_tiles), default=0)
@@ -1109,8 +1110,11 @@ def build(state, settings=None, collapsed=None,
         # no captions at all.
         if not (show_captions and key in CAPTIONED_ROWS and not folded):
             return 0
-        lines = [_wrap_lines(CAPTIONS[(key, c)], open_col_w[c]) for c in col_x
-                 if (key, c) in CAPTIONS and (key, c) in declared_tiles]
+        # interest captions overhang a single line (see CAPTIONS), so they count as one line
+        # regardless of the column's (variable) width — otherwise the band, and the board,
+        # would reflow as intervals are added/removed and the column narrows/widens.
+        lines = [1 if c == "interest" else _wrap_lines(CAPTIONS[(key, c)], open_col_w[c])
+                 for c in col_x if (key, c) in CAPTIONS and (key, c) in declared_tiles]
         return max(lines, default=1) * CAPTION_LINE
 
     # pass the held intervals + any frozen manual tuning so the plain text builds the SAME

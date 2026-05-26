@@ -1249,7 +1249,9 @@ def test_complexity_row_carries_its_symbol_and_captions():
     assert cells["caption:complexity:primes"].text == "domain prime complexity map"
     assert cells["caption:complexity:commas"].text == "comma basis interval complexity list"
     assert cells["caption:complexity:targets"].text == "target interval complexity list"
-    assert cells["caption:complexity:interest"].text == "complexity"  # terse, like the interest column's others
+    # the interest column's weighting-row captions are the mockup's descriptive names
+    assert cells["caption:complexity:interest"].text == "interval complexities"
+    assert cells["caption:prescaling:interest"].text == "complexity prescaled intervals"
 
 
 def test_complexity_caption_mnemonic_underlines_its_symbol_letter():
@@ -2109,23 +2111,19 @@ def test_collapsing_interest_hides_its_cells_but_keeps_the_header():
     assert "cell:mapped:0:0" in cids
 
 
-def test_interest_captions_are_terse_one_liners_that_never_reflow_the_board():
-    # the interest column is narrow (a few curated intervals), so its captions are terse
-    # one-liners rather than the targets column's verbose "...target interval... list"
-    # names. A long name would wrap to more lines as the column narrows and fewer as it
-    # widens, so the caption band — and the whole board — would grow and shrink as
-    # intervals are added (the regression below). Keeping every caption to a single line
-    # even at the one-interval (narrowest) width makes the band height constant instead.
+def test_interest_captions_match_the_mockup_names():
+    # the interest column's captions are the mockup's own descriptive names — distinct from
+    # the targets column's "...target interval... list" phrasing. They're longer than the
+    # narrow column, so (like the column title) they overhang a single line rather than
+    # wrapping; the caption band counts them as one line, so adding intervals never reflows
+    # the board (guarded by test_adding_intervals_of_interest_neither_shrinks_the_header...).
     cells = {c.id: c for c in _with_interest(_INTEREST[:1]).cells}  # names default on
-    assert cells["caption:vectors:interest"].text == "intervals"
-    assert cells["caption:mapping:interest"].text == "mapped"
-    assert cells["caption:tuning:interest"].text == "tempered"
-    assert cells["caption:just:interest"].text == "just"
-    assert cells["caption:retune:interest"].text == "errors"
+    assert cells["caption:vectors:interest"].text == "intervals of interest"
+    assert cells["caption:mapping:interest"].text == "mapped intervals"
+    assert cells["caption:tuning:interest"].text == "tempered interval sizes"
+    assert cells["caption:just:interest"].text == "(just) interval sizes"
+    assert cells["caption:retune:interest"].text == "interval retunings"
     assert "caption:damage:interest" not in cells  # no damage row, like the column's tiles
-    narrowest = 2 * spreadsheet.BRACKET_W + spreadsheet.COL_W  # one-interval content width
-    for rkey in ("vectors", "mapping", "tuning", "just", "retune"):
-        assert spreadsheet._wrap_lines(cells[f"caption:{rkey}:interest"].text, narrowest) == 1
 
 
 def test_mnemonics_underline_the_symbol_letter_within_the_name_captions():
