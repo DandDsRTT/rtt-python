@@ -16,7 +16,7 @@ import sys
 from html import escape as _escape
 from pathlib import Path
 
-from nicegui import ui
+from nicegui import app, helpers, ui
 
 from rtt.web import presets
 from rtt.web import service
@@ -28,6 +28,19 @@ _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 _PANEL_W = 330  # px width the settings drawer opens to (the Show + example columns)
 _RAIL_W = 40  # px width of the permanent left rail (hamburger + the rotated app title)
+_STORE_KEY = "rtt_doc"  # store key holding the serialized document (survives refresh)
+_STORAGE_SECRET = "dnd-rtt-app"  # signs the per-browser session cookie that keys app.storage.user
+# Under NiceGUI's in-process User test simulation, app.storage.user is file-backed: writing
+# it on every render both litters the tree and races the harness's teardown file-cleanup on
+# Windows. The tests re-import this module per case, so a module-level dict gives the same
+# survives-a-refresh persistence, isolated per test, with no file I/O. Production is unaffected.
+_MEMORY_STORE: dict = {}
+
+
+def _doc_store() -> dict:
+    """Where the serialized document is persisted: the per-browser ``app.storage.user`` in
+    production, an in-process dict under the test simulation (see :data:`_MEMORY_STORE`)."""
+    return _MEMORY_STORE if helpers.is_user_simulation() else app.storage.user
 
 # One weight and colour for every EBK bracket, brace and monzo rule. Each mark is
 # drawn as an SVG whose viewBox maps 1:1 to the cell's px size (see _svg), so a
@@ -573,6 +586,9 @@ _CSS = f"""
               font-size:12px !important; line-height:1; color:#666; background:#fff;
               border:1px solid #bbb; cursor:pointer; user-select:none; }}
 .rtt-toggle:hover {{ background:#ececec; color:#000; }}
+/* the select-all/none master toggle, sitting above the two groups (a ruled separator
+   below it sets it apart from the show/example header and the grouped toggles) */
+.rtt-show-all {{ padding:0 9px 6px; border-bottom:1px solid #c4c4c4; margin-bottom:4px; }}
 /* the panel's two column headers: "show" (the toggles) and "example" (their sample
    renders), aligned over the grid columns the rows below use. Both share one font and
    sit on a common baseline so the two words line up. */
@@ -1192,12 +1208,18 @@ def index() -> None:
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
 
+    # The Editor owns the whole document — temperament, view selections, the Show
+    # settings (editor.settings) and the folded rows/columns/tiles (editor.collapsed) —
+    # and the undo/redo history over all of it. We persist that document per browser
+    # (app.storage.user) so a refresh restores exactly where the user left off; a
+    # corrupt/old blob is ignored, falling back to the as-shipped defaults.
     editor = Editor()
-    settings = show_settings.defaults()  # which parts of the grid are visible
-    # the commas and "other intervals of interest" columns and the interval-vectors
-    # row start folded to strips (the mockup's default view), each expandable on
-    # click; interest also starts empty until the user enters intervals
-    collapsed: set = {"col:commas", "col:interest", "row:vectors"}  # ids of folded rows/columns/tiles
+    stored = _doc_store().get(_STORE_KEY)
+    if stored:
+        try:
+            editor.load(stored)
+        except Exception:
+            pass
     els: dict = {}  # entity id -> outer element (persists across renders)
     inputs: dict = {}  # mapping cell id -> q-input
     labels: dict = {}  # cell id -> the label whose text tracks state
@@ -1236,7 +1258,7 @@ def index() -> None:
             d.pop(eid, None)
 
     def on_mapping_change():
-        if building[0] or not settings["temperament_boxes"]:  # no editable matrix when hidden
+        if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
             return
         d, r = editor.state.d, len(editor.state.mapping)
         matrix = [[_parse_int(inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
@@ -1335,8 +1357,19 @@ def index() -> None:
         render()
 
     def on_show_toggle(key, value):
-        settings[key] = value
+        # building[0] guards the echo when render() syncs a checkbox to the document
+        # (e.g. after undo/redo/reset/select-all) rather than a real user toggle
+        if building[0]:
+            return
+        editor.set_show(key, value)
         render()  # the reconciling renderer animates the affected rows/columns in or out
+
+    def on_select_all(value):
+        # the settings panel's select-all/none: flip every implemented Show toggle at once
+        if building[0]:
+            return
+        editor.set_all_show(value)
+        render()
 
     def on_preselect(name, value):
         # the temperament chooser loads a mapping (an undoable edit); the tuning chooser
@@ -1411,13 +1444,11 @@ def index() -> None:
         render()
 
     def on_toggle(item):  # fold/unfold one row, column, or tile ("row:tuning", "tile:mapping:primes")
-        collapsed.discard(item) if item in collapsed else collapsed.add(item)
+        editor.toggle_collapsed(item)
         render()
 
     def on_toggle_all():  # the master node-corner toggle: fold the whole grid, or expand it all back
-        new = spreadsheet.toggle_all_collapsed(last_lay[0], collapsed)
-        collapsed.clear()
-        collapsed.update(new)
+        editor.set_collapsed(spreadsheet.toggle_all_collapsed(last_lay[0], editor.collapsed))
         render()
 
     def _ratio(cb, approx):
@@ -1646,7 +1677,7 @@ def index() -> None:
     def render():
         building[0] = True
         st = editor.state
-        lay = spreadsheet.build(st, settings, collapsed, editor.tuning_scheme, editor.target_spec,
+        lay = spreadsheet.build(st, editor.settings, editor.collapsed, editor.tuning_scheme, editor.target_spec,
                                 interest=editor.interest_monzos, range_mode=editor.range_mode,
                                 pending_comma=editor.pending_comma, held_monzos=editor.held_monzos,
                                 generator_tuning=editor.effective_generator_tuning())
@@ -1818,6 +1849,16 @@ def index() -> None:
 
         refs["undo"].set_enabled(editor.can_undo)
         refs["redo"].set_enabled(editor.can_redo)
+        refs["reset"].set_enabled(editor.can_reset)
+        # reflect the document's Show settings into the panel (after undo/redo/reset/
+        # select-all/load). building[0] is still True, so these programmatic value writes
+        # are swallowed by on_show_toggle/on_select_all rather than re-firing as edits.
+        for key, box in boxes.items():
+            if box.value != editor.settings[key]:
+                box.value = editor.settings[key]
+        select_all_box.value = all(editor.settings[k] for k in show_settings.IMPLEMENTED)
+        # persist the whole document so a browser refresh restores exactly this state
+        _doc_store()[_STORE_KEY] = editor.serialize()
         building[0] = False
 
     # the corner hamburger toggles the settings drawer, which slides the app right
@@ -1838,6 +1879,15 @@ def index() -> None:
                 ui.label("D&D's RTT app").classes("rtt-sidetitle")
             drawer = ui.element("div").classes("rtt-drawer")
             with drawer, ui.element("div").classes("rtt-drawer-inner"):
+                # the select-all/none master checkbox, above everything: one click flips
+                # every implemented Show toggle on or off. Its checked state (all on) is
+                # kept in sync by render(); the not-yet-built toggles are left untouched.
+                with ui.element("div").classes("rtt-show-all"):
+                    select_all_box = ui.checkbox(
+                        "select all / none",
+                        value=all(editor.settings[k] for k in show_settings.IMPLEMENTED),
+                        on_change=lambda e: on_select_all(e.value)) \
+                        .props("dense size=xs color=grey-8").classes("rtt-show-item")
                 with ui.element("div").classes("rtt-show-head"):
                     ui.label("show").classes("rtt-show-title")
                     ui.label("example").classes("rtt-show-examplehdr")
@@ -1848,7 +1898,7 @@ def index() -> None:
                         for key, label, _ in items:
                             row = ui.element("div").classes("rtt-show-row")
                             with row:
-                                box = ui.checkbox(label, value=settings[key],
+                                box = ui.checkbox(label, value=editor.settings[key],
                                                   on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
                                     .props("dense size=xs color=grey-8").classes("rtt-show-item")
                                 example = ui.html(_example_html(key)).classes("rtt-ex-cell")
@@ -1874,6 +1924,10 @@ def index() -> None:
                                     .props("flat dense").classes("rtt-iconbtn").mark("undo")
                                 refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
                                     .props("flat dense").classes("rtt-iconbtn").mark("redo")
+                                # reset everything (settings, expand/collapse, values) to the
+                                # as-shipped defaults — itself an undoable action
+                                refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: act(editor.reset), color=None) \
+                                    .props("flat dense").classes("rtt-iconbtn").mark("reset")
 
     def on_key(e):
         if not (e.action.keydown and e.modifiers.ctrl):
@@ -1907,7 +1961,7 @@ def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8137
     worktrees = Path(__file__).resolve().parents[2] / ".claude" / "worktrees"
     ui.run(title="D&D's RTT App", favicon="https://github.com/DandDsRTT.png",
-           reload=True, show=False, port=port,
+           reload=True, show=False, port=port, storage_secret=_STORAGE_SECRET,
            uvicorn_reload_excludes=_reload_excludes(worktrees))
 
 

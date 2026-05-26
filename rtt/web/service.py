@@ -7,7 +7,7 @@ a temperament's mapping and its dual comma basis (kept in sync) plus dimensions.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from fractions import Fraction
 
 from rtt.canonicalization import canonical_ca, canonical_ma
@@ -31,6 +31,7 @@ from rtt.target_intervals import (
 )
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
+    TuningSchemeSpec,
     _damage_weights,
     complexity_name_traits,
     get_complexity,
@@ -121,6 +122,17 @@ def from_temperament_data(ebk: str) -> TemperamentState:
     if t.variance is Variance.ROW:
         return from_mapping(t.matrix, t.domain_basis)
     return from_comma_basis(t.matrix, t.domain_basis)
+
+
+def mapping_ebk(state: TemperamentState) -> str:
+    """The temperament's mapping as an EBK string — the editable dual the grid shows and
+    the form persistence stores. A nonstandard domain prefixes its basis (e.g.
+    ``"2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"``) so the string parses back to the same
+    temperament via :func:`parse_mapping_state`."""
+    ebk = to_ebk(Temperament(state.mapping, Variance.ROW, state.domain_basis))
+    if not is_standard_prime_limit_domain_basis(state.domain_basis):
+        ebk = ".".join(str(e) for e in state.domain_basis) + " " + ebk
+    return ebk
 
 
 def standard_primes(d: int) -> tuple[int, ...]:
@@ -534,6 +546,31 @@ def prescaler_of(scheme) -> str:
     return "log-prime"
 
 
+def scheme_to_json(scheme):
+    """A tuning scheme as a JSON-safe value, for persistence: a bare name string, or a
+    spec dict for a control-refined scheme. The infinite optimization power (minimax) is
+    encoded as the string ``"inf"`` because the JSON layer writes a raw float infinity as
+    null. The inverse is :func:`scheme_from_json`."""
+    if isinstance(scheme, str):
+        return scheme
+    data = asdict(scheme)
+    if data["optimization_power"] == float("inf"):
+        data["optimization_power"] = "inf"
+    return data
+
+
+def scheme_from_json(data):
+    """Rebuild a tuning scheme from :func:`scheme_to_json`'s output — a name string passes
+    through; a spec dict is rehydrated into a :class:`TuningSchemeSpec`, decoding the
+    ``"inf"`` optimization-power sentinel back to a float."""
+    if isinstance(data, str):
+        return data
+    data = dict(data)
+    if data.get("optimization_power") == "inf":
+        data["optimization_power"] = float("inf")
+    return TuningSchemeSpec(**data)
+
+
 def complexity_prescaler(mapping, scheme: str = DEFAULT_TUNING_SCHEME) -> tuple[float, ...]:
     """The diagonal of the complexity prescaler L — each domain prime's pre-norm weight
     (log2(prime) for the default log-prime norm). The L matrix is diag of this."""
@@ -563,11 +600,6 @@ def plain_text_values(
     tun = tuning(state.mapping, scheme, db)  # maps over the domain elements, shared by both sets
     target_sizes = interval_sizes(tun, targets, db)
     comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
-    # the mapping's EBK is the editable dual; a nonstandard domain prefixes its basis
-    # (e.g. "2.3.13/5 [⟨…]}") so the string still parses back to the same temperament
-    mapping_ebk = to_ebk(Temperament(state.mapping, Variance.ROW, db))
-    if not is_standard_prime_limit_domain_basis(db):
-        mapping_ebk = ".".join(str(e) for e in db) + " " + mapping_ebk
     # the weighting region: complexity (a covector over the primes, lists elsewhere), the
     # per-target weight list, and the prescaling matrices (L applied to each vector set, as
     # ket lists). Complexity over the primes is the complexity of each domain basis element.
@@ -587,7 +619,7 @@ def plain_text_values(
         ("quantities", "primes"): ".".join(str(e) for e in db),
         ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
         ("vectors", "targets"): _ket_list(target_monzos, "⟩"),
-        ("mapping", "primes"): mapping_ebk,
+        ("mapping", "primes"): mapping_ebk(state),
         ("mapping", "commas"): _ket_list(zip(*mapped_comma), "}"),
         ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
         ("tuning", "gens"): _cents_genmap(tun.generator_map),

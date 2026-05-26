@@ -8,7 +8,7 @@ the initial state, undo availability, and the shrink guard.
 from fractions import Fraction
 
 from rtt.web import service, settings, spreadsheet
-from rtt.web.editor import INITIAL_MAPPING, Editor
+from rtt.web.editor import INITIAL_COLLAPSED, INITIAL_MAPPING, Editor
 
 
 def test_editor_starts_at_meantone_with_no_undo():
@@ -214,29 +214,31 @@ def test_setting_a_bare_family_clears_any_manual_limit():
     assert editor.target_spec == "OLD"
 
 
-def test_scheme_and_target_spec_are_view_selections_outside_undo():
-    # they are display/analysis choices, not temperament edits, so they neither
-    # push onto the undo stack nor get reverted by undoing a temperament change
+def test_scheme_and_target_spec_changes_are_undoable():
+    # the whole document is one undo history: selecting a tuning scheme or target set
+    # is an undoable change, reverted by undo and reapplied by redo
     editor = Editor()
     editor.set_tuning_scheme("CTE")
-    assert editor.can_undo is False  # selecting a scheme is not an undoable edit
-    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
+    assert editor.can_undo is True
+    editor.set_target_spec("OLD")
     editor.undo()
-    assert editor.tuning_scheme == "CTE"  # undo reverts the mapping, not the scheme
+    assert editor.target_spec == "TILT"  # undo reverts the target choice
+    editor.undo()
+    assert editor.tuning_scheme == service.DEFAULT_TUNING_SCHEME  # ...then the scheme
+    editor.redo()
+    assert editor.tuning_scheme == "CTE"  # redo reapplies it
 
 
-def test_range_mode_starts_monotone_and_is_a_view_selection_outside_undo():
-    # which generator tuning range the ranges chart shows (monotone vs tradeoff) is
-    # a display choice like the tuning scheme, so it starts at a default, is settable,
-    # and stays put across undo (it is not a temperament edit)
+def test_range_mode_starts_monotone_and_is_undoable():
+    # which generator tuning range the ranges chart shows (monotone vs tradeoff) starts
+    # at a default, is settable, and — like every document change — is undoable
     editor = Editor()
     assert editor.range_mode == "monotone"
     editor.set_range_mode("tradeoff")
     assert editor.range_mode == "tradeoff"
-    assert editor.can_undo is False  # choosing a range mode is not an undoable edit
-    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
+    assert editor.can_undo is True  # choosing a range mode is an undoable change
     editor.undo()
-    assert editor.range_mode == "tradeoff"  # undo reverts the mapping, not the mode
+    assert editor.range_mode == "monotone"  # undo reverts the mode
 
 
 def test_domain_expand_shrink_are_inert_on_a_nonstandard_domain():
@@ -279,16 +281,17 @@ def test_interest_intervals_add_edit_remove():
     assert editor.interest_monzos == [(-1, 1, 0)]
 
 
-def test_interest_intervals_are_view_data_outside_undo():
-    # like the tuning/target selections, the interest set is curated display data,
-    # not a temperament edit: editing it does not push undo, and undoing a temperament
-    # change leaves it untouched
+def test_interest_intervals_changes_are_undoable():
+    # the interest set is part of the one document history: adding (or editing) an
+    # interval of interest is an undoable change
     editor = Editor()
     editor.add_interest()
-    assert editor.can_undo is False  # adding an interval of interest is not undoable
-    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
+    assert editor.can_undo is True  # adding an interval of interest is an undoable change
+    editor.set_interest_monzos([[-1, 1, 0]])  # edit it to 3/2
     editor.undo()
-    assert editor.interest_monzos == [(0, 0, 0)]  # the undo reverts the mapping, not the set
+    assert editor.interest_monzos == [(0, 0, 0)]  # undo reverts the edit (back to the blank)
+    editor.undo()
+    assert editor.interest_monzos == []  # ...then the add
 
 
 def test_try_edit_mapping_text_applies_a_valid_ebk_map():
@@ -348,3 +351,128 @@ def test_optimize_button_freezes_the_tuning_and_lock_toggles_auto():
     editor.toggle_optimize_lock()
     assert editor.optimize_locked is False
     assert editor.effective_generator_tuning() is not None
+
+
+def test_show_settings_start_at_defaults_and_changes_are_undoable():
+    editor = Editor()
+    assert editor.settings == settings.defaults()  # the Editor owns the Show settings
+    editor.set_show("charts", True)
+    assert editor.settings["charts"] is True
+    assert editor.can_undo is True  # toggling a Show setting is an undoable change
+    editor.undo()
+    assert editor.settings["charts"] is False
+    editor.redo()
+    assert editor.settings["charts"] is True
+
+
+def test_select_all_then_none_over_implemented_toggles():
+    editor = Editor()
+    editor.set_all_show(True)  # the panel's select-all
+    assert all(editor.settings[k] for k in settings.IMPLEMENTED)
+    editor.set_all_show(False)  # ...and select-none
+    assert not any(editor.settings[k] for k in settings.IMPLEMENTED)
+    editor.undo()  # one undo restores the whole all-on set (a single action)
+    assert all(editor.settings[k] for k in settings.IMPLEMENTED)
+
+
+def test_expand_collapse_state_is_owned_and_undoable():
+    editor = Editor()
+    # the commas/interest columns and the vectors row start folded (the mockup default)
+    assert editor.collapsed == set(INITIAL_COLLAPSED)
+    editor.toggle_collapsed("col:commas")  # unfold the commas column
+    assert "col:commas" not in editor.collapsed
+    assert editor.can_undo is True  # folding/unfolding is an undoable change
+    editor.undo()
+    assert "col:commas" in editor.collapsed
+    editor.set_collapsed({"row:tuning"})  # the master expand/collapse-all replaces the set
+    assert editor.collapsed == {"row:tuning"}
+    editor.undo()
+    assert "col:commas" in editor.collapsed  # back to the prior fold state
+
+
+def test_reset_restores_every_default_as_one_undoable_action():
+    editor = Editor()
+    assert editor.can_reset is False  # a fresh editor is already at the defaults
+    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])  # a value change
+    editor.set_tuning_scheme("CTE")               # a view selection
+    editor.set_show("charts", True)               # a Show setting
+    editor.toggle_collapsed("col:commas")         # an expand/collapse change
+    assert editor.can_reset is True
+    editor.reset()
+    assert editor.state.mapping == INITIAL_MAPPING
+    assert editor.tuning_scheme == service.DEFAULT_TUNING_SCHEME
+    assert editor.settings == settings.defaults()
+    assert "col:commas" in editor.collapsed
+    assert editor.can_reset is False
+    editor.undo()  # a single undo brings the whole prior document back
+    assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
+    assert editor.tuning_scheme == "CTE"
+    assert editor.settings["charts"] is True
+    assert "col:commas" not in editor.collapsed
+
+
+def test_serialize_load_round_trips_the_whole_document():
+    editor = Editor()
+    editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
+    editor.set_tuning_scheme("POTE")
+    editor.set_target_spec("9-OLD")
+    editor.set_interest_monzos([[-1, 1, 0]])
+    editor.add_held()
+    editor.set_range_mode("tradeoff")
+    editor.set_show("charts", True)
+    editor.toggle_collapsed("col:commas")
+    data = editor.serialize()
+
+    restored = Editor()
+    restored.load(data)
+    assert restored.state.mapping == ((1, 0, -4), (0, 1, 4))
+    assert restored.tuning_scheme == "POTE"
+    assert restored.target_spec == "9-OLD"
+    assert restored.interest_monzos == [(-1, 1, 0)]
+    assert restored.held_monzos == [(0, 0, 0)]
+    assert restored.range_mode == "tradeoff"
+    assert restored.settings["charts"] is True
+    assert "col:commas" not in restored.collapsed
+    assert restored.can_undo is False  # a load is a fresh start, not an undoable step
+
+
+def test_serialize_survives_the_json_layer_with_an_infinite_optimization_power():
+    # minimax uses an infinite Lp power; the JSON layer writes a raw float inf as null,
+    # so the scheme is encoded with an "inf" sentinel and decoded back to a real float
+    import json
+
+    editor = Editor()
+    editor.set_optimization_power(float("inf"))
+    data = editor.serialize()
+    assert data["tuning_scheme"]["optimization_power"] == "inf"
+    json.loads(json.dumps(data))  # the document survives a JSON round-trip (no inf -> null)
+    restored = Editor()
+    restored.load(data)
+    assert service.optimization_power(restored.tuning_scheme) == float("inf")
+
+
+def test_serialize_load_round_trips_a_finite_power_spec():
+    editor = Editor()
+    editor.set_optimization_power(2.0)  # miniRMS
+    restored = Editor()
+    restored.load(editor.serialize())
+    assert service.optimization_power(restored.tuning_scheme) == 2.0
+
+
+def test_serialize_load_round_trips_a_nonstandard_domain():
+    editor = Editor()
+    editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # Barbados over 2.3.13/5
+    restored = Editor()
+    restored.load(editor.serialize())
+    assert restored.state.domain_basis == (2, 3, Fraction(13, 5))
+    assert restored.state.mapping == ((1, 2, 2), (0, -2, -3))
+
+
+def test_load_tolerates_a_state_saved_before_a_setting_existed():
+    # an older saved document may lack a Show key added since; load fills it from defaults
+    editor = Editor()
+    data = editor.serialize()
+    del data["settings"]["charts"]
+    restored = Editor()
+    restored.load(data)
+    assert restored.settings["charts"] is settings.defaults()["charts"]

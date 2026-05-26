@@ -159,3 +159,49 @@ async def test_enabling_audio_renders_speakers_and_control_banks(user: User) -> 
     assert isinstance(_cell_child(user, "speaker:mapped_audio:target:0"), ui.button)
     for ctrl in ("wave", "mode", "hold", "root"):
         assert isinstance(_cell_child(user, f"{ctrl}:mapped_audio:targets"), ui.html)
+
+
+# --- tier 4: the settings select-all/none, the reset control, and refresh persistence ---
+
+
+async def test_select_all_turns_on_every_implemented_feature(user: User) -> None:
+    # charts is off by default (no per-tile chart cells); the panel's select-all/none master
+    # checkbox flips every implemented Show toggle on at once, so the chart cell appears
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="select all / none").click()
+    await user.should_see(marker="chart:retune:targets")
+
+
+async def test_reset_restores_settings_expand_collapse_and_values(user: User) -> None:
+    await user.open("/")
+    _cell_child(user, "cell:mapping:1:2").set_value("7")  # a value change
+    user.find(kind=ui.checkbox, content="charts").click()  # a settings change
+    await user.should_see(marker="chart:retune:targets")
+    assert _cell_text(user, "cell:mapped:1:6") == "7"
+    user.find(marker="reset").click()  # reset everything to the defaults
+    await user.should_see(marker="cell:mapped:1:6")
+    assert _cell_text(user, "cell:mapped:1:6") == "4"  # the value is back to meantone's
+    await user.should_not_see(marker="chart:retune:targets")  # ...and charts is off again
+
+
+async def test_undo_button_reverts_a_settings_change(user: User) -> None:
+    # the unified history covers Show settings too: toggling charts on then pressing undo
+    # turns it back off (the chart cells disappear)
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="charts").click()
+    await user.should_see(marker="chart:retune:targets")
+    user.find(marker="undo").click()
+    await user.should_see(marker="cell:mapping:0:0")  # the board re-rendered
+    await user.should_not_see(marker="chart:retune:targets")  # charts off again
+
+
+async def test_state_persists_across_a_refresh(user: User) -> None:
+    # the document is persisted on each render and reloaded when the page opens, so a refresh
+    # (a fresh open of "/") restores exactly where the user left off
+    await user.open("/")
+    _cell_child(user, "cell:mapping:1:2").set_value("7")
+    await user.should_see(marker="cell:mapped:1:6")
+    assert _cell_text(user, "cell:mapped:1:6") == "7"
+    await user.open("/")  # the refresh
+    await user.should_see(marker="cell:mapped:1:6")
+    assert _cell_text(user, "cell:mapped:1:6") == "7"  # the edit survived

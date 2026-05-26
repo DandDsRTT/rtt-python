@@ -1,61 +1,117 @@
 """Framework-free view-model for the temperament editor.
 
-Holds the current :class:`~rtt.web.service.TemperamentState` plus undo/redo
-stacks, and exposes the user actions (edit either matrix, expand/shrink the
-domain, undo, redo). It also tracks the two view selections that the derived rows
-are shown under — the tuning scheme and the target interval set spec — which sit
-outside undo because they are display choices, not temperament edits. The NiceGUI
-layer is thin glue over this; all of it is unit-testable without a UI.
+Holds the whole editor *document* — everything the user can change — and the
+undo/redo history over it. The document bundles the temperament
+(:class:`~rtt.web.service.TemperamentState`), the view selections shown over it
+(tuning scheme, target interval set, intervals of interest, held intervals, range
+mode, optimize lock) and the UI state (the Show settings and the folded
+rows/columns/tiles). It is all one history: any change snapshots the whole
+document, undo/redo swap snapshots, :meth:`Editor.reset` restores the defaults, and
+:meth:`Editor.serialize`/:meth:`Editor.load` persist it across a page refresh. The
+NiceGUI layer is thin glue over this; all of it is unit-testable without a UI.
 """
 
 from __future__ import annotations
 
+import functools
 import re
+from dataclasses import dataclass
 
 from rtt.web import service
+from rtt.web import settings as show_settings
 from rtt.web.service import TemperamentState
 
 INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))  # meantone, matching the original app
+# The rows/columns/tiles folded to strips in the as-shipped view (the mockup's
+# default): the commas and "other intervals of interest" columns and the
+# interval-vectors row. Reset returns to exactly this fold state.
+INITIAL_COLLAPSED: frozenset[str] = frozenset({"col:commas", "col:interest", "row:vectors"})
+
+
+@dataclass(frozen=True)
+class _Doc:
+    """An immutable snapshot of the whole document — the unit of undo/redo, reset
+    and persistence. Mutable collections are kept in immutable form (tuples, a
+    frozenset, sorted setting items) so a stored snapshot can never be mutated in
+    place; :meth:`Editor._restore` copies them back to the editor's working forms."""
+
+    state: TemperamentState
+    tuning_scheme: object  # str (a named scheme) | TuningSchemeSpec (a control-refined one)
+    target_family: str
+    target_limit: int | None
+    interest_monzos: tuple[tuple[int, ...], ...]
+    held_monzos: tuple[tuple[int, ...], ...]
+    range_mode: str
+    optimize_locked: bool
+    generator_tuning: tuple[float, ...] | None
+    settings: tuple[tuple[str, bool], ...]
+    collapsed: frozenset[str]
+
+
+@functools.lru_cache(maxsize=1)
+def _initial_doc() -> _Doc:
+    """The default document — the state a fresh Editor and :meth:`Editor.reset` start
+    from. Cached (and immutable) so the as-shipped baseline is computed once."""
+    return _Doc(
+        state=service.from_mapping(INITIAL_MAPPING),
+        tuning_scheme=service.DEFAULT_TUNING_SCHEME,
+        target_family=service.DEFAULT_TARGET_SPEC,
+        target_limit=None,
+        interest_monzos=(),
+        held_monzos=(),
+        range_mode="monotone",
+        optimize_locked=False,
+        generator_tuning=None,
+        settings=tuple(sorted(show_settings.defaults().items())),
+        collapsed=INITIAL_COLLAPSED,
+    )
 
 
 class Editor:
     def __init__(self) -> None:
-        self._state: TemperamentState = service.from_mapping(INITIAL_MAPPING)
-        # Display/analysis selections: which tuning scheme and target interval set
-        # the derived rows are shown under. Unlike the temperament itself, these are
-        # view choices (like the Show toggles), so they live outside the undo stack.
-        self.tuning_scheme: str = service.DEFAULT_TUNING_SCHEME
-        # The target set is a family ("TILT"/"OLD") plus an optional manual limit N.
-        # The limit is *weakly held*: any domain (d) change forgets it (see the state
-        # setter), so the set reverts to the new domain's default rather than resurrecting.
-        self.target_family: str = service.DEFAULT_TARGET_SPEC
-        self.target_limit: int | None = None
-        # "Other intervals of interest": a user-built set of intervals to watch,
-        # held as monzos (edited like the comma basis — editable vector cells).
-        # Display data the user curates, not part of the temperament, so (like the
-        # tuning/target selections) it lives outside the undo stack.
-        self.interest_monzos: list[tuple[int, ...]] = []
-        # Held intervals: the optimization's held-just constraints, a user-built set of
-        # monzos edited in the held-intervals column (like the intervals of interest). The
-        # tuning holds each exactly just; a display/constraint choice, so outside undo.
-        self.held_monzos: list[tuple[int, ...]] = []
-        # Which generator tuning range the ranges chart shows — diamond-monotone or
-        # diamond-tradeoff. A display choice like the two above, so it sits outside undo.
-        self.range_mode: str = "monotone"
-        # The optimize button's state. ``optimize_locked`` on = auto-optimize every change
-        # (the always-optimal default behaviour). Off (single-click action) = the tuning is
-        # frozen at ``generator_tuning`` (the last optimum) and stays put under edits until
-        # re-optimized. ``generator_tuning`` is None until first frozen (so the load shows
-        # the optimum). A display/constraint choice, so it lives outside the undo stack.
-        self.optimize_locked: bool = False
-        self.generator_tuning: tuple[float, ...] | None = None
+        self._undo_stack: list[_Doc] = []
+        self._redo_stack: list[_Doc] = []
         # A comma being added but not yet valid: a draft monzo (d components, each an
-        # int or None while blank). It is NOT part of the temperament — the mapping is
-        # untouched — until it is filled in with a comma independent of the basis, so
-        # d = r + n always holds for the real commas; the draft is shown apart.
+        # int or None while blank). It is NOT part of the document — the mapping is
+        # untouched, and a draft does not survive undo/redo/reset/load — until it is
+        # filled in with a comma independent of the basis, at which point it commits.
         self.pending_comma: list[int | None] | None = None
-        self._undo_stack: list[TemperamentState] = []
-        self._redo_stack: list[TemperamentState] = []
+        self._restore(_initial_doc())
+
+    # --- the document: capture / restore (the unit of undo, reset, persistence) ---
+
+    def _capture(self) -> _Doc:
+        """Freeze the current document into a snapshot."""
+        return _Doc(
+            state=self._state,
+            tuning_scheme=self.tuning_scheme,
+            target_family=self.target_family,
+            target_limit=self.target_limit,
+            interest_monzos=tuple(self.interest_monzos),
+            held_monzos=tuple(self.held_monzos),
+            range_mode=self.range_mode,
+            optimize_locked=self.optimize_locked,
+            generator_tuning=self.generator_tuning,
+            settings=tuple(sorted(self.settings.items())),
+            collapsed=frozenset(self.collapsed),
+        )
+
+    def _restore(self, doc: _Doc) -> None:
+        """Make ``doc`` the live document, copying its immutable collections back to
+        the editor's working (mutable) forms. Sets ``_state`` directly so the state
+        setter's weakly-held-limit side effect does not fire on an undo/redo."""
+        self._state = doc.state
+        self.tuning_scheme = doc.tuning_scheme
+        self.target_family = doc.target_family
+        self.target_limit = doc.target_limit
+        self.interest_monzos = [tuple(m) for m in doc.interest_monzos]
+        self.held_monzos = [tuple(m) for m in doc.held_monzos]
+        self.range_mode = doc.range_mode
+        self.optimize_locked = doc.optimize_locked
+        self.generator_tuning = doc.generator_tuning
+        self.settings = dict(doc.settings)
+        self.collapsed = set(doc.collapsed)
+        self.pending_comma = None  # a draft never survives a document restore
 
     @property
     def state(self) -> TemperamentState:
@@ -76,6 +132,12 @@ class Editor:
     @property
     def can_redo(self) -> bool:
         return bool(self._redo_stack)
+
+    @property
+    def can_reset(self) -> bool:
+        """Whether the document differs from the as-shipped defaults — i.e. whether
+        the reset control has anything to restore."""
+        return self._capture() != _initial_doc()
 
     @property
     def target_spec(self) -> str:
@@ -129,46 +191,59 @@ class Editor:
     def add_interest(self) -> None:
         """Append a blank interval of interest (a zero monzo = 1/1) for the user to
         edit, mirroring how add_comma seeds a blank comma."""
+        self._snapshot()
         self.interest_monzos.append((0,) * self.state.d)
 
     def remove_interest(self, i: int) -> None:
         """Drop the i-th interval of interest (each one carries its own − control)."""
+        self._snapshot()
         del self.interest_monzos[i]
 
     def set_interest_monzos(self, monzos) -> None:
         """Replace the interest set from the edited vector cells."""
+        self._snapshot()
         self.interest_monzos = [tuple(int(x) for x in m) for m in monzos]
 
     def add_held(self) -> None:
         """Append a blank held interval (a zero monzo = 1/1) for the user to fill in —
         the held-intervals column's + control, mirroring add_interest."""
+        self._snapshot()
         self.held_monzos.append((0,) * self.state.d)
 
     def remove_held(self, i: int) -> None:
         """Drop the i-th held interval (each one carries its own − control)."""
+        self._snapshot()
         del self.held_monzos[i]
 
     def set_held_monzos(self, monzos) -> None:
         """Replace the held-interval set from the edited vector cells."""
+        self._snapshot()
         self.held_monzos = [tuple(int(x) for x in m) for m in monzos]
+
+    def _optimum_generator_tuning(self) -> tuple[float, ...]:
+        """The scheme's current optimal generator tuning, respecting any held intervals."""
+        held = service.comma_ratios(self.held_monzos) if self.held_monzos else ()
+        return service.tuning(self.state.mapping, self.tuning_scheme, held=held).generator_map
 
     def optimize(self) -> None:
         """The optimize button's single click: freeze the generator tuning at the scheme's
         current optimum (respecting any held intervals). With the lock off, the frozen tuning
-        then stays put as the temperament/scheme change, until optimized again."""
-        held = service.comma_ratios(self.held_monzos) if self.held_monzos else ()
-        self.generator_tuning = service.tuning(
-            self.state.mapping, self.tuning_scheme, held=held
-        ).generator_map
+        then stays put as the temperament/scheme change, until optimized again. Idempotent —
+        re-optimizing to the same tuning (e.g. the extra clicks a double-click fires) does not
+        push a redundant undo step."""
+        optimum = self._optimum_generator_tuning()
+        if optimum == self.generator_tuning:
+            return
+        self._snapshot()
+        self.generator_tuning = optimum
 
     def toggle_optimize_lock(self) -> None:
         """The optimize button's double click: toggle auto-optimize. Locked on, the tuning
         recomputes to the optimum on every change; unlocking freezes it at the current optimum."""
+        self._snapshot()
         self.optimize_locked = not self.optimize_locked
-        if self.optimize_locked:
-            self.generator_tuning = None  # auto: recompute the optimum on every change
-        else:
-            self.optimize()  # unlocking freezes at the current optimum
+        # auto: recompute the optimum on every change (None); unlocking freezes at it now
+        self.generator_tuning = None if self.optimize_locked else self._optimum_generator_tuning()
 
     def effective_generator_tuning(self) -> tuple[float, ...] | None:
         """The generator tuning the grid should display: None (recompute the optimum) while
@@ -199,22 +274,26 @@ class Editor:
         return True
 
     def set_tuning_scheme(self, scheme: str) -> None:
+        self._snapshot()
         self.tuning_scheme = scheme
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
         """Swap the complexity prescaler (the alt.-complexity control in box 𝐋), which
         re-weights damage and so retunes. Holds the refined scheme as a resolved spec
         (the service/layout take a spec anywhere a scheme name is taken)."""
+        self._snapshot()
         self.tuning_scheme = service.scheme_with_prescaler(self.tuning_scheme, prescaler)
 
     def set_complexity_euclidean(self, euclidean: bool) -> None:
         """Switch the complexity norm between Euclidean (q=2) and taxicab (q=1) — the
         alt.-complexity control in box 𝒄 — which likewise re-weights and retunes."""
+        self._snapshot()
         self.tuning_scheme = service.scheme_with_norm(self.tuning_scheme, euclidean)
 
     def set_optimization_power(self, power: float) -> None:
         """Set the optimization power 𝑝 (the editable field in the optimization box): ∞ for
         minimax, 2 for miniRMS, 1 for miniaverage. Re-solves the tuning under the new Lp norm."""
+        self._snapshot()
         self.tuning_scheme = service.scheme_with_power(self.tuning_scheme, power)
 
     def set_weight_slope(self, slope: str) -> None:
@@ -236,13 +315,48 @@ class Editor:
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
         or ``"OLD"``. A manual limit is weakly held — the next domain change forgets it."""
+        self._snapshot()
         match = re.match(r"(\d*)-?(TILT|OLD)", spec)
         n, family = (match.group(1), match.group(2)) if match else ("", self.target_family)
         self.target_family = family
         self.target_limit = int(n) if n else None
 
     def set_range_mode(self, mode: str) -> None:
+        self._snapshot()
         self.range_mode = mode
+
+    def set_show(self, key: str, value: bool) -> None:
+        """Set one Show toggle (which parts of the grid are visible) — an undoable change."""
+        self._snapshot()
+        self.settings[key] = value
+
+    def set_all_show(self, value: bool) -> None:
+        """The settings panel's select-all/none: turn every *implemented* Show toggle on
+        (``True``) or off (``False``) at once. The not-yet-built toggles are left at their
+        defaults (the user can't toggle them individually either)."""
+        self._snapshot()
+        for key in show_settings.IMPLEMENTED:
+            self.settings[key] = value
+
+    def toggle_collapsed(self, item: str) -> None:
+        """Fold or unfold one row, column, or tile (``"row:tuning"``, ``"col:targets"``,
+        ``"tile:mapping:primes"``) — an undoable change to the expand/collapse state."""
+        self._snapshot()
+        self.collapsed.discard(item) if item in self.collapsed else self.collapsed.add(item)
+
+    def set_collapsed(self, items) -> None:
+        """Replace the whole set of folded ids (the master expand/collapse-all toggle
+        computes the next set from the layout) — an undoable change."""
+        self._snapshot()
+        self.collapsed = set(items)
+
+    def reset(self) -> None:
+        """Restore the entire document to the as-shipped defaults — temperament values,
+        view selections, Show settings and expand/collapse state — as one undoable action."""
+        if not self.can_reset:
+            return
+        self._snapshot()
+        self._restore(_initial_doc())
 
     def expand(self) -> None:
         if not self.can_expand:
@@ -287,14 +401,59 @@ class Editor:
 
     def undo(self) -> None:
         if self._undo_stack:
-            self._redo_stack.append(self.state)
-            self.state = self._undo_stack.pop()
+            self._redo_stack.append(self._capture())
+            self._restore(self._undo_stack.pop())
 
     def redo(self) -> None:
         if self._redo_stack:
-            self._undo_stack.append(self.state)
-            self.state = self._redo_stack.pop()
+            self._undo_stack.append(self._capture())
+            self._restore(self._redo_stack.pop())
 
     def _snapshot(self) -> None:
-        self._undo_stack.append(self.state)
+        self._undo_stack.append(self._capture())
         self._redo_stack.clear()  # a fresh action invalidates the redo history
+
+    def serialize(self) -> dict:
+        """The whole document as a JSON-safe dict, for persisting across a page refresh.
+        The temperament rides as its (domain-prefixed) EBK string so a nonstandard domain
+        round-trips; the tuning scheme is name-or-spec via the service (inf power encoded)."""
+        return {
+            "mapping_ebk": service.mapping_ebk(self._state),
+            "tuning_scheme": service.scheme_to_json(self.tuning_scheme),
+            "target_family": self.target_family,
+            "target_limit": self.target_limit,
+            "interest_monzos": [list(m) for m in self.interest_monzos],
+            "held_monzos": [list(m) for m in self.held_monzos],
+            "range_mode": self.range_mode,
+            "optimize_locked": self.optimize_locked,
+            "generator_tuning": list(self.generator_tuning) if self.generator_tuning is not None else None,
+            "settings": dict(self.settings),
+            "collapsed": sorted(self.collapsed),
+        }
+
+    def load(self, data: dict) -> None:
+        """Restore a document previously produced by :meth:`serialize`. Unknown/missing
+        keys fall back to defaults (so an older saved state still loads), and an
+        unparseable temperament leaves the editor untouched. Builds the snapshot fully
+        before swapping it in, so a malformed field can't leave a half-loaded state. A
+        load is a fresh start, so it clears the undo/redo history."""
+        state = service.parse_mapping_state(data["mapping_ebk"])
+        if state is None:
+            return
+        doc = _Doc(
+            state=state,
+            tuning_scheme=service.scheme_from_json(data["tuning_scheme"]),
+            target_family=data.get("target_family", service.DEFAULT_TARGET_SPEC),
+            target_limit=data.get("target_limit"),
+            interest_monzos=tuple(tuple(int(x) for x in m) for m in data.get("interest_monzos", ())),
+            held_monzos=tuple(tuple(int(x) for x in m) for m in data.get("held_monzos", ())),
+            range_mode=data.get("range_mode", "monotone"),
+            optimize_locked=bool(data.get("optimize_locked", False)),
+            generator_tuning=tuple(data["generator_tuning"])
+            if data.get("generator_tuning") is not None else None,
+            settings=tuple(sorted({**show_settings.defaults(), **data.get("settings", {})}.items())),
+            collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
+        )
+        self._restore(doc)
+        self._undo_stack.clear()
+        self._redo_stack.clear()
