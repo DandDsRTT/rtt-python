@@ -2196,17 +2196,20 @@ def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels():
     assert on["label:quantities"].y < on["label:units"].y < on["label:vectors"].y
 
 
-def test_optimization_on_shows_the_power_below_the_damage_row():
-    on = {c.id: c for c in _with(optimization=True).cells}
-    # the optimization power p of the current tuning (TOP, a minimax scheme => ∞),
-    # rendered like a count: the math-italic symbol, " = ", and its value
+def test_optimization_power_rides_the_bottom_of_the_damage_tile():
+    # per the mockup, the optimization power 𝑝 (TOP, a minimax scheme ⇒ ∞) lives INSIDE
+    # the target-interval damage list tile, at its bottom — there is NO separate
+    # optimization row. It reads like a count: the math-italic symbol, " = ", its value.
+    lay = _with(optimization=True)
+    on = {c.id: c for c in lay.cells}
     assert on["optimization:power"].text == "\U0001D45D = ∞"  # 𝑝 = ∞
-    # it rides the target-intervals column (the tuning's own column) ...
-    assert on["optimization:power"].x == on["header:targets"].x
-    assert on["optimization:power"].w == on["header:targets"].w
-    # ... in a new row at the bottom of the tuning boxes, below the damage row
+    # it sits below the damage values, in the target-intervals column
     assert on["optimization:power"].y > on["damage:target:0"].y
-    assert "label:optimization" in on
+    assert on["optimization:power"].x == on["header:targets"].x
+    # ...and there is no separate optimization row (no label, fold toggle or gridline)
+    assert "label:optimization" not in on
+    assert "toggle:row:optimization" not in on
+    assert "h:optimization" not in {ln.id for ln in lay.lines}
 
 
 def test_optimization_power_reflects_the_current_tuning_scheme():
@@ -2221,31 +2224,20 @@ def test_optimization_power_reflects_the_current_tuning_scheme():
 
 def test_optimization_needs_its_parent_tuning_boxes():
     # optimization is a sub-control of tuning boxes: with the tuning region hidden
-    # there is nothing to annotate, so the power row stays away even when toggled on
+    # there is nothing to annotate, so the power stays away even when toggled on
     cells = {c.id for c in _with(optimization=True, tuning_boxes=False).cells}
     assert "optimization:power" not in cells
-    assert "label:optimization" not in cells
 
 
-def test_optimization_power_sits_on_a_grey_panel():
-    # like every value tile, the power rides a grey panel (never a bare floating number)
+def test_optimization_power_nests_inside_the_damage_tile_panel():
+    # no separate optimization panel — the power rides within the damage×targets tile,
+    # which grows to enclose it (so it is never a bare floating number)
     lay = _with(optimization=True)
-    panel = {b.id: b for b in lay.blocks}.get("block:optimization")
-    assert panel is not None
-    assert panel.w > 0 and panel.h > 0
-
-
-def test_optimization_row_collapses_keeping_its_label_and_gridline():
-    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    s = settings.defaults()
-    s["optimization"] = True
-    full = {c.id for c in spreadsheet.build(base, s).cells}
-    assert "toggle:row:optimization" in full  # collapsible: it has a fold toggle
-    lay = spreadsheet.build(base, s, collapsed={"row:optimization"})
-    cells = {c.id for c in lay.cells}
-    assert "optimization:power" not in cells  # the value folds away
-    assert "label:optimization" in cells  # ...the label survives as a strip
-    assert {ln.id for ln in lay.lines} >= {"h:optimization"}  # ...leaving a gridline
+    blocks = {b.id: b for b in lay.blocks}
+    assert "block:optimization" not in blocks
+    pw = {c.id: c for c in lay.cells}["optimization:power"]
+    panel = blocks["block:damage:targets"]
+    assert panel.y <= pw.y and pw.y + pw.h <= panel.y + panel.h
 
 
 def test_optimization_on_adds_a_held_intervals_column():

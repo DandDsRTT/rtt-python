@@ -754,11 +754,10 @@ def build(state, settings=None, collapsed=None,
     # basis / target list. An independent box toggle, riding between domain primes and commas.
     detempering_vectors = service.generator_detempering(state.mapping) if show_detempering else ()
     detempering_tiles = (("block:vec:detempering", "vectors", "detempering"),) if show_detempering else ()
-    # the optimization power rides one tile over the targets column (guarded by panel()
-    # and the toggle loop, so it adds nothing unless the optimization row is present)
+    # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
+    # tile (see opt_box below), not in a tile/row of their own
     tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + TILES + AUDIO_TILES + UNITS_TILES
-             + interest_tiles + held_tiles + detempering_tiles
-             + (("block:optimization", "optimization", "targets"),))
+             + interest_tiles + held_tiles + detempering_tiles)
     # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
     # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
     # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
@@ -834,7 +833,6 @@ def build(state, settings=None, collapsed=None,
         ("complexity", ROW_H, show_weighting, True, "complexity"),
         ("weight", ROW_H, show_weighting, True, "weight"),
         ("damage", ROW_H, show_tuning, True, "damage"),
-        ("optimization", ROW_H, show_optimization, True, "optimization"),
     )
     # the present rows that carry an in-tile caption; a column is floored wide enough to
     # keep each of these within MAX_CAPTION_LINES (see _caption_floor in the loop)
@@ -953,6 +951,12 @@ def build(state, settings=None, collapsed=None,
     norm_ctrl = (show_alt_complexity and "row:complexity" not in collapsed
                  and col_open("targets") and "tile:complexity:targets" not in collapsed)
     norm_extra = (RANGE_GAP + PRESELECT_H) if norm_ctrl else 0
+    # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target-interval
+    # damage list tile (like the ranges box in the gens tile), gated on the optimization
+    # sub-control. Reserve their height up front so the board stays clear below the tile.
+    opt_ctrl = (show_optimization and "row:damage" not in collapsed
+                and col_open("targets") and "tile:damage:targets" not in collapsed)
+    opt_extra = (RANGE_GAP + ROW_H) if opt_ctrl else 0
 
     header_y = 0
     col_node_y = header_h + (GAP - TOGGLE) / 2  # the column toggle sits just under the header text
@@ -1054,6 +1058,8 @@ def build(state, settings=None, collapsed=None,
             tile_h[key] += presc_extra
         if key == "complexity":  # room for the alt.-complexity norm chooser below the list
             tile_h[key] += norm_extra
+        if key == "damage":  # room for the optimization controls below the damage list
+            tile_h[key] += opt_extra
         y += tile_h[key] + GAP
     total_h = y
 
@@ -1501,13 +1507,15 @@ def build(state, settings=None, collapsed=None,
                              "rangemode", text=range_mode))
         gtm_box = (gx, cy, gw, RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
 
-    # the optimization power 𝑝 of the current tuning, annotating the bottom of the
-    # tuning boxes (the scheme's Lp-norm order: ∞ minimax, 2 least-squares, 1 average).
-    # It rides the target-intervals column — the tuning's own column, whose damage list
-    # the optimization minimizes — and reads like a count: "𝑝 = ∞".
-    if tile_open("optimization", "targets"):
+    # the optimization power 𝑝 of the current tuning (the scheme's Lp-norm order: ∞ minimax,
+    # 2 least-squares, 1 average), nested at the BOTTOM of the target-interval damage list
+    # tile — the tuning's own column, whose damages the optimization minimizes. Reads like a
+    # count: "𝑝 = ∞". The damage tile's panel grows by opt_extra (above) to enclose it, so it
+    # sits inside the tile rather than in a row of its own (which the mockup has no trace of).
+    if opt_ctrl:
         power = _format_power(service.optimization_power(tuning_scheme))
-        cells.append(CellBox("optimization:power", col_x["targets"], row_y["optimization"],
+        oy = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
+        cells.append(CellBox("optimization:power", col_x["targets"], oy,
                              col_w["targets"], ROW_H, "optimization", text=f"{_mathit('p')} = {power}"))
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
