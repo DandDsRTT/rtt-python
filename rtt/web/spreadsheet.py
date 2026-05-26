@@ -937,8 +937,6 @@ def build(state, settings=None, collapsed=None,
         # zero when names are hidden (no caption renders) so the column keeps its content size
         if not show_captions:
             return 0
-        if key == "interest":
-            return 0  # interest captions overhang a single line (see CAPTIONS) — never widen the column
         return max((_min_width_for_lines(CAPTIONS[(rk, key)], MAX_CAPTION_LINES)
                     for rk in present_caption_rows
                     if (rk, key) in CAPTIONS and (rk, key) in declared_tiles), default=0)
@@ -1111,11 +1109,8 @@ def build(state, settings=None, collapsed=None,
         # no captions at all.
         if not (show_captions and key in CAPTIONED_ROWS and not folded):
             return 0
-        # interest captions overhang a single line (see CAPTIONS), so they count as one line
-        # regardless of the column's (variable) width — otherwise the band, and the board,
-        # would reflow as intervals are added/removed and the column narrows/widens.
-        lines = [1 if c == "interest" else _wrap_lines(CAPTIONS[(key, c)], open_col_w[c])
-                 for c in col_x if (key, c) in CAPTIONS and (key, c) in declared_tiles]
+        lines = [_wrap_lines(CAPTIONS[(key, c)], open_col_w[c]) for c in col_x
+                 if (key, c) in CAPTIONS and (key, c) in declared_tiles]
         return max(lines, default=1) * CAPTION_LINE
 
     # pass the held intervals + any frozen manual tuning so the plain text builds the SAME
@@ -1770,8 +1765,8 @@ def build(state, settings=None, collapsed=None,
                 bracket(f"{key}:commalist", LIST_BRACKETS, "commas", row_y[key], ROW_H)
             if tile_open(key, "targets"):
                 bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
-            if mi and tile_open(key, "interest"):
-                bracket(f"{key}:ilist", LIST_BRACKETS, "interest", row_y[key], ROW_H)
+            # the interest size rows carry NO bracket — the whole interest column is a bare
+            # collection of standalone values, not a [ … ] list (per the mockup)
             if nh and tile_open(key, "held"):
                 bracket(f"{key}:hlist", LIST_BRACKETS, "held", row_y[key], ROW_H)
     if tile_open("weight", "targets"):
@@ -2035,7 +2030,8 @@ def build(state, settings=None, collapsed=None,
     matrix_frame("prescaling", "primes", "prescaling")
     matrix_frame("prescaling", "commas", "prescaling:commas")
     matrix_frame("prescaling", "targets", "prescaling:targets")
-    matrix_frame("prescaling", "interest", "prescaling:interest")
+    # the interest prescaling is NOT framed as a matrix — its columns stand alone (see the
+    # monzo_list_marks call below), like the rest of the interest column
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is
     # marked top + bottom — inset so they stop short of the rules. The foot tells the
@@ -2074,6 +2070,9 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
     monzo_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
     monzo_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
+    # the interest prescaling row is prescaled vectors in superspace (kets) — standalone
+    # columns like the interval-vectors row, not the matrix frame the other columns use
+    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the

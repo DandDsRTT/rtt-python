@@ -644,13 +644,14 @@ def test_plain_text_interest_column_is_standalone_kets_not_a_matrix():
     assert pt[("vectors", "interest")] == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"
     # mapped into generator coords (close }), again standalone — not a bracketed matrix
     assert pt[("mapping", "interest")] == "[0 1} [-1 2} [-1 2} [3 -4}"
-    # the size rows are ordinary lists over the intervals, like the targets column
-    assert pt[("tuning", "interest")] == f"[{cents(sizes.tempered)}]"
-    assert pt[("just", "interest")] == f"[{cents(sizes.just)}]"
-    assert pt[("retune", "interest")] == f"[{cents(sizes.errors)}]"
-    assert pt[("complexity", "interest")].startswith("[") and pt[("complexity", "interest")].endswith("]")
-    # prescaling mirrors its (still-matrix) grid tile: a wrapped ket list, like the targets
-    assert pt[("prescaling", "interest")].startswith("[[") and pt[("prescaling", "interest")].endswith("⟩]")
+    # the size rows are bare numbers — the whole interest column drops the enclosing [ … ]
+    assert pt[("tuning", "interest")] == cents(sizes.tempered)
+    assert pt[("just", "interest")] == cents(sizes.just)
+    assert pt[("retune", "interest")] == cents(sizes.errors)
+    assert "[" not in pt[("complexity", "interest")] and "]" not in pt[("complexity", "interest")]
+    # prescaling is standalone kets too (no outer wrap), like the interval-vectors row
+    assert pt[("prescaling", "interest")].startswith("[") and pt[("prescaling", "interest")].endswith("⟩")
+    assert not pt[("prescaling", "interest")].endswith("⟩]")
     # no interest entries when the column is empty
     assert ("vectors", "interest") not in service.plain_text_values(state)
 

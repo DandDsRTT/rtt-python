@@ -495,9 +495,6 @@ _CSS = f"""
    half a line below a two-line sibling's top rather than hugging the cells. */
 .rtt-caption {{ width:100%; text-align:center; text-wrap:balance; font-size:9px; line-height:10px;
                color:#333; overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }}
-/* the narrow intervals-of-interest column's captions overhang a single line (centred,
-   overflowing into the gutters) like the column title, rather than wrapping tall */
-.rtt-caption-overhang {{ white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }}
 .rtt-caption-cell {{ align-items:center; }}
 /* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power", "double-click
    to lock") stay on ONE line — centred under their control, overflowing sideways if need be —
@@ -1684,11 +1681,8 @@ def index() -> None:
                 math_cells[cb.id] = ui.html("").classes("rtt-units")  # content set in render()
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
-                cls = "rtt-caption"
-                if cb.id.startswith("optimization:"):
-                    cls += " rtt-opt-1line"  # the optimization box's captions stay on one line (no wrap)
-                elif cb.id.endswith(":interest"):
-                    cls += " rtt-caption-overhang"  # single-line overhang (the narrow column)
+                # the optimization box's captions stay on one line (no wrap), unlike tile names
+                cls = "rtt-caption rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-caption"
                 captions[cb.id] = ui.html("").classes(cls)  # content set in render()
             elif cb.kind == "preselect":
                 name = cb.id.split(":", 1)[1]  # temperament / tuning / target

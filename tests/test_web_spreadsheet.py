@@ -1226,10 +1226,15 @@ def test_complexity_over_primes_is_a_map_the_rest_are_lists():
     ).cells}
     # the domain-prime complexity is a covector ⟨ … ] (a map), like the tuning map
     assert cells["bracket:complexity:map:l"].text == "⟨" and cells["bracket:complexity:map:r"].text == "]"
-    # the comma / target / interest complexities are plain [ … ] lists
+    # the comma / target complexities are plain [ … ] lists
     assert cells["bracket:complexity:commalist:l"].text == "["
     assert cells["bracket:complexity:list:l"].text == "[" and cells["bracket:complexity:list:r"].text == "]"
-    assert cells["bracket:complexity:ilist:l"].text == "["
+    # ...but the interest complexity drops its bracket — the whole interest column is bare
+    assert not any(c.startswith("bracket:complexity:ilist") for c in cells)
+    # and the interest prescaling stands alone too — per-column ket marks (top + angle ⟩),
+    # not the spanning matrix frame the comma/target prescaling tiles use
+    assert {"ebktop:prescaling:interest:0", "ebkangle:prescaling:interest:0"} <= set(cells)
+    assert "ebkbrace:prescaling:interest" not in cells
 
 
 def test_complexity_is_not_charted():
@@ -1959,7 +1964,8 @@ def test_populated_interest_renders_plain_text_for_all_its_value_tiles():
     assert cells["ptext:vectors:interest"].text == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"
     assert cells["ptext:mapping:interest"].text == "[0 1} [-1 2} [-1 2} [3 -4}"
     assert {"ptext:tuning:interest", "ptext:just:interest", "ptext:retune:interest"} <= set(cells)
-    assert cells["ptext:just:interest"].text.startswith("[") and cells["ptext:just:interest"].text.endswith("]")
+    # the size rows' plain text is bare numbers too — no enclosing [ … ] (the whole column)
+    assert cells["ptext:just:interest"].text == "701.955 203.910 182.404 813.686"
 
 
 def test_interest_intervals_are_editable_monzo_vectors_like_the_comma_basis():
@@ -2007,35 +2013,35 @@ def test_empty_but_open_interest_still_offers_the_add_control():
     assert not any(c.startswith("interest_minus:") for c in cells)
 
 
-def test_adding_intervals_of_interest_neither_shrinks_the_header_nor_reflows_the_board():
+def test_adding_intervals_of_interest_never_shrinks_the_header():
     # regression: the long title floats the interest HEADER out to its two-line strip
-    # width; the few-interval value cells must not shrink that header (which would
-    # rewrap the title onto a third line). And the board height must not change as
-    # intervals are added: the captions are terse one-liners (so they never wrap taller
-    # in a narrow column), and an empty set reserves no caption band at all — an interest
-    # set is curated display data, not a layout dimension.
+    # width; the few-interval value cells must not shrink that header (which would rewrap
+    # the title onto a third line). The footprint hugs max(content, the caption's 2-line
+    # floor), so it only ever grows as intervals are added — like every other column.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     builds = [spreadsheet.build(base, collapsed=frozenset(), interest=[(0, 0, 0)] * n) for n in range(5)]
     widths = [{c.id: c for c in lay.cells}["header:interest"].w for lay in builds]
-    heights = [lay.height for lay in builds]
     assert widths == sorted(widths)  # monotonic: adding an interval never narrows the header
     assert min(widths) == widths[0]  # ...and never dips below the empty (title-strip) width
-    assert len(set(heights)) == 1  # the board height is unaffected by the interval count
 
 
 def test_interest_tiles_and_footprint_hug_their_content_the_title_overhangs():
-    # the grey tiles, value cells AND the column footprint hug the few narrow intervals —
-    # no empty padding out to the wide title. The two-line title is wider than the column
-    # and overhangs it (rendered without wrapping), rather than the footprint reserving the
-    # title's width and leaving the narrow tile adrift in it.
+    # the column footprint hugs its content — or the modest width its captions need to wrap
+    # within MAX_CAPTION_LINES, like every other column — NOT the wide title's width. The
+    # two-line title overhangs the column rather than the footprint reserving its width and
+    # leaving the narrow tile adrift in it.
     lay = _with_interest(_INTEREST[:1])  # a single interval
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
     content_w = 2 * spreadsheet.BRACKET_W + 1 * spreadsheet.COL_W  # the two gutters + one cell
-    # the tile hugs that content — its PAD plus the FRAME_GAP its +-control overhangs each side
-    assert blocks["block:interest"].w == content_w + 2 * spreadsheet.PAD + 2 * spreadsheet.FRAME_GAP
-    # the footprint hugs the content too (no title reservation); the title overhangs it
-    assert cells["header:interest"].w == content_w
+    # one interval's content is narrow, so its captions' 2-line floor sets the (still modest) width
+    floor = max(spreadsheet._min_width_for_lines(spreadsheet.CAPTIONS[(rk, "interest")], spreadsheet.MAX_CAPTION_LINES)
+                for rk in ("vectors", "mapping", "tuning", "just", "retune"))
+    hug_w = max(content_w, floor)
+    # the tile hugs that width — its PAD plus the FRAME_GAP its +-control overhangs each side
+    assert blocks["block:interest"].w == hug_w + 2 * spreadsheet.PAD + 2 * spreadsheet.FRAME_GAP
+    # the footprint hugs content/captions (no title reservation); the wider title overhangs it
+    assert cells["header:interest"].w == hug_w
     assert cells["header:interest"].w < spreadsheet._title_w("other intervals\nof interest")
 
 
@@ -2087,9 +2093,9 @@ def test_populated_interest_mapped_list_is_standalone_columns_not_a_matrix():
             "ebktop:imapped:1", "ebkbrace:imapped:1"} <= set(cells)
     assert "bracket:imapped:l" not in cells and "bracket:imapped:r" not in cells
     assert not any(c.startswith("sep:imapped:") for c in cells)
-    # the tempered/just/retuning size rows DO keep their plain list brackets (they are
-    # single-row [ … ] lists over the intervals, not stacked column vectors)
-    assert cells["bracket:tuning:ilist:l"].text == "[" and cells["bracket:retune:ilist:r"].text == "]"
+    # the tempered/just/retuning size rows drop their list brackets too — the whole interest
+    # column is a loose collection, not a matrix/list, so its values stand bare (per the mockup)
+    assert not any(c.startswith(("bracket:tuning:ilist", "bracket:just:ilist", "bracket:retune:ilist")) for c in cells)
 
 
 def test_populated_interest_has_per_interval_axes_and_panels():

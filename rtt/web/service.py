@@ -678,11 +678,11 @@ def plain_text_values(
         values.update({
             ("vectors", "interest"): _ket_list(interest, "⟩", wrap=False),
             ("mapping", "interest"): _ket_list(zip(*interest_mapped), "}", wrap=False),
-            ("tuning", "interest"): _cents_list(interest_sizes.tempered),
-            ("just", "interest"): _cents_list(interest_sizes.just),
-            ("retune", "interest"): _cents_list(interest_sizes.errors),
-            ("prescaling", "interest"): _cents_ket_list(_prescaled(interest)),
-            ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios)),
+            ("tuning", "interest"): _cents_list(interest_sizes.tempered, wrap=False),
+            ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
+            ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
+            ("prescaling", "interest"): _cents_ket_list(_prescaled(interest), wrap=False),
+            ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios), wrap=False),
         })
     return values
 
@@ -724,9 +724,11 @@ def _cents_map(values) -> str:
     return "⟨" + " ".join(cents(v) for v in values) + "]"
 
 
-def _cents_list(values) -> str:
-    """A tuning list over the targets: ``[1200.000 1901.955 …]``."""
-    return "[" + " ".join(cents(v) for v in values) + "]"
+def _cents_list(values, wrap: bool = True) -> str:
+    """A tuning list over the targets: ``[1200.000 1901.955 …]``. ``wrap=False`` drops the
+    enclosing ``[ ]`` for the intervals-of-interest column, whose values stand bare."""
+    body = " ".join(cents(v) for v in values)
+    return f"[{body}]" if wrap else body
 
 
 def _cents_genmap(values) -> str:
