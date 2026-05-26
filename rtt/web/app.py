@@ -501,10 +501,12 @@ _CSS = f"""
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
 .rtt-cents-int {{ font-size:10px; }}
 .rtt-cents-frac {{ font-size:7px; color:#000; }}
-/* the optimization objective's value, enlarged to a focal readout (the mockup shows it as
-   prominent as its ⟪𝐝⟫ₚ symbol), the fraction kept proportionally smaller */
-.rtt-opt-value .rtt-cents-int {{ font-size:15px; }}
-.rtt-opt-value .rtt-cents-frac {{ font-size:9px; }}
+/* the optimization objective's min-damage value: a static (non-interactive) gridded box
+   matching the editable power field beside it — a white, bordered box holding the cents value
+   (int over frac), sized to read like the ∞ input rather than a bare grid number */
+.rtt-opt-value {{ border:{_CELL_BORDER}; background:#fff; box-sizing:border-box; height:100%; }}
+.rtt-opt-value .rtt-cents-int {{ font-size:13px; }}
+.rtt-opt-value .rtt-cents-frac {{ font-size:8px; }}
 /* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
    line's font is scaled (inline) to fit the narrow value square, so it never overflows.
    No fixed height (like .rtt-tval): the cell centres it, and when a per-cell unit is

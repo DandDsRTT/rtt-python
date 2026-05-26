@@ -59,8 +59,10 @@ RANGE_MODE_H = 13  # height of the monotone/tradeoff range-mode selector (one ro
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
 OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
-OPT_POWER_W = 32  # width of the (roughly square) editable power field, centred in its column —
-# a tight box like the mockup's, not a full-column-width input
+OPT_POWER_W = 32  # width of the (roughly square) editable power field — and the matching static
+# min-damage box beside it — each a tight box centred in its column, not a full-column input
+OPT_BTN_W = 76  # width of the optimize button: a normal rectangle hugging the word, centred in
+# its column (not a giant full-width/full-height button), the same ROW_H height as the power field
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -1661,34 +1663,41 @@ def build(state, settings=None, collapsed=None,
         box_top = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
         title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
         content_top = title_top + OPT_TITLE_H
-        sym_top = content_top + ROW_H            # the symbol row, under the values
+        sym_top = content_top + ROW_H            # the symbol/hint row, under the value boxes
         cap_top = sym_top + SYMBOL_H             # the caption row, under the symbols
         body_h = ROW_H + SYMBOL_H + 2 * CAPTION_LINE  # the value+symbol+caption stack height
-        # three columns: objective | power | optimize button (a touch wider, per the mockup)
+        # three columns: objective | power | optimize button
         cw = ow * 0.3
         obj_x, pow_x, btn_x = ox, ox + cw, ox + 2 * cw
+        btn_w = ow - 2 * cw                      # the button column's width
         objective = _lp_objective(target_sizes.damage, service.optimization_power(tuning_scheme))
         power = _format_power(service.optimization_power(tuning_scheme))
         cells.append(CellBox("optimization:title", ox, title_top, ow, OPT_TITLE_H, "boxtitle",
                              text="optimization"))
-        # the objective: its cents value over the symbol ⟪𝐝⟫ₚ (the Lp norm the tuning minimizes)
-        cells.append(CellBox("optimization:objective", obj_x, content_top, cw, ROW_H, "tval",
-                             text=service.cents(objective)))
+        # the objective: the minimized-damage value shown as a static (non-interactive) gridded
+        # box — a tight box centred in its column, matching the power field beside it — over the
+        # symbol ⟪𝐝⟫ₚ (the Lp norm the tuning minimizes)
+        cells.append(CellBox("optimization:objective", obj_x + (cw - OPT_POWER_W) / 2, content_top,
+                             OPT_POWER_W, ROW_H, "tval", text=service.cents(objective)))
         cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, cw, SYMBOL_H, "symbol",
                              text="⟪𝐝⟫ₚ"))
-        # the power: a tight, roughly square editable field (∞ minimax, 2 miniRMS, 1 miniaverage)
-        # centred in its column, over the symbol 𝑝 and the caption "optimization power"; app.py
-        # routes edits to set_optimization_power
+        # the power: a matching tight, roughly square editable field (∞ minimax, 2 miniRMS,
+        # 1 miniaverage) centred in its column, over the symbol 𝑝 and the caption "optimization
+        # power"; app.py routes edits to set_optimization_power
         cells.append(CellBox("optimization:power", pow_x + (cw - OPT_POWER_W) / 2, content_top,
                              OPT_POWER_W, ROW_H, "powerinput", text=power))
         cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, cw, SYMBOL_H, "symbol",
                              text="𝑝"))
         cells.append(CellBox("optimization:power:caption", pow_x, cap_top, cw, 2 * CAPTION_LINE,
                              "caption", text="optimization power"))
-        # the button single-clicks to optimize once, double-clicks to lock auto-optimize;
-        # app.py owns that behaviour and the lock visual, reading the editor
-        cells.append(CellBox("optimization:button", btn_x, content_top, ow - 2 * cw, body_h, "optimize",
-                             text="optimize"))
+        # the optimize button: a normal rectangle hugging the word (the same ROW_H height as the
+        # power field, centred in its column), with a "double-click to lock" hint beneath it. It
+        # single-clicks to optimize once, double-clicks to lock auto-optimize; app.py owns that
+        # behaviour and the lock visual, reading the editor
+        cells.append(CellBox("optimization:button", btn_x + (btn_w - OPT_BTN_W) / 2, content_top,
+                             OPT_BTN_W, ROW_H, "optimize", text="optimize"))
+        cells.append(CellBox("optimization:button:hint", btn_x, sym_top, btn_w, 2 * CAPTION_LINE,
+                             "caption", text="double-click to lock"))
         opt_box = (ox, box_top, ow, OPT_PAD_T + OPT_TITLE_H + body_h)
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),

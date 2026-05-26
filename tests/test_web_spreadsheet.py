@@ -2362,10 +2362,16 @@ def test_optimization_box_lays_out_objective_power_and_button_in_columns():
     assert on["optimization:objective"].y < on["optimization:objective:symbol"].y
     assert (on["optimization:power"].y < on["optimization:power:symbol"].y
             < on["optimization:power:caption"].y)
-    # the editable power field is a tight box (centred in its column), not a full-width input,
-    # matching the mockup's small ∞ box — narrower than the objective value cell beside it
-    assert on["optimization:power"].w < on["optimization:objective"].w
+    # the min-damage objective is a static gridded box matching the editable power field —
+    # both tight boxes (centred in their columns), the same width, narrower than their column
+    assert on["optimization:objective"].w == on["optimization:power"].w
+    assert on["optimization:objective"].w < on["optimization:objective:symbol"].w  # box < its column
     assert on["optimization:power"].x > on["optimization:power:symbol"].x  # centred over its 𝑝 label
+    # the optimize button is a normal rectangle the same height as the value boxes (the p input),
+    # not a giant full-height button, with a "double-click to lock" hint beneath it
+    assert on["optimization:button"].h == on["optimization:objective"].h
+    assert on["optimization:button:hint"].text == "double-click to lock"
+    assert on["optimization:button:hint"].y > on["optimization:button"].y
     # the title sits inside the box (below its top border), not awkwardly on it
     box = {b.id: b for b in _with(optimization=True).blocks}["block:optimization:box"]
     assert on["optimization:title"].y > box.y
