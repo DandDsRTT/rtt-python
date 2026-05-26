@@ -2463,15 +2463,17 @@ def test_held_column_symbols_are_map_times_basis_products():
 
 
 def test_held_column_captions_are_full_held_interval_names():
-    on = _held(names=True, weighting=True)  # weighting opens the complexity row
-    # full descriptive names, mirroring the target interval column (not the terse
-    # one-word captions of the other-intervals-of-interest column)
+    on = _held(names=True, weighting=True)  # weighting opens the prescaling + complexity rows
+    # full descriptive names mirroring the comma column ("held interval basis" in place of
+    # "comma basis"), without the comma column's "(made to vanish!)" — held intervals are held
+    # just, not vanished
     assert on["caption:vectors:held"].text == "held interval basis"
     assert on["caption:mapping:held"].text == "mapped held interval basis"
-    assert on["caption:tuning:held"].text == "tempered held interval size list"
-    assert on["caption:just:held"].text == "(just) held interval size list"
-    assert on["caption:retune:held"].text == "held interval error list"
-    assert on["caption:complexity:held"].text == "held interval complexity list"
+    assert on["caption:tuning:held"].text == "tempered held interval basis interval size list"
+    assert on["caption:just:held"].text == "(just) held interval basis interval size list"
+    assert on["caption:retune:held"].text == "held interval basis interval retuning list"
+    assert on["caption:prescaling:held"].text == "complexity prescaled held interval basis"
+    assert on["caption:complexity:held"].text == "held interval basis interval complexity list"
 
 
 def test_held_column_equivalences_show_the_held_just_identities():
@@ -2490,6 +2492,17 @@ def test_held_column_shows_plain_text_values():
     assert "ptext:tuning:held" in on and "ptext:just:held" in on
     # held just ⇒ the retuning error vanishes
     assert abs(float(on["ptext:retune:held"].text.strip("[]"))) < 1e-3
+
+
+def test_held_column_has_the_full_interval_column_tile_set():
+    # the held column mirrors the intervals-of-interest column's FULL tile set: besides the
+    # vectors / mapping / sizes / complexity tiles, it gets the units-row label, the complexity-
+    # prescaling matrix, and the just / mapped audio rows (each gated on its own toggle)
+    on = _held(weighting=True, audio=True, domain_units=True)
+    assert "cell:prescaling:held:0:0" in on     # the complexity-prescaling matrix over the held interval
+    assert "speaker:just_audio:held:0" in on    # the just audio row sounds the held interval
+    assert "speaker:mapped_audio:held:0" in on  # the mapped (tempered) audio row
+    assert "urow:held:0" in on                  # the units row's /1 over the held column
 
 
 def test_generator_detempering_column_holds_the_d_matrix():

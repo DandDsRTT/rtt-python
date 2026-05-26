@@ -152,13 +152,15 @@ CAPTIONS = {
     ("prescaling", "interest"): "prescaled",
     ("complexity", "interest"): "complexity",
     # the held column is the optimization's held-just constraint set: like the comma basis
-    # (special intervals the temperament treats specially), it carries full descriptive
-    # names — mirroring the target interval column ("held interval …" for "target interval …")
+    # (special intervals the temperament treats specially), it carries full descriptive names
+    # mirroring the comma column ("held interval basis" in place of "comma basis"), but without
+    # the comma column's "(made to vanish!)" — held intervals are held just, not vanished
     ("mapping", "held"): "mapped held interval basis",
-    ("tuning", "held"): "tempered held interval size list",
-    ("just", "held"): "(just) held interval size list",
-    ("retune", "held"): "held interval error list",
-    ("complexity", "held"): "held interval complexity list",
+    ("tuning", "held"): "tempered held interval basis interval size list",
+    ("just", "held"): "(just) held interval basis interval size list",
+    ("retune", "held"): "held interval basis interval retuning list",
+    ("prescaling", "held"): "complexity prescaled held interval basis",
+    ("complexity", "held"): "held interval basis interval complexity list",
 }
 CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # The quantity symbol shown above each name when symbols is on. Styling: the maps
@@ -374,6 +376,7 @@ UNITS = {
     ("tuning", "held"): "¢",
     ("just", "held"): "¢",
     ("retune", "held"): "¢",
+    ("prescaling", "held"): "oct",
     ("complexity", "held"): "(C)",
 }
 UNITED_ROWS = frozenset(row for row, _ in UNITS)  # rows that reserve a units-line slot
@@ -799,7 +802,11 @@ def build(state, settings=None, collapsed=None,
         ("block:tuning:held", "tuning", "held"),    # tempered sizes (= just, since held)
         ("block:just:held", "just", "held"),        # just sizes
         ("block:retune:held", "retune", "held"),    # errors (≈ 0, since held just)
+        ("block:urow:held", "units", "held"),       # the units row's /1 over the held column
+        ("block:prescaling:held", "prescaling", "held"),
         ("block:complexity:held", "complexity", "held"),
+        ("block:just_audio:held", "just_audio", "held"),
+        ("block:mapped_audio:held", "mapped_audio", "held"),
     )
     # The optimization box's other mockup column — unchanged intervals (count u) — is
     # deferred to the projection feature: the unchanged interval basis is U = nullspace(P − I),
@@ -1290,6 +1297,9 @@ def build(state, settings=None, collapsed=None,
         if tile_open("units", "interest"):
             for ii in range(mi):
                 cells.append(CellBox(f"urow:interest:{ii}", interest_left(ii), uy, COL_W, ROW_H, "units", text="/1"))
+        if tile_open("units", "held"):
+            for ih in range(nh):
+                cells.append(CellBox(f"urow:held:{ih}", held_left(ih), uy, COL_W, ROW_H, "units", text="/1"))
 
     # quantities row: domain primes (+ controls) and target ratios (below the
     # tile's toggle head, like every other row's values). The whole row -- its
@@ -1533,7 +1543,7 @@ def build(state, settings=None, collapsed=None,
 
     # Source the pitches from tuning_data so the audio rows stay in lockstep with the just /
     # tuning rows they sound (one source of truth for "what those rows contain").
-    list_groups = ("primes", "commas", "targets", "interest")  # tuning_data's tuple order
+    list_groups = ("primes", "commas", "targets", "interest", "held")  # tuning_data's tuple order
     if row_open("just_audio"):
         for group, vals in zip(list_groups, tuning_data["just"]):
             audio_tile("just_audio", group, vals)
@@ -1550,8 +1560,9 @@ def build(state, settings=None, collapsed=None,
         "commas": state.comma_basis,
         "targets": target_vectors,
         "interest": interest,
+        "held": held,
     }
-    for group in ("primes", "commas", "targets", "interest"):
+    for group in ("primes", "commas", "targets", "interest", "held"):
         if not tile_open("prescaling", group):
             continue
         left = group_left[group]
