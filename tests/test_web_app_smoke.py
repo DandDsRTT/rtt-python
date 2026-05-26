@@ -356,9 +356,11 @@ def test_interest_example_is_the_bold_interval_symbol():
 def test_show_toggle_labels_wrap_long_names_onto_two_lines():
     # most toggle labels are short and fit the narrow label column on one line, but "other
     # intervals of interest" needs two — the label honours its embedded newline (pre-line)
-    # instead of clipping/overflowing as nowrap would
+    # instead of clipping/overflowing as nowrap would. Its line-height is pinned tight
+    # (1) so the two wrapped lines sit almost touching, not spaced like neighbouring rows.
     rule = _css_rule(".rtt-show-item .q-checkbox__label")
     assert "white-space:pre-line" in rule
+    assert "line-height:1" in rule
 
 
 def test_brace_is_one_filled_path_with_width_independent_end_curls():

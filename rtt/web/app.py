@@ -653,7 +653,7 @@ _CSS = f"""
 /* one toggle row: the checkbox+label in the Show column, its sample in the example column */
 .rtt-show-row {{ display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }}
 .rtt-show-item .q-checkbox__label {{ font-family:'Cambria',Georgia,serif; font-size:13px;
-                                    color:#000; white-space:pre-line; }}
+                                    color:#000; white-space:pre-line; line-height:1; }}
 /* a not-yet-built toggle is disabled — make that unmistakable: render its label AND
    its checkbox box the same light grey (vs the crisp black of an active toggle), a
    far clearer "inactive" cue than Quasar's faint default opacity dim alone */
