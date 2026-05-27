@@ -3051,7 +3051,9 @@ def _colormap_layout():
     s = settings.defaults()
     s["tuning_colorization"] = True
     s["temperament_colorization"] = True
-    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=((-1, 1, 0),))
+    s["optimization"] = True  # reveal the held-intervals column (a tuning-box sub-control)
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                             interest=((-1, 1, 0),), held_monzos=((-1, 1, 0),))
 
 
 def test_colorization_follows_the_content_map():
@@ -3071,9 +3073,11 @@ def test_colorization_follows_the_content_map():
     assert at("prime:0") == N                  # quantities × primes (the domain basis)
     assert at("target:0") == N                 # quantities × targets (T)
     assert at("interest:0") == N               # quantities × other-intervals
+    assert at("held:0") == N                   # quantities × held intervals (H, a chosen list)
     assert at("basis:0") == N                  # interval-vectors × spine (the domain basis)
     assert at("cell:vec:targets:0:0") == N     # interval-vectors × targets (the target vectors)
     assert at("cell:interest:0:0") == N        # interval-vectors × other-intervals
+    assert at("cell:held:0:0") == N            # interval-vectors × held intervals (the H basis)
     # the generators in the spine are the generator basis — an input, carrying neither the
     # tuning map 𝒈 nor the embedding G — so they're colourless, like the domain primes
     assert at("gen:0") == N                     # mapping × spine (the generator ratios)
@@ -3082,17 +3086,19 @@ def test_colorization_follows_the_content_map():
     assert at("cell:mapped_comma:0:0") == Y     # mapping × commas (𝑀C)
     assert at("cell:mapped:0:0") == Y           # mapping × targets (Y = 𝑀T)
     assert at("cell:imapped:0:0") == Y          # mapping × other-intervals (𝑀·interest)
+    assert at("cell:hmapped:0:0") == Y          # mapping × held intervals (𝑀H)
     # the tempered family 𝒕 = 𝒈𝑀 carries both G and 𝑀 → green; the bare genmap 𝒈 is cyan.
     # the retuning row 𝒓 = 𝒕 − 𝒋 keeps the 𝒈𝑀 term's G and 𝑀 (a difference still has them)
     assert at("tuning:gen:0") == C              # tuning × generators (𝒈, the generator tuning map)
-    for col in ("prime", "comma", "target", "interest"):
-        assert at(f"tuning:{col}:0") == G       # 𝒕 / 𝒕C / 𝐚 = 𝒈𝑀(…)
-        assert at(f"retune:{col}:0") == G       # 𝒓 / 𝒓C / 𝐞 = (𝒈𝑀 − 𝒋)(…)
+    for col in ("prime", "comma", "target", "interest", "held"):
+        assert at(f"tuning:{col}:0") == G       # 𝒕 / 𝒕C / 𝐚 / 𝒕H = 𝒈𝑀(…)
+        assert at(f"retune:{col}:0") == G       # 𝒓 / 𝒓C / 𝐞 / 𝒓H = (𝒈𝑀 − 𝒋)(…)
     # the just sizes carry no G/𝑀; only the comma column has C (the just size of the commas)
     assert at("just:prime:0") == N              # just × primes (𝒋)
     assert at("just:comma:0") == Y              # just × commas (𝒋C)
     assert at("just:target:0") == N             # just × targets (𝐨 = 𝒋T)
     assert at("just:interest:0") == N           # just × other-intervals
+    assert at("just:held:0") == N               # just × held intervals (𝒋H, held just)
     # the damage row rides the error chain 𝐞 = (𝒈𝑀 − 𝒋)T → green
     assert at("damage:target:0") == G           # damage × targets (𝐝 = |𝐞|diag(𝒘))
 
@@ -3303,7 +3309,9 @@ def test_caption_widened_commas_tile_keeps_its_controls_on_the_panel_edges():
 def _audio_colormap():
     s = settings.defaults()
     s["tuning_colorization"] = s["temperament_colorization"] = s["audio"] = True
-    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, interest=((-1, 1, 0),))
+    s["optimization"] = True  # reveal the held-intervals column (and its audio tiles)
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                             interest=((-1, 1, 0),), held_monzos=((-1, 1, 0),))
 
 
 def test_audio_rows_colorize_by_content_like_the_rows_they_sound():
@@ -3316,11 +3324,11 @@ def test_audio_rows_colorize_by_content_like_the_rows_they_sound():
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
     assert at("speaker:just_audio:comma:0") == Y           # 𝒋C
-    for g in ("prime", "target", "interest"):
-        assert at(f"speaker:just_audio:{g}:0") == N         # 𝒋 / 𝐨: no G/𝑀/C
+    for g in ("prime", "target", "interest", "held"):
+        assert at(f"speaker:just_audio:{g}:0") == N         # 𝒋 / 𝐨 / 𝒋H: no G/𝑀/C
     assert at("speaker:mapped_audio:gen:0") == C            # 𝒈 (the generator tuning map)
-    for g in ("prime", "comma", "target", "interest"):
-        assert at(f"speaker:mapped_audio:{g}:0") == G       # 𝒕 = 𝒈𝑀
+    for g in ("prime", "comma", "target", "interest", "held"):
+        assert at(f"speaker:mapped_audio:{g}:0") == G       # 𝒕 / 𝒕H = 𝒈𝑀
 
 
 def test_every_audio_tile_gets_its_own_bank():

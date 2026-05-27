@@ -264,6 +264,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("mapping", "detempering"): frozenset({"M"}),      # 𝑀D (D is colourless, like the target list)
     ("mapping", "targets"): frozenset({"M"}),          # Y = 𝑀T
     ("mapping", "interest"): frozenset({"M"}),         # 𝑀·interest
+    ("mapping", "held"): frozenset({"M"}),             # 𝑀H (the held intervals are a chosen list, like interest)
     ("canon", "primes"): frozenset({"M"}),             # the canonical mapping (𝑀 = 𝐅𝑀_c): still the 𝑀 family
     # the generator tuning map 𝒈 = G; the tempered family 𝒕 = 𝒈𝑀 etc. carry G and M (green)
     ("tuning", "gens"): frozenset({"G"}),              # 𝒈 (the generator tuning map)
@@ -272,6 +273,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("tuning", "detempering"): frozenset({"G", "M"}),  # 𝒕D = 𝒈 (the tempered family carries G𝑀)
     ("tuning", "targets"): frozenset({"G", "M"}),      # 𝐚 = 𝒈𝑀T
     ("tuning", "interest"): frozenset({"G", "M"}),
+    ("tuning", "held"): frozenset({"G", "M"}),         # 𝒕H (held just, but the tempered family still carries G𝑀)
     # the just sizes carry no G/𝑀; only the comma column has C (the just size of the commas)
     ("just", "commas"): frozenset({"C"}),              # 𝒋C
     # the retuning/error chain 𝒓 = 𝒕 − 𝒋 keeps 𝒕's G and M; the comma column adds C
@@ -280,6 +282,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("retune", "detempering"): frozenset({"G", "M"}),  # 𝒓D (keeps 𝒕D's G𝑀, like the other retunings)
     ("retune", "targets"): frozenset({"G", "M"}),      # 𝐞 = 𝒓T
     ("retune", "interest"): frozenset({"G", "M"}),
+    ("retune", "held"): frozenset({"G", "M"}),         # 𝒓H (≈ 𝟎 since held just, but keeps 𝒕's G𝑀 like the others)
     ("damage", "targets"): frozenset({"G", "M"}),      # 𝐝 = |𝐞|diag(𝒘), via 𝐞
     # complexity over the comma basis norms C → temperament; over primes/targets it's colourless
     ("complexity", "commas"): frozenset({"C"}),        # 𝒄 of the comma basis (norm of 𝑋C)
@@ -291,6 +294,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("mapped_audio", "detempering"): frozenset({"G", "M"}),  # sounds 𝒕D (the tempered family)
     ("mapped_audio", "targets"): frozenset({"G", "M"}),
     ("mapped_audio", "interest"): frozenset({"G", "M"}),
+    ("mapped_audio", "held"): frozenset({"G", "M"}),   # sounds 𝒕H (the tempered family)
 }
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
