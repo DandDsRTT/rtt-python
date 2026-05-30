@@ -1911,6 +1911,39 @@ def test_math_expressions_is_an_interactive_toggle():
     assert "math_expressions" in settings.IMPLEMENTED
 
 
+def test_math_expressions_render_the_prescaler_diagonal_as_logs():
+    # the complexity prescaler L is exactly diag(log₂ prime) for the log-prime norm —
+    # the same closed-form-of-a-log structure the just row has — so math expressions
+    # gives each diagonal cell a "log₂{prime} = {value}" form (octaves, no 1200×). The
+    # off-diagonal cells are 0 (no closed form) and keep their plain "0" tval.
+    cells = {c.id: c for c in _with(weighting=True, math_expressions=True).cells}
+    assert cells["cell:prescaling:primes:0:0"].kind == "mathexpr"
+    assert cells["cell:prescaling:primes:0:0"].text == "log₂2\n= 1"  # log₂2 == 1, shown bare
+    assert cells["cell:prescaling:primes:1:1"].text == "log₂3\n= 1.585"
+    assert cells["cell:prescaling:primes:2:2"].text == "log₂5\n= 2.322"
+    assert cells["cell:prescaling:primes:0:1"].kind == "tval"  # off-diagonal stays plain
+    assert cells["cell:prescaling:primes:0:1"].text == "0"
+
+
+def test_math_expressions_render_the_prescaled_comma_basis_as_logs():
+    # 𝑋C = LC: each cell is the prime's log scaled by the comma's coefficient for that
+    # prime — so the syntonic comma 80/81 (basis sign — see the just-comma test) over
+    # 2.3.5 gives 4·log₂2, -4·log₂3, log₂5. A unit coefficient drops the ``1 ·`` prefix.
+    cells = {c.id: c for c in _with(weighting=True, math_expressions=True).cells}
+    assert cells["cell:prescaling:commas:0:0"].text == "4 · log₂2\n= 4"
+    assert cells["cell:prescaling:commas:1:0"].text == "-4 · log₂3\n= -6.340"
+    assert cells["cell:prescaling:commas:2:0"].text == "log₂5\n= 2.322"
+
+
+def test_math_expressions_without_quantities_show_only_the_prescaler_expression():
+    # quantities drives the "= value" second line for the prescaling row too; with it
+    # off, the cell is just the bare closed form — no decimal, no newline, like the
+    # just row's math expression in the same configuration
+    cells = {c.id: c for c in _with(weighting=True, math_expressions=True, quantities=False).cells}
+    assert cells["cell:prescaling:primes:1:1"].text == "log₂3"
+    assert cells["cell:prescaling:commas:1:0"].text == "-4 · log₂3"
+
+
 def test_counts_on_adds_a_top_row_of_per_column_cardinalities():
     cells = {c.id: c for c in _with(counts=True).cells}
     # the counts row reports each present column's set cardinality, with the
