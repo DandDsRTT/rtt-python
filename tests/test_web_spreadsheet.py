@@ -1523,14 +1523,22 @@ def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdow
     off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
     on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
     assert "caption:prescaler" not in off
-    cap = on["caption:prescaler"]
-    assert cap.kind == "caption"
-    assert cap.text == "predefined prescalers"
-    assert cap.h == spreadsheet.CAPTION_LINE
-    assert cap.y > on["control:prescaler"].y  # caption sits below the dropdown
+    assert "caption:diminuator" not in off
+    cap_p = on["caption:prescaler"]
+    assert cap_p.kind == "caption"
+    assert cap_p.text == "predefined prescalers"
+    assert cap_p.y > on["control:prescaler"].y  # caption sits below the dropdown
+    # the diminuator's label is a separate caption (a narrow inline label rendered broken in
+    # the primes column at d=3, with the checkbox square jammed between "ignore" and "diminuator")
+    cap_d = on["caption:diminuator"]
+    assert cap_d.kind == "caption"
+    assert cap_d.text == "ignore diminuator"
+    assert cap_d.y > on["control:diminuator"].y  # caption sits below the checkbox square
     # the diminuator checkbox rides to the RIGHT of the dropdown on the same row (no longer below)
     assert on["control:diminuator"].y == on["control:prescaler"].y
     assert on["control:diminuator"].x > on["control:prescaler"].x
+    # ...and the captions are bottom-aligned (one tidy label row, like the optimization box)
+    assert cap_p.y == cap_d.y
 
 
 def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
@@ -1539,11 +1547,10 @@ def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
     assert "control:diminuator" not in off  # no control unless alt. complexity is on
     ctrl = on["control:diminuator"]
     assert ctrl.kind == "control_check"
-    assert ctrl.text == "ignore diminuator"
+    assert ctrl.text == ""  # the square only — "ignore diminuator" is a separate caption beneath
     assert ctrl.checked is False  # the default scheme is lp, which uses the diminuator
-    # the checkbox sits in box 𝐋 (over the primes); its row-position is covered by the layout test
-    hdr = on["header:primes"]
-    assert hdr.x <= ctrl.x and ctrl.x + ctrl.w <= hdr.x + hdr.w
+    # the square sits in box 𝐋 (over the primes); its row-position is covered by the layout test
+    assert on["header:primes"].x <= ctrl.x
 
 
 def test_alt_complexity_captions_the_weight_slope_chooser():

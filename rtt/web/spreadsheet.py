@@ -1173,15 +1173,19 @@ def build(state, settings=None, collapsed=None,
     # its choosers' height up front so the rows below drop clear.
     lbox_ctrl = (show_alt_complexity and "row:prescaling" not in collapsed
                  and col_open("primes") and "tile:prescaling:primes" not in collapsed)
-    # box 𝐋 lays its two controls on ONE row (dropdown left, checkbox right) plus a caption
-    # under the dropdown — like the optimization box's value-then-caption pattern
-    lbox_extra = (RANGE_GAP + PRESELECT_H + CAPTION_LINE) if lbox_ctrl else 0
+    # box 𝐋 lays its two controls on ONE row (dropdown left, checkbox square right) with a
+    # caption under each (the diminuator's label moves out of the inline checkbox into a
+    # caption, since the inline version wraps broken in the narrow primes column). Captions
+    # wrap to two lines at d=3, so reserve 2 * CAPTION_LINE.
+    lbox_extra = (RANGE_GAP + PRESELECT_H + 2 * CAPTION_LINE) if lbox_ctrl else 0
     # box 𝒄 lays its three controls in ONE row below the complexity list: the predefined-
     # complexity master dropdown on the left, then the q norm-power field and the dual(q)
     # display, each captioned (q/dual using the optimization box's value-symbol-caption stack).
+    # q/dual's captions ("interval complexity norm power", "dual norm power") wrap to up to
+    # three lines in their overhanging caption slot — reserve the height up front.
     cbox_ctrl = (show_alt_complexity and "row:complexity" not in collapsed
                  and col_open("targets") and "tile:complexity:targets" not in collapsed)
-    cbox_extra = (RANGE_GAP + ROW_H + SYMBOL_H + CAPTION_LINE) if cbox_ctrl else 0
+    cbox_extra = (RANGE_GAP + ROW_H + SYMBOL_H + 3 * CAPTION_LINE) if cbox_ctrl else 0
     # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target interval
     # damage list tile (like the ranges box in the gens tile), gated on the optimization
     # sub-control. Reserve their height up front so the board stays clear below the tile.
@@ -1795,29 +1799,43 @@ def build(state, settings=None, collapsed=None,
                     cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
                                          text=service.prescale_text(value), unit=u))
     if lbox_ctrl:  # box 𝐋's controls sit on one row at the bottom of the prescaling matrix:
-        # the prescaler dropdown on the left, the "ignore diminuator" checkbox on the right (the
-        # size-factor / integer-limit shear). The dropdown carries its "predefined prescalers"
-        # caption beneath; the checkbox's own inline label serves as its label.
+        # the prescaler dropdown on the left (wide enough to seat "log-prime" without
+        # truncating to "log-pri..."), the "ignore diminuator" checkbox SQUARE on the right
+        # (no inline label, since the inline label wraps broken in the narrow primes column).
+        # Each control's caption sits beneath, wrapping to two lines as needed, bottom-aligned.
         py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
-        half_w = col_w["primes"] / 2
-        cells.append(CellBox("control:prescaler", col_x["primes"], py, half_w, PRESELECT_H,
+        drop_w = 80           # seats "log-prime" + the dropdown arrow
+        check_w = 24          # the small checkbox square
+        check_x = col_x["primes"] + drop_w + OPT_COL_GAP
+        # the diminuator caption hugs its column-remainder slot, overhanging slightly if needed
+        # so "ignore diminuator" can wrap to two readable lines instead of word-by-word
+        cap_d_w = max(60, col_x["primes"] + col_w["primes"] - check_x)
+        cap_y = py + PRESELECT_H
+        cap_h = 2 * CAPTION_LINE
+        cells.append(CellBox("control:prescaler", col_x["primes"], py, drop_w, PRESELECT_H,
                              "control_select", text=service.prescaler_of(tuning_scheme),
                              values=tuple(service.PRESCALERS)))
-        cells.append(CellBox("control:diminuator", col_x["primes"] + half_w, py,
-                             half_w, PRESELECT_H, "control_check", text="ignore diminuator",
+        cells.append(CellBox("control:diminuator", check_x, py, check_w, PRESELECT_H,
+                             "control_check", text="",  # square only; label moves to a caption below
                              checked=service.diminuator_ignored(tuning_scheme)))
-        cells.append(CellBox("caption:prescaler", col_x["primes"], py + PRESELECT_H,
-                             half_w, CAPTION_LINE, "caption", text="predefined prescalers"))
+        cells.append(CellBox("caption:prescaler", col_x["primes"], cap_y, drop_w, cap_h,
+                             "caption", text="predefined prescalers"))
+        cells.append(CellBox("caption:diminuator", check_x, cap_y, cap_d_w, cap_h,
+                             "caption", text="ignore diminuator"))
     if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
         # [predefined complexities ▼] | q | dual(q), each captioned. The q (norm power) and
         # dual(q) (its dual norm power) follow the optimization box's value-over-symbol-over-
-        # caption stack; the dropdown has just a caption (no symbol). Captions are bottom-aligned.
-        # dual(q) only appears in all-interval mode (the dual norm power is meaningful via the
-        # dual-norm inequality used to minimax over every interval).
+        # caption stack — the value cell stays at COL_W (a standard gridded number), but the
+        # symbol/caption sit in a wider overhanging SLOT so "dual(q)" doesn't overflow and the
+        # multi-word captions wrap to readable 2-3 lines (not word-by-word). Captions are
+        # bottom-aligned. dual(q) only appears in all-interval mode (the dual norm power is
+        # meaningful via the dual-norm inequality used to minimax over every interval).
         cy = tile_top["complexity"] + tile_h["complexity"] - cbox_extra + RANGE_GAP
         sym_y = cy + ROW_H
         cap_y = sym_y + SYMBOL_H
+        cap_h = 3 * CAPTION_LINE
         drop_w = col_w["targets"] / 2  # half the targets column for the dropdown
+        slot_w = 60  # overhanging symbol/caption slot for q/dual (wider than the COL_W value cell)
         # the predefined-complexities master dropdown. "custom" is always an option (the
         # reconciler keeps a control_select's options fixed), shown when the fine controls leave
         # the shape off the preset list; selecting it is inert
@@ -1826,19 +1844,23 @@ def build(state, settings=None, collapsed=None,
                              values=tuple(service.COMPLEXITY_NAMES) + ("custom",)))
         cells.append(CellBox("caption:complexity", col_x["targets"], cap_y, drop_w, CAPTION_LINE,
                              "caption", text="predefined complexities"))
-        # the q norm-power field: a read-only tval display for this styling pass (wiring later)
-        q_x = col_x["targets"] + drop_w + OPT_COL_GAP
+        # the q norm-power field: a read-only tval display for this styling pass (wiring later).
+        # the slot is wider than the value cell, with the value centred so the symbol/caption
+        # have room to render without overflow/wrap horrors
+        q_slot_x = col_x["targets"] + drop_w + OPT_COL_GAP
+        q_x = q_slot_x + (slot_w - COL_W) / 2
         q_text = "2" if service.is_euclidean(tuning_scheme) else "1"
         cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, "tval", text=q_text))
-        cells.append(CellBox("symbol:q", q_x, sym_y, COL_W, SYMBOL_H, "symbol", text="q"))
-        cells.append(CellBox("caption:q", q_x, cap_y, COL_W, CAPTION_LINE, "caption",
+        cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="q"))
+        cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
                              text="interval complexity norm power"))
         if service.is_all_interval(tuning_scheme):
-            dual_x = q_x + COL_W + OPT_COL_GAP
+            dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
+            dual_x = dual_slot_x + (slot_w - COL_W) / 2
             dual_text = "2" if service.is_euclidean(tuning_scheme) else "∞"
             cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "tval", text=dual_text))
-            cells.append(CellBox("symbol:dual", dual_x, sym_y, COL_W, SYMBOL_H, "symbol", text="dual(q)"))
-            cells.append(CellBox("caption:dual", dual_x, cap_y, COL_W, CAPTION_LINE, "caption",
+            cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="dual(q)"))
+            cells.append(CellBox("caption:dual", dual_slot_x, cap_y, slot_w, cap_h, "caption",
                                  text="dual norm power"))
     if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
         for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
