@@ -3436,6 +3436,36 @@ def test_off_by_default_rows_colorize_by_content_too():
     assert at("complexity:held:0") == C                    # 𝒄 of the held basis (norm of 𝑋H)
 
 
+def test_generator_detempering_column_colorizes_by_content():
+    # the generator detempering D joins the comma basis C and the mapping 𝑀 as a yellow
+    # (temperament) object: the detempering list itself (quantities ratio + vectors) is 𝐷,
+    # and its products green wherever the row also carries a cyan object — the mapping 𝑀D
+    # stays yellow (both temperament), but the tempered 𝒕D, just 𝒋D, retune 𝒓D, prescaled
+    # 𝑋D and the complexity norm of 𝑋D all green (a cyan G/J/X meets the yellow D).
+    s = settings.defaults()
+    s["tuning_colorization"] = True
+    s["temperament_colorization"] = True
+    s["generator_detempering"] = True  # reveal the detempering column
+    s["weighting"] = True              # reveal the prescaling + complexity rows
+    s["audio"] = True                  # reveal the just/mapped audio speaker tiles
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+    cells = {c.id: c for c in lay.cells}
+    Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
+    at = lambda cid: _color_at(lay, *_mid(cells, cid))
+    # the detempering list itself is 𝐷 (yellow); mapping it (𝑀D) stays yellow (both temperament)
+    assert at("detempering:0") == Y                    # quantities × detempering (the detempering ratios = 𝐷)
+    assert at("cell:vec:detempering:0:0") == Y         # interval-vectors × detempering (the 𝐷 basis)
+    assert at("cell:mapped_detempering:0:0") == Y      # mapping × detempering (𝑀D, both temperament)
+    # every tempered/just/prescaled product greens — its cyan G/J/X meets the yellow 𝐷
+    assert at("tuning:detempering:0") == G             # tuning × detempering (𝒕D = 𝒈𝑀D)
+    assert at("just:detempering:0") == G               # just × detempering (𝒋D, cyan 𝒋 over yellow 𝐷)
+    assert at("retune:detempering:0") == G             # retune × detempering (𝒓D)
+    assert at("cell:prescaling:detempering:0:0") == G  # prescaling × detempering (𝑋D, cyan 𝑋 over yellow 𝐷)
+    assert at("complexity:detempering:0") == G         # complexity × detempering (norm of 𝑋D)
+    assert at("speaker:just_audio:detempering:0") == G    # just audio × detempering (sounds 𝒋D)
+    assert at("speaker:mapped_audio:detempering:0") == G  # mapped audio × detempering (sounds 𝒕D)
+
+
 def test_washes_bridge_the_plus_column_gutters():
     # the domain primes and commas tiles carry an in-tile +, so each tile's footprint runs
     # a FRAME_GAP wider on each side than its bare content. A wash on such a column must

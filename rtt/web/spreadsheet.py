@@ -325,6 +325,7 @@ COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS)
 #   "H" — the held interval basis                                          → tuning (cyan)
 #   "M" — the (temperament) mapping                                        → temperament (yellow)
 #   "C" — the comma basis                                                  → temperament (yellow)
+#   "D" — the generator detempering                                        → temperament (yellow)
 # Colourless: the domain basis (the primes), the other-intervals of interest, and the
 # weight 𝒘 (a standalone derived scalar, like the counts). A tile carrying both a tuning
 # and a temperament object reads green (the darken blend of the two washes) — e.g. the
@@ -338,7 +339,7 @@ COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS)
 # — so they're uncoloured, like the domain primes; among built tiles only 𝒈 (the genmap,
 # and the 𝒈𝑀 it feeds) is cyan, while the embedding G awaits the deferred form box (𝐹).
 _FACTOR_GROUP = {"G": "tuning", "J": "tuning", "X": "tuning", "T": "tuning", "H": "tuning",
-                 "M": "temperament", "C": "temperament"}
+                 "M": "temperament", "C": "temperament", "D": "temperament"}
 CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # interval-vectors / quantities headers: the comma basis is C (yellow); the target list
     # T and the held basis H are cyan; the domain primes and other-intervals stay colourless
@@ -348,10 +349,12 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("vectors", "targets"): frozenset({"T"}),          # the target list vectors = T
     ("quantities", "held"): frozenset({"H"}),          # the held ratios = H
     ("vectors", "held"): frozenset({"H"}),             # the held basis vectors = H
+    ("quantities", "detempering"): frozenset({"D"}),   # the detempering ratios = 𝐷 (yellow)
+    ("vectors", "detempering"): frozenset({"D"}),      # the detempering basis vectors = 𝐷
     # the mapping matrix and its mapped lists are 𝑀 (the mapped comma basis 𝑀C also has C)
     ("mapping", "primes"): frozenset({"M"}),           # 𝑀
     ("mapping", "commas"): frozenset({"M", "C"}),      # 𝑀C
-    ("mapping", "detempering"): frozenset({"M"}),      # 𝑀D (D promoted with the detempering column)
+    ("mapping", "detempering"): frozenset({"M", "D"}),  # 𝑀D (both temperament → yellow)
     ("mapping", "targets"): frozenset({"M", "T"}),     # 𝑀T (the mapping carries the cyan target list)
     ("mapping", "interest"): frozenset({"M"}),         # 𝑀·interest (other-intervals are colourless)
     ("mapping", "held"): frozenset({"M", "H"}),        # 𝑀H (the mapping carries the cyan held basis)
@@ -360,7 +363,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("tuning", "gens"): frozenset({"G"}),              # 𝒈 (the generator tuning map)
     ("tuning", "primes"): frozenset({"G", "M"}),       # 𝒕 = 𝒈𝑀
     ("tuning", "commas"): frozenset({"G", "M", "C"}),  # 𝒕C
-    ("tuning", "detempering"): frozenset({"G", "M"}),  # 𝒕D = 𝒈 (the tempered family carries G𝑀)
+    ("tuning", "detempering"): frozenset({"G", "M", "D"}),  # 𝒕D = 𝒈 (tempered G𝑀 meets the yellow 𝐷)
     ("tuning", "targets"): frozenset({"G", "M", "T"}),  # 𝐚 = 𝒈𝑀T (carries the cyan target list)
     ("tuning", "interest"): frozenset({"G", "M"}),
     ("tuning", "held"): frozenset({"G", "M", "H"}),    # 𝒕H (carries the cyan held basis)
@@ -371,29 +374,32 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("just", "targets"): frozenset({"J", "T"}),        # 𝐨 = 𝒋T
     ("just", "interest"): frozenset({"J"}),            # 𝒋·interest
     ("just", "held"): frozenset({"J", "H"}),           # 𝒋H
+    ("just", "detempering"): frozenset({"J", "D"}),    # 𝒋D (cyan 𝒋 over the yellow 𝐷 → green)
     # the retuning/error chain 𝒓 = 𝒕 − 𝒋 keeps 𝒕's G and 𝑀 AND 𝒋's cyan J (a difference carries
     # both operands' factors); the comma column adds C, the target / held columns add T / H
     ("retune", "primes"): frozenset({"G", "M", "J"}),       # 𝒓 = 𝒈𝑀 − 𝒋
     ("retune", "commas"): frozenset({"G", "M", "C", "J"}),  # 𝒓C
-    ("retune", "detempering"): frozenset({"G", "M"}),       # 𝒓D (J & D promoted with the detempering column)
+    ("retune", "detempering"): frozenset({"G", "M", "J", "D"}),  # 𝒓D (𝒕's G𝑀J meets the yellow 𝐷)
     ("retune", "targets"): frozenset({"G", "M", "T", "J"}),  # 𝐞 = 𝒓T
     ("retune", "interest"): frozenset({"G", "M", "J"}),
     ("retune", "held"): frozenset({"G", "M", "H", "J"}),    # 𝒓H (≈ 𝟎 since held just, but keeps the factors)
     ("damage", "targets"): frozenset({"G", "M", "T", "J"}),  # 𝐝 = |𝐞|diag(𝒘), via 𝐞 = 𝒓T
-    # the prescaler 𝑋 is cyan; it carries to every column it scales — the comma column adds C
-    # (→ green), the target / held columns add the cyan T / H, primes / other-intervals ride
-    # the bare cyan 𝑋 (the detempering column is promoted with the rest of that column)
+    # the prescaler 𝑋 is cyan; it carries to every column it scales — the comma and
+    # detempering columns add the yellow C / 𝐷 (→ green), the target / held columns add the
+    # cyan T / H, and primes / other-intervals ride the bare cyan 𝑋
     ("prescaling", "primes"): frozenset({"X"}),        # the bare prescaler 𝑋
     ("prescaling", "commas"): frozenset({"X", "C"}),   # 𝑋C (the prescaled comma basis → green)
     ("prescaling", "targets"): frozenset({"X", "T"}),  # 𝑋T
     ("prescaling", "interest"): frozenset({"X"}),      # 𝑋·interest
     ("prescaling", "held"): frozenset({"X", "H"}),     # 𝑋H
+    ("prescaling", "detempering"): frozenset({"X", "D"}),  # 𝑋D (cyan 𝑋 over the yellow 𝐷 → green)
     # complexity 𝒄 = ‖𝑋·v‖ inherits the prescaler's cyan 𝑋 and the basis's own colour
     ("complexity", "primes"): frozenset({"X"}),        # 𝒄 of the primes (norm of 𝑋)
     ("complexity", "commas"): frozenset({"X", "C"}),   # 𝒄 of the comma basis (norm of 𝑋C → green)
     ("complexity", "targets"): frozenset({"X", "T"}),  # 𝒄 of the targets (norm of 𝑋T)
     ("complexity", "interest"): frozenset({"X"}),      # 𝒄 of the other-intervals
     ("complexity", "held"): frozenset({"X", "H"}),     # 𝒄 of the held basis (norm of 𝑋H)
+    ("complexity", "detempering"): frozenset({"X", "D"}),  # 𝒄 of the detempering (norm of 𝑋D → green)
     # the audio rows mirror the just (cyan 𝒋; comma column greens via C) and tempered (G·M;
     # the target / held columns add the cyan T / H) sizes they sound
     ("just_audio", "primes"): frozenset({"J"}),        # sounds 𝒋
@@ -401,10 +407,11 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("just_audio", "targets"): frozenset({"J", "T"}),  # sounds 𝐨 = 𝒋T
     ("just_audio", "interest"): frozenset({"J"}),      # sounds 𝒋·interest
     ("just_audio", "held"): frozenset({"J", "H"}),     # sounds 𝒋H
+    ("just_audio", "detempering"): frozenset({"J", "D"}),  # sounds 𝒋D (→ green)
     ("mapped_audio", "gens"): frozenset({"G"}),        # the genmap, as the tuning row carries
     ("mapped_audio", "primes"): frozenset({"G", "M"}),
     ("mapped_audio", "commas"): frozenset({"G", "M", "C"}),
-    ("mapped_audio", "detempering"): frozenset({"G", "M"}),  # sounds 𝒕D (D promoted with the detempering column)
+    ("mapped_audio", "detempering"): frozenset({"G", "M", "D"}),  # sounds 𝒕D (G𝑀 meets the yellow 𝐷)
     ("mapped_audio", "targets"): frozenset({"G", "M", "T"}),  # sounds 𝐚 = 𝒈𝑀T
     ("mapped_audio", "interest"): frozenset({"G", "M"}),
     ("mapped_audio", "held"): frozenset({"G", "M", "H"}),   # sounds 𝒕H
