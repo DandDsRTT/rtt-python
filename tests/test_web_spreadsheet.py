@@ -2411,6 +2411,86 @@ def test_equivalences_alone_render_the_symbol_line_only_where_there_is_an_equati
     assert not any(c.startswith("caption:") for c in eq_only)  # names is off here
 
 
+def test_symbols_labels_each_matrix_row_or_column_with_a_subscripted_glyph():
+    # Symbols on doesn't just put the matrix's name (𝑀, C, 𝒕, …) below the cells; it
+    # also labels each individual row/column of the matrix with a subscripted version
+    # of that name, per the maximized mockup. A covector stack labels its ROWS at the
+    # left of each row's ⟨ bracket; every other multi-value tile labels its COLUMNS
+    # above each cell.
+    on = {c.id: c for c in _with(symbols=True, names=True).cells}
+    off = {c.id: c for c in _with(symbols=False).cells}
+
+    # The mapping matrix 𝑀 is a stack of two covector rows (one per generator), each
+    # labelled 𝒎ᵢ at the left of its ⟨ — the bold-italic lowercase of 𝑀
+    assert on["matlabel:row:mapping:primes:0"].text == "𝒎₁"
+    assert on["matlabel:row:mapping:primes:1"].text == "𝒎₂"
+
+    # The comma basis C is a single column vector here (one comma), labelled 𝐜₁ above
+    # the cell — the bold-upright lowercase of C
+    assert on["matlabel:col:vectors:commas:0"].text == "𝐜₁"
+    # The target interval list T over the default 8 targets → 𝐭₁…𝐭₈
+    assert on["matlabel:col:vectors:targets:0"].text == "𝐭₁"
+    assert on["matlabel:col:vectors:targets:7"].text == "𝐭₈"
+
+    # A single-row map's cells are labelled by their column index — the tuning map 𝒕
+    # over d=3 primes → 𝒕₁, 𝒕₂, 𝒕₃ (the symbol IS the label letter; only the index changes)
+    assert on["matlabel:col:tuning:primes:0"].text == "𝒕₁"
+    assert on["matlabel:col:tuning:primes:2"].text == "𝒕₃"
+
+    # Compound symbols keep the prefix and lowercase only the trailing vector letter:
+    # 𝒕C → 𝒕𝐜ᵢ, 𝑀C → 𝑀𝐜ᵢ
+    assert on["matlabel:col:tuning:commas:0"].text == "𝒕𝐜₁"
+    assert on["matlabel:col:mapping:commas:0"].text == "𝑀𝐜₁"
+
+    # Renamed single-letter symbols (Y, 𝐚, 𝐨, 𝐞, 𝐝) are already the column letter, so
+    # the label is the symbol itself + the subscript
+    assert on["matlabel:col:mapping:targets:0"].text == "𝐲₁"   # Y → 𝐲
+    assert on["matlabel:col:tuning:targets:0"].text == "𝐚₁"    # tempered target sizes
+    assert on["matlabel:col:just:targets:0"].text == "𝐨₁"      # just target sizes
+    assert on["matlabel:col:retune:targets:0"].text == "𝐞₁"    # target retunings
+    assert on["matlabel:col:damage:targets:0"].text == "𝐝₁"    # damage list
+
+    # Symbols off drops every label, like the symbol/equivalence cells
+    assert not any(c.startswith("matlabel:") for c in off)
+
+
+def test_matrix_labels_index_match_their_matrix_size():
+    # Each label set covers exactly its matrix's rows/columns — r=2 row labels for the
+    # mapping, d=3 column labels for the tuning map, k=4 for the target list — so the
+    # i-suffix on the ids tracks the live matrix and a relabel adds/drops in lockstep
+    on = {c.id for c in _with(symbols=True).cells}
+    assert {f"matlabel:row:mapping:primes:{i}" for i in range(2)} <= on
+    assert "matlabel:row:mapping:primes:2" not in on   # only r=2 rows
+    assert {f"matlabel:col:vectors:targets:{j}" for j in range(8)} <= on
+    assert "matlabel:col:vectors:targets:8" not in on  # only k=8 targets in the default set
+    assert {f"matlabel:col:tuning:primes:{p}" for p in range(3)} <= on
+    assert "matlabel:col:tuning:primes:3" not in on    # only d=3 primes
+
+
+def test_matrix_labels_only_emit_where_the_tile_is_open():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["symbols"] = True
+    # the mapping row collapsed: its row labels vanish with the rest of its content,
+    # while the interval-vectors row's column labels are unaffected
+    cells = {c.id for c in spreadsheet.build(base, s, collapsed={"row:mapping"}).cells}
+    assert not any(c.startswith("matlabel:row:mapping:") for c in cells)
+    assert "matlabel:col:vectors:commas:0" in cells
+
+
+def test_matrix_labels_sit_above_or_left_of_the_cells_they_label():
+    on = {c.id: c for c in _with(symbols=True).cells}
+    # a column label sits directly above the cell it labels (same x, smaller y)
+    assert on["matlabel:col:tuning:primes:0"].x == on["tuning:prime:0"].x
+    assert on["matlabel:col:tuning:primes:0"].y < on["tuning:prime:0"].y
+    # a row label sits LEFT of the row's covector ⟨ bracket (same y band as the row,
+    # smaller x than the bracket — both inside the mapping/primes tile)
+    assert on["matlabel:row:mapping:primes:0"].x < on["bracket:map:0:l"].x
+    # the row label vertically aligns with the row's value cells
+    assert (on["matlabel:row:mapping:primes:0"].y <= on["cell:mapping:0:0"].y
+            <= on["matlabel:row:mapping:primes:0"].y + on["matlabel:row:mapping:primes:0"].h)
+
+
 def test_units_annotate_each_box_with_its_unit_string():
     on = {c.id: c for c in _with(units=True, names=True).cells}
     off = {c.id: c for c in _with(units=False).cells}

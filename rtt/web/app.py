@@ -466,6 +466,11 @@ _CSS = f"""
    vectors/matrices) — not a maths-font glyph, whose styling font fallback dropped */
 .rtt-symbol {{ width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
               font-family:'Cambria',Georgia,serif; }}
+/* the per-row / per-column matrix label (𝒎ᵢ at the left of each mapping row, 𝐜ᵢ
+   above each comma, 𝒕ᵢ above each tuned prime, …): same _math_html serif as .rtt-symbol
+   but smaller, so the subscript reads at a glance without dominating the value below */
+.rtt-matlabel {{ width:100%; text-align:center; font-size:11px; color:#000; line-height:1;
+              font-family:'Cambria',Georgia,serif; }}
 /* the per-box "units: …" line below the caption, and the domain-units row/col labels.
    The unit VALUE is set in a single-story-g sans face (the mockup's distinct unit style):
    Corbel (the ClearType sans companion to the body Cambria) has a single-story g —
@@ -492,7 +497,7 @@ _CSS = f"""
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
 /* the symbol + caption (and the units line) hold off their fade-in until the tile has expanded */
-.rtt-caption-cell, .rtt-symbol-cell, .rtt-units-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
+.rtt-caption-cell, .rtt-symbol-cell, .rtt-units-cell, .rtt-matlabel-cell {{ animation-delay:{_T}; animation-fill-mode:backwards; }}
 /* the preselect chooser dropdowns: a compact bordered q-select that fills its
    PRESELECT_H cell, with a thin grey rule and a small caret — like the mockup */
 .rtt-preselect {{ width:100%; }}
@@ -1646,6 +1651,11 @@ def index() -> None:
                 # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off)
                 cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
                 math_cells[cb.id] = ui.html("").classes(cls)  # content set in render()
+            elif cb.kind == "matlabel":  # per-row / per-column matrix label (𝒎ᵢ, 𝐜ᵢ, 𝒕ᵢ, …):
+                # routed through _math_html so its bold-italic / bold-upright glyphs draw in
+                # the same styled face as the tile symbol it indexes
+                wrap.classes("rtt-matlabel-cell")
+                math_cells[cb.id] = ui.html("").classes("rtt-matlabel")  # content set in render()
             elif cb.kind == "units":  # the per-box units line and the domain-units row/col labels
                 wrap.classes("rtt-units-cell")
                 math_cells[cb.id] = ui.html("").classes("rtt-units")  # content set in render()
@@ -1951,9 +1961,10 @@ def index() -> None:
                 checks[cb.id].value = cb.checked
             elif cb.kind == "formchooser":  # a one-shot action: snap back to the placeholder
                 selects[cb.id].value = ""
-            elif cb.kind in ("symbol", "count", "units"):  # text rendered as HTML:
-                # symbols/equivalence tails/counts go through _math_html (styled math
-                # glyphs); units use _units_html (a single-story-g sans value, serif label)
+            elif cb.kind in ("symbol", "count", "units", "matlabel"):  # text rendered as HTML:
+                # symbols/equivalence tails/counts and matrix row/col labels go through
+                # _math_html (styled math glyphs); units use _units_html (a single-story-g
+                # sans value, serif label)
                 html = _units_html(cb.text) if cb.kind == "units" else _math_html(cb.text)
                 if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
                     math_cells[cb.id].set_content(html)

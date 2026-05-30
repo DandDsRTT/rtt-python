@@ -51,6 +51,11 @@ PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box
 PTEXT_H = 13  # px height of a one-line read-only plain-text value
 PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch taller than a text line)
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
+MATLABEL_H = 13  # height reserved above each row of value cells for column labels
+# (𝐜₁, 𝒕₁, 𝐲₁, …) when symbols is shown — one bold lowercase letter + a Unicode subscript
+MATLABEL_W = 22  # width reserved left of an EBK ⟨ bracket for row labels (𝒎₁, 𝒎₂, …):
+# the bold-italic lowercase form of the matrix's capital + a Unicode subscript. Reserved
+# inside the matrix tile's content footprint, so the cells shift right by this much.
 UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when units shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
@@ -229,11 +234,37 @@ SYMBOLS = {
     ("damage", "targets"): "𝐝",
 }
 SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symbol slot
+# Matrix-row labels (a row-vector / covector stack) and matrix-column labels (every
+# other multi-cell tile) are emitted when symbols is on, one per row / per column,
+# alongside the existing tile symbol. Each label is a bold lowercase form of the
+# tile's symbol with a Unicode subscript: 𝑀 → 𝒎ᵢ at the left of each row, 𝒕 → 𝒕ᵢ
+# above each cell, the compound 𝒕C → 𝒕𝐜ᵢ keeping the 𝒕 and lowercasing only the
+# trailing C, etc. The mapping matrix is the one tile in the built layout whose
+# rows are individually labelled; every other multi-cell tile labels its columns.
+ROW_LABELED_TILES = frozenset({("mapping", "primes")})
+# The trailing-letter lowering rule for column labels. A symbol's last char (an
+# UPRIGHT CAPITAL: C, T, H, D, Y, …) becomes its bold-upright lowercase (𝐜, 𝐭, 𝐡,
+# 𝐝, 𝐲, …), so 𝒕C → 𝒕𝐜, 𝑀C → 𝑀𝐜, 𝑀H → 𝑀𝐡. Symbols already ending in a bold
+# lowercase letter (𝒕, 𝒋, 𝒓, 𝒈, 𝐚, 𝐨, 𝐞, 𝐝, 𝒄, 𝒘, 𝑋) pass through untouched —
+# their column labels are the symbol itself + the subscript (𝒕₁, 𝐚₁, …).
+_COL_LABEL_LOWER = {"C": "𝐜", "T": "𝐭", "H": "𝐡", "D": "𝐝", "Y": "𝐲", "I": "𝐢"}
+# The bold-italic lowercase form of a matrix's capital, for row labels of covector
+# stacks. 𝑀 → 𝒎 (the only built case — 𝑋 already passes through as 𝒙-shaped).
+_ROW_LABEL_LOWER = {"𝑀": "𝒎"}
 # multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping,
 # the canonical mapping and the complexity-prescaling matrix for their spanning
 # bracket+brace, the interval vectors for the per-column ket marks
 FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
+# Value rows whose tiles carry per-column matrix labels (𝐜ᵢ, 𝒕ᵢ, 𝐲ᵢ, …) when symbols
+# is on. Each row's labelled tiles draw from SYMBOLS; the counts/quantities/units/canon
+# spine rows hold a single index per column already (a cardinality, a ratio, a unit) so
+# they label their cells in-place, not over a separate band. The prescaling matrix 𝑋
+# (multi-row) is excluded: the mockup gives it elaborate per-row Lᵢ labels with norm
+# expressions, which the subscript-only rule here can't form — so its band stays empty.
+COL_LABELED_ROWS = frozenset({
+    "vectors", "mapping", "tuning", "just", "retune", "damage", "complexity", "weight",
+})
 
 # Content-derived colorization (the mockup's coloured washes behind the grey tiles): a
 # group's "{group}_colorization" setting, when on, paints colour behind the tiles whose
@@ -538,7 +569,7 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell",
     "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell",
-    "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar",
+    "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel",
     "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus", "held_minus", "held_plus", "optimize",
     "boxtitle", "powerinput",
@@ -553,6 +584,27 @@ GRIDDED_KINDS = frozenset({
 BLANKED_NUMBER_KINDS = frozenset({
     "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell", "formcell", "heldcell",
 })
+
+
+def _col_label_letter(symbol: str) -> str:
+    """The glyph (sans subscript) for a tile's per-column label, derived from its
+    matrix symbol: a trailing upright capital (C/T/H/D/Y/I) lowers to its bold-upright
+    lowercase, leaving any prefix intact. Already-lowercase symbols pass through.
+
+    >>> _col_label_letter("𝒕C"); _col_label_letter("Y"); _col_label_letter("𝒕")
+    '𝒕𝐜'
+    '𝐲'
+    '𝒕'
+    """
+    if symbol and symbol[-1] in _COL_LABEL_LOWER:
+        return symbol[:-1] + _COL_LABEL_LOWER[symbol[-1]]
+    return symbol
+
+
+def _row_label_letter(symbol: str) -> str:
+    """The glyph (sans subscript) for a tile's per-row label, derived from its matrix
+    symbol: a math-italic capital (𝑀, 𝑋) lowers to its bold-italic lowercase (𝒎, 𝒙)."""
+    return _ROW_LABEL_LOWER.get(symbol, symbol)
 
 
 def _mathit(letter: str) -> str:
@@ -925,12 +977,16 @@ def build(state, settings=None, collapsed=None,
     # COL_W-wide index per row (a basis square / generator ratio; a unit label) and so is
     # one COL_W wide — its longer header overhangs it (see the col_w hug-content rule above).
     # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
-    # the value cells are inset by BRACKET_W within the group.
+    # the value cells are inset by BRACKET_W within the group. The primes column
+    # additionally reserves a MATLABEL_W gutter on the left when symbols is on AND
+    # the mapping row will render, so its row labels (𝒎₁, 𝒎₂, …) seat left of each
+    # row's ⟨ bracket without overflowing the panel.
+    matlabel_primes_w = MATLABEL_W if (show_symbols and show_temp) else 0
     col_bands = (
         ("quantities", COL_W, show_domain_quantities, True),
         ("units", COL_W, show_domain_units, True),
         ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
-        ("primes", 2 * BRACKET_W + d * COL_W, show_temp, True),
+        ("primes", 2 * BRACKET_W + d * COL_W + matlabel_primes_w, show_temp, True),
         ("detempering", 2 * BRACKET_W + r * COL_W, show_detempering, True),
         ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
         ("held", 2 * BRACKET_W + nh * COL_W, show_optimization, True),
@@ -1144,6 +1200,8 @@ def build(state, settings=None, collapsed=None,
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
     tile_h, tile_top, row_frame, row_sym, row_cap, row_units, row_ptext, chart_top = {}, {}, {}, {}, {}, {}, {}, {}
     row_pre = {}  # the preselect band height, so the <choose form> chooser can stack below it
+    row_matlabel_top = {}  # y of the column-label band when reserved (one MATLABEL_H slot above
+    # the value cells), so column labels (𝐜₁, 𝒕₁, …) can be emitted at a fixed row-relative y
 
     def caption_band(key, folded):
         # the row's caption band is sized to its tallest (wrapped) caption, so the longest
@@ -1189,6 +1247,11 @@ def build(state, settings=None, collapsed=None,
         # and a taller bottom curly brace (BRACE_H, with room for its spike)
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
+        # column labels sit immediately above the value cells (between top frame and
+        # the cells, OR — when no top frame — between the toggle head and the cells).
+        # Reserved on every value row when symbols is on, so the labels (𝐜ᵢ above each
+        # comma, 𝒕ᵢ above each tuned prime, …) never overlap the cells or the brackets.
+        matlabel_band = (MATLABEL_H if (show_symbols and key in COL_LABELED_ROWS and not folded) else 0)
         # a charted row grows a chart band (above the values, below the top frame)
         charted = show_charts and key in CHARTED_ROWS and not folded
         chart_band = (CHART_H + CHART_GAP) if charted else 0
@@ -1210,8 +1273,12 @@ def build(state, settings=None, collapsed=None,
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
         if charted:
-            chart_top[key] = y + head + top_frame  # the chart sits just below the top frame
-        row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
+            chart_top[key] = y + head + top_frame + matlabel_band  # chart sits below the col-label band
+        if matlabel_band:
+            # col-label band sits immediately above the value cells: toggle head + top
+            # frame + (this band) + (chart band if any) + cells
+            row_matlabel_top[key] = y + head + top_frame
+        row_y[key] = y + head + top_frame + matlabel_band + chart_band  # values sit below toggle head, top frame, matlabel band, chart
         row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
         row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
         row_cap[key] = cap  # the units line and plain-text box sit below the caption
@@ -1220,7 +1287,7 @@ def build(state, settings=None, collapsed=None,
         row_pre[key] = pre  # the preselect band, with the <choose form> chooser below it
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
+        tile_h[key] = head + top_frame + matlabel_band + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
         # a row with a nested tile-control (ranges chart, alt-complexity chooser, optimization
         # block) adds its reserved height here, so the rows below drop clear of it and every
         # tile in the row grows to the same height (the row stays one uniform band)
@@ -1258,8 +1325,15 @@ def build(state, settings=None, collapsed=None,
             u = u.replace("p", f"p{_sub(prime + 1)}")
         return u
 
+    def matlabel_left_w(group_key):
+        # The MATLABEL_W gutter on the left of a content footprint reserved for row
+        # labels (𝒎₁, …) — only the primes column under the mapping matrix needs it
+        # in the built layout. Shared by prime_left and the bracket placement so the
+        # cells, the left ⟨ and the labels stay in lockstep.
+        return matlabel_primes_w if group_key == "primes" else 0
+
     def prime_left(p):
-        return primes_x + BRACKET_W + p * COL_W
+        return primes_x + matlabel_left_w("primes") + BRACKET_W + p * COL_W
 
     def comma_left(c):
         return commas_x + BRACKET_W + c * COL_W
@@ -1293,14 +1367,19 @@ def build(state, settings=None, collapsed=None,
     blocks: list[Block] = []
 
     # column headers (always shown; a collapsed column keeps its title) plus a
-    # fold toggle in the header band for collapsible ones
+    # fold toggle in the header band for collapsible ones. A matlabel-widened column
+    # (primes when symbols is on) shifts its header + toggle right by the gutter so
+    # both stay centred over the CELLS rather than the wider column footprint — the
+    # gutter only carries row labels, never participates in title centring.
     for key in col_x:
-        cells.append(CellBox(f"header:{key}", col_x[key], header_y, col_w[key], HEADER_H, "colheader", text=col_header[key]))
+        hx = col_x[key] + matlabel_left_w(key)
+        hw = col_w[key] - matlabel_left_w(key)
+        cells.append(CellBox(f"header:{key}", hx, header_y, hw, HEADER_H, "colheader", text=col_header[key]))
         if col_collapsible[key]:
             glyph = _fold_glyph(f"col:{key}" in collapsed)
             # the fold toggle sits on the column's gridline (its content centre), so it
             # stays aligned with the trunk even when the interest header floats wider
-            tx = col_x[key] + (col_w[key] - TOGGLE) / 2
+            tx = hx + (hw - TOGGLE) / 2
             cells.append(CellBox(f"toggle:col:{key}", tx, col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
 
     # row labels (always shown; a collapsed row keeps its label as the strip)
@@ -1825,8 +1904,11 @@ def build(state, settings=None, collapsed=None,
         # value brackets are short and centred in their row (so stacked rows keep a
         # gap); the enclosing mapped-list [ ] passes fit=True to span the matrix.
         gx, gw = content_box(group_key)  # hug the cells (interest's content, not its footprint)
+        # the left bracket steps right past the matlabel gutter (when reserved), so
+        # the row labels sit inside the panel left of the ⟨ rather than overflowing it
+        mx = matlabel_left_w(group_key)
         by, bh = (y, h) if fit else (y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H)
-        cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
+        cells.append(CellBox(f"bracket:{bid}:l", gx + mx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
 
     if row_open("canon") and tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
@@ -1886,6 +1968,43 @@ def build(state, settings=None, collapsed=None,
     if tile_open("damage", "targets"):
         bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
 
+    # Matrix row + column labels (when symbols is on). The mapping matrix labels its
+    # rows (one 𝒎ᵢ at the left of each row's ⟨, inside the MATLABEL_W gutter reserved
+    # in the primes column); every other multi-cell tile in SYMBOLS labels its columns
+    # (one glyph above each cell, in the MATLABEL_H band reserved above the values).
+    if show_symbols:
+        # the per-column group's count and left-edge accessor, so a tile's columns are
+        # iterated by its (rkey, ckey) without re-deriving the loop bounds each time
+        group_count = {"gens": r, "primes": d, "commas": nc, "targets": k,
+                       "held": nh, "detempering": r}
+        # row labels — only the mapping matrix in the built layout: r rows at content_x
+        if ("mapping", "primes") in ROW_LABELED_TILES and tile_open("mapping", "primes"):
+            glyph = _row_label_letter(SYMBOLS[("mapping", "primes")])  # 𝑀 → 𝒎
+            for i in range(r):
+                cells.append(CellBox(
+                    f"matlabel:row:mapping:primes:{i}",
+                    content_x["primes"], map_top(i), MATLABEL_W, ROW_H,
+                    "matlabel", text=f"{glyph}{_sub(i + 1)}",
+                ))
+        # column labels — one per cell of each symboled tile, in the reserved band
+        # directly above the value cells (above the chart band too, for charted rows)
+        for (rkey, ckey), symbol in SYMBOLS.items():
+            if (rkey, ckey) in ROW_LABELED_TILES:
+                continue  # row labels handled above
+            if ckey not in group_count or rkey not in row_matlabel_top:
+                continue
+            if not tile_open(rkey, ckey):
+                continue
+            glyph = _col_label_letter(symbol)
+            left = group_left[ckey]
+            y = row_matlabel_top[rkey]
+            for i in range(group_count[ckey]):
+                cells.append(CellBox(
+                    f"matlabel:col:{rkey}:{ckey}:{i}",
+                    left(i), y, COL_W, MATLABEL_H,
+                    "matlabel", text=f"{glyph}{_sub(i + 1)}",
+                ))
+
     # Shared axes. A multi-element group is one line that fans out at the near end
     # (from its node) into one line per element, runs through the data, then fans
     # back in at the far end to a foot extending a touch past the data — pinched at
@@ -1904,7 +2023,13 @@ def build(state, settings=None, collapsed=None,
         if key not in col_x:
             return
         fanned_columns.add(key)
-        cx = col_x[key] + col_w[key] / 2
+        # the trunk centres on the cell array, not the column footprint: the two diverge
+        # when a matrix-label gutter widens the footprint asymmetrically (primes under
+        # the mapping), so following the cells keeps the trunk aligned with the fan-out
+        if n > 0:
+            cx = (center_open(0) + center_open(n - 1)) / 2
+        else:
+            cx = col_x[key] + col_w[key] / 2
         if n == 0:  # an empty interval set (interest, before any are entered) is one straight axis
             lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y))
             lines.append(Line(f"foot:{key}", "v", cx, fanout_y, total_h - fanout_y))
