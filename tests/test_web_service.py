@@ -629,8 +629,12 @@ def test_plain_text_held_column_mirrors_the_grid():
     assert pt[("just", "held")] == f"[{cents(sizes.just)}]"
     assert pt[("retune", "held")] == f"[{cents(sizes.errors)}]"
     assert abs(float(pt[("retune", "held")].strip("[]"))) < 1e-3  # held just ⇒ no error
+    # the prescaling row over the held basis: L applied to each held monzo (like the comma
+    # column's L·C). The fifth 3/2 = [-1, 1, 0] prescaled by log-prime L = [-1, 1.585, 0].
+    assert pt[("prescaling", "held")] == "[[-1 1.585 0⟩]"
     # no held entries when none are held
     assert ("vectors", "held") not in service.plain_text_values(state)
+    assert ("prescaling", "held") not in service.plain_text_values(state)
 
 
 def test_plain_text_interest_column_is_standalone_kets_not_a_matrix():

@@ -685,6 +685,7 @@ def plain_text_values(
             ("tuning", "held"): _cents_list(held_sizes.tempered),
             ("just", "held"): _cents_list(held_sizes.just),
             ("retune", "held"): _cents_list(held_sizes.errors),
+            ("prescaling", "held"): _prescale_ket_list(_prescaled(held)),
             ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios)),
         })
     # the other-intervals-of-interest column is a loose collection, not a basis, so every
