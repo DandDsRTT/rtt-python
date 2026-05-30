@@ -218,6 +218,10 @@ SYMBOLS = {
     ("retune", "detempering"): "𝒓D",
     ("retune", "targets"): "𝐞",
     ("prescaling", "primes"): "𝑋",  # the complexity prescaler matrix (math italic, like 𝑀)
+    ("prescaling", "commas"): "𝑋C",   # 𝑋 applied to the comma basis C
+    ("prescaling", "detempering"): "𝑋D",   # 𝑋 applied to the generator detempering D
+    ("prescaling", "targets"): "𝑋T",   # 𝑋 applied to the target interval list T
+    ("prescaling", "held"): "𝑋H",   # 𝑋 applied to the held interval basis H
     # the held interval column mirrors the comma column: the basis H lives in the
     # interval-vectors row, and everything else is a product with it — the mapped held
     # basis 𝑀H and the held sizes 𝒕H, 𝒋H, 𝒓H (the held complexity is a derived auxiliary,
@@ -474,6 +478,12 @@ WEIGHT_EQUIVALENCE_BY_SLOPE = {
     "unityWeight": " = 1",
     "simplicityWeight": " = 1/𝒄",
 }
+
+# The prescaling row's equivalences are scheme-dependent: the prescaler matrix 𝑋 IS the
+# log-prime matrix L for the default (Tenney) prescaler, the prime-diagonal matrix 𝑃 for
+# Benedetti/sopfr, the identity 𝐼 for the unweighted count (copfr). Build() substitutes the
+# active letter for every prescaling tile (𝑋 = L, 𝑋C = LC, 𝑋T = LT, …) — see PRESCALERS.
+PRESCALER_LETTER = {"log-prime": "L", "prime": "𝑃", "identity": "𝐼"}
 
 # Always-present content tiles (a row×column intersection) as (grey-panel id, row,
 # column). Each gets a grey panel and a top-left fold toggle; the panel/toggle ids
@@ -2157,9 +2167,17 @@ def build(state, settings=None, collapsed=None,
     # equation are drawn only where defined (the comma columns have none yet). An
     # empty interest column has no tiles. Mnemonics underlines the symbol letter.
     # The weight row's equivalence is the one scheme-dependent equation (𝒘 = 𝒄 / 1 / 1/𝒄),
-    # so it is resolved per build from the live scheme's slope rather than baked in.
+    # so it is resolved per build from the live scheme's slope rather than baked in. The
+    # prescaling row's equivalences likewise name the live prescaler (L/𝑃/𝐼), so 𝑋 = L
+    # for the default log-prime and the L of 𝑋C = LC / 𝑋T = LT / etc. swaps with it.
+    L = PRESCALER_LETTER[service.prescaler_of(tuning_scheme)]
     equivalences = {**EQUIVALENCES,
-                    ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[service.damage_weight_slope(tuning_scheme)]}
+                    ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[service.damage_weight_slope(tuning_scheme)],
+                    ("prescaling", "primes"): f" = {L}",
+                    ("prescaling", "commas"): f" = {L}C",
+                    ("prescaling", "detempering"): f" = {L}D",
+                    ("prescaling", "targets"): f" = {L}T",
+                    ("prescaling", "held"): f" = {L}H"}
     for (rkey, ckey), name in CAPTIONS.items():
         if ckey == "interest" and not interest:
             continue

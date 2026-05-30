@@ -1284,6 +1284,27 @@ def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
     assert on["cell:prescaling:primes:1:0"].y == on["cell:prescaling:primes:0:0"].y + spreadsheet.ROW_H
 
 
+def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
+    # the prescaling row's symbols mirror the mapping/tuning rows: a per-tile glyph (the
+    # prescaler 𝑋 by itself over the primes, 𝑋C / 𝑋T / 𝑋H / 𝑋D as products with the
+    # comma / target / held / detempering bases), each with an equivalence naming the
+    # active prescaler — L for the default log-prime, so 𝑋 = L, 𝑋C = LC, etc.
+    lay = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        # ``optimization`` brings the held column out (held lives in the optimization layer);
+        # without it the prescaling/held tile would be silently absent and that assertion
+        # would skip rather than verify the symbol/equivalence wiring.
+        {**settings.defaults(), "weighting": True, "optimization": True,
+         "symbols": True, "equivalences": True},
+        held_monzos=((-1, 1, 0),),  # 3/2 held, so the held column appears
+    )
+    on = {c.id: c for c in lay.cells}
+    assert on["symbol:prescaling:primes"].text == "𝑋 = L"
+    assert on["symbol:prescaling:commas"].text == "𝑋C = LC"
+    assert on["symbol:prescaling:targets"].text == "𝑋T = LT"
+    assert on["symbol:prescaling:held"].text == "𝑋H = LH"
+
+
 def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
