@@ -480,6 +480,13 @@ def is_euclidean(scheme) -> bool:
     return resolve_tuning_scheme(scheme).complexity_norm_power == 2
 
 
+def is_all_interval(scheme) -> bool:
+    """Whether ``scheme`` is an all-interval tuning scheme — its target set is the empty
+    quotient list ``{}`` (every interval, by duality). The shipped minimax-S (TOP) is."""
+    targets = resolve_tuning_scheme(scheme).target_intervals
+    return targets is not None and targets.strip() in ("{}", "")
+
+
 def scheme_with_weight_slope(scheme, slope: str):
     """``scheme`` with its damage-weight slope swapped to ``slope`` (a :data:`WEIGHT_SLOPES`
     key) — the weight box's chooser — keeping the complexity and optimization power. Returns

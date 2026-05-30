@@ -1430,25 +1430,14 @@ def test_alt_complexity_adds_a_prescaler_dropdown_to_the_prescaling_box():
     assert ctrl.kind == "control_select"
     assert ctrl.text == "log-prime"  # the default scheme's current prescaler (Tenney)
     assert ctrl.values == ("identity", "log-prime", "prime")  # the chooser's options
-    # it rides below the prescaling matrix (box 𝐋), spanning the primes column
+    # it rides below the prescaling matrix (box 𝐋), at the primes column's left edge
     assert ctrl.y > on["cell:prescaling:primes:2:2"].y
-    assert ctrl.x == on["header:primes"].x and ctrl.w == on["header:primes"].w
+    assert ctrl.x == on["header:primes"].x
+    # it shares the row with the diminuator checkbox, so it takes only part of the column width
+    assert ctrl.w < on["header:primes"].w
 
 
-def test_alt_complexity_adds_a_norm_chooser_to_the_complexity_box():
-    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
-    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
-    assert "control:norm" not in off
-    ctrl = on["control:norm"]
-    assert ctrl.kind == "control_select"
-    assert ctrl.text == "taxicab"  # the default scheme's q=1 norm
-    assert ctrl.values == ("taxicab", "Euclidean")
-    # it rides below the complexity list (box 𝒄), spanning the targets column
-    assert ctrl.y > on["complexity:target:0"].y
-    assert ctrl.x == on["header:targets"].x and ctrl.w == on["header:targets"].w
-
-
-def test_alt_complexity_adds_a_predefined_complexity_chooser_above_the_norm_chooser():
+def test_alt_complexity_adds_a_predefined_complexity_chooser_to_box_c():
     off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
     on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
     assert "control:complexity" not in off  # no control unless alt. complexity is on
@@ -1457,12 +1446,73 @@ def test_alt_complexity_adds_a_predefined_complexity_chooser_above_the_norm_choo
     assert ctrl.text == "lp"  # the default scheme's complexity (log-prime taxicab, Tenney)
     # the predefined complexities + Euclidean variants, plus the inert "custom" shown off-preset
     assert ctrl.values == tuple(service.COMPLEXITY_NAMES) + ("custom",)
-    # the master chooser rides below the complexity list (box 𝒄), ABOVE the norm chooser it overrides
-    assert on["complexity:target:0"].y < ctrl.y < on["control:norm"].y
-    assert ctrl.x == on["header:targets"].x and ctrl.w == on["header:targets"].w
+    # the master chooser sits below the complexity list (box 𝒄), at the targets-column left edge
+    assert ctrl.y > on["complexity:target:0"].y
+    assert ctrl.x == on["header:targets"].x
 
 
-def test_alt_complexity_adds_an_ignore_diminuator_checkbox_below_the_prescaler():
+def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
+    # box 𝒄 lays its three controls left-to-right: [predefined complexities ▼] | q | dual(q),
+    # each with a caption beneath. The q (norm power) and dual(q) fields follow the optimization
+    # box's value-over-symbol-over-caption pattern (the 𝑝 / "optimization power" style); the
+    # dropdown has just a caption (no symbol slot).
+    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    # the predefined-complexities dropdown carries its caption beneath
+    assert on["caption:complexity"].kind == "caption"
+    assert on["caption:complexity"].text == "predefined complexities"
+    # the q norm-power field: a read-only tval display for now (styling pass; wiring later),
+    # showing 1 for the default taxicab scheme
+    assert on["control:q"].kind == "tval"
+    assert on["control:q"].text == "1"
+    assert on["control:q"].x > on["control:complexity"].x  # to the RIGHT of the dropdown
+    assert on["control:q"].y == on["control:complexity"].y  # same row
+    assert on["symbol:q"].text == "q"
+    assert on["symbol:q"].y > on["control:q"].y  # symbol BELOW the value (optimization-box style)
+    assert on["caption:q"].text == "interval complexity norm power"
+    assert on["caption:q"].y > on["symbol:q"].y  # caption BELOW the symbol
+    # the dual(q) display: the dual norm power, paired symbol/caption like q (and to the right)
+    assert on["control:dual"].kind == "tval"
+    assert on["control:dual"].text == "∞"  # the dual of taxicab (q=1) is ∞
+    assert on["control:dual"].x > on["control:q"].x
+    assert on["symbol:dual"].text == "dual(q)"
+    assert on["caption:dual"].text == "dual norm power"
+    # the dropdown's caption is BOTTOM-ALIGNED with the q/dual captions (one tidy row of labels)
+    assert on["caption:complexity"].y == on["caption:q"].y == on["caption:dual"].y
+    # the old taxicab/Euclidean dropdown is gone — its look is replaced by the q field (mockup)
+    assert "control:norm" not in on
+
+
+def test_alt_complexity_hides_dual_q_outside_all_interval_mode():
+    # per the mockup note, dual(q) is meaningful only when the scheme is all-interval (the dual
+    # norm only enters via the dual norm inequality used to minimax over every interval). The
+    # default minimax-S (TOP) IS all-interval, so dual(q) renders; a TILT-based scheme hides it.
+    on_all = {c.id for c in _with(weighting=True, alt_complexity=True).cells}
+    assert "control:dual" in on_all and "symbol:dual" in on_all and "caption:dual" in on_all
+    s = {**settings.defaults(), "weighting": True, "alt_complexity": True}
+    on_tilt = {c.id for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), s, tuning_scheme="TILT minimax-S").cells}
+    assert "control:dual" not in on_tilt
+    assert "control:q" in on_tilt  # q itself still shows (the norm power is meaningful here)
+
+
+def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdown():
+    # box 𝐋 sits as one row: [predefined prescalers ▼] on the left, the "ignore diminuator"
+    # checkbox to its right. The dropdown carries a "predefined prescalers" caption beneath
+    # it; the checkbox's own label suffices for that side.
+    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
+    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    assert "caption:prescaler" not in off
+    cap = on["caption:prescaler"]
+    assert cap.kind == "caption"
+    assert cap.text == "predefined prescalers"
+    assert cap.h == spreadsheet.CAPTION_LINE
+    assert cap.y > on["control:prescaler"].y  # caption sits below the dropdown
+    # the diminuator checkbox rides to the RIGHT of the dropdown on the same row (no longer below)
+    assert on["control:diminuator"].y == on["control:prescaler"].y
+    assert on["control:diminuator"].x > on["control:prescaler"].x
+
+
+def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
     off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
     on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
     assert "control:diminuator" not in off  # no control unless alt. complexity is on
@@ -1470,9 +1520,21 @@ def test_alt_complexity_adds_an_ignore_diminuator_checkbox_below_the_prescaler()
     assert ctrl.kind == "control_check"
     assert ctrl.text == "ignore diminuator"
     assert ctrl.checked is False  # the default scheme is lp, which uses the diminuator
-    # the checkbox rides in box 𝐋 (the prescaling matrix over the primes), below the prescaler
-    assert ctrl.y > on["control:prescaler"].y
-    assert ctrl.x == on["header:primes"].x and ctrl.w == on["header:primes"].w
+    # the checkbox sits in box 𝐋 (over the primes); its row-position is covered by the layout test
+    hdr = on["header:primes"]
+    assert hdr.x <= ctrl.x and ctrl.x + ctrl.w <= hdr.x + hdr.w
+
+
+def test_alt_complexity_captions_the_weight_slope_chooser():
+    # the weight box's slope dropdown carries a "damage weight slope" caption beneath it,
+    # like the optimization box's "optimization power" caption — single CAPTION_LINE band
+    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    assert "caption:slope" not in {c.id for c in _with(weighting=True, alt_complexity=False).cells}
+    cap = on["caption:slope"]
+    assert cap.kind == "caption"
+    assert cap.text == "damage weight slope"
+    assert cap.h == spreadsheet.CAPTION_LINE
+    assert cap.y > on["control:slope"].y  # sits below the chooser
 
 
 def test_alt_complexity_adds_a_weight_slope_chooser_to_the_weight_box():

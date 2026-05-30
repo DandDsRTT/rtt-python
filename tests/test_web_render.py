@@ -90,7 +90,7 @@ async def test_enabling_alt_complexity_renders_its_in_tile_choosers(user: User) 
     await user.should_see(marker="control:prescaler")
     await user.should_see(marker="control:diminuator")  # the box-𝐋 checkbox (control_check)
     await user.should_see(marker="control:complexity")
-    await user.should_see(marker="control:norm")
+    await user.should_see(marker="control:q")  # the q norm-power field (replaces the old norm dropdown)
     await user.should_see(marker="control:slope")
 
 
