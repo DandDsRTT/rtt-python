@@ -2503,13 +2503,16 @@ def test_symbols_labels_each_matrix_row_or_column_with_a_subscripted_glyph():
     assert on["matlabel:col:tuning:commas:0"].text == "𝒕𝐜₁"
     assert on["matlabel:col:mapping:commas:0"].text == "𝑀𝐜₁"
 
-    # Renamed single-letter symbols (Y, 𝐚, 𝐨, 𝐞, 𝐝) are already the column letter, so
-    # the label is the symbol itself + the subscript
+    # The mapped target list Y is itself a list of vectors, so its column label is
+    # the renamed bold-upright 𝐲 + subscript
     assert on["matlabel:col:mapping:targets:0"].text == "𝐲₁"   # Y → 𝐲
-    assert on["matlabel:col:tuning:targets:0"].text == "𝐚₁"    # tempered target sizes
-    assert on["matlabel:col:just:targets:0"].text == "𝐨₁"      # just target sizes
-    assert on["matlabel:col:retune:targets:0"].text == "𝐞₁"    # target retunings
-    assert on["matlabel:col:damage:targets:0"].text == "𝐝₁"    # damage list
+    # The five target-size lists hold SCALARS per cell, so the indexed label is the
+    # NON-BOLD italic form of the list's symbol — 𝐚 → 𝑎, 𝐨 → 𝑜, 𝐞 → 𝑒, 𝒘 → 𝑤, 𝐝 → 𝑑.
+    # (The list itself is named with the bold form; the indexed entries are scalars.)
+    assert on["matlabel:col:tuning:targets:0"].text == "𝑎₁"    # tempered target sizes
+    assert on["matlabel:col:just:targets:0"].text == "𝑜₁"      # just target sizes
+    assert on["matlabel:col:retune:targets:0"].text == "𝑒₁"    # target retunings
+    assert on["matlabel:col:damage:targets:0"].text == "𝑑₁"    # damage list
 
     # Symbols off drops every label, like the symbol/equivalence cells
     assert not any(c.startswith("matlabel:") for c in off)
@@ -2550,6 +2553,93 @@ def test_matrix_labels_sit_above_or_left_of_the_cells_they_label():
     # the row label vertically aligns with the row's value cells
     assert (on["matlabel:row:mapping:primes:0"].y <= on["cell:mapping:0:0"].y
             <= on["matlabel:row:mapping:primes:0"].y + on["matlabel:row:mapping:primes:0"].h)
+
+
+def test_col_labels_sit_above_the_top_frame_in_framed_rows():
+    # In a framed row (interval vectors, mapping, prescaling), the col labels (𝐜ᵢ, 𝐲ᵢ,
+    # …) MUST sit above the matrix's top bracket ─┐ — the labels name the columns the
+    # bracket spans, so they read like a header over the matrix, not as decoration
+    # squeezed into the bracket gutter.
+    on = {c.id: c for c in _with(symbols=True).cells}
+    # mapping matrix: top bracket (ebktop:primes) sits BELOW the row labels' band, and
+    # the col labels for the mapping's mapped lists sit above their own ebktop marks
+    assert on["matlabel:col:mapping:targets:0"].y + on["matlabel:col:mapping:targets:0"].h \
+        <= on["ebktop:mapped:0"].y
+    assert on["matlabel:col:mapping:commas:0"].y + on["matlabel:col:mapping:commas:0"].h \
+        <= on["ebktop:mapped_comma:0"].y
+    # interval vectors row: same rule — the comma basis 𝐜ᵢ labels sit above the basis's
+    # per-column ket marks (ebktop:vec:commas:*)
+    assert on["matlabel:col:vectors:commas:0"].y + on["matlabel:col:vectors:commas:0"].h \
+        <= on["ebktop:vec:commas:0"].y
+    assert on["matlabel:col:vectors:targets:0"].y + on["matlabel:col:vectors:targets:0"].h \
+        <= on["ebktop:vec:targets:0"].y
+
+
+def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter():
+    # The mapping matrix's outer top bracket ─┐ and bottom curly brace span ONLY the
+    # cells (left of which the per-row ⟨ sits, in turn left of which the matlabel
+    # gutter sits). Without this the bracket would be a MATLABEL_W wider than the
+    # matrix, visually swallowing the 𝒎ᵢ labels.
+    on = {c.id: c for c in _with(symbols=True).cells}
+    ebktop = on["ebktop:primes"]
+    ebkbrace = on["ebkbrace:primes"]
+    left_bracket = on["bracket:map:0:l"]
+    right_bracket = on["bracket:map:0:r"]
+    # the top/brace's LEFT edge starts at the per-row ⟨'s left edge (both flush over
+    # the cells), past the row-label gutter — never at col_x[primes]
+    assert ebktop.x == left_bracket.x
+    assert ebkbrace.x == left_bracket.x
+    # the top/brace's RIGHT edge ends at the per-row ]'s right edge
+    assert ebktop.x + ebktop.w == right_bracket.x + right_bracket.w
+    assert ebkbrace.x + ebkbrace.w == right_bracket.x + right_bracket.w
+
+
+def test_complexity_row_labels_every_cell_with_a_subscripted_glyph():
+    # Complexity is a covector applied to each interval set; every cell is a scalar
+    # complexity. The mockup labels each column with 𝒄 (the row's symbol) compounded
+    # with the column's vector letter and a subscript: 𝒄ᵢ over primes, 𝒄𝐜ᵢ over the
+    # comma basis, 𝒄𝐝ᵢ over detempering, 𝒄𝐡ᵢ over held intervals.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["symbols"] = True
+    s["weighting"] = True              # opens the complexity row
+    s["optimization"] = True           # opens the held column (for the 𝒄𝐡 case)
+    s["generator_detempering"] = True  # opens the detempering column (for the 𝒄𝐝 case)
+    on = {c.id: c for c in spreadsheet.build(
+        base, s, held_monzos=((-1, 1, 0),)
+    ).cells}
+    assert on["matlabel:col:complexity:primes:0"].text == "𝒄₁"
+    assert on["matlabel:col:complexity:primes:2"].text == "𝒄₃"
+    assert on["matlabel:col:complexity:commas:0"].text == "𝒄𝐜₁"
+    assert on["matlabel:col:complexity:held:0"].text == "𝒄𝐡₁"
+    assert on["matlabel:col:complexity:detempering:0"].text == "𝒄𝐝₁"
+    # complexity over targets keeps the bare 𝒄 (its own letter, no compound)
+    assert on["matlabel:col:complexity:targets:0"].text == "𝒄₁"
+
+
+def test_prescaling_matrix_row_and_col_labels():
+    # The prescaler 𝑋 is a covector stack like 𝑀, so prescaling/primes gets ROW labels
+    # 𝒙ᵢ (one per dimension, parallel to 𝒎ᵢ on the mapping). Its applications to comma/
+    # held/detempering/target sets are matrices of vectors, so each gets COLUMN labels
+    # 𝑋𝐜ᵢ / 𝑋𝐡ᵢ / 𝑋𝐝ᵢ / 𝑋𝐭ᵢ, parallel to the mapping row's 𝑀𝐜ᵢ family.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["symbols"] = True
+    s["weighting"] = True
+    s["optimization"] = True
+    s["generator_detempering"] = True
+    on = {c.id: c for c in spreadsheet.build(
+        base, s, held_monzos=((-1, 1, 0),)
+    ).cells}
+    # row labels on the 𝑋 matrix: d=3 rows, one 𝒙ᵢ per dimension
+    assert on["matlabel:row:prescaling:primes:0"].text == "𝒙₁"
+    assert on["matlabel:row:prescaling:primes:1"].text == "𝒙₂"
+    assert on["matlabel:row:prescaling:primes:2"].text == "𝒙₃"
+    # col labels on the prescaled vector lists: 𝑋·basis, 𝑋·detempering, 𝑋·held, 𝑋·targets
+    assert on["matlabel:col:prescaling:commas:0"].text == "𝑋𝐜₁"
+    assert on["matlabel:col:prescaling:held:0"].text == "𝑋𝐡₁"
+    assert on["matlabel:col:prescaling:detempering:0"].text == "𝑋𝐝₁"
+    assert on["matlabel:col:prescaling:targets:0"].text == "𝑋𝐭₁"
 
 
 def test_units_annotate_each_box_with_its_unit_string():
