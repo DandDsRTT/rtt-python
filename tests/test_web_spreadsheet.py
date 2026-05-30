@@ -1314,8 +1314,8 @@ def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors():
         assert cell.kind == "tval"
     # the comma + target prescaling tiles exist with panels and matrix frames, like the primes one
     assert {"block:prescaling:commas", "block:prescaling:targets"} <= blocks
-    assert {"ebktop:prescaling:commas", "ebkbrace:prescaling:commas",
-            "ebktop:prescaling:targets", "ebkbrace:prescaling:targets"} <= set(on)
+    assert {"ebktop:prescaling:commas", "ebkbot:prescaling:commas",
+            "ebktop:prescaling:targets", "ebkbot:prescaling:targets"} <= set(on)
     assert "cell:prescaling:targets:0:0" in on  # the target column is populated too
 
 
@@ -1387,11 +1387,18 @@ def test_every_present_row_and_column_has_a_gridline():
         assert f"trunk:{key}" in line_ids, f"column {key!r} has no gridline"
 
 
-def test_prescaling_matrix_is_framed_like_the_mapping():
-    on = {c.id for c in _with(weighting=True).cells}
-    assert {"ebktop:prescaling", "ebkbrace:prescaling"} <= on  # top bracket + bottom brace
-    # the mapping's own frame keeps its stable ids
-    assert {"ebktop:primes", "ebkbrace:primes"} <= on
+def test_prescaling_matrices_close_with_a_square_bracket_not_a_curly_brace():
+    # the prescaler L (and L·vector lists) are NOT generator coordinates, so the bottom
+    # mark is the bottom of a square bracket [, not the } curly brace the mapping uses for
+    # its generator-coord lists. Stable per-tile ids.
+    on = {c.id: c for c in _with(weighting=True).cells}
+    for bid in ("prescaling", "prescaling:commas", "prescaling:targets"):
+        assert on[f"ebktop:{bid}"].kind == "ebktop"
+        assert on[f"ebkbot:{bid}"].kind == "ebkbot"
+        assert f"ebkbrace:{bid}" not in on  # no curly brace under a plain matrix
+    # the mapping matrix keeps its top bracket + bottom curly brace (its mapped lists ARE
+    # generator coords, so the } close is correct there)
+    assert on["ebktop:primes"].kind == "ebktop" and on["ebkbrace:primes"].kind == "ebkbrace"
 
 
 def test_prescaling_matrix_carries_its_symbol_and_caption():

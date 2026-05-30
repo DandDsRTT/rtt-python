@@ -2105,20 +2105,24 @@ def build(state, settings=None, collapsed=None,
     # a matrix tile (the primes mapping, the canonical mapping, the complexity prescaler)
     # is enclosed by a top bracket + bottom brace spanning its whole column. ``bid`` keeps
     # each frame's ids stable so two framed rows over the same column never collide.
-    def matrix_frame(rkey, ckey, bid):
+    def matrix_frame(rkey, ckey, bid, foot="ebkbrace"):
+        # ``foot`` picks the matrix's bottom mark: ``ebkbrace`` (} curly close) for tiles
+        # whose contents are generator coordinates (the mapping and its canonical forms);
+        # ``ebkbot`` (the bottom of a square bracket [) for tiles that are NOT in generator
+        # coords (the bare prescaler L and its L·vector lists).
         if not tile_open(rkey, ckey):
             return
         gx, gw = col_x[ckey], col_w[ckey]
         cells.append(CellBox(f"ebktop:{bid}", gx, frame_top_y(rkey), gw, FRAME_H, "ebktop"))
-        cells.append(CellBox(f"ebkbrace:{bid}", gx, frame_brace_y(rkey), gw, BRACE_H, "ebkbrace"))
+        cells.append(CellBox(f"{foot}:{bid}", gx, frame_brace_y(rkey), gw, BRACE_H, foot))
 
     matrix_frame("mapping", "primes", "primes")
     matrix_frame("canon", "primes", "canon")
     matrix_frame("canon", "gens", "form")
-    matrix_frame("prescaling", "primes", "prescaling")
-    matrix_frame("prescaling", "commas", "prescaling:commas")
-    matrix_frame("prescaling", "detempering", "prescaling:detempering")
-    matrix_frame("prescaling", "targets", "prescaling:targets")
+    matrix_frame("prescaling", "primes", "prescaling", foot="ebkbot")
+    matrix_frame("prescaling", "commas", "prescaling:commas", foot="ebkbot")
+    matrix_frame("prescaling", "detempering", "prescaling:detempering", foot="ebkbot")
+    matrix_frame("prescaling", "targets", "prescaling:targets", foot="ebkbot")
     # the interest prescaling is NOT framed as a matrix — its columns stand alone (see the
     # monzo_list_marks call below), like the rest of the interest column
 
