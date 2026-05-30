@@ -318,65 +318,96 @@ COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS)
 # quantity is built from that group's fundamental object, showing through the gaps around
 # the grey tiles. Each quantity is a product of fundamental objects; a tile is washed by
 # whichever *colour-bearing* objects are multiplied into it:
-#   "G" — the generator embedding (and the generator tuning map 𝒈, which tunes G) → tuning (cyan)
-#   "M" — the (temperament) mapping                                                → temperament (yellow)
-#   "C" — the comma basis                                                           → temperament (yellow)
-# Everything else is colourless: the domain basis (the primes), the target list T, the
-# just tuning map 𝒋, the complexity prescaler 𝑋 and the weight 𝒘. A tile carrying both a
-# tuning and a temperament object reads green (the darken blend of the two washes) — e.g.
-# the tempered map 𝒕 = 𝒈𝑀 (G·M), and the whole error/damage chain 𝐞 = (𝒈𝑀 − 𝒋)T, whose
-# 𝒈𝑀 term keeps its G and M even though 𝒓 is a difference. CELL_FACTORS lists only the
-# colour-bearing factors of each tile; a (row, col) absent here carries no wash. Keys
-# match TILES / AUDIO_TILES. NB the generators shown in the spine (mapping × quantities)
+#   "G" — the generator embedding / generator tuning map 𝒈 (which tunes G) → tuning (cyan)
+#   "J" — the just tuning map 𝒋                                            → tuning (cyan)
+#   "X" — the complexity prescaler 𝑋                                       → tuning (cyan)
+#   "T" — the target interval list                                         → tuning (cyan)
+#   "H" — the held interval basis                                          → tuning (cyan)
+#   "M" — the (temperament) mapping                                        → temperament (yellow)
+#   "C" — the comma basis                                                  → temperament (yellow)
+# Colourless: the domain basis (the primes), the other-intervals of interest, and the
+# weight 𝒘 (a standalone derived scalar, like the counts). A tile carrying both a tuning
+# and a temperament object reads green (the darken blend of the two washes) — e.g. the
+# tempered map 𝒕 = 𝒈𝑀 (G·M), the mapped target list 𝑀T (M·T), the just-of-commas 𝒋C (J·C),
+# and the whole error/damage chain 𝐞 = (𝒈𝑀 − 𝒋)T, which keeps every operand's factors
+# (G, M, J, T) across the 𝒓 = 𝒕 − 𝒋 difference. A norm carries its operand's factors, so
+# the complexity 𝒄 = ‖𝑋·v‖ inherits 𝑋 and the basis v's own colour. CELL_FACTORS lists
+# only the colour-bearing factors of each tile; a (row, col) absent here carries no wash.
+# Keys match TILES / AUDIO_TILES. NB the generators shown in the spine (mapping × quantities)
 # are the generator *basis* — a chosen input, neither the embedding G nor the tuning map 𝒈
 # — so they're uncoloured, like the domain primes; among built tiles only 𝒈 (the genmap,
 # and the 𝒈𝑀 it feeds) is cyan, while the embedding G awaits the deferred form box (𝐹).
-_FACTOR_GROUP = {"G": "tuning", "M": "temperament", "C": "temperament"}
+_FACTOR_GROUP = {"G": "tuning", "J": "tuning", "X": "tuning", "T": "tuning", "H": "tuning",
+                 "M": "temperament", "C": "temperament"}
 CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
-    # interval-vectors / quantities headers: the comma basis IS C; primes/targets/interest are colourless
+    # interval-vectors / quantities headers: the comma basis is C (yellow); the target list
+    # T and the held basis H are cyan; the domain primes and other-intervals stay colourless
     ("quantities", "commas"): frozenset({"C"}),        # the comma ratios = C
     ("vectors", "commas"): frozenset({"C"}),           # the comma basis vectors = C
+    ("quantities", "targets"): frozenset({"T"}),       # the target ratios = T
+    ("vectors", "targets"): frozenset({"T"}),          # the target list vectors = T
+    ("quantities", "held"): frozenset({"H"}),          # the held ratios = H
+    ("vectors", "held"): frozenset({"H"}),             # the held basis vectors = H
     # the mapping matrix and its mapped lists are 𝑀 (the mapped comma basis 𝑀C also has C)
     ("mapping", "primes"): frozenset({"M"}),           # 𝑀
     ("mapping", "commas"): frozenset({"M", "C"}),      # 𝑀C
-    ("mapping", "detempering"): frozenset({"M"}),      # 𝑀D (D is colourless, like the target list)
-    ("mapping", "targets"): frozenset({"M"}),          # Y = 𝑀T
-    ("mapping", "interest"): frozenset({"M"}),         # 𝑀·interest
-    ("mapping", "held"): frozenset({"M"}),             # 𝑀H (the held intervals are a chosen list, like interest)
+    ("mapping", "detempering"): frozenset({"M"}),      # 𝑀D (D promoted with the detempering column)
+    ("mapping", "targets"): frozenset({"M", "T"}),     # 𝑀T (the mapping carries the cyan target list)
+    ("mapping", "interest"): frozenset({"M"}),         # 𝑀·interest (other-intervals are colourless)
+    ("mapping", "held"): frozenset({"M", "H"}),        # 𝑀H (the mapping carries the cyan held basis)
     ("canon", "primes"): frozenset({"M"}),             # the canonical mapping (𝑀 = 𝐅𝑀_c): still the 𝑀 family
     # the generator tuning map 𝒈 = G; the tempered family 𝒕 = 𝒈𝑀 etc. carry G and M (green)
     ("tuning", "gens"): frozenset({"G"}),              # 𝒈 (the generator tuning map)
     ("tuning", "primes"): frozenset({"G", "M"}),       # 𝒕 = 𝒈𝑀
     ("tuning", "commas"): frozenset({"G", "M", "C"}),  # 𝒕C
     ("tuning", "detempering"): frozenset({"G", "M"}),  # 𝒕D = 𝒈 (the tempered family carries G𝑀)
-    ("tuning", "targets"): frozenset({"G", "M"}),      # 𝐚 = 𝒈𝑀T
+    ("tuning", "targets"): frozenset({"G", "M", "T"}),  # 𝐚 = 𝒈𝑀T (carries the cyan target list)
     ("tuning", "interest"): frozenset({"G", "M"}),
-    ("tuning", "held"): frozenset({"G", "M"}),         # 𝒕H (held just, but the tempered family still carries G𝑀)
-    # the just sizes carry no G/𝑀; only the comma column has C (the just size of the commas)
-    ("just", "commas"): frozenset({"C"}),              # 𝒋C
-    # the retuning/error chain 𝒓 = 𝒕 − 𝒋 keeps 𝒕's G and M; the comma column adds C
-    ("retune", "primes"): frozenset({"G", "M"}),       # 𝒓 = 𝒈𝑀 − 𝒋
-    ("retune", "commas"): frozenset({"G", "M", "C"}),  # 𝒓C
-    ("retune", "detempering"): frozenset({"G", "M"}),  # 𝒓D (keeps 𝒕D's G𝑀, like the other retunings)
-    ("retune", "targets"): frozenset({"G", "M"}),      # 𝐞 = 𝒓T
-    ("retune", "interest"): frozenset({"G", "M"}),
-    ("retune", "held"): frozenset({"G", "M"}),         # 𝒓H (≈ 𝟎 since held just, but keeps 𝒕's G𝑀 like the others)
-    ("damage", "targets"): frozenset({"G", "M"}),      # 𝐝 = |𝐞|diag(𝒘), via 𝐞
-    # the prescaler 𝑋 is colourless, but prescaling the comma basis keeps its C (the bare
-    # prescaler over primes, and 𝑋 applied to the target/interest/held/detempering lists,
-    # carry no C, so only the comma column colours — as in the complexity row it feeds)
-    ("prescaling", "commas"): frozenset({"C"}),        # 𝑋C (the prescaled comma basis)
-    # complexity over the comma basis norms C → temperament; over primes/targets it's colourless
-    ("complexity", "commas"): frozenset({"C"}),        # 𝒄 of the comma basis (norm of 𝑋C)
-    # the audio rows mirror the just (colourless; comma column C) and tempered (G·M) sizes they sound
-    ("just_audio", "commas"): frozenset({"C"}),
+    ("tuning", "held"): frozenset({"G", "M", "H"}),    # 𝒕H (carries the cyan held basis)
+    # the just tuning map 𝒋 is cyan; the comma column adds C (→ green), the cyan T / H lists
+    # stay cyan, and the colourless primes / other-intervals ride the bare cyan 𝒋
+    ("just", "primes"): frozenset({"J"}),              # 𝒋
+    ("just", "commas"): frozenset({"J", "C"}),         # 𝒋C (cyan 𝒋 over the yellow comma basis → green)
+    ("just", "targets"): frozenset({"J", "T"}),        # 𝐨 = 𝒋T
+    ("just", "interest"): frozenset({"J"}),            # 𝒋·interest
+    ("just", "held"): frozenset({"J", "H"}),           # 𝒋H
+    # the retuning/error chain 𝒓 = 𝒕 − 𝒋 keeps 𝒕's G and 𝑀 AND 𝒋's cyan J (a difference carries
+    # both operands' factors); the comma column adds C, the target / held columns add T / H
+    ("retune", "primes"): frozenset({"G", "M", "J"}),       # 𝒓 = 𝒈𝑀 − 𝒋
+    ("retune", "commas"): frozenset({"G", "M", "C", "J"}),  # 𝒓C
+    ("retune", "detempering"): frozenset({"G", "M"}),       # 𝒓D (J & D promoted with the detempering column)
+    ("retune", "targets"): frozenset({"G", "M", "T", "J"}),  # 𝐞 = 𝒓T
+    ("retune", "interest"): frozenset({"G", "M", "J"}),
+    ("retune", "held"): frozenset({"G", "M", "H", "J"}),    # 𝒓H (≈ 𝟎 since held just, but keeps the factors)
+    ("damage", "targets"): frozenset({"G", "M", "T", "J"}),  # 𝐝 = |𝐞|diag(𝒘), via 𝐞 = 𝒓T
+    # the prescaler 𝑋 is cyan; it carries to every column it scales — the comma column adds C
+    # (→ green), the target / held columns add the cyan T / H, primes / other-intervals ride
+    # the bare cyan 𝑋 (the detempering column is promoted with the rest of that column)
+    ("prescaling", "primes"): frozenset({"X"}),        # the bare prescaler 𝑋
+    ("prescaling", "commas"): frozenset({"X", "C"}),   # 𝑋C (the prescaled comma basis → green)
+    ("prescaling", "targets"): frozenset({"X", "T"}),  # 𝑋T
+    ("prescaling", "interest"): frozenset({"X"}),      # 𝑋·interest
+    ("prescaling", "held"): frozenset({"X", "H"}),     # 𝑋H
+    # complexity 𝒄 = ‖𝑋·v‖ inherits the prescaler's cyan 𝑋 and the basis's own colour
+    ("complexity", "primes"): frozenset({"X"}),        # 𝒄 of the primes (norm of 𝑋)
+    ("complexity", "commas"): frozenset({"X", "C"}),   # 𝒄 of the comma basis (norm of 𝑋C → green)
+    ("complexity", "targets"): frozenset({"X", "T"}),  # 𝒄 of the targets (norm of 𝑋T)
+    ("complexity", "interest"): frozenset({"X"}),      # 𝒄 of the other-intervals
+    ("complexity", "held"): frozenset({"X", "H"}),     # 𝒄 of the held basis (norm of 𝑋H)
+    # the audio rows mirror the just (cyan 𝒋; comma column greens via C) and tempered (G·M;
+    # the target / held columns add the cyan T / H) sizes they sound
+    ("just_audio", "primes"): frozenset({"J"}),        # sounds 𝒋
+    ("just_audio", "commas"): frozenset({"J", "C"}),   # sounds 𝒋C (→ green)
+    ("just_audio", "targets"): frozenset({"J", "T"}),  # sounds 𝐨 = 𝒋T
+    ("just_audio", "interest"): frozenset({"J"}),      # sounds 𝒋·interest
+    ("just_audio", "held"): frozenset({"J", "H"}),     # sounds 𝒋H
     ("mapped_audio", "gens"): frozenset({"G"}),        # the genmap, as the tuning row carries
     ("mapped_audio", "primes"): frozenset({"G", "M"}),
     ("mapped_audio", "commas"): frozenset({"G", "M", "C"}),
-    ("mapped_audio", "detempering"): frozenset({"G", "M"}),  # sounds 𝒕D (the tempered family)
-    ("mapped_audio", "targets"): frozenset({"G", "M"}),
+    ("mapped_audio", "detempering"): frozenset({"G", "M"}),  # sounds 𝒕D (D promoted with the detempering column)
+    ("mapped_audio", "targets"): frozenset({"G", "M", "T"}),  # sounds 𝐚 = 𝒈𝑀T
     ("mapped_audio", "interest"): frozenset({"G", "M"}),
-    ("mapped_audio", "held"): frozenset({"G", "M"}),   # sounds 𝒕H (the tempered family)
+    ("mapped_audio", "held"): frozenset({"G", "M", "H"}),   # sounds 𝒕H
 }
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,

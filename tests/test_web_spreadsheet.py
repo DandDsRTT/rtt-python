@@ -3358,69 +3358,82 @@ def _colormap_layout():
 
 def test_colorization_follows_the_content_map():
     # colour by algebraic content: a tile is tinted by which fundamental objects are
-    # multiplied into its quantity — the generator embedding G (and the generator tuning
-    # map 𝒈, which tunes G) → tuning (cyan); the mapping 𝑀 or the comma basis C →
-    # temperament (yellow); both → green (the darken blend). The target list T, the just
-    # tuning map 𝒋, the prescaler 𝑋 and the weight 𝒘 are colourless.
+    # multiplied into its quantity. Cyan (tuning): the generator embedding G / genmap 𝒈,
+    # the just tuning map 𝒋, the prescaler 𝑋, the target list T, the held basis H. Yellow
+    # (temperament): the mapping 𝑀, the comma basis C. Both → green (the darken blend).
+    # Only the weight 𝒘 (and the standalone counts) stay colourless.
     lay = _colormap_layout()
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    # quantities + interval-vectors rows: only the comma basis (C) is coloured (yellow);
-    # the domain primes, the targets (T) and the other-intervals carry no colour
+    # quantities + interval-vectors rows: the comma basis is C (yellow); the target list T
+    # and the held basis H are now cyan; only the domain primes and other-intervals stay neutral
     assert at("comma:0") == Y                  # quantities × commas (the comma ratios are C)
     assert at("cell:comma:0:0") == Y           # interval-vectors × commas (the comma basis vectors)
     assert at("prime:0") == N                  # quantities × primes (the domain basis)
-    assert at("target:0") == N                 # quantities × targets (T)
+    assert at("target:0") == C                 # quantities × targets (T, now cyan)
     assert at("interest:0") == N               # quantities × other-intervals
-    assert at("held:0") == N                   # quantities × held intervals (H, a chosen list)
+    assert at("held:0") == C                   # quantities × held intervals (H, now cyan)
     assert at("basis:0") == N                  # interval-vectors × spine (the domain basis)
-    assert at("cell:vec:targets:0:0") == N     # interval-vectors × targets (the target vectors)
+    assert at("cell:vec:targets:0:0") == C     # interval-vectors × targets (the target vectors, T)
     assert at("cell:interest:0:0") == N        # interval-vectors × other-intervals
-    assert at("cell:held:0:0") == N            # interval-vectors × held intervals (the H basis)
+    assert at("cell:held:0:0") == C            # interval-vectors × held intervals (the H basis)
     # the generators in the spine are the generator basis — an input, carrying neither the
     # tuning map 𝒈 nor the embedding G — so they're colourless, like the domain primes
     assert at("gen:0") == N                     # mapping × spine (the generator ratios)
-    # the mapping matrix and its mapped lists are pure 𝑀 (and 𝑀C) → temperament (yellow)
+    # the mapping matrix and its mapped lists are 𝑀; mapping a cyan list (T, H) greens it
     assert at("cell:mapping:0:0") == Y          # mapping × primes (𝑀)
     assert at("cell:mapped_comma:0:0") == Y     # mapping × commas (𝑀C)
-    assert at("cell:mapped:0:0") == Y           # mapping × targets (Y = 𝑀T)
+    assert at("cell:mapped:0:0") == G           # mapping × targets (𝑀T = 𝑀·T, both colours)
     assert at("cell:imapped:0:0") == Y          # mapping × other-intervals (𝑀·interest)
-    assert at("cell:hmapped:0:0") == Y          # mapping × held intervals (𝑀H)
+    assert at("cell:hmapped:0:0") == G          # mapping × held intervals (𝑀H, both colours)
     # the tempered family 𝒕 = 𝒈𝑀 carries both G and 𝑀 → green; the bare genmap 𝒈 is cyan.
     # the retuning row 𝒓 = 𝒕 − 𝒋 keeps the 𝒈𝑀 term's G and 𝑀 (a difference still has them)
     assert at("tuning:gen:0") == C              # tuning × generators (𝒈, the generator tuning map)
     for col in ("prime", "comma", "target", "interest", "held"):
         assert at(f"tuning:{col}:0") == G       # 𝒕 / 𝒕C / 𝐚 / 𝒕H = 𝒈𝑀(…)
         assert at(f"retune:{col}:0") == G       # 𝒓 / 𝒓C / 𝐞 / 𝒓H = (𝒈𝑀 − 𝒋)(…)
-    # the just sizes carry no G/𝑀; only the comma column has C (the just size of the commas)
-    assert at("just:prime:0") == N              # just × primes (𝒋)
-    assert at("just:comma:0") == Y              # just × commas (𝒋C)
-    assert at("just:target:0") == N             # just × targets (𝐨 = 𝒋T)
-    assert at("just:interest:0") == N           # just × other-intervals
-    assert at("just:held:0") == N               # just × held intervals (𝒋H, held just)
+    # the just tuning map 𝒋 is now cyan; its products green where the column also carries a
+    # yellow object (commas C), stay cyan where the column is neutral or cyan (T, H)
+    assert at("just:prime:0") == C              # just × primes (𝒋, now cyan)
+    assert at("just:comma:0") == G              # just × commas (𝒋C, both colours)
+    assert at("just:target:0") == C             # just × targets (𝐨 = 𝒋T, both cyan → cyan)
+    assert at("just:interest:0") == C           # just × other-intervals (𝒋·interest)
+    assert at("just:held:0") == C               # just × held intervals (𝒋H, both cyan → cyan)
     # the damage row rides the error chain 𝐞 = (𝒈𝑀 − 𝒋)T → green
     assert at("damage:target:0") == G           # damage × targets (𝐝 = |𝐞|diag(𝒘))
 
 
 def test_off_by_default_rows_colorize_by_content_too():
     # the rows hidden by default follow the same content rule when revealed: the canonical
-    # mapping is the 𝑀 family (𝑀 = 𝐅𝑀_c → yellow), and the prescaled comma basis 𝑋C and the
-    # complexity of the comma basis (norm of 𝑋C) both keep C (→ yellow). All ride a
-    # temperament wash; none carries G, so none greens. The bare prescaler 𝑋 (over the
-    # primes) and the prescaled target list 𝑋T carry no C, so they stay colourless.
+    # mapping is the 𝑀 family (𝑀 = 𝐅𝑀_c → yellow). The prescaler 𝑋 is now cyan, so the
+    # prescaling and complexity rows carry it everywhere; a column that also bears a yellow
+    # object (commas C) greens, while the bare prescaler over primes and the cyan target
+    # list 𝑋T stay cyan.
     s = settings.defaults()
     s["temperament_colorization"] = True
-    s["form"] = True       # reveal the canonical-mapping row
-    s["weighting"] = True  # reveal the prescaling + complexity rows (a tuning-boxes sub-control)
-    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+    s["tuning_colorization"] = True
+    s["form"] = True            # reveal the canonical-mapping row
+    s["weighting"] = True       # reveal the prescaling + complexity rows (a tuning-boxes sub-control)
+    s["optimization"] = True    # reveal the held column
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            interest=((-1, 1, 0),), held_monzos=((-1, 1, 0),))
     cells = {c.id: c for c in lay.cells}
+    Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    assert at("cell:canon:0:0") == {"temperament"}             # the canonical mapping (𝑀 family)
-    assert at("cell:prescaling:commas:0:0") == {"temperament"} # 𝑋C (the prescaler keeps the comma basis's C)
-    assert at("complexity:comma:0") == {"temperament"}         # 𝒄 of the comma basis (norm of 𝑋C)
-    assert at("cell:prescaling:primes:0:0") == set()           # the bare prescaler 𝑋 (no C) → colourless
-    assert at("cell:prescaling:targets:0:0") == set()          # 𝑋T (T carries no C) → colourless
+    assert at("cell:canon:0:0") == Y                       # the canonical mapping (𝑀 family)
+    # the prescaling row 𝑋 is cyan; the comma column adds C (green); T / H ride cyan-only
+    assert at("cell:prescaling:primes:0:0") == C           # the bare prescaler 𝑋 (cyan)
+    assert at("cell:prescaling:commas:0:0") == G           # 𝑋C (the prescaler keeps the comma basis's C)
+    assert at("cell:prescaling:targets:0:0") == C          # 𝑋T (both cyan → cyan)
+    assert at("cell:prescaling:interest:0:0") == C         # 𝑋·interest (cyan)
+    assert at("cell:prescaling:held:0:0") == C             # 𝑋H (both cyan → cyan)
+    # complexity 𝒄 = ‖𝑋·v‖ inherits 𝑋 (cyan), greening only where the basis is C
+    assert at("complexity:prime:0") == C                   # 𝒄 of the primes (norm of 𝑋)
+    assert at("complexity:comma:0") == G                   # 𝒄 of the comma basis (norm of 𝑋C)
+    assert at("complexity:target:0") == C                  # 𝒄 of the targets (norm of 𝑋T)
+    assert at("complexity:interest:0") == C                # 𝒄 of the other-intervals
+    assert at("complexity:held:0") == C                    # 𝒄 of the held basis (norm of 𝑋H)
 
 
 def test_washes_bridge_the_plus_column_gutters():
@@ -3620,17 +3633,18 @@ def _audio_colormap():
 
 
 def test_audio_rows_colorize_by_content_like_the_rows_they_sound():
-    # the audio rows mirror the rows they sound. just audio plays the just sizes 𝒋 (no
-    # G/𝑀 → colourless), except the comma column — the just size of the comma basis 𝒋C
-    # (C → yellow). mapped audio plays the tempered sizes: the generator tuning map 𝒈
-    # (G → cyan) over the generators, and 𝒕 = 𝒈𝑀 (G·M → green) over the value columns.
+    # the audio rows mirror the rows they sound. just audio plays the just sizes 𝒋, now
+    # cyan; the comma column greens (the just size of the comma basis 𝒋C carries C too),
+    # while the target / held columns stay cyan. mapped audio plays the tempered sizes:
+    # the generator tuning map 𝒈 (G → cyan) over the generators, and 𝒕 = 𝒈𝑀 (G·M → green)
+    # over the value columns.
     lay = _audio_colormap()
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    assert at("speaker:just_audio:comma:0") == Y           # 𝒋C
+    assert at("speaker:just_audio:comma:0") == G           # 𝒋C (cyan 𝒋 over the yellow comma basis)
     for g in ("prime", "target", "interest", "held"):
-        assert at(f"speaker:just_audio:{g}:0") == N         # 𝒋 / 𝐨 / 𝒋H: no G/𝑀/C
+        assert at(f"speaker:just_audio:{g}:0") == C         # 𝒋 / 𝐨 / 𝒋H: cyan 𝒋 (T/H also cyan)
     assert at("speaker:mapped_audio:gen:0") == C            # 𝒈 (the generator tuning map)
     for g in ("prime", "comma", "target", "interest", "held"):
         assert at(f"speaker:mapped_audio:{g}:0") == G       # 𝒕 / 𝒕H = 𝒈𝑀
