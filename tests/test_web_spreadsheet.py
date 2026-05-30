@@ -3105,17 +3105,22 @@ def test_colorization_follows_the_content_map():
 
 def test_off_by_default_rows_colorize_by_content_too():
     # the rows hidden by default follow the same content rule when revealed: the canonical
-    # mapping is the 𝑀 family (𝑀 = 𝐅𝑀_c → yellow), and the complexity of the comma basis
-    # norms C (→ yellow). Both ride a temperament wash; neither carries G, so neither greens.
+    # mapping is the 𝑀 family (𝑀 = 𝐅𝑀_c → yellow), and the prescaled comma basis 𝑋C and the
+    # complexity of the comma basis (norm of 𝑋C) both keep C (→ yellow). All ride a
+    # temperament wash; none carries G, so none greens. The bare prescaler 𝑋 (over the
+    # primes) and the prescaled target list 𝑋T carry no C, so they stay colourless.
     s = settings.defaults()
     s["temperament_colorization"] = True
     s["form"] = True       # reveal the canonical-mapping row
-    s["weighting"] = True  # reveal the complexity row (a tuning-boxes sub-control)
+    s["weighting"] = True  # reveal the prescaling + complexity rows (a tuning-boxes sub-control)
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
     cells = {c.id: c for c in lay.cells}
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    assert at("cell:canon:0:0") == {"temperament"}      # the canonical mapping (𝑀 family)
-    assert at("complexity:comma:0") == {"temperament"}  # 𝒄 of the comma basis (norm of 𝑋C)
+    assert at("cell:canon:0:0") == {"temperament"}             # the canonical mapping (𝑀 family)
+    assert at("cell:prescaling:commas:0:0") == {"temperament"} # 𝑋C (the prescaler keeps the comma basis's C)
+    assert at("complexity:comma:0") == {"temperament"}         # 𝒄 of the comma basis (norm of 𝑋C)
+    assert at("cell:prescaling:primes:0:0") == set()           # the bare prescaler 𝑋 (no C) → colourless
+    assert at("cell:prescaling:targets:0:0") == set()          # 𝑋T (T carries no C) → colourless
 
 
 def test_washes_bridge_the_plus_column_gutters():

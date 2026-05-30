@@ -284,6 +284,10 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("retune", "interest"): frozenset({"G", "M"}),
     ("retune", "held"): frozenset({"G", "M"}),         # 𝒓H (≈ 𝟎 since held just, but keeps 𝒕's G𝑀 like the others)
     ("damage", "targets"): frozenset({"G", "M"}),      # 𝐝 = |𝐞|diag(𝒘), via 𝐞
+    # the prescaler 𝑋 is colourless, but prescaling the comma basis keeps its C (the bare
+    # prescaler over primes, and 𝑋 applied to the target/interest/held/detempering lists,
+    # carry no C, so only the comma column colours — as in the complexity row it feeds)
+    ("prescaling", "commas"): frozenset({"C"}),        # 𝑋C (the prescaled comma basis)
     # complexity over the comma basis norms C → temperament; over primes/targets it's colourless
     ("complexity", "commas"): frozenset({"C"}),        # 𝒄 of the comma basis (norm of 𝑋C)
     # the audio rows mirror the just (colourless; comma column C) and tempered (G·M) sizes they sound
