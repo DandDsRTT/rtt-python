@@ -170,6 +170,19 @@ async def test_target_chooser_renders_in_the_expanded_target_interval_list(user:
     await user.should_see(marker="preselect:target")
 
 
+async def test_chooser_popups_open_wide_enough_for_one_line_entries(user: User) -> None:
+    # A chooser's open popup must grow to fit its longest entry on one line
+    # (popup-content-style width:max-content), never capped at the trigger cell's width —
+    # long names (e.g. the "established tuning scheme" list) were truncating. The popup
+    # still stays at least as wide as the trigger (a min-width floor), so the open list is
+    # never narrower than the box it drops from.
+    await _enable(user, "preselects")
+    for cell_id in ("preselect:temperament", "preselect:tuning"):
+        style = _cell_child(user, cell_id)._props["popup-content-style"]
+        assert "width:max-content" in style, f"{cell_id}: {style}"
+        assert style.startswith("min-width:"), f"{cell_id}: {style}"
+
+
 async def test_optimization_renders_the_optimize_button(user: User) -> None:
     # the optimize button renders in the damage tile when optimization is on (its single/
     # double-click optimize+lock behaviour is covered by the editor tests). The fixture

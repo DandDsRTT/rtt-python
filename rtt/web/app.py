@@ -560,8 +560,8 @@ _CSS = f"""
             inset:2px !important; background:#888 !important; border-radius:0 !important; }}
 /* each chooser's dropdown popup matches the field's Cambria text, with compact items */
 .rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
-/* compact items; a long name (e.g. a systematic tuning) wraps within the field
-   width rather than widening the popup past the field it drops from */
+/* compact items; the popup grows to max-content (see _select_props), widening past
+   the field so a long name (e.g. a systematic tuning) shows on one line */
 .rtt-select-popup .q-item {{ min-height:22px; padding:1px 8px; font-size:11px; }}
 .rtt-select-popup .q-item__label {{ font-size:11px; white-space:normal;
               font-family:'Cambria',Georgia,serif; }}
@@ -1419,6 +1419,16 @@ def _line_style(ln) -> str:
     return f"top:{ln.pos - half}px; left:{ln.start}px; width:{ln.length}px"
 
 
+def _select_props(min_width: float) -> str:
+    """Shared Quasar props for every chooser dropdown (preselect / target / form / control
+    select): a compact borderless field whose open popup is at least as wide as its trigger
+    (``min_width`` px) but grows to ``max-content``, so each entry shows on one line rather
+    than wrapping or truncating at the trigger's width."""
+    return ("dense options-dense borderless hide-bottom-space "
+            "popup-content-class=rtt-select-popup "
+            f"popup-content-style=min-width:{min_width}px;width:max-content")
+
+
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
@@ -1841,8 +1851,7 @@ def index() -> None:
                             .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
                         sel = ui.select(list(presets.TARGET_SETS), value=editor.target_family,
                                 on_change=lambda e: on_target_change()) \
-                            .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
-                                   f"popup-content-style=width:{cb.w - 33}px").classes("rtt-preselect")  # field = cell − 30px square − 3px gap
+                            .props(_select_props(cb.w - 33)).classes("rtt-preselect")  # field = cell − 30px square − 3px gap
                     selects[cb.id] = (num, sel)
                 elif name == "temperament":
                     # a normal dropdown: the chosen preset shows in the box; the ""
@@ -1851,22 +1860,16 @@ def index() -> None:
                     options = {"": "choose temperament", **presets.temperament_options()}
                     selects[cb.id] = ui.select(options, value=presets.identify(editor.state) or "",
                             on_change=lambda e: on_preselect("temperament", e.value)) \
-                        .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
-                               f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
+                        .props(_select_props(cb.w)).classes("rtt-preselect")
                 else:  # tuning — systematic scheme names; a control-refined scheme has no name
                     scheme = editor.tuning_scheme if isinstance(editor.tuning_scheme, str) else None
                     selects[cb.id] = ui.select(list(presets.TUNING_SCHEMES), value=scheme,
                             on_change=lambda e: on_preselect("tuning", e.value)) \
-                        .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
-                               f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
+                        .props(_select_props(cb.w)).classes("rtt-preselect")
             elif cb.kind == "control_select":  # an alt.-complexity chooser (prescaler / norm / weight slope)
-                # the popup grows to max-content so long display names (e.g. the predefined-
-                # complexity expansions) fit on one line each, while staying at least as wide
-                # as the dropdown trigger
                 selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
-                    .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
-                           f"popup-content-style=min-width:{cb.w}px;width:max-content").classes("rtt-preselect")
+                    .props(_select_props(cb.w)).classes("rtt-preselect")
             elif cb.kind == "control_check":  # the box-𝐋 "ignore diminuator" checkbox (size factor)
                 checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
@@ -1875,8 +1878,7 @@ def index() -> None:
                 name = cb.id.split(":", 1)[1]  # mapping / comma_basis
                 selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
                         on_change=lambda e, n=name: on_form_choose(n, e.value)) \
-                    .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
-                           f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
+                    .props(_select_props(cb.w)).classes("rtt-preselect")
             elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
                 labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
             elif cb.kind == "ptextedit":  # an editable dual: typing a valid EBK string drives the grid
