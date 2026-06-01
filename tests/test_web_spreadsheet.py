@@ -1371,14 +1371,14 @@ def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors():
 def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
     # the plain-text value and the gridded cells are two views of ONE matrix, so the
     # string must read off the SAME numbers the grid shows — bare whole numbers and all
-    # (the prescaler diagonal is mostly 0 and 1), never padded to "0.000"/"1.000". Each
-    # 𝐿·basis product reads as columns ``[ … ⟩`` (square open + ket close) inside outer
-    # ``[ … ]``. The bare prescaler 𝐿 is the asymmetric exception: its columns are
-    # ``⟨ … ]`` (angle open + square close) inside outer ``[ … ⟩`` (square open + ket
-    # close) — the plain text mirrors the same vocabulary the gridded EBK does.
+    # (the prescaler diagonal is mostly 0 and 1), never padded to "0.000"/"1.000". Every
+    # prescaling tile uses ``⟨ … ]`` per vector (the same shape the mapping uses per row);
+    # only the outer wrap differs by tile family. The bare prescaler 𝐿 wraps with the
+    # asymmetric ``[ … ⟩`` (mirroring the mapping's ``[ … }`` but with the angle ⟩
+    # instead of the curly }); every 𝐿·basis product (𝐿C / 𝐿T / 𝐿H) wraps with the
+    # symmetric ``[ … ]``.
     import re
     cells = {c.id: c for c in _with(plain_text_values=True, weighting=True).cells}
-    col = {"primes": "⟨]", "commas": "[⟩", "targets": "[⟩"}
     outer = {"primes": "[⟩", "commas": "[]", "targets": "[]"}
     for group in ("primes", "commas", "targets"):
         coords = [re.fullmatch(rf"cell:prescaling:{group}:(\d+):(\d+)", cid)
@@ -1386,12 +1386,11 @@ def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
         coords = [(int(m.group(2)), int(m.group(1))) for m in coords if m]  # (col, row)
         ncols = max(c for c, _ in coords) + 1
         d = max(r for _, r in coords) + 1
-        co, cc = col[group]
-        cols = [co + " ".join(cells[f"cell:prescaling:{group}:{i}:{c}"].text
-                              for i in range(d)) + cc
+        vecs = ["⟨" + " ".join(cells[f"cell:prescaling:{group}:{i}:{c}"].text
+                               for i in range(d)) + "]"
                 for c in range(ncols)]
         op, cl = outer[group]
-        assert cells[f"ptext:prescaling:{group}"].text == f"{op}{' '.join(cols)}{cl}", group
+        assert cells[f"ptext:prescaling:{group}"].text == f"{op}{' '.join(vecs)}{cl}", group
 
 
 def test_weighting_rows_show_their_units_line_when_units_on():
