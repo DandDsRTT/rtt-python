@@ -2506,13 +2506,14 @@ def test_symbols_labels_each_matrix_row_or_column_with_a_subscripted_glyph():
     # The mapped target list Y is itself a list of vectors, so its column label is
     # the renamed bold-upright 𝐲 + subscript
     assert on["matlabel:col:mapping:targets:0"].text == "𝐲₁"   # Y → 𝐲
-    # The five target-size lists hold SCALARS per cell, so the indexed label is the
-    # NON-BOLD italic form of the list's symbol — 𝐚 → 𝑎, 𝐨 → 𝑜, 𝐞 → 𝑒, 𝒘 → 𝑤, 𝐝 → 𝑑.
-    # (The list itself is named with the bold form; the indexed entries are scalars.)
-    assert on["matlabel:col:tuning:targets:0"].text == "𝑎₁"    # tempered target sizes
-    assert on["matlabel:col:just:targets:0"].text == "𝑜₁"      # just target sizes
-    assert on["matlabel:col:retune:targets:0"].text == "𝑒₁"    # target retunings
-    assert on["matlabel:col:damage:targets:0"].text == "𝑑₁"    # damage list
+    # The six target SIZE lists hold SCALARS per cell, so each indexed label is the
+    # bare PLAIN-ASCII letter (neither bold nor italic) — the bold form names the list
+    # (𝐚, 𝐨, 𝐞, 𝒘, 𝐝, 𝒄); the indexed scalar is a/o/e/w/d/c. Plain ASCII passes through
+    # _math_html as plain serif text, with the index subscripted via Unicode.
+    assert on["matlabel:col:tuning:targets:0"].text == "a₁"    # tempered target sizes
+    assert on["matlabel:col:just:targets:0"].text == "o₁"      # just target sizes
+    assert on["matlabel:col:retune:targets:0"].text == "e₁"    # target retunings
+    assert on["matlabel:col:damage:targets:0"].text == "d₁"    # damage list
 
     # Symbols off drops every label, like the symbol/equivalence cells
     assert not any(c.startswith("matlabel:") for c in off)
@@ -2555,6 +2556,26 @@ def test_matrix_labels_sit_above_or_left_of_the_cells_they_label():
             <= on["matlabel:row:mapping:primes:0"].y + on["matlabel:row:mapping:primes:0"].h)
 
 
+def test_col_labels_sit_in_the_gap_above_the_tile():
+    # Per the mockup, the col labels float in the GAP between two tile rows — roughly
+    # equidistant from the tile above and the bracket below — rather than sitting
+    # snugged against the bracket inside the tile head. So matlabel ENDS above the
+    # tile_top of its row (no part of the label inside the panel proper).
+    on = {c.id: c for c in _with(symbols=True).cells}
+    for tile_id, label_id in [
+        ("vec:commas", "matlabel:col:vectors:commas:0"),
+        ("vec:targets", "matlabel:col:vectors:targets:0"),
+        ("mapped", "matlabel:col:mapping:targets:0"),
+        ("mapped_comma", "matlabel:col:mapping:commas:0"),
+    ]:
+        label = on[label_id]
+        ebktop = on[f"ebktop:{tile_id}:0"]
+        # the label's bottom edge sits ABOVE the bracket (with clear gap), not flush
+        # against it — they're separated by the head + GAP padding
+        assert label.y + label.h < ebktop.y - 5, \
+            f"{label_id} (y={label.y}+{label.h}) should sit well above {tile_id} bracket (y={ebktop.y})"
+
+
 def test_col_labels_sit_above_the_top_frame_in_framed_rows():
     # In a framed row (interval vectors, mapping, prescaling), the col labels (𝐜ᵢ, 𝐲ᵢ,
     # …) MUST sit above the matrix's top bracket ─┐ — the labels name the columns the
@@ -2594,27 +2615,31 @@ def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter():
     assert ebkbrace.x + ebkbrace.w == right_bracket.x + right_bracket.w
 
 
-def test_complexity_row_labels_every_cell_with_a_subscripted_glyph():
-    # Complexity is a covector applied to each interval set; every cell is a scalar
-    # complexity. The mockup labels each column with 𝒄 (the row's symbol) compounded
-    # with the column's vector letter and a subscript: 𝒄ᵢ over primes, 𝒄𝐜ᵢ over the
-    # comma basis, 𝒄𝐝ᵢ over detempering, 𝒄𝐡ᵢ over held intervals.
+def test_complexity_col_labels_spell_out_the_norm_definition():
+    # Complexity is the q-norm of L (the prescaler) applied to each basis vector; per
+    # the mockup each cell is labelled with that closed form rather than a bare 𝒄
+    # subscript. The L is math-italic, the basis letter (𝐜/𝐡/𝐝/𝐭) bold-upright, the
+    # index a Unicode subscript, and the trailing q a small post-norm subscript marker.
+    # The PRIMES column uses bracket-index notation L[i] (each prime's column of L),
+    # not a separate vector letter — there is no bold lowercase p in this scheme.
+    # The TARGETS column is the named complexity list 𝒄, so its labels stay plain "c".
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["symbols"] = True
     s["weighting"] = True              # opens the complexity row
-    s["optimization"] = True           # opens the held column (for the 𝒄𝐡 case)
-    s["generator_detempering"] = True  # opens the detempering column (for the 𝒄𝐝 case)
+    s["optimization"] = True           # opens the held column
+    s["generator_detempering"] = True  # opens the detempering column
     on = {c.id: c for c in spreadsheet.build(
         base, s, held_monzos=((-1, 1, 0),)
     ).cells}
-    assert on["matlabel:col:complexity:primes:0"].text == "𝒄₁"
-    assert on["matlabel:col:complexity:primes:2"].text == "𝒄₃"
-    assert on["matlabel:col:complexity:commas:0"].text == "𝒄𝐜₁"
-    assert on["matlabel:col:complexity:held:0"].text == "𝒄𝐡₁"
-    assert on["matlabel:col:complexity:detempering:0"].text == "𝒄𝐝₁"
-    # complexity over targets keeps the bare 𝒄 (its own letter, no compound)
-    assert on["matlabel:col:complexity:targets:0"].text == "𝒄₁"
+    assert on["matlabel:col:complexity:primes:0"].text == "‖𝐿[1]‖q"
+    assert on["matlabel:col:complexity:primes:2"].text == "‖𝐿[3]‖q"
+    assert on["matlabel:col:complexity:commas:0"].text == "‖𝐿𝐜₁‖q"
+    assert on["matlabel:col:complexity:held:0"].text == "‖𝐿𝐡₁‖q"
+    assert on["matlabel:col:complexity:detempering:0"].text == "‖𝐿𝐝₁‖q"
+    # complexity over targets is the named complexity LIST 𝒄 — each cell a scalar
+    # entry, so the label is plain "c" (no styling, like the other size lists)
+    assert on["matlabel:col:complexity:targets:0"].text == "c₁"
 
 
 def test_prescaling_matrix_row_and_col_labels():

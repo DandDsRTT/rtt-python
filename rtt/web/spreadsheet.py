@@ -268,34 +268,38 @@ COL_LABEL_LETTERS = {
     ("mapping", "held"): "𝑀𝐡",
     ("mapping", "detempering"): "𝑀𝐝",
     # tuning row — single covector applied to each column set; the tempered target
-    # list is the bold-upright 𝐚, but its cells are scalars so the col label is italic
+    # list 𝐚 is bold-upright as a list, but each cell is a SCALAR so its index reads
+    # as plain "a" (neither bold nor italic) — same for the other scalar lists below
     ("tuning", "gens"): "𝒈",
     ("tuning", "primes"): "𝒕",
     ("tuning", "commas"): "𝒕𝐜",
-    ("tuning", "targets"): "𝑎",      # tempered target SIZES (scalars) — non-bold italic
+    ("tuning", "targets"): "a",       # tempered target SIZES (scalars) — plain
     ("tuning", "held"): "𝒕𝐡",
     ("tuning", "detempering"): "𝒕𝐝",
     # just row
     ("just", "primes"): "𝒋",
     ("just", "commas"): "𝒋𝐜",
-    ("just", "targets"): "𝑜",        # just target SIZES — non-bold italic
+    ("just", "targets"): "o",         # just target SIZES — plain
     ("just", "held"): "𝒋𝐡",
     ("just", "detempering"): "𝒋𝐝",
     # retune row
     ("retune", "primes"): "𝒓",
     ("retune", "commas"): "𝒓𝐜",
-    ("retune", "targets"): "𝑒",      # retuning errors — non-bold italic
+    ("retune", "targets"): "e",       # retuning errors — plain
     ("retune", "held"): "𝒓𝐡",
     ("retune", "detempering"): "𝒓𝐝",
     # damage + weight — scalar lists over the targets only
-    ("damage", "targets"): "𝑑",      # damage scalars — non-bold italic
-    ("weight", "targets"): "𝑤",      # weight scalars — non-bold italic
-    # complexity row — 𝒄 across every interval set, compounded with the column letter
-    ("complexity", "primes"): "𝒄",
-    ("complexity", "commas"): "𝒄𝐜",
-    ("complexity", "targets"): "𝒄",
-    ("complexity", "held"): "𝒄𝐡",
-    ("complexity", "detempering"): "𝒄𝐝",
+    ("damage", "targets"): "d",       # damage scalars — plain
+    ("weight", "targets"): "w",       # weight scalars — plain
+    # complexity row — the q-norm of the prescaler L applied to each basis vector,
+    # spelt out as ‖L·basisᵢ‖q per the mockup (the targets column is the named
+    # complexity LIST 𝒄, so its cells stay plain "c"). The callable form maps the
+    # column index to a fully-formed label (see _norm_label).
+    ("complexity", "primes"): lambda i: f"‖𝐿[{i + 1}]‖q",
+    ("complexity", "commas"): lambda i: f"‖𝐿𝐜{_sub(i + 1)}‖q",
+    ("complexity", "held"): lambda i: f"‖𝐿𝐡{_sub(i + 1)}‖q",
+    ("complexity", "detempering"): lambda i: f"‖𝐿𝐝{_sub(i + 1)}‖q",
+    ("complexity", "targets"): "c",   # complexity scalars — plain
     # prescaling row — vector lists 𝑋·basis (𝑋 itself is row-labeled, above)
     ("prescaling", "commas"): "𝑋𝐜",
     ("prescaling", "targets"): "𝑋𝐭",
@@ -1338,11 +1342,12 @@ def build(state, settings=None, collapsed=None,
         # and a taller bottom curly brace (BRACE_H, with room for its spike)
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
-        # column labels (𝐜ᵢ above each comma, 𝒕ᵢ above each tuned prime, …) ride a
-        # band ABOVE the top bracket — they head the matrix, not its bracket gutter —
-        # so a framed matrix reads label / [top bracket] / cells top-to-bottom. Reserved
-        # whenever symbols is on and the row has at least one col-labelled tile.
-        matlabel_band = (MATLABEL_H if (show_symbols and key in COL_LABELED_ROWS and not folded) else 0)
+        # column labels (𝐜ᵢ above each comma, 𝒕ᵢ above each tuned prime, …) float in
+        # the GAP above the tile, equidistant from the tile-above bottom and this
+        # tile's top bracket — they head the matrix from outside the panel. The
+        # height is NOT added to tile_h: the existing GAP (between rows) is wide
+        # enough to hold MATLABEL_H. This flag only gates the position computation.
+        has_matlabel = (show_symbols and key in COL_LABELED_ROWS and not folded)
         # a charted row grows a chart band (above the values, below the top frame)
         charted = show_charts and key in CHARTED_ROWS and not folded
         chart_band = (CHART_H + CHART_GAP) if charted else 0
@@ -1364,12 +1369,13 @@ def build(state, settings=None, collapsed=None,
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
         if charted:
-            chart_top[key] = y + head + matlabel_band + top_frame  # the chart sits below the top frame
-        if matlabel_band:
-            # col-label band sits at the TOP of the matrix, above the top-bracket frame:
-            # toggle head + (this band) + top frame + (chart band) + cells
-            row_matlabel_top[key] = y + head
-        row_y[key] = y + head + matlabel_band + top_frame + chart_band  # values sit below toggle head, label band, top frame, chart
+            chart_top[key] = y + head + top_frame  # the chart sits below the top frame
+        if has_matlabel:
+            # col-label band rides in the GAP above the tile, centred between the
+            # row-above's bottom (y - GAP) and this row's top bracket (y + head +
+            # top_frame_top). The label height fits inside GAP — no tile_h reservation.
+            row_matlabel_top[key] = y - (GAP + MATLABEL_H) // 2
+        row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
         row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
         row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
         row_cap[key] = cap  # the units line and plain-text box sit below the caption
@@ -1378,7 +1384,7 @@ def build(state, settings=None, collapsed=None,
         row_pre[key] = pre  # the preselect band, with the <choose form> chooser below it
         row_label[key] = label
         row_collapsible[key] = collapsible
-        tile_h[key] = head + matlabel_band + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
+        tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
         # a row with a nested tile-control (ranges chart, alt-complexity chooser, optimization
         # block) adds its reserved height here, so the rows below drop clear of it and every
         # tile in the row grows to the same height (the row stays one uniform band)
@@ -2116,8 +2122,11 @@ def build(state, settings=None, collapsed=None,
                     "matlabel", text=f"{glyph}{_sub(i + 1)}",
                 ))
         # column labels — one per cell of each col-labelled tile, in the band above
-        # the top frame (so a framed matrix reads label / [bracket] / cells)
-        for (rkey, ckey), glyph in COL_LABEL_LETTERS.items():
+        # the top frame (so a framed matrix reads label / [bracket] / cells). A label
+        # value is either a string (the bare glyph; the i+1 subscript is appended) or
+        # a callable (i) → full label text, for tiles whose label has a richer form
+        # than glyph+subscript (the complexity row's norm expressions).
+        for (rkey, ckey), val in COL_LABEL_LETTERS.items():
             if ckey not in group_count or rkey not in row_matlabel_top:
                 continue
             if not tile_open(rkey, ckey):
@@ -2125,10 +2134,11 @@ def build(state, settings=None, collapsed=None,
             left = group_left[ckey]
             y = row_matlabel_top[rkey]
             for i in range(group_count[ckey]):
+                text = val(i) if callable(val) else f"{val}{_sub(i + 1)}"
                 cells.append(CellBox(
                     f"matlabel:col:{rkey}:{ckey}:{i}",
                     left(i), y, COL_W, MATLABEL_H,
-                    "matlabel", text=f"{glyph}{_sub(i + 1)}",
+                    "matlabel", text=text,
                 ))
 
     # Shared axes. A multi-element group is one line that fans out at the near end
