@@ -304,13 +304,18 @@ def tuning(
     domain_basis=None,
     nonprime_approach: str = "",
     held=(),
+    prescaler_override=None,
 ) -> Tuning:
     """The temperament's maps and generator ranges (cents) under ``scheme`` — no
     interval set. Over a nonstandard ``domain_basis`` the maps run over its (possibly
     nonprime) elements; ``nonprime_approach`` ("" neutral, "nonprime-based",
     "prime-based") picks how the optimization treats a nonprime basis (trait 7).
     ``held`` is the user's held interval constraints (ratio strings from the held column):
-    the optimization holds each exactly just, on top of any the scheme itself holds."""
+    the optimization holds each exactly just, on top of any the scheme itself holds.
+
+    ``prescaler_override`` (a d-tuple) drives the complexity-prescaler diagonal directly,
+    overriding the scheme's log-prime / prime / identity diagonal — the bare prescaler
+    tile's hand-edited values flow through here into the damage-weighted optimum."""
     t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
     if nonprime_approach:
@@ -319,10 +324,10 @@ def tuning(
         own = (spec.held_intervals or "").strip().strip("{}").strip()
         parts = ([own] if own else []) + [r for r in held]
         spec = replace(spec, held_intervals="{" + ", ".join(parts) + "}")
-    tempered = optimize_tuning_map(t, spec)
+    tempered = optimize_tuning_map(t, spec, prescaler_override=prescaler_override)
     just = get_just_tuning_map(t)
     return Tuning(
-        generator_map=optimize_generator_tuning_map(t, spec),
+        generator_map=optimize_generator_tuning_map(t, spec, prescaler_override=prescaler_override),
         tuning_map=tempered,
         just_map=just,
         retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
@@ -387,28 +392,37 @@ def _temperament_spec_monzos(mapping, scheme, ratios):
 
 
 def interval_complexities(
-    mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=()
+    mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
 ) -> tuple[float, ...]:
     """Each interval's complexity under ``scheme``'s complexity norm — the (pre-transformed)
     norm of its monzo (log-prime/Tenney by default). Independent of the damage slope, which
-    only decides how complexity becomes a weight."""
+    only decides how complexity becomes a weight.
+
+    ``prescaler_override`` (a d-tuple) replaces the trait-derived diagonal — the seam the
+    bare prescaler tile rides into the complexity row."""
     t, spec, monzos = _temperament_spec_monzos(mapping, scheme, ratios)
     return tuple(
         get_complexity(
             m, t, spec.complexity_norm_power, spec.complexity_log_prime_power,
             spec.complexity_prime_power, spec.complexity_size_factor, spec.nonprime_basis_approach,
+            prescaler_override=prescaler_override,
         )
         for m in monzos
     )
 
 
 def interval_weights(
-    mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=()
+    mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
 ) -> tuple[float, ...]:
     """Each interval's damage weight under ``scheme``: 1 (unity weight), its complexity,
-    or 1/complexity, picked by the scheme's damage-weight slope."""
+    or 1/complexity, picked by the scheme's damage-weight slope.
+
+    ``prescaler_override`` (a d-tuple) flows into each per-target complexity via
+    :func:`_damage_weights`, so a hand-edited diagonal reaches the weights row."""
     t, spec, monzos = _temperament_spec_monzos(mapping, scheme, ratios)
-    return tuple(float(w) for w in _damage_weights(monzos, t, spec))
+    return tuple(
+        float(w) for w in _damage_weights(monzos, t, spec, prescaler_override=prescaler_override)
+    )
 
 
 def damage_weight_slope(scheme: str = DEFAULT_TUNING_SCHEME) -> str:

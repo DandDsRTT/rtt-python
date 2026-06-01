@@ -532,6 +532,46 @@ def test_complexity_prescaler_override_short_circuits_the_schemes_diagonal():
         service.complexity_prescaler(mapping, "minimax-S")
 
 
+def test_interval_complexities_use_the_prescaler_override():
+    import pytest
+
+    # the complexity row reads the same prescaler the matrix shows, so a custom diagonal
+    # flows into it directly. The override (2, 3, 5) IS the sopfr prescaler, so the
+    # complexities under the default scheme + override should match the sopfr scheme's
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    ratios = ("3/2", "5/4")
+    overridden = service.interval_complexities(
+        mapping, "minimax-S", ratios, prescaler_override=(2.0, 3.0, 5.0))
+    sopfr = service.interval_complexities(mapping, "minimax-sopfr-S", ratios)
+    assert overridden == pytest.approx(sopfr, abs=1e-6)
+
+
+def test_interval_weights_use_the_prescaler_override():
+    import pytest
+
+    # damage weights flow off complexity (when the slope isn't unity), so the override
+    # flows there too: an override that matches sopfr's diagonal yields sopfr's weights
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    targets = ("3/2", "5/4", "5/3")
+    overridden = service.interval_weights(
+        mapping, "minimax-S", targets, prescaler_override=(2.0, 3.0, 5.0))
+    sopfr = service.interval_weights(mapping, "minimax-sopfr-S", targets)
+    assert overridden == pytest.approx(sopfr, abs=1e-6)
+
+
+def test_tuning_uses_the_prescaler_override():
+    import pytest
+
+    # the tuning solve weights its damage minimization by complexity-derived weights, so
+    # the override reaches the optimum — overriding to the sopfr diagonal yields the
+    # tuning the sopfr scheme would have produced
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    overridden = service.tuning(mapping, "minimax-S", prescaler_override=(2.0, 3.0, 5.0))
+    sopfr = service.tuning(mapping, "minimax-sopfr-S")
+    assert overridden.tuning_map == pytest.approx(sopfr.tuning_map, abs=1e-6)
+    assert overridden.generator_map == pytest.approx(sopfr.generator_map, abs=1e-6)
+
+
 def test_plain_text_mapping_is_the_ebk_string():
     # the mapping tile's plain-text value is the temperament's EBK string: a list
     # of per-generator maps, ⟨ … ] inside, enclosed by the rank-count [ … }

@@ -211,12 +211,16 @@ def _optimization_power_from_name(name: str) -> float:
 
 
 def optimize_generator_tuning_map(
-    t: Temperament, spec: TuningSchemeSpec | str
+    t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None,
 ) -> tuple[float, ...]:
     """The generator tuning map minimizing target interval damage under the scheme.
 
     ``spec`` may be a :class:`TuningSchemeSpec`, a systematic tuning-scheme name string,
-    or a historical scheme name (e.g. ``"TOP"``, ``"TE"``, ``"CTE"``)."""
+    or a historical scheme name (e.g. ``"TOP"``, ``"TE"``, ``"CTE"``).
+
+    ``prescaler_override`` (a d-tuple) bypasses the spec's trait-derived prescaler
+    diagonal, riding through into the damage-weight complexities; ``None`` keeps the
+    existing behavior."""
     spec = resolve_tuning_scheme(spec)
 
     # trait 7, prime-based: re-express the temperament over its simplest prime-only basis,
@@ -227,7 +231,7 @@ def optimize_generator_tuning_map(
     solve_t = _change_to_simplest_prime_basis(t) if prime_based else t
     solve_spec = replace(spec, nonprime_basis_approach="") if prime_based else spec
 
-    generators = _solve_generators(solve_t, solve_spec)
+    generators = _solve_generators(solve_t, solve_spec, prescaler_override=prescaler_override)
     if prime_based:
         generators = _retrieve_prime_domain_basis_generators(generators, t, solve_t)
 
@@ -240,14 +244,16 @@ def optimize_generator_tuning_map(
     return tuple(float(g) for g in generators)
 
 
-def _solve_generators(t: Temperament, spec: TuningSchemeSpec) -> np.ndarray:
+def _solve_generators(t: Temperament, spec: TuningSchemeSpec, prescaler_override=None) -> np.ndarray:
     """The optimum generators for a scheme over the temperament's own domain basis."""
     d = get_d(t)
     mapping = np.array(_mapping_matrix(t), dtype=float)  # r x d
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)  # d
     if _is_all_interval(spec) and spec.complexity_size_factor != 0:
-        return _optimize_augmented_all_interval(t, spec, mapping, just_tuning_map, d)
-    monzos, weights, power = _optimization_setup(t, spec, d)
+        return _optimize_augmented_all_interval(
+            t, spec, mapping, just_tuning_map, d, prescaler_override=prescaler_override,
+        )
+    monzos, weights, power = _optimization_setup(t, spec, d, prescaler_override=prescaler_override)
     return _constrained_solve(
         mapping, just_tuning_map, monzos, weights, power, _held_monzos(spec, d)
     )
@@ -320,6 +326,7 @@ def _optimize_augmented_all_interval(
     mapping: np.ndarray,
     just_tuning_map: np.ndarray,
     d: int,
+    prescaler_override=None,
 ) -> np.ndarray:
     """All-interval schemes with a size factor (Weil/lils family) augment the system with a
     phantom prime: an extra generator and a mapping row ``(size_factor·log2(p), -1)``, the
@@ -335,7 +342,8 @@ def _optimize_augmented_all_interval(
     aug_just = np.append(just_tuning_map, 0.0)
 
     primes, prime_weights, power = _optimization_setup(
-        t, replace(spec, complexity_size_factor=0), d
+        t, replace(spec, complexity_size_factor=0), d,
+        prescaler_override=prescaler_override,
     )
     aug_monzos = np.eye(d + 1)
     weights = np.append(prime_weights, 1.0)  # phantom prime weighted 1
@@ -362,7 +370,7 @@ def _destretch(
 
 
 def _optimization_setup(
-    t: Temperament, spec: TuningSchemeSpec, d: int
+    t: Temperament, spec: TuningSchemeSpec, d: int, prescaler_override=None,
 ) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
     """The (target monzos, per-target damage weights, optimization power) for the scheme.
 
@@ -373,15 +381,22 @@ def _optimization_setup(
         return (), np.array([]), spec.optimization_power  # held intervals alone pin the tuning
     if spec.target_intervals.strip() in ("{}", ""):
         primes = tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
-        weights = _damage_weights(primes, t, replace(spec, damage_weight_slope="simplicityWeight"))
+        weights = _damage_weights(
+            primes, t, replace(spec, damage_weight_slope="simplicityWeight"),
+            prescaler_override=prescaler_override,
+        )
         return primes, weights, get_dual_power(spec.complexity_norm_power)
     monzos = resolve_target_intervals(spec.target_intervals, t, d)
-    return monzos, _damage_weights(monzos, t, spec), spec.optimization_power
+    return monzos, _damage_weights(monzos, t, spec, prescaler_override=prescaler_override), spec.optimization_power
 
 
-def optimize_tuning_map(t: Temperament, spec: TuningSchemeSpec | str) -> tuple[float, ...]:
+def optimize_tuning_map(
+    t: Temperament, spec: TuningSchemeSpec | str, prescaler_override=None,
+) -> tuple[float, ...]:
     """The optimum tuning map (the generators applied to the mapping) under the scheme."""
-    generators = np.array(optimize_generator_tuning_map(t, spec), dtype=float)
+    generators = np.array(
+        optimize_generator_tuning_map(t, spec, prescaler_override=prescaler_override), dtype=float,
+    )
     mapping = np.array(_mapping_matrix(t), dtype=float)
     return tuple(float(x) for x in generators @ mapping)
 
@@ -477,9 +492,16 @@ def _held_monzos(spec: TuningSchemeSpec, d: int) -> np.ndarray | None:
 
 
 def _damage_weights(
-    monzos: tuple[tuple[int, ...], ...], t: Temperament, spec: TuningSchemeSpec
+    monzos: tuple[tuple[int, ...], ...],
+    t: Temperament,
+    spec: TuningSchemeSpec,
+    prescaler_override=None,
 ) -> np.ndarray:
-    """The per-target damage weights: 1 (unity), complexity, or 1/complexity."""
+    """The per-target damage weights: 1 (unity), complexity, or 1/complexity.
+
+    ``prescaler_override`` rides into each per-target complexity (the slope rolls off
+    the same diagonal the matrix tile shows), so a custom diagonal reaches the tuning
+    solve too rather than only the displayed prescaler."""
     if spec.damage_weight_slope == "unityWeight":
         return np.ones(len(monzos))
     complexities = np.array(
@@ -492,6 +514,7 @@ def _damage_weights(
                 spec.complexity_prime_power,
                 spec.complexity_size_factor,
                 spec.nonprime_basis_approach,
+                prescaler_override=prescaler_override,
             )
             for monzo in monzos
         ]
@@ -646,10 +669,18 @@ def get_complexity_prescaler(
     log_prime_power,  # trait 5a
     prime_power,  # trait 5b
     nonprime_basis_approach: str,  # trait 7
+    override=None,
 ) -> list[float]:
     """The diagonal of the complexity prescaler L: each domain basis element's pre-norm
     weight, log2(prime)**a · prime**b (log-prime by default, a=1, b=0). An interval's
-    complexity is a norm of L applied to its monzo, so this is the matrix that defines it."""
+    complexity is a norm of L applied to its monzo, so this is the matrix that defines it.
+
+    ``override`` is a per-call escape hatch: when set, the four trait arguments are
+    ignored and the override is returned verbatim. Threaded through the optimization and
+    complexity / weight paths so the web app's bare prescaler tile can hand-edit the
+    diagonal without having to invent a synthetic spec or monkey-patch every consumer."""
+    if override is not None:
+        return [float(x) for x in override]
     diagonal = []
     for q in get_domain_basis(t):
         fraction = Fraction(q)
@@ -675,13 +706,19 @@ def get_complexity(
     prime_power,  # trait 5b
     size_factor,  # trait 5c
     nonprime_basis_approach: str,  # trait 7
+    prescaler_override=None,
 ) -> float:
     """An interval's complexity: a (pre-transformed) norm of its monzo.
 
     A nonzero ``size_factor`` augments the pre-transformed monzo with one extra entry
     (the size-weighted sum, ``size_factor`` times the interval's log size), then divides
-    the norm by ``1 + size_factor`` — the Weil/lils family of complexities."""
-    diagonal = get_complexity_prescaler(t, log_prime_power, prime_power, nonprime_basis_approach)
+    the norm by ``1 + size_factor`` — the Weil/lils family of complexities.
+
+    ``prescaler_override`` (a d-tuple) bypasses the trait-driven prescaler diagonal —
+    the seam the web app's custom prescaler tile rides into the optimization."""
+    diagonal = get_complexity_prescaler(
+        t, log_prime_power, prime_power, nonprime_basis_approach, override=prescaler_override,
+    )
     transformed = [w * x for w, x in zip(diagonal, pcv)]
     if size_factor != 0:
         transformed.append(size_factor * sum(transformed))
