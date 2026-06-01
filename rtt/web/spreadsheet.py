@@ -2592,20 +2592,23 @@ def build(state, settings=None, collapsed=None,
     # monzo_list_marks + bracket below.
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is
-    # marked top + bottom — inset so they stop short of the rules. The foot tells the
-    # two apart: a tempered/mapped column (generator coords) closes with a curly brace,
-    # a raw (untempered) monzo is a ket and closes with the angle ⟩ (a down-chevron).
+    # marked top + bottom — inset so they stop short of the rules. ``top`` and ``foot``
+    # pick the per-column shapes: a tempered/mapped column (generator coords) takes the
+    # default ``[ ... }`` (ebktop + ebkbrace curly close); a raw (untempered) monzo is a
+    # ket and closes with the angle ⟩ (ebkangle); the bare prescaler 𝐿's columns flip
+    # this asymmetry the OTHER way — angle open at top (ebkbra) + square close at bottom
+    # (ebkbot) — so they read ``⟨ ... ]`` instead of ``[ ... ⟩``.
     # ``separators=False`` drops the dividing rules: for a bordered grid (the comma
     # basis — its own cell borders already divide the columns) or for the standalone
     # columns of the intervals-of-interest collection (which isn't a matrix at all).
-    def monzo_list_marks(rkey, name, ckey, left, n_cols, foot="ebkbrace", separators=True, pending_col=-1):
+    def monzo_list_marks(rkey, name, ckey, left, n_cols, top="ebktop", foot="ebkbrace", separators=True, pending_col=-1):
         if not tile_open(rkey, ckey):
             return
         mark_w = COL_W - 2 * MARK_INSET
         for c in range(n_cols):
             mx = left(c) + MARK_INSET
             pend = (c == pending_col)  # the draft column's ket marks render red, like its cells
-            cells.append(CellBox(f"ebktop:{name}:{c}", mx, frame_top_y(rkey), mark_w, FRAME_H, "ebktop", pending=pend))
+            cells.append(CellBox(f"{top}:{name}:{c}", mx, frame_top_y(rkey), mark_w, FRAME_H, top, pending=pend))
             cells.append(CellBox(f"{foot}:{name}:{c}", mx, frame_brace_y(rkey), mark_w, BRACE_H, foot, pending=pend))
         if not separators:
             return
@@ -2629,18 +2632,23 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
     monzo_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
     monzo_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
-    # the prescaling row's per-column marks — ⌐ top (ebktop) + ⌣ bottom (ebkbrace), the
-    # asymmetric pair the mockup uses inside the outer brackets (same visual vocabulary as
-    # the mapped lists' columns). The plain-text equivalent is ⟨ … ] per column. Separators
-    # between columns are drawn only for the 𝐿T and 𝐿H tiles, per the mockup; the bare 𝐿
-    # / 𝐿C / 𝐿D tiles keep their columns spaced without dividing rules. The interest tile
-    # stays standalone (no outer wrap, no separators).
-    monzo_list_marks("prescaling", "prescaling", "primes", prime_left, d, foot="ebkbrace", separators=False)
-    monzo_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkbrace", separators=False)
-    monzo_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkbrace", separators=False)
-    monzo_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkbrace", separators=True)
-    monzo_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkbrace", separators=True)
-    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkbrace", separators=False)
+    # the prescaling row's per-column marks read off as the same EBK its plain-text uses:
+    #
+    #   * Bare prescaler 𝐿 — columns ``⟨ … ]`` (angle open + square close):
+    #       top = ebkbra (angle/bra head ∧),  foot = ebkbot (square close ⌐ flipped)
+    #   * 𝐿·basis products — columns ``[ … ⟩`` (square open + ket close):
+    #       top = ebktop (square open ⌐),     foot = ebkangle (angle/ket foot ∨)
+    #   * Interest tile — same as products (its standalone columns also read [ … ⟩).
+    #
+    # Separators between columns are drawn for 𝐿T and 𝐿H per the mockup; the bare 𝐿 and
+    # 𝐿C / 𝐿D tiles keep their columns spaced without dividing rules. Interest stays
+    # standalone (no outer wrap, no separators).
+    monzo_list_marks("prescaling", "prescaling", "primes", prime_left, d, top="ebkbra", foot="ebkbot", separators=False)
+    monzo_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkangle", separators=False)
+    monzo_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkangle", separators=False)
+    monzo_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkangle", separators=True)
+    monzo_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkangle", separators=True)
+    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the

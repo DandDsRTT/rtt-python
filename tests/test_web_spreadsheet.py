@@ -1231,12 +1231,13 @@ def test_complexity_over_primes_is_a_map_the_rest_are_lists():
     assert cells["bracket:complexity:list:l"].text == "[" and cells["bracket:complexity:list:r"].text == "]"
     # ...but the interest complexity drops its bracket — the whole interest column is bare
     assert not any(c.startswith("bracket:complexity:ilist") for c in cells)
-    # the interest prescaling stands alone too — per-column ⌐/⌣ (ebktop / ebkbrace) marks,
-    # no outer [ … ] wrap, like the other interest-row standalone-columns shapes. The
-    # comma/target/held prescaling tiles get the same per-column marks plus an outer
-    # bracket frame (see test_prescaling_matrices_have_outer_brackets_and_per_column_marks).
-    assert {"ebktop:prescaling:interest:0", "ebkbrace:prescaling:interest:0"} <= set(cells)
-    assert "ebkangle:prescaling:interest:0" not in cells  # NOT a ket — prescaled, not raw
+    # the interest prescaling stands alone too — per-column ⌐ top + ∨ angle bottom marks
+    # (ebktop + ebkangle, reading as ``[ … ⟩`` per column), no outer ``[ … ]`` wrap, like
+    # the other interest-row standalone-columns shapes. The comma/target/held prescaling
+    # tiles get the same per-column marks plus an outer bracket frame (see
+    # test_prescaling_matrices_have_outer_brackets_and_per_column_marks).
+    assert {"ebktop:prescaling:interest:0", "ebkangle:prescaling:interest:0"} <= set(cells)
+    assert "ebkbrace:prescaling:interest:0" not in cells  # NOT a curly close — prescaled, not generator-coord
     assert "bracket:prescaling:interest:l" not in cells  # standalone, no outer wrap
 
 
@@ -1362,8 +1363,8 @@ def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors():
     # test_prescaling_matrices_have_outer_brackets_and_per_column_marks for the outer
     # ``[ ]`` framing the whole tile).
     assert {"block:prescaling:commas", "block:prescaling:targets"} <= blocks
-    assert {"ebktop:prescaling:commas:0", "ebkbrace:prescaling:commas:0",
-            "ebktop:prescaling:targets:0", "ebkbrace:prescaling:targets:0"} <= set(on)
+    assert {"ebktop:prescaling:commas:0", "ebkangle:prescaling:commas:0",
+            "ebktop:prescaling:targets:0", "ebkangle:prescaling:targets:0"} <= set(on)
     assert "cell:prescaling:targets:0:0" in on  # the target column is populated too
 
 
@@ -1445,27 +1446,29 @@ def test_every_present_row_and_column_has_a_gridline():
 
 def test_prescaling_matrices_have_outer_brackets_and_per_column_marks():
     # The mockup draws each prescaling matrix tile (𝐿C/𝐿D/𝐿T/𝐿H and the bare prescaler 𝐿)
-    # with outer brackets PLUS per-column ebktop/ebkbrace marks at the top/bottom of every
-    # cell column. The per-column FEET are the curly-brace bottom shape ⌣ (ebkbrace) — the
-    # same visual the mapped lists use under generator coordinates — paired with ebktop ⌐.
-    # The plain-text reading is ⟨ … ] per column. The bare prescaler 𝐿 gets the asymmetric
-    # outer ``[ … ⟩`` (square open + ket close), distinguishing the prescaler matrix from a
-    # product; every 𝐿·basis product (commas/detempering/targets/held) gets symmetric ``[ … ]``.
+    # with outer brackets PLUS per-column marks at the top/bottom of every cell column.
+    # The shapes match the plain-text EBK exactly:
+    #
+    #   * Bare prescaler 𝐿 — per-column ⟨ … ] (top = ebkbra ∧, foot = ebkbot ⌐ flipped),
+    #     outer [ … ⟩ (square open + ket close).
+    #   * 𝐿·basis products — per-column [ … ⟩ (top = ebktop ⌐, foot = ebkangle ∨),
+    #     outer [ … ] (symmetric square).
     on = {c.id: c for c in _with(weighting=True).cells}
-    # bare 𝐿: asymmetric outer brackets
+    # bare 𝐿: outer brackets are asymmetric, per-column marks are angle-head + square-bot
     assert on["bracket:prescaling:l"].text == "[" and on["bracket:prescaling:r"].text == "⟩"
-    # product tiles: symmetric outer brackets
+    assert on["ebkbra:prescaling:0"].kind == "ebkbra"
+    assert on["ebkbot:prescaling:0"].kind == "ebkbot"
+    assert "ebktop:prescaling:0" not in on  # NOT a square open at top
+    assert "ebkangle:prescaling:0" not in on  # NOT an angle close at bottom
+    assert "ebkbrace:prescaling:0" not in on  # NOT a curly close
+    # product tiles: symmetric outer brackets, per-column marks are square-top + angle-bot
     for bid in ("prescaling:commas", "prescaling:targets"):
         assert on[f"bracket:{bid}:l"].text == "[" and on[f"bracket:{bid}:r"].text == "]"
-    # all of them: per-column ebktop / ebkbrace marks
-    for bid in ("prescaling", "prescaling:commas", "prescaling:targets"):
         assert on[f"ebktop:{bid}:0"].kind == "ebktop"
-        assert on[f"ebkbrace:{bid}:0"].kind == "ebkbrace"
-        # no spanning matrix-wide bar (the old matrix_frame ids), no square-bracket bottom,
-        # no angle ⟩ per-column close
-        assert f"ebktop:{bid}" not in on  # the single-bar form is gone
+        assert on[f"ebkangle:{bid}:0"].kind == "ebkangle"
+        assert f"ebkbra:{bid}:0" not in on
         assert f"ebkbot:{bid}:0" not in on
-        assert f"ebkangle:{bid}:0" not in on
+        assert f"ebkbrace:{bid}:0" not in on
     # the mapping matrix keeps its single top bracket + bottom curly brace (its mapped lists
     # ARE generator coords, so the } close is correct there)
     assert on["ebktop:primes"].kind == "ebktop" and on["ebkbrace:primes"].kind == "ebkbrace"
