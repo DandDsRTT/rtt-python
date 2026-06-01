@@ -520,6 +520,18 @@ def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
     assert service.complexity_prescaler(mapping, "minimax-sopfr-S") == pytest.approx((2.0, 3.0, 5.0), abs=1e-3)
 
 
+def test_complexity_prescaler_override_short_circuits_the_schemes_diagonal():
+    # the bare prescaler tile's editable cells write a custom diagonal the user types in;
+    # the service threads that diagonal through every consumer by accepting it as an
+    # override — bypassing the scheme's log-prime / prime / identity computation entirely
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    custom = (2.0, 3.0, 5.0)
+    assert service.complexity_prescaler(mapping, "minimax-S", override=custom) == custom
+    # None falls back to the scheme's computed diagonal (today's behavior)
+    assert service.complexity_prescaler(mapping, "minimax-S", override=None) == \
+        service.complexity_prescaler(mapping, "minimax-S")
+
+
 def test_plain_text_mapping_is_the_ebk_string():
     # the mapping tile's plain-text value is the temperament's EBK string: a list
     # of per-generator maps, ⟨ … ] inside, enclosed by the rank-count [ … }

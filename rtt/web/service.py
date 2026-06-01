@@ -605,9 +605,18 @@ def scheme_from_json(data):
     return TuningSchemeSpec(**data)
 
 
-def complexity_prescaler(mapping, scheme: str = DEFAULT_TUNING_SCHEME) -> tuple[float, ...]:
+def complexity_prescaler(
+    mapping, scheme: str = DEFAULT_TUNING_SCHEME, override=None,
+) -> tuple[float, ...]:
     """The diagonal of the complexity prescaler L — each domain prime's pre-norm weight
-    (log2(prime) for the default log-prime norm). The L matrix is diag of this."""
+    (log2(prime) for the default log-prime norm). The L matrix is diag of this.
+
+    ``override`` lets the bare prescaler tile's editable cells short-circuit the scheme's
+    computed diagonal: a d-tuple typed in there REPLACES the log-prime/prime/identity
+    diagonal everywhere it flows — the matrix display, the 𝐿·basis products, complexity,
+    weights, and the tuning solve. ``None`` (the default) keeps today's behavior."""
+    if override is not None:
+        return tuple(float(x) for x in override)
     t = Temperament(_to_matrix(mapping), Variance.ROW)
     spec = resolve_tuning_scheme(scheme)
     return tuple(
