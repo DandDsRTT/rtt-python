@@ -1288,10 +1288,10 @@ def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
 
 
 def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
-    # the prescaling row's symbols mirror the mapping/tuning rows: a per-tile glyph (the
-    # prescaler 𝑋 by itself over the primes, 𝑋C / 𝑋T / 𝑋H / 𝑋D as products with the
-    # comma / target / held / detempering bases), each with an equivalence naming the
-    # active prescaler — L for the default log-prime, so 𝑋 = L, 𝑋C = LC, etc.
+    # the bare prescaler tile carries the abstract-name = concrete-name equation form
+    # ``𝑋 = L`` (italic 𝑋 placeholder, upright L for the active log-prime prescaler) —
+    # per the mockup. The product tiles (LC/LD/LT/LH) show just the concrete product
+    # name, no equivalence: they're already the matrix, no abstract stand-in named.
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         # ``optimization`` brings the held column out (held lives in the optimization layer);
@@ -1302,10 +1302,30 @@ def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
         held_monzos=((-1, 1, 0),),  # 3/2 held, so the held column appears
     )
     on = {c.id: c for c in lay.cells}
+    # bare prescaler tile: the only one with an equivalence (the equation form)
     assert on["symbol:prescaling:primes"].text == "𝑋 = L"
-    assert on["symbol:prescaling:commas"].text == "𝑋C = LC"
-    assert on["symbol:prescaling:targets"].text == "𝑋T = LT"
-    assert on["symbol:prescaling:held"].text == "𝑋H = LH"
+    # product tiles: just the concrete name, no "= …" — scheme-aware (L → 𝐼/𝑃 elsewhere)
+    assert on["symbol:prescaling:commas"].text == "LC"
+    assert on["symbol:prescaling:targets"].text == "LT"
+    assert on["symbol:prescaling:held"].text == "LH"
+
+
+def test_prescaling_product_symbols_follow_the_active_prescaler():
+    # the prescaler letter in every product symbol swaps with the scheme: log-prime → L,
+    # prime → 𝑃, identity → 𝐼. So under identity the LC tile reads 𝐼C, the LT tile reads
+    # 𝐼T, etc. — the column letter (C/T/H) stays put.
+    scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "identity")
+    lay = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        {**settings.defaults(), "weighting": True, "optimization": True,
+         "symbols": True, "equivalences": True},
+        tuning_scheme=scheme, held_monzos=((-1, 1, 0),),
+    )
+    on = {c.id: c for c in lay.cells}
+    assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐼"   # bare: scheme-aware equivalence
+    assert on["symbol:prescaling:commas"].text == "𝐼C"     # product: scheme-aware letter
+    assert on["symbol:prescaling:targets"].text == "𝐼T"
+    assert on["symbol:prescaling:held"].text == "𝐼H"
 
 
 def test_complexity_symbol_and_mnemonic_only_on_the_target_list():

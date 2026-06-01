@@ -225,11 +225,17 @@ SYMBOLS = {
     ("retune", "commas"): "𝒓C",
     ("retune", "detempering"): "𝒓D",
     ("retune", "targets"): "𝐞",
+    # the bare prescaler tile carries the abstract-equals-concrete equation form ``𝑋 = L``
+    # (italic 𝑋 placeholder, upright L concrete) — per the mockup. Its equivalence " = L"
+    # is resolved scheme-aware at build time (PRESCALER_LETTER). The product tiles
+    # (commas/detempering/targets/held) show just the concrete product ``LC``/``LD``/etc.,
+    # again scheme-aware — so identity reads 𝐼C / 𝐼D / etc. The L-prefix placeholders here
+    # ARE overridden per build (see PRESCALER_LETTER + the symbol-build block).
     ("prescaling", "primes"): "𝑋",  # the complexity prescaler matrix (math italic, like 𝑀)
-    ("prescaling", "commas"): "𝑋C",   # 𝑋 applied to the comma basis C
-    ("prescaling", "detempering"): "𝑋D",   # 𝑋 applied to the generator detempering D
-    ("prescaling", "targets"): "𝑋T",   # 𝑋 applied to the target interval list T
-    ("prescaling", "held"): "𝑋H",   # 𝑋 applied to the held interval basis H
+    ("prescaling", "commas"): "LC",   # the concrete product over the comma basis C
+    ("prescaling", "detempering"): "LD",   # over the generator detempering D
+    ("prescaling", "targets"): "LT",   # over the target interval list T
+    ("prescaling", "held"): "LH",   # over the held interval basis H
     # the held interval column mirrors the comma column: the basis H lives in the
     # interval-vectors row, and everything else is a product with it — the mapped held
     # basis 𝑀H and the held sizes 𝒕H, 𝒋H, 𝒓H (the held complexity is a derived auxiliary,
@@ -941,6 +947,15 @@ def build(state, settings=None, collapsed=None,
     # where one exists ("1200 · log₂3 = 1901.96", the = cents kept when quantities is
     # on); a cell with no closed form is untouched and keeps its plain cents value.
     show_math = settings["math_expressions"]
+    # The bare prescaling tile's equivalence ("𝑋 = L") and the product tiles' symbols
+    # (LC/LD/LT/LH) both name the active prescaler: L for log-prime, 𝑃 for prime, 𝐼 for
+    # identity. Resolved up front so both the symbol-emission site and the column-label
+    # loop pick up the live letter — the static SYMBOLS dict's L-prefix is the placeholder
+    # this build-time override resolves. The matching "𝑋 = L" equivalence is set further
+    # down (alongside the weight slope's), where the rest of the equivalence dict is built.
+    _prescaler_letter = PRESCALER_LETTER[service.prescaler_of(tuning_scheme)]
+    prescaling_symbols = {(r, c): _prescaler_letter + s[1:] for (r, c), s in SYMBOLS.items()
+                          if r == "prescaling" and s.startswith("L")}
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
     header_h = HEADER_H
@@ -2195,7 +2210,10 @@ def build(state, settings=None, collapsed=None,
         # the top frame (so a framed matrix reads label / [bracket] / cells). A label
         # value is either a string (the bare glyph; the i+1 subscript is appended) or
         # a callable (i) → full label text, for tiles whose label has a richer form
-        # than glyph+subscript (the complexity row's norm expressions).
+        # than glyph+subscript (the complexity row's norm expressions). The prescaling
+        # row's product-column labels (𝑋𝐜/𝑋𝐭/…) carry the abstract 𝑋 here — their
+        # concrete-letter version is in prescaling_symbols and shows at the tile-symbol
+        # slot below (LC/LD/LT/LH and the scheme-aware swaps).
         for (rkey, ckey), val in COL_LABEL_LETTERS.items():
             if ckey not in group_count or rkey not in row_matlabel_top:
                 continue
@@ -2377,16 +2395,13 @@ def build(state, settings=None, collapsed=None,
     # empty interest column has no tiles. Mnemonics underlines the symbol letter.
     # The weight row's equivalence is the one scheme-dependent equation (𝒘 = 𝒄 / 1 / 1/𝒄),
     # so it is resolved per build from the live scheme's slope rather than baked in. The
-    # prescaling row's equivalences likewise name the live prescaler (L/𝑃/𝐼), so 𝑋 = L
-    # for the default log-prime and the L of 𝑋C = LC / 𝑋T = LT / etc. swaps with it.
-    L = PRESCALER_LETTER[service.prescaler_of(tuning_scheme)]
+    # bare prescaling tile is the only one whose equivalence names the live prescaler
+    # (``𝑋 = L`` for log-prime, swapping to 𝐼/𝑃 with the scheme); the product tiles
+    # (LC/LD/LT/LH) carry the L as part of their SYMBOL instead (see prescaling_symbols
+    # below) and don't print an "= …" line.
     equivalences = {**EQUIVALENCES,
                     ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[service.damage_weight_slope(tuning_scheme)],
-                    ("prescaling", "primes"): f" = {L}",
-                    ("prescaling", "commas"): f" = {L}C",
-                    ("prescaling", "detempering"): f" = {L}D",
-                    ("prescaling", "targets"): f" = {L}T",
-                    ("prescaling", "held"): f" = {L}H"}
+                    ("prescaling", "primes"): f" = {_prescaler_letter}"}
     for (rkey, ckey), name in CAPTIONS.items():
         if ckey == "interest" and not interest:
             continue
@@ -2395,7 +2410,8 @@ def build(state, settings=None, collapsed=None,
         cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
         if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS:
             equiv = equivalences.get((rkey, ckey), "") if show_equiv else ""
-            glyph = SYMBOLS.get((rkey, ckey), "") if (show_symbols or equiv) else ""
+            base_symbol = prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
+            glyph = base_symbol if (show_symbols or equiv) else ""
             if glyph or equiv:
                 cells.append(CellBox(f"symbol:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
             cy += SYMBOL_H
