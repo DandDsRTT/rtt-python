@@ -933,8 +933,9 @@ def build(state, settings=None, collapsed=None,
     show_units = settings["units"]  # the in-tile "units: …" line, below each box's caption
     show_domain_units = settings["domain_units"]  # the units row (spine) + units column
     show_temp = settings["temperament_boxes"]
-    show_form = settings["form"]  # the canonical-mapping form box (its own row)
-    show_form_controls = settings["form_controls"]  # the <choose form> choosers in the mapping/comma-basis boxes
+    # the canonical-mapping form row (its matrices) and the <choose form> chooser in the
+    # mapping/comma-basis boxes ride together under the form_controls toggle
+    show_form_controls = settings["form_controls"]
     show_tuning = settings["tuning_boxes"]
     # optimization is a sub-control of tuning boxes: it annotates the tuning region with
     # the scheme's optimization power, so it only applies while that region shows
@@ -1194,7 +1195,7 @@ def build(state, settings=None, collapsed=None,
         ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
         ("units", ROW_H, show_domain_units, True, "units"),
         ("vectors", d * ROW_H, show_temp, True, "interval vectors"),
-        ("canon", rc * ROW_H, show_form, True, "canonical mapping"),
+        ("canon", rc * ROW_H, show_form_controls, True, "canonical mapping"),
         ("mapping", r * ROW_H, show_temp, True, "mapping"),
         ("tuning", ROW_H, show_tuning, True, "tuning"),
         ("just", ROW_H, show_tuning, True, "just tuning"),

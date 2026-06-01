@@ -39,7 +39,6 @@ _FEATURE_CELLS = [
     ("symbols", "symbol:mapping:primes"),            # the quantity-symbol glyph, _math_html
     ("plain text values", "ptext:mapping:primes"),   # the editable EBK dual input
     ("preselects", "preselect:temperament"),         # the chooser dropdowns (q-select)
-    ("form controls", "formchooser:mapping"),         # the <choose form> chooser (q-select)
     ("charts", "chart:retune:targets"),              # a per-tile bar-chart SVG
     ("tuning ranges", "rangechart:tuning:gens"),     # the generator-range I-beam chart SVG
     # "units" labels BOTH the general and specific toggles, so one click flips both on:

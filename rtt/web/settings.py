@@ -46,7 +46,6 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("temperament_boxes", "temperament boxes", True),
             ("temperament_colorization", "colorization", False),
             ("form_controls", "form controls", False),
-            ("form", "form boxes", False),
             ("form_colorization", "colorization", False),
             ("tuning_boxes", "tuning boxes", True),
             ("optimization", "optimization", False),
@@ -74,7 +73,6 @@ SUBCONTROLS: dict[str, str] = {
     "mnemonics": "names",
     "equivalences": "symbols",
     "temperament_colorization": "temperament_boxes",
-    "form": "form_controls",  # the form boxes (canonical mapping + F) ride under the form controls
     "form_colorization": "form_controls",  # the magenta wash (deferred; greyed until built)
     "optimization": "tuning_boxes",
     "tuning_ranges": "tuning_boxes",
@@ -92,7 +90,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
      "quantities", "domain_quantities", "units", "domain_units", "counts", "preselects",
      "temperament_boxes", "tuning_boxes", "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting", "alt_complexity", "audio",
-     "form", "form_controls", "generator_detempering", "optimization", "interest"}
+     "generator_detempering", "optimization", "interest"}
 )
 
 
