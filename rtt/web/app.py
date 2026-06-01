@@ -447,10 +447,11 @@ _CSS = f"""
 .rtt-opt-1line {{ white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }}
 /* a left-justified caption sits flush against its left edge (the dropdown it labels), free
    to overhang to the right on one line rather than wrapping (e.g. "predefined prescalers").
-   The 5px left inset aligns the caption's first character vertically with the dropdown's
-   inner text (which sits ~5px from the dropdown's border, accounting for q-field padding). */
+   The small left inset aligns the caption's first character vertically with the dropdown's
+   inner text (which sits a few px from the dropdown's border, per q-field padding); the
+   2px top inset nudges it down off the dropdown's bottom border. */
 .rtt-caption-left {{ text-align:left !important; white-space:nowrap; overflow:visible;
-                    text-wrap:nowrap; padding-left:5px; }}
+                    text-wrap:nowrap; padding:2px 0 0 7px; }}
 .rtt-caption-cell:has(> .rtt-caption-left) {{ align-items:flex-start; overflow:visible; }}
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
