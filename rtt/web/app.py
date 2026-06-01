@@ -520,9 +520,18 @@ _CSS = f"""
 .rtt-preselect .q-icon {{ font-size:16px; color:#555; }}
 .rtt-control-check {{ width:100%; height:100%; display:flex; justify-content:center;
             align-items:center; }}  /* visually centres the q-checkbox inside its cell wrap */
-.rtt-control-check .q-checkbox__inner {{ font-size:36px; color:#555; }}  /* the box glyph size */
+.rtt-control-check .q-checkbox__inner {{ font-size:40px; color:#555; }}  /* the box glyph size */
 .rtt-control-check .q-checkbox__label {{ font-size:11px; color:#000; padding-left:3px;
-            line-height:36px; font-family:'Cambria',Georgia,serif; }}
+            line-height:40px; font-family:'Cambria',Georgia,serif; }}
+/* Override Quasar's Material checkbox visuals to match the mockup: a plain white square
+   with a thin dark border, no rounded corners. The bg div is what Quasar paints as the box;
+   normally it gets a tinted fill + border-radius. We force white, square, and a clean border,
+   and keep the checkmark SVG dark when truthy. */
+.rtt-control-check .q-checkbox__bg {{ background:#fff !important; border:1.5px solid #333 !important;
+            border-radius:0 !important; opacity:1 !important; }}
+.rtt-control-check .q-checkbox__bg::before, .rtt-control-check .q-checkbox__bg::after {{
+            background:transparent !important; border-radius:0 !important; }}
+.rtt-control-check .q-checkbox__svg {{ color:#222 !important; }}
 /* each chooser's dropdown popup matches the field's Cambria text, with compact items */
 .rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
 /* compact items; a long name (e.g. a systematic tuning) wraps within the field

@@ -45,6 +45,16 @@ CAPTION_CHAR_W = 0.52  # serif glyph width as a fraction of the font size: a con
 MAX_CAPTION_LINES = 2  # a name wraps to at most this many lines; a longer one widens its tile
 PRESELECT_H = 30  # height of a preselect chooser dropdown — aligned with the gridded value
 # row (ROW_H), so dropdowns sit at the same height as the value cells beside them
+# The alt.-complexity in-tile choosers' widths. Hard-coded so the column they sit in can be
+# widened up front to fit them, ensuring no caption or control spills out the tile's right edge.
+LBOX_DROP_W = 100   # the prescaler dropdown (seats "log-prime" + arrow comfortably)
+LBOX_DIM_W = 80     # the diminuator slot (checkbox square + "ignore diminuator" caption)
+LBOX_W = LBOX_DROP_W + 8 + LBOX_DIM_W  # the box-𝐋 controls' total footprint (8 = OPT_COL_GAP)
+CBOX_DROP_W = 170   # the predefined-complexities dropdown (inverted display names "lp (log-product)" …)
+CBOX_SLOT_W = 60    # the q / dual(q) symbol/caption slots (the value cell is COL_W centred within)
+CBOX_W = CBOX_DROP_W + 8 + CBOX_SLOT_W + 8 + CBOX_SLOT_W  # the box-𝒄 controls' total footprint
+CHECK_H = 40        # the diminuator checkbox cell height — matches the CSS font-size that draws
+# the square, so the bg square seats inside the cell without clipping
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 TARGET_PRESELECT_W = 132  # wider: the target chooser seats a square limit field + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
@@ -922,6 +932,15 @@ def build(state, settings=None, collapsed=None,
     # alt. complexity is a sub-control of weighting: it adds the prescaler dropdown to box 𝐋
     # (the prescaling matrix), so it only applies while that region shows
     show_alt_complexity = show_weighting and settings["alt_complexity"]
+    # Whether each alt.-complexity in-tile chooser will be emitted — evaluated up front
+    # (without depending on col_x, which the column-width loop computes later) so the column-
+    # width floor below can widen the primes / targets columns to fit the controls
+    _lbox_show = (show_alt_complexity and settings["temperament_boxes"]
+                  and "col:primes" not in collapsed and "row:prescaling" not in collapsed
+                  and "tile:prescaling:primes" not in collapsed)
+    _cbox_show = (show_alt_complexity and settings["tuning_boxes"]
+                  and "col:targets" not in collapsed and "row:complexity" not in collapsed
+                  and "tile:complexity:targets" not in collapsed)
     # audio is a top-level toggle (not nested under the tuning boxes): it adds the just /
     # tempered audio rows between counts and quantities. Their per-column tiles still ride the
     # column boxes (targets need tuning boxes; interest needs interest; primes/commas/gens
@@ -1185,6 +1204,16 @@ def build(state, settings=None, collapsed=None,
                     for rk in present_caption_rows
                     if (rk, key) in CAPTIONS and (rk, key) in declared_tiles), default=0)
 
+    def _control_floor(key):
+        # the width an open column needs so its alt.-complexity in-tile choosers fit without
+        # overhanging the column's right edge (e.g. d=3 primes is naturally 122px but box 𝐋's
+        # controls + diminuator caption need ~188px); widens the column to enclose them
+        if key == "primes" and _lbox_show:
+            return LBOX_W
+        if key == "targets" and _cbox_show:
+            return CBOX_W
+        return 0
+
     # the domain, the comma basis and the interest set each ride an expand (+) control
     # just inside the right of their (open) tile — domain primes add a prime, commas
     # add a comma, interest adds a blank interval to edit
@@ -1196,7 +1225,7 @@ def build(state, settings=None, collapsed=None,
         if not present:
             continue
         collapsed_col = f"col:{key}" in collapsed
-        hug_w = max(natural, _caption_floor(key))  # the open footprint: hugs content (+ caption room)
+        hug_w = max(natural, _caption_floor(key), _control_floor(key))  # the open footprint: hugs content (+ caption / control room)
         open_col_w[key] = hug_w  # the width it has (or would have) OPEN — collapse-independent, for caption wrapping
         # The content (value cells + their bracket gutters) is the natural width. The column
         # footprint (col_w) hugs that content, or widens where a long caption needs the room;
@@ -1288,22 +1317,20 @@ def build(state, settings=None, collapsed=None,
     # the targets) stacks the predefined-complexity chooser then the norm chooser, and box 𝒘
     # (the weight list over the targets) carries the weight-slope chooser. Each tile reserves
     # its choosers' height up front so the rows below drop clear.
-    lbox_ctrl = (show_alt_complexity and "row:prescaling" not in collapsed
-                 and col_open("primes") and "tile:prescaling:primes" not in collapsed)
+    lbox_ctrl = _lbox_show and col_open("primes")
     # box 𝐋 lays its two controls on ONE row (dropdown left, checkbox square right) with a
     # one-line caption under each: the prescaler's left-justified (and free to overhang to
     # the right), the diminuator's centred under its checkbox. The checkbox cell is taller
-    # than a gridded value cell — its square is sized for visibility (~36px per the mockup),
-    # so the row reserves max(PRESELECT_H, CHECK_H) before the caption line.
-    CHECK_H = 36
+    # than a gridded value cell — its square is sized for visibility (~CHECK_H per the
+    # mockup), so the row reserves max(PRESELECT_H, CHECK_H) before the caption line.
     lbox_extra = (RANGE_GAP + max(PRESELECT_H, CHECK_H) + CAPTION_LINE) if lbox_ctrl else 0
     # box 𝒄 lays its three controls in ONE row below the complexity list: the predefined-
     # complexity master dropdown on the left, then the q norm-power field and the dual(q)
     # display, each captioned (q/dual using the optimization box's value-symbol-caption stack).
     # q/dual's captions ("interval complexity norm power", "dual norm power") wrap to up to
-    # three lines in their overhanging caption slot — reserve the height up front.
-    cbox_ctrl = (show_alt_complexity and "row:complexity" not in collapsed
-                 and col_open("targets") and "tile:complexity:targets" not in collapsed)
+    # three lines in their overhanging caption slot — reserve the height up front. The
+    # targets column was widened up front (by _control_floor) to CBOX_W to enclose them.
+    cbox_ctrl = _cbox_show and col_open("targets")
     cbox_extra = (RANGE_GAP + ROW_H + SYMBOL_H + 3 * CAPTION_LINE) if cbox_ctrl else 0
     # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target interval
     # damage list tile (like the ranges box in the gens tile), gated on the optimization
@@ -1934,32 +1961,26 @@ def build(state, settings=None, collapsed=None,
                     cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
                                          text=service.prescale_text(value), unit=u))
     if lbox_ctrl:  # box 𝐋's controls sit on one row at the bottom of the prescaling matrix:
-        # the prescaler dropdown on the left, the "ignore diminuator" checkbox SQUARE on the
-        # right (no inline label — the inline label wraps broken in the narrow primes column).
-        # The checkbox cell spans its diminuator slot's full width so its square renders centred
-        # by CSS (justify-content:center) — equal to its caption's centre below. Captions sit
-        # below the taller of the two controls, one line each: prescaler left-justified to the
-        # dropdown, diminuator centred under its checkbox.
+        # the prescaler dropdown on the left (LBOX_DROP_W wide, fixed), the "ignore diminuator"
+        # checkbox SQUARE on the right (no inline label — it wraps broken in the narrow primes
+        # column). The diminuator's CELL spans LBOX_DIM_W and the checkbox square renders
+        # CSS-centred within it. Captions sit below the taller of the two controls, one line
+        # each: prescaler left-justified to the dropdown, diminuator centred under its slot.
+        # The column was widened up front (by _control_floor) to LBOX_W so nothing overhangs.
         py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
-        drop_w = 100          # seats "log-prime" + the dropdown arrow comfortably
-        # the diminuator's slot sits to the right of the dropdown; the checkbox CELL spans the
-        # whole slot and the visible square is CSS-centred within it (so the square sits over
-        # the centre of the caption below it)
-        dim_slot_x = col_x["primes"] + drop_w + OPT_COL_GAP
-        dim_slot_w = max(60, col_x["primes"] + col_w["primes"] - dim_slot_x)
-        # the prescaler's caption is one line, left-justified to the dropdown's edge — it
-        # overhangs the dropdown to the right (and the column) rather than wrapping
-        cap_p_w = 160  # enough for "predefined prescalers" on one line at the caption font
+        dim_slot_x = col_x["primes"] + LBOX_DROP_W + OPT_COL_GAP
         cap_y = py + max(PRESELECT_H, CHECK_H)  # captions sit below the taller control
-        cells.append(CellBox("control:prescaler", col_x["primes"], py, drop_w, PRESELECT_H,
+        cells.append(CellBox("control:prescaler", col_x["primes"], py, LBOX_DROP_W, PRESELECT_H,
                              "control_select", text=service.prescaler_of(tuning_scheme),
                              values=tuple(service.PRESCALERS)))
-        cells.append(CellBox("control:diminuator", dim_slot_x, py, dim_slot_w, CHECK_H,
+        cells.append(CellBox("control:diminuator", dim_slot_x, py, LBOX_DIM_W, CHECK_H,
                              "control_check", text="",  # square only; label moves to a caption below
                              checked=service.diminuator_ignored(tuning_scheme)))
-        cells.append(CellBox("caption:prescaler", col_x["primes"], cap_y, cap_p_w, CAPTION_LINE,
-                             "caption", text="predefined prescalers", align="left"))
-        cells.append(CellBox("caption:diminuator", dim_slot_x, cap_y, dim_slot_w, CAPTION_LINE,
+        # the prescaler's caption is one line, left-justified to the dropdown's edge —
+        # constrained to the (widened) column width so it doesn't overhang
+        cells.append(CellBox("caption:prescaler", col_x["primes"], cap_y, col_w["primes"],
+                             CAPTION_LINE, "caption", text="predefined prescalers", align="left"))
+        cells.append(CellBox("caption:diminuator", dim_slot_x, cap_y, LBOX_DIM_W, CAPTION_LINE,
                              "caption", text="ignore diminuator"))
     if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
         # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q
@@ -1972,8 +1993,8 @@ def build(state, settings=None, collapsed=None,
         sym_y = cy + ROW_H
         cap_y = sym_y + SYMBOL_H
         cap_h = 3 * CAPTION_LINE
-        drop_w = 170  # widened from half-column so display names ("lp (log-product)", …) fit
-        slot_w = 60   # overhanging symbol/caption slot for q/dual (wider than the COL_W value cell)
+        drop_w = CBOX_DROP_W
+        slot_w = CBOX_SLOT_W
         # the predefined-complexities master dropdown. The dropdown stores the short internal
         # key ("lp", "copfr", …) but presents the inverted-form display name ("lp (log-product)",
         # …). "custom" is always an option (the reconciler keeps a control_select's options
