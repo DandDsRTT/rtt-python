@@ -1292,8 +1292,11 @@ def build(state, settings=None, collapsed=None,
                  and col_open("primes") and "tile:prescaling:primes" not in collapsed)
     # box 𝐋 lays its two controls on ONE row (dropdown left, checkbox square right) with a
     # one-line caption under each: the prescaler's left-justified (and free to overhang to
-    # the right), the diminuator's centred under its checkbox.
-    lbox_extra = (RANGE_GAP + PRESELECT_H + CAPTION_LINE) if lbox_ctrl else 0
+    # the right), the diminuator's centred under its checkbox. The checkbox cell is taller
+    # than a gridded value cell — its square is sized for visibility (~36px per the mockup),
+    # so the row reserves max(PRESELECT_H, CHECK_H) before the caption line.
+    CHECK_H = 36
+    lbox_extra = (RANGE_GAP + max(PRESELECT_H, CHECK_H) + CAPTION_LINE) if lbox_ctrl else 0
     # box 𝒄 lays its three controls in ONE row below the complexity list: the predefined-
     # complexity master dropdown on the left, then the q norm-power field and the dual(q)
     # display, each captioned (q/dual using the optimization box's value-symbol-caption stack).
@@ -1931,28 +1934,27 @@ def build(state, settings=None, collapsed=None,
                     cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
                                          text=service.prescale_text(value), unit=u))
     if lbox_ctrl:  # box 𝐋's controls sit on one row at the bottom of the prescaling matrix:
-        # the prescaler dropdown on the left (wide enough to seat "log-prime" without
-        # truncating to "log-pri..."), the "ignore diminuator" checkbox SQUARE on the right
-        # (no inline label, since the inline label wraps broken in the narrow primes column).
-        # Each control's caption sits beneath: the prescaler caption is left-justified to the
-        # dropdown on one line (overhanging the column to the right if needed), the diminuator
-        # caption is centred under its checkbox (and the checkbox is centred above the caption).
+        # the prescaler dropdown on the left, the "ignore diminuator" checkbox SQUARE on the
+        # right (no inline label — the inline label wraps broken in the narrow primes column).
+        # The checkbox cell spans its diminuator slot's full width so its square renders centred
+        # by CSS (justify-content:center) — equal to its caption's centre below. Captions sit
+        # below the taller of the two controls, one line each: prescaler left-justified to the
+        # dropdown, diminuator centred under its checkbox.
         py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
         drop_w = 100          # seats "log-prime" + the dropdown arrow comfortably
-        check_w = 24          # the small checkbox square
-        # the diminuator's caption slot sits to the right of the dropdown; both the caption and
-        # its checkbox are centred on this slot
+        # the diminuator's slot sits to the right of the dropdown; the checkbox CELL spans the
+        # whole slot and the visible square is CSS-centred within it (so the square sits over
+        # the centre of the caption below it)
         dim_slot_x = col_x["primes"] + drop_w + OPT_COL_GAP
         dim_slot_w = max(60, col_x["primes"] + col_w["primes"] - dim_slot_x)
-        check_x = dim_slot_x + (dim_slot_w - check_w) / 2  # checkbox centred above its caption
         # the prescaler's caption is one line, left-justified to the dropdown's edge — it
-        # overhangs the dropdown to the right (and the column) rather than wrapping to two lines
-        cap_p_w = 160  # enough for "predefined prescalers" on one line at 11px font
-        cap_y = py + PRESELECT_H
+        # overhangs the dropdown to the right (and the column) rather than wrapping
+        cap_p_w = 160  # enough for "predefined prescalers" on one line at the caption font
+        cap_y = py + max(PRESELECT_H, CHECK_H)  # captions sit below the taller control
         cells.append(CellBox("control:prescaler", col_x["primes"], py, drop_w, PRESELECT_H,
                              "control_select", text=service.prescaler_of(tuning_scheme),
                              values=tuple(service.PRESCALERS)))
-        cells.append(CellBox("control:diminuator", check_x, py, check_w, PRESELECT_H,
+        cells.append(CellBox("control:diminuator", dim_slot_x, py, dim_slot_w, CHECK_H,
                              "control_check", text="",  # square only; label moves to a caption below
                              checked=service.diminuator_ignored(tuning_scheme)))
         cells.append(CellBox("caption:prescaler", col_x["primes"], cap_y, cap_p_w, CAPTION_LINE,
@@ -1960,31 +1962,31 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox("caption:diminuator", dim_slot_x, cap_y, dim_slot_w, CAPTION_LINE,
                              "caption", text="ignore diminuator"))
     if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
-        # [predefined complexities ▼] | q | dual(q), each captioned. The q (norm power) and
-        # dual(q) (its dual norm power) follow the optimization box's value-over-symbol-over-
-        # caption stack — the value cell stays at COL_W (a standard gridded number), but the
-        # symbol/caption sit in a wider overhanging SLOT so "dual(q)" doesn't overflow and the
-        # multi-word captions wrap to readable 2-3 lines (not word-by-word). Captions are
-        # bottom-aligned. dual(q) only appears in all-interval mode (the dual norm power is
+        # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q
+        # and dual(q) use the optimization box's value-over-symbol-over-caption stack — the
+        # value cell stays at COL_W (a standard gridded number), but the symbol/caption sit in
+        # a wider overhanging SLOT so "dual(q)" doesn't overflow and multi-word captions wrap
+        # readable. dual(q) only appears in all-interval mode (the dual norm power is
         # meaningful via the dual-norm inequality used to minimax over every interval).
         cy = tile_top["complexity"] + tile_h["complexity"] - cbox_extra + RANGE_GAP
         sym_y = cy + ROW_H
         cap_y = sym_y + SYMBOL_H
         cap_h = 3 * CAPTION_LINE
-        drop_w = col_w["targets"] / 2  # half the targets column for the dropdown
-        slot_w = 60  # overhanging symbol/caption slot for q/dual (wider than the COL_W value cell)
+        drop_w = 170  # widened from half-column so display names ("lp (log-product)", …) fit
+        slot_w = 60   # overhanging symbol/caption slot for q/dual (wider than the COL_W value cell)
         # the predefined-complexities master dropdown. The dropdown stores the short internal
-        # key ("lp", "copfr", …) but presents the friendly display name ("log-product (lp)",
+        # key ("lp", "copfr", …) but presents the inverted-form display name ("lp (log-product)",
         # …). "custom" is always an option (the reconciler keeps a control_select's options
         # fixed), shown when the fine controls leave the shape off the preset list; selecting
-        # it is inert.
+        # it is inert. The dropdown's caption hugs its bottom (rather than bottom-aligning with
+        # the q/dual captions further down).
         complexity_key = service.complexity_name_of(tuning_scheme)
         complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
         complexity_values = tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
         cells.append(CellBox("control:complexity", col_x["targets"], cy, drop_w, PRESELECT_H,
                              "control_select", text=complexity_text, values=complexity_values))
-        cells.append(CellBox("caption:complexity", col_x["targets"], cap_y, drop_w, CAPTION_LINE,
-                             "caption", text="predefined complexities"))
+        cells.append(CellBox("caption:complexity", col_x["targets"], cy + PRESELECT_H, drop_w,
+                             CAPTION_LINE, "caption", text="predefined complexities"))
         # the q norm-power field: an editable white box (a powerinput) styled to match the
         # optimization box's 𝑝 field; wiring (typing a new q to drive the norm) comes later.
         # The slot is wider than the value cell, with the value centred so the italic symbol
@@ -2000,7 +2002,9 @@ def build(state, settings=None, collapsed=None,
             dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
             dual_x = dual_slot_x + (slot_w - COL_W) / 2
             dual_text = "2" if service.is_euclidean(tuning_scheme) else "∞"
-            cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "tval", text=dual_text))
+            # dual(q) renders via the same powerinput path as q so the ∞ glyph sits at the
+            # same visual size as the q numeral (the on_power_change handler no-ops here)
+            cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "powerinput", text=dual_text))
             cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H,
                                  "symbol", text="dual(𝑞)"))
             cells.append(CellBox("caption:dual", dual_slot_x, cap_y, slot_w, cap_h, "caption",

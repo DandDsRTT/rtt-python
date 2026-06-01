@@ -518,10 +518,11 @@ _CSS = f"""
             min-height:0 !important; padding:0; line-height:30px; font-family:'Cambria',Georgia,serif; }}
 .rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append {{ height:30px; min-height:0 !important; }}
 .rtt-preselect .q-icon {{ font-size:16px; color:#555; }}
-.rtt-control-check {{ width:100%; height:20px; }}
-.rtt-control-check .q-checkbox__inner {{ font-size:18px; color:#555; }}  /* the box glyph size */
+.rtt-control-check {{ width:100%; height:100%; display:flex; justify-content:center;
+            align-items:center; }}  /* visually centres the q-checkbox inside its cell wrap */
+.rtt-control-check .q-checkbox__inner {{ font-size:36px; color:#555; }}  /* the box glyph size */
 .rtt-control-check .q-checkbox__label {{ font-size:11px; color:#000; padding-left:3px;
-            line-height:20px; font-family:'Cambria',Georgia,serif; }}
+            line-height:36px; font-family:'Cambria',Georgia,serif; }}
 /* each chooser's dropdown popup matches the field's Cambria text, with compact items */
 .rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
 /* compact items; a long name (e.g. a systematic tuning) wraps within the field
@@ -1725,10 +1726,13 @@ def index() -> None:
                         .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
                                f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
             elif cb.kind == "control_select":  # an alt.-complexity chooser (prescaler / norm / weight slope)
+                # the popup grows to max-content so long display names (e.g. the predefined-
+                # complexity expansions) fit on one line each, while staying at least as wide
+                # as the dropdown trigger
                 selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
                     .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
-                           f"popup-content-style=width:{cb.w}px").classes("rtt-preselect")
+                           f"popup-content-style=min-width:{cb.w}px;width:max-content").classes("rtt-preselect")
             elif cb.kind == "control_check":  # the box-𝐋 "ignore diminuator" checkbox (size factor)
                 checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \

@@ -1502,11 +1502,11 @@ def test_alt_complexity_adds_a_predefined_complexity_chooser_to_box_c():
     assert "control:complexity" not in off  # no control unless alt. complexity is on
     ctrl = on["control:complexity"]
     assert ctrl.kind == "control_select"
-    # the dropdown shows the friendly display name for the current complexity, not the short
-    # internal key — for the default scheme (log-prime taxicab) that's "log-product (lp)"
-    assert ctrl.text == "log-product (lp)"
-    # the dropdown's options are the friendly display names (full name + abbreviation in parens),
-    # plus the inert "custom" shown when the fine controls leave the shape off-preset
+    # the dropdown shows the friendly display name (abbreviation first, expansion in parens) —
+    # for the default scheme (log-prime taxicab) that's "lp (log-product)"
+    assert ctrl.text == "lp (log-product)"
+    # the dropdown's options are the friendly display names (abbreviation + parenthetical
+    # expansion), plus the inert "custom" shown when the fine controls leave the shape off-preset
     assert ctrl.values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
     # the master chooser sits below the complexity list (box 𝒄), at the targets-column left edge
     assert ctrl.y > on["complexity:target:0"].y
@@ -1519,9 +1519,11 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
     # box's value-over-symbol-over-caption pattern (the 𝑝 / "optimization power" style); the
     # dropdown has just a caption (no symbol slot).
     on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
-    # the predefined-complexities dropdown carries its caption beneath
+    # the predefined-complexities dropdown carries its caption HUGGING its bottom (rather than
+    # bottom-aligned with the q/dual captions further down the row)
     assert on["caption:complexity"].kind == "caption"
     assert on["caption:complexity"].text == "predefined complexities"
+    assert on["caption:complexity"].y == on["control:complexity"].y + on["control:complexity"].h
     # the q norm-power field: an editable powerinput (white box) styled like the optimization
     # power 𝑝 — the wiring (typing a new q to drive the norm) comes later. Default taxicab => 1.
     assert on["control:q"].kind == "powerinput"
@@ -1532,14 +1534,17 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
     assert on["symbol:q"].y > on["control:q"].y  # symbol BELOW the value (optimization-box style)
     assert on["caption:q"].text == "interval complexity norm power"
     assert on["caption:q"].y > on["symbol:q"].y  # caption BELOW the symbol
-    # the dual(q) display: the dual norm power, paired symbol/caption like q (and to the right)
-    assert on["control:dual"].kind == "tval"
+    # the dual(q) display: the dual norm power, rendered through the SAME powerinput path as q
+    # so ∞ sits at the same visual size as the q numeral (the on_power_change handler no-ops here)
+    assert on["control:dual"].kind == "powerinput"
     assert on["control:dual"].text == "∞"  # the dual of taxicab (q=1) is ∞
     assert on["control:dual"].x > on["control:q"].x
     assert on["symbol:dual"].text == "dual(𝑞)"  # the math italic q sits inside the dual-of-q label
     assert on["caption:dual"].text == "dual norm power"
-    # the dropdown's caption is BOTTOM-ALIGNED with the q/dual captions (one tidy row of labels)
-    assert on["caption:complexity"].y == on["caption:q"].y == on["caption:dual"].y
+    # the q and dual(q) captions sit at the same y (one tidy row); the dropdown's caption hugs
+    # higher up against the dropdown's bottom, so it is ABOVE that row
+    assert on["caption:q"].y == on["caption:dual"].y
+    assert on["caption:complexity"].y < on["caption:q"].y
     # the old taxicab/Euclidean dropdown is gone — its look is replaced by the q field (mockup)
     assert "control:norm" not in on
 
