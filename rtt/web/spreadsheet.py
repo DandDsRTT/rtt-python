@@ -2128,6 +2128,15 @@ def build(state, settings=None, collapsed=None,
             bracket("vec:held", LIST_BRACKETS, "held", row_y["vectors"], d * ROW_H, fit=True)
         if tile_open("vectors", "detempering"):
             bracket("vec:detempering", LIST_BRACKETS, "detempering", row_y["vectors"], d * ROW_H, fit=True)
+    if row_open("prescaling"):  # L·basis matrices: outer [ ] over the d-tall prescaled columns,
+        # mirroring the interval-vectors row's framing — the bare L and every L·v share the
+        # same shape (per the mockup). The interest tile is the lone exception: standalone
+        # columns, no outer wrap, like every other interest-row tile.
+        for group, n_cols in (("primes", d), ("commas", nc), ("detempering", r),
+                              ("targets", k), ("held", nh)):
+            if n_cols and tile_open("prescaling", group):
+                bid = "prescaling" if group == "primes" else f"prescaling:{group}"
+                bracket(bid, LIST_BRACKETS, group, row_y["prescaling"], d * ROW_H, fit=True)
     if tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
         bracket("tuning:genmap", GENMAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
     # the detempering tuning row IS the generator tuning map (𝒕D = 𝒈), so it too is framed
@@ -2476,14 +2485,12 @@ def build(state, settings=None, collapsed=None,
     def frame_brace_y(rkey):
         return row_y[rkey] + row_h[rkey] + FRAME_GAP
 
-    # a matrix tile (the primes mapping, the canonical mapping, the complexity prescaler)
-    # is enclosed by a top bracket + bottom brace spanning its whole column. ``bid`` keeps
+    # a matrix tile (the primes mapping and its canonical forms) is enclosed by a top
+    # bracket + bottom curly brace spanning its whole column: the brace marks generator
+    # coordinates, so it's the right close for the mapping but not for raw monzos or
+    # prescaled vectors (those use per-column marks via monzo_list_marks). ``bid`` keeps
     # each frame's ids stable so two framed rows over the same column never collide.
-    def matrix_frame(rkey, ckey, bid, foot="ebkbrace"):
-        # ``foot`` picks the matrix's bottom mark: ``ebkbrace`` (} curly close) for tiles
-        # whose contents are generator coordinates (the mapping and its canonical forms);
-        # ``ebkbot`` (the bottom of a square bracket [) for tiles that are NOT in generator
-        # coords (the bare prescaler L and its L·vector lists).
+    def matrix_frame(rkey, ckey, bid):
         # The matlabel gutter (row labels 𝒎ᵢ / 𝒙ᵢ) sits LEFT of the matrix, outside the
         # bracket — so the frame hugs the cells and never swallows the row labels.
         if not tile_open(rkey, ckey):
@@ -2491,17 +2498,17 @@ def build(state, settings=None, collapsed=None,
         mx = matlabel_left_w(ckey)
         gx, gw = col_x[ckey] + mx, col_w[ckey] - mx
         cells.append(CellBox(f"ebktop:{bid}", gx, frame_top_y(rkey), gw, FRAME_H, "ebktop"))
-        cells.append(CellBox(f"{foot}:{bid}", gx, frame_brace_y(rkey), gw, BRACE_H, foot))
+        cells.append(CellBox(f"ebkbrace:{bid}", gx, frame_brace_y(rkey), gw, BRACE_H, "ebkbrace"))
 
     matrix_frame("mapping", "primes", "primes")
     matrix_frame("canon", "primes", "canon")
     matrix_frame("canon", "gens", "form")
-    matrix_frame("prescaling", "primes", "prescaling", foot="ebkbot")
-    matrix_frame("prescaling", "commas", "prescaling:commas", foot="ebkbot")
-    matrix_frame("prescaling", "detempering", "prescaling:detempering", foot="ebkbot")
-    matrix_frame("prescaling", "targets", "prescaling:targets", foot="ebkbot")
-    # the interest prescaling is NOT framed as a matrix — its columns stand alone (see the
-    # monzo_list_marks call below), like the rest of the interest column
+    # the prescaling row uses the SAME outer-``[ ]``-plus-per-column-marks shape as the
+    # mapped-list rows below, but with an ebkbot foot (the bottom of the same ``[``) on
+    # every column instead of the generator-coord curly brace or the raw-monzo angle ⟩.
+    # The interest tile keeps the per-column marks but drops the outer ``[ ]`` (standalone
+    # columns, like the rest of the interest column). Done via monzo_list_marks + bracket
+    # below, alongside the mapping row's mapped lists (same family of shape).
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is
     # marked top + bottom — inset so they stop short of the rules. The foot tells the
@@ -2541,9 +2548,16 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
     monzo_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
     monzo_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
-    # the interest prescaling row is prescaled vectors in superspace (kets) — standalone
-    # columns like the interval-vectors row, not the matrix frame the other columns use
-    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
+    # the prescaling row's per-column ebktop/ebkbot — matching the mapping row's shape
+    # except the close is ebkbot (the bottom of ``[``) instead of ebkbrace (the bottom of
+    # ``}``). The matrix tiles also grow the outer ``[ ]`` framing below; the interest
+    # tile stays bare (standalone columns, no outer wrap), per the mockup.
+    monzo_list_marks("prescaling", "prescaling", "primes", prime_left, d, foot="ebkbot")
+    monzo_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkbot")
+    monzo_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkbot")
+    monzo_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkbot")
+    monzo_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkbot")
+    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkbot", separators=False)
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the
