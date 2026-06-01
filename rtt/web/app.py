@@ -451,7 +451,7 @@ _CSS = f"""
    inner text (which sits a few px from the dropdown's border, per q-field padding); the
    2px top inset nudges it down off the dropdown's bottom border. */
 .rtt-caption-left {{ text-align:left !important; white-space:nowrap; overflow:visible;
-                    text-wrap:nowrap; padding:2px 0 0 7px; }}
+                    text-wrap:nowrap; padding:2px 0 0 6px; }}
 .rtt-caption-cell:has(> .rtt-caption-left) {{ align-items:flex-start; overflow:visible; }}
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
