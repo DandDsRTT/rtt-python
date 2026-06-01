@@ -3476,6 +3476,9 @@ def test_off_by_default_rows_colorize_by_content_too():
     assert at("complexity:target:0") == C                  # 𝒄 of the targets (norm of 𝑋T)
     assert at("complexity:interest:0") == C                # 𝒄 of the other-intervals
     assert at("complexity:held:0") == C                    # 𝒄 of the held basis (norm of 𝑋H)
+    # the weight 𝒘 incorporates the target complexity list (𝒘 = 𝒄 / 1 / 1∕𝒄), so it inherits
+    # that list's cyan 𝑋 (and rides the cyan target column T) → cyan
+    assert at("weight:target:0") == C                      # 𝒘 (built from the cyan complexity 𝒄)
 
 
 def test_generator_detempering_column_colorizes_by_content():

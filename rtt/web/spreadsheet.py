@@ -337,11 +337,12 @@ COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS)
 #   "M" — the (temperament) mapping                                        → temperament (yellow)
 #   "C" — the comma basis                                                  → temperament (yellow)
 #   "D" — the generator detempering                                        → temperament (yellow)
-# Colourless: the domain basis (the primes), the other-intervals of interest, and the
-# weight 𝒘 (a standalone derived scalar, like the counts). A tile carrying both a tuning
-# and a temperament object reads green (the darken blend of the two washes) — e.g. the
-# tempered map 𝒕 = 𝒈𝑀 (G·M), the mapped target list 𝑀T (M·T), the just-of-commas 𝒋C (J·C),
-# and the whole error/damage chain 𝐞 = (𝒈𝑀 − 𝒋)T, which keeps every operand's factors
+# Colourless: the domain basis (the primes) and the other-intervals of interest. (The
+# weight 𝒘 is NOT colourless — it incorporates the cyan complexity list; see its entry.)
+# A tile carrying both a tuning and a temperament object reads green (the darken blend of
+# the two washes) — e.g. the tempered map 𝒕 = 𝒈𝑀 (G·M), the mapped target list 𝑀T (M·T),
+# the just-of-commas 𝒋C (J·C), and the whole
+# error/damage chain 𝐞 = (𝒈𝑀 − 𝒋)T, which keeps every operand's factors
 # (G, M, J, T) across the 𝒓 = 𝒕 − 𝒋 difference. A norm carries its operand's factors, so
 # the complexity 𝒄 = ‖𝑋·v‖ inherits 𝑋 and the basis v's own colour. CELL_FACTORS lists
 # only the colour-bearing factors of each tile; a (row, col) absent here carries no wash.
@@ -411,6 +412,9 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("complexity", "interest"): frozenset({"X"}),      # 𝒄 of the other-intervals
     ("complexity", "held"): frozenset({"X", "H"}),     # 𝒄 of the held basis (norm of 𝑋H)
     ("complexity", "detempering"): frozenset({"X", "D"}),  # 𝒄 of the detempering (norm of 𝑋D → green)
+    # the weight 𝒘 incorporates the target complexity list (𝒘 = 𝒄, 1, or 1∕𝒄 by the damage-
+    # weight slope), so it inherits that list's cyan 𝑋 and rides the cyan target column T → cyan
+    ("weight", "targets"): frozenset({"X", "T"}),      # 𝒘 (built from the cyan complexity 𝒄)
     # the audio rows mirror the just (cyan 𝒋; comma column greens via C) and tempered (G·M;
     # the target / held columns add the cyan T / H) sizes they sound
     ("just_audio", "primes"): frozenset({"J"}),        # sounds 𝒋
