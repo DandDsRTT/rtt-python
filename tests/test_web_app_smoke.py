@@ -235,16 +235,16 @@ def _css_rule(selector):
     return m.group(1)
 
 
-def test_left_rail_height_tracks_the_settings_drawer_not_the_taller_grid():
-    # The app-title rail and the settings drawer share .rtt-panelgroup; the rail (no
-    # align-self) stretches to that group's height. The group must hug its content
-    # (align-self:flex-start) so its height — and the rail's — tracks the drawer, i.e. the
-    # open settings panel. With align-self:stretch the group instead grew to the shell's
-    # tallest child, so a grid taller than the settings dragged the rail down to the grid's
-    # full height rather than matching the panel beside it.
+def test_sidebar_is_a_fixed_full_height_left_column():
+    # The rail + settings drawer share .rtt-panelgroup, the app's fixed left sidebar. The page no
+    # longer scrolls (the grid scrolls in its own pane, .rtt-app), so the sidebar needs no
+    # position:sticky and no content-hugging: it is a flex:none column the shell stretches to full
+    # height (the shell's align-items:stretch), so the rail's grey and the open settings panel run
+    # the height of the window beside the grid — independent of how tall the grid's content is.
     rule = _css_rule(".rtt-panelgroup")
-    assert "align-self:flex-start" in rule
-    assert "stretch" not in rule  # never re-stretch to the shell (the grid) height
+    assert "flex:none" in rule                  # fixed width; doesn't grow/shrink with the grid
+    assert "position:sticky" not in rule        # no page scroll to pin against anymore
+    assert "align-self:flex-start" not in rule  # full height, not hugging the drawer's content
 
 
 def _z(selector):
@@ -253,9 +253,9 @@ def _z(selector):
     return int(m.group(1))
 
 
-def test_titles_freeze_with_sticky_bands_pinned_to_the_window():
-    # the three title bands are position:sticky, so the browser pins them to the window edges as
-    # the page scrolls (no JS on the scroll path, no bobble): the column band to the top, the row
+def test_titles_freeze_with_sticky_bands_pinned_to_the_pane():
+    # the three title bands are position:sticky, so the browser pins them to the grid pane's edges
+    # as it scrolls (no JS on the scroll path, no bobble): the column band to the top, the row
     # band to the left, the corner to both. They stack above the body, corner above the sides.
     col, row, cnr = _css_rule(".rtt-colband"), _css_rule(".rtt-rowband"), _css_rule(".rtt-cornerband")
     assert "position:sticky" in col and "top:0" in col        # column band pinned to the top
@@ -264,27 +264,25 @@ def test_titles_freeze_with_sticky_bands_pinned_to_the_window():
     assert _z(".rtt-cell") < _z(".rtt-colband") < _z(".rtt-rowband") < _z(".rtt-cornerband")
 
 
-def test_settings_panel_freezes_to_the_window_top_like_the_column_band():
-    # The rail (the "D&D's RTT app" title) and the settings drawer share .rtt-panelgroup. Like
-    # the column band, the group is position:sticky pinned to the top, so scrolling the tall grid
-    # down keeps the app title and the open settings panel in view at the window edge. Its
-    # containing block is the shell, which is as tall as the grid, so it stays stuck the whole way
-    # down. It is top-only — NOT left-pinned like the corner — so it still scrolls horizontally
-    # with the page exactly as the column titles do (left-pinning it would overlap the row band).
-    rule = _css_rule(".rtt-panelgroup")
-    assert "position:sticky" in rule and "top:0" in rule
-    assert "left:0" not in rule
+def test_shell_fixes_the_app_to_the_window_framed_by_a_white_margin():
+    # The shell is position:fixed at a 6px inset from every window edge, so the app fills the window
+    # exactly and the page itself never scrolls (the grid scrolls inside its own pane instead). The
+    # 6px of white body around the fixed shell frames the whole app — the white margin that stays
+    # put even while the grid scrolls, since nothing scrolls over it.
+    rule = _css_rule(".rtt-shell")
+    assert "position:fixed" in rule
+    for edge in ("top:6px", "left:6px", "right:6px", "bottom:6px"):
+        assert edge in rule, edge
 
 
 def test_settings_pane_stacks_a_frozen_header_over_a_scrolling_body():
-    # The expanded settings panel can outrun the screen, so — like the main app's frozen column
-    # band over its page-scrolled body — the pane freezes its header and scrolls the toggle
-    # groups under it. The drawer-inner is a flex column capped to the window height (less the
-    # 6px .nicegui-content inset top and bottom, so a tall panel scrolls internally rather than
-    # running past the foot of the screen and adding a page scrollbar, as a bare 100vh once did).
+    # The settings panel can outrun the screen, so — like the grid pane's frozen column titles over
+    # its scrolling body — the pane freezes its header and scrolls the toggle groups under it. The
+    # drawer-inner is a flex column filling the full-height sidebar (height:100%); the body scrolls
+    # within it so a tall panel never runs off the screen.
     inner = _css_rule(".rtt-drawer-inner")
     assert "display:flex" in inner and "flex-direction:column" in inner
-    assert "max-height:calc(100vh - 12px)" in inner  # capped to the window, not its content height
+    assert "height:100%" in inner  # fills the full-height sidebar, not capped to its own content
     # the header (select-all/none + the show/example titles) never shrinks or scrolls...
     assert "flex:none" in _css_rule(".rtt-show-frozen")
     # ...and the groups scroll within the capped pane (min-height:0 lets the flex child shrink
@@ -313,17 +311,20 @@ def test_bands_are_opaque_and_pass_clicks_through_off_the_band():
     assert "overflow" not in _css_rule(".rtt-colband")
 
 
-def test_grid_grows_the_page_rather_than_being_capped_to_the_window():
-    # the grid lays out at natural size (max-content) and neither the app nor the shell is
-    # width-capped, so a grid bigger than the window grows the page (the page is the scroller)
-    # and spills off the edges — adding a row/col expands the view, never a fixed-box scrollbar.
+def test_grid_scrolls_in_its_own_pane_not_the_page():
+    # the grid lays out at natural size (.rtt-outer width:max-content) and scrolls inside .rtt-app
+    # (overflow:auto) — its OWN pane, which fills the shell width right of the sidebar (flex:1,
+    # min-width:0 so it bounds the grid rather than being pushed wider). So a grid bigger than the
+    # pane scrolls here — scrollbars bounded to the pane, right of the frozen sidebar — instead of
+    # growing/scrolling the page.
     assert "width:max-content" in _css_rule(".rtt-outer")
-    assert "flex:0 0 auto" in _css_rule(".rtt-app")
-    assert "max-width" not in _css_rule(".rtt-shell")  # never capped to the viewport
+    app_rule = _css_rule(".rtt-app")
+    assert "overflow:auto" in app_rule                              # the grid's own scroller
+    assert "flex:1 1 auto" in app_rule and "min-width:0" in app_rule  # bounds the grid to the pane
 
 
-def test_seam_appears_only_when_the_page_is_scrolled():
-    # each band's body-facing edge is transparent until the page is scrolled on that axis, when
+def test_seam_appears_only_when_the_pane_is_scrolled():
+    # each band's body-facing edge is transparent until the grid pane is scrolled on that axis, when
     # the board gains rtt-scrolled-x/y (see _FREEZE_JS) and the edge takes the grey seam; the
     # border is always 1px so revealing it shifts nothing.
     css = app._CSS
@@ -333,13 +334,14 @@ def test_seam_appears_only_when_the_page_is_scrolled():
     assert ".rtt-board.rtt-scrolled-x .rtt-rowband" in css and f"border-right-color:{app._SEAM}" in css
 
 
-def test_freeze_script_toggles_the_seam_on_page_scroll_only():
-    # the only JS is a capture-phase scroll listener that toggles rtt-scrolled-x/y on the board
-    # from its viewport rect (a band is "stuck" once the board's edge passes the viewport edge).
+def test_freeze_script_toggles_the_seam_on_pane_scroll():
+    # the only JS is a capture-phase scroll listener that toggles rtt-scrolled-x/y on the board from
+    # its pane's scroll offset (a band is "stuck" once .rtt-app has scrolled off zero on that axis).
     # It never moves the titles — position:sticky does that — so there is no bobble.
     js = app._FREEZE_JS
+    assert "scrollTop" in js and "scrollLeft" in js     # reads the pane's scroll offset...
+    assert "closest('.rtt-app')" in js                  # ...of the grid's own scroll pane
     assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js
-    assert "getBoundingClientRect" in js
     assert "addEventListener('scroll'" in js
     assert "ResizeObserver" not in js and "scroll-timeline" not in js  # no fixed-box machinery
 

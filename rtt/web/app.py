@@ -266,19 +266,20 @@ window.rttAudio = (function () {
 })();
 """
 
-# Frozen-pane support: reveal the seam ONLY once the page has scrolled the body under a band.
+# Frozen-pane support: reveal the seam ONLY once the grid pane has been scrolled under a band.
 # position:sticky pins the title bands with zero JS on the scroll path (no bobble); this listener
-# just toggles the seam classes. A band is "stuck" (content scrolled under it) exactly when the
-# board's top/left edge has passed the viewport edge — read from its viewport rect, so it works
-# whether the page or some inner element is the scroller. scroll doesn't bubble → capture phase.
+# just toggles the seam classes. A band is "stuck" (content scrolled under it) exactly when its
+# scroll pane (.rtt-app, the inner scroller) has scrolled off zero on that axis. scroll doesn't
+# bubble → capture phase, so the inner pane's scroll events are still caught here.
 _FREEZE_JS = """
 window.rttFreeze = (function () {
   function update() {
     var boards = document.querySelectorAll('.rtt-board');
     for (var i = 0; i < boards.length; i++) {
-      var r = boards[i].getBoundingClientRect();
-      boards[i].classList.toggle('rtt-scrolled-y', r.top < 0);
-      boards[i].classList.toggle('rtt-scrolled-x', r.left < 0);
+      var sc = boards[i].closest('.rtt-app');   // the grid's own scroll pane
+      if (!sc) continue;
+      boards[i].classList.toggle('rtt-scrolled-y', sc.scrollTop > 0);
+      boards[i].classList.toggle('rtt-scrolled-x', sc.scrollLeft > 0);
     }
   }
   document.addEventListener('scroll', update, true);
@@ -330,54 +331,47 @@ _CSS = f"""
                  min-height:28px !important; padding:0 !important; background:#fff !important;
                  border:1px solid #999; border-radius:3px !important; box-shadow:none !important; }}
 .rtt-hamburger .q-icon {{ color:#333 !important; font-size:19px; }}
-/* the shell lays the rail+pane group and the app in a row. It is NOT width-capped: a grid wider
-   than the window grows the shell past the viewport so the PAGE scrolls horizontally (the grid
-   spilling off the right), with the row titles staying put via position:sticky. */
-.rtt-shell {{ position:relative; display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
-/* the rail+pane group hugs its own content (align-self:flex-start), so its height — and the
-   rail's, via align-items:stretch — is the drawer's height, NOT the shell's tallest child.
-   A COLLAPSED drawer is 0fr (zero height, below), so the group falls to the rail's own
-   content → a short title tab. An OPEN drawer is the settings' height, so the group (and the
-   rail) match the panel exactly, even when the grid beside it runs much taller. (Were this
-   align-self:stretch, the group would take the shell's full height and a tall grid would
-   drag the rail down to the grid's height.) Opening the pane widens this group, pushing the
-   app right. It is also position:sticky/top:0, so it freezes to the window top as the page
-   scrolls down — the app title and the open settings panel stay in view beside the scrolling
-   grid, exactly as the column band pins the column titles. Its containing block is the shell
-   (as tall as the grid), so it stays stuck the whole way down. It is top-only (the column
-   band's behaviour, NOT the corner's top+left): it still scrolls left with the page on
-   horizontal scroll rather than pinning over — and overlapping — the sticky row band. */
-.rtt-panelgroup {{ display:flex; flex-wrap:nowrap; align-self:flex-start; position:sticky; top:0; }}
-/* the drawer animates BOTH its width (the slide-over) and its height (grid-template-rows 0fr->1fr,
-   which grows/shrinks the pane to its content height), so opening/closing glides instead of the
-   pane popping to full height. align-self:flex-start stops the group stretching the drawer, which
-   would defeat the content-based fr sizing; a 0fr drawer contributes no height (see above). */
-.rtt-drawer {{ display:grid; grid-template-rows:0fr; align-self:flex-start; width:0; overflow:hidden;
-              transition:width {_T}, grid-template-rows {_T}; flex:none; }}
-.rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; grid-template-rows:1fr; }}
-/* the pane is a flex column: a frozen header (select-all/none + show/example) over a scrolling
-   body (the toggle groups), mirroring the main app's frozen column band above its scrolling grid.
-   It caps at the window height less the .nicegui-content inset (6px top + 6px bottom), so a panel
-   taller than the screen scrolls INTERNALLY instead of running past the foot of the screen and
-   adding a page scrollbar — the failure a bare min-height:100vh once hit. overflow:hidden +
-   min-height:0 still let the drawer's grid-rows open/close animation clip and grow it smoothly. */
-.rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0; overflow:hidden;
-                    min-height:0; max-height:calc(100vh - 12px); display:flex; flex-direction:column;
+/* the shell lays the fixed left sidebar (rail + settings pane) and the grid pane in a row. It is
+   position:fixed at a 6px inset from every window edge, so it fills the window exactly (the page
+   itself never scrolls) and the 6px of white body shows as a margin framing the whole app. The
+   grid spills inside its OWN pane (.rtt-app, the scroller) rather than off the page, which keeps
+   the sidebar frozen at the left. align-items:stretch makes the sidebar and grid pane full height;
+   the fixed width bounds the grid pane (flex:1) so it scrolls instead of pushing the shell wider. */
+.rtt-shell {{ position:fixed; top:6px; left:6px; right:6px; bottom:6px;
+             display:flex; flex-wrap:nowrap; gap:0; align-items:stretch; }}
+/* the rail+pane group is the fixed left sidebar: a flex:none column the shell holds at the left
+   edge for the whole session. align-items:stretch (the shell's) makes it — and the rail and drawer
+   within it — full height, so the rail's grey runs the height of the window beside the grid. The
+   page no longer scrolls, so it needs no position:sticky; it simply stays put while the grid pane
+   to its right scrolls. Opening the drawer widens it, narrowing the grid pane (which reflows). */
+.rtt-panelgroup {{ display:flex; flex-wrap:nowrap; flex:none; }}
+/* the drawer slides open/closed by animating its width only (the pane is always full sidebar
+   height now, so no height animation). overflow:hidden clips the fixed-width inner while the
+   drawer is narrowed to 0. */
+.rtt-drawer {{ width:0; overflow:hidden; transition:width {_T}; flex:none; }}
+.rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; }}
+/* the pane is a full-height flex column: a frozen header (select-all/none + show/example) over a
+   scrolling body (the toggle groups), mirroring the grid pane's frozen titles above its scrolling
+   body. It fills the sidebar height; the body scrolls internally so a tall panel never runs off
+   the screen. overflow:hidden + min-height:0 let the body scroll without forcing the pane taller. */
+.rtt-drawer-inner {{ width:{_PANEL_W}px; height:100%; box-sizing:border-box; background:#e0e0e0;
+                    overflow:hidden; min-height:0; display:flex; flex-direction:column;
                     font-family:'Cambria',Georgia,serif; color:#000; }}
-/* the app sits right of the rail+pane group and sizes to the grid (flex:0 0 auto), so a wide
-   grid widens the page rather than being shrunk to fit — the page is the horizontal scroller */
-.rtt-app {{ flex:0 0 auto; }}
+/* the grid pane sits right of the sidebar and fills the rest of the shell width (flex:1, min-width:0
+   so it can shrink). It is the grid's OWN scroller (overflow:auto): a grid wider/taller than the
+   pane scrolls HERE — its scrollbars bounded to the pane, right of the frozen sidebar — instead of
+   scrolling the page. Grey backdrop so the gaps around the tiles read through. */
+.rtt-app {{ flex:1 1 auto; min-width:0; overflow:auto; background:#c0c0c0; }}
 
-/* Page-scrolled grid with sticky frozen titles. The grid lays out at full size in .rtt-outer
-   (width:max-content), so when it outgrows the window the PAGE scrolls — both ways — and the
-   grid spills off the edges (no inner scroll box, no viewport cap; adding a row/col just grows
-   the page). Titles freeze with position:sticky: three opaque bands inside the board pin to the
-   window edges as the page scrolls — the column band to the top, the row band to the left, the
-   corner to both — and, being opaque, occlude the body scrolling beneath them. Each band is a
-   sticky inner inside a full-board absolute wrapper (pointer-events:none, so it can stay stuck
-   across the whole grid without blocking the body's clicks; the inner re-enables them). A
-   rightmost column title overhangs its content-hugging column; the band doesn't clip
-   (no overflow), so the tail spills into .rtt-outer's _PAD margin as it did before. */
+/* The grid lays out at full size in .rtt-outer (width:max-content) and scrolls inside .rtt-app
+   (the pane scroller) — both ways — so it spills inside its pane rather than off the page; adding
+   a row/col just grows the scroll content. Titles freeze with position:sticky relative to .rtt-app:
+   three opaque bands inside the board pin to the pane edges as it scrolls — the column band to the
+   top, the row band to the left, the corner to both — and, being opaque, occlude the body scrolling
+   beneath them. Each band is a sticky inner inside a full-board absolute wrapper (pointer-events:none,
+   so it can stay stuck across the whole grid without blocking the body's clicks; the inner re-enables
+   them). A rightmost column title overhangs its content-hugging column; the band doesn't clip (no
+   overflow), so the tail spills into .rtt-outer's _PAD margin as it did before. */
 .rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
               font-family:'Cambria',Georgia,serif; }}
 /* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
