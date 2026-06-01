@@ -903,6 +903,24 @@ def test_target_chooser_is_wider_to_seat_its_numeric_override():
     assert cells["preselect:target"].w > cells["preselect:tuning"].w
 
 
+def test_tuning_and_temperament_dropdowns_are_copied_into_more_tiles():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["preselects"] = True
+    lay = spreadsheet.build(base, s, tuning_scheme="POTE")
+    cells = {c.id: c for c in lay.cells}
+    boxes = {b.id: b for b in lay.blocks}
+    # a copy of the tuning chooser rides the generator tuning map tile (gens column),
+    # mirroring the live scheme like the tuning map copy in the primes column
+    gt = cells["preselect:tuning:gens"]
+    assert gt.x == cells["header:gens"].x and gt.text == "POTE"
+    # it shares the tuning row's control band with the tuning map dropdown (primes box)
+    assert boxes["block:preselect:tuning:gens"].y == boxes["block:preselect:tuning"].y
+    # a copy of the temperament chooser rides the comma basis tile (commas column)
+    ct = cells["preselect:temperament:commas"]
+    assert ct.x == cells["header:commas"].x and ct.text == ""  # a placeholder, like the mapping copy
+
+
 def test_target_preselect_now_lives_in_the_target_interval_list_tile():
     # the target interval set chooser belongs to the target interval list (the vectors-row
     # targets tile), not the quantities row -- so it rides below that list's value cells

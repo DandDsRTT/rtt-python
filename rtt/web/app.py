@@ -1755,7 +1755,7 @@ def index() -> None:
                     cls += " rtt-caption-left"
                 captions[cb.id] = ui.html("").classes(cls)  # content set in render()
             elif cb.kind == "preselect":
-                name = cb.id.split(":", 1)[1]  # temperament / tuning / target
+                name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
                 if name == "target":
                     # a numeric limit override beside the TILT/OLD family select, seeded
                     # from the editor's live target family + (optional) manual limit
@@ -2036,7 +2036,7 @@ def index() -> None:
                 # mirror the live selection: the temperament chooser shows the matched
                 # preset (or its placeholder), the target chooser splits into limit +
                 # family, the tuning chooser shows its scheme. building[0] guards echoes.
-                if cb.id == "preselect:temperament":
+                if cb.id.startswith("preselect:temperament"):  # base + the comma-basis copy
                     selects[cb.id].value = presets.identify(editor.state) or ""
                 elif cb.id == "preselect:target":
                     num, sel = selects[cb.id]

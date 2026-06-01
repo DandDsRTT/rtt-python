@@ -513,7 +513,16 @@ PRESELECTS = (
     ("tuning", "tuning", "primes", "established tuning scheme"),
     ("target", "vectors", "targets", "target interval set scheme"),
 )
-PRESELECT_ROWS = frozenset(row for _, row, _, _ in PRESELECTS)
+# Extra copies of a preselect chooser in another governing tile (the same control, its own
+# id so the renderer keeps both): the tuning scheme also under the generator tuning map, the
+# temperament also in the comma basis (which it loads). The gens tuning copy is untitled
+# (its label is established by the tuning map copy) so it doesn't overhang the open
+# domain-primes column to its right; it shares the tuning row's control band with that copy.
+PRESELECT_COPIES = (
+    ("tuning", "tuning", "gens", ""),
+    ("temperament", "vectors", "commas", "temperament"),
+)
+PRESELECT_ROWS = frozenset(row for _, row, _, _ in PRESELECTS + PRESELECT_COPIES)
 
 # The "form" chooser (settings["form_controls"]) as (name, row, column, title): a control
 # in the mapping and comma-basis boxes that re-stores that matrix in canonical form (an
@@ -2558,14 +2567,20 @@ def build(state, settings=None, collapsed=None,
         # control is a resolved spec (no preset name), so it shows blank rather than a repr
         preselect_text = {"temperament": "", "target": target_spec,
                           "tuning": tuning_scheme if isinstance(tuning_scheme, str) else ""}
-        for name, rkey, ckey, title in PRESELECTS:
+
+        def emit_preselect(cid, name, rkey, ckey, title):
             if not tile_open(rkey, ckey):
-                continue
+                return
             top = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
             pw = min(col_w[ckey], TARGET_PRESELECT_W if name == "target" else PRESELECT_W)
-            ctrl_dy = control_box(f"block:preselect:{name}", col_x[ckey], top, pw, title)
-            cells.append(CellBox(f"preselect:{name}", col_x[ckey], top + ctrl_dy, pw, PRESELECT_H,
+            ctrl_dy = control_box(f"block:{cid}", col_x[ckey], top, pw, title)
+            cells.append(CellBox(cid, col_x[ckey], top + ctrl_dy, pw, PRESELECT_H,
                                  "preselect", text=preselect_text[name]))
+
+        for name, rkey, ckey, title in PRESELECTS:
+            emit_preselect(f"preselect:{name}", name, rkey, ckey, title)
+        for name, rkey, ckey, title in PRESELECT_COPIES:  # the same control in a second tile
+            emit_preselect(f"preselect:{name}:{ckey}", name, rkey, ckey, title)
 
     # the form chooser, one box below the preselect chooser: it canonicalizes the mapping /
     # comma basis it rides (an undoable edit). A control, so it ignores the value-display
