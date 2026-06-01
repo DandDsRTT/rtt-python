@@ -758,20 +758,21 @@ def _math_expr(operand: str, value: float, show_value: bool) -> str:
     return f"{expr}\n= {service.cents(value)}" if show_value else expr
 
 
-def _prescale_math_expr(coeff, prime: int, value: float, show_value: bool) -> str:
-    """A prescaling cell's exact closed form ``{coeff} · log₂{prime}`` — the log-prime
-    norm IS ``log₂(prime)`` and a prescaled vector entry scales it by the basis element's
-    component. Octaves, not cents (the prescaler lives a level below the just sizes), so
-    no ``1200 ·`` prefix and the ``= {value}`` second line uses the same
-    :func:`service.prescale_text` formatter the bare cells use. Unit coefficients drop
-    their ``1 ·`` prefix (``log₂3`` not ``1 · log₂3``), and ``-1`` keeps just the sign
-    (``-log₂3``). With quantities off, only the expression shows."""
+def _prescale_math_expr(coeff, prime_term: str, value: float, show_value: bool) -> str:
+    """A prescaling cell's exact closed form ``{coeff} · {prime_term}`` — where
+    ``prime_term`` is what the active prescaler puts on the diagonal (``log₂{prime}`` for
+    log-prime, ``{prime}`` for the prime prescaler; identity has no non-trivial closed
+    form and never reaches here). Octaves, not cents (the prescaler lives a level below
+    the just sizes), so no ``1200 ·`` prefix and the ``= {value}`` second line uses the
+    same :func:`service.prescale_text` formatter the bare cells use. Unit coefficients
+    drop their ``1 ·`` prefix (``log₂3`` not ``1 · log₂3``), and ``-1`` keeps just the
+    sign (``-log₂3``). With quantities off, only the expression shows."""
     if coeff == 1:
-        expr = f"log₂{prime}"
+        expr = prime_term
     elif coeff == -1:
-        expr = f"-log₂{prime}"
+        expr = f"-{prime_term}"
     else:
-        expr = f"{coeff} · log₂{prime}"
+        expr = f"{coeff} · {prime_term}"
     return f"{expr}\n= {service.prescale_text(value)}" if show_value else expr
 
 
@@ -1879,6 +1880,19 @@ def build(state, settings=None, collapsed=None,
         "held": held,
         "detempering": detempering_vectors,
     }
+    # the active prescaler's per-prime diagonal term, lifted as the math-expression
+    # operand: log-prime puts ``log₂{prime}`` on the diagonal, prime puts ``{prime}``
+    # itself, identity puts a constant ``1`` — and ``1`` IS the value, so the cell would
+    # be ``coeff · 1 = coeff`` (no information added). Following the just row's rule
+    # (math expressions only where a non-trivial closed form exists), the identity
+    # scheme is read as "no closed form" → cells stay tval.
+    _active_prescaler = service.prescaler_of(tuning_scheme)
+    if _active_prescaler == "log-prime":
+        prime_term = {i: f"log₂{p}" for i, p in enumerate(elements)}
+    elif _active_prescaler == "prime":
+        prime_term = {i: str(p) for i, p in enumerate(elements)}
+    else:  # "identity" — coeff · 1 is silly, skip mathexpr (cell stays tval)
+        prime_term = {}
     for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
         if not tile_open("prescaling", group):
             continue
@@ -1889,13 +1903,14 @@ def build(state, settings=None, collapsed=None,
                 value = prescaler[i] * vec[i]
                 cid = f"cell:prescaling:{group}:{i}:{c}"
                 cx, cy = left(c), row_y["prescaling"] + i * ROW_H
-                # math expressions adds the closed form ``coeff · log₂{prime}`` where the
-                # prime comes from the row (the L diagonal it sits on) and the coefficient
-                # is the basis vector's entry for that prime. A zero entry has no closed
-                # form (the product is 0 with nothing to log), so it keeps the plain tval.
-                if show_math and vec[i] != 0:
+                # math expressions adds the closed form ``coeff · {prime_term}`` where
+                # the prime_term is what the active prescaler puts on the diagonal (log,
+                # prime, or none for identity), and the coefficient is the basis vector's
+                # entry for that prime. A zero entry has no closed form (the product is
+                # 0 with nothing to factor), so it keeps the plain tval.
+                if show_math and vec[i] != 0 and i in prime_term:
                     cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
-                                         text=_prescale_math_expr(vec[i], elements[i], value, show_quantities), unit=u))
+                                         text=_prescale_math_expr(vec[i], prime_term[i], value, show_quantities), unit=u))
                 else:
                     cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
                                          text=service.prescale_text(value), unit=u))

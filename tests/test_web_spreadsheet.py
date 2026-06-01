@@ -1962,6 +1962,43 @@ def test_math_expressions_without_quantities_show_only_the_prescaler_expression(
     assert cells["cell:prescaling:commas:1:0"].text == "-4 · log₂3"
 
 
+def test_math_expressions_under_prime_prescaler_drop_the_log():
+    # the prime prescaler (𝑃) puts each prime ITSELF on the diagonal, so the closed
+    # form is ``coeff · prime`` — no log₂. The just-row pattern (mathexpr only where a
+    # closed form lives) carries over: each non-zero cell prefixes its value, and
+    # zero cells stay plain.
+    scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "prime")
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
+                            {**settings.defaults(), "weighting": True, "math_expressions": True},
+                            tuning_scheme=scheme)
+    cells = {c.id: c for c in lay.cells}
+    # the diagonal: each prime is its own scaling (no log)
+    assert cells["cell:prescaling:primes:0:0"].text == "2\n= 2"  # prime 2, coeff 1
+    assert cells["cell:prescaling:primes:1:1"].text == "3\n= 3"  # prime 3, coeff 1
+    assert cells["cell:prescaling:primes:2:2"].text == "5\n= 5"
+    # the comma column: coeff · prime (no log)
+    assert cells["cell:prescaling:commas:0:0"].text == "4 · 2\n= 8"
+    assert cells["cell:prescaling:commas:1:0"].text == "-4 · 3\n= -12"
+
+
+def test_math_expressions_under_identity_prescaler_emit_no_closed_form():
+    # the identity prescaler (𝐼) puts 1 on every diagonal slot, so the closed form
+    # would just repeat the coefficient — no new information. Following the just-row
+    # rule (mathexpr only where a NON-trivial closed form lives), every prescaling
+    # cell stays as its plain tval.
+    scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "identity")
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
+                            {**settings.defaults(), "weighting": True, "math_expressions": True},
+                            tuning_scheme=scheme)
+    cells = {c.id: c for c in lay.cells}
+    # diagonal cell of the bare prescaler — value 1, no log dressing
+    assert cells["cell:prescaling:primes:1:1"].kind == "tval"
+    assert cells["cell:prescaling:primes:1:1"].text == "1"
+    # comma column entry — value 4 (= coeff), no log dressing
+    assert cells["cell:prescaling:commas:0:0"].kind == "tval"
+    assert cells["cell:prescaling:commas:0:0"].text == "4"
+
+
 def test_counts_on_adds_a_top_row_of_per_column_cardinalities():
     cells = {c.id: c for c in _with(counts=True).cells}
     # the counts row reports each present column's set cardinality, with the
