@@ -3543,9 +3543,9 @@ def test_colorization_follows_the_content_map():
     for col in ("prime", "comma", "target", "interest", "held"):
         assert at(f"tuning:{col}:0") == G       # 𝒕 / 𝒕C / 𝐚 / 𝒕H = 𝒈𝑀(…)
         assert at(f"retune:{col}:0") == G       # 𝒓 / 𝒓C / 𝐞 / 𝒓H = (𝒈𝑀 − 𝒋)(…)
-    # the just tuning map 𝒋 is now cyan; its products green where the column also carries a
-    # yellow object (commas C), stay cyan where the column is neutral or cyan (T, H)
-    assert at("just:prime:0") == C              # just × primes (𝒋, now cyan)
+    # the just tuning map 𝒋 is cyan; its products green where the column also carries a
+    # yellow object (primes P, commas C), stay cyan where the column is cyan (T, H)
+    assert at("just:prime:0") == G              # just × primes (𝒋 over the yellow domain basis P)
     assert at("just:comma:0") == G              # just × commas (𝒋C, both colours)
     assert at("just:target:0") == C             # just × targets (𝐨 = 𝒋T, both cyan → cyan)
     assert at("just:interest:0") == C           # just × other-intervals (𝒋·interest)
@@ -3556,10 +3556,9 @@ def test_colorization_follows_the_content_map():
 
 def test_off_by_default_rows_colorize_by_content_too():
     # the rows hidden by default follow the same content rule when revealed: the canonical
-    # mapping is the 𝑀 family (𝑀 = 𝐅𝑀_c → yellow). The prescaler 𝑋 is now cyan, so the
-    # prescaling and complexity rows carry it everywhere; a column that also bears a yellow
-    # object (commas C) greens, while the bare prescaler over primes and the cyan target
-    # list 𝑋T stay cyan.
+    # mapping is the 𝑀 family (𝑀 = 𝐅𝑀_c → yellow). The prescaler 𝑋 is cyan, so the prescaling
+    # and complexity rows carry it everywhere; a column that also bears a yellow object (the
+    # domain primes P or the comma basis C) greens, while the cyan target list 𝑋T stays cyan.
     s = settings.defaults()
     s["temperament_colorization"] = True
     s["tuning_colorization"] = True
@@ -3572,14 +3571,15 @@ def test_off_by_default_rows_colorize_by_content_too():
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
     assert at("cell:canon:0:0") == Y                       # the canonical mapping (𝑀 family)
-    # the prescaling row 𝑋 is cyan; the comma column adds C (green); T / H ride cyan-only
-    assert at("cell:prescaling:primes:0:0") == C           # the bare prescaler 𝑋 (cyan)
+    # the prescaling row 𝑋 is cyan; the primes (P) and comma (C) columns add yellow (green);
+    # T / H ride cyan-only
+    assert at("cell:prescaling:primes:0:0") == G           # 𝑋 over the yellow domain basis P (green)
     assert at("cell:prescaling:commas:0:0") == G           # 𝑋C (the prescaler keeps the comma basis's C)
     assert at("cell:prescaling:targets:0:0") == C          # 𝑋T (both cyan → cyan)
     assert at("cell:prescaling:interest:0:0") == C         # 𝑋·interest (cyan)
     assert at("cell:prescaling:held:0:0") == C             # 𝑋H (both cyan → cyan)
-    # complexity 𝒄 = ‖𝑋·v‖ inherits 𝑋 (cyan), greening only where the basis is C
-    assert at("complexity:prime:0") == C                   # 𝒄 of the primes (norm of 𝑋)
+    # complexity 𝒄 = ‖𝑋·v‖ inherits 𝑋 (cyan), greening where the basis is yellow (P or C)
+    assert at("complexity:prime:0") == G                   # 𝒄 of the primes (norm of 𝑋 over the yellow P)
     assert at("complexity:comma:0") == G                   # 𝒄 of the comma basis (norm of 𝑋C)
     assert at("complexity:target:0") == C                  # 𝒄 of the targets (norm of 𝑋T)
     assert at("complexity:interest:0") == C                # 𝒄 of the other-intervals
@@ -3861,18 +3861,19 @@ def _audio_colormap():
 
 
 def test_audio_rows_colorize_by_content_like_the_rows_they_sound():
-    # the audio rows mirror the rows they sound. just audio plays the just sizes 𝒋, now
-    # cyan; the comma column greens (the just size of the comma basis 𝒋C carries C too),
-    # while the target / held columns stay cyan. tempered audio plays the tempered sizes:
-    # the generator tuning map 𝒈 (G → cyan) over the generators, and 𝒕 = 𝒈𝑀 (G·M → green)
-    # over the value columns.
+    # the audio rows mirror the rows they sound. just audio plays the just sizes 𝒋, cyan;
+    # the primes and comma columns green (the just sizes 𝒋 over the yellow domain basis P /
+    # comma basis C), while the target / held columns stay cyan. tempered audio plays the
+    # tempered sizes: the generator tuning map 𝒈 (G → cyan) over the generators, and
+    # 𝒕 = 𝒈𝑀 (G·M → green) over the value columns.
     lay = _audio_colormap()
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
+    assert at("speaker:just_audio:prime:0") == G           # 𝒋 over the yellow domain basis P (green)
     assert at("speaker:just_audio:comma:0") == G           # 𝒋C (cyan 𝒋 over the yellow comma basis)
-    for g in ("prime", "target", "interest", "held"):
-        assert at(f"speaker:just_audio:{g}:0") == C         # 𝒋 / 𝐨 / 𝒋H: cyan 𝒋 (T/H also cyan)
+    for g in ("target", "interest", "held"):
+        assert at(f"speaker:just_audio:{g}:0") == C         # 𝐨 / 𝒋H: cyan 𝒋 (T/H also cyan)
     assert at("speaker:tempered_audio:gen:0") == C            # 𝒈 (the generator tuning map)
     for g in ("prime", "comma", "target", "interest", "held"):
         assert at(f"speaker:tempered_audio:{g}:0") == G       # 𝒕 / 𝒕H = 𝒈𝑀
