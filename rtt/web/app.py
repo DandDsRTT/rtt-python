@@ -470,7 +470,12 @@ _CSS = f"""
    above each comma, 𝒕ᵢ above each tuned prime, …): same _math_html serif as .rtt-symbol
    but smaller, so the subscript reads at a glance without dominating the value below */
 .rtt-matlabel {{ width:100%; text-align:center; font-size:11px; color:#000; line-height:1;
-              font-family:'Cambria',Georgia,serif; }}
+              font-family:'Cambria',Georgia,serif; white-space:nowrap; }}
+/* the complexity row's column labels spell out the q-norm (‖L𝐜ᵢ‖q), which is much
+   wider than a plain subscripted letter. Drop the font size so the labels don't
+   collide and let them overflow the COL_W cell width without clipping (overflow:visible). */
+.rtt-matlabel-norm {{ font-size:8px; overflow:visible; }}
+.rtt-matlabel sub {{ font-size:70%; vertical-align:sub; line-height:0; }}
 /* the per-box "units: …" line below the caption, and the domain-units row/col labels.
    The unit VALUE is set in a single-story-g sans face (the mockup's distinct unit style):
    Corbel (the ClearType sans companion to the body Cambria) has a single-story g —
@@ -1259,10 +1264,18 @@ def _math_html(text):
     """``text`` with each Mathematical Alphanumeric letter rendered as its base
     letter in a span carrying explicit CSS weight/slant — so the UI serif draws a
     correctly bold/italic glyph rather than depending on a maths font (which font
-    fallback mis-rendered). Ordinary characters pass through, HTML-escaped. Used
-    for the quantity symbols and their equivalence tails."""
+    fallback mis-rendered). Ordinary characters pass through, HTML-escaped. The
+    matlabel NORM_SUB sentinels wrap a range as italic subscript (the trailing q
+    on the complexity row's ‖L𝐜ᵢ‖q). Used for the quantity symbols, their
+    equivalence tails, and the matrix labels."""
     out = []
     for ch in text:
+        if ch == spreadsheet.NORM_SUB_OPEN:
+            out.append('<sub style="font-style:italic">')
+            continue
+        if ch == spreadsheet.NORM_SUB_CLOSE:
+            out.append('</sub>')
+            continue
         styled = _demath(ch)
         if styled is None:
             out.append(_escape(ch))
@@ -1653,9 +1666,11 @@ def index() -> None:
                 math_cells[cb.id] = ui.html("").classes(cls)  # content set in render()
             elif cb.kind == "matlabel":  # per-row / per-column matrix label (𝒎ᵢ, 𝐜ᵢ, 𝒕ᵢ, …):
                 # routed through _math_html so its bold-italic / bold-upright glyphs draw in
-                # the same styled face as the tile symbol it indexes
+                # the same styled face as the tile symbol it indexes. The complexity row's
+                # labels are longer (‖L𝐜ᵢ‖q) so they use a smaller variant to avoid colliding
+                cls = "rtt-matlabel rtt-matlabel-norm" if "‖" in cb.text else "rtt-matlabel"
                 wrap.classes("rtt-matlabel-cell")
-                math_cells[cb.id] = ui.html("").classes("rtt-matlabel")  # content set in render()
+                math_cells[cb.id] = ui.html("").classes(cls)  # content set in render()
             elif cb.kind == "units":  # the per-box units line and the domain-units row/col labels
                 wrap.classes("rtt-units-cell")
                 math_cells[cb.id] = ui.html("").classes("rtt-units")  # content set in render()

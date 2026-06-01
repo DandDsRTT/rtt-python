@@ -2556,24 +2556,38 @@ def test_matrix_labels_sit_above_or_left_of_the_cells_they_label():
             <= on["matlabel:row:mapping:primes:0"].y + on["matlabel:row:mapping:primes:0"].h)
 
 
-def test_col_labels_sit_in_the_gap_above_the_tile():
-    # Per the mockup, the col labels float in the GAP between two tile rows — roughly
-    # equidistant from the tile above and the bracket below — rather than sitting
-    # snugged against the bracket inside the tile head. So matlabel ENDS above the
-    # tile_top of its row (no part of the label inside the panel proper).
-    on = {c.id: c for c in _with(symbols=True).cells}
-    for tile_id, label_id in [
-        ("vec:commas", "matlabel:col:vectors:commas:0"),
-        ("vec:targets", "matlabel:col:vectors:targets:0"),
-        ("mapped", "matlabel:col:mapping:targets:0"),
-        ("mapped_comma", "matlabel:col:mapping:commas:0"),
+def test_col_labels_sit_inside_the_tile_centred_above_the_bracket():
+    # Per Douglas: col labels sit INSIDE the tile (nothing in the gaps between tiles),
+    # roughly equidistant from the tile_top and the bracket below them. matlabel
+    # starts at or below the logical tile top AND ends with visible space above the
+    # matrix's top bracket.
+    lay = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        {**settings.defaults(), "symbols": True},
+    )
+    on = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
+    for tile_block_id, frame_id, label_id in [
+        ("block:vec:commas", "vec:commas", "matlabel:col:vectors:commas:0"),
+        ("block:vec:targets", "vec:targets", "matlabel:col:vectors:targets:0"),
+        ("block:mapped", "mapped", "matlabel:col:mapping:targets:0"),
+        ("block:mapped_comma", "mapped_comma", "matlabel:col:mapping:commas:0"),
     ]:
         label = on[label_id]
-        ebktop = on[f"ebktop:{tile_id}:0"]
-        # the label's bottom edge sits ABOVE the bracket (with clear gap), not flush
-        # against it — they're separated by the head + GAP padding
-        assert label.y + label.h < ebktop.y - 5, \
-            f"{label_id} (y={label.y}+{label.h}) should sit well above {tile_id} bracket (y={ebktop.y})"
+        ebktop = on[f"ebktop:{frame_id}:0"]
+        tile_top = blocks[tile_block_id].y + spreadsheet.PAD  # logical top (panel overhangs by PAD)
+        # the label sits INSIDE the tile (at or below tile_top), not above it in the GAP
+        assert label.y >= tile_top - 1, \
+            f"{label_id} (y={label.y}) must sit inside tile (top={tile_top}), not in the gap"
+        # the label sits ABOVE the bracket (with the bracket clear below it)
+        assert label.y + label.h <= ebktop.y, \
+            f"{label_id} bottom y={label.y + label.h} must be at/above bracket y={ebktop.y}"
+        # equidistance: distance from tile_top to label-top ≈ distance from label-bottom
+        # to bracket-top (within 1px tolerance for int rounding)
+        dist_above = label.y - tile_top
+        dist_below = ebktop.y - (label.y + label.h)
+        assert abs(dist_above - dist_below) <= 1, \
+            f"{label_id}: dist_above={dist_above}, dist_below={dist_below} should be ~equal"
 
 
 def test_col_labels_sit_above_the_top_frame_in_framed_rows():
@@ -2632,11 +2646,14 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
     on = {c.id: c for c in spreadsheet.build(
         base, s, held_monzos=((-1, 1, 0),)
     ).cells}
-    assert on["matlabel:col:complexity:primes:0"].text == "‖𝐿[1]‖q"
-    assert on["matlabel:col:complexity:primes:2"].text == "‖𝐿[3]‖q"
-    assert on["matlabel:col:complexity:commas:0"].text == "‖𝐿𝐜₁‖q"
-    assert on["matlabel:col:complexity:held:0"].text == "‖𝐿𝐡₁‖q"
-    assert on["matlabel:col:complexity:detempering:0"].text == "‖𝐿𝐝₁‖q"
+    # The trailing q is italic-subscripted (per the mockup) — emitted with sentinel
+    # markers around it that the matlabel renderer converts to <sub><i>q</i></sub>.
+    q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
+    assert on["matlabel:col:complexity:primes:0"].text == f"‖𝐿[1]‖{q}"
+    assert on["matlabel:col:complexity:primes:2"].text == f"‖𝐿[3]‖{q}"
+    assert on["matlabel:col:complexity:commas:0"].text == f"‖𝐿𝐜₁‖{q}"
+    assert on["matlabel:col:complexity:held:0"].text == f"‖𝐿𝐡₁‖{q}"
+    assert on["matlabel:col:complexity:detempering:0"].text == f"‖𝐿𝐝₁‖{q}"
     # complexity over targets is the named complexity LIST 𝒄 — each cell a scalar
     # entry, so the label is plain "c" (no styling, like the other size lists)
     assert on["matlabel:col:complexity:targets:0"].text == "c₁"

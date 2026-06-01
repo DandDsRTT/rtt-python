@@ -51,11 +51,18 @@ PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box
 PTEXT_H = 13  # px height of a one-line read-only plain-text value
 PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch taller than a text line)
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
-MATLABEL_H = 13  # height reserved above each row of value cells for column labels
-# (𝐜₁, 𝒕₁, 𝐲₁, …) when symbols is shown — one bold lowercase letter + a Unicode subscript
+MATLABEL_H = 13  # height of a per-column matrix label (𝐜₁, 𝒕₁, 𝐲₁, …) when symbols is on
+MATLABEL_PAD = 4  # padding above + below the label within its band, so the label sits
+# roughly equidistant from the tile's top edge and the matrix's top bracket
 MATLABEL_W = 22  # width reserved left of an EBK ⟨ bracket for row labels (𝒎₁, 𝒎₂, …):
 # the bold-italic lowercase form of the matrix's capital + a Unicode subscript. Reserved
 # inside the matrix tile's content footprint, so the cells shift right by this much.
+# Sentinel markers wrapping a matlabel's italic-subscript range (the trailing q on the
+# complexity row's "‖L𝐜ᵢ‖q"). The matlabel renderer (app._math_html) converts them to
+# <sub><i>…</i></sub> so the q reads as a proper italic subscript without polluting the
+# source text. Two Private-Use-Area code points so they never collide with content.
+NORM_SUB_OPEN = ""
+NORM_SUB_CLOSE = ""
 UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when units shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
@@ -293,12 +300,12 @@ COL_LABEL_LETTERS = {
     ("weight", "targets"): "w",       # weight scalars — plain
     # complexity row — the q-norm of the prescaler L applied to each basis vector,
     # spelt out as ‖L·basisᵢ‖q per the mockup (the targets column is the named
-    # complexity LIST 𝒄, so its cells stay plain "c"). The callable form maps the
-    # column index to a fully-formed label (see _norm_label).
-    ("complexity", "primes"): lambda i: f"‖𝐿[{i + 1}]‖q",
-    ("complexity", "commas"): lambda i: f"‖𝐿𝐜{_sub(i + 1)}‖q",
-    ("complexity", "held"): lambda i: f"‖𝐿𝐡{_sub(i + 1)}‖q",
-    ("complexity", "detempering"): lambda i: f"‖𝐿𝐝{_sub(i + 1)}‖q",
+    # complexity LIST 𝒄, so its cells stay plain "c"). The trailing q is wrapped in
+    # NORM_SUB sentinels so the matlabel renderer draws it as italic subscript.
+    ("complexity", "primes"): lambda i: f"‖𝐿[{i + 1}]‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}",
+    ("complexity", "commas"): lambda i: f"‖𝐿𝐜{_sub(i + 1)}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}",
+    ("complexity", "held"): lambda i: f"‖𝐿𝐡{_sub(i + 1)}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}",
+    ("complexity", "detempering"): lambda i: f"‖𝐿𝐝{_sub(i + 1)}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}",
     ("complexity", "targets"): "c",   # complexity scalars — plain
     # prescaling row — vector lists 𝑋·basis (𝑋 itself is row-labeled, above)
     ("prescaling", "commas"): "𝑋𝐜",
@@ -1335,19 +1342,19 @@ def build(state, settings=None, collapsed=None,
             continue
         folded = f"row:{key}" in collapsed
         framed = key in FRAMED_ROWS and not folded
-        # an open tile reserves a head strip at the top for its corner fold toggle,
-        # so the toggle sits clear of the frame/cells (no strip when folded to a row)
-        head = 0 if folded else TOGGLE + 2 * TOGGLE_INSET - PAD
+        # column labels (𝐜ᵢ above each comma, 𝒕ᵢ above each tuned prime, …) sit INSIDE
+        # the tile, in the head area above the top bracket — roughly equidistant from
+        # the tile_top and the bracket. The head is expanded when a matlabel is present
+        # so the label has padding on both sides (the toggle stays in its corner — the
+        # two share the head's y-range but at different x).
+        has_matlabel = (show_symbols and key in COL_LABELED_ROWS and not folded)
+        head_default = TOGGLE + 2 * TOGGLE_INSET - PAD  # toggle's natural head reservation
+        # the matlabel needs MATLABEL_H + 2*PAD of head to sit centred with breathing room
+        head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
         # framing bands stand off the cells by FRAME_GAP: a top bracket (FRAME_H)
         # and a taller bottom curly brace (BRACE_H, with room for its spike)
         top_frame = (FRAME_H + FRAME_GAP) if framed else 0
         bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
-        # column labels (𝐜ᵢ above each comma, 𝒕ᵢ above each tuned prime, …) float in
-        # the GAP above the tile, equidistant from the tile-above bottom and this
-        # tile's top bracket — they head the matrix from outside the panel. The
-        # height is NOT added to tile_h: the existing GAP (between rows) is wide
-        # enough to hold MATLABEL_H. This flag only gates the position computation.
-        has_matlabel = (show_symbols and key in COL_LABELED_ROWS and not folded)
         # a charted row grows a chart band (above the values, below the top frame)
         charted = show_charts and key in CHARTED_ROWS and not folded
         chart_band = (CHART_H + CHART_GAP) if charted else 0
@@ -1371,10 +1378,10 @@ def build(state, settings=None, collapsed=None,
         if charted:
             chart_top[key] = y + head + top_frame  # the chart sits below the top frame
         if has_matlabel:
-            # col-label band rides in the GAP above the tile, centred between the
-            # row-above's bottom (y - GAP) and this row's top bracket (y + head +
-            # top_frame_top). The label height fits inside GAP — no tile_h reservation.
-            row_matlabel_top[key] = y - (GAP + MATLABEL_H) // 2
+            # col-label sits centred INSIDE the head — distance from tile_top to label
+            # top = distance from label bottom to bracket top = MATLABEL_PAD, so the
+            # label reads roughly equidistant from both edges of the matrix's head
+            row_matlabel_top[key] = y + (head - MATLABEL_H) // 2
         row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
         row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
         row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
