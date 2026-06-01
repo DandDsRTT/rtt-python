@@ -1343,7 +1343,8 @@ def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors():
 def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
     # the plain-text value and the gridded cells are two views of ONE matrix, so the
     # string must read off the SAME numbers the grid shows — bare whole numbers and all
-    # (the prescaler diagonal is mostly 0 and 1), never padded to "0.000"/"1.000"
+    # (the prescaler diagonal is mostly 0 and 1), never padded to "0.000"/"1.000".
+    # Per-column parens close, matching the mockup ([(1 0 0)(0 1.585 0)…] for L over primes).
     import re
     cells = {c.id: c for c in _with(plain_text_values=True, weighting=True).cells}
     for group in ("primes", "commas", "targets"):
@@ -1352,10 +1353,10 @@ def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
         coords = [(int(m.group(2)), int(m.group(1))) for m in coords if m]  # (col, row)
         ncols = max(c for c, _ in coords) + 1
         d = max(r for _, r in coords) + 1
-        kets = ["[" + " ".join(cells[f"cell:prescaling:{group}:{i}:{c}"].text
-                               for i in range(d)) + "⟩"
-                for c in range(ncols)]
-        assert cells[f"ptext:prescaling:{group}"].text == "[" + " ".join(kets) + "]", group
+        parens = ["(" + " ".join(cells[f"cell:prescaling:{group}:{i}:{c}"].text
+                                 for i in range(d)) + ")"
+                  for c in range(ncols)]
+        assert cells[f"ptext:prescaling:{group}"].text == "[" + " ".join(parens) + "]", group
 
 
 def test_weighting_rows_show_their_units_line_when_units_on():

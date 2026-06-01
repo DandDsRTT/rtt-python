@@ -686,10 +686,10 @@ def plain_text_values(
         ("retune", "detempering"): _cents_list(detemper_sizes.errors),
         ("retune", "targets"): _cents_list(target_sizes.errors),
         ("damage", "targets"): _cents_list(target_sizes.damage),
-        ("prescaling", "primes"): _prescale_ket_list(_prescaled(prime_units)),
-        ("prescaling", "commas"): _prescale_ket_list(_prescaled(state.comma_basis)),
-        ("prescaling", "detempering"): _prescale_ket_list(_prescaled(detemper_monzos)),
-        ("prescaling", "targets"): _prescale_ket_list(_prescaled(target_monzos)),
+        ("prescaling", "primes"): _prescale_paren_list(_prescaled(prime_units)),
+        ("prescaling", "commas"): _prescale_paren_list(_prescaled(state.comma_basis)),
+        ("prescaling", "detempering"): _prescale_paren_list(_prescaled(detemper_monzos)),
+        ("prescaling", "targets"): _prescale_paren_list(_prescaled(target_monzos)),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
         ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas)),
         ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios)),
@@ -708,13 +708,13 @@ def plain_text_values(
             ("tuning", "held"): _cents_list(held_sizes.tempered),
             ("just", "held"): _cents_list(held_sizes.just),
             ("retune", "held"): _cents_list(held_sizes.errors),
-            ("prescaling", "held"): _prescale_ket_list(_prescaled(held)),
+            ("prescaling", "held"): _prescale_paren_list(_prescaled(held)),
             ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios)),
         })
     # the other-intervals-of-interest column is a loose collection, not a basis, so every
     # row is unwrapped (wrap=False): its vectors and mapped images stand alone (each its own
     # ket, space-separated, no outer [ … ]), unlike the comma/target/held matrices; the size
-    # rows drop their [ … ] too, and prescaling lists each prescaled vector as its own ket.
+    # rows drop their [ … ] too, and prescaling lists each prescaled vector as its own parens.
     if interest:
         interest_ratios = comma_ratios(interest, db)
         interest_mapped = mapped_intervals(state.mapping, interest_ratios, db)
@@ -725,7 +725,7 @@ def plain_text_values(
             ("tuning", "interest"): _cents_list(interest_sizes.tempered, wrap=False),
             ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
             ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
-            ("prescaling", "interest"): _prescale_ket_list(_prescaled(interest), wrap=False),
+            ("prescaling", "interest"): _prescale_paren_list(_prescaled(interest), wrap=False),
             ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios), wrap=False),
         })
     return values
@@ -740,13 +740,17 @@ def _ket_list(vectors, close: str, wrap: bool = True) -> str:
     return f"[{kets}]" if wrap else kets
 
 
-def _prescale_ket_list(vectors, wrap: bool = True) -> str:
-    """A ket list of complexity-prescaler matrix columns — ``[[4 -6.340 2.322⟩]`` — for the
-    weighting prescaling matrices (the prescaled vectors L·v). Formats each entry with
-    prescale_text, so the string shows exactly the grid's numbers (whole numbers bare,
-    else 3-dp) rather than a denser all-3-dp form."""
-    kets = " ".join("[" + " ".join(prescale_text(x) for x in v) + "⟩" for v in vectors)
-    return f"[{kets}]" if wrap else kets
+def _prescale_paren_list(vectors, wrap: bool = True) -> str:
+    """A parenthesised list of complexity-prescaler matrix columns — ``[(4 -6.340 2.322)]``
+    — for the weighting prescaling matrices (the prescaled vectors L·v). The mockup uses
+    ``( )`` per column, not the raw-monzo ket close ``⟩`` and not the generator-coords
+    brace close ``}``: prescaled vectors are weighted basis elements, neither raw nor
+    tempered. Formats each entry with prescale_text, so the string shows exactly the
+    grid's numbers (whole numbers bare, else 3-dp) rather than a denser all-3-dp form.
+    ``wrap`` adds the outer ``[ ]`` for a matrix presentation; ``wrap=False`` drops it
+    for the intervals-of-interest column, whose columns stand alone."""
+    parens = " ".join("(" + " ".join(prescale_text(x) for x in v) + ")" for v in vectors)
+    return f"[{parens}]" if wrap else parens
 
 
 def comma_basis_pending_text(comma_basis, pending) -> tuple[str, str, str]:
