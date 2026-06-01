@@ -432,6 +432,30 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("tempered_audio", "held"): frozenset({"G", "M", "H"}),   # sounds 𝒕H
 }
 
+# The spine label cells carry no algebraic quantity — they head a value row or column, so
+# they take that BAND's family colour, continuing the colour through the spine so each
+# value column / row reads as one unbroken band. This is a BY-BAND rule, distinct from
+# CELL_FACTORS' by-content rule: a spine cell is coloured by the band it heads, even where
+# that band's value cells are green (e.g. the retuning units cell is cyan, since retuning
+# is a tuning-family row, though the retuning 𝒓 value cells are green).
+#   - SPINE_COLUMN_GROUP: a value COLUMN → its family. The counts + units ROW cells at that
+#     column take this. commas / detempering are temperament; held / targets are tuning;
+#     the generators + domain primes spine stay neutral (no entry), like their value tiles.
+#   - SPINE_ROW_GROUP: a value ROW → its family. The quantities + units COLUMN cells at that
+#     row take this. The mapping is temperament; the tuning-family rows are tuning.
+SPINE_COLUMN_GROUP = {
+    "commas": "temperament", "detempering": "temperament",
+    "held": "tuning", "targets": "tuning",
+}
+SPINE_ROW_GROUP = {
+    "mapping": "temperament",
+    "tuning": "tuning", "just": "tuning", "retune": "tuning",
+    "prescaling": "tuning", "complexity": "tuning",
+}
+# The spine rows (whose cells colour by their column) and spine columns (by their row).
+SPINE_ROWS = frozenset({"counts", "units"})
+SPINE_COLUMNS = frozenset({"quantities", "units"})
+
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
 # column): each is a quick menu for one of the things you actually choose, riding
 # under its governing tile — the temperament under the mapping matrix, the tuning
@@ -2269,26 +2293,39 @@ def build(state, settings=None, collapsed=None,
     if opt_box is not None:
         blocks.append(Block("block:optimization:box", *opt_box, boxed=True))
 
-    # Colorization washes. Each colour-bearing tile (CELL_FACTORS) renders one band per
-    # group — a white base plus the group's colour at mix-blend-mode:darken (see app.py).
-    # The base sits a layer BELOW the colour (z-index), so where a tile carries both groups
-    # the two colour bands darken-compose regardless of paint order: cyan over yellow gives
-    # the mockup's green. Each band hugs its (open) tile's extent and overhangs by WASH_PAD
-    # — plus, on a +-bearing column, the extra FRAME_GAP its tile claims (tile_pad over PAD)
-    # — so a run of same-coloured tiles meets across the inter-tile gaps and reads as one
-    # continuous band rather than leaving grey strips between them. A folded tile (by its own
-    # toggle, its row or its column) is not open, so its colour goes away with its content.
+    # Colorization washes. Each colour-bearing tile renders one band per group — a white
+    # base plus the group's colour at mix-blend-mode:darken (see app.py). The base sits a
+    # layer BELOW the colour (z-index), so where a tile carries both groups the two colour
+    # bands darken-compose regardless of paint order: cyan over yellow gives the mockup's
+    # green. Each band hugs its (open) tile's extent and overhangs by WASH_PAD — plus, on a
+    # +-bearing column, the extra FRAME_GAP its tile claims (tile_pad over PAD) — so a run of
+    # same-coloured tiles meets across the inter-tile gaps and reads as one continuous band
+    # rather than leaving grey strips between them. A folded tile (by its own toggle, its row
+    # or its column) is not open, so its colour goes away with its content. Two sources of a
+    # tile's groups: most tiles colour by CONTENT (the colour-bearing objects multiplied into
+    # their quantity, CELL_FACTORS); the spine label cells colour by the BAND they head — the
+    # counts + units rows by their column's family, the quantities + units columns by their
+    # row's family — continuing each value band's colour through the spine (see SPINE_*).
+    def tile_groups(rkey, ckey):
+        if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
+            return {SPINE_COLUMN_GROUP[ckey]}          # a counts/units row cell: its column's family
+        if ckey in SPINE_COLUMNS and rkey in SPINE_ROW_GROUP:
+            return {SPINE_ROW_GROUP[rkey]}             # a quantities/units column cell: its row's family
+        return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())}
+
     if col_x and row_y:
         bands = []  # (id, x, y, w, h, group)
-        for (rkey, ckey), factors in CELL_FACTORS.items():
+        for rkey, ckey in declared_tiles:
             if not tile_open(rkey, ckey):
+                continue
+            groups = {g for g in tile_groups(rkey, ckey) if settings.get(f"{g}_colorization")}
+            if not groups:
                 continue
             pad = tile_pad(ckey) - PAD
             x, w = col_x[ckey] - WASH_PAD - pad, col_w[ckey] + 2 * (WASH_PAD + pad)
             y, h = tile_top[rkey] - WASH_PAD, tile_h[rkey] + 2 * WASH_PAD
-            for group in {_FACTOR_GROUP[f] for f in factors}:
-                if settings.get(f"{group}_colorization"):
-                    bands.append((f"{group}:{rkey}:{ckey}", x, y, w, h, group))
+            for group in groups:
+                bands.append((f"{group}:{rkey}:{ckey}", x, y, w, h, group))
         for bid, x, y, w, h, _ in bands:  # white bases (a layer below the colour bands)
             blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
         for bid, x, y, w, h, group in bands:  # the darken colour bands over them

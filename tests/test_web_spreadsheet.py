@@ -3403,7 +3403,8 @@ def test_colorization_follows_the_content_map():
     # multiplied into its quantity. Cyan (tuning): the generator embedding G / genmap 𝒈,
     # the just tuning map 𝒋, the prescaler 𝑋, the target list T, the held basis H. Yellow
     # (temperament): the mapping 𝑀, the comma basis C. Both → green (the darken blend).
-    # Only the weight 𝒘 (and the standalone counts) stay colourless.
+    # (The spine label cells colour by the band they head instead — see
+    # test_spine_rows_and_columns_colorize_by_their_band.)
     lay = _colormap_layout()
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
@@ -3421,8 +3422,10 @@ def test_colorization_follows_the_content_map():
     assert at("cell:interest:0:0") == N        # interval-vectors × other-intervals
     assert at("cell:held:0:0") == C            # interval-vectors × held intervals (the H basis)
     # the generators in the spine are the generator basis — an input, carrying neither the
-    # tuning map 𝒈 nor the embedding G — so they're colourless, like the domain primes
-    assert at("gen:0") == N                     # mapping × spine (the generator ratios)
+    # tuning map 𝒈 nor the embedding G — so by CONTENT they'd be neutral; but the quantities
+    # spine column colours by its row's BAND (continuity), so the mapping row's generator
+    # ratios take the mapping's temperament yellow (see test_spine_rows_and_columns_…)
+    assert at("gen:0") == Y                     # mapping × spine (generator ratios, by the mapping band)
     # the mapping matrix and its mapped lists are 𝑀; mapping a cyan list (T, H) greens it
     assert at("cell:mapping:0:0") == Y          # mapping × primes (𝑀)
     assert at("cell:mapped_comma:0:0") == Y     # mapping × commas (𝑀C)
@@ -3509,6 +3512,51 @@ def test_generator_detempering_column_colorizes_by_content():
     assert at("complexity:detempering:0") == G         # complexity × detempering (norm of 𝑋D)
     assert at("speaker:just_audio:detempering:0") == G    # just audio × detempering (sounds 𝒋D)
     assert at("speaker:tempered_audio:detempering:0") == G  # tempered audio × detempering (sounds 𝒕D)
+
+
+def _spine_colormap():
+    # everything that reveals the two spine rows (counts, units) and the two spine columns
+    # (quantities, units), plus the detempering column and the weighting rows, so every
+    # spine intersection the continuity rule colours is present to probe
+    s = settings.defaults()
+    s["tuning_colorization"] = s["temperament_colorization"] = True
+    s["counts"] = s["domain_units"] = s["domain_quantities"] = True
+    s["weighting"] = s["optimization"] = s["generator_detempering"] = True
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                             interest=((-1, 1, 0),), held_monzos=((-1, 1, 0),))
+
+
+def test_spine_rows_and_columns_colorize_by_their_band():
+    # the spine label cells (the counts + units ROWS, the quantities + units COLUMNS) carry
+    # no algebraic quantity of their own — they head a value row or column, so they take
+    # that BAND's family colour, continuing the colour through the spine so each value
+    # column / row reads as one unbroken band. This is a BY-BAND rule, not the content rule:
+    # the retuning spine cell is cyan (its band is a tuning row) even though the retuning
+    # VALUE cells are green (𝒓 carries both groups).
+    lay = _spine_colormap()
+    cells = {c.id: c for c in lay.cells}
+    Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
+    at = lambda cid: _color_at(lay, *_mid(cells, cid))
+    # counts + units ROWS take each column's family: commas / detempering yellow, held /
+    # targets cyan (the four columns named); the neutral gens / primes columns stay N
+    for spine in ("count", "urow"):
+        suffix = ":0" if spine == "urow" else ""
+        assert at(f"{spine}:commas{suffix}") == Y       # the commas column is temperament (C)
+        assert at(f"{spine}:targets{suffix}") == C      # the target column is tuning (T)
+        assert at(f"{spine}:held{suffix}") == C         # the held column is tuning (H)
+        assert at(f"{spine}:gens{suffix}") == N         # the generators spine column stays neutral
+        assert at(f"{spine}:primes{suffix}") == N       # the domain primes column stays neutral
+    assert at("urow:detempering:0") == Y                # the detempering column is temperament (D)
+    # quantities + units COLUMNS take each row's family: mapping yellow; tuning, just,
+    # retuning, prescaling, complexity cyan. The retuning units cell is cyan despite the
+    # retuning VALUE cells being green — the spine follows the band, not the content.
+    assert at("gen:0") == Y                             # quantities × mapping (the generator ratios → yellow)
+    assert at("ucol:mapping:0") == Y                    # units × mapping (yellow)
+    assert at("ucol:tuning") == C                       # units × tuning (cyan)
+    assert at("ucol:just") == C                         # units × just tuning (cyan)
+    assert at("ucol:retune") == C                       # units × retuning (cyan, though 𝒓 cells are green)
+    assert at("ucol:prescaling:0") == C                 # units × complexity prescaling (cyan)
+    assert at("ucol:complexity") == C                   # units × complexity (cyan)
 
 
 def test_washes_bridge_the_plus_column_gutters():
