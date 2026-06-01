@@ -361,11 +361,12 @@ COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS)
 #   "X" — the complexity prescaler 𝑋                                       → tuning (cyan)
 #   "T" — the target interval list                                         → tuning (cyan)
 #   "H" — the held interval basis                                          → tuning (cyan)
+#   "P" — the domain basis (the primes)                                    → temperament (yellow)
 #   "M" — the (temperament) mapping                                        → temperament (yellow)
 #   "C" — the comma basis                                                  → temperament (yellow)
 #   "D" — the generator detempering                                        → temperament (yellow)
-# Colourless: the domain basis (the primes) and the other-intervals of interest. (The
-# weight 𝒘 is NOT colourless — it incorporates the cyan complexity list; see its entry.)
+# Colourless: only the other-intervals of interest. (The weight 𝒘 is NOT colourless — it
+# incorporates the cyan complexity list; see its entry. The domain basis P is yellow.)
 # A tile carrying both a tuning and a temperament object reads green (the darken blend of
 # the two washes) — e.g. the tempered map 𝒕 = 𝒈𝑀 (G·M), the mapped target list 𝑀T (M·T),
 # the just-of-commas 𝒋C (J·C), and the whole
@@ -375,13 +376,16 @@ COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS)
 # only the colour-bearing factors of each tile; a (row, col) absent here carries no wash.
 # Keys match TILES / AUDIO_TILES. NB the generators shown in the spine (mapping × quantities)
 # are the generator *basis* — a chosen input, neither the embedding G nor the tuning map 𝒈
-# — so they're uncoloured, like the domain primes; among built tiles only 𝒈 (the genmap,
-# and the 𝒈𝑀 it feeds) is cyan, while the embedding G awaits the deferred form box (𝐹).
+# — so by CONTENT they'd be uncoloured; the spine-band rule (see SPINE_*) tints them by the
+# mapping row instead. Among built tiles only 𝒈 (the genmap, and the 𝒈𝑀 it feeds) is cyan
+# by content, while the embedding G awaits the deferred form box (𝐹).
 _FACTOR_GROUP = {"G": "tuning", "J": "tuning", "X": "tuning", "T": "tuning", "H": "tuning",
-                 "M": "temperament", "C": "temperament", "D": "temperament"}
+                 "P": "temperament", "M": "temperament", "C": "temperament", "D": "temperament"}
 CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
-    # interval-vectors / quantities headers: the comma basis is C (yellow); the target list
-    # T and the held basis H are cyan; the domain primes and other-intervals stay colourless
+    # interval-vectors / quantities headers: the domain basis is P (yellow) and the comma
+    # basis is C (yellow); the target list T and the held basis H are cyan; only the other-
+    # intervals stay colourless
+    ("quantities", "primes"): frozenset({"P"}),        # the domain prime ratios = P
     ("quantities", "commas"): frozenset({"C"}),        # the comma ratios = C
     ("vectors", "commas"): frozenset({"C"}),           # the comma basis vectors = C
     ("quantities", "targets"): frozenset({"T"}),       # the target ratios = T
@@ -466,12 +470,12 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
 # that band's value cells are green (e.g. the retuning units cell is cyan, since retuning
 # is a tuning-family row, though the retuning 𝒓 value cells are green).
 #   - SPINE_COLUMN_GROUP: a value COLUMN → its family. The counts + units ROW cells at that
-#     column take this. commas / detempering are temperament; held / targets are tuning;
-#     the generators + domain primes spine stay neutral (no entry), like their value tiles.
+#     column take this. domain primes / commas / detempering are temperament; held / targets
+#     are tuning; the generators spine stays neutral (no entry), like its value tiles.
 #   - SPINE_ROW_GROUP: a value ROW → its family. The quantities + units COLUMN cells at that
 #     row take this. The mapping is temperament; the tuning-family rows are tuning.
 SPINE_COLUMN_GROUP = {
-    "commas": "temperament", "detempering": "temperament",
+    "primes": "temperament", "commas": "temperament", "detempering": "temperament",
     "held": "tuning", "targets": "tuning",
 }
 SPINE_ROW_GROUP = {

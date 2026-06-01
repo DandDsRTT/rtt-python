@@ -3513,15 +3513,15 @@ def test_colorization_follows_the_content_map():
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    # quantities + interval-vectors rows: the comma basis is C (yellow); the target list T
-    # and the held basis H are now cyan; only the domain primes and other-intervals stay neutral
+    # quantities + interval-vectors rows: the domain primes P and comma basis C are yellow;
+    # the target list T and the held basis H are cyan; only the other-intervals stay neutral
     assert at("comma:0") == Y                  # quantities × commas (the comma ratios are C)
     assert at("cell:comma:0:0") == Y           # interval-vectors × commas (the comma basis vectors)
-    assert at("prime:0") == N                  # quantities × primes (the domain basis)
+    assert at("prime:0") == Y                  # quantities × primes (the domain basis, now yellow)
     assert at("target:0") == C                 # quantities × targets (T, now cyan)
     assert at("interest:0") == N               # quantities × other-intervals
     assert at("held:0") == C                   # quantities × held intervals (H, now cyan)
-    assert at("basis:0") == N                  # interval-vectors × spine (the domain basis)
+    assert at("basis:0") == N                  # interval-vectors × spine (the domain basis, quantities col)
     assert at("cell:vec:targets:0:0") == C     # interval-vectors × targets (the target vectors, T)
     assert at("cell:interest:0:0") == N        # interval-vectors × other-intervals
     assert at("cell:held:0:0") == C            # interval-vectors × held intervals (the H basis)
@@ -3650,7 +3650,7 @@ def test_spine_rows_and_columns_colorize_by_their_band():
         assert at(f"{spine}:targets{suffix}") == C      # the target column is tuning (T)
         assert at(f"{spine}:held{suffix}") == C         # the held column is tuning (H)
         assert at(f"{spine}:gens{suffix}") == N         # the generators spine column stays neutral
-        assert at(f"{spine}:primes{suffix}") == N       # the domain primes column stays neutral
+        assert at(f"{spine}:primes{suffix}") == Y       # the domain primes column is now temperament (yellow)
     # quantities + units COLUMNS take each row's family: mapping yellow; tuning, just,
     # retuning, prescaling, complexity cyan. The retuning units cell is cyan despite the
     # retuning VALUE cells being green — the spine follows the band, not the content.
