@@ -853,7 +853,7 @@ def test_preselects_on_adds_the_three_chooser_dropdowns_under_their_tiles():
     # the temperament chooser sits under the mapping matrix, aligned to its column
     temp, matrix = cells["preselect:temperament"], cells["cell:mapping:0:0"]
     assert temp.y > matrix.y and temp.x == cells["header:primes"].x
-    # the target chooser sits under the target interval list (quantities row)
+    # the target chooser sits under the target interval list, aligned to its column
     assert cells["preselect:target"].x == cells["header:targets"].x
 
 
@@ -867,18 +867,18 @@ def test_tuning_and_target_choosers_show_the_live_selection_temperament_is_a_pla
     assert cells["preselect:temperament"].text == ""  # a chooser placeholder, not a live value
 
 
-def test_preselect_choosers_follow_their_columns_when_temperament_is_hidden():
+def test_preselect_choosers_follow_their_tiles_when_temperament_is_hidden():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["preselects"], s["temperament_boxes"] = True, False
     cells = {c.id for c in spreadsheet.build(base, s).cells}
-    # the temperament and tuning choosers both ride the domain-primes column (under
-    # the mapping matrix / tuning map), which temperament_boxes owns -- so hiding the
-    # temperament takes both choosers with the column
+    # every chooser rides a temperament-owned tile: the temperament + tuning choosers the
+    # domain-primes column (under the mapping matrix / tuning map), the target chooser the
+    # interval-vectors row (the target interval list tile) -- so hiding the temperament
+    # takes each chooser away with its tile
     assert "preselect:temperament" not in cells
     assert "preselect:tuning" not in cells
-    # the target chooser rides the tuning-owned target intervals column, so it stays
-    assert "preselect:target" in cells
+    assert "preselect:target" not in cells
 
 
 def test_preselect_dropdown_clears_the_row_below_it():
@@ -901,6 +901,21 @@ def test_target_chooser_is_wider_to_seat_its_numeric_override():
     # so it reserves more width than the single-control tuning chooser
     cells = {c.id: c for c in _with(preselects=True).cells}
     assert cells["preselect:target"].w > cells["preselect:tuning"].w
+
+
+def test_target_preselect_now_lives_in_the_target_interval_list_tile():
+    # the target interval set chooser belongs to the target interval list (the vectors-row
+    # targets tile), not the quantities row -- so it rides below that list's value cells
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["preselects"] = True
+    cells = {c.id: c for c in spreadsheet.build(base, s).cells}
+    target = cells["preselect:target"]
+    assert target.x == cells["header:targets"].x  # still under the targets column
+    # it now sits in the interval-vectors row (the target interval list), below those cells
+    assert target.y > cells["cell:vec:targets:0:0"].y
+    # and below the quantities-row target ratios it used to sit under
+    assert target.y > cells["target:0"].y
 
 
 def test_control_dropdowns_are_enclosed_in_titled_boxes():

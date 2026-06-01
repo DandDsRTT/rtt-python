@@ -511,7 +511,7 @@ SPINE_COLUMNS = frozenset({"quantities", "units"})
 PRESELECTS = (
     ("temperament", "mapping", "primes", "temperament"),
     ("tuning", "tuning", "primes", "established tuning scheme"),
-    ("target", "quantities", "targets", "target interval set scheme"),
+    ("target", "vectors", "targets", "target interval set scheme"),
 )
 PRESELECT_ROWS = frozenset(row for _, row, _, _ in PRESELECTS)
 
