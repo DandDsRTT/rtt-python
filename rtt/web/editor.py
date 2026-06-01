@@ -371,9 +371,14 @@ class Editor:
         self.range_mode = mode
 
     def set_show(self, key: str, value: bool) -> None:
-        """Set one Show toggle (which parts of the grid are visible) — an undoable change."""
+        """Set one Show toggle (which parts of the grid are visible) — an undoable change.
+        Deselecting a toggle also deselects every sub-control nested under it, so a hidden
+        parent never strands its sub-controls' content (or panel rows) on screen."""
         self._snapshot()
         self.settings[key] = value
+        if not value:
+            for child in show_settings.subcontrols_of(key):
+                self.settings[child] = False
 
     def set_all_show(self, value: bool) -> None:
         """The settings panel's select-all/none: turn every *implemented* Show toggle on

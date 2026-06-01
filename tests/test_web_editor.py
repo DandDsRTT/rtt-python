@@ -452,6 +452,49 @@ def test_select_all_then_none_over_implemented_toggles():
     assert all(editor.settings[k] for k in settings.IMPLEMENTED)
 
 
+def test_deselecting_a_parent_also_deselects_its_subcontrols():
+    # a hidden parent must not leave its sub-controls' content stranded on screen:
+    # deselecting "temperament boxes" turns its "colorization" sub-control off too
+    editor = Editor()
+    editor.set_show("temperament_colorization", True)
+    assert editor.settings["temperament_colorization"] is True
+    editor.set_show("temperament_boxes", False)
+    assert editor.settings["temperament_boxes"] is False
+    assert editor.settings["temperament_colorization"] is False
+
+
+def test_deselecting_a_parent_cascades_through_nested_subcontrols():
+    # the cascade is transitive: "tuning boxes" -> "weighting" -> "all-interval"/"alt.
+    # complexity", so deselecting the grandparent turns the grandchildren off too (else
+    # their panel rows orphan and their content lingers when the grandparent is hidden)
+    editor = Editor()
+    for key in ("weighting", "all_interval", "alt_complexity", "tuning_ranges", "optimization"):
+        editor.set_show(key, True)
+    editor.set_show("tuning_boxes", False)
+    for key in ("tuning_boxes", "weighting", "all_interval", "alt_complexity",
+                "tuning_ranges", "optimization"):
+        assert editor.settings[key] is False
+
+
+def test_the_subcontrol_cascade_is_one_undoable_action():
+    editor = Editor()
+    editor.set_show("temperament_colorization", True)
+    editor.set_show("temperament_boxes", False)  # deselects parent + sub-control together
+    assert editor.settings["temperament_colorization"] is False
+    editor.undo()  # a single undo brings the parent AND its sub-control back
+    assert editor.settings["temperament_boxes"] is True
+    assert editor.settings["temperament_colorization"] is True
+
+
+def test_selecting_a_parent_does_not_force_its_subcontrols_on():
+    # only deselecting cascades; re-selecting a parent leaves the (now-off) sub-controls
+    # off rather than resurrecting them
+    editor = Editor()
+    editor.set_show("temperament_boxes", False)
+    editor.set_show("temperament_boxes", True)
+    assert editor.settings["temperament_colorization"] is False
+
+
 def test_expand_collapse_state_is_owned_and_undoable():
     editor = Editor()
     # the commas/interest columns and the vectors row start folded (the mockup default)

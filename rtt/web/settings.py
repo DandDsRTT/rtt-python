@@ -96,3 +96,18 @@ IMPLEMENTED: frozenset[str] = frozenset(
 
 def defaults() -> dict[str, bool]:
     return dict(DEFAULTS)
+
+
+def subcontrols_of(key: str) -> set[str]:
+    """Every sub-control nested under ``key`` — its direct sub-controls and theirs,
+    transitively (see :data:`SUBCONTROLS`). Deselecting a toggle deselects all of
+    these so a hidden parent never strands its sub-controls' content or panel rows."""
+    nested: set[str] = set()
+    queue = [key]
+    while queue:
+        parent = queue.pop()
+        for child, child_parent in SUBCONTROLS.items():
+            if child_parent == parent and child not in nested:
+                nested.add(child)
+                queue.append(child)
+    return nested
