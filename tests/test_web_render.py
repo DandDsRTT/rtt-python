@@ -161,9 +161,9 @@ async def test_enabling_audio_renders_speakers_and_control_banks(user: User) -> 
     # carries its four-control bank (waveform / play-mode / hold / 1-1) as glyph elements —
     # a missing _make_cell branch would leave an empty wrap (and IndexError in _cell_child).
     await _enable(user, "audio")
-    assert isinstance(_cell_child(user, "speaker:mapped_audio:target:0"), ui.button)
+    assert isinstance(_cell_child(user, "speaker:tempered_audio:target:0"), ui.button)
     for ctrl in ("wave", "mode", "hold", "root"):
-        assert isinstance(_cell_child(user, f"{ctrl}:mapped_audio:targets"), ui.html)
+        assert isinstance(_cell_child(user, f"{ctrl}:tempered_audio:targets"), ui.html)
 
 
 # --- tier 4: the settings select-all/none, the reset control, and refresh persistence ---

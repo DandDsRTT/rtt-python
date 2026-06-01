@@ -419,13 +419,13 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("just_audio", "interest"): frozenset({"J"}),      # sounds 𝒋·interest
     ("just_audio", "held"): frozenset({"J", "H"}),     # sounds 𝒋H
     ("just_audio", "detempering"): frozenset({"J", "D"}),  # sounds 𝒋D (→ green)
-    ("mapped_audio", "gens"): frozenset({"G"}),        # the genmap, as the tuning row carries
-    ("mapped_audio", "primes"): frozenset({"G", "M"}),
-    ("mapped_audio", "commas"): frozenset({"G", "M", "C"}),
-    ("mapped_audio", "detempering"): frozenset({"G", "M", "D"}),  # sounds 𝒕D (G𝑀 meets the yellow 𝐷)
-    ("mapped_audio", "targets"): frozenset({"G", "M", "T"}),  # sounds 𝐚 = 𝒈𝑀T
-    ("mapped_audio", "interest"): frozenset({"G", "M"}),
-    ("mapped_audio", "held"): frozenset({"G", "M", "H"}),   # sounds 𝒕H
+    ("tempered_audio", "gens"): frozenset({"G"}),        # the genmap, as the tuning row carries
+    ("tempered_audio", "primes"): frozenset({"G", "M"}),
+    ("tempered_audio", "commas"): frozenset({"G", "M", "C"}),
+    ("tempered_audio", "detempering"): frozenset({"G", "M", "D"}),  # sounds 𝒕D (G𝑀 meets the yellow 𝐷)
+    ("tempered_audio", "targets"): frozenset({"G", "M", "T"}),  # sounds 𝐚 = 𝒈𝑀T
+    ("tempered_audio", "interest"): frozenset({"G", "M"}),
+    ("tempered_audio", "held"): frozenset({"G", "M", "H"}),   # sounds 𝒕H
 }
 
 # The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
@@ -617,7 +617,7 @@ TILES = (
 )
 
 # The audio rows' tiles mirror the just / tuning rows they sound: just_audio (the JI
-# sizes) over primes/commas/targets, mapped_audio (the tempered sizes) over those plus
+# sizes) over primes/commas/targets, tempered_audio (the tempered sizes) over those plus
 # the generators (whose tuned size the tuning row also carries; a generator has no just
 # size, so just_audio has no generators tile). The interest column's audio tiles are
 # appended dynamically in build() like its other tiles.
@@ -625,10 +625,10 @@ AUDIO_TILES = (
     ("block:just_audio:primes", "just_audio", "primes"),
     ("block:just_audio:commas", "just_audio", "commas"),
     ("block:just_audio:targets", "just_audio", "targets"),
-    ("block:mapped_audio:gens", "mapped_audio", "gens"),
-    ("block:mapped_audio:primes", "mapped_audio", "primes"),
-    ("block:mapped_audio:commas", "mapped_audio", "commas"),
-    ("block:mapped_audio:targets", "mapped_audio", "targets"),
+    ("block:tempered_audio:gens", "tempered_audio", "gens"),
+    ("block:tempered_audio:primes", "tempered_audio", "primes"),
+    ("block:tempered_audio:commas", "tempered_audio", "commas"),
+    ("block:tempered_audio:targets", "tempered_audio", "targets"),
 )
 
 # The domain-units tiles (shown with the specific `domain_units` toggle): the units
@@ -886,7 +886,7 @@ def build(state, settings=None, collapsed=None,
     # (the prescaling matrix), so it only applies while that region shows
     show_alt_complexity = show_weighting and settings["alt_complexity"]
     # audio is a top-level toggle (not nested under the tuning boxes): it adds the just /
-    # mapped audio rows between counts and quantities. Their per-column tiles still ride the
+    # tempered audio rows between counts and quantities. Their per-column tiles still ride the
     # column boxes (targets need tuning boxes; interest needs interest; primes/commas/gens
     # need temperament).
     show_audio = settings["audio"]
@@ -994,7 +994,7 @@ def build(state, settings=None, collapsed=None,
         ("block:prescaling:interest", "prescaling", "interest"),
         ("block:complexity:interest", "complexity", "interest"),
         ("block:just_audio:interest", "just_audio", "interest"),
-        ("block:mapped_audio:interest", "mapped_audio", "interest"),
+        ("block:tempered_audio:interest", "tempered_audio", "interest"),
     )
     # the held interval column's tiles (computed above): a user-editable interval list, like
     # the intervals of interest. Empty by default, so — like an empty interest column — it
@@ -1010,7 +1010,7 @@ def build(state, settings=None, collapsed=None,
         ("block:prescaling:held", "prescaling", "held"),
         ("block:complexity:held", "complexity", "held"),
         ("block:just_audio:held", "just_audio", "held"),
-        ("block:mapped_audio:held", "mapped_audio", "held"),
+        ("block:tempered_audio:held", "tempered_audio", "held"),
     )
     # The optimization box's other mockup column — unchanged intervals (count u) — is
     # deferred to the projection feature: the unchanged interval basis is U = nullspace(P − I),
@@ -1037,7 +1037,7 @@ def build(state, settings=None, collapsed=None,
         ("block:complexity:detempering", "complexity", "detempering"),
         ("block:urow:detempering", "units", "detempering"),
         ("block:just_audio:detempering", "just_audio", "detempering"),
-        ("block:mapped_audio:detempering", "mapped_audio", "detempering"),
+        ("block:tempered_audio:detempering", "tempered_audio", "detempering"),
     ) if show_detempering else ()
     # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
     # tile (see opt_box below), not in a tile/row of their own
@@ -1110,7 +1110,7 @@ def build(state, settings=None, collapsed=None,
     row_bands = (
         ("counts", ROW_H, show_counts, True, "counts"),
         ("just_audio", ROW_H, show_audio, True, "just audio"),
-        ("mapped_audio", ROW_H, show_audio, True, "mapped audio"),
+        ("tempered_audio", ROW_H, show_audio, True, "tempered audio"),
         ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
         ("units", ROW_H, show_domain_units, True, "units"),
         ("vectors", d * ROW_H, show_temp, True, "interval vectors"),
@@ -1801,8 +1801,8 @@ def build(state, settings=None, collapsed=None,
         chart("retune", "detempering", detempering_sizes.errors)
 
     # the audio rows: a speaker button per pitch, sounding the just (just_audio) or
-    # tempered (mapped_audio) cents of each interval — the same data the just / tuning
-    # rows display, so the ear and the eye agree. mapped_audio also sounds the generators
+    # tempered (tempered_audio) cents of each interval — the same data the just / tuning
+    # rows display, so the ear and the eye agree. tempered_audio also sounds the generators
     # (their tuned size, as the tuning row's genmap does); a generator has no just size.
     def audio_tile(key, group, vals):
         if not tile_open(key, group):
@@ -1833,12 +1833,12 @@ def build(state, settings=None, collapsed=None,
             audio_tile("just_audio", group, vals)
         if show_detempering:  # sound the detempering intervals' JI sizes, like the commas
             audio_tile("just_audio", "detempering", detempering_sizes.just)
-    if row_open("mapped_audio"):
-        audio_tile("mapped_audio", "gens", tun.generator_map)  # the genmap, as the tuning row carries
+    if row_open("tempered_audio"):
+        audio_tile("tempered_audio", "gens", tun.generator_map)  # the genmap, as the tuning row carries
         for group, vals in zip(list_groups, tuning_data["tuning"]):
-            audio_tile("mapped_audio", group, vals)
+            audio_tile("tempered_audio", group, vals)
         if show_detempering:  # their tempered sizes (= the generators' tuned sizes, 𝒕D = 𝒈)
-            audio_tile("mapped_audio", "detempering", detempering_sizes.tempered)
+            audio_tile("tempered_audio", "detempering", detempering_sizes.tempered)
     # the prescaling row applies the prescaler L to each column group's vectors: over the
     # primes it is the d×d diagonal (L·eₚ — the prescaler matrix itself), over the comma /
     # target / interest sets it is L·vector (each component scaled by the diagonal), a d-tall
