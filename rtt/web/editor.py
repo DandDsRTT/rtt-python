@@ -44,6 +44,16 @@ class _Doc:
     range_mode: str
     optimize_locked: bool
     generator_tuning: tuple[float, ...] | None
+    # The user's override for the complexity prescaler 𝐿's diagonal — d floats, one per
+    # domain prime. ``None`` means "no override": every weighting calculation falls back to
+    # the scheme's computed diagonal (log_prime / prime / identity, per the alt.-complexity
+    # traits), so the bare prescaler tile shows that, and complexity / damage / tuning flow
+    # from it as they always did. Once set, the override drives EVERY downstream consumer
+    # (the prescaler tile's cells, the 𝐿·basis product tiles, complexity, weights, the
+    # tuning solve and its derived retunings/damages) — the bare tile is the single source
+    # of truth for the prescaler. Stored as a d-tuple (the diagonal) rather than the full
+    # d×d matrix because 𝐿 IS conceptually diag(...); off-diagonal cells are pinned at 0.
+    custom_prescaler: tuple[float, ...] | None
     settings: tuple[tuple[str, bool], ...]
     collapsed: frozenset[str]
 
@@ -62,6 +72,7 @@ def _initial_doc() -> _Doc:
         range_mode="monotone",
         optimize_locked=False,
         generator_tuning=None,
+        custom_prescaler=None,
         settings=tuple(sorted(show_settings.defaults().items())),
         collapsed=INITIAL_COLLAPSED,
     )
@@ -92,6 +103,7 @@ class Editor:
             range_mode=self.range_mode,
             optimize_locked=self.optimize_locked,
             generator_tuning=self.generator_tuning,
+            custom_prescaler=self.custom_prescaler,
             settings=tuple(sorted(self.settings.items())),
             collapsed=frozenset(self.collapsed),
         )
@@ -109,6 +121,7 @@ class Editor:
         self.range_mode = doc.range_mode
         self.optimize_locked = doc.optimize_locked
         self.generator_tuning = doc.generator_tuning
+        self.custom_prescaler = doc.custom_prescaler
         self.settings = dict(doc.settings)
         self.collapsed = set(doc.collapsed)
         self.pending_comma = None  # a draft never survives a document restore
@@ -280,9 +293,12 @@ class Editor:
     def set_complexity_prescaler(self, prescaler: str) -> None:
         """Swap the complexity prescaler (the alt.-complexity control in box 𝐋), which
         re-weights damage and so retunes. Holds the refined scheme as a resolved spec
-        (the service/layout take a spec anywhere a scheme name is taken)."""
+        (the service/layout take a spec anywhere a scheme name is taken). Also CLEARS
+        any custom-prescaler override — picking a named preset is the user's reset path,
+        snapping the bare prescaler tile back to the scheme's computed diagonal."""
         self._snapshot()
         self.tuning_scheme = service.scheme_with_prescaler(self.tuning_scheme, prescaler)
+        self.custom_prescaler = None
 
     def set_complexity_euclidean(self, euclidean: bool) -> None:
         """Switch the complexity norm between Euclidean (q=2) and taxicab (q=1) — the
@@ -305,9 +321,35 @@ class Editor:
     def set_complexity_name(self, name: str) -> None:
         """Set the whole complexity shape from the predefined-complexities master chooser (box
         𝒄) — prescaler, size factor and norm at once, overriding the box 𝐋/𝒄 fine controls —
-        which re-weights and retunes."""
+        which re-weights and retunes. Also CLEARS the custom-prescaler override: every named
+        complexity carries its own prescaler trait, so a preset pick is the user's reset path
+        away from a hand-edited diagonal back to the named complexity's computed diagonal."""
         self._snapshot()
         self.tuning_scheme = service.scheme_with_complexity(self.tuning_scheme, name)
+        self.custom_prescaler = None
+
+    def set_custom_prescaler_entry(self, i: int, value: float) -> None:
+        """Edit one diagonal entry of the prescaler 𝐿 — the bare prescaler tile's editable
+        cells call this on every change. The first edit *seeds* the override from the current
+        scheme's diagonal (so the d-1 other cells keep their displayed values rather than
+        snapping to silent zeros); subsequent edits mutate the seeded tuple."""
+        self._snapshot()
+        if self.custom_prescaler is None:
+            seed = service.complexity_prescaler(self.state.mapping, self.tuning_scheme)
+            self.custom_prescaler = tuple(seed)
+        diag = list(self.custom_prescaler)
+        diag[i] = float(value)
+        self.custom_prescaler = tuple(diag)
+
+    def clear_custom_prescaler(self) -> None:
+        """Drop the custom override — every weighting calculation reverts to the live
+        scheme's computed diagonal. The Show-panel reset path uses :meth:`reset` (which
+        clears the whole document); this is the targeted clear that the preset choosers
+        and the bare prescaler tile's revert control rely on."""
+        if self.custom_prescaler is None:
+            return  # no-op so a redundant revert doesn't push an empty undo step
+        self._snapshot()
+        self.custom_prescaler = None
 
     def set_diminuator_ignored(self, ignored: bool) -> None:
         """Toggle the size factor (the box 𝐋 "ignore diminuator" checkbox) — the integer-limit
@@ -430,6 +472,7 @@ class Editor:
             "range_mode": self.range_mode,
             "optimize_locked": self.optimize_locked,
             "generator_tuning": list(self.generator_tuning) if self.generator_tuning is not None else None,
+            "custom_prescaler": list(self.custom_prescaler) if self.custom_prescaler is not None else None,
             "settings": dict(self.settings),
             "collapsed": sorted(self.collapsed),
         }
@@ -454,6 +497,8 @@ class Editor:
             optimize_locked=bool(data.get("optimize_locked", False)),
             generator_tuning=tuple(data["generator_tuning"])
             if data.get("generator_tuning") is not None else None,
+            custom_prescaler=tuple(float(x) for x in data["custom_prescaler"])
+            if data.get("custom_prescaler") is not None else None,
             settings=tuple(sorted({**show_settings.defaults(), **data.get("settings", {})}.items())),
             collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
         )

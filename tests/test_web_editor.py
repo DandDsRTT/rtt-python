@@ -56,6 +56,67 @@ def test_set_complexity_prescaler_swaps_the_weighting_prescaler_into_the_layout(
     assert on["cell:prescaling:primes:2:2"] == "5"
 
 
+def test_custom_prescaler_starts_unset_and_is_a_diagonal_d_tuple():
+    # the editor stores a "custom prescaler" override (the diagonal of 𝐿) the bare prescaler
+    # tile's editable cells write to. Unset by default — every downstream calculation falls
+    # back to the scheme's computed prescaler (the trait-driven log_prime / prime / identity
+    # diagonals); set, the override drives the matrix display AND the tuning math
+    editor = Editor()
+    assert editor.custom_prescaler is None  # nothing typed yet -> scheme controls everything
+
+
+def test_set_custom_prescaler_entry_seeds_then_edits_one_diagonal_cell():
+    # the editor exposes a single-cell setter the bare prescaler tile's input cells call on
+    # change. The first write seeds the diagonal from the current scheme's prescaler so the
+    # unedited cells keep their displayed values (no silent reset to zeros); the seed is the
+    # d-tuple complexity_prescaler returns for the live scheme
+    editor = Editor()
+    editor.set_custom_prescaler_entry(1, 7.5)
+    seed = service.complexity_prescaler(editor.state.mapping, service.DEFAULT_TUNING_SCHEME)
+    assert editor.custom_prescaler == (seed[0], 7.5, seed[2])
+    editor.set_custom_prescaler_entry(2, 11.0)  # a second edit keeps the first
+    assert editor.custom_prescaler == (seed[0], 7.5, 11.0)
+
+
+def test_clear_custom_prescaler_reverts_to_the_scheme():
+    editor = Editor()
+    editor.set_custom_prescaler_entry(0, 4.0)
+    assert editor.custom_prescaler is not None
+    editor.clear_custom_prescaler()
+    assert editor.custom_prescaler is None  # the cells revert to the scheme's diagonal
+
+
+def test_picking_a_preset_prescaler_clears_the_custom_override():
+    # the prescaler dropdown (the in-tile box-𝐋 control) is the user's reset path: picking
+    # "log-prime" / "prime" / "identity" CLEARS the custom override AND swaps the scheme's
+    # prescaler trait, so the cells go back to the scheme's computed diagonal
+    editor = Editor()
+    editor.set_custom_prescaler_entry(1, 9.9)
+    editor.set_complexity_prescaler("prime")
+    assert editor.custom_prescaler is None  # picking a preset wipes the override
+    assert service.prescaler_of(editor.tuning_scheme) == "prime"
+
+
+def test_picking_a_predefined_complexity_clears_the_custom_override():
+    # the predefined-complexity master chooser (box 𝒄) likewise reaches into the prescaler
+    # (each named complexity carries its own prescaler), so it too clears any custom diagonal
+    editor = Editor()
+    editor.set_custom_prescaler_entry(0, 3.3)
+    editor.set_complexity_name("sopfr")  # sopfr brings the prime-diagonal prescaler in
+    assert editor.custom_prescaler is None
+    assert service.prescaler_of(editor.tuning_scheme) == "prime"
+
+
+def test_custom_prescaler_edits_are_undoable():
+    editor = Editor()
+    editor.set_custom_prescaler_entry(1, 7.5)
+    assert editor.can_undo is True  # writing to a cell is a document change
+    editor.undo()
+    assert editor.custom_prescaler is None  # undo reverts the edit
+    editor.redo()
+    assert editor.custom_prescaler is not None and editor.custom_prescaler[1] == 7.5
+
+
 def test_set_complexity_euclidean_switches_the_complexity_norm():
     editor = Editor()
     assert service.is_euclidean(editor.tuning_scheme) is False  # taxicab default
