@@ -263,6 +263,30 @@ class Editor:
         the lock is on or nothing has been frozen yet; else the frozen manual tuning."""
         return None if self.optimize_locked else self.generator_tuning
 
+    def set_generator_tuning_text(self, text: str) -> bool:
+        """Freeze a typed manual generator tuning (the editable generator tuning map): parse a
+        cents map of exactly r values and hold it, turning auto-optimize off (a manual tuning
+        and auto-optimize are mutually exclusive). False (state untouched) when it is not r
+        cents values, so the caller can flag the input rather than mangling the tuning."""
+        gens = service.parse_cents_map(text, len(self.state.mapping))
+        if gens is None:
+            return False
+        self._snapshot()
+        self.optimize_locked = False
+        self.generator_tuning = gens
+        return True
+
+    def set_generator_tuning_component(self, i: int, cents: float) -> None:
+        """Override one generator's tuning (one editable generator-tuning-map cell), seeding
+        the rest from the frozen tuning or, when none is frozen, the current optimum. Turns
+        auto-optimize off, like a typed tuning."""
+        base = self.effective_generator_tuning() or self._optimum_generator_tuning()
+        new = list(base)
+        new[i] = float(cents)
+        self._snapshot()
+        self.optimize_locked = False
+        self.generator_tuning = tuple(new)
+
     def try_edit_mapping_text(self, text: str) -> bool:
         """Parse an EBK map string (honouring a domain-basis prefix, so a nonstandard
         temperament can be typed in) and apply it. Returns False (leaving the state

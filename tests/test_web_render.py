@@ -124,6 +124,16 @@ async def test_editing_a_mapping_cell_updates_the_mapped_list(user: User) -> Non
     assert _cell_text(user, "cell:mapped:1:6") == "7"  # the mapped list recomputed live
 
 
+async def test_editing_a_generator_tuning_cell_applies_an_override(user: User) -> None:
+    await user.open("/")
+    # the generator tuning map cells are editable: typing a cents value overrides that generator
+    # (on_gentuning_change -> editor -> render). With no override the cell would re-render to the
+    # computed optimum, so seeing the typed 700.000 survive the render proves the override applied
+    _cell_child(user, "tuning:gen:1").set_value("700.000")
+    await user.should_see(marker="tuning:gen:1")
+    assert _cell_child(user, "tuning:gen:1").value == "700.000"
+
+
 async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")

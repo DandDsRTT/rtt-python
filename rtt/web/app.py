@@ -1543,6 +1543,18 @@ def index() -> None:
         editor.set_optimization_power(power)
         render()
 
+    def on_gentuning_change(cid):
+        # an editable generator-tuning-map cell: a valid cents number overrides that one
+        # generator's tuning (a per-number manual override); an unparseable entry is ignored
+        if building[0] or cid not in inputs:
+            return
+        try:
+            cents = float(str(inputs[cid].value).strip())
+        except ValueError:
+            return
+        editor.set_generator_tuning_component(int(cid.rsplit(":", 1)[1]), cents)
+        render()
+
     def on_ptext_edit(cid, value):
         # the editable plain-text duals: a valid EBK string drives the grid (like
         # typing in a matrix cell); an unparseable one reddens the box and is ignored
@@ -1552,6 +1564,8 @@ def index() -> None:
             ok = editor.try_edit_mapping_text(value)
         elif cid == "ptext:vectors:commas":
             ok = editor.try_edit_comma_basis_text(value)
+        elif cid == "ptext:tuning:gens":  # a typed cents tuning freezes the generator tuning map
+            ok = editor.set_generator_tuning_text(value)
         else:
             return
         if ok:
@@ -1882,6 +1896,10 @@ def index() -> None:
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_power_change(cid)) \
                     .props("dense borderless").classes("rtt-cellinput")
+            elif cb.kind == "gentuningcell":  # an editable generator-tuning-map cell (per-generator override)
+                wrap.classes("rtt-cell-input")
+                inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_gentuning_change(cid)) \
+                    .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
@@ -1990,6 +2008,8 @@ def index() -> None:
                  else opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
             elif cb.kind == "powerinput":  # reflect the live optimization power (∞ / 2 / 1)
                 inputs[cb.id].value = cb.text
+            elif cb.kind == "gentuningcell":  # reflect the live generator tuning (blank when quantities off)
+                inputs[cb.id].value = "" if cb.blank else cb.text
             elif cb.kind == "mapping":
                 inputs[cb.id].value = "" if cb.blank else str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":

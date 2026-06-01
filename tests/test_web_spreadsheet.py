@@ -1,4 +1,5 @@
 from rtt.web import service, settings, spreadsheet
+from rtt.web.editor import Editor
 
 
 def _layout(mapping=((1, 1, 0), (0, 1, 4))):
@@ -1023,12 +1024,13 @@ def test_collapsing_hides_the_plain_text_band_with_the_tile():
     assert "ptext:mapping:targets" in tile_off  # ...but its open sibling keeps one
 
 
-def test_only_the_editable_duals_render_as_input_plain_text():
+def test_editable_plain_text_tiles_render_as_inputs():
     cells = {c.id: c for c in _with(plain_text_values=True).cells}
-    # the mapping and the comma basis — the grid's two editable duals — are inputs
-    assert cells["ptext:mapping:primes"].kind == "ptextedit"
-    assert cells["ptext:vectors:commas"].kind == "ptextedit"
-    # every other plain-text value is read-only display text, not an editable box
+    # the editable tiles render as inputs: the mapping + comma-basis duals, and the
+    # generator tuning map (typing a cents tuning freezes it as the manual tuning)
+    for cid in ("ptext:mapping:primes", "ptext:vectors:commas", "ptext:tuning:gens"):
+        assert cells[cid].kind == "ptextedit"
+    # every computed value stays read-only display text, not an editable box
     for cid in ("ptext:mapping:targets", "ptext:mapping:commas", "ptext:tuning:primes",
                 "ptext:quantities:primes", "ptext:damage:targets"):
         assert cells[cid].kind == "ptext"
@@ -3014,6 +3016,27 @@ def test_a_manual_generator_tuning_drives_the_displayed_maps():
     # the default optimum (TOP) stretches the octave, so it differs
     auto = {c.id: c for c in spreadsheet.build(base, s).cells}
     assert auto["tuning:prime:0"].text != "1200.000"
+
+
+def test_typing_the_generator_tuning_map_drives_the_grid_through_the_editor():
+    # the editable generator tuning map: a typed cents tuning, applied via the editor, drives
+    # the built tuning maps just like a frozen manual tuning -- the hybrid input end to end
+    editor = Editor()
+    assert editor.set_generator_tuning_text("{1200.000 700.000]") is True
+    cells = {c.id: c for c in spreadsheet.build(
+        editor.state, editor.settings, tuning_scheme=editor.tuning_scheme,
+        generator_tuning=editor.effective_generator_tuning()).cells}
+    # meantone g=(1200,700): prime 2 = g0, prime 3 = g0+g1, prime 5 = 4*g1
+    assert cells["tuning:prime:0"].text == "1200.000"
+    assert cells["tuning:prime:1"].text == "1900.000"
+    assert cells["tuning:prime:2"].text == "2800.000"
+
+
+def test_generator_tuning_map_cells_are_editable_inputs():
+    # each generator-tuning-map cell is an editable per-generator override, not a read-only value
+    cells = {c.id: c for c in _layout().cells}
+    assert cells["tuning:gen:0"].kind == "gentuningcell"
+    assert cells["tuning:gen:1"].kind == "gentuningcell"
 
 
 def test_optimization_draws_the_minimized_damage_indicator_on_the_chart():

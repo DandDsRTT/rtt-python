@@ -430,6 +430,36 @@ def test_optimize_button_freezes_the_tuning_and_lock_toggles_auto():
     assert editor.effective_generator_tuning() is not None
 
 
+def test_set_generator_tuning_text_freezes_a_typed_genmap():
+    editor = Editor()
+    # typing a valid cents genmap freezes it as the manual tuning, with auto-optimize off
+    assert editor.set_generator_tuning_text("{1200.000 701.955]") is True
+    assert editor.effective_generator_tuning() == (1200.0, 701.955)
+    assert editor.optimize_locked is False
+    assert editor.can_undo is True
+    # an auto-locked editor: typing a tuning turns the lock off (manual vs auto are exclusive)
+    locked = Editor()
+    locked.toggle_optimize_lock()
+    assert locked.optimize_locked is True
+    locked.set_generator_tuning_text("{1200 700]")
+    assert locked.optimize_locked is False
+    assert locked.effective_generator_tuning() == (1200.0, 700.0)
+    # the wrong count or junk is rejected, leaving the tuning untouched
+    assert editor.set_generator_tuning_text("{1200]") is False  # one value, need two
+    assert editor.set_generator_tuning_text("garbage") is False
+    assert editor.effective_generator_tuning() == (1200.0, 701.955)
+
+
+def test_set_generator_tuning_component_overrides_one_generator():
+    editor = Editor()
+    optimum = editor._optimum_generator_tuning()
+    # with nothing frozen, editing one generator seeds the rest from the current optimum
+    editor.set_generator_tuning_component(1, 700.0)
+    eff = editor.effective_generator_tuning()
+    assert eff[1] == 700.0 and eff[0] == optimum[0]
+    assert editor.optimize_locked is False and editor.can_undo is True
+
+
 def test_show_settings_start_at_defaults_and_changes_are_undoable():
     editor = Editor()
     assert editor.settings == settings.defaults()  # the Editor owns the Show settings

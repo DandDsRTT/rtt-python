@@ -792,6 +792,24 @@ def test_parse_rejects_unparseable_wrong_variance_or_non_integer():
     assert service.parse_comma_basis("nonsense") is None
 
 
+def test_parse_cents_map_reads_a_genmap_or_tuning_string():
+    # the generator tuning map ({ … ]) and a prime tuning map (⟨ … ]), float-tolerant
+    assert service.parse_cents_map("{1201.699 697.564]") == (1201.699, 697.564)
+    assert service.parse_cents_map("⟨1200.000 1901.955 2786.314]") == (1200.0, 1901.955, 2786.314)
+    # round-trips the genmap plain text it inverts (to the 3-dp the string carries)
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    gm = service.tuning(st.mapping).generator_map
+    parsed = service.parse_cents_map(service.plain_text_values(st)[("tuning", "gens")])
+    assert parsed == tuple(round(g, 3) for g in gm)
+    # an optional length check, so a caller can demand exactly r generators
+    assert service.parse_cents_map("{1200 700]", 2) == (1200.0, 700.0)
+    assert service.parse_cents_map("{1200 700]", 3) is None
+    # junk / non-numeric / empty -> None
+    assert service.parse_cents_map("garbage") is None
+    assert service.parse_cents_map("{1200 x]") is None
+    assert service.parse_cents_map("") is None
+
+
 def test_tuning_exposes_diamond_generator_ranges():
     import pytest
 

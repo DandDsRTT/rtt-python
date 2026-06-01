@@ -742,7 +742,7 @@ UNITS_TILES = (
 # The plain-text tiles whose string is an editable input that drives the grid —
 # the two duals the grid itself lets you type into: the mapping (mapping/primes)
 # and the comma basis (vectors/commas). Every other plain-text value is read-only.
-EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas")})
+EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas"), ("tuning", "gens")})
 EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band holds an input
 # Rows that carry a plain-text band (every value row; the counts row has none). The
 # quantities row's ratios are placed per column, the rest as one EBK string per tile.
@@ -756,7 +756,7 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
 # plain text on leaves just the inline string — the two value views are independent.)
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell",
-    "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell",
+    "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel",
     "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus", "held_minus", "held_plus", "optimize",
@@ -771,6 +771,7 @@ GRIDDED_KINDS = frozenset({
 # so math_expressions' own show_value logic trims it.)
 BLANKED_NUMBER_KINDS = frozenset({
     "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell", "formcell", "heldcell",
+    "gentuningcell",
 })
 
 
@@ -1930,9 +1931,13 @@ def build(state, settings=None, collapsed=None,
             tval_row(key, "interest", interest_vals)
             tval_row(key, "held", held_vals)
     # the generator tuning map: the tuning row's map over the generators (the gens-column
-    # counterpart of the tuning map over the primes), so the generators get a tuning tile too
-    if row_open("tuning"):
-        tval_row("tuning", "gens", tun.generator_map)
+    # counterpart of the tuning map over the primes). Its cells are EDITABLE (a hybrid input):
+    # typing a cents value overrides that generator's tuning, like typing the whole map in the
+    # plain text. The genmap has no closed form, so they are plain editable cells (never mathexpr).
+    if row_open("tuning") and tile_open("tuning", "gens"):
+        for i, v in enumerate(tun.generator_map):
+            cells.append(CellBox(f"tuning:gen:{i}", group_left["gens"](i), row_y["tuning"], COL_W, ROW_H,
+                                 "gentuningcell", text=service.cents(v), unit=cell_unit("tuning", "gens", gen=i)))
     # the detempering column's size rows: tempering the detempering intervals recovers the
     # generators, so its tuning row IS the generator tuning map (𝒕D = 𝒈); its just and
     # retuning sizes are ordinary interval lists (𝒋D, 𝒓D), the latter charted like the targets.

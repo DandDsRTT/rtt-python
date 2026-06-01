@@ -849,6 +849,30 @@ def _int_matrix_or_none(matrix) -> Matrix | None:
     return tuple(rows)
 
 
+def _parse_float_list(text: str, n: int | None = None) -> tuple[float, ...] | None:
+    """A whitespace/comma-separated list of floats inside any EBK bracket pair
+    (``{ ⟨ [ ( ) ] ⟩ }``), or None if it is empty, non-numeric, or (when ``n`` is given)
+    not exactly ``n`` long. The float-tolerant core behind the cents-map parser."""
+    tokens = text.strip().strip("{}⟨⟩[]()").replace(",", " ").split()
+    if not tokens:
+        return None
+    try:
+        values = tuple(float(t) for t in tokens)
+    except ValueError:
+        return None
+    if n is not None and len(values) != n:
+        return None
+    return values
+
+
+def parse_cents_map(text: str, n: int | None = None) -> tuple[float, ...] | None:
+    """Read a cents map string back to its values — the generator tuning map
+    ``{1201.699 697.564]`` or a prime tuning map ``⟨1200.000 …]`` — float-tolerant, the
+    inverse of :func:`_cents_genmap` / :func:`_cents_map`. None if unparseable or (with
+    ``n`` set) not exactly ``n`` values. The reader behind a typed manual generator tuning."""
+    return _parse_float_list(text, n)
+
+
 def parse_mapping(text: str) -> Matrix | None:
     """Read an EBK *map* string (e.g. ``[⟨1 1 0] ⟨0 1 4]}``) back to a mapping
     matrix, or None if it is unparseable, the wrong variance (a vector, not a map),
