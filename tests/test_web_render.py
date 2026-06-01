@@ -131,6 +131,26 @@ async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
     assert _cell_child(user, "cell:vec:targets:0:0").value == "2"
 
 
+async def test_editing_a_prescaler_diagonal_cell_overrides_the_scheme(user: User) -> None:
+    # the bare prescaler 𝐿's diagonal cells (prescalercell kind) are editable: typing into one
+    # routes through on_prescaler_change -> set_custom_prescaler_entry, threads as the
+    # custom_prescaler kwarg into spreadsheet.build, and re-renders. The 5-limit default scheme
+    # seeds the diagonal at log₂2/log₂3/log₂5 = (1, 1.585, 2.322); overriding prime 3 to 4.0
+    # must survive the render in the diagonal cell AND retune the comma column's product tile
+    # (𝐿C reads the same diagonal, so its prime-3 row goes from -4·1.585 = -6.340 to -4·4 = -16).
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()  # the prescaling row is gated on weighting
+    await user.should_see(marker="cell:prescaling:primes:1:1")
+    _cell_child(user, "cell:prescaling:primes:1:1").set_value("4.0")
+    await user.should_see(marker="cell:prescaling:primes:1:1")
+    # the typed value rode the override back to the diagonal cell on re-render (it would
+    # otherwise have reverted to the scheme's 1.585), and the off-diagonal "0" stays read-only
+    assert _cell_child(user, "cell:prescaling:primes:1:1").value == "4"  # bare (no fractional part)
+    # the off-diagonal cell is plain tval "0" (the rtt-tval div, no editable input); a render
+    # error in that branch would surface here via the fixture's ERROR-log guard
+    await user.should_see(marker="cell:prescaling:primes:0:1")
+
+
 async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")

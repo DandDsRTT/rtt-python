@@ -1590,6 +1590,23 @@ def index() -> None:
         editor.set_generator_tuning_component(int(cid.rsplit(":", 1)[1]), cents)
         render()
 
+    def on_prescaler_change(cid):
+        # a bare prescaler 𝐿 diagonal cell (cid "cell:prescaling:primes:i:i"): a valid float
+        # overrides that one diagonal entry (which then drives EVERY downstream consumer — the
+        # product tiles, complexity, weights, the tuning solve and its retunings/damages).
+        # The first edit seeds the override from the scheme so the d-1 untouched cells keep
+        # their displayed values (set_custom_prescaler_entry handles that). The bare prescaler
+        # is a float diagonal (log_prime / prime / identity / typed), so parse as float — an
+        # unparseable entry leaves the scheme unchanged, like the other editable cells.
+        if building[0] or cid not in inputs:
+            return
+        try:
+            value = float(str(inputs[cid].value).strip())
+        except ValueError:
+            return
+        editor.set_custom_prescaler_entry(int(cid.split(":")[3]), value)
+        render()
+
     def on_ptext_edit(cid, value):
         # the editable plain-text duals: a valid EBK string drives the grid (like
         # typing in a matrix cell); an unparseable one reddens the box and is ignored
@@ -1751,6 +1768,13 @@ def index() -> None:
             elif cb.kind == "targetcell":  # an editable target interval list monzo component (overrides the set)
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_target_cells_change()) \
+                    .props("dense borderless").classes("rtt-cellinput")
+            elif cb.kind == "prescalercell":  # a bare prescaler 𝐿 diagonal cell, the user's editable
+                # override (off-diagonal cells stay tval "0" — 𝐿 is diagonal). Each input dispatches
+                # to set_custom_prescaler_entry; the cid carries the diagonal slot, so the lambda
+                # closes over it (a free cb would be the LAST cell's id by the time the user types)
+                wrap.classes("rtt-cell-input")
+                inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_prescaler_change(cid)) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind in ("prime", "formcell"):  # a read-only bordered cell (domain prime / form-matrix entry)
                 with ui.element("div").classes("rtt-white"):
@@ -1971,7 +1995,8 @@ def index() -> None:
                                 interest=editor.interest_monzos, range_mode=editor.range_mode,
                                 pending_comma=editor.pending_comma, held_monzos=editor.held_monzos,
                                 generator_tuning=editor.effective_generator_tuning(),
-                                target_override=editor.target_override)
+                                target_override=editor.target_override,
+                                custom_prescaler=editor.custom_prescaler)
         last_lay[0] = lay
         # the board is the grid's full size; the three sticky bands span the title gutters at the
         # board's origin, so cells routed into them keep their native (cb.x, cb.y) and line up with
@@ -2071,6 +2096,10 @@ def index() -> None:
                 inputs[cb.id].value = cb.text  # the normalized held monzo component build computed
             elif cb.kind == "targetcell":
                 inputs[cb.id].value = cb.text  # the target monzo component build computed (blank when quantities off)
+            elif cb.kind == "prescalercell":  # reflect the live prescaler diagonal (the override if set,
+                # else the scheme-derived value — spreadsheet.build resolves that and emits the final
+                # text already). Blank when quantities are off, mirroring the other editable matrix cells
+                inputs[cb.id].value = cb.text
             elif cb.kind == "ptext":  # read-only value: keep its text and shrink-to-fit font in sync
                 labels[cb.id].set_text(cb.text)
                 labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
