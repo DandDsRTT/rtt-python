@@ -141,6 +141,16 @@ OPTIMIZATION_COUNTS = (
 OPTIMIZATION_COUNTS_TILES = tuple(
     (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in OPTIMIZATION_COUNTS
 )
+# The generator-detempering column carries a count too: the matrix holds one detempering
+# interval per generator, so its cardinality is the rank r (the same value the generators
+# column's rank count reports). Like OPTIMIZATION_COUNTS, it is gated on its column being
+# shown (the generator_detempering box), so it lives in its own conditional tuple.
+DETEMPERING_COUNTS = (
+    ("detempering", "r", "generator detempering count"),
+)
+DETEMPERING_COUNTS_TILES = tuple(
+    (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in DETEMPERING_COUNTS
+)
 
 # Quantity-name captions shown inside each (row, column) tile when names are on.
 # In the comma column, the rows whose quantity the temperament zeroes out — mapped
@@ -180,7 +190,7 @@ CAPTIONS = {
     ("complexity", "targets"): "target interval complexity list",
     ("weight", "targets"): "target interval weight list",
     ("damage", "targets"): "target interval damage list",
-    **{("counts", ckey): name for ckey, _sym, name in COUNTS + OPTIMIZATION_COUNTS},
+    **{("counts", ckey): name for ckey, _sym, name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS},
     # Other intervals of interest carry the mockup's own descriptive names — distinct from
     # the targets column's "...target interval... list" phrasing. This column is narrow (a
     # few user-curated intervals), so a wrapped caption would grow/shrink the caption band —
@@ -1106,7 +1116,8 @@ def build(state, settings=None, collapsed=None,
     ) if show_detempering else ()
     # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
     # tile (see opt_box below), not in a tile/row of their own
-    tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + TILES + AUDIO_TILES + UNITS_TILES
+    tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
+             + TILES + AUDIO_TILES + UNITS_TILES
              + interest_tiles + held_tiles + detempering_tiles)
     # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
     # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
@@ -1579,10 +1590,12 @@ def build(state, settings=None, collapsed=None,
     cells.append(CellBox("toggle:all", node_x, col_node_y, TOGGLE, TOGGLE, "alltoggle",
                          text=_fold_glyph(all_collapsed)))
 
-    # counts row: each present column's set cardinality, centred over its values
+    # counts row: each present column's set cardinality, centred over its values. The
+    # detempering column counts the rank r (one detempering interval per generator).
     if row_open("counts"):
-        cardinality = {"gens": r, "primes": d, "commas": state.n, "targets": k, "held": nh}
-        for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS:
+        cardinality = {"gens": r, "primes": d, "commas": state.n, "targets": k, "held": nh,
+                       "detempering": r}
+        for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS:
             if tile_open("counts", ckey):
                 cells.append(CellBox(f"count:{ckey}", col_x[ckey], row_y["counts"], col_w[ckey], ROW_H,
                                      "count", text=f"{_mathit(sym)} = {cardinality[ckey]}"))

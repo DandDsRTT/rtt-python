@@ -2052,6 +2052,17 @@ def test_counts_on_adds_a_top_row_of_per_column_cardinalities():
     assert cells["count:targets"].text == "\U0001D458 = 8"  # 𝑘 target interval count: the 6-TILT is 8
 
 
+def test_counts_row_counts_the_generator_detempering_column_too():
+    # the generator detempering matrix holds one detempering interval per generator, so its
+    # count is the rank r — the same value as the generators column's rank count. The count
+    # tile only exists while the detempering column is shown (like the held count and its column)
+    cells = {c.id: c for c in _with(counts=True, generator_detempering=True).cells}
+    assert cells["count:detempering"].text == "\U0001D45F = 2"  # 𝑟 rank: one detempering interval per generator
+    assert cells["count:detempering"].text == cells["count:gens"].text  # tracks the rank, like the generators count
+    # absent when the detempering column is hidden (no column → no count tile)
+    assert "count:detempering" not in {c.id for c in _with(counts=True).cells}
+
+
 def test_counts_row_sits_at_the_top_aligned_over_its_columns():
     cells = {c.id: c for c in _with(counts=True).cells}
     # the counts row is the topmost data row — above the quantities (primes/targets)
@@ -3635,11 +3646,11 @@ def test_spine_rows_and_columns_colorize_by_their_band():
     for spine in ("count", "urow"):
         suffix = ":0" if spine == "urow" else ""
         assert at(f"{spine}:commas{suffix}") == Y       # the commas column is temperament (C)
+        assert at(f"{spine}:detempering{suffix}") == Y  # the detempering column is temperament (D)
         assert at(f"{spine}:targets{suffix}") == C      # the target column is tuning (T)
         assert at(f"{spine}:held{suffix}") == C         # the held column is tuning (H)
         assert at(f"{spine}:gens{suffix}") == N         # the generators spine column stays neutral
         assert at(f"{spine}:primes{suffix}") == N       # the domain primes column stays neutral
-    assert at("urow:detempering:0") == Y                # the detempering column is temperament (D)
     # quantities + units COLUMNS take each row's family: mapping yellow; tuning, just,
     # retuning, prescaling, complexity cyan. The retuning units cell is cyan despite the
     # retuning VALUE cells being green — the spine follows the band, not the content.
