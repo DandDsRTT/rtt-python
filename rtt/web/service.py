@@ -688,10 +688,14 @@ def plain_text_values(
         ("retune", "detempering"): _cents_list(detemper_sizes.errors),
         ("retune", "targets"): _cents_list(target_sizes.errors),
         ("damage", "targets"): _cents_list(target_sizes.damage),
-        ("prescaling", "primes"): _prescale_paren_list(_prescaled(prime_units)),
-        ("prescaling", "commas"): _prescale_paren_list(_prescaled(state.comma_basis)),
-        ("prescaling", "detempering"): _prescale_paren_list(_prescaled(detemper_monzos)),
-        ("prescaling", "targets"): _prescale_paren_list(_prescaled(target_monzos)),
+        # the bare prescaler 𝐿 reads with an asymmetric outer wrap (square open + ket
+        # close, "[…⟩") — distinguishing it as the prescaler MATRIX rather than a product
+        # of it with another basis; the 𝐿·basis product matrices (𝐿C/𝐿D/𝐿H/𝐿T) carry
+        # symmetric outer "[ ]" brackets.
+        ("prescaling", "primes"): _prescale_bra_list(_prescaled(prime_units), outer="[⟩"),
+        ("prescaling", "commas"): _prescale_bra_list(_prescaled(state.comma_basis)),
+        ("prescaling", "detempering"): _prescale_bra_list(_prescaled(detemper_monzos)),
+        ("prescaling", "targets"): _prescale_bra_list(_prescaled(target_monzos)),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
         ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas)),
         ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios)),
@@ -710,7 +714,7 @@ def plain_text_values(
             ("tuning", "held"): _cents_list(held_sizes.tempered),
             ("just", "held"): _cents_list(held_sizes.just),
             ("retune", "held"): _cents_list(held_sizes.errors),
-            ("prescaling", "held"): _prescale_paren_list(_prescaled(held)),
+            ("prescaling", "held"): _prescale_bra_list(_prescaled(held)),
             ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios)),
         })
     # the other-intervals-of-interest column is a loose collection, not a basis, so every
@@ -727,7 +731,7 @@ def plain_text_values(
             ("tuning", "interest"): _cents_list(interest_sizes.tempered, wrap=False),
             ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
             ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
-            ("prescaling", "interest"): _prescale_paren_list(_prescaled(interest), wrap=False),
+            ("prescaling", "interest"): _prescale_bra_list(_prescaled(interest), outer=""),
             ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios), wrap=False),
         })
     return values
@@ -742,17 +746,19 @@ def _ket_list(vectors, close: str, wrap: bool = True) -> str:
     return f"[{kets}]" if wrap else kets
 
 
-def _prescale_paren_list(vectors, wrap: bool = True) -> str:
-    """A parenthesised list of complexity-prescaler matrix columns — ``[(4 -6.340 2.322)]``
-    — for the weighting prescaling matrices (the prescaled vectors L·v). The mockup uses
-    ``( )`` per column, not the raw-monzo ket close ``⟩`` and not the generator-coords
-    brace close ``}``: prescaled vectors are weighted basis elements, neither raw nor
-    tempered. Formats each entry with prescale_text, so the string shows exactly the
-    grid's numbers (whole numbers bare, else 3-dp) rather than a denser all-3-dp form.
-    ``wrap`` adds the outer ``[ ]`` for a matrix presentation; ``wrap=False`` drops it
-    for the intervals-of-interest column, whose columns stand alone."""
-    parens = " ".join("(" + " ".join(prescale_text(x) for x in v) + ")" for v in vectors)
-    return f"[{parens}]" if wrap else parens
+def _prescale_bra_list(vectors, outer: str = "[]") -> str:
+    """A list of complexity-prescaler matrix columns as bra-style vectors —
+    ``[⟨1 0 0 0 0] ⟨0 1.585 0 0 0] …]`` — for the weighting prescaling matrices (the
+    prescaled vectors 𝐿·v). Each column reads ``⟨ values ]`` (angle open + square close),
+    and ``outer`` picks the wrap: ``"[]"`` for the 𝐿·basis product matrices (𝐿C/𝐿D/𝐿H/𝐿T),
+    ``"[⟩"`` for the bare prescaler 𝐿 itself (asymmetric — square open + ket close), and
+    ``""`` for the intervals-of-interest column (standalone columns, no outer wrap).
+    Formats each entry with prescale_text, so the string shows exactly the grid's numbers
+    (whole numbers bare, else 3-dp) rather than a denser all-3-dp form."""
+    bras = " ".join("⟨" + " ".join(prescale_text(x) for x in v) + "]" for v in vectors)
+    if not outer:
+        return bras
+    return f"{outer[0]}{bras}{outer[1]}"
 
 
 def comma_basis_pending_text(comma_basis, pending) -> tuple[str, str, str]:
