@@ -1336,12 +1336,14 @@ def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
     off = {c.id for c in _with(weighting=False).cells}
     assert "cell:prescaling:primes:0:0" not in off  # no prescaling matrix unless weighting is on
     pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)), service.DEFAULT_TUNING_SCHEME)
-    # a d×d diagonal matrix over the primes: the prescaler weights on the diagonal, 0 off it,
-    # in the int/frac gridded cell (tval) like every other numeric matrix value
-    assert on["cell:prescaling:primes:0:0"].kind == "tval"
+    # a d×d diagonal matrix over the primes: the prescaler weights on the diagonal (the
+    # editable prescalercell — the user types overrides here), 0 off it (a plain tval since
+    # 𝐿 is diagonal, no point editing what's pinned to zero).
+    assert on["cell:prescaling:primes:0:0"].kind == "prescalercell"
     assert on["cell:prescaling:primes:0:0"].text == "1"               # log2(2) = 1, shown bare
     assert on["cell:prescaling:primes:1:1"].text == service.cents(pre[1])  # log2(3) = 1.585
     assert on["cell:prescaling:primes:2:2"].text == service.cents(pre[2])  # log2(5) = 2.322
+    assert on["cell:prescaling:primes:0:1"].kind == "tval"             # off-diagonal stays tval
     assert on["cell:prescaling:primes:0:1"].text == "0"               # off-diagonal entry
     # column p sits under prime p; rows stack one ROW_H apart (a d-tall matrix)
     assert on["cell:prescaling:primes:0:0"].x == on["prime:0"].x
@@ -2051,15 +2053,16 @@ def test_math_expressions_is_an_interactive_toggle():
 
 
 def test_math_expressions_render_the_prescaler_diagonal_as_logs():
-    # the complexity prescaler L is exactly diag(log₂ prime) for the log-prime norm —
-    # the same closed-form-of-a-log structure the just row has — so math expressions
-    # gives each diagonal cell a "log₂{prime} = {value}" form (octaves, no 1200×). The
-    # off-diagonal cells are 0 (no closed form) and keep their plain "0" tval.
+    # the bare prescaler 𝐿's diagonal is the user's editable surface (the prescalercell
+    # kind, where the override is typed), so it WINS over math_expressions even with the
+    # toggle on: each diagonal cell shows its plain prescaled value (the active diagonal),
+    # not a closed-form expression. Math expressions still styles the off-diagonal product
+    # tiles (LC, LD, LT, LH), and the diagonal's value still matches the live scheme.
     cells = {c.id: c for c in _with(weighting=True, math_expressions=True).cells}
-    assert cells["cell:prescaling:primes:0:0"].kind == "mathexpr"
-    assert cells["cell:prescaling:primes:0:0"].text == "log₂2\n= 1"  # log₂2 == 1, shown bare
-    assert cells["cell:prescaling:primes:1:1"].text == "log₂3\n= 1.585"
-    assert cells["cell:prescaling:primes:2:2"].text == "log₂5\n= 2.322"
+    assert cells["cell:prescaling:primes:0:0"].kind == "prescalercell"
+    assert cells["cell:prescaling:primes:0:0"].text == "1"  # log₂2 == 1, shown bare
+    assert cells["cell:prescaling:primes:1:1"].text == "1.585"
+    assert cells["cell:prescaling:primes:2:2"].text == "2.322"
     assert cells["cell:prescaling:primes:0:1"].kind == "tval"  # off-diagonal stays plain
     assert cells["cell:prescaling:primes:0:1"].text == "0"
 
@@ -2075,28 +2078,33 @@ def test_math_expressions_render_the_prescaled_comma_basis_as_logs():
 
 
 def test_math_expressions_without_quantities_show_only_the_prescaler_expression():
-    # quantities drives the "= value" second line for the prescaling row too; with it
-    # off, the cell is just the bare closed form — no decimal, no newline, like the
-    # just row's math expression in the same configuration
+    # quantities drives the "= value" second line for the prescaling row's product tiles too;
+    # with it off, each LC/LD/LT/LH cell is just the bare closed form — no decimal, no newline,
+    # like the just row's math expression in the same configuration. The bare prescaler 𝐿's
+    # diagonal is an editable prescalercell (a value-bearing input box), so quantities=False
+    # blanks its text alongside the other editable matrix cells (commacell/heldcell/...).
     cells = {c.id: c for c in _with(weighting=True, math_expressions=True, quantities=False).cells}
-    assert cells["cell:prescaling:primes:1:1"].text == "log₂3"
+    assert cells["cell:prescaling:primes:1:1"].kind == "prescalercell"
+    assert cells["cell:prescaling:primes:1:1"].text == ""  # blanked alongside other editable cells
+    assert cells["cell:prescaling:primes:1:1"].blank is True
     assert cells["cell:prescaling:commas:1:0"].text == "-4 · log₂3"
 
 
 def test_math_expressions_under_prime_prescaler_drop_the_log():
     # the prime prescaler (𝑃) puts each prime ITSELF on the diagonal, so the closed
-    # form is ``coeff · prime`` — no log₂. The just-row pattern (mathexpr only where a
-    # closed form lives) carries over: each non-zero cell prefixes its value, and
-    # zero cells stay plain.
+    # form for the product tiles (LC/LD/LT/LH) is ``coeff · prime`` — no log₂. The bare
+    # prescaler 𝐿's diagonal stays a prescalercell (the editable surface), so it shows
+    # each prime as the plain value rather than a closed form.
     scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "prime")
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
                             {**settings.defaults(), "weighting": True, "math_expressions": True},
                             tuning_scheme=scheme)
     cells = {c.id: c for c in lay.cells}
-    # the diagonal: each prime is its own scaling (no log)
-    assert cells["cell:prescaling:primes:0:0"].text == "2\n= 2"  # prime 2, coeff 1
-    assert cells["cell:prescaling:primes:1:1"].text == "3\n= 3"  # prime 3, coeff 1
-    assert cells["cell:prescaling:primes:2:2"].text == "5\n= 5"
+    # the diagonal: each prime is the plain value (prescalercell, not mathexpr)
+    assert cells["cell:prescaling:primes:0:0"].kind == "prescalercell"
+    assert cells["cell:prescaling:primes:0:0"].text == "2"  # prime 2
+    assert cells["cell:prescaling:primes:1:1"].text == "3"  # prime 3
+    assert cells["cell:prescaling:primes:2:2"].text == "5"
     # the comma column: coeff · prime (no log)
     assert cells["cell:prescaling:commas:0:0"].text == "4 · 2\n= 8"
     assert cells["cell:prescaling:commas:1:0"].text == "-4 · 3\n= -12"
@@ -2105,19 +2113,102 @@ def test_math_expressions_under_prime_prescaler_drop_the_log():
 def test_math_expressions_under_identity_prescaler_emit_no_closed_form():
     # the identity prescaler (𝐼) puts 1 on every diagonal slot, so the closed form
     # would just repeat the coefficient — no new information. Following the just-row
-    # rule (mathexpr only where a NON-trivial closed form lives), every prescaling
-    # cell stays as its plain tval.
+    # rule (mathexpr only where a NON-trivial closed form lives), every product-tile
+    # prescaling cell stays as its plain tval. The bare prescaler 𝐿's diagonal is an
+    # editable prescalercell regardless of scheme (the user types overrides here), so
+    # it shows the plain value (1) too — same number, kinder kind.
     scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "identity")
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
                             {**settings.defaults(), "weighting": True, "math_expressions": True},
                             tuning_scheme=scheme)
     cells = {c.id: c for c in lay.cells}
-    # diagonal cell of the bare prescaler — value 1, no log dressing
-    assert cells["cell:prescaling:primes:1:1"].kind == "tval"
+    # diagonal cell of the bare prescaler — value 1, the editable prescalercell kind
+    assert cells["cell:prescaling:primes:1:1"].kind == "prescalercell"
     assert cells["cell:prescaling:primes:1:1"].text == "1"
     # comma column entry — value 4 (= coeff), no log dressing
     assert cells["cell:prescaling:commas:0:0"].kind == "tval"
     assert cells["cell:prescaling:commas:0:0"].text == "4"
+
+
+def test_bare_prescaler_diagonal_is_editable_prescalercell_kind():
+    # the bare prescaler 𝐿 tile is the editable surface where the user types overrides
+    # for the prescaler's diagonal — so each diagonal cell (i == c) is a prescalercell
+    # kind (mirroring commacell/interestcell/heldcell, the other editable matrix cells).
+    # The OFF-diagonal cells stay tval "0" — they're pinned at zero because 𝐿 is diagonal.
+    cells = {c.id: c for c in _with(weighting=True).cells}
+    # diagonal cells are prescalercell
+    for i in range(3):
+        assert cells[f"cell:prescaling:primes:{i}:{i}"].kind == "prescalercell"
+    # off-diagonal cells stay plain tval "0"
+    for i in range(3):
+        for c in range(3):
+            if i == c:
+                continue
+            assert cells[f"cell:prescaling:primes:{i}:{c}"].kind == "tval"
+            assert cells[f"cell:prescaling:primes:{i}:{c}"].text == "0"
+
+
+def test_bare_prescaler_diagonal_carries_its_prime_index():
+    # like the commacell/interestcell/heldcell editable kinds, each diagonal cell records
+    # which diagonal slot (= which domain prime) it edits, so the app layer can dispatch
+    # set_custom_prescaler_entry(i, value) on change. The off-diagonal cells stay pinned 0
+    # and carry no prime index (nothing to dispatch).
+    cells = {c.id: c for c in _with(weighting=True).cells}
+    for i in range(3):
+        assert cells[f"cell:prescaling:primes:{i}:{i}"].prime == i
+
+
+def test_custom_prescaler_override_drives_the_bare_prescaler_diagonal_text():
+    # a custom_prescaler override (d-tuple) typed into the bare prescaler tile flows back
+    # into the diagonal cells' text — the user's edit IS what they see, rather than the
+    # scheme's computed log/prime/identity diagonal.
+    s = settings.defaults() | {"weighting": True}
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            custom_prescaler=(2.5, 7.5, 11.0))
+    cells = {c.id: c for c in lay.cells}
+    assert cells["cell:prescaling:primes:0:0"].text == "2.500"
+    assert cells["cell:prescaling:primes:1:1"].text == "7.500"
+    assert cells["cell:prescaling:primes:2:2"].text == "11"  # bare (no fractional part)
+
+
+def test_custom_prescaler_override_flows_into_the_product_tiles():
+    # 𝐿C (and 𝐿T, 𝐿D, 𝐿H) read off the same prescaler diagonal — typing an override at
+    # the bare tile MUST retune every product tile that scales by 𝐿. Here the syntonic
+    # comma 80/81 over 2.3.5 with diag (1, 1, 2) gives 4·1, -4·1, 1·2 = 4, -4, 2.
+    s = settings.defaults() | {"weighting": True}
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            custom_prescaler=(1.0, 1.0, 2.0))
+    cells = {c.id: c for c in lay.cells}
+    assert cells["cell:prescaling:commas:0:0"].text == "4"
+    assert cells["cell:prescaling:commas:1:0"].text == "-4"
+    assert cells["cell:prescaling:commas:2:0"].text == "2"
+
+
+def test_custom_prescaler_override_drives_the_complexity_row():
+    # the complexity row norms each interval's prescaled monzo — so a custom diagonal
+    # rewrites every complexity cell. With diag (1, 1, 1) (an identity-style override
+    # over 2.3.5), the comma 80/81's complexity equals its taxicab norm = 4+4+1 = 9.
+    s = settings.defaults() | {"weighting": True}
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            custom_prescaler=(1.0, 1.0, 1.0))
+    cells = {c.id: c for c in lay.cells}
+    assert cells["complexity:comma:0"].text == "9.000"
+
+
+def test_custom_prescaler_override_drives_the_weight_row():
+    # the weight row reads each target's complexity (under the live prescaler) — so a
+    # custom diagonal MUST rewrite the weights too. With diag (1, 1, 1) and the default
+    # simplicity-weight slope, every weight is 1/complexity of its target. Spot-check by
+    # comparing the override case to the scheme's: the override's weights are NOT the
+    # default's (the prescaler changed, so the complexities did too).
+    s = settings.defaults() | {"weighting": True}
+    default = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+    override = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                                  custom_prescaler=(1.0, 1.0, 1.0))
+    d_weights = [c.text for c in default.cells if c.id.startswith("weight:target:")]
+    o_weights = [c.text for c in override.cells if c.id.startswith("weight:target:")]
+    assert d_weights and o_weights and len(d_weights) == len(o_weights)
+    assert d_weights != o_weights  # the override genuinely changed the weights row
 
 
 def test_counts_on_adds_a_top_row_of_per_column_cardinalities():

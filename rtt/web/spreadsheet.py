@@ -759,6 +759,7 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell",
     "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell", "targetcell",
+    "prescalercell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel",
     "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus", "held_minus", "held_plus", "optimize",
@@ -773,7 +774,7 @@ GRIDDED_KINDS = frozenset({
 # so math_expressions' own show_value logic trims it.)
 BLANKED_NUMBER_KINDS = frozenset({
     "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell", "formcell", "heldcell",
-    "gentuningcell", "targetcell",
+    "gentuningcell", "targetcell", "prescalercell",
 })
 
 
@@ -952,7 +953,8 @@ def _bus_span(positions):
 
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
-          pending_comma=None, held_monzos=(), generator_tuning=None, target_override=None) -> Layout:
+          pending_comma=None, held_monzos=(), generator_tuning=None, target_override=None,
+          custom_prescaler=None) -> Layout:
     if settings is None:
         settings = _default_settings()
     if tuning_scheme is None:
@@ -1064,11 +1066,13 @@ def build(state, settings=None, collapsed=None,
     if generator_tuning is not None and len(generator_tuning) == len(state.mapping):
         tun = service.tuning_from_generators(state.mapping, generator_tuning, elements)
     else:
-        tun = service.tuning(state.mapping, tuning_scheme, elements, approach, held=held_ratios)
+        tun = service.tuning(state.mapping, tuning_scheme, elements, approach, held=held_ratios,
+                             prescaler_override=custom_prescaler)
     target_sizes = service.interval_sizes(tun, targets, elements)
     held_mapped = service.mapped_intervals(state.mapping, held_ratios, elements)  # M·held (gen coords)
     held_sizes = service.interval_sizes(tun, held_ratios, elements)  # tempered/just/error sizes
-    target_weights = service.interval_weights(state.mapping, tuning_scheme, targets)  # the damage row's diag(𝒘)
+    target_weights = service.interval_weights(state.mapping, tuning_scheme, targets,
+                                              prescaler_override=custom_prescaler)  # the damage row's diag(𝒘)
     comma_ratios = service.comma_ratios(state.comma_basis, elements)
     nc = len(comma_ratios)  # the real commas (those that define the temperament)
     mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
@@ -1094,16 +1098,25 @@ def build(state, settings=None, collapsed=None,
     # domain elements (each element's complexity, log₂ of it for the default log-prime
     # norm), a list over the comma / target / interest interval sets.
     complexities = {
-        "primes": service.interval_complexities(state.mapping, tuning_scheme, tuple(_ratio_str(e) for e in elements)),
-        "commas": service.interval_complexities(state.mapping, tuning_scheme, comma_ratios),
-        "targets": service.interval_complexities(state.mapping, tuning_scheme, targets),
-        "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios),
-        "held": service.interval_complexities(state.mapping, tuning_scheme, held_ratios),
-        "detempering": service.interval_complexities(state.mapping, tuning_scheme, gens),
+        "primes": service.interval_complexities(state.mapping, tuning_scheme, tuple(_ratio_str(e) for e in elements),
+                                                prescaler_override=custom_prescaler),
+        "commas": service.interval_complexities(state.mapping, tuning_scheme, comma_ratios,
+                                                prescaler_override=custom_prescaler),
+        "targets": service.interval_complexities(state.mapping, tuning_scheme, targets,
+                                                 prescaler_override=custom_prescaler),
+        "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios,
+                                                  prescaler_override=custom_prescaler),
+        "held": service.interval_complexities(state.mapping, tuning_scheme, held_ratios,
+                                              prescaler_override=custom_prescaler),
+        "detempering": service.interval_complexities(state.mapping, tuning_scheme, gens,
+                                                     prescaler_override=custom_prescaler),
     }
     # the prescaler 𝑋: a d×d diagonal matrix over the primes (diag = each prime's pre-norm
     # weight, the values the complexity map norms). log-prime by default: diag(log₂ prime).
-    prescaler = service.complexity_prescaler(state.mapping, tuning_scheme)
+    # A custom_prescaler override (the bare prescaler tile's editable diagonal) short-circuits
+    # the scheme's computed diagonal here, threading the user's typed values into every
+    # prescaling/complexity/weight/tuning calculation downstream.
+    prescaler = service.complexity_prescaler(state.mapping, tuning_scheme, override=custom_prescaler)
     interest_tiles = () if not interest else (
         ("block:vec:interest", "vectors", "interest"),
         ("block:interest", "quantities", "interest"),
@@ -2027,12 +2040,19 @@ def build(state, settings=None, collapsed=None,
                 value = prescaler[i] * vec[i]
                 cid = f"cell:prescaling:{group}:{i}:{c}"
                 cx, cy = left(c), row_y["prescaling"] + i * ROW_H
-                # math expressions adds the closed form ``coeff · {prime_term}`` where
-                # the prime_term is what the active prescaler puts on the diagonal (log,
-                # prime, or none for identity), and the coefficient is the basis vector's
-                # entry for that prime. A zero entry has no closed form (the product is
-                # 0 with nothing to factor), so it keeps the plain tval.
-                if show_math and vec[i] != 0 and i in prime_term:
+                # the bare prescaler 𝐿's diagonal (group == "primes" and i == c) is the
+                # user's editable surface: each diagonal cell is a prescalercell — the
+                # input box the user types overrides into — and so wins over the math-
+                # expression closed form (typed values, not log₂{prime}, are what reads
+                # off here). The off-diagonal of 𝐿 is pinned at 0 (𝐿 is diagonal), so it
+                # stays tval. Every other prescaling tile (LC/LD/LT/LH/...) is a product —
+                # the user can't edit its individual cells — so math_expressions still
+                # styles a non-zero coefficient with its closed form ``coeff · {prime_term}``,
+                # and a zero coefficient (no closed form) keeps the plain tval.
+                if group == "primes" and i == c:
+                    cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
+                                         text=service.prescale_text(value), prime=i, unit=u))
+                elif show_math and vec[i] != 0 and i in prime_term:
                     cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
                                          text=_prescale_math_expr(vec[i], prime_term[i], value, show_quantities), unit=u))
                 else:
