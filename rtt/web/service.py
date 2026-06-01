@@ -448,6 +448,22 @@ COMPLEXITY_NAMES = {
     "lols-E": "E-lols",
 }
 
+# Friendly display names the master-complexity dropdown shows — each pairs the full name
+# with its standard abbreviation in parens (per the D&D guide's monster table). The chooser
+# stores the short internal key (the COMPLEXITY_NAMES key) but presents these on the dropdown.
+COMPLEXITY_DISPLAYS = {
+    "copfr": "count-of-prime-factors-with-repetition (copfr)",
+    "lp": "log-product (lp)",
+    "sopfr": "sum-of-prime-factors-with-repetition (sopfr)",
+    "lils": "log-integer-limit-squared (lils)",
+    "lols": "log-odd-limit-squared (lols)",
+    "copfr-E": "Euclideanized copfr (E-copfr)",
+    "lp-E": "Euclideanized log-product (E-lp)",
+    "sopfr-E": "Euclideanized sopfr (E-sopfr)",
+    "lils-E": "Euclideanized lils (E-lils)",
+    "lols-E": "Euclideanized lols (E-lols)",
+}
+
 
 def scheme_with_prescaler(scheme, prescaler: str):
     """``scheme`` with its complexity prescaler swapped to ``prescaler`` (one of

@@ -61,6 +61,8 @@ class CellBox:
     # number -- how "quantities" off shows the bare gridded structure
     unit: str = ""  # the cell's per-value unit (e.g. "g₁/p₁"), shown small beneath the value
     # when the general `units` toggle is on -- the tile's unit with its variables indexed
+    align: str = ""  # horizontal text alignment for a caption (default centred; "left" left-justifies
+    # it under the control it labels, like the box-𝐋 "predefined prescalers" caption)
 
 
 @dataclass(frozen=True)

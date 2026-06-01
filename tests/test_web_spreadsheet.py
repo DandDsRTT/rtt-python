@@ -1464,9 +1464,12 @@ def test_alt_complexity_adds_a_predefined_complexity_chooser_to_box_c():
     assert "control:complexity" not in off  # no control unless alt. complexity is on
     ctrl = on["control:complexity"]
     assert ctrl.kind == "control_select"
-    assert ctrl.text == "lp"  # the default scheme's complexity (log-prime taxicab, Tenney)
-    # the predefined complexities + Euclidean variants, plus the inert "custom" shown off-preset
-    assert ctrl.values == tuple(service.COMPLEXITY_NAMES) + ("custom",)
+    # the dropdown shows the friendly display name for the current complexity, not the short
+    # internal key — for the default scheme (log-prime taxicab) that's "log-product (lp)"
+    assert ctrl.text == "log-product (lp)"
+    # the dropdown's options are the friendly display names (full name + abbreviation in parens),
+    # plus the inert "custom" shown when the fine controls leave the shape off-preset
+    assert ctrl.values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
     # the master chooser sits below the complexity list (box 𝒄), at the targets-column left edge
     assert ctrl.y > on["complexity:target:0"].y
     assert ctrl.x == on["header:targets"].x
@@ -1481,13 +1484,13 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
     # the predefined-complexities dropdown carries its caption beneath
     assert on["caption:complexity"].kind == "caption"
     assert on["caption:complexity"].text == "predefined complexities"
-    # the q norm-power field: a read-only tval display for now (styling pass; wiring later),
-    # showing 1 for the default taxicab scheme
-    assert on["control:q"].kind == "tval"
+    # the q norm-power field: an editable powerinput (white box) styled like the optimization
+    # power 𝑝 — the wiring (typing a new q to drive the norm) comes later. Default taxicab => 1.
+    assert on["control:q"].kind == "powerinput"
     assert on["control:q"].text == "1"
     assert on["control:q"].x > on["control:complexity"].x  # to the RIGHT of the dropdown
     assert on["control:q"].y == on["control:complexity"].y  # same row
-    assert on["symbol:q"].text == "q"
+    assert on["symbol:q"].text == "𝑞"  # math italic q, matching 𝑝 on the optimization power
     assert on["symbol:q"].y > on["control:q"].y  # symbol BELOW the value (optimization-box style)
     assert on["caption:q"].text == "interval complexity norm power"
     assert on["caption:q"].y > on["symbol:q"].y  # caption BELOW the symbol
@@ -1495,7 +1498,7 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
     assert on["control:dual"].kind == "tval"
     assert on["control:dual"].text == "∞"  # the dual of taxicab (q=1) is ∞
     assert on["control:dual"].x > on["control:q"].x
-    assert on["symbol:dual"].text == "dual(q)"
+    assert on["symbol:dual"].text == "dual(𝑞)"  # the math italic q sits inside the dual-of-q label
     assert on["caption:dual"].text == "dual norm power"
     # the dropdown's caption is BOTTOM-ALIGNED with the q/dual captions (one tidy row of labels)
     assert on["caption:complexity"].y == on["caption:q"].y == on["caption:dual"].y
@@ -1527,9 +1530,14 @@ def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdow
     cap_p = on["caption:prescaler"]
     assert cap_p.kind == "caption"
     assert cap_p.text == "predefined prescalers"
+    # the prescaler caption is ONE line and left-justified to the dropdown's left edge
+    # (overhanging the dropdown to the right rather than wrapping word-by-word)
+    assert cap_p.h == spreadsheet.CAPTION_LINE
+    assert cap_p.align == "left"
+    assert cap_p.x == on["control:prescaler"].x
     assert cap_p.y > on["control:prescaler"].y  # caption sits below the dropdown
-    # the diminuator's label is a separate caption (a narrow inline label rendered broken in
-    # the primes column at d=3, with the checkbox square jammed between "ignore" and "diminuator")
+    # the diminuator's label is a separate caption (the inline checkbox label rendered broken
+    # in the narrow primes column at d=3, with the square jammed between "ignore" and "diminuator")
     cap_d = on["caption:diminuator"]
     assert cap_d.kind == "caption"
     assert cap_d.text == "ignore diminuator"
@@ -1537,7 +1545,10 @@ def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdow
     # the diminuator checkbox rides to the RIGHT of the dropdown on the same row (no longer below)
     assert on["control:diminuator"].y == on["control:prescaler"].y
     assert on["control:diminuator"].x > on["control:prescaler"].x
-    # ...and the captions are bottom-aligned (one tidy label row, like the optimization box)
+    # ...and is horizontally CENTRED above its caption (small square over the wider caption slot)
+    assert abs((on["control:diminuator"].x + on["control:diminuator"].w / 2)
+               - (cap_d.x + cap_d.w / 2)) < 1
+    # both captions sit on the same baseline below their controls
     assert cap_p.y == cap_d.y
 
 

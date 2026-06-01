@@ -440,6 +440,11 @@ _CSS = f"""
    to lock") stay on ONE line — centred under their control, overflowing sideways if need be —
    so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
 .rtt-opt-1line {{ white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }}
+/* a left-justified caption sits flush against its left edge (the dropdown it labels), free
+   to overhang to the right on one line rather than wrapping (box 𝐋 "predefined prescalers") */
+.rtt-caption-left {{ text-align:left !important; white-space:nowrap; overflow:visible;
+                    text-wrap:nowrap; }}
+.rtt-caption-cell:has(> .rtt-caption-left) {{ align-items:flex-start; overflow:visible; }}
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
    so it reads instead of hiding under the glyph */
@@ -506,13 +511,13 @@ _CSS = f"""
 /* the preselect chooser dropdowns: a compact bordered q-select that fills its
    PRESELECT_H cell, with a thin grey rule and a small caret — like the mockup */
 .rtt-preselect {{ width:100%; }}
-.rtt-preselect .q-field__control {{ min-height:0 !important; height:20px;
+.rtt-preselect .q-field__control {{ min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 6px; }}
 .rtt-preselect .q-field__control::before, .rtt-preselect .q-field__control::after {{ display:none !important; }}
-.rtt-preselect .q-field__native, .rtt-preselect .q-field__input {{ font-size:11px; color:#000;
-            min-height:0 !important; padding:0; line-height:20px; font-family:'Cambria',Georgia,serif; }}
-.rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append {{ height:20px; min-height:0 !important; }}
-.rtt-preselect .q-icon {{ font-size:15px; color:#555; }}
+.rtt-preselect .q-field__native, .rtt-preselect .q-field__input {{ font-size:12px; color:#000;
+            min-height:0 !important; padding:0; line-height:30px; font-family:'Cambria',Georgia,serif; }}
+.rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append {{ height:30px; min-height:0 !important; }}
+.rtt-preselect .q-icon {{ font-size:16px; color:#555; }}
 .rtt-control-check {{ width:100%; height:20px; }}
 .rtt-control-check .q-checkbox__inner {{ font-size:18px; color:#555; }}  /* the box glyph size */
 .rtt-control-check .q-checkbox__label {{ font-size:11px; color:#000; padding-left:3px;
@@ -1461,11 +1466,15 @@ def index() -> None:
         editor.set_held_monzos(monzos)
         render()
 
-    def on_power_change():
-        # the editable optimization power 𝑝: ∞ / inf / max -> minimax, else a positive number
-        if building[0] or "optimization:power" not in inputs:
+    def on_power_change(cid):
+        # editable power inputs share this kind. optimization:power drives the Lp optimization
+        # power; control:q (the complexity norm power in box 𝒄) is styling-only for now, so we
+        # accept the keystroke but don't yet wire it through to the scheme.
+        if building[0] or cid not in inputs:
             return
-        raw = str(inputs["optimization:power"].value).strip().lower()
+        if cid != "optimization:power":
+            return  # control:q: white-box look, no behaviour yet (wiring later)
+        raw = str(inputs[cid].value).strip().lower()
         if raw in ("∞", "inf", "max", "minimax"):
             power = float("inf")
         else:
@@ -1573,7 +1582,10 @@ def index() -> None:
         elif cid == "control:complexity":
             if value == "custom":  # a display-only state (a shape off the preset list): no-op
                 return
-            editor.set_complexity_name(value)
+            # the dropdown presents the friendly display name ("log-product (lp)"); map it back
+            # to the internal complexity key the editor takes ("lp")
+            internal = next((k for k, v in service.COMPLEXITY_DISPLAYS.items() if v == value), value)
+            editor.set_complexity_name(internal)
         elif cid == "control:diminuator":  # the checkbox passes a bool (ignore the diminuator?)
             editor.set_diminuator_ignored(bool(value))
         render()
@@ -1676,8 +1688,12 @@ def index() -> None:
                 math_cells[cb.id] = ui.html("").classes("rtt-units")  # content set in render()
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
-                # the optimization box's captions stay on one line (no wrap), unlike tile names
+                # the optimization box's captions stay on one line (no wrap), unlike tile names.
+                # a caption with align="left" reads left-justified under its control (e.g. the
+                # box-𝐋 "predefined prescalers" label sitting under the prescaler dropdown)
                 cls = "rtt-caption rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-caption"
+                if cb.align == "left":
+                    cls += " rtt-caption-left"
                 captions[cb.id] = ui.html("").classes(cls)  # content set in render()
             elif cb.kind == "preselect":
                 name = cb.id.split(":", 1)[1]  # temperament / tuning / target
@@ -1801,11 +1817,11 @@ def index() -> None:
                 opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
             elif cb.kind == "boxtitle":  # an in-tile box title (e.g. "optimization")
                 labels[cb.id] = ui.label(cb.text).classes("rtt-boxtitle")
-            elif cb.kind == "powerinput":  # the editable optimization power (∞ / 2 / 1). The 𝑝
-                # label rides as a separate symbol cell below it (the value-over-label mockup
-                # layout), so the field itself shows only the value, in the bordered cell-input box
+            elif cb.kind == "powerinput":  # an editable cell-input number (the optimization power
+                # 𝑝, or the box-𝒄 norm power 𝑞). The symbol label rides as a separate cell
+                # below; the field itself shows only the value, in the bordered cell-input box.
                 wrap.classes("rtt-cell-input")
-                inputs[cb.id] = ui.input(on_change=lambda e: on_power_change()) \
+                inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_power_change(cid)) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
