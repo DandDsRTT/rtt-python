@@ -2571,12 +2571,12 @@ def build(state, settings=None, collapsed=None,
     matrix_frame("mapping", "primes", "primes")
     matrix_frame("canon", "primes", "canon")
     matrix_frame("canon", "gens", "form")
-    # the prescaling row uses the SAME outer-``[ ]``-plus-per-column-marks shape as the
-    # mapped-list rows below, but with an ebkbot foot (the bottom of the same ``[``) on
-    # every column instead of the generator-coord curly brace or the raw-monzo angle ⟩.
-    # The interest tile keeps the per-column marks but drops the outer ``[ ]`` (standalone
-    # columns, like the rest of the interest column). Done via monzo_list_marks + bracket
-    # below, alongside the mapping row's mapped lists (same family of shape).
+    # the prescaling row uses per-column ebktop ⌐ + ebkbrace ⌣ marks (the same asymmetric
+    # pair the mapped lists use under their generator-coord curly close), framed by outer
+    # brackets — symmetric ``[ … ]`` for the 𝐿·basis products, asymmetric ``[ … ⟩`` for the
+    # bare prescaler 𝐿 itself (square open + ket close, marking it as the prescaler matrix
+    # rather than a product). Interest stays standalone (no outer wrap). Done via
+    # monzo_list_marks + bracket below.
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is
     # marked top + bottom — inset so they stop short of the rules. The foot tells the

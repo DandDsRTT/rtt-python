@@ -759,7 +759,7 @@ def _mathexpr_html(text: str, width: float) -> str:
 # the rejected font glyph scaled its weight with its height, and a fixed viewBox
 # stretched to the cell sheared its serifs. Square/top brackets are crisp filled
 # rects; the calligraphic ⟨ and brace are filled variable-width ribbons (_ribbon).
-_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkbot", "ebkangle", "vbar"}
+_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar"}
 
 
 def _svg(w, h, body):
@@ -831,17 +831,6 @@ def _top_bracket(w, h):
         _rect(0, 0, w, _BR_BAR)
         + _rect(0, 0, _BR_SERIF_T, _BR_SERIF_L)
         + _rect(w - _BR_SERIF_T, 0, _BR_SERIF_T, _BR_SERIF_L))
-
-
-def _bot_bracket(w, h):
-    """The matrix's spanning bottom bracket: the mirror of _top_bracket — a bar across
-    the bottom with an up-foot at each end. Used by matrix tiles whose cells are NOT in
-    generator coordinates (the bare prescaler and its L·vector lists), so the } curly
-    brace would be a misleading close."""
-    return _svg(w, h,
-        _rect(0, h - _BR_BAR, w, _BR_BAR)
-        + _rect(0, h - _BR_SERIF_L, _BR_SERIF_T, _BR_SERIF_L)
-        + _rect(w - _BR_SERIF_T, h - _BR_SERIF_L, _BR_SERIF_T, _BR_SERIF_L))
 
 
 def _angle_bracket(w, h):
@@ -962,8 +951,6 @@ def _ebk_svg(cb):
             svg = _square_bracket(cb.w, cb.h, "left" if cb.text == "[" else "right")
     elif cb.kind == "ebktop":
         svg = _top_bracket(cb.w, cb.h)
-    elif cb.kind == "ebkbot":
-        svg = _bot_bracket(cb.w, cb.h)
     elif cb.kind == "ebkbrace":
         svg = _brace(cb.w, cb.h)
     elif cb.kind == "ebkangle":
