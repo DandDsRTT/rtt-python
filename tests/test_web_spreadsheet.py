@@ -1302,12 +1302,13 @@ def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
         held_monzos=((-1, 1, 0),),  # 3/2 held, so the held column appears
     )
     on = {c.id: c for c in lay.cells}
-    # bare prescaler tile: the only one with an equivalence (the equation form)
-    assert on["symbol:prescaling:primes"].text == "𝑋 = L"
-    # product tiles: just the concrete name, no "= …" — scheme-aware (L → 𝐼/𝑃 elsewhere)
-    assert on["symbol:prescaling:commas"].text == "LC"
-    assert on["symbol:prescaling:targets"].text == "LT"
-    assert on["symbol:prescaling:held"].text == "LH"
+    # bare prescaler tile: the only one with an equivalence (the equation form). All
+    # prescaler letters are math italic — 𝐿 (log-prime) joins 𝑃 / 𝐼 / 𝑋 / 𝑀 in that family
+    assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
+    # product tiles: just the concrete name, no "= …" — scheme-aware (𝐿 → 𝐼/𝑃 elsewhere)
+    assert on["symbol:prescaling:commas"].text == "𝐿C"
+    assert on["symbol:prescaling:targets"].text == "𝐿T"
+    assert on["symbol:prescaling:held"].text == "𝐿H"
 
 
 def test_prescaling_product_symbols_follow_the_active_prescaler():
