@@ -53,8 +53,9 @@ LBOX_W = LBOX_DROP_W + 8 + LBOX_DIM_W  # the box-𝐋 controls' total footprint 
 CBOX_DROP_W = 170   # the predefined-complexities dropdown (inverted display names "lp (log-product)" …)
 CBOX_SLOT_W = 60    # the q / dual(q) symbol/caption slots (the value cell is COL_W centred within)
 CBOX_W = CBOX_DROP_W + 8 + CBOX_SLOT_W + 8 + CBOX_SLOT_W  # the box-𝒄 controls' total footprint
-CHECK_H = 40        # the diminuator checkbox cell height — matches the CSS font-size that draws
-# the square, so the bg square seats inside the cell without clipping
+CHECK_SQUARE = 18   # the rendered checkbox square's px footprint: the .rtt-control-check q-checkbox
+# draws an 18px bg square (a 20px inner at its 40px font-size). The diminuator cell is sized to this
+# so the square centres on the prescaler dropdown's row and its caption hugs the square's own bottom
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 TARGET_PRESELECT_W = 144  # wider: the target chooser seats a 30px gridded limit square + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
@@ -1375,11 +1376,11 @@ def build(state, settings=None, collapsed=None,
     # its choosers' height up front so the rows below drop clear.
     lbox_ctrl = _lbox_show and col_open("primes")
     # box 𝐋 lays its two controls on ONE row (dropdown left, checkbox square right) with a
-    # one-line caption under each: the prescaler's left-justified (and free to overhang to
-    # the right), the diminuator's centred under its checkbox. The checkbox cell is taller
-    # than a gridded value cell — its square is sized for visibility (~CHECK_H per the
-    # mockup), so the row reserves max(PRESELECT_H, CHECK_H) before the caption line.
-    lbox_extra = (RANGE_GAP + max(PRESELECT_H, CHECK_H) + CAPTION_LINE) if lbox_ctrl else 0
+    # one-line caption under each: the prescaler's left-justified (and free to overhang to the
+    # right), the diminuator's centred under its checkbox. The checkbox square is shorter than the
+    # dropdown and rides centred on its row, so the dropdown's own stack (PRESELECT_H + caption) is
+    # the deeper of the two and sets the reserve — the same shape as slope_extra below.
+    lbox_extra = (RANGE_GAP + PRESELECT_H + CAPTION_LINE) if lbox_ctrl else 0
     # box 𝒄 lays its three controls in ONE row below the complexity list: the predefined-
     # complexity master dropdown on the left, then the q norm-power field and the dual(q)
     # display, each captioned (q/dual using the optimization box's value-symbol-caption stack).
@@ -2038,19 +2039,21 @@ def build(state, settings=None, collapsed=None,
                     cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
                                          text=service.prescale_text(value), unit=u))
     if lbox_ctrl:  # box 𝐋's controls sit on one row at the bottom of the prescaling matrix:
-        # the prescaler dropdown on the left (LBOX_DROP_W wide, fixed), the "ignore diminuator"
-        # checkbox SQUARE on the right (no inline label — it wraps broken in the narrow primes
-        # column). The diminuator's CELL spans LBOX_DIM_W and the checkbox square renders
-        # CSS-centred within it. EACH caption HUGS its own control's bottom: the prescaler's
-        # under the dropdown (at PRESELECT_H), the diminuator's under the checkbox (at CHECK_H)
-        # — so the labels read with their controls rather than floating at a row-bottom seam.
+        # the prescaler dropdown on the left (LBOX_DROP_W wide, PRESELECT_H tall), the "ignore
+        # diminuator" checkbox SQUARE on the right (no inline label — it wraps broken in the narrow
+        # primes column). The diminuator's CELL is sized to the rendered square (CHECK_SQUARE) and
+        # rides vertically CENTRED on the dropdown's row, so the square aligns with the dropdown's
+        # middle rather than sagging below it. EACH caption HUGS its own control's bottom: the
+        # prescaler's under the dropdown (at PRESELECT_H), the diminuator's right under the square —
+        # which, being shorter than the dropdown, sits HIGHER than the prescaler's caption.
         # The column was widened up front (by _control_floor) to LBOX_W so nothing overhangs.
         py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
         dim_slot_x = col_x["primes"] + LBOX_DROP_W + OPT_COL_GAP
+        check_y = py + (PRESELECT_H - CHECK_SQUARE) / 2  # centre the square on the dropdown's row
         cells.append(CellBox("control:prescaler", col_x["primes"], py, LBOX_DROP_W, PRESELECT_H,
                              "control_select", text=service.prescaler_of(tuning_scheme),
                              values=tuple(service.PRESCALERS)))
-        cells.append(CellBox("control:diminuator", dim_slot_x, py, LBOX_DIM_W, CHECK_H,
+        cells.append(CellBox("control:diminuator", dim_slot_x, check_y, LBOX_DIM_W, CHECK_SQUARE,
                              "control_check", text="",  # square only; label moves to a caption below
                              checked=service.diminuator_ignored(tuning_scheme)))
         # the prescaler's caption is one line, left-justified to the dropdown's edge,
@@ -2058,7 +2061,7 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox("caption:prescaler", col_x["primes"], py + PRESELECT_H,
                              col_w["primes"], CAPTION_LINE, "caption",
                              text="predefined prescalers", align="left"))
-        cells.append(CellBox("caption:diminuator", dim_slot_x, py + CHECK_H, LBOX_DIM_W,
+        cells.append(CellBox("caption:diminuator", dim_slot_x, check_y + CHECK_SQUARE, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="ignore diminuator"))
     if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
         # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q

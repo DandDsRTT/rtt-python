@@ -1654,21 +1654,23 @@ def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdow
     assert cap_p.align == "left"
     assert cap_p.x == on["control:prescaler"].x
     assert cap_p.y == on["control:prescaler"].y + on["control:prescaler"].h
-    # the diminuator caption HUGS the checkbox's bottom (the inline label rendered broken in
-    # the narrow primes column at d=3, with the square jammed between "ignore" and "diminuator")
+    # the diminuator caption HUGS the checkbox square's bottom: the cell is sized to the rendered
+    # square (CHECK_SQUARE), so its bottom IS the square's bottom and the caption sits right under it
     cap_d = on["caption:diminuator"]
     assert cap_d.kind == "caption"
     assert cap_d.text == "ignore diminuator"
     assert cap_d.y == on["control:diminuator"].y + on["control:diminuator"].h
-    # the diminuator checkbox rides to the RIGHT of the dropdown on the same row (no longer below)
-    assert on["control:diminuator"].y == on["control:prescaler"].y
-    assert on["control:diminuator"].x > on["control:prescaler"].x
+    dim, drop = on["control:diminuator"], on["control:prescaler"]
+    # the diminuator checkbox rides to the RIGHT of the dropdown, vertically CENTRED on its row
+    # (the small square aligns with the dropdown's middle rather than sagging below it)
+    assert dim.x > drop.x
+    assert dim.y + dim.h / 2 == drop.y + drop.h / 2  # their vertical centres coincide
     # ...and is horizontally CENTRED above its caption (small square over the wider caption slot)
-    assert abs((on["control:diminuator"].x + on["control:diminuator"].w / 2)
-               - (cap_d.x + cap_d.w / 2)) < 1
-    # the captions live at different y's (each hugs its own control), since the checkbox is
-    # taller than the dropdown — the dropdown's label sits HIGHER than the checkbox's
-    assert cap_p.y < cap_d.y
+    assert abs((dim.x + dim.w / 2) - (cap_d.x + cap_d.w / 2)) < 1
+    # the square is SHORTER than the dropdown, so — centred on the row — its bottom (and thus its
+    # bottom-hugging caption) sits HIGHER than the dropdown's own bottom-hugging caption
+    assert dim.h < drop.h
+    assert cap_d.y < cap_p.y
 
 
 def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
