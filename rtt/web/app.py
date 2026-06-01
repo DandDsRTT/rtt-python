@@ -526,14 +526,20 @@ _CSS = f"""
 /* Universal checkbox look — every q-checkbox in the app (settings panel, the box-𝐋
    diminuator, anywhere else) renders as a plain white square with a thin dark border, no
    rounded corners, and an INNER filled square when checked (square-radio-dot style,
-   matching the tuning-ranges options). The Material checkmark is hidden and replaced. */
+   matching the tuning-ranges options). The Material checkmark SVG is hidden and replaced
+   by an ::after pseudo-element painted black when the inner is truthy. */
 .q-checkbox__bg {{ background:#fff !important; border:1px solid #555 !important;
             border-radius:0 !important; opacity:1 !important; }}
-.q-checkbox__bg::before, .q-checkbox__bg::after {{ background:transparent !important;
-            border-radius:0 !important; }}
+.q-checkbox__bg::before {{ background:transparent !important; border-radius:0 !important; }}
 .q-checkbox__svg {{ display:none !important; }}
-.q-checkbox__inner--truthy .q-checkbox__bg::after {{ content:""; display:block !important;
-            position:absolute; inset:2px; background:#000; }}
+/* checked: ::after fills the box's interior in black. Two selectors (Quasar's truthy class
+   + the standard aria-checked attribute) so the rule fires regardless of which Quasar
+   version is in play. !important on every property is required because Quasar's stylesheets
+   set background:transparent !important on .q-checkbox__bg::after otherwise. */
+.q-checkbox__inner--truthy .q-checkbox__bg::after,
+.q-checkbox[aria-checked="true"] .q-checkbox__bg::after {{
+            content:"" !important; display:block !important; position:absolute !important;
+            inset:2px !important; background:#000 !important; border-radius:0 !important; }}
 /* each chooser's dropdown popup matches the field's Cambria text, with compact items */
 .rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
 /* compact items; a long name (e.g. a systematic tuning) wraps within the field
@@ -558,9 +564,10 @@ _CSS = f"""
 .rtt-preselect-num .q-field__native::-webkit-inner-spin-button {{ -webkit-appearance:none; margin:0; }}
 .rtt-preselect-num .q-field__marginal, .rtt-preselect-num .q-field__append {{ display:none !important; }}
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
-   side by side (filled = selected), per the mockup, with small Cambria labels */
-.rtt-rangemode {{ width:100%; display:flex; flex-direction:row; align-items:center;
-                  justify-content:center; gap:4px; line-height:1; overflow:hidden; }}
+   stacked vertically (filled = selected), per the mockup, with small Cambria labels.
+   Vertical stack because the bumped 16px boxes don't fit side by side under the chart. */
+.rtt-rangemode {{ width:100%; display:flex; flex-direction:column; align-items:center;
+                  justify-content:center; gap:3px; line-height:1; overflow:hidden; }}
 .rtt-rangeopt {{ display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }}
 .rtt-rangebox {{ width:16px; height:16px; flex:none; border:1px solid #555; background:#fff;
                 box-sizing:border-box; position:relative; }}

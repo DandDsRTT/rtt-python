@@ -78,7 +78,8 @@ UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when 
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
 RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
-RANGE_MODE_H = 13  # height of the monotone/tradeoff range-mode selector (one row of square indicators) below the chart
+RANGE_MODE_H = 36  # height of the monotone/tradeoff range-mode selector — two rows of square
+# indicators STACKED below the chart (since the bumped 16px boxes don't fit side by side)
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
 OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
@@ -2028,7 +2029,7 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox("control:complexity", col_x["targets"], cy, drop_w, PRESELECT_H,
                              "control_select", text=complexity_text, values=complexity_values))
         cells.append(CellBox("caption:complexity", col_x["targets"], cy + PRESELECT_H, drop_w,
-                             CAPTION_LINE, "caption", text="predefined complexities"))
+                             CAPTION_LINE, "caption", text="predefined complexities", align="left"))
         # the q norm-power field: an editable white box (a powerinput) styled to match the
         # optimization box's 𝑝 field; wiring (typing a new q to drive the norm) comes later.
         # The slot is wider than the value cell, with the value centred so the italic symbol
@@ -2064,7 +2065,8 @@ def build(state, settings=None, collapsed=None,
                              "control_select", text=service.weight_slope_of(tuning_scheme),
                              values=tuple(service.WEIGHT_SLOPES)))
         cells.append(CellBox("caption:slope", col_x["targets"], py + PRESELECT_H,
-                             col_w["targets"], CAPTION_LINE, "caption", text="damage weight slope"))
+                             col_w["targets"], CAPTION_LINE, "caption",
+                             text="damage weight slope", align="left"))
     if row_open("damage"):  # damage is over the targets only (the tuning's own column)
         tval_row("damage", "targets", target_sizes.damage)
         # optimization adds the horizontal minimized-damage indicator (the objective ⟪𝐝⟫ₚ
