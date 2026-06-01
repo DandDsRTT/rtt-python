@@ -567,14 +567,14 @@ _CSS = f"""
 .rtt-select-popup .q-item--active {{ color:#000 !important; background:#ededed; }}
 .rtt-select-popup .q-focus-helper {{ background:#000 !important; }}
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
-.rtt-preselect-target {{ width:100%; height:20px; display:flex; gap:3px; align-items:center; }}
-.rtt-preselect-target .rtt-preselect-num {{ flex:0 0 20px; }}  /* square: matches the 20px height */
+.rtt-preselect-target {{ width:100%; height:30px; display:flex; gap:3px; align-items:center; }}
+.rtt-preselect-target .rtt-preselect-num {{ flex:0 0 30px; }}  /* a gridded value square (COL_W x ROW_H) */
 .rtt-preselect-target .rtt-preselect {{ flex:1 1 auto; width:auto; }}
-.rtt-preselect-num .q-field__control {{ min-height:0 !important; height:20px;
+.rtt-preselect-num .q-field__control {{ min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }}
 .rtt-preselect-num .q-field__control::before, .rtt-preselect-num .q-field__control::after {{ display:none !important; }}
-.rtt-preselect-num .q-field__native {{ font-size:11px; color:#000; min-height:0 !important; padding:0;
-            line-height:20px; text-align:center; font-family:'Cambria',Georgia,serif; }}
+.rtt-preselect-num .q-field__native {{ font-size:{_CELL_FONT}px; color:#000; min-height:0 !important; padding:0;
+            line-height:30px; text-align:center; font-family:'Cambria',Georgia,serif; }}
 .rtt-preselect-num .q-field__native::-webkit-inner-spin-button {{ -webkit-appearance:none; margin:0; }}
 .rtt-preselect-num .q-field__marginal, .rtt-preselect-num .q-field__append {{ display:none !important; }}
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
@@ -1763,7 +1763,7 @@ def index() -> None:
                         sel = ui.select(list(presets.TARGET_SETS), value=editor.target_family,
                                 on_change=lambda e: on_target_change()) \
                             .props("dense options-dense borderless hide-bottom-space popup-content-class=rtt-select-popup "
-                                   f"popup-content-style=width:{cb.w - 23}px").classes("rtt-preselect")  # field = cell − square − gap
+                                   f"popup-content-style=width:{cb.w - 33}px").classes("rtt-preselect")  # field = cell − 30px square − 3px gap
                     selects[cb.id] = (num, sel)
                 elif name == "temperament":
                     # a normal dropdown: the chosen preset shows in the box; the ""

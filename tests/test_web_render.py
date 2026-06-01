@@ -134,6 +134,15 @@ async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
     assert _cell_text(user, "cell:mapped:1:6") == "4"  # back to meantone's mapped list
 
 
+async def test_target_chooser_renders_in_the_expanded_target_interval_list(user: User) -> None:
+    # the target chooser moved into the target interval list (the interval-vectors row,
+    # folded by default); expanding that row renders its numeric-limit + TILT/OLD select
+    # (the one preselect branch the default view never reaches now)
+    await _enable(user, "preselects")
+    user.find(marker="toggle:row:vectors").click()
+    await user.should_see(marker="preselect:target")
+
+
 async def test_optimization_renders_the_optimize_button(user: User) -> None:
     # the optimize button renders in the damage tile when optimization is on (its single/
     # double-click optimize+lock behaviour is covered by the editor tests). The fixture

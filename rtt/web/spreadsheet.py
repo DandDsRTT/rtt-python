@@ -56,7 +56,7 @@ CBOX_W = CBOX_DROP_W + 8 + CBOX_SLOT_W + 8 + CBOX_SLOT_W  # the box-𝒄 control
 CHECK_H = 40        # the diminuator checkbox cell height — matches the CSS font-size that draws
 # the square, so the bg square seats inside the cell without clipping
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
-TARGET_PRESELECT_W = 132  # wider: the target chooser seats a square limit field + the family select
+TARGET_PRESELECT_W = 144  # wider: the target chooser seats a 30px gridded limit square + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
 # always fits on ONE line within its column (a long tuning row just gets smaller text)
 PTEXT_H = 13  # px height of a one-line read-only plain-text value
