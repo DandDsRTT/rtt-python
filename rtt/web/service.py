@@ -713,12 +713,13 @@ def plain_text_values(
         ("retune", "detempering"): _cents_list(detemper_sizes.errors),
         ("retune", "targets"): _cents_list(target_sizes.errors),
         ("damage", "targets"): _cents_list(target_sizes.damage),
-        # the bare prescaler 𝐿 is the asymmetric exception of the prescaling row: its
-        # per-column close is ⟨ … ] (angle open + square close) and its outer wrap is
-        # [ … ⟩ (square open + ket close). Every 𝐿·basis product (𝐿C/𝐿D/𝐿H/𝐿T) is
-        # symmetric the other way — per-column [ … ⟩ inside outer [ … ] — so the bare
-        # prescaler reads as the matrix itself rather than a product with another basis.
-        ("prescaling", "primes"): _prescale_vector_list(_prescaled(prime_units), outer="[⟩"),
+        # the bare prescaler 𝐿 is the asymmetric exception of the prescaling row: it reads
+        # as a covector stack like the mapping — per-row ⟨ … ] (angle open + square close)
+        # inside outer [ … ⟩ (square open + ket close). Every 𝐿·basis product (𝐿C/𝐿D/𝐿H/𝐿T)
+        # is instead a matrix of prescaled VECTORS — per-column ket [ … ⟩ inside symmetric
+        # outer [ … ] — so the bare prescaler reads as the matrix itself rather than a
+        # product with another basis.
+        ("prescaling", "primes"): _prescale_vector_list(_prescaled(prime_units), col="⟨]", outer="[⟩"),
         ("prescaling", "commas"): _prescale_vector_list(_prescaled(state.comma_basis)),
         ("prescaling", "detempering"): _prescale_vector_list(_prescaled(detemper_monzos)),
         ("prescaling", "targets"): _prescale_vector_list(_prescaled(target_monzos)),
@@ -772,16 +773,17 @@ def _ket_list(vectors, close: str, wrap: bool = True) -> str:
     return f"[{kets}]" if wrap else kets
 
 
-def _prescale_vector_list(vectors, col: str = "⟨]", outer: str = "[]") -> str:
+def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]") -> str:
     """A list of complexity-prescaler matrix columns — for the weighting prescaling matrices
-    (the prescaled vectors 𝐿·v). Every prescaling tile shares the same per-vector bracket
-    pair ``⟨ … ]`` (angle open + square close), the same shape the mapping uses for each
-    of its rows; only the OUTER wrap differs by tile family:
+    (the prescaled vectors 𝐿·v). A 𝐿·basis product is a matrix of prescaled VECTORS, so each
+    column is a ket ``[ … ⟩`` (square open + angle close — the default ``col``); the OUTER
+    wrap then differs by tile family:
 
-      * Bare prescaler 𝐿 — ``outer="[⟩"`` (square open + ket close — the asymmetric exception,
-        mirroring the mapping's ``[ … }`` but with the angle ⟩ instead of the curly }).
-      * 𝐿·basis products  — ``outer="[]"`` (default, symmetric square).
-      * Interest tile     — ``outer=""``  (standalone columns, no wrap).
+      * 𝐿·basis products  — ``col="[⟩"``, ``outer="[]"`` (kets inside a symmetric square).
+      * Interest tile     — ``col="[⟩"``, ``outer=""``  (standalone kets, no wrap).
+      * Bare prescaler 𝐿  — ``col="⟨]"``, ``outer="[⟩"`` (the asymmetric exception: it reads
+        as a covector stack like the mapping — per-row ⟨ … ] inside outer [ … ⟩, mirroring
+        the mapping's ``[ … }`` but with the angle ⟩ instead of the curly }).
 
     Each value is formatted with prescale_text, so the string shows exactly the grid's
     numbers (whole numbers bare, else 3-dp) rather than a denser all-3-dp form."""

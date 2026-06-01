@@ -2710,17 +2710,15 @@ def build(state, settings=None, collapsed=None,
     # (ebkangle) at the bottom-span instead of the curly } (ebkbrace).
     matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle")
     # the 𝐿·basis product matrices (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile use a
-    # COLUMN-WISE construction instead — per-column ⟨ … ] marks with outer ``[ … ]``
+    # COLUMN-WISE construction instead — per-column ket ``[ … ⟩`` marks with outer ``[ … ]``
     # left/right brackets (or no outer wrap for interest). See the monzo_list_marks +
     # bracket calls further below.
 
     # a matrix of monzo columns: vertical rules separate the columns, and each is
     # marked top + bottom — inset so they stop short of the rules. ``top`` and ``foot``
     # pick the per-column shapes: a tempered/mapped column (generator coords) takes the
-    # default ``[ ... }`` (ebktop + ebkbrace curly close); a raw (untempered) monzo is a
-    # ket and closes with the angle ⟩ (ebkangle); the bare prescaler 𝐿's columns flip
-    # this asymmetry the OTHER way — angle open at top (ebkbra) + square close at bottom
-    # (ebkbot) — so they read ``⟨ ... ]`` instead of ``[ ... ⟩``.
+    # default ``[ ... }`` (ebktop + ebkbrace curly close); a raw (untempered) monzo or a
+    # prescaled vector is a ket, closing with the angle ⟩ (ebkangle) instead — ``[ ... ⟩``.
     # ``separators=False`` drops the dividing rules: for a bordered grid (the comma
     # basis — its own cell borders already divide the columns) or for the standalone
     # columns of the intervals-of-interest collection (which isn't a matrix at all).
@@ -2755,26 +2753,21 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
     monzo_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
     monzo_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
-    # the prescaling row's per-column marks read off as the same EBK its plain-text uses:
+    # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
+    # Every 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile is a matrix of prescaled
+    # VECTORS, so each column is a ket ``[ … ⟩`` — top = ebktop (square open ⌐), foot =
+    # ebkangle (angle/ket foot ∨) — the default monzo_list_marks shape (no overrides). The
+    # bare prescaler 𝐿 is the exception: it has NO per-column marks (its EBK is mapping-
+    # style — see the matrix_frame + per-row ⟨ … ] bracket calls above).
     #
-    #   * Bare prescaler 𝐿 — columns ``⟨ … ]`` (angle open + square close):
-    #       top = ebkbra (angle/bra head ∧),  foot = ebkbot (square close ⌐ flipped)
-    #   * 𝐿·basis products — columns ``[ … ⟩`` (square open + ket close):
-    #       top = ebktop (square open ⌐),     foot = ebkangle (angle/ket foot ∨)
-    #   * Interest tile — same as products (its standalone columns also read [ … ⟩).
-    #
-    # Separators between columns are drawn for 𝐿T and 𝐿H per the mockup; the bare 𝐿 and
-    # 𝐿C / 𝐿D tiles keep their columns spaced without dividing rules. Interest stays
-    # standalone (no outer wrap, no separators).
-    # the bare prescaler 𝐿 has NO per-column marks (its EBK is mapping-style — see the
-    # matrix_frame + per-row bracket calls above). Every OTHER prescaling tile is column-wise:
-    # per-column ``⟨ … ]`` marks (top = ebkbra, foot = ebkbot) inside outer ``[ … ]``
-    # brackets (or no outer wrap for the standalone interest tile).
-    monzo_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, top="ebkbra", foot="ebkbot", separators=False)
-    monzo_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, top="ebkbra", foot="ebkbot", separators=False)
-    monzo_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, top="ebkbra", foot="ebkbot", separators=True)
-    monzo_list_marks("prescaling", "prescaling:held", "held", held_left, nh, top="ebkbra", foot="ebkbot", separators=True)
-    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, top="ebkbra", foot="ebkbot", separators=False)
+    # Separators between columns are drawn for 𝐿T and 𝐿H per the mockup; the 𝐿C / 𝐿D tiles
+    # keep their columns spaced without dividing rules. Interest stays standalone (no outer
+    # wrap, no separators).
+    monzo_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkangle", separators=False)
+    monzo_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkangle", separators=False)
+    monzo_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkangle", separators=True)
+    monzo_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkangle", separators=True)
+    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the

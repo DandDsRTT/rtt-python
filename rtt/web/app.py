@@ -793,7 +793,7 @@ def _mathexpr_html(text: str, width: float) -> str:
 # the rejected font glyph scaled its weight with its height, and a fixed viewBox
 # stretched to the cell sheared its serifs. Square/top brackets are crisp filled
 # rects; the calligraphic ⟨ and brace are filled variable-width ribbons (_ribbon).
-_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbot", "ebkbrace", "ebkangle", "ebkbra", "vbar"}
+_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar"}
 
 
 def _svg(w, h, body):
@@ -968,34 +968,6 @@ def _angle_foot(w, h):
     return _svg(w, h, _ribbon(pts))
 
 
-def _angle_head(w, h):
-    """The bra's ``⟨`` turned a quarter-turn to open a column from above: a shallow
-    upward chevron from the bottom corners to a centre vertex, the mirror of
-    :func:`_angle_foot`. Used for columns that read ``⟨ … ]`` (angle open + square
-    close) — the bare prescaler 𝐿's per-column marks, distinguishing it from the
-    𝐿·basis products (whose columns read ``[ … ⟩`` — square open + angle close)."""
-    cx = w / 2
-    # mirror of _angle_foot: vertex sits a thick-half-width-plus-margin DOWN from the top
-    by, vy = h - 0.85, 0.5 + _BR_ANGLE_THICK
-    left, vertex, right = (0.8, by), (cx, vy), (w - 0.8, by)
-    n = 8
-    pts = [(left[0] + (vertex[0] - left[0]) * i / n, left[1] + (vertex[1] - left[1]) * i / n,
-            _BR_ANGLE_THIN + (_BR_ANGLE_THICK - _BR_ANGLE_THIN) * i / n) for i in range(n + 1)]
-    pts += [(vertex[0] + (right[0] - vertex[0]) * i / n, vertex[1] + (right[1] - vertex[1]) * i / n,
-             _BR_ANGLE_THICK + (_BR_ANGLE_THIN - _BR_ANGLE_THICK) * i / n) for i in range(1, n + 1)]
-    return _svg(w, h, _ribbon(pts))
-
-
-def _bot_bracket(w, h):
-    """The mirror of :func:`_top_bracket` — a bar across the bottom with an up-foot at
-    each end. Used as the per-column close ``]`` (square bottom) on the bare prescaler 𝐿
-    tile, whose columns read ``⟨ … ]`` (angle open + square close)."""
-    return _svg(w, h,
-        _rect(0, h - _BR_BAR, w, _BR_BAR)
-        + _rect(0, h - _BR_SERIF_L, _BR_SERIF_T, _BR_SERIF_L)
-        + _rect(w - _BR_SERIF_T, h - _BR_SERIF_L, _BR_SERIF_T, _BR_SERIF_L))
-
-
 def _vbar(w, h):
     """A vertical rule between the mapped list's monzo columns, the bar's weight."""
     return _svg(w, h, _rect((w - _BR_BAR) / 2, 0, _BR_BAR, h))
@@ -1013,14 +985,10 @@ def _ebk_svg(cb):
             svg = _square_bracket(cb.w, cb.h, "left" if cb.text == "[" else "right")
     elif cb.kind == "ebktop":
         svg = _top_bracket(cb.w, cb.h)
-    elif cb.kind == "ebkbot":
-        svg = _bot_bracket(cb.w, cb.h)
     elif cb.kind == "ebkbrace":
         svg = _brace(cb.w, cb.h)
     elif cb.kind == "ebkangle":
         svg = _angle_foot(cb.w, cb.h)
-    elif cb.kind == "ebkbra":
-        svg = _angle_head(cb.w, cb.h)
     else:
         svg = _vbar(cb.w, cb.h)  # "vbar"
     return svg.replace(_BR_COLOR, _PENDING_COLOR) if cb.pending else svg

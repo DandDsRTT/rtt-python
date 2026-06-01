@@ -1291,14 +1291,13 @@ def test_complexity_over_primes_is_a_map_the_rest_are_lists():
     assert cells["bracket:complexity:list:l"].text == "[" and cells["bracket:complexity:list:r"].text == "]"
     # ...but the interest complexity drops its bracket — the whole interest column is bare
     assert not any(c.startswith("bracket:complexity:ilist") for c in cells)
-    # the interest prescaling stands alone too — per-column ⟨ … ] marks (ebkbra ∧ at top +
-    # ebkbot ⌐-flipped at bottom), no outer ``[ … ]`` wrap, like the other interest-row
+    # the interest prescaling stands alone too — per-column ket ``[ … ⟩`` marks (ebktop ⌐
+    # at top + ebkangle ∨ at bottom), no outer ``[ … ]`` wrap, like the other interest-row
     # standalone-columns shapes. The comma/target/held prescaling tiles get the same
     # per-column marks plus an outer bracket frame (see
     # test_prescaling_matrices_have_outer_brackets_and_per_column_marks).
-    assert {"ebkbra:prescaling:interest:0", "ebkbot:prescaling:interest:0"} <= set(cells)
-    assert "ebkangle:prescaling:interest:0" not in cells  # NOT an angle close
-    assert "ebkbrace:prescaling:interest:0" not in cells  # NOT a curly close
+    assert {"ebktop:prescaling:interest:0", "ebkangle:prescaling:interest:0"} <= set(cells)
+    assert "ebkbrace:prescaling:interest:0" not in cells  # NOT a curly close — the ket's angle foot ⟩
     assert "bracket:prescaling:interest:l" not in cells  # standalone, no outer wrap
 
 
@@ -1422,26 +1421,26 @@ def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors():
         assert cell.text == _t(pre[i] * comp)
         assert cell.kind == "tval"
     # the comma + target prescaling tiles exist with panels, and their EBK is per-column
-    # ⟨ … ] (ebkbra:…:{c} + ebkbot:…:{c}) inside outer left/right ``[ … ]`` brackets (see
-    # test_prescaling_matrices_have_outer_brackets_and_per_column_marks for the outer
-    # frame).
+    # ket ``[ … ⟩`` (ebktop:…:{c} + ebkangle:…:{c}) inside outer left/right ``[ … ]``
+    # brackets (see test_prescaling_matrices_have_outer_brackets_and_per_column_marks for
+    # the outer frame).
     assert {"block:prescaling:commas", "block:prescaling:targets"} <= blocks
-    assert {"ebkbra:prescaling:commas:0", "ebkbot:prescaling:commas:0",
-            "ebkbra:prescaling:targets:0", "ebkbot:prescaling:targets:0"} <= set(on)
+    assert {"ebktop:prescaling:commas:0", "ebkangle:prescaling:commas:0",
+            "ebktop:prescaling:targets:0", "ebkangle:prescaling:targets:0"} <= set(on)
     assert "cell:prescaling:targets:0:0" in on  # the target column is populated too
 
 
 def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
     # the plain-text value and the gridded cells are two views of ONE matrix, so the
     # string must read off the SAME numbers the grid shows — bare whole numbers and all
-    # (the prescaler diagonal is mostly 0 and 1), never padded to "0.000"/"1.000". Every
-    # prescaling tile uses ``⟨ … ]`` per vector (the same shape the mapping uses per row);
-    # only the outer wrap differs by tile family. The bare prescaler 𝐿 wraps with the
-    # asymmetric ``[ … ⟩`` (mirroring the mapping's ``[ … }`` but with the angle ⟩
-    # instead of the curly }); every 𝐿·basis product (𝐿C / 𝐿T / 𝐿H) wraps with the
-    # symmetric ``[ … ]``.
+    # (the prescaler diagonal is mostly 0 and 1), never padded to "0.000"/"1.000". The bare
+    # prescaler 𝐿 is a covector stack — per-row ``⟨ … ]`` inside the asymmetric outer
+    # ``[ … ⟩`` (mirroring the mapping's ``[ … }`` but with the angle ⟩ instead of the curly
+    # }). Every 𝐿·basis product (𝐿C / 𝐿T / 𝐿H) is a matrix of prescaled VECTORS — per-column
+    # ket ``[ … ⟩`` inside the symmetric outer ``[ … ]``.
     import re
     cells = {c.id: c for c in _with(plain_text_values=True, weighting=True).cells}
+    vecbr = {"primes": "⟨]", "commas": "[⟩", "targets": "[⟩"}  # per-vector bracket pair
     outer = {"primes": "[⟩", "commas": "[]", "targets": "[]"}
     for group in ("primes", "commas", "targets"):
         coords = [re.fullmatch(rf"cell:prescaling:{group}:(\d+):(\d+)", cid)
@@ -1449,8 +1448,9 @@ def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
         coords = [(int(m.group(2)), int(m.group(1))) for m in coords if m]  # (col, row)
         ncols = max(c for c, _ in coords) + 1
         d = max(r for _, r in coords) + 1
-        vecs = ["⟨" + " ".join(cells[f"cell:prescaling:{group}:{i}:{c}"].text
-                               for i in range(d)) + "]"
+        vo, vc = vecbr[group]
+        vecs = [vo + " ".join(cells[f"cell:prescaling:{group}:{i}:{c}"].text
+                              for i in range(d)) + vc
                 for c in range(ncols)]
         op, cl = outer[group]
         assert cells[f"ptext:prescaling:{group}"].text == f"{op}{' '.join(vecs)}{cl}", group
@@ -1512,9 +1512,9 @@ def test_prescaling_matrices_have_outer_brackets_and_per_column_marks():
     # per-row bracket pattern the mapping does, just with the angle ⟩ (ebkangle) at the
     # bottom-span instead of the curly } (ebkbrace).
     #
-    # The 𝐿·basis product matrices (𝐿C / 𝐿D / 𝐿T / 𝐿H) are column-wise: per-column
-    # ``⟨ … ]`` marks (top = ebkbra ∧, foot = ebkbot — square close on the bottom of
-    # the column) inside outer ``[ … ]`` left/right brackets.
+    # The 𝐿·basis product matrices (𝐿C / 𝐿D / 𝐿T / 𝐿H) are column-wise: per-column ket
+    # ``[ … ⟩`` marks (top = ebktop ⌐ square open, foot = ebkangle ∨ angle close on the
+    # bottom of the column) inside outer ``[ … ]`` left/right brackets.
     on = {c.id: c for c in _with(weighting=True).cells}
     # bare 𝐿: mapping-style — ebktop + ebkangle spanning the matrix top/bottom, MAP_BRACKETS
     # ⟨ … ] per row, and NO outer left/right brackets (the spans replace them)
@@ -1525,14 +1525,12 @@ def test_prescaling_matrices_have_outer_brackets_and_per_column_marks():
     assert "bracket:prescaling:l" not in on  # no outer left/right — matrix_frame spans top/bot
     assert "bracket:prescaling:r" not in on
     assert "ebkbrace:prescaling" not in on  # NOT a curly close at bottom — angle close ⟩
-    # product tiles: symmetric outer left/right [ ], per-column marks are angle-top + square-bot
+    # product tiles: symmetric outer left/right [ ], per-column ket marks — square top + angle foot
     for bid in ("prescaling:commas", "prescaling:targets"):
         assert on[f"bracket:{bid}:l"].text == "[" and on[f"bracket:{bid}:r"].text == "]"
-        assert on[f"ebkbra:{bid}:0"].kind == "ebkbra"
-        assert on[f"ebkbot:{bid}:0"].kind == "ebkbot"
-        assert f"ebktop:{bid}:0" not in on  # NOT a square top — angle (bra) top
-        assert f"ebkangle:{bid}:0" not in on
-        assert f"ebkbrace:{bid}:0" not in on
+        assert on[f"ebktop:{bid}:0"].kind == "ebktop"
+        assert on[f"ebkangle:{bid}:0"].kind == "ebkangle"
+        assert f"ebkbrace:{bid}:0" not in on  # NOT a curly close — the ket's angle foot ⟩
     # the mapping matrix keeps its single top bracket + bottom curly brace (its mapped lists
     # ARE generator coords, so the } close is correct there)
     assert on["ebktop:primes"].kind == "ebktop" and on["ebkbrace:primes"].kind == "ebkbrace"
@@ -3476,9 +3474,9 @@ def test_generator_detempering_prescaling_row_scales_each_vector():
     cells = {c.id: c for c in _with(generator_detempering=True, weighting=True, units=True).cells}
     assert [cells[f"cell:prescaling:detempering:{i}:0"].text for i in range(3)] == ["1", "0", "0"]
     assert [cells[f"cell:prescaling:detempering:{i}:1"].text for i in range(3)] == ["-1", "1.585", "0"]
-    # framed per-column ⟨ … ] (ebkbra/ebkbot) inside outer ``[ ]`` like every other 𝐿·basis
-    # product prescaling tile, captioned + in octaves like the comma basis's
-    assert "ebkbra:prescaling:detempering:0" in cells
+    # framed per-column ket [ … ⟩ (ebktop/ebkangle) inside outer ``[ ]`` like every other
+    # 𝐿·basis product prescaling tile, captioned + in octaves like the comma basis's
+    assert "ebktop:prescaling:detempering:0" in cells
     assert cells["bracket:prescaling:detempering:l"].text == "["
     assert cells["caption:prescaling:detempering"].text == "complexity prescaled generator detempering"
     assert cells["units:prescaling:detempering"].text == "units: oct"

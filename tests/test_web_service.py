@@ -683,11 +683,10 @@ def test_plain_text_held_column_mirrors_the_grid():
     assert abs(float(pt[("retune", "held")].strip("[]"))) < 1e-3  # held just ⇒ no error
     # the prescaling row over the held basis: 𝐿 applied to each held monzo (like the comma
     # column's 𝐿·C). The fifth 3/2 = [-1, 1, 0] prescaled by log-prime 𝐿 = [-1, 1.585, 0].
-    # Per the mockup, every prescaling tile uses ``⟨ … ]`` per vector (the same shape the
-    # mapping uses for each row); the outer wrap is symmetric ``[ … ]`` for the 𝐿·basis
-    # products (𝐿H here, 𝐿C / 𝐿D / 𝐿T elsewhere). The bare prescaler 𝐿 is the only
-    # asymmetric exception — its outer wrap is ``[ … ⟩`` (see the bare-𝐿 test).
-    assert pt[("prescaling", "held")] == "[⟨-1 1.585 0]]"
+    # The 𝐿·basis products (𝐿H here, 𝐿C / 𝐿D / 𝐿T elsewhere) are matrices of prescaled
+    # VECTORS, so each column is a ket ``[ … ⟩`` inside the symmetric outer ``[ … ]``. (The
+    # bare prescaler 𝐿 is the exception — covector rows ``⟨ … ]`` inside outer ``[ … ⟩``.)
+    assert pt[("prescaling", "held")] == "[[-1 1.585 0⟩]"
     # no held entries when none are held
     assert ("vectors", "held") not in service.plain_text_values(state)
     assert ("prescaling", "held") not in service.plain_text_values(state)
@@ -717,11 +716,11 @@ def test_plain_text_interest_column_is_standalone_kets_not_a_matrix():
     assert pt[("retune", "interest")] == cents(sizes.errors)
     assert "[" not in pt[("complexity", "interest")] and "]" not in pt[("complexity", "interest")]
     # prescaling/interest is standalone vectors (no outer wrap), like the interval-vectors
-    # row's standalone kets — each vector its own ``⟨ … ]`` (angle open + square close),
-    # space-separated, with no surrounding bracket. Same per-vector shape as every other
-    # prescaling tile, just stripped of the outer wrap (per the interest column's pattern).
-    assert pt[("prescaling", "interest")].startswith("⟨") and pt[("prescaling", "interest")].endswith("]")
-    assert not pt[("prescaling", "interest")].endswith("]]")  # no outer wrap
+    # row's standalone kets — each prescaled vector its own ket ``[ … ⟩`` (square open +
+    # angle close), space-separated, with no surrounding bracket. Same per-vector shape as
+    # the 𝐿·basis product tiles, just stripped of the outer wrap (the interest pattern).
+    assert pt[("prescaling", "interest")].startswith("[") and pt[("prescaling", "interest")].endswith("⟩")
+    assert not pt[("prescaling", "interest")].endswith("⟩]")  # no outer wrap
     # no interest entries when the column is empty
     assert ("vectors", "interest") not in service.plain_text_values(state)
 
@@ -736,11 +735,11 @@ def test_plain_text_weighting_rows_mirror_the_grid():
     assert pt[("complexity", "targets")].startswith("[") and pt[("complexity", "targets")].endswith("]")
     # the per-target weight list (simplicity-weighted by default → 1/complexity)
     assert pt[("weight", "targets")].startswith("[") and pt[("weight", "targets")].endswith("]")
-    # the prescaling row is 𝐿 applied to each vector set, a ⟨…]-per-vector matrix:
-    # 𝐿·[4,-4,1] = [4,-6.34,2.322] — each vector ``⟨ … ]`` (angle open + square close),
-    # wrapped in outer [ … ] like the mockup's 𝐿C tile. The string shows the SAME numbers
-    # as the grid — whole numbers bare (4, not 4.000)
-    assert pt[("prescaling", "commas")] == "[⟨4 -6.340 2.322]]"
+    # the prescaling row is 𝐿 applied to each vector set, a […⟩-per-vector matrix:
+    # 𝐿·[4,-4,1] = [4,-6.34,2.322] — each prescaled vector a ket ``[ … ⟩`` (square open +
+    # angle close), wrapped in outer [ … ] like the mockup's 𝐿C tile. The string shows the
+    # SAME numbers as the grid — whole numbers bare (4, not 4.000)
+    assert pt[("prescaling", "commas")] == "[[4 -6.340 2.322⟩]"
 
 
 def test_plain_text_over_a_nonstandard_domain_uses_the_basis():
