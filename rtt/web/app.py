@@ -447,10 +447,10 @@ _CSS = f"""
 .rtt-opt-1line {{ white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }}
 /* a left-justified caption sits flush against its left edge (the dropdown it labels), free
    to overhang to the right on one line rather than wrapping (e.g. "predefined prescalers").
-   The 10px left inset aligns the caption's first character vertically with the dropdown's
-   inner text (which sits ~10px from the dropdown's border, accounting for q-field padding). */
+   The 5px left inset aligns the caption's first character vertically with the dropdown's
+   inner text (which sits ~5px from the dropdown's border, accounting for q-field padding). */
 .rtt-caption-left {{ text-align:left !important; white-space:nowrap; overflow:visible;
-                    text-wrap:nowrap; padding-left:10px; }}
+                    text-wrap:nowrap; padding-left:5px; }}
 .rtt-caption-cell:has(> .rtt-caption-left) {{ align-items:flex-start; overflow:visible; }}
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
@@ -585,7 +585,7 @@ _CSS = f"""
    awkward if the boxes were centred and so didn't align vertically. */
 .rtt-rangemode {{ width:100%; display:flex; flex-direction:column; align-items:flex-start;
                   justify-content:center; gap:3px; line-height:1; overflow:hidden;
-                  padding-left:10px; }}
+                  padding:5px 5px 5px 10px; }}  /* top/bottom 5 so the bottom row doesn't touch the box edge */
 .rtt-rangeopt {{ display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }}
 .rtt-rangebox {{ width:16px; height:16px; flex:none; border:1px solid #555; background:#fff;
                 box-sizing:border-box; position:relative; }}

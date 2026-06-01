@@ -78,8 +78,9 @@ UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when 
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
 RANGE_CHART_H = 58  # height of the generator tuning-ranges I-beam chart (title + caps + min/max labels)
-RANGE_MODE_H = 36  # height of the monotone/tradeoff range-mode selector — two rows of square
-# indicators STACKED below the chart (since the bumped 16px boxes don't fit side by side)
+RANGE_MODE_H = 46  # height of the monotone/tradeoff range-mode selector — two rows of square
+# indicators STACKED below the chart, with 5px top/bottom padding so neither row touches the
+# enclosing box's edge (the bumped 16px boxes don't fit side by side anyway)
 RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the values above the chart)
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
 OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
