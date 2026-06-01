@@ -3564,6 +3564,21 @@ def test_generator_tuning_map_panel_encloses_its_values_chart_and_selector():
     assert "block:gentuning" not in {b.id for b in lay.blocks}
 
 
+def test_tuning_ranges_box_has_a_left_aligned_boxtitle():
+    # the ranges box wears the same left-aligned boxtitle as every other control box, not
+    # a centred title drawn inside the chart SVG
+    lay = _with(tuning_ranges=True)
+    cells = {c.id: c for c in lay.cells}
+    boxes = {b.id: b for b in lay.blocks}
+    title = cells["rangetitle:tuning:gens"]
+    assert title.kind == "boxtitle" and title.text == "tuning ranges"
+    chart, sel = cells["rangechart:tuning:gens"], cells["rangemode:tuning:gens"]
+    assert title.y < chart.y  # the title sits above the chart
+    assert title.x == cells["header:gens"].x
+    box = boxes["block:tuning:rangesbox"]  # the box still frames the whole thing
+    assert box.y <= title.y and box.y + box.h >= sel.y + sel.h
+
+
 def test_tuning_ranges_draws_a_bordered_box_around_the_chart_and_selector():
     # the mockup frames the tuning-ranges section (title + I-beams + mode selector) in a
     # thin-bordered box nested in the generator tuning map tile; the layout emits a boxed

@@ -81,10 +81,9 @@ _CHART_INDICATOR = "#888888"  # the minimized-damage indicator line (a solid lig
 # in the same 1:1 SVG box as the EBK marks. A ranged generator is a stem with a cap at
 # top (max cents) and bottom (min), labelled at the caps; a pinned generator (the period,
 # octave held pure, so min == max) collapses to a single flat cap with one value.
-_RANGE_TITLE = "tuning ranges"  # the panel title, per the mockup
 _RANGE_CAP_W = 14  # I-beam cap width (px); the live-tuning tick is a shorter bar
 _RANGE_MARK_W = 1.6  # I-beam stem + cap thickness (px) — constant at any height (1:1 viewBox)
-_RANGE_PLOT_T = 25  # plot-area top (below the title + top-cap label; spaced off the title)
+_RANGE_PLOT_T = 11  # plot-area top (room for the top-cap label; the title is now a boxtitle above the chart)
 _RANGE_PLOT_B = 12  # plot-area bottom margin (room for the bottom-cap label)
 _RANGE_FONT = 7  # cents-label / placeholder font size
 
@@ -1081,16 +1080,14 @@ def _bar_chart(w, h, values, indicator=None, indicator_label=""):
 
 
 def _range_chart(w, h, ranges, tunings=()):
-    """The generator tuning-ranges chart filling its 1:1 px box: a titled panel with one
-    vertical I-beam per generator showing its [min, max] tuning in cents (max at the top
-    cap, min at the bottom), with a shorter tick marking where the live tuning falls within
-    that range. A pinned generator (min == max) draws a single flat cap; empty ``ranges``
-    draws a 'no range' placeholder."""
+    """The generator tuning-ranges chart filling its 1:1 px box: one vertical I-beam per
+    generator showing its [min, max] tuning in cents (max at the top cap, min at the
+    bottom), with a shorter tick marking where the live tuning falls within that range. A
+    pinned generator (min == max) draws a single flat cap; empty ``ranges`` draws a 'no
+    range' placeholder. The 'tuning ranges' title is a boxtitle above the chart, not in the SVG."""
     cx0, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
-    title = (f'<text x="{w / 2:.2f}" y="9" text-anchor="middle" font-size="8.5" '
-             f'font-weight="bold" fill="{_BR_COLOR}">{_RANGE_TITLE}</text>')
     if not ranges:
-        return _svg(w, h, title + f'<text x="{w / 2:.2f}" y="{h / 2 + 2:.2f}" text-anchor="middle" '
+        return _svg(w, h, f'<text x="{w / 2:.2f}" y="{h / 2 + 2:.2f}" text-anchor="middle" '
                     f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">no range</text>')
     plot_top, plot_bot = _RANGE_PLOT_T, h - _RANGE_PLOT_B
     mid, hw = (plot_top + plot_bot) / 2, _RANGE_MARK_W / 2
@@ -1103,7 +1100,7 @@ def _range_chart(w, h, ranges, tunings=()):
         return (f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
                 f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">{v:.3f}</text>')
 
-    body = [title]
+    body = []
     for i, (lo, hi) in enumerate(ranges):
         cx = cx0 + i * col_w + col_w / 2
         if hi - lo < 1e-6:  # pinned (e.g. the period): one value, no range — a single cap

@@ -444,12 +444,13 @@ def test_bar_chart_indicator_line_is_broken_by_its_power_labelled_objective():
     assert "⟪" not in plain
 
 
-def test_range_chart_draws_a_titled_i_beam_with_min_max_labels_for_a_ranged_generator():
+def test_range_chart_draws_an_i_beam_with_min_max_labels_for_a_ranged_generator():
     # the generator tuning-ranges chart: a tall I-beam (stem + two caps) for a generator
-    # with a range, the max/min cents labelled at its top/bottom caps
+    # with a range, the max/min cents labelled at its top/bottom caps. The "tuning ranges"
+    # title is a boxtitle above the chart now, not drawn inside this SVG.
     svg = app._range_chart(92, 96, ((1200.0, 1200.0), (685.714, 720.0)))
     assert svg.startswith("<svg") and 'viewBox="0 0 92.00 96.00"' in svg
-    assert "tuning ranges" in svg  # the chart title, per the mockup
+    assert "tuning ranges" not in svg  # the title moved out to a boxtitle
     for label in ("720.000", "685.714"):  # the fifth's max (top cap) and min (bottom cap), 3dp like the grid
         assert label in svg
     heights = [h for _y, h in _bars(svg)]
@@ -479,7 +480,6 @@ def test_range_chart_draws_only_a_flat_cap_for_a_pinned_generator():
 def test_range_chart_shows_a_placeholder_and_no_i_beams_when_there_is_no_range():
     # the diamond-monotone range can be empty (no monotone tuning); show a placeholder
     svg = app._range_chart(92, 96, ())
-    assert "tuning ranges" in svg
     assert "no range" in svg  # the placeholder text
     assert "<rect" not in svg  # no I-beams drawn
 

@@ -1362,7 +1362,7 @@ def build(state, settings=None, collapsed=None,
     # gens tile of the (present, unfolded) tuning row.
     gtm_chart = (show_ranges and show_tuning and "row:tuning" not in collapsed
                  and col_open("gens") and "tile:tuning:gens" not in collapsed)
-    gtm_extra = (RANGE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
+    gtm_extra = (RANGE_GAP + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
     # the alt.-complexity controls nest at the bottom of their matrix/list tiles (like the
     # ranges box in the gens tile): box 𝐋 (the prescaling matrix over the primes) stacks the
     # prescaler chooser then the "ignore diminuator" checkbox, box 𝒄 (the complexity list over
@@ -2137,19 +2137,23 @@ def build(state, settings=None, collapsed=None,
     # rather than floating. The monotone range can be None (no monotone tuning exists),
     # passed as () so the chart draws a placeholder rather than I-beams. gtm_chart/gtm_extra
     # were computed up front (so the tuning row could reserve the box's height).
-    gtm_box = None  # (x, y, w, h) of the bordered box framing the chart + selector
+    gtm_box = None  # (x, y, w, h) of the bordered box framing the title, chart + selector
     if gtm_chart:
         chosen = tun.monotone_generator_range if range_mode == "monotone" else tun.tradeoff_generator_range
         gx, gw = col_x["gens"], col_w["gens"]
-        # the chart nests below the tile's values + caption (tile_h now includes gtm_extra
-        # for the box itself, so back it out to find the values' bottom)
+        # the box nests below the tile's values + caption (tile_h now includes gtm_extra
+        # for the box itself, so back it out to find the values' bottom); a left-aligned
+        # boxtitle tops it (like every control box), then the chart, then the mode selector
         cy = tile_top["tuning"] + tile_h["tuning"] - gtm_extra + RANGE_GAP
-        cells.append(CellBox("rangechart:tuning:gens", gx, cy, gw, RANGE_CHART_H, "rangechart",
+        cells.append(CellBox("rangetitle:tuning:gens", gx, cy, gw, BOX_TITLE_H, "boxtitle",
+                             text="tuning ranges", align="left"))
+        chart_y = cy + BOX_TITLE_H + BOX_TITLE_GAP
+        cells.append(CellBox("rangechart:tuning:gens", gx, chart_y, gw, RANGE_CHART_H, "rangechart",
                              ranges=tuple(chosen) if chosen is not None else (),
                              values=tuple(tun.generator_map)))  # the live tuning, marked within each range
-        cells.append(CellBox("rangemode:tuning:gens", gx, cy + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
+        cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
                              "rangemode", text=range_mode))
-        gtm_box = (gx, cy, gw, RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
+        gtm_box = (gx, cy, gw, BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
 
     # the optimization box, nested at the BOTTOM of the target interval damage list tile (the
     # tuning's own column, whose damages it minimizes): a bordered box titled "optimization"
