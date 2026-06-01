@@ -101,6 +101,15 @@ def _cell_text(user: User, cell_id: str) -> str:
     return getattr(_cell_child(user, cell_id), "text", "")
 
 
+async def test_tuning_preselect_offers_only_lp_while_alternatives_are_shelved(user: User) -> None:
+    # alternative-complexity schemes are gated behind the (shelved) alt. complexity setting,
+    # so with it off the tuning chooser lists only the strictly log-product scheme.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="preselects").click()
+    await user.should_see(marker="preselect:tuning")
+    assert _cell_child(user, "preselect:tuning").options == ["minimax-S"]
+
+
 async def test_editing_a_mapping_cell_updates_the_mapped_list(user: User) -> None:
     await user.open("/")
     # meantone [[1,1,0],[0,1,4]]: 5/4 (target 6) maps to 4 fifths in the mapped list

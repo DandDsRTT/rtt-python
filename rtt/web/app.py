@@ -1863,7 +1863,9 @@ def index() -> None:
                         .props(_select_props(cb.w)).classes("rtt-preselect")
                 else:  # tuning — systematic scheme names; a control-refined scheme has no name
                     scheme = editor.tuning_scheme if isinstance(editor.tuning_scheme, str) else None
-                    selects[cb.id] = ui.select(list(presets.TUNING_SCHEMES), value=scheme,
+                    # alternative-complexity schemes are gated behind the alt. complexity setting
+                    options = presets.tuning_schemes(editor.settings["alt_complexity"])
+                    selects[cb.id] = ui.select(list(options), value=scheme,
                             on_change=lambda e: on_preselect("tuning", e.value)) \
                         .props(_select_props(cb.w)).classes("rtt-preselect")
             elif cb.kind == "control_select":  # an alt.-complexity chooser (prescaler / norm / weight slope)

@@ -9,7 +9,8 @@ three things you actually *choose* (the rest of the grid is derived):
   the sign/form of the commas is irrelevant (they span the same nullspace). Keyed
   as ``"limit:name"`` so the same name (e.g. Miracle) can appear at several limits.
 * :data:`TUNING_SCHEMES` — tuning-scheme names in the systematic naming scheme of
-  D&D's Guide (and this library), e.g. ``minimax-S`` (TOP), ``minimax-ES`` (TE).
+  D&D's Guide (and this library), e.g. ``minimax-S`` (the all-interval log-product
+  scheme) or ``minimax-sopfr-S``.
 * :data:`TARGET_SETS` — target interval set families the service can resolve
   against the current domain (see :func:`rtt.web.service.target_interval_set`); an
   optional numeric limit (the N in ``N-TILT`` / ``N-OLD``) overrides the default.
@@ -25,17 +26,30 @@ import functools
 from rtt.web import service
 
 # Systematic tuning-scheme names (the minimax family, which optimize to sensible
-# all-interval tunings). The trailing comment is the historical name each matches.
+# all-interval tunings). The trailing comment names the interval complexity each is built
+# on: minimax-S uses the plain log-product (lp); the rest use other complexities and so
+# ride behind the alternative-complexity feature — see :func:`tuning_schemes`.
 TUNING_SCHEMES: tuple[str, ...] = (
-    "minimax-S",                      # TOP
-    "minimax-ES",                     # TE
-    "held-octave minimax-ES",         # CTE
-    "destretched-octave minimax-ES",  # POTE
-    "minimax-E-copfr-S",              # Frobenius
-    "minimax-sopfr-S",                # BOP
-    "minimax-lils-S",                 # WOP (Weil)
-    "minimax-E-lils-S",               # WE (Weil-Euclidean)
+    "minimax-S",                      # lp (log-product)
+    "minimax-ES",                     # E-lp (Euclidean log-product)
+    "held-octave minimax-ES",         # E-lp, octave held just
+    "destretched-octave minimax-ES",  # E-lp, octave destretched
+    "minimax-E-copfr-S",              # E-copfr
+    "minimax-sopfr-S",                # sopfr
+    "minimax-lils-S",                 # lils
+    "minimax-E-lils-S",               # E-lils
 )
+
+
+def tuning_schemes(include_alternatives: bool) -> tuple[str, ...]:
+    """The tuning-scheme names the preselect offers. Every scheme whose interval complexity
+    isn't the plain log-product (``lp``) is an alternative-complexity scheme, gated behind
+    the alternative-complexity feature: with ``include_alternatives`` false only the
+    strictly-lp schemes are offered, keeping the app log-product-only until that feature
+    ships; with it true, the whole family."""
+    if include_alternatives:
+        return TUNING_SCHEMES
+    return tuple(s for s in TUNING_SCHEMES if service.complexity_name_of(s) == "lp")
 
 TARGET_SETS: tuple[str, ...] = ("TILT", "OLD")
 
