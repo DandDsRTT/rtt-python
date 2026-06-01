@@ -1981,24 +1981,25 @@ def build(state, settings=None, collapsed=None,
         # the prescaler dropdown on the left (LBOX_DROP_W wide, fixed), the "ignore diminuator"
         # checkbox SQUARE on the right (no inline label — it wraps broken in the narrow primes
         # column). The diminuator's CELL spans LBOX_DIM_W and the checkbox square renders
-        # CSS-centred within it. Captions sit below the taller of the two controls, one line
-        # each: prescaler left-justified to the dropdown, diminuator centred under its slot.
+        # CSS-centred within it. EACH caption HUGS its own control's bottom: the prescaler's
+        # under the dropdown (at PRESELECT_H), the diminuator's under the checkbox (at CHECK_H)
+        # — so the labels read with their controls rather than floating at a row-bottom seam.
         # The column was widened up front (by _control_floor) to LBOX_W so nothing overhangs.
         py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
         dim_slot_x = col_x["primes"] + LBOX_DROP_W + OPT_COL_GAP
-        cap_y = py + max(PRESELECT_H, CHECK_H)  # captions sit below the taller control
         cells.append(CellBox("control:prescaler", col_x["primes"], py, LBOX_DROP_W, PRESELECT_H,
                              "control_select", text=service.prescaler_of(tuning_scheme),
                              values=tuple(service.PRESCALERS)))
         cells.append(CellBox("control:diminuator", dim_slot_x, py, LBOX_DIM_W, CHECK_H,
                              "control_check", text="",  # square only; label moves to a caption below
                              checked=service.diminuator_ignored(tuning_scheme)))
-        # the prescaler's caption is one line, left-justified to the dropdown's edge —
-        # constrained to the (widened) column width so it doesn't overhang
-        cells.append(CellBox("caption:prescaler", col_x["primes"], cap_y, col_w["primes"],
-                             CAPTION_LINE, "caption", text="predefined prescalers", align="left"))
-        cells.append(CellBox("caption:diminuator", dim_slot_x, cap_y, LBOX_DIM_W, CAPTION_LINE,
-                             "caption", text="ignore diminuator"))
+        # the prescaler's caption is one line, left-justified to the dropdown's edge,
+        # hugging its bottom (py + PRESELECT_H) — constrained to the widened column width
+        cells.append(CellBox("caption:prescaler", col_x["primes"], py + PRESELECT_H,
+                             col_w["primes"], CAPTION_LINE, "caption",
+                             text="predefined prescalers", align="left"))
+        cells.append(CellBox("caption:diminuator", dim_slot_x, py + CHECK_H, LBOX_DIM_W,
+                             CAPTION_LINE, "caption", text="ignore diminuator"))
     if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
         # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q
         # and dual(q) use the optimization box's value-over-symbol-over-caption stack — the

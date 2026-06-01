@@ -1573,26 +1573,26 @@ def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdow
     cap_p = on["caption:prescaler"]
     assert cap_p.kind == "caption"
     assert cap_p.text == "predefined prescalers"
-    # the prescaler caption is ONE line and left-justified to the dropdown's left edge
-    # (overhanging the dropdown to the right rather than wrapping word-by-word)
+    # the prescaler caption HUGS the dropdown's bottom (one line, left-justified to its x)
     assert cap_p.h == spreadsheet.CAPTION_LINE
     assert cap_p.align == "left"
     assert cap_p.x == on["control:prescaler"].x
-    assert cap_p.y > on["control:prescaler"].y  # caption sits below the dropdown
-    # the diminuator's label is a separate caption (the inline checkbox label rendered broken
-    # in the narrow primes column at d=3, with the square jammed between "ignore" and "diminuator")
+    assert cap_p.y == on["control:prescaler"].y + on["control:prescaler"].h
+    # the diminuator caption HUGS the checkbox's bottom (the inline label rendered broken in
+    # the narrow primes column at d=3, with the square jammed between "ignore" and "diminuator")
     cap_d = on["caption:diminuator"]
     assert cap_d.kind == "caption"
     assert cap_d.text == "ignore diminuator"
-    assert cap_d.y > on["control:diminuator"].y  # caption sits below the checkbox square
+    assert cap_d.y == on["control:diminuator"].y + on["control:diminuator"].h
     # the diminuator checkbox rides to the RIGHT of the dropdown on the same row (no longer below)
     assert on["control:diminuator"].y == on["control:prescaler"].y
     assert on["control:diminuator"].x > on["control:prescaler"].x
     # ...and is horizontally CENTRED above its caption (small square over the wider caption slot)
     assert abs((on["control:diminuator"].x + on["control:diminuator"].w / 2)
                - (cap_d.x + cap_d.w / 2)) < 1
-    # both captions sit on the same baseline below their controls
-    assert cap_p.y == cap_d.y
+    # the captions live at different y's (each hugs its own control), since the checkbox is
+    # taller than the dropdown — the dropdown's label sits HIGHER than the checkbox's
+    assert cap_p.y < cap_d.y
 
 
 def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
