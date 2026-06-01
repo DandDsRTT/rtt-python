@@ -705,7 +705,7 @@ _CSS = f"""
    stacked vertically (general above specific) */
 .rtt-show-group {{ border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6;
                   padding:6px 8px; margin-top:8px; }}
-.rtt-show-grouptitle {{ font-size:13px; font-style:italic; text-align:center;
+.rtt-show-grouptitle {{ font-size:13px; font-weight:bold; text-align:center;
                        color:#000; margin-bottom:4px; }}
 /* one toggle row: the checkbox+label in the Show column, its sample in the example column */
 .rtt-show-row {{ display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }}
