@@ -264,6 +264,18 @@ def test_titles_freeze_with_sticky_bands_pinned_to_the_window():
     assert _z(".rtt-cell") < _z(".rtt-colband") < _z(".rtt-rowband") < _z(".rtt-cornerband")
 
 
+def test_settings_panel_freezes_to_the_window_top_like_the_column_band():
+    # The rail (the "D&D's RTT app" title) and the settings drawer share .rtt-panelgroup. Like
+    # the column band, the group is position:sticky pinned to the top, so scrolling the tall grid
+    # down keeps the app title and the open settings panel in view at the window edge. Its
+    # containing block is the shell, which is as tall as the grid, so it stays stuck the whole way
+    # down. It is top-only — NOT left-pinned like the corner — so it still scrolls horizontally
+    # with the page exactly as the column titles do (left-pinning it would overlap the row band).
+    rule = _css_rule(".rtt-panelgroup")
+    assert "position:sticky" in rule and "top:0" in rule
+    assert "left:0" not in rule
+
+
 def test_bands_are_opaque_and_pass_clicks_through_off_the_band():
     # the band wrapper spans the whole board but lets clicks fall through to the body
     # (pointer-events:none); the sticky inner re-enables them and is opaque #c0c0c0, so the body

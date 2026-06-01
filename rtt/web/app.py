@@ -342,8 +342,13 @@ _CSS = f"""
    rail) match the panel exactly, even when the grid beside it runs much taller. (Were this
    align-self:stretch, the group would take the shell's full height and a tall grid would
    drag the rail down to the grid's height.) Opening the pane widens this group, pushing the
-   app right. */
-.rtt-panelgroup {{ display:flex; flex-wrap:nowrap; align-self:flex-start; }}
+   app right. It is also position:sticky/top:0, so it freezes to the window top as the page
+   scrolls down — the app title and the open settings panel stay in view beside the scrolling
+   grid, exactly as the column band pins the column titles. Its containing block is the shell
+   (as tall as the grid), so it stays stuck the whole way down. It is top-only (the column
+   band's behaviour, NOT the corner's top+left): it still scrolls left with the page on
+   horizontal scroll rather than pinning over — and overlapping — the sticky row band. */
+.rtt-panelgroup {{ display:flex; flex-wrap:nowrap; align-self:flex-start; position:sticky; top:0; }}
 /* the drawer animates BOTH its width (the slide-over) and its height (grid-template-rows 0fr->1fr,
    which grows/shrinks the pane to its content height), so opening/closing glides instead of the
    pane popping to full height. align-self:flex-start stops the group stretching the drawer, which
