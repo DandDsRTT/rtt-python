@@ -1538,6 +1538,31 @@ def test_prescaling_matrices_have_outer_brackets_and_per_column_marks():
     assert on["ebktop:primes"].kind == "ebktop" and on["ebkbrace:primes"].kind == "ebkbrace"
 
 
+def test_outer_matrix_frame_hugs_the_cells_leaving_subrow_labels_outside():
+    # When the primes column footprint is widened past its content — here by the box-𝐋
+    # prescaler controls that alt. complexity adds beneath the prescaling matrix — the
+    # spanning top/bottom frame of the mapping and complexity-prescaler matrices must
+    # still hug the CELL matrix, exactly like the per-row ⟨ … ] brackets do (both via
+    # content_box). Otherwise the frame drifts left over the subrow labels (𝒎ᵢ / 𝒙ᵢ),
+    # swallowing them, and overhangs the cells on the right. Per the mockup the labels
+    # sit OUTSIDE the frame, to its left.
+    cells = {c.id: c for c in _with(weighting=True, alt_complexity=True, symbols=True).cells}
+    for top_id, foot_id, label_id, left_id, right_id in (
+        ("ebktop:primes", "ebkbrace:primes", "matlabel:row:mapping:primes:0",
+         "bracket:map:0:l", "bracket:map:0:r"),
+        ("ebktop:prescaling", "ebkangle:prescaling", "matlabel:row:prescaling:primes:0",
+         "bracket:prescaling:row:0:l", "bracket:prescaling:row:0:r"),
+    ):
+        top, foot = cells[top_id], cells[foot_id]
+        label, left, right = cells[label_id], cells[left_id], cells[right_id]
+        # the subrow label sits fully to the LEFT of the outer frame (outside it)
+        assert label.x + label.w <= top.x
+        # the frame's left and right edges align with the per-row brackets — it hugs the
+        # cell matrix, not the wider grey footprint (top and bottom spans stay in lockstep)
+        assert top.x == left.x == foot.x
+        assert top.x + top.w == right.x + right.w == foot.x + foot.w
+
+
 def test_prescaling_matrix_carries_its_symbol_and_caption():
     cells = {c.id: c for c in _with(weighting=True, symbols=True, names=True).cells}
     assert cells["symbol:prescaling:primes"].text == "𝑋"  # math italic, the prescaler matrix (X = L)

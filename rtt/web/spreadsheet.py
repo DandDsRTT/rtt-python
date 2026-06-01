@@ -1582,6 +1582,17 @@ def build(state, settings=None, collapsed=None,
         # cells, the left ⟨ and the labels stay in lockstep.
         return matlabel_primes_w if group_key == "primes" else 0
 
+    def matrix_span(group_key):
+        # The (x, width) of a group's CELL matrix — its content_box minus the row-label
+        # gutter on the left. This is the region the EBK encloses: the per-row ⟨ … ]
+        # brackets seat their ⟨ at its left edge and ] at its right, and the spanning
+        # ebktop/ebkbrace/ebkangle frame runs its full width. Anchored to the content
+        # (not the wider grey footprint), so a column widened past its cells keeps the
+        # EBK hugging them and the row labels sitting outside it.
+        x, w = content_box(group_key)
+        mx = matlabel_left_w(group_key)
+        return x + mx, w - mx
+
     def prime_left(p):
         return primes_x + matlabel_left_w("primes") + BRACKET_W + p * COL_W
 
@@ -2241,12 +2252,12 @@ def build(state, settings=None, collapsed=None,
     def bracket(bid, glyphs, group_key, y, h, *, fit=False):
         # value brackets are short and centred in their row (so stacked rows keep a
         # gap); the enclosing mapped-list [ ] passes fit=True to span the matrix.
-        gx, gw = content_box(group_key)  # hug the cells (interest's content, not its footprint)
-        # the left bracket steps right past the matlabel gutter (when reserved), so
-        # the row labels sit inside the panel left of the ⟨ rather than overflowing it
-        mx = matlabel_left_w(group_key)
+        # matrix_span hugs the cells (interest's content, not its footprint) and steps
+        # the left ⟨ right past the matlabel gutter, so the row labels sit inside the
+        # panel left of the ⟨ rather than overflowing it.
+        gx, gw = matrix_span(group_key)
         by, bh = (y, h) if fit else (y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H)
-        cells.append(CellBox(f"bracket:{bid}:l", gx + mx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
+        cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
         cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
 
     if row_open("canon") and tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
@@ -2675,15 +2686,18 @@ def build(state, settings=None, collapsed=None,
     # prescaled vectors (those use per-column marks via monzo_list_marks). ``bid`` keeps
     # each frame's ids stable so two framed rows over the same column never collide.
     def matrix_frame(rkey, ckey, bid, foot="ebkbrace"):
-        # The matlabel gutter (row labels 𝒎ᵢ / 𝒙ᵢ) sits LEFT of the matrix, outside the
-        # bracket — so the frame hugs the cells and never swallows the row labels. ``foot``
-        # is the bottom-spanning close: ``ebkbrace`` for the mapping family (generator
-        # coordinates, curly close), ``ebkangle`` for the bare prescaler 𝐿 (angle close ⟩
-        # mirroring the mapping's plain-text bracket but with ⟩ in place of }).
+        # The spanning frame hugs the CELL matrix — content_box, exactly as the per-row
+        # bracket() calls do — not the grey footprint (col_x/col_w). The matlabel gutter
+        # (row labels 𝒎ᵢ / 𝒙ᵢ) sits LEFT of that matrix, OUTSIDE the frame. Anchoring to
+        # the footprint instead would, whenever it is widened past its content (e.g. by the
+        # box-𝐋 prescaler controls under the prescaling matrix), drag the frame left over
+        # those labels and right past the cells. ``foot`` is the bottom-spanning close:
+        # ``ebkbrace`` for the mapping family (generator coordinates, curly close),
+        # ``ebkangle`` for the bare prescaler 𝐿 (angle close ⟩, mirroring the mapping's
+        # plain-text bracket but with ⟩ in place of }).
         if not tile_open(rkey, ckey):
             return
-        mx = matlabel_left_w(ckey)
-        gx, gw = col_x[ckey] + mx, col_w[ckey] - mx
+        gx, gw = matrix_span(ckey)
         cells.append(CellBox(f"ebktop:{bid}", gx, frame_top_y(rkey), gw, FRAME_H, "ebktop"))
         cells.append(CellBox(f"{foot}:{bid}", gx, frame_brace_y(rkey), gw, BRACE_H, foot))
 
