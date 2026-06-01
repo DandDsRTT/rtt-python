@@ -276,6 +276,32 @@ def test_settings_panel_freezes_to_the_window_top_like_the_column_band():
     assert "left:0" not in rule
 
 
+def test_settings_pane_stacks_a_frozen_header_over_a_scrolling_body():
+    # The expanded settings panel can outrun the screen, so — like the main app's frozen column
+    # band over its page-scrolled body — the pane freezes its header and scrolls the toggle
+    # groups under it. The drawer-inner is a flex column capped to the window height (less the
+    # 6px .nicegui-content inset top and bottom, so a tall panel scrolls internally rather than
+    # running past the foot of the screen and adding a page scrollbar, as a bare 100vh once did).
+    inner = _css_rule(".rtt-drawer-inner")
+    assert "display:flex" in inner and "flex-direction:column" in inner
+    assert "max-height:calc(100vh - 12px)" in inner  # capped to the window, not its content height
+    # the header (select-all/none + the show/example titles) never shrinks or scrolls...
+    assert "flex:none" in _css_rule(".rtt-show-frozen")
+    # ...and the groups scroll within the capped pane (min-height:0 lets the flex child shrink
+    # below its content so the overflow scrolls rather than forcing the pane taller)
+    body = _css_rule(".rtt-show-scroll")
+    assert "overflow-y:auto" in body and "min-height:0" in body
+
+
+def test_settings_frozen_seam_sits_below_the_header_not_inside_it():
+    # the darker-grey rule moves from between select-all/none and the show/example titles to
+    # BELOW both — it becomes the header's bottom edge, the frozen/scrolling seam, exactly as the
+    # column band's seam divides the frozen titles from the scrolling grid. select-all/none, now
+    # the header's first line, no longer carries the rule (nor the spacing that set it apart).
+    assert "border-bottom:1px solid #c4c4c4" in _css_rule(".rtt-show-frozen")
+    assert "border-bottom" not in _css_rule(".rtt-show-all")
+
+
 def test_bands_are_opaque_and_pass_clicks_through_off_the_band():
     # the band wrapper spans the whole board but lets clicks fall through to the body
     # (pointer-events:none); the sticky inner re-enables them and is opaque #c0c0c0, so the body

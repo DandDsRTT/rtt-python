@@ -264,6 +264,17 @@ async def test_body_cells_render_on_the_board_under_no_band(user: User) -> None:
         assert not _renders_inside(user, "cell:mapping:0:0", band)
 
 
+async def test_settings_frozen_header_matches_the_main_app_frozen_band_height(user: User) -> None:
+    # "exactly the same height as the frozen part of the main app pane": render() sizes the
+    # settings pane's frozen header to the layout's freeze_y — the very value the column band is
+    # sized to — so the two frozen/scrolling seams sit at the same height across the app.
+    await user.open("/")
+    frozen = next(iter(user.find(marker="showfrozen").elements))
+    colband = next(iter(user.find(marker="colband").elements))
+    assert frozen._style.get("height")  # the header is sized (not left to hug its content)...
+    assert frozen._style.get("height") == colband._style.get("height")  # ...to the band's height
+
+
 async def test_state_persists_across_a_refresh(user: User) -> None:
     # the document is persisted on each render and reloaded when the page opens, so a refresh
     # (a fresh open of "/") restores exactly where the user left off

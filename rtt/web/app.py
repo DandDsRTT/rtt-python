@@ -355,11 +355,15 @@ _CSS = f"""
 .rtt-drawer {{ display:grid; grid-template-rows:0fr; align-self:flex-start; width:0; overflow:hidden;
               transition:width {_T}, grid-template-rows {_T}; flex:none; }}
 .rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; grid-template-rows:1fr; }}
-/* the pane hugs its settings boxes — no min-height (a forced 100vh ran past the foot of the
-   screen and added a scrollbar). overflow:hidden + min-height:0 let the drawer's grid-rows
-   animation clip and grow it smoothly. */
+/* the pane is a flex column: a frozen header (select-all/none + show/example) over a scrolling
+   body (the toggle groups), mirroring the main app's frozen column band above its scrolling grid.
+   It caps at the window height less the .nicegui-content inset (6px top + 6px bottom), so a panel
+   taller than the screen scrolls INTERNALLY instead of running past the foot of the screen and
+   adding a page scrollbar — the failure a bare min-height:100vh once hit. overflow:hidden +
+   min-height:0 still let the drawer's grid-rows open/close animation clip and grow it smoothly. */
 .rtt-drawer-inner {{ width:{_PANEL_W}px; box-sizing:border-box; background:#e0e0e0; overflow:hidden;
-                    min-height:0; font-family:'Cambria',Georgia,serif; color:#000; padding:8px 14px 16px; }}
+                    min-height:0; max-height:calc(100vh - 12px); display:flex; flex-direction:column;
+                    font-family:'Cambria',Georgia,serif; color:#000; }}
 /* the app sits right of the rail+pane group and sizes to the grid (flex:0 0 auto), so a wide
    grid widens the page rather than being shrunk to fit — the page is the horizontal scroller */
 .rtt-app {{ flex:0 0 auto; }}
@@ -693,14 +697,28 @@ _CSS = f"""
               font-size:12px !important; line-height:1; color:#666; background:#fff;
               border:1px solid #bbb; cursor:pointer; user-select:none; }}
 .rtt-toggle:hover {{ background:#ececec; color:#000; }}
-/* the select-all/none master toggle, sitting above the two groups (a ruled separator
-   below it sets it apart from the show/example header and the grouped toggles) */
-.rtt-show-all {{ padding:0 9px 6px; border-bottom:1px solid #c4c4c4; margin-bottom:4px; }}
+/* the pane's frozen header: the select-all/none master + the show/example titles, pinned above
+   the scrolling toggle groups exactly as the column band pins the column titles above the grid.
+   Its height is set in render() to the layout's freeze_y, so it matches the main app's frozen band
+   to the pixel; the two rows centre within that height (compressed to both fit). Its bottom border
+   is the frozen/scrolling seam — the darker rule that used to sit under select-all/none. The full
+   330px-wide border (drawn on the border-box edge despite the 14px side padding) reads as one
+   clean divider across the pane, like the column band's seam. */
+.rtt-show-frozen {{ flex:none; box-sizing:border-box; display:flex; flex-direction:column;
+                   justify-content:center; gap:3px; padding:0 14px; border-bottom:1px solid #c4c4c4; }}
+/* the scrolling body: the two toggle groups. It fills the rest of the capped pane and scrolls
+   within it (overflow-y:auto), with min-height:0 so the flex child can shrink below its content —
+   without it the body would force the pane taller than the cap instead of scrolling. */
+.rtt-show-scroll {{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:0 14px 16px; }}
+/* the select-all/none master toggle — the header's first line (above the show/example titles);
+   one click flips every implemented Show toggle. The rule that set it apart now sits below the
+   whole header (.rtt-show-frozen's border), so it keeps only its horizontal inset. */
+.rtt-show-all {{ padding:0 9px; }}
 /* the panel's two column headers: "show" (the toggles) and "example" (their sample
    renders), aligned over the grid columns the rows below use. Both share one font and
    sit on a common baseline so the two words line up. */
 .rtt-show-head {{ display:grid; grid-template-columns:160px 1fr; align-items:baseline;
-                 padding:0 9px 2px 9px; }}
+                 padding:0 9px; }}
 .rtt-show-title {{ font-size:14px; font-weight:bold; }}
 .rtt-show-examplehdr {{ font-size:14px; font-weight:bold; }}
 /* general and specific each sit in their own rounded, lightly-bordered sub-card,
@@ -1963,6 +1981,9 @@ def index() -> None:
         colband.style(f"width:{lay.width}px; height:{fy}px")
         rowband.style(f"width:{fx}px; height:{lay.height}px")
         cornerband.style(f"width:{fx}px; height:{fy}px")
+        # the settings pane's frozen header takes the same height as the main app's frozen
+        # column band, so the two frozen/scrolling seams line up across the app
+        show_frozen.style(f"height:{fy}px")
         seen = set()
 
         for ln in lay.lines:
@@ -2172,37 +2193,45 @@ def index() -> None:
                 ui.label("D&D's RTT app").classes("rtt-sidetitle")
             drawer = ui.element("div").classes("rtt-drawer")
             with drawer, ui.element("div").classes("rtt-drawer-inner"):
-                # the select-all/none master checkbox, above everything: one click flips
-                # every implemented Show toggle on or off. Its checked state (all on) is
-                # kept in sync by render(); the not-yet-built toggles are left untouched.
-                with ui.element("div").classes("rtt-show-all"):
-                    select_all_box = ui.checkbox(
-                        "select all / none",
-                        value=all(editor.settings[k] for k in show_settings.IMPLEMENTED),
-                        on_change=lambda e: on_select_all(e.value)) \
-                        .props("dense size=xs color=grey-8").classes("rtt-show-item")
-                with ui.element("div").classes("rtt-show-head"):
-                    ui.label("show").classes("rtt-show-title")
-                    ui.label("example").classes("rtt-show-examplehdr")
+                # the frozen header: the select-all/none master + the show/example titles, pinned
+                # above the scrolling groups (render() sizes it to the layout's freeze_y, matching
+                # the main app's frozen band). Its bottom border is the frozen/scrolling seam.
+                show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
+                with show_frozen:
+                    # the select-all/none master checkbox: one click flips every implemented Show
+                    # toggle on or off. Its checked state (all on) is kept in sync by render();
+                    # the not-yet-built toggles are left untouched.
+                    with ui.element("div").classes("rtt-show-all"):
+                        select_all_box = ui.checkbox(
+                            "select all / none",
+                            value=all(editor.settings[k] for k in show_settings.IMPLEMENTED),
+                            on_change=lambda e: on_select_all(e.value)) \
+                            .props("dense size=xs color=grey-8").classes("rtt-show-item")
+                    with ui.element("div").classes("rtt-show-head"):
+                        ui.label("show").classes("rtt-show-title")
+                        ui.label("example").classes("rtt-show-examplehdr")
+                # the scrolling body: the toggle groups, which scroll under the frozen header when
+                # the panel outgrows the window (rather than spilling off the bottom of the screen)
                 boxes: dict = {}  # toggle key -> checkbox, so a sub-control row can bind to its parent
-                for group_name, items in show_settings.SHOW_GROUPS:
-                    with ui.element("div").classes("rtt-show-group"):
-                        ui.label(group_name).classes("rtt-show-grouptitle")
-                        for key, label, _ in items:
-                            row = ui.element("div").classes("rtt-show-row")
-                            with row:
-                                box = ui.checkbox(label, value=editor.settings[key],
-                                                  on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
-                                    .props("dense size=xs color=grey-8").classes("rtt-show-item")
-                                example = ui.html(_example_html(key)).classes("rtt-ex-cell")
-                                if key not in show_settings.IMPLEMENTED:
-                                    box.props("disable")  # not built yet -> greyed and inert
-                                    example.classes(add="rtt-ex-disabled")  # ...and its sample greys to match
-                            boxes[key] = box
-                            parent = show_settings.SUBCONTROLS.get(key)
-                            if parent:  # indent the row under its parent and show it only while the parent is on
-                                row.classes(add="rtt-show-sub")
-                                row.bind_visibility_from(boxes[parent], "value")
+                with ui.element("div").classes("rtt-show-scroll"):
+                    for group_name, items in show_settings.SHOW_GROUPS:
+                        with ui.element("div").classes("rtt-show-group"):
+                            ui.label(group_name).classes("rtt-show-grouptitle")
+                            for key, label, _ in items:
+                                row = ui.element("div").classes("rtt-show-row")
+                                with row:
+                                    box = ui.checkbox(label, value=editor.settings[key],
+                                                      on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
+                                        .props("dense size=xs color=grey-8").classes("rtt-show-item")
+                                    example = ui.html(_example_html(key)).classes("rtt-ex-cell")
+                                    if key not in show_settings.IMPLEMENTED:
+                                        box.props("disable")  # not built yet -> greyed and inert
+                                        example.classes(add="rtt-ex-disabled")  # ...and its sample greys to match
+                                boxes[key] = box
+                                parent = show_settings.SUBCONTROLS.get(key)
+                                if parent:  # indent the row under its parent and show it only while the parent is on
+                                    row.classes(add="rtt-show-sub")
+                                    row.bind_visibility_from(boxes[parent], "value")
 
         with ui.element("div").classes("rtt-app"):
             with ui.element("div").classes("rtt-outer"):
