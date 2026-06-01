@@ -2054,11 +2054,12 @@ def test_counts_on_adds_a_top_row_of_per_column_cardinalities():
 
 def test_counts_row_counts_the_generator_detempering_column_too():
     # the generator detempering matrix holds one detempering interval per generator, so its
-    # count is the rank r — the same value as the generators column's rank count. The count
-    # tile only exists while the detempering column is shown (like the held count and its column)
-    cells = {c.id: c for c in _with(counts=True, generator_detempering=True).cells}
+    # count IS the rank r — the same value AND the same name ("rank") as the generators
+    # column's count. The count tile only exists while the detempering column is shown.
+    cells = {c.id: c for c in _with(counts=True, names=True, generator_detempering=True).cells}
     assert cells["count:detempering"].text == "\U0001D45F = 2"  # 𝑟 rank: one detempering interval per generator
     assert cells["count:detempering"].text == cells["count:gens"].text  # tracks the rank, like the generators count
+    assert cells["caption:counts:detempering"].text == "rank"  # the same name as the generators count, not a new one
     # absent when the detempering column is hidden (no column → no count tile)
     assert "count:detempering" not in {c.id for c in _with(counts=True).cells}
 

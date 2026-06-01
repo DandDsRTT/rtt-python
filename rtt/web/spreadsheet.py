@@ -142,11 +142,11 @@ OPTIMIZATION_COUNTS_TILES = tuple(
     (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in OPTIMIZATION_COUNTS
 )
 # The generator-detempering column carries a count too: the matrix holds one detempering
-# interval per generator, so its cardinality is the rank r (the same value the generators
-# column's rank count reports). Like OPTIMIZATION_COUNTS, it is gated on its column being
+# interval per generator, so its count IS the rank r — same value AND same name ("rank") as
+# the generators column's count. Like OPTIMIZATION_COUNTS, it is gated on its column being
 # shown (the generator_detempering box), so it lives in its own conditional tuple.
 DETEMPERING_COUNTS = (
-    ("detempering", "r", "generator detempering count"),
+    ("detempering", "r", "rank"),  # the count IS the rank r — same name as the generators count
 )
 DETEMPERING_COUNTS_TILES = tuple(
     (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in DETEMPERING_COUNTS
