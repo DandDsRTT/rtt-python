@@ -114,6 +114,7 @@ LINE_W = 2  # px thickness of the shared-axis gridlines: the renderer's .rtt-lin
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 GENMAP_BRACKETS = ("{", "]")  # { … ] for the generator tuning map (per the mockup)
+PRESCALER_BRACKETS = ("[", "⟩")  # [ … ⟩ for the bare prescaler 𝐿 — asymmetric (square open + ket close)
 
 # The counts row: each column's set cardinality, as (column key, symbol, name).
 # The symbol+value (e.g. "r = 2", the symbol rendered math-italic via _mathit) is
@@ -2192,15 +2193,17 @@ def build(state, settings=None, collapsed=None,
             bracket("vec:held", LIST_BRACKETS, "held", row_y["vectors"], d * ROW_H, fit=True)
         if tile_open("vectors", "detempering"):
             bracket("vec:detempering", LIST_BRACKETS, "detempering", row_y["vectors"], d * ROW_H, fit=True)
-    if row_open("prescaling"):  # L·basis matrices: outer [ ] over the d-tall prescaled columns,
-        # mirroring the interval-vectors row's framing — the bare L and every L·v share the
-        # same shape (per the mockup). The interest tile is the lone exception: standalone
-        # columns, no outer wrap, like every other interest-row tile.
+    if row_open("prescaling"):  # 𝐿·basis matrices: outer brackets over the d-tall prescaled columns.
+        # The bare prescaler 𝐿 gets the asymmetric ``[ … ⟩`` (square open + ket close), marking
+        # it as the prescaler matrix itself rather than a product; every 𝐿·basis product
+        # (𝐿C/𝐿D/𝐿T/𝐿H) gets symmetric ``[ … ]`` like the mapped lists. The interest tile is
+        # the lone exception: standalone columns, no outer wrap, like every other interest-row tile.
         for group, n_cols in (("primes", d), ("commas", nc), ("detempering", r),
                               ("targets", k), ("held", nh)):
             if n_cols and tile_open("prescaling", group):
                 bid = "prescaling" if group == "primes" else f"prescaling:{group}"
-                bracket(bid, LIST_BRACKETS, group, row_y["prescaling"], d * ROW_H, fit=True)
+                brackets = PRESCALER_BRACKETS if group == "primes" else LIST_BRACKETS
+                bracket(bid, brackets, group, row_y["prescaling"], d * ROW_H, fit=True)
     if tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
         bracket("tuning:genmap", GENMAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
     # the detempering tuning row IS the generator tuning map (𝒕D = 𝒈), so it too is framed
@@ -2613,16 +2616,18 @@ def build(state, settings=None, collapsed=None,
     monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
     monzo_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
     monzo_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
-    # the prescaling row's per-column ebktop/ebkbot — matching the mapping row's shape
-    # except the close is ebkbot (the bottom of ``[``) instead of ebkbrace (the bottom of
-    # ``}``). The matrix tiles also grow the outer ``[ ]`` framing below; the interest
-    # tile stays bare (standalone columns, no outer wrap), per the mockup.
-    monzo_list_marks("prescaling", "prescaling", "primes", prime_left, d, foot="ebkbot")
-    monzo_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkbot")
-    monzo_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkbot")
-    monzo_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkbot")
-    monzo_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkbot")
-    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkbot", separators=False)
+    # the prescaling row's per-column marks — ⌐ top (ebktop) + ⌣ bottom (ebkbrace), the
+    # asymmetric pair the mockup uses inside the outer brackets (same visual vocabulary as
+    # the mapped lists' columns). The plain-text equivalent is ⟨ … ] per column. Separators
+    # between columns are drawn only for the 𝐿T and 𝐿H tiles, per the mockup; the bare 𝐿
+    # / 𝐿C / 𝐿D tiles keep their columns spaced without dividing rules. The interest tile
+    # stays standalone (no outer wrap, no separators).
+    monzo_list_marks("prescaling", "prescaling", "primes", prime_left, d, foot="ebkbrace", separators=False)
+    monzo_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkbrace", separators=False)
+    monzo_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkbrace", separators=False)
+    monzo_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkbrace", separators=True)
+    monzo_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkbrace", separators=True)
+    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkbrace", separators=False)
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the
