@@ -446,9 +446,11 @@ _CSS = f"""
    so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
 .rtt-opt-1line {{ white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }}
 /* a left-justified caption sits flush against its left edge (the dropdown it labels), free
-   to overhang to the right on one line rather than wrapping (box 𝐋 "predefined prescalers") */
+   to overhang to the right on one line rather than wrapping (e.g. "predefined prescalers").
+   The 10px left inset aligns the caption's first character vertically with the dropdown's
+   inner text (which sits ~10px from the dropdown's border, accounting for q-field padding). */
 .rtt-caption-left {{ text-align:left !important; white-space:nowrap; overflow:visible;
-                    text-wrap:nowrap; }}
+                    text-wrap:nowrap; padding-left:10px; }}
 .rtt-caption-cell:has(> .rtt-caption-left) {{ align-items:flex-start; overflow:visible; }}
 /* most mnemonic underlines sit snug at the baseline; only a marked descender
    (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
@@ -545,6 +547,13 @@ _CSS = f"""
 .q-checkbox[aria-checked="true"] .q-checkbox__bg::after {{
             content:"" !important; display:block !important; position:absolute !important;
             inset:2px !important; background:#000 !important; border-radius:0 !important; }}
+/* MIXED state for the select-all/none master: when some-but-not-all of its targets are on,
+   render the inner square GREY (rather than black or empty) to convey the indeterminate
+   third state. Applied via the .rtt-show-mixed class, toggled in render() based on
+   any() && !all() over the implemented Show settings. */
+.rtt-show-mixed .q-checkbox__bg::after {{
+            content:"" !important; display:block !important; position:absolute !important;
+            inset:2px !important; background:#888 !important; border-radius:0 !important; }}
 /* each chooser's dropdown popup matches the field's Cambria text, with compact items */
 .rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
 /* compact items; a long name (e.g. a systematic tuning) wraps within the field
@@ -570,9 +579,13 @@ _CSS = f"""
 .rtt-preselect-num .q-field__marginal, .rtt-preselect-num .q-field__append {{ display:none !important; }}
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
    stacked vertically (filled = selected), per the mockup, with small Cambria labels.
-   Vertical stack because the bumped 16px boxes don't fit side by side under the chart. */
-.rtt-rangemode {{ width:100%; display:flex; flex-direction:column; align-items:center;
-                  justify-content:center; gap:3px; line-height:1; overflow:hidden; }}
+   Vertical stack because the bumped 16px boxes don't fit side by side. Each row is
+   LEFT-aligned (align-items:flex-start) so the two boxes line up at the same x, with
+   their labels extending to the right — the labels have different widths and would look
+   awkward if the boxes were centred and so didn't align vertically. */
+.rtt-rangemode {{ width:100%; display:flex; flex-direction:column; align-items:flex-start;
+                  justify-content:center; gap:3px; line-height:1; overflow:hidden;
+                  padding-left:10px; }}
 .rtt-rangeopt {{ display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }}
 .rtt-rangebox {{ width:16px; height:16px; flex:none; border:1px solid #555; background:#fff;
                 box-sizing:border-box; position:relative; }}
@@ -2050,7 +2063,14 @@ def index() -> None:
         for key, box in boxes.items():
             if box.value != editor.settings[key]:
                 box.value = editor.settings[key]
-        select_all_box.value = all(editor.settings[k] for k in show_settings.IMPLEMENTED)
+        # the master checkbox: checked (true / black fill) when all on, unchecked (false /
+        # empty) when all off, MIXED (grey fill) when some-but-not-all are on
+        states = [editor.settings[k] for k in show_settings.IMPLEMENTED]
+        select_all_box.value = all(states)
+        if any(states) and not all(states):
+            select_all_box.classes(add="rtt-show-mixed")
+        else:
+            select_all_box.classes(remove="rtt-show-mixed")
         # persist the whole document so a browser refresh restores exactly this state
         _doc_store()[_STORE_KEY] = editor.serialize()
         building[0] = False
