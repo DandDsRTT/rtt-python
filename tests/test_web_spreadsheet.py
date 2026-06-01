@@ -903,6 +903,29 @@ def test_target_chooser_is_wider_to_seat_its_numeric_override():
     assert cells["preselect:target"].w > cells["preselect:tuning"].w
 
 
+def test_control_dropdowns_are_enclosed_in_titled_boxes():
+    # every dropdown rides inside a thin-bordered box with a left-aligned title, like
+    # the optimization box -- one consistent control-box style across the grid
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["preselects"], s["form_controls"] = True, True
+    lay = spreadsheet.build(base, s)
+    cells = {c.id: c for c in lay.cells}
+    boxes = {b.id: b for b in lay.blocks}
+    for cid, title in (("preselect:tuning", "established tuning scheme"),
+                       ("preselect:temperament", "temperament"),
+                       ("preselect:target", "target interval set scheme"),
+                       ("formchooser:mapping", "form"),
+                       ("formchooser:comma_basis", "form")):
+        ctrl, box = cells[cid], boxes[f"block:{cid}"]
+        assert box.boxed is True  # a bordered box, not a plain tile
+        assert box.x <= ctrl.x and box.x + box.w >= ctrl.x + ctrl.w  # encloses the control
+        assert box.y <= ctrl.y and box.y + box.h >= ctrl.y + ctrl.h
+        title_cell = cells[f"block:{cid}:title"]
+        assert title_cell.kind == "boxtitle" and title_cell.text == title
+        assert title_cell.y < ctrl.y  # the title sits above the control it labels
+
+
 def test_build_honors_the_target_interval_spec():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5
     tilt = {c.text for c in spreadsheet.build(base, target_spec="TILT").cells if c.id.startswith("target:")}

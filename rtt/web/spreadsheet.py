@@ -95,6 +95,17 @@ OPT_COL_GAP = 8  # gap between the three left-packed controls (the min-damage / 
 # into the empty space on the rows below. The captions stay on ONE line each.
 OPT_BTN_W = 94   # optimize button — wide enough to seat "double-click to lock" on one line beneath it
 OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred under the ∞ cell)
+# An in-tile control box: a dropdown / checkbox enclosed in a thin-bordered frame with a
+# left-aligned title, like the optimization box. The title is one line that overhangs the
+# column to the right (the box widens to fit it, like a tile name) rather than wrapping —
+# matching the grid's "hug content, overhang titles" rule. Pads inset the control off the
+# border. A row reserves PRESELECT_BOX_H for its control band so following rows clear it.
+BOX_TITLE_H = 14  # px height of a control box's single-line title strip
+BOX_TITLE_FONT = 11  # the .rtt-boxtitle font size (for estimating the title's width)
+BOX_TITLE_CHAR_W = 0.6  # bold-serif glyph width fraction, to size a box wide enough for its title
+BOX_PAD = 3  # inset around the control within the box (off the border)
+BOX_TITLE_GAP = 3  # gap between the title strip and the control row
+PRESELECT_BOX_H = BOX_PAD + BOX_TITLE_H + BOX_TITLE_GAP + PRESELECT_H + BOX_PAD  # a titled box's height
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -493,25 +504,25 @@ SPINE_ROW_GROUP = {
 SPINE_ROWS = frozenset({"counts", "units"})
 SPINE_COLUMNS = frozenset({"quantities", "units"})
 
-# The three "preselect" chooser dropdowns (settings["preselects"]) as (name, row,
-# column): each is a quick menu for one of the things you actually choose, riding
-# under its governing tile — the temperament under the mapping matrix, the tuning
-# scheme under the tuning map, the target interval set under the target list.
+# The "preselect" chooser dropdowns (settings["preselects"]) as (name, row, column,
+# title): each is a quick menu for one of the things you actually choose, riding under
+# its governing tile in a titled control box — the temperament under the mapping matrix,
+# the tuning scheme under the tuning map, the target interval set under the target list.
 PRESELECTS = (
-    ("temperament", "mapping", "primes"),
-    ("tuning", "tuning", "primes"),
-    ("target", "quantities", "targets"),
+    ("temperament", "mapping", "primes", "temperament"),
+    ("tuning", "tuning", "primes", "established tuning scheme"),
+    ("target", "quantities", "targets", "target interval set scheme"),
 )
-PRESELECT_ROWS = frozenset(row for _, row, _ in PRESELECTS)
+PRESELECT_ROWS = frozenset(row for _, row, _, _ in PRESELECTS)
 
-# The "<choose form>" chooser (settings["form_controls"]) as (name, row, column): a
-# control in the mapping and comma-basis boxes that re-stores that matrix in canonical
-# form (an undoable edit). Rides below the tile, like a preselect chooser.
+# The "form" chooser (settings["form_controls"]) as (name, row, column, title): a control
+# in the mapping and comma-basis boxes that re-stores that matrix in canonical form (an
+# undoable edit). Rides below the tile in its own titled box, like a preselect chooser.
 FORM_CHOOSERS = (
-    ("mapping", "mapping", "primes"),
-    ("comma_basis", "vectors", "commas"),
+    ("mapping", "mapping", "primes", "form"),
+    ("comma_basis", "vectors", "commas", "form"),
 )
-FORM_CHOOSER_ROWS = frozenset(row for _, row, _ in FORM_CHOOSERS)
+FORM_CHOOSER_ROWS = frozenset(row for _, row, _, _ in FORM_CHOOSERS)
 
 # Mnemonics: underline the caption letter that spells the tile's symbol (see
 # SYMBOLS) — a memory aid linking the name to its symbol (e.g. "tuning map" -> t,
@@ -906,6 +917,16 @@ def _min_width_for_lines(text: str, max_lines: int, font: float = CAPTION_FONT) 
         if _wrap_chars(words, chars) <= max_lines:
             return int(chars * font * CAPTION_CHAR_W + 4) + 1  # invert _chars_per_line (round up)
     return int(len(text) * font * CAPTION_CHAR_W + 4) + 1
+
+
+def _control_box_width(ctrl_w: float, title: str) -> float:
+    """A control box hugs its control, but widens to seat its single-line title (which
+    overhangs the column to the right, like a tile name) so the label is never clipped.
+    An untitled box is exactly its control's width."""
+    if not title:
+        return ctrl_w
+    title_w = len(title) * BOX_TITLE_FONT * BOX_TITLE_CHAR_W + 2 * BOX_PAD + 8  # + the .rtt-boxtitle left pad
+    return max(ctrl_w, title_w)
 
 
 def _bus_span(positions):
@@ -1465,10 +1486,10 @@ def build(state, settings=None, collapsed=None,
         uni = UNIT_H if (show_units and key in UNITED_ROWS and not folded) else 0
         # below the caption/units a tile reserves bands for the plain-text value box and
         # the preselect chooser (its row), stacked in that order
-        pre = PRESELECT_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
-        # the <choose form> chooser rides one band below the preselect chooser, in the
-        # mapping and comma-basis boxes, when form controls are shown
-        formctrl = PRESELECT_H if (show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
+        pre = PRESELECT_BOX_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
+        # the form chooser rides one box below the preselect chooser, in the mapping and
+        # comma-basis boxes, when form controls are shown
+        formctrl = PRESELECT_BOX_H if (show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
         ptext = ptext_band(key, folded)
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
@@ -2514,6 +2535,20 @@ def build(state, settings=None, collapsed=None,
     def ptext_band_y(rkey):
         return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_units[rkey]
 
+    # a titled control box: a bordered frame around a PRESELECT_H control with an optional
+    # left-aligned title strip above it (the box widens to seat the title, which overhangs
+    # the column to the right). Returns the control's y-offset from the box top so the caller
+    # seats it below the title.
+    def control_box(box_id, x, top, ctrl_w, title):
+        box_w = _control_box_width(ctrl_w, title)
+        ctrl_dy = BOX_PAD + (BOX_TITLE_H + BOX_TITLE_GAP if title else 0)
+        box_h = ctrl_dy + PRESELECT_H + BOX_PAD
+        blocks.append(Block(box_id, x, top, box_w, box_h, boxed=True))
+        if title:
+            cells.append(CellBox(f"{box_id}:title", x, top + BOX_PAD, box_w, BOX_TITLE_H,
+                                 "boxtitle", text=title, align="left"))
+        return ctrl_dy
+
     # preselect chooser dropdowns, in the reserved band below each governing tile's
     # plain-text box. The tuning/target choosers carry the live selection; the
     # temperament chooser is a placeholder (it loads, not mirrors). These are controls,
@@ -2523,23 +2558,27 @@ def build(state, settings=None, collapsed=None,
         # control is a resolved spec (no preset name), so it shows blank rather than a repr
         preselect_text = {"temperament": "", "target": target_spec,
                           "tuning": tuning_scheme if isinstance(tuning_scheme, str) else ""}
-        for name, rkey, ckey in PRESELECTS:
+        for name, rkey, ckey, title in PRESELECTS:
             if not tile_open(rkey, ckey):
                 continue
-            py = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
+            top = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
             pw = min(col_w[ckey], TARGET_PRESELECT_W if name == "target" else PRESELECT_W)
-            cells.append(CellBox(f"preselect:{name}", col_x[ckey], py, pw, PRESELECT_H, "preselect", text=preselect_text[name]))
+            ctrl_dy = control_box(f"block:preselect:{name}", col_x[ckey], top, pw, title)
+            cells.append(CellBox(f"preselect:{name}", col_x[ckey], top + ctrl_dy, pw, PRESELECT_H,
+                                 "preselect", text=preselect_text[name]))
 
-    # the <choose form> chooser, one band below the preselect chooser: it canonicalizes
-    # the mapping / comma basis it rides (an undoable edit). A control, so it ignores the
-    # value-display toggles, like the preselect choosers.
+    # the form chooser, one box below the preselect chooser: it canonicalizes the mapping /
+    # comma basis it rides (an undoable edit). A control, so it ignores the value-display
+    # toggles, like the preselect choosers.
     if show_form_controls:
-        for name, rkey, ckey in FORM_CHOOSERS:
+        for name, rkey, ckey, title in FORM_CHOOSERS:
             if not tile_open(rkey, ckey):
                 continue
-            fy = ptext_band_y(rkey) + row_ptext[rkey] + row_pre[rkey]  # below the preselect band
-            cells.append(CellBox(f"formchooser:{name}", col_x[ckey],
-                                 fy, min(col_w[ckey], PRESELECT_W), PRESELECT_H, "formchooser"))
+            top = ptext_band_y(rkey) + row_ptext[rkey] + row_pre[rkey]  # below the preselect box
+            pw = min(col_w[ckey], PRESELECT_W)
+            ctrl_dy = control_box(f"block:formchooser:{name}", col_x[ckey], top, pw, title)
+            cells.append(CellBox(f"formchooser:{name}", col_x[ckey], top + ctrl_dy, pw, PRESELECT_H,
+                                 "formchooser"))
 
     # plain-text value band: each tile's value as its natural EBK string, directly
     # below the symbol/caption stack (above the preselect chooser). The two editable

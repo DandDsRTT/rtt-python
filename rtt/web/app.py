@@ -651,10 +651,13 @@ _CSS = f"""
 .rtt-optimize .q-btn__content {{ font-size:{_CELL_FONT}px; }}
 .rtt-optimize-locked {{ background:#000 !important; }}
 .rtt-optimize-locked .q-btn__content {{ color:#fff !important; }}
-/* an in-tile box title (the optimization box's "optimization" header): left-aligned at the
-   top-left of the box (its cell otherwise centres it), padded off the left border */
+/* an in-tile box title (the optimization box's "optimization" header, and every titled
+   control box): left-aligned at the top-left of the box (its cell otherwise centres it),
+   padded off the left border. One line that overhangs to the right rather than wrapping —
+   the box is sized to seat it, so it never clips. */
 .rtt-boxtitle {{ font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
-                 color:#000; width:100%; text-align:left; padding-left:8px; }}
+                 color:#000; width:100%; text-align:left; padding-left:8px;
+                 white-space:nowrap; overflow:visible; }}
 /* the audio rows' speaker buttons (one per pitch). Flat and transparent so the cyan/green
    wash shows through; the icon fills the (square) cell. .rtt-spk-on highlights it while sounding. */
 .rtt-audio-btn {{ width:100% !important; height:100% !important; min-width:0 !important;
