@@ -460,6 +460,45 @@ def test_set_generator_tuning_component_overrides_one_generator():
     assert editor.optimize_locked is False and editor.can_undo is True
 
 
+def test_set_target_override_text_and_monzos():
+    editor = Editor()
+    # typing a vector list overrides the target set with those intervals, stored as ratios
+    assert editor.set_target_override_text("[1 0 0⟩ [-1 1 0⟩") is True
+    assert editor.target_override == ("2/1", "3/2")
+    assert editor.can_undo is True
+    # junk is rejected, leaving the override untouched
+    assert editor.set_target_override_text("garbage") is False
+    assert editor.target_override == ("2/1", "3/2")
+    # editing the monzo grid sets the override from the typed columns (2^2 = 4/1, 5^1 = 5/1)
+    editor.set_target_override_monzos([[2, 0, 0], [0, 0, 1]])
+    assert editor.target_override == ("4/1", "5/1")
+
+
+def test_choosing_a_target_spec_or_changing_domain_clears_the_target_override():
+    editor = Editor()
+    editor.set_target_override_text("[1 0 0⟩")
+    assert editor.target_override is not None
+    editor.set_target_spec("OLD")  # the chooser and the manual list are alternatives
+    assert editor.target_override is None
+    # a domain change also resets the (domain-specific) manual list to the new default
+    editor.set_target_override_text("[1 0 0⟩")
+    editor.expand()
+    assert editor.target_override is None
+
+
+def test_target_override_round_trips_serialize_and_older_docs_lack_it():
+    editor = Editor()
+    editor.set_target_override_text("[1 0 0⟩ [-1 1 0⟩")
+    data = editor.serialize()
+    fresh = Editor()
+    fresh.load(data)
+    assert fresh.target_override == ("2/1", "3/2")
+    del data["target_override"]  # a doc saved before the override existed loads as None
+    older = Editor()
+    older.load(data)
+    assert older.target_override is None
+
+
 def test_show_settings_start_at_defaults_and_changes_are_undoable():
     editor = Editor()
     assert editor.settings == settings.defaults()  # the Editor owns the Show settings

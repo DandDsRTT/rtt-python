@@ -1026,9 +1026,11 @@ def test_collapsing_hides_the_plain_text_band_with_the_tile():
 
 def test_editable_plain_text_tiles_render_as_inputs():
     cells = {c.id: c for c in _with(plain_text_values=True).cells}
-    # the editable tiles render as inputs: the mapping + comma-basis duals, and the
-    # generator tuning map (typing a cents tuning freezes it as the manual tuning)
-    for cid in ("ptext:mapping:primes", "ptext:vectors:commas", "ptext:tuning:gens"):
+    # the editable tiles render as inputs: the mapping + comma-basis duals, the generator
+    # tuning map (typing a cents tuning freezes it), and the target interval list (typing a
+    # vector list overrides the target set)
+    for cid in ("ptext:mapping:primes", "ptext:vectors:commas", "ptext:tuning:gens",
+                "ptext:vectors:targets"):
         assert cells[cid].kind == "ptextedit"
     # every computed value stays read-only display text, not an editable box
     for cid in ("ptext:mapping:targets", "ptext:mapping:commas", "ptext:tuning:primes",
@@ -3037,6 +3039,37 @@ def test_generator_tuning_map_cells_are_editable_inputs():
     cells = {c.id: c for c in _layout().cells}
     assert cells["tuning:gen:0"].kind == "gentuningcell"
     assert cells["tuning:gen:1"].kind == "gentuningcell"
+
+
+def test_a_target_override_drives_the_target_columns():
+    # a typed explicit target list replaces the TILT/OLD set everywhere it flows: the ratios,
+    # the vector cells, and the tempered/just/damage size lists all show exactly the two intervals
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    cells = {c.id: c for c in spreadsheet.build(base, s, target_override=("2/1", "3/2")).cells}
+    assert cells["target:0"].text == "2/1" and cells["target:1"].text == "3/2"
+    assert "target:2" not in cells  # exactly two columns
+    assert cells["cell:vec:targets:0:0"].kind == "targetcell"  # the editable monzo cells
+    for row in ("tuning", "just", "damage"):  # the size lists follow the override (two columns)
+        assert f"{row}:target:1" in cells and f"{row}:target:2" not in cells
+
+
+def test_target_interval_list_cells_and_plain_text_are_editable():
+    cells = {c.id: c for c in _with(plain_text_values=True).cells}
+    assert cells["ptext:vectors:targets"].kind == "ptextedit"
+    assert cells["cell:vec:targets:0:0"].kind == "targetcell"
+
+
+def test_typing_the_target_interval_list_drives_the_grid_through_the_editor():
+    # the editable target interval list end to end: a typed vector list, applied via the editor,
+    # drives the built target columns (the hybrid override)
+    editor = Editor()
+    assert editor.set_target_override_text("[1 0 0⟩ [-1 1 0⟩") is True
+    cells = {c.id: c for c in spreadsheet.build(
+        editor.state, editor.settings, tuning_scheme=editor.tuning_scheme,
+        target_override=editor.target_override).cells}
+    assert cells["target:0"].text == "2/1" and cells["target:1"].text == "3/2"
+    assert "target:2" not in cells
 
 
 def test_optimization_draws_the_minimized_damage_indicator_on_the_chart():

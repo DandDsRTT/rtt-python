@@ -54,6 +54,7 @@ class _Doc:
     # of truth for the prescaler. Stored as a d-tuple (the diagonal) rather than the full
     # d×d matrix because 𝐿 IS conceptually diag(...); off-diagonal cells are pinned at 0.
     custom_prescaler: tuple[float, ...] | None
+    target_override: tuple[str, ...] | None  # a typed explicit target list, overriding the TILT/OLD spec
     settings: tuple[tuple[str, bool], ...]
     collapsed: frozenset[str]
 
@@ -73,6 +74,7 @@ def _initial_doc() -> _Doc:
         optimize_locked=False,
         generator_tuning=None,
         custom_prescaler=None,
+        target_override=None,
         settings=tuple(sorted(show_settings.defaults().items())),
         collapsed=INITIAL_COLLAPSED,
     )
@@ -104,6 +106,7 @@ class Editor:
             optimize_locked=self.optimize_locked,
             generator_tuning=self.generator_tuning,
             custom_prescaler=self.custom_prescaler,
+            target_override=self.target_override,
             settings=tuple(sorted(self.settings.items())),
             collapsed=frozenset(self.collapsed),
         )
@@ -122,6 +125,7 @@ class Editor:
         self.optimize_locked = doc.optimize_locked
         self.generator_tuning = doc.generator_tuning
         self.custom_prescaler = doc.custom_prescaler
+        self.target_override = doc.target_override
         self.settings = dict(doc.settings)
         self.collapsed = set(doc.collapsed)
         self.pending_comma = None  # a draft never survives a document restore
@@ -132,10 +136,12 @@ class Editor:
 
     @state.setter
     def state(self, new_state: TemperamentState) -> None:
-        # a domain (d) change forgets the weakly-held manual target limit, so the set
-        # reverts to the new domain's default — and does not resurrect if d comes back
+        # a domain (d) change forgets the weakly-held manual target limit and any typed
+        # target list, so the set reverts to the new domain's default — and does not
+        # resurrect if d comes back
         if new_state.d != self._state.d:
             self.target_limit = None
+            self.target_override = None
         self._state = new_state
 
     @property
@@ -383,12 +389,34 @@ class Editor:
 
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
-        or ``"OLD"``. A manual limit is weakly held — the next domain change forgets it."""
+        or ``"OLD"``. A manual limit is weakly held — the next domain change forgets it.
+        Choosing a scheme clears any typed target list (the chooser and the manual list are
+        alternatives)."""
         self._snapshot()
         match = re.match(r"(\d*)-?(TILT|OLD)", spec)
         n, family = (match.group(1), match.group(2)) if match else ("", self.target_family)
         self.target_family = family
         self.target_limit = int(n) if n else None
+        self.target_override = None
+
+    def set_target_override_text(self, text: str) -> bool:
+        """Set an explicit target interval list from a typed EBK vector string (the editable
+        target interval list plain text). Stored as ratios, overriding the TILT/OLD spec until
+        the spec is re-chosen or the domain changes. False (state untouched) when it is not a
+        valid integer vector list, so the caller can flag the input."""
+        monzos = service.parse_comma_basis(text)
+        if monzos is None:
+            return False
+        self._snapshot()
+        self.target_override = service.comma_ratios(monzos, self.state.domain_basis)
+        return True
+
+    def set_target_override_monzos(self, monzos) -> None:
+        """Set the explicit target list from edited monzo columns (the editable target
+        interval list cells), like :meth:`set_interest_monzos` — stored back as ratios."""
+        self._snapshot()
+        self.target_override = service.comma_ratios(
+            [tuple(int(x) for x in m) for m in monzos], self.state.domain_basis)
 
     def set_range_mode(self, mode: str) -> None:
         self._snapshot()
@@ -502,6 +530,7 @@ class Editor:
             "optimize_locked": self.optimize_locked,
             "generator_tuning": list(self.generator_tuning) if self.generator_tuning is not None else None,
             "custom_prescaler": list(self.custom_prescaler) if self.custom_prescaler is not None else None,
+            "target_override": list(self.target_override) if self.target_override is not None else None,
             "settings": dict(self.settings),
             "collapsed": sorted(self.collapsed),
         }
@@ -528,6 +557,8 @@ class Editor:
             if data.get("generator_tuning") is not None else None,
             custom_prescaler=tuple(float(x) for x in data["custom_prescaler"])
             if data.get("custom_prescaler") is not None else None,
+            target_override=tuple(data["target_override"])
+            if data.get("target_override") is not None else None,
             settings=tuple(sorted({**show_settings.defaults(), **data.get("settings", {})}.items())),
             collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
         )

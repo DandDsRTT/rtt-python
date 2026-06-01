@@ -1522,6 +1522,23 @@ def index() -> None:
         editor.set_held_monzos(monzos)
         render()
 
+    def on_target_cells_change():
+        # the target interval list is edited as monzo columns, like the comma basis; read the
+        # d-tall columns (id is cell:vec:targets:{column}:{prime}) and replace the target set
+        if building[0]:
+            return
+        d = editor.state.d
+        targets = editor.target_override or service.target_interval_set(
+            editor.target_spec, editor.state.domain_basis)
+        k = len(targets)
+        if any(f"cell:vec:targets:{j}:{p}" not in inputs for j in range(k) for p in range(d)):
+            return  # the target cells aren't currently shown (folded away)
+        monzos = [[_parse_int(inputs[f"cell:vec:targets:{j}:{p}"].value) for p in range(d)] for j in range(k)]
+        if any(v is None for m in monzos for v in m):
+            return
+        editor.set_target_override_monzos(monzos)
+        render()
+
     def on_power_change(cid):
         # editable power inputs share this kind. optimization:power drives the Lp optimization
         # power; control:q (the complexity norm power in box 𝒄) is styling-only for now, so we
@@ -1566,6 +1583,8 @@ def index() -> None:
             ok = editor.try_edit_comma_basis_text(value)
         elif cid == "ptext:tuning:gens":  # a typed cents tuning freezes the generator tuning map
             ok = editor.set_generator_tuning_text(value)
+        elif cid == "ptext:vectors:targets":  # a typed vector list overrides the target interval set
+            ok = editor.set_target_override_text(value)
         else:
             return
         if ok:
@@ -1710,6 +1729,10 @@ def index() -> None:
             elif cb.kind == "heldcell":  # an editable held interval monzo component (constrains the tuning)
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_held_change()) \
+                    .props("dense borderless").classes("rtt-cellinput")
+            elif cb.kind == "targetcell":  # an editable target interval list monzo component (overrides the set)
+                wrap.classes("rtt-cell-input")
+                inputs[cb.id] = ui.input(on_change=lambda e: on_target_cells_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind in ("prime", "formcell"):  # a read-only bordered cell (domain prime / form-matrix entry)
                 with ui.element("div").classes("rtt-white"):
@@ -1929,7 +1952,8 @@ def index() -> None:
         lay = spreadsheet.build(st, editor.settings, editor.collapsed, editor.tuning_scheme, editor.target_spec,
                                 interest=editor.interest_monzos, range_mode=editor.range_mode,
                                 pending_comma=editor.pending_comma, held_monzos=editor.held_monzos,
-                                generator_tuning=editor.effective_generator_tuning())
+                                generator_tuning=editor.effective_generator_tuning(),
+                                target_override=editor.target_override)
         last_lay[0] = lay
         # the board is the grid's full size; the three sticky bands span the title gutters at the
         # board's origin, so cells routed into them keep their native (cb.x, cb.y) and line up with
@@ -2024,6 +2048,8 @@ def index() -> None:
                 inputs[cb.id].value = cb.text  # the normalized monzo component build computed
             elif cb.kind == "heldcell":
                 inputs[cb.id].value = cb.text  # the normalized held monzo component build computed
+            elif cb.kind == "targetcell":
+                inputs[cb.id].value = cb.text  # the target monzo component build computed (blank when quantities off)
             elif cb.kind == "ptext":  # read-only value: keep its text and shrink-to-fit font in sync
                 labels[cb.id].set_text(cb.text)
                 labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")

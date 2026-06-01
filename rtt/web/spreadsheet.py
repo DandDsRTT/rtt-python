@@ -742,7 +742,8 @@ UNITS_TILES = (
 # The plain-text tiles whose string is an editable input that drives the grid —
 # the two duals the grid itself lets you type into: the mapping (mapping/primes)
 # and the comma basis (vectors/commas). Every other plain-text value is read-only.
-EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas"), ("tuning", "gens")})
+EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas"), ("tuning", "gens"),
+                            ("vectors", "targets")})
 EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band holds an input
 # Rows that carry a plain-text band (every value row; the counts row has none). The
 # quantities row's ratios are placed per column, the rest as one EBK string per tile.
@@ -756,7 +757,7 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
 # plain text on leaves just the inline string — the two value views are independent.)
 GRIDDED_KINDS = frozenset({
     "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell",
-    "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell",
+    "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell", "targetcell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel",
     "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus", "held_minus", "held_plus", "optimize",
@@ -771,7 +772,7 @@ GRIDDED_KINDS = frozenset({
 # so math_expressions' own show_value logic trims it.)
 BLANKED_NUMBER_KINDS = frozenset({
     "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell", "formcell", "heldcell",
-    "gentuningcell",
+    "gentuningcell", "targetcell",
 })
 
 
@@ -950,7 +951,7 @@ def _bus_span(positions):
 
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
-          pending_comma=None, held_monzos=(), generator_tuning=None) -> Layout:
+          pending_comma=None, held_monzos=(), generator_tuning=None, target_override=None) -> Layout:
     if settings is None:
         settings = _default_settings()
     if tuning_scheme is None:
@@ -1041,7 +1042,9 @@ def build(state, settings=None, collapsed=None,
     # so it is harmless until that box is enabled.
     approach = "prime-based" if settings.get("nonstandard_domain") else ""
     gens = service.generators(state.mapping, elements)
-    targets = service.target_interval_set(target_spec, elements)
+    # a typed explicit target list overrides the TILT/OLD spec; every target consumer below
+    # derives from this one resolved tuple, so the override flows through the whole grid
+    targets = target_override if target_override is not None else service.target_interval_set(target_spec, elements)
     k = len(targets)
     mapped = service.mapped_intervals(state.mapping, targets, elements)
     canon_mapping = service.canonical_mapping(state.mapping)  # M defactored + HNF (the form box)
@@ -1452,7 +1455,8 @@ def build(state, settings=None, collapsed=None,
     # tuning the grid does (held-just sizes, frozen-tuning maps) — the two views can't diverge
     ptext_strings = (service.plain_text_values(state, tuning_scheme, target_spec,
                                                held=held, interest=interest,
-                                               generator_tuning=generator_tuning)
+                                               generator_tuning=generator_tuning,
+                                               target_override=target_override)
                      if show_ptext else {})
 
     def ptext_height(rkey, ckey):  # one line; the app shrinks the font to fit the box width
@@ -1821,10 +1825,10 @@ def build(state, settings=None, collapsed=None,
                     v = pending[p]
                     cells.append(CellBox(f"cell:comma:{p}:{nc}", comma_left(nc), vec_top(p), COL_W, ROW_H, "commacell",
                                          text="" if v is None else str(v), prime=p, comma=nc, pending=True, unit=cell_unit("vectors", "commas", prime=p)))
-        if tile_open("vectors", "targets"):
-            for j in range(k):
-                for p in range(d):
-                    cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "vec", text=str(target_vectors[j][p]), unit=cell_unit("vectors", "targets", prime=p)))
+        if tile_open("vectors", "targets"):  # the target interval list as EDITABLE monzo columns
+            for j in range(k):                # (a hybrid input, like the comma basis): typing a
+                for p in range(d):            # column overrides the target set with those intervals
+                    cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "targetcell", text=str(target_vectors[j][p]), prime=p, comma=j, unit=cell_unit("vectors", "targets", prime=p)))
         if tile_open("vectors", "held"):  # the held intervals as editable monzos, like the intervals of interest
             for i in range(nh):
                 for p in range(d):

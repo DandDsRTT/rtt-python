@@ -810,6 +810,14 @@ def test_parse_cents_map_reads_a_genmap_or_tuning_string():
     assert service.parse_cents_map("") is None
 
 
+def test_plain_text_targets_honor_an_override():
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    pt = service.plain_text_values(st, target_override=("2/1", "3/2"))
+    # the target columns reflect exactly the two overridden intervals across the value rows
+    assert pt[("vectors", "targets")] == "[[1 0 0⟩ [-1 1 0⟩]"
+    assert pt[("tuning", "targets")].count(".") == 2  # two cents values, one per overridden target
+
+
 def test_tuning_exposes_diamond_generator_ranges():
     import pytest
 

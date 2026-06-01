@@ -134,6 +134,17 @@ async def test_editing_a_generator_tuning_cell_applies_an_override(user: User) -
     assert _cell_child(user, "tuning:gen:1").value == "700.000"
 
 
+async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
+    await user.open("/")
+    user.find(marker="toggle:row:vectors").click()  # expand the target interval list row
+    # the target interval list cells are editable: overriding a component freezes the set as an
+    # explicit override. The default first target is 2/1 = (1 0 0); typing 2 there survives the
+    # render only if the override applied (else the cell reverts to the default's component)
+    _cell_child(user, "cell:vec:targets:0:0").set_value("2")
+    await user.should_see(marker="cell:vec:targets:0:0")
+    assert _cell_child(user, "cell:vec:targets:0:0").value == "2"
+
+
 async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")

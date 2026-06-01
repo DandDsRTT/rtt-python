@@ -647,15 +647,17 @@ def plain_text_values(
     held=(),
     interest=(),
     generator_tuning=None,
+    target_override=None,
 ) -> dict[tuple[str, str], str]:
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
     show the same numbers two ways — the EBK string is the inline notation. ``held``
-    (the held interval monzos), ``interest`` (the other-intervals-of-interest monzos)
-    and ``generator_tuning`` (a frozen manual tuning) are threaded into the same tuning
-    the grid builds, so the two views can't diverge."""
+    (the held interval monzos), ``interest`` (the other-intervals-of-interest monzos),
+    ``generator_tuning`` (a frozen manual tuning) and ``target_override`` (a typed explicit
+    target list) are threaded into the same tuning/targets the grid builds, so the two views
+    can't diverge."""
     db = state.domain_basis
-    targets = target_interval_set(target_spec, db)
+    targets = target_override if target_override is not None else target_interval_set(target_spec, db)
     commas = comma_ratios(state.comma_basis, db)
     mapped = mapped_intervals(state.mapping, targets, db)
     mapped_comma = mapped_commas(state.mapping, state.comma_basis)
