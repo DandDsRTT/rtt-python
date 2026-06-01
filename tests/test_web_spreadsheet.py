@@ -3563,9 +3563,9 @@ def test_colorization_follows_the_content_map():
     # colour by algebraic content: a tile is tinted by which fundamental objects are
     # multiplied into its quantity. Cyan (tuning): the generator embedding G / genmap 𝒈,
     # the just tuning map 𝒋, the prescaler 𝑋, the target list T, the held basis H. Yellow
-    # (temperament): the mapping 𝑀, the comma basis C. Both → green (the darken blend).
-    # (The spine label cells colour by the band they head instead — see
-    # test_spine_rows_and_columns_colorize_by_their_band.)
+    # (temperament): the mapping 𝑀, the comma basis C, the domain basis P, the generator
+    # basis B. Both → green (the darken blend). (The spine label cells colour by the band
+    # they head instead — see test_spine_rows_and_columns_colorize_by_their_band.)
     lay = _colormap_layout()
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
@@ -3593,9 +3593,10 @@ def test_colorization_follows_the_content_map():
     assert at("cell:mapped:0:0") == G           # mapping × targets (𝑀T = 𝑀·T, both colours)
     assert at("cell:imapped:0:0") == Y          # mapping × other-intervals (𝑀·interest)
     assert at("cell:hmapped:0:0") == G          # mapping × held intervals (𝑀H, both colours)
-    # the tempered family 𝒕 = 𝒈𝑀 carries both G and 𝑀 → green; the bare genmap 𝒈 is cyan.
-    # the retuning row 𝒓 = 𝒕 − 𝒋 keeps the 𝒈𝑀 term's G and 𝑀 (a difference still has them)
-    assert at("tuning:gen:0") == C              # tuning × generators (𝒈, the generator tuning map)
+    # the generators column carries the generator basis B (yellow) in every tile, like the
+    # primes column carries P — so the cyan genmap 𝒈 over it reads green; 𝒕 = 𝒈𝑀 over it is
+    # green too (already had G·M). the retuning row 𝒓 = 𝒕 − 𝒋 keeps the 𝒈𝑀 term's G and 𝑀
+    assert at("tuning:gen:0") == G              # tuning × generators (𝒈 over the yellow generator basis B)
     for col in ("prime", "comma", "target", "interest", "held"):
         assert at(f"tuning:{col}:0") == G       # 𝒕 / 𝒕C / 𝐚 / 𝒕H = 𝒈𝑀(…)
         assert at(f"retune:{col}:0") == G       # 𝒓 / 𝒓C / 𝐞 / 𝒓H = (𝒈𝑀 − 𝒋)(…)
@@ -3646,11 +3647,11 @@ def test_off_by_default_rows_colorize_by_content_too():
 
 
 def test_generator_detempering_column_colorizes_by_content():
-    # the generator detempering D joins the comma basis C and the mapping 𝑀 as a yellow
-    # (temperament) object: the detempering list itself (quantities ratio + vectors) is 𝐷,
-    # and its products green wherever the row also carries a cyan object — the mapping 𝑀D
-    # stays yellow (both temperament), but the tempered 𝒕D, just 𝒋D, retune 𝒓D, prescaled
-    # 𝑋D and the complexity norm of 𝑋D all green (a cyan G/J/X meets the yellow D).
+    # the generator detempering column is NEUTRAL — like the intervals-of-interest column,
+    # the basis itself (D) carries no colour, and a tile takes only the colour of the OTHER
+    # objects its row multiplies in. So the basis + mapped-detempering tiles are uncoloured,
+    # the mapping product 𝑀·D is yellow (the 𝑀), and the tuning/retune family stays green
+    # (its 𝒈𝑀), while the just / prescaled / complexity products are CYAN (their bare 𝒋 / 𝑋).
     s = settings.defaults()
     s["tuning_colorization"] = True
     s["temperament_colorization"] = True
@@ -3661,18 +3662,18 @@ def test_generator_detempering_column_colorizes_by_content():
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    # the detempering list itself is 𝐷 (yellow); mapping it (𝑀D) stays yellow (both temperament)
-    assert at("detempering:0") == Y                    # quantities × detempering (the detempering ratios = 𝐷)
-    assert at("cell:vec:detempering:0:0") == Y         # interval-vectors × detempering (the 𝐷 basis)
-    assert at("cell:mapped_detempering:0:0") == Y      # mapping × detempering (𝑀D, both temperament)
-    # every tempered/just/prescaled product greens — its cyan G/J/X meets the yellow 𝐷
-    assert at("tuning:detempering:0") == G             # tuning × detempering (𝒕D = 𝒈𝑀D)
-    assert at("just:detempering:0") == G               # just × detempering (𝒋D, cyan 𝒋 over yellow 𝐷)
-    assert at("retune:detempering:0") == G             # retune × detempering (𝒓D)
-    assert at("cell:prescaling:detempering:0:0") == G  # prescaling × detempering (𝑋D, cyan 𝑋 over yellow 𝐷)
-    assert at("complexity:detempering:0") == G         # complexity × detempering (norm of 𝑋D)
-    assert at("speaker:just_audio:detempering:0") == G    # just audio × detempering (sounds 𝒋D)
-    assert at("speaker:tempered_audio:detempering:0") == G  # tempered audio × detempering (sounds 𝒕D)
+    # the detempering basis carries no colour (like the interest list); only its products colour
+    assert at("detempering:0") == N                    # quantities × detempering (the detempering list, neutral)
+    assert at("cell:vec:detempering:0:0") == N         # interval-vectors × detempering (the basis, neutral)
+    assert at("cell:mapped_detempering:0:0") == Y      # mapping × detempering (𝑀·D → the 𝑀 yellow)
+    # the tuning/retune family keeps its 𝒈𝑀 green; the bare 𝒋 / 𝑋 products are cyan-only now
+    assert at("tuning:detempering:0") == G             # tuning × detempering (𝒕·D, the 𝒈𝑀 greens)
+    assert at("just:detempering:0") == C               # just × detempering (𝒋·D, bare cyan 𝒋)
+    assert at("retune:detempering:0") == G             # retune × detempering (𝒓·D, keeps 𝒈𝑀)
+    assert at("cell:prescaling:detempering:0:0") == C  # prescaling × detempering (𝑋·D, bare cyan 𝑋)
+    assert at("complexity:detempering:0") == C         # complexity × detempering (norm of 𝑋·D, cyan)
+    assert at("speaker:just_audio:detempering:0") == C    # just audio × detempering (sounds 𝒋·D, cyan)
+    assert at("speaker:tempered_audio:detempering:0") == G  # tempered audio × detempering (sounds 𝒕·D, green)
 
 
 def _spine_colormap():
@@ -3698,16 +3699,16 @@ def test_spine_rows_and_columns_colorize_by_their_band():
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    # counts + units ROWS take each column's family: commas / detempering yellow, held /
-    # targets cyan (the four columns named); the neutral gens / primes columns stay N
+    # counts + units ROWS take each column's family: primes / commas yellow and now the
+    # generators column too; held / targets cyan; the detempering column is neutral
     for spine in ("count", "urow"):
         suffix = ":0" if spine == "urow" else ""
         assert at(f"{spine}:commas{suffix}") == Y       # the commas column is temperament (C)
-        assert at(f"{spine}:detempering{suffix}") == Y  # the detempering column is temperament (D)
+        assert at(f"{spine}:primes{suffix}") == Y       # the domain primes column is temperament (P)
+        assert at(f"{spine}:gens{suffix}") == Y          # the generators column is now temperament (B)
         assert at(f"{spine}:targets{suffix}") == C      # the target column is tuning (T)
         assert at(f"{spine}:held{suffix}") == C         # the held column is tuning (H)
-        assert at(f"{spine}:gens{suffix}") == N         # the generators spine column stays neutral
-        assert at(f"{spine}:primes{suffix}") == Y       # the domain primes column is now temperament (yellow)
+        assert at(f"{spine}:detempering{suffix}") == N  # the detempering column is now neutral
     # quantities + units COLUMNS take each row's family: mapping yellow; tuning, just,
     # retuning, prescaling, complexity cyan. The retuning units cell is cyan despite the
     # retuning VALUE cells being green — the spine follows the band, not the content.
@@ -3920,8 +3921,8 @@ def test_audio_rows_colorize_by_content_like_the_rows_they_sound():
     # the audio rows mirror the rows they sound. just audio plays the just sizes 𝒋, cyan;
     # the primes and comma columns green (the just sizes 𝒋 over the yellow domain basis P /
     # comma basis C), while the target / held columns stay cyan. tempered audio plays the
-    # tempered sizes: the generator tuning map 𝒈 (G → cyan) over the generators, and
-    # 𝒕 = 𝒈𝑀 (G·M → green) over the value columns.
+    # tempered sizes: the generator tuning map 𝒈 over the generators (cyan 𝒈 over the yellow
+    # generator basis B → green), and 𝒕 = 𝒈𝑀 (G·M → green) over the value columns.
     lay = _audio_colormap()
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
@@ -3930,7 +3931,7 @@ def test_audio_rows_colorize_by_content_like_the_rows_they_sound():
     assert at("speaker:just_audio:comma:0") == G           # 𝒋C (cyan 𝒋 over the yellow comma basis)
     for g in ("target", "interest", "held"):
         assert at(f"speaker:just_audio:{g}:0") == C         # 𝐨 / 𝒋H: cyan 𝒋 (T/H also cyan)
-    assert at("speaker:tempered_audio:gen:0") == C            # 𝒈 (the generator tuning map)
+    assert at("speaker:tempered_audio:gen:0") == G           # 𝒈 over the yellow generator basis B (green)
     for g in ("prime", "comma", "target", "interest", "held"):
         assert at(f"speaker:tempered_audio:{g}:0") == G       # 𝒕 / 𝒕H = 𝒈𝑀
 
