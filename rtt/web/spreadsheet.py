@@ -1842,9 +1842,20 @@ def build(state, settings=None, collapsed=None,
     # (a "mathexpr" kind prefixing the cents value); a cell with no closed form is
     # untouched — it keeps its plain cents cell. Math expressions never removes a
     # value, bracket, caption or tile: those are governed by quantities/gridded/names.
+    # Charts track tiles: a charted row (retuning/weight/damage) draws a bar chart over
+    # EVERY tile it shows. tval_row — the one place a charted row's value cells are emitted
+    # — records each tile it draws here, and a single loop below charts them all. So a
+    # column joining a charted row is charted automatically (no per-column chart() call to
+    # forget), and a chart can never drift from the values beneath it.
+    chart_tiles = []  # (row, col, values) per open value tile of a charted row
+    chart_indicators = {}  # (row, col) -> (indicator, label); only the damage chart carries one
+
     def tval_row(key, group, vals):
         if not tile_open(key, group):
             return
+        vals = tuple(vals)
+        if key in CHARTED_ROWS:
+            chart_tiles.append((key, group, vals))
         y = row_y[key]
         # the tuning-family unit is cents per the column's coordinate: over the generators
         # it's ¢/gᵢ, over the primes ¢/pᵢ, over the (dimensionless) interval columns plain ¢
@@ -1880,8 +1891,6 @@ def build(state, settings=None, collapsed=None,
             tval_row(key, "targets", target_vals)
             tval_row(key, "interest", interest_vals)
             tval_row(key, "held", held_vals)
-            chart(key, "primes", prime_vals)
-            chart(key, "targets", target_vals)
     # the generator tuning map: the tuning row's map over the generators (the gens-column
     # counterpart of the tuning map over the primes), so the generators get a tuning tile too
     if row_open("tuning"):
@@ -1895,7 +1904,6 @@ def build(state, settings=None, collapsed=None,
                           ("retune", detempering_sizes.errors)):
             if row_open(key):
                 tval_row(key, "detempering", vals)
-        chart("retune", "detempering", detempering_sizes.errors)
 
     # the audio rows: a speaker button per pitch, sounding the just (just_audio) or
     # tempered (tempered_audio) cents of each interval — the same data the just / tuning
@@ -2058,7 +2066,6 @@ def build(state, settings=None, collapsed=None,
             tval_row("complexity", group, complexities[group])
     if row_open("weight"):  # weight is over the targets only, like damage (it scales them)
         tval_row("weight", "targets", target_weights)
-        chart("weight", "targets", target_weights)
     if slope_ctrl:  # the alt.-complexity weight-slope chooser, nested at the bottom of box 𝒘,
         # with its "damage weight slope" caption beneath (the optimization box's caption pattern)
         py = tile_top["weight"] + tile_h["weight"] - slope_extra + RANGE_GAP
@@ -2072,12 +2079,17 @@ def build(state, settings=None, collapsed=None,
         tval_row("damage", "targets", target_sizes.damage)
         # optimization adds the horizontal minimized-damage indicator (the objective ⟪𝐝⟫ₚ
         # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
-        # (∞ / 2 / 1); off, the chart is plain bars
-        power = service.optimization_power(tuning_scheme)
-        objective = _lp_objective(target_sizes.damage, power)
-        chart("damage", "targets", target_sizes.damage,
-              indicator=objective if show_optimization else None,
-              indicator_label=_format_power(power) if show_optimization else "")
+        # (∞ / 2 / 1); off, the chart is plain bars. Recorded for the chart loop below.
+        if show_optimization:
+            power = service.optimization_power(tuning_scheme)
+            chart_indicators[("damage", "targets")] = (
+                _lp_objective(target_sizes.damage, power), _format_power(power))
+
+    # Draw a bar chart over every tile a charted row recorded (see chart_tiles above):
+    # one pass, so the set of charts always equals the set of charted-row value tiles.
+    for rkey, ckey, vals in chart_tiles:
+        indicator, label = chart_indicators.get((rkey, ckey), (None, ""))
+        chart(rkey, ckey, vals, indicator=indicator, indicator_label=label)
 
     # The generator tuning-ranges chart nests at the BOTTOM of the generator tuning map
     # tile (below its values and caption), a per-generator [min, max] I-beam (octave held

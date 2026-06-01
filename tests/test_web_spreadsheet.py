@@ -3339,6 +3339,24 @@ def test_charts_on_adds_signed_retuning_charts_over_primes_and_targets():
     assert ct.y + ct.h <= on["retune:target:0"].y
 
 
+def test_every_open_tile_in_the_retuning_row_is_charted():
+    # the retuning row carries a per-tile bar chart for EVERY one of its tiles, not a
+    # hardcoded few: a chart tracks its tile, so any column joining the row is charted
+    # automatically. Exercise every group the row can span at once.
+    s = settings.defaults()
+    s.update(charts=True, optimization=True, generator_detempering=True)
+    on = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        interest=((-3, 2, 0),),       # 9/8, an interval of interest (the interest column)
+        held_monzos=((-1, 1, 0),),    # 3/2 held (the held column)
+    ).cells}
+    elem = {"primes": "prime", "commas": "comma", "targets": "target",
+            "interest": "interest", "held": "held", "detempering": "detempering"}
+    for group, e in elem.items():
+        assert f"retune:{e}:0" in on, f"the retune {group} tile is missing"  # the tile is present
+        assert on[f"chart:retune:{group}"].kind == "chart", f"the retune {group} tile is not charted"
+
+
 def test_generator_tuning_map_tile_shows_the_generator_map_cents_in_the_default_view():
     # the generator tuning map (the tuning row over the generators) is a default-view
     # tile, like the tuning map over the primes — present without any toggle
