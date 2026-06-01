@@ -1870,14 +1870,20 @@ def build(state, settings=None, collapsed=None,
             else:
                 cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v), unit=u))
 
-    # a charted tile draws a bar chart in the band reserved above its values; the
-    # chart spans the column group so its bars align with the value cells below.
-    # chart_top[key] exists only where a chart band was reserved (charts on, row
-    # charted, not folded), so it gates emission against the layout with no drift.
+    # a charted tile draws a bar chart in the band reserved above its values. The box spans
+    # the value block exactly — the left bracket gutter, the value columns, and the right
+    # bracket gutter — anchored to group_left (the cells), NOT the column footprint. So the
+    # chart's BRACKET_W-inset axis and COL_W bar pitch overlay the cells: each bar centres on
+    # its value's gridline even when a caption widens the footprint or a matlabel gutter
+    # offsets the cells within it (the gridlines follow the cells the same way; see
+    # column_axis). chart_top[key] exists only where a chart band was reserved (charts on,
+    # row charted, not folded), so it gates emission against the layout with no drift.
     def chart(rkey, ckey, vals, indicator=None, indicator_label=""):
-        if rkey in chart_top and tile_open(rkey, ckey):
-            cells.append(CellBox(f"chart:{rkey}:{ckey}", col_x[ckey], chart_top[rkey],
-                                 col_w[ckey], CHART_H, "chart", values=tuple(vals),
+        vals = tuple(vals)
+        if vals and rkey in chart_top and tile_open(rkey, ckey):
+            x = group_left[ckey](0) - BRACKET_W  # the left bracket gutter, where the value block starts
+            cells.append(CellBox(f"chart:{rkey}:{ckey}", x, chart_top[rkey],
+                                 2 * BRACKET_W + len(vals) * COL_W, CHART_H, "chart", values=vals,
                                  indicator=indicator, indicator_label=indicator_label))
 
     tuning_data = {

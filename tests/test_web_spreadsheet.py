@@ -3363,6 +3363,30 @@ def test_every_open_tile_in_the_retuning_row_is_charted():
         assert on[f"chart:retune:{group}"].kind == "chart", f"the retune {group} tile is not charted"
 
 
+def test_chart_bars_centre_on_their_value_gridlines():
+    # each black bar centres exactly on the thin grey vertical gridline under its value
+    # cell — the chart's plot area overlays the value block, not the (possibly wider /
+    # gutter-offset) column footprint. _bar_chart lays bar i at chart.x + BRACKET_W +
+    # i·COL_W + COL_W/2, so that must equal the per-element gridline. symbols adds the
+    # primes matlabel gutter and the interest column's long title widens its footprint,
+    # so both offsets are exercised.
+    s = settings.defaults()
+    s.update(charts=True, symbols=True, optimization=True, generator_detempering=True)
+    lay = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+        interest=((-3, 2, 0),), held_monzos=((-1, 1, 0),))
+    on = {c.id: c for c in lay.cells}
+    gridline = {ln.id: ln.pos for ln in lay.lines if ln.orientation == "v"}
+    bw, cw = spreadsheet.BRACKET_W, spreadsheet.COL_W
+    elem = {"primes": "prime", "commas": "comma", "targets": "target",
+            "interest": "interest", "held": "held", "detempering": "detempering"}
+    for group, e in elem.items():
+        ch = on[f"chart:retune:{group}"]
+        for i in range(len(ch.values)):
+            bar_centre = ch.x + bw + i * cw + cw / 2
+            assert bar_centre == gridline[f"v:{e}:{i}"], f"{group} bar {i} is off its gridline"
+
+
 def test_generator_tuning_map_tile_shows_the_generator_map_cents_in_the_default_view():
     # the generator tuning map (the tuning row over the generators) is a default-view
     # tile, like the tuning map over the primes — present without any toggle
