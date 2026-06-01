@@ -665,3 +665,17 @@ def test_load_tolerates_a_state_saved_before_a_setting_existed():
     restored = Editor()
     restored.load(data)
     assert restored.settings["charts"] is settings.defaults()["charts"]
+
+
+def test_load_pins_a_shelved_toggle_to_its_default():
+    # a saved document can carry a toggle that has since been shelved (pulled from
+    # IMPLEMENTED because the feature isn't ready to expose). Loading it must not
+    # resurrect that feature: greyed toggles are pinned to their defaults whatever the
+    # blob says, so IMPLEMENTED stays the single source of truth for what the grid shows.
+    assert "alt_complexity" not in settings.IMPLEMENTED  # precondition: it's shelved
+    editor = Editor()
+    data = editor.serialize()
+    data["settings"]["alt_complexity"] = True  # a value the panel can no longer set
+    restored = Editor()
+    restored.load(data)
+    assert restored.settings["alt_complexity"] is False  # pinned back to its default

@@ -1721,8 +1721,12 @@ def test_alt_complexity_control_needs_weighting_and_the_primes_column():
     }
 
 
-def test_alt_complexity_is_implemented_now_that_its_prescaler_control_builds():
-    assert "alt_complexity" in settings.IMPLEMENTED
+def test_alt_complexity_is_deferred_so_its_toggle_stays_greyed():
+    # alt. complexity is built, but shelved as not-ready: it is held OUT of IMPLEMENTED so the
+    # Show panel greys/disables its checkbox (like projection, identity objects, …) and the
+    # load path pins it to its default. Its build code and layout tests below stay intact —
+    # only the live, toggleable exposure is withdrawn, ready to restore when the feature is.
+    assert "alt_complexity" not in settings.IMPLEMENTED
 
 
 def test_weighting_subcontrols_are_registered_under_weighting():
@@ -2675,9 +2679,11 @@ def test_counts_row_reserves_no_symbol_slot_so_its_captions_dont_shift():
 
 
 def test_every_implemented_toggle_actually_changes_the_layout():
-    # a toggle is "implemented" (live, not greyed, in the Show panel) iff it has built
+    # a toggle is "implemented" (live, not greyed, in the Show panel) only if it has built
     # content — with its parent chain on, flipping the toggle must visibly change the grid
-    # (cells/blocks added/removed/moved or their text/kind changed)
+    # (cells/blocks added/removed/moved or their text/kind changed). The converse needn't
+    # hold: a built feature may be shelved out of IMPLEMENTED (e.g. alt. complexity), so it
+    # changes the layout yet stays greyed — hence we only sweep the IMPLEMENTED toggles here.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
     def snapshot(s):

@@ -80,20 +80,6 @@ async def test_optimization_with_charts_renders_the_damage_indicator(user: User)
     await user.should_see(marker="chart:damage:targets")
 
 
-async def test_enabling_alt_complexity_renders_its_in_tile_choosers(user: User) -> None:
-    # the weighting region's in-tile choosers (box 𝐋 prescaler, box 𝒄 predefined complexity +
-    # norm, box 𝒘 weight slope) are control_select dropdowns — a _make_cell branch the default
-    # view never reaches. alt. complexity nests under weighting, so enable the parent first.
-    await user.open("/")
-    user.find(kind=ui.checkbox, content="weighting").click()
-    user.find(kind=ui.checkbox, content="alt. complexity").click()
-    await user.should_see(marker="control:prescaler")
-    await user.should_see(marker="control:diminuator")  # the box-𝐋 checkbox (control_check)
-    await user.should_see(marker="control:complexity")
-    await user.should_see(marker="control:q")  # the q norm-power field (replaces the old norm dropdown)
-    await user.should_see(marker="control:slope")
-
-
 async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> None:
     # both colorization sub-toggles share the label "colorization", so one click matches
     # and flips both on. They paint wash blocks behind the tiles — drive that branch and

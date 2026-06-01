@@ -5,9 +5,12 @@ Mirrors the mockup's Show legend (two sections of toggles). Each entry is
 (:mod:`rtt.web.spreadsheet`) reads a settings dict to decide what to include, so
 toggling a box adds/removes content (which the reconciling renderer animates).
 
-Toggles whose behaviour is built are listed in :data:`IMPLEMENTED` and render as
-interactive checkboxes; the rest are shown at their default state and greyed out
-until their content exists.
+Toggles offered as live, interactive checkboxes are listed in :data:`IMPLEMENTED`;
+the rest render greyed out at their default state — usually because their content
+isn't built yet, but a built feature can also be *shelved* there (held out of
+:data:`IMPLEMENTED`) when it isn't ready to expose. :func:`from_persisted` pins
+every greyed toggle to its default on load, so a stale saved value can't re-expose
+a shelved feature.
 
 A few toggles are *sub-controls* of another (see :data:`SUBCONTROLS`): the panel
 indents them under their parent and only shows them while the parent is on.
@@ -89,7 +92,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
     {"names", "symbols", "mnemonics", "equivalences", "gridded_values", "plain_text_values",
      "quantities", "domain_quantities", "units", "domain_units", "counts", "preselects",
      "temperament_boxes", "tuning_boxes", "math_expressions", "charts", "tuning_ranges",
-     "tuning_colorization", "temperament_colorization", "weighting", "alt_complexity", "audio",
+     "tuning_colorization", "temperament_colorization", "weighting", "audio",
      "generator_detempering", "optimization", "interest"}
 )
 
@@ -111,3 +114,14 @@ def subcontrols_of(key: str) -> set[str]:
                 nested.add(child)
                 queue.append(child)
     return nested
+
+
+def from_persisted(stored: dict) -> dict[str, bool]:
+    """A persisted Show-settings dict merged onto the defaults — but a saved value is kept
+    only for a live (:data:`IMPLEMENTED`) toggle; for a greyed one its default is kept. The
+    panel can't change a greyed toggle (its checkbox is disabled), so a stale ``True`` for
+    one would otherwise resurrect a shelved feature on load. Pinning every greyed toggle to
+    its default keeps :data:`IMPLEMENTED` the single source of truth for what the grid can
+    show. Unknown keys (from a newer or older build) are dropped."""
+    return {key: (stored.get(key, default) if key in IMPLEMENTED else default)
+            for key, default in DEFAULTS.items()}

@@ -537,10 +537,11 @@ class Editor:
 
     def load(self, data: dict) -> None:
         """Restore a document previously produced by :meth:`serialize`. Unknown/missing
-        keys fall back to defaults (so an older saved state still loads), and an
-        unparseable temperament leaves the editor untouched. Builds the snapshot fully
-        before swapping it in, so a malformed field can't leave a half-loaded state. A
-        load is a fresh start, so it clears the undo/redo history."""
+        keys — and any greyed, not-yet-live Show toggle — fall back to defaults (so an
+        older saved state still loads, and a shelved feature can't be re-exposed by stale
+        saved state); an unparseable temperament leaves the editor untouched. Builds the
+        snapshot fully before swapping it in, so a malformed field can't leave a half-
+        loaded state. A load is a fresh start, so it clears the undo/redo history."""
         state = service.parse_mapping_state(data["mapping_ebk"])
         if state is None:
             return
@@ -559,7 +560,7 @@ class Editor:
             if data.get("custom_prescaler") is not None else None,
             target_override=tuple(data["target_override"])
             if data.get("target_override") is not None else None,
-            settings=tuple(sorted({**show_settings.defaults(), **data.get("settings", {})}.items())),
+            settings=tuple(sorted(show_settings.from_persisted(data.get("settings", {})).items())),
             collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
         )
         self._restore(doc)
