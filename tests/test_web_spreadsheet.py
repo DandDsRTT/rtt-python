@@ -862,8 +862,8 @@ def test_tuning_and_target_choosers_show_the_live_selection_temperament_is_a_pla
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["preselects"] = True
-    cells = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="POTE", target_spec="OLD").cells}
-    assert cells["preselect:tuning"].text == "POTE"  # reflects the active scheme
+    cells = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="destretched-octave minimax-ES", target_spec="OLD").cells}
+    assert cells["preselect:tuning"].text == "destretched-octave minimax-ES"  # reflects the active scheme
     assert cells["preselect:target"].text == "OLD"  # reflects the active set
     assert cells["preselect:temperament"].text == ""  # a chooser placeholder, not a live value
 
@@ -908,13 +908,13 @@ def test_tuning_and_temperament_dropdowns_are_copied_into_more_tiles():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["preselects"] = True
-    lay = spreadsheet.build(base, s, tuning_scheme="POTE")
+    lay = spreadsheet.build(base, s, tuning_scheme="destretched-octave minimax-ES")
     cells = {c.id: c for c in lay.cells}
     boxes = {b.id: b for b in lay.blocks}
     # a copy of the tuning chooser rides the generator tuning map tile (gens column),
     # mirroring the live scheme like the tuning map copy in the primes column
     gt = cells["preselect:tuning:gens"]
-    assert gt.x == cells["header:gens"].x and gt.text == "POTE"
+    assert gt.x == cells["header:gens"].x and gt.text == "destretched-octave minimax-ES"
     # it shares the tuning row's control band with the tuning map dropdown (primes box)
     assert boxes["block:preselect:tuning:gens"].y == boxes["block:preselect:tuning"].y
     # a copy of the temperament chooser rides the comma basis tile (commas column)
@@ -970,9 +970,9 @@ def test_build_honors_the_target_interval_spec():
 
 def test_build_honors_the_tuning_scheme():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    top = {c.id: c.text for c in spreadsheet.build(base, tuning_scheme="TOP").cells}
-    pote = {c.id: c.text for c in spreadsheet.build(base, tuning_scheme="POTE").cells}
-    # POTE holds the octave pure; TOP stretches it — so the prime-2 tuning differs
+    top = {c.id: c.text for c in spreadsheet.build(base, tuning_scheme="minimax-S").cells}
+    pote = {c.id: c.text for c in spreadsheet.build(base, tuning_scheme="destretched-octave minimax-ES").cells}
+    # destretched-octave minimax-ES holds the octave pure; minimax-S stretches it — so the prime-2 tuning differs
     assert top["tuning:prime:0"] != pote["tuning:prime:0"]
     assert pote["tuning:prime:0"] == "1200.000"
 
@@ -1591,7 +1591,7 @@ def test_alt_complexity_adds_a_prescaler_dropdown_to_the_prescaling_box():
     assert "control:prescaler" not in off  # no control unless alt. complexity is on
     ctrl = on["control:prescaler"]
     assert ctrl.kind == "control_select"
-    assert ctrl.text == "log-prime"  # the default scheme's current prescaler (Tenney)
+    assert ctrl.text == "log-prime"  # the default scheme's current prescaler
     assert ctrl.values == ("identity", "log-prime", "prime")  # the chooser's options
     # it rides below the prescaling matrix (box 𝐋), at the primes column's left edge
     assert ctrl.y > on["cell:prescaling:primes:2:2"].y
@@ -1656,7 +1656,7 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
 def test_alt_complexity_hides_dual_q_outside_all_interval_mode():
     # per the mockup note, dual(q) is meaningful only when the scheme is all-interval (the dual
     # norm only enters via the dual norm inequality used to minimax over every interval). The
-    # default minimax-S (TOP) IS all-interval, so dual(q) renders; a TILT-based scheme hides it.
+    # default minimax-S IS all-interval, so dual(q) renders; a TILT-based scheme hides it.
     on_all = {c.id for c in _with(weighting=True, alt_complexity=True).cells}
     assert "control:dual" in on_all and "symbol:dual" in on_all and "caption:dual" in on_all
     s = {**settings.defaults(), "weighting": True, "alt_complexity": True}
@@ -1731,7 +1731,7 @@ def test_alt_complexity_adds_a_weight_slope_chooser_to_the_weight_box():
     assert "control:slope" not in off  # no control unless alt. complexity is on
     ctrl = on["control:slope"]
     assert ctrl.kind == "control_select"
-    assert ctrl.text == "simplicity-weight"  # the default scheme's damage-weight slope (TOP)
+    assert ctrl.text == "simplicity-weight"  # the default scheme's damage-weight slope
     assert ctrl.values == ("complexity-weight", "unity-weight", "simplicity-weight")
     # it rides below the weight list (box 𝒘), spanning the targets column
     assert ctrl.y > on["weight:target:0"].y
@@ -3093,7 +3093,7 @@ def test_optimization_hint_invites_unlock_once_the_auto_lock_is_latched():
 
 
 def test_optimization_power_field_reflects_the_current_scheme():
-    # the power field shows the *current* scheme's Lp order: ∞ for minimax (TOP), 2 for
+    # the power field shows the *current* scheme's Lp order: ∞ for minimax, 2 for
     # least-squares (miniRMS)
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
@@ -3152,7 +3152,7 @@ def test_a_manual_generator_tuning_drives_the_displayed_maps():
     s = settings.defaults()
     manual = {c.id: c for c in spreadsheet.build(base, s, generator_tuning=(1200.0, 701.955)).cells}
     assert manual["tuning:prime:0"].text == "1200.000"          # prime 2 = the pure octave
-    # the default optimum (TOP) stretches the octave, so it differs
+    # the default optimum stretches the octave, so it differs
     auto = {c.id: c for c in spreadsheet.build(base, s).cells}
     assert auto["tuning:prime:0"].text != "1200.000"
 
@@ -3499,7 +3499,7 @@ def test_generator_detempering_prescaling_row_scales_each_vector():
 
 def test_generator_detempering_complexity_row_lists_each_complexity():
     # the complexity of each detempering interval: the octave (1.000) and the fifth (2.585,
-    # = log₂2 + log₂3 under the default Tenney norm), framed as an interval-size list
+    # = log₂2 + log₂3 under the default log-product norm), framed as an interval-size list
     cells = {c.id: c for c in _with(generator_detempering=True, weighting=True, units=True).cells}
     assert [cells[f"complexity:detempering:{i}"].text for i in range(2)] == ["1.000", "2.585"]
     assert cells["bracket:complexity:detemperinglist:l"].text == "["

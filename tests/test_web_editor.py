@@ -44,7 +44,7 @@ def test_canonicalize_comma_basis_restores_canonical_form_undoably():
 
 def test_set_complexity_prescaler_swaps_the_weighting_prescaler_into_the_layout():
     editor = Editor()
-    assert service.prescaler_of(editor.tuning_scheme) == "log-prime"  # the default (Tenney)
+    assert service.prescaler_of(editor.tuning_scheme) == "log-prime"  # the default
     editor.set_complexity_prescaler("prime")  # the alt.-complexity control (box 𝐋)
     assert service.prescaler_of(editor.tuning_scheme) == "prime"
     # and the swap flows into the prescaling matrix: sopfr's diagonal IS the primes
@@ -161,7 +161,7 @@ def test_set_complexity_euclidean_switches_the_complexity_norm():
 
 def test_set_complexity_name_sets_the_whole_complexity_shape():
     editor = Editor()
-    assert service.complexity_name_of(editor.tuning_scheme) == "lp"  # default (Tenney)
+    assert service.complexity_name_of(editor.tuning_scheme) == "lp"  # default
     editor.set_complexity_name("sopfr")  # the predefined-complexities master chooser (box 𝒄)
     assert service.complexity_name_of(editor.tuning_scheme) == "sopfr"
     assert service.prescaler_of(editor.tuning_scheme) == "prime"  # sopfr's prescaler flowed in
@@ -180,7 +180,7 @@ def test_set_diminuator_ignored_toggles_the_size_factor():
 
 def test_set_weight_slope_swaps_the_damage_weight_slope():
     editor = Editor()
-    assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"  # TOP default
+    assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"  # minimax-S default
     editor.set_weight_slope("unity-weight")  # the weight box's damage-weight-slope chooser
     assert service.weight_slope_of(editor.tuning_scheme) == "unity-weight"
     # the swap re-weights the targets: unity weight makes every target weight 1
@@ -291,9 +291,9 @@ def test_editor_starts_with_default_tuning_scheme_and_target_spec():
 
 def test_selecting_a_tuning_scheme_and_target_spec_updates_them():
     editor = Editor()
-    editor.set_tuning_scheme("POTE")
+    editor.set_tuning_scheme("destretched-octave minimax-ES")
     editor.set_target_spec("OLD")
-    assert editor.tuning_scheme == "POTE"
+    assert editor.tuning_scheme == "destretched-octave minimax-ES"
     assert editor.target_spec == "OLD"
 
 
@@ -328,7 +328,7 @@ def test_scheme_and_target_spec_changes_are_undoable():
     # the whole document is one undo history: selecting a tuning scheme or target set
     # is an undoable change, reverted by undo and reapplied by redo
     editor = Editor()
-    editor.set_tuning_scheme("CTE")
+    editor.set_tuning_scheme("held-octave minimax-ES")
     assert editor.can_undo is True
     editor.set_target_spec("OLD")
     editor.undo()
@@ -336,7 +336,7 @@ def test_scheme_and_target_spec_changes_are_undoable():
     editor.undo()
     assert editor.tuning_scheme == service.DEFAULT_TUNING_SCHEME  # ...then the scheme
     editor.redo()
-    assert editor.tuning_scheme == "CTE"  # redo reapplies it
+    assert editor.tuning_scheme == "held-octave minimax-ES"  # redo reapplies it
 
 
 def test_range_mode_starts_monotone_and_is_undoable():
@@ -616,7 +616,7 @@ def test_reset_restores_every_default_as_one_undoable_action():
     editor = Editor()
     assert editor.can_reset is False  # a fresh editor is already at the defaults
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])  # a value change
-    editor.set_tuning_scheme("CTE")               # a view selection
+    editor.set_tuning_scheme("held-octave minimax-ES")  # a view selection
     editor.set_show("charts", True)               # a Show setting
     editor.toggle_collapsed("col:commas")         # an expand/collapse change
     assert editor.can_reset is True
@@ -628,7 +628,7 @@ def test_reset_restores_every_default_as_one_undoable_action():
     assert editor.can_reset is False
     editor.undo()  # a single undo brings the whole prior document back
     assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
-    assert editor.tuning_scheme == "CTE"
+    assert editor.tuning_scheme == "held-octave minimax-ES"
     assert editor.settings["charts"] is True
     assert "col:commas" not in editor.collapsed
 
@@ -636,7 +636,7 @@ def test_reset_restores_every_default_as_one_undoable_action():
 def test_serialize_load_round_trips_the_whole_document():
     editor = Editor()
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
-    editor.set_tuning_scheme("POTE")
+    editor.set_tuning_scheme("destretched-octave minimax-ES")
     editor.set_target_spec("9-OLD")
     editor.set_interest_monzos([[-1, 1, 0]])
     editor.add_held()
@@ -648,7 +648,7 @@ def test_serialize_load_round_trips_the_whole_document():
     restored = Editor()
     restored.load(data)
     assert restored.state.mapping == ((1, 0, -4), (0, 1, 4))
-    assert restored.tuning_scheme == "POTE"
+    assert restored.tuning_scheme == "destretched-octave minimax-ES"
     assert restored.target_spec == "9-OLD"
     assert restored.interest_monzos == [(-1, 1, 0)]
     assert restored.held_monzos == [(0, 0, 0)]

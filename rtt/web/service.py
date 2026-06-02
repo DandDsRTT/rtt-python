@@ -45,7 +45,7 @@ from rtt.tuning_ranges import get_generator_tuning_range
 
 Matrix = tuple[tuple[int, ...], ...]
 
-DEFAULT_TUNING_SCHEME = "minimax-S"  # systematic name for TOP (the as-shipped scheme)
+DEFAULT_TUNING_SCHEME = "minimax-S"  # the as-shipped scheme
 DEFAULT_TARGET_SPEC = "TILT"  # the default target interval set family (tracks the domain)
 
 
@@ -365,8 +365,8 @@ def optimization_power(scheme: str = DEFAULT_TUNING_SCHEME) -> float:
 
 def held_intervals(scheme: str = DEFAULT_TUNING_SCHEME, d: int = 3) -> tuple[str, ...]:
     """The intervals the scheme tunes exactly justly (trait 0), as ratio strings — the
-    optimization's held interval constraints. The shipped minimax-S (TOP) holds nothing;
-    a held-octave scheme (e.g. CTE) holds ``2/1``. ``"octave"`` reads as the prime 2."""
+    optimization's held interval constraints. The shipped minimax-S holds nothing;
+    a held-octave scheme (e.g. held-octave minimax-ES) holds ``2/1``. ``"octave"`` reads as the prime 2."""
     held = resolve_tuning_scheme(scheme).held_intervals
     if not held:
         return ()
@@ -395,7 +395,7 @@ def interval_complexities(
     mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
 ) -> tuple[float, ...]:
     """Each interval's complexity under ``scheme``'s complexity norm — the (pre-transformed)
-    norm of its monzo (log-prime/Tenney by default). Independent of the damage slope, which
+    norm of its monzo (log-prime by default). Independent of the damage slope, which
     only decides how complexity becomes a weight.
 
     ``prescaler_override`` (a d-tuple) replaces the trait-derived diagonal — the seam the
@@ -432,7 +432,7 @@ def damage_weight_slope(scheme: str = DEFAULT_TUNING_SCHEME) -> str:
 
 
 # The three predefined complexity prescalers the alt.-complexity control offers, as the
-# (log-prime power, prime power) traits each sets — identity (count), Tenney, Benedetti.
+# (log-prime power, prime power) traits each sets — identity (count), log-prime, prime (sopfr).
 PRESCALERS = {"identity": (0, 0), "log-prime": (1, 0), "prime": (0, 1)}
 
 # The damage-weight slopes the weight box's chooser offers, mapping each display name to the
@@ -446,8 +446,8 @@ WEIGHT_SLOPES = {
 # The predefined complexities the master chooser in box 𝒄 offers, each mapping its display
 # name to the systematic interval-complexity token whose traits it sets (prescaler + size
 # factor + norm power). It is the master that overrides the box 𝐋 prescaler and box 𝒄 norm:
-# copfr (count), lp (log-product/Tenney), sopfr (Benedetti), lils (log-integer-limit/Weil),
-# lols (log-odd-limit/Kees), and the Euclidean (q=2) variant of each. lols/lols-E also hold
+# copfr (count), lp (log-product), sopfr, lils (log-integer-limit),
+# lols (log-odd-limit), and the Euclidean (q=2) variant of each. lols/lols-E also hold
 # the octave just (the only ones that touch trait 0); see :func:`scheme_with_complexity`.
 COMPLEXITY_NAMES = {
     "copfr": "copfr",
@@ -514,7 +514,7 @@ def is_euclidean(scheme) -> bool:
 
 def is_all_interval(scheme) -> bool:
     """Whether ``scheme`` is an all-interval tuning scheme — its target set is the empty
-    quotient list ``{}`` (every interval, by duality). The shipped minimax-S (TOP) is."""
+    quotient list ``{}`` (every interval, by duality). The shipped minimax-S is."""
     targets = resolve_tuning_scheme(scheme).target_intervals
     return targets is not None and targets.strip() in ("{}", "")
 

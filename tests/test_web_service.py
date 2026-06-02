@@ -6,10 +6,10 @@ from rtt.web import service
 
 def test_optimization_power_is_the_schemes_lp_norm_order():
     # the optimization power p is trait 2 of the tuning scheme: the order of the
-    # Lp norm minimized over the damages. TOP (the shipped default) is a minimax
+    # Lp norm minimized over the damages. minimax-S (the shipped default) is a minimax
     # scheme, so p = ∞; miniRMS is least-squares (p = 2); miniaverage is p = 1.
-    assert service.optimization_power("TOP") == math.inf
-    assert service.optimization_power() == math.inf  # defaults to the shipped scheme (TOP)
+    assert service.optimization_power("minimax-S") == math.inf
+    assert service.optimization_power() == math.inf  # defaults to the shipped scheme (minimax-S)
     assert service.optimization_power("least squares") == 2
     assert service.optimization_power("miniaverage-U") == 1
 
@@ -149,11 +149,11 @@ def test_tuning_holds_user_specified_intervals_just():
 
 def test_held_intervals_come_from_the_tuning_scheme():
     # the held intervals (tuned exactly justly) are trait 0 of the tuning scheme,
-    # surfaced as ratios. The shipped minimax-S (TOP) holds nothing; a held-octave
-    # scheme like CTE holds the octave.
-    assert service.held_intervals("TOP", 3) == ()
-    assert service.held_intervals() == ()  # defaults to the shipped scheme (TOP)
-    assert service.held_intervals("CTE", 3) == ("2/1",)
+    # surfaced as ratios. The shipped minimax-S holds nothing; a held-octave
+    # scheme like held-octave minimax-ES holds the octave.
+    assert service.held_intervals("minimax-S", 3) == ()
+    assert service.held_intervals() == ()  # defaults to the shipped scheme (minimax-S)
+    assert service.held_intervals("held-octave minimax-ES", 3) == ("2/1",)
 
 
 def test_comma_ratios_renders_each_comma_monzo_as_a_ratio():
@@ -431,8 +431,8 @@ def test_is_euclidean_reports_the_complexity_norm_power():
 
 
 def test_prescaler_of_reports_the_schemes_current_prescaler():
-    assert service.prescaler_of("minimax-S") == "log-prime"  # the default (Tenney)
-    assert service.prescaler_of("minimax-sopfr-S") == "prime"  # Benedetti
+    assert service.prescaler_of("minimax-S") == "log-prime"  # the default
+    assert service.prescaler_of("minimax-sopfr-S") == "prime"  # sopfr
     assert service.prescaler_of("minimax-copfr-S") == "identity"  # unweighted count
     # it round-trips with scheme_with_prescaler
     assert service.prescaler_of(service.scheme_with_prescaler("minimax-S", "prime")) == "prime"
@@ -452,7 +452,7 @@ def test_scheme_with_weight_slope_swaps_the_damage_slope_preserving_the_rest():
 
 
 def test_weight_slope_of_reports_the_schemes_current_slope():
-    assert service.weight_slope_of("minimax-S") == "simplicity-weight"  # the shipped default (TOP)
+    assert service.weight_slope_of("minimax-S") == "simplicity-weight"  # the shipped default
     assert service.weight_slope_of("minimax-U") == "unity-weight"
     assert service.weight_slope_of("minimax-C") == "complexity-weight"
     # it round-trips with scheme_with_weight_slope
@@ -464,8 +464,8 @@ def test_scheme_with_complexity_sets_the_prescaler_norm_and_size_factor():
     # the prescaler (log-prime/prime/identity) and the norm power (taxicab/Euclidean).
     copfr = service.scheme_with_complexity("minimax-S", "copfr")  # unweighted count
     assert service.prescaler_of(copfr) == "identity" and service.is_euclidean(copfr) is False
-    assert service.prescaler_of(service.scheme_with_complexity("minimax-S", "sopfr")) == "prime"  # Benedetti
-    lpe = service.scheme_with_complexity("minimax-S", "lp-E")  # Tenney-Euclidean
+    assert service.prescaler_of(service.scheme_with_complexity("minimax-S", "sopfr")) == "prime"  # sopfr
+    lpe = service.scheme_with_complexity("minimax-S", "lp-E")  # E-lp
     assert service.prescaler_of(lpe) == "log-prime" and service.is_euclidean(lpe) is True
     # the optimization power and damage slope ride along unchanged
     assert service.optimization_power(service.scheme_with_complexity("miniRMS-C", "copfr")) == 2
@@ -484,7 +484,7 @@ def test_scheme_with_complexity_lols_holds_the_octave_others_clear_it():
 
 def test_complexity_name_of_reports_the_named_complexity_else_custom():
     assert service.complexity_name_of("minimax-S") == "lp"    # the default (log-prime taxicab)
-    assert service.complexity_name_of("minimax-ES") == "lp-E"  # Tenney-Euclidean
+    assert service.complexity_name_of("minimax-ES") == "lp-E"  # E-lp
     assert service.complexity_name_of("minimax-copfr-S") == "copfr"
     assert service.complexity_name_of("minimax-sopfr-S") == "sopfr"
     assert service.complexity_name_of("minimax-lils-S") == "lils"
@@ -516,7 +516,7 @@ def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
     mapping = [[1, 1, 0], [0, 1, 4]]  # 2.3.5 domain
     # the default log-prime prescaler L = diag(log2(prime))
     assert service.complexity_prescaler(mapping, "minimax-S") == pytest.approx((1.0, 1.585, 2.322), abs=1e-3)
-    # sopfr (Benedetti) prescaler weights each prime by the prime itself
+    # sopfr prescaler weights each prime by the prime itself
     assert service.complexity_prescaler(mapping, "minimax-sopfr-S") == pytest.approx((2.0, 3.0, 5.0), abs=1e-3)
 
 

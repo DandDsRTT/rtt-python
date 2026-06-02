@@ -658,8 +658,8 @@ WEIGHT_EQUIVALENCE_BY_SLOPE = {
 }
 
 # The prescaling row's equivalences are scheme-dependent: the prescaler matrix 𝑋 IS the
-# log-prime matrix 𝐿 for the default (Tenney) prescaler, the prime-diagonal matrix 𝑃 for
-# Benedetti/sopfr, the identity 𝐼 for the unweighted count (copfr). All three are math
+# log-prime matrix 𝐿 for the default prescaler, the prime-diagonal matrix 𝑃 for
+# sopfr, the identity 𝐼 for the unweighted count (copfr). All three are math
 # italic capitals (matching 𝑀 / 𝑋 elsewhere). Build() substitutes the active letter for
 # every prescaling tile (𝑋 = 𝐿, 𝐿C, 𝐿T, …) — see PRESCALERS.
 PRESCALER_LETTER = {"log-prime": "𝐿", "prime": "𝑃", "identity": "𝐼"}
