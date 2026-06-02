@@ -381,13 +381,13 @@ def _optimization_setup(
         return (), np.array([]), spec.optimization_power  # held intervals alone pin the tuning
     if spec.target_intervals.strip() in ("{}", ""):
         primes = tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
-        weights = _damage_weights(
+        weights = damage_weights(
             primes, t, replace(spec, damage_weight_slope="simplicityWeight"),
             prescaler_override=prescaler_override,
         )
         return primes, weights, get_dual_power(spec.complexity_norm_power)
     vectors = resolve_target_intervals(spec.target_intervals, t, d)
-    return vectors, _damage_weights(vectors, t, spec, prescaler_override=prescaler_override), spec.optimization_power
+    return vectors, damage_weights(vectors, t, spec, prescaler_override=prescaler_override), spec.optimization_power
 
 
 def optimize_tuning_map(
@@ -491,7 +491,7 @@ def _held_vectors(spec: TuningSchemeSpec, d: int) -> np.ndarray | None:
     return np.array(_parse_interval_spec(spec.held_intervals, d), dtype=float)
 
 
-def _damage_weights(
+def damage_weights(
     vectors: tuple[tuple[int, ...], ...],
     t: Temperament,
     spec: TuningSchemeSpec,

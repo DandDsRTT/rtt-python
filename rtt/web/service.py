@@ -33,8 +33,8 @@ from rtt.target_intervals import (
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
     TuningSchemeSpec,
-    _damage_weights,
     complexity_name_traits,
+    damage_weights,
     get_complexity,
     get_complexity_prescaler,
     get_just_tuning_map,
@@ -425,12 +425,12 @@ def interval_weights(
     or 1/complexity, picked by the scheme's damage-weight slope.
 
     ``prescaler_override`` (a d-tuple) flows into each per-target complexity via
-    :func:`_damage_weights`, so a hand-edited diagonal reaches the weights row. Over a
+    :func:`damage_weights`, so a hand-edited diagonal reaches the weights row. Over a
     nonstandard ``domain_basis`` each ratio is expressed in that basis, like the complexity
     row, so a nonprime target's weight derives from its full domain-basis vector."""
     t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios, domain_basis)
     return tuple(
-        float(w) for w in _damage_weights(vectors, t, spec, prescaler_override=prescaler_override)
+        float(w) for w in damage_weights(vectors, t, spec, prescaler_override=prescaler_override)
     )
 
 
