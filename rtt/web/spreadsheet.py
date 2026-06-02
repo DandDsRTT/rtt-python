@@ -671,11 +671,12 @@ WEIGHT_EQUIVALENCE_BY_SLOPE = {
 }
 
 # The prescaling row's equivalences are scheme-dependent: the prescaler matrix 𝑋 IS the
-# log-prime matrix 𝐿 for the default prescaler, the prime-diagonal matrix 𝑃 for
-# sopfr, the identity 𝐼 for the unweighted count (copfr). All three are math
-# italic capitals (matching 𝑀 / 𝑋 elsewhere). Build() substitutes the active letter for
-# every prescaling tile (𝑋 = 𝐿, 𝐿C, 𝐿T, …) — see PRESCALERS.
-PRESCALER_LETTER = {"log-prime": "𝐿", "prime": "𝑃", "identity": "𝐼"}
+# log-prime matrix 𝐿 for the default prescaler, the prime diagonal diag(𝒑) for sopfr, the
+# identity 𝐼 for the unweighted count (copfr). 𝐿 and 𝐼 are math-italic capitals (like 𝑀 / 𝑋);
+# the prime diagonal is written diag(𝒑) per the guide — a bare 𝑃 would clash with the guide's
+# projection matrix (P = GM). Build() substitutes the active form into every prescaling tile
+# (𝑋 = 𝐿, 𝐿C, 𝐿T, …) — see PRESCALERS.
+PRESCALER_LETTER = {"log-prime": "𝐿", "prime": "diag(𝒑)", "identity": "𝐼"}
 
 # Always-present content tiles (a row×column intersection) as (grey-panel id, row,
 # column). Each gets a grey panel and a top-left fold toggle; the panel/toggle ids
@@ -1031,7 +1032,7 @@ def build(state, settings=None, collapsed=None,
     # on); a cell with no closed form is untouched and keeps its plain cents value.
     show_math = settings["math_expressions"]
     # The bare prescaling tile's equivalence ("𝑋 = L") and the product tiles' symbols
-    # (LC/LD/LT/LH) both name the active prescaler: L for log-prime, 𝑃 for prime, 𝐼 for
+    # (LC/LD/LT/LH) both name the active prescaler: L for log-prime, diag(𝒑) for prime, 𝐼 for
     # identity. Resolved up front so both the symbol-emission site and the column-label
     # loop pick up the live letter — the static SYMBOLS dict's L-prefix is the placeholder
     # this build-time override resolves. The matching "𝑋 = L" equivalence is set further
@@ -2643,7 +2644,7 @@ def build(state, settings=None, collapsed=None,
     # The weight row's equivalence is the one scheme-dependent equation (𝒘 = 𝒄 / 1 / 1/𝒄),
     # so it is resolved per build from the live scheme's slope rather than baked in. The
     # bare prescaling tile is the only one whose equivalence names the live prescaler
-    # (``𝑋 = L`` for log-prime, swapping to 𝐼/𝑃 with the scheme); the product tiles
+    # (``𝑋 = L`` for log-prime, swapping to 𝐼/diag(𝒑) with the scheme); the product tiles
     # (LC/LD/LT/LH) carry the L as part of their SYMBOL instead (see prescaling_symbols
     # below) and don't print an "= …" line.
     equivalences = {**EQUIVALENCES,

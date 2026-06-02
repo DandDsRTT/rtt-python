@@ -1507,10 +1507,10 @@ def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
         held_monzos=((-1, 1, 0),),  # 3/2 held, so the held column appears
     )
     on = {c.id: c for c in lay.cells}
-    # bare prescaler tile: the only one with an equivalence (the equation form). All
-    # prescaler letters are math italic — 𝐿 (log-prime) joins 𝑃 / 𝐼 / 𝑋 / 𝑀 in that family
+    # bare prescaler tile: the only one with an equivalence (the equation form). 𝐿
+    # (log-prime) is math-italic like 𝐼 / 𝑋 / 𝑀 (the prime prescaler is written diag(𝒑))
     assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
-    # product tiles: just the concrete name, no "= …" — scheme-aware (𝐿 → 𝐼/𝑃 elsewhere)
+    # product tiles: just the concrete name, no "= …" — scheme-aware (𝐿 → 𝐼 / diag(𝒑) elsewhere)
     assert on["symbol:prescaling:commas"].text == "𝐿C"
     assert on["symbol:prescaling:targets"].text == "𝐿T"
     assert on["symbol:prescaling:held"].text == "𝐿H"
@@ -1532,6 +1532,23 @@ def test_prescaling_product_symbols_follow_the_active_prescaler():
     assert on["symbol:prescaling:commas"].text == "𝐼C"     # product: scheme-aware letter
     assert on["symbol:prescaling:targets"].text == "𝐼T"
     assert on["symbol:prescaling:held"].text == "𝐼H"
+
+
+def test_prime_prescaler_renders_as_diag_p_not_the_projection_letter():
+    # the prime (sopfr) prescaler is the guide's diag(𝒑), the diagonal matrix of primes —
+    # NOT a bare 𝑃, which the guide reserves for the projection matrix (P = GM). "diag(" and
+    # the trailing column letter render upright; only the prime list 𝒑 is bold-italic.
+    scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "prime")
+    lay = spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))),
+        {**settings.defaults(), "weighting": True, "optimization": True,
+         "symbols": True, "equivalences": True},
+        tuning_scheme=scheme, held_monzos=((-1, 1, 0),),
+    )
+    on = {c.id: c for c in lay.cells}
+    assert on["symbol:prescaling:primes"].text == "𝑋 = diag(𝒑)"
+    assert on["symbol:prescaling:commas"].text == "diag(𝒑)C"
+    assert on["symbol:prescaling:targets"].text == "diag(𝒑)T"
 
 
 def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
@@ -2349,7 +2366,7 @@ def test_math_expressions_without_quantities_show_only_the_prescaler_expression(
 
 
 def test_math_expressions_under_prime_prescaler_drop_the_log():
-    # the prime prescaler (𝑃) puts each prime ITSELF on the diagonal, so the closed
+    # the prime prescaler (diag(𝒑)) puts each prime ITSELF on the diagonal, so the closed
     # form for the product tiles (LC/LD/LT/LH) is ``coeff · prime`` — no log₂. The bare
     # prescaler 𝐿's diagonal stays a prescalercell (the editable surface), so it shows
     # each prime as the plain value rather than a closed form.
