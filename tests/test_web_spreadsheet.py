@@ -1788,6 +1788,12 @@ def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown():
     assert on["control:all_interval"].x > on["preselect:target"].x
 
 
+def test_all_interval_show_entry_is_live_not_a_greyed_stub():
+    # it now builds content (the target-controls checkbox + the dual(q) gate), so the Show panel
+    # offers it live (interactive), not greyed out as an unbuilt stub
+    assert "all_interval" in settings.IMPLEMENTED
+
+
 def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdown():
     # box 𝐋 sits as one row: [predefined prescalers ▼] on the left, the "ignore diminuator"
     # checkbox to its right. The dropdown carries a "predefined prescalers" caption beneath
