@@ -44,11 +44,9 @@ CAPTION_CHAR_W = 0.52  # serif glyph width as a fraction of the font size: a con
 MAX_CAPTION_LINES = 2  # a name wraps to at most this many lines; a longer one widens its tile
 PRESELECT_H = 30  # height of a preselect chooser dropdown — aligned with the gridded value
 # row (ROW_H), so dropdowns sit at the same height as the value cells beside them
-# The alt.-complexity in-tile choosers' widths. Hard-coded so the column they sit in can be
-# widened up front to fit them, ensuring no caption or control spills out the tile's right edge.
-LBOX_DROP_W = 100   # the prescaler dropdown (seats "log-prime" + arrow comfortably)
+# The box-𝐋 diminuator slot width, hard-coded so the primes column can be widened up front to fit
+# it (also reused for the target-controls all-interval check, the same checkbox-over-caption shape).
 LBOX_DIM_W = 80     # the diminuator slot (checkbox square + "replace diminuator" caption)
-LBOX_W = LBOX_DROP_W + 8 + LBOX_DIM_W  # the box-𝐋 controls' total footprint (8 = OPT_COL_GAP)
 CBOX_DROP_W = 170   # the predefined-complexities dropdown (inverted display names "lp (log-product)" …)
 CBOX_SLOT_W = 60    # the q / dual(q) symbol/caption slots (the value cell is COL_W centred within)
 CBOX_W = CBOX_DROP_W + 8 + CBOX_SLOT_W + 8 + CBOX_SLOT_W  # the box-𝒄 controls' total footprint
@@ -119,7 +117,7 @@ BOX_OUTER = 4  # vertical gap above/below a control box (it spans its tile's wid
 BOX_INNER = 5  # inset of the dropdown within the box (off the border)
 CTRL_LABEL_GAP = 2  # padding below the label, to the box's bottom edge
 # box 𝐓's footprint: the target chooser dropdown + the all-interval checkbox slot on one row,
-# both inside one bordered box. Unlike the un-boxed LBOX_W/CBOX_W above, this includes the box
+# both inside one bordered box. Unlike the un-boxed LBOX_DIM_W/CBOX_W above, this includes the box
 # padding (BOX_OUTER off the tile, BOX_INNER off the border, each side) so _control_floor can
 # widen the target column enough that the box never overhangs the tile.
 TBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + TARGET_PRESELECT_W + 8 + LBOX_DIM_W  # 8 = OPT_COL_GAP
@@ -523,11 +521,13 @@ SPINE_COLUMNS = frozenset({"quantities", "units"})
 # The "preselect" chooser dropdowns (settings["preselects"]) as (name, row, column,
 # title): each is a quick menu for one of the things you actually choose, riding under
 # its governing tile in a titled control box — the temperament under the mapping matrix,
-# the tuning scheme under the tuning map, the target interval set under the target list.
+# the tuning scheme under the tuning map, the target interval set under the target list,
+# the predefined prescaler under the prescaling matrix (box 𝐋, shown only with weighting).
 PRESELECTS = (
     ("temperament", "mapping", "primes", "temperament"),
     ("tuning", "tuning", "primes", "established tuning scheme"),
     ("target", "vectors", "targets", "target interval set scheme"),
+    ("prescaler", "prescaling", "primes", "predefined prescalers"),
 )
 # Extra copies of a preselect chooser in another governing tile (the same control, its own
 # id so the renderer keeps both): the tuning scheme also under the generator tuning map, the
@@ -1028,8 +1028,8 @@ def build(state, settings=None, collapsed=None,
     # prescaling -> complexity -> weight rows that feed the damage row, so it too only
     # applies while the tuning region (and its target column) shows
     show_weighting = show_tuning and settings["weighting"]
-    # alt. complexity is a sub-control of weighting: it adds the prescaler dropdown to box 𝐋
-    # (the prescaling matrix), so it only applies while that region shows
+    # alt. complexity is a sub-control of weighting: it adds the "replace diminuator" checkbox to
+    # box 𝐋 (the prescaling matrix), so it only applies while that region shows
     show_alt_complexity = show_weighting and settings["alt_complexity"]
     # Whether each alt.-complexity in-tile chooser will be emitted — evaluated up front
     # (without depending on col_x, which the column-width loop computes later) so the column-
@@ -1358,11 +1358,11 @@ def build(state, settings=None, collapsed=None,
 
     def _control_floor(key):
         # the width an open column needs so its in-tile choosers fit without overhanging the
-        # column's right edge (e.g. d=3 primes is naturally 122px but box 𝐋's controls +
-        # diminuator caption need ~188px); widens the column to enclose them
+        # column's right edge (e.g. the narrow targets column is widened to seat box 𝒄's wide
+        # predefined-complexities dropdown); widens the column to enclose them
         floor = 0
         if key == "primes" and _lbox_show:
-            floor = LBOX_W
+            floor = LBOX_DIM_W  # box 𝐋's lone control now: the diminuator checkbox + its caption
         if key == "targets" and _cbox_show:
             floor = max(floor, CBOX_W)
         if key == "targets" and show_preselects and settings["all_interval"]:
@@ -1443,18 +1443,15 @@ def build(state, settings=None, collapsed=None,
                  and col_open("gens") and "tile:tuning:gens" not in collapsed)
     gtm_extra = (RANGE_GAP + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
     # the alt.-complexity controls nest at the bottom of their matrix/list tiles (like the
-    # ranges box in the gens tile): box 𝐋 (the prescaling matrix over the primes) stacks the
-    # prescaler chooser then the "replace diminuator" checkbox, box 𝒄 (the complexity list over
-    # the targets) stacks the predefined-complexity chooser then the norm chooser, and box 𝒘
-    # (the weight list over the targets) carries the weight-slope chooser. Each tile reserves
-    # its choosers' height up front so the rows below drop clear.
+    # ranges box in the gens tile): box 𝐋 (the prescaling matrix over the primes) carries the
+    # "replace diminuator" checkbox, box 𝒄 (the complexity list over the targets) stacks the
+    # predefined-complexity chooser then the norm chooser, and box 𝒘 (the weight list over the
+    # targets) carries the weight-slope chooser. (The prescaler chooser is a preselect now, riding
+    # the preselect band above — see PRESELECTS.) Each tile reserves its controls' height up front.
     lbox_ctrl = _lbox_show and col_open("primes")
-    # box 𝐋 lays its two controls on ONE row (dropdown left, checkbox square right) with a
-    # one-line caption under each: the prescaler's left-justified (and free to overhang to the
-    # right), the diminuator's centred under its checkbox. The checkbox square is shorter than the
-    # dropdown and rides centred on its row, so the dropdown's own stack (PRESELECT_H + caption) is
-    # the deeper of the two and sets the reserve — the same shape as slope_extra below.
-    lbox_extra = (RANGE_GAP + PRESELECT_H + CAPTION_LINE) if lbox_ctrl else 0
+    # box 𝐋's lone control is the diminuator checkbox at the column's left, over its "replace
+    # diminuator" caption: a small square (OPTION_BOX_PX) plus a one-line caption sets the reserve.
+    lbox_extra = (RANGE_GAP + OPTION_BOX_PX + CAPTION_LINE) if lbox_ctrl else 0
     # box 𝒄 lays its three controls in ONE row below the complexity list: the predefined-
     # complexity master dropdown on the left, then the q norm-power field and the dual(q)
     # display, each captioned (q/dual using the optimization box's value-symbol-caption stack).
@@ -1487,7 +1484,7 @@ def build(state, settings=None, collapsed=None,
     # it AND every tile in the row grows to the same height, so the row stays one uniform band.
     tile_extra = {
         "tuning": gtm_extra,        # the generator tuning-ranges chart (box in the genmap)
-        "prescaling": lbox_extra,   # box 𝐋: the prescaler chooser + diminuator checkbox
+        "prescaling": lbox_extra,   # box 𝐋: the "replace diminuator" checkbox
         "complexity": cbox_extra,   # box 𝒄: the predefined-complexity + norm choosers
         "weight": slope_extra,      # box 𝒘: the weight-slope chooser
         "damage": opt_extra,        # the optimization controls under the damage list
@@ -2225,30 +2222,15 @@ def build(state, settings=None, collapsed=None,
                 else:
                     cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
                                          text=service.prescale_text(value), unit=u))
-    if lbox_ctrl:  # box 𝐋's controls sit on one row at the bottom of the prescaling matrix:
-        # the prescaler dropdown on the left (LBOX_DROP_W wide, PRESELECT_H tall), the "ignore
-        # diminuator" checkbox SQUARE on the right (no inline label — it wraps broken in the narrow
-        # primes column). The diminuator's CELL is sized to the rendered square (OPTION_BOX_PX) and
-        # rides vertically CENTRED on the dropdown's row, so the square aligns with the dropdown's
-        # middle rather than sagging below it. EACH caption HUGS its own control's bottom: the
-        # prescaler's under the dropdown (at PRESELECT_H), the diminuator's right under the square —
-        # which, being shorter than the dropdown, sits HIGHER than the prescaler's caption.
-        # The column was widened up front (by _control_floor) to LBOX_W so nothing overhangs.
+    if lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox at the
+        # bottom of the prescaling matrix (the prescaler chooser is a preselect now, riding the
+        # preselect band above). A SQUARE (no inline label — it wraps broken in the narrow primes
+        # column) at the column's left, over its "replace diminuator" caption hugging its bottom.
         py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
-        dim_slot_x = col_x["primes"] + LBOX_DROP_W + OPT_COL_GAP
-        check_y = py + (PRESELECT_H - OPTION_BOX_PX) / 2  # centre the square on the dropdown's row
-        cells.append(CellBox("control:prescaler", col_x["primes"], py, LBOX_DROP_W, PRESELECT_H,
-                             "control_select", text=_scheme_prescaler,
-                             values=tuple(service.PRESCALERS)))
-        cells.append(CellBox("control:diminuator", dim_slot_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
+        cells.append(CellBox("control:diminuator", col_x["primes"], py, LBOX_DIM_W, OPTION_BOX_PX,
                              "control_check", text="",  # square only; label moves to a caption below
                              checked=service.diminuator_replaced(tuning_scheme)))
-        # the prescaler's caption is one line, left-justified to the dropdown's edge,
-        # hugging its bottom (py + PRESELECT_H) — constrained to the widened column width
-        cells.append(CellBox("caption:prescaler", col_x["primes"], py + PRESELECT_H,
-                             col_w["primes"], CAPTION_LINE, "caption",
-                             text="predefined prescalers", align="left"))
-        cells.append(CellBox("caption:diminuator", dim_slot_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
+        cells.append(CellBox("caption:diminuator", col_x["primes"], py + OPTION_BOX_PX, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="replace diminuator"))
     if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
         # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q
@@ -2826,9 +2808,13 @@ def build(state, settings=None, collapsed=None,
     # so they ride the tile whether or not math expressions has emptied its values.
     if show_preselects:
         # the tuning chooser shows the scheme name; a scheme refined by the alt.-complexity
-        # control is a resolved spec (no preset name), so it shows blank rather than a repr
+        # control is a resolved spec (no preset name), so it shows blank rather than a repr.
+        # the prescaler chooser shows the scheme's named prescaler, blank ("-") when a custom
+        # diagonal override deviates from it (the bare prescaler tile's manual edits).
         preselect_text = {"temperament": "", "target": target_spec,
-                          "tuning": tuning_scheme if isinstance(tuning_scheme, str) else ""}
+                          "tuning": tuning_scheme if isinstance(tuning_scheme, str) else "",
+                          "prescaler": service.displayed_prescaler_name(
+                              state.mapping, tuning_scheme, custom_prescaler) or ""}
 
         def emit_preselect(cid, name, rkey, ckey, label):
             if not tile_open(rkey, ckey):
@@ -2913,8 +2899,8 @@ def build(state, settings=None, collapsed=None,
         # bracket() calls do — not the grey footprint (col_x/col_w). The matlabel gutter
         # (row labels 𝒎ᵢ / 𝒙ᵢ) sits LEFT of that matrix, OUTSIDE the frame. Anchoring to
         # the footprint instead would, whenever it is widened past its content (e.g. by the
-        # box-𝐋 prescaler controls under the prescaling matrix), drag the frame left over
-        # those labels and right past the cells. ``foot`` is the bottom-spanning close:
+        # prescaler chooser or box-𝐋 diminuator under the prescaling matrix), drag the frame left
+        # over those labels and right past the cells. ``foot`` is the bottom-spanning close:
         # ``ebkbrace`` for the mapping family (generator coordinates, curly close),
         # ``ebkangle`` for the bare prescaler 𝐿 (angle close ⟩, mirroring the mapping's
         # plain-text bracket but with ⟩ in place of }).

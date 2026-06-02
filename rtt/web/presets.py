@@ -51,6 +51,16 @@ def tuning_schemes(include_alternatives: bool) -> tuple[str, ...]:
         return TUNING_SCHEMES
     return tuple(s for s in TUNING_SCHEMES if service.complexity_name_of(s) == "lp")
 
+
+def prescaler_options(include_alternatives: bool) -> tuple[str, ...]:
+    """The prescaler names the chooser offers (keys of :data:`rtt.web.service.PRESCALERS`).
+    log-prime is the plain default; the others (identity = unweighted count, prime = sopfr) are
+    alternative-complexity prescalers gated behind that feature — so with ``include_alternatives``
+    false only log-prime is offered, keeping the app log-prime-only until that feature ships."""
+    if include_alternatives:
+        return tuple(service.PRESCALERS)
+    return ("log-prime",)
+
 TARGET_SETS: tuple[str, ...] = ("TILT", "OLD")
 
 # prime limit -> ((name, comma basis), ...). A comma basis of nc vectors over the

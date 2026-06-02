@@ -433,6 +433,38 @@ async def test_selecting_a_scheme_clears_a_manual_tuning_override(user: User) ->
     assert _cell_child(user, "tuning:gen:1").value == optimum  # tuning snapped back to the optimum
 
 
+async def test_prescaler_chooser_shows_the_prompt_when_a_diagonal_is_overridden(user: User) -> None:
+    # the prescaler preselect names the scheme's prescaler; hand-editing the bare prescaler 𝐿
+    # diagonal freezes a custom override deviating from it, so the closed box falls back to "-"
+    # via Quasar's display-value — the same fallback the tuning chooser uses for a manual tuning.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()  # opens the prescaling row (box 𝐋)
+    _toggle(user, "preselects")  # the chooser dropdowns
+    await user.should_see(marker="preselect:prescaler")
+    assert "display-value" not in _cell_child(user, "preselect:prescaler")._props  # names log-prime
+    _cell_child(user, "cell:prescaling:primes:1:1").set_value("4.0")  # deviate from log₂3 = 1.585
+    await user.should_see(marker="preselect:prescaler")
+    assert _cell_child(user, "preselect:prescaler")._props.get("display-value") == "-"
+
+
+async def test_picking_a_prescaler_clears_a_manual_diagonal_override(user: User) -> None:
+    # after hand-editing the prescaler diagonal (the chooser shows "-"), re-picking "log-prime"
+    # from the chooser clears the override and snaps the diagonal back to the scheme's value —
+    # set_complexity_prescaler is the reset path, like re-selecting a tuning scheme.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()
+    _toggle(user, "preselects")
+    await user.should_see(marker="cell:prescaling:primes:1:1")
+    seed = _cell_child(user, "cell:prescaling:primes:1:1").value  # the scheme's log₂3 = 1.585
+    _cell_child(user, "cell:prescaling:primes:1:1").set_value("4.0")  # deviate
+    await user.should_see(marker="preselect:prescaler")
+    assert _cell_child(user, "preselect:prescaler")._props.get("display-value") == "-"
+    _cell_child(user, "preselect:prescaler").set_value("log-prime")  # re-pick the named prescaler
+    await user.should_see(marker="preselect:prescaler")
+    assert "display-value" not in _cell_child(user, "preselect:prescaler")._props  # name shown again
+    assert _cell_child(user, "cell:prescaling:primes:1:1").value == seed  # diagonal snapped back
+
+
 async def test_optimization_renders_the_optimize_button(user: User) -> None:
     # the optimize button renders in the damage tile when optimization is on (its single/
     # double-click optimize+lock behaviour is covered by the editor tests). The fixture

@@ -1790,19 +1790,36 @@ def test_weighting_is_implemented_now_that_its_region_builds():
     assert "weighting" in settings.IMPLEMENTED
 
 
-def test_alt_complexity_adds_a_prescaler_dropdown_to_the_prescaling_box():
-    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
-    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
-    assert "control:prescaler" not in off  # no control unless alt. complexity is on
-    ctrl = on["control:prescaler"]
-    assert ctrl.kind == "control_select"
-    assert ctrl.text == "log-prime"  # the default scheme's current prescaler
-    assert ctrl.values == ("identity", "log-prime", "prime")  # the chooser's options
-    # it rides below the prescaling matrix (box 𝐋), at the primes column's left edge
-    assert ctrl.y > on["cell:prescaling:primes:2:2"].y
-    assert ctrl.x == on["header:primes"].x
-    # it shares the row with the diminuator checkbox, so it takes only part of the column width
-    assert ctrl.w < on["header:primes"].w
+def test_preselects_adds_the_prescaler_chooser_under_the_prescaling_tile():
+    # the prescaler is a preselect (like temperament / tuning / target), gated on PRESELECTS —
+    # not the shelved alt_complexity. It rides under the prescaling matrix tile (box 𝐋), which
+    # exists only while weighting is on; the temperament boxes own the primes column it sits in.
+    off = {c.id for c in _with(weighting=True, preselects=False).cells}
+    on = {c.id: c for c in _with(weighting=True, preselects=True).cells}
+    assert "preselect:prescaler" not in off  # no chooser unless preselects is on
+    sel = on["preselect:prescaler"]
+    assert sel.kind == "preselect"
+    assert sel.text == "log-prime"  # the default scheme's prescaler
+    # it rides below the prescaling matrix, seated one inner pad into the primes column (like the
+    # other preselects, the dropdown sits inside a tile-spanning box at BOX_INNER off the edge)
+    assert sel.y > on["cell:prescaling:primes:2:2"].y
+    assert sel.x == on["header:primes"].x + spreadsheet.BOX_INNER
+    # gone without the prescaling tile (weighting off) or its column (temperament boxes off)
+    assert "preselect:prescaler" not in {c.id for c in _with(weighting=False, preselects=True).cells}
+    assert "preselect:prescaler" not in {
+        c.id for c in _with(weighting=True, preselects=True, temperament_boxes=False).cells}
+
+
+def test_prescaler_chooser_shows_dash_when_a_custom_diagonal_deviates():
+    # like the tuning chooser, the prescaler preselect falls back to "-" (empty text) when a
+    # manual prescaler edit (the custom_prescaler override) deviates from the scheme's diagonal
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["preselects"], s["weighting"] = True, True
+    named = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert named["preselect:prescaler"].text == "log-prime"  # the scheme's prescaler, no override
+    devi = {c.id: c for c in spreadsheet.build(base, s, custom_prescaler=(1.0, 9.9, 2.322)).cells}
+    assert devi["preselect:prescaler"].text == ""  # off the named list -> the "-" placeholder
 
 
 def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_complexity():
@@ -1972,39 +1989,25 @@ def test_all_interval_show_entry_is_live_not_a_greyed_stub():
     assert "all_interval" in settings.IMPLEMENTED
 
 
-def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdown():
-    # box 𝐋 sits as one row: [predefined prescalers ▼] on the left, the "replace diminuator"
-    # checkbox to its right. The dropdown carries a "predefined prescalers" caption beneath
-    # it; the checkbox's own label suffices for that side.
+def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
+    # box 𝐋's only alt.-complexity control is now the "replace diminuator" checkbox — the prescaler
+    # chooser became a preselect (riding the preselect band above). The square sits at the primes
+    # column's left edge, over its "replace diminuator" caption; no prescaler dropdown beside it.
     off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
     on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
-    assert "caption:prescaler" not in off
+    assert "control:prescaler" not in on  # the prescaler is a preselect now, not a box-𝐋 control
+    assert "caption:prescaler" not in on
     assert "caption:diminuator" not in off
-    cap_p = on["caption:prescaler"]
-    assert cap_p.kind == "caption"
-    assert cap_p.text == "predefined prescalers"
-    # the prescaler caption HUGS the dropdown's bottom (one line, left-justified to its x)
-    assert cap_p.h == spreadsheet.CAPTION_LINE
-    assert cap_p.align == "left"
-    assert cap_p.x == on["control:prescaler"].x
-    assert cap_p.y == on["control:prescaler"].y + on["control:prescaler"].h
-    # the diminuator caption HUGS the checkbox square's bottom: the cell is sized to the rendered
-    # square (OPTION_BOX_PX), so its bottom IS the square's bottom and the caption sits right under it
     cap_d = on["caption:diminuator"]
     assert cap_d.kind == "caption"
     assert cap_d.text == "replace diminuator"
-    assert cap_d.y == on["control:diminuator"].y + on["control:diminuator"].h
-    dim, drop = on["control:diminuator"], on["control:prescaler"]
-    # the diminuator checkbox rides to the RIGHT of the dropdown, vertically CENTRED on its row
-    # (the small square aligns with the dropdown's middle rather than sagging below it)
-    assert dim.x > drop.x
-    assert dim.y + dim.h / 2 == drop.y + drop.h / 2  # their vertical centres coincide
-    # ...and is horizontally CENTRED above its caption (small square over the wider caption slot)
+    dim = on["control:diminuator"]
+    # the square sits at the column's left, its caption hugging its bottom (the cell is sized to
+    # the rendered square, OPTION_BOX_PX, so its bottom IS the square's bottom)
+    assert dim.x == on["header:primes"].x
+    assert cap_d.y == dim.y + dim.h
+    # ...and is horizontally CENTRED above its caption slot (both at the column's left edge)
     assert abs((dim.x + dim.w / 2) - (cap_d.x + cap_d.w / 2)) < 1
-    # the square is SHORTER than the dropdown, so — centred on the row — its bottom (and thus its
-    # bottom-hugging caption) sits HIGHER than the dropdown's own bottom-hugging caption
-    assert dim.h < drop.h
-    assert cap_d.y < cap_p.y
 
 
 def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
@@ -2054,11 +2057,11 @@ def test_all_interval_omits_the_weight_slope_chooser():
     assert "caption:slope" not in on
 
 
-def test_alt_complexity_control_needs_weighting_and_the_primes_column():
-    # the prescaler control lives in box 𝐋 (the prescaling matrix over the primes), so it
+def test_box_l_diminuator_needs_weighting_and_the_primes_column():
+    # the diminuator checkbox lives in box 𝐋 (the prescaling matrix over the primes), so it
     # is gone if weighting is off or the temperament (primes) boxes are hidden
-    assert "control:prescaler" not in {c.id for c in _with(weighting=False, alt_complexity=True).cells}
-    assert "control:prescaler" not in {
+    assert "control:diminuator" not in {c.id for c in _with(weighting=False, alt_complexity=True).cells}
+    assert "control:diminuator" not in {
         c.id for c in _with(weighting=True, alt_complexity=True, temperament_boxes=False).cells
     }
 

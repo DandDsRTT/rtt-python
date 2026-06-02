@@ -63,7 +63,6 @@ _DISAMBIGUATED = [
     ("powerinput", "optimization:power"),
     ("powerinput", "control:q"),
     ("powerinput", "control:dual"),
-    ("control_select", "control:prescaler"),
     ("control_select", "control:complexity"),
     ("control_select", "control:slope"),
     ("control_check", "control:diminuator"),
@@ -73,6 +72,7 @@ _DISAMBIGUATED = [
     ("preselect", "preselect:temperament"),
     ("preselect", "preselect:tuning"),
     ("preselect", "preselect:target"),
+    ("preselect", "preselect:prescaler"),
     ("preselect", "preselect:tuning:gens"),         # a copied chooser in a second tile
     ("preselect", "preselect:temperament:commas"),
     ("ptextedit", "ptext:mapping:primes"),
@@ -95,16 +95,16 @@ def test_disambiguated_controls_each_have_text(kind, cid):
 def test_overloaded_kinds_resolve_to_distinct_text_per_role():
     # one powerinput is the optimization power 𝑝, another the complexity norm power 𝑞
     assert _help("powerinput", "optimization:power") != _help("powerinput", "control:q")
-    # the three alt.-complexity choosers each describe their own dimension
-    assert len({_help("control_select", "control:prescaler"),
-                _help("control_select", "control:complexity"),
-                _help("control_select", "control:slope")}) == 3
+    # the two alt.-complexity choosers each describe their own dimension
+    assert len({_help("control_select", "control:complexity"),
+                _help("control_select", "control:slope")}) == 2
     assert _help("control_check", "control:diminuator") != _help("control_check", "control:all_interval")
     assert _help("formchooser", "formchooser:mapping") != _help("formchooser", "formchooser:comma_basis")
-    # the three preset choosers differ; a copied chooser reads like its base
+    # the four preset choosers differ; a copied chooser reads like its base
     assert len({_help("preselect", "preselect:temperament"),
                 _help("preselect", "preselect:tuning"),
-                _help("preselect", "preselect:target")}) == 3
+                _help("preselect", "preselect:target"),
+                _help("preselect", "preselect:prescaler")}) == 4
     assert _help("preselect", "preselect:tuning:gens") == _help("preselect", "preselect:tuning")
 
 

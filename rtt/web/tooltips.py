@@ -121,8 +121,7 @@ _ID_HELP: dict[str, str] = {
     "optimization:power": "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean.",
     "control:q": "Interval-complexity norm power 𝑞.",
     "control:dual": "Dual norm power — the dual exponent of 𝑞, used to minimax over every interval.",
-    # control_select: the prescaler, complexity, and weight-slope choosers
-    "control:prescaler": "Choose a predefined prescaler — the per-prime weighting applied before optimizing.",
+    # control_select: the complexity and weight-slope choosers (the prescaler is a preselect now)
     "control:complexity": "Choose the interval-complexity measure used to weight damage.",
     "control:slope": "Choose the damage weight slope — how a target's weight scales with its complexity.",
     # control_check
@@ -139,6 +138,7 @@ _PRESELECT_HELP: dict[str, str] = {
     "temperament": "Load a named temperament preset — sets the mapping and comma basis.",
     "tuning": "Choose a named tuning scheme (e.g. minimax-S).",
     "target": "Choose the target-interval set and its prime limit.",
+    "prescaler": "Choose a predefined prescaler — the per-prime weighting applied before optimizing.",
 }
 
 # the editable plain-text duals (kind ``ptextedit``), each naming its own value. These

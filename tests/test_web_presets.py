@@ -108,3 +108,12 @@ def test_tuning_schemes_gate_alternative_complexities_behind_the_setting():
     # the gated list is a strict subset, and everything withheld is genuinely non-lp
     withheld = set(presets.TUNING_SCHEMES) - set(presets.tuning_schemes(include_alternatives=False))
     assert withheld and all(service.complexity_name_of(s) != "lp" for s in withheld)
+
+
+def test_prescaler_options_gate_the_alternatives_behind_the_setting():
+    # the prescaler chooser offers only log-prime (the plain default) until alt-complexities are
+    # un-shelved; with them on, the whole PRESCALERS family (identity = count, prime = sopfr too)
+    assert presets.prescaler_options(include_alternatives=False) == ("log-prime",)
+    assert presets.prescaler_options(include_alternatives=True) == tuple(service.PRESCALERS)
+    # log-prime is offered in both modes (the un-gated default)
+    assert "log-prime" in presets.prescaler_options(include_alternatives=True)

@@ -307,6 +307,15 @@ class Editor:
         # target prefix here — a target-based "TILT minimax-S" shows as the "minimax-S" entry
         return service.base_scheme_name(self.tuning_scheme)
 
+    @property
+    def displayed_prescaler_name(self) -> str | None:
+        """The named prescaler the grid's displayed 𝑋 diagonal realises, or None — for which the
+        prescaler chooser shows "-". None when a custom-prescaler override deviates from the
+        scheme's computed diagonal (the user hand-edited the bare prescaler tile). Mirrors
+        :attr:`displayed_tuning_scheme_name` for the prescaler preselect."""
+        return service.displayed_prescaler_name(
+            self.state.mapping, self.tuning_scheme, self.custom_prescaler)
+
     def set_generator_tuning_text(self, text: str) -> bool:
         """Freeze a typed manual generator tuning (the editable generator tuning map): parse a
         cents map of exactly r values and hold it, turning auto-optimize off (a manual tuning
@@ -366,7 +375,7 @@ class Editor:
         self.generator_tuning = None
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
-        """Swap the complexity prescaler (the alt.-complexity control in box 𝐋), which
+        """Swap the complexity prescaler (the predefined-prescalers preselect), which
         re-weights damage and so retunes. Holds the refined scheme as a resolved spec
         (the service/layout take a spec anywhere a scheme name is taken). Also CLEARS
         any custom-prescaler override — picking a named preset is the user's reset path,

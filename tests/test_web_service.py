@@ -487,6 +487,20 @@ def test_prescaler_of_reports_the_schemes_current_prescaler():
     assert service.prescaler_of(service.scheme_with_prescaler("minimax-S", "prime")) == "prime"
 
 
+def test_displayed_prescaler_name_falls_back_to_none_on_a_deviating_override():
+    # the prescaler chooser shows the scheme's named prescaler, or None ("-") when a custom
+    # diagonal override deviates from it — the seam the bare prescaler tile's manual edits ride.
+    mapping = ((1, 1, 0), (0, 1, 4))
+    # no override -> the scheme's own prescaler name (like prescaler_of)
+    assert service.displayed_prescaler_name(mapping, "minimax-S") == "log-prime"
+    assert service.displayed_prescaler_name(mapping, "minimax-sopfr-S") == "prime"
+    # an override EQUAL to the scheme's computed diagonal still reads as the named prescaler
+    same = service.complexity_prescaler(mapping, "minimax-S")
+    assert service.displayed_prescaler_name(mapping, "minimax-S", same) == "log-prime"
+    # a DEVIATING override -> None (the chooser shows "-")
+    assert service.displayed_prescaler_name(mapping, "minimax-S", (1.0, 9.9, 2.322)) is None
+
+
 def test_scheme_with_weight_slope_swaps_the_damage_slope_preserving_the_rest():
     # the weight box's "damage weight slope" chooser: swap how complexity becomes a weight
     # (unity 𝒘=1, complexity 𝒘=𝒄, simplicity 𝒘=1/𝒄) without disturbing the complexity itself.

@@ -694,6 +694,18 @@ def complexity_prescaler(
     )
 
 
+def displayed_prescaler_name(mapping, scheme=DEFAULT_TUNING_SCHEME, custom_prescaler=None) -> str | None:
+    """The named prescaler (:data:`PRESCALERS`) the displayed L diagonal realises, or ``None`` —
+    for which the prescaler chooser shows "-". ``None`` when a ``custom_prescaler`` override
+    deviates from the scheme's computed diagonal (the user hand-edited the bare prescaler tile),
+    so the shown diagonal no longer matches a named prescaler. An override equal to the scheme's
+    own diagonal keeps the scheme's name, mirroring ``Editor.displayed_tuning_scheme_name``."""
+    if custom_prescaler is not None and \
+            tuple(float(x) for x in custom_prescaler) != complexity_prescaler(mapping, scheme):
+        return None
+    return prescaler_of(scheme)
+
+
 def plain_text_values(
     state: TemperamentState,
     scheme: str = DEFAULT_TUNING_SCHEME,

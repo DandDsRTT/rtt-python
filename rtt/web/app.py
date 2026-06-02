@@ -1046,6 +1046,9 @@ def index() -> None:
         elif name == "tuning" and value is not None:
             editor.set_tuning_scheme(value)  # the bare name, applied in the live target mode
             render()
+        elif name == "prescaler" and value is not None:
+            editor.set_complexity_prescaler(value)  # swaps the scheme's prescaler, clears the override
+            render()
 
     def on_form_choose(name, value):
         # the <choose form> control: selecting "canonical" re-stores that matrix in
@@ -1079,14 +1082,12 @@ def index() -> None:
         render()
 
     def on_control_select(cid, value):
-        # the weighting choosers (box 𝐋 prescaler, box 𝒄 complexity + norm, box 𝒘 weight slope):
-        # each swaps a scheme trait, re-weighting and retuning. The re-render echo is
-        # ignored via the guards.
+        # the weighting choosers (box 𝒄 complexity + norm, box 𝒘 weight slope): each swaps a
+        # scheme trait, re-weighting and retuning. The re-render echo is ignored via the guards.
+        # (The prescaler chooser is a preselect now — see on_preselect.)
         if building[0] or value is None:
             return
-        if cid == "control:prescaler":
-            editor.set_complexity_prescaler(value)
-        elif cid == "control:norm":
+        if cid == "control:norm":
             editor.set_complexity_euclidean(value == "Euclidean")
         elif cid == "control:slope":
             editor.set_weight_slope(value)
@@ -1229,8 +1230,8 @@ def index() -> None:
             elif cb.kind == "caption":
                 wrap.classes("rtt-caption-cell")
                 # the optimization box's captions stay on one line (no wrap), unlike tile names.
-                # a caption with align="left" reads left-justified under its control (e.g. the
-                # box-𝐋 "predefined prescalers" label sitting under the prescaler dropdown)
+                # a caption with align="left" reads left-justified under its control (e.g. a
+                # preselect chooser's label, like "predefined prescalers" under the prescaler chooser)
                 cls = "rtt-caption rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-caption"
                 if cb.align == "left":
                     cls += " rtt-caption-left"
@@ -1260,6 +1261,18 @@ def index() -> None:
                         .props(_select_props(cb.w)).classes("rtt-preselect")
                     _set_offlist_prompt(sel, value)
                     selects[cb.id] = sel
+                elif name == "prescaler":
+                    # the predefined-prescalers chooser: log-prime always, the rest (identity /
+                    # prime) gated behind alt-complexities. "-" when a manual diagonal edit deviates
+                    # from the named prescaler (editor.displayed_prescaler_name returns None then).
+                    options = list(presets.prescaler_options(editor.settings["alt_complexity"]))
+                    value = editor.displayed_prescaler_name
+                    value = value if value in options else None
+                    sel = ui.select(options, value=value,
+                            on_change=lambda e: on_preselect("prescaler", e.value)) \
+                        .props(_select_props(cb.w)).classes("rtt-preselect")
+                    _set_offlist_prompt(sel, value)
+                    selects[cb.id] = sel
                 else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-
                     # interval); a control-refined scheme has no name, shown as the "-" placeholder.
                     # Alternative-complexity schemes are gated behind the alt. complexity setting.
@@ -1274,7 +1287,7 @@ def index() -> None:
                         .props(_select_props(cb.w)).classes("rtt-preselect")
                     _set_offlist_prompt(sel, scheme)
                     selects[cb.id] = sel
-            elif cb.kind == "control_select":  # a weighting chooser (prescaler / complexity / norm / weight slope)
+            elif cb.kind == "control_select":  # a weighting chooser (complexity / norm / weight slope)
                 selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
                     .props(_select_props(cb.w)).classes("rtt-preselect")
@@ -1564,6 +1577,13 @@ def index() -> None:
                     num.value = limit if limit is not None else \
                         service.default_target_limit(family, service.standard_primes(editor.state.d))
                     sel.value = family
+                elif cb.id == "preselect:prescaler":  # the scheme's prescaler, "-" on a deviating edit;
+                    # the option list widens/narrows as alt-complexities flips, so refresh it too
+                    options = list(presets.prescaler_options(editor.settings["alt_complexity"]))
+                    value = editor.displayed_prescaler_name
+                    value = value if value in options else None
+                    selects[cb.id].set_options(options, value=value)
+                    _set_offlist_prompt(selects[cb.id], value)
                 else:  # tuning — a refined spec or a deviating manual override shows "-"
                     scheme = editor.displayed_tuning_scheme_name
                     # the option LABELS T-prefix only while target-based, so recompute them as the
