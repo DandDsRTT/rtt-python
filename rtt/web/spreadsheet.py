@@ -1338,12 +1338,10 @@ def build(state, settings=None, collapsed=None,
             floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(l, 1) for l in labels))
         return floor
 
-    # the domain, the comma basis and the interest set each ride an expand (+) control
-    # just inside the right of their (open) tile — domain primes add a prime, commas
-    # add a comma, interest adds a blank interval to edit
+    # each column hugs its content (a long caption widens the footprint), the columns laid
+    # left to right a GAP apart. The element +/− controls no longer ride inside these tiles
+    # (they sit up on the fan's top bus, see plus_stub_x), so no column reserves overhang for one.
     col_x, col_w, content_w, col_collapsible, open_col_w = {}, {}, {}, {}, {}
-    ctrl_x = {}
-    plus_cols = set()  # columns whose + rides inside the tile (the tile overhangs it a margin)
     x = content_x0
     for key, natural, present, collapsible in col_bands:
         if not present:
@@ -1366,20 +1364,8 @@ def build(state, settings=None, collapsed=None,
             content_w[key] = natural
             col_w[key] = hug_w  # the footprint widens for a long caption
         col_collapsible[key] = collapsible
-        # a +-bearing column (an open domain/comma/interest set with cells) carries an in-tile
-        # + on the panel's right edge (seated below). Reserve an extra FRAME_GAP of tile
-        # overhang on EACH side, so the + clears the edge and the tile stays centred on the
-        # gridline (panel_rect draws the overhang).
-        in_tile_plus = (key in ("primes", "commas", "interest", "held") and not collapsed_col
-                        and content_w[key] > 2 * BRACKET_W)
-        if in_tile_plus:
-            x += FRAME_GAP  # the left overhang
         col_x[key] = x
-        x += col_w[key]
-        if in_tile_plus:
-            plus_cols.add(key)
-            x += FRAME_GAP  # the right overhang, so the next column still clears the tile
-        x += GAP
+        x += col_w[key] + GAP
     total_w = x
 
     # Content is centred within each footprint: the margin is (footprint − content) / 2,
@@ -1394,14 +1380,8 @@ def build(state, settings=None, collapsed=None,
 
     def tile_box(key):
         # the (x, width) of a column's grey tile/panel: the full footprint (the panel fills it
-        # and overhangs by tile_pad). The caption stack rides this width; content centres within.
+        # and overhangs by PAD). The caption stack rides this width; content centres within.
         return col_x[key], col_w[key]
-
-    def tile_pad(key):
-        # how far a tile's grey panel overhangs its content on each side: PAD normally, plus
-        # an extra FRAME_GAP for a +-bearing column so its + clears the panel's right edge
-        # (kept equal both sides → the tile stays centred on the gridline)
-        return PAD + (FRAME_GAP if key in plus_cols else 0)
 
     primes_x = content_x.get("primes")  # centred content-left; None when the column is hidden
     commas_x = content_x.get("commas")  # None when the commas column is hidden
@@ -1412,20 +1392,6 @@ def build(state, settings=None, collapsed=None,
 
     def col_open(key):
         return key in col_x and f"col:{key}" not in collapsed
-
-    # the in-tile + (add a prime / comma / interest interval) rides the right edge of its grey
-    # panel — FRAME_GAP in, panel-relative like the fold toggle and audio bank — so a caption-
-    # widened column (commas) keeps it on the edge rather than drifting it inward with the
-    # re-centred content. Equals the old content-relative seat wherever tile == content (every
-    # un-widened column). An empty interest set has no cells, so its lone + centres on the gridline.
-    for key in ("primes", "commas", "interest", "held"):
-        if not col_open(key):
-            continue
-        if key in plus_cols:
-            tx, tw = tile_box(key)
-            ctrl_x[key] = tx + tw + tile_pad(key) - FRAME_GAP - BTN
-        else:
-            ctrl_x[key] = col_x[key] + col_w[key] / 2 - BTN / 2
 
     # The generator tuning-ranges box (the chart + its mode selector) nests at the bottom
     # of the generator tuning map tile when tuning_ranges is on. Its extra height is
@@ -1735,11 +1701,28 @@ def build(state, settings=None, collapsed=None,
     }
 
     # The element +/− controls ride each fanning column's TOP bus (the fan-out, just after the
-    # toggle), not the quantities row: the − sits on a branch point (a per-element split). The
-    # sub-axis centre IS that branch point's x; column_axis fans the same centres, so the controls
-    # and the gridlines stay in lockstep.
+    # toggle), not the quantities row: the − sits on a branch point (a per-element split), the +
+    # on a "stub" one COL_W past the last branch point — the slot where the next element would
+    # branch — with the top bus stretched out to reach it. sub_axis_x is the split's x (column_axis
+    # fans the same centres); plus_stub_x records, per addable column that shows a +, where that +
+    # (and so the bus end) sits, keeping the cells and the gridlines in lockstep.
     def sub_axis_x(ckey, i):  # centre of column ckey's i-th per-element sub-axis (a branch point)
         return group_left[ckey](i) + COL_W / 2
+
+    def col_plus_x(ckey):
+        n = group_n[ckey]
+        if n == 0:  # an empty set has no branch points: the + centres on the single trunk
+            mx, mw = matrix_span(ckey)
+            return mx + mw / 2
+        return sub_axis_x(ckey, n - 1) + COL_W  # one slot past the last branch point
+
+    def _plus_shows(ckey):  # mirrors the +'s emit gate in the quantities block (col_open for the
+        if ckey in ("interest", "held"):  # addable sets, so an empty-but-open column still adds one)
+            return col_open(ckey) and row_open("quantities")
+        return tile_open("quantities", ckey)
+
+    plus_stub_x = {ckey: col_plus_x(ckey) for ckey in ("primes", "commas", "interest", "held")
+                   if _plus_shows(ckey)}
 
     cells: list[CellBox] = []
     lines: list[Line] = []
@@ -1856,6 +1839,11 @@ def build(state, settings=None, collapsed=None,
             cells.append(CellBox(cid, sub_axis_x(ckey, i) - COL_W / 2, fanout_y, COL_W,
                                  (qy + ROW_H) - fanout_y, kind, **kw))
 
+        def branch_plus(cid, ckey, kind):
+            # the always-shown + centred on the column's stub, one slot past the last branch
+            # point (the top bus stretches out to reach it); an empty set centres it on the trunk
+            cells.append(CellBox(cid, plus_stub_x[ckey] - BTN / 2, fanout_y - BTN / 2, BTN, BTN, kind))
+
         if tile_open("quantities", "primes"):
             for p in range(d):
                 cells.append(CellBox(f"prime:{p}", prime_left(p), qy, COL_W, ROW_H, "prime", text=str(elements[p]), prime=p))
@@ -1863,7 +1851,6 @@ def build(state, settings=None, collapsed=None,
             # − rides that prime's branch point (the last top-bus split).
             if d > 1:
                 branch_minus("minus", "primes", d - 1, "minus")
-            cells.append(CellBox("plus", ctrl_x["primes"], qy + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
         if tile_open("quantities", "commas"):
             for c in range(nc):
                 cells.append(CellBox(f"comma:{c}", comma_left(c), qy, COL_W, ROW_H, "commaratio", text=comma_ratios[c], comma=c))
@@ -1874,7 +1861,6 @@ def build(state, settings=None, collapsed=None,
             # last column's branch point — cancelling the draft, or dropping a real comma when >1
             if pending is not None or nc > 1:
                 branch_minus("comma_minus", "commas", nc_shown - 1, "comma_minus")
-            cells.append(CellBox("comma_plus", ctrl_x["commas"], qy + (ROW_H - BTN) // 2, BTN, BTN, "comma_plus"))
         if tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
             for i in range(r):                       # derived from M like the comma ratios — no ± control)
                 cells.append(CellBox(f"detempering:{i}", detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=gens[i]))
@@ -1887,10 +1873,6 @@ def build(state, settings=None, collapsed=None,
                 cells.append(CellBox(f"held:{i}", held_left(i), qy, COL_W, ROW_H, "commaratio", text=held_ratios[i], comma=i))
                 # each held interval carries its own − on its branch point (any one is removable)
                 branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
-        # the held + rides col_open (like interest's): an empty-but-open held column shows its
-        # + so the first held interval can be added, even with no tile yet
-        if col_open("held") and row_open("quantities"):
-            cells.append(CellBox("held_plus", ctrl_x["held"], qy + (ROW_H - BTN) // 2, BTN, BTN, "held_plus"))
         if tile_open("quantities", "interest"):  # the user's other intervals of interest
             for i in range(mi):
                 # the derived ratio (read-only, from the vector) heads each column, like a comma's
@@ -1898,12 +1880,13 @@ def build(state, settings=None, collapsed=None,
                 # every interval carries its own − on its branch point: any one is removable,
                 # unlike the domain/comma last-only −
                 branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
-        # the + rides col_open, not tile_open: an empty-but-open interest column declares
-        # no tile yet, but must still show its + so the first interval can be added (a blank
-        # 1/1 — a zero vector — to edit in the vectors row). With intervals present ctrl_x
-        # seats it inside the tile like the domain/comma +; empty, it centres on the gridline.
-        if col_open("interest") and row_open("quantities"):
-            cells.append(CellBox("interest_plus", ctrl_x["interest"], qy + (ROW_H - BTN) // 2, BTN, BTN, "interest_plus"))
+        # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
+        # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
+        # the first interval can still be added). The − is the hover counterpart on a branch point.
+        for ckey, cid in (("primes", "plus"), ("commas", "comma_plus"),
+                          ("held", "held_plus"), ("interest", "interest_plus")):
+            if ckey in plus_stub_x:
+                branch_plus(cid, ckey, cid)
 
     # generator ratios (aligned with the mapping rows they label) + the mapping
     # matrix and its mapped target interval list
@@ -2106,7 +2089,7 @@ def build(state, settings=None, collapsed=None,
         # Anchored to the grey panel's right edge (tile_box), not the centred content — so a
         # caption-widened tile keeps the bank on its edge rather than drifting it inward.
         cx, cw = tile_box(group)
-        right = cx + cw + tile_pad(group) - TOGGLE_INSET
+        right = cx + cw + PAD - TOGGLE_INSET
         by, step = tile_top[key] - PAD + TOGGLE_INSET, TOGGLE + TOGGLE_INSET
         left0 = right - (4 * TOGGLE + 3 * TOGGLE_INSET)
         for j, ctrl in enumerate(("wave", "mode", "hold", "root")):
@@ -2548,7 +2531,10 @@ def build(state, settings=None, collapsed=None,
         for i in range(n):
             gridline(f"v:{prefix}:{i}", "v", xs[i], fanout_y, bot_bus_y - fanout_y, dotted=dotted)
         bx, bw = _bus_span(xs)
-        gridline(f"bus:{key}:top", "h", fanout_y, bx, bw, dotted=dotted)
+        # an addable column stretches its TOP bus out past the last sub-axis to the + stub, so the
+        # branching bar reaches the + (which rides plus_stub_x); the bottom bus just spans the data.
+        top_end = plus_stub_x[key] if key in plus_stub_x else bx + bw
+        gridline(f"bus:{key}:top", "h", fanout_y, bx, top_end - bx, dotted=dotted)
         gridline(f"bus:{key}:bot", "h", bot_bus_y, bx, bw, dotted=dotted)
         gridline(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y, dotted=dotted)
         gridline(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y, dotted=dotted)
@@ -2620,7 +2606,7 @@ def build(state, settings=None, collapsed=None,
         row_c = f"row:{rkey}" in collapsed or tile_c
         cx, cw = tile_box(ckey)  # the tile widens for a long caption; content centres within it
         ch, cy = tile_h[rkey], tile_top[rkey]
-        w, px = (0, 0) if col_c else (cw, tile_pad(ckey))
+        w, px = (0, 0) if col_c else (cw, PAD)
         h, py = (0, 0) if row_c else (ch, PAD)
         bx = cx + cw / 2 if col_c else cx
         by = cy + ch / 2 if row_c else cy
@@ -2646,8 +2632,7 @@ def build(state, settings=None, collapsed=None,
     # base plus the group's colour at mix-blend-mode:darken (see app.py). The base sits a
     # layer BELOW the colour (z-index), so where a tile carries both groups the two colour
     # bands darken-compose regardless of paint order: cyan over yellow gives the mockup's
-    # green. Each band hugs its (open) tile's extent and overhangs by WASH_PAD — plus, on a
-    # +-bearing column, the extra FRAME_GAP its tile claims (tile_pad over PAD) — so a run of
+    # green. Each band hugs its (open) tile's extent and overhangs by WASH_PAD — so a run of
     # same-coloured tiles meets across the inter-tile gaps and reads as one continuous band
     # rather than leaving grey strips between them. A folded tile (by its own toggle, its row
     # or its column) is not open, so its colour goes away with its content. Two sources of a
@@ -2670,8 +2655,7 @@ def build(state, settings=None, collapsed=None,
             groups = {g for g in tile_groups(rkey, ckey) if settings.get(f"{g}_colorization")}
             if not groups:
                 continue
-            pad = tile_pad(ckey) - PAD
-            x, w = col_x[ckey] - WASH_PAD - pad, col_w[ckey] + 2 * (WASH_PAD + pad)
+            x, w = col_x[ckey] - WASH_PAD, col_w[ckey] + 2 * WASH_PAD
             y, h = tile_top[rkey] - WASH_PAD, tile_h[rkey] + 2 * WASH_PAD
             for group in groups:
                 bands.append((f"{group}:{rkey}:{ckey}", x, y, w, h, group))
@@ -2949,7 +2933,7 @@ def build(state, settings=None, collapsed=None,
                 and rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey)):
             glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
             cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
-                                 col_x[ckey] - tile_pad(ckey) + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
+                                 col_x[ckey] - PAD + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
                                  TOGGLE, TOGGLE, "tiletoggle", text=glyph))
 
     # Value-display filtering. The tiles (blocks) and gridlines (lines) always

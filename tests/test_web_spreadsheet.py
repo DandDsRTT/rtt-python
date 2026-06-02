@@ -175,28 +175,23 @@ def test_a_single_prime_domain_has_no_minus_but_keeps_plus():
     assert {"plus", "prime:0"} <= cells  # ...but you can still expand
 
 
-def test_quantities_row_pluses_sit_inside_their_tiles_with_equal_margins():
-    # the domain/comma/interest + ride just inside their tile, centred on the row — the
-    # horizontal echo of the interval-vectors basis +, which sits below its stack. The +
-    # sits FRAME_GAP off the last value AND the tile overhangs it the same FRAME_GAP, so
-    # its two margins match; it must NOT float out past (or sit flush against) the edge.
-    # Names off, so every tile hugs its content (a long caption widens its tile, which
-    # detaches the + from the far edge — covered by the caption-widening test instead).
+def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point():
+    # the domain/comma/interest + rides its column's fan stub — one COL_W past the last branch
+    # point (the slot where the next element would branch), centred on the top bus — and the bus
+    # stretches out to reach it. The horizontal echo of the interval-vectors basis +.
     opts = settings.defaults()
     opts["names"] = False
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), opts, interest=((-1, 1, 0),))
     cells = {c.id: c for c in lay.cells}
-    blocks = {b.id: b for b in lay.blocks}
-    for plus_id, last_cell, panel in (("plus", "prime:2", "block:primes"),
-                                      ("comma_plus", "comma:0", "block:commas"),
-                                      ("interest_plus", "interest:0", "block:interest")):
-        p, last, tile = cells[plus_id], cells[last_cell], blocks[panel]
-        assert tile.y <= p.y and p.y + p.h <= tile.y + tile.h  # inside the tile vertically
-        assert abs((p.y + p.h / 2) - (last.y + last.h / 2)) < 1  # centred on the row
-        left = p.x - (last.x + last.w)  # gap from the last value box
-        right = (tile.x + tile.w) - (p.x + p.w)  # gap to the tile's right edge
-        assert left == spreadsheet.FRAME_GAP  # FRAME_GAP off the values (matches the basis +)
-        assert abs(right - left) < 0.01  # and an equal margin to the edge (not flush, not floating)
+    by_id = {ln.id: ln for ln in lay.lines}
+    for plus_id, col, last_sub in (("plus", "primes", "v:prime:2"),
+                                   ("comma_plus", "commas", "v:comma:0"),
+                                   ("interest_plus", "interest", "v:interest:0")):
+        plus, bus = cells[plus_id], by_id[f"bus:{col}:top"]
+        stub = by_id[last_sub].pos + spreadsheet.COL_W  # one slot past the last sub-axis
+        assert abs((plus.x + plus.w / 2) - stub) < 0.51     # the + centres on the stub
+        assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51  # ...up on the top bus
+        assert abs((bus.start + bus.length) - stub) < 0.51  # and the bus reaches it
 
 
 def test_target_intervals_column_with_mapped_list():
@@ -271,18 +266,23 @@ def test_shared_axes_and_branching():
     assert {"vbar:mapping:left", "vbar:mapping:right", "foot:mapping"} <= ids
 
 
-def test_convergence_buses_reach_the_outer_sub_lines_far_edges():
-    # the buses rejoining the per-element sub-gridlines span the FULL extent of the outer
-    # sub-lines -- half a line-width past each centre -- so the join corners stay solid at
-    # the far (rejoin) end too, not just the near (fan-out) end. (At 1px the shortfall was
-    # invisible; at 2px the far corner dropped a square.)
-    by = {ln.id: ln for ln in _layout().lines}  # 2.3.5 -> primes fan to 3 columns
+def test_convergence_buses_keep_solid_corners_and_the_top_bus_reaches_the_plus():
+    # both buses fan from half a line-width before the first sub-line, so the near (fan-out)
+    # corner stays solid at LINE_W. The BOTTOM bus rejoins half past the last sub-line (its far
+    # corner solid too). The TOP bus instead stretches on past the last sub-line to the + stub —
+    # the branching bar reaching the add-control. (At 1px the shortfall was invisible; at 2px the
+    # far corner dropped a square.)
+    lay = _layout()  # 2.3.5 -> primes fan to 3 columns
+    by = {ln.id: ln for ln in lay.lines}
+    cells = {c.id: c for c in lay.cells}
     half = spreadsheet.LINE_W / 2
     v0, vlast = by["v:prime:0"], by["v:prime:2"]
-    for bus_id in ("bus:primes:top", "bus:primes:bot"):
-        bus = by[bus_id]
-        assert bus.start == v0.pos - half  # from half a width before the first sub-line...
-        assert bus.start + bus.length == vlast.pos + half  # ...to half past the last
+    assert by["bus:primes:top"].start == v0.pos - half  # both fan out from half before the first...
+    assert by["bus:primes:bot"].start == v0.pos - half
+    assert by["bus:primes:bot"].start + by["bus:primes:bot"].length == vlast.pos + half  # bot rejoins half past
+    top, plus = by["bus:primes:top"], cells["plus"]
+    assert top.start + top.length == plus.x + plus.w / 2  # the top bus reaches the + stub
+    assert top.start + top.length > vlast.pos + half      # ...extending past the last sub-line
 
 
 def test_mapping_rejoin_bars_span_the_full_generator_fan():
@@ -2162,21 +2162,21 @@ def test_a_long_caption_widens_its_tile_to_stay_within_two_lines():
     assert panel.x <= cap.x and cap.x + cap.w <= panel.x + panel.w
 
 
-def test_a_long_caption_keeps_the_add_control_on_the_widened_tiles_edge():
-    # Companion to test_quantities_row_pluses_sit_inside_their_tiles_with_equal_margins (which
-    # runs names-off): with names ON, the commas captions widen its tile past its lone comma, so
-    # the content re-centres in the wider tile. The add-a-comma "+" must stay on the tile's right
-    # edge (FRAME_GAP in, panel-relative) rather than drift inward with the centred content — the
-    # same edge the fold toggle and audio bank hug. The un-widened primes "+" is the control: it
-    # already sits at its (content == tile) edge, so the panel-relative rule leaves it put.
-    cells = {c.id: c for c in _with(names=True).cells}
-    blocks = {b.id: b for b in _with(names=True).blocks}
+def test_a_widened_caption_tile_keeps_the_add_control_on_its_fan_stub():
+    # Companion to the names-off + test: with names ON, the commas captions widen its tile past
+    # its lone comma and the content re-centres in the wider tile. The + rides the fan stub
+    # (cell-anchored, a slot past the re-centred comma) and the top bus reaches it — so the +
+    # tracks the fan, not the tile edge, and the bar follows it.
+    lay = _with(names=True)
+    cells = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
     narrow = {b.id: b for b in _with(names=False).blocks}
-    assert blocks["block:commas"].w > narrow["block:commas"].w   # commas tile widened by its caption
-    assert blocks["block:primes"].w == narrow["block:primes"].w  # primes tile did not widen
-    for plus_id, col in (("comma_plus", "commas"), ("plus", "primes")):
-        plus, panel = cells[plus_id], blocks[f"block:{col}"]
-        assert plus.x + plus.w == panel.x + panel.w - spreadsheet.FRAME_GAP  # hugs the panel's right edge
+    by_id = {ln.id: ln for ln in lay.lines}
+    assert blocks["block:commas"].w > narrow["block:commas"].w  # commas tile widened by its caption
+    plus, bus = cells["comma_plus"], by_id["bus:commas:top"]
+    stub = by_id["v:comma:0"].pos + spreadsheet.COL_W  # one slot past the (re-centred) comma
+    assert abs((plus.x + plus.w / 2) - stub) < 0.51     # the + tracks the fan, not the tile edge
+    assert abs((bus.start + bus.length) - stub) < 0.51  # and the bus reaches it
 
 
 def test_min_width_for_lines_floors_a_column_to_keep_a_name_within_two_lines():
@@ -2773,8 +2773,8 @@ def test_interest_tiles_and_footprint_hug_their_content_the_title_overhangs():
     floor = max(spreadsheet._min_width_for_lines(spreadsheet.CAPTIONS[(rk, "interest")], spreadsheet.MAX_CAPTION_LINES)
                 for rk in ("vectors", "mapping", "tuning", "just", "retune"))
     hug_w = max(content_w, floor)
-    # the tile hugs that width — its PAD plus the FRAME_GAP its +-control overhangs each side
-    assert blocks["block:interest"].w == hug_w + 2 * spreadsheet.PAD + 2 * spreadsheet.FRAME_GAP
+    # the tile hugs that width — just its PAD overhang each side (the + rides the fan, not the tile)
+    assert blocks["block:interest"].w == hug_w + 2 * spreadsheet.PAD
     # the footprint hugs content/captions (no title reservation); the wider title overhangs it
     assert cells["header:interest"].w == hug_w
     assert cells["header:interest"].w < spreadsheet._title_w("other intervals\nof interest")
