@@ -385,23 +385,28 @@ def interval_sizes(tun: Tuning, ratios, domain_basis=None) -> IntervalSizes:
     return IntervalSizes(tempered, just, errors, tuple(abs(e) for e in errors))
 
 
-def _temperament_spec_vectors(mapping, scheme, ratios):
+def _temperament_spec_vectors(mapping, scheme, ratios, domain_basis=None):
     """The (Temperament, resolved spec, vectors-over-the-domain) triple the complexity and
-    weight projections share — both norm a set of vectors through the scheme's complexity."""
-    t = Temperament(_to_matrix(mapping), Variance.ROW)
-    return t, resolve_tuning_scheme(scheme), _vectors(ratios, get_d(t))
+    weight projections share — both norm a set of vectors through the scheme's complexity.
+    Over a nonstandard ``domain_basis`` the temperament and the vectors run over its
+    (possibly nonprime) elements, mirroring :func:`interval_sizes` — so e.g. ``13/5`` over
+    ``2.3.13/5`` keeps its basis vector instead of truncating to the d primes."""
+    t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
+    return t, resolve_tuning_scheme(scheme), _interval_vectors(ratios, domain_basis, get_d(t))
 
 
 def interval_complexities(
     mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
+    domain_basis=None,
 ) -> tuple[float, ...]:
     """Each interval's complexity under ``scheme``'s complexity norm — the (pre-transformed)
     norm of its vector (log-prime by default). Independent of the damage slope, which
     only decides how complexity becomes a weight.
 
     ``prescaler_override`` (a d-tuple) replaces the trait-derived diagonal — the seam the
-    bare prescaler tile rides into the complexity row."""
-    t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios)
+    bare prescaler tile rides into the complexity row. Over a nonstandard ``domain_basis``
+    each ratio is expressed in that basis (so a nonprime target keeps its full vector)."""
+    t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios, domain_basis)
     return tuple(
         get_complexity(
             m, t, spec.complexity_norm_power, spec.complexity_log_prime_power,
@@ -414,13 +419,16 @@ def interval_complexities(
 
 def interval_weights(
     mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
+    domain_basis=None,
 ) -> tuple[float, ...]:
     """Each interval's damage weight under ``scheme``: 1 (unity weight), its complexity,
     or 1/complexity, picked by the scheme's damage-weight slope.
 
     ``prescaler_override`` (a d-tuple) flows into each per-target complexity via
-    :func:`_damage_weights`, so a hand-edited diagonal reaches the weights row."""
-    t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios)
+    :func:`_damage_weights`, so a hand-edited diagonal reaches the weights row. Over a
+    nonstandard ``domain_basis`` each ratio is expressed in that basis, like the complexity
+    row, so a nonprime target's weight derives from its full domain-basis vector."""
+    t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios, domain_basis)
     return tuple(
         float(w) for w in _damage_weights(vectors, t, spec, prescaler_override=prescaler_override)
     )
@@ -743,10 +751,10 @@ def plain_text_values(
         ("prescaling", "detempering"): _prescale_vector_list(_prescaled(detemper_vectors)),
         ("prescaling", "targets"): _prescale_vector_list(_prescaled(target_vectors)),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
-        ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas)),
-        ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios)),
-        ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets)),
-        ("weight", "targets"): _cents_list(interval_weights(state.mapping, scheme, targets)),
+        ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas, domain_basis=db)),
+        ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios, domain_basis=db)),
+        ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets, domain_basis=db)),
+        ("weight", "targets"): _cents_list(interval_weights(state.mapping, scheme, targets, domain_basis=db)),
     }
     # the held interval column mirrors the comma column: the basis as a vector list, mapped
     # into generator coords, then the held-just sizes/errors and complexity. Added only when
@@ -761,7 +769,7 @@ def plain_text_values(
             ("just", "held"): _cents_list(held_sizes.just),
             ("retune", "held"): _cents_list(held_sizes.errors),
             ("prescaling", "held"): _prescale_vector_list(_prescaled(held)),
-            ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios)),
+            ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios, domain_basis=db)),
         })
     # the other-intervals-of-interest column is a loose collection, not a basis, so every
     # row is unwrapped (wrap=False): its vectors and mapped images stand alone (each its own
@@ -778,7 +786,7 @@ def plain_text_values(
             ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
             ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
             ("prescaling", "interest"): _prescale_vector_list(_prescaled(interest), outer=""),
-            ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios), wrap=False),
+            ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios, domain_basis=db), wrap=False),
         })
     return values
 

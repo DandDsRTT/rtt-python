@@ -1094,7 +1094,8 @@ def build(state, settings=None, collapsed=None,
     held_mapped = service.mapped_intervals(state.mapping, held_ratios, elements)  # M·held (gen coords)
     held_sizes = service.interval_sizes(tun, held_ratios, elements)  # tempered/just/error sizes
     target_weights = service.interval_weights(state.mapping, tuning_scheme, targets,
-                                              prescaler_override=custom_prescaler)  # the damage row's diag(𝒘)
+                                              prescaler_override=custom_prescaler,
+                                              domain_basis=elements)  # the damage row's diag(𝒘)
     comma_ratios = service.comma_ratios(state.comma_basis, elements)
     nc = len(comma_ratios)  # the real commas (those that define the temperament)
     mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
@@ -1123,15 +1124,15 @@ def build(state, settings=None, collapsed=None,
         "primes": service.interval_complexities(state.mapping, tuning_scheme, tuple(_ratio_str(e) for e in elements),
                                                 prescaler_override=custom_prescaler),
         "commas": service.interval_complexities(state.mapping, tuning_scheme, comma_ratios,
-                                                prescaler_override=custom_prescaler),
+                                                prescaler_override=custom_prescaler, domain_basis=elements),
         "targets": service.interval_complexities(state.mapping, tuning_scheme, targets,
-                                                 prescaler_override=custom_prescaler),
+                                                 prescaler_override=custom_prescaler, domain_basis=elements),
         "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios,
-                                                  prescaler_override=custom_prescaler),
+                                                  prescaler_override=custom_prescaler, domain_basis=elements),
         "held": service.interval_complexities(state.mapping, tuning_scheme, held_ratios,
-                                              prescaler_override=custom_prescaler),
+                                              prescaler_override=custom_prescaler, domain_basis=elements),
         "detempering": service.interval_complexities(state.mapping, tuning_scheme, gens,
-                                                     prescaler_override=custom_prescaler),
+                                                     prescaler_override=custom_prescaler, domain_basis=elements),
     }
     # the prescaler 𝑋: a d×d diagonal matrix over the primes (diag = each prime's pre-norm
     # weight, the values the complexity map norms). log-prime by default: diag(log₂ prime).

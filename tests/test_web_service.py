@@ -387,6 +387,31 @@ def test_interval_weights_of_the_empty_set_are_empty():
     assert service.interval_weights([[1, 1, 0], [0, 1, 4]], "minimax-S", ()) == ()
 
 
+def test_interval_weight_uses_the_full_domain_basis_vector():
+    import pytest
+
+    # minimax-S weights by simplicity (1 / complexity), so the weight of the 2.3.13/5 basis
+    # element "13/5" is 1 / log2(65) — derived from its domain-basis vector, the same fix
+    # the complexity row needs (both share _temperament_spec_vectors).
+    mapping = [[1, 2, 2], [0, -2, -3]]  # Barbados over 2.3.13/5
+    db = (2, 3, Fraction(13, 5))
+    got = service.interval_weights(mapping, "minimax-S", ("13/5",), domain_basis=db)[0]
+    assert got == pytest.approx(1 / math.log2(13 * 5), abs=1e-6)
+
+
+def test_plain_text_complexity_runs_over_the_nonstandard_domain_basis():
+    # the complexity band must express each ratio over the domain basis, like the grid:
+    # a 13/5 target over 2.3.13/5 takes its basis-vector height (log2(65)), not the prime-
+    # truncated reading. Guards that plain_text_values threads the domain basis to the seam.
+    state = service.parse_mapping_state("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    targets = ("13/5", "3/2")
+    band = service.plain_text_values(state, "minimax-S", target_override=targets)[("complexity", "targets")]
+    over_basis = service.interval_complexities(state.mapping, "minimax-S", targets, domain_basis=state.domain_basis)
+    truncated = service.interval_complexities(state.mapping, "minimax-S", targets)  # no basis: drops the 13
+    assert service.cents(over_basis[0]) in band     # the domain-basis height shows
+    assert service.cents(truncated[0]) not in band  # not the prime-truncated value
+
+
 def test_interval_complexities_norm_each_intervals_prescaled_vector():
     import pytest
 
@@ -401,6 +426,20 @@ def test_interval_complexities_norm_each_intervals_prescaled_vector():
 
 def test_interval_complexities_of_the_empty_set_are_empty():
     assert service.interval_complexities([[1, 1, 0], [0, 1, 4]], "minimax-S", ()) == ()
+
+
+def test_interval_complexity_uses_the_full_domain_basis_vector():
+    import pytest
+
+    # Over a nonstandard domain 2.3.13/5, the target "13/5" IS the third basis element
+    # (the unit vector [0 0 1]), not a 13-limit prime rational. Its log-prime complexity
+    # is the height log2(13*5) = log2(65). Without the domain basis threaded through, the
+    # ratio parsed to a length-6 prime vector that was silently truncated to d=3 — dropping
+    # the 13 and reporting log2(5) for an interval that has no 5 in this basis.
+    mapping = [[1, 2, 2], [0, -2, -3]]  # Barbados over 2.3.13/5
+    db = (2, 3, Fraction(13, 5))
+    got = service.interval_complexities(mapping, "minimax-S", ("13/5",), domain_basis=db)[0]
+    assert got == pytest.approx(math.log2(13 * 5), abs=1e-6)
 
 
 def test_scheme_with_prescaler_swaps_the_prescaler_preserving_the_rest():
