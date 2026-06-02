@@ -1257,14 +1257,22 @@ def test_interval_vectors_quantities_tile_shows_the_domain_basis_as_row_index():
     assert cells["basis:1"].y - cells["basis:0"].y == spreadsheet.ROW_H  # stacked down its column
 
 
-def test_interval_vectors_basis_has_vertical_domain_controls():
-    cells = {c.id: c for c in _layout().cells}
-    # the domain controls of the quantities row, oriented vertically: a + below the
-    # stack to add a prime, a − on the highest (bottom) prime to remove one
-    plus, minus, top, bot = cells["basis_plus"], cells["basis_minus"], cells["basis:0"], cells["basis:2"]
-    assert plus.y >= bot.y + bot.h  # + sits below the whole stack, clear of the last box (no overlap)
-    assert abs((plus.x + plus.w / 2) - (top.x + top.w / 2)) < 1  # centred under the basis column
-    assert minus.y <= bot.y + spreadsheet.ROW_H and minus.y + minus.h > bot.y  # − rides the highest prime
+def test_interval_vectors_basis_controls_ride_the_rows_left_bus():
+    # the basis fans HORIZONTALLY (one sub-row per prime); its domain controls ride the row's
+    # LEFT bus — out to the left of the primes, the row mirror of the columns' top-bus controls:
+    # a − on the bottom prime's branch point, a + on the stub one ROW_H below the stack, with the
+    # left bar stretched down to reach it.
+    lay = _layout()
+    cells = {c.id: c for c in lay.cells}
+    by_id = {ln.id: ln for ln in lay.lines}
+    plus, minus, bot = cells["basis_plus"], cells["basis_minus"], cells["basis:2"]
+    left_bus = by_id["vbar:vectors:left"]
+    assert minus.x == left_bus.pos  # − zone drops from the left-bus branch point (button at its edge)
+    assert abs((minus.y + minus.h / 2) - by_id["h:vectors:2"].pos) < 0.51  # ...on the bottom prime's sub-row
+    assert minus.x < cells["basis:2"].x  # ...out to the LEFT of the primes
+    assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51  # + centred on the left bus
+    assert plus.y >= bot.y + bot.h  # ...below the whole stack (clear of the last box)
+    assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51  # bar reaches the +
 
 
 def test_interval_vectors_basis_minus_is_absent_when_the_domain_cannot_shrink():

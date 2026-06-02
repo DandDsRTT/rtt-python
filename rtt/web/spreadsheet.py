@@ -1724,6 +1724,12 @@ def build(state, settings=None, collapsed=None,
     plus_stub_x = {ckey: col_plus_x(ckey) for ckey in ("primes", "commas", "interest", "held")
                    if _plus_shows(ckey)}
 
+    # The interval-vectors basis fans HORIZONTALLY (one sub-row per prime), so its + is the row
+    # mirror of the columns' top-bus +: it rides a stub one ROW_H below the last sub-row, on the
+    # row's left bus, with that bus's left bar stretched down to reach it. row_plus_y records it
+    # for row_axis (as plus_stub_x does for the columns); only the vectors row carries a basis +.
+    row_plus_y = ({"vectors": vec_top(d) + ROW_H / 2} if tile_open("vectors", "quantities") else {})
+
     cells: list[CellBox] = []
     lines: list[Line] = []
     blocks: list[Block] = []
@@ -1941,15 +1947,21 @@ def build(state, settings=None, collapsed=None,
         # the domain basis lists the interval-vectors' rows: the d primes as boxed
         # COL_W squares (the same the quantities row heads its columns with) stacked
         # down the quantities spine — the dual index, as the generators label the
-        # mapping rows. Its domain ± controls ride it vertically: + below the stack to
-        # add a prime, − on the highest (bottom) prime to remove one.
+        # mapping rows. Its domain ± controls ride the row's LEFT bus, out to the left of
+        # the primes (the row mirror of the columns' top-bus controls): a + on the stub
+        # one ROW_H below the stack, and a − on the bottom prime's branch point.
         if tile_open("vectors", "quantities"):
             bx = col_x["quantities"] + (col_w["quantities"] - COL_W) / 2  # square, centred in the spine
             for p in range(d):
                 cells.append(CellBox(f"basis:{p}", bx, vec_top(p), COL_W, ROW_H, "prime", text=str(elements[p]), prime=p))
+            # the left bus the controls ride (node_edge + FAN when the row fans, i.e. d > 1 — matching
+            # row_axis); the − zone drops from it rightward over the bottom prime as the hover target
+            basis_bus_x = node_edge + FAN if d > 1 else node_edge
             if d > 1:  # the highest prime is the removable one (shrink trims the last)
-                cells.append(CellBox("basis_minus", col_x["quantities"], vec_top(d - 1), col_w["quantities"], ROW_H, "basis_minus"))
-            cells.append(CellBox("basis_plus", bx + (COL_W - BTN) / 2, vec_top(d) + FRAME_GAP, BTN, BTN, "plus"))
+                cells.append(CellBox("basis_minus", basis_bus_x, vec_top(d - 1),
+                                     (bx + COL_W) - basis_bus_x, ROW_H, "basis_minus"))
+            cells.append(CellBox("basis_plus", basis_bus_x - BTN / 2, row_plus_y["vectors"] - BTN / 2,
+                                 BTN, BTN, "plus"))
         if tile_open("vectors", "commas"):
             for c in range(nc):
                 for p in range(d):
@@ -2577,7 +2589,11 @@ def build(state, settings=None, collapsed=None,
         for i in range(n):
             gridline(f"h:{key}:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
         bus_y, bus_h = _bus_span(ys)
-        gridline(f"vbar:{key}:left", "v", left_bus_x, bus_y, bus_h, dotted=folded)
+        # a row with a basis + (only the vectors row) stretches its LEFT bar down past the last
+        # sub-row to the + stub (row_plus_y), so the branching bar reaches the +; the right bar
+        # just spans the data.
+        left_bottom = row_plus_y[key] if key in row_plus_y else bus_y + bus_h
+        gridline(f"vbar:{key}:left", "v", left_bus_x, bus_y, left_bottom - bus_y, dotted=folded)
         gridline(f"vbar:{key}:right", "v", right_bus_x, bus_y, bus_h, dotted=folded)
         gridline(f"trunk:{key}", "h", cy, node_edge, left_bus_x - node_edge, dotted=folded)
         gridline(f"foot:{key}", "h", cy, right_bus_x, total_w - right_bus_x, dotted=folded)

@@ -784,9 +784,10 @@ _CSS = f"""
 .rtt-minus-btn {{ position:absolute !important; top:0; left:50%; transform:translate(-50%,-50%);
            opacity:0; pointer-events:none; transition:opacity {_T}; }}
 .rtt-minus-zone:hover .rtt-minus-btn {{ opacity:1; pointer-events:auto; }}
-/* the vertical basis's domain −: reveals to the RIGHT of the highest prime (the
-   spine's spare width), since the row above it is the next prime, not free space */
-.rtt-minus-btn-v {{ position:absolute !important; right:0; top:50%; transform:translateY(-50%);
+/* the horizontal basis's domain −: its zone spans the bottom prime's sub-row from the
+   row's left bus; the button reveals centred ON that left-bus branch point (out to the
+   left of the primes), the row mirror of a column −'s top-bus reveal */
+.rtt-minus-btn-v {{ position:absolute !important; left:0; top:50%; transform:translate(-50%,-50%);
            opacity:0; pointer-events:none; transition:opacity {_T}; }}
 .rtt-minus-zone:hover .rtt-minus-btn-v {{ opacity:1; pointer-events:auto; }}
 
