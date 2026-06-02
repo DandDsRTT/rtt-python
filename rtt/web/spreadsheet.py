@@ -103,8 +103,8 @@ OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred u
 # insets the control + label off the box border; CTRL_LABEL_GAP sits between the label and
 # the control. Box heights vary with the label's wrap, so a row reserves its tallest.
 BOX_OUTER = 4  # gap between a control box and its tile's edges
-BOX_INNER = 5  # inset of the control + its label within the box (off the border)
-CTRL_LABEL_GAP = 2  # gap between a control's field label and the control below it
+BOX_INNER = 5  # inset of the dropdown within the box (off the border)
+CTRL_LABEL_GAP = 2  # padding below the label, to the box's bottom edge
 BOX_TITLE_H = 14  # px height of the optimization / tuning-ranges boxes' bold title strip
 BOX_TITLE_GAP = 4  # gap below that title, before the box's content
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
@@ -1475,13 +1475,13 @@ def build(state, settings=None, collapsed=None,
             return 0
         return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
 
-    # a titled control box (preselect / form chooser) fits WITHIN its column's tile: the field
-    # label wraps to the box's width rather than widening it past the tile. Box heights vary
-    # with the wrap, so a row reserves its tallest control's band.
+    # a control box (preselect / form chooser) frames its dropdown WITHIN its column's tile.
+    # The label is the standard one-line left-justified caption hugging the dropdown's bottom
+    # (the .rtt-caption-left asset); it overflows the box to the right rather than widening it.
     def control_dims(ckey, cap_w, label):
         dropdown_w = max(40, min(col_w[ckey] - 2 * BOX_OUTER - 2 * BOX_INNER, cap_w))
-        label_h = _wrap_lines(label, dropdown_w) * CAPTION_LINE if label else 0
-        box_h = BOX_INNER + label_h + (CTRL_LABEL_GAP if label else 0) + PRESELECT_H + BOX_INNER
+        label_h = CAPTION_LINE if label else 0  # one line (overflows right, never wraps the box wider)
+        box_h = BOX_INNER + PRESELECT_H + (label_h + CTRL_LABEL_GAP if label else BOX_INNER)
         return dropdown_w, label_h, box_h
 
     def control_band_h(ckey, cap_w, label):  # the box plus outer padding above and below
@@ -2610,17 +2610,17 @@ def build(state, settings=None, collapsed=None,
         return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_units[rkey]
 
     # a control box: a thin-bordered frame that fits WITHIN its column's tile, the dropdown at
-    # the top and the standard caption LABEL underneath it (the dropdown-label asset every other
-    # control uses). The label wraps to the box's width (never widening it past the tile).
-    # Returns the (x, width, y) to seat the dropdown at.
+    # the top and the standard dropdown-label underneath — a left-justified one-line caption
+    # (.rtt-caption-left: 6px left, 2px top) hugging the dropdown's bottom edge, the same asset
+    # every other labelled control uses. Returns the (x, width, y) to seat the dropdown at.
     def control_box(box_id, ckey, top, cap_w, label):
         dropdown_w, label_h, box_h = control_dims(ckey, cap_w, label)
         box_x, box_y = col_x[ckey] + BOX_OUTER, top + BOX_OUTER
         blocks.append(Block(box_id, box_x, box_y, dropdown_w + 2 * BOX_INNER, box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
-        if label:  # the standard dropdown label: a caption UNDERNEATH the control
-            cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESELECT_H + CTRL_LABEL_GAP,
-                                 dropdown_w, label_h, "caption", text=label))
+        if label:
+            cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESELECT_H, dropdown_w, label_h,
+                                 "caption", text=label, align="left"))
         return ctrl_x, dropdown_w, ctrl_y
 
     # preselect chooser dropdowns, in the reserved band below each governing tile's

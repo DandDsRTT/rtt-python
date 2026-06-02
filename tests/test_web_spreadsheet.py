@@ -963,9 +963,10 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
         assert box.y <= ctrl.y and box.y + box.h >= ctrl.y + ctrl.h
         # the box stays WITHIN its tile -- never spilling out (the reported bug)
         assert box.x >= panel.x - 0.5 and box.x + box.w <= panel.x + panel.w + 0.5
-        # the standard dropdown label (a caption) sits UNDERNEATH the control, not a box title above
+        # the standard dropdown label (a left-justified caption, the .rtt-caption-left asset)
+        # hugs the dropdown's bottom edge, like the box-𝐋/𝒄/𝒘 controls -- not a box title above
         lbl = cells[f"block:{cid}:label"]
-        assert lbl.kind == "caption" and lbl.text == label and lbl.y > ctrl.y
+        assert lbl.kind == "caption" and lbl.text == label and lbl.align == "left" and lbl.y > ctrl.y
 
 
 def test_build_honors_the_target_interval_spec():
