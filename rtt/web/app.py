@@ -15,6 +15,7 @@ import math
 import sys
 from html import escape as _escape
 from pathlib import Path
+from typing import Callable, NamedTuple
 from urllib.parse import quote
 
 from nicegui import app, helpers, ui
@@ -41,6 +42,16 @@ from rtt.web.marks import (
     _top_bracket,
     _vbar,
 )
+
+
+class _KindHandlers(NamedTuple):
+    """The build + update pair for one cell kind — the unified replacement for the two
+    parallel ``if/elif cb.kind`` ladders (audit #3). ``build(cb, wrap)`` creates the cell's
+    child element(s) and registers their per-id handles; ``update(cb)`` refreshes the live
+    element from the cell box. ``update`` is None for static kinds (built once, never refilled)."""
+    build: Callable
+    update: Callable | None = None
+
 
 _ASSETS = Path(__file__).parent / "assets"  # CSS/JS asset files, loaded at import time
 
@@ -872,6 +883,11 @@ def index() -> None:
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
+    # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build, update). Populated
+    # below as each kind family is migrated off the _make_cell / render if/elif ladders; a kind
+    # absent here still falls through to its ladder branch, so the registry and ladders coexist
+    # during the migration (and the ladders shrink to nothing once every kind is registered).
+    cell_kinds: dict[str, _KindHandlers] = {}
 
     def drop(eid):
         """Remove an entity's element and forget every per-id handle for it."""
@@ -1197,7 +1213,10 @@ def index() -> None:
             cents[cb.id] = (w, f)
 
         with wrap:
-            if cb.kind == "mapping":
+            entry = cell_kinds.get(cb.kind)
+            if entry is not None:
+                entry.build(cb, wrap)
+            elif cb.kind == "mapping":
                 wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
                 inputs[cb.id] = ui.input(on_change=lambda e: on_mapping_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
@@ -1534,7 +1553,10 @@ def index() -> None:
             # keep native coords in their frozen strip / corner
             top = cb.y - (fy if container in ("body", "row") else 0)
             els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
-            if cb.kind in _EBK_SVG_KINDS:
+            entry = cell_kinds.get(cb.kind)
+            if entry is not None and entry.update is not None:
+                entry.update(cb)
+            elif cb.kind in _EBK_SVG_KINDS:
                 # the mark is drawn 1:1 to its px box, so redraw it whenever the box
                 # changes size (e.g. the brace/top bracket as the domain grows) or its
                 # pending (red) state flips (a draft comma's marks committing to black)
