@@ -316,6 +316,17 @@ _CSS = f"""
    reads unmistakably inactive, matching the #999 of a disabled toggle. */
 .rtt-iconbtn.disabled {{ border-color:#bbb !important; }}
 .rtt-iconbtn.disabled .q-icon {{ color:#999 !important; }}
+/* Quasar's reset gives EVERY disabled control -- `.disabled`/`[disabled]` and their
+   descendants -- a `not-allowed` cursor (the slashed "no-entry" circle on hover). This app
+   never wants it: a greyed button or checkbox already reads as inactive from its dim, so the
+   slashed circle is just noise. Neutralise the cursor app-wide (the dim STAYS -- that's the
+   real disabled cue). Quasar's rule is `cursor:not-allowed !important` in its
+   `quasar_importants` cascade layer; because !important REVERSES layer precedence, a layered
+   !important in the earlier `overrides` layer beats it regardless of specificity (an unlayered
+   !important would lose). The dropdown-header undim below rides the same trick. */
+@layer overrides {{
+  .disabled, .disabled *, [disabled], [disabled] * {{ cursor:default !important; }}
+}}
 /* the left rail: a light-grey column at the screen's left edge holding the hamburger (top)
    and, under it, the app title turned a quarter-turn. It sits to the LEFT of the pane and
    stays #e0e0e0 whether the pane is open or closed, so opening the pane never moves the
@@ -585,15 +596,12 @@ _CSS = f"""
 .rtt-select-popup .q-focus-helper {{ background:#000 !important; }}
 /* the prime-limit divider rows are disabled (non-selectable): Quasar renders a disabled
    q-item with no focus-helper (so no hover highlight) and skips it on click, so it can't be
-   picked and a click leaves the popup open. But Quasar's own reset also dims a disabled item
-   (opacity .6) and gives it a not-allowed cursor — both unwanted on what is really a header.
-   Those rules sit in Quasar's `quasar_importants` cascade layer; for !important the layer
-   order is reversed, so a layered !important outranks an unlayered one no matter the
-   specificity. Hence this override goes in the earlier `overrides` layer to win — leaving a
-   plain static header: full opacity, default cursor, on the item and its label. */
+   picked and a click leaves the popup open. But Quasar's reset also DIMS a disabled item
+   (opacity .6), unwanted on what is really a header — so undim it back to full opacity.
+   (Its not-allowed cursor is already cleared app-wide above, in this same `overrides` layer
+   — see that block for the !important-layer-reversal that lets the override win.) */
 @layer overrides {{
-  .rtt-select-popup .q-item.disabled {{ opacity:1 !important; cursor:default !important; }}
-  .rtt-select-popup .q-item.disabled * {{ cursor:default !important; }}
+  .rtt-select-popup .q-item.disabled {{ opacity:1 !important; }}
 }}
 /* ...and the divider reads as a section header: a centred grey label flanked by rules. It
    keeps the items' horizontal padding (it does NOT run to the popup's literal edges), so the
