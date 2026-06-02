@@ -465,6 +465,49 @@ async def test_picking_a_prescaler_clears_a_manual_diagonal_override(user: User)
     assert _cell_child(user, "cell:prescaling:primes:1:1").value == seed  # diagonal snapped back
 
 
+async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -> None:
+    # the box-𝒄 complexity chooser is a control_select — a distinct kind from the preselect
+    # dropdowns, with no other direct render coverage. Enabling weighting must build it carrying
+    # its live complexity value (not blank) and a populated option list. A dropped control_select
+    # build branch would leave an empty wrap; the value/option assertions catch that desync.
+    # (With alt. complexity shelved the list is just log-product, so this checks build, not a swap;
+    # the slope chooser below exercises the update branch.)
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()  # opens box 𝒄 (the complexity chooser)
+    await user.should_see(marker="control:complexity")
+    chooser = _cell_child(user, "control:complexity")
+    assert chooser.value          # built reflecting the live complexity (not blank)
+    assert list(chooser.options)  # ...with its option list populated
+
+
+async def test_weight_slope_chooser_mirrors_a_scheme_change(user: User) -> None:
+    # the box-𝒘 weight-slope chooser is the other control_select. Its value tracks the scheme's
+    # weight slope, so picking a different slope variant of the scheme through the tuning preselect
+    # (minimax-U default -> minimax-C) must flip the slope chooser on re-render — without the user
+    # touching that chooser. A dropped control_select update branch leaves it stale at the old slope.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()  # box 𝒘 (the slope chooser)
+    _toggle(user, "preselects")                                # the tuning scheme dropdown
+    await user.should_see(marker="control:slope")
+    await user.should_see(marker="preselect:tuning")
+    before = _cell_child(user, "control:slope").value
+    _cell_child(user, "preselect:tuning").set_value("minimax-C")  # the complexity-weighted variant
+    await user.should_see(marker="control:slope")
+    assert _cell_child(user, "control:slope").value != before  # the slope chooser mirrored the change
+
+
+async def test_range_mode_selector_highlights_the_live_mode(user: User) -> None:
+    # the monotone/tradeoff selector (rangemode kind) renders under the ranges chart; its render
+    # branch fills exactly the live mode's square (rtt-rangeopt-on) and clears the other's. No
+    # other test asserts that fill, so a dropped rangemode update branch — leaving neither square
+    # highlighted, or both — would slip through (it doesn't raise, so the ERROR-log guard misses it).
+    await _enable(user, "tuning ranges")
+    await user.should_see(marker="rangemode:tuning:gens")
+    wrap = next(iter(user.find(marker="rangemode:tuning:gens").elements))
+    on = [c for c in wrap.default_slot.children if "rtt-rangeopt-on" in c._classes]
+    assert len(on) == 1  # exactly the live mode (monotone, the default) is highlighted
+
+
 async def test_optimization_renders_the_optimize_button(user: User) -> None:
     # the optimize button renders in the damage tile when optimization is on (its single/
     # double-click optimize+lock behaviour is covered by the editor tests). The fixture
