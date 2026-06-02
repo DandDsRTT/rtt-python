@@ -451,11 +451,6 @@ _CSS = f"""
 .rtt-caption {{ width:100%; text-align:center; text-wrap:balance; font-size:9px; line-height:10px;
                color:#333; overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }}
 .rtt-caption-cell {{ align-items:center; }}
-/* a control box's field label: a small grey label above the dropdown it names, wrapping to
-   the box's width so a long label ("established tuning scheme") stacks rather than spilling
-   the tile. Left-aligned and lighter than the bold box titles (optimization / tuning ranges). */
-.rtt-control-label {{ width:100%; text-align:left; font-size:9px; line-height:10px; color:#555;
-                     font-family:'Cambria',Georgia,serif; white-space:normal; overflow-wrap:break-word; }}
 /* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power", "double-click
    to lock") stay on ONE line — centred under their control, overflowing sideways if need be —
    so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
@@ -1938,9 +1933,6 @@ def index() -> None:
                 if cb.align == "left":
                     cls += " rtt-caption-left"
                 captions[cb.id] = ui.html("").classes(cls)  # content set in render()
-            elif cb.kind == "controllabel":  # a field label above a control box's dropdown
-                wrap.classes("rtt-caption-cell")
-                captions[cb.id] = ui.html("").classes("rtt-control-label")  # content set in render()
             elif cb.kind == "preselect":
                 name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
                 if name == "target":
@@ -2286,10 +2278,6 @@ def index() -> None:
                 if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
                     captions[cb.id].set_content(html)
                     caption_html[cb.id] = html
-            elif cb.kind == "controllabel":  # a plain field label, no underlines
-                if caption_html.get(cb.id) != cb.text:
-                    captions[cb.id].set_content(cb.text)
-                    caption_html[cb.id] = cb.text
             elif cb.kind in _LABEL_KINDS:
                 labels[cb.id].set_text(cb.text)
 

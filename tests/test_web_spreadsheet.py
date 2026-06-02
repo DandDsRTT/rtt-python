@@ -943,8 +943,8 @@ def test_target_preselect_now_lives_in_the_target_interval_list_tile():
 
 
 def test_control_dropdowns_are_boxed_within_their_tiles():
-    # every dropdown rides inside a thin-bordered box that STAYS WITHIN its tile, with a small
-    # field label above the control naming it (not a bold box title that spills the tile)
+    # every dropdown rides inside a thin-bordered box that STAYS WITHIN its tile, with the
+    # standard caption label UNDERNEATH the control (the dropdown-label asset, not a box title)
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["preselects"], s["form_controls"] = True, True
@@ -963,9 +963,9 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
         assert box.y <= ctrl.y and box.y + box.h >= ctrl.y + ctrl.h
         # the box stays WITHIN its tile -- never spilling out (the reported bug)
         assert box.x >= panel.x - 0.5 and box.x + box.w <= panel.x + panel.w + 0.5
-        # a field label names the dropdown, sitting above it (a control label, not a box title)
+        # the standard dropdown label (a caption) sits UNDERNEATH the control, not a box title above
         lbl = cells[f"block:{cid}:label"]
-        assert lbl.kind == "controllabel" and lbl.text == label and lbl.y < ctrl.y
+        assert lbl.kind == "caption" and lbl.text == label and lbl.y > ctrl.y
 
 
 def test_build_honors_the_target_interval_spec():

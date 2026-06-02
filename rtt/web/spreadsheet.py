@@ -2609,18 +2609,18 @@ def build(state, settings=None, collapsed=None,
     def ptext_band_y(rkey):
         return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_units[rkey]
 
-    # a titled control box: a thin-bordered frame that fits WITHIN its column's tile, with a
-    # small field LABEL above the control naming what it sets. The label wraps to the box's
-    # width (never widening it past the tile). Returns the (x, width, y) to seat the control at.
+    # a control box: a thin-bordered frame that fits WITHIN its column's tile, the dropdown at
+    # the top and the standard caption LABEL underneath it (the dropdown-label asset every other
+    # control uses). The label wraps to the box's width (never widening it past the tile).
+    # Returns the (x, width, y) to seat the dropdown at.
     def control_box(box_id, ckey, top, cap_w, label):
         dropdown_w, label_h, box_h = control_dims(ckey, cap_w, label)
         box_x, box_y = col_x[ckey] + BOX_OUTER, top + BOX_OUTER
         blocks.append(Block(box_id, box_x, box_y, dropdown_w + 2 * BOX_INNER, box_h, boxed=True))
-        ctrl_x = box_x + BOX_INNER
-        if label:
-            cells.append(CellBox(f"{box_id}:label", ctrl_x, box_y + BOX_INNER, dropdown_w, label_h,
-                                 "controllabel", text=label, align="left"))
-        ctrl_y = box_y + BOX_INNER + label_h + (CTRL_LABEL_GAP if label else 0)
+        ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
+        if label:  # the standard dropdown label: a caption UNDERNEATH the control
+            cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESELECT_H + CTRL_LABEL_GAP,
+                                 dropdown_w, label_h, "caption", text=label))
         return ctrl_x, dropdown_w, ctrl_y
 
     # preselect chooser dropdowns, in the reserved band below each governing tile's
