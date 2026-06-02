@@ -284,11 +284,24 @@ BLACKWOOD_COMPLEXITY = [
 @pytest.mark.parametrize("power, slope, complexity_name, expected", BLACKWOOD_COMPLEXITY)
 def test_optimize_generator_tuning_map_complexity_name(power, slope, complexity_name, expected):
     t = parse_temperament_data(BLACKWOOD)
-    traits = complexity_name_traits(complexity_name) if complexity_name else {}
+    traits, held = complexity_name_traits(complexity_name) if complexity_name else ({}, None)
     spec = TuningSchemeSpec(
-        optimization_power=power, target_intervals=SIX_TILT, damage_weight_slope=slope, **traits
+        optimization_power=power, target_intervals=SIX_TILT, damage_weight_slope=slope,
+        held_intervals=held, **traits,
     )
     assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
+
+
+def test_complexity_name_traits_surfaces_held_separately():
+    # the held interval must NOT ride inside the complexity-trait dict — a caller splatting
+    # the traits into a spec would otherwise have to know to pop it first. It comes back as a
+    # separate value, so the dict is pure complexity traits.
+    traits, held = complexity_name_traits("lols-complexity")  # log-odd-limit holds the octave
+    assert "held_intervals" not in traits
+    assert held == "octave"
+    plain_traits, plain_held = complexity_name_traits("copfr-complexity")  # holds nothing
+    assert "held_intervals" not in plain_traits
+    assert plain_held is None
 
 
 # Held-intervals (trait 0, tests.m 2813-2853): named intervals tuned exactly justly.

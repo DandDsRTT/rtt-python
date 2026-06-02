@@ -93,9 +93,14 @@ def damage_name_traits(name: str) -> dict:
     }
 
 
-def complexity_name_traits(name: str) -> dict:
-    """Traits an interval-complexity systematic name encodes, e.g. ``"copfr-E-complexity"``."""
-    return _complexity_traits_from_name(name)
+def complexity_name_traits(name: str) -> tuple[dict, str | None]:
+    """The complexity traits an interval-complexity systematic name encodes (e.g.
+    ``"copfr-E-complexity"``) and, separately, any interval it holds justly — only the
+    ``ols``/``lols`` (log-odd-limit) family hold the octave. Surfacing held on its own keeps
+    it out of the trait dict, so a caller applies it explicitly rather than popping it."""
+    traits = _complexity_traits_from_name(name)
+    held = traits.pop("held_intervals", None)
+    return traits, held
 
 
 # Historical tuning-scheme names, each expressed as the equivalent systematic name.

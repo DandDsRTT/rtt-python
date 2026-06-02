@@ -569,8 +569,7 @@ def scheme_with_complexity(scheme, name: str):
     prescaler and box 𝒄 norm. lols/lols-E hold the octave just (log-odd-limit); every other
     name clears the held octave, since the held interval is the complexity's own (trait 0).
     Keeps the optimization power and damage slope. Returns a resolved spec."""
-    traits = complexity_name_traits(COMPLEXITY_NAMES[name])
-    held = traits.pop("held_intervals", None)  # only lols/ols inject one; set it explicitly so
+    traits, held = complexity_name_traits(COMPLEXITY_NAMES[name])  # only lols/ols hold an interval
     return replace(resolve_tuning_scheme(scheme), held_intervals=held, **traits)  # non-lols clears it
 
 
