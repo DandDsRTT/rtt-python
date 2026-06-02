@@ -16,16 +16,11 @@ import numpy as np
 from scipy.optimize import linprog
 
 from rtt.dimensions import get_d
-from rtt.dual import dual
-from rtt.temperament import Temperament, Variance
+from rtt.dual import mapping_matrix
+from rtt.temperament import Temperament
 from rtt.tuning import get_just_tuning_map, resolve_target_intervals
 
 Mode = Literal["monotone", "tradeoff"]
-
-
-def _mapping_matrix(t: Temperament) -> np.ndarray:
-    matrix = t.matrix if t.variance is Variance.ROW else dual(t).matrix
-    return np.array(matrix, dtype=float)  # r x d
 
 
 def get_generator_tuning_range(
@@ -35,7 +30,7 @@ def get_generator_tuning_range(
 
     ``None`` (monotone only) means no such tuning exists for this temperament."""
     d = get_d(t)
-    mapping = _mapping_matrix(t)  # r x d
+    mapping = np.array(mapping_matrix(t), dtype=float)  # r x d
     r = mapping.shape[0]
     just = np.array(get_just_tuning_map(t), dtype=float)  # d
 

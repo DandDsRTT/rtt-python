@@ -21,6 +21,12 @@ def dual(t: Temperament) -> Temperament:
     return Temperament(matrix, flipped, t.domain_basis)
 
 
+def mapping_matrix(t: Temperament) -> Matrix:
+    """The temperament's mapping as a row matrix (the maps as rows): its stored matrix
+    when row-variance, else the dual's. Callers wanting a float array ``np.array`` it."""
+    return t.matrix if t.variance is Variance.ROW else dual(t).matrix
+
+
 def _integer_null_space(matrix: Matrix) -> Matrix:
     """Null-space basis as integer row vectors (denominators cleared)."""
     result = []

@@ -18,7 +18,7 @@ from rtt.domain_basis import (
     get_simplest_prime_only_basis,
     is_standard_prime_limit_domain_basis,
 )
-from rtt.dual import dual
+from rtt.dual import dual, mapping_matrix
 from rtt.math_utils import pad_vectors_with_zeros_up_to_d, pcv_to_quotient, quotient_to_pcv
 from rtt.parsing import parse_quotient_list, parse_quotients
 from rtt.target_intervals import process_old, process_tilt
@@ -236,7 +236,7 @@ def optimize_generator_tuning_map(
         generators = _retrieve_prime_domain_basis_generators(generators, t, solve_t)
 
     if spec.destretched_interval:
-        mapping = np.array(_mapping_matrix(t), dtype=float)
+        mapping = np.array(mapping_matrix(t), dtype=float)
         just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
         generators = _destretch(
             generators, spec.destretched_interval, mapping, just_tuning_map, get_d(t)
@@ -247,7 +247,7 @@ def optimize_generator_tuning_map(
 def _solve_generators(t: Temperament, spec: TuningSchemeSpec, prescaler_override=None) -> np.ndarray:
     """The optimum generators for a scheme over the temperament's own domain basis."""
     d = get_d(t)
-    mapping = np.array(_mapping_matrix(t), dtype=float)  # r x d
+    mapping = np.array(mapping_matrix(t), dtype=float)  # r x d
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)  # d
     if _is_all_interval(spec) and spec.complexity_size_factor != 0:
         return _optimize_augmented_all_interval(
@@ -273,7 +273,7 @@ def _retrieve_prime_domain_basis_generators(
     """Convert generators optimized over the prime basis back to the original (nonprime)
     basis: re-derive the prime tuning map, restrict it to the original basis elements, then
     recover the original temperament's generators from that tuning map."""
-    prime_mapping = np.array(_mapping_matrix(prime_t), dtype=float)
+    prime_mapping = np.array(mapping_matrix(prime_t), dtype=float)
     tuning_over_primes = np.asarray(generators) @ prime_mapping
     basis_change = np.array(
         express_quotients_in_domain_basis(
@@ -397,7 +397,7 @@ def optimize_tuning_map(
     generators = np.array(
         optimize_generator_tuning_map(t, spec, prescaler_override=prescaler_override), dtype=float,
     )
-    mapping = np.array(_mapping_matrix(t), dtype=float)
+    mapping = np.array(mapping_matrix(t), dtype=float)
     return tuple(float(x) for x in generators @ mapping)
 
 
@@ -436,7 +436,7 @@ def get_generator_tuning_map_mean_damage(
 
 
 def _tuning_map_from_generators(t: Temperament, generator_tuning_map: tuple) -> np.ndarray:
-    return np.array(generator_tuning_map, dtype=float) @ np.array(_mapping_matrix(t), dtype=float)
+    return np.array(generator_tuning_map, dtype=float) @ np.array(mapping_matrix(t), dtype=float)
 
 
 def _evaluate_damages(
@@ -743,10 +743,6 @@ def generator_tuning_map_from_t_and_tuning_map(
 ) -> tuple[float, ...]:
     """Recover the generator tuning map from a temperament and a tuning map,
     via a right-inverse of the mapping (the tuning map is generators · mapping)."""
-    mapping = np.array(_mapping_matrix(t), dtype=float)
+    mapping = np.array(mapping_matrix(t), dtype=float)
     generators = np.array(tuning_map, dtype=float) @ np.linalg.pinv(mapping)
     return tuple(float(x) for x in generators)
-
-
-def _mapping_matrix(t: Temperament) -> tuple:
-    return t.matrix if t.variance is Variance.ROW else dual(t).matrix
