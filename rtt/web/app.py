@@ -517,20 +517,20 @@ def _example_html(key: str) -> str:
 # example column still uses _example_html / _EXAMPLE_TEXT.
 _TILE_NAME = "tile name"        # the name caption; its symbol-spelling letter (the n of "name") underlines for mnemonics
 _TILE_SYMBOL = "𝒏"              # the quantity symbol — a bold-italic n, matching the underlined letter
-_TILE_EQUIV = " = 𝒆𝒈"          # the symbol's defining-equation tail: 𝒏 = 𝒆𝒈, an "e.g." pun fitting an example tile
-_TILE_MATH = "1200·log₂(3/2)"   # math_expressions: a value's closed form, shown inside the boxed cell (just-row style)
-_TILE_VALUE = "701.96"          # quantities: the number the closed form evaluates to, inside the cell below the form
-_TILE_UNITS = "¢"               # units: the value's unit (cents)
+_TILE_EQUIV = " = 𝑒G"          # the symbol's defining-equation tail (𝒏 = 𝑒G — mixed object styling: italic scalar, upright matrix)
+_TILE_ROWLABEL = "𝒏₁"           # the matrix's row header (a matlabel) — rides the symbol layer, like real row labels
+_TILE_MATH = "1200·log₂(3/2)"   # math_expressions: a value's closed form, shown INSIDE the boxed cell (just-row style)
+_TILE_VALUE = "= 701.96"        # quantities: the value the closed form evaluates to — the "= …" line inside the cell
+_TILE_UNITS = "¢/p"             # units: the value's unit (cents per prime) — the "units: …" line AND the per-cell unit
 _TILE_PTEXT = "⟨1200 1902 2786]"  # plain_text_values: the same kind of value as a one-line EBK string
 
-# Where the mnemonic underline falls in the name: the letter the symbol spells (the 'n').
-_TILE_MNEMONIC_AT = _TILE_NAME.index("n")
+_TILE_MNEMONIC_AT = _TILE_NAME.index("n")  # where the mnemonic underline falls (the symbol's letter)
 
-# Each line of the tile, top to bottom, listing its layer keys left-to-right in render order. The
-# value cell's line seats THREE layers — gridded_values (the EBK-framed box), math_expressions
-# (the closed form) and quantities (the value) — because on a real tile the form and value live
-# INSIDE the box, not on rows of their own. The symbol line seats the symbol + its equivalence
-# tail; the name line the mnemonic letter + the rest of the name.
+# The tile's stacked lines, top to bottom, by their PRIMARY layer keys (left-to-right render
+# order). The value cell additionally shows the symbol layer's row header and the units layer's
+# per-cell unit (secondary appearances, added in the builder), and seats math_expressions /
+# quantities INSIDE its box rather than on rows of their own. The symbol line seats the symbol +
+# its equivalence tail; the name line the mnemonic letter + the rest of the name.
 _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("gridded_values", "math_expressions", "quantities"),
     ("symbols", "equivalences"),
@@ -541,14 +541,24 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("charts",),
 )
 
-# A tile part is inert (greyed, unclickable) until its visual parent is shown — the dummy mirrors
-# the grid, where a sub-layer can't appear without its host: an underline needs a name, an
-# equation a symbol, and the value (and its closed form) the boxed cell to sit in.
+# A tile part is inert (greyed, unclickable) until its visual host is shown — the dummy mirrors
+# the grid, where a sub-layer can't appear without its host: the value and its closed form need
+# the boxed cell to sit in, an underline a name, an equation a symbol.
 _TILE_PARENT: dict[str, str] = {
     "mnemonics": "names",
     "equivalences": "symbols",
     "quantities": "gridded_values",
     "math_expressions": "gridded_values",
+}
+
+# Per-layer font size in the tile (px), matched to the real tile constants so the dummy's
+# proportions read like an actual tile: the symbol/equivalence glyph, the name caption, the row
+# header (matlabel), the units line, and the tiny stacked closed-form/value inside the cell.
+_TILE_FONT = {
+    "symbols": 15, "equivalences": 15, "rowlabel": spreadsheet.MATLABEL_H - 2,
+    "names": spreadsheet.CAPTION_FONT, "mnemonics": spreadsheet.CAPTION_FONT,
+    "units": 10, "cellunit": 9, "plain_text_values": 11,
+    "math_expressions": 6, "quantities": 7,
 }
 
 
@@ -560,19 +570,39 @@ def _tile_name_pieces() -> tuple[str, str, str]:
     return _TILE_NAME[:i], _TILE_NAME[i], _TILE_NAME[i + 1:]
 
 
+def _tile_fold_html() -> str:
+    """The decorative fold toggle for the tile's top-left corner — the same boxed double-chevron
+    glyph a real tile carries (open/collapse state). Inert here; it only makes the tile read as a tile."""
+    return _control_svg(_FOLD_GLYPH["unfold_less"])
+
+
+# The value cell's geometry (px): one COL_W×ROW_H square box, like a real gridded cell, framed by
+# the EBK marks with GAP clearance so the brackets don't crowd the value; a top bracket / brace
+# CAP tall above and below.
+_TILE_CELL = spreadsheet.COL_W           # the square cell side (== ROW_H)
+_TILE_BR_W = 9                            # EBK bracket width
+_TILE_BR_GAP = 4                          # clearance between a bracket and the cell box
+_TILE_CAP = 5                             # top-bracket / brace height
+_TILE_FRAME_W = _TILE_BR_W + _TILE_BR_GAP + _TILE_CELL + _TILE_BR_GAP + _TILE_BR_W
+_TILE_FRAME_H = _TILE_CAP + _TILE_CELL + _TILE_CAP
+_TILE_CELL_X = _TILE_BR_W + _TILE_BR_GAP  # the cell's left edge within the frame
+
+
 def _tile_grid_frame_html() -> str:
-    """The boxed-cell FRAME of the value cell: the EBK angle/closing brackets, top bracket and
-    brace around one white value box — the gridded structure the closed form and value sit inside,
-    drawn with the same hand marks the grid uses. The builder lays the form and value over the box."""
+    """The boxed-cell FRAME: the EBK angle/closing brackets, top bracket and brace around one
+    COL_W×ROW_H white value box (the same square a real gridded cell is), with GAP clearance
+    between the brackets and the box. The builder lays the closed form and value inside the box."""
     def mark(x, y, w, h, inner):
         return f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px">{inner}</div>'
-    return ('<div style="position:relative;width:108px;height:34px">'
-            + mark(11, 1, 86, 5, _top_bracket(86, 5))
-            + mark(0, 6, 9, 22, _angle_bracket(9, 22))
-            + mark(11, 6, 86, 22, '<div style="width:100%;height:100%;box-sizing:border-box;'
-                                  'border:1px solid #000;background:#fff"></div>')
-            + mark(98, 6, 9, 22, _square_bracket(9, 22, "right"))
-            + mark(11, 28, 86, 5, _brace(86, 5))
+    cell, cap, bw = _TILE_CELL, _TILE_CAP, _TILE_BR_W
+    cx = _TILE_CELL_X
+    return (f'<div style="position:relative;width:{_TILE_FRAME_W}px;height:{_TILE_FRAME_H}px">'
+            + mark(cx, 0, cell, cap, _top_bracket(cell, cap))
+            + mark(0, cap, bw, cell, _angle_bracket(bw, cell))
+            + mark(cx, cap, cell, cell, '<div style="width:100%;height:100%;box-sizing:border-box;'
+                                        'border:1px solid #555;background:#fff"></div>')
+            + mark(cx + cell + _TILE_BR_GAP, cap, bw, cell, _square_bracket(bw, cell, "right"))
+            + mark(cx, cap + cell, cell, cap, _brace(cell, cap))
             + '</div>')
 
 
@@ -606,7 +636,7 @@ def _general_part_html(key: str) -> str:
     if key == "mnemonics":
         return _escape(_tile_name_pieces()[1])
     if key == "units":
-        return _math_html(_TILE_UNITS)
+        return f'<span class="rtt-units-pre">units: </span>{_units_html(_TILE_UNITS)}'
     if key == "plain_text_values":
         return _math_html(_TILE_PTEXT)
     if key == "preselects":
@@ -1715,9 +1745,11 @@ def index() -> None:
                 ui.label("D&D's RTT app").classes("rtt-sidetitle")
             drawer = ui.element("div").classes("rtt-drawer")
             with drawer, ui.element("div").classes("rtt-drawer-inner"):
-                # the frozen header: the select-all/none master + the show/example titles, pinned
-                # above the scrolling groups (render() sizes it to the layout's freeze_y, matching
-                # the main app's frozen band). Its bottom border is the frozen/scrolling seam.
+                # the frozen header: just the select-all/none master, pinned above the scrolling
+                # groups (render() sizes it to the layout's freeze_y, matching the main app's frozen
+                # band). Its bottom border is the frozen/scrolling seam. The show/example column
+                # titles are NOT here — they describe only the specific-group checkbox column now
+                # (the general group is the dummy tile), so they ride that group's head below.
                 show_frozen = ui.element("div").classes("rtt-show-frozen").mark("showfrozen")
                 with show_frozen:
                     # the select-all/none master checkbox: one click flips every implemented Show
@@ -1730,9 +1762,6 @@ def index() -> None:
                             on_change=lambda e: on_select_all(e.value)) \
                             .props("dense size=xs color=grey-8").classes("rtt-show-item") \
                             .tooltip(tooltips.CHROME_HELP["select_all"])
-                    with ui.element("div").classes("rtt-show-head"):
-                        ui.label("show").classes("rtt-show-title")
-                        ui.label("example").classes("rtt-show-examplehdr")
                 # the scrolling body: the toggle groups, which scroll under the frozen header when
                 # the panel outgrows the window (rather than spilling off the bottom of the screen)
                 boxes: dict = {}  # specific-group toggle key -> checkbox, so a sub-control row can bind to its parent
@@ -1741,55 +1770,83 @@ def index() -> None:
                 with show_scroll:
                     for group_name, items in show_settings.SHOW_GROUPS:
                         with ui.element("div").classes("rtt-show-group"):
-                            ui.label(group_name).classes("rtt-show-grouptitle")
                             if group_name == "general":
                                 # the general layers render as ONE clickable dummy value tile rather
-                                # than a checkbox column: each part is a sample of that layer, clicked
-                                # directly to show/hide it. render() styles every part by the live
-                                # setting; on_part_click flips it. Each part keeps the layer's hover
-                                # help (the text its checkbox carried) and a showpart:<key> marker so
-                                # a test (and the user) can find it. tile_parts maps a key to its
-                                # element(s) — a list, since the name splits into two (around its letter).
-                                def part_el(key):
-                                    el = ui.html(_general_part_html(key)).classes("rtt-tile-part") \
-                                        .mark(f"showpart:{key}").tooltip(tooltips.SHOW_HELP[key])
+                                # than a checkbox column — laid out and proportioned like a real value
+                                # tile. Each part is a sample of that layer, clicked directly to show/
+                                # hide it; render() styles it by the live setting. A layer's PRIMARY
+                                # element carries the showpart:<key> marker + hover help; some layers
+                                # also surface inside the value cell (the symbol's row header, the
+                                # units' per-cell unit) or split in two (the name, around its mnemonic
+                                # letter) — those extra elements ride the same key's list.
+                                def add_el(key, html, *, marked=False, size=None, style=""):
+                                    fs = size if size is not None else _TILE_FONT.get(key)
+                                    css = (f"font-size:{fs}px;" if fs else "") + style
+                                    el = ui.html(html).classes("rtt-tile-part").tooltip(tooltips.SHOW_HELP[key])
+                                    if key == "mnemonics":
+                                        el.classes(add="rtt-tile-mnem")  # always underlined; render() colours it
+                                    if marked:
+                                        el.mark(f"showpart:{key}")
+                                    if css:
+                                        el.style(css)
                                     el.on("click", lambda k=key: on_part_click(k))
                                     tile_parts.setdefault(key, []).append(el)
                                     return el
 
+                                def part_el(key, *, size=None, style=""):  # the layer's primary (marked) element
+                                    return add_el(key, _general_part_html(key), marked=True, size=size, style=style)
+
                                 with ui.element("div").classes("rtt-show-tile"):
+                                    ui.html(_tile_fold_html()).classes("rtt-tile-fold")  # decorative fold toggle, top-left
                                     for line in _GENERAL_TILE_LINES:
                                         if "gridded_values" in line:
-                                            # the value cell: the EBK-framed box (gridded_values) with the
-                                            # closed form (math_expressions) over the value (quantities)
-                                            # stacked INSIDE it — three click targets layered over one box.
+                                            # the value cell, like a real gridded cell: a square box (the
+                                            # gridded_values frame) holding the stacked closed form
+                                            # (math_expressions) over the "= value" (quantities); a row-header
+                                            # matlabel to its left (rides the symbol layer) and a per-cell unit
+                                            # beneath (rides the units layer).
+                                            cx = 18 + _TILE_CELL_X  # the cell's left within the container
                                             with ui.element("div").classes("rtt-tile-line"), \
-                                                    ui.element("div").style("position:relative;width:108px;height:34px"):
-                                                part_el("gridded_values").style("position:absolute;left:0;top:0")
-                                                part_el("math_expressions").style("position:absolute;left:11px;"
-                                                    "top:6px;width:86px;height:11px;justify-content:center;font-size:8px")
-                                                part_el("quantities").style("position:absolute;left:11px;"
-                                                    "top:17px;width:86px;height:11px;justify-content:center;font-size:10px")
+                                                    ui.element("div").style(f"position:relative;"
+                                                        f"width:{18 + _TILE_FRAME_W}px;height:{_TILE_FRAME_H + 12}px"):
+                                                add_el("symbols", _math_html(_TILE_ROWLABEL), size=_TILE_FONT["rowlabel"],
+                                                       style="position:absolute;left:0;top:13px;width:16px;"
+                                                             "height:13px;justify-content:center")
+                                                part_el("gridded_values", style="position:absolute;left:18px;top:0")
+                                                part_el("math_expressions", style=f"position:absolute;left:{cx}px;"
+                                                        f"top:{_TILE_CAP + 1}px;width:{_TILE_CELL}px;height:13px;justify-content:center")
+                                                part_el("quantities", style=f"position:absolute;left:{cx}px;"
+                                                        f"top:{_TILE_CAP + 14}px;width:{_TILE_CELL}px;height:14px;justify-content:center")
+                                                add_el("units", _units_html(_TILE_UNITS), size=_TILE_FONT["cellunit"],
+                                                       style=f"position:absolute;left:{cx}px;top:{_TILE_FRAME_H}px;"
+                                                             f"width:{_TILE_CELL}px;height:11px;justify-content:center")
                                         elif "names" in line:
                                             # the name word, split so the mnemonic letter is its own target
                                             # while the word still reads whole: "tile " + "n" + "ame". Only
-                                            # the "tile " piece carries the showpart:names marker, so a test
-                                            # click lands one toggle (both name pieces flip names on click).
+                                            # the first piece is marked, so a test click lands one toggle.
                                             before, _letter, after = _tile_name_pieces()
                                             with ui.element("div").classes("rtt-tile-line"):
-                                                pre = ui.html(_escape(before)).classes("rtt-tile-part") \
-                                                    .mark("showpart:names").tooltip(tooltips.SHOW_HELP["names"])
-                                                pre.on("click", lambda: on_part_click("names"))
+                                                add_el("names", _escape(before), marked=True)
                                                 part_el("mnemonics")
-                                                post = ui.html(_escape(after)).classes("rtt-tile-part") \
-                                                    .tooltip(tooltips.SHOW_HELP["names"])
-                                                post.on("click", lambda: on_part_click("names"))
-                                                tile_parts["names"] = [pre, post]
+                                                add_el("names", _escape(after))
+                                        elif "preselects" in line:
+                                            # the presets chooser sits in a control box (bordered, like a
+                                            # real tile's control boxes) with its caption underneath.
+                                            with ui.element("div").classes("rtt-tile-line"), \
+                                                    ui.element("div").classes("rtt-tile-cbox"):
+                                                part_el("preselects")
+                                                add_el("preselects", _escape("presets"),
+                                                       size=spreadsheet.CAPTION_FONT, style="margin-top:2px")
                                         else:
                                             with ui.element("div").classes("rtt-tile-line"):
                                                 for key in line:
                                                     part_el(key)
                                 continue
+                            # the specific group keeps the show | example column header (moved here from
+                            # the frozen band — it describes only this checkbox column now).
+                            with ui.element("div").classes("rtt-show-head"):
+                                ui.label("show").classes("rtt-show-title")
+                                ui.label("example").classes("rtt-show-examplehdr")
                             for key, label, _ in items:
                                 row = ui.element("div").classes("rtt-show-row")
                                 with row:

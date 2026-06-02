@@ -470,10 +470,24 @@ def test_general_tile_renders_its_special_samples():
     assert "<svg" in app._general_part_html("gridded_values")   # the EBK frame marks...
     assert "border" in app._general_part_html("gridded_values")  # ...around a bordered value box
     assert "log" in app._general_part_html("math_expressions")  # 1200·log₂(3/2)
+    assert "=" in app._general_part_html("quantities")          # the value line carries the "=" sign
     assert 'font-style:italic">n</span>' in app._general_part_html("symbols")  # the styled 𝒏
+    # the units sample reads "units: ¢/p" — the "units:" prefix (as on a real tile) and a unit
+    # naming what it is (cents per prime), the variable p bold like real units
+    units = app._general_part_html("units")
+    assert "units: " in units and "¢" in units and "<b>p</b>" in units
     assert "(presets)" in app._general_part_html("preselects")       # the placeholder...
     assert "arrow_drop_down" in app._general_part_html("preselects")  # ...and the dropdown caret
     assert "<svg" in app._general_part_html("charts")           # the sparkline
+    assert "<svg" in app._tile_fold_html()  # the decorative top-left fold toggle (a boxed chevron)
+
+
+def test_general_tile_equivalence_mixes_object_stylings():
+    # the equivalence 𝒏 = 𝑒G shows styling variety: an italic scalar e and an upright (matrix) G,
+    # distinct from the bold-italic map 𝒏 — so the equation reads as a mix of mathematical objects.
+    equiv = app._general_part_html("equivalences")
+    assert 'font-style:italic">e</span>' in equiv  # the italic scalar e (not bold-italic)
+    assert ">G<" in equiv or equiv.rstrip().endswith("G")  # the upright G, unstyled
 
 
 def test_interest_example_is_the_bold_interval_symbol():
@@ -497,7 +511,7 @@ def test_general_tile_covers_every_general_layer_exactly_once():
 
 def test_general_tile_rides_each_subcontrol_on_its_parents_line():
     # a sub-control refines its parent layer, so in the tile it shares that layer's line rather
-    # than getting a line of its own: equivalences extends the symbol (𝒏 = 𝒆𝒈), mnemonics
+    # than getting a line of its own: equivalences extends the symbol (𝒏 = 𝑒G), mnemonics
     # underlines the name. Every general sub-control must sit on a line WITH its parent.
     lines = app._GENERAL_TILE_LINES
     general_subs = {k: p for k, p in show_settings.SUBCONTROLS.items()
@@ -516,7 +530,7 @@ def test_general_tile_seats_the_value_layers_inside_the_gridded_cell():
 
 def test_general_tile_symbol_and_equivalence_read_as_one_equation():
     # the symbol part is the bold-italic n; the equivalence part is its defining-equation tail,
-    # so the two joined read 𝒏 = 𝒆𝒈 (the symbol's equation), one source of truth with _TILE_*.
+    # so the two joined read 𝒏 = 𝑒G (the symbol's equation), one source of truth with _TILE_*.
     assert app._general_part_html("symbols") == app._math_html(app._TILE_SYMBOL)
     assert app._general_part_html("symbols") + app._general_part_html("equivalences") \
         == app._math_html(app._TILE_SYMBOL + app._TILE_EQUIV)
@@ -541,7 +555,11 @@ def test_general_tile_part_reads_black_when_on_grey_when_off_and_inert_under_an_
     off = _css_rule(".rtt-part-off")
     assert "color:#999" in off and "opacity:" in off
     assert "pointer-events:none" in _css_rule(".rtt-part-inert")
-    assert "text-decoration:underline" in _css_rule(".rtt-mnem-underline")
+    # the mnemonic underline is ALWAYS drawn so the toggle reads as a toggle: grey (like any
+    # disabled part) when off, black when on — the colour, not the underline's presence, flips.
+    mnem = _css_rule(".rtt-tile-mnem")
+    assert "text-decoration:underline" in mnem and "text-decoration-color:#999" in mnem
+    assert "text-decoration-color:#000" in _css_rule(".rtt-mnem-underline")
 
 
 def test_show_toggle_labels_wrap_long_names_onto_two_lines():

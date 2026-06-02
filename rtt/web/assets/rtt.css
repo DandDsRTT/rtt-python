@@ -518,8 +518,6 @@
    stacked vertically (general above specific) */
 .rtt-show-group { border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6;
                   padding:6px 8px; margin-top:8px; }
-.rtt-show-grouptitle { font-size:13px; font-weight:bold; text-align:center;
-                       color:#000; margin-bottom:4px; }
 /* one toggle row: the checkbox+label in the Show column, its sample in the example column */
 .rtt-show-row { display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }
 .rtt-show-item .q-checkbox__label { font-family:'Cambria',Georgia,serif; font-size:13px;
@@ -535,22 +533,34 @@
    plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
 .rtt-ex-cell.rtt-ex-disabled { color:#999; opacity:0.75; }
 .rtt-ex { white-space:nowrap; }
-/* the "general" group's dummy tile: a value-tile-styled panel (lighter than the grey card,
-   thin-bordered, hugging its stacked layers) whose parts are clicked directly to toggle, in
-   place of a column of checkboxes. The tile is centred in its sub-card. */
-.rtt-show-tile { display:inline-flex; flex-direction:column; align-items:center; gap:2px;
-                 margin:2px auto 4px; padding:7px 14px; background:#f2f2f2;
-                 border:1px solid #b4b4b4; border-radius:4px;
-                 font-family:'Cambria',Georgia,serif; }
+/* the "general" group's dummy tile: a value-tile-styled panel matching a real tile — the grey
+   #e0e0e0 fill, a thin #8a8a8a border and SQUARE corners (no radius, like the grid's tiles).
+   It hugs its stacked layers, sits position:relative (the decorative fold toggle pins to its top
+   left), and is centred horizontally in the pane (margin auto). Generous side padding keeps the
+   tile closer to square than a thin column. */
+.rtt-show-tile { display:flex; flex-direction:column; align-items:center; gap:2px;
+                 width:fit-content; margin:8px auto; padding:9px 26px; background:#e0e0e0;
+                 border:1px solid #8a8a8a; position:relative; font-family:'Cambria',Georgia,serif; }
+/* the decorative fold toggle in the tile's top-left corner (inert — it only makes the panel read
+   as a tile); a 12x12 boxed double-chevron in the fan-control grey */
+.rtt-tile-fold { position:absolute; left:4px; top:4px; width:12px; height:12px; color:#555; }
 /* one stacked layer line; the symbol and name lines seat two parts (parent + sub-control) */
 .rtt-tile-line { display:flex; justify-content:center; align-items:center;
-                 min-height:16px; line-height:1.1; }
+                 min-height:14px; line-height:1.1; }
+/* a control box — a chooser in a bordered box with its caption underneath, like a real tile's
+   control boxes (.rtt-block-boxed: the lighter #e8e8e8 fill, a #8a8a8a border) */
+.rtt-tile-cbox { display:flex; flex-direction:column; align-items:center;
+                 border:1px solid #8a8a8a; background:#e8e8e8; padding:3px 5px; margin:2px 0; }
 /* every part is a click target. The on/off classes carry the live state — black + opaque when
    the layer is shown, grey + dimmed when hidden (the dim also fades the SVG samples, whose
-   baked-in strokes a colour change alone can't grey). A sub-control whose parent is off is
-   inert until the parent is on. Inline so the paired parts flow as one glyph/word. */
+   baked-in strokes a colour change alone can't grey). A part is inert (no click) while its host
+   is off. Inline so the paired parts flow as one glyph/word. */
 .rtt-tile-part { cursor:pointer; display:inline-flex; align-items:center; white-space:pre; }
 .rtt-part-on { color:#000; opacity:1; }
 .rtt-part-off { color:#999; opacity:0.5; }
 .rtt-part-inert { pointer-events:none; }
-.rtt-mnem-underline { text-decoration:underline; }
+/* mnemonics is an underline on the name's symbol letter, ALWAYS drawn so the toggle reads as a
+   toggle: grey like any disabled part when off, black when on (render() adds rtt-mnem-underline).
+   The underline colour is independent of the letter's text colour (which tracks the name). */
+.rtt-tile-mnem { text-decoration:underline; text-decoration-color:#999; }
+.rtt-mnem-underline { text-decoration-color:#000; }
