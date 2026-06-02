@@ -1446,21 +1446,36 @@ def _units_html(text):
     return _bold_units(text)
 
 
+# spacing of the dots on a folded band's gridline: a LINE_W-long dot every _DOT_PITCH px.
+# CSS `border-style:dotted` packs dots ~one border-width apart (≈2*LINE_W period) and gives
+# no control; painting them ourselves lets us space them out — here ≈twice as sparse.
+_DOT_PITCH = 8
+
+
 def _line_style(ln, y_shift: float = 0) -> str:
     """Absolute-position CSS for one gridline rule (a zero-size div carrying a single
     border). The border grows off one edge, so shift the box back by half the line width
     to seat the rule centred on its coordinate (its toggle-node / cell-column centre).
     ``y_shift`` lifts the rule into the body's scroll space (the frozen column strip's
-    height), since every gridline lives on the scrolling board. A folded band's rule is
-    dotted (placeholder for the hidden content); the border style is set here, every
-    update, so re-expanding a band restores the solid rule rather than leaving a stuck
-    inline override -- v rules carry border-left, h rules border-top (per the CSS)."""
+    height), since every gridline lives on the scrolling board. A folded band's rule reads
+    as dotted (a placeholder for the hidden content): the dots are painted as a repeating
+    gradient showing through a TRANSPARENT border, so the box keeps its zero cross-size and
+    the rule neither resizes nor shimmers as a band folds. The border colour + background
+    are emitted here every update, so re-expanding restores the solid rule rather than
+    leaving a stuck override -- v rules carry border-left, h rules border-top (per the CSS)."""
     half = spreadsheet.LINE_W / 2
-    edge = "left" if ln.orientation == "v" else "top"
-    border = f"border-{edge}-style:{'dotted' if ln.dotted else 'solid'}"
     if ln.orientation == "v":
-        return f"left:{ln.pos - half}px; top:{ln.start - y_shift}px; height:{ln.length}px; {border}"
-    return f"top:{ln.pos - half - y_shift}px; left:{ln.start}px; width:{ln.length}px; {border}"
+        pos, edge, sweep = f"left:{ln.pos - half}px; top:{ln.start - y_shift}px; height:{ln.length}px", "left", "to bottom"
+    else:
+        pos, edge, sweep = f"top:{ln.pos - half - y_shift}px; left:{ln.start}px; width:{ln.length}px", "top", "to right"
+    if ln.dotted:
+        # paint the dots over the border box (the box has no width of its own — just the
+        # border), so the gradient fills the LINE_W-wide border strip rather than the
+        # zero-width content box; the transparent border lets it show.
+        dots = (f"repeating-linear-gradient({sweep},#e0e0e0 0 {spreadsheet.LINE_W}px,"
+                f"transparent {spreadsheet.LINE_W}px {_DOT_PITCH}px) border-box")
+        return f"{pos}; border-{edge}-color:transparent; background:{dots}"
+    return f"{pos}; border-{edge}-color:#e0e0e0; background:none"
 
 
 def _select_props(min_width: float) -> str:

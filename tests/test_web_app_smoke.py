@@ -221,13 +221,25 @@ def test_line_style_centres_the_rule_on_its_coordinate():
 
 
 def test_line_style_dots_a_collapsed_bands_rule_and_restores_it_when_open():
-    # a collapsed row/column converges to one rule, drawn dotted as a placeholder. The
-    # border style is emitted on every update (not just at creation), so re-expanding a
-    # band restores the solid rule rather than leaving the inline dotted override stuck.
-    assert "border-left-style:dotted" in app._line_style(Line("trunk:x", "v", 100, 0, 50, dotted=True))
-    assert "border-left-style:solid" in app._line_style(Line("trunk:x", "v", 100, 0, 50))
-    assert "border-top-style:dotted" in app._line_style(Line("h:x", "h", 60, 0, 50, dotted=True))
-    assert "border-top-style:solid" in app._line_style(Line("h:x", "h", 60, 0, 50))
+    # a collapsed row/column converges to one rule, drawn dotted as a placeholder. The dots
+    # are a repeating gradient painted through a transparent border (so the zero-size box
+    # doesn't resize as a band folds), swept along the rule's length. The border colour and
+    # background are emitted every update, so re-expanding restores the solid grey rule.
+    v_dotted = app._line_style(Line("trunk:x", "v", 100, 0, 50, dotted=True))
+    assert "border-left-color:transparent" in v_dotted and "repeating-linear-gradient(to bottom," in v_dotted
+    # painted over the border box -- the box has no width of its own, only the border, so
+    # without this the gradient fills the zero-width content box and the dots never show
+    assert "border-box" in v_dotted
+    v_solid = app._line_style(Line("trunk:x", "v", 100, 0, 50))
+    assert "border-left-color:#e0e0e0" in v_solid and "background:none" in v_solid
+    h_dotted = app._line_style(Line("h:x", "h", 60, 0, 50, dotted=True))
+    assert "border-top-color:transparent" in h_dotted and "repeating-linear-gradient(to right," in h_dotted
+    h_solid = app._line_style(Line("h:x", "h", 60, 0, 50))
+    assert "border-top-color:#e0e0e0" in h_solid and "background:none" in h_solid
+    # the dots are sparse: the transparent gap runs well past the dot's far edge (a LINE_W
+    # dot then a gap several times wider), unlike CSS `dotted`'s ~one-width packing
+    assert f"transparent {spreadsheet.LINE_W}px {app._DOT_PITCH}px" in v_dotted
+    assert app._DOT_PITCH >= 3 * spreadsheet.LINE_W
 
 
 def test_shared_axis_gridlines_render_two_pixels_thick():
