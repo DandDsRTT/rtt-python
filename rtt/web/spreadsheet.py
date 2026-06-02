@@ -87,16 +87,23 @@ RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the val
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
 OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
 OPT_PAD_B = 4  # bottom margin below the captions (the box hugs the contents vertically too)
-OPT_PAD_L = 8  # left margin for the title and the control group (off the box's left edge)
-OPT_PAD_R = 8  # right margin: the box border hugs the controls, leaving only this margin
+OPT_PAD_L = 8  # left margin: inset of the objective from the box's left edge
+OPT_PAD_R = 8  # right margin: inset of the optimize button from the box's right edge
 OPT_TITLE_GAP = 6  # bottom margin under the title, before the control row
-OPT_COL_GAP = 8  # gap between the three left-packed controls (the min-damage / ∞ / optimize row)
-# The three controls are packed close at the LEFT, and the box border HUGS them (it is sized to
-# the contents, not the full target column). The min-damage value and the ∞ field are ordinary
-# COL_W gridded cells (contents centred); their symbols/captions centre under them and overflow
-# into the empty space on the rows below. The captions stay on ONE line each.
+OPT_COL_GAP = 8  # the standard gap between adjacent in-tile controls — sizes OPT_BOX_MIN_W
+# (the clearance around the optimization box's centered power) and the box-𝐋 / q-dual / all-
+# interval slots elsewhere
+# The box spans the FULL width of the damage tile; its three controls DISTRIBUTE across it: the
+# objective hugs the left edge, the optimize button the right edge, and the power 𝑝 sits centered
+# in the gap between them, so the "optimization power" caption has clear room either side. The
+# min-damage value and the ∞ field are ordinary COL_W gridded cells (contents centred); their
+# symbols/captions centre under them. The captions stay on ONE line each.
 OPT_BTN_W = 94   # optimize button — wide enough to seat "double-click to unlock" on one line beneath it
 OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred under the ∞ cell)
+# the narrowest the box can be and still seat its spread-out controls with the power's caption
+# clear of both neighbors — left pad | objective | gap | caption | gap | button | right pad. A
+# damage tile narrower than this floors its column up to fit (see _control_floor).
+OPT_BOX_MIN_W = OPT_PAD_L + COL_W + OPT_COL_GAP + OPT_POW_CAP_W + OPT_COL_GAP + OPT_BTN_W + OPT_PAD_R
 # An in-tile control box: a dropdown / checkbox enclosed in a thin-bordered frame, with a
 # small field LABEL above the control naming what it sets ("established tuning scheme"). The
 # box stays WITHIN its tile (never spilling into a neighbour) — the label wraps to fit the
@@ -1289,6 +1296,9 @@ def build(state, settings=None, collapsed=None,
             floor = max(floor, CBOX_W)
         if key == "targets" and show_preselects and settings["all_interval"]:
             floor = max(floor, TBOX_W)  # box 𝐓: target chooser + all-interval checkbox, one box
+        if (key == "targets" and show_optimization and "row:damage" not in collapsed
+                and "tile:damage:targets" not in collapsed):
+            floor = max(floor, OPT_BOX_MIN_W)  # seat the box's spread-out controls (see opt_box)
         # the preselect / form dropdowns' one-line labels (the .rtt-caption-left asset) must fit
         # the column too, so a long label like "established tuning scheme" widens its (narrow)
         # tile rather than spilling it — e.g. the generator tuning map's tuning-scheme copy
@@ -1421,10 +1431,11 @@ def build(state, settings=None, collapsed=None,
     # sub-control. Reserve their height up front so the board stays clear below the tile.
     opt_ctrl = (show_optimization and "row:damage" not in collapsed
                 and col_open("targets") and "tile:damage:targets" not in collapsed)
-    # the optimization box: a title strip over two value-over-label columns (the objective
-    # ⟪𝐝⟫ₚ and the editable power 𝑝, each a value above its symbol; the power also captioned
-    # "optimization power") plus the optimize button, all packed left. Its height = a title
-    # inset + the title + a title gap + the value row + the symbol row + a one-line caption + pad.
+    # the optimization box: a title strip over a row of three controls distributed across the
+    # tile's full width — the objective ⟪𝐝⟫ₚ and the editable power 𝑝 (each a value above its
+    # symbol; the power also captioned "optimization power") plus the optimize button. Its height
+    # = a title inset + the title + a title gap + the value row + the symbol row + a one-line
+    # caption + pad (the width is the targets column, floored to OPT_BOX_MIN_W).
     opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
                   + CAPTION_LINE + OPT_PAD_B) if opt_ctrl else 0)
     slope_ctrl = (show_alt_complexity and "row:weight" not in collapsed
@@ -2252,27 +2263,30 @@ def build(state, settings=None, collapsed=None,
         gtm_box = (gx, cy, gw, BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
 
     # the optimization box, nested at the BOTTOM of the target interval damage list tile (the
-    # tuning's own column, whose damages it minimizes): a bordered box titled "optimization"
-    # holding, per the mockup, three controls packed close at the LEFT — the minimized-damage
-    # objective (an ordinary gridded value, read-only so unboxed, over ⟪𝐝⟫ₚ), the editable power
-    # (the ∞ cell over 𝑝 over "optimization power"), and the optimize button (over its "double-
-    # click to lock" hint). The min-damage and ∞ are plain COL_W gridded cells (contents centred);
-    # their wider symbols/captions centre under them and overflow into the empty rows below, so the
-    # controls themselves stay tight. The damage tile's panel grows by opt_extra to enclose it.
+    # tuning's own column, whose damages it minimizes): a bordered box titled "optimization",
+    # spanning the FULL width of the tile (like the tuning-ranges box) and DISTRIBUTING three
+    # controls across it — the minimized-damage objective (a read-only gridded value over ⟪𝐝⟫ₚ)
+    # hugging the left, the optimize button (over its "double-click to lock" hint) hugging the
+    # right, and the editable power (the ∞ cell over 𝑝 over "optimization power") centered in the
+    # gap between them, so its caption has clear room either side. The min-damage and ∞ are plain
+    # COL_W gridded cells (contents centred). The damage tile's panel grows by opt_extra to enclose
+    # the box's height, and the targets column is floored to OPT_BOX_MIN_W (see _control_floor) so
+    # the spread-out controls always fit.
     opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
     if opt_ctrl:
         ox = col_x["targets"]
+        box_w = col_w["targets"]                 # the box spans the full width of the damage tile
         box_top = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
         title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
         content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP  # a gap below the title
         sym_top = content_top + ROW_H            # the symbol/hint row, under the values
         cap_top = sym_top + SYMBOL_H             # the caption row (one line), under the symbols
         body_h = ROW_H + SYMBOL_H + CAPTION_LINE + OPT_PAD_B  # value + symbol + one-line caption + pad
-        # the three controls, packed close at the left (a tight gridded row): min damage | ∞ | optimize
+        # the three controls, distributed across the box: objective at the left, optimize button at
+        # the right, power centered in the gap between them (so its caption clears both neighbors)
         obj_x = ox + OPT_PAD_L
-        pow_x = obj_x + COL_W + OPT_COL_GAP
-        btn_x = pow_x + COL_W + OPT_COL_GAP
-        box_w = (btn_x + OPT_BTN_W + OPT_PAD_R) - ox  # the box HUGS the controls (not the full column)
+        btn_x = ox + box_w - OPT_PAD_R - OPT_BTN_W
+        pow_x = ((obj_x + COL_W) + btn_x) / 2 - COL_W / 2
         objective = _lp_objective(target_sizes.damage, service.optimization_power(tuning_scheme))
         power = _format_power(service.optimization_power(tuning_scheme))
         cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",

@@ -1067,6 +1067,38 @@ def test_a_long_control_label_widens_its_narrow_tile():
     assert box.x >= gens_on.x and box.x + box.w <= gens_on.x + gens_on.w  # the box stays inside the widened tile
 
 
+def test_chooser_boxes_span_the_full_width_of_their_tiles():
+    # every single-dropdown chooser box spans the full width of its tile: seated at the standard
+    # inset on BOTH sides (so it sits centered in its panel), like the optimization and tuning-
+    # ranges boxes — not capped at the dropdown's natural width. The target chooser is the one
+    # documented exception (next test).
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["preselects"], s["form_controls"] = True, True
+    boxes = {b.id: b for b in spreadsheet.build(base, s).blocks}
+    for cid, tile in (("block:preselect:temperament", "block:mapping"),
+                      ("block:preselect:tuning", "block:tuning:primes"),
+                      ("block:preselect:tuning:gens", "block:tuning:gens"),
+                      ("block:formchooser:mapping", "block:mapping"),
+                      ("block:formchooser:comma_basis", "block:vec:commas")):
+        box, panel = boxes[cid], boxes[tile]
+        left, right = box.x - panel.x, (panel.x + panel.w) - (box.x + box.w)
+        assert abs(left - right) < 1  # equal insets == the box fills its tile's footprint
+
+
+def test_target_chooser_stays_capped_not_filling_its_tile():
+    # the target chooser is the exception to the fill-the-tile rule: it keeps its natural (capped)
+    # width — seating the numeric limit square + family select — rather than stretching to fill its
+    # wide tile. (When all-interval is on, that capped dropdown + the checkbox make up box 𝐓.)
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["preselects"] = True  # all-interval off: a plain capped dropdown box, well short of its tile
+    boxes = {b.id: b for b in spreadsheet.build(base, s).blocks}
+    box, panel = boxes["block:preselect:target"], boxes["block:vec:targets"]
+    left, right = box.x - panel.x, (panel.x + panel.w) - (box.x + box.w)
+    assert right > left + 30  # capped & left-biased — not filling the tile like the other choosers
+
+
 def test_build_honors_the_target_interval_spec():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5
     tilt = {c.text for c in spreadsheet.build(base, target_spec="TILT").cells if c.id.startswith("target:")}
@@ -3310,11 +3342,18 @@ def test_optimization_box_lays_out_objective_power_and_button_in_columns():
     # centred like any other value cell (not stretched/left-justified within the control)
     assert on["optimization:objective"].w == spreadsheet.COL_W
     assert on["optimization:power"].w == spreadsheet.COL_W
-    # the controls are PACKED LEFT (the whole group is left-justified): a small gap between them
-    # and the group near the left edge — not centred in wide thirds (which left large gaps)
-    assert on["optimization:objective"].x < box.x + 0.2 * box.w  # group starts near the left edge
-    gap = on["optimization:power"].x - (on["optimization:objective"].x + on["optimization:objective"].w)
-    assert 0 < gap < 20  # the objective and power cells are close, not spread apart
+    # the controls DISTRIBUTE across the full-width box (no longer packed left): the objective
+    # hugs the left edge, the optimize button hugs the right edge, and the power sits centered
+    # in the gap between them, so its "optimization power" caption has clear room either side
+    assert on["optimization:objective"].x == box.x + spreadsheet.OPT_PAD_L
+    assert (on["optimization:button"].x + on["optimization:button"].w
+            == box.x + box.w - spreadsheet.OPT_PAD_R)
+    obj_r = on["optimization:objective"].x + on["optimization:objective"].w
+    btn_l = on["optimization:button"].x
+    pow_c = on["optimization:power"].x + on["optimization:power"].w / 2
+    assert abs(pow_c - (obj_r + btn_l) / 2) < 1  # power centered in the gap between the two
+    cap = on["optimization:power:caption"]
+    assert cap.x > obj_r and cap.x + cap.w < btn_l  # ...and its caption clears both neighbors
     # the optimize button is a normal rectangle the same height as the value boxes (the p input),
     # not a giant full-height button, with a "double-click to lock" hint beneath it
     assert on["optimization:button"].h == on["optimization:objective"].h
@@ -3328,6 +3367,31 @@ def test_optimization_box_lays_out_objective_power_and_button_in_columns():
     assert on["optimization:title"].y > box.y
     assert on["optimization:objective"].y > on["optimization:title"].y + on["optimization:title"].h
     assert "optimization:button" not in {c.id for c in _with(optimization=False).cells}
+
+
+def test_optimization_box_fills_the_full_width_of_the_damage_tile():
+    # the box no longer hugs its controls — it spans the entire target-interval damage list
+    # tile (like the tuning-ranges box spans the generator tuning map tile), giving the
+    # controls room to spread out across it
+    lay = _with(optimization=True)
+    blk = {b.id: b for b in lay.blocks}
+    box = blk["block:optimization:box"]
+    panel = blk["block:damage:targets"]  # the damage tile's grey panel
+    assert box.x == panel.x + spreadsheet.PAD  # the box starts at the tile's content left edge
+    assert box.w == panel.w - 2 * spreadsheet.PAD  # ...and fills the tile's content width
+
+
+def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box():
+    # a 3-limit temperament targets few intervals, so its damage tile would be narrower than
+    # the optimization box's spread-out controls; turning optimization on floors the targets
+    # column so the box (and thus the whole tile) is wide enough to seat them
+    base = service.from_mapping(((1, 1), (0, 1)))
+    s = settings.defaults()
+    s["optimization"] = True
+    blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
+    box = blk["block:optimization:box"]
+    assert box.w >= spreadsheet.OPT_BOX_MIN_W  # wide enough to seat objective | power | button
+    assert box.w == blk["block:damage:targets"].w - 2 * spreadsheet.PAD  # still fills its tile
 
 
 def test_a_manual_generator_tuning_drives_the_displayed_maps():
@@ -3431,10 +3495,7 @@ def test_optimization_box_is_a_bordered_frame_nested_in_the_damage_tile():
     box = blocks["block:optimization:box"]
     assert box.boxed
     panel = blocks["block:damage:targets"]
-    assert panel.y <= box.y and box.y + box.h <= panel.y + panel.h
-    # the box HUGS its contents — it is clearly narrower than the full target column (panel),
-    # not stretched to span it
-    assert box.w < panel.w - 30
+    assert panel.y <= box.y and box.y + box.h <= panel.y + panel.h  # nested within the panel
 
 
 def test_optimization_on_adds_an_addable_held_intervals_column():
