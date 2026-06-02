@@ -596,7 +596,7 @@ EQUIVALENCES = {
     ("just", "targets"): " = 𝒋T",
     ("retune", "primes"): " = 𝒕 − 𝒋",
     ("retune", "targets"): " = 𝒓T",
-    ("damage", "targets"): " = |𝐞|diag(𝒘)",
+    ("damage", "targets"): " = |𝐞|diag(𝒘)",  # build() drops diag(𝒘) under unity weight (𝒘 = 1 ⇒ 𝐝 = |𝐞|)
     # the held intervals are tuned exactly just: the tempered size equals the just size (and
     # vice versa — the just row carries the inverse identity), so the retuning error vanishes
     ("tuning", "held"): " = 𝒋H",
@@ -2694,17 +2694,21 @@ def build(state, settings=None, collapsed=None,
     # reserved for every captioned column so the names stay aligned; the glyph and
     # equation are drawn only where defined (the comma columns have none yet). An
     # empty interest column has no tiles. Mnemonics underlines the symbol letter.
-    # The weight row's equivalence is the one scheme-dependent equation (𝒘 = 𝒄 / 1 / 1/𝒄),
-    # so it is resolved per build from the live scheme's slope rather than baked in. The
-    # bare prescaling tile is the only one whose equivalence names the live prescaler
-    # (``𝑋 = L`` for log-prime, swapping to 𝐼/diag(𝒑) with the scheme); the product tiles
-    # (LC/LD/LT/LH) carry the L as part of their SYMBOL instead (see prescaling_symbols
+    # Two equations resolve per build from the live scheme's damage-weight slope rather than
+    # being baked in: the weight row (𝒘 = 𝒄 / 1 / 1/𝒄), and the damage row, which drops its
+    # diag(𝒘) factor under unity weight — 𝒘 = 1 makes diag(𝒘) the identity, so 𝐝 = |𝐞| (per
+    # the guide). The bare prescaling tile is the only one whose equivalence names the live
+    # prescaler (``𝑋 = L`` for log-prime, swapping to 𝐼/diag(𝒑) with the scheme); the product
+    # tiles (LC/LD/LT/LH) carry the L as part of their SYMBOL instead (see prescaling_symbols
     # below) and don't print an "= …" line.
     ai = service.is_all_interval(tuning_scheme)  # all-interval: kept target tiles use prime-proxy labels
+    slope = service.damage_weight_slope(tuning_scheme)
     equivalences = {**EQUIVALENCES,
-                    ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[service.damage_weight_slope(tuning_scheme)],
+                    ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                     ("prescaling", "primes"): f" = {_prescaler_letter}",
                     **(ALL_INTERVAL_EQUIVALENCES if ai else {})}
+    if slope == "unityWeight":  # no real weight to apply, so the list is just 𝐝 = |𝐞|
+        equivalences[("damage", "targets")] = " = |𝐞|"
     for (rkey, ckey), name in CAPTIONS.items():
         if ckey == "interest" and not interest:
             continue

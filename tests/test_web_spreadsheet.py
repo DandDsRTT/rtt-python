@@ -2067,6 +2067,22 @@ def test_weight_equivalence_reflects_the_schemes_damage_slope():
     assert equiv("minimax-S") == "𝒘 = 1/𝒄"    # simplicity weight (the shipped default)
 
 
+def test_damage_equivalence_drops_the_weight_factor_under_unity_weight():
+    # 𝐝 = |𝐞|diag(𝒘), but unity weight makes 𝒘 = 1 — so diag(𝒘) is the identity and the
+    # damage list is simply 𝐝 = |𝐞| (per the guide). Only the weighted schemes keep the factor.
+    def equiv(scheme):
+        lay = spreadsheet.build(
+            service.from_mapping(((1, 1, 0), (0, 1, 4))),
+            {**settings.defaults(), "symbols": True, "equivalences": True},
+            tuning_scheme=scheme,
+        )
+        return {c.id: c for c in lay.cells}["symbol:damage:targets"].text
+
+    assert equiv("minimax-C") == "𝐝 = |𝐞|diag(𝒘)"   # complexity weight keeps the factor
+    assert equiv("minimax-U") == "𝐝 = |𝐞|"           # unity weight: no weight factor
+    assert equiv("minimax-S") == "𝐝 = |𝐞|diag(𝒘)"   # simplicity weight keeps it (shipped default)
+
+
 def test_commas_have_a_shared_vertical_axis_per_comma():
     ids = {ln.id for ln in _layout().lines}
     assert "v:comma:0" in ids  # one axis per comma, like the primes/targets
