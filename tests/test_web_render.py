@@ -127,11 +127,13 @@ def _stacked_face(user: User, cell_id: str):
 
 async def test_tuning_preselect_offers_only_lp_while_alternatives_are_shelved(user: User) -> None:
     # alternative-complexity schemes are gated behind the (shelved) alt. complexity setting,
-    # so with it off the tuning chooser lists only the strictly log-product scheme.
+    # so with it off the tuning chooser offers only the strictly log-product scheme. (The chooser's
+    # options are {value: label}, the labels 𝑇-prefixed when target-based; here the default scheme
+    # is all-interval, so check the offered values.)
     await user.open("/")
     user.find(kind=ui.checkbox, content="preselects").click()
     await user.should_see(marker="preselect:tuning")
-    assert _cell_child(user, "preselect:tuning").options == ["minimax-S"]
+    assert list(_cell_child(user, "preselect:tuning").options) == ["minimax-S"]
 
 
 async def test_editing_a_mapping_cell_updates_the_mapped_list(user: User) -> None:
