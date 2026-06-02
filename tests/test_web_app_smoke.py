@@ -235,16 +235,18 @@ def _css_rule(selector):
     return m.group(1)
 
 
-def test_sidebar_is_a_fixed_full_height_left_column():
-    # The rail + settings drawer share .rtt-panelgroup, the app's fixed left sidebar. The page no
-    # longer scrolls (the grid scrolls in its own pane, .rtt-app), so the sidebar needs no
-    # position:sticky and no content-hugging: it is a flex:none column the shell stretches to full
-    # height (the shell's align-items:stretch), so the rail's grey and the open settings panel run
-    # the height of the window beside the grid — independent of how tall the grid's content is.
+def test_sidebar_hugs_its_content_as_a_fixed_left_column():
+    # The rail + settings drawer share .rtt-panelgroup, the app's fixed left sidebar (flex:none, and
+    # no position:sticky — the page never scrolls). Under the shell's align-items:flex-start it HUGS
+    # its content height rather than stretching its grey down the window: the rail's title tab when
+    # the drawer is collapsed, the settings panel's height when open. The drawer animates its height
+    # (grid-template-rows 0fr->1fr) so a collapsed drawer contributes no height (sidebar = rail tab).
     rule = _css_rule(".rtt-panelgroup")
-    assert "flex:none" in rule                  # fixed width; doesn't grow/shrink with the grid
-    assert "position:sticky" not in rule        # no page scroll to pin against anymore
-    assert "align-self:flex-start" not in rule  # full height, not hugging the drawer's content
+    assert "flex:none" in rule                # fixed width; doesn't grow/shrink with the grid
+    assert "position:sticky" not in rule      # no page scroll to pin against
+    drawer = _css_rule(".rtt-drawer")
+    assert "grid-template-rows:0fr" in drawer  # collapsed -> zero height, so the sidebar hugs the rail
+    assert "align-self:flex-start" in drawer   # ...and the panelgroup doesn't stretch it back open
 
 
 def _z(selector):
@@ -278,11 +280,11 @@ def test_shell_fixes_the_app_to_the_window_framed_by_a_white_margin():
 def test_settings_pane_stacks_a_frozen_header_over_a_scrolling_body():
     # The settings panel can outrun the screen, so — like the grid pane's frozen column titles over
     # its scrolling body — the pane freezes its header and scrolls the toggle groups under it. The
-    # drawer-inner is a flex column filling the full-height sidebar (height:100%); the body scrolls
-    # within it so a tall panel never runs off the screen.
+    # drawer-inner is a flex column that hugs its content but caps at the window height (less the 6px
+    # inset top+bottom); the body scrolls within it so a tall panel never runs off the screen.
     inner = _css_rule(".rtt-drawer-inner")
     assert "display:flex" in inner and "flex-direction:column" in inner
-    assert "height:100%" in inner  # fills the full-height sidebar, not capped to its own content
+    assert "max-height:calc(100vh - 12px)" in inner  # hugs content, capped at the window (not height:100%)
     # the header (select-all/none + the show/example titles) never shrinks or scrolls...
     assert "flex:none" in _css_rule(".rtt-show-frozen")
     # ...and the groups scroll within the capped pane (min-height:0 lets the flex child shrink
@@ -312,13 +314,24 @@ def test_row_band_wrapper_passes_clicks_through_and_the_strip_clips():
 
 def test_grid_scrolls_in_its_own_body_pane_not_the_page():
     # the grid scrolls inside .rtt-gridbody (overflow:auto) — its own pane, within the grid region
-    # .rtt-app (flex:1 / min-width:0, bounding the grid to the pane). .rtt-app itself only clips
-    # (overflow:hidden) and hosts the absolutely-placed frozen regions; the page never scrolls. So a
-    # grid bigger than the pane scrolls in the body, scrollbars bounded there, right of the sidebar.
+    # .rtt-app. .rtt-app hugs the grid (flex:0 1 auto — shrinks to the room left of the sidebar
+    # rather than filling it) and only clips (overflow:hidden), hosting the absolutely-placed frozen
+    # regions; the page never scrolls. So a grid bigger than the pane scrolls in the body, scrollbars
+    # bounded there, right of the sidebar.
     assert "overflow:auto" in _css_rule(".rtt-gridbody")             # the grid's own scroller
     app_rule = _css_rule(".rtt-app")
     assert "overflow:hidden" in app_rule and "position:relative" in app_rule  # the region, not the scroller
-    assert "flex:1 1 auto" in app_rule and "min-width:0" in app_rule  # bounds the grid to the pane
+    assert "flex:0 1 auto" in app_rule and "min-width:0" in app_rule  # hugs the grid, shrinks to the pane
+
+
+def test_panes_hug_their_content_and_cap_at_the_window():
+    # both panes size to their content (under the shell's align-items:flex-start) so their grey
+    # backdrops don't stretch into empty space — white body shows beyond the shorter one. Each caps
+    # at the window before scrolling internally: the grid pane via max-width/max-height (flex-shrinking
+    # to the room left of the sidebar), the settings pane via the drawer-inner's max-height.
+    assert "align-items:flex-start" in _css_rule(".rtt-shell")
+    app_rule = _css_rule(".rtt-app")
+    assert "max-width:100%" in app_rule and "max-height:100%" in app_rule
 
 
 def test_seam_appears_only_when_the_body_is_scrolled():

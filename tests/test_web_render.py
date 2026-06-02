@@ -355,6 +355,22 @@ async def test_settings_frozen_header_matches_the_grid_column_strip_height(user:
     assert frozen._style.get("height") == colhead._style.get("height")  # ...to the strip's height
 
 
+def _px(el, prop: str) -> float:
+    return float(el._style.get(prop).rstrip("px"))
+
+
+async def test_grid_pane_is_sized_to_hug_the_grid_plus_a_margin(user: User) -> None:
+    # the grey grid pane hugs the grid's footprint + a _PAD (12px) margin all round, so render()
+    # sizes it from the layout rather than letting it stretch to fill the window: its width is the
+    # board (body) width + 2·PAD, its height the board height + the column strip + 2·PAD.
+    await user.open("/")
+    pane = next(iter(user.find(marker="gridpane").elements))
+    board = next(iter(user.find(marker="board").elements))
+    colhead = next(iter(user.find(marker="colhead").elements))
+    assert _px(pane, "width") == _px(board, "width") + 24            # grid width + a 12px margin each side
+    assert _px(pane, "height") == _px(board, "height") + _px(colhead, "height") + 24  # body + strip + margins
+
+
 async def test_state_persists_across_a_refresh(user: User) -> None:
     # the document is persisted on each render and reloaded when the page opens, so a refresh
     # (a fresh open of "/") restores exactly where the user left off

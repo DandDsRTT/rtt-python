@@ -337,37 +337,42 @@ _CSS = f"""
 /* the shell lays the fixed left sidebar (rail + settings pane) and the grid pane in a row. It is
    position:fixed at a 6px inset from every window edge, so it fills the window exactly (the page
    itself never scrolls) and the 6px of white body shows as a margin framing the whole app. The
-   grid spills inside its OWN pane (.rtt-app, the scroller) rather than off the page, which keeps
-   the sidebar frozen at the left. align-items:stretch makes the sidebar and grid pane full height;
-   the fixed width bounds the grid pane (flex:1) so it scrolls instead of pushing the shell wider. */
+   grid spills inside its OWN pane (.rtt-app) rather than off the page, which keeps the sidebar
+   frozen at the left. align-items:flex-start lets each pane HUG its content height (white showing
+   below the shorter one) rather than stretching its grey to the full window; the shell's fixed
+   size is what each pane caps against (max-height / flex-shrink) before scrolling internally. */
 .rtt-shell {{ position:fixed; top:6px; left:6px; right:6px; bottom:6px;
-             display:flex; flex-wrap:nowrap; gap:0; align-items:stretch; }}
+             display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }}
 /* the rail+pane group is the fixed left sidebar: a flex:none column the shell holds at the left
-   edge for the whole session. align-items:stretch (the shell's) makes it — and the rail and drawer
-   within it — full height, so the rail's grey runs the height of the window beside the grid. The
-   page no longer scrolls, so it needs no position:sticky; it simply stays put while the grid pane
-   to its right scrolls. Opening the drawer widens it, narrowing the grid pane (which reflows). */
+   edge for the whole session. align-self defaults to the shell's align-items:flex-start, so the
+   sidebar HUGS its content — the rail's title tab when the drawer is collapsed, the settings panel's
+   height when open — rather than stretching its grey down the whole window. The page no longer
+   scrolls, so it needs no position:sticky; it stays put while the grid pane to its right scrolls.
+   Opening the drawer widens it, narrowing the grid pane (which reflows). */
 .rtt-panelgroup {{ display:flex; flex-wrap:nowrap; flex:none; }}
-/* the drawer slides open/closed by animating its width only (the pane is always full sidebar
-   height now, so no height animation). overflow:hidden clips the fixed-width inner while the
-   drawer is narrowed to 0. */
-.rtt-drawer {{ width:0; overflow:hidden; transition:width {_T}; flex:none; }}
-.rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; }}
-/* the pane is a full-height flex column: a frozen header (select-all/none + show/example) over a
-   scrolling body (the toggle groups), mirroring the grid pane's frozen titles above its scrolling
-   body. It fills the sidebar height; the body scrolls internally so a tall panel never runs off
-   the screen. overflow:hidden + min-height:0 let the body scroll without forcing the pane taller. */
-.rtt-drawer-inner {{ width:{_PANEL_W}px; height:100%; box-sizing:border-box; background:#e0e0e0;
-                    overflow:hidden; min-height:0; display:flex; flex-direction:column;
-                    font-family:'Cambria',Georgia,serif; color:#000; }}
-/* the grid pane sits right of the sidebar and fills the rest of the shell width (flex:1, min-width:0
-   so it can shrink). It is the positioning context (position:relative) for the frozen column-title
-   strip, the corner, and the body scroller — which are absolutely placed within it; overflow:hidden
-   clips them to the pane. The actual scrolling happens INSIDE it, in .rtt-gridbody, so the
-   scrollbars sit at the body's edges (right of the frozen titles), not the pane's. Grey backdrop so
-   the gaps around the tiles read through. */
-.rtt-app {{ flex:1 1 auto; min-width:0; position:relative; overflow:hidden; background:#c0c0c0;
-           font-family:'Cambria',Georgia,serif; }}
+/* the drawer animates BOTH width (the slide-over) and height (grid-template-rows 0fr->1fr, growing
+   the pane to its content height) so the sidebar's grey hugs the settings rather than the window.
+   align-self:flex-start stops the panelgroup stretching it (which would defeat the content-fr
+   sizing); a collapsed 0fr drawer contributes no height, so the sidebar falls to the rail's tab. */
+.rtt-drawer {{ display:grid; grid-template-rows:0fr; align-self:flex-start; width:0; overflow:hidden;
+              transition:width {_T}, grid-template-rows {_T}; flex:none; }}
+.rtt-drawer.rtt-drawer-open {{ width:{_PANEL_W}px; grid-template-rows:1fr; }}
+/* the pane is a flex column: a frozen header (select-all/none + show/example) over a scrolling body
+   (the toggle groups), mirroring the grid pane's frozen titles above its scrolling body. It hugs
+   its content but caps at the window height (less the 6px inset top+bottom) so a tall panel scrolls
+   internally instead of running off the screen. overflow:hidden + min-height:0 let the drawer's
+   grid-rows open/close animation clip and grow it, and the body scroll without forcing it taller. */
+.rtt-drawer-inner {{ width:{_PANEL_W}px; max-height:calc(100vh - 12px); box-sizing:border-box;
+                    background:#e0e0e0; overflow:hidden; min-height:0; display:flex;
+                    flex-direction:column; font-family:'Cambria',Georgia,serif; color:#000; }}
+/* the grid pane sits right of the sidebar. It HUGS the grid (render() sizes it to the grid's full
+   footprint + a _PAD margin) so its grey backdrop doesn't stretch into empty space — white shows
+   beyond it. flex:0 1 auto + max-width:100% let it shrink to the room left of the sidebar, and
+   max-height:100% caps it at the window; past either cap the body (.rtt-gridbody) scrolls. It is
+   the positioning context for the frozen column strip, corner and body scroller (absolutely placed,
+   so render() must size it explicitly); overflow:hidden clips them to the pane. */
+.rtt-app {{ flex:0 1 auto; min-width:0; max-width:100%; max-height:100%; position:relative;
+           overflow:hidden; background:#c0c0c0; font-family:'Cambria',Georgia,serif; }}
 
 /* The grid pane is split so the body's scrollbars stop AT the frozen titles (like the settings
    pane): the column-title strip (.rtt-colhead) and the corner sit OUTSIDE the body scroller
@@ -379,12 +384,12 @@ _CSS = f"""
    from the pane's top-left for the grey margin; the body fills to the pane's right/bottom edges, so
    its scrollbars sit there. The board (.rtt-gridcontent) holds the cells at native coords shifted up
    by freeze_y (the strip's height), so a body cell lands at the same pane position it always had. */
-.rtt-colhead {{ position:absolute; top:{_PAD}px; left:{_PAD}px; right:0; z-index:4; overflow:hidden;
+.rtt-colhead {{ position:absolute; top:{_PAD}px; left:{_PAD}px; right:{_PAD}px; z-index:4; overflow:hidden;
                background:#c0c0c0; box-sizing:border-box; border-bottom:1px solid transparent; }}
 .rtt-colhead-inner {{ position:absolute; top:0; left:0; will-change:transform; }}
 .rtt-corner {{ position:absolute; top:{_PAD}px; left:{_PAD}px; z-index:6; background:#c0c0c0;
               box-sizing:border-box; border-right:1px solid transparent; border-bottom:1px solid transparent; }}
-.rtt-gridbody {{ position:absolute; left:{_PAD}px; right:0; bottom:0; overflow:auto; }}
+.rtt-gridbody {{ position:absolute; left:{_PAD}px; right:{_PAD}px; bottom:{_PAD}px; overflow:auto; }}
 /* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
    (the white wash bases), not the grey pane behind it */
 .rtt-gridcontent {{ position:relative; isolation:isolate; transition:width {_T}, height {_T}; }}
@@ -2062,6 +2067,10 @@ def index() -> None:
         # above. The strip (its inner is full grid width, translated horizontally by _FREEZE_JS) and
         # the corner keep native coords. gridbody drops below the strip (top = _PAD + fy).
         fx, fy = lay.freeze_x, lay.freeze_y
+        # the grid pane hugs the grid's full footprint + a _PAD margin all round, so its grey backdrop
+        # tracks the content (white beyond) rather than filling the window; the CSS caps it at the
+        # window, past which the body scrolls
+        grid_pane.style(f"width:{lay.width + 2 * _PAD}px; height:{lay.height + 2 * _PAD}px")
         board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
         colhead.style(f"height:{fy}px")
         colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
@@ -2329,7 +2338,8 @@ def index() -> None:
                                     row.classes(add="rtt-show-sub")
                                     row.bind_visibility_from(boxes[parent], "value")
 
-        with ui.element("div").classes("rtt-app"):
+        grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")
+        with grid_pane:
             # the grid pane splits into frozen title regions OUTSIDE the body scroller (so the body's
             # scrollbars stop at the titles): the column-title strip (scrolls horizontally in sync via
             # _FREEZE_JS), the corner (frozen both), and the body scroller .rtt-gridbody — which holds
