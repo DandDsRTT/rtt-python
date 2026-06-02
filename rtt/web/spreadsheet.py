@@ -1197,10 +1197,11 @@ def build(state, settings=None, collapsed=None,
     # for a stray hardcoded column list to keep drawing a tile that no longer exists.
     declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in tiles}
     if service.is_all_interval(tuning_scheme):
-        # all-interval: the retune-over-targets tile becomes 𝐞 = 𝑟, identical to the 𝒓 retuning-
-        # over-primes row, so drop it as redundant (the mockup's "get rid of this redundant box?",
-        # resolved toward removal). Dropping it here clears its cells, bracket, caption and symbol.
-        declared_tiles -= {("retune", "targets")}
+        # all-interval (Tₚ = I): each size/error list over the targets collapses to its prime map —
+        # tempered 𝐚 → 𝒕, just 𝐨 → 𝒋, error 𝐞 → 𝒓 — duplicating the prime-map row above it, so drop
+        # all three (the mockup's "get rid of this redundant box?" on each, resolved toward removal).
+        # Dropping them here clears their cells, brackets, captions, panels and fold toggles.
+        declared_tiles -= {("tuning", "targets"), ("just", "targets"), ("retune", "targets")}
 
     # Column bands left-to-right: (key, natural width, present, collapsible).
     # Each set-column belongs to a box toggle: generators, the domain primes and
@@ -2304,8 +2305,11 @@ def build(state, settings=None, collapsed=None,
         # value, the same COL_W cell as any damage value) over the symbol ⟪𝐝⟫ₚ
         cells.append(CellBox("optimization:objective", obj_x, content_top, COL_W, ROW_H, "tval",
                              text=service.cents(objective)))
+        # all-interval: the minimized objective IS the retuning magnitude ‖𝒓𝐿⁻¹‖ (the mockup's
+        # "becomes 'retuning magnitude'") — relabel the symbol; its value already computes over primes
+        obj_symbol = "‖𝒓𝐿⁻¹‖" if service.is_all_interval(tuning_scheme) else "⟪𝐝⟫ₚ"
         cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, COL_W, SYMBOL_H,
-                             "symbol", text="⟪𝐝⟫ₚ"))
+                             "symbol", text=obj_symbol))
         # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — another COL_W gridded
         # cell — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it)
         cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
@@ -2586,7 +2590,8 @@ def build(state, settings=None, collapsed=None,
         blocks.append(Block(bid, *panel_rect(ckey, rkey)))
 
     for bid, rkey, ckey in tiles:
-        panel(bid, ckey, rkey)
+        if (rkey, ckey) in declared_tiles:  # a dropped tile (e.g. all-interval's redundant ones) loses its panel too
+            panel(bid, ckey, rkey)
     # the nested tuning-ranges box: a thin-bordered frame around the chart + selector,
     # appended after the tile panels so it layers on top of the generator tuning map tile
     if gtm_box is not None:

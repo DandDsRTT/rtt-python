@@ -1854,15 +1854,29 @@ def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
     assert on_ai["control:all_interval"].checked is True
 
 
-def test_all_interval_removes_the_redundant_retune_target_tile():
-    # all-interval makes the retune-over-targets tile 𝐞 = 𝑟 — identical to the 𝒓 retuning-over-
-    # primes row — so the tile is removed (the mockup's "get rid of this redundant box?", resolved
-    # toward removal). A target-based scheme keeps it; the over-primes retuning row stays either way.
-    based = {c.id for c in _with(scheme="TILT minimax-S").cells}
-    assert any("retune" in c and "target" in c for c in based)  # present when target-based
-    allint = {c.id for c in _with(scheme="minimax-S").cells}
-    assert not any("retune" in c and "target" in c for c in allint)  # removed when all-interval
-    assert any(c.startswith("retune:prime") for c in allint)  # the 𝒓 over-primes row remains
+def test_all_interval_removes_the_redundant_size_and_error_target_tiles():
+    # all-interval (Tₚ = I) collapses each size/error list over the targets to its prime map
+    # (tempered 𝐚 → 𝒕, just 𝐨 → 𝒋, error 𝐞 → 𝒓), duplicating the prime-map row above it — so the
+    # three tiles are FULLY removed (cells AND their grey panel — never a blank box). A target-based
+    # scheme keeps them; the prime-map rows remain either way.
+    def ids(scheme):
+        lay = _with(scheme=scheme)
+        return {c.id for c in lay.cells} | {b.id for b in lay.blocks}  # cells + panels (blocks)
+    based, allint = ids("TILT minimax-S"), ids("minimax-S")
+    for row in ("tuning", "just", "retune"):
+        assert any(row in i and "target" in i for i in based), row       # present when target-based
+        assert not any(row in i and "target" in i for i in allint), row  # fully removed (no blank panel)
+        assert any(i.startswith(f"{row}:prime") for i in allint), row    # the prime-map row remains
+
+
+def test_all_interval_relabels_the_optimization_objective():
+    # the optimization objective ⟪𝐝⟫ₚ is the minimized total damage; when all-interval that quantity
+    # IS the "retuning magnitude" ‖𝒓𝐿⁻¹‖ (the value already computes over the primes), so the symbol
+    # relabels. A target-based scheme keeps ⟪𝐝⟫ₚ.
+    based = {c.id: c for c in _with(scheme="TILT minimax-S", optimization=True).cells}
+    assert based["optimization:objective:symbol"].text == "⟪𝐝⟫ₚ"
+    allint = {c.id: c for c in _with(scheme="minimax-S", optimization=True).cells}
+    assert allint["optimization:objective:symbol"].text == "‖𝒓𝐿⁻¹‖"
 
 
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
