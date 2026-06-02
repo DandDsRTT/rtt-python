@@ -295,10 +295,10 @@ async def test_undo_button_reverts_a_settings_change(user: User) -> None:
     await user.should_not_see(marker="chart:retune:targets")  # charts off again
 
 
-# --- tier 4: frozen split panes (titles pinned while only the body scrolls) ---
+# --- tier 4: frozen split panes (titles frozen outside the body scroller) ---
 
 def _renders_inside(user: User, cell_marker: str, region_marker: str) -> bool:
-    """True if the cell's wrap is a descendant of the region (corner / title strip / body pane)."""
+    """True if the cell's wrap is a descendant of the region (corner / column strip / body board)."""
     cell = next(iter(user.find(marker=cell_marker).elements))
     region = next(iter(user.find(marker=region_marker).elements))
     slot = cell.parent_slot
@@ -309,35 +309,36 @@ def _renders_inside(user: User, cell_marker: str, region_marker: str) -> bool:
     return False
 
 
-@pytest.mark.parametrize("cell, band", [
-    ("header:gens", "colband"),        # a column title -> the column band (sticky to the top)
-    ("toggle:col:targets", "colband"),  # its fold toggle rides the same band
-    ("label:tuning", "rowband"),       # a row title -> the row band (sticky to the left)
-    ("toggle:row:tuning", "rowband"),   # its fold toggle rides the same band
-    ("toggle:all", "corner"),          # the master toggle -> the corner band
+@pytest.mark.parametrize("cell, region", [
+    ("header:gens", "colheadinner"),       # a column title -> the column-title strip (above the body)
+    ("toggle:col:targets", "colheadinner"),  # its fold toggle rides the same strip
+    ("label:tuning", "rowband"),           # a row title -> the sticky-left row band (inside the body)
+    ("toggle:row:tuning", "rowband"),       # its fold toggle rides the same band
+    ("toggle:all", "corner"),              # the master toggle -> the corner (frozen both)
 ])
-async def test_each_title_renders_into_its_sticky_band(user: User, cell: str, band: str) -> None:
+async def test_each_title_renders_into_its_frozen_region(user: User, cell: str, region: str) -> None:
     await user.open("/")
-    assert _renders_inside(user, cell, band)
+    assert _renders_inside(user, cell, region)
 
 
-async def test_body_cells_render_on_the_board_under_no_band(user: User) -> None:
-    # a value cell sits on the board itself (the page-scrolled body), beneath none of the bands
+async def test_body_cells_render_on_the_board_under_no_frozen_region(user: User) -> None:
+    # a value cell sits on the board (.rtt-gridcontent, the body scroll content), beneath none of
+    # the frozen regions that sit outside / sticky-within the scroller
     await user.open("/")
     assert _renders_inside(user, "cell:mapping:0:0", "board")
-    for band in ("colband", "rowband", "corner"):
-        assert not _renders_inside(user, "cell:mapping:0:0", band)
+    for region in ("colheadinner", "rowband", "corner"):
+        assert not _renders_inside(user, "cell:mapping:0:0", region)
 
 
-async def test_settings_frozen_header_matches_the_main_app_frozen_band_height(user: User) -> None:
-    # "exactly the same height as the frozen part of the main app pane": render() sizes the
-    # settings pane's frozen header to the layout's freeze_y — the very value the column band is
-    # sized to — so the two frozen/scrolling seams sit at the same height across the app.
+async def test_settings_frozen_header_matches_the_grid_column_strip_height(user: User) -> None:
+    # "exactly the same height as the frozen part of the main app pane": render() sizes the settings
+    # pane's frozen header to the layout's freeze_y — the very value the grid's frozen column strip
+    # is sized to — so the two frozen/scrolling seams sit at the same height across the app.
     await user.open("/")
     frozen = next(iter(user.find(marker="showfrozen").elements))
-    colband = next(iter(user.find(marker="colband").elements))
+    colhead = next(iter(user.find(marker="colhead").elements))
     assert frozen._style.get("height")  # the header is sized (not left to hug its content)...
-    assert frozen._style.get("height") == colband._style.get("height")  # ...to the band's height
+    assert frozen._style.get("height") == colhead._style.get("height")  # ...to the strip's height
 
 
 async def test_state_persists_across_a_refresh(user: User) -> None:

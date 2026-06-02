@@ -253,15 +253,15 @@ def _z(selector):
     return int(m.group(1))
 
 
-def test_titles_freeze_with_sticky_bands_pinned_to_the_pane():
-    # the three title bands are position:sticky, so the browser pins them to the grid pane's edges
-    # as it scrolls (no JS on the scroll path, no bobble): the column band to the top, the row
-    # band to the left, the corner to both. They stack above the body, corner above the sides.
-    col, row, cnr = _css_rule(".rtt-colband"), _css_rule(".rtt-rowband"), _css_rule(".rtt-cornerband")
-    assert "position:sticky" in col and "top:0" in col        # column band pinned to the top
-    assert "position:sticky" in row and "left:0" in row       # row band pinned to the left
-    assert "position:sticky" in cnr and "top:0" in cnr and "left:0" in cnr  # corner pinned to both
-    assert _z(".rtt-cell") < _z(".rtt-colband") < _z(".rtt-rowband") < _z(".rtt-cornerband")
+def test_titles_freeze_outside_or_sticky_within_the_body_scroller():
+    # The frozen titles sit so the body's scrollbars stop at them. The row band freezes by
+    # position:sticky to the left of the body scroller; the column-title strip and the corner sit
+    # OUTSIDE the scroller (position:absolute on the pane), so the body's vertical scrollbar starts
+    # below the strip. They stack above the body, the corner above both edges.
+    assert "position:sticky" in _css_rule(".rtt-rowband") and "left:0" in _css_rule(".rtt-rowband")
+    assert "position:absolute" in _css_rule(".rtt-colhead")  # the strip is lifted out of the scroller
+    assert "position:absolute" in _css_rule(".rtt-corner")   # ...as is the corner (frozen both)
+    assert _z(".rtt-cell") < _z(".rtt-colhead") < _z(".rtt-rowband") < _z(".rtt-corner")
 
 
 def test_shell_fixes_the_app_to_the_window_framed_by_a_white_margin():
@@ -300,48 +300,49 @@ def test_settings_frozen_seam_sits_below_the_header_not_inside_it():
     assert "border-bottom" not in _css_rule(".rtt-show-all")
 
 
-def test_bands_are_opaque_and_pass_clicks_through_off_the_band():
-    # the band wrapper spans the whole board but lets clicks fall through to the body
-    # (pointer-events:none); the sticky inner re-enables them and is opaque #c0c0c0, so the body
-    # is hidden behind the titles as it scrolls under them
+def test_row_band_wrapper_passes_clicks_through_and_the_strip_clips():
+    # the row band rides a full-height .rtt-band wrapper that lets clicks fall through to the body
+    # (pointer-events:none); the sticky inner re-enables them and is opaque #c0c0c0, so the body is
+    # hidden behind the row titles as it scrolls under them. The column strip clips its translated
+    # inner (overflow:hidden) so titles scrolled off the left don't spill over the corner / sidebar.
     assert "pointer-events:none" in _css_rule(".rtt-band")
-    assert "pointer-events:auto" in app._CSS  # the band inners re-enable clicks
-    # the column band must NOT clip, so a rightmost column's title (which overhangs its
-    # content-hugging column, centred on the gridline) spills into the .rtt-outer margin
-    assert "overflow" not in _css_rule(".rtt-colband")
+    assert "pointer-events:auto" in app._CSS  # the row band inner re-enables clicks
+    assert "overflow:hidden" in _css_rule(".rtt-colhead")
 
 
-def test_grid_scrolls_in_its_own_pane_not_the_page():
-    # the grid lays out at natural size (.rtt-outer width:max-content) and scrolls inside .rtt-app
-    # (overflow:auto) — its OWN pane, which fills the shell width right of the sidebar (flex:1,
-    # min-width:0 so it bounds the grid rather than being pushed wider). So a grid bigger than the
-    # pane scrolls here — scrollbars bounded to the pane, right of the frozen sidebar — instead of
-    # growing/scrolling the page.
-    assert "width:max-content" in _css_rule(".rtt-outer")
+def test_grid_scrolls_in_its_own_body_pane_not_the_page():
+    # the grid scrolls inside .rtt-gridbody (overflow:auto) — its own pane, within the grid region
+    # .rtt-app (flex:1 / min-width:0, bounding the grid to the pane). .rtt-app itself only clips
+    # (overflow:hidden) and hosts the absolutely-placed frozen regions; the page never scrolls. So a
+    # grid bigger than the pane scrolls in the body, scrollbars bounded there, right of the sidebar.
+    assert "overflow:auto" in _css_rule(".rtt-gridbody")             # the grid's own scroller
     app_rule = _css_rule(".rtt-app")
-    assert "overflow:auto" in app_rule                              # the grid's own scroller
+    assert "overflow:hidden" in app_rule and "position:relative" in app_rule  # the region, not the scroller
     assert "flex:1 1 auto" in app_rule and "min-width:0" in app_rule  # bounds the grid to the pane
 
 
-def test_seam_appears_only_when_the_pane_is_scrolled():
-    # each band's body-facing edge is transparent until the grid pane is scrolled on that axis, when
-    # the board gains rtt-scrolled-x/y (see _FREEZE_JS) and the edge takes the grey seam; the
+def test_seam_appears_only_when_the_body_is_scrolled():
+    # each frozen region's body-facing edge is transparent until the body is scrolled on that axis,
+    # when .rtt-app gains rtt-scrolled-x/y (see _FREEZE_JS) and the edge takes the grey seam; the
     # border is always 1px so revealing it shifts nothing.
     css = app._CSS
-    assert "border-bottom:1px solid transparent" in css  # column-band seam, hidden at rest
+    assert "border-bottom:1px solid transparent" in css  # column-strip seam, hidden at rest
     assert "border-right:1px solid transparent" in css   # row-band seam, hidden at rest
-    assert ".rtt-board.rtt-scrolled-y .rtt-colband" in css and f"border-bottom-color:{app._SEAM}" in css
-    assert ".rtt-board.rtt-scrolled-x .rtt-rowband" in css and f"border-right-color:{app._SEAM}" in css
+    assert ".rtt-app.rtt-scrolled-y .rtt-colhead" in css and f"border-bottom-color:{app._SEAM}" in css
+    assert ".rtt-app.rtt-scrolled-x .rtt-rowband" in css and f"border-right-color:{app._SEAM}" in css
 
 
-def test_freeze_script_toggles_the_seam_on_pane_scroll():
-    # the only JS is a capture-phase scroll listener that toggles rtt-scrolled-x/y on the board from
-    # its pane's scroll offset (a band is "stuck" once .rtt-app has scrolled off zero on that axis).
-    # It never moves the titles — position:sticky does that — so there is no bobble.
+def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scroll():
+    # the only JS is a capture-phase scroll listener over .rtt-gridbody (the body scroller). It
+    # translateX-syncs the column-title strip to the body's horizontal scroll (the one thing CSS
+    # can't do for a strip lifted out of the scroller) and toggles rtt-scrolled-x/y on .rtt-app from
+    # the body's scroll offset to reveal the seams. It never moves the row titles — position:sticky
+    # does that — so there is no bobble.
     js = app._FREEZE_JS
-    assert "scrollTop" in js and "scrollLeft" in js     # reads the pane's scroll offset...
-    assert "closest('.rtt-app')" in js                  # ...of the grid's own scroll pane
-    assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js
+    assert ".rtt-gridbody" in js                                # listens to the body scroller
+    assert "scrollTop" in js and "scrollLeft" in js             # reads its scroll offset
+    assert ".rtt-colhead-inner" in js and "translateX" in js    # syncs the strip horizontally
+    assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js    # toggles the seams
     assert "addEventListener('scroll'" in js
     assert "ResizeObserver" not in js and "scroll-timeline" not in js  # no fixed-box machinery
 

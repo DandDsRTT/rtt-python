@@ -266,20 +266,23 @@ window.rttAudio = (function () {
 })();
 """
 
-# Frozen-pane support: reveal the seam ONLY once the grid pane has been scrolled under a band.
-# position:sticky pins the title bands with zero JS on the scroll path (no bobble); this listener
-# just toggles the seam classes. A band is "stuck" (content scrolled under it) exactly when its
-# scroll pane (.rtt-app, the inner scroller) has scrolled off zero on that axis. scroll doesn't
-# bubble → capture phase, so the inner pane's scroll events are still caught here.
+# Frozen-pane support. The row band freezes by position:sticky (zero JS on its scroll path), but the
+# column-title strip sits OUTSIDE the body scroller (so the vertical scrollbar can stop below it), so
+# it can't ride the scroll via CSS — this listener translateX-syncs it to the body's horizontal
+# scroll. It also reveals the seams: a frozen region is "stuck" (body scrolled under it) exactly when
+# .rtt-gridbody has scrolled off zero on that axis, toggled as rtt-scrolled-x/y on .rtt-app. scroll
+# doesn't bubble → capture phase, so the body's scroll events are still caught here.
 _FREEZE_JS = """
 window.rttFreeze = (function () {
   function update() {
-    var boards = document.querySelectorAll('.rtt-board');
-    for (var i = 0; i < boards.length; i++) {
-      var sc = boards[i].closest('.rtt-app');   // the grid's own scroll pane
-      if (!sc) continue;
-      boards[i].classList.toggle('rtt-scrolled-y', sc.scrollTop > 0);
-      boards[i].classList.toggle('rtt-scrolled-x', sc.scrollLeft > 0);
+    var bodies = document.querySelectorAll('.rtt-gridbody');
+    for (var i = 0; i < bodies.length; i++) {
+      var b = bodies[i], app = b.closest('.rtt-app');
+      if (!app) continue;
+      var inner = app.querySelector('.rtt-colhead-inner');
+      if (inner) inner.style.transform = 'translateX(' + (-b.scrollLeft) + 'px)';
+      app.classList.toggle('rtt-scrolled-y', b.scrollTop > 0);
+      app.classList.toggle('rtt-scrolled-x', b.scrollLeft > 0);
     }
   }
   document.addEventListener('scroll', update, true);
@@ -358,36 +361,41 @@ _CSS = f"""
                     overflow:hidden; min-height:0; display:flex; flex-direction:column;
                     font-family:'Cambria',Georgia,serif; color:#000; }}
 /* the grid pane sits right of the sidebar and fills the rest of the shell width (flex:1, min-width:0
-   so it can shrink). It is the grid's OWN scroller (overflow:auto): a grid wider/taller than the
-   pane scrolls HERE — its scrollbars bounded to the pane, right of the frozen sidebar — instead of
-   scrolling the page. Grey backdrop so the gaps around the tiles read through. */
-.rtt-app {{ flex:1 1 auto; min-width:0; overflow:auto; background:#c0c0c0; }}
+   so it can shrink). It is the positioning context (position:relative) for the frozen column-title
+   strip, the corner, and the body scroller — which are absolutely placed within it; overflow:hidden
+   clips them to the pane. The actual scrolling happens INSIDE it, in .rtt-gridbody, so the
+   scrollbars sit at the body's edges (right of the frozen titles), not the pane's. Grey backdrop so
+   the gaps around the tiles read through. */
+.rtt-app {{ flex:1 1 auto; min-width:0; position:relative; overflow:hidden; background:#c0c0c0;
+           font-family:'Cambria',Georgia,serif; }}
 
-/* The grid lays out at full size in .rtt-outer (width:max-content) and scrolls inside .rtt-app
-   (the pane scroller) — both ways — so it spills inside its pane rather than off the page; adding
-   a row/col just grows the scroll content. Titles freeze with position:sticky relative to .rtt-app:
-   three opaque bands inside the board pin to the pane edges as it scrolls — the column band to the
-   top, the row band to the left, the corner to both — and, being opaque, occlude the body scrolling
-   beneath them. Each band is a sticky inner inside a full-board absolute wrapper (pointer-events:none,
-   so it can stay stuck across the whole grid without blocking the body's clicks; the inner re-enables
-   them). A rightmost column title overhangs its content-hugging column; the band doesn't clip (no
-   overflow), so the tail spills into .rtt-outer's _PAD margin as it did before. */
-.rtt-outer {{ background:#c0c0c0; padding:{_PAD}px; width:max-content;
-              font-family:'Cambria',Georgia,serif; }}
+/* The grid pane is split so the body's scrollbars stop AT the frozen titles (like the settings
+   pane): the column-title strip (.rtt-colhead) and the corner sit OUTSIDE the body scroller
+   (.rtt-gridbody), which holds only the value cells + the sticky-left row band. So the body's
+   vertical scrollbar starts BELOW the column titles, and its horizontal scrollbar spans only the
+   body — neither runs up alongside a frozen title. The strip can't ride the body's scroll via CSS
+   (a left-frozen sticky row band needs the body itself to be the horizontal scroll container), so
+   _FREEZE_JS translateX-syncs the strip to the body's horizontal scroll. Every region is inset _PAD
+   from the pane's top-left for the grey margin; the body fills to the pane's right/bottom edges, so
+   its scrollbars sit there. The board (.rtt-gridcontent) holds the cells at native coords shifted up
+   by freeze_y (the strip's height), so a body cell lands at the same pane position it always had. */
+.rtt-colhead {{ position:absolute; top:{_PAD}px; left:{_PAD}px; right:0; z-index:4; overflow:hidden;
+               background:#c0c0c0; box-sizing:border-box; border-bottom:1px solid transparent; }}
+.rtt-colhead-inner {{ position:absolute; top:0; left:0; will-change:transform; }}
+.rtt-corner {{ position:absolute; top:{_PAD}px; left:{_PAD}px; z-index:6; background:#c0c0c0;
+              box-sizing:border-box; border-right:1px solid transparent; border-bottom:1px solid transparent; }}
+.rtt-gridbody {{ position:absolute; left:{_PAD}px; right:0; bottom:0; overflow:auto; }}
 /* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
-   (the white wash bases), not the page behind it */
-.rtt-board {{ position:relative; isolation:isolate; transition:width {_T}, height {_T}; }}
+   (the white wash bases), not the grey pane behind it */
+.rtt-gridcontent {{ position:relative; isolation:isolate; transition:width {_T}, height {_T}; }}
 .rtt-band {{ position:absolute; inset:0; pointer-events:none; }}
-.rtt-colband {{ position:sticky; top:0; z-index:4; background:#c0c0c0; box-sizing:border-box;
-               pointer-events:auto; border-bottom:1px solid transparent; }}
 .rtt-rowband {{ position:sticky; left:0; z-index:5; background:#c0c0c0; box-sizing:border-box;
                pointer-events:auto; border-right:1px solid transparent; }}
-.rtt-cornerband {{ position:sticky; top:0; left:0; z-index:6; background:#c0c0c0; box-sizing:border-box;
-                  pointer-events:auto; border-right:1px solid transparent; border-bottom:1px solid transparent; }}
-/* the seam on each band's body-facing edge stays transparent until the page is scrolled on that
-   axis (classes toggled in _FREEZE_JS); the border is always 1px so revealing it shifts nothing */
-.rtt-board.rtt-scrolled-y .rtt-colband, .rtt-board.rtt-scrolled-y .rtt-cornerband {{ border-bottom-color:{_SEAM}; }}
-.rtt-board.rtt-scrolled-x .rtt-rowband, .rtt-board.rtt-scrolled-x .rtt-cornerband {{ border-right-color:{_SEAM}; }}
+/* the seam on each frozen region's body-facing edge stays transparent until the body is scrolled
+   on that axis (classes toggled on .rtt-app in _FREEZE_JS); the border is always 1px so revealing
+   it shifts nothing */
+.rtt-app.rtt-scrolled-y .rtt-colhead, .rtt-app.rtt-scrolled-y .rtt-corner {{ border-bottom-color:{_SEAM}; }}
+.rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner {{ border-right-color:{_SEAM}; }}
 @keyframes rtt-in {{ from {{ opacity:0; }} to {{ opacity:1; }} }}
 .rtt-line, .rtt-block, .rtt-block-boxed, .rtt-cell, .rtt-wash, .rtt-washbase {{ animation:rtt-in {_T} ease; }}
 
@@ -1398,14 +1406,16 @@ def _units_html(text):
     return _bold_units(text)
 
 
-def _line_style(ln) -> str:
+def _line_style(ln, y_shift: float = 0) -> str:
     """Absolute-position CSS for one gridline rule (a zero-size div carrying a single
     border). The border grows off one edge, so shift the box back by half the line width
-    to seat the rule centred on its coordinate (its toggle-node / cell-column centre)."""
+    to seat the rule centred on its coordinate (its toggle-node / cell-column centre).
+    ``y_shift`` lifts the rule into the body's scroll space (the frozen column strip's
+    height), since every gridline lives on the scrolling board."""
     half = spreadsheet.LINE_W / 2
     if ln.orientation == "v":
-        return f"left:{ln.pos - half}px; top:{ln.start}px; height:{ln.length}px"
-    return f"top:{ln.pos - half}px; left:{ln.start}px; width:{ln.length}px"
+        return f"left:{ln.pos - half}px; top:{ln.start - y_shift}px; height:{ln.length}px"
+    return f"top:{ln.pos - half - y_shift}px; left:{ln.start}px; width:{ln.length}px"
 
 
 def _select_props(min_width: float) -> str:
@@ -2009,16 +2019,20 @@ def index() -> None:
                                 target_override=editor.target_override,
                                 custom_prescaler=editor.custom_prescaler)
         last_lay[0] = lay
-        # the board is the grid's full size; the three sticky bands span the title gutters at the
-        # board's origin, so cells routed into them keep their native (cb.x, cb.y) and line up with
-        # the body for free. The .rtt-band wrappers auto-fill the board (inset:0, in CSS).
+        # The body scroller holds the grid shifted up by the column strip's height (freeze_y): the
+        # board content is (total_h - fy) tall, its cells/lines/blocks placed at native coords minus
+        # fy, so they land where they always did with the column-title rows now lifted into the strip
+        # above. The strip (its inner is full grid width, translated horizontally by _FREEZE_JS) and
+        # the corner keep native coords. gridbody drops below the strip (top = _PAD + fy).
         fx, fy = lay.freeze_x, lay.freeze_y
-        board.style(f"width:{lay.width}px; height:{lay.height}px")
-        colband.style(f"width:{lay.width}px; height:{fy}px")
-        rowband.style(f"width:{fx}px; height:{lay.height}px")
-        cornerband.style(f"width:{fx}px; height:{fy}px")
-        # the settings pane's frozen header takes the same height as the main app's frozen
-        # column band, so the two frozen/scrolling seams line up across the app
+        board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
+        colhead.style(f"height:{fy}px")
+        colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
+        corner.style(f"width:{fx}px; height:{fy}px")
+        gridbody.style(f"top:{_PAD + fy}px")
+        rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
+        # the settings pane's frozen header takes the same height as the grid's frozen column
+        # strip, so the two frozen/scrolling seams line up across the app
         show_frozen.style(f"height:{fy}px")
         seen = set()
 
@@ -2028,7 +2042,7 @@ def index() -> None:
                 with board:
                     cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
                     els[ln.id] = ui.element("div").classes(cls).props(f'data-eid="{ln.id}"')
-            els[ln.id].style(_line_style(ln))
+            els[ln.id].style(_line_style(ln, fy))
 
         for bl in lay.blocks:
             seen.add(bl.id)
@@ -2042,7 +2056,7 @@ def index() -> None:
                            else "rtt-washbase" if bl.tint == "base"
                            else "rtt-wash" if bl.tint else "rtt-block")
                     els[bl.id] = ui.element("div").classes(cls).props(f'data-eid="{bl.id}"')
-            style = f"left:{bl.x}px; top:{bl.y}px; width:{bl.w}px; height:{bl.h}px"
+            style = f"left:{bl.x}px; top:{bl.y - fy}px; width:{bl.w}px; height:{bl.h}px"
             if bl.tint in _TINTS:  # the coloured layer (the base draws white from CSS)
                 style += f"; background:{_TINTS[bl.tint]}"
             els[bl.id].style(style)
@@ -2053,13 +2067,17 @@ def index() -> None:
                 drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
             if cb.kind in _AUDIO_KINDS and cb.id in els and audio_keys.get(cb.id) != cb.values:
                 drop(cb.id)  # cents changed -> rebuild so the baked-in click handler sounds the new pitch
+            container = _FREEZE_CONTAINER.get(cb.kind, "body")
             if cb.id not in els:
-                with cell_parents[_FREEZE_CONTAINER.get(cb.kind, "body")]:
+                with cell_parents[container]:
                     els[cb.id] = _make_cell(cb)
                 kinds[cb.id] = cb.kind
                 if cb.kind in _AUDIO_KINDS:
                     audio_keys[cb.id] = cb.values
-            els[cb.id].style(f"left:{cb.x}px; top:{cb.y}px; width:{cb.w}px; height:{cb.h}px")
+            # body + row cells live in the scroll space (shifted up by fy); column + corner cells
+            # keep native coords in their frozen strip / corner
+            top = cb.y - (fy if container in ("body", "row") else 0)
+            els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
             if cb.kind in _EBK_SVG_KINDS:
                 # the mark is drawn 1:1 to its px box, so redraw it whenever the box
                 # changes size (e.g. the brace/top bracket as the domain grows) or its
@@ -2275,33 +2293,35 @@ def index() -> None:
                                     row.bind_visibility_from(boxes[parent], "value")
 
         with ui.element("div").classes("rtt-app"):
-            with ui.element("div").classes("rtt-outer"):
-                # the grid lays out at full size and scrolls with the PAGE. Body cells/lines/blocks
-                # go straight on the board; the frozen titles ride three sticky bands, each a
-                # full-board wrapper (clicks pass through) holding a sticky opaque inner that pins
-                # to a window edge. Sizes are set in render() from the layout's freeze_x/freeze_y.
-                board = ui.element("div").classes("rtt-board").mark("board")
-                with board:
-                    with ui.element("div").classes("rtt-band"):
-                        colband = ui.element("div").classes("rtt-colband").mark("colband")
-                    with ui.element("div").classes("rtt-band"):
-                        rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
-                    with ui.element("div").classes("rtt-band"):
-                        cornerband = ui.element("div").classes("rtt-cornerband").mark("corner")
-                        with cornerband:
-                            # the corner holds the undo/redo title tile (the app title is on the rail)
-                            with ui.element("div").classes("rtt-titletile").mark("titletile"):
-                                with ui.element("div").classes("rtt-tile-btns"):
-                                    refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
-                                        .props("flat dense").classes("rtt-iconbtn").mark("undo")
-                                    refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
-                                        .props("flat dense").classes("rtt-iconbtn").mark("redo")
-                                    # reset everything (settings, expand/collapse, values) to the
-                                    # as-shipped defaults — itself an undoable action
-                                    refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: act(editor.reset), color=None) \
-                                        .props("flat dense").classes("rtt-iconbtn").mark("reset")
-            # where each cell renders: its sticky band (corner/col/row) or the body board
-            cell_parents = {"corner": cornerband, "col": colband, "row": rowband, "body": board}
+            # the grid pane splits into frozen title regions OUTSIDE the body scroller (so the body's
+            # scrollbars stop at the titles): the column-title strip (scrolls horizontally in sync via
+            # _FREEZE_JS), the corner (frozen both), and the body scroller .rtt-gridbody — which holds
+            # the value cells, lines and blocks (on .rtt-gridcontent) plus the sticky-left row band.
+            # Sizes/positions are set in render() from the layout's freeze_x/freeze_y. Column/corner
+            # cells keep native coords; body/row cells shift up by freeze_y into the body's scroll space.
+            colhead = ui.element("div").classes("rtt-colhead").mark("colhead")
+            with colhead:
+                colhead_inner = ui.element("div").classes("rtt-colhead-inner").mark("colheadinner")
+            corner = ui.element("div").classes("rtt-corner").mark("corner")
+            with corner:
+                # the corner holds the undo/redo title tile (the app title is on the rail)
+                with ui.element("div").classes("rtt-titletile").mark("titletile"):
+                    with ui.element("div").classes("rtt-tile-btns"):
+                        refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
+                            .props("flat dense").classes("rtt-iconbtn").mark("undo")
+                        refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
+                            .props("flat dense").classes("rtt-iconbtn").mark("redo")
+                        # reset everything (settings, expand/collapse, values) to the
+                        # as-shipped defaults — itself an undoable action
+                        refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: act(editor.reset), color=None) \
+                            .props("flat dense").classes("rtt-iconbtn").mark("reset")
+            gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
+            with gridbody:
+                board = ui.element("div").classes("rtt-gridcontent").mark("board")
+                with board, ui.element("div").classes("rtt-band"):
+                    rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
+            # where each cell renders: a frozen region (corner/column strip/row band) or the body board
+            cell_parents = {"corner": corner, "col": colhead_inner, "row": rowband, "body": board}
 
     def on_key(e):
         if not (e.action.keydown and e.modifiers.ctrl):
