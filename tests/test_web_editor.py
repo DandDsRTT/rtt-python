@@ -787,3 +787,26 @@ def test_load_pins_a_shelved_toggle_to_its_default():
     restored = Editor()
     restored.load(data)
     assert restored.settings["alt_complexity"] is False  # pinned back to its default
+
+
+def test_load_falls_back_when_the_core_fields_are_missing():
+    # mapping_ebk and tuning_scheme must fall back like the other 11 fields rather than
+    # raise KeyError — the docstring promises a missing field can't leave a half-loaded
+    # state, so a truncated/older blob still loads.
+    editor = Editor()
+    base = editor.serialize()
+
+    # tuning_scheme absent (mapping present): the scheme falls back to the default and the
+    # rest of the document still loads.
+    no_scheme = dict(base)
+    del no_scheme["tuning_scheme"]
+    restored = Editor()
+    restored.load(no_scheme)  # must not raise
+    assert service.base_scheme_name(restored.tuning_scheme) == service.DEFAULT_TUNING_SCHEME
+
+    # both core fields absent: still no raise (an absent mapping just leaves the editor
+    # untouched, exactly like an unparseable one).
+    both_missing = dict(base)
+    del both_missing["mapping_ebk"]
+    del both_missing["tuning_scheme"]
+    Editor().load(both_missing)  # must not raise

@@ -620,12 +620,13 @@ class Editor:
         saved state); an unparseable temperament leaves the editor untouched. Builds the
         snapshot fully before swapping it in, so a malformed field can't leave a half-
         loaded state. A load is a fresh start, so it clears the undo/redo history."""
-        state = service.parse_mapping_state(data["mapping_ebk"])
+        state = service.parse_mapping_state(data.get("mapping_ebk", ""))
         if state is None:
             return
         doc = _Doc(
             state=state,
-            tuning_scheme=service.scheme_from_json(data["tuning_scheme"]),
+            tuning_scheme=service.scheme_from_json(
+                data.get("tuning_scheme", service.DEFAULT_TUNING_SCHEME)),
             target_family=data.get("target_family", service.DEFAULT_TARGET_SPEC),
             target_limit=data.get("target_limit"),
             interest_vectors=tuple(tuple(int(x) for x in m) for m in data.get("interest_vectors", ())),
