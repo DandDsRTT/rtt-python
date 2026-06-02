@@ -588,16 +588,16 @@ def complexity_name_of(scheme) -> str:
     return "custom"
 
 
-def scheme_with_diminuator(scheme, ignored: bool):
-    """``scheme`` with its size factor (trait 5c) set — the box 𝐋 "ignore diminuator" checkbox.
-    Ignoring the diminuator (the lesser of a ratio's num/den) replaces it with the numinator:
-    the integer-limit "shear" that turns lp into lils (and copfr/sopfr into their limit forms).
+def scheme_with_diminuator(scheme, replaced: bool):
+    """``scheme`` with its size factor (trait 5c) set — the box 𝐋 "replace diminuator" checkbox.
+    Replacing the diminuator (the lesser of a ratio's num/den) with the numinator (the greater)
+    is the integer-limit "shear" that turns lp into lils (and copfr/sopfr into their limit forms).
     Keeps everything else. Returns a resolved spec."""
-    return replace(resolve_tuning_scheme(scheme), complexity_size_factor=1 if ignored else 0)
+    return replace(resolve_tuning_scheme(scheme), complexity_size_factor=1 if replaced else 0)
 
 
-def diminuator_ignored(scheme) -> bool:
-    """Whether ``scheme`` ignores the diminuator (carries the size factor) — so the box 𝐋
+def diminuator_replaced(scheme) -> bool:
+    """Whether ``scheme`` replaces the diminuator (carries the size factor) — so the box 𝐋
     checkbox can show the live state. False for log-product (lp), True for log-integer-limit (lils)."""
     return resolve_tuning_scheme(scheme).complexity_size_factor != 0
 

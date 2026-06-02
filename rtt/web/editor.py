@@ -440,11 +440,11 @@ class Editor:
         self._snapshot()
         self.custom_prescaler = None
 
-    def set_diminuator_ignored(self, ignored: bool) -> None:
-        """Toggle the size factor (the box 𝐋 "ignore diminuator" checkbox) — the integer-limit
+    def set_diminuator_replaced(self, replaced: bool) -> None:
+        """Toggle the size factor (the box 𝐋 "replace diminuator" checkbox) — the integer-limit
         shear that turns lp into lils — which re-weights and retunes."""
         self._snapshot()
-        self.tuning_scheme = service.scheme_with_diminuator(self.tuning_scheme, ignored)
+        self.tuning_scheme = service.scheme_with_diminuator(self.tuning_scheme, replaced)
 
     def set_all_interval(self, all_interval: bool) -> None:
         """Toggle the target-controls all-interval checkbox: checked targets every interval (the

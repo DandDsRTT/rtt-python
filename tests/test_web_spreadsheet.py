@@ -1883,7 +1883,7 @@ def test_all_interval_show_entry_is_live_not_a_greyed_stub():
 
 
 def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdown():
-    # box 𝐋 sits as one row: [predefined prescalers ▼] on the left, the "ignore diminuator"
+    # box 𝐋 sits as one row: [predefined prescalers ▼] on the left, the "replace diminuator"
     # checkbox to its right. The dropdown carries a "predefined prescalers" caption beneath
     # it; the checkbox's own label suffices for that side.
     off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
@@ -1902,7 +1902,7 @@ def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdow
     # square (OPTION_BOX_PX), so its bottom IS the square's bottom and the caption sits right under it
     cap_d = on["caption:diminuator"]
     assert cap_d.kind == "caption"
-    assert cap_d.text == "ignore diminuator"
+    assert cap_d.text == "replace diminuator"
     assert cap_d.y == on["control:diminuator"].y + on["control:diminuator"].h
     dim, drop = on["control:diminuator"], on["control:prescaler"]
     # the diminuator checkbox rides to the RIGHT of the dropdown, vertically CENTRED on its row
@@ -1923,7 +1923,7 @@ def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
     assert "control:diminuator" not in off  # no control unless alt. complexity is on
     ctrl = on["control:diminuator"]
     assert ctrl.kind == "control_check"
-    assert ctrl.text == ""  # the square only — "ignore diminuator" is a separate caption beneath
+    assert ctrl.text == ""  # the square only — "replace diminuator" is a separate caption beneath
     assert ctrl.checked is False  # the default scheme is lp, which uses the diminuator
     # the square sits in box 𝐋 (over the primes); its row-position is covered by the layout test
     assert on["header:primes"].x <= ctrl.x

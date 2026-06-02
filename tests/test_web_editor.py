@@ -169,13 +169,13 @@ def test_set_complexity_name_sets_the_whole_complexity_shape():
     assert service.held_intervals(editor.tuning_scheme) == ("2/1",)
 
 
-def test_set_diminuator_ignored_toggles_the_size_factor():
+def test_set_diminuator_replaced_toggles_the_size_factor():
     editor = Editor()
-    assert service.diminuator_ignored(editor.tuning_scheme) is False  # lp default uses it
-    editor.set_diminuator_ignored(True)  # the box-𝐋 "ignore diminuator" checkbox: lp -> lils
-    assert service.diminuator_ignored(editor.tuning_scheme) is True
-    editor.set_diminuator_ignored(False)
-    assert service.diminuator_ignored(editor.tuning_scheme) is False
+    assert service.diminuator_replaced(editor.tuning_scheme) is False  # lp default uses it
+    editor.set_diminuator_replaced(True)  # the box-𝐋 "replace diminuator" checkbox: lp -> lils
+    assert service.diminuator_replaced(editor.tuning_scheme) is True
+    editor.set_diminuator_replaced(False)
+    assert service.diminuator_replaced(editor.tuning_scheme) is False
 
 
 def test_set_all_interval_toggles_the_scheme_target_set():
@@ -230,9 +230,9 @@ def test_the_weighting_choosers_are_undoable_like_every_other_change():
     editor.set_complexity_name("sopfr")
     editor.undo()
     assert service.complexity_name_of(editor.tuning_scheme) == "lp"  # reverted
-    editor.set_diminuator_ignored(True)
+    editor.set_diminuator_replaced(True)
     editor.undo()
-    assert service.diminuator_ignored(editor.tuning_scheme) is False  # reverted
+    assert service.diminuator_replaced(editor.tuning_scheme) is False  # reverted
 
 
 def test_redo_restores_an_undone_action():

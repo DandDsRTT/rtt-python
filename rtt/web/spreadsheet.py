@@ -48,7 +48,7 @@ PRESELECT_H = 30  # height of a preselect chooser dropdown — aligned with the 
 # The alt.-complexity in-tile choosers' widths. Hard-coded so the column they sit in can be
 # widened up front to fit them, ensuring no caption or control spills out the tile's right edge.
 LBOX_DROP_W = 100   # the prescaler dropdown (seats "log-prime" + arrow comfortably)
-LBOX_DIM_W = 80     # the diminuator slot (checkbox square + "ignore diminuator" caption)
+LBOX_DIM_W = 80     # the diminuator slot (checkbox square + "replace diminuator" caption)
 LBOX_W = LBOX_DROP_W + 8 + LBOX_DIM_W  # the box-𝐋 controls' total footprint (8 = OPT_COL_GAP)
 CBOX_DROP_W = 170   # the predefined-complexities dropdown (inverted display names "lp (log-product)" …)
 CBOX_SLOT_W = 60    # the q / dual(q) symbol/caption slots (the value cell is COL_W centred within)
@@ -1414,7 +1414,7 @@ def build(state, settings=None, collapsed=None,
     gtm_extra = (RANGE_GAP + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
     # the alt.-complexity controls nest at the bottom of their matrix/list tiles (like the
     # ranges box in the gens tile): box 𝐋 (the prescaling matrix over the primes) stacks the
-    # prescaler chooser then the "ignore diminuator" checkbox, box 𝒄 (the complexity list over
+    # prescaler chooser then the "replace diminuator" checkbox, box 𝒄 (the complexity list over
     # the targets) stacks the predefined-complexity chooser then the norm chooser, and box 𝒘
     # (the weight list over the targets) carries the weight-slope chooser. Each tile reserves
     # its choosers' height up front so the rows below drop clear.
@@ -2157,14 +2157,14 @@ def build(state, settings=None, collapsed=None,
                              values=tuple(service.PRESCALERS)))
         cells.append(CellBox("control:diminuator", dim_slot_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
                              "control_check", text="",  # square only; label moves to a caption below
-                             checked=service.diminuator_ignored(tuning_scheme)))
+                             checked=service.diminuator_replaced(tuning_scheme)))
         # the prescaler's caption is one line, left-justified to the dropdown's edge,
         # hugging its bottom (py + PRESELECT_H) — constrained to the widened column width
         cells.append(CellBox("caption:prescaler", col_x["primes"], py + PRESELECT_H,
                              col_w["primes"], CAPTION_LINE, "caption",
                              text="predefined prescalers", align="left"))
         cells.append(CellBox("caption:diminuator", dim_slot_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
-                             CAPTION_LINE, "caption", text="ignore diminuator"))
+                             CAPTION_LINE, "caption", text="replace diminuator"))
     if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
         # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q
         # and dual(q) use the optimization box's value-over-symbol-over-caption stack — the

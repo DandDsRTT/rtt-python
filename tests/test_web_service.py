@@ -506,15 +506,15 @@ def test_complexity_name_of_reports_the_named_complexity_else_custom():
 
 
 def test_scheme_with_diminuator_toggles_the_size_factor_between_lp_and_lils():
-    # the box-𝐋 "ignore diminuator" checkbox (the size-factor trait 5c): ignoring the diminuator
+    # the box-𝐋 "replace diminuator" checkbox (the size-factor trait 5c): replacing the diminuator
     # (the lesser of num/den) replaces it with the numinator — the integer-limit/lils behavior.
-    assert service.diminuator_ignored("minimax-S") is False  # lp (default) uses the diminuator
-    ignored = service.scheme_with_diminuator("minimax-S", True)  # lp -> lils
-    assert service.diminuator_ignored(ignored) is True
-    assert service.complexity_name_of(ignored) == "lils"
-    # un-ignoring returns lils -> lp
+    assert service.diminuator_replaced("minimax-S") is False  # lp (default) uses the diminuator
+    replaced = service.scheme_with_diminuator("minimax-S", True)  # lp -> lils
+    assert service.diminuator_replaced(replaced) is True
+    assert service.complexity_name_of(replaced) == "lils"
+    # keeping the diminuator returns lils -> lp
     kept = service.scheme_with_diminuator("minimax-lils-S", False)
-    assert service.diminuator_ignored(kept) is False and service.complexity_name_of(kept) == "lp"
+    assert service.diminuator_replaced(kept) is False and service.complexity_name_of(kept) == "lp"
     # the prescaler, norm and damage slope ride along unchanged
     on_sopfr = service.scheme_with_diminuator("minimax-sopfr-ES", True)
     assert service.prescaler_of(on_sopfr) == "prime" and service.is_euclidean(on_sopfr) is True

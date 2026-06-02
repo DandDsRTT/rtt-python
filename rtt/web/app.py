@@ -1582,7 +1582,7 @@ def index() -> None:
     expr_state: dict = {}  # math-expression cell id -> last (text, w) rendered, to redraw on change
     kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
     selects: dict = {}  # preselect cell id -> its q-select
-    checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "ignore diminuator")
+    checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "replace diminuator")
     ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
     rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
     opt_buttons: dict = {}  # optimize-button cell id -> its ui.button (for the auto-lock visual)
@@ -1852,8 +1852,8 @@ def index() -> None:
             # to the internal complexity key the editor takes ("lp")
             internal = next((k for k, v in service.COMPLEXITY_DISPLAYS.items() if v == value), value)
             editor.set_complexity_name(internal)
-        elif cid == "control:diminuator":  # the checkbox passes a bool (ignore the diminuator?)
-            editor.set_diminuator_ignored(bool(value))
+        elif cid == "control:diminuator":  # the checkbox passes a bool (replace the diminuator?)
+            editor.set_diminuator_replaced(bool(value))
         elif cid == "control:all_interval":  # the target-controls checkbox: all-interval vs target-based
             editor.set_all_interval(bool(value))
         render()
@@ -2030,7 +2030,7 @@ def index() -> None:
                 selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
                     .props(_select_props(cb.w)).classes("rtt-preselect")
-            elif cb.kind == "control_check":  # the box-𝐋 "ignore diminuator" checkbox (size factor)
+            elif cb.kind == "control_check":  # the box-𝐋 "replace diminuator" checkbox (size factor)
                 checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
                     .props("dense").classes("rtt-control-check")
@@ -2325,7 +2325,7 @@ def index() -> None:
                     _set_offlist_prompt(selects[cb.id], scheme)
             elif cb.kind == "control_select":  # mirror the live alt.-complexity choice
                 selects[cb.id].value = cb.text or None
-            elif cb.kind == "control_check":  # mirror the live "ignore diminuator" state
+            elif cb.kind == "control_check":  # mirror the live "replace diminuator" state
                 checks[cb.id].value = cb.checked
             elif cb.kind == "formchooser":  # a one-shot action: snap back to the placeholder
                 selects[cb.id].value = ""

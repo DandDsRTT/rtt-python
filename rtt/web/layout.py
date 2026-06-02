@@ -58,7 +58,7 @@ class CellBox:
     indicator_label: str = ""  # the subscript on that indicator's ⟪𝐝⟫ label — the scheme's Lp
     # power (∞ / 2 / 1) — so the renderer can letter the line-breaking label
     pending: bool = False  # a not-yet-valid comma draft cell — rendered blank and red-outlined
-    checked: bool = False  # a "control_check" checkbox's state (the box-𝐋 "ignore diminuator")
+    checked: bool = False  # a "control_check" checkbox's state (the box-𝐋 "replace diminuator")
     blank: bool = False  # a value cell kept (its box/brackets stay) but emptied of its
     # number -- how "quantities" off shows the bare gridded structure
     unit: str = ""  # the cell's per-value unit (e.g. "g₁/p₁"), shown small beneath the value
