@@ -1708,7 +1708,7 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
     # each with a caption beneath. The q (norm power) and dual(q) fields follow the optimization
     # box's value-over-symbol-over-caption pattern (the 𝑝 / "optimization power" style); the
     # dropdown has just a caption (no symbol slot).
-    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    on = {c.id: c for c in _with(weighting=True, alt_complexity=True, all_interval=True).cells}
     # the predefined-complexities dropdown carries its caption HUGGING its bottom (rather than
     # bottom-aligned with the q/dual captions further down the row)
     assert on["caption:complexity"].kind == "caption"
@@ -1740,16 +1740,27 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
 
 
 def test_alt_complexity_hides_dual_q_outside_all_interval_mode():
-    # per the mockup note, dual(q) is meaningful only when the scheme is all-interval (the dual
-    # norm only enters via the dual norm inequality used to minimax over every interval). The
-    # default minimax-S IS all-interval, so dual(q) renders; a TILT-based scheme hides it.
-    on_all = {c.id for c in _with(weighting=True, alt_complexity=True).cells}
+    # with the show-panel entry on, dual(q) is meaningful only when the scheme is all-interval (the
+    # dual norm enters only via the dual-norm inequality used to minimax over every interval). The
+    # shipped minimax-S (TOP) is all-interval, so dual(q) renders; a TILT-based scheme hides it.
+    on_all = {c.id for c in _with(weighting=True, alt_complexity=True, all_interval=True).cells}
     assert "control:dual" in on_all and "symbol:dual" in on_all and "caption:dual" in on_all
-    s = {**settings.defaults(), "weighting": True, "alt_complexity": True}
+    s = {**settings.defaults(), "weighting": True, "alt_complexity": True, "all_interval": True}
     on_tilt = {c.id for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), s, tuning_scheme="TILT minimax-S").cells}
     assert "control:dual" not in on_tilt
     assert "control:q" in on_tilt  # q itself still shows (the norm power is meaningful here)
+
+
+def test_dual_q_requires_the_all_interval_show_entry():
+    # the show-panel "all-interval" entry gates dual(q): with the entry OFF (its default), box 𝒄
+    # shows q but never dual(q) — even though the shipped scheme is all-interval — so the default
+    # view is unchanged. dual(q) surfaces only once the entry is on (and the scheme is all-interval).
+    off = {c.id for c in _with(weighting=True, alt_complexity=True).cells}  # entry off (default)
+    assert "control:q" in off  # q itself is unaffected by the all-interval entry
+    assert not ({"control:dual", "symbol:dual", "caption:dual"} & off)
+    on = {c.id for c in _with(weighting=True, alt_complexity=True, all_interval=True).cells}
+    assert {"control:dual", "symbol:dual", "caption:dual"} <= on
 
 
 def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdown():

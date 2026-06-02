@@ -2156,7 +2156,7 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
         cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
                              text="interval complexity norm power"))
-        if service.is_all_interval(tuning_scheme):
+        if settings["all_interval"] and service.is_all_interval(tuning_scheme):
             dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
             dual_x = dual_slot_x + (slot_w - COL_W) / 2
             dual_text = "2" if service.is_euclidean(tuning_scheme) else "∞"
