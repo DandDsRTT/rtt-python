@@ -23,6 +23,7 @@ from rtt.dual import dual
 from rtt.formatting import to_ebk
 from rtt.generator_detempering import get_generator_detempering
 from rtt.math_utils import get_primes, pcv_to_quotient
+from rtt.matrix_utils import Matrix
 from rtt.parsing import parse_quotient_list, parse_temperament_data
 from rtt.target_intervals import (
     default_old_limit,
@@ -43,8 +44,6 @@ from rtt.tuning import (
     resolve_tuning_scheme,
 )
 from rtt.tuning_ranges import get_generator_tuning_range
-
-Matrix = tuple[tuple[int, ...], ...]
 
 DEFAULT_TUNING_SCHEME = "minimax-S"  # the as-shipped scheme
 DEFAULT_TARGET_SPEC = "TILT"  # the default target interval set family (tracks the domain)
