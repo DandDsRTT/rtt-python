@@ -2663,6 +2663,23 @@ def build(state, settings=None, collapsed=None,
         for name, rkey, ckey, label in PRESELECT_COPIES:  # the same control in a second tile
             emit_preselect(f"preselect:{name}:{ckey}", name, rkey, ckey, label)
 
+        # the all-interval checkbox: the show-panel "all-interval" entry adds it to the RIGHT of
+        # the target interval set scheme chooser (box-𝐋's checkbox-beside-dropdown layout — an
+        # 18px square over an "all-interval" caption, vertically centred on the chooser's row). It
+        # reflects whether the scheme targets every interval; ticking it (wired in app.py) switches
+        # the scheme all-interval and greys the chooser.
+        if settings["all_interval"] and tile_open("vectors", "targets"):
+            t_top = ptext_band_y("vectors") + row_ptext["vectors"]
+            t_box_w = _control_box_width(min(col_w["targets"], TARGET_PRESELECT_W),
+                                         "target interval set scheme")
+            check_x = col_x["targets"] + t_box_w + OPT_COL_GAP
+            check_y = t_top + (BOX_PAD + BOX_TITLE_H + BOX_TITLE_GAP) + (PRESELECT_H - CHECK_SQUARE) / 2
+            cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, CHECK_SQUARE,
+                                 "control_check", text="",
+                                 checked=service.is_all_interval(tuning_scheme)))
+            cells.append(CellBox("caption:all_interval", check_x, check_y + CHECK_SQUARE, LBOX_DIM_W,
+                                 CAPTION_LINE, "caption", text="all-interval"))
+
     # the form chooser, one box below the preselect chooser: it canonicalizes the mapping /
     # comma basis it rides (an undoable edit). A control, so it ignores the value-display
     # toggles, like the preselect choosers.
