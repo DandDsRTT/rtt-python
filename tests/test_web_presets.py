@@ -36,7 +36,7 @@ def test_temperament_options_groups_by_limit_with_a_divider_before_each_group():
     assert [k for k in keys if k.startswith("hdr:")] == ["hdr:5", "hdr:7", "hdr:11", "hdr:13"]
     # a divider precedes its group's members, and "13-limit" appears in its label
     assert keys.index("hdr:13") < keys.index("13:Marvel")
-    assert "13-limit" in options["hdr:13"] and options["13:Marvel"] == "Marvel"
+    assert "13-limit" in options["hdr:13"] and options["13:Marvel"] == "marvel"
     # the same name recurs across limits under distinct values (no collision)
     assert "7:Miracle" in options and "11:Miracle" in options
 
@@ -47,6 +47,19 @@ def test_is_divider_flags_only_limit_headers_not_presets():
     assert presets.is_divider("hdr:11")
     assert not presets.is_divider("11:Miracle")
     assert not presets.is_divider("")
+
+
+def test_temperament_options_show_names_lowercased_but_keep_canonical_value_keys():
+    options = presets.temperament_options()
+    labels = [label for key, label in options.items() if not key.startswith("hdr:")]
+    assert labels  # there are temperament rows to check
+    # every temperament label is shown lowercase (incl. multi-word and accented names)
+    assert all(label == label.lower() for label in labels), labels
+    assert options["7:Septimal Meantone"] == "septimal meantone"
+    assert options["5:Würschmidt"] == "würschmidt"
+    # the value keys keep the canonical proper-name casing — the stable id shared with
+    # TEMPERAMENT_COMMAS / identify — even though the shown label is lowercased
+    assert "5:Meantone" in options and options["5:Meantone"] == "meantone"
 
 
 def test_every_tuning_scheme_preset_optimizes_to_a_finite_tuning():

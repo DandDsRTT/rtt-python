@@ -108,14 +108,16 @@ def is_divider(value: str) -> bool:
 
 def temperament_options() -> dict[str, str]:
     """Ordered ``{value: label}`` for the temperament chooser: a divider row before
-    each prime-limit group, then the temperaments in it. The divider rows carry the
-    :data:`_DIVIDER_PREFIX` so the chooser renders them disabled — they read as group
-    headers without being pickable values (see :func:`is_divider`)."""
+    each prime-limit group, then the temperaments in it, each shown lowercase. The
+    divider rows carry the :data:`_DIVIDER_PREFIX` so the chooser renders them disabled
+    — they read as group headers without being pickable values (see :func:`is_divider`)."""
     options: dict[str, str] = {}
     for limit, group in TEMPERAMENTS_BY_LIMIT:
         options[f"{_DIVIDER_PREFIX}{limit}"] = f"── {limit}-limit ──"
         for name, _ in group:
-            options[f"{limit}:{name}"] = name
+            # the value key keeps the canonical proper-name casing (it is the stable id
+            # shared with TEMPERAMENT_COMMAS / identify); only the shown label is lowercased
+            options[f"{limit}:{name}"] = name.lower()
     return options
 
 
