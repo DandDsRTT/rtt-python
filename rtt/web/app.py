@@ -574,11 +574,16 @@ _CSS = f"""
 .rtt-select-popup .q-focus-helper {{ background:#000 !important; }}
 /* the prime-limit divider rows are disabled (non-selectable): Quasar renders a disabled
    q-item with no focus-helper (so no hover highlight) and skips it on click, so it can't be
-   picked and a click leaves the popup open. Undo Quasar's disabled styling so it reads as a
-   plain static header, not a thwarted choice — full opacity, default cursor (never the
-   not-allowed cursor, on the item and its label) */
-.rtt-select-popup .q-item.disabled {{ opacity:1 !important; cursor:default !important; }}
-.rtt-select-popup .q-item.disabled * {{ cursor:default !important; }}
+   picked and a click leaves the popup open. But Quasar's own reset also dims a disabled item
+   (opacity .6) and gives it a not-allowed cursor — both unwanted on what is really a header.
+   Those rules sit in Quasar's `quasar_importants` cascade layer; for !important the layer
+   order is reversed, so a layered !important outranks an unlayered one no matter the
+   specificity. Hence this override goes in the earlier `overrides` layer to win — leaving a
+   plain static header: full opacity, default cursor, on the item and its label. */
+@layer overrides {{
+  .rtt-select-popup .q-item.disabled {{ opacity:1 !important; cursor:default !important; }}
+  .rtt-select-popup .q-item.disabled * {{ cursor:default !important; }}
+}}
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
 .rtt-preselect-target {{ width:100%; height:30px; display:flex; gap:3px; align-items:center; }}
 .rtt-preselect-target .rtt-preselect-num {{ flex:0 0 30px; }}  /* a gridded value square (COL_W x ROW_H) */
