@@ -3077,6 +3077,18 @@ def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
     assert "h:optimization" not in {ln.id for ln in lay.lines}
 
 
+def test_optimization_hint_invites_unlock_once_the_auto_lock_is_latched():
+    # the optimize button's hint reads "double-click to lock" by default; once the auto-
+    # optimize lock is latched on, the next double-click UNlocks it, so the hint flips to match
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"] = True
+    unlocked = {c.id: c for c in spreadsheet.build(base, s).cells}
+    locked = {c.id: c for c in spreadsheet.build(base, s, optimize_locked=True).cells}
+    assert unlocked["optimization:button:hint"].text == "double-click to lock"
+    assert locked["optimization:button:hint"].text == "double-click to unlock"
+
+
 def test_optimization_power_field_reflects_the_current_scheme():
     # the power field shows the *current* scheme's Lp order: ∞ for minimax (TOP), 2 for
     # least-squares (miniRMS)

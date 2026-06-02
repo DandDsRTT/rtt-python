@@ -94,7 +94,7 @@ OPT_COL_GAP = 8  # gap between the three left-packed controls (the min-damage / 
 # the contents, not the full target column). The min-damage value and the ∞ field are ordinary
 # COL_W gridded cells (contents centred); their symbols/captions centre under them and overflow
 # into the empty space on the rows below. The captions stay on ONE line each.
-OPT_BTN_W = 94   # optimize button — wide enough to seat "double-click to lock" on one line beneath it
+OPT_BTN_W = 94   # optimize button — wide enough to seat "double-click to unlock" on one line beneath it
 OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred under the ∞ cell)
 # An in-tile control box: a dropdown / checkbox enclosed in a thin-bordered frame with a
 # left-aligned title, like the optimization box. The title is one line that overhangs the
@@ -954,7 +954,7 @@ def _bus_span(positions):
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_monzos=(), generator_tuning=None, target_override=None,
-          custom_prescaler=None) -> Layout:
+          custom_prescaler=None, optimize_locked=False) -> Layout:
     if settings is None:
         settings = _default_settings()
     if tuning_scheme is None:
@@ -2239,12 +2239,13 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
                              OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power"))
         # the optimize button: a normal ROW_H-tall rectangle wide enough to seat the "double-click
-        # to lock" hint on one line beneath it. It single-clicks to optimize once, double-clicks to
-        # lock auto-optimize; app.py owns that behaviour + the lock visual
+        # to unlock" hint on one line beneath it. It single-clicks to optimize once, double-clicks
+        # to lock auto-optimize; app.py owns that behaviour + the lock visual. The hint names the
+        # double-click's NEXT effect, so it flips to "unlock" while the auto-optimize lock is on.
         cells.append(CellBox("optimization:button", btn_x, content_top, OPT_BTN_W, ROW_H, "optimize",
                              text="optimize"))
         cells.append(CellBox("optimization:button:hint", btn_x, sym_top, OPT_BTN_W, CAPTION_LINE,
-                             "caption", text="double-click to lock"))
+                             "caption", text=f"double-click to {'unlock' if optimize_locked else 'lock'}"))
         opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),

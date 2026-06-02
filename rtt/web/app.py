@@ -2059,7 +2059,8 @@ def index() -> None:
                                 pending_comma=editor.pending_comma, held_monzos=editor.held_monzos,
                                 generator_tuning=editor.effective_generator_tuning(),
                                 target_override=editor.target_override,
-                                custom_prescaler=editor.custom_prescaler)
+                                custom_prescaler=editor.custom_prescaler,
+                                optimize_locked=editor.optimize_locked)
         last_lay[0] = lay
         # The body scroller holds the grid shifted up by the column strip's height (freeze_y): the
         # board content is (total_h - fy) tall, its cells/lines/blocks placed at native coords minus
