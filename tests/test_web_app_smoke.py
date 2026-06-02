@@ -196,8 +196,11 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
     import re
     ys = [float(y) for _x, y in re.findall(r"(-?\d+\.\d+),(-?\d+\.\d+)", app._angle_foot(14, 7))]
     assert 0 <= min(ys) and max(ys) <= 7
-    assert 'viewBox="0 0 16.00 16.00"' in marks["["]
-    assert 'viewBox="0 0 16.00 60.00"' in marks["]2"]  # 1 row vs many: same generator
+    def _viewbox(svg):
+        m = re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', svg)
+        return float(m.group(1)), float(m.group(2))
+    assert _viewbox(marks["["]) == (16, 16)
+    assert _viewbox(marks["]2"]) == (16, 60)  # 1 row vs many: same generator, viewBox == the cell box
 
 
 def test_units_html_bolds_variables_but_not_cents_oct_or_slash():

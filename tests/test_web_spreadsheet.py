@@ -36,8 +36,13 @@ def test_freeze_boundaries_sit_at_the_title_band_edges():
     # row-toggle band. The renderer pins everything within those bands and scrolls the
     # rest under them, so these must land exactly on the band edges.
     lay = _layout()
-    assert lay.freeze_y == spreadsheet.HEADER_H + (spreadsheet.GAP - spreadsheet.TOGGLE) / 2 + spreadsheet.TOGGLE
-    assert lay.freeze_x == spreadsheet.LABEL_W + spreadsheet.GAP + spreadsheet.TOGGLE
+    # land on the ACTUAL band edges (the extent of the title/toggle cells), not a re-derived
+    # production formula that would mirror any bug in it
+    assert lay.freeze_y == max(c.y + c.h for c in lay.cells if c.kind in {"colheader", "coltoggle"})
+    assert lay.freeze_x == max(c.x + c.w for c in lay.cells if c.kind in {"rowlabel", "rowtoggle"})
+    # and every content cell clears both bands, so the bands precede the scrolling content
+    titles = {"colheader", "coltoggle", "rowlabel", "rowtoggle", "alltoggle"}
+    assert all(c.y >= lay.freeze_y and c.x >= lay.freeze_x for c in lay.cells if c.kind not in titles)
 
 
 def test_layout_reports_the_rightmost_title_overhang():
@@ -1907,9 +1912,8 @@ def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
     # the all-interval (and diminuator) checkbox CELL is sized to the rendered square so its
     # caption hugs it; that square is the SINGLE shared option-box size (OPTION_BOX_PX = 16),
     # identical to the settings-panel checkboxes and the tuning-ranges monotone/tradeoff boxes.
-    assert spreadsheet.OPTION_BOX_PX == 16
     chk = {c.id: c for c in _with(all_interval=True).cells}["control:all_interval"]
-    assert chk.h == spreadsheet.OPTION_BOX_PX
+    assert chk.h == spreadsheet.OPTION_BOX_PX  # tracks the one shared option-box constant
 
 
 def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown():
