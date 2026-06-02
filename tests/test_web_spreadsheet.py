@@ -3382,10 +3382,11 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
 
 
 def test_prescaling_matrix_row_and_col_labels():
-    # The bare prescaler matrix is a covector stack like 𝑀, labelled with its abstract symbol's
-    # rows 𝒙ᵢ (one per dimension, parallel to 𝒎ᵢ on the mapping). Its products, where 𝑋 further
-    # appears as the concrete 𝐿 (the default log-prime matrix), get COLUMN labels 𝐿𝐜ᵢ / 𝐿𝐡ᵢ /
-    # 𝐿𝐝ᵢ / 𝐿𝐭ᵢ — matching those product tiles' 𝐿-lettered big symbols.
+    # The bare prescaler matrix is a covector stack like 𝑀. Its big symbol stays the abstract 𝑋,
+    # but every LABEL takes the concrete glyph the matrix realises — 𝑋 = 𝐿 by default (the log-prime
+    # matrix) — so the rows read 𝒍ᵢ (lowercase 𝐿, one per dimension, parallel to 𝒎ᵢ on the mapping)
+    # and the products get COLUMN labels 𝐿𝐜ᵢ / 𝐿𝐡ᵢ / 𝐿𝐝ᵢ / 𝐿𝐭ᵢ — never the generic 𝒙/𝑋, which
+    # would mix with the 𝐿 in the same tile.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["symbols"] = True
@@ -3395,10 +3396,10 @@ def test_prescaling_matrix_row_and_col_labels():
     on = {c.id: c for c in spreadsheet.build(
         base, s, held_vectors=((-1, 1, 0),)
     ).cells}
-    # row labels on the bare 𝑋 matrix: d=3 rows, one 𝒙ᵢ per dimension
-    assert on["matlabel:row:prescaling:primes:0"].text == "𝒙₁"
-    assert on["matlabel:row:prescaling:primes:1"].text == "𝒙₂"
-    assert on["matlabel:row:prescaling:primes:2"].text == "𝒙₃"
+    # row labels: d=3 rows, one 𝒍ᵢ per dimension (the lowercase of the realised 𝐿)
+    assert on["matlabel:row:prescaling:primes:0"].text == "𝒍₁"
+    assert on["matlabel:row:prescaling:primes:1"].text == "𝒍₂"
+    assert on["matlabel:row:prescaling:primes:2"].text == "𝒍₃"
     # col labels on the prescaled product lists: 𝐿·basis, 𝐿·detempering, 𝐿·held, 𝐿·targets
     assert on["matlabel:col:prescaling:commas:0"].text == "𝐿𝐜₁"
     assert on["matlabel:col:prescaling:held:0"].text == "𝐿𝐡₁"

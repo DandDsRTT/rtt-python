@@ -316,7 +316,10 @@ SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symb
 # list itself, the italic form its scalar entries.
 ROW_LABEL_LETTERS = {
     ("mapping", "primes"): "𝒎",      # 𝑀 → 𝒎: each row of the mapping is a covector 𝒎ᵢ
-    ("prescaling", "primes"): "𝒙",   # 𝑋 → 𝒙: each row of the bare prescaler matrix (always 𝑋)
+    # each row of the bare prescaler matrix is a covector, labelled with the lowercase of the
+    # glyph it realises — build() swaps in 𝒍ᵢ when 𝑋 = 𝐿 (the log-prime matrix), else the generic
+    # 𝒙ᵢ (see row_labels). The static value is that generic fallback.
+    ("prescaling", "primes"): "𝒙",
 }
 ROW_LABELED_TILES = frozenset(ROW_LABEL_LETTERS)
 COL_LABEL_LETTERS = {
@@ -1089,11 +1092,15 @@ def build(state, settings=None, collapsed=None,
     # the bare tile's SYMBOL equivalence names the realised prescaler concretely; a real deviation
     # has no closed form, so none.
     prescaler_equivalence = f" = {PRESCALER_LETTER[_realized_prescaler]}" if _realized_prescaler else ""
-    # the bare matrix keeps the literal abstract 𝑋 (SYMBOLS); only the products' "L" placeholder
-    # resolves to the live glyph ("LC"/"LD"/… → 𝐿C/… or 𝑋C/…), matching their column headers.
+    # the bare matrix keeps the literal abstract 𝑋 as its big SYMBOL (SYMBOLS); only the products'
+    # "L" placeholder resolves to the live glyph ("LC"/"LD"/… → 𝐿C/… or 𝑋C/…), matching their headers.
     prescaling_symbols = {(r, c): prescaler_symbol + s[1:] for (r, c), s in SYMBOLS.items()
                           if r == "prescaling" and s.startswith("L")}
     col_labels = {**COL_LABEL_LETTERS, **_prescaler_col_labels(prescaler_symbol)}
+    # the bare matrix's per-row labels take the lowercase of the realised glyph — 𝒍ᵢ when 𝑋 = 𝐿,
+    # else the generic 𝒙ᵢ — so they don't mix with the 𝐿 the products/headers carry.
+    row_labels = {**ROW_LABEL_LETTERS,
+                  ("prescaling", "primes"): "𝒍" if prescaler_is_log_prime else "𝒙"}
     # the bare tile's NAME gains its equivalence when 𝑋 = 𝐿 — "complexity prescaler = log-prime
     # matrix" — shown with the equivalences layer (like the symbol line's own "𝑋 = 𝐿"). Threaded
     # through the caption sizing + emission below so the tile reserves space for the longer name.
@@ -2506,7 +2513,7 @@ def build(state, settings=None, collapsed=None,
             ("prescaling", "primes"): lambda i: row_y["prescaling"] + i * ROW_H,
         }
         row_count = {("mapping", "primes"): r, ("prescaling", "primes"): d}
-        for (rkey, ckey), glyph in ROW_LABEL_LETTERS.items():
+        for (rkey, ckey), glyph in row_labels.items():
             if not tile_open(rkey, ckey):
                 continue
             top = row_top[(rkey, ckey)]
