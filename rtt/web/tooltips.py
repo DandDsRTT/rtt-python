@@ -1,0 +1,146 @@
+"""Hover text (tooltips) for the Show settings and the interactive grid controls.
+
+One place for every control's explanatory hover text, so the wording can be revised
+without touching the layout (:mod:`rtt.web.spreadsheet`) or the renderer
+(:mod:`rtt.web.app`). :data:`SHOW_HELP` keys by Show-toggle key (see
+:mod:`rtt.web.settings`); :data:`CHROME_HELP` covers the app-chrome buttons; and
+:func:`control_help` maps a grid cell's ``(kind, id)`` to its hover text, returning
+``None`` for the read-only value/label cells that aren't controls.
+"""
+
+from __future__ import annotations
+
+# Hover text per Show toggle (settings.SHOW_GROUPS key). Every toggle is covered,
+# greyed-out ones included — the text explains what the toggle would reveal.
+SHOW_HELP: dict[str, str] = {
+    # general
+    "names": "Show each tile's name caption (e.g. “mapping”, “generators”).",
+    "mnemonics": "Underline the letter of each name that its symbol uses — a memory aid. Refines “names”.",
+    "symbols": "Show each value's math symbol (𝑀, 𝒈, 𝒕, …).",
+    "equivalences": "Show each symbol's defining equation (e.g. 𝒕 = 𝒈𝑀) instead of the bare glyph. Refines “symbols”.",
+    "gridded_values": "Lay the values out in the grid as matrix and vector cells.",
+    "plain_text_values": "Show each value as one plain-text string (e.g. ⟨1 0 -4]) below its tile.",
+    "charts": "Draw a bar chart over each charted row's values.",
+    "preselects": "Show the preset choosers — temperament, tuning scheme, and target set.",
+    "quantities": "Show the numeric quantities inside the value cells.",
+    "units": "Show each value's units (e.g. ¢, g/p) beneath its cells.",
+    "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",
+    # specific boxes & controls
+    "counts": "Show the dimension counts — dimensionality 𝑑, rank 𝑟, nullity 𝑛.",
+    "audio": "Show audio controls — play each pitch and pick its waveform and play mode.",
+    "domain_quantities": "Show the numeric quantities in the domain basis (the prime column).",
+    "domain_units": "Show the units on the domain-basis row and column labels.",
+    "temperament_boxes": "Show the temperament boxes — the mapping 𝑀 and the comma basis C.",
+    "temperament_colorization": "Tint each cell by what derives it — the mapping 𝑀 or the comma basis C. Refines “temperament boxes”.",
+    "form_controls": "Show the form controls — rewrite the mapping or comma basis into a chosen form.",
+    "form_colorization": "Tint the cells touched by the form 𝐹. Refines “form controls”.",
+    "tuning_boxes": "Show the tuning boxes — the generator tuning map, prescaler, damage, and more.",
+    "optimization": "Show the optimization box — the objective, the optimize button, and the power 𝑝.",
+    "tuning_ranges": "Chart each generator's tuning range as an I-beam under the generator tuning map.",
+    "weighting": "Show the weighting boxes — the prescaler, the complexity 𝒄, and the weight 𝒘.",
+    "all_interval": "Show the all-interval control — optimize over every interval rather than a finite target list.",
+    "alt_complexity": "Show the alternate-complexity choosers — prescaler, norm power, and weight slope.",
+    "projection": "Show the projection box — the rational projection 𝑃 = 𝐺𝑀 holding the just primes.",
+    "tuning_colorization": "Tint each cell by what derives it — the generator tuning map 𝒈. Refines “tuning boxes”.",
+    "interest": "Show the “other intervals of interest” column.",
+    "generator_detempering": "Show the generator-detempering D column — the generator map written as vectors.",
+    "nonstandard_domain": "Use a nonstandard domain basis instead of the standard primes.",
+    "identity_objects": "Show the identity-object tiles — trivial self-maps built from the other boxes.",
+}
+
+# Hover text for the always-present app chrome (the rail + the title tile).
+CHROME_HELP: dict[str, str] = {
+    "settings": "Show or hide the Show settings panel.",
+    "select_all": "Turn every available Show toggle on, or all off.",
+    "undo": "Undo the last change.",
+    "redo": "Redo the change you undid.",
+    "reset": "Reset everything — settings, layout, and values — to the defaults.",
+}
+
+
+# Hover text per interactive cell kind whose meaning is fixed by the kind alone.
+# (Kinds backing several controls are disambiguated by id in _ID_HELP below.)
+_KIND_HELP: dict[str, str] = {
+    # editable matrix / vector entries
+    "mapping": "Mapping entry — how many of this generator map to this prime. Type to edit the temperament.",
+    "commacell": "Comma-vector entry — this prime's exponent in a comma the temperament tempers out. Type to edit.",
+    "interestcell": "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type to edit.",
+    "heldcell": "Held-interval entry — this prime's exponent in an interval held unchanged (pure) by the tuning. Type to edit.",
+    "targetcell": "Target-interval entry — this prime's exponent in a target the tuning optimizes over. Type to override the chosen target set.",
+    "prescalercell": "Prescaler entry — the weight on this prime applied before optimizing. Type to override the scheme's value.",
+    "gentuningcell": "Generator tuning — this generator's tuned size in cents. Type to override the optimum.",
+    # other grid controls
+    "rangemode": "Choose how the generator's tuning range is measured — monotone or tradeoff.",
+    "optimize": "Optimize the tuning to minimize damage now. Double-click to lock auto-optimize on.",
+    # add / remove buttons
+    "plus": "Add the next prime to the domain.",
+    "minus": "Remove the highest prime from the domain.",
+    "basis_minus": "Remove the highest prime from the domain.",
+    "comma_plus": "Add a comma to the basis.",
+    "comma_minus": "Remove the last comma from the basis.",
+    "interest_plus": "Add an interval of interest.",
+    "interest_minus": "Remove this interval of interest.",
+    "held_plus": "Add a held interval.",
+    "held_minus": "Remove this held interval.",
+    # fold / unfold toggles
+    "rowtoggle": "Collapse or expand this row.",
+    "coltoggle": "Collapse or expand this column.",
+    "tiletoggle": "Collapse or expand this tile.",
+    "alltoggle": "Collapse or expand the entire grid.",
+    # audio
+    "speaker": "Play this pitch.",
+    "audio_wave": "Cycle this tile's waveform — sine, square, triangle, sawtooth.",
+    "audio_mode": "Cycle this tile's play mode — note, arpeggio, chord, rolled chord.",
+    "audio_hold": "Toggle sustain — hold or loop this tile's notes.",
+    "audio_root": "Toggle the 1/1 root drone sounding underneath this tile.",
+}
+
+
+# Controls whose kind backs several roles, told apart by the cell's exact id.
+_ID_HELP: dict[str, str] = {
+    # powerinput: the optimization power vs the complexity norm power and its dual
+    "optimization:power": "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean.",
+    "control:q": "Interval-complexity norm power 𝑞.",
+    "control:dual": "Dual norm power — the dual exponent of 𝑞, used to minimax over every interval.",
+    # control_select: the three alternate-complexity choosers
+    "control:prescaler": "Choose a predefined prescaler — the per-prime weighting applied before optimizing.",
+    "control:complexity": "Choose the interval-complexity measure used to weight damage.",
+    "control:slope": "Choose the damage weight slope — how a target's weight scales with its complexity.",
+    # control_check
+    "control:diminuator": "Replace the diminuator — the smaller of each ratio's numerator and denominator — in the interval-complexity measure.",
+    "control:all_interval": "Optimize over every interval at once (an all-interval scheme) instead of a finite target list.",
+    # formchooser
+    "formchooser:mapping": "Rewrite the mapping into a canonical form (an undoable edit).",
+    "formchooser:comma_basis": "Rewrite the comma basis into a canonical form (an undoable edit).",
+}
+
+# preselect choosers, keyed by name (the id is ``preselect:<name>`` plus, for a copy
+# of the chooser in a second tile, a trailing ``:<column>`` — so the name is segment 1).
+_PRESELECT_HELP: dict[str, str] = {
+    "temperament": "Load a named temperament preset — sets the mapping and comma basis.",
+    "tuning": "Choose a named tuning scheme (e.g. minimax-S).",
+    "target": "Choose the target-interval set and its prime limit.",
+}
+
+# the editable plain-text duals (kind ``ptextedit``), each naming its own value. These
+# ids are exactly spreadsheet.EDITABLE_PTEXT, so every ptextedit cell is covered here.
+_PTEXT_HELP: dict[str, str] = {
+    "ptext:mapping:primes": "Type the mapping as a plain-text string (e.g. ⟨⟨1 0 -4]]) to drive the grid.",
+    "ptext:vectors:commas": "Type the comma basis as a plain-text string to drive the grid.",
+    "ptext:tuning:gens": "Type the generator tuning map as a plain-text string to drive the grid.",
+    "ptext:vectors:targets": "Type the target-interval list as a plain-text string to drive the grid.",
+    "ptext:prescaling:primes": "Type the prescaler as a plain-text string to drive the grid.",
+}
+
+
+def control_help(kind: str, cid: str) -> str | None:
+    """Hover text for an interactive grid control, or ``None`` for a read-only cell.
+
+    Keyed on the cell's ``kind`` (see :mod:`rtt.web.spreadsheet`), with a few kinds
+    disambiguated by their ``id`` where one kind backs several controls (e.g. a
+    ``powerinput`` is the optimization power 𝑝, the norm power 𝑞, or its dual)."""
+    if kind == "preselect":
+        return _PRESELECT_HELP.get(cid.split(":")[1])
+    if kind == "ptextedit":
+        return _PTEXT_HELP.get(cid)
+    return _ID_HELP.get(cid) or _KIND_HELP.get(kind)

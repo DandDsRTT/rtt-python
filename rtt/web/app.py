@@ -23,6 +23,7 @@ from rtt.web import presets
 from rtt.web import service
 from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
+from rtt.web import tooltips
 from rtt.web.editor import Editor
 
 _PAD = 12  # px margin of #c0c0c0 around the coordinate space
@@ -2157,6 +2158,11 @@ def index() -> None:
                 ui.html(glyph).classes("rtt-audio-ctrl") \
                     .props(f'data-audio="{tile}" data-actrl="{ctrl}"') \
                     .on("click", js_handler=f"() => window.rttAudio.{fn}('{tile}')")
+        # explanatory hover text for the interactive controls (read-only value cells get none).
+        # The mark/data-eid ride the wrap, so the tooltip hangs off it too — one shared anchor.
+        help_text = tooltips.control_help(cb.kind, cb.id)
+        if help_text:
+            wrap.tooltip(help_text)
         return wrap
 
     def render():
@@ -2419,7 +2425,8 @@ def index() -> None:
             # the left rail: the hamburger on top, the app title rotated a quarter-turn below it.
             # The rail is left of the pane, so opening the pane never moves the title.
             with ui.element("div").classes("rtt-rail"):
-                ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense").classes("rtt-hamburger")
+                ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense") \
+                    .classes("rtt-hamburger").tooltip(tooltips.CHROME_HELP["settings"])
                 ui.label("D&D's RTT app").classes("rtt-sidetitle")
             drawer = ui.element("div").classes("rtt-drawer")
             with drawer, ui.element("div").classes("rtt-drawer-inner"):
@@ -2436,7 +2443,8 @@ def index() -> None:
                             "select all / none",
                             value=all(editor.settings[k] for k in show_settings.IMPLEMENTED),
                             on_change=lambda e: on_select_all(e.value)) \
-                            .props("dense size=xs color=grey-8").classes("rtt-show-item")
+                            .props("dense size=xs color=grey-8").classes("rtt-show-item") \
+                            .tooltip(tooltips.CHROME_HELP["select_all"])
                     with ui.element("div").classes("rtt-show-head"):
                         ui.label("show").classes("rtt-show-title")
                         ui.label("example").classes("rtt-show-examplehdr")
@@ -2453,7 +2461,8 @@ def index() -> None:
                                 with row:
                                     box = ui.checkbox(label, value=editor.settings[key],
                                                       on_change=lambda e, k=key: on_show_toggle(k, e.value)) \
-                                        .props("dense size=xs color=grey-8").classes("rtt-show-item")
+                                        .props("dense size=xs color=grey-8").classes("rtt-show-item") \
+                                        .tooltip(tooltips.SHOW_HELP[key])
                                     example = ui.html(_example_html(key)).classes("rtt-ex-cell")
                                     if key not in show_settings.IMPLEMENTED:
                                         box.props("disable")  # not built yet -> greyed and inert
@@ -2483,13 +2492,13 @@ def index() -> None:
                 with ui.element("div").classes("rtt-titletile").mark("titletile"):
                     with ui.element("div").classes("rtt-tile-btns"):
                         refs["undo"] = ui.button(icon="undo", on_click=lambda: act(editor.undo), color=None) \
-                            .props("flat dense").classes("rtt-iconbtn").mark("undo")
+                            .props("flat dense").classes("rtt-iconbtn").mark("undo").tooltip(tooltips.CHROME_HELP["undo"])
                         refs["redo"] = ui.button(icon="redo", on_click=lambda: act(editor.redo), color=None) \
-                            .props("flat dense").classes("rtt-iconbtn").mark("redo")
+                            .props("flat dense").classes("rtt-iconbtn").mark("redo").tooltip(tooltips.CHROME_HELP["redo"])
                         # reset everything (settings, expand/collapse, values) to the
                         # as-shipped defaults — itself an undoable action
                         refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: act(editor.reset), color=None) \
-                            .props("flat dense").classes("rtt-iconbtn").mark("reset")
+                            .props("flat dense").classes("rtt-iconbtn").mark("reset").tooltip(tooltips.CHROME_HELP["reset"])
             gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
             with gridbody:
                 board = ui.element("div").classes("rtt-gridcontent").mark("board")

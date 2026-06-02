@@ -14,6 +14,7 @@ Python-side parallel of the data-eid the JS reconciler uses).
 
 import nicegui.ui as ui
 import pytest
+from nicegui.elements.tooltip import Tooltip
 from nicegui.testing import User
 
 from rtt.web.editor import Editor
@@ -101,6 +102,16 @@ async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> No
     await user.open("/")
     user.find(kind=ui.checkbox, content="colorization").click()
     await user.should_see(marker="cell:mapping:0:0")
+
+
+async def test_settings_and_controls_carry_hover_tooltips(user: User) -> None:
+    # the Show toggles and the interactive grid controls all get explanatory hover text
+    # (rtt.web.tooltips). A tooltip renders hidden until hover, so the User sim's visible-only
+    # search can't see one — scan the client's element registry for the attached Tooltips.
+    await user.open("/")
+    tips = [el.text for el in user.client.elements.values() if isinstance(el, Tooltip)]
+    assert any("name caption" in t for t in tips)       # the "names" Show toggle's help
+    assert any("map to this prime" in t for t in tips)  # the always-present mapping cells' help
 
 
 # --- tier 3: the edit -> render -> undo pipeline (input -> handler -> render) ---
