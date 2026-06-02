@@ -145,23 +145,28 @@ def test_primes_sit_above_the_mapping_columns():
     assert cells["prime:0"].y < cells["cell:mapping:0:0"].y  # quantities row above mapping
 
 
-def test_minus_is_revealed_above_the_removable_prime_clear_of_its_input():
-    # only the highest prime can be dropped (service.shrink_domain trims the last),
-    # so its hover-minus rides that column — above the header, never over the
-    # editable mapping cell below it (which would block editing the column).
-    cells = {c.id: c for c in _layout().cells}
-    minus, last_prime = cells["minus"], cells["prime:2"]
-    input_below = cells["cell:mapping:0:2"]
-    assert minus.x == last_prime.x  # shares the removable column
-    assert minus.y < last_prime.y  # revealed above the header, not beside the block
-    assert minus.y + minus.h <= input_below.y  # and clear of the editable input
+def test_minus_is_revealed_at_the_last_primes_branch_point_clear_of_its_input():
+    # only the highest prime can be dropped (service.shrink_domain trims the last), so its
+    # hover-minus rides that prime's branch point — the top-bus split, up at the fan-out,
+    # centred on the sub-axis — never over the editable mapping cell below (which would
+    # block editing). Its zone drops from the branch point over the header as the hover target.
+    lay = _layout()
+    cells = {c.id: c for c in lay.cells}
+    by_id = {ln.id: ln for ln in lay.lines}
+    minus = cells["minus"]
+    assert abs((minus.x + minus.w / 2) - by_id["v:prime:2"].pos) < 0.51  # centred on the last sub-axis
+    assert minus.y == by_id["bus:primes:top"].pos  # the zone drops from the top bus (branch point)
+    assert minus.y + minus.h <= cells["cell:mapping:0:2"].y  # ...and clear of the editable input below
 
 
 def test_minus_tracks_the_new_last_prime_after_a_shrink():
     shrunk = service.shrink_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # d=2
-    cells = {c.id: c for c in spreadsheet.build(shrunk).cells}
+    lay = spreadsheet.build(shrunk)
+    cells = {c.id: c for c in lay.cells}
+    by_id = {ln.id: ln for ln in lay.lines}
     assert "prime:2" not in cells  # only primes 0 and 1 remain
-    assert cells["minus"].x == cells["prime:1"].x  # the minus follows to the new last column
+    # the minus follows to the new last column's branch point
+    assert abs((cells["minus"].x + cells["minus"].w / 2) - by_id["v:prime:1"].pos) < 0.51
 
 
 def test_a_single_prime_domain_has_no_minus_but_keeps_plus():
@@ -2237,8 +2242,10 @@ def test_comma_minus_rides_the_last_comma_only_when_more_than_one():
     two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real (independent) commas
     cells = {c.id: c for c in spreadsheet.build(two).cells}
     assert "comma_minus" in cells  # ...but with two, the last is removable
-    assert cells["comma_minus"].x == cells["comma:1"].x  # rides the last comma column
-    assert cells["comma_minus"].y < cells["comma:1"].y  # revealed above its header
+    by_id = {ln.id: ln for ln in spreadsheet.build(two).lines}
+    cm = cells["comma_minus"]  # centred on the last comma's branch point, dropping from the top bus
+    assert abs((cm.x + cm.w / 2) - by_id["v:comma:1"].pos) < 0.51
+    assert cm.y == by_id["bus:commas:top"].pos
 
 
 def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():
@@ -2253,8 +2260,9 @@ def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():
     assert "cell:mapping:1:0" in cells and "cell:mapping:2:0" not in cells
     # the draft has no size cells (undefined until valid)
     assert "tuning:comma:1" not in cells
-    # the − rides the draft column (to cancel it)
-    assert cells["comma_minus"].x == cells["comma:pending"].x
+    # the − rides the draft column's branch point (to cancel it)
+    by_id = {ln.id: ln for ln in spreadsheet.build(base, pending_comma=[None, None, None]).lines}
+    assert abs((cells["comma_minus"].x + cells["comma_minus"].w / 2) - by_id["v:comma:1"].pos) < 0.51
 
 
 def test_a_partly_typed_pending_comma_shows_its_entered_components():

@@ -31,7 +31,6 @@ HEADER_H = 36  # column-header height — two text lines tall, so a multi-word t
 # stacks centered onto a second line (via explicit "\n" breaks in col_header, e.g.
 # "domain" / "primes"); single-word titles centre as one line
 BTN = 15  # px side of a domain +/− control — half the COL_W square mapping/prime cell
-MINUS_REVEAL_H = 18  # height the removable prime's hover-minus rises above its header
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (off the edges and content)
@@ -1711,6 +1710,37 @@ def build(state, settings=None, collapsed=None,
     def vec_top(p):  # the y of vector component p in the d-tall interval-vectors row
         return row_y["vectors"] + p * ROW_H
 
+    # The value groups share an element name (for cell ids), a left-edge accessor, a fanned
+    # element count, and the operand of their just log₂ (a bare prime, or a comma/target
+    # ratio). Defined here — ahead of the cells, the EBK pass and the column_axis fan — so the
+    # +/− controls, the brackets and the gridlines all read ONE geometry. primes carry a map,
+    # commas and targets interval lists.
+    group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
+                  "interest": "interest", "held": "held", "detempering": "detempering"}
+    group_left = {"gens": gen_left, "primes": prime_left, "commas": comma_left, "targets": target_left,
+                  "interest": interest_left, "held": held_left, "detempering": detempering_left}
+    # how many side-by-side cells each group column carries: its element count, so the
+    # gridline pass can fan every group column into that many vertical sub-axes (commas
+    # count the shown columns, draft included). Keyed identically to group_left/group_elem
+    # so a column with cells can never be left out of the fan (the generators-column bug).
+    group_n = {"gens": r, "primes": d, "commas": nc_shown, "targets": k,
+               "interest": mi, "held": nh, "detempering": r}
+    group_ratio = {  # the just interval ratio each value group is taken over
+        "primes": lambda i: _ratio_str(elements[i]),  # a prime "p/1", or a nonprime element "n/d"
+        "commas": lambda i: comma_ratios[i],
+        "targets": lambda i: targets[i],
+        "interest": lambda i: interest_ratios[i],
+        "held": lambda i: held_ratios[i],
+        "detempering": lambda i: gens[i],  # the detempering interval as a ratio (service.generators = D)
+    }
+
+    # The element +/− controls ride each fanning column's TOP bus (the fan-out, just after the
+    # toggle), not the quantities row: the − sits on a branch point (a per-element split). The
+    # sub-axis centre IS that branch point's x; column_axis fans the same centres, so the controls
+    # and the gridlines stay in lockstep.
+    def sub_axis_x(ckey, i):  # centre of column ckey's i-th per-element sub-axis (a branch point)
+        return group_left[ckey](i) + COL_W / 2
+
     cells: list[CellBox] = []
     lines: list[Line] = []
     blocks: list[Block] = []
@@ -1817,14 +1847,22 @@ def build(state, settings=None, collapsed=None,
     # "quantities" toggle, which drops it from row_y via its present flag.
     if "quantities" in row_y:
         qy = row_y["quantities"]
+
+        def branch_minus(cid, ckey, i, kind, **kw):
+            # a hover − centred on column ckey's i-th branch point (its top-bus split): the
+            # zone drops from the branch point (where the revealed button parks) down over the
+            # element's header as the hover target, COL_W wide on the sub-axis — clear of the
+            # editable cells below the header (which a covering zone would block).
+            cells.append(CellBox(cid, sub_axis_x(ckey, i) - COL_W / 2, fanout_y, COL_W,
+                                 (qy + ROW_H) - fanout_y, kind, **kw))
+
         if tile_open("quantities", "primes"):
             for p in range(d):
                 cells.append(CellBox(f"prime:{p}", prime_left(p), qy, COL_W, ROW_H, "prime", text=str(elements[p]), prime=p))
             # Only the highest prime is removable (shrink_domain trims the last), so its
-            # − rides that column as a hover affordance: a zone spanning the header that
-            # reveals the button just above it, clear of the editable mapping cell below.
+            # − rides that prime's branch point (the last top-bus split).
             if d > 1:
-                cells.append(CellBox("minus", prime_left(d - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "minus"))
+                branch_minus("minus", "primes", d - 1, "minus")
             cells.append(CellBox("plus", ctrl_x["primes"], qy + (ROW_H - BTN) // 2, BTN, BTN, "plus"))
         if tile_open("quantities", "commas"):
             for c in range(nc):
@@ -1832,10 +1870,10 @@ def build(state, settings=None, collapsed=None,
             if pending is not None:  # the draft has no ratio yet — a "?" in a distinct id so
                 # it is removed (not restructured from "?" label to fraction) when it commits
                 cells.append(CellBox("comma:pending", comma_left(nc), qy, COL_W, ROW_H, "commaratio", text="?", comma=nc, pending=True))
-            # commas mirror the domain controls: + starts a (pending) comma; the − rides
-            # the last column — cancelling the draft, or dropping a real comma when >1
+            # commas mirror the domain controls: + starts a (pending) comma; the − rides the
+            # last column's branch point — cancelling the draft, or dropping a real comma when >1
             if pending is not None or nc > 1:
-                cells.append(CellBox("comma_minus", comma_left(nc_shown - 1), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "comma_minus"))
+                branch_minus("comma_minus", "commas", nc_shown - 1, "comma_minus")
             cells.append(CellBox("comma_plus", ctrl_x["commas"], qy + (ROW_H - BTN) // 2, BTN, BTN, "comma_plus"))
         if tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
             for i in range(r):                       # derived from M like the comma ratios — no ± control)
@@ -1847,8 +1885,8 @@ def build(state, settings=None, collapsed=None,
             for i in range(nh):
                 # the derived ratio (read-only, from the editable vector) heads each column
                 cells.append(CellBox(f"held:{i}", held_left(i), qy, COL_W, ROW_H, "commaratio", text=held_ratios[i], comma=i))
-                # each held interval carries its own − (a hover affordance over its header)
-                cells.append(CellBox(f"held_minus:{i}", held_left(i), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "held_minus", comma=i))
+                # each held interval carries its own − on its branch point (any one is removable)
+                branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
         # the held + rides col_open (like interest's): an empty-but-open held column shows its
         # + so the first held interval can be added, even with no tile yet
         if col_open("held") and row_open("quantities"):
@@ -1857,9 +1895,9 @@ def build(state, settings=None, collapsed=None,
             for i in range(mi):
                 # the derived ratio (read-only, from the vector) heads each column, like a comma's
                 cells.append(CellBox(f"interest:{i}", interest_left(i), qy, COL_W, ROW_H, "commaratio", text=interest_ratios[i], comma=i))
-                # every interval carries its own − (a hover affordance over its header):
-                # any one is removable, unlike the domain/comma last-only −
-                cells.append(CellBox(f"interest_minus:{i}", interest_left(i), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "interest_minus", comma=i))
+                # every interval carries its own − on its branch point: any one is removable,
+                # unlike the domain/comma last-only −
+                branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
         # the + rides col_open, not tile_open: an empty-but-open interest column declares
         # no tile yet, but must still show its + so the first interval can be added (a blank
         # 1/1 — a zero vector — to edit in the vectors row). With intervals present ctrl_x
@@ -1956,28 +1994,6 @@ def build(state, settings=None, collapsed=None,
                     # inset within the COL_W slot (centred) so each ket is its own box with a
                     # gap to its neighbours — the interest column is a collection, not a matrix
                     cells.append(CellBox(f"cell:interest:{p}:{i}", interest_left(i) + KET_INSET, vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(interest[i][p]), prime=p, comma=i, unit=cell_unit("vectors", "interest", prime=p)))
-
-    # the three value groups share an element name (for cell ids), a left-edge
-    # accessor, and the operand of their just log₂ (a bare prime, or a comma/target
-    # ratio); primes carry a map, commas and targets carry interval lists
-    group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
-                  "interest": "interest", "held": "held", "detempering": "detempering"}
-    group_left = {"gens": gen_left, "primes": prime_left, "commas": comma_left, "targets": target_left,
-                  "interest": interest_left, "held": held_left, "detempering": detempering_left}
-    # how many side-by-side cells each group column carries: its element count, so the
-    # gridline pass can fan every group column into that many vertical sub-axes (commas
-    # count the shown columns, draft included). Keyed identically to group_left/group_elem
-    # so a column with cells can never be left out of the fan (the generators-column bug).
-    group_n = {"gens": r, "primes": d, "commas": nc_shown, "targets": k,
-               "interest": mi, "held": nh, "detempering": r}
-    group_ratio = {  # the just interval ratio each value group is taken over
-        "primes": lambda i: _ratio_str(elements[i]),  # a prime "p/1", or a nonprime element "n/d"
-        "commas": lambda i: comma_ratios[i],
-        "targets": lambda i: targets[i],
-        "interest": lambda i: interest_ratios[i],
-        "held": lambda i: held_ratios[i],
-        "detempering": lambda i: gens[i],  # the detempering interval as a ratio (service.generators = D)
-    }
 
     def closed_form_operand(key, group, i):
         """The operand ``R`` of a cell's exact closed form ``1200 · log₂R``, or None

@@ -775,12 +775,13 @@ _CSS = f"""
 .rtt-audio-glyph {{ width:12px; height:12px; display:block; }}
 .material-icons.rtt-audio-glyph {{ font-size:12px; width:auto; height:auto; }}
 .rtt-audio-rootglyph {{ font-size:8px; font-family:'Cambria',Georgia,serif; line-height:1; }}
-/* the domain − is a hover affordance: an invisible zone over the removable prime's
-   header reveals the button parked at its top (above the header, clear of inputs). The
-   zone sits above the prime cells (z-index) so a column added via + can't paint over it
-   and shrink the hover target down to just the button itself. */
+/* the domain − is a hover affordance: an invisible zone dropping from the removable
+   element's branch point (the column's top-bus split) down over its header reveals the
+   button centred ON that branch point — up at the fan, clear of the editable cells below.
+   The zone sits above the cells (z-index) so a column added via + can't paint over it and
+   shrink the hover target down to just the button itself. */
 .rtt-minus-zone {{ background:transparent; z-index:4; }}
-.rtt-minus-btn {{ position:absolute !important; top:0; left:50%; transform:translateX(-50%);
+.rtt-minus-btn {{ position:absolute !important; top:0; left:50%; transform:translate(-50%,-50%);
            opacity:0; pointer-events:none; transition:opacity {_T}; }}
 .rtt-minus-zone:hover .rtt-minus-btn {{ opacity:1; pointer-events:auto; }}
 /* the vertical basis's domain −: reveals to the RIGHT of the highest prime (the
