@@ -1025,16 +1025,19 @@ def test_collapsing_hides_the_plain_text_band_with_the_tile():
 
 
 def test_editable_plain_text_tiles_render_as_inputs():
-    cells = {c.id: c for c in _with(plain_text_values=True).cells}
+    # weighting opens the prescaling row so the bare prescaler 𝐿 tile's ptext is present too
+    cells = {c.id: c for c in _with(plain_text_values=True, weighting=True).cells}
     # the editable tiles render as inputs: the mapping + comma-basis duals, the generator
-    # tuning map (typing a cents tuning freezes it), and the target interval list (typing a
-    # vector list overrides the target set)
+    # tuning map (typing a cents tuning freezes it), the target interval list (typing a
+    # vector list overrides the target set), and the bare prescaler 𝐿 (typing a d×d
+    # diagonal matrix overrides the complexity-prescaler diagonal)
     for cid in ("ptext:mapping:primes", "ptext:vectors:commas", "ptext:tuning:gens",
-                "ptext:vectors:targets"):
+                "ptext:vectors:targets", "ptext:prescaling:primes"):
         assert cells[cid].kind == "ptextedit"
     # every computed value stays read-only display text, not an editable box
     for cid in ("ptext:mapping:targets", "ptext:mapping:commas", "ptext:tuning:primes",
-                "ptext:quantities:primes", "ptext:damage:targets"):
+                "ptext:quantities:primes", "ptext:damage:targets",
+                "ptext:prescaling:commas"):  # 𝐿C is a computed product, not editable
         assert cells[cid].kind == "ptext"
 
 

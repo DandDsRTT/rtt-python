@@ -890,6 +890,33 @@ def parse_mapping(text: str) -> Matrix | None:
     return _int_matrix_or_none(t.matrix)
 
 
+def parse_prescaler_diagonal(text: str, d: int) -> tuple[float, ...] | None:
+    """Read a bare prescaler 𝐿's plain text back to the diagonal it carries — the inverse
+    of :func:`_prescale_vector_list` for the ``("prescaling", "primes")`` tile, the d×d
+    covector matrix ``[⟨1 0 0] ⟨0 1.585 0] ⟨0 0 2.322]⟩``. The display shows the full
+    matrix even though 𝐿 IS diagonal (off-diagonal cells pinned 0), so the parser does
+    the inverse: parse the matrix via :func:`parse_temperament_data`, verify it's covariant
+    and d×d, verify every off-diagonal entry is 0 (else 𝐿 wouldn't be diagonal — reject as
+    malformed), and return the diagonal as a d-tuple of floats. None whenever the input
+    can't be that shape, so the caller can flag the typed text without mangling the override.
+    The reader behind a typed custom-prescaler EBK string (the bare prescaler tile's ptext)."""
+    try:
+        t = parse_temperament_data(text)
+    except Exception:
+        return None
+    if t.variance is not Variance.ROW or len(t.matrix) != d:
+        return None
+    for i, row in enumerate(t.matrix):
+        if len(row) != d:
+            return None
+        for j, val in enumerate(row):
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                return None
+            if i != j and val != 0:
+                return None  # 𝐿 is diagonal; an off-diagonal nonzero is malformed input
+    return tuple(float(t.matrix[i][i]) for i in range(d))
+
+
 def parse_mapping_state(text: str) -> TemperamentState | None:
     """Parse an EBK *map* string into a full state, honouring an optional domain-basis
     prefix (e.g. ``"2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"`` -> a nonstandard temperament).

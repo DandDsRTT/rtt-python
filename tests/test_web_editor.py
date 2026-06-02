@@ -107,6 +107,39 @@ def test_picking_a_predefined_complexity_clears_the_custom_override():
     assert service.prescaler_of(editor.tuning_scheme) == "prime"
 
 
+def test_set_custom_prescaler_text_holds_a_typed_diagonal():
+    # the bare prescaler 𝐿 tile's editable plain text (the matrix-form EBK) parses to a
+    # d-tuple diagonal, replaces the override wholesale (the d-1 untouched cells take the
+    # typed values, NOT a re-seed from the scheme), and is undoable like the other duals.
+    editor = Editor()
+    ok = editor.set_custom_prescaler_text("[⟨1 0 0] ⟨0 4 0] ⟨0 0 2.322]⟩")
+    assert ok is True
+    assert editor.custom_prescaler == (1.0, 4.0, 2.322)
+    # undoable like the other typed-text setters
+    editor.undo()
+    assert editor.custom_prescaler is None
+    editor.redo()
+    assert editor.custom_prescaler == (1.0, 4.0, 2.322)
+
+
+def test_set_custom_prescaler_text_rejects_unparseable_or_malformed_input():
+    # an unparseable / wrong-shape / non-diagonal string leaves the override (and the
+    # undo stack) untouched, so the caller can redden the input box rather than mangle 𝐿.
+    editor = Editor()
+    editor.set_custom_prescaler_entry(1, 7.5)  # establish a non-None starting state
+    before = editor.custom_prescaler
+    undo_steps_before = editor.can_undo
+    assert editor.set_custom_prescaler_text("garbage") is False
+    assert editor.custom_prescaler == before  # unchanged after the rejected edit
+    # an off-diagonal nonzero is malformed (𝐿 is diagonal), so it too is rejected
+    assert editor.set_custom_prescaler_text("[⟨1 0.5 0] ⟨0 1 0] ⟨0 0 1]⟩") is False
+    assert editor.custom_prescaler == before
+    # the wrong size (a 2×2 matrix when d == 3) is rejected
+    assert editor.set_custom_prescaler_text("[⟨1 0] ⟨0 2]⟩") is False
+    assert editor.custom_prescaler == before
+    assert editor.can_undo == undo_steps_before  # no redundant undo step on a rejection
+
+
 def test_custom_prescaler_edits_are_undoable():
     editor = Editor()
     editor.set_custom_prescaler_entry(1, 7.5)

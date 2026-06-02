@@ -371,6 +371,21 @@ class Editor:
         diag[i] = float(value)
         self.custom_prescaler = tuple(diag)
 
+    def set_custom_prescaler_text(self, text: str) -> bool:
+        """Freeze a typed manual prescaler diagonal — the bare prescaler 𝐿 tile's editable
+        plain-text dual. Parses the d×d covariant matrix the tile renders (with off-diagonal
+        zeros) and stores its diagonal as the override, replacing any prior cell-by-cell
+        edits in one step. False (state untouched) when the text isn't a valid d×d matrix
+        with all off-diagonal entries zero, so the caller can flag the input rather than
+        mangling 𝐿. Distinct from :meth:`set_custom_prescaler_entry` (per-cell): this writes
+        the WHOLE diagonal at once, the way a typed dual replaces the whole structure."""
+        diag = service.parse_prescaler_diagonal(text, self.state.d)
+        if diag is None:
+            return False
+        self._snapshot()
+        self.custom_prescaler = diag
+        return True
+
     def clear_custom_prescaler(self) -> None:
         """Drop the custom override — every weighting calculation reverts to the live
         scheme's computed diagonal. The Show-panel reset path uses :meth:`reset` (which

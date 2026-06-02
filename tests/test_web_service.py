@@ -809,6 +809,36 @@ def test_parse_cents_map_reads_a_genmap_or_tuning_string():
     assert service.parse_cents_map("") is None
 
 
+def test_parse_prescaler_diagonal_reads_the_matrix_form_and_extracts_the_diagonal():
+    # the bare prescaler 𝐿's plain text shows the FULL d×d matrix ([⟨…] ⟨…] ⟨…]⟩) even
+    # though 𝐿 is diagonal — the off-diagonal cells are pinned 0. The parser inverts that
+    # display: it reads the matrix, verifies the off-diagonal is all zero (else 𝐿 wouldn't
+    # be diagonal — reject as malformed), and returns the diagonal as a d-tuple of floats.
+    assert service.parse_prescaler_diagonal(
+        "[⟨1 0 0] ⟨0 1.585 0] ⟨0 0 2.322]⟩", 3) == (1.0, 1.585, 2.322)
+    # round-trips the live plain text the bare prescaler tile renders
+    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
+    assert service.parse_prescaler_diagonal(pt[("prescaling", "primes")], 3) == (1.0, 1.585, 2.322)
+    # a hand-typed override: change the prime-3 slot to 4 (the diagonal becomes 1, 4, 2.322)
+    assert service.parse_prescaler_diagonal(
+        "[⟨1 0 0] ⟨0 4 0] ⟨0 0 2.322]⟩", 3) == (1.0, 4.0, 2.322)
+
+
+def test_parse_prescaler_diagonal_rejects_unparseable_or_non_diagonal_or_wrong_size():
+    # rejects: unparseable, the wrong matrix size, a non-zero off-diagonal (𝐿 is diagonal),
+    # a vector (col variance) instead of a matrix of covectors, or empty input. None lets
+    # the caller flag the input without mangling the override.
+    assert service.parse_prescaler_diagonal("garbage", 3) is None
+    assert service.parse_prescaler_diagonal("", 3) is None
+    # a 2x2 matrix when d == 3 (the wrong size)
+    assert service.parse_prescaler_diagonal("[⟨1 0] ⟨0 2]⟩", 3) is None
+    # a nonzero off-diagonal: 𝐿 is diagonal, so a 0.5 outside the diagonal is malformed
+    assert service.parse_prescaler_diagonal("[⟨1 0.5 0] ⟨0 1 0] ⟨0 0 1]⟩", 3) is None
+    # a covector list rather than a covector matrix (one ⟨…] only) — wrong shape for the
+    # bare prescaler tile, even if the d numbers parse as floats
+    assert service.parse_prescaler_diagonal("⟨1 1.585 2.322]", 3) is None
+
+
 def test_plain_text_targets_honor_an_override():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     pt = service.plain_text_values(st, target_override=("2/1", "3/2"))

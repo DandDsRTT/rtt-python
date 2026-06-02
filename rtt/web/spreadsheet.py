@@ -741,10 +741,13 @@ UNITS_TILES = (
 )
 
 # The plain-text tiles whose string is an editable input that drives the grid —
-# the two duals the grid itself lets you type into: the mapping (mapping/primes)
-# and the comma basis (vectors/commas). Every other plain-text value is read-only.
+# the duals the grid itself lets you type into: the mapping (mapping/primes), the comma
+# basis (vectors/commas), the generator tuning map (tuning/gens), the target interval list
+# (vectors/targets), and the bare prescaler 𝐿's diagonal (prescaling/primes — the matrix
+# form parses to a d-tuple via service.parse_prescaler_diagonal). Every other plain-text
+# value is a computed read-only display.
 EDITABLE_PTEXT = frozenset({("mapping", "primes"), ("vectors", "commas"), ("tuning", "gens"),
-                            ("vectors", "targets")})
+                            ("vectors", "targets"), ("prescaling", "primes")})
 EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band holds an input
 # Rows that carry a plain-text band (every value row; the counts row has none). The
 # quantities row's ratios are placed per column, the rest as one EBK string per tile.

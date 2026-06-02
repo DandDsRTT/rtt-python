@@ -163,6 +163,39 @@ async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
     assert _cell_child(user, "cell:vec:targets:0:0").value == "2"
 
 
+async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) -> None:
+    # the bare prescaler 𝐿 tile's plain-text box is the OTHER editable surface (alongside
+    # the diagonal cells): typing a d×d matrix EBK with all off-diagonal entries zero parses
+    # to a d-tuple diagonal (on_ptext_edit -> editor.set_custom_prescaler_text), which then
+    # drives every downstream consumer. The diagonal grid cell must reflect the typed value
+    # on re-render — would otherwise be the scheme's log₂3 = 1.585 default.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()  # opens the prescaling row
+    user.find(kind=ui.checkbox, content="plain text values").click()  # the ptext band
+    await user.should_see(marker="ptext:prescaling:primes")
+    _cell_child(user, "ptext:prescaling:primes").set_value("[⟨1 0 0] ⟨0 4 0] ⟨0 0 2.322]⟩")
+    await user.should_see(marker="cell:prescaling:primes:1:1")
+    # the diagonal cell now reads the typed value (rather than reverting to the scheme's 1.585)
+    assert _cell_child(user, "cell:prescaling:primes:1:1").value == "4"
+
+
+async def test_unparseable_prescaler_plain_text_reddens_the_box(user: User) -> None:
+    # an off-diagonal nonzero is invalid (𝐿 is diagonal), so the input box flags the typed
+    # text via the rtt-ptext-error class instead of mangling the override — mirroring the
+    # mapping / comma-basis duals' validation path. The override stays untouched (the editor
+    # would otherwise have written a non-diagonal 𝐿, which the math layer can't honour).
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="plain text values").click()
+    await user.should_see(marker="ptext:prescaling:primes")
+    _cell_child(user, "ptext:prescaling:primes").set_value("[⟨1 0.5 0] ⟨0 1 0] ⟨0 0 1]⟩")
+    # the input box surfaces the rejection via the same red-outline class the other duals use
+    classes = _cell_child(user, "ptext:prescaling:primes").classes
+    assert "rtt-ptext-error" in classes
+    # the diagonal grid cell stays at its scheme-derived 1.585 (no override applied)
+    assert _cell_child(user, "cell:prescaling:primes:1:1").value == "1.585"
+
+
 async def test_editing_a_prescaler_diagonal_cell_overrides_the_scheme(user: User) -> None:
     # the bare prescaler 𝐿's diagonal cells (prescalercell kind) are editable: typing into one
     # routes through on_prescaler_change -> set_custom_prescaler_entry, threads as the

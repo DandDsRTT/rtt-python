@@ -1676,6 +1676,11 @@ def index() -> None:
             ok = editor.set_generator_tuning_text(value)
         elif cid == "ptext:vectors:targets":  # a typed vector list overrides the target interval set
             ok = editor.set_target_override_text(value)
+        elif cid == "ptext:prescaling:primes":  # a typed d×d matrix overrides the prescaler 𝐿's
+            # diagonal — the alternative to per-cell edits in the same tile, and the only path
+            # for typing the WHOLE diagonal at once. An invalid shape (non-diagonal, wrong size)
+            # reddens the box rather than mangling 𝐿, like the mapping / comma-basis duals.
+            ok = editor.set_custom_prescaler_text(value)
         else:
             return
         if ok:
