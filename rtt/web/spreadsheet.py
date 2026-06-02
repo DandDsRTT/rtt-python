@@ -1636,14 +1636,12 @@ def build(state, settings=None, collapsed=None,
     total_h = y
 
     # Each multi-element column runs a single trunk down to the fan-out bus, where it
-    # splits into one line per element. The bus sits centred in the whitespace of a GAP
-    # between row bands -- by default the gap above the first row band (FAN below the
-    # branch top). But the counts row shows one value per column (a cardinality), so when
-    # it's present the trunk stays single through it and the split drops to the gap below
-    # the counts tile, centred between that tile and the row beneath it.
+    # splits into one line per element. The bus sits centred in the whitespace of the GAP
+    # above the first row band (FAN below the branch top) -- immediately after the column
+    # toggle, mirroring how the rows fan out at node_edge + FAN just after the row toggle.
+    # The element +/− controls ride this bus (see below), and the counts row's per-column
+    # cardinality simply has the already-split sub-lines threading through it.
     fanout_y = branch_top_y + FAN
-    if "counts" in row_y:
-        fanout_y = tile_top["counts"] + tile_h["counts"] + GAP / 2
 
     def row_open(key):
         return key in row_y and f"row:{key}" not in collapsed

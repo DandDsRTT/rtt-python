@@ -2547,21 +2547,25 @@ def test_counts_row_sits_at_the_top_aligned_over_its_columns():
         assert cells[f"count:{ckey}"].w == cells[f"header:{ckey}"].w
 
 
-def test_counts_present_drops_the_column_fan_out_below_the_counts_row():
-    # counts shows one value per column (a cardinality), so a column's gridline stays
-    # a single trunk through the counts row and only splits into per-element lines
-    # BELOW it -- unlike the counts-absent case, where it splits above the top row.
+def test_counts_present_keeps_the_column_fan_out_immediately_after_the_toggle():
+    # the column fan-out sits right below the toggle (where rows fan too), NOT delayed
+    # past the counts row: counts shows one cardinality per column, and the per-element
+    # sub-lines now thread straight through the counts band rather than splitting below it.
     lay = _with(counts=True)
     by_id = {ln.id: ln for ln in lay.lines}
     cells = {c.id: c for c in lay.cells}
     fan = by_id["bus:primes:top"].pos  # the y where the per-prime lines fan out
     count = cells["count:primes"]
-    assert fan > count.y + count.h  # the fan-out sits below the counts row...
-    assert fan < cells["prime:0"].y  # ...and above the quantities (per-prime) values
-    # the trunk runs unbroken from the top down to that fan-out (through counts)
+    assert fan < count.y  # the fan-out sits ABOVE the counts row...
+    # ...and the per-prime sub-lines thread straight through the counts band
+    v0 = by_id["v:prime:0"]
+    assert v0.start == fan
+    assert v0.start < count.y and v0.start + v0.length > count.y + count.h
+    # the trunk is just the short stem from the branch top down to the fan-out
     trunk = by_id["trunk:primes"]
     assert trunk.start + trunk.length == fan
-    assert by_id["v:prime:0"].start == fan  # the per-prime lines begin at the fan-out
+    # and it matches the counts-absent fan-out position (counts no longer shifts it)
+    assert fan == {ln.id: ln for ln in _with(counts=False).lines}["bus:primes:top"].pos
 
 
 def test_counts_off_by_default_leaves_the_quantities_row_on_top():
