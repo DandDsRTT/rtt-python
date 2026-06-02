@@ -6,10 +6,12 @@ def _layout(mapping=((1, 1, 0), (0, 1, 4))):
     return spreadsheet.build(service.from_mapping(mapping))
 
 
-def _with(**overrides):
+def _with(scheme=None, **overrides):
+    # scheme=None uses build's (target-based, all-interval-OFF) default; pass an all-interval
+    # name like "minimax-S" to exercise all-interval rendering (dual(q), the primes target column)
     s = settings.defaults()
     s.update(overrides)
-    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, tuning_scheme=scheme)
 
 
 def _with_interest(interest, collapsed=None):
@@ -1726,8 +1728,8 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
     # box 𝒄 lays its three controls left-to-right: [predefined complexities ▼] | q | dual(q),
     # each with a caption beneath. The q (norm power) and dual(q) fields follow the optimization
     # box's value-over-symbol-over-caption pattern (the 𝑝 / "optimization power" style); the
-    # dropdown has just a caption (no symbol slot).
-    on = {c.id: c for c in _with(weighting=True, alt_complexity=True, all_interval=True).cells}
+    # dropdown has just a caption (no symbol slot). dual(q) needs an all-interval scheme.
+    on = {c.id: c for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True, all_interval=True).cells}
     # the predefined-complexities dropdown carries its caption HUGGING its bottom (rather than
     # bottom-aligned with the q/dual captions further down the row)
     assert on["caption:complexity"].kind == "caption"
@@ -1760,44 +1762,44 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
 
 def test_alt_complexity_hides_dual_q_outside_all_interval_mode():
     # with the show-panel entry on, dual(q) is meaningful only when the scheme is all-interval (the
-    # dual norm enters only via the dual-norm inequality used to minimax over every interval). The
-    # shipped minimax-S (TOP) is all-interval, so dual(q) renders; a TILT-based scheme hides it.
-    on_all = {c.id for c in _with(weighting=True, alt_complexity=True, all_interval=True).cells}
+    # dual norm enters only via the dual-norm inequality used to minimax over every interval). An
+    # all-interval scheme renders dual(q); a TILT-based scheme (the default) hides it.
+    on_all = {c.id for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True, all_interval=True).cells}
     assert "control:dual" in on_all and "symbol:dual" in on_all and "caption:dual" in on_all
-    s = {**settings.defaults(), "weighting": True, "alt_complexity": True, "all_interval": True}
-    on_tilt = {c.id for c in spreadsheet.build(
-        service.from_mapping(((1, 1, 0), (0, 1, 4))), s, tuning_scheme="TILT minimax-S").cells}
+    on_tilt = {c.id for c in _with(scheme="TILT minimax-S", weighting=True, alt_complexity=True, all_interval=True).cells}
     assert "control:dual" not in on_tilt
     assert "control:q" in on_tilt  # q itself still shows (the norm power is meaningful here)
 
 
 def test_dual_q_requires_the_all_interval_show_entry():
-    # the show-panel "all-interval" entry gates dual(q): with the entry OFF (its default), box 𝒄
-    # shows q but never dual(q) — even though the shipped scheme is all-interval — so the default
-    # view is unchanged. dual(q) surfaces only once the entry is on (and the scheme is all-interval).
-    off = {c.id for c in _with(weighting=True, alt_complexity=True).cells}  # entry off (default)
+    # the show-panel "all-interval" entry gates dual(q): even for an all-interval scheme, with the
+    # entry OFF box 𝒄 shows q but never dual(q). dual(q) surfaces only once the entry is on.
+    off = {c.id for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True).cells}  # entry off
     assert "control:q" in off  # q itself is unaffected by the all-interval entry
     assert not ({"control:dual", "symbol:dual", "caption:dual"} & off)
-    on = {c.id for c in _with(weighting=True, alt_complexity=True, all_interval=True).cells}
+    on = {c.id for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True, all_interval=True).cells}
     assert {"control:dual", "symbol:dual", "caption:dual"} <= on
 
 
 def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
     # the show-panel "all-interval" entry ALONE adds an "all-interval" checkbox to the target-
     # interval-list controls (it does NOT need the target chooser / preselects): an OPTION_BOX_PX
-    # square over an "all-interval" caption. It reflects whether the scheme targets every interval — the
-    # shipped minimax-S does, so it reads checked. Entry off => no checkbox.
+    # square over an "all-interval" caption. It reflects whether the scheme targets every interval —
+    # the default scheme is target-based, so it reads UNCHECKED; an all-interval scheme reads checked.
     off = {c.id for c in _with().cells}  # entry off (default)
     assert "control:all_interval" not in off and "caption:all_interval" not in off
-    on = {c.id: c for c in _with(all_interval=True).cells}  # entry on, no preselects
+    on = {c.id: c for c in _with(all_interval=True).cells}  # entry on, default (target-based) scheme
     chk = on["control:all_interval"]
     assert chk.kind == "control_check"
     assert chk.text == ""  # the square only — "all-interval" is a caption beneath
-    assert chk.checked is True  # the shipped minimax-S targets every interval
+    assert chk.checked is False  # all-interval OFF by default (the default scheme is target-based)
     cap = on["caption:all_interval"]
     assert cap.kind == "caption" and cap.text == "all-interval"
     assert abs((chk.x + chk.w / 2) - (cap.x + cap.w / 2)) < 1  # square centred above its caption
     assert cap.y == chk.y + chk.h  # the caption hugs the square's bottom
+    # an all-interval scheme reads the box checked
+    on_ai = {c.id: c for c in _with(scheme="minimax-S", all_interval=True).cells}
+    assert on_ai["control:all_interval"].checked is True
 
 
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():

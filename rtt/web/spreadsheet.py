@@ -956,7 +956,8 @@ def build(state, settings=None, collapsed=None,
     if settings is None:
         settings = _default_settings()
     if tuning_scheme is None:
-        tuning_scheme = service.DEFAULT_TUNING_SCHEME
+        # the as-shipped scheme is target-based (all-interval OFF), matching the editor's default
+        tuning_scheme = f"{service.DEFAULT_TARGET_SPEC} {service.DEFAULT_TUNING_SCHEME}"
     if target_spec is None:
         target_spec = service.DEFAULT_TARGET_SPEC
     collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
@@ -1046,6 +1047,11 @@ def build(state, settings=None, collapsed=None,
     # a typed explicit target list overrides the TILT/OLD spec; every target consumer below
     # derives from this one resolved tuple, so the override flows through the whole grid
     targets = target_override if target_override is not None else service.target_interval_set(target_spec, elements)
+    if service.is_all_interval(tuning_scheme):
+        # all-interval: the target list T becomes the identity (Tₚ = I) — every interval, by duality,
+        # is represented by the domain's own basis (the primes). Every target-column row then derives
+        # its prime-based "when all-interval" form (𝐿, ‖𝐿‖, 𝐿⁻¹, 𝑟, |𝑟|𝑋⁻¹) from this `targets`.
+        targets = tuple(_ratio_str(e) for e in elements)
     k = len(targets)
     mapped = service.mapped_intervals(state.mapping, targets, elements)
     canon_mapping = service.canonical_mapping(state.mapping)  # M defactored + HNF (the form box)
