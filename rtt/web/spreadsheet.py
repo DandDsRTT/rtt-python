@@ -1194,6 +1194,11 @@ def build(state, settings=None, collapsed=None,
     # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
     # for a stray hardcoded column list to keep drawing a tile that no longer exists.
     declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in tiles}
+    if service.is_all_interval(tuning_scheme):
+        # all-interval: the retune-over-targets tile becomes 𝐞 = 𝑟, identical to the 𝒓 retuning-
+        # over-primes row, so drop it as redundant (the mockup's "get rid of this redundant box?",
+        # resolved toward removal). Dropping it here clears its cells, bracket, caption and symbol.
+        declared_tiles -= {("retune", "targets")}
 
     # Column bands left-to-right: (key, natural width, present, collapsible).
     # Each set-column belongs to a box toggle: generators, the domain primes and
@@ -2884,7 +2889,8 @@ def build(state, settings=None, collapsed=None,
     # Present whenever the tile's row and column bands are open — it stays put when
     # only the tile is folded, so the tile can be re-expanded.
     for _bid, rkey, ckey in tiles:
-        if rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey):
+        if ((rkey, ckey) in declared_tiles  # a dropped tile (e.g. all-interval's retune×targets) takes its toggle too
+                and rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey)):
             glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
             cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
                                  col_x[ckey] - tile_pad(ckey) + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,

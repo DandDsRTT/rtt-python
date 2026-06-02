@@ -1834,6 +1834,17 @@ def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
     assert on_ai["control:all_interval"].checked is True
 
 
+def test_all_interval_removes_the_redundant_retune_target_tile():
+    # all-interval makes the retune-over-targets tile 𝐞 = 𝑟 — identical to the 𝒓 retuning-over-
+    # primes row — so the tile is removed (the mockup's "get rid of this redundant box?", resolved
+    # toward removal). A target-based scheme keeps it; the over-primes retuning row stays either way.
+    based = {c.id for c in _with(scheme="TILT minimax-S").cells}
+    assert any("retune" in c and "target" in c for c in based)  # present when target-based
+    allint = {c.id for c in _with(scheme="minimax-S").cells}
+    assert not any("retune" in c and "target" in c for c in allint)  # removed when all-interval
+    assert any(c.startswith("retune:prime") for c in allint)  # the 𝒓 over-primes row remains
+
+
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
     # the all-interval (and diminuator) checkbox CELL is sized to the rendered square so its
     # caption hugs it; that square is the SINGLE shared option-box size (OPTION_BOX_PX = 16),
