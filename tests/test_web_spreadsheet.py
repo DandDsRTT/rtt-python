@@ -347,13 +347,23 @@ def test_spine_columns_hug_their_col_w_content_not_the_long_title():
     assert cells["header:units"].w < spreadsheet._title_w("units")
 
 
-def test_generators_column_gridline_spans_the_full_height():
-    by_id = {ln.id: ln for ln in _layout().lines}
-    gens, quant = by_id["trunk:gens"], by_id["trunk:quantities"]
-    # the generators gridline runs the full grid height like the quantities spine,
-    # rather than stopping at the mapping band partway down
-    assert gens.start == quant.start
-    assert gens.length == quant.length
+def test_generators_column_fans_into_per_generator_axes():
+    # the generators column carries r side-by-side cells (the genmap, the per-generator
+    # units, the form matrix), so it fans into one vertical rule per generator -- exactly
+    # like the domain primes column fans per prime -- rather than a single spine down its
+    # centre. (It used to be pinned as a full-height spine; the fan matches the mockup.)
+    lay = _layout()  # rank 2 -> two generators
+    by_id = {ln.id: ln for ln in lay.lines}
+    cells = {c.id: c for c in lay.cells}
+    ids = set(by_id)
+    assert {"v:gen:0", "v:gen:1"} <= ids  # one axis per generator
+    assert {"trunk:gens", "bus:gens:top", "bus:gens:bot", "foot:gens"} <= ids
+    # each per-generator axis runs through the centre of its generator-tuning-map cell
+    for i in (0, 1):
+        cell = cells[f"tuning:gen:{i}"]
+        assert abs(by_id[f"v:gen:{i}"].pos - (cell.x + cell.w / 2)) < 0.51
+    # the trunk is now just the short fan stem above the data, not a full-height spine
+    assert by_id["trunk:gens"].length < by_id["trunk:quantities"].length
 
 
 def test_interval_vectors_row_has_a_horizontal_gridline():

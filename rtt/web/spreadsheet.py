@@ -1905,6 +1905,12 @@ def build(state, settings=None, collapsed=None,
                   "interest": "interest", "held": "held", "detempering": "detempering"}
     group_left = {"gens": gen_left, "primes": prime_left, "commas": comma_left, "targets": target_left,
                   "interest": interest_left, "held": held_left, "detempering": detempering_left}
+    # how many side-by-side cells each group column carries: its element count, so the
+    # gridline pass can fan every group column into that many vertical sub-axes (commas
+    # count the shown columns, draft included). Keyed identically to group_left/group_elem
+    # so a column with cells can never be left out of the fan (the generators-column bug).
+    group_n = {"gens": r, "primes": d, "commas": nc_shown, "targets": k,
+               "interest": mi, "held": nh, "detempering": r}
     group_ratio = {  # the just interval ratio each value group is taken over
         "primes": lambda i: _ratio_str(elements[i]),  # a prime "p/1", or a nonprime element "n/d"
         "commas": lambda i: comma_ratios[i],
@@ -2460,19 +2466,19 @@ def build(state, settings=None, collapsed=None,
         gridline(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y, dotted=dotted)
         gridline(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y, dotted=dotted)
 
-    column_axis("primes", "prime", d, lambda p: prime_left(p) + COL_W / 2)
-    column_axis("commas", "comma", nc_shown, lambda c: comma_left(c) + COL_W / 2)
-    column_axis("targets", "target", k, lambda j: target_left(j) + COL_W / 2)
-    column_axis("interest", "interest", mi, lambda i: interest_left(i) + COL_W / 2)
-    column_axis("held", "held", nh, lambda i: held_left(i) + COL_W / 2)
-    column_axis("detempering", "detempering", r, lambda i: detempering_left(i) + COL_W / 2)
+    # every group column fans into one vertical sub-axis per element, derived from
+    # group_left/group_elem/group_n (not a hand-kept call list) so a column with cells --
+    # the generators column included -- can never be missed and left a lone centre spine.
+    for key in group_left:
+        column_axis(key, group_elem[key], group_n[key],
+                    lambda i, k=key: group_left[k](i) + COL_W / 2)
 
     # every NON-fanning present column is a spine: a single full-height trunk rule. Both ends
     # are derived, not hand-kept — the columns come from col_x (so a column can never lack its
     # gridline) and the fanned ones are excluded via fanned_columns (filled by the column_axis
     # calls above), so a fanned column never doubles up a centre trunk on top of its fan. The
-    # spines are the quantities/units row-label + coordinate columns and the generators column
-    # (it indexes the mapping rows and backs the rank count + ranges chart).
+    # spines are just the quantities/units columns: each carries one index per row (a basis
+    # square / generator ratio; a unit label), so there are no side-by-side cells to fan.
     for key in col_x:
         if key in fanned_columns:
             continue
