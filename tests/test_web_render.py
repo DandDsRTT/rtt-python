@@ -324,6 +324,20 @@ async def test_tuning_chooser_shows_the_prompt_as_a_placeholder_when_off_list(us
     assert _cell_child(user, "preselect:tuning")._props.get("display-value") == "-"
 
 
+async def test_tuning_chooser_shows_the_prompt_when_the_generator_tuning_is_overridden(user: User) -> None:
+    # hand-editing the generator tuning map freezes a manual tuning that deviates from the
+    # scheme's optimum, so the shown tuning no longer realises the selected scheme — BOTH
+    # tuning-scheme dropdowns (under the tuning map 𝒕 and the generator tuning map 𝒈) fall
+    # back to "-", even though the scheme name (minimax-S) is unchanged.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="preselects").click()
+    both = ("preselect:tuning", "preselect:tuning:gens")
+    assert all("display-value" not in _cell_child(user, cid)._props for cid in both)
+    _cell_child(user, "tuning:gen:1").set_value("700.000")  # off the minimax-S optimum fifth
+    await user.should_see(marker="preselect:tuning")
+    assert all(_cell_child(user, cid)._props.get("display-value") == "-" for cid in both)
+
+
 async def test_optimization_renders_the_optimize_button(user: User) -> None:
     # the optimize button renders in the damage tile when optimization is on (its single/
     # double-click optimize+lock behaviour is covered by the editor tests). The fixture

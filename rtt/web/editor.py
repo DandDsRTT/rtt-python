@@ -284,6 +284,23 @@ class Editor:
         the lock is on or nothing has been frozen yet; else the frozen manual tuning."""
         return None if self.optimize_locked else self.generator_tuning
 
+    @property
+    def displayed_tuning_scheme_name(self) -> str | None:
+        """The named scheme the grid's *displayed* tuning realises, or None — for which the
+        tuning chooser shows "-". None when the scheme is a control-refined spec (no name), or
+        when a manual generator-tuning override is in effect and deviates from the scheme's
+        optimum (the user hand-edited the generator tuning map), so the shown tuning no longer
+        matches the selected scheme. A frozen tuning still equal to the optimum, or a stale
+        override the grid ignores (its generator count no longer fits the mapping), keeps the
+        scheme's name — those still show the scheme's own tuning."""
+        if not isinstance(self.tuning_scheme, str):
+            return None
+        override = self.effective_generator_tuning()
+        if (override is not None and len(override) == len(self.state.mapping)
+                and override != self._optimum_generator_tuning()):
+            return None
+        return self.tuning_scheme
+
     def set_generator_tuning_text(self, text: str) -> bool:
         """Freeze a typed manual generator tuning (the editable generator tuning map): parse a
         cents map of exactly r values and hold it, turning auto-optimize off (a manual tuning

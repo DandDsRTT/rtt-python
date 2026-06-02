@@ -1977,8 +1977,10 @@ def index() -> None:
                     # Alternative-complexity schemes are gated behind the alt. complexity setting.
                     options = presets.tuning_scheme_options(
                         service.is_all_interval(editor.tuning_scheme), editor.settings["alt_complexity"])
-                    scheme = editor.tuning_scheme if (isinstance(editor.tuning_scheme, str)
-                                                      and editor.tuning_scheme in options) else None
+                    # "-" when the displayed tuning is off the named list — a refined spec, or a
+                    # manual override deviating from the scheme's optimum; else the offered name
+                    name = editor.displayed_tuning_scheme_name
+                    scheme = name if name in options else None
                     sel = ui.select(options, value=scheme,
                             on_change=lambda e: on_preselect("tuning", e.value)) \
                         .props(_select_props(cb.w)).classes("rtt-preselect")
@@ -2273,8 +2275,8 @@ def index() -> None:
                     num.value = limit if limit is not None else \
                         service.default_target_limit(family, service.standard_primes(editor.state.d))
                     sel.value = family
-                else:  # tuning — off-list (a refined spec) shows the "-" placeholder
-                    scheme = cb.text or None
+                else:  # tuning — a refined spec or a deviating manual override shows "-"
+                    scheme = editor.displayed_tuning_scheme_name
                     selects[cb.id].value = scheme
                     _set_offlist_prompt(selects[cb.id], scheme)
             elif cb.kind == "control_select":  # mirror the live alt.-complexity choice

@@ -518,6 +518,35 @@ def test_set_generator_tuning_component_overrides_one_generator():
     assert editor.optimize_locked is False and editor.can_undo is True
 
 
+def test_displayed_tuning_scheme_name_drops_to_none_when_the_tuning_deviates():
+    # the tuning chooser shows the scheme name only while the displayed tuning realises that
+    # scheme; once it deviates the name drops to None (the chooser then shows "-").
+    editor = Editor()
+    assert editor.displayed_tuning_scheme_name == "minimax-S"  # default: the scheme's own optimum
+    # hand-editing the generator tuning map off the optimum is a deviation
+    editor.set_generator_tuning_component(1, 700.0)
+    assert editor.displayed_tuning_scheme_name is None
+    # a control-refined scheme (a finite optimization power) has no name either
+    fresh = Editor()
+    fresh.set_optimization_power(2.0)
+    assert fresh.displayed_tuning_scheme_name is None
+
+
+def test_displayed_tuning_scheme_name_keeps_the_name_when_the_tuning_still_matches():
+    # freezing at the scheme's optimum (the optimize button) is not a deviation — the frozen
+    # tuning equals the optimum — so the name stays.
+    editor = Editor()
+    editor.optimize()
+    assert editor.effective_generator_tuning() is not None  # a tuning is frozen
+    assert editor.displayed_tuning_scheme_name == "minimax-S"
+    # a stale frozen tuning the grid ignores (its generator count no longer fits the mapping,
+    # here after the domain expands and re-ranks) also keeps the name — the grid then shows the
+    # scheme's optimum, not the stale override
+    editor.expand()
+    assert len(editor.effective_generator_tuning()) != editor.state.r
+    assert editor.displayed_tuning_scheme_name == "minimax-S"
+
+
 def test_set_target_override_text_and_monzos():
     editor = Editor()
     # typing a vector list overrides the target set with those intervals, stored as ratios
