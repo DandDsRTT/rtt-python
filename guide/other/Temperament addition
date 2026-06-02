@@ -1,0 +1,1973 @@
+'''Temperament addition''' is the general name for either the '''temperament sum''' or the '''temperament difference''', which are two closely related operations on [[regular temperaments]]. Basically, to add or subtract temperaments means to match up the entries of temperament vectors and then add or subtract them individually. The result is a new temperament that has similar properties to the original temperaments.
+
+== Introductory examples ==
+For example, in the [[5-limit]], the sum of [[12-ET]] and [[7-ET]] is [[19-ET]] because {{map|12 19 28}} + {{map|7 11 16}} = {{map|(12+7) (19+11) (28+16)}} = {{map|19 30 44}}, and the difference of 12-ET and 7-ET is 5-ET because {{map|12 19 28}} - {{map|7 11 16}} = {{map|(12-7) (8-11) (12-16)}} = {{map|5 8 12}}. 
+
+
+<math>\left[ \begin{array} {rrr}
+
+12 & 19 & 28  \\
+
+\end{array} \right]
++
+\left[ \begin{array} {rrr}
+
+7 & 11 & 16 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+(12+7) & (19+11) & (28+16) \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+19 & 30 & 44 \\
+
+\end{array} \right]</math>
+
+<math>\left[ \begin{array} {rrr}
+
+12 & 19 & 28  \\
+
+\end{array} \right]
+-
+\left[ \begin{array} {rrr}
+
+7 & 11 & 16 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+(12-7) & (19-11) & (28-16) \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+5 & 8 & 12 \\
+
+\end{array} \right]</math>
+
+
+We can write these using [[wart notation]] as 12p + 7p = 19p and 12p - 7p = 5p, respectively. The similarity in these temperaments can be seen in how, like both 12-ET and 7-ET, 19-ET (their sum) and 5-ET (their difference) both also [[support]] [[meantone temperament]].
+
+Temperament sums and differences can also be found using commas; for example meantone + porcupine = tetracot because {{vector|4 -4 1}} + {{vector|1 -5 3}} = {{vector|(4+1) (-4+-5) (1+3)}} = {{vector|5 -9 4}} and meantone - porcupine = dicot because {{vector|4 -4 1}} - {{vector|1 -5 3}} = {{vector|(4-1) (-4--5) (1-3)}} = {{vector|3 1 -2}}. 
+
+
+<math>\left[ \begin{array} {rrr}
+
+4 \\
+-4 \\
+1 \\
+
+\end{array} \right]
++
+\left[ \begin{array} {rrr}
+
+1 \\
+-5 \\
+3 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+(4+1) \\
+(-4+-5) \\
+(1+3) \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+5 \\
+-9 \\
+4 \\
+
+\end{array} \right]</math>
+
+<math>\left[ \begin{array} {rrr}
+
+4 \\
+-4 \\
+1 \\
+
+\end{array} \right]
+-
+\left[ \begin{array} {rrr}
+
+1 \\
+-5 \\
+3 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+(4-1) \\
+(-4--5) \\
+(1-3) \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+3 \\
+1 \\
+-2 \\
+
+\end{array} \right]</math>
+
+
+We could write this in quotient form — replacing addition with multiplication and subtraction with division — as 80/81 × 250/243=20000/19683 and 80/81 ÷ 250/243=25/24, respectively. The similarity in these temperaments can be seen in how all of them are supported by 7-ET. (Note that these examples are all given in canonical form, which is why we're seeing the meantone comma as 80/81 instead of the more common 81/80; for the reason why, see [[Temperament addition#Negation]].)
+
+Temperament addition is simplest for temperaments which can be represented by single vectors such as demonstrated in these examples. In other words, it is simplest for temperaments that are either rank-1 ([[equal temperament]]s, or ETs for short) or nullity-1 (having only a single comma). Because [[grade]] <math>g</math> is the generic term for rank <math>r</math> and nullity <math>n</math>, we could define the minimum grade <math>g_{\text{min}}</math> of a temperament as the minimum of its rank and nullity <math>\min(r,n)</math>, and so for convenience in this article we will refer to <math>r=1</math> (read "rank-1") or <math>n=1</math> (read "nullity-1") temperaments as <math>g_{\text{min}}=1</math> (read "min-grade-1") temperaments. We'll also use <math>g_{\text{max}}</math> (read "max-grade"), which naturally is equal to <math>\max(r,n)</math>.
+
+For <math>g_{\text{min}}>1</math> temperaments, temperament addition gets a little trickier. This is discussed in the [[Temperament_addition#Beyond_.5Bmath.5D.5Cmin.28g.29.3D1.5B.2Fmath.5D|beyond <math>g_{\text{min}}=1</math> section]] later.
+
+== Applications ==
+The temperament that results from summing or diffing two temperaments, as stated above, has similar properties to the original two temperaments. 
+
+Take the case of meantone + porcupine = tetracot from the previous section. What this relationship means is that tetracot is the temperament which doesn't make the meantone comma itself [[vanish]], nor the porcupine comma itself, but instead make whatever comma relates pitches that are exactly one meantone comma plus one porcupine comma apart vanish. And that's the tetracot comma! And on the other hand, for the temperament difference, dicot, this is the temperament that makes neither meantone nor porcupine vanish, but instead the comma that's the size of the difference between them. And that's the dicot comma. So tetracot makes 80/81 × 250/243 vanish, and dicot makes 80/81 × 243/250 vanish.
+
+Similar reasoning is possible for the mapping-rows of mappings — the analogs of the commas of comma bases — but are less intuitive to describe. What's reasonably easy to understand, though, is how temperament addition on maps is essentially navigation of the scale tree for the rank-2 temperament they share; [[Dave Keenan & Douglas Blumeyer's guide to RTT/Exploring temperaments#Scale trees|see here]] for more information on this. So if you understand the effects on individual maps, then you can apply those to changes of maps within a more complex temperament.
+
+Ultimately, these two effects are the primary applications of temperament addition.<ref>It has also been asserted that there exists a connection between temperament addition and "Fokker groups" as discussed on this page: [[Fokker block]], but the connection remains unclear to this author.</ref>
+
+== A note on variance ==
+For simplicity, this article will use the word "vector" in its general sense, that is, [[variance]]-agnostic. This means it includes either contravariant vectors (plain "vectors", such as [[prime-count vector]]s) or covariant vectors ("''co''vectors", such as [[map]]s). However, the reader should assume that only one of the two types is being used at a given time, since the two variances do not mix. For more information, see [[Linear_dependence#Variance]]. The same variance-agnosticism holds for [[multivector|''multi''vector]]s in this article as well.
+
+== Visualizing temperament addition ==
+[[File:Sum diff and wedge.png|thumb|left|300px|A and B are vectors representing temperaments. They could be maps or commas. A∧B is their wedge product and gives a higher-[[grade]] temperament that [[temperament merging|merge]]s both A and B. A+B and A-B give the sum and difference, respectively.]]
+
+=== Versus the wedge product ===
+
+If the [[wedge product]] of two vectors represents the directed area of a parallelogram constructed with the vectors as its sides, then the temperament sum and difference are the vectors that connect the diagonals of this parallelogram.
+
+=== Tuning and tone space ===
+[[File:Visualization of temperament arithmetic.png|300px|right|thumb|A visualization of temperament addition on projective tuning space.]]
+
+One way we can visualize temperament addition is on [[projective tuning space]].
+
+This shows both the sum and the difference of porcupine and meantone. All four temperaments — the two input temperaments, porcupine and meantone, as well as the sum, tetracot, and the diff, dicot — can be seen to intersect at 7-ET. This is because all four temperaments' [[mapping]]s can be expressed with the map for 7-ET as one of their mapping-rows.
+
+These are all <math>r=2</math> temperaments, so their mappings each have one other row besides the one reserved for 7-ET. Any line that we draw across these four temperament lines will strike four ETs whose maps have a sum and difference relationship. On this diagram, two such lines have been drawn. The first one runs through 5-ET, 20-ET, 15-ET, and 10-ET. We can see that 5 + 15 = 20, which corresponds to the fact that 20-ET is the ET on the line for tetracot, which is the sum of porcupine and meantone, while 5-ET and 15-ET are the ETs on their lines. Similarly, we can see that 15 - 5 = 10, which corresponds to the fact that 10-ET is the ET on the line for dicot, which is the difference of porcupine and meantone.
+
+[[File:Visualization of temperament arithmetic on projective tone space.png|200px|thumb|right|A visualization of temperament addition on projective tone space.]]
+
+The other line runs through the ETs 12, 41, 29, and 17, and we can see again that 12 + 29 = 41 and 29 - 12 = 17.
+
+We can also visualize temperament addition on [[projective tone space]]. Here relationships are inverted: points are lines, and lines are points. So all four temperaments are found along the line for 7-ET.
+
+Note that when viewed in tuning space, the sum is found between the two input temperaments, and the difference is found on the outside of them, to one side or the other. While in tone space, it's the difference that's found between the two input temperaments, and its the sum that's found outside. In either situation when a temperament is on the outside and may be on one side or the other, the explanation for this can be inferred from behavior of the scale tree on any temperament line, where e.g. if 5-ET and 7-ET support a <math>r=2</math> temperament, then so will 5 + 7 = 12-ET, and then so will 5 + 12 and 7 + 12 in turn, and so on and so on recursively; when you navigate like this, what we could call ''down'' the scale tree, children are always found between their parents. But when you try to go back ''up'' the scale tree, to one or the other parent, you may not immediately know which side of the child to go.
+
+== Conditions on temperament addition ==
+=== The temperaments have the same dimensions ===
+Temperament addition is only possible for temperaments with the same [[dimensions]], that is, the same [[rank]] and [[dimensionality]] (and therefore, by the [[rank-nullity theorem]], also the same [[nullity]]). The reason for this is visually obvious: without the same <math>d</math>, <math>r</math>, and <math>n</math> (dimensionality, rank, and nullity, respectively), the numeric representations of the temperament — such as matrices and multivectors — will not have the same proportions, and therefore their entries will be unable to be matched up one-to-one. From this condition it also follows that the result of temperament addition will be a new temperament with the same <math>d</math>, <math>r</math>, and <math>n</math> as the input temperaments.
+
+=== The temperaments share the same domain basis ===
+If you're unfamiliar with [[domain bases]], then you can probably safely assume your temperaments are in the same subspace, because they should be in the default, standard, [[prime-limit]] interval subspace. If they're not, change them to be on the same interval subspace if you can, and then come back to temperament addition.
+
+=== The temperaments are addable ===
+[[File:Addability.png|300px|thumb|left|In the first row, we see the sum of two vectors. In the second row, we see how a pair of temperaments each defined by 2 basis vectors may be added as long as the other basis vectors match. In the third row we see a continued development of this idea, where a pair of temperaments each defined by 3 basis vectors is able to be added by virtue of all other basis vectors being the same.]]
+
+Matching the dimensions is only the first of two conditions on the possibility of temperament addition. The second condition is that the temperaments must all be '''addable'''. This condition is trickier, and so a detailed discussion of it will be deferred to a later section (here: [[Temperament addition#Addability]]). But let us at least say here what it essentially means. The basis vectors representing the summed or differenced temperaments ''must all match, except for one non-matching vector in each''. Said another way, any number of matching vectors is allowed in the basis alongside, but ultimately we're only ever able to add (mono)vectors — the single non-matching vectors from each temperament.
+
+We can gain some intuition about this addability condition by thinking about these non-matching vectors — the ones that are changing — as if they were themselves a basis for a temperament, and then recalling what we know about bases: that when a basis consists of two or more vectors, then an infinitude of other bases for the same subspace exist (such as how there are multiple forms for a rank-2 temperament mapping); whereas when a basis consists of only a single vector, then there is only one possible basis. Finally, we must recognize that entry-wise matrix addition is an operation defined on matrices, not bases; and so entry-wise matrix addition can give different results when done to different bases for the same subspace. The only way for temperament addition to work reliably, therefore, is to only do it on matrices where the basis for what is changing has only a single possible representation, and that is only the case when only one basis vector is changing.
+
+Any set of <math>g_{\text{min}}=1</math> temperaments are addable<ref>or they are all the same temperament, in which case they <span style="color: #3C8031;">share all the same basis vectors and could perhaps be said to be ''completely'' linearly dependent.</span></ref>, because the side of duality where <math>g=1</math> will satisfy this condition, so we don't need to worry in detail about it in that case. Or in other words, <math>g_{\text{min}}=1</math> temperaments can be represented by monovectors, and we have no problem entry-wise adding those.
+
+== Versus temperament merging ==
+Like [[temperament merging]], temperament addition takes temperaments as inputs and finds a new temperament sharing properties of the inputs. And they both can be understood as, in some sense, ''adding'' these input temperaments together.
+
+But there is a big difference between temperament addition and merging. Temperament addition is done using ''entry-wise'' addition (or subtraction), whereas merging is done using ''concatenation''. So the temperament sum of mappings with two rows each is a new mapping that still has exactly two rows, while the other hand, the merging of mappings with two rows each is a new mapping that has a total of four rows<ref>At least, this mapping would have a total of four rows before it is canonicalized. After canonicalization, it may end up with only three (or two if you map-merged a temperament with itself for some reason).</ref>.
+
+=== The linear dependence connection ===
+Another connection between temperament addition and merging is that they ''may'' involve checks for linear dependence.
+
+Temperament addition, as stated earlier, always requires addability, which is a more complex property involving linear dependence.
+
+Merging does not ''necessarily'' involve linear dependence. Linear dependence only matters for merging when you attempt to do it using ''exterior'' algebra, that is, by using the wedge product, rather than the ''linear'' algebra approach, which is just to concatenate the vectors as a matrix and canonicalize. For more information on this, see [[Douglas Blumeyer and Dave Keenan's Intro to exterior algebra for RTT#The linearly dependent exception to the wedge product]].
+
+== <math>g_{\text{min}}=1</math> ==
+As stated above, temperament addition is simplest for temperaments which can be represented by single vectors, or in other words, temperaments that are <math>g_{\text{min}}=1</math>, and for other temperaments, the computation gets a little trickier. Here we'll look at how to handle the simple case of <math>g_{\text{min}}=1</math>.
+
+As shown in the [[Temperament_addition#Introductory_examples|introductory examples]], <math>g_{\text{min}}=1</math> examples are as easy as entry-wise addition or subtraction. But there's just a couple tricks to it.
+
+=== Getting to the side of duality with <math>g_{\text{min}}=1</math> ===
+We may be looking at a temperament representation which itself does not consist of a single vector, but its dual does. For example, the meantone mapping {{rket|{{map|1 0 -4}} {{map|0 1 4}}}} and the porcupine mapping {{rket|{{map|1 2 3}} {{map|0 3 5}}}} each consist of two vectors. So these representations require additional labor to compute. But their duals are easy! If we simply find a comma basis for each of these mappings, we get [{{vector|4 -4 1}}] and [{{vector|1 -5 3}}]. In this form, the temperaments can be entry-wise added, to [{{vector|5 -9 4}}] as we saw earlier. And if in the end we're still after a mapping, since we started with mappings, we can take the dual of this comma basis, to find the mapping {{rket|{{map|1 1 1}} {{map|0 4 9}}}}.
+
+=== Negation ===
+[[File:Very simple illustration of temperament sum vs diff.png|500px|thumb|left|Equivalences of temperament addition depending on negativity.]]
+
+There's just one other trick to it, and that's that we have to be mindful of negation.
+
+The temperament difference can be understood as being the same operation as the temperament sum except with one of the two temperaments negated.
+
+For single vectors (and multivectors), negation is as simple as changing the sign of every entry.
+
+Suppose you have a matrix representing temperament <math>𝓣_1</math> and another matrix representing <math>𝓣_2</math>. If you want to find both their sum and difference, you can calculate both <math>𝓣_1 + 𝓣_2</math> and <math>𝓣_1 + -𝓣_2</math>. There's no need to also find <math>-𝓣_1 + 𝓣_2</math>; this will merely give the negation of <math>𝓣_1 + -𝓣_2</math>. The same goes for <math>-𝓣_1 + -𝓣_2</math>, which is the negation of <math>𝓣_1 + 𝓣_2</math>.
+
+But a question remains: which result between <math>𝓣_1 + 𝓣_2</math> and <math>𝓣_1 + -𝓣_2</math> is actually the sum and which is the difference? This seems like an obvious question to answer, except for one key problem: how can we be certain that <math>𝓣_1</math> or <math>𝓣_2</math> wasn't already in negated form to begin with? We need to establish a way to check for matrix negativity.
+
+The check is that the vectors must be in [[canonical form]]. For a contravariant vector, such as the kind that represent commas, canonical form means that the trailing entry (the final non-zero entry) must be positive. For a covariant vector, such as the kind that represent mapping-rows, canonical form means that the leading entry (the first non-zero entry) must be positive. 
+
+Sometimes the canonical form of a vector is not the most popular form. For instance, the meantone comma is usually expressed in positive form, that is, with its numerator greater than its denominator, so that its cents value is positive, or in other words, it's the meantone comma upwards in pitch, not downwards. But the prime-count vector for that form, 81/80, is {{vector|-4 4 -1}}, and as we can see, its trailing entry -1 is negative. So the canonical form of meantone is actually {{vector|4 -4 1}}.
+
+== <math>g_{\text{min}}>1</math> ==
+As stated above, temperament addition is simplest for temperaments which can be represented by single vectors, or in other words, temperaments that are <math>g_{\text{min}}=1</math>, and for other temperaments, the computation gets a little trickier. Here we'll look at how to handle the trickier cases of <math>g_{\text{min}}>1</math>.
+
+Throughout this section, we will be using <span style="color: #3C8031;">a green color on linearly dependent objects and values</span>, and <span style="color: #B6321C;">a red color on linearly independent objects and values</span>, to help differentiate between the two.
+
+=== Addability ===
+In order to understand how to do temperament addition on <math>g_{\text{min}}>1</math> temperaments, we must first understand addability.
+
+In order to understand addability, we must work up to it, understanding these concepts in this order:
+#<span style="color: #3C8031;">linear dependence</span>
+#<span style="color: #3C8031;">linear dependence</span> ''between temperaments''
+#<span style="color: #B6321C;">linear ''in''dependence</span> between temperaments
+#<span style="color: #B6321C;">linear independence</span> between temperaments by only one basis vector (that's addability)
+
+==== 1. <span style="color: #3C8031;">Linear dependence</span> ====
+This is explained here: [[linear dependence]].
+
+==== 2. <span style="color: #3C8031;">Linear dependence</span> between temperaments ====
+<span style="color: #3C8031;">Linear dependence</span> has been defined for the matrices and multivectors that represent temperaments, but it can also be defined for temperaments themselves. The conditions of temperament addition motivate a definition of <span style="color: #3C8031;">linear dependence</span> for temperaments whereby temperaments are considered <span style="color: #3C8031;">linearly dependent</span> if ''either of their mappings or their comma bases are <span style="color: #3C8031;">linearly dependent</span>''<ref>or — equivalently, in EA — either their multimaps or their multicommas are <span style="color: #3C8031;">linearly dependent</span></ref>.
+
+For example, 5-limit 5-ET and 5-limit 7-ET, represented by the mappings {{rket|{{map|5 8 12}}}} and {{rket|{{map|7 11 16}}}} may at first seem to be <span style="color: #B6321C;">linearly independent</span>, because the basis vectors visible in their mappings are clearly <span style="color: #B6321C;">linearly independent</span> (when comparing two vectors, the only way they could be <span style="color: #3C8031;">linearly dependent</span> is if they are multiples of each other, as discussed [[Linear dependence#Linear dependence between individual vectors|here]]). And indeed their ''mappings'' are <span style="color: #B6321C;">linearly independent</span>. But these two ''temperaments'' are <span style="color: #3C8031;">linearly ''de''pendent</span>, because if we consider their corresponding comma bases, we will find that they <span style="color: #3C8031;">share</span> the basis vector of the meantone comma {{vector|4 -4 1}}.
+
+To make this point visually, we could say that two temperaments are <span style="color: #3C8031;">linearly dependent</span> if they intersect in one or the other of tone space and tuning space. So you have to check both views.<ref>You may be wondering — what about two temperaments which are parallel in tone or tuning space, e.g. compton and blackwood in tuning space? Their comma bases are each <math>n=1</math>, and they merge to give a <math>n=2</math> [[comma basis]], which corresponds to a <math>r=1</math> mapping, which means it should appear as an ET point on the PTS diagram. But how could that be? Well, here's their comma-merge: [{{vector|1 0 0}} {{vector|0 1 0}}], and so that corresponding mapping is {{rket|{{map|0 0 1}}}}. So it's some degenerate ET. I suppose we could say it's the point at infinity away from the center of the diagram.</ref>
+
+==== 3. <span style="color: #B6321C;">Linear independence</span> between temperaments ====
+<span style="color: #3C8031;">Linear dependence</span> may be considered as a boolean (yes/no, linearly <span style="color: #3C8031;">dependent</span>/<span style="color: #B6321C;">independent</span>) or it may be considered as <span style="color: #3C8031;">an integer count of linearly dependent basis vectors</span>. In other words, it is the dimension of <span style="color: #3C8031;">the linear-dependence basis <math>\dim(L_{\text{dep}})</math></span>. To refer to this count, we may hyphenate it as <span style="color: #3C8031;">'''linear-dependence'''</span>, and use the variable <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span>. For example, 5-ET and 7-ET, per the example in the previous section, are <span style="color: #3C8031;"><math>l_{\text{dep}}=1</math></span> (read <span style="color: #3C8031;">"linear-dependence-1"</span>) temperaments.
+
+It does not make sense to speak of <span style="color: #3C8031;">linear dependence in this integer count sense</span> between ''temperaments'', however. Here's an example that illustrates why. Consider two different <math>d=5</math>, <math>r=2</math> temperaments. Both their mappings and comma bases are <span style="color: #3C8031;">linearly dependent</span>, but their mappings have <span style="color: #3C8031;"><math>l_{\text{dep}}=1</math></span>, while their comma bases have <span style="color: #3C8031;"><math>l_{\text{dep}}=2</math></span>. So what could the <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span> of this temperament possibly be? We ''could'' define "min-linear-dependence" and "max-linear-dependence", as we define "min-grade" and "max-grade", but these do not turn out to be helpful.
+
+On the other hand, it does make sense to speak of the <span style="color: #B6321C;">'''linear-independence'''</span> of the temperament as an integer count. This is because the count of <span style="color: #B6321C;">linearly independent</span> basis vectors of two temperaments' mappings and the count of <span style="color: #B6321C;">linearly independent</span> basis vectors of their comma bases will always be the same. So the temperament <span style="color: #B6321C;">linear-independence</span> is simply this number. In the <math>d=5</math>, <math>r=2</math> example from the previous paragraph, these would be <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span> (read <span style="color: #B6321C;">"linear-independence-1"</span>) temperaments.
+
+A proof of this conjecture is given here: [[Temperament addition#Sintel's proof of the linear-independence conjecture]].
+
+==== 4. <span style="color: #B6321C;">Linear independence</span> between temperaments by only one basis vector (i.e. addability) ====
+Two temperaments are addable if they are <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>. In other words, both their mappings and their comma bases <span style="color: #3C8031;">share</span> all but one basis vector.
+
+And so this is why <math>g_{\text{min}}=1</math> temperaments are all addable. Because if <math>g_{\text{min}}=1</math>, and the temperaments are different from each other so <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> is at least 1, and <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> can't be greater than <math>g_{\text{min}}</math>, so then necessarily <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> <math>= 1</math> exactly, and therefore the temperaments are addable.
+
+=== Multivector approach ===
+The simplest approach to <math>g_{\text{min}}>1</math> temperament addition is to use multivectors. This is discussed in more detail here: [[Douglas Blumeyer and Dave Keenan's Intro to exterior algebra for RTT#Temperament addition]].
+
+=== Matrix approach ===
+Temperament addition for <math>g_{\text{min}}>1</math> temperaments (again, that's with both <math>r>1</math> and <math>n>1</math>) can also be done using matrices, and it works in essentially the same way — entry-wise addition or subtraction — but there are some complications that make it significantly more involved than it is with multivectors. There's essentially five steps:
+
+# Find the linear-dependence basis <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>
+#Put the matrices in a form with the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>
+#Check for enfactoring, and do an addabilization defactor (if necessary)
+#Check for negation, and change negation (if necessary)
+#Entry-wise add, and canonicalize
+
+==== The steps ====
+===== 1. Find the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> =====
+For matrices, it is necessary to make explicit <span style="color: #3C8031;">the basis for the linearly dependent vectors shared</span> between the involved matrices before adding. In other words, any vectors that can be found through linear combinations of any of the involved matrices' basis vectors must appear explicitly and in the same position of each matrix before the sum or difference is taken. These vectors are called the <span style="color: #3C8031;">linear-dependence basis, or <math>L_{\text{dep}}</math></span>. 
+
+Before this can be done, of course, we need to actually find the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>. This can be done using the technique described here: [[Linear dependence#For a given set of basis matrices, how to compute a basis for their linearly dependent vectors]]
+
+===== 2. Put the matrices in a form with the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> =====
+The <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> will always have one less vector than the original matrix, by the definition of addability as <span style="color: #B6321C;"><math>L_{\text{ind}}=1</math></span>. And the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> is not a full recreation of the original temperament; it needs that one extra vector to get back to representing it. 
+
+So a next step, we need pad out the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> by drawing from vectors from the original matrices. We can start from their first vectors. But if that vector happens to be linearly dependent on the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>, then it won't result in a representation of the original matrix. Otherwise we'll produce a [[rank-deficient]] matrix that doesn't still represent the same temperament as we started with. So we just have to keep going until we get it. 
+
+===== 3. Addabiliziation defactoring =====
+But it is not quite as simple as determining the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> and then supplying the remaining vectors necessary to match the grade of the original matrix, because the results may then be [[enfactoring|enfactored]]. And defactoring them without compromising the explicit <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> cannot be done using existing [[defactoring algorithms]]; it's a tricky process, or at least computationally intensive. This is called '''addabilization defactoring'''.
+
+Most established defactoring algorithms will alter any or all of the entries of a matrix. This is not an option if we still want to be able to add temperaments, however, because these matrices must retain their explicit <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>. And we can't defactor and then paste the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> back over the first vector or something, because then we might just be enfactored again. We need to find a defactoring algorithm that manages to work without altering any of the vectors in the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>.
+
+The first step to addabilization defactoring is inspired by [[Pernet-Stein defactoring]]: we find the value of the enfactoring factor (the "greatest factor") by following this algorithm until the point where we have a square transformation matrix, but instead of inverting it and multiplying by it to ''remove'' the defactoring, we simply take this square matrix's determinant, which is the factor we were about to remove. If that determinant is 1, then we're already defactored; if not, then we need to take do some additional steps. 
+
+It turns out that you can always<ref>This conjecture was first suggested by Mike Battaglia, but it has not yet been mathematically proven. Sintel and Tom Price have done some experiments but nothing complete yet. Douglas Blumeyer's test cases in the [[RTT library in Wolfram Language]] have emiprically proven that this is true, though.</ref> isolate the greatest factor in the single final vector of the matrix — the <span style="color: #B6321C;">linearly independent vector</span> — through linear combinations of the vectors in the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>.
+
+The example that will be worked through in this section below is as simple as it can get: the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> consists of only a single vector, so we simply add some number of this <span style="color: #3C8031;">single linearly dependent vector</span> to the <span style="color: #B6321C;">linearly independent vector</span>. However, if there are multiple vectors in the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>, the linear combination which surfaces the greatest factor may involve just one or potentially all of those vectors, and the best approach to finding this combination is simply an automatic solver. An example of this approach is demonstrated in the [[RTT library in Wolfram Language]], here: https://github.com/cmloegcmluin/RTT/blob/main/main.m#L477
+
+Another complication is that the greatest factor may be very large, or be a highly composite number. In this case, searching for the linear combination that isolates the greatest factor in its entirety directly may be intractable; it is better to eliminate it piecemeal, i.e., whenever the solver finds a factor of the greatest factor, eliminate it, and repeat until the greatest factor is fully eliminated. The RTT library code linked to above works in this way.
+
+===== 4. Negation =====
+Temperament negation is more complex with matrices, both in terms of checking for it, as well as changing it. 
+
+For matrices, negation is accomplished by choosing a single vector and changing the sign of every entry in it. In the case of comma bases, a vector is a column, whereas in a mapping a vector (technically a row vector, or covector) is a row.
+
+For matrices, the check for negation is related to canonicalization of multivectors as are used in exterior algebra for RTT. Essentially we take the largest possible minor determinants of the matrix (or "largest-minors" for short), and then look at their leading or trailing entry (leading in the case of a covariant matrix, like a mapping; trailing in the case of a contravariant matrix, like a comma basis): if this entry is positive, so is the temperament, and vice versa.
+
+===== 5. Entry-wise add =====
+The entry-wise addition of elements works mostly the same as for vectors. But there's one catch: we only do it for the pair of <span style="color: #B6321C;">linearly independent vectors</span>. We set the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> aside, and reintroduce it at the end. 
+
+When taking the sum, this is just for simplicity's sake. There's no sense in adding the two copies of the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> together, as we'll just get the same vector but 2-enfactored. So we may as well set it aside, and deal only with the <span style="color: #B6321C;">linearly independent vectors</span>, and put it back at the end.
+
+When taking the difference, it's essential that we set the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> aside before entry-wise addition, though, because if we were to subtract it from itself, we'd end up with all zeros. Unlike the case of the sum, where we'd just end up with an enfactored version of the starting vectors, we couldn't even defactor to get back to where we started if we completely wiped out the relevant information by sending it all to zeros. 
+
+As a final step, as is always good to do when concluding temperament operations, put the result in [[canonical form]].
+
+==== Example ====
+For our example, let’s look at septimal meantone plus flattone. The canonical forms of these temperaments are {{rket|{{map|1 0 -4 -13}} {{map|0 1 4 10}}}} and {{rket|{{map|1 0 -4 17}} {{map|0 1 4 -9}}}}. 
+
+'''0. Counterexample.''' Before we try following the detailed instructions just described above, let's do the counterexample, to illustrate why we have to follow them at all. Simple entry-wise addition of these two mapping matrices gives {{rket|{{map|2 0 -8 4}} {{map|0 2 8 1}}}}, which is not the correct answer:
+
+
+<math>\left[ \begin{array} {rrr}
+
+1 & 0 & -4 & -13 \\
+0 & 1 & 4 & 10 \\
+
+\end{array} \right]
++
+\left[ \begin{array} {rrr}
+
+1 & 0 & -4 & 17 \\
+0 & 1 & 4 & -9 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+2 & 0 & -8 & 4 \\
+0 & 2 & 8 & 1 \\
+
+\end{array} \right]</math>
+
+
+And it's wrong not only because it is clearly enfactored (at least one factor of 2, that is visible in the first vector). The full explanation of why this is the wrong answer is beyond the scope of this example (the nature of correctness here is discussed in the section [[Temperament addition#Addition on non-addable temperaments]]). However, if we now follow through with the instructions described above, we can find the correct answer.
+
+'''1. Find the linear-dependence basis.''' We know where to start: first find the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> and put each of these two mappings into a form that includes it explicitly. In this case, their <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> consists of a single vector: <span style="color: #3C8031;">{{rket|{{map|19 30 44 53}}}}</span>. 
+
+'''2. Reproduce the original temperament.''' The original matrices had two vectors, so as our second step, we pad out these matrices by drawing from vectors from the original matrices, starting from their first vectors, so now we have [<span style="color: #3C8031;">{{map|19 30 44 53}}</span> {{map|1 0 -4 -13}}⟩ and [<span style="color: #3C8031;">{{map|19 30 44 53}}</span> {{map|1 0 -4 17}}⟩. We could choose any vectors from the original matrices, as long as they are <span style="color: #B6321C;">linearly independent</span> from the ones we already have; if one is not, skip it and move on. In this case the first vectors are both fine, though.
+
+
+<math>\left[ \begin{array} {rrr}
+
+\color{OliveGreen}19 & \color{OliveGreen}30 & \color{OliveGreen}44 & \color{OliveGreen}53 \\
+1 & 0 & -4 & -13 \\
+
+\end{array} \right]
++
+\left[ \begin{array} {rrr}
+
+\color{OliveGreen}19 & \color{OliveGreen}30 & \color{OliveGreen}44 & \color{OliveGreen}53 \\
+1 & 0 & -4 & 17 \\
+
+\end{array} \right]</math>
+
+
+'''3. Defactor.''' Next, verify that both matrices are defactored. In this case, both matrices ''are'' enfactored, each by a factor of 30<ref>or you may prefer to think of this as three different (prime) factors: 2, 3, 5 (which multiply to 30)</ref>. So we'll use addabilization defactoring. Since there's only a single vector in the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>, therefore all we need to do is repeatedly add that <span style="color: #3C8031;">one linearly dependent vector</span> to the <span style="color: #B6321C;">linearly independent vector</span> until we find a vector with the target GCD, which we can then simply divide out to defactor the matrix. Specifically, we add 11 times the <span style="color: #3C8031;">linearly dependent vector</span>. For the first matrix, {{map|1 0 -4 -13}} + 11⋅<span style="color: #3C8031;">{{map|19 30 44 53}}</span> = {{map|210 330 480 570}}, whose entries have a GCD = 30, so we can defactor the matrix by dividing that vector by 30, leaving us with <span style="color: #B6321C;">{{map|7 11 16 19}}</span>. Therefore the final matrix here is [<span style="color: #3C8031;">{{map|19 30 44 53}}</span> {{map|7 11 16 19}}⟩. The other matrix matrix happens to defactor in the same way: {{map|1 0 -4 17}} + 11⋅<span style="color: #3C8031;">{{map|19 30 44 53}}</span> = {{map|210 330 480 600}} whose GCD is also 30, reducing to <span style="color: #B6321C;">{{map|7 11 16 20}}</span>, so the final matrix is [<span style="color: #3C8031;">{{map|19 30 44 53}}</span> <span style="color: #B6321C;">{{map|7 11 16 20}}</span>⟩.
+
+'''4. Check negativity.''' The next thing we need to do is check the negativity of these two temperaments. If either of the matrices we're adding is negative, then we'll have to change it (if both are negative, then the problem cancels out, and we go back to being right). We check negativity by using the largest-minors of these matrices. The first matrix's largest-minors are (-1, -4, -10, -4, -13, -12) and the second matrix's largest-minors are (-1, -4, 9, -4, 17, 32). What we're looking for here are their leading entries, because these are largest-minors of a mapping (if we were looking at largest-minors of comma bases, we'd be looking at the trailing entries instead). Specifically, we're looking to see if the leading entries are positive. They're not. Which tells us these matrices are both negative! But again, since they were ''both'' negative, the effect cancels out; no need to change anything (but if we wanted to, we could just take the <span style="color: #B6321C;">linearly independent vector</span> for each matrix and negate every entry in it).
+
+'''5. Add.''' Now the matrices are ready to add:
+
+
+<math>\left[ \begin{array} {rrr}
+
+\color{OliveGreen}19 & \color{OliveGreen}30 & \color{OliveGreen}44 & \color{OliveGreen}53 \\
+\color{BrickRed}7 & \color{BrickRed}11 & \color{BrickRed}16 & \color{BrickRed}19 \\
+
+\end{array} \right]
++
+\left[ \begin{array} {rrr}
+
+\color{OliveGreen}19 & \color{OliveGreen}30 & \color{OliveGreen}44 & \color{OliveGreen}53 \\
+\color{BrickRed}7 & \color{BrickRed}11 & \color{BrickRed}16 & \color{BrickRed}20 \\
+
+\end{array} \right]</math>
+
+
+We set the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> aside, and deal only with the <span style="color: #B6321C;">linearly independent vectors</span>:
+
+
+<math>\left[ \begin{array} {rrr}
+
+\color{BrickRed}7 & \color{BrickRed}11 & \color{BrickRed}16 & \color{BrickRed}19 \\
+
+\end{array} \right]
++
+\left[ \begin{array} {rrr}
+
+\color{BrickRed}7 & \color{BrickRed}11 & \color{BrickRed}16 & \color{BrickRed}20 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+\color{BrickRed}14 & \color{BrickRed}22 & \color{BrickRed}32 & \color{BrickRed}39 \\
+
+\end{array} \right]</math>
+
+
+Then we can reintroduce the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> afterwards:
+
+
+<math>\left[ \begin{array} {rrr}
+
+\color{OliveGreen}19 & \color{OliveGreen}30 & \color{OliveGreen}44 & \color{OliveGreen}53 \\
+\color{BrickRed}14 & \color{BrickRed}22 & \color{BrickRed}32 & \color{BrickRed}39 \\
+
+\end{array} \right]</math>
+
+
+And finally [[canonical form|canonicalize]]:
+
+
+<math>\left[ \begin{array} {rrr}
+
+1 & 0 & -4 & 2 \\
+0 & 2 & 8 & 1 \\
+
+\end{array} \right]</math>
+
+
+so we can now see that meantone plus flattone is [[godzilla]].
+
+As long as we've done all this work to set these matrices up to find their sum, let's find their difference as well. Again, set aside the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>, and just entry-wise subtract the two <span style="color: #B6321C;">linearly independent vectors</span>:
+
+
+<math>\left[ \begin{array} {rrr}
+
+\color{BrickRed}7 & \color{BrickRed}11 & \color{BrickRed}16 & \color{BrickRed}19 \\
+
+\end{array} \right]</math>
+-
+<math>\left[ \begin{array} {rrr}
+
+\color{BrickRed}7 & \color{BrickRed}11 & \color{BrickRed}16 & \color{BrickRed}20 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+\color{BrickRed}0 & \color{BrickRed}0 & \color{BrickRed}0 & \color{BrickRed}-1 \\
+
+\end{array} \right]</math>
+
+
+And so, reintroducing the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>, we have:
+
+
+<math>\left[ \begin{array} {rrr}
+
+\color{OliveGreen}19 & \color{OliveGreen}30 & \color{OliveGreen}44 & \color{OliveGreen}53 \\
+\color{BrickRed}0 & \color{BrickRed}0 & \color{BrickRed}0 & \color{BrickRed}-1 \\
+
+\end{array} \right]</math>
+
+
+Which canonicalizes to:
+
+
+<math>\left[ \begin{array} {rrr}
+
+19 & 30 & 44 & 0 \\
+0 & 0 & 0 & 1 \\
+
+\end{array} \right]</math>
+
+
+And so we can see that meantone minus flattone is [[meanmag]].
+
+=== Addition on non-addable temperaments ===
+==== Initial example: canonical form ====
+Even when a pair of temperaments isn’t addable, if they have the same dimensions, that means the matrices representing them have the same shape, and so then there’s nothing stopping us from entry-wise adding them. For example, the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> for the canonical comma bases for septimal meantone [{{vector|4 -4 1 0}} {{vector|13 -10 0 1}}] and septimal blackwood [{{vector|-8 5 0 0}} {{vector|-6 2 0 1}}] is empty, meaning their <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> <math>=2</math>, and therefore they aren't addable. Yet we can still do entry-wise addition on the matrices that are acting as these temperaments’ comma bases as if the temperaments were addable: 
+
+
+<math>\left[ \begin{array} {r|r}
+
+4 & 13 \\
+-4 & -10 \\
+1 & 0 \\
+0 & 1 \\
+
+\end{array} \right]
++
+\left[ \begin{array} {r|r}
+
+-8 & -6 \\
+5 & 2 \\
+0 & 0 \\
+0 & 1 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {r|r}
+
+(4+-8) & (13+-6) \\
+(-4+5) & (-10+2) \\
+(1+0) & (0+0) \\
+(0+0) & (1+1) \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {r|r}
+
+-4 & 7 \\
+1 & -8 \\
+1 & 0 \\
+0 & 2 \\
+
+\end{array} \right]</math>
+
+
+And — at first glance — the result may even seem to be what we were looking for: a temperament which makes
+# neither the meantone comma {{vector|4 -4 1 0}} nor the Pythagorean limma {{vector|-8 5 0 0}} vanish, but does make the just diatonic semitone {{vector|-4 1 1 0}} vanish; and
+# neither Harrison's comma {{vector|13 -10 0 1}} nor Archytas' comma {{vector|-6 2 0 1}} vanish, but does make the laruru negative second {{vector|7 -8 0 2}} vanish.
+
+But while these two monovector additions have worked out individually, the full result cannot truly be said to be the "temperament sum" of septimal meantone and blackwood. And here follows a demonstration why it cannot.
+
+==== Second example: alternate form ====
+Let's try summing two completely different comma bases for these temperaments and see what we get. So septimal meantone can also be represented by the comma basis consisting of the diesis {{vector|1 2 -3 1}} and the hemimean comma {{vector|-6 0 5 -2}} (which is another way of saying that septimal meantone also makes those commas vanish). And septimal blackwood can also be represented by the septimal third-tone {{vector|2 -3 0 1}} and the cloudy comma {{vector|-14 0 0 5}}. So here's those two bases' entry-wise sum:
+
+
+<math>\left[ \begin{array} {rrr}
+
+1 & -6 \\
+2 & 0 \\
+-3 & 5 \\
+1 & -2 \\
+
+\end{array} \right]
++
+\left[ \begin{array} {rrr}
+
+2 & -14 \\
+-3 & 0 \\
+0 & 0 \\
+1 & 5 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+(1+2) & (-6+-14) \\
+(2+-3) & (0+0) \\
+(-3+0) & (5+0) \\
+(1+1) & (-2+5) \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+3 & -20 \\
+-1 & 0 \\
+-3 & 5 \\
+2 & 3 \\
+
+\end{array} \right]</math>
+
+
+This works out for the individual monovectors too, that is, it now makes none of the input commas vanish anymore, but instead their sums. But what we're looking at here ''is not a comma basis for the same temperament'' as we got the first time! 
+
+We can confirm this by putting both results into [[canonical form]]. That's exactly what canonical form is for: confirming whether or not two matrices are representations of the same temperament! The first result happens to already be in canonical form, so that's [{{vector|-4 1 1 0}} {{vector|7 -8 0 2}}]. This second result [{{vector|3 -1 -3 2}} {{vector|-20 0 5 3}}] doesn't match that, but we can't be sure whether we don't have a match until we put it into canonical form. So its canonical form is [{{vector|-49 3 19 0}} {{vector|-23 1 8 1}}], which doesn't match, and so these are decidedly not the same temperament. 
+
+==== Third example: reordering of canonical form ====
+In fact, we could even take the same sets of commas and merely reorder them to come up with a different result! Here, we'll just switch the order of the two commas in the representation of septimal blackwood:
+
+
+<math>\left[ \begin{array} {rrr}
+
+4 & 13 \\
+-4 & -10 \\
+1 & 0 \\
+0 & 1 \\
+
+\end{array} \right]
++
+\left[ \begin{array} {rrr}
+
+-6 & -8 \\
+2 & 5 \\
+0 & 0 \\
+1 & 0 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+(4+-6) & (13+-8) \\
+(-4+2) & (-10+5) \\
+(1+0) & (0+0) \\
+(0+1) & (1+0) \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+-2 & 5 \\
+-2 & -5 \\
+1 & 0 \\
+1 & 1 \\
+
+\end{array} \right]</math>
+
+
+And the canonical form of [{{vector|-2 -2 1 1}} {{vector|5 -5 0 1}}] is [{{vector|-7 3 1 0}} {{vector|5 -5 0 1}}], so that's yet another possible temperament resulting from attempting to add these non-addable temperaments.
+
+==== Fourth example: other side of duality ====
+We can even experience this without changing basis. Let's just compare the results we get from the canonical form of these two temperaments, on either side of duality. The first example we worked through happened to be their canonical comma bases. So now let's look at their canonical mappings. Septimal meantone's is {{rket|{{map|1 0 -4 -13}} {{map|0 1 4 10}}}} and septimal blackwood's is {{rket|{{map|5 8 0 14}} {{map|0 0 1 0}}}}. So what temperament do we get by summing these? 
+
+
+<math>\left[ \begin{array} {rrr}
+
+1 & 0 & -4 & -13 \\
+0 & 1 & 4 & 10 \\
+
+\end{array} \right]
++
+\left[ \begin{array} {rrr}
+
+5 & 8 & 0 & 14 \\
+0 & 0 & 1 & 0 \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+(1+5) & (0+8) & (-4+0) & (-13+14) \\
+(0+0) & (1+0) & (4+1) & (10+0) \\
+
+\end{array} \right]
+=
+\left[ \begin{array} {rrr}
+
+6 & 8 & -4 & 1 \\
+0 & 1 & 5 & 10 \\
+
+\end{array} \right]</math>
+
+
+In order to compare this result directly with our other three results, let's take the dual of this {{rket|{{map|6 8 -4 1}} {{map|0 1 5 10}}}}, which is [{{vector|22 -15 3 0}} {{vector|41 -30 2 2}}] (in canonical form), so we can see that's yet a fourth possible result.<ref>
+It is possible to find a pair of mapping forms for septimal meantone and septimal blackwood that sum to a mapping which is the dual of the comma basis found by summing their canonical comma bases. One example is {{rket|{{map|97 152 220 259}} {{map|-30 -47 -68 -80}}}} + {{rket|{{map|-95 -152 -212 -266}} {{map|30 48 67 84}}}}.</ref>
+
+==== Summary ====
+Here's the four different results we've found so far:
+
+
+<math>
+
+\begin{array}{ccc}
+
+\text{canonical} & & \text{alternate} & & \text{reordered canonical} & & \text{other side of duality} \\
+
+\left[ \begin{array} {rrr}
+-4 & 7 \\
+1 & -8 \\
+1 & 0 \\
+0 & 2 \\
+\end{array} \right] &
+
+≠ & 
+
+\left[ \begin{array} {rrr}
+-49 & -23 \\
+3 & 1 \\
+19 & 8 \\
+0 & 1 \\
+\end{array} \right] &
+
+≠ &
+
+\left[ \begin{array} {rrr}
+-7 & 5 \\
+3 & -5 \\
+1 & 0 \\
+0 & 1 \\
+\end{array} \right] &
+
+≠ &
+
+\left[ \begin{array} {rrr}
+22 & 41 \\
+-15 & -30 \\
+3 & 2 \\
+0 & 2 \\
+\end{array} \right]
+
+\end{array}
+
+</math>
+
+
+What we're experiencing here is the effect first discussed in the early section [[Temperament addition#The temperaments are addable]]: since entry-wise addition of matrices is a operation defined on matrices, not bases, we get different results for different bases. 
+
+This in stark contrast to the situation when you have addable temperaments; once you get them into the form with the explicit <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> and only the single <span style="color: #B6321C;">linearly independent basis vector</span>, you will get the same resultant temperament regardless of which side of duality you add them on — the duals stay in sync, we could say — and regardless of which basis we choose.<ref>Note that different bases ''are'' possible for addable temperaments, e.g. the simplest addable forms for 5-limit meantone and porcupine are [<span style="color: #3C8031;">{{map|7 11 16}}</span> <span style="color: #B6321C;">{{map|-2 -3 -4}}</span>⟩ + [<span style="color: #3C8031;">{{map|7 11 16}}</span> <span style="color: #B6321C;">{{map|1 2 3}}</span>⟩ = {{rket|{{map|14 22 32}} {{map|-1 -1 -1}}}} which canonicalizes to {{rket|{{map|1 1 1}} {{map|0 4 9}}}}. But [<span style="color: #3C8031;">{{map|7 11 16}}</span> <span style="color: #B6321C;">{{map|-9 -14 -20}}</span>⟩ + [<span style="color: #3C8031;">{{map|7 11 16}}</span> <span style="color: #B6321C;">{{map|1 2 3}}</span>⟩ also works (in the  meantone mapping, we've added one copy of the first vector to the second), giving {{rket|{{map|14 22 32}} {{map|-8 -12 -17}}}} which also canonicalizes to {{rket|{{map|1 1 1}} {{map|0 4 9}}}}; in fact, as long as the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> is explicit and neither matrix is enfactored, the entry-wise addition will work out fine.</ref>
+
+And so we can see that despite immediate appearances, while it seems like we can simply do entry-wise addition on temperaments with more than one <span style="color: #B6321C;">basis vector not in common</span>, this does not give us reliable results per temperament.
+
+==== How it looks with multivectors ====
+We've now observed the outcome when adding non-addable temperaments using the matrix approach. It's instructive to observe how it works with multivectors as well. The canonical multicommas for septimal meantone and septimal blackwood are {{multicomma|12 -13 4 10 -4 1}} and {{multicomma|14 0 -8 0 5 0}}, respectively. When we add these, we get {{multicomma|26 -13 -4 10 1 1}}. What temperament is this — does it match with any of the four comma bases we've already found? Let's check by converting it back to matrix form. Oh, wait — we can't. This is what we call a [[decomposability|indecomposable]] multivector. In other words, there is no set of vectors that could be wedged together to produce this multivector. This is the way that multivectors convey to us that there is no true temperament sum of these two temperaments.
+
+=== Further explanations ===
+==== Diagrammatic explanation ====
+===== Introduction =====
+The diagrams used for this explanation were inspired in part by [[Kite Giedraitis|Kite]]'s [[gencom]]s, and specifically how in his "twin squares" matrices — which have dimensions <math>d×d</math> — one can imagine shifting a bar up and down to change the boundary between vectors that form a basis for the commas and those that are a [[generator detempering]]). The count of the former is the nullity <math>n</math>, and the count of the latter is the rank <math>r</math>, and the shifting of the boundary bar between them with the total <math>d</math> vectors corresponds to the insight of the rank-nullity theorem, which states that <math>r + n=d</math>. And so this diagram's square grid has just the right amount of room to portray both the mapping and the comma basis for a given temperament (with the comma basis's vectors rotated 90 degrees to appear as rows, to match up with the rows of the mapping).
+
+So consider this first example of such a diagram:
+
+{| class="wikitable"
+|+
+| rowspan="4" |<math>d=4</math>
+| style="border-bottom: 3px solid black;"|<math>g_{\text{min}}=1</math>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="border-top: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+| rowspan="3" |<math>g_{\text{max}}=3</math>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C; "><math>l_{\text{ind}}=1</math></span>
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+| rowspan="2" |
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|}
+
+This represents a <math>d=4</math> temperament. These diagrams are grade-agnostic, which is to say that they are agnostic as to which side counts the <math>r</math> and which side counts the <math>n</math>. So we are showing them as <math>g_{\text{min}}</math> and <math>g_{\text{max}}</math> instead. We could say there's a variation on the rank-nullity theorem whereby <math>g_{\text{min}} + g_{\text{max}}=d</math>, just as <math>r + n=d</math>. So we can then say that this diagram represents either a <math>r=1</math>, <math>n=3</math> temperament, or perhaps a <math>n=1</math>, <math>r=3</math> temperament.
+
+But actually, this diagram represents more than just a single temperament. It represents a relationship between a pair of temperaments (which have the same [[dimensions]], non-grade-agnostically, i.e. not a pairing of a <math>r=1</math>, <math>n=3</math> temperament with a <math>r=3</math>, <math>n=1</math> temperament). As elsewhere, <span style="color: #3C8031;">green coloration indicates the linearly dependent basis vectors <math>L_{\text{dep}}</math></span> between this pair of temperaments, and <span style="color: #B6321C;">red coloration indicates linearly ''in''dependent basis vectors <math>L_{\text{ind}}</math></span> between the same pair of temperaments.
+
+So, in this case, the two ET maps are <span style="color: #B6321C;">linearly independent</span>. This should be unsurprising; because ET maps are constituted by only a single vector (they're <math>r=1</math> by definition), if they ''were'' <span style="color: #3C8031;">linearly dependent</span>, then they'd necessarily be the ''same'' exact ET! Temperament addition on two of the same ET is never interesting; <math>T_1</math> plus <math>T_1</math> simply equals <math>T_1</math> again, and <math>T_1</math> minus <math>T_1</math> is undefined. That said, if we ''were'' to represent temperament addition between two of the same temperament on such a diagram as this, then every cell would be green. And this is true regardless whether <math>r=1</math> or otherwise.
+
+From this information, we can see that the comma bases of any randomly selected pair of ''different'' <math>d=4</math> ETs are going to <span style="color: #3C8031;">share 2 vectors</span>, or in other words, their <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> will have two basis vectors. In terms of the diagram, we're saying that they'll always have two <span style="color: #3C8031;">green-colored vectors</span> under the black bar.
+
+These diagrams are a good way to understand which temperament relationships are possible and which aren't, where by a "relationship" here we mean a particular combination of their matching dimensions and their linear-independence integer count. A good way to use these diagrams for this purpose is to imagine the <span style="color: #B6321C;">red coloration</span> emanating away from the black bar in both directions simultaneously, one pair of vectors at a time. Doing it like this captures the fact, as previously stated, that the <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> on either side of duality is always equal. There's no notion of a max or min here, as there is with <math>g</math> or <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span>; the <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> on either side is always the same, so we can capture it with a single number, which counts the <span style="color: #B6321C;">red vectors</span> on just one half (that is, half of the total count of <span style="color: #B6321C;">red vectors</span>, or half of the width of the <span style="color: #B6321C;">red band</span> in the middle of the grid).
+
+There's no need to look at diagrams like this where the black bar is below the center. This is because, even though for convenience we're currently treating the top half as <math>r</math> and the bottom half as <math>n</math>, these diagrams are ultimately grade-agnostic. So we could say that each one essentially represents not just one possibility for the relationship between two temperaments' dimensions and <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span>, but ''two'' such possibilities. Again, this diagram equally represents both <math>d=4, r=1, n=3, </math><span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span> as well as <math>d=4, r=3, n=1, </math><span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>. Which is another way of saying we could vertically mirror it without changing it.
+
+With the black bar always either in the top half or exactly in the center, we can see that the emanating <span style="color: #B6321C;">red band</span> will always either hit the top edge of the square grid first, or they will hit both the top and bottom edges of it simultaneously. So this is how these diagrams visually convey the fact that the <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> between two temperaments will always be less than or equal to their <math>g_{\text{min}}</math>: because a situation where <math>g_{\text{min}}>l</math> would visually look like the <span style="color: #B6321C;">red band</span> spilling past the edges of the square grid.
+
+We could also say that two temperaments are <span style="color: #3C8031;">linearly dependent</span> on each other when <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span><math><g_{\text{max}}</math>, that is, their <span style="color: #B6321C;">linear-independence</span> is less than their ''max''-grade.
+
+Perhaps more importantly, we can also see from these diagrams that any pair of <math>g_{\text{min}}=1</math> temperaments will be addable. Because if they are <math>g_{\text{min}}=1</math>, then the furthest the <span style="color: #B6321C;">red band</span> can extend from the black bar is 1 vector, and 1 mirrored set of <span style="color: #B6321C;">red vectors</span> means <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>, and that's the definition of addability.
+
+===== A simple <math>d=3</math> example =====
+Let's back-pedal to <math>d=3</math> for a simple illustrative example.
+{| class="wikitable"
+|+
+| rowspan="3" |<math>d=3</math>
+|style="border-bottom: 3px solid black;"|<math>g_{\text{min}}=1</math>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="border-top: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+| rowspan="2" |<math>g_{\text{max}}=2</math>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|
+|}
+
+This diagram shows us that any two <math>d=3</math>, <math>g_{\text{min}}=1</math> temperaments (like 5-limit ETs) will be <span style="color: #3C8031;">linearly dependent</span>, i.e. their comma bases will <span style="color: #3C8031;">share</span> one vector. You may already know this intuitively if you are familiar with the 5-limit [[projective tuning space]] diagram from the [[Paul_Erlich#Papers|Middle Path]] paper, which shows how we can draw a line through any two ETs and that line will represent a temperament, and the single comma that temperament makes to vanish is <span style="color: #3C8031;">this shared vector</span>. The diagram also tells us that any two 5-limit temperaments that make only a single comma vanish will also be <span style="color: #3C8031;">linearly dependent</span>, for the opposite reason: their ''mappings'' will always <span style="color: #3C8031;">share</span> one vector.
+
+And we can see that there are no other diagrams of interest for <math>d=3</math>, because there's no sense in looking at diagrams with no <span style="color: #B6321C;">red band</span>, but we can't extend the <span style="color: #B6321C;">red band</span> any further than 1 vector on each side without going over the edge, and we can't lower the black bar any further without going below the center. So we're done. And our conclusion is that any pair of different <math>d=3</math> temperaments that are nontrivial (<math>0 < n < d=3</math> and <math>0 < r < d=3</math>) will be addable.
+
+===== Completing the suite of <math>d=4</math> examples =====
+Okay, back to <math>d=4</math>. We've already looked at the <math>g_{\text{min}}=1</math> possibility (which, for any <math>d</math>, there will only ever be one of). So let's start looking at the possibilities where <math>g_{\text{min}}=2</math>, which in the case of <math>d=4</math> leaves us only one pair of values for <math>r</math> and <math>n</math>: both being 2.
+
+{| class="wikitable"
+|+
+| rowspan="4" |<math>d=4</math>
+| rowspan="2" style="border-bottom: 3px solid black;" |<math>g_{\text{min}}=2</math>
+|style="background-color: #BED5BA; border-bottom: 1px solid #B6321C;"|      
+|style="background-color: #BED5BA; border-bottom: 1px solid #B6321C;"|      
+|style="background-color: #BED5BA; border-bottom: 1px solid #B6321C;"|      
+|style="background-color: #BED5BA; border-bottom: 1px solid #B6321C;"|      
+|style="border-bottom: 1px solid #B6321C;"|
+|-
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+| style="border-top: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+| rowspan="2" |<math>g_{\text{max}}=2</math>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|
+|}
+
+But even with <math>d</math>, <math>r</math>, and <math>n</math> fixed, we still have more than one possibility for <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>. The above diagram shows <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>. The below diagram shows <span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span>.
+
+{| class="wikitable"
+|+
+| rowspan="4" |<math>d=4</math>
+| rowspan="2" style="border-bottom: 3px solid black;" |<math>g_{\text{min}}=2</math>
+| style="background-color: #E7BBB3; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| rowspan="2" style="border-top: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span>
+|-
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|-
+| rowspan="2" |<math>g_{\text{max}}=2</math>
+| style="background-color: #E7BBB3;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3;" |<span style="color: #B6321C;">  ↓  </span>
+| rowspan="2" style="border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span>
+|-
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|}
+
+In the former possibility, where <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span> (and therefore the temperaments are addable), we have a pair of different <math>d=4</math>, <math>r=2</math> temperaments where we can find a single comma that both temperaments make to vanish, and — equivalently — we can find one ET that supports both temperaments.
+
+In the latter possibility, where <span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span>, neither side of duality <span style="color: #3C8031;">shares</span> any vectors in common. And so we've encountered our first example that is not addable. In other words, if the <span style="color: #B6321C;">red band</span> ever extends more than 1 vector away from the black bar, temperament addition is not possible. So <math>d=4</math> is the first time we had enough room (half of <math>d</math>) to support that condition.
+
+We have now exhausted the possibility space for <math>d=4</math>. We can't extend either the <span style="color: #B6321C;">red band</span> or the black bar any further.
+
+===== <math>d=5</math> diagrams finally reveal important relationships =====
+So how about we go to <math>d=5</math> (such as the 11-limit). As usual, starting with <math>g_{\text{min}}=1</math>:
+{| class="wikitable"
+|+
+| rowspan="5" |<math>d=5</math>
+|style="border-bottom: 3px solid black;" |<math>g_{\text{min}}=1</math>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="border-top: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+| rowspan="4" |<math>g_{\text{max}}=4</math>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+| rowspan="3" |
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|}
+
+Just as with the <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span> diagrams given for <math>d=3</math> and <math>d=5</math>, we can see these are addable temperaments.
+
+Now let's look at <math>d=5</math> but with <math>g_{\text{min}}=2</math>. This presents two possibilities. First, <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>:
+
+{| class="wikitable"
+|+
+| rowspan="5" |<math>d=5</math>
+| rowspan="2" style="border-bottom: 3px solid black;" |<math>g_{\text{min}}=2</math>
+|style="background-color: #BED5BA; border-bottom: 1px solid #B6321C;"|      
+|style="background-color: #BED5BA; border-bottom: 1px solid #B6321C;"|      
+|style="background-color: #BED5BA; border-bottom: 1px solid #B6321C;"|      
+|style="background-color: #BED5BA; border-bottom: 1px solid #B6321C;"|      
+|style="background-color: #BED5BA; border-bottom: 1px solid #B6321C;"|      
+| style="border-bottom: 1px solid #B6321C;" |
+|-
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+| style="border-top: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+| rowspan="3" |<math>g_{\text{max}}=3</math>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↓  </span>
+| style="border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|
+|}
+
+And second, <span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span>:
+
+{| class="wikitable"
+|+
+| rowspan="5" |<math>d=5</math>
+| rowspan="2" style="border-bottom: 3px solid black;" |<math>g_{\text{min}}=2</math>
+| style="background-color: #E7BBB3; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| style="background-color: #E7BBB3; border-top: 1px solid #B6321C;" |<span style="color: #B6321C;">  ↑  </span>
+| rowspan="2" style="border-top: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span>
+|-
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black;"|<span style="color: #B6321C;">  ↑  </span>
+|-
+| rowspan="3" |<math>g_{\text{max}}=3</math>
+| style="background-color: #E7BBB3;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3;" |<span style="color: #B6321C;">  ↓  </span>
+| style="background-color: #E7BBB3;" |<span style="color: #B6321C;">  ↓  </span>
+| rowspan="2" style="border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span>
+|-
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|-
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|style="background-color: #BED5BA;"|      
+|
+|}
+
+Here's where things really get interesting. Because in both of these cases, the pairs of temperaments represented are <span style="color: #3C8031;">linearly dependent</span> on each other (i.e. either their mappings are <span style="color: #3C8031;">linearly dependent</span>, their comma bases are <span style="color: #3C8031;">linearly dependent</span>, or both). And so far, every possibility where temperaments have been <span style="color: #3C8031;">linearly dependent</span>, they have also been <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>, and therefore addable. But if you look at the second case here, we are <span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span>, but since <math>d=5</math>, the temperaments still manage to be <span style="color: #3C8031;">linearly dependent</span>. So this is the first example of a <span style="color: #3C8031;">linearly dependent</span> temperament pairing which is not addable.
+
+===== Back to <math>d=2</math>, for a surprisingly tricky example =====
+Beyond <math>d=5</math>, these diagrams get cumbersome to prepare, and cease to reveal further insights. But if we step back down to <math>d=2</math>, a place simpler than anywhere we've looked so far, we actually find another surprisingly tricky example, which is hopefully still illuminating.
+
+So <math>d=2</math> (such as the 3-limit) presents another case — similar to the <math>d=5</math>, <math>g_{\text{min}}=2</math>, <span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span> case explored most recently above — where the properties of <span style="color: #3C8031;">linearly dependence</span> and addability do not match each other. But while in the other case, we had a temperament pair that was <span style="color: #3C8031;">linearly dependent</span> yet not addable, in this <math>d=2</math> (and therefore <math>g_{\text{min}}=1</math>, <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>) case, it is the other way around: addable yet <span style="color: #B6321C;">linearly independent</span>!
+
+{| class="wikitable"
+|+
+| rowspan="2" |<math>d=2</math>
+|style="border-bottom: 3px solid black;" |<math>g_{\text{min}}=1</math>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↑  </span>
+|style="background-color: #E7BBB3; border-bottom: 3px solid black; border-top: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↑  </span>
+| style="border-top: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|-
+|<math>g_{\text{max}}=1</math>
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+|style="background-color: #E7BBB3; border-bottom: 1px solid #B6321C;"|<span style="color: #B6321C;">  ↓  </span>
+| style="border-bottom: 1px solid #B6321C;" |<span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>
+|}
+
+Basically, in the case of <math>d=2</math>, <math>g_{\text{max}}=1</math> (in non-trivial cases, i.e. not [[JI]] or the [[unison temperament]]), so any two different ETs or commas you pick are going to be <span style="color: #B6321C;">linearly independent</span> (because the only way they could be <span style="color: #3C8031;">linearly dependent</span> would be to be the same temperament). And yet we know we can still entry-wise add them to new vectors that are [[Douglas_Blumeyer_and_Dave_Keenan%27s_Intro_to_exterior_algebra_for_RTT#Decomposability|decomposable]], because they're already vectors (decomposing means to express a [[Douglas_Blumeyer_and_Dave_Keenan%27s_Intro_to_exterior_algebra_for_RTT#From_vectors_to_multivectors|multivector]] in the form of a list of monovectors, so decomposing a multivector that's already a monovector like this is tantamount to merely putting array braces around it.)
+
+==== Geometric explanation ====
+We've presented a diagrammatic illustration of the behavior of <span style="color: #B6321C;">linear-independence <math>l_{\text{ind}}</math></span> with respect to temperament dimensions. But some of the results might have seemed surprising. For instance, when looking at the diagram for <math>d=4, g_{\text{min}}=1, g_{\text{max}}=3</math>, it might have seemed intuitive enough that the the <span style="color: #3C8031;">red band</span> could not extend beyond the square grid, but then again, why shouldn't it be possible to have, say, two 7-limit ETs which make only a single comma in common vanish? Perhaps it doesn't seem clear that this is impossible, and that they must make two commas in common vanish (and of course the infinitude of combinations of these two commas). If this is as unclear to you as it was to the author when exploring this topic, then this explanatory section is for you! Here, we will use geometrical representations of temperaments to hone our intuitions about the possible combinations of dimensions and <span style="color: #B6321C;">linear-independence <math>l_{\text{ind}}</math></span> of temperaments.
+
+In this approach, we’re actually not going to focus directly on the <span style="color: #B6321C;">linear-independence <math>l_{\text{ind}}</math></span> of temperaments. Instead, we're going to look at the <span style="color: #3C8031;">linear-''de''pendence <math>l_{\text{dep}}</math></span> of matrices representing temperaments such as mappings and comma bases, and then compute the <span style="color: #B6321C;">linear-independence <math>l_{\text{ind}}</math></span> from it and the grade <math>g</math>. As we’ve established, the <span style="color: #3C8031;">linear-dependence <math>l_{\text{dep}}</math></span> differs from one side of duality to the other, so we’ll only be looking at one side of duality at a time. 
+
+===== Introduction =====
+In this geometric approach, we'll be imagining individual vectors as points (0D), sets of two vectors as lines (1D), sets of three as planes (2D), four as volumes (3D), and so forth, as according to this table:
+{| class="wikitable center-all"
+|+
+!vector
+count
+!geometric
+dimension
+!form
+|-
+|0
+|undefined
+|(emptiness)
+|-
+|1
+|0
+|point
+|-
+|2
+|1
+|line
+|-
+|3
+|2
+|plane
+|-
+|4
+|3
+|volume
+|-
+|5
+|4
+|hypervolume
+|-
+| ⋮
+|⋮
+|⋮
+|}
+
+This is a "vector space", and these geometric dimensions are consistent with how temperaments represented by these counts of vectors appear in ''projective'' vector space, which reduces geometric dimensions by 1. For example, a vector has a geometric interpretation as a directed line segment, which is 1D, but a point is 0D, which is one dimension lower. Essentially what we're doing is ''assuming the origin''. 
+
+Think of it this way: geometric points are zero-dimensional, simply representing a position in space, whereas linear algebra vectors are one-dimensional, representing both a magnitude and direction; the way vectors manage to encode this extra dimension without providing any additional information is by being understood to describe this position in space ''relative to an origin''. Well, so we'll now switch our interpretation of these objects to the geometric one, where the vector's entries are nothing more than a coordinate for a point in space. And the "projection" involved in projective vector space essentially positions us at this discarded origin, looking out from it upon every individual point, which accomplishes the same feat, in a visual way.
+
+Perhaps an example may help clarify this setup. Suppose we've got an (x,y,z) space, and two coordinates (5,8,12) and (7,11,16). You should recognize these as the simple maps for 5-ET and 7-ET, usually written as {{map|5 8 12}} and {{map|7 11 16}}, respectively. Ask for the equation of the plane defined by the three points (5,8,12), (7,11,16), and the origin (0,0,0) and you'll get -4x + 4y -1z = 0, which clearly shows us the entries of the meantone comma. That's because meantone temperament can be defined by these two maps. 5-limit JI is a 3D space, and meantone temperament, as a rank-2 temperament, would be a 2D plane. But we don't normally need to think of the map corresponding to the origin, where everything is made to vanish, including meantone. So we can just assume it, and think of a 2D plane as being defined by only 2 points, which in a view projected (from the origin) will look like just the line connecting (5,8,12) and (7,11,16).
+
+So, we've set the stage for our projective vector spaces. We will now be looking at representations of temperaments as counts of vector sets, and then using this scheme to convert them to primitive geometric forms. We'll place two of each form into the space, representing the two temperaments whose addability is being checked. Then we will observe their possible <span style="color: #3C8031;">''intersections''</span> depending on how they're oriented in space, and it's these <span style="color: #3C8031;">intersections that represent their linear-dependence</span>. When the dimension of the <span style="color: #3C8031;">intersection</span> is then converted back to a vector set count, then we have their <span style="color: #3C8031;">linear-dependence <math>l_{\text{dep}}</math></span>, for this side of duality, anyway (remember, unlike the <span style="color: #B6321C;">linear-independence <math>l_{\text{ind}}</math></span>, this value isn't necessarily the same on both sides of duality). We can finally subtract the <span style="color: #3C8031;">linear-dependence</span> from the grade (vector count) to get the <span style="color: #B6321C;">linear-indepedence</span>, in order to determine if the two temperaments are addable. 
+
+In these examples, we'll be assuming that no two temperaments being compared are the same, because adding copies of the same temperament is not interesting. The other things we'll be assuming is that no lines, planes, etc. are parallel to each other; this is due to a strange effect touched upon in footnote 4 whereby temperament geometry that appears parallel in projective space actually still intersects; the present author asks that if anyone is able to demystify this situation, that they please do!
+
+===== At <math>d=3</math> =====
+First, let's establish the geometric dimension of the space. With <math>d=3</math>, we've got a 2D space (one less than 3), so the entire space can be visualized on a plane.
+
+Our only possible values for <math>g_{\text{min}}</math> and <math>g_{\text{max}}</math> here are 1 and 2, respectively. So these are the two possible counts of vectors <math>g</math> possessed by matrices representing temperaments here. 
+
+So let's look at temperaments represented by matrices with 1 vector first (<math>g=1</math>). In this case, each of the two temperaments is a point in the plane. Unless these two temperaments are the same temperament, the <span style="color: #3C8031;">intersection</span> of these two points is empty. Emptiness isn't even 0D! So that tells us that these temperaments have 0 vectors worth of <span style="color: #3C8031;">linear dependence</span>. With <math>g=1</math>, that gives us a <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span><math> = g</math> <math> - </math> <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span> <math>= 1 -</math> <span style="color: #3C8031;"><math>0</math></span> <math>= 1</math>:
+
+[[File:D3 g1 dep0.png|200px|none]]
+
+Next, let's look at temperaments represented by matrices with 2 vectors (<math>g=2</math>). In this case, each of the two temperaments is a line in the plane. Again, assuming the two lines are not the same line or parallel, their <span style="color: #3C8031;">intersection</span> is a point. Being 0D, that tells us that the <span style="color: #3C8031;">linear-dependence</span> of these matrices is 1. So that gives us an <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> <math>= g</math> <math>-</math> <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span> <math>= 2 -</math> <span style="color: #3C8031;"><math>1</math></span> <math>= 1</math>. This matches the value we found via the <math>g=1</math>, so we've effectively checked our work:
+
+[[File:D3 g2 dep1.png|200px|none]]
+
+===== At <math>d=2</math> =====
+Let's step back to <math>d=2</math>. Here we've got a 2 minus 1 equals 1D space, so the entire space can be visualized on a single line (one direction corresponds to an increasing ratio between the two coordinates, and the other to a decreasing ratio). 
+
+We know our only possible value for <math>g_{\text{min}}</math> and <math>g_{\text{max}}</math> here is 1. So in either case, each of the two temperaments is a point on the line. As with two points in a plane — when <math>d=3</math> — unless these two temperaments are the same temperament, the intersection of these two points is empty. So again the <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span><math> = g = 1</math>:
+
+[[File:D2 g1 dep0.png|200px|none]]
+
+===== At <math>d=4</math> =====
+First, let's establish the geometric dimension of the space. With <math>d=4</math>, we've got a 3D space (one less than 4), so the entire space can be visualized in a volume.
+
+At <math>d=4</math>, we have a couple options for the grade: either <math>g_{\text{min}}=1</math> and <math>g_{\text{max}}=3</math>, or both <math>g_{\text{min}}</math> and <math>g_{\text{max}}</math> equal 2.
+
+Let's look at temperaments represented by matrices with 1 vector first (<math>g=1</math>). Yet again, we find ourselves with two separate points, but now we find them in a space that's not a line, not a plane, but a volume. This doesn't change <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span><math> = g = 1</math>, so we're not even going to show it, or any further cases of <math>g=1</math>. These are all addable.
+
+And when <math>g=3</math>, because this is paired with <math>g=1</math> from the min and max values, we should expect to get the same answer as with <math>g=1</math>. And indeed, it will check out that way. Because two <math>g=3</math> temperaments will be planes in this volume, and the intersection of two planes is a line. Which means that <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span><math> = 2</math>. And so <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span><math> = g</math> <math> - </math> <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span> <math>= 3 -</math> <span style="color: #3C8031;"><math>2</math></span> <math>= 1</math>. And here's where our geometric approach begins to pay off! This was the example given at the beginning that might seem unintuitive when relying only on the diagrammatic approach. But here we can see clearly that there would be no way for two planes in a volume to intersect only at a point, which proves the fact that two 7-limit ETs could never only make a single comma in common vanish.
+
+[[File:D4 g3 dep2.png|200px]]
+
+Next let's look at temperaments represented by matrices with 2 vectors, that is, when both <math>g_{\text{min}}</math> and <math>g_{\text{max}}</math> are equal to 2. What are the possible ways lines can occupy a volume together? In a plane, as it was with <math>d=3</math> (and again assuming no parallel objects in these examples), they must intersect. But in a volume, here in <math>d=4</math>, this is possible. So, with <math>g=2</math>, it is possible to have a <span style="color: #B6321C;"><math>l_{\text{dep}}</math></span> <math>= 0</math>, which leads to <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span><math> = g</math> <math> - </math> <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span> <math>= 2 -</math> <span style="color: #3C8031;"><math>0</math></span> <math>= 2</math>. Not addable in this case.
+
+[[File:D4 g2 dep0.png|200px]]
+
+But we can also imagine two lines in a volume that do intersect at a point. This is the case where <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span><math> = g</math> <math> - </math> <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span> <math>= 2 -</math> <span style="color: #3C8031;"><math>1</math></span> <math>= 1</math>: addable!
+
+[[File:D4 g2 dep1.png|200px]]
+
+===== At <math>d=5</math> =====
+First, let's establish the geometric dimension of the space. With <math>d=5</math>, we've got a 4D space (one less than 5), so the entire space can be visualized in a hypervolume. We've now gone beyond the dimensionality of physical reality, so things get a little harder to conceptualize unfortunately. But <math>d=5</math> is the first <math>d</math> where we can make an important point about addability, so please bear with!
+
+At <math>d=5</math>, we also have a couple options for the grade: either <math>g_{\text{min}}=1</math> and <math>g_{\text{max}}=4</math>, or <math>g_{\text{min}}=2</math> and <math>g_{\text{max}}=3</math>.
+
+First we'll look at <math>g_{\text{min}}=1</math> and <math>g_{\text{max}}=4</math>. Temperament matrices with <math>g=1</math> are still addable. And temperament matrices with <math>g=4</math> should be too. We can see this visually as how two volumes in a hypervolume together will have an intersection the shape of a plane. We can now see that there's a generalizable principal that any two <math>(d-1)</math>-dimensional objects will necessarily have a <math>(d-2)</math>-dimensional intersection, and thus have <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> <math>= 1</math> and be addable. So we won't need to show this one or any further like it, either.
+
+So let's look at temperament matrices with <math>g_{\text{min}}=2</math> and <math>g_{\text{max}}=3</math>. For <math>g=2</math>, we have two possible values for <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span>: 0 or 1. Meaning that either the two lines through this hypervolume do not intersect (0), or they intersect at a point (1). These diagrams would look very much like the corresponding diagrams for <math>d=4</math>, so we will not be showing them. But what about when <math>g=3</math>? We can certainly imagine two planes in a hypervolume intersecting at a line, just as they do in an ordinary volume — they're just not taking advantage of the additional geometric dimension. So we won't show that example either. But where it gets really interesting is imagining then taking one of these two planes and rotating it in the fifth dimension; this causes the intersection between the two planes to be reduced down to a single point. And this corresponds with the case of <span style="color: #3C8031;"><math>l_{\text{dep}}=1</math></span> here, which means <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span><math> = g</math> <math> - </math> <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span> <math>= 3 -</math> <span style="color: #3C8031;"><math>1</math></span> <math>= 2</math>, so therefore not addable:
+
+[[File:D5 g3 dep1.png|300px]]
+
+So for <math>g_{\text{min}}=2</math> and <math>g_{\text{max}}=3</math> we got two different possibilities for <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span>: 1 and 2, and for each of these two possibilities, we found it twice. We can see then that these match up, that is, that the <math>g_{\text{min}}=2</math> case with <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span> matches with the <math>g_{\text{max}}=3</math> case with <span style="color: #B6321C;"><math>l_{\text{ind}}=1</math></span>, and the <span style="color: #B6321C;"><math>l_{\text{ind}}=2</math></span> cases match in the same way.
+
+===== Summary table =====
+Here's a summary table of our geometric findings so far:
+ {| class="wikitable center-all"
+|+
+! rowspan="2" |<math>d</math> ( <math>= g_{\text{min}} + g_{\text{max}}</math>)
+! colspan="2" |<math>g_{\text{min}}</math>
+! colspan="2" |<math>g_{\text{max}}</math>
+! rowspan="2" |<span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> ( <math>= g -</math> <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span>)
+|-
+!<math>g</math>
+!<span style="color: #3C8031;"><math>l_{\text{dep}}</math></span>
+!<math>g</math>
+!<span style="color: #3C8031;"><math>l_{\text{dep}}</math></span>
+|-
+|2
+|1
+|0
+|1
+|0
+|1
+|-
+|3
+|1
+|0
+|2
+|1
+|1
+|-
+| rowspan="3" |4
+| 1
+|0
+|3
+|2
+|1
+|-
+|2
+|0
+|2
+|0
+|2
+|-
+|2
+|1
+|2
+|1
+|1
+|-
+| rowspan="3" | 5
+|1
+|0
+|4
+|3
+|1
+|-
+|2
+|0
+|3
+|1
+|2
+|-
+|2
+|1
+|3
+|2
+|1
+|}
+
+==== Algebraic explanation ====
+This explanation relies on comparing the results of the multivector and matrix approaches to temperament addition, and showing algebraically how the matrix approach can only achieve the same answer as the multivector approach on the condition that it keeps all but one vector between the added matrices the same, that is, not only are the temperaments addable, but their <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> appears explicitly in the added matrices. 
+
+To compare results, we eventually get both approaches into a multivector form. With the multivector approach, we wedge the vector set first and then add the resultant multivectors to get a new multivector. With the matrix approach, we treat the vector set as a matrix and add first, then treat the resultant matrix as a vector set and wedge those vectors to get a new multivector.
+
+The diagrams below are organized into a 2×2 layout. The left part shows the multivector approach, and the right part shows the matrix approach. The top part shows how the results of two approaches match when the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> is successfully explicit (and in these cases, the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> vectors are highlighted in green and the <span style="color: #B6321C;"><math>L_{\text{ind}}</math></span> vectors are highlighted in red), and the bottom part shows how the results fail to match when it is not. Successful matches are highlighted in yellow and failures to match are highlighted in blue.
+
+This first diagram demonstrates this situation for a <math>d=3, g=2</math> case. 
+{| class="wikitable center-all"
+|+
+!
+!
+!
+! colspan="11" |
+!
+! colspan="11" |
+!
+|-
+!
+!
+!
+| colspan="11" rowspan="1" |'''multivector approach'''
+!
+| colspan="11" rowspan="1" |'''matrix approach'''
+!
+|-
+!
+!
+!
+! colspan="11" |
+!
+! colspan="11" |
+!
+|-
+! rowspan="5" |
+| colspan="1" rowspan="5" |explicit <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>
+
+[{{vector|<math>a</math> <math>b</math> <math>c</math>}}]
+! rowspan="5" |
+| style="background-color: #BED5BA;"|<math>a</math>
+| style="background-color: #BED5BA;"|<math>b</math>
+| style="background-color: #BED5BA;"|<math>c</math>
+| rowspan="2" |
+| style="background-color: #BED5BA;"|<math>a</math>
+| style="background-color: #BED5BA;"|<math>b</math>
+| style="background-color: #BED5BA;"|<math>c</math>
+| rowspan="2" |
+| colspan="3" rowspan="2" |
+! rowspan="5" |
+| style="background-color: #BED5BA;"|<math>a</math>
+| style="background-color: #BED5BA;"|<math>b</math>
+| style="background-color: #BED5BA;"|<math>c</math>
+| colspan="1" rowspan="2" |<math>+</math>
+| style="background-color: #BED5BA;"|<math>a</math>
+| style="background-color: #BED5BA;"|<math>b</math>
+| style="background-color: #BED5BA;"|<math>c</math>
+| colspan="1" rowspan="2" |<math>=</math>
+|<math>2a</math>
+|<math>2b</math>
+|<math>2c</math>
+! rowspan="5" |
+|-
+| style="background-color: #E7BBB3;"|<math>d</math>
+| style="background-color: #E7BBB3;"|<math>e</math>
+| style="background-color: #E7BBB3;"|<math>f</math>
+| style="background-color: #E7BBB3;"|<math>g</math>
+| style="background-color: #E7BBB3;"|<math>h</math>
+| style="background-color: #E7BBB3;"|<math>i</math>
+| style="background-color: #E7BBB3;"|<math>d</math>
+| style="background-color: #E7BBB3;"|<math>e</math>
+| style="background-color: #E7BBB3;"|<math>f</math>
+| style="background-color: #E7BBB3;"|<math>g</math>
+| style="background-color: #E7BBB3;"|<math>h</math>
+| style="background-color: #E7BBB3;"|<math>i</math>
+|<math>d+g</math>
+|<math>e+h</math>
+|<math>f+i</math>
+|-
+| colspan="3" rowspan="1" |<math>∧</math>
+|
+| colspan="3" rowspan="1" |<math>∧</math>
+|
+| colspan="3" |
+| colspan="3" |
+|
+| colspan="3" |
+|
+| colspan="3" rowspan="1" |<math>∧</math>
+|-
+|<math>bf-ce</math>
+|<math>af-cd</math>
+|<math>ae-bd</math>
+|<math> +</math>
+|<math>bi-ch</math>
+|<math>ai-cg</math>
+|<math>ah-bg</math>
+|<math>=</math>
+|<math>bf-ce+bi-ch</math>
+|<math>af-cd+ai-cg</math>
+|<math>ae-bd+ah-bg</math>
+| colspan="3" rowspan="2" |
+| rowspan="2" |
+| colspan="3" rowspan="2" |
+| rowspan="2" |
+|<math>2b(f+i)-2c(e+h)</math>
+|<math>2a(f+i)-2c(d+g)</math>
+|<math>2a(e+h)-2b(d+g)</math>
+|-
+| colspan="3" |
+|
+| colspan="3" |
+|
+| style="background-color: LightYellow;"|<math>b(f+i)-c(e+h)</math>
+| style="background-color: LightYellow;"|<math>a(f+i)-c(d+g)</math>
+| style="background-color: LightYellow;"|<math>a(e+h)-b(d+g)</math>
+| style="background-color: LightYellow;"|<math>b(f+i)-c(e+h)</math>
+| style="background-color: LightYellow;"|<math>a(f+i)-c(d+g)</math>
+| style="background-color: LightYellow;"|<math>a(e+h)-b(d+g)</math>
+|-
+!
+!
+!
+! colspan="11" |
+!
+! colspan="11" |
+!
+|-
+! rowspan="5" |
+| rowspan="5" |hidden <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>
+! rowspan="5" |
+|<math>a</math>
+|<math>b</math>
+|<math>c</math>
+| rowspan="2" |
+|<math>j</math>
+|<math>k</math>
+|<math>l</math>
+|
+| colspan="3" rowspan="2" |
+! rowspan="5" |
+|<math>a</math>
+|<math>b</math>
+|<math>c</math>
+| colspan="1" rowspan="2" |<math>+</math>
+|<math>j</math>
+|<math>k</math>
+|<math>l</math>
+| colspan="1" rowspan="2" |<math>=</math>
+|<math>a+j</math>
+|<math>b+k</math>
+|<math>c+l</math>
+! rowspan="5" |
+|-
+|<math>d</math>
+|<math>e</math>
+|<math>f</math>
+|<math>g</math>
+|<math>h</math>
+|<math>i</math>
+|<math></math>
+|<math>d</math>
+|<math>e</math>
+|<math>f</math>
+|<math>g</math>
+|<math>h</math>
+|<math>i</math>
+|<math>d+g</math>
+|<math>e+h</math>
+|<math>f+i</math>
+|-
+| colspan="3" rowspan="1" |<math>∧</math>
+|
+| colspan="3" rowspan="1" |<math>∧</math>
+|
+| colspan="3" |
+| colspan="3" |
+|
+| colspan="3" |
+|
+| colspan="3" rowspan="1" |<math>∧</math>
+|-
+|<math>bf-ce</math>
+|<math>af-cd</math>
+|<math>ae-bd</math>
+|<math>+</math>
+|<math>ki-lh</math>
+|<math>ji-lg</math>
+|<math>jh-kg</math>
+|<math>=</math>
+|<math>bf-ce+ki-lh</math>
+|<math>af-cd+ji-lg</math>
+|<math>ae-bd+jh-kg</math>
+| colspan="3" rowspan="2" |
+| rowspan="2" |
+| colspan="3" rowspan="2" |
+| rowspan="2" |
+|<math>(b+k)(f+i)-(c+l)(e+h)</math>
+|<math>(a+j)(f+i)-(c+l)(d+g)</math>
+|<math>(a+j)(e+h)-(b+k)(d+g)</math>
+|-
+| colspan="3" |
+|
+| colspan="3" |
+|
+| style="background-color: LightBlue;"|<math>bf-ce+ki-lh</math>
+| style="background-color: LightBlue;"|<math>af-cd+ji-lg</math>
+| style="background-color: LightBlue;"|<math>ae-bd+jh-kg</math>
+| style="background-color: LightBlue;"|<math>bf+bi+kf+ki-ce-ch-le-lh</math>
+| style="background-color: LightBlue;"|<math>af+ai+jf+ji-cd-cg-ld-lg</math>
+| style="background-color: LightBlue;"|<math>ae+ah+je+jh-bd-bg-kd-kg</math>
+|-
+!
+!
+!
+! colspan="11" |
+!
+! colspan="11" |
+!
+|}
+
+This second diagram demonstrates this situation for a <math>d=5, g=3</math> case. One pair of the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span> vectors are explicitly matching, but not the other, which isn't enough.
+
+{| class="wikitable center-all"
+|+
+!
+! colspan="2" |
+!
+! colspan="32" |
+!
+! colspan="22" |
+!
+|-
+!
+! colspan="2" |
+!
+| colspan="32" rowspan="1" |'''multivector approach'''
+!
+| colspan="22" rowspan="1" |'''matrix approach'''
+!
+|-
+!
+! colspan="2" |
+!
+! colspan="32" |
+!
+! colspan="22" |
+!
+|-
+! rowspan="7" |
+| colspan="1" rowspan="7" |explicit <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>
+
+[{{vector|<math>a</math> <math>b</math> <math>c</math> <math>d</math> <math>e</math>}} 
+{{vector|<math>f</math> <math>g</math> <math>h</math> <math>i</math> <math>j</math>}}]
+| style="background-color: #BED5BA;"|<math>r_1</math>
+! rowspan="7" |
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>a</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>b</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>c</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>d</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>e</math>
+| rowspan="3" |
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>a</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>b</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>c</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>d</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>e</math>
+| rowspan="3" |
+| colspan="10" rowspan="3" |
+! rowspan="7" |
+| style="background-color: #BED5BA;"|<math>a</math>
+| style="background-color: #BED5BA;"|<math>b</math>
+| style="background-color: #BED5BA;"|<math>c</math>
+| style="background-color: #BED5BA;"|<math>d</math>
+| style="background-color: #BED5BA;"|<math>e</math>
+| colspan="1" rowspan="3" |+
+| style="background-color: #BED5BA;"|<math>a</math>
+| style="background-color: #BED5BA;"|<math>b</math>
+| style="background-color: #BED5BA;"|<math>c</math>
+| style="background-color: #BED5BA;"|<math>d</math>
+| style="background-color: #BED5BA;"|<math>e</math>
+| colspan="1" rowspan="3" |<math>=</math>
+| colspan="2" rowspan="1" |<math>2a</math>
+| colspan="2" rowspan="1" |<math>2b</math>
+| colspan="2" rowspan="1" |<math>2c</math>
+| colspan="2" rowspan="1" |<math>2d</math>
+| colspan="2" rowspan="1" |<math>2e</math>
+! rowspan="7" |
+|-
+| style="background-color: #BED5BA;"|<math>r_2</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>f</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>g</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>h</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>i</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>j</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>f</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>g</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>h</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>i</math>
+| style="background-color: #BED5BA;" colspan="2" rowspan="1" |<math>j</math>
+| style="background-color: #BED5BA;" |<math>f</math>
+| style="background-color: #BED5BA;" |<math>g</math>
+| style="background-color: #BED5BA;" |<math>h</math>
+| style="background-color: #BED5BA;" |<math>i</math>
+| style="background-color: #BED5BA;" |<math>j</math>
+| style="background-color: #BED5BA;" |<math>f</math>
+| style="background-color: #BED5BA;" |<math>g</math>
+| style="background-color: #BED5BA;" |<math>h</math>
+| style="background-color: #BED5BA;" |<math>i</math>
+| style="background-color: #BED5BA;" |<math>j</math>
+| colspan="2" rowspan="1" |<math>2f</math>
+| colspan="2" rowspan="1" |<math>2g</math>
+| colspan="2" rowspan="1" |<math>2h</math>
+| colspan="2" rowspan="1" |<math>2i</math>
+| colspan="2" rowspan="1" |<math>2j</math>
+|-
+| style="background-color: #E7BBB3;"|<math>r_3</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>k</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>l</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>m</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>n</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>o</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>p</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>q</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>r</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>s</math>
+| style="background-color: #E7BBB3;" colspan="2" rowspan="1" |<math>t</math>
+| style="background-color: #E7BBB3;"|<math>k</math>
+| style="background-color: #E7BBB3;"|<math>l</math>
+| style="background-color: #E7BBB3;"|<math>m</math>
+| style="background-color: #E7BBB3;"|<math>n</math>
+| style="background-color: #E7BBB3;"|<math>o</math>
+| style="background-color: #E7BBB3;"|<math>p</math>
+| style="background-color: #E7BBB3;"|<math>q</math>
+| style="background-color: #E7BBB3;"|<math>r</math>
+| style="background-color: #E7BBB3;"|<math>s</math>
+| style="background-color: #E7BBB3;"|<math>t</math>
+| colspan="2" rowspan="1" |<math>k+p</math>
+| colspan="2" rowspan="1" |<math>l+q</math>
+| colspan="2" rowspan="1" |<math>m+r</math>
+| colspan="2" rowspan="1" |<math>n+s</math>
+| colspan="2" rowspan="1" |<math>o+t</math>
+|-
+|
+| colspan="10" rowspan="1" |<math>∧</math>
+|
+| colspan="10" rowspan="1" |<math>∧</math>
+|
+| colspan="10" |
+| colspan="5" |
+|
+| colspan="5" |
+|
+| colspan="10" rowspan="1" |<math>∧</math>
+|-
+|<math>r_1∧r_2</math>
+| rowspan="2" |<math>ag-bf</math>
+| rowspan="2" |<math>ah-cf</math>
+| rowspan="2" |<math>ai-df</math>
+| rowspan="2" |<math>aj-ef</math>
+| rowspan="2" |<math>bh-cg</math>
+| rowspan="2" |<math>bi-dg</math>
+| rowspan="2" |<math>bj-eg</math>
+| rowspan="2" |<math>ci-dh</math>
+| rowspan="2" |<math>cj-eh</math>
+| rowspan="2" |<math>dj-ei</math>
+| rowspan="2" |
+| rowspan="2" |<math>ag-bf</math>
+| rowspan="2" |<math>ah-cf</math>
+| rowspan="2" |<math>ai-df</math>
+| rowspan="2" |<math>aj-ef</math>
+| rowspan="2" |<math>bh-cg</math>
+| rowspan="2" |<math>bi-dg</math>
+| rowspan="2" |<math>bj-eg</math>
+| rowspan="2" |<math>ci-dh</math>
+| rowspan="2" |<math>cj-eh</math>
+| rowspan="2" |<math>dj-ei</math>
+| rowspan="2" |
+| colspan="10" rowspan="2" |
+| colspan="5" rowspan="3" |
+| rowspan="3" |
+| colspan="5" rowspan="3" |
+| rowspan="3" |
+|<math>4ag-4bf</math>
+|<math>4ah-4cf</math>
+|<math>4ai-4df</math>
+|<math>4aj-4ef</math>
+|<math>4bh-4cg</math>
+|<math>4bi-4dg</math>
+|<math>4bj-4eg</math>
+|<math>4ci-4dh</math>
+|<math>4cj-4eh</math>
+|<math>4dj-4ei</math>
+|-
+|simplify <math>r_1∧r_2</math> if necessary
+|<math>ag-bf</math>
+|<math>ah-cf</math>
+|<math>ai-df</math>
+|<math>aj-ef</math>
+|<math>bh-cg</math>
+|<math>bi-dg</math>
+|<math>bj-eg</math>
+|<math>ci-dh</math>
+|<math>cj-eh</math>
+|<math>dj-ei</math>
+|-
+|<math>(r_1∧r_2)∧r_3</math>
+|<math>k(bh-cg)\\-l(ah-cf)\\+m(ag-bf)</math>
+|<math>k(bi-dg)\\-l(ai-df)\\+n(ag-bf)</math>
+|<math>k(bj-eg)\\-l(aj-ef)\\+o(ag-bf)</math>
+|<math>k(ci-dh)\\-m(ai-df)\\+n(ah-cf)</math>
+|<math>k(cj-eh)\\-m(aj-ef)\\+o(ah-cf)</math>
+|<math>k(dj-ei)\\-n(aj-ef)\\+o(ai-df)</math>
+|<math>l(ci-dh)\\-m(bi-dg)\\+n(bh-cg)</math>
+|<math>l(cj-eh)\\-m(bj-eg)\\+o(bh-cg)</math>
+|<math>l(dj-ei)\\-n(bj-eg)\\+o(bi-dg)</math>
+|<math>m(dj-ei)\\-n(cj-eh)\\+o(ci-dh)</math>
+|<math>+</math>
+|<math>p(bh-cg)\\-q(ah-cf)\\+r(ag-bf)</math>
+|<math>p(bi-dg)\\-q(ai-df)\\+s(ag-bf)</math>
+|<math>p(bj-eg)\\-q(aj-ef)\\+t(ag-bf)</math>
+|<math>p(ci-dh)\\-r(ai-df)\\+s(ah-cf)</math>
+|<math>p(cj-eh)\\-r(aj-ef)\\+t(ah-cf)</math>
+|<math>p(dj-ei)\\-s(aj-ef)\\+t(ai-df)</math>
+|<math>q(ci-dh)\\-r(bi-dg)\\+s(bh-cg)</math>
+|<math>q(cj-eh)\\-r(bj-eg)\\+t(bh-cg)</math>
+|<math>q(dj-ei)\\-s(bj-eg)\\+t(bi-dg)</math>
+|<math>r(dj-ei)\\-s(cj-eh)\\+t(ci-dh)</math>
+|<math>=</math>
+| style="background-color: LightYellow;"|<math>(k+p)(bh-cg)\\-(l+q)(ah-cf)\\+(m+r)(ag-bf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(bi-dg)\\-(l+q)(ai-df)\\+(n+s)(ag-bf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(bj-eg)\\-(l+q)(aj-ef)\\+(o+t)(ag-bf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(ci-dh)\\-(m+r)(ai-df)\\+(n+s)(ah-cf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(cj-eh)\\-(m+r)(aj-ef)\\+(o+t)(ah-cf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(dj-ei)\\-(n+s)(aj-ef)\\+(o+t)(ai-df)</math>
+| style="background-color: LightYellow;"|<math>(l+q)(ci-dh)\\-(m+r)(bi-dg)\\+(n+s)(bh-cg)</math>
+| style="background-color: LightYellow;"|<math>(l+q)(cj-eh)\\-(m+r)(bj-eg)\\+(o+t)(bh-cg)</math>
+| style="background-color: LightYellow;"|<math>(l+q)(dj-ei)\\-(n+s)(bj-eg)\\+(o+t)(bi-dg)</math>
+| style="background-color: LightYellow;"|<math>(m+r)(dj-ei)\\-(n+s)(cj-eh)\\+(o+t)(ci-dh)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(bh-cg)\\-(l+q)(ah-cf)\\+(m+r)(ag-bf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(bi-dg)\\-(l+q)(ai-df)\\+(n+s)(ag-bf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(bj-eg)\\-(l+q)(aj-ef)\\+(o+t)(ag-bf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(ci-dh)\\-(m+r)(ai-df)\\+(n+s)(ah-cf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(cj-eh)\\-(m+r)(aj-ef)\\+(o+t)(ah-cf)</math>
+| style="background-color: LightYellow;"|<math>(k+p)(dj-ei)\\-(n+s)(aj-ef)\\+(o+t)(ai-df)</math>
+| style="background-color: LightYellow;"|<math>(l+q)(ci-dh)\\-(m+r)(bi-dg)\\+(n+s)(bh-cg)</math>
+| style="background-color: LightYellow;"|<math>(l+q)(cj-eh)\\-(m+r)(bj-eg)\\+(o+t)(bh-cg)</math>
+| style="background-color: LightYellow;"|<math>(l+q)(dj-ei)\\-(n+s)(bj-eg)\\+(o+t)(bi-dg)</math>
+| style="background-color: LightYellow;"|<math>(m+r)(dj-ei)\\-(n+s)(cj-eh)\\+(o+t)(ci-dh)</math>
+|-
+!
+!
+!
+!
+! colspan="32" |
+!
+! colspan="22" |
+!
+|-
+! rowspan="7" |
+| rowspan="7" |hidden <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>
+|<math>r_1</math>
+! rowspan="7" |
+| colspan="2" rowspan="1" |<math>a</math>
+| colspan="2" rowspan="1" |<math>b</math>
+| colspan="2" rowspan="1" |<math>c</math>
+| colspan="2" rowspan="1" |<math>d</math>
+| colspan="2" rowspan="1" |<math>e</math>
+| rowspan="3" |
+| colspan="2" rowspan="1" |<math>a</math>
+| colspan="2" rowspan="1" |<math>b</math>
+| colspan="2" rowspan="1" |<math>c</math>
+| colspan="2" rowspan="1" |<math>d</math>
+| colspan="2" rowspan="1" |<math>e</math>
+| rowspan="3" |
+| colspan="10" rowspan="3" |
+! rowspan="7" |
+|<math>a</math>
+|<math>b</math>
+|<math>c</math>
+|<math>d</math>
+|<math>e</math>
+| colspan="1" rowspan="3" |<math>+</math>
+|<math>a</math>
+|<math>b</math>
+|<math>c</math>
+|<math>d</math>
+|<math>e</math>
+| colspan="1" rowspan="3" |<math>=</math>
+| colspan="2" rowspan="1" |<math>2a</math>
+| colspan="2" rowspan="1" |<math>2b</math>
+| colspan="2" rowspan="1" |<math>2c</math>
+| colspan="2" rowspan="1" |<math>2d</math>
+| colspan="2" rowspan="1" |<math>2e</math>
+! rowspan="7" |
+|-
+|<math>r_2</math>
+| colspan="2" rowspan="1" |<math>f</math>
+| colspan="2" rowspan="1" |<math>g</math>
+| colspan="2" rowspan="1" |<math>h</math>
+| colspan="2" rowspan="1" |<math>i</math>
+| colspan="2" rowspan="1" |<math>j</math>
+| colspan="2" rowspan="1" |<math>u</math>
+| colspan="2" rowspan="1" |<math>v</math>
+| colspan="2" rowspan="1" |<math>w</math>
+| colspan="2" rowspan="1" |<math>x</math>
+| colspan="2" rowspan="1" |<math>y</math>
+|<math>f</math>
+|<math>g</math>
+|<math>h</math>
+|<math>i</math>
+|<math>j</math>
+|<math>u</math>
+|<math>v</math>
+|<math>w</math>
+|<math>x</math>
+|<math>y</math>
+| colspan="2" rowspan="1" |<math>f+u</math>
+| colspan="2" rowspan="1" |<math>g+v</math>
+| colspan="2" rowspan="1" |<math>w+h</math>
+| colspan="2" rowspan="1" |<math>i+x</math>
+| colspan="2" rowspan="1" |<math>j+y</math>
+|-
+|<math>r_3</math>
+| colspan="2" rowspan="1" |<math>k</math>
+| colspan="2" rowspan="1" |<math>l</math>
+| colspan="2" rowspan="1" |<math>m</math>
+| colspan="2" rowspan="1" |<math>n</math>
+| colspan="2" rowspan="1" |<math>o</math>
+| colspan="2" rowspan="1" |<math>p</math>
+| colspan="2" rowspan="1" |<math>q</math>
+| colspan="2" rowspan="1" |<math>r</math>
+| colspan="2" rowspan="1" |<math>s</math>
+| colspan="2" rowspan="1" |<math>t</math>
+|<math>k</math>
+|<math>l</math>
+|<math>m</math>
+|<math>n</math>
+|<math>o</math>
+|<math>p</math>
+|<math>q</math>
+|<math>r</math>
+|<math>s</math>
+|<math>t</math>
+| colspan="2" rowspan="1" |<math>k+p</math>
+| colspan="2" rowspan="1" |<math>l+q</math>
+| colspan="2" rowspan="1" |<math>m+r</math>
+| colspan="2" rowspan="1" |<math>n+s</math>
+| colspan="2" rowspan="1" |<math>o+t</math>
+|-
+|
+| colspan="10" rowspan="1" |<math>∧</math>
+|
+| colspan="10" rowspan="1" |<math>∧</math>
+|
+| colspan="10" |
+| colspan="5" |
+|
+| colspan="5" |
+|
+| colspan="10" rowspan="1" |<math>∧</math>
+|-
+|<math>r_1∧r_2</math>
+| rowspan="2" |<math>ag-bf</math>
+| rowspan="2" |<math>ah-cf</math>
+| rowspan="2" |<math>ai-df</math>
+| rowspan="2" |<math>aj-ef</math>
+| rowspan="2" |<math>bh-cg</math>
+| rowspan="2" |<math>bi-dg</math>
+| rowspan="2" |<math>bj-eg</math>
+| rowspan="2" |<math>ci-dh</math>
+| rowspan="2" |<math>cj-eh</math>
+| rowspan="2" |<math>dj-ei</math>
+| rowspan="2" |
+| rowspan="2" |<math>av-bu</math>
+| rowspan="2" |<math>aw-cu</math>
+| rowspan="2" |<math>ax-du</math>
+| rowspan="2" |<math>ay-eu</math>
+| rowspan="2" |<math>bw-cv</math>
+| rowspan="2" |<math>bx-dv</math>
+| rowspan="2" |<math>by-ev</math>
+| rowspan="2" |<math>cx-dw</math>
+| rowspan="2" |<math>cy-ew</math>
+| rowspan="2" |<math>dy-ex</math>
+| rowspan="2" |
+| colspan="10" rowspan="2" |
+| colspan="5" rowspan="3" |
+| rowspan="3" |
+| colspan="5" rowspan="3" |
+| rowspan="3" |
+|<math>2a(g+v)\\-2b(f+u)</math>
+|<math>2a(w+h)\\-2c(f+u)</math>
+|<math>2a(i+x)\\-2d(f+u)</math>
+|<math>2a(j+y)\\-2e(f+u)</math>
+|<math>2b(w+h)\\-2c(g+v)</math>
+|<math>2b(i+x)\\-2d(g+v)</math>
+|<math>2b(j+y)\\-2e(g+v)</math>
+|<math>2c(i+x)\\-2d(w+h)</math>
+|<math>2c(j+y)\\-2e(w+h)</math>
+|<math>2d(j+y)\\-2e(i+x)</math>
+|-
+|simplify <math>(r_1∧r_2)</math> if necessary
+|<math>a(g+v)\\-b(f+u)</math>
+|<math>a(w+h)\\-c(f+u)</math>
+|<math>a(i+x)\\-d(f+u)</math>
+|<math>a(j+y)\\-e(f+u)</math>
+|<math>b(w+h)\\-c(g+v)</math>
+|<math>b(i+x)\\-d(g+v)</math>
+|<math>b(j+y)\\-e(g+v)</math>
+|<math>c(i+x)\\-d(w+h)</math>
+|<math>c(j+y)\\-e(w+h)</math>
+|<math>d(j+y)\\-e(i+x)</math>
+|-
+|<math>(r_1∧r_2)∧r_3</math>
+|<math>k(bh-cg)\\-l(ah-cf)\\+m(ag-bf)</math>
+|<math>k(bi-dg)\\-l(ai-df)\\+n(ag-bf)</math>
+|<math>k(bj-eg)\\-l(aj-ef)\\+o(ag-bf)</math>
+|<math>k(ci-dh)\\-m(ai-df)\\+n(ah-cf)</math>
+|<math>k(cj-eh)\\-m(aj-ef)\\+o(ah-cf)</math>
+|<math>k(dj-ei)\\-n(aj-ef)\\+o(ai-df)</math>
+|<math>l(ci-dh)\\-m(bi-dg)\\+n(bh-cg)</math>
+|<math>l(cj-eh)\\-m(bj-eg)\\+o(bh-cg)</math>
+|<math>l(dj-ei)\\-n(bj-eg)\\+o(bi-dg)</math>
+|<math>m(dj-ei)\\-n(cj-eh)\\+o(ci-dh)</math>
+|<math>+</math>
+|<math>p(bw-cv)\\-q(aw-cu)\\+r(av-bu)</math>
+|<math>p(bx-dv)\\-q(ax-du)\\+s(av-bu)</math>
+|<math>p(by-ev)\\-q(ay-eu)\\+t(av-bu)</math>
+|<math>p(cx-dw)\\-r(ax-du)\\+s(aw-cu)</math>
+|<math>p(cy-ew)\\-r(ay-eu)\\+t(aw-cu)</math>
+|<math>p(dy-ex)\\-s(ay-eu)\\+t(ax-du)</math>
+|<math>q(cx-dw)\\-r(bx-dv)\\+s(bw-cv)</math>
+|<math>q(cy-ew)\\-r(by-ev)\\+t(bw-cv)</math>
+|<math>q(dy-ex)\\-s(by-ev)\\+t(bw-cv)</math>
+|<math>r(dy-ex)\\-s(cy-ew)\\+t(cx-dw)</math>
+|<math>=</math>
+| style="background-color: LightBlue;"|<math>k(bh-cg)\\-l(ah-cf)\\+m(ag-bf)\\+p(bw-cv)\\-q(aw-cu)\\+r(av-bu)</math>
+| style="background-color: LightBlue;"|<math>k(bi-dg)\\-l(ai-df)\\+n(ag-bf)\\+p(bx-dv)\\-q(ax-du)\\+s(av-bu)</math>
+| style="background-color: LightBlue;"|<math>k(bj-eg)\\-l(aj-ef)\\+o(ag-bf)\\+p(by-ev)\\-q(ay-eu)\\+t(av-bu)</math>
+| style="background-color: LightBlue;"|<math>k(ci-dh)\\-m(ai-df)\\+n(ah-cf)\\+p(cx-dw)\\-r(ax-du)\\+s(aw-cu)</math>
+| style="background-color: LightBlue;"|<math>k(cj-eh)\\-m(aj-ef)\\+o(ah-cf)\\+p(cy-ew)\\-r(ay-eu)\\+t(aw-cu)</math>
+| style="background-color: LightBlue;"|<math>k(dj-ei)\\-n(aj-ef)\\+o(ai-df)\\+p(dy-ex)\\-s(ay-eu)\\+t(ax-du)</math>
+| style="background-color: LightBlue;"|<math>l(ci-dh)\\-m(bi-dg)\\+n(bh-cg)\\+q(cx-dw)\\-r(bx-dv)\\+s(bw-cv)</math>
+| style="background-color: LightBlue;"|<math>l(cj-eh)\\-m(bj-eg)\\+o(bh-cg)\\+q(cy-ew)\\-r(by-ev)\\+t(bw-cv)</math>
+| style="background-color: LightBlue;"|<math>l(dj-ei)\\-n(bj-eg)\\+o(bi-dg)\\+q(dy-ex)\\-s(by-ev)\\+t(bw-cv)</math>
+| style="background-color: LightBlue;"|<math>m(dj-ei)\\-n(cj-eh)\\+o(ci-dh)\\+r(dy-ex)\\-s(cy-ew)\\+t(cx-dw)</math>
+| style="background-color: LightBlue;"|<math>(k+p)\\(b(w+h)-c(g+v))\\-(l+q)\\(a(w+h)-c(f+u))\\+(m+r)\\(a(g+v)-b(f+u))</math>
+| style="background-color: LightBlue;"|<math>(k+p)\\(b(i+x)-d(g+v))\\-(l+q)\\(a(i+x)-d(f+u))\\+(n+s)\\(a(g+v)-b(f+u))</math>
+| style="background-color: LightBlue;"|<math>(k+p)\\(b(j+y)-e(g+v))\\-(l+q)\\(a(j+y)-e(f+u))\\+(o+t)\\(a(g+v)-b(f+u))</math>
+| style="background-color: LightBlue;"|<math>(k+p)\\(c(i+x)-d(w+h))\\-(m+r)\\(a(i+x)-d(f+u))\\+(n+s)\\(a(w+h)-c(f+u))</math>
+| style="background-color: LightBlue;"|<math>(k+p)\\(c(j+y)-e(w+h))\\-(m+r)\\(a(j+y)-e(f+u))\\+(o+t)\\(a(w+h)-c(f+u))</math>
+| style="background-color: LightBlue;"|<math>(k+p)\\(d(j+y)-e(i+x))\\-(n+s)\\(a(j+y)-e(f+u))\\+(o+t)\\(a(i+x)-d(f+u))</math>
+| style="background-color: LightBlue;"|<math>(l+q)\\(c(i+x)-d(w+h))\\-(m+r)\\(b(i+x)-d(g+v))\\+(n+s)\\(b(w+h)-c(g+v))</math>
+| style="background-color: LightBlue;"|<math>(l+q)\\(c(j+y)-e(w+h))\\-(m+r)\\(b(j+y)-e(g+v))\\+(o+t)\\(b(w+h)-c(g+v))</math>
+| style="background-color: LightBlue;"|<math>(l+q)\\(d(j+y)-e(i+x))\\-(n+s)\\(b(j+y)-e(g+v))\\+(o+t)\\(b(i+x)-d(g+v))</math>
+| style="background-color: LightBlue;"|<math>(m+r)\\(d(j+y)-e(i+x))\\-(n+s)\\(c(j+y)-e(w+h))\\+(o+t)\\(c(i+x)-d(w+h))</math>
+|-
+!
+! colspan="2" |
+!
+! colspan="32" |
+!
+! colspan="22" |
+!
+|}
+
+These two examples are by no means a proof, but meditation on the patterns in the variables is at least fairly convincing.
+
+==== Sintel's proof of the <span style="color: #B6321C;">linear-independence</span> conjecture ====
+===== Sintel's original text =====
+ <nowiki>If A and B are mappings from Z^n to Z^m, with n > m, A, B full rank (using A and B as their rowspace equivalently):
+  
+  dim(A + B) - m = dim(ker(A) + ker(B)) - (n-m)
+  
+  >> dim(A)+dim(B)=dim(A+B)+dim(A∩B) => dim(A + B) = dim(A) + dim(B) - dim(A∩B)
+  
+  dim(A) + dim(B) - dim(A∩B) - m = dim(ker(A) + ker(B)) - (n-m)
+  
+  >> by duality of kernel, dim(ker(A) + ker(B))  = dim(ker(A ∩ B))
+  
+  dim(A) + dim(B) - dim(A∩B) - m = dim(ker(A ∩ B))  - (n-m)
+  
+  >> rank nullity: dim(ker(A ∩ B)) + dim(A ∩ B) = n
+  
+  dim(A) + dim(B) - dim(A∩B) - m = n -  dim(A ∩ B)  - (n-m)
+  
+  m + m - dim(A∩B) - m = n -  dim(A ∩ B)  - (n-m)
+  
+  m + m - m = n - n + m
+  
+  m = m</nowiki>
+
+===== Douglas Blumeyer's interpretation =====
+We're going to take the strategy of beginning with what we're trying to prove, then reducing it to an obvious equivalence, which will show that our initial statement must be just as true.
+
+So here's the statement we're trying to prove:
+
+
+<math>\text{rank}(\text{union}(M_1, M_2)) - r = \text{nullity}(\text{union}(C_1, C_2)) - n</math>
+
+
+<math>M_1</math> and <math>M_2</math> are mappings which both have dimensionality <math>d</math>, rank <math>r</math>, nullity <math>n</math>, and are full-rank, and <math>C_1</math> and <math>C_2</math> are their comma bases, respectively.
+
+Technically since these matrices are representing subspace bases, the correct operation here is "sumset", not "union", but because "union" is a more commonly known opposite of intersection and would work for plain matrices, I've decided to stick with it here.
+
+So, the left-hand side of this equation is a way to express the count of <span style="color: #B6321C;">linearly independent basis vectors <math>L_{\text{ind}}</math></span> existing between <math>M_1</math> and <math>M_2</math>. The right-hand side tells you the same thing, but between <math>C_1</math> and <math>C_2</math>. The fact that these two things are equal is the thing we're trying to prove. So let's go!
+
+Let's call the following Equation B. This makes sense because basis vectors between <math>M_1</math> and <math>M_2</math> are either going to be <span style="color: #3C8031;">linearly dependent</span> or <span style="color: #B6321C;">linearly independent</span>. The union is going to be all of <math>M_1</math>'s <span style="color: #B6321C;">independent vectors</span>, all of <math>M_2</math>'s <span style="color: #B6321C;">independent vectors</span>, and all of <math>M_1</math> and <math>M_2</math>'s <span style="color: #3C8031;">dependent vectors</span> but only one copy of them. While the intersection is going be all of <math>M_1</math> and <math>M_2</math>'s <span style="color: #3C8031;">dependent vectors</span> again — essentially the other copy of them. So they sum to the same thing.
+
+
+<math>\text{rank}(M_1) + \text{rank}(M_2) = \text{rank}(\text{union}(M_1, M_2)) + \text{rank}(\text{intersection}(M_1, M_2))</math>
+
+
+Then this is just Equation B, rearranged.
+
+
+<math>\text{rank}(\text{union}(M_1, M_2)) = \text{rank}(M_1) + \text{rank}(M_2) - \text{rank}(\text{intersection}(M_1, M_2))</math>
+
+
+This takes Equation B, solves it for <math>\text{rank}(\text{union}(M_1, M_2))</math>, then substitutes that result into Equation A, which is then flipped left/right, and then <math>r</math> is subtracted from both sides.
+
+
+<math>\text{rank}(M_1) + \text{rank}(M_2) - \text{rank}(\text{intersection}(M_1, M_2)) - r = \text{nullity}(\text{union}(C_1, C_2)) - n</math>
+
+
+By the "duality of the comma basis", this is Equation C:
+
+
+<math>\text{nullity}(\text{union}(C_1, C_2)) = \text{nullity}(\text{nullspace}(\text{intersection}(M_1, M_2)))</math>
+
+
+Now substitute in the right-hand side of Equation C for <math>\text{nullity}(\text{union}(C_1, C_2))</math> in Equation B.
+
+
+<math>\text{rank}(M_1) + \text{rank}(M_2) - \text{rank}(\text{intersection}(M_1, M_2)) - r = \text{nullity}(\text{nullspace}(\text{intersection}(M_1, M_2))) - n</math>
+
+
+This is the rank nullity theorem where <math>\text{intersection}(M_1, M_2)</math> is the temperament. Let's call it Equation D:
+
+
+<math>\text{nullity}(\text{nullspace}(\text{intersection}(M_1, M_2))) + \text{rank}(\text{intersection}(M_1, M_2)) = d</math>
+
+
+Now solve Equation D for <math>\text{nullity}(\text{nullspace}(\text{intersection}(M_1, M_2)))</math>, and substitute that result into Equation B:
+
+
+<math>\text{rank}(M_1) + \text{rank}(M_2) - \text{rank}(\text{intersection}(M_1, M_2)) - r = d - \text{rank}(\text{intersection}(M_1, M_2)) - n</math>
+
+
+Now realize that <math>\text{rank}(M_1)</math> and <math>\text{rank}(M_2)</math> are both equal to <math>r</math>.
+
+
+<math>r + r - \text{rank}(\text{intersection}(M_1, M_2)) - r = d - \text{rank}(\text{intersection}(M_1, M_2)) - n</math>
+
+
+Now cancel the <math>\text{rank}(\text{intersection}(M_1, M_2))</math> from both sides, and substitute in <math>(d - r)</math> for <math>n</math>.
+
+
+<math>r + r - r = d - d + r</math>
+
+
+Now cancel the <math>r</math>'s on the left and the <math>d</math>'s on the right:
+
+
+<math>r = r</math>
+
+
+So we know this is true.
+
+== Glossary ==
+* <math>d</math>: [[dimensionality]], the dimension of a temperament's domain
+* <math>r</math>: [[rank]], the dimension of a temperament's [[mapping]]
+* <math>n</math>: [[nullity]], the dimension of a temperament's [[comma basis]]
+* <math>g</math>: [[grade]], the generic term for rank or nullity
+* <math>g_{\text{min}}</math>: min-grade, the minimum of a temperament's rank and nullity <math>\min(r,n)</math>
+* <math>g_{\text{max}}</math>: max-grade, the maximum of a temperament's rank and nullity <math>\min(r,n)</math>
+* <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>: <span style="color: #3C8031;">linear-dependence basis</span>, a basis for all the <span style="color: #3C8031;">linearly dependent</span> vectors between two temperaments
+* <span style="color: #B6321C;"><math>L_{\text{ind}}</math></span>: <span style="color: #B6321C;">linear-independence basis</span>, a basis for all the vectors of a temperament that are <span style="color: #B6321C;">linearly independent</span> from a specific other temperament
+* <span style="color: #3C8031;"><math>l_{\text{dep}}</math></span>: <span style="color: #3C8031;">linear-dependence</span>, the dimension of the <span style="color: #3C8031;"><math>L_{\text{dep}}</math></span>
+* <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span>: <span style="color: #B6321C;">linear-independence</span>, the dimension of the <span style="color: #B6321C;"><math>L_{\text{ind}}</math></span>
+* '''[[dimensions]]''': the <math>d</math>, <math>r</math>, and <math>n</math> of a temperament
+* '''addable''': two temperaments are addable when they have the same dimensions and have <span style="color: #B6321C;"><math>l_{\text{ind}}</math></span> <math>= 1</math>
+* '''negation''': a mapping is negated when the leading entry of its [[minors|largest-minors]] is negative; a comma basis is negated when the trailing entry of its largest-minors is negative 
+
+== Wolfram implementation ==
+Temperament arithemetic has been implemented as the functions <code>sum</code> and <code>diff</code> in the [[RTT library in Wolfram Language]].
+
+== Credits ==
+This page is mostly the work of [[Douglas Blumeyer]], and he assumes full responsibility for any inaccuracies or otherwise shortcomings here. But he would like to thank [[Mike Battaglia]], [[Dave Keenan]], and [[Sintel]] for the huge amounts of counseling they provided. There's no way this page could have come together without their help. In particular, the page would not exist at all without the original spark of inspiration from Mike.
+
+== Footnotes ==
+<references />
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]
+[[Category:Pages with proofs]]

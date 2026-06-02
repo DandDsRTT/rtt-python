@@ -1,0 +1,50 @@
+This article proposes [[Saturation, torsion, contorsion, and defactoring#Defactoring|"defactoring" and "enfactoring"]] as clearer and more descriptive terminology, to replace the existing terms [[Saturation,_torsion,_contorsion,_and_defactoring|"saturation", "torsion", and "contorsion"]], for which several problems are described here.
+
+These new terms were coined by [[Dave Keenan]] in collaboration with [[Douglas Blumeyer]] in June of 2021<ref>Many, many other terms were considered before arriving at defactored and enfactored, including but not limited to: repeated, (up/down)sampled, decimated, divided/multiplied, divisive/multiplicative, completed/depleted/repleted/pleated, efficient, brown, dry, spongy/holey, fluffy, corrugated, copied, shredded, tupled, tupletted, enphactored (where the ph stood for possibly hidden), reduced, simplified...</ref>. 
+
+The arguments in favor of "defactor" and "enfactor" are:
+# They do have obvious mathematical meaning in this context: the absence/removal ("de-") vs. presence/introduction ("en-") of a common factor ("-factor") in linear combinations of a matrix's rows or columns.
+# "Enfactored" sounds a bit like "infected", better suggesting the [[The pathology of enfactoring|pathological case]] of unsaturation.
+# They don't have any of the problems listed for the other terms.
+# When you use both of them together, the relationship between torsion/contorsion and saturation becomes obvious through the terminology, where before it was unapparent. 
+
+== Defactoring, to replace saturation ==
+
+Several problems with the term "saturation" may be identified:
+
+# It does not have any obvious musical or mathematical meaning in this context.
+# It has another unrelated meaning within xenharmonics that it would conflict with: https://en.xen.wiki/w/Anomalous_saturated_suspension
+# To "saturate" in everyday use means to ''add'' to something, whereas in this mathematical sense it means to ''remove'' something, which can be very confusing. We suggest an effective way to look at it is that saturating is accomplished not by adding more information into the container but rather by shrinking the container itself so that it has no wasted capacity, and thereby attains a saturated state, but still feel that this is a bit of a stretch.
+# The most common everyday usage of that word is for "saturated fats", which are the bad kind of fats, so it has negative associations, despite "saturation" being the ''good'' state for a matrix to be in. 
+# Furthermore, there is another common but conflicting sense of saturation for matrices which clamps entry values to between -1 and 1.<ref>See https://math.stackexchange.com/questions/1964814/linear-transformation-of-a-saturated-vector and https://faculty.uml.edu//thu/tcs01-june.pdf</ref>
+
+== Enfactoring, to replace torsion and contorsion ==
+
+As for the term "torsion", the problems with it are:
+
+# Again, it does not have any obvious musical or mathematical meaning in this context. 
+# There is an argument that using torsion in this way is an abuse of the term, which was originally applied to periodicity blocks, not temperaments.<ref>See: https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_2937 which is also referred to here http://tonalsoft.com/enc/t/torsion.aspx</ref> Both periodicity blocks and temperaments can be defined by lists of commas. And either way, these lists can be saturated or unsaturated. But in the case of periodicity blocks — where commas ''are not made to vanish'' — there is an audible difference in the choice between a saturated and unsaturated list, whereas with a temperament —  where commas ''are made to vanish'' — there is no audible difference. In concrete terms, while it can make sense to construct a Fokker block with {{vector|-4 4 -1}} in the middle and {{vector|-8 8 -2}} = 2{{vector|-4 4 -1}} at the edge — which leads to a pitch system with 24 pitches instead of 12 where half of the pitches are a copy of the other half but offset by a fixed amount — it does not make sense to imagine a temperament which makes 2{{vector|-4 4 -1}} vanish but does not make {{vector|-4 4 -1}} vanish. And so the conflation<ref>See: https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_2033.html#2405</ref> of the two situations by using the same term is misleading, so the authors of this article believe that the term torsion should not be used in RTT. While it is ''theoretically possible'' to interpret RTT using mathematical structures like quotient subgroups, lattices, and free abelian groups, or in other words, as if a temperament looked like a periodicity block, in which case one can imagine a reality where e.g. (81/80)² is made to vanish while 81/80 is not, this is not how temperaments actually sound from a musical point of view in our physical reality; in this case, the inherently projective approach to linear algebra, where a (81/80)² and a 81/80 that both have been made to vanish map to the same tempered lattice node, models this problem better. So "torsion" could be preserved as a term for the effect on periodicity blocks (though there's almost certainly something more helpful than that, but that's a battle for another day<ref>Furthermore, care should be taken to recognize the difference in behavior between, say<br><br>
+<math>
+\left[ 
+\begin{array} {r}
+-8 & -30 \\
+8 & -3 \\
+-2 & 15\\
+\end{array}
+\right]
+</math><br><br>
+when it is used as a list of 5-limit commas defining a periodicity block versus when it is used as a [[comma basis]] for a temperament, namely, that in the first case the fact that the first column has a common factor of 2 and the second column has a common factor of 3 is meaningful, i.e. the 2-enfactorment will affect one dimension of the block and the 3-enfactorment will affect a different dimension of the block, or in other words, we can say that the commas here are individually enfactored rather than the entire list being enfactored, while in the second case there is no such meaning to the individual columns' factors of 2 and 3, respectively, because it would be equivalent of any form where the product of all the column factors was 6, or in other words, all that matters is that the comma basis as a whole is 6-enfactored here. So perhaps it would be best if, for periodicity blocks, the term "enfactored" was avoided altogether, and instead commas were described as "2-torted".</ref><ref>The explanation for "why 'torsion' in the first place?" is interesting. It comes from group theory (see: https://en.wikipedia.org/wiki/Group_(mathematics)#Uniqueness_of_identity_element). In group theory, to have torsion, a group must have an element that comes back to zero after being chained 2 or more times. The number of times before coming back to zero is called the "order" of the element, sometimes also called the "period length" or "period". When the order is greater than 1 (and less than infinity), the element is said to have torsion, or to be a torsion element, and so the group it is an identity element of is said to have torsion. See also: https://en.wikipedia.org/wiki/Order_(group_theory). Clearly we can't use period (length) because period has another firmly established meaning in xenharmonics. But we could refer to torsion as "finite order greater than one", but that's quite the mouthful while still nearly as obscure.</ref>) but it is inappropriate to use for RTT.
+
+And as for the word "contorsion", here are its problems:
+
+# Again, it does not have any obvious musical or mathematical meaning in this context. It's a word that was invented specially for RTT in 2002. The prefix co- or con- is sometimes used to form terms for things that are the duals of others (e.g. vectors and ''co''vectors), so the term "con-torsion" was coined to refer to the dual concept of torsion. But "torsion" already has a couple problems as described above, so "contorsion" just compounds those. So the authors here believe it would be best to banish the term "contorsion" from the RTT community altogether.
+# A word with the same spelling was also coined with a different mathematical meaning outside of RTT, in the field of differential geometry: https://en.wikipedia.org/wiki/Contorsion_tensor<ref>In this field, it does definitely represent twisting, like in a Möbius strip. Also, DG contorsion is related to DG torsion by subtraction, not duality.</ref>
+# It is prone to spelling confusion. People commonly refer to temperaments with contorsion as "contorted". But contorted is the adjective form of a different word, contortion, with a t, not an s. The proper adjective form of contorsion would be contorsioned. It also exerts confusion back on usages of "torsion"; would you use "torted" instead of torsioned? Or would people prefer "torsional" and "contorsional", even though that suggests only of or pertaining to in general rather than having the effect applied.<ref>If it was meant to most strongly evoke duality with torsion, it should have been spelled "cotorsion". Naming it "contorsion" is a step toward "contortion" but stopping halfway there. But this isn't a strong point, because duality with torsion was the false assumption mentioned above.</ref> 
+# Due to its similarity with the word "contortion", the word contorsion evokes bending, twisting, and knotting. But there is nothing bendy, twisty, or knotted about the effect it has on JI lattices or tuning space, except when you attempt to understand them as if they were periodicity blocks, as criticized above.
+
+== References and footnotes ==
+<references/>
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]

@@ -1,0 +1,1715 @@
+A '''projection matrix''', or '''projection''' for short<ref group="note">If an alternative word to "mapping" is sought that does not generically refer to the mathematical structure in the way that "matrix" does, the noun "operator" could be used, according to this: https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_12787#12787</ref>, is an object in [[regular temperament theory]] (RTT) that uniquely identifies a specific tuning of a specific regular temperament.<ref group="note">All temperaments discussed on this page hereafter will be assumed to be "regular".</ref>
+
+== Shape ==
+A projection is typically a square matrix with shape <math>(d, d)</math>, where <math>d</math> is the [[dimensionality]] of the temperament (for exceptions to this, see [[Projection#Projecting to other spaces]]).
+
+== With respect to other RTT objects ==
+[[File:Temperament and tuning matrices 2.png|frameless|1200x1200px]]
+
+Projections are perhaps best understood in comparison with other more frequently used RTT objects:
+
+=== The mapping ===
+Like [[mapping]]s, projections:
+# Represent regular temperaments, 
+# Transform [[JI]] intervals, and 
+# Accept these JI intervals as inputs in the form of [[prime-count vector]]s.
+
+Perhaps the simplest way to explain the difference would be to say that a mapping outputs intervals in the form of [[generator-count vector]]s, whereas a projection outputs intervals that are also in the form of prime-count vectors. 
+
+The key reason for this difference is that mappings represent temperaments in the abstract, that is, how intervals are approximated but without any specific information about how to embed them into tuning space; to find the cents value<ref group="note">Any logarithmic pitch unit&mdash;cents, octaves, millioctaves, etc.&mdash;may be used, but this article has chosen to consistently use cents.</ref> of a ''mapped'' interval&mdash;one that has been mapped by a mapping&mdash;one must further map it by a [[generator tuning map]]. On the other hand, a ''projected'' interval&mdash;one that has been mapped by a projection, or "projected"&mdash;already includes the embedding information, and so their cents value can be obtained by mapping them with the generic [[just tuning map]] for the primes. In other words, the projection has applied tuning to the mapped intervals in a particular way, by embedding them back into the original JI space, where the tuning is known, so all we're really doing at that point is sizing the interval.
+
+While a projection maps one prime-count vector to another prime-count vector, the output vector is usually quite different from the input vector. Most notably, the input interval is justly intoned, and therefore the entries of its vector are integers, while the output interval is tempered, and therefore the entries of its vector may be non-integers. Some temperament tunings are chosen so that certain JI intervals remain unchanged by the temperament; in such cases, if the input interval is one of the unchanged-intervals, then its output will exactly match the input.
+
+=== The tuning map ===
+Like a [[tuning map]], a projection transforms a JI interval into a new interval that is both mapped and tuned. One key difference is that a tuning map sends the input interval straight to its cents value, whereas the projection sends the interval to an intermediate form as a vector with typically non-integer entries, which must be further mapped by the just tuning map to find its cents value. This difference in behavior is explained by the fact that the tuning map is the projection left-multiplied by the just tuning map, or in other words, that the tuning map projects the input interval and then sizes it to cents all in one go. 
+
+At a glance, tuning maps may seem more convenient, then. But the advantage of a projection is that it still identifies the tuning of a temperament, whereas the tuning map, due to being injected with and collapsed down with the just tuning map, has obscured that information and thereby lost the ability to serve as a unique identifier. It only serves the function of mapping intervals to cents values.
+
+=== The generator embedding ===
+A projection matrix may be found as the combination of a mapping with a generator embedding, through matrix multiplication. The mapping represents the approximation information in the abstract, i.e. abstracted from any specific embedding, while the generator embedding specifies such a embedding. And so together, the projection matrix represents the specific embedding of the given approximation, or in other words, specific tuning of the given temperament, de-abstracting it.
+
+Multiplying the mapping and generator embedding together in the opposite order, <math>MG</math>, instead gives an identity matrix, <math>I</math>. Using the example of 1/4-comma meantone again, {{rket|{{map|1 1 0}} {{map|0 1 4}}}}{{rbra|{{vector|1 0 0}} {{vector|0 0 1/4}}}} = {{rbra|{{rket|1 0}} {{rket|0 1}}}}. This simply proves that the generator embedding is, in fact, a matrix of generators.
+
+Think about it like any other interval mapping situation: if an interval is mapped to the generator-count vector {{rket|0 1}}, that tells us that the interval maps to exactly one of the second generator and nothing else; in cases like this, we can say it that it is a member of the [[preimage]] for that second generator, or in other words, that it is one of the many possible JI intervals which is approximated by exactly one of that generator. And similarly, if an interval maps to a generator-count vector of {{rket|1 0}}, that would mean that whatever prime-count vector we put in was a member of the preimage for the ''other'' generator.
+
+So, if an entire matrix is mapped by a temperament's mapping matrix to an identity matrix, then that is a very special case; it tells us that each of this matrix's columns can be thought of as a vector that maps to a different one of each of that same temperament's generators. It is, in other words, a [[generator detempering]].
+
+== Examples ==
+The generator of meantone temperament is the fifth. A justly intoned fifth is the interval <math>\frac32</math> at about 701.955 ¢, which as a 5-limit prime-count vector looks like {{vector|-1 1 0}}. But in the [[quarter comma meantone|quarter-comma tuning of meantone]], the fifth is flattened. Since 1 fifth is a quarter comma flat, 4 fifths are a full comma flat. 4 just fifths equals <math>\frac{81}{16}</math>, and 4 fifths minus a comma works out to exactly <math>\frac51</math>. Thus the tuning of the fifth is one-quarter of <math>\frac51</math>, which is <math>5^\frac14 = \sqrt[4]5</math> at about 696.578 ¢, which as a vector looks like {{vector|0 0 1/4}}. JI ratios have prime counts that contain only integers, but this one has fractions in it; <math>\sqrt[4]5</math> is an irrational number, so it is not JI. 
+
+So, by combining this vector for the tuned fifth with the vector {{vector|1 0 0}} for a purely-tuned octave <math>\frac21</math> as the period, we produce the full generator embedding <math>G</math> for quarter-comma meantone as {{rbra|{{vector|1 0 0}} {{vector|0 0 1/4}}}}:
+
+
+<math>
+\left[ \begin{array} {rrr}
+1 & 0 \\
+0 & 0 \\
+0 & \frac14 \\
+\end{array} \right]
+</math>
+
+
+And so here is the projection matrix for quarter-comma meantone, shown as the product of that generator embedding with the meantone mapping:
+
+
+<math>
+
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 0 & 0 \\
+0 & \frac14 & 1 \\
+\end{array} \right]
+\end{array}
+
+=
+
+\begin{array} {c}
+G \\
+\left[ \begin{array} {r}
+1 & 0 \\
+0 & 0 \\
+0 & \frac14 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+M \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{array} \right]
+\end{array}
+
+</math>
+
+
+The columns of <math>P</math> are vectors, one for each prime. The 1<sup>st</sup> column of <math>P</math> tells us that prime 2 is projected to {{vector|1 0 0}} = <math>\frac21</math>. Thus <math>\frac21</math> is projected to itself, and is an unchanged-interval. The 2<sup>nd</sup> column tells us that prime 3 is projected to {{vector|1 0 1/4}} = an octave plus the tempered fifth. The 3<sup>rd</sup> column tells us that prime 5 is projected to {{vector|0 0 1}} = <math>\frac51</math>. Thus <math>\frac51</math> is also an unchanged-interval, as is any combination of our two unchanged-intervals <math>\frac21</math> and <math>\frac21</math>, such as <math>\frac54</math>, <math>\frac85</math>, <math>\frac{25}{16}</math>, etc.
+
+We can use this matrix to determine what a JI interval <math>\textbf{i}</math> is projected to. Multiply <math>P</math> by <math>\textbf{i}</math> to get <math>P\textbf{i}</math>. Let's start with <math>\textbf{i}</math> = <math>\frac43</math>:
+
+
+<math>
+
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 0 & 0 \\
+0 & \frac14 & 1 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{array} {r}
+2 \\
+-1 \\
+0 \\
+\end{array} \right]
+\end{array}
+
+=
+
+\begin{array} {c}
+P\textbf{i} \\
+\left[ \begin{array} {r}
+1 \\
+0 \\
+-\frac14 \\
+\end{array} \right]
+\end{array}
+
+</math>
+
+
+Thus <math>\frac43</math> is projected to {{vector|1 0 -1/4}}. Note that {{vector|1 0 -1/4}} is one quarter of an exact untempered JI ratio, <math>\frac{16}{5}</math>, and thus four tempered fourths equals a pure 5-limit minor thirteenth. 
+
+Now let <math>\textbf{i}</math> = <math>\frac65</math>.
+
+
+<math>
+
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 0 & 0 \\
+0 & \frac14 & 1 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{array} {r}
+1 \\
+1 \\
+-1 \\
+\end{array} \right]
+\end{array}
+
+=
+
+\begin{array} {c}
+P\textbf{i} \\
+\left[ \begin{array} {r}
+2 \\
+0 \\
+-\frac34 \\
+\end{array} \right]
+\end{array}
+
+</math>
+
+
+Thus <math>\frac65</math> becomes {{vector|2 0 -3/4}}, and four of them equals an untempered <math>\frac{256}{125}</math>. The reader can do similar calculations to verify that <math>\frac21</math> is projected to <math>\frac21</math>, <math>\frac54</math> is projected to <math>\frac54</math>, and <math>\frac32</math> is projected to {{vector|0 0 1/4}}.
+
+For quarter-comma meantone, it's plain to see from the projection matrix that it's a rank-2 temperament: one of the rows is already all-zeros, so clearly it's not full-rank (rank-3)! This will not in general be true of projection matrices, however. For example, we can take a look at ''third''-comma meantone's projection.
+
+For third-comma meantone, three fifths (<math>\frac{27}{8}</math>) are a full comma flat. That works out to <math>\frac{10}{3}</math>. Thus the generator is {{vector|1/3 -1/3 1/3}}. Again, the period is a pure octave. This gives us our generator embedding <math>G</math>. Multiply it by the same mapping <math>M</math> to find the projection matrix <math>P</math>:
+
+
+<math>
+
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+1 & \frac43 & \frac43 \\
+0 & -\frac43 & -\frac13 \\
+0 & \frac43 & \frac13 \\
+\end{array} \right]
+\end{array}
+
+=
+
+\begin{array} {c}
+G \\
+\left[ \begin{array} {r}
+1 & \frac13 \\
+0 & -\frac13 \\
+0 & \frac13 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+M \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{array} \right]
+\end{array}
+
+</math>
+
+
+Let's use <math>P</math> to find out what <math>\frac65</math> gets projected to:
+
+
+<math>
+
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+1 & \frac43 & \frac43 \\
+0 & -\frac43 & -\frac13 \\
+0 & \frac43 & \frac13 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{array} {r}
+1 \\
+1 \\
+-1 \\
+\end{array} \right]
+\end{array}
+
+=
+
+\begin{array} {c}
+P\textbf{i} \\
+\left[ \begin{array} {r}
+1 \\
+1 \\
+-1 \\
+\end{array} \right]
+\end{array}
+
+</math>
+
+
+Thus <math>\frac65</math> is an unchanged-interval of third-comma meantone, instead of <math>\frac54</math>. The reader can verify that <math>\frac21</math> is still an unchanged-interval.
+
+Nearly two-dozen further examples of generator embeddings may be found throughout the article [[Generator embedding optimization]], including some with tempered octaves.
+
+== Generator embedding ==
+In order to understand projections, it is critical to understand the lesser-used and lesser-understood half of them: the generator embedding. So let's briefly cover this object next.
+
+A '''generator embedding'''  is an object that represents the ''embedding'' of a [[regular temperament]] from the tempered lattice back into tuning space. It could be thought of as representing the "tuning" information of a temperament, if one leaves out the actual "sizing" part of that (the conversion of prime factors to their logarithmic pitch size). It has one column for each of the temperament's [[generators]]. Each of these columns represents its generator's tuning in the form of a vector.
+
+=== With respect to the generator tuning map ===
+A more common way to view the tuning of a temperament than as a generator ''embedding'' is as a [[generator tuning map|generator ''tuning map'']]. In cases where tuning is thought of as approximation followed by embedding, the generator tuning map <math>𝒈</math> is closely related to the generator embedding <math>G</math>; it is simply <math>G</math> left-multiplied by the [[just tuning map]] <math>𝒋</math><ref group="note">Similarly, the projection matrix, when left-multiplied by <math>𝒋</math>, gives the ''temperament'' [[tuning map]] <math>𝒕</math>, usually referred to simply as the "tuning map" for short. 1/4-comma meantone's <math>𝒕</math> is {{map|1.000 1.585 2.232}}·{{ket|{{map|1 1 0}} {{map|0 0 0}} {{map|0 1/4 1}}}} = {{map|1.000 1.580 2.232}}. This is clearly closely related to the just tuning map, which represents the tuning of JI.</ref> (see [[Dave Keenan & Douglas Blumeyer's guide to RTT/Units analysis#Just tuning map, generator embedding: generator tuning map]]). For example, since meantone is 5-limit, its just tuning map is {{map|log₂2 log₂3 log₂5}} ≈ {{map|1.000 1.585 2.232}}, so 1/4-comma meantone's <math>𝒈</math> is {{map|1.000 1.585 2.232}}·{{rbra|{{vector|1 0 0}} {{vector|0 0 1/4}}}} = {{map|1.000 0.580}}, or in cents instead of octaves, that's {{rbra|1200.000 696.578}}. 
+
+Many popular regular temperament tuning schemes work by optimizing for the entries of <math>𝒈</math> directly, and many times it's not helpful or insightful to view the generators in non-integer vector form, which are reasons for <math>𝒈</math>'s popularity over <math>G</math>. Some practitioners may not even view tuning as an optimization problem and will simply choose values for <math>𝒈</math> on gut feeling. This is all to say that this idea of approximating and then re-embedding, AKA projecting, is not an inherently necessary feature of RTT; it is only one way to look at it which may be valuable to some musicians and theoreticians but completely bonkers-seeming and convoluted to others.
+
+=== Units ===
+The units of a prime-count vector are typically understood to be "primes", which is natural enough given their name. But the units of the generator embedding <math>G</math> are better taken to be '''p'''/'''g''', read "primes ''per generator''." This makes sense because their job is to translate temperament generators back into terms of primes.
+
+Here is an example generator embedding for a [[5-limit]], [[Tour_of_Regular_Temperaments#Rank-2_temperaments|rank-2 temperament]], with units given for each entry:
+
+
+<math>
+    \left[ \begin{array} {rrr}
+    1\;{}^{\text{p}_1}{\mskip -5mu/\mskip -3mu}_{\text{g}_1} & \frac13\;{}^{\text{p}_1}{\mskip -5mu/\mskip -3mu}_{\text{g}_2} \\
+    0\;{}^{\text{p}_2}{\mskip -5mu/\mskip -3mu}_{\text{g}_1} & {-\frac13}\;{}^{\text{p}_2}{\mskip -5mu/\mskip -3mu}_{\text{g}_2} \\
+    0\;{}^{\text{p}_3}{\mskip -5mu/\mskip -3mu}_{\text{g}_1} & \frac13\;{}^{\text{p}_3}{\mskip -5mu/\mskip -3mu}_{\text{g}_2} \\
+    \end{array} \right]
+</math>
+
+
+The subscripts indicate which primes and which generators are related. So the columns, as previously stated, correspond to the two generators of the temperament, g₁ and g₂, while the rows correspond to the three primes for this temperament, p₁, p₂, and p₃, which are primes 2, 3, and 5, respectively.
+
+See also [[Dave Keenan & Douglas Blumeyer's guide to RTT/Units analysis]], and/or the [[#Units|Units]] section later in this article for more details.
+
+== Uniqueness ==
+As just mentioned, projection matrices represent specific tunings of abstract temperaments, being the matrix product of a generator embedding which provides the embedding information, and a mapping which provides the approximation information. Notably, not only does the projection matrix represent the tuning of a temperament, it does so ''uniquely''. We can say that mappings and generator embeddings contain not only approximation and embedding information, but also ''generator form'' information, and it is this generator form information which causes them to be non-unique; however, when they are combined into a projection matrix, their generator form information ''cancels out'', and so no matter which combination of matching mapping and generator embedding we choose for a given temperament tuning, we will end up with the same exact projection.<ref group="note">The present author is not sure if any combination of mapping and generator embedding should lead to a projection matrix, and what the conditions on this would be. If anyone can figure this out, please add it to the article.</ref>
+
+=== Mapping non-uniqueness===
+To be clear, a mapping matrix does ''not'' uniquely represent approximation information. Multiple mappings can be found that describe the same temperament, in the sense that the same set of [[commas]] [[Tempering_out|vanish]]. This non-uniqueness is the reason why a [[canonical form]] for mappings was developed, which can be understood as a function which takes any equivalent mapping and converts it to the same exact mapping. 
+
+What distinguishes these equivalent mappings from each other is the sizes of the generators they use. 
+
+This concept is best demonstrated by example. Consider the following mapping :
+
+
+<math>
+M_1 = \left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{array} \right]
+</math>
+
+
+This is an example of a mapping which represents meantone. This mapping represents it in a form where the first generator (the [[period]]) is an octave and the second generator (or simply ''the'' generator) is a perfect fifth. But this mapping ''also'' represents meantone:
+
+
+<math>
+M_2 = \left[ \begin{array} {r}
+1 & 2 & 4 \\
+0 & {-1} & {-4} \\
+\end{array} \right]
+</math>
+
+
+This mapping represents it in a form where the period is an octave still but the generator is a perfect fourth. We can also have:
+
+
+<math>
+M_3 = \left[ \begin{array} {r}
+1 & 0 & {-4} \\
+0 & 1 & 4 \\
+\end{array} \right]
+</math>
+
+
+Where the generator is a perfect twelfth, or even something like:
+
+
+<math>
+M_4 = \left[ \begin{array} {r}
+12 & 19 & 28 \\
+7 & 11 & 16 \\
+\end{array} \right]
+</math>
+
+
+which technically makes the [[meantone comma]] <math>\frac{81}{80}</math> vanish&mdash;the main requirement of being a meantone temperament&mdash;but it has a period of about 76 ¢ and generator of about 41 ¢, which is pretty strange indeed (we're not being specific about tuning here, just giving the ballpark sizes). 
+
+What we can say is that generator form information differentiates these forms of the meantone mapping.<ref group="note">There is a way to represent approximation information without generator form information, which therefore means a data structure which inherently uniquely represents temperaments, and that is a [[multimap]].</ref>
+
+=== Matching generator embeddings ===
+For a given temperament tuning, such as [[quarter-comma meantone]], each possible form of the mapping will be matched with a generator embedding which it multiplies together with to find the unique quarter-comma meantone projection matrix. For example, for the {{ket|{{bra|1 1 0}} {{bra|0 1 4}}}} version we gave above which describes meantone in terms of an octave and a fifth, the matching generator embedding is:
+
+
+<math>
+G_1 = \left[ \begin{array} {r}
+1 & 0 \\
+0 & 0 \\
+0 & \frac14 \\
+\end{array} \right]
+</math>
+
+
+We can see here in the first column that the period is given by the integer vector {{vector|1 0 0}}, representing <math>2^1</math>, and the fifth is given by the non-integer vector {{vector|0 0 <math>\frac14</math>}}, representing <math>\sqrt[4]{5} \approx 1.495 \approx 1.5 = \frac32</math>.
+
+For the second version we gave above, then, {{ket|{{bra|1 2 4}} {{bra|0 -1 -4}}}}, which describes meantone in terms of an octave and a ''fourth'', the matching generator embedding is:
+
+
+<math>
+G_ 2 = \left[ \begin{array} {r}
+1 & 1 \\
+0 & 0 \\
+0 & {-\frac14} \\
+\end{array} \right]
+</math>
+
+
+This has the same period, but now the generator is {{vector|1 0 <math>{-\frac14}</math>}}, representing <math>\frac{2}{\sqrt[4]{5}} \approx 1.337 \approx 1.\overline{3} \approx \frac43</math>.
+
+=== Converging to the same projection ===
+Now check out what happens when we find both <math>G_{1}M_{1}</math> and <math>G_{2}M_{2}</math>:
+
+
+<math>
+
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 0 & 0 \\
+0 & \frac14 & 1 \\
+\end{array} \right]
+\end{array}
+
+=
+
+\begin{array} {c}
+G_1 \\
+\left[ \begin{array} {r}
+1 & 0 \\
+0 & 0 \\
+0 & \frac14 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+M_1 \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{array} \right]
+\end{array}
+
+\\ \text{ } \\ \text{ } \\
+
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 0 & 0 \\
+0 & \frac14 & 1 \\
+\end{array} \right]
+\end{array}
+
+=
+
+\begin{array} {c}
+G_2 \\
+\left[ \begin{array} {r}
+1 & 1 \\
+0 & 0 \\
+0 & {-\frac14} \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+M_2 \\
+\left[ \begin{array} {r}
+1 & 2 & 4 \\
+0 & {-1} & {-4} \\
+\end{array} \right]
+\end{array}
+
+\\
+
+</math>
+
+
+This shows us that there is no <math>P_1</math> or <math>P_2</math> or otherwise; we have only a single shared projection matrix <math>P</math> for any possible combination of mapping and generator embeddings representing this temperament tuning (which, again, in this case is quarter-comma meantone).
+
+=== Keeping the mapping and generator embedding in sync ===
+The way to transform from one mapping form <math>M_1</math> to another equivalent mapping form <math>M_2</math> is to perform elementary row operations, the most common of which is to add some multiple of one row to another (or subtract some multiple of one row from another). For more information on this, please see [[Dave Keenan & Douglas Blumeyer's guide to RTT/Mappings#Adding and subtracting rows|the detailed explanation here]]. Similarly, we can transform from one generator embedding <math>G_1</math> to another equivalent generator embedding <math>G_2</math> by performing elementary ''column'' operations. 
+
+Supposing one desires to transform from a pair of <math>M_1</math> and <math>G_1</math> to another pair of <math>M_2</math> and <math>G_2</math> where both pairs multiply to the same <math>P</math>, or&mdash;said another way&mdash;you wish to keep your <math>M</math> and <math>G</math> ''in sync'', the simplest approach would be to&mdash;for each elementary row operation you apply to <math>M</math> you must apply the opposite elementary column operation to <math>G</math>, e.g. if you add three times the second row to the first row of <math>M</math>, then you must ''subtract'' three times the second ''column'' from the first ''column'' of <math>G</math>. This is along the same lines as the explanations provided for manipulating generator form by changing forms of <math>M</math>, which you can find here: [[Generator form manipulation]].
+
+For example, if we have <math>M_1</math> = {{rket|{{bra|1 1 0}} {{bra|0 1 4}}}} and <math>G_1</math> = {{rbra|{{ket|1 0 0}} {{ket|0 0 <math>\frac14</math>}}}}, then <math>M_1</math> and <math>G_1</math> are in sync because they're both in the form where <math>g_1</math> is ~2 and <math>g_2</math> is ~3/2. Or if we have <math>M_2</math> = {{rket|{{bra|1 0 -4}} {{bra|0 1 4}}}} and <math>G_2</math> = {{rbra|{{ket|1 0 0}} {{ket|1 0 <math>\frac14</math>}}}} then they're still in sync because they're both <math>g_1</math> ~2 and <math>g_2</math> ~3 here. But if we mismatched those, they'd be out of sync. Those are both <math>M</math>'s for meantone, and both <math>G</math>'s that can work for quarter-comma meantone, but if you mismatch them with respect to the generator form information, you won't find the same <math>P</math> by matrix multiplication <math>GM</math>. 
+
+(This notion of "sync" is the same idea pointed out in the diagram at the start of the "Obtaining objects from the projection" section below, with the note on <math>G</math> reading "(the one matching M)". And for more information on generator form information, see the "Generator information types" below.)
+
+We note in particular that putting <math>M</math> and <math>G</math> into their canonical forms independently is not a guarantee that they will remain in sync; canonicalization will not necessarily arrive at the same generator form information in <math>G</math> as it does in <math>M</math>.
+
+=== Form matrix ===
+When performing these elementary row and column operations, we can actually keep track of them in a way, by applying them in parallel to an identity matrix. 
+
+This is a special type of matrix called a unimodular matrix; that is, unimodularity is simply a property of a matrix which says that its determinant is ±1, which in itself is not particularly important except that it means the determinant is never 0 in which case the matrix would be uninvertible, and we do need it to be invertible. And this matrix will stay unimodular so long as we only apply elementary operations to it; that's what special about elementary operations.
+
+Let's look at an example of this sort of form change tracking. Let's go from the octave-twelfth form of meantone to its octave-fifth form. We'll consider the octave-twelfth form to be our "home base" of sorts, and let it be "plain" <math>M</math>, and mark the octave-fifth form with subscripts:
+
+
+<math>
+\begin{align}
+
+\begin{array} {c}
+F \\
+\left[ \begin{array} {c}
+1 & 0 \\
+{\color{blue}0} & {\color{blue}1} \\
+\end{array} \right]
+\end{array}
+
+&\cdots
+
+\begin{array} {c}
+M \\
+\left[ \begin{array} {c}
+1 & 0 & -4 \\
+{\color{blue}0} & {\color{blue}1} & {\color{blue}4} \\
+\end{array} \right]
+\end{array}
+
+\\[24pt]
+
+\begin{array} {c}
+F_{\text{8ave,5th}} \\
+\left[ \begin{array} {c}
+1{\color{blue}+0} & 0{\color{blue}+1} \\
+0 & 1 \\
+\end{array} \right]
+\end{array}
+
+&\cdots
+
+\begin{array} {c}
+M_{\text{8ave,5th}} \\
+\left[ \begin{array} {c}
+1{\color{blue}+0} & 0{\color{blue}+1} & -4{\color{blue}+4} \\
+0 & 1 & 4 \\
+\end{array} \right]
+\end{array}
+
+\\[24pt]
+
+\begin{array} {c}
+F_{\text{8ave,5th}} \\
+\left[ \begin{array} {c}
+1 & 1 \\
+0 & 1 \\
+\end{array} \right]
+\end{array}
+
+&\cdots
+
+\begin{array} {c}
+M_{\text{8ave,5th}} \\
+\left[ \begin{array} {c}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{array} \right]
+\end{array}
+
+\end{align}
+
+</math>
+
+
+Now that was only just one step, so it's not much of a feat. But you can keep going and going with your parallel changes to your <math>M</math> and <math>F</math> so long as you always stick to elementary operations, and everything we're about to discuss that you can do with trick will work just the same.
+
+So end up with this as our unimodular matrix:
+
+
+<math>
+\begin{array} {c}
+F_{\text{8ave,5th}} \\
+\left[ \begin{array} {c}
+1 & 1 \\
+0 & 1 \\
+\end{array} \right]
+\end{array}
+</math>
+
+
+What's powerful about this <math>F_{\text{8ave,5th}}</math> matrix is that we can now use it ''as a transformation'' on the original <math>M</math> to change it directly into the <math>M_{\text{8ave,5th}}</math> we arrived at via the elementary row operations:
+
+
+<math>
+
+\begin{array} {c}
+M_{\text{8ave,5th}} \\
+\left[ \begin{array} {c}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{array} \right]
+\end{array}
+
+=
+
+\begin{array} {c}
+F_{\text{8ave,5th}} \\
+\left[ \begin{array} {c}
+1 & 1 \\
+0 & 1 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+M \\
+\left[ \begin{array} {c}
+1 & 0 & -4 \\
+0 & 1 & 4 \\
+\end{array} \right]
+\end{array}
+
+</math>
+
+
+So with one act of matrix multiplication, we can replace an arbitrarily large number of elementary row operations. Again, this may not seem so impressive considering in this case we only manipulated it by one step to begin with, but in general this is a very powerful effect. And, it synergizes with what happens to the generator embedding matrix simultaneously. That's what we'll look at next.
+
+So, all of the same effects are there for the generator embedding matrix, but with respect to its columns:
+
+
+<math>
+
+\begin{array} {c}
+
+\begin{array} {c}
+G \\
+\left[ \begin{array} {c}
+{\color{blue}1} & 1 \\
+{\color{blue}0} & 0\\
+{\color{blue}0} & \frac14 \\
+\end{array} \right]
+\end{array}
+
+& &
+
+\begin{array} {c}
+G_{\text{8ave,5th}} \\
+\left[ \begin{array} {c}
+1 & 1{\color{blue}-1} \\
+0 & 0{\color{blue}-0}\\
+0 & \frac14{\color{blue}-0} \\
+\end{array} \right]
+\end{array}
+
+& &
+
+\begin{array} {c}
+G_{\text{8ave,5th}} \\
+\left[ \begin{array} {c}
+1 & 0 \\
+0 & 0 \\
+0 & \frac14 \\
+\end{array} \right]
+\end{array}
+
+\\ \vdots & & \vdots & & \vdots \\
+
+\begin{array} {c}
+F^{-1} \\
+\left[ \begin{array} {c}
+{\color{blue}1} & 0 \\
+{\color{blue}0} & 1 \\
+\end{array} \right]
+\end{array}
+
+& &
+
+\begin{array} {c}
+F_{\text{8ave,5th}}^{-1} \\
+\left[ \begin{array} {c}
+1 & 0{\color{blue}-1} \\
+0 & 1{\color{blue}-0} \\
+\end{array} \right]
+\end{array}
+
+& &
+
+\begin{array} {c}
+F_{\text{8ave,5th}}^{-1} \\
+\left[ \begin{array} {c}
+1 & -1 \\
+0 & 1 \\
+\end{array} \right]
+\end{array}
+
+\end{array}
+</math>
+
+
+Notice that we have <math>F^{-1}</math> here, the inverse of <math>F</math>. You may recall that previously we had stated that the changes we make to the generator embedding matrix to keep it in sync with the mapping were the inverses of the ones we were applying to the mapping. Well, now we can see that they are inverses not just in an informal sense, but a very literal mathematical way! In the beginning, when both <math>F</math> and <math>F^{-1}</math> were identity matrices, the fact that they are inverses is apparent, in the same way that 1⁻¹ or 1/1 is 1. But if you wish to double-check the following:
+
+
+<math>
+
+\left[ \begin{array} {c}
+1 & 1 \\
+0 & 1 \\
+\end{array} \right]
+^{-1}
+
+=
+
+\left[ \begin{array} {c}
+1 & -1 \\
+0 & 1 \\
+\end{array} \right]
+</math>
+
+
+Please go ahead and do so in your favored math software.
+
+What this tells us is that anywhere we could write <math>P = GM</math> in our RTT equations, we can now write <math>P = GM = GF^{-1}FM</math>. 
+
+The injection of these <math>F</math> matrices doesn't affect the temperament or tuning in any way. Think about it this way. 9/8 always goes to 193.157 cents in quarter comma meantone, whether you're using the octave-and-fifth form or the octave-and-fourth form or any other form. All the form does is tell you what your generator sizes themselves are. They generate (span) the same space regardless. <math>F</math> is only good for keeping the embedding and approximating parts of your projection in sync when you're changing the basis, that's all. The point is for it to have no effect on the general intervals.
+
+In other words, the service it provides is rather to ''give us a way to speak of the generator form of a temperament with respect to a particular mapping and a particular generator embedding.'' In other words, if we possess a scheme for unambiguously determining a "home base" <math>M</math>&mdash;such as a [[canonical form]], which we ''do'' have&mdash;and we possess a scheme for unambiguously determining a particular embedding&mdash;such as any tuning scheme which gives tunings expressible as embeddings (e.g. miniaverage, miniRMS)&mdash;then we now also have a way to describe with cold, hard matrices (i.e. not fuzzier instructions like "octave-fifth") what exact form we wish our generators to be in. We can speak of a pair of a linked bases&mdash"
+;the generator embedding treated as a basis, and the mapping treated as a mapping-row basis&mdash;as the (generator) '''form''' of a temperament. And so a tuning system can be more fully specified than it could previously, leveraging this conceit.
+
+It may be helpful to define <math>M_{\text{c}}</math> as the canonical mapping, the one in canonical form, and <math>G_{\text{c}}</math> as the one in "corresponding form" form to the canonical form of the mapping, i.e. per whichever tuning scheme is being used, it's the <math>G</math> you get from <math>M_{\text{c}}</math>. In this case, then with respect to <math>P = G_{\text{c}}M_{\text{c}}</math>, any <math>M_{\text{f}}</math> and <math>G_{\text{f}}</math> are viable so long as <math>M_{\text{c}} = F_{\text{f}}M_{\text{f}}</math> and <math>G_{\text{c}} = G_{\text{f}}F_{\text{f}}^{-1}</math> for some generator form <math>F_{\text{f}}</math>.
+
+So, for a concrete example, we can say that for meantone temperament, given that its canonical form is the octave-twelfth form (that was no accident that we chose it as our "home base" earlier!) this generator form matrix <math>F_{\text{8ave,4th}}</math> represents the octave-fourth form:
+
+
+<math>
+\begin{array} {c}
+F_{\text{8ave,4th}} \\
+\left[ \begin{array} {c}
+1 & 2 \\
+0 & -1 \\
+\end{array} \right]
+\end{array}
+</math>
+
+
+Because we have the quarter-comma tuning of meantone as our tuning, then we have this as our canonical <math>M</math> and corresponding <math>G</math>:
+
+
+<math>
+\begin{array} {c}
+G_{\text{c}} \\
+\left[ \begin{array} {c}
+1 & 1 \\
+0 & 0\\
+0 & \frac14 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+M_{\text{c}}  \\
+\left[ \begin{array} {c}
+1 & 0 & -4 \\
+0 & 1 & 4 \\
+\end{array} \right]
+\end{array}
+</math>
+
+
+And injecting <math>F_{\text{8ave,4th}}</math> and its inverse <math>F_{\text{8ave,4th}}^{-1}</math> (yes, it happens to be its own inverse):
+
+
+<math>
+\begin{array} {c}
+G_{\text{c}} \\
+\left[ \begin{array} {c}
+1 & 1 \\
+0 & 0\\
+0 & \frac14 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+F_{\text{8ave,4th}}^{-1} \\
+\left[ \begin{array} {c}
+1 & 2 \\
+0 & -1 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+F_{\text{8ave,4th}} \\
+\left[ \begin{array} {c}
+1 & 2 \\
+0 & -1 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+M_{\text{c}}  \\
+\left[ \begin{array} {c}
+1 & 0 & -4 \\
+0 & 1 & 4 \\
+\end{array} \right]
+\end{array}
+</math>
+
+
+We can then find <math>G_{\text{8ave,4th}}</math> and <math>M_{\text{8ave,4th}}</math> if we like, as <math>G_{\text{c}}F_{\text{8ave,4th}}^{-1} </math> and <math>F_{\text{8ave,4th}}M_{\text{c}}</math>, respectively:
+
+
+<math>
+\begin{array} {c}
+G_{\text{8ave,4th}} \\
+\left[ \begin{array} {c}
+1 & 1 \\
+0 & 0\\
+0 & -\frac14 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+M_{\text{8ave,4th}}  \\
+\left[ \begin{array} {c}
+1 & 2 & 4 \\
+0 & -1 & -4 \\
+\end{array} \right]
+\end{array}
+</math>
+
+== Units ==
+The units of a projection matrix are a unique case: '''p'''/'''p''', read "primes per prime". At first glance it may appear that this expression should cancel out. The reason why the primes in the numerator and the primes in the denominator do not cancel is that the former series of primes progresses across the matrix by rows while the latter series of primes progresses across the matrix by columns: 
+
+
+<math>
+\Large
+\left[ \begin{array} {rrr}
+\frac{\color{ForestGreen}\text{p}_1}{\color{ForestGreen}\text{p}_1} & \frac{\color{ForestGreen}\text{p}_1}{\color{NavyBlue}\text{p}_2} & \frac{\color{ForestGreen}\text{p}_1}{\color{Plum}\text{p}_3} \\[10pt]
+\frac{\color{NavyBlue}\text{p}_2}{\color{ForestGreen}\text{p}_1} & \frac{\color{NavyBlue}\text{p}_2}{\color{NavyBlue}\text{p}_2} & \frac{\color{NavyBlue}\text{p}_2}{\color{Plum}\text{p}_3} \\[10pt]
+\frac{\color{Plum}\text{p}_3}{\color{ForestGreen}\text{p}_1} & \frac{\color{Plum}\text{p}_3}{\color{NavyBlue}\text{p}_2} & \frac{\color{Plum}\text{p}_3}{\color{Plum}\text{p}_3} \\[10pt]
+\end{array} \right]
+</math>
+
+
+So the primes only match along the main diagonal. There, they could be considered to cancel out. But we see no value to this. We may as well keep those as '''p'''/'''p''' like all the other entries.
+
+Here's an example (again, of quarter-comma meantone) of a projection matrix with both its amounts and units:
+
+
+<math>
+    \left[ \begin{array} {rrr}
+    1\;{}^{\text{p}_1}{\mskip -5mu/\mskip -3mu}_{\text{g}_1} & 1\;{}^{\text{p}_1}{\mskip -5mu/\mskip -3mu}_{\text{g}_2} & 0\;{}^{\text{p}_1}{\mskip -5mu/\mskip -3mu}_{\text{g}_3} \\
+    0\;{}^{\text{p}_2}{\mskip -5mu/\mskip -3mu}_{\text{g}_1} & 0\;{}^{\text{p}_2}{\mskip -5mu/\mskip -3mu}_{\text{g}_2} & 0\;{}^{\text{p}_2}{\mskip -5mu/\mskip -3mu}_{\text{g}_3} \\
+    0\;{}^{\text{p}_3}{\mskip -5mu/\mskip -3mu}_{\text{g}_1} & \frac14\;{}^{\text{p}_3}{\mskip -5mu/\mskip -3mu}_{\text{g}_2} & 1\;{}^{\text{p}_3}{\mskip -5mu/\mskip -3mu}_{\text{g}_3}\\
+    \end{array} \right]
+</math>
+
+
+In the first several of the following subsections, we examine units-only analyses of some RTT objects; for simpler of examples of these, see [[Dave Keenan & Douglas Blumeyer's guide to RTT/Units analysis#Units-only analyses]]. Then the last few sections are more general units analyses.
+
+=== Generator embedding, mapping: Projection matrix ===
+A <math>\small 𝗽</math>/<math>\small 𝗴</math> generator embedding and a <math>\small 𝗴</math>/<math>\small 𝗽</math> mapping combine to make a <math>\small 𝗽</math>/<math>\small 𝗽</math> projection matrix.
+
+
+<math>
+\begin{align}
+
+\begin{array} {c} G \\[4pt]
+\left[\begin{array} {rrr}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\end{array} \right]
+\end{array}
+
+\begin{array} {c} M \\[4pt]
+\left[ \begin{array} {rrr}
+\frac{\color{BurntOrange}\mathsf{g_1}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{BurntOrange}\mathsf{g_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{BurntOrange}\mathsf{g_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{OrangeRed}\mathsf{g_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{OrangeRed}\mathsf{g_2}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{OrangeRed}\mathsf{g_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{array} \right]
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} GM \\[4pt]
+\left[ \begin{array} {rrr}
+
+(\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})
+(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{ForestGreen}\mathsf{p_1}})
++
+(\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})
+(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{ForestGreen}\mathsf{p_1}})
+
+&
+
+(\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})
+(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{NavyBlue}\mathsf{p_2}})
++
+(\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})
+(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{NavyBlue}\mathsf{p_2}})
+
+&
+
+(\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})
+(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{Plum}\mathsf{p_3}})
++
+(\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})
+(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{Plum}\mathsf{p_3}})
+
+\\[6pt]
+
+(\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})
+(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{ForestGreen}\mathsf{p_1}})
++
+(\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})
+(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{ForestGreen}\mathsf{p_1}})
+
+&
+
+(\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})
+(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{NavyBlue}\mathsf{p_2}})
++
+(\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})
+(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{NavyBlue}\mathsf{p_2}})
+
+&
+
+(\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})
+(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{Plum}\mathsf{p_3}})
++
+(\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})
+(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{Plum}\mathsf{p_3}})
+
+\\[6pt]
+
+(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})
+(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{ForestGreen}\mathsf{p_1}})
++
+(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})
+(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{ForestGreen}\mathsf{p_1}})
+
+&
+
+(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})
+(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{NavyBlue}\mathsf{p_2}})
++
+(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})
+(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{NavyBlue}\mathsf{p_2}})
+
+&
+
+(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})
+(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{Plum}\mathsf{p_3}})
++
+(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})
+(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{Plum}\mathsf{p_3}})
+
+\\[6pt]
+
+\end{array} \right]
+\end{array}
+
+\\[20pt] &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} P \\[4pt]
+\left[ \begin{array} {rrr}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{Plum}\mathsf{p_3}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{array} \right]
+\end{array}
+
+\end{align}
+</math>
+
+
+=== Just tuning map, generator embedding: Generator tuning map ===
+Here, a <math>\mathsf{¢}</math>/<math>\small 𝗽</math> just tuning map and a <math>\small 𝗽</math>/<math>\small 𝗴</math> generator embedding combine to make a <math>\mathsf{¢}</math>/<math>\small 𝗴</math> generator tuning map.
+
+
+<math>
+\begin{align}
+
+\begin{array} {c} 𝒋 \\[4pt]
+\left[ \begin{array} {rrr}
+\frac{{\large\mathsf{¢}}}{\color{ForestGreen}\mathsf{p_1}} & \frac{{\large\mathsf{¢}}}{\color{NavyBlue}\mathsf{p_2}} & \frac{{\large\mathsf{¢}}}{\color{Plum}\mathsf{p_3}} \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c} G \\[4pt]
+\left[\begin{array} {rrr}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\end{array} \right]
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒋G \\[4pt]
+\left[ \begin{array} {rrr}
+
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})(\frac{\cancel{\color{ForestGreen}\mathsf{p_1}}}{\color{BurntOrange}\mathsf{g_1}}) + (\frac{{\large\mathsf{¢}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})(\frac{\cancel{\color{NavyBlue}\mathsf{p_2}}}{\color{BurntOrange}\mathsf{g_1}}) + (\frac{{\large\mathsf{¢}}}{\cancel{\color{Plum}\mathsf{p_3}}})(\frac{\cancel{\color{Plum}\mathsf{p_3}}}{\color{BurntOrange}\mathsf{g_1}})
+&
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})(\frac{\cancel{\color{ForestGreen}\mathsf{p_1}}}{\color{OrangeRed}\mathsf{g_2}}) + (\frac{{\large\mathsf{¢}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})(\frac{\cancel{\color{NavyBlue}\mathsf{p_2}}}{\color{OrangeRed}\mathsf{g_2}}) + (\frac{{\large\mathsf{¢}}}{\cancel{\color{Plum}\mathsf{p_3}}})(\frac{\cancel{\color{Plum}\mathsf{p_3}}}{\color{OrangeRed}\mathsf{g_2}})
+\\[6pt] 
+
+\end{array} \right]
+\end{array}
+
+\\ &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒈 \\[4pt]
+\left[ \begin{array} {rrr}
+\frac{{\large\mathsf{¢}}}{\color{BurntOrange}\mathsf{g_1}} & \frac{{\large\mathsf{¢}}}{\color{OrangeRed}\mathsf{g_2}}
+\end{array} \right]
+\end{array}
+
+\end{align}
+</math>
+
+
+=== Just tuning map, projection matrix: Tuning map ===
+A <math>\mathsf{¢}</math>/<math>\small 𝗽</math> just tuning map and a <math>\small 𝗽</math>/<math>\small 𝗽</math> projection matrix combine to make a <math>\mathsf{¢}</math>/<math>\small 𝗽</math> tuning map.
+
+
+<math>
+\begin{align}
+
+\begin{array} {c} 𝒋 \\[4pt]
+\left[ \begin{array} {rrr}
+\frac{{\large\mathsf{¢}}}{\color{ForestGreen}\mathsf{p_1}} & \frac{{\large\mathsf{¢}}}{\color{NavyBlue}\mathsf{p_2}} & \frac{{\large\mathsf{¢}}}{\color{Plum}\mathsf{p_3}} \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c} P \\[4pt]
+\left[ \begin{array} {rrr}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{Plum}\mathsf{p_3}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{array} \right]
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒋P \\[4pt]
+\left[ \begin{array} {rrr}
+
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})
+(\frac{\cancel{\color{ForestGreen}\mathsf{p_1}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})
++
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})
+(\frac{\cancel{\color{NavyBlue}\mathsf{p_2}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})
++
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{Plum}\mathsf{p_3}}})
+(\frac{\cancel{\color{Plum}\mathsf{p_3}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})
+
+&
+
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})
+(\frac{\cancel{\color{ForestGreen}\mathsf{p_1}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})
++
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})
+(\frac{\cancel{\color{NavyBlue}\mathsf{p_2}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})
++
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{Plum}\mathsf{p_3}}})
+(\frac{\cancel{\color{Plum}\mathsf{p_3}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})
+
+&
+
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})
+(\frac{\cancel{\color{ForestGreen}\mathsf{p_1}}}{\cancel{\color{Plum}\mathsf{p_3}}})
++
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})
+(\frac{\cancel{\color{NavyBlue}\mathsf{p_2}}}{\cancel{\color{Plum}\mathsf{p_3}}})
++
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{Plum}\mathsf{p_3}}})
+(\frac{\cancel{\color{Plum}\mathsf{p_3}}}{\cancel{\color{Plum}\mathsf{p_3}}})
+
+\end{array} \right]
+\end{array}
+
+\\ &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒕 \\[4pt]
+\left[ \begin{array} {rrr}
+\frac{{\large\mathsf{¢}}}{\color{ForestGreen}\mathsf{p_1}} & \frac{{\large\mathsf{¢}}}{\color{NavyBlue}\mathsf{p_2}} & \frac{{\large\mathsf{¢}}}{\color{Plum}\mathsf{p_3}} \\
+\end{array} \right]
+\end{array}
+
+\end{align}
+</math>
+
+
+=== Just tuning map, projected interval: Tempered interval size ===
+A <math>\mathsf{¢}</math>/<math>\small 𝗽</math> just tuning map and a vector representing a projected interval combine to give the interval's size in <math>\mathsf{¢}</math>.
+
+
+<math>
+\begin{align}
+
+\begin{array} {c} 𝒋 \\[4pt]
+\left[ \begin{array} {rrr}
+\frac{{\large\mathsf{¢}}}{\color{ForestGreen}\mathsf{p_1}} & \frac{{\large\mathsf{¢}}}{\color{NavyBlue}\mathsf{p_2}} & \frac{{\large\mathsf{¢}}}{\color{Plum}\mathsf{p_3}} \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c} P\textbf{i} \\[4pt]
+\left[ \begin{array} {rrr}
+\color{ForestGreen}\mathsf{p_1} \\[6pt]
+\color{NavyBlue}\mathsf{p_2} \\[6pt]
+\color{Plum}\mathsf{p_3} \\[6pt]
+\end{array} \right]
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒋P\textbf{i} \\[4pt]
+\left[ \begin{array} {rrr}
+(\frac{{\large\mathsf{¢}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})(\cancel{\color{ForestGreen}\mathsf{p_1}}) + (\frac{{\large\mathsf{¢}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})(\cancel{\color{NavyBlue}\mathsf{p_2}}) + (\frac{{\large\mathsf{¢}}}{\cancel{\color{Plum}\mathsf{p_3}}})(\cancel{\color{Plum}\mathsf{p_3}}) 
+\end{array} \right]
+\end{array}
+
+\\ &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒕\textbf{i} \\[4pt]
+\left[ \begin{array} {rrr}
+{\large\mathsf{¢}}
+\end{array} \right]
+\end{array}
+
+\end{align}
+</math>
+
+
+=== Generator embedding, mapped interval: Projected interval ===
+A <math>\small 𝗽</math>/<math>\small 𝗴</math> generator embedding and a generator-count vector (units of <math>\small 𝗴</math>) combine to make a vector (units of <math>\small 𝗽</math>) representing the projected interval.
+
+
+<math>
+\begin{align}
+
+\begin{array} {c} G \\[4pt]
+\left[\begin{array} {rrr}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\end{array} \right]
+\end{array}
+
+\begin{array} {c} M\textbf{i} \\[4pt]
+\left[ \begin{array} {rrr}
+\color{BurntOrange}\mathsf{g_1} \\[6pt]
+\color{OrangeRed}\mathsf{g_2} \\[6pt]
+\end{array} \right]
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} GM\textbf{i} \\[4pt]
+\left[ \begin{array} {rrr}
+(\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})(\cancel{\color{BurntOrange}\mathsf{g_1}}) + (\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})(\cancel{\color{OrangeRed}\mathsf{g_2}}) \\[6pt]
+(\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})(\cancel{\color{BurntOrange}\mathsf{g_1}}) + (\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})(\cancel{\color{OrangeRed}\mathsf{g_2}}) \\[6pt]
+(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{BurntOrange}\mathsf{g_1}}})(\cancel{\color{BurntOrange}\mathsf{g_1}}) + (\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{OrangeRed}\mathsf{g_2}}})(\cancel{\color{OrangeRed}\mathsf{g_2}}) \\[6pt]
+\end{array} \right]
+\end{array}
+
+\\[20pt] &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} P\textbf{i} \\[4pt]
+\left[ \begin{array} {rrr}
+\color{ForestGreen}\mathsf{p_1} \\[6pt]
+\color{NavyBlue}\mathsf{p_2} \\[6pt]
+\color{Plum}\mathsf{p_3} \\[6pt]
+\end{array} \right]
+\end{array}
+
+\end{align}
+</math>
+
+
+=== Projection matrix, interval: Projected interval ===
+A <math>\small 𝗽</math>/<math>\small 𝗽</math> projection matrix and a vector (units of <math>\small 𝗽</math>) representing an interval combine to make a new vector (still with units of <math>\small 𝗽</math>) representing the projected interval. 
+
+
+<math>
+\begin{align}
+
+\begin{array} {c} P \\[4pt]
+\left[ \begin{array} {rrr}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{Plum}\mathsf{p_3}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{array} \right]
+\end{array}
+
+\begin{array} {c} \textbf{i} \\[4pt]
+\left[ \begin{array} {rrr}
+\color{ForestGreen}\mathsf{p_1} \\[6pt]
+\color{NavyBlue}\mathsf{p_2} \\[6pt]
+\color{Plum}\mathsf{p_3} \\[6pt]
+\end{array} \right]
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} P\textbf{i} \\[4pt]
+\left[ \begin{array} {rrr}
+(\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})(\cancel{\color{ForestGreen}\mathsf{p_1}}) + (\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})(\cancel{\color{NavyBlue}\mathsf{p_2}}) + (\frac{\color{ForestGreen}\mathsf{p_1}}{\cancel{\color{Plum}\mathsf{p_3}}})(\cancel{\color{Plum}\mathsf{p_3}}) \\[6pt]
+(\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})(\cancel{\color{ForestGreen}\mathsf{p_1}}) + (\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})(\cancel{\color{NavyBlue}\mathsf{p_2}}) + (\frac{\color{NavyBlue}\mathsf{p_2}}{\cancel{\color{Plum}\mathsf{p_3}}})(\cancel{\color{Plum}\mathsf{p_3}}) \\[6pt]
+(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{ForestGreen}\mathsf{p_1}}})(\cancel{\color{ForestGreen}\mathsf{p_1}}) + (\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{NavyBlue}\mathsf{p_2}}})(\cancel{\color{NavyBlue}\mathsf{p_2}}) + (\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{Plum}\mathsf{p_3}}})(\cancel{\color{Plum}\mathsf{p_3}}) \\[6pt]
+\end{array} \right]
+\end{array}
+
+\\[20pt] &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} P\textbf{i} \\[4pt]
+\left[ \begin{array} {rrr}
+\color{ForestGreen}\mathsf{p_1} \\[6pt]
+\color{NavyBlue}\mathsf{p_2} \\[6pt]
+\color{Plum}\mathsf{p_3} \\[6pt]
+\end{array} \right]
+\end{array}
+
+\end{align}
+</math>
+
+
+=== The JI mapping times the JI generator embedding ===
+This situation is a variation upon the situation [[Dave Keenan & Douglas Blumeyer's guide to RTT/Units analysis#Cancelation|described here]], where the projection matrix <math>P</math> is derived as the matrix product of the generator embedding matrix <math>G</math> and the temperament mapping matrix <math>M</math>. What we're going to do here is work through the variation where it's the ''JI'' embedding matrix <math>G_{\text{j}}</math> and the ''JI'' mapping matrix <math>M_{\text{j}}</math>. 
+
+The key difference here is that both of these matrices are [[identity matrix|identity matrices]]. Thus, upon multiplying them, the result is ''also'' an identity matrix. 
+
+As you'll recall, the units of a projection matrix are <math>\small 𝗽</math>/<math>\small 𝗽</math>, where these vectorized units do not cancel, because one increments along rows and the other along columns, so we get different combinations of primes in different entries. However, ''along the diagonal'', the indices match, and cancel out. Like so:
+
+
+<math>
+\left[ \begin{array} {c}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{Plum}\mathsf{p_3}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{array} \right]
+
+→
+
+\left[ \begin{array} {c}
+\frac{\cancel{\color{ForestGreen}\mathsf{p_1}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{Plum}\mathsf{p_3}} \\
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\cancel{\color{NavyBlue}\mathsf{p_2}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{Plum}\mathsf{p_3}} \\
+\frac{\color{Plum}\mathsf{p_3}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\cancel{\color{Plum}\mathsf{p_3}}}{\cancel{\color{Plum}\mathsf{p_3}}} \\
+\end{array} \right]
+
+→
+
+\left[ \begin{array} {c}
+{\large\mathsf{𝟙}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{ForestGreen}\mathsf{p_1}} & {\large\mathsf{𝟙}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}} & {\large\mathsf{𝟙}} \\[6pt]
+\end{array} \right]
+</math>
+
+
+So we keep the <math>\small 𝗽</math>/<math>\small 𝗽</math> unit because most of the entries still relate one prime to another. 
+
+However, if this units pattern were applied ''to an identity matrix'', like so:
+
+
+<math>
+\left[ \begin{array} {c}
+1\,{\large\mathsf{𝟙}} & 0\,\frac{\color{ForestGreen}\mathsf{p_1}}{\color{NavyBlue}\mathsf{p_2}} & 0\,\color{ForestGreen}\frac{\mathsf{p_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+0\,\frac{\color{NavyBlue}\mathsf{p_2}}{\color{ForestGreen}\mathsf{p_1}} & 1\,{\large\mathsf{𝟙}} & 0\,\frac{\color{NavyBlue}\mathsf{p_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+0\,\frac{\color{Plum}\mathsf{p_3}}{\color{ForestGreen}\mathsf{p_1}} & 0\,\frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}} & 1\,{\large\mathsf{𝟙}} \\[6pt]
+\end{array} \right]
+</math>
+
+
+And then we eliminate units for all the entries whose quantities are zero:
+
+
+<math>
+\left[ \begin{array} {c}
+1\,{\large\mathsf{𝟙}} & 0 & 0 \\
+0 & 1\,{\large\mathsf{𝟙}} & 0 \\
+0 & 0 & 1\,{\large\mathsf{𝟙}} \\
+\end{array} \right]
+</math>
+
+
+Having zeroed out all of the entries who had any dimensionful units, we can now rightly say that this matrix as a whole is unitless (has dimensionless units).
+
+Now we can see why, despite the fact that <math>GM = P</math> in a meaningful sense, it is not the case that <math>G_{\text{j}}M_{\text{j}} = P_{\text{j}}</math> in any meaningful sense. Instead <math>G_{\text{j}}M_{\text{j}} = I</math>, a completely generic, unitless identity matrix.
+
+=== Derivation of generator embedding matrix from unchanged-interval basis and mapping ===
+The generator embedding matrix <math>G</math> is related to the mapping <math>M</math> and unchanged-interval basis <math>\mathrm{U}</math> by the following formula:
+
+
+<math>
+G=\mathrm{U}(M\mathrm{U})^{-1}
+</math>
+
+
+This formula is used, among other places, in the [[Generator_embedding_optimization#Zero-damage_method|zero-damage method]] for computing miniaverage tunings of regular temperaments (see here: [[Generator embedding optimization#Convert to generators]]). 
+
+And it turns out this formula works fine when subjected to a units analysis. <math>\mathrm{U}</math> has units of primes. And <math>M</math> has units of generators per primes. So we have <math>\small 𝗽\!·\!((𝗴</math>/<math>\small 𝗽)\!·\!𝗽)^{-1}</math>. The <math>\small 𝗽</math>'s on the inside of the parens cancel, and we're left with <math>\small 𝗽𝗴^{-1}</math>, or in other words, <math>\small 𝗽</math>/<math>\small 𝗴</math>, which are indeed the units of <math>G</math>.
+
+=== Derivation of projection matrix from unrotated vector list and scaling factor matrix ===
+In a similar fashion we can show that the formula for the projection matrix <math>P</math> from the [[unrotated vector list]] <math>\mathrm{V}</math> and the [[scaling factor matrix]] <math>\textit{Λ}</math> holds up to units analysis. You can read about these objects and their relationships below: [[Projection#The unrotated vectors and scaling factors]]. The formula is:
+
+
+<math>
+\mathrm{V}\textit{Λ}\mathrm{V}^{-1}
+</math>
+
+
+With <math>\mathrm{V}</math> having units of <math>\small 𝗽</math> and <math>\textit{Λ}</math> having no units (having dimensionless units), we find: <math>{\small 𝗽}\!·\!\mathsf{𝟙}\!·\!{\small 𝗽^{-1}}</math>. This simplifies to <math>\small 𝗽</math>/<math>\small 𝗽</math>, which matches our projection matrix's units.
+
+== Projection properties ==
+=== Unrotated vectors and scaling factors ===
+A <math>(d, d)</math>-shaped projection matrix represents both all of the [[comma]]s of a temperament as well as all of the [[unchanged-interval]]s of the tuning. It does so via <math>d</math> '''unrotated vectors''', which is to say, this projection only ''scales'' the vector. Each one of these unrotated vectors, then, is paired with a corresponding '''scaling factor''', which tells us by how much the projection scales it. Each of these scaling factors&mdash;which we'll represent with the Greek letter lambda <math>λ</math>&mdash;is equal to either 1 or 0, and no other value is possible (more on this in the next section).
+
+* When a scaling factor is equal to 1, this essentially means "no scaling", since multiplying something by 1 has no effect; so, these unrotated vectors are ''also'' unscaled vectors, which means they are completely unchanged. In other words, these are the unchanged-intervals of this tuning of this temperament.
+* When a scaling factor is equal to 0, this means the projection scales it down to nothing. These, then, are the commas of the temperament. These are technically unrotated vectors, in the sense that rotation is no longer meaningful for something that has been vanished.
+
+For readers familiar with the linear algebra concepts of [https://mathworld.wolfram.com/Eigenvector.html eigenvector]s and eigenvalues, this all may sound familiar: eigenvector is technical math speak for an "unrotated vector", and eigenvalue is technical math speak for its "scaling factor"; the prefix "eigen-" comes from the German word for "own", which we can think of as referring to how it projects onto its own span, or in other words, its projection falls along the infinite line through space we get if we extend the original vector in both directions forever, which is just another way of saying that the projection doesn't rotate the vector off of its original span like it does for most other vectors (in actuality, though, the "eigen" part of "eigenvector" means "own" in a different, but related way: it refers to the fact that the vector is the projection's "own" vector, or in other words, that it ''characterizes'' the projection, which is why another commonly used term for a vector like this is a "characteristic vector"). For those readers unfamiliar with these ideas, we recognize that this may be a lot to process at once. 
+
+It may be helpful to visualize the projection as a distortion field across tuning space, with curvy vortices something like how we might see warm and cold fronts on a weather map, or specks of iron patterned by a magnetic field. In these sorts of visualizations, we could imagine the unrotated vectors as the arrows that points along the paths where the distortion pattern happens to come out to be perfectly straight.
+
+Now what's mathematically powerful about the idea of unrotated vectors is this: because the projection is only scaling things along these vectors, not rotating them, then we no longer require a full-blown matrix to represent that change. We can dramatically simply our formula. We can represent such a change using nothing but a single number, called a ''scalar''. This scalar is its corresponding scaling factor.
+
+=== Idempotence ===
+The only possible scaling factors of a projection matrix are 1 and 0. That is because projections are ''idempotent''<ref group="note">Etymologically, the roots of this word are "same" and "power", meaning it has only the same power each time it is applied.</ref>, meaning that if we interpret them as functions, then repeatedly applying the function has no effect beyond the first application. In other words, if <math\textbf{i}<nowiki></math></nowiki> is an interval vector:
+
+
+<math>
+P\textbf{i} = PP\textbf{i} = PPP\textbf{i} \text{...}
+</math> 
+
+
+We can see this by example with quarter-comma meantone:
+
+
+<math>
+
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 0 & 0 \\
+0 & \frac14 & 1 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{array} {r}
+{-1} \\
+1 \\
+0 \\
+\end{array} \right]
+\end{array}
+
+= 
+
+\begin{array} {c}
+P\textbf{i} \\
+\left[ \begin{array} {r}
+0 \\
+0 \\
+\frac14 \\
+\end{array} \right]
+\end{array}
+
+\\ \text{ } \\ \text{ } \\
+
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 0 & 0 \\
+0 & \frac14 & 1 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+P\textbf{i} \\
+\left[ \begin{array} {r}
+0 \\
+0 \\
+\frac14 \\
+\end{array} \right]
+\end{array}
+
+= 
+
+\begin{array} {c}
+P\textbf{i} \\
+\left[ \begin{array} {r}
+0 \\
+0 \\
+\frac14 \\
+\end{array} \right]
+\end{array}
+
+</math>
+
+
+In other words, once we map a JI perfect fifth <math>\frac32 = 701.955\,¢</math> with quarter-comma meantone, we get <math>\sqrt[4]{5} = 696.578\,¢</math>. And if quarter-comma meantone's fifth goes through its own portal, it comes out the other side still as quarter-comma meantone's fifth.
+
+So we can see why the only possible values a projection could scale its eigenvectors by would be 1 and 0, because these are the only values one can repeatedly scale things by without changing them past the first scaling.<ref group="note">Here is a helpful proof, giving another way to look at this fact: https://math.stackexchange.com/questions/1393656/show-that-if-%ce%bb-is-an-eigenvalue-of-a-projection-matrix-p-then-%ce%bb-1-or-%ce%bb-0/1393661#1393661</ref> 
+
+=== Flattening ===
+A good way to understand the idempotence of projections is geometrically. This also agrees with our natural language intuitions about projections, such as projecting shadows of objects onto a wall. A projection is any transformation that reduces the dimensionality. What we've done is taken information in <math>d</math>-dimensional space and projected it down by one dimension, into <math>(d-1)</math>-dimensional space. For example we might take some 3D object and project it down to its silhouette. If we take the projection we just made and try to project it again, nothing is left to change. 
+
+But how to connect this to RTT? Well, when we make commas vanish, we reduce dimensionality. For example, 5-limit JI is three-dimensional, or ''rank-3'', because it is represented by a mapping matrix with three rows:
+
+
+<math>
+\left[ \begin{array} {r}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{array} \right]
+</math>
+
+
+In general, it is an <math>r × d</math> matrix where <math>r = d</math>, or in other words, a <math>d × d</math> matrix. Whereas a rank-2 temperament in 5-limit still boasts three columns (those correspond to the 3 primes of the 5-limit), but only has two rows, corresponding to how it has reduced the three generators of pure JI down to two generators approximating JI:
+
+
+<math>
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{array} \right]
+</math>
+
+
+So in general this is an <math>r × d</math> matrix where <math>r < d</math>.
+
+So it may be confusing at first to realize that a projection matrix represents a lower-dimensional object, given that, like JI, it is always a <math>d × d</math> matrix! For example, the quarter-comma meantone projection we've been looking at:
+
+
+<math>
+\left[ \begin{array} {r}
+1 & 1 & 0 \\
+0 & 0 & 0 \\
+0 & \frac14 & 1 \\
+\end{array} \right]
+</math>
+
+
+projects all the vectors of the 3-dimensional space of 5-limit JI onto a 2-dimensional plane. On one hand, how could it not&mdash;it is, after all, an object representing a tuning of meantone, which is definitely a rank-2 temperament. But on the other hand, this projection matrix has three rows. So how can we reconcile this situation? 
+
+Here's one way to think about it. When we look at a mapping matrix like meantone's {{ket|{{bra|1 1 0}} {{bra|0 1 4}}}} above, we're basically plotting vectors in a brand-new 2D space, that is, one completely distinct from the 3D space we started with in JI. So while the <math>x</math>, <math>y</math>, and <math>z</math> axes for JI corresponded to our primes <math>\text{p}_1</math>, <math>\text{p}_2</math>, and <math>\text{p}_3</math>, our <math>x</math> and <math>y</math> axes (no <math>z</math> here!) of our new meantone space correspond to its generators <math>\text{g}_1</math> and <math>\text{p}_2</math>. That's how ''its'' 2D plane exists. However, as for a tuning of meantone's projection matrix, such as quarter-comma's, it remains in the original 3D space with the <math>\text{p}_1</math>, <math>\text{p}_2</math>, and <math>\text{p}_3</math> axes. What this means is that everything in that space gets projected&mdash;or smooshed down, you could think of it&mdash;into a single plane. So this plane is 2D, certainly, but importantly, it still requires three coordinates to describe ''because it exists titled at some angle through the original JI space''. It is a 2D object occupying 3D space, just like any 2D document you might have in your real-life 3D physical space sitting up on a bookshelf at some slight angle. 
+
+=== Visualization of simpler problem ===
+It's rather tricky to visualize planes tilted within volumes, as it turns out. But perhaps a simpler example will be welcome. So let's gear down to the 3-limit, which is 2D. Consider 3-limit [[5edo|5-ET]], which is a rank-1, nullity-1 temperament. The one comma that it makes vanish is the [[Blackwood|blackwood comma]]. Here is the projection matrix for an arbitrary tuning of this temperament:
+
+
+<math>
+\begin{array} {c}
+P \\
+\left[ \begin{array} {r}
+-\frac53 & -\frac83 & \\
+\frac53 & \frac83 & \\
+\end{array} \right]
+\end{array}
+
+= 
+
+\begin{array} {c}
+G \\
+\left[ \begin{array} {r}
+-\frac13  \\
+\frac13 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+M \\
+\left[ \begin{array} {r}
+5 & 8 \\
+\end{array} \right]
+\end{array}
+</math>
+
+
+In particular, this is the tuning where <math>\frac32</math> is unchanged (as are all of its multiples). So our unchanged-interval basis contains a single column vector. This describes a line we could draw across the 3-limit lattice, which we could call our "unchanged-interval line". The idea is that every pitch (i.e., every point in this 2D 3-limit space) will get projected onto this line. Every pitch that is already on this line therefore won't be moved by this tuning; that's why it's unchanged! 
+
+Note that this unchanged-interval line is also our tempered lattice. Normally, when we draw the tempered lattice separately from the JI lattice, we wouldn't draw it at an angle like this. But it's important that it's at this angle here, since that's the angle at which it has been re-embedded into our original JI space.
+
+And since we have only a single comma, we know the angle at which every point in space that's off the unchanged-interval line will be projected onto it. We can figure it out by drawing a line from our comma, {{Vector|-8 5}}, to the origin, {{Vector|0 0}}. Every other projection line will be parallel to this line.
+[[File:Projection demo - arbitrary tuning case.png|none|thumb|900x900px|The purple grid is the original 2D JI lattice. The green line is the 1D tempered lattice for this unchanged-3/2 tuning of 5-ET, which we can also think of as the unchanged-interval line. We've only shown 5 points on it (other than the origin), i.e. we iterated the generator until we reached the next octave. For each of these green points on the tempered lattice, we show one purple point on the JI lattice which projects to it, via a blue arrow. 
+
+
+In particular, we show the blackwood comma, the vanishing comma of this temperament, projecting to the unison [0}. 
+
+
+Note that each next iteration of the generator adds a new green dot 1/3 of the way to the next JI lattice node which is diagonally up and to the left; this corresponds to the fact that 3/2 is our unchanged-interval, and 3/2 [-1 1⟩ maps to ~3/2 [3} in 5-ET. In other words, each generator is 2^(-1/3)·3^(1/3) so that (2^(-1/3)·3^(1/3))^3 = 2^(-1)·3^(1) = 3/2.
+
+
+Notice that all of the blue projection lines are exactly parallel, but that the green unchanged-interval line is not parallel or perpendicular to them.]]
+For comparison's sake, here's the tuning of 5-ET we get by taking the pseudoinverse of its mapping (i.e. the [[minimax-E-copfr-S]] tuning). Note that here, the projection lines are exactly perpendicular to the unchanged-interval line.
+[[File:Projection demo - pseudoinverse case.png|none|thumb|900x900px|The projection line from the blackwood comma to the origin (its vanishing) is identical to the previous diagram, and we're showing the same set of JI pitches projecting to the generator steps of 5-ET up to the octave, and all projection lines are still parallel. What's different in this diagram is the angle of the unchanged-interval line, which is now exactly perpendicular to the projection lines (note the 90° square angle indicators). 
+
+
+The reason why the pseudoinverse gives this perpendicular line is that in a sense this tuning is the "best fit line" to this temperament; it minimizes the overall lengths of all projection lines. Tuning tempered intervals is much trickier than this, however; this simplistic approach is deceptive in that it doesn't how 1) harmonic space isn't based on Euclidean distances and 2) primes 2 and 3 are not necessarily of equal importance. 
+
+
+The green dots are much more closely spaced here than in the previous diagram, but the generator size (in cents) is very similar; it's just that depending on how you're angled in this space, the combination of powers of 2 and 3 that define the generator size will be different, which can manifest as very different spacings visually.]]
+
+And so from here we can try to generalize these insights to higher dimensions. Meantone temperament, again, would exist in 3D. The meantone comma at the point {{vector|-4 4 -1}} would make a blue line to unison at the origin {{vector|0 0 0}}. Also through the origin we'd have an green "unchanged-interval plane". This could be tilted at any angle; the tilt would depend only the tuning of the temperament. No matter the tuning, every interval will have a parallel blue line through the space projecting it onto this plane. And this plane would also therefore represent the tempered lattice, and would have a regularly-spaced 2D grid of points on it.
+
+=== Tunings and commas ===
+Any projection will occupy some line/plane/space/etc. that is perpendicular to all of the temperaments commas' vectors, no matter what the tuning happens to be. What differentiates one tuning from another is what path all the other intervals take onto the projection. Remember how we described projections earlier as distortion fields with curvy vortices something like how we might see warm and cold fronts on a weather map, and among those waves of distortion one will occasionally find paths or spots where the distortion works out perfectly straight or perfectly still. So any tuning of a temperament will have the same such straight paths for the commas mapping to the origin (the point with all zeros). But the tunings will all be set aside from each other by which unchanged-intervals they have, that is, the "eyes of the storm" if you will, the points in space that don't budge at all by the distortion. And whatever these are will be part of the complicated distortion field that leads to all the other non-eigenvector intervals landing somewhere or another on that set projection line/plane/space (its dimensionality depends on the rank of the temperament).
+
+== Obtaining objects from the projection ==
+From a projection <math>P</math> it is possible to obtain many other useful objects. See the below diagram.
+
+[[File:Projection relations.png|frameless|800x800px]]
+
+All you need is purple to get anything on here (a purple bit, or one blue bit and one red bit). Meaning that if you have any of these:
+*<math>P</math>
+*<math>\textit{Λ}</math> and <math>\mathrm{V}</math>
+*<math>M</math> and <math>G</math>
+*<math>M</math> and <math>\textrm{U}</math>
+*<math>\textrm{C}</math> and <math>G</math>
+*<math>\textrm{C}</math> and <math>\textrm{U}</math>
+then you can get everything else using the methods described below.
+
+=== The comma basis ===
+To obtain the comma basis from <math>P</math>, simply take the nullspace as you would take it of the mapping (see [[Dave Keenan & Douglas Blumeyer's guide to RTT/Exploring temperaments#Nullspace]] for more information). 
+
+Remember, the mapping represents the temperament, and the projection represents a particular tuning of this temperament, so no matter which projection we use, while they will each have their own unchanged-intervals, they will share the same commas: the commas of the temperament.
+
+
+<math>\textrm{C} = \text{nullspace}(P)</math>
+
+
+An alternative method for finding <math>\textrm{C}</math> is discussed in the "Alternative method for the comma and unchanged-interval bases" section below.
+
+=== The unchanged-interval basis ===
+The '''unchanged-interval basis''' of a tuning is the [[basis]] for all of its [[unchanged-interval]]s. 
+
+Obtaining the unchanged-interval basis <math>\textrm{U}</math> means to obtain the unchanged-intervals <math>\textbf{u}_1, \textbf{u}_2, …</math> of <math>P</math> or in other words any <math>\textbf{u}_i</math> for which <math>P\textbf{u}_i = \textbf{u}_i</math>. There are many ways to find these, but one way stands out for its clarity. We can rewrite this equation by subtracting <math>\textbf{u}_i</math> from both sides to get:
+
+
+<math>
+P\textbf{u}_i - \textbf{u}_i = 0
+</math>
+
+
+Next, we can factor out the <math>\textbf{u}</math> from both terms:
+
+
+<math>
+(P - I)\textbf{u}_i = 0
+</math>
+
+
+To be clear, that's an identity matrix <math>I</math>, the matrix equivalent of a 1. 
+
+So now what have we gained? We've given ourselves a way to think of this as a nullspace problem, in the same way we found the commas of the projection!
+
+Let's review the commas problem but in another way. If <math>\textbf{c}_1</math> is a comma of the temperament, then <math>M\textbf{c}_1 = 0</math> and <math>P\textbf{c}_1 = 0</math>, which tells us that <math>\text{nullspace}(M)</math> or <math>\text{nullspace}(P)</math> will give us the comma basis <math>\textrm{C}</math>, or in other words a basis for all such commas <math>\textbf{c}_1, \textbf{c}_2, …</math>. 
+
+So, if <math>(P - I)\textbf{u}_i = 0</math>, then <math>\text{nullspace}(P - I)</math> should similarly give us a basis for all the <math>\textbf{u}_i</math> which satisfy that equation. 
+
+
+<math>\textrm{U} = \text{nullspace}(P - I)</math>
+
+
+An alternative method for finding <math>\textrm{U}</math> is discussed in the "Alternative method for the comma and unchanged-interval bases" section below.
+
+=== The mapping ===
+To obtain (some form of) the mapping from a projection, find its comma basis per the above, then take the nullspace of that comma basis to get the mapping. For more information, see [[Dave Keenan & Douglas Blumeyer's guide to RTT/Exploring temperaments#Nullspace]].
+
+
+<math>M = \text{nullspace}(\text{nullspace}(P))</math>
+
+
+In other words, do a double nullspace.
+
+=== The generator embedding ===
+To obtain (some form of) a generator embedding for a projection, find the unchanged-interval basis per the above, and then use <math>G = \textrm{U}(M\textrm{U})^{-1}</math>. Let's unpack why this is so.
+
+If the projection matrix is <math>P</math>, and a matrix whose columns are vectors representing the unchanged-intervals of a tuning is <math>\mathrm{U}</math>, then by this definition of unrotated (only-scaled) vectors:
+
+
+<math>
+P\mathrm{U} = λ\mathrm{U}
+</math>
+
+
+Again, this is because the intervals in <math>\mathrm{U}</math> are merely scaled, so we can represent their change with something simpler than a matrix like <math>P</math>, namely, a mere scalar like <math>λ</math>.
+
+Furthermore, if <math>λ = 1</math>, then we have:
+
+
+<math>
+P\mathrm{U} = (1)\mathrm{U}
+</math>
+
+
+Or even more simply:
+
+
+<math>
+P\mathrm{U} = \mathrm{U}
+</math>
+
+
+Again, this shows how the projection matrix maps&mdash;or more specifically, we can say it ''projects''&mdash;the interval onto itself, or in other words, that it is unchanged by the tuning.
+
+Because we know what <math>\mathrm{U}</math> is&mdash;we've specifically decided which intervals we wish to be unchanged here&mdash;we could solve for <math>P</math> now. But we don't actually care about <math>P</math> directly; what we want to find are the generators.
+
+Fortunately, <math>P</math> is defined ''in terms of'' our desired generators, specifically our generator embedding <math>G</math>, as well as our mapping, <math>M</math>. The formula is this:
+
+
+<math>
+P = GM
+</math>
+
+
+So we can substitute <math>GM</math> in for <math>P</math>, and our equation will now be:
+
+
+<math>
+(GM)\mathrm{U} = \mathrm{U}
+</math>
+
+
+Since we're solving for our generators <math>G</math>, we right multiply both sides by the inverse of <math>M\mathrm{U}</math>, in order to cancel out the <math>M\mathrm{U}</math> on the left-hand side, and thereby isolate <math>G</math>:
+
+
+<math>
+GM\mathrm{U}(M\mathrm{U})^{-1} = \mathrm{U}(M\mathrm{U})^{-1} \\
+G\cancel{M\mathrm{U}}\cancel{(M\mathrm{U})^{-1}} = \mathrm{U}(M\mathrm{U})^{-1} \\
+G = \mathrm{U}(M\mathrm{U})^{-1}
+</math>
+
+
+For a simpler take on this idea which doesn't involve the projection matrix, see [[Dave Keenan & Douglas Blumeyer's guide to RTT/Tuning computation#Solving for the generators]].
+
+=== The unrotated vectors and scaling factors ===
+To obtain the unrotated vectors and scaling factors, we can find these in matrix form via a mathematical process known as "eigendecomposition", which can be handled by most math software. For example, in Wolfram Language, we can perform an eigendecomposition using the function <code>Eigensystem[]</code>. Here's an example of quarter-comma meantone:
+ <nowiki>In:   P = {{1,1,0},{0,0,0},{0,1/4,1}}
+ In:   Eigensystem[P] // MatrixForm
+ Out:  {{1,1,0},{{0,0,1},{1,0,0},{4,-4,1}}}</nowiki>
+
+The answer comes in the form of a tuple. The first element is a list of our scaling factors (eigenvalues), and the second element is a list of our unrotated vectors (eigenvectors). So, this result is telling us that for scaling factors 1, 1, and 0, respectively, we have corresponding unrotated vectors {{vector|0 0 1}}, {{vector|1 0 0}}, and {{vector|4 -4 1}}. The set of eigenvectors with eigenvalue 0 constitute a comma basis, while the set of eigenvectors with eigenvalue 1 constitute an unchanged-interval basis (so, quarter-comma meantone is characterized by an unchanged <math>\frac21</math> and <math>\frac51</math>).
+
+The '''unrotated vector list''' may be treated as a matrix <math>\mathrm{V}</math>, and the list of scaling factors may be diagonalized (placed along the main diagonal of an otherwise all-zeros matrix) as the '''scaling factor matrix''' <math>\textit{Λ}</math> (that's a capital lambda, the same Greek letter we use the lowercase version of for the individual scaling factors). 
+
+As a bonus, we can get back to the projection via <math>P = \mathrm{V}\textit{Λ}\mathrm{V}^{-1}</math>. 
+
+By the way, the general method to find scaling factors is to solve the "characteristic equation" <math>\det(P - λI) = 0</math> for <math>λ</math>; that's lamdba times an identity matrix, or in other words, subtract lambda from each entry along <math>P</math>'s diagonal. But this shouldn't be necessary if one follows the other suggestions provided here.
+
+=== Alternative method for the comma and unchanged-interval bases ===
+This section assumes you've reviewed the immediately previous section.
+
+The pair of <math>\textit{Λ}</math> and <math>\mathrm{V}</math> also provide us an alternative way to find <math>\textrm{C}</math> and <math>\textrm{U}</math>. If the 1's come first in <math>\textit{Λ}</math> and the 0's afterwards, then <math>\mathrm{V}</math> is simply the concatenation of <math>\textrm{C}</math> and <math>\textrm{U}</math>. To continue the above example, we have:
+
+
+<math>
+\begin{array} {c}
+\textit{Λ} \\
+\left[ \begin{array} {r}
+\style{background-color:#98CC70;padding:5px}{1} & 0 & 0 \\
+0 & \style{background-color:#98CC70;padding:5px}{1} & 0 \\
+0 & 0 & \style{background-color:#F2B2B4;padding:5px}{0} \\
+\end{array} \right]
+\end{array}
+
+\text{&}
+
+\begin{array} {c}
+\mathrm{V} \\
+\left[ \begin{array} {rr|r}
+\style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#98CC70;padding:5px}{1} & \style{background-color:#F2B2B4;padding:5px}{4} \\
+\style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#F2B2B4;padding:5px}{{-4}} \\
+\style{background-color:#98CC70;padding:5px}{1} & \style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#F2B2B4;padding:5px}{1} \\
+\end{array} \right]
+\end{array}
+
+→
+
+\begin{array} {c}
+\textrm{U} \\
+\left[ \begin{array} {r}
+\style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#98CC70;padding:5px}{1} \\
+\style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#98CC70;padding:5px}{0} \\
+\style{background-color:#98CC70;padding:5px}{1} & \style{background-color:#98CC70;padding:5px}{0} \\
+\end{array} \right]
+\end{array}
+
+\text{&}
+
+\begin{array} {c}
+\textrm{C} \\
+\left[ \begin{array} {r}
+\style{background-color:#F2B2B4;padding:5px}{4} \\
+\style{background-color:#F2B2B4;padding:5px}{{-4}} \\
+\style{background-color:#F2B2B4;padding:5px}{1} \\
+\end{array} \right]
+\end{array}
+
+</math>
+
+
+On the left, we've highlighted the diagonalized scaling factors with green if they are for unchanged-intervals, and with red if they are for vanishing commas. Then on the right, we've colored the entire corresponding vector columns, and placed a vertical line between the two green columns corresponding to the two green scaling factors of 1 and the one red column corresponding to the one red scaling factor of 0. And so we can see that the green-colored part of <math>\mathrm{V}</math> is <math>\textrm{U}</math>, and the red-colored part of <math>V</math> is <math>\textrm{C}</math>.
+
+== Unrotated vector lists are not bases ==
+As seen above, the unrotated vector list <math>V</math> is the concatenation of the unchanged-interval basis <math>\mathrm{U}</math> and the comma basis <math>\mathrm{C}</math>. Yet <math>V</math> itself is not a basis; it is merely a ''list'' of vectors. Why is this? Perhaps it is best visualized in the diagram below:
+
+[[File:V is not basis.png|frameless|900x900px]]
+
+The basic idea is that any two commas' projections are the zero vector, so an indefinite number of these may be combined with each other. And any unchanged-interval's projection is equal to itself, so an indefinite number of these may be combined as well. But any interval that is a combination of some number of unchanged-intervals and some number of commas will have the comma part projected to zero but the unchanged-interval part left alone, and thus be rotated by the projection. In other words, only intervals with the same scaling factor can be combined and still remain unrotated, which is to say that the commas form one type of unrotated vector basis and the unchanged-intervals form another type of unrotated vector basis, but these bases do not combine into one basis together.
+
+That said, <math>V</math> must still be full-rank, meaning there is some relationship between the comma vectors and the unchanged-interval vectors. Specifically, it means that no unchanged-interval can be a linear combination of other unchanged-intervals and commas. If any were, we'd find an impossible situation, such as two unchanged-intervals off by a comma, so neither interval can change, yet they must both project to the same thing. For another take on this idea, see [[Dave Keenan & Douglas Blumeyer's guide to RTT/Tuning computation#Edge cases]].
+
+== Generator information types ==
+[[File:Info types - flow chart.png|thumb|602x602px|A diagram showing how the three information types (approximation, embedding, and form) break down across the tuning map, projection, mapping, generator embedding, multimap, and form matrices. ]]
+One way to think about what's happening in this vicinity of RTT is that we have three different generator information types: 
+# approximation
+#embedding
+# form
+
+Mappings combine types (1) and (3). Generator embeddings combine types (2) and (3). Projections combine types (1) and (2). So each possible subset of two of these pieces of information is accounted for by these three objects.
+
+One advantage of using exterior algebra for RTT, i.e. representing a temperament with a multimap rather than a mapping matrix, is that it isolates the approximation information (1) from the form information (3), i.e. that any equivalent mapping is sent to the same multimap (largest minors list). For more information, see [[Douglas Blumeyer and Dave Keenan's Intro to exterior algebra for RTT#Pure representation of temperament information]].
+
+In a similar way, when you combine a mapping with a generator embedding into a projection, the generator form information goes away from both, and you're left with just pure approximation and embedding information. We've used color to help convey this idea in the diagram to the right, with type (1) red, type (2) blue, type (3) green.
+
+So, when you compress the multi-row projection matrix into a single-row tuning map by multiplying it by the just tuning map <math>𝒋</math>, the two types of information are still there, but blended together such that they are unrecoverable, or in other words, it's now ambiguous how we arrived at this <math>𝒕</math> and could have arrived to it from a different combination of <math>M</math> and <math>G</math>.
+
+So again, while the mapping represents approximation information abstracted from any embedding, and the generator embedding represents embedding information that could be applied to any suitable approximation, they are each impure in the sense that they bind their respective generator information types to a particular form. This is the nature of how they must match to multiply together to give a certain projection. But no matter which two <math>G</math> and <math>M</math> you choose, as long as they do match, then their form information cancels out and we end up with just the approximation and embedding information. 
+
+(The top-left object is something no one has ever spoken about, as far as we know, and we see no use for it. We can't even say what "pure embedding information" would mean, independent of a temperament, or what it would mean to explore that space, in the way theorists have explored multimap space using temperament addition, etc. So we can see that the "multituning", perhaps we could call it, of quarter-comma meantone, is {{multivector|0 ¼ 0}})
+
+And here's a series of tables that show various parts of the tempering process color-coded according to the above diagram:
+
+[[File:Info types - checkers.png|frameless|800x800px]]
+
+== Mapping projected intervals ==
+For any interval vector <math>\textbf{i}</math> that has already been projected by the projection matrix <math>P</math>, if you then map it by the temperament mapping <math>M</math>, you'll get the same thing as you would have if you hadn't projected it. In other words:
+
+
+<math>
+MP\textbf{i} = M\textbf{i}
+</math>
+
+
+that is, so long as <math>P</math> and <math>M</math> are for the same temperament. Said yet another way, even though temperament mappings are primarily designed to map vectors with ''all integer'' entries (therefore representing JI intervals), if you happen to try mapping one of the projected vectors which typically have ''non-integer but at least rational'' entries, it will nonetheless find itself mapped to the same generator-count vector as whatever all-integer JI vector it came from would have been mapped to.
+
+== Projecting to other spaces ==
+The typical use case for a projection matrix is to re-embed a temperament lattice back into the original JI space from which it was tempered. But it is also possible to project to a completely different JI space after tempering, even a higher-dimensional one than the original space, or a lower-dimensional one than the tempered lattice. As long as you know how to translate vectors in the destination space into size, it's fair game. In fact, there's nothing stopping you from taking vectors in that space and projecting again, and again, and again. Though the present author fails to see if there are any meaningful musical purposes for this much temperamental distortion.
+
+== Comma bases should always have integer entries ==
+While projections, generator embeddings, and unchanged-interval bases may have non-integer entries, comma bases should not. Rather than temper out a comma with rational entries, clear its denominators. And a comma with irrational entries is departing from a scenario where RTT has much practical value.
+
+== Applications ==
+Projections and generator embeddings come up in some methods for calculating tunings according to commonly-used schemes:
+# Those that use the pseudoinverse method, such as miniRMS and minimax-ES tunings: see [[Generator embedding optimization#Pseudoinverse method]].
+# Those that use the zero-damage method, such as miniaverage tunings: see [[Generator embedding optimization#Zero-damage method]].
+# Tunings based on unchanged-intervals: see [[Generator embedding optimization#Unchanged-interval method]].
+
+== See also ==
+* [[Projection matrices]]: a more mathematical discussion of these ideas
+* [[Eigenmonzo basis]]: an alternative conceptualization for the unchanged-interval basis
+
+Note that projection matrices do not have anything deeply to do with [[projective tuning space]] or [[projective tone space]], other than the fact that they both use the mathematical operation of projecting something from a higher dimension to a lower one.
+
+== Footnotes ==
+<references group="note" />
+
+[[Category:Regular temperament theory]]
+[[Category:Tuning]]

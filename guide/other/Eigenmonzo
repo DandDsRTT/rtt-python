@@ -1,0 +1,20 @@
+An '''eigenmonzo''' (also known as an '''unchanged interval''') is a (usually justly intoned) interval that remains unchanged when a specific tuning of a given temperament is applied to it. The term "eigenmonzo" does not imply that the interval is notated in monzo form, so that if 2.3 {{Monzo|2 -1}} is an eigenmonzo, then we may also refer to the same interval written as a ratio, 4/3, as an eigenmonzo.
+
+A [[regular temperament]] transforms untempered intervals into tempered intervals, which changes most of their sizes. Only a small set of exceptional intervals do not change in size. This set of unchanged intervals depends on the choice of tuning. 
+
+A popular example of an unchanged interval is the JI interval 5/1, when it is mapped by [[quarter-comma meantone]]; because this temperament tuning's generator is defined as exactly one-quarter the size of the interval 5/1, it remains justly tuned.
+
+For any pure-octave temperament tuning, 2/1 is an unchanged interval.
+
+A [[rank]]-''n'' temperament can have up to ''n'' linearly independent unchanged intervals&mdash;one for each [[generator]].
+
+The term "eigenmonzo" here comes from the [[linear algebra formalism]], where intervals are often represented as vectors corresponding to their [[monzos]] (and thus instances of "vector" are often replaced with "monzo"). An [[wikipedia: Eigenvalues and eigenvectors|eigenvector]] is a vector that is not rotated (only scaled) by a matrix.  The etymology of "eigen" is "own" in the sense of "characteristic"; the set of unrotated vectors and their scale factors are considered to characterize the transformation represented by the matrix. In this case, the transformation matrix is the [[projection]] corresponding to the tuning of the regular temperament, which gives the conflations of the just bases with [[Radical interval|radical intervals]], such as 3/2 to 5^(1/4). Note that this is ''not'' the matrix corresponding to the [[mapping]], which cannot specify a precise tuning.
+
+However, the definition of eigenmonzo is more precise; along with corresponding to an eigenvector, it must be scaled by a factor of 1 (i.e. left unchanged). In other words, there are many intervals that correspond to eigenvectors of a projection but that are not unchanged intervals in the corresponding tuning (most notably, any comma tempered out by a temperament is scaled to 0, but that is obviously not unchanged).
+
+== See also ==
+* [[Eigenmonzo subgroup]]
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]

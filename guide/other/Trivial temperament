@@ -1,0 +1,24 @@
+A '''trivial temperament''' is something that fits the mathematical definition of [[regular temperament]], but is a unique, extreme case that people might be uncomfortable calling a "[[temperament]]". There are two types of trivial temperaments: [[just intonation]], which leaves all intervals [[tempering|untempered]], and [[single-pitch tuning]], which [[tempering out|tempers out]] all intervals.
+
+== Just intonation ==
+{{Main| Just intonation }}
+
+The [[mapping]] for a [[just intonation subgroup]] of rank ''n'' is an ''n''×''n'' {{w|identity matrix}}, and transforms said subgroup to itself. In musical terms, this means that nothing is tempered. The set of commas that are tempered out is {1/1}, but that is still a valid set, so just intonation still counts as valid regular temperaments. 
+
+There is an infinite family of these temperaments, one for each subgroup of JI. The 2-limit version is equivalent to [[1edo|1et]]. The [[3-limit]] version, or [[pythagorean tuning]], is a rank-2 temperament, which has all the properties of any other rank-2 temperament except that it tempers out no commas. 5-limit JI is rank-3, 7-limit JI is rank-4, etc.
+
+[[User:VectorGraphics|Vector]] proposes the name ''identity temperament''{{idio}} for this family of temperaments. 
+
+== Single-pitch tuning ==
+{{Main| Single-pitch tuning }}
+
+The single-pitch tuning is the rank-0 temperament, in which every interval is a comma. Thus all notes are represented by the same note. This is different from 1edo because not even octaves exist. The mapping for this is the 0-val, {{val| 0 0 … 0 }}, and its [[wedgie]] is a single entry. 
+
+As with JI, there is technically a temperament of a single pitch for every subgroup.
+
+[[Gene Ward Smith]] proposes the name ''unison temperament'' for this family of temperaments<ref>http://www.robertinventor.com/tuning-math/s__12/msg_11050-11074.html</ref>, as all intervals are equated to the unison. [[Keenan Pepper]] proposes the name ''Om temperament''{{idio}}. [[Wikipedia:Om|''Om'']] is a reference to that syllable's use in Hindu meditation practices, for there is only one temperament-distinct pitch in the whole system, in the same way that ''Om'' in the meditation sense is the only word you need to create the whole universe.
+
+== Notes and references ==
+<references />
+
+[[Category:Regular temperament theory]]

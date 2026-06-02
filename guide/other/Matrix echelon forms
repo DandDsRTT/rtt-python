@@ -1,0 +1,200 @@
+The mathematical field of linear algebra has defined a number of echelon forms for matrices, many of them have been used in [[regular temperament theory]]. This article is intended as a reference and gathering place for relevant information about these matrix forms.
+
+== REF ==
+The most general form, with the fewest constraints, is simply called '''[https://en.wikipedia.org/wiki/Row_echelon_form Row Echelon Form]''', or '''REF'''. Its only constraint is ''echelon<ref group="note">The name "echelon" is a French word for a military troop formation with a similar triangular shape: https://en.wikipedia.org/wiki/Echelon_formation.</ref> form'': each row's pivot, or first nonzero entry, is strictly to the right of the preceding row's pivot. This single constraint is fairly weak, and therefore REF does not produce a unique representation. This constraint is shared by every matrix form discussed here.<ref group="note">Note that the definition of REF is inconsistent and sometimes it includes some of the constraints of RREF, discussed further below. See: https://www.statisticshowto.com/matrices-and-matrix-algebra/reduced-row-echelon-form-2/</ref><ref group="note">REF also requires that all rows that are entirely zeros should appear at the bottom of the matrix. However this rule is only relevant for [[rank-deficient]] matrices. We'll be assuming all matrices here are [[full-rank]], so we don't have to worry about this.</ref>
+
+In the below example, <math>x_{ij}</math> represents any number.
+
+{| class="wikitable" style="text-align: center;"
+|+ style="font-size: 105%;" | REF
+|- style="width: 25px;"
+| style="background-color: #6d9eeb;" | x<sub>₁</sub>
+| style="background-color: #6d9eeb;" | x<sub>₂</sub>
+| style="background-color: #6d9eeb;" | x<sub>₃</sub>
+| style="background-color: #6d9eeb;" | x<sub>₄</sub>
+| style="background-color: #6d9eeb;" | x<sub>₅</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #6d9eeb;" | x<sub>₂</sub>
+| style="background-color: #6d9eeb;" | x<sub>₃</sub>
+| style="background-color: #6d9eeb;" | x<sub>₄</sub>
+| style="background-color: #6d9eeb;" | x<sub>₅</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #6d9eeb;" | x<sub>₄</sub>
+| style="background-color: #6d9eeb;" | x<sub>₅</sub>
+|}
+
+== IREF ==
+'''[https://people.sc.fsu.edu/~jburkardt/f_src/row_echelon_integer/row_echelon_integer.html Integer Row Echelon Form]''', or '''IREF''', is, unsurprisingly, any REF which meets an additional ''integer'' constraint, or in other words, that all of its entries are integers. This is still not a sufficiently strict set of constraints to ensure a unique representation.
+
+In the below example, <math>n_{ij}</math> represents any integer.
+
+{| class="wikitable" style="text-align: center;"
+|+ style="font-size: 105%;" | IREF
+|- style="width: 25px;"
+| style="background-color: #93c47d;" | n<sub>1</sub>
+| style="background-color: #93c47d;" | n<sub>2</sub>
+| style="background-color: #93c47d;" | n<sub>3</sub>
+| style="background-color: #93c47d;" | n<sub>4</sub>
+| style="background-color: #93c47d;" | n<sub>5</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #93c47d;" | n<sub>2</sub>
+| style="background-color: #93c47d;" | n<sub>3</sub>
+| style="background-color: #93c47d;" | n<sub>4</sub>
+| style="background-color: #93c47d;" | n<sub>5</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #93c47d;" | n<sub>4</sub>
+| style="background-color: #93c47d;" | n<sub>5</sub>
+|}
+
+== RREF ==
+'''[https://en.wikipedia.org/wiki/Row_echelon_form#Reduced_row_echelon_form Reduced Row Echelon Form]''', or '''RREF''', takes REF in a different direction than IREF. Instead of stipulating anything about integers, it requires that the matrix is ''reduced'', i.e. that the pivots are exactly equal to 1. This may require dividing rows by a number such that some resulting entries are no longer integers. Actually, there's a second part to the "reduced" constraint: each pivot column (a column which contains any row's pivot) has zeros for all other entries besides the pivot it contains. Due to these strict constraints, the RREF of a matrix is the first one we've looked at so far here which does ensure uniqueness.
+
+{| class="wikitable" style="text-align: center;"
+|+ style="font-size: 105%;" | RREF
+|- style="width: 25px;"
+| style="background-color: #d9ead3;" | 1
+| style="background-color: #93c47d;" | 0
+| style="background-color: #6d9eeb;" | x<sub>3</sub>
+| style="background-color: #93c47d;" | 0
+| style="background-color: #6d9eeb;" | x<sub>5</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #d9ead3;" | 1
+| style="background-color: #6d9eeb;" | x<sub>3</sub>
+| style="background-color: #93c47d;" | 0
+| style="background-color: #6d9eeb;" | x<sub>5</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #d9ead3;" | 1
+| style="background-color: #6d9eeb;" | x<sub>5</sub>
+|}
+
+So IREF and RREF make a [https://en.wikipedia.org/wiki/Venn_diagram Venn diagram] inside the category of REF: some IREF are RREF, but there are some RREF that are not IREF and some IREF that are not RREF. When we scope the situation to a specific matrix, however, because RREF is a unique form, this means that one or the other sector of the Venn diagram for RREF will be empty; either the unique RREF will also be IREF (and therefore the RREF-but-not-IREF sector will be empty), or it will not be IREF (and vice versa).
+
+== IRREF ==
+'''[[Normal_lists|Integer Reduced Row Echelon Form]]''', or '''IRREF''': based on the name, one might expect this form to be a combination of the constraints for RREF and IREF, and therefore if represented in an [https://en.wikipedia.org/wiki/Euler_diagram Euler diagram] (generalization of Venn diagram) would only exist within their intersection. However this is not the case. That's because the IRREF does not include the key constraint of RREF which is that all of the pivots must be 1. IRREF is produced by simply taking the unique RREF and multiplying each row by whatever minimum value is necessary to make all of the entries integers. Of course, this sometimes results in the pivots no longer being 1, so sometimes it is no longer RREF. It is always still REF, though,<ref group="note">Also, it will always still satisfy the second aspect of reduced, i.e. that all other entries in pivot columns besides the pivots are zeroes.</ref> and because it is also always integer, that makes it always IREF; therefore, IRREF is strictly a subcategory of IREF. And because the RREF is unique, and the conversion process does not alter that, the IRREF is also unique.  
+
+{| class="wikitable" style="text-align: center;"
+|+ style="font-size: 105%;" | IRREF
+|- style="width: 25px;"
+| style="background-color: #93c47d;" | n<sub>1</sub>
+| style="background-color: #274e13;" | 0
+| style="background-color: #93c47d;" | n<sub>3</sub>
+| style="background-color: #274e13;" | 0
+| style="background-color: #93c47d;" | n<sub>5</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #93c47d;" | n<sub>2</sub>
+| style="background-color: #93c47d;" | n<sub>3</sub>
+| style="background-color: #274e13;" | 0
+| style="background-color: #93c47d;" | n<sub>5</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #93c47d;" | n<sub>4</sub>
+| style="background-color: #93c47d;" | n<sub>5</sub>
+|}
+
+The multiplication of rows by whatever integer is required to clear the denominators of the RREF form is the action which is responsible for causing [[enfactoring]], whenever the IRREF produces an enfactored mapping from a defactored one.
+
+It is not possible for an RREF to be IREF without also being IRREF. 
+
+== HNF ==
+{{main|Normal forms#Hermite normal form}}
+{{wikipedia|Hermite normal form}}
+The '''Hermite normal form''', or '''HNF''': this one's constraints begin with echelon form and integer, therefore every HNF is also IREF. But HNF is not exactly reduced (as discussed above; [[canonical_form#RREF|link here]]); instead, it is ''normalized'', which — similarly to reduced — is a two-part constraint. Where reduced requires that all pivots be exactly equal to 1, normalized requires only that all pivots be positive (positive integers, of course, due to the other integer constraint). And where reduced requires that all entries in pivot columns besides the pivots are exactly equal to 0, normalized requires only that all entries in pivot columns below the pivots are exactly equal to 0, while entries in pivot columns above the pivots only have to be strictly less than the pivot in the respective column (while still being non-negative).<ref group="note">The exact criteria for HNF are not always consistently agreed upon, however.</ref><ref group="note">We are using "row-style" Hermite Normal Form here, not "column-style"; the latter would involve simply flipping everything 90 degrees so that the echelon requirement was that pivots be strictly ''below'' the pivots in the previous ''column'', and that pivot ''rows'' are considered for the normalization constraint rather than pivot ''columns''.</ref> In other words, elements above the pivot have to be reduced modulo the pivot. The normalization HNF uses is cool because this constraint, while strictly less strict than the reduced constraint used by RREF, is still strict enough to ensure uniqueness, but loose enough to ensure the integer constraint can be simultaneously satisfied, where RREF cannot ensure that. 
+
+So HNF has a lot in common with IRREF, which is the IREF you find by converting the RREF, but it is not always the same as IRREF.
+
+[[Defactored Hermite form]] (which we will call "canonical form" here) is closely related to HNF, because the second step of finding the canonical form is taking the HNF. So the canonical form is always ''a'' HNF, and therefore it has all the same properties of being echelon, integer, and normalized, and in turn therefore it also provides a unique representation. However it is not necessary ''the'' same HNF of the original mapping, due to the first step being defactoring; it is the same as as HNF except when the original mapping is enfactored.
+
+In the below example, <math>p_{ij}</math> represents any positive integer, and <math>a_{ij}</math> represents any nonnegative integer less than the <math>p</math> in its column.
+
+{| class="wikitable" style="text-align: center;"
+|+ style="font-size: 105%;" | HNF (and canonical form)
+|- style="width: 25px;"
+| style="background-color: #e69138;" | p<sub>1</sub>
+| style="background-color: #ffe599;" | a<sub>2</sub>
+| style="background-color: #93c47d;" | n<sub>3</sub>
+| style="background-color: #ffe599;" | a<sub>4</sub>
+| style="background-color: #93c47d;" | n<sub>5</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #e69138;" | p<sub>2</sub>
+| style="background-color: #93c47d;" | n<sub>3</sub>
+| style="background-color: #ffe599;" | a<sub>4</sub>
+| style="background-color: #93c47d;" | n<sub>5</sub>
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #e69138;" | p<sub>4</sub>
+| style="background-color: #93c47d;" | n<sub>5</sub>
+|}
+
+For an example of working out a HNF by hand, see: [[Defactoring algorithms #Hermite decomposition by hand]].
+
+== SNF ==
+There is also the '''[https://en.wikipedia.org/wiki/Smith_normal_form Smith Normal Form]''', or '''SNF''', but we won't be discussing it in this context, because putting a mapping into SNF obliterates a lot of meaningful RTT information. SNF is also echelon, and integer, so like HNF it is also always IREF. But SNF requires that every single entry other than the pivots are zero, and that the pivots all fall exactly along the main diagonal of the matrix. The SNF essentially reduces a matrix down to the information of what its rank is and whether it is enfactored. For example, all 5-limit rank-2 temperaments such as meantone, porcupine, mavila, hanson, etc. have the same SNF: {{rket|{{map|1 0 0}} {{map|0 1 0}}}}. Or, if you 2-enfactor them, they will all have the SNF {{rket|{{map|1 0 0}} {{map|0 2 0}}}}. So while the SNF is closely related to defactoring, it is not itself a useful form to put mappings into.<ref group="note">Here is a useful resource for computing the Smith Normal Form manually, if you are interested: https://math.stackexchange.com/questions/133076/computing-the-smith-normal-form The fact that it involves calculating so many GCDs is unsurprising given its ability to defactor matrices.</ref>
+
+The SNF is used for finding [[generator detempering]]s. 
+
+{| class="wikitable" style="text-align: center;"
+|+ style="font-size: 105%;" | SNF
+|- style="width: 25px;"
+| style="background-color: #e69138;" | p<sub>1</sub>
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #e69138;" | p<sub>2</sub>
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+|-
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+| style="background-color: #e69138;" | p<sub>3</sub>
+| style="background-color: #274e13;" | 0
+| style="background-color: #274e13;" | 0
+|}
+
+== Mapping form equivalence possibilities ==
+[[File:Cases for temperament mapping forms3.png|300px|thumb|right]]
+Considering only full-rank, integer mappings, we find three cases for a given temperament which is not enfactored. In all three cases, HNF is the same as canonical form (here abbreviated as DCF, for defactored canonical form<ref group="note">This was before the community decided on "defactored Hermite form", and I was too lazy to go back and update all these diagrams.</ref>):
+# The RREF, IRREF, and HNF are all ''different''. Example: [[Porcupine_family#Porcupine|porcupine]] with RREF of {{rket|{{map|1 0 {{frac|1|3}} {{map|0 1 {{frac|5|3}}}}}}}}, IRREF of {{rket|{{map|3 0 -1}} {{map|0 3 5}}}}, and HNF of {{rket|{{map|1 2 3}} {{map|0 3 5}}}}. 
+# The RREF, IRREF, HNF are all ''the same''. Example: [[Meantone_family#Meantone_.2812.2619.2C_2.3.5.29|meantone]] with all equal to {{rket|{{map|1 0 -4}} {{map|0 1 4}}}}. This case is quite rare.
+# The IRREF and HNF are the same, but the ''RREF is different''. Example: [[Kleismic_family#Hanson|hanson]] with IRREF and HNF of {{rket|{{map|1 0 1}} {{map|0 6 5}}}} but RREF of {{rket|{{map|1 0 1}} {{map|0 1 {{frac|5|6}}}}}}.
+
+And there are three corresponding cases when a temperament is enfactored. In all three cases, the key difference is that HNF is no longer the same as DCF, with the only difference being that the common factor is not removed. In all cases below, the examples are shown with a common factor of 2 introduced in their second row, which stays behind in the second row of the HNF:
+# Now ''all four'' are different. Example: enfactored porcupine, e.g. {{rket|{{map|15 24 35}} {{map|14 22 32}}}} causes the HNF to be {{rket|{{map|1 2 3}} {{map|0 6 10}}}}.
+# Everything is still the same now, ''except HNF''. Example: enfactored meantone, e.g. {{rket|{{map|5 8 12}} {{map|14 22 32}}}} causes the HNF to be {{rket|{{map|1 0 -4}} {{map|0 2 8}}}}. This case, like the corresponding defactored state, is also quite rare.
+# The ''only match'' now is between IRREF and DCF. In other words, the HNF and DCF diverged, and it was the DCF which remained the same as IRREF. Example: enfactored hanson, e.g. {{rket|{{map|15 24 35}} {{map|38 60 88}}}} causes the HNF to be {{rket|{{map|1 0 1}} {{map|0 12 10}}}}.
+
+There is also a final case which is incredibly rare. It can be compared to the #3 cases above, the ones using hanson as their example. The idea here is that when the HNF and DCF diverge, instead of DCF remaining the same as IRREF, it's the HNF that remains the same as IRREF. There may be no practical temperoids with this case, but {{rket|{{map|165 264 393}} {{map|231 363 524}}}} will do it,<ref group="note">AKA 165b<sup>4</sup>c<sup>19</sup>&231b<sup>6</sup>c<sup>24</sup>, which makes the 7.753¢ comma {{vector|-131 131 -33}} [[vanish]]!</ref> with IRREF and HNF of {{rket|{{map|33 0 -131}} {{map|0 33 131}}}}, DCF of {{rket|{{map|1 1 0}} {{map|0 33 131}}}}, and RREF of {{rket|{{map|1 0 {{frac|−131|33}}}}}} {{map|0 1 {{frac|131|33}}}}}}.
+
+That accounts for 7 of the 15 total possible cases for a system of equalities between 4 entities. The remaining 9 cases are impossible due to properties of the domain: 
+* If HNF equals RREF, then the pivots of HNF are all 1's, which means the temperament is not enfactored, which means HNF also equals DCF. This eliminates 3 cases: {{nowrap|HNF {{=}} RREF}}; {{nowrap|HNF {{=}} RREF|HNF {{=}} IRREF|RREF {{=}} IRREF}}; {{nowrap|HNF {{=}} RREF|IRREF {{=}} DCF}}.
+* If RREF equals DCF, then RREF must be integer, which means RREF must also equal IRREF. This eliminates 3 cases: {{nowrap|RREF {{=}} DCF}}; {{nowrap|RREF {{=}} DCF|HNF {{=}} RREF|HNF {{=}} DCF}}; {{nowrap|RREF {{=}} DCF|HNF {{=}} IRREF}}.
+* The case where the only equality is between RREF and IRREF would only be possible when the temperament is both enfactored and rank-deficient, such as {{rket|{{map|0 0 0}} {{map|2 4 6}}}} which gives to HNF, RREF, IRREF, and DCF of {{rket|{{map|2 4 6}} {{map|0 0 0}}}}, {{rket|{{map|1 2 3}} {{map|0 0 0}}}}, {{rket|{{map|1 2 3}} {{map|0 0 0}}}}, and {{rket|{{map|1 2 3}}}}, respectively.
+* The case where the only equalities are between RREF and IRREF and between HNF and DCF is impossible, because if {{nowrap|RREF {{=}} IRREF}} that suggests that all entries are multiples of their pivots, which is easy if the temperament is enfactored, but if {{nowrap|HNF {{=}} DCF}} then it is not.
+
+== Footnotes ==
+<references group="note" />
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]

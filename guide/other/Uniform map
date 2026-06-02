@@ -1,0 +1,36 @@
+[[File:Uniform maps.png|thumb|right|500px|This visualizes edo maps. We could call it the uniform map continuum. Generator size decreases to the right, so the edo number goes up. Each colored cell is the closest approximation of steps to a prime for that generator size. We can see uniform maps as any set of step counts for primes found as perfectly vertical lines drawn through such a diagram. And integer uniform maps would be any such vertical line that is also drawn straight through a number which appears in the row for ''n''-edo.]]
+A '''uniform map''' is any [[val|map]] found by ''uniformly'' multiplying every entry of the [[just intonation point]] (JIP) for some prime limit ''p'', {{map| log<sub>2</sub>2 log<sub>2</sub>3 log<sub>2</sub>5 … log<sub>2</sub>''p'' }}, by the same positive real number before rounding them to integers. 
+
+What this means is that somewhere along the continuum of all possible [[equal-step tuning]] [[generator]] sizes, we can find one whose individually closest approximations for each of the primes is given by this map. In this sense, uniform maps are those that give reasonable tunings (further discussion of this idea may be found in [[Patent val #Generalized patent val]]). The map with the overall best tuning accuracy for an edo will always be a uniform map. In many [[regular temperament theory]] contexts, uniform maps are the only maps used, such as in the famous [[projective tuning space]] diagrams from [[Paul Erlich]]'s seminal A Middle Path paper, or the [[optimal ET sequence]]s given for many [[regular temperament]]s across the wiki.
+
+For an example, choosing 17.1 as our uniform multiplier, we find the map {{nowrap|17.1{{dot}}{{map|log<sub>2</sub>2 log<sub>2</sub>3 log<sub>2</sub>5}} {{=}} {{map|17.1 27.103 39.705}}}} which rounds to {{map| 17 27 40 }}. This is one of the many uniform maps for 17edo.
+
+Every [[edo]] has a finite number of possible uniform maps within a given prime limit, but an infinite number of uniform maps if no prime limit is given.
+
+To find a uniform map for some ''n''-edo, choose any multiplier that rounds to ''n'' (anywhere from {{nowrap|''n'' − 0.5}} to {{nowrap|''n'' + 0.5}}). For example, 16.9 rounds to 17, so we could use that to find another example for 17edo. Uniformly multiplying {{nowrap|16.9{{dot}}{{map| log<sub>2</sub>2 log<sub>2</sub>3 log<sub>2</sub>5 }} {{=}} {{map| 16.9 26.786 39.241 }}}}, which rounds to {{map| 17 27 39 }}.
+
+Subgroup uniform maps are also possible. For example, a uniform map on the 2.5.9/7 subgroup would be found by uniformly multiplying {{map|log<sub>2</sub>2 log<sub>2</sub>5 log<sub>2</sub>(9/7)}}.
+
+== Integer uniform map, or simple map ==
+{{Main| Patent val }}
+
+A uniform map whose multiplier is an integer is called an '''integer uniform map'''. For example, we could use the integer 17 itself directly. So {{nowrap|17{{dot}}{{map| log<sub>2</sub>2 log<sub>2</sub>3 log<sub>2</sub>5 }} {{=}} {{map| 17 26.944 39.473 }}}}, which also rounds to {{map| 17 27 39 }}. Every edo has one integer uniform map. 
+
+Another name for an integer uniform map is a '''simple map'''. The two different terms provide two different ways of presenting the same object, which can be helpful in different contexts:
+* In contexts pertaining to tuning accuracy, ''simple map'' works well. This is probably the more common context. 
+* In contexts pertaining to other uniform maps, ''integer uniform map'' works well. 
+
+To define ''simple map'' independently of ''integer uniform map'', it is a specific type of map used for [[edo]]s. Every edo has one simple map. The simple map for ''n''-edo is found by taking the [[just intonation point]] (JIP) for some prime limit ''p'', {{map| log<sub>2</sub>2 log<sub>2</sub>3 log<sub>2</sub>5 … log<sub>2</sub>''p'' }}, multiplying it by ''n'', then individually rounding entries to the nearest integer. For example, the simple map for 7-limit 19edo is {{nowrap|19{{dot}}{{map| log<sub>2</sub>2 log<sub>2</sub>3 log<sub>2</sub>5 log<sub>2</sub>7 }} {{=}} {{map| 19 30.115 44.117 53.340 }}}} which rounds to {{map| 19 30 44 53 }}.
+
+So the simple map is not necessarily the ''best'' map for its edo in terms of overall tuning accuracy, but it is the ''simplest'' map to calculate. The classic example of a simple map which is not the best map is 17p in the 5-limit, {{nowrap|17{{dot}}{{map| log<sub>2</sub>2 log<sub>2</sub>3 log<sub>2</sub>5 }} {{=}} {{map| 17 26.944 39.473 }}}} which rounds to {{map| 17 27 39 }}. The approximation of prime 5 is really bad here; it is about exactly halfway between 39 and 40 steps, but slightly below, which is why it rounds down. But it turns out that if we round up instead, using 40 steps to approximate prime 5, then the absolute errors in the primes remain about the same. However, the error in 5/3 is much less, because the error in 5 and the error in 3 are now in the same direction, canceling each other out, and so overall {{map| 17 27 40 }} has less error than {{map| 17 27 39 }}.
+
+== Terminology ==
+A uniform map is the same thing as a [[generalized patent val]], or GPV. An integer uniform map or simple map is the same thing as a [[patent val]].
+
+As for the difference between ''map'' and ''val'', there is none, at least in most [[RTT]] cases; this is discussed here: [[Map]]. 
+
+Otherwise, the difference in terminology between uniform maps, integer uniform maps, patent vals, and GPVs, reflects an inversion in conceptual framing. For patent vals and GPVs, patent vals are considered the base case, and GPVs a generalization thereof, whereas for uniform maps and integer uniform maps, uniform maps are considered the base case and integer uniform maps a specialization thereof. There is an argument that uniform maps are the more fundamental and important concept to regular temperament theory and therefore that this framing is the superior of the two.
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]

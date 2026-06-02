@@ -1,0 +1,932 @@
+{{breadcrumb}}
+This is article 4 of 9 in [[Dave Keenan]] & [[Douglas Blumeyer]]'s guide to RTT, or "[[D&D's guide]]" for short. 
+
+{{Subpage|Mappings|prev|text=In an earlier article of this series we gave an introduction to mappings}}, the most important objects in RTT. As part of that effort, we couldn't help but touch upon some important underlying properties of these objects — in particular how one-row mappings could merge together to create multi-row mappings, and how this affects which commas are made to vanish by the mapping. These concepts run pretty deep, and in this article we'll be diving deeper into them. By the end of this article, you will understand the relationship between mapping matrices, as well as between mapping matrices and their commas, and how to find them from each other. 
+
+== Projective tuning space ==
+In this section, we will be going to go into (potentially excruciating) detail about how to read the projective tuning space diagram featured prominently in Paul Erlich's Middle Path paper. Basically, JI, ETs, and the higher-rank temperaments in between can all be plotted in space, which can be visualized on a diagram, to help you navigate their interrelationships. That's what projective tuning space is.
+
+For me personally (Douglas here), attaining total understanding of this visualization was critical before a lot of the linear algebra stuff started to mean much to me. But other people might not work that way, and the extent of detail we go into in this section is not necessary to become competent with RTT (in fact, to our delight, one of the points we make in this section was news to Paul himself). So if you're already confident about reading the PTS diagram, you may try skipping ahead to the second half of this article.
+
+=== Intro to PTS ===
+[[File:Pts-2-3-5-e2-twtop-tlin.jpg|center|thumb|800px|'''Figure 1a.''' 5-limit projective tuning space]]
+
+This is 5-limit [[projective tuning space]], or PTS for short ''(see Figure 1a)''. This diagram was created by RTT pioneer [[Paul Erlich]]. It compresses a huge amount of valuable information into a small space. If at first it looks overwhelming or insane, do not despair. It may not be instantly easy to understand, but once you learn the tricks for navigating it from these materials, you will find it is very powerful. Perhaps you will even find patterns in it which others haven't found yet.
+
+We suggest you open this diagram in another window and keep it open as you proceed through these next few sections, as we will be referring to it frequently.
+
+[[File:JI scale 2.png|thumb|right|150px|'''Figure 1b.''' Just an example JI scale]]
+
+If you've worked with 5-limit JI before, you're probably aware that it is three-dimensional. You've probably reasoned about it as a 3D lattice, where one axis is for the factors of prime 2, one axis is for the factors of prime 3, and one axis is for the factors of prime 5. This way, you can use vectors, such as {{vector|-4 4 -1}} or {{vector|1 -2 1}}, just like coordinates.
+
+PTS can be thought of as a projection of 5-limit JI map space, which similarly has one axis each for 2, 3, and 5. But PTS is not a JI pitch lattice. In fact, in a sense, it is the opposite! This is because the coordinates in map space aren't prime-counts, but generator-counts-per-prime, as found in maps such as {{map|12 19 28}}. That particular map is seen here as the biggish, slightly tilted numeral 12 just to the left of the center point.
+
+[[File:PTS with axes.png|300px|left|thumb|'''Figure 1c.''' PTS, with axes]]
+
+And the two 17-ETs we looked at can be found here too. {{map|17 27 40}}, 17c, is the slightly smaller numeral 17 found on the line labeled "meantone" which the 12 is also on, thus representing the fact we mentioned earlier that they both vanish the meantone comma {{sfrac|81|80}}. The other 17, {{map|17 27 39}}, is found on the other side of the center point, aligned horizontally with the first 17. So you could say that map space plots ETs, showing how they are related to each other.
+
+Of course, PTS looks nothing like this JI lattice ''(see Figure 1b)''. This diagram has a ton more information, and as such, Paul needed to get creative about how to structure it. It's a little tricky, but we'll get there. For starters, the axes are not actually shown on the PTS diagram; if they were, they would look like this ''(see Figure 1c)''.
+
+The 2-axis points toward the bottom right, the 3-axis toward the top right, and the 5-axis toward the left. These are the positive halves of each of these axes; we don't need to worry about the negative halves of any of them, because every term of every ET map is positive.
+
+And so it makes sense that {{map|17 27 40}} and {{map|17 27 39}} are aligned horizontally, because the only difference between their maps is in the 5-term, and the 5-axis is horizontal.
+
+=== Scaled axes ===
+You might guess that to arrive at that tilted numeral 12, you would start at the origin in the center, move 12 steps toward the bottom right (along the 2-axis), 19 steps toward the top right (not along, but parallel to the 3-axis), and then 28 steps toward the left (parallel to the 5-axis). And if you guessed this, you'd probably also figure that you could perform these moves in any order, because you'd arrive at the same ending position regardless ''(see Figure 1d)''.
+
+[[File:PTS with finding 12-ET.png|400px|right|thumb|'''Figure 1d.''' arriving at 12-ET by moving in any of the 6 possible axis orders (Note: this is a visualization of an early guess at how things work. They're different and more complicated than this. Keep reading!)]]
+
+If you did guess this, you are on the right track, but the full truth is a bit more complicated than that.
+
+The first difference to understand is that each axis's steps have been scaled proportionally according to their prime ''(see Figure 1e)''. We will see in a moment that the scaling factor, to be precise, is the inverse of the logarithm of the prime. To illustrate this, let's choose an example ET and compare its position with the positions of three other closely-related ETs:
+
+# The one which is one step away from it on the 5-axis,
+# The one which is one step away from it on the 3-axis, and
+# The one which is one step away from it on the 2-axis.
+
+[[File:Shape_of_scale_of_movements_on_axes.png|thumb|left|200px|'''Figure 1e.''' the basic shape the scaled axes make between neighbor maps (maps with only 1 difference between their terms)]]
+
+Our example ET will be 40. We'll start out at the map {{map|40 63 93}}. This map is a default of sorts for 40-ET, because it's the map where all three terms are as close as possible to JI when prime 2 is exact (we'll be calling it a [[simple map]] here; it has more commonly been called a "[[patent val]]", but we are critical of that terminology.<ref group="note">See our thoughts on that here: https://en.xen.wiki/w/Talk:Patent_val</ref>).
+
+From here, let's move by a single step on the 5-axis by adding 1 to the 5-term of our map, from 93 to 94, therefore moving to the map {{map|40 63 94}}. This map is found directly to the left. This makes sense because the orientation of the 5-axis is horizontal, and the positive direction points out from the origin toward the left, so increases to the 5-term move us in that direction.
+
+Back from our starting point, let's move by a single step again, but this time on the 3-axis, by adding 1 to the 3-term of our map, from 63 to 64, therefore moving to the map {{map|40 64 93}}. This map is found up and to the right. Again, this direction makes sense, because it's the direction the 3-axis points.
+
+Finally, let's move by a single step on the 2-axis, from 40 to 41, moving to the map {{map|41 63 93}}, which unsurprisingly is in the direction the 2-axis points. This move actually takes us off the chart, way down here.
+
+[[File:40-ET distances example.png|400px|right|thumb|'''Figure 1f.''' Distances between 40-ET's neighbors in PTS]]
+
+Now let's observe the difference in distances ''(see Figure 1f)''. Notice how the distance between the maps separated by a change in 5-term is the smallest, the maps separated by a change in 3-term have the medium-sized distance, and maps separated by a change in the 2-term have the largest distance. This tells us that steps along the 3-axis are larger than steps along the 5-axis, and steps along the 2-axis are larger still. The relationship between these sizes is that the 3-axis step has been divided by the binary logarithm of 3, written <math>\log_2{3}</math>, which is approximately 1.585, while the 5-axis step has been divided by the binary logarithm of 5, written <math>\log_2{5}</math>, and which is approximately 2.322. The 2-axis step can also be thought of as having been divided by the binary logarithm of its prime, but because <math>\log_2{2}</math> is exactly 1, and dividing by 1 does nothing, the scaling has no effect on the 2-axis.
+
+The reason Paul chose this particular scaling scheme<ref group="note">Really, he didn't ''choose an axis scaling scheme'', though, as much as this scaling scheme arises as one of many possible ways to understanding the end result. We felt was an easier introduction to the image than Paul's original conceptualization for it would have been. Paul's projective intentions are described a bit later on in this article.</ref> is that it causes those ETs which are closer to JI to appear closer to the center of the diagram (and this is a useful property to organize ETs by). How does this work? Well, let's look into it.
+
+Remember that near-just ETs have maps whose terms are in close proportion to <math>\small\log(2\!:\!3\!:\!5)</math>. ET maps use only integers, so they can only approximate this ideal, but a theoretical pure JI map would be {{map|<math>\small\log_2{\!2}\;</math> <math>\small\log_2{\!3}\;</math> <math>\small\log_2{\!5}</math>}}. If we scaled this theoretical JI map by this scaling scheme, then, we'd get <math>\small 1\!:\!1\!:\!1</math>, because we're just dividing things by themselves: 
+
+
+<math>\dfrac{\log_2{2}}{\log_2{2}} \!:\! \dfrac{\log_2{3}}{\log_2{3}} \!:\! \dfrac{\log_2{5}}{\log_2{5}} = 1\!:\!1\!:\!1</math>
+
+
+This tells us that we should find this theoretical JI map at the point arrived at by moving exactly the same amount along the 2-axis, 3-axis, and 5-axis. Well, if we tried that, these three movements would cancel each other out: we'd draw an equilateral triangle and end up exactly where we started, at the origin, or in other words, at pure JI. Any other ET approximating but not exactly <math>\small\log(2\!:\!3\!:\!5)</math> will be scaled to proportions not exactly <math>\small 1\!:\!1\!:\!1</math>, but approximately so, like maybe <math>\small 1.000\!:\!0.999\!:\!1.002</math>, and so you'll move in something close to an equilateral triangle, but not exactly, and land in some interesting spot that's not quite in the center. In other words, we scale the axes this way so that we can compare the maps not in absolute terms, but in terms of what direction and by how much they deviate from JI ''(see Figure 1g)''.
+
+[[File:Scaling.png|600px|right|thumb|'''Figure 1g.''' a visualization of how scaling axes illuminates deviations from JI]]
+
+For example, let's scale our 12-ET example:
+
+* <math>\frac{12}{\log_2{2}} = 12</math>
+* <math>\frac{19}{\log_2{3}} \approx 11.988</math>
+* <math>\frac{28}{\log_2{5}} \approx 12.059</math>
+
+Clearly, 12:11.988:12.059 is quite close to 1:1:1. This checks out with our knowledge that it is close to JI, at least in the 5-limit.
+
+But if instead we picked some random alternate mapping of 12-ET, like {{map|12 23 25}}, looking at those integer terms directly, it may not be obvious how close to JI this map is. However, upon scaling them:
+
+* <math>\frac{12}{\log_2{2}} = 12</math>
+* <math>\frac{23}{\log_2{3}} \approx 14.511</math>
+* <math>\frac{25}{\log_2{5}} \approx 10.767</math>
+
+It becomes clear how far this map is from JI.
+
+So what really matters here are the little differences between these numbers. Everything else cancels out. That 12-ET's scaled 3-term, at ≈11.988, is ever-so-slightly less than 12, indicates that prime 3 is mapped ever-so-slightly narrow. And that its 5-term, at ≈12.059, is slightly more than 12, indicates that prime 5 is mapped slightly wide in 12. This checks out with the placement of 12 on the diagram: ever-so-slightly below and to the left of the horizontal midline, due to the narrowness of the 3, and slightly further still to the left, due to the wideness of the 5.
+
+We can imagine that if we hadn't scaled the steps, as in our initial naive guess, we'd have ended up nowhere near the center of the diagram. How could we have, if the steps are all the same size, but we're moving 28 of them to the left, but only 12 and 19 of them to the bottom left and top right? We'd clearly end up way, way further to the left, and also above the horizontal midline. And this is where pretty much any near-just ET would get plotted, because 3 being bigger than 2 would dominate its behavior, and 5 being larger still than 3 would dominate its behavior.
+
+=== Perspective ===
+The truth about distances between related ETs on the PTS diagram is actually slightly even more complicated than that, though; as we mentioned, the scaled axes are only the first difference from our initial guess. In addition to the effect of the scaling of the axes, there is another effect, which is like a perspective effect. Basically, as ETs get more complex, you can think of them as getting farther and farther away; to suggest this, they are printed smaller and smaller on the page, and the distances between them appear smaller and smaller too.
+
+Remember that 5-limit JI is 3D, but we're viewing it on a 2D page. It's not the case that its axes are flat on the page. They're not literally occupying the same plane, 120° apart from each other. That's just not how axes typically work, and it's not how they work here either! The 5-axis is perpendicular to the 2-axis and 3-axis just like typical Cartesian space. Again, we're looking only at the positive coordinates, which is to say that this is only the +++ [[Wikipedia:Octant_(solid_geometry)|octant]] of space, which comes to a point at the origin (0,0,0) like the corner of a cube. So you should think of this diagram as showing that cubic octant sticking its corner straight out of the page at us, like a triangular pyramid. So we're like a tiny little bug, situated right at the tip of that corner, pointing straight down the octant's interior diagonal, or in other words the line equidistant from three axes, the line which we understand represents theoretically pure JI. So we see that in the center of the page, represented as a red hexagram, and then toward the edges of the page is our peripheral vision. ''(See Figure 1h.)''
+
+[[File:Understanding projection.png|600px|thumb|left|'''Figure 1h.''' Visualization of the projection process. (In real life, the cube is infinite in size. We made it smaller here to help make the shape clearer.)]]
+
+PTS doesn't show the entire tuning cube. You can see evidence of this in the fact that some numerals have been cut off on its edges. We've cropped things around the central region of information, which is where the ETs best approximating JI are found (note how close 53-ET is to the center!). Paul added some concentric hexagons to the center of his diagram, which you could think of as concentric around that interior diagonal, or in other words, are defined by gradually increasing thresholds of deviations from JI for any one prime at a time.
+
+No maps past [[99edo|99-ET]] are drawn on this diagram. ETs with that many steps are considered too complex (read: big numbers, impractical) to bother cluttering the diagram with. Better to leave the more useful information easier to read.
+
+Okay, but what about the perspective effect? Right. So every step further away on any axis, then, appears a bit smaller than the previous step, because it's just a bit further away from us. And how much smaller? Well, the perspective effect is such that, as seen on this diagram, the distances between n-ETs are twice the size of the distances between 2n-ETs.
+
+Moreover, there's a special relationship between the positions of n-ETs and 2n-ETs, and indeed between n-ETs and 3n-ETs, 4n-ETs, etc. To understand why, it's instructive to plot it out ''(see Figure 1i)''.
+
+[[File:Hiding vals.png|500px|thumb|right|'''Figure 1i.''' Redundant maps hiding behind their simpler counterparts. The eye is the origin; the same as in Figure 1h. Projective tuning space is the plane resting at the bottom that we are projecting onto. The portion we see in the Middle Path version is only a tiny part right in the middle. The dotted lines just above where the PTS plane is drawn are there to indicate the elision of an infinitude of space; potentially you could go way up to insanely large ETs and they would all be between the origin-eye and this projective plane.]]
+
+For simplicity, we're looking at the octant cube here from the angle straight on to the 2-axis, so changes to the 2-terms don't matter here. At the top is the origin; that's the point at the center of PTS. Close-by, we can see the map {{map|3 5 7}}, and two closely related maps {{map|3 4 7}} and {{map|3 5 8}}. Colored lines have been drawn from the origin through these points to the black line in the top-right, which represents the page; this is portraying how if our eye is at that origin, where on the page these points would appear to be.
+
+In between where the colored lines touch the maps themselves and the page, we see a cluster of more maps, each of which starts with 6. In other words, these maps are about twice as far away from us as the others. Let's consider {{map|6 10 14}} first. Notice that each of its terms is exactly 2x the corresponding term in {{map|3 5 7}}. In effect, {{map|6 10 14}} is redundant with {{map|3 5 7}}. If you imagine doing a mapping calculation or two, you can easily convince yourself that you'll get the same answer as if you'd just done it with {{map|3 5 7}} instead and then simply divided by 2 one time at the end. It behaves in the exact same way as {{map|3 5 7}} in terms of the relationships between the intervals it maps, the only difference being that it needlessly includes twice as many steps to do so, never using every other one. So we don't really care about {{map|6 10 14}}. Which is great, because it's hidden exactly behind {{map|3 5 7}} from where we're looking.
+
+The same is true of the map pair {{map|3 4 7}} and {{map|6 8 14}}, as well as of {{map|3 5 8}} and {{map|6 10 16}}. Any map whose terms have a common factor other than 1 is going to be redundant in this sense, and therefore hidden. You can imagine that even further past {{map|3 5 7}} you'll find {{map|9 15 21}}, {{map|12 20 28}}, and so on, and these we could call "enfactored" maps.<ref group="note">Elsewhere you may see these called "contorted", but as you can read on the page [[defactoring]], this is not technically correct, but has historically been frequently confused.</ref><ref group="note">On some versions of PTS which Paul prepared, these enfactored ETs are actually printed on the page.</ref> More on those later. What's important to realize here is that Paul found a way to collapse 3 dimensions worth of information down to 2 dimensions without losing anything important. Each of these lines connecting redundant ETs have been [[Wikipedia:Projection_(mathematics)|projected]] onto the page as a single point. That's why the diagram is called "projective" tuning space.
+
+Now, to find a 6-ET with anything new to bring to the table, we'll need to find one whose terms don't share a common factor. That's not hard. We'll just take one of the ones halfway between the ones we just looked at. How about {{map|6 11 14}}, which is halfway between {{map|6 10 14}} and {{map|6 12 14}}. Notice that the purple line that runs through it lands halfway between the red and blue lines on the page. Similarly, {{map|6 10 15}} is halfway between {{map|6 10 14}} and {{map|6 10 16}}, and its yellow line appears halfway between the red and green lines on the page. What this is demonstrating is that halfway between any pair of n-ETs on the diagram, whether this pair is separated along the 3-axis or 5-axis, you will find a 2n-ET. We can't really demonstrate this with 3-ET and 6-ET on the diagram, because those ETs are too inaccurate; they've been cropped off. But if we return to our 40-ET example, that will work just fine.
+
+[[File:Plot of 5 10 20 40 80.png|800px|thumb|left|'''Figure 1j.'''Plot of 40-ETs with 80-ETs halfway between each pair, including the enfactored 40-ETs hiding behind 20-ET and 10-ET]]
+
+I've circled every 40-ET visible in the chart ''(see Figure 1j)''. And you can see that halfway between each one, there's an [[80edo|80-ET]] too. Well, sometimes it's not actually printed on the diagram<ref group="note">The reason is that Paul's diagram, in addition to cutting off beyond 99-ET, also filters out maps that aren't uniform maps.</ref>, but it's still there. You will also notice that if we also land right about on top of [[20edo|20-ET]] and [[10edo|10-ET]]. That's no coincidence! Hiding behind that 20-ET is a redundant 40-ET whose terms are all 2x the 20-ET's terms, and hiding behind the 10-ET is a redundant 40-ET whose terms are all 4x the 40-ET's terms (and also a redundant 20-ET and a [[30edo|30-ET]], and [[50edo|50-ET]], [[60edo|60-ET]], etc. etc. etc.)
+
+Also, check out the spot halfway between our two 17-ETs: there's the 34-ET we briefly mused about earlier, which would solve 17's problem of approximating prime 5 by subdividing each of its steps in half. We can confirm now that this 34-ET does a superb job at approximating prime 5, because it is almost vertically aligned with the JI red hexagram.
+
+Just as there are 2n-ETs halfway between n-ETs, there are 3n-ETs a third of the way between n-ETs. Look at these two [[29edo|29-ET]]s here. The [[58edo|58-ET]] is here halfway between them, and two [[87edo|87-ET]]s are here each a third of the way between.
+
+=== Map space vs. tuning space ===
+So far, we've been describing PTS as a projection of map space, which is to say that we've been thinking of maps as the coordinates. We should be aware that tuning space is a slightly different structure. In tuning space, coordinates are not maps, but tunings, specified in cents, octaves, or some other unit of pitch. So a coordinate might be {{map|6 10 14}} in map space, but {{map|1200 2000 2800}} in tuning space.
+
+Both tuning space and map space project to the identical result as seen in Paul's diagram, which is how we've been able to get away without distinguishing them thus far.
+
+Why did we do this to you? Well, we decided map space was conceptually easier to introduce than tuning space. Paul himself prefers to think of this diagram as a projection of tuning space, however, so we don't want to leave this material before clarifying the difference. Also, there are different helpful insights you can get from thinking of PTS as tuning space. Let's consider those now.
+
+The first key difference to notice is that we can standardize coordinates in tuning space, so that the first term of every coordinate is the same, namely, one octave, or 1200 cents. For example, note that while in map space, {{map|3 5 7}} is located physically in front of {{map|6 10 14}}, in tuning space, these two points collapse to literally the same point, {{map|1200 2000 2800}}. This can be helpful in a similar way to how the scaled axes of PTS help us visually compare maps' proximity to the central JI spoke: they are now expressed closer to in terms of their deviation from JI, so we can more immediately compare maps to each other, as well as individually directly to the pure JI primes, as long as we memorize the cents values of those (they're 1200, 1901.955, and 2786.314). For example, in map space, it may not be immediately obvious that {{map|6 9 14}} is halfway between {{map|3 5 7}} and {{map|3 4 7}}, but in tuning space it is immediately obvious that {{map|1200 1800 2800}} is halfway between {{map|1200 2000 2800}} and {{map|1200 1600 2800}}.
+
+So if we take a look at a cross-section of projection again, but in terms of tuning space now ''(see Figure 1k)'', we can see how every point is about the same distance from us.
+
+[[File:Tuning space version.png|400px|thumb|right|'''Figure 1k.''' Demonstration of projection in terms of ''tuning'' space (compare with Figure 1i, which shows projection in terms of ''map'' space). As you can see here, all the points are in about the same region of space, since tuning space tends toward JI.]]
+
+The other major difference is that tuning space is continuous, where map space is discrete. In other words, to find a map between {{map|6 10 14}} and {{map|6 9 14}}, you're subdividing it by 2 or 3 and picking a point in between, that sort of thing. But between {{map|1200 2000 2800}} and {{map|1200 1800 2800}} you've got an infinitude of choices smoothly transitioning between each other; you've basically got knobs you can turn on the proportions of the tuning of 2, 3, and 5. Everything from from {{map|1200 1999.999 2800}} to {{map|1200 1901.955 2800}} to {{map|1200 1817.643 2800}} is along the way.
+
+[[File:Tuning projection.png|400px|thumb|left|'''Figure 1l.''' Demonstration of tuning projection. As long as the tunings change in a fixed proportion, the tuning will project to the same point on PTS.]]
+
+But perhaps even more interesting than this continuous tuning space that appears in PTS between points is the continuous tuning space that does not appear in PTS because it exists within each point, that is, exactly out from and deeper into the page at each point. In tuning space, as we've just established, there are no maps in front of or behind each other that get collapsed to a single point. But there are still many things that get collapsed to a single point like this, but in tuning space they are different tunings ''(see Figure 1l)''. For example, {{map|1200 1900 2800}} is the way we'd write 12-ET in tuning space. But there are other tunings represented by this same point in PTS, such as {{map|1200.12 1900.19 2800.28}} (note that in order to remain at the same point, we've maintained the exact proportions of all the prime tunings). That tuning might not be of particular interest. We just used it as a simple example to illustrate the point. A more useful example would be {{map|1198.440 1897.531 2796.361}}, which by some algorithm is the optimal tuning for 12-ET (minimizes error across primes or intervals); it may not be as obvious from looking at that one, but if you check the proportions of those terms with each other, you will find they are still exactly 12:19:28.
+
+The key point here is that, as we mentioned before, the problems of tuning and tempering are largely separate. PTS projects all tunings of the same temperament to the same point. This way, issues of tuning are completely hidden and ignored on PTS, so we can focus instead on tempering.
+
+=== Regions ===
+We've shown that ETs with the same number that are horizontally aligned differ in their mapping of 5, and ETs with the same number that are aligned on the 3-axis running bottom left to top right differ in their mapping of 3. These basic relationships can be extrapolated to be understood in a general sense. ETs found in the center-left map 5 relatively big and 2 and 3 relatively small. ETs found in the top-right map 3 relatively big and 2 and 5 relatively small. ETs found in the bottom-right map 2 relatively big and 3 and 5 relatively small. And for each of these three statements, the region on the opposite side maps things in the opposite way.
+
+So: we now know which point is {{map|12 19 28}}, and we know a couple of 17's, 40's and a 41. But can we answer in the general case? Given an arbitrary map, like {{map|7 11 16}}, can we find it on the diagram? Well, you may look to the first term, 7, which tells you it's [[7edo|7-ET]]. There's only one big 7 on this diagram, so it's probably that. (You're right). But that one's easy. The 7 is huge.
+
+What if we gave you {{map|43 68 100}}. Where's [[43edo|43-ET]]? I'll bet you're still complaining: the map expresses the tempering of 2, 3, and 5 in terms of their shared generator, but doesn't tell us directly which primes are sharp, and which primes are flat, so how could we know in which region to look for this ET?
+
+The answer to that is, unfortunately: that's just how it is. It can be a bit of a hunt sometimes. But the chances are, in the real world, if you're looking for a map or thinking about it, then you probably already have at least some other information about it to help you find it, whether it's memorized in your head, or you're reading it off the results page for an automatic temperament search tool.
+
+Probably you have the information about the primes' tempering; maybe you get lucky and a 43 jumps out at you but it's not the one you're looking for, but you can use what you know about the perspectival scaling and axis directions and log-of-prime scaling to find other 43's relative to it.
+
+Or maybe you know some comma that is made to vanish by the map {{map|43 68 100}}, so you can find it along the line for that comma's temperament.
+
+=== Temperament lines ===
+So we understand the shape of projective tuning space. And we understand what points are in this space. But what about the magenta lines, now?
+
+So far, we've only mentioned one of these lines: the one labeled "meantone", noting that the fact that 12 and 17c appear on it means that either of them makes the meantone comma vanish. In other words, this line represents the meantone temperament.
+
+For another example, the line on the right side of the diagram running almost vertically which has the other 17-ET we looked at, as well as 10-ET and 7-ET, is labeled "dicot", and so this line represents the dicot temperament, and unsurprisingly all of these ET's make the dicot comma vanish.
+
+Simply put, lines on PTS are temperaments. 
+
+But hold up now: points are ETs, which are temperaments, too, right? Well, yes, that's still true. But while points are equal temperaments, or '''[[List_of_rank_one_temperaments_by_step_size|rank-1 temperaments]]''', the lines represent '''[https://en.xen.wiki/index.php?title=Rank_two_temperament rank-2 temperaments]'''. It may be helpful to differentiate the names in your mind in terms of their geometric dimensionality. Recall that projective tuning space has compressed all our information by one dimension; every point on our diagram is actually a line radiating out from our eye. So a rank-1 temperament is really a line, which is one-dimensional; rank-1, 1D. And the rank-2 temperaments, which are seen as lines in our diagram, are truly planes coming up out of the page, and planes are of course two-dimensional; rank-2, 2D. If you wanted to, you could even say 5-limit JI was a rank-3 temperament, because that's this entire space, which is 3-dimensional; rank-3, 3D.
+
+"[[Rank]]" has a slightly different meaning than dimension, but that's not important yet. For now, it's enough to know that each temperament line on this 5-limit PTS diagram is defined by making a comma with the same name vanish. For now, we're still focusing on visually how to navigate PTS. So the natural thing to wonder next, then, is what's up with the slopes of all these temperament lines?
+
+[[File:Diagrams to understand PTS for RTT.png|thumb|left|400px|'''Figure 1m.''' How the vanishing comma affects slope on PTS. A temperament defined by a comma with a 0 for a prime will be perpendicular to that prime's axis, because the tuning of that prime does not affect whether or not the comma vanishes. Therefore the prime corresponding to the 0 in the comma is represented by x, which can be anything, while the proportion between the other two primes must remain fixed.]]
+
+Let's begin with a simple example: the perfectly horizontal line that runs through just about the middle of the page, through the numeral 12, labeled "[[compton]]". What's happening along this line? Well, as we know, moving to the left means tuning 5 sharper, and moving to the right means tuning 5 flatter. But what about 2 and 3? Well, they are changing as well: 2 is sharp in the bottom right, and 3 is sharp in the top right, so when we move exactly rightward, 2 and 3 are both getting sharper (though not as directly as 5 is getting flatter). But the critical thing to observe here is that 2 and 3 are sharpening at the exact same rate. Therefore the approximations of primes 2 and 3 are in a constant ratio with each other along horizontal lines like this. Said another way, if you look at the 2 and 3 terms for any ET's map on this line, the ratio between its term for 2 and 3 will be identical.
+
+Let's grab some samples to confirm. We already know that 12-ET here looks like {{map|12 19}} (I'm dropping the 5 term for now). The 24-ET here looks like {{map|24 38}}, which is simply 2×{{map|12 19}}. The 36-ET here looks like {{map|36 57}} = 3×{{map|12 19}}. And so on. So that's why we only see multiples of 12 along this line: because 12 and 19 are co-prime, so the only other maps which could have them in the same ratio would be multiples of them.
+
+Let's look at the other perfectly horizontal line on this diagram. It's found about a quarter of the way down the diagram, and runs through the 10-ET and 20-ET we looked at earlier. This one's called "[[blackwood]]". Here, we can see that all of its ETs are multiples of 5. In fact, [[5edo|5-ET]] itself is on this line, though we can only see a sliver of its giant numeral off the left edge of the diagram. Again, all of its maps have locked ratios between their mappings of prime 2 and prime 3: {{map|5 8}}, {{map|10 16}}, {{map|15 24}}, {{map|20 32}}, {{map|40 64}}, {{map|80 128}}, etc. You get the idea.
+
+So what do these two temperaments have in common such that their lines are parallel? Well, they're defined by commas, so why don't we compare their commas. The compton comma is {{vector|-19 12 0}}, and the blackwood comma is {{vector|8 -5 0}}.<ref group="note">Yes, these are the same as the [[Pythagorean comma]] and [[Pythagorean diatonic semitone]], respectively.</ref> What sticks out about these two commas is that they both have a 5-term of 0. This means that when we ask the question "how many steps does this comma map to in a given ET", the ET's mapping of 5 is irrelevant. Whether we check it in {{map|40 63 93}} or {{map|40 63 94}}, the result is going to be the same. So if {{map|40 63 93}} makes the blackwood comma vanish, then so does {{map|40 63 94}}. And if {{map|24 38 56}} makes the compton comma vanish, then so does {{map|24 38 55}}. And so on.
+
+Similar temperaments can be found which include only 2 of the 3 primes at once. Take "[[augmented (temperament)|augmented]]", for instance, running from bottom-left to top-right. This temperament is aligned with the 3-axis. This tells us several equivalent things: that relative changes to the mapping of 3 are irrelevant for augmented temperament, that the augmented comma has no 3's in its prime factorization, and the ratios of the mappings of 2 and 5 are the same for any ET along this line. Indeed we find that the augmented comma is {{vector|7 0 -3}}, or [[128/125]], which has no 3's. And if we sample a few maps along this line, we find {{map|12 19 28}}, {{map|9 14 21}}, {{map|15 24 35}}, {{map|21 33 48}}, {{map|27 43 63}}, etc., for which there is no pattern to the 3-term, but the 2- and 5-terms for each are in a 3:7 ratio.
+
+There are even temperaments whose comma includes only 3's and 5's, such as "[[bug]]" temperament, which makes [[27/25]] vanish, or {{vector|0 3 -2}}. If you look on this PTS diagram, however, you won't find bug. Paul chose not to draw it. There are infinite temperaments possible here, so he had to set a threshold somewhere on which temperaments to show, and bug just didn't make the cut in terms of how much it distorts harmony from JI. If he had drawn it, it would have been way out on the left edge of the diagram, completely outside the concentric hexagons. It would run parallel to the 2-axis, or from top-left to bottom-right, and it would connect the 5-ET (the huge numeral which is cut off the left edge of the diagram so that we can only see a sliver of it) to the [[9edo|9-ET]] in the bottom left, running through the 19-ET and [[14edo|14-ET]] in-between. Indeed, these ET maps — {{map|9 14 21}}, {{map|5 8 12}}, {{map|19 30 45}}, and {{map|14 22 33}} — lock the ratio between their 3-terms and 5-terms, in this case to 2:3.
+
+Those are the three simplest slopes to consider, i.e. the ones which are exactly parallel to the axes ''(see Figure 1m)''. But all the other temperament lines follow a similar principle. Their slopes are a manifestation of the prime factors in their defining comma. If having zero 5's means you are perfectly horizontal, then having only one 5 means your slope will be close to horizontal, such as meantone {{vector|-4 4 -1}} or [[Helmholtz (temperament)|helmholtz]] {{vector|-15 8 1}}. Similarly, magic {{vector|-10 -1 5}} and [[würschmidt]] {{vector|17 1 -8}}, having only one 3 apiece, are close to parallel with the 3-axis, while porcupine {{vector|1 -5 3}} and [[ripple]] {{vector|-1 8 -5}}, having only one 2 apiece, are close to parallel with the 2-axis.
+
+Think of it like this: for meantone, a change to the mapping of 5 doesn't make near as much of a difference to the outcome as does a change to the mapping of 2 or 3, therefore, changes along the 5-axis don't have near as much of an effect on that line, so it ends up roughly parallel to it.
+
+=== Scale trees ===
+Patterns, patterns, everywhere. PTS is chock full of them. One pattern we haven't discussed yet is the pattern made by the ETs that fall along each temperament line.
+
+Let's consider meantone as our first example. Notice that between 12 and 7, the next-biggest numeral we find is 19, and 12+7=19. Notice in turn that between 12 and 19 the next-biggest numeral is 31, and 12+19=31, and also that between 19 and 7 the next-biggest numeral is 26, and 19+7=26. You can continue finding deeper ETs indefinitely following this pattern: 43 between 12 and 31, 50 between 31 and 19, 45 between 19 and 26, 33 between 26 and 7. In fact, if we step back a bit, remembering that the huge numeral just off the left edge is a 5, we can see that 12 is there in the first place because 5+7=12.
+
+This effect is happening on every other temperament line. Look at dicot. 10+7=17. 10+17=27. 17+7=24. Etc.<ref group="note">There's an extension of this pattern. Pick any ET. Maybe start with a prominent one like 7, or 12. Notice that you can find lines radiating out from it of aligned ETs. These would all be rank-2 temperaments, though they're not all drawn. You'll see that if you pick any size of numeral and follow consecutive numerals of continuously changing size, that the values decrease by the ET number you're radiating out from. That's because each step you can think of subtracting that ET number over and over, because moving inward you'd be doing the opposite: repeatedly adding that ET number, per the rules of the scale tree.</ref>
+
+To fully understand why this is happening, we need a crash course in [[mediants]], and the [[Stern-Brocot_ancestors_and_rank_2_temperaments|The Stern-Brocot tree]].
+
+The mediant of two fractions <math>\frac{n_1}{d_1}</math> and <math>\frac{n_2}{d_2}</math> is <math>\frac{n_1 + n_2}{d_1 + d_2}</math>. It's sometimes called the freshman's sum because it's an easy mistake to make when first learning how to add fractions. And while this operation is certainly not equivalent to adding two fractions, it does turn out to have other important mathematical properties. The one we're leveraging here is that the mediant of two numbers is always greater than one and less than the other. For example, the mediant of {{sfrac|3|5}} and {{sfrac|2|3}} is {{sfrac|5|8}}, and it's easy to see in decimal form that 0.625 is between 0.6 and 0.666.
+
+The Stern-Brocot tree is a helpful visualization of all these mediant relations. Flanking the part of the tree we care about — which comes up in the closely-related theory of [[MOS_scale|MOS scales]], where it is often referred to as the "scale tree" — are the extreme fractions {{sfrac|0|1}} and {{sfrac|1|1}}. Taking the mediant of these two gives our first node: {{sfrac|1|2}}. Each new node on the tree drops an infinitely descending line of copies of itself on each new tier. Then, each node branches to either side, connecting itself to a new node which is the mediant of its two adjacent values. So {{sfrac|0|1}} and {{sfrac|1|2}} become {{sfrac|1|3}}, and {{sfrac|1|2}} and {{sfrac|1|1}} become {{sfrac|2|3}}. In the next tier, {{sfrac|0|1}} and {{sfrac|1|3}} become {{sfrac|1|4}}, {{sfrac|1|3}} and {{sfrac|1|2}} become {{sfrac|2|5}}, {{sfrac|1|2}} and {{sfrac|2|3}} become {{sfrac|3|5}}, and {{sfrac|2|3}} and {{sfrac|1|1}} become {{sfrac|3|4}}.<ref group="note">Each tier of the Stern-Brocot tree is the next [[Wikipedia:Farey_sequence|Farey sequence]].</ref> The tree continues forever.
+
+So what does this have to do with the patterns along the temperament lines in PTS? Well, each temperament line is kind of like its own section of the scale tree. The key insight here is that in terms of meantone temperament, there's more to 7-ET than simply the number 7. The 7 is just a fraction's denominator. The numerator in this case is 3. So imagine a {{sfrac|3|7}} floating on top of the 7-ET there. And there's more to 5-ET than simply the number 5, in that case, the fraction is the {{sfrac|2|5}}. So the mediant of {{sfrac|2|5}} and {{sfrac|3|7}} is {{sfrac|5|12}}. And if you compare the decimal values of these numbers, we have 0.4, 0.429, and 0.417. Success: {{sfrac|5|12}} is between {{sfrac|2|5}} and {{sfrac|3|7}} on the meantone line. You may verify yourself that the mediant of {{sfrac|5|12}} and {{sfrac|3|7}}, {{sfrac|8|19}}, is between them in size, as well as {{sfrac|7|17}} being between {{sfrac|2|5}} and {{sfrac|5|12}} in size.
+
+In fact, if you followed this value along the meantone line all the way from {{sfrac|2|5}} to {{sfrac|3|7}}, it would vary continuously from 0.4 to 0.429; the ET points are the spots where the value happens to be rational.
+
+Okay, so it's easy to see how all this follows from here. But where the heck did we get {{sfrac|2|5}} and {{sfrac|3|7}} in the first place? We seemed to pull them out of thin air. And what the heck is this value?
+
+Different generator sizes also gives us a new way to think about the scale tree patterns. Remember how earlier we pointed out that {{map|12 19 28}} was simply {{map|5 8 12}} + {{map|7 11 16}}? Well, if {{rket|{{map|5 8 12}} {{map|7 11 16}}}} is a way of expressing meantone in terms of its two generators, you can imagine that 12-ET is the point where those two generators converge on being the same exact size.<ref group="note">For real numbers <math>p,q</math> we can make the two generators respectively <math>\frac{p}{5p+7q}</math> and <math>\frac{q}{5p+7q}</math> of an octave, e.g. <math>(p,q)=(1,0)</math> for 5-ET, <math>(0,1)</math> for 7-ET, <math>(1,1)</math> for 12-ET, and many other possibilities.</ref> If they become the same size, then they aren't truly two separate generators, or at least there's no effect in thinking of them as separate. And so for convenience you can simply combine their mappings into one. You could imagine gradually increasing the size of one generator and decreasing the size of the other until they were both 100¢. As long as you maintain the correct proportion, you'll stay along the meantone line.
+
+=== Generators ===
+[[File:Generator sizes in PTS.png|800px|thumb|'''Figure 1n.''' Generator sizes of rank-2 temperaments in PTS. Don't worry too much about the valid ranges yet; we'll discuss that part later. And we didn't break down what's happening along the blackwood, compton, augmented, dimipent, and some other lines which are labeled on the original PTS diagram. In some cases, it's just because we got lazy and didn't want to deal with fitting more numbers on this thing. But in the case of all those that we just listed, it's because although they are rank-2, those temperaments all have non-octave periods, and so it doesn't make enough sense to compare their generators here. You'll learn about periods in the next section.]]
+
+The answer to both of those questions is: it's the generator (in this case, the meantone generator).
+
+A generator is an interval which generates a temperament. Again, if you're already familiar with MOS scales, this is the same concept. If not, all this means is that if you repeatedly move by this interval, you will visit the pitches you can include in your tuning.
+
+We looked at generators in the earlier article. We saw how the generator for 12-ET was about 1.059, because repeated movement is like repeated multiplication (1.059 × 1.059 × 1.059 ...) and <math>1.059^{12} \approx 2</math>, <math>1.059^{19} \approx 3</math>, and <math>1.059^{28} \approx 5</math>. This meantone generator is the same basic idea, but there's a couple of important differences we need to cover.
+
+First of all, and this difference is superficial, it's in a different format. We were expressing 12-ET's generator 1.059 as a frequency multiplier; it's like 2, 3, or 5, and this could be measured in Hz, say, by multiplying by 440 if A4 was our 1/1 (1.059 away from A is 466Hz, which is #A). But the meantone generators we're looking at now in forms like {{sfrac|2|5}}, {{sfrac|3|7}}, or {{sfrac|5|12}}, are expressed as fractional octaves, i.e. they're in terms of pitch, something that could be measured in cents if we multiplied by 1200 (2/5 × 1200 ¢ = 480 ¢). And we have that special way of writing fractional octaves, and that's with a backslash instead of a slash, like this: 2\5, 3\7, 5\12.
+
+Cents and hertz values can readily be converted between one form and the other, so it's the second difference which is more important. It's their size. If we do convert 12-ET's generator to cents so we can compare it with meantone's generator at 12-ET, we can see that 12-ET's generator is 100 ¢ (<math>\log_2{1.059}</math> × 1200 ¢ = 100 ¢) while meantone's generator at 12-ET is 500 ¢ (5/12 × 1200 ¢ = 500 ¢). When we look at 12-ET in terms of itself, rather than in terms of any particular rank-2 temperament, its generator is 1\12; that's the simplest, smallest generator which if we iterate it 12 times will touch every pitch in 12-ET. But when we look at 12-ET not as the end goal, but rather as a foundation upon which we could work with a given temperament, things change; we don't necessarily need to include every pitch in 12-ET to realize a temperament it supports. Instead, we just need to make sure the temperament's generator is a multiple of the ET's generator, as we have with 500 ¢ = 100 ¢ × 5.
+
+The fact that the meantone temperament line passes through 12-ET, and also the augmented temperament line passes through 12-ET, doesn't mean that you need the entirety of 12-ET to play either one. It means something more like this: if you had an instrument locked into 12-ET, you could use it to play some kind of meantone and some kind of augmented, but 12-ET is not necessarily the most interesting manifestation of either meantone or augmented. It's merely the case that it technically supports either one. The most interesting manifestations of meantone or augmented may lay between ETs, and/or boast far more than 12 notes.
+
+We mentioned that the generator value changes continuously as we move along a temperament line. So just to either side of 12-ET along the meantone line, the tuning of 2, 3, and 5 supports a generator size which in turn supports meantone, but it wouldn't support augmented. And just to either side of 12-ET along the augmented line, the tuning of 2, 3, and 5 supports a generator which still supports augmented, but not meantone. 12-ET, we could say, is a convergence point between the meantone generator and the augmented generator. But it is not a convergence point because the two generators become identical in 12-ET, but rather because they can both be achieved in terms of 12-ET's generator. In other words, 5\12 ≠ 4\12, but they are both multiples of 1\12.
+
+Here's a diagram that shows how the generator size changes gradually across each line in PTS. It may seem weird how the same generator size appears in multiple different places across the space. But keep in mind that pretty much any generator is possible pretty much anywhere here. This is simply the generator size pattern you get when you lock the octave to exactly 1200 cents, to establish a common basis for comparison. This is what enables us to produce maps of temperaments such as the one found at [[Map_of_linear_temperaments|this Xen wiki page]], or this chart here ''(see Figure 1n)''.
+
+=== Periods and generators ===
+Let's bring up MOS theory again. We mentioned earlier that you might have been familiar with the scale tree if you'd worked with MOS scales before, and if so, the connection was scale cardinalities, or in other words, how many notes are in the resultant scales when you continuously iterate the generator until you reach points where there are only two scale step sizes. At these points scales tend to sound relatively good, and this is in fact the definition of a MOS scale. There's a mathematical explanation for how to know, given a ratio between the size of your generator and period, the cardinalities of scales possible; we won't re-explain it here. The point is that the scale tree can show you that pattern visually. And so if each temperament line in PTS is its own segment of the scale tree, then we can use it in a similar way.
+
+For example, if we pick a point along the meantone line between 12 and 19, the cardinalities will be 5, 7, 12, 19, 31, 50, etc. If we chose exactly the point at 12 then the cardinality pattern would terminate there, or in other words, eventually we'll hit a scale with 12 notes and instead of two different step sizes there would only be one, i.e. you've got an ET, and there's no place else to go from there. The system has circled back around to its starting point, so it's a closed system. Further generator iterations will only retread notes you've already touched. The same would be true if you chose exactly the point at 19, except ''that'''s where you'd hit an ET instead, at 19 notes.
+
+Between ETs, in the stretches of rank-2 temperament lines where the generator is not a rational fraction of the octave, theoretically those temperaments could have infinite pitches; you could continuously iterate the generator and you'd never exactly circle back to the point where you started. If bigger numbers were shown on PTS, you could continue to use those numbers to guide your cardinalities forever.
+
+The structure when you stop iterating the meantone generator with five notes is called meantone[5]. If you were to use the entirety of 12-ET as meantone then that'd be meantone[12]. But you can also realize meantone[12] in 19-ET; in the former you have only one step size, but in the latter you have two. You can't realize meantone[19] in 12-ET, but you could also realize it in 31-ET.
+
+=== Temperament merging ===
+We've seen how 12-ET is found at the intersection of the meantone and augmented temperament lines, and therefore supports both at the same time. In fact, no other ET can boast this feat. Therefore, we can even go so far as to describe 12-ET as the "intersection" of meantone and augmented. Using the pipe operator "|" to mean "[[comma-merging|comma-merge]]", then, we could call 12-ET "meantone|augmented", read "meantone comma-merge augmented", or "meantone or augmented" for short. In other words, we express a rank-1 temperament in terms of two rank-2 temperaments.
+
+For another rank-1 example, we could call 7-ET "meantone|dicot", because it is the comma-merge of meantone and dicot temperaments.
+
+We can conclude that there's no "blackwood|compton" temperament, because those two lines are parallel. In other words, it's impossible to make the blackwood comma and compton comma vanish simultaneously. How could it ever be the case that 12 fifths take you back where you started yet also 5 fifths take you back where you started?<ref group="note">As you can confirm using the matrix tools you'll learn soon, technically speaking you ''can'' make them both vanish at the same time... but it'll only be by using 0-EDO, i.e. a system with only a single pitch. For more information see [[trivial temperaments]].</ref>
+
+Similarly, we can express rank-2 temperaments in terms of rank-1 temperaments. Have you ever heard the expression "two points make a line"? Well, if we choose two ETs from PTS, then there is one and only one line that runs through both of them. So, by choosing those ETs, we can be understood to be describing the rank-2 temperament along that line, or in other words, the one and only temperament whose comma both of those ETs make vanish. This is just what we saw in the earlier article where e.g. 7&22 made porcupine.
+
+For another example, we could choose 5-ET and 7-ET. Looking at either 7-ET or 5-ET, we can see that many temperament lines pass through them individually. Even more pass through them which Paul chose (via a complexity threshold) not to show. But there's only one line which runs through both 5-ET and 7-ET, and that's the meantone line. So of all the commas that 5-ET makes vanish, and all the commas that 7-ET makes vanish, there's only a single one which they have in common, and that's the meantone comma. Therefore we could give meantone temperament another name, and that's "5&7"; in this case we use the ampersand operator, not the pipe. We can call this operator "[[map-merging|map-merge]]", so we can read that "5 map-merge 7", or "5 and 7" for short.
+
+When specifying a rank-1 temperament in terms of two rank-2 temperaments, an obvious constraint is that the two rank-2 temperaments cannot be parallel. When specifying a rank-2 temperament in terms of two rank-1 temperaments, it seems like things should be more open-ended. Indeed, however, there is a special additional constraint on either method, and they're related to each other. Let's look at rank-2 as the map-merge of rank-1 first.
+
+5&7 is valid for meantone. So is 7&12. 12&19 and 19&7 are both fine too, and so are 5&17 and 17&12. Yes, these are all literally the same thing (though you may connote a meantone generator size on the meantone line somewhere between these two ETs). So how could we mess this one up, then? Well, here are our first counterexamples: 5&19, 7&17, and 17&19. And what problem do all these share in common? The problem is that between 5 and 19 on the meantone line we find 12, and 12 is a smaller number than 19 (or, if you prefer, on PTS, it is printed as a larger numeral). It's the same problem with 17&19, and with 7&17 the problem is that 12 is smaller than 17. It's tricky, but you have to make sure that between the two ETs you map-merge there's not a smaller ET (which you should be map-merging instead). The reason why is out of scope to explain here, but we'll get to it eventually.
+
+And the related constraint for rank-1 from two rank-2 is that you can't choose two temperaments whose names are printed smaller on the page than another temperament between them. More on that later.
+
+== Duality, nullspace, commas, bases, canonicalization ==
+From the PTS diagram, we can visually pick out rank-1 temperaments as the comma-mergings of rank-2 temperaments as well as rank-2 temperaments as the map-mergings of rank-1 temperaments. But we can also understand these results through maps and vectors. And we're going to need to learn how, because PTS can only take us so far. 5-limit PTS is good for humans because we live in a physically 3-dimensional world (and spend a lot of time sitting in front of 2D pages on paper and on computer screens), but as soon as you want to start working in 7-limit harmony, which is 4D, visual analogies will begin to fail us, and if we're not equipped with the necessary mathematical abstractions, we'll no longer be able to effectively navigate.
+
+Don't worry: we're not going 4D just yet. We've still got plenty we can cover using only the 5-limit. But we're going to set aside PTS for now. It's matrix time. By the end of this section, you'll understand how to represent a temperament in matrix form, how to interpret them, notate them, and use them, as well as how to apply important transformations between different kinds of these matrices. So you can imagine what you're doing another way, if not visually.
+
+=== Mapping-row-bases and comma bases ===
+19-ET's map is {{map|19 30 44}}. We also now know that we could call it "meantone|magic", because we find it at the intersection of the meantone and magic temperament lines. But how would we mathematically, non-visually make this connection?
+
+The first critical step is to recall that a temperament can be defined by its vanishing commas, which can be expressed as vectors. So, we can represent meantone using the meantone comma, {{vector|-4 4 -1}}, and magic using the magic comma {{vector|-10 -1 5}}.
+
+The comma-merge of two vectors can be represented as a matrix. Technically, vectors are vertical lists of numbers, or columns, so when we put meantone and magic together, we get a matrix that looks like this:
+
+
+<math>
+\left[ \begin{array} {c|c}
+{-4} & {-10} \\
+4 & {-1} \\
+{-1} & 5
+\end{array} \right]
+</math>
+
+
+We call such a matrix a '''[[comma basis]]'''. The plural of "basis" is "bases", but pronounced like BAY-seez (/ˈbeɪsiz/).
+
+Now how in the world could that matrix represent the same temperament as {{map|19 30 44}}? Well, they're two different ways of describing it. {{map|19 30 44}}, as we know, tells us how many generator steps it takes to reach each prime approximation. This new matrix, it turns out, is an equivalent way of stating the same information; it is a minimal representation of the ''nullspace'' of that mapping, or in other words, of all the commas it makes vanish.
+This was a bit tricky for me (Douglas) to get my head around, so let me hammer this point home: when you say "the nullspace", you're referring to ''the entire infinite set of all commas that a mapping makes vanish'', ''not only'' the two commas you see in any given basis for it. Think of the comma basis as one of many valid sets of instructions to find every possible comma, the "comma space", by adding or subtracting (integer multiples of) these two commas from each other.<ref group="note">To be clear, because what you are adding and subtracting in interval vectors are exponents (as you know), the commas are actually being multiplied by each other; e.g. {{nowrap|{{vector|-4 4 -1}} + {{vector|10 1 -5}} {{=}} {{vector|6 5 -6}}}}, which is the same thing as <math>\frac{81}{80} × \frac{3072}{3125} = \frac{15552}{15625}</math></ref> The math term for adding and subtracting vectors like this, which you will certainly see plenty of as you explore RTT, is "linear combination". It should be visually clear from the PTS diagram that this 19-ET comma basis couldn't be listing every single comma 19-ET makes vanish, because we can see there are at least four temperament lines that pass through it (there are actually infinity of them!). But so it turns out that picking two commas is perfectly enough; every other comma that 19-ET makes vanish could be expressed in terms of these two!
+
+It's the analogous effect to what we've seen with mapping-rows and how there are many forms to any given temperament's mapping. It's more relative than it is absolute. As long as you add and subtract whole multiples of commas from each other, if the comma vanished before, it'll still vanish now. In more technical terms, any other interval arrived at through linear combinations of the commas in a basis would also be a valid column in the basis; any of these interval vectors, by definition, is mapped to zero steps by the mapping. So any combination of them will also map to zero steps, and thus be a comma that is made to vanish by the temperament.
+
+Try one. How about the kleisma, {{vector|6 5 -6}}. Well that one's too easy! Clearly if you go down by one magic comma to {{vector|10 1 -5}} and then up by one meantone comma you get one kleisma. What you're doing when you're adding and subtracting multiples of commas from each other like this are technically called [[Wikipedia:Elementary_matrix|elementary column operations]]. Feel free to work through any other examples yourself.
+
+A good way to explain why we don't need three of these commas is that if you had three of them, you could use any two of them to create the third, and then subtract the result from the third, turning that comma into a zero vector, or a vector with only zeroes, which is pretty useless, so we could just discard it.
+
+[[File:Different nestings.png|400px|thumb|left|'''Figure 2a.''' How to write matrices in terms of either columns/vectors/commas or rows/row-vectors/maps. (Apologies for the unnecessary 7-limit here, i.e. these matrices are 2×4 and 4×2. Everything we've been doing so far has been 5-limit, i.e. 2×3 and 3×2. But we haven't got around to correcting this asset.)]]
+
+We can [[extended bra-ket notation|extend our angle bracket notation]] to handle matrices by nesting rows inside columns, or columns inside rows ''(see Figure 2a)''. For example, we could have written our comma basis like this: [{{vector|-4 4 -1}} {{vector|-10 -1 5}}]. Starting from the outside, the square brackets tell us to think in terms of a list. It's just that this list isn't a list of ''numbers'', like the ones we've gotten used to by now, but rather a list of ''vectors''. So this list includes two such vectors. Alternatively, we could have written this same matrix like {{ket|[-4 -10] [4 -1] [-1 5]}}, but that would obscure the fact that it is the combination of two familiar commas (but that notation ''would'' be useful for expressing a matrix built out of multiple maps, as we will soon see).
+
+Sometimes a comma basis may have only a single comma. That's okay. It's just like how ET mappings have only a single row. A single vector can become a matrix. To disambiguate this situation, if necessary, just as we did with single-row mappings, you could put the vector inside row brackets, like this: [{{vector|-4 4 -1}}]. Similarly, a single row vector (map) can become a matrix, by nesting inside column brackets, like this: {{rket|{{map|19 30 44}}}}<ref group="note">The reasons for the different styles of bracket are explained here: [[Extended_bra-ket_notation#Variant_including_curly_and_square_brackets|Extended bra-ket notation: Variant including curly and square brackets]].</ref>.
+
+Why isn't a mapping a "basis", you ask? Well, it can be thought of as a basis too. It depends on the context. When you use the word "mapping" for it, you're treating it like a function, or a machine: it takes in intervals, and spits out new forms of intervals. That's how we've been using it here. But in other places, you may be thinking of this matrix as a basis for the infinite space of possible maps that could be combined to produce a matrix which works the same way as a given mapping, i.e. it makes the same commas vanish. In these contexts, it might make more sense to call such a mapping matrix a "mapping-row-basis".
+
+And now you wonder why it's not just "map basis". Well, that's answerable too. It's because "map" is the analogous term to an "interval", but we're looking for the analogous term to a "comma". A comma is an interval which vanishes. So we need a word that means a map that makes a comma vanish, and that term is "mapping-row".
+
+So, yes, that's right: maps are similar to commas insofar as — once you have more than one of them in your matrix — the possibilities for individual members immediately go infinite. Technically speaking, though, while a comma basis is a basis of the nullspace of the mapping, a mapping-row-basis is a ''row''-basis of the ''row''-space of the mapping.
+
+=== Duality ===
+The fact that we can define a temperament by either a mapping or a comma basis is referred to as ''duality''. We say the comma basis is the ''dual'' of the mapping, and the mapping is the dual of the comma basis.
+
+We could imagine drawing a diagram for a temperament with a line of duality down the center, with a mapping on the left, and a comma basis on the right. Either side ultimately gives the same information, but sometimes you want to come at it in terms of the maps, and sometimes in terms of the commas.
+
+One last note on the bracket notation before we proceed: you will regularly see matrices across the wiki that use only square brackets on the outside, whether it's a mapping or a comma basis e.g. [{{map|5 8 12}} {{map|7 11 16}}] or [{{vector|-4 4 -1}} {{vector|-10 -1 5}}]. That's fine because it's unambiguous; if you have a list of rows, it's fairly obvious you've arranged them vertically, and if you've got a list of columns, it's fairly obvious you've arranged them horizontally. For the mapping, we prefer the style of using a left angle bracket for the rows and a right curly bracket on the outside — for slightly more effort, it raises slightly less questions — but using only square brackets on the outside should not be said to be wrong. And as for comma bases, they are perhaps best thought of as a list of vectors, rather than a matrix, so we try to capture that in the notation, by using only square brackets on the outside, though it is often helpful also to think of them all smooshed together as a matrix.
+
+Our preferred notation is explained further in [[Extended_bra-ket_notation#Variant_including_curly_and_square_brackets|Extended bra-ket notation: Variant including curly and square brackets]].
+
+=== Nullspace ===
+We learned above, that we can merge the maps for 5-ET and 7-ET to obtain this meantone mapping:
+
+
+<math>
+\left[ \begin{matrix}
+5 & 8 & 12 \\
+7 & 11 & 16
+\end{matrix} \right]
+</math>
+
+
+We're going to show you how to start with this mapping and find a corresponding comma basis. This is sometimes called "finding the nullspace", even though what it's really finding is a ''basis'' for this nullspace. Another word you may see used for the nullspace, that we prefer to avoid, is the ''kernel''. A more specific name for the "nullspace" in our RTT application is the "comma space".
+
+Working this out by hand goes like this (it is a standard linear algebra operation, so if you're comfortable with it already, you can skip this and other similar parts of these materials).
+
+First, augment our mapping with an "identity matrix".
+
+
+<math>
+\left[ \begin{matrix}
+5 & 8 & 12 \\
+7 & 11 & 16 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1
+\end{matrix} \right]
+</math>
+
+
+What's an identity matrix? Here are some examples:
+
+
+<math>
+\left[ \begin{matrix}
+1 \\
+\end{matrix} \right]
+</math>
+
+<math>
+\left[ \begin{matrix}
+1 & 0 \\
+0 & 1 \\
+\end{matrix} \right]
+</math>
+
+<math>
+\left[ \begin{matrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{matrix} \right]
+</math>
+
+
+etc. No matter its size, it's always a square matrix consisting of all <math>0</math>'s except for its main diagonal which has <math>1</math>'s. It's called an identity matrix because when you multiply something by it, you still have the identical thing. It doesn't change.<ref group="note">"Identity" has special meaning in some math situations. For some simple examples, 0 can be called the "additive identity", because with respect to the addition operation, it's the thing which if you add it to something else, you don't change it, or in other words, the output is identical to the input. 5 + 0 = 5, 7.98<math>\pi</math> + 0 = 7.98<math>\pi</math>, and in general <math>x</math> + 0 = <math>x</math>. Similarly we have the multiplicative identity, which is 1, because anything times 1 is itself. Hopefully you see the similarity here. It's helpful to have "identities" like this for any given mathematical operation, and matrix multiplication is no exception. So "identity matrices" are the identities for matrix multiplication. For matrix multiplication, there's more than one identity, because it depends on the row or column count of the matrix you're multiplying with. You can test it for yourself. Any matrix multiplied by an appropriately-sized identity matrix will give you the same matrix back, unchanged. Other examples of algebraic identities are the additive identity, <math>0</math>, and the multiplicative identity, <math>1</math>. The reason why <math>0</math> is the additive identity is because <math>n + 0 = n</math>, and <math>1</math> is the multiplicative identity because <math>n × 1 = n</math>. An identity ''matrix'' is the multiplicative identity for matrices in the same way: <math>AI = A</math>. There's a different identity matrix for each size of square matrix: <math>(1, 1)</math>-shaped, <math>(2, 2)</math>-shaped, <math>(3, 3)</math>-shaped, etc. but they all follow the same pattern: their entries are all <math>0</math>'s except for <math>1</math>'s along the main diagonal. Here's the <math>(2, 2)</math>-shaped <math>I</math> for comparison:
+<br><br>
+<math>
+I =
+\left[ \begin{matrix}
+1 & 0 \\
+0 & 1 \\
+\end{matrix} \right]
+</math>
+<br><br>
+</ref>
+
+Now, add and subtract integer multiples of columns from each other until you can get one of the columns to be all zeroes above the line, and what's left below the line will be our comma:
+
+There are many different ways of attacking this, but the the general strategy is just to try and make the numbers as small as possible.
+Let's start with subtracting the second column from the last.
+
+
+<math>
+\left[ \begin{matrix}
+5 & 8 & 4 \\
+7 & 11 & 5 \\
+\hline
+1 & 0 &  0 \\
+0 & 1 & -1 \\
+0 & 0 &  1
+\end{matrix} \right]</math>
+
+
+Then we can subtract the first column from the second.
+
+
+<math>\left[ \begin{matrix}
+5 & 3 & 4 \\
+7 & 4 & 5 \\
+\hline
+1 & -1 &  0 \\
+0 &  1 & -1 \\
+0 &  0 &  1
+\end{matrix} \right]</math>
+
+
+Columns two and three now differ by one, so subtract the second from the last again.
+
+
+<math>\left[ \begin{matrix}
+5 & 3 & 1 \\
+7 & 4 & 1 \\
+\hline
+1 & -1 &  1 \\
+0 &  1 & -2 \\
+0 &  0 &  1
+\end{matrix} \right]</math>
+
+
+We're getting closer! Now subtract the second column from the first ''twice'', which also leaves us with ones.
+
+
+<math>\left[ \begin{matrix}
+-1 & 3 & 1 \\
+-1 & 4 & 1 \\
+\hline
+ 3 & -1 & 1 \\
+-2 &  1 & -2 \\
+ 0 &  0 & 1
+\end{matrix} \right]</math>
+
+
+Now finally, we can add the last column to the first.
+
+
+<math>\left[ \begin{matrix}
+0 & 3 & 1 \\
+0 & 4 & 1 \\
+\hline
+ 4 & -1 &  1 \\
+-4 &  1 & -2 \\
+ 1 &  0 &  1
+\end{matrix} \right]</math>
+
+
+And we've done it! A column with all zeros above the line.
+We can now grab the part of that column that's below the line:
+
+
+<math>
+\left[ \begin{matrix}
+\color{green}4 \\
+\color{green}{-4} \\
+\color{green}1
+\end{matrix} \right]
+</math>
+
+
+And ta-da! You've found a comma basis given a mapping, and it is [{{vector|4 -4 1}}] which represents {{sfrac|80|81}}. In other words, for this temperament, you have converted a row-basis for its mapping row-space into a basis for its nullspace. Feel free to try this with any of the other combinations of two ET maps mentioned above. You could try to show that [{{vector|4 -4 1}}] is a basis for the nullspace of any other combination of ETs we found that could specify meantone, such as 7&12, or 12&19.
+
+Throughout this section of this article we will be referring to examples implemented in [https://www.wolfram.com/language/ Wolfram Language] (formerly Mathematica), a popular and capable programming language for working with math. We encourage you to try them out, to get a feel for things in another way, and get yourself started exploring temperaments yourself! If you're interested, you can run them right on the web without downloading or setting anything up on your computer: just go to https://www.wolframcloud.com, sign up for free, create a new computational notebook, paste in the contents from [https://github.com/cmloegcmluin/RTT/blob/main/main.m this file], and Shift+Enter to run it, which will load up all the functions. Then open a new tab to use them; you'll be computing in no time. (And of course you're encouraged to look over the implementations of the functions if that may help you.) FYI, any notebook you create has a lifespan of 60 days before Wolfram Cloud will recycle it, so you'll have to copy and paste them to new notebooks or wherever if you don't want to lose your work.<ref group="note">It's not as simple as select-all, copy, paste, because of how computational notebooks can (and should) be broken down into many cells. However there is a handy way to copy all cells, including all of each of their output: just click in the top right to select the first cell (it should highlight along the right edge in blue), then shift-click the same area but for the bottom cell, copy, and paste. Voilà!</ref>
+If, on the other hand, you're not interested in code examples, that's no big deal. They're not necessary to follow along. 
+Let's try it out in Wolfram Language:
+
+ <nowiki>In:   nullSpaceBasis["[⟨5 8 12] ⟨7 11 16]}"]
+Out:  "[4 -4 1⟩"</nowiki>
+
+When we looked at a comma-merge corresponding to 19-ET above, there was nothing special about the pairing of meantone and magic. We could have chosen meantone|hanson, or magic|negri, etc. A matrix formed out of the comma-merge of any two of these particular commas will capture the same exact nullspace of the mapping {{rket|{{map|19 30 44}}}}.
+
+We already have the tools to check that each of these commas' vectors is made to vanish individually by the mapping-row {{map|19 30 44}}; all we have to do is make sure that the comma is mapped to zero steps by it. But that doesn't indicate a special relationship between 19-ET and any of these commas ''individually''; each of these commas are made to vanish by many different ETs, not just 19-ET. 19-ET does have a special relationship to a nullspace, but it's not to a nullspace which can be expressed in basis form as a ''single'' comma; rather, it is to a nullspace which can be expressed in basis form as the comma-merge of ''two'' commas (at least in the 5-limit; more on this later). In this way, comma bases which represent the comma-merge of two commas are greater than the sum of their individual parts.
+
+We can confirm the relationship between an ET and its nullspace by converting back and forth between them. In the next section we'll look at how to go from any one of these comma bases to the mapping {{rket|{{map|19 30 44}}}}, thus demonstrating the various bases' equivalence with respect to it.
+
+=== ...And nullspace again ===
+Interestingly, the same operation that takes us from a mapping to its dual comma basis also takes us from a comma basis back to its dual mapping. They're both done with the nullspace operation! 
+
+We'll demonstrate working this one out by hand too. The only difference between doing the nullspace for a wide matrix like a mapping and a tall matrix like a comma basis is that for a tall matrix everything will look sideways from how it looked for the wide matrix. We'll do everything the same way, just rotated by 90°.
+
+Here's our starting point, a meantone|magic comma basis:
+
+
+<math>
+\left[ \begin{array} {c|c}
+{-4} & {-10} \\
+4 & {-1} \\
+{-1} & 5 \\
+\end{array} \right]
+</math>
+
+
+Now, augment it with an "identity matrix". (We've been separating the commas with a vertical bar, but to better distinguish the commas from the identity matrix here, we'll only use the vertical bar between them and the identity matrix.)
+
+
+<math>
+\left[ \begin{array} {cc|ccc}
+{-4} & {-10} & 1 & 0 & 0 \\
+4 & {-1} & 0 & 1 & 0 \\
+{-1} & 5 & 0 & 0 & 1 \\
+\end{array} \right]
+</math>
+
+
+Now, add and subtract multiples of rows from each other until you can get one of the rows to be all zeroes to the left the line. We show this step in a different way to how we showed it above, in case one way of showing it works for some people and the other way works for others:
+
+
+<math>
+\left[ \begin{array} {cc|ccc}
+{-4} + \left(\style{background-color:#F2B2B4;padding:5px}{2} × \style{background-color:#98CC70;padding:5px}{-1}\right) & 
+{-10} + \left(\style{background-color:#F2B2B4;padding:5px}{2} × \style{background-color:#98CC70;padding:5px}{5}\right) & 
+1 + \left(\style{background-color:#F2B2B4;padding:5px}{2} × \style{background-color:#98CC70;padding:5px}{0}\right) & 
+0 + \left(\style{background-color:#F2B2B4;padding:5px}{2} × \style{background-color:#98CC70;padding:5px}{0}\right) & 
+0 + \left(\style{background-color:#F2B2B4;padding:5px}{2} × \style{background-color:#98CC70;padding:5px}{1}\right) \\
+4 & {-1} & 0 & 1 & 0 \\
+\style{background-color:#98CC70;padding:5px}{-1} & \style{background-color:#98CC70;padding:5px}{5} & \style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#98CC70;padding:5px}{1} \\
+\end{array} \right] =
+</math>
+
+
+<math>
+\left[ \begin{array} {cc|ccc}
+{-6} & 0 & 1 & 0 & 2 \\
+4 & {-1} & 0 & 1 & 0 \\
+\style{background-color:#98CC70;padding:5px}{-1} & \style{background-color:#98CC70;padding:5px}{5} & \style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#98CC70;padding:5px}{0} & \style{background-color:#98CC70;padding:5px}{1} \\
+\end{array} \right]
+</math>
+
+
+What we've done here is add two times the 3<sup>rd</sup> row to the 1<sup>st</sup> row. Hence the <math>\style{background-color:#F2B2B4;padding:5px}{2}</math> we see for each column. The reason we did this is because our goal is get one of the rows in the left half to be all zeros. So we're already halfway there! We've got a 0 in the top-right cell of the left half. 
+
+This first one was easy. But as one approaches a target like the one we're approaching, things often get trickier the closer one gets. In this case, we still have to somehow change that -6 to the left of our new 0 into a 0, too. But there's no row that we can add or subtract from this row that can change the -6 into a 0 <i>without also messing up the 0 to its left that we already accomplished</i>. So we can't go straight to the finish line from here. First, we have to create a row that we can use.
+
+Basically we need to create a row which has the power to change the -6 without also changing the 0 too. So that means we need a row which <i>also has a 0 in the same column as that 0 we want to keep</i>. We can create this row either by modifying the 2<sup>nd</sup> row or the 3<sup>rd</sup> row. In the following step, we've chosen to modify the 3<sup>rd</sup> row. 
+
+So if we need to change the 5 in the 3<sup>rd</sup> row to a 0, there's only one way to do that: add 5 times the 2<sup>nd</sup> row to the 3<sup>rd</sup> row:
+
+
+<math>
+\left[ \begin{array} {cc|ccc}
+{-6} & 0 & 1 & 0 & 2 \\
+4 & {-1} & 0 & 1 & 0 \\
+19 & 0 & 0 & 5 & 1 \\
+\end{array} \right]
+</math>
+
+
+So now we've created the row we need in order to destroy that -6 without messing up the 0. But wait... maybe we're not quite there yet. The problem is that 19 and doesn't divide evenly into 6. So if we want to use a 19 to wipe out a 6, we'll actually need to multiply the row with the 6 by 19, and the row with the 19 by 6, so that their values match and can be canceled out. So that's why we do this:
+
+
+<math>
+\left[ \begin{array} {cc|ccc}
+{-114} & 0 & 19 & 0 & 38 \\
+4 & {-1} & 0 & 1 & 0 \\
+19 & 0 & 0 & 5 & 1 \\
+\end{array} \right]
+</math>
+
+
+And then add the 3<sup>rd</sup> row to the 1<sup>st</sup> row 6 times:
+
+
+<math>
+\left[ \begin{array} {cc|ccc}
+\color{lime}0 & \color{lime}0 & \color{green}19 & \color{green}30 & \color{green}44 \\
+4 & {-1} & 0 & 1 & 0 \\
+19 & 0 & 0 & 5 & 1 \\
+\end{array} \right]
+</math>
+
+
+And we've done it! A row with all zeros to the left of the line. So now we're ready to grab the rest of the row from the right side of the line:
+
+
+<math>
+\left[ \begin{matrix}
+\color{green}19 & \color{green}30 & \color{green}44 \\
+\end{matrix} \right]
+</math>
+
+
+Great. We've found a mapping given a comma basis, and it is {{rket|{{map|19 30 44}}}}. In other words, for this temperament, we have converted a basis for its nullspace to a row-basis for its mapping row-space. Feel free to try this with any other combination of two commas made to vanish by this mapping-row.
+
+Now just to convince ourselves of the nullspace-both-ways relationship between the mapping and the comma basis, let's do the nullspace function to take us from this mapping {{rket|{{map|19 30 44}}}} back to its comma basis. Start at the augmentation step:
+
+
+<math>
+\left[ \begin{matrix}
+19 & 30 & 44 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1
+\end{matrix} \right]
+</math>
+
+
+This time we need to get two of the columns to have (all) zeroes above the line.
+
+
+<math>
+\left[ \begin{matrix}
+19 & 30 & 836 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 19
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+19 & 30 & \color{lime}0 \\
+\hline
+1 & 0 & \color{green}{-44} \\
+0 & 1 & \color{green}0 \\
+0 & 0 & \color{green}19
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+19 & 570 & \color{lime}0 \\
+\hline
+1 & 0 & \color{green}{-44} \\
+0 & 19 & \color{green}0 \\
+0 & 0 & \color{green}19
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+19 & \color{lime}0 & \color{lime}0 \\
+\hline
+1 & \color{green}{-30} & \color{green}{-44} \\
+0 & \color{green}19 & \color{green}0 \\
+0 & \color{green}0 & \color{green}19
+\end{matrix} \right]
+</math>
+
+
+Now grab the parts of the columns from below the line.
+
+
+<math>
+\left[ \begin{array} {c|c}
+\color{green}{-30} & \color{green}{-44} \\
+\color{green}19 & \color{green}0 \\
+\color{green}0 & \color{green}19
+\end{array} \right]
+</math>
+
+
+So that's not any of the commas we've looked at so far (it's the [[19-comma|19-edo-comma]] and the [[acute limma]]). But it is clear to see that either of them would be made to vanish by 19-ET (no need to map by hand — just look at these commas side-by-side with the mapping-row {{rket|{{map|19 30 44}}}} and it should be apparent). We're done!
+
+And let's try that one in Wolfram Language, too:
+
+ <nowiki>In:   nullSpaceBasis["⟨19 30 44]"]
+Out:  "[[-44 0 19⟩ [-30 19 0⟩]"</nowiki>
+
+So we've gotten right back where we've started.
+
+The RTT library for Wolfram Language includes a function called <code>dual[]</code>. This will give you a comma basis for a mapping, or a mapping for a comma basis, depending on which you put it:
+
+ <nowiki>In:   dual["⟨19 30 44]"]
+Out:  "[[-44 0 19⟩ [-30 19 0⟩]"
+In:   dual["[[-4 4 -1⟩ [-10 -1 5⟩]"]
+Out:  "⟨19 30 44]"</nowiki>
+
+It's great to have Wolfram and other such tools to compute these things for us, once we understand them. But we think it's a very good idea to work through these operations by hand at least a couple times, to demystify them and give you a feel for them.
+
+=== JI as a temperament ===
+Two points make a line. By the same logic, three points make a plane. Does this carry any weight in RTT? Yes it does.
+
+Our hypothesis might be: this represents the entirety of 5-limit JI. If two rank-1 temperaments — each of which can be described as making 2 commas vanish — when map-merged result in a rank-2 temperament — which is defined as making 1 comma vanish — then when we map-merge three rank-1 temperaments, we should expect to get a rank-3 temperament, which makes 0 commas vanish. The rank-1 temperaments appear as 0D points in PTS but are understood to be a 1D line coming straight at us; the rank-2 temperaments appear as 1D lines in PTS but are understood to be 2D planes coming straight at us; the rank-3 temperament appear as the 2D plane of the entire PTS diagram but is understood to be the entire 3D space.
+
+Let's check our hypothesis using the PTS navigation techniques and matrix math we've learned.
+
+Let's say we pick three ETs from PTS: 12, 15, and 22. The same constraint applies here that we can't choose ETs for which there is a smaller number between them on the line that connects them. Each pair of these pass that test. Done.
+
+Their combined matrix is:
+
+
+<math>
+\left[ \begin{matrix}
+12 & 19 & 28 \\
+15 & 24 & 35 \\
+22 & 35 & 51
+\end{matrix} \right]
+</math>
+
+
+We explain later about [[#Canonical_form|canonical form]], but for now you'll have to take our word for it that the canonical form of the above mapping is this:
+
+
+<math>
+\left[ \begin{matrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1
+\end{matrix} \right]
+</math>
+
+
+Hey, that looks like an identity matrix! Well, in this case the best interpretation can be found by checking its mapping of {{sfrac|2|1}}, {{sfrac|3|1}}, and {{sfrac|5|1}}, or in other words {{vector|1}}, {{vector|0 1}}, and {{vector|0 0 1}}. Each prime is generated by a different generator, independently. And if you think about the implications of that, you'll realize that this is simply another way of expressing the idea of 5-limit JI! Because the three generators are entirely independent, we are capable of exactly generating literally any 5-limit interval. Which is another way of confirming our hypothesis that no commas vanish.
+
+=== Tempered lattice ===
+Let's make sure we establish what exactly the tempered lattice is. This is something like the JI lattice we looked at very early on, except instead of one axis per prime, we have one axis per generator. As we saw just a moment ago, these two situations are not all that different; the JI lattice could be viewed as a tempered lattice, where each prime is a generator.
+
+In this rank-2 example of 5-limit meantone, we have 2 generators, so the lattice is 2D, and can therefore be viewed on a simple square grid on the page. Up and down correspond to movements by one generator, and left and right correspond to movements by the other generator.
+
+The next step is to understand our primes in terms of this temperament's generators. Meantone's mapping is {{rket|{{map|1 0 -4}} {{map|0 1 4}}}}. This maps prime 2 to one of the first generator and zero of the second generator. This can be seen plainly by slicing the first column from the matrix; we could even write it as the vector {{vector|1 0}}. Similarly, this mapping maps prime 3 to zero of the first generator and one of the second generator, or in vector form {{vector|0 1}}. Finally, this mapping maps prime 5 to negative four of the first generator and four of the second generator, or {{vector|-4 4}}.
+
+So we could label the nodes with a list of approximations. For example, the node at {{vector|-4 4}} would be ~5. We could label ~9/8 on {{vector|-3 2}} just the same as we could label {{vector|-3 2}} 9/8 in JI, however, here, we can also label that node ~10/9, because {{vector|1 -2 1}} → 1×{{vector|1 0}} + -2×{{vector|0 1}} + 1×{{vector|-4 4}} = {{vector|1 0}} + {{vector|0 -2}} + {{vector|-4 4}} = {{vector|-3 2}}. Cool, huh? Because conflating 9/8 and 10/9 is a quintessential example of the effect of making the meantone comma vanish ''(see Figure 2b)''.
+
+[[File:Mapping to tempered vector.png|400px|thumb|right|'''Figure 2b.''' Converting from a JI interval vector to a tempered interval vector, with one less rank, conflating intervals related by the vanished comma.]]
+
+Sometimes it may be more helpful to imagine slicing your mapping matrix the other way, by columns (vectors) corresponding to the different primes, rather than rows (maps) corresponding to generators. Meaning we can look at {{rket|{{map|1 0 -4}} {{map|0 1 4}}}} as a matrix of three vectors, [{{vector|1 0}} {{vector|0 1}} {{vector|-4 4}}] which tells us that 2/1 is {{vector|1 0}}, 3/1 is {{vector|0 1}}, and 5/1 is {{vector|-4 4}}. 
+
+And so we can see that tempering has reduced the dimensionality of our lattice by 1. Or in other words, the dimensionality of our lattice was always the rank; it's just that in JI, the rank was equal to the dimensionality. And what's happened by reducing this rank is that we eliminated one of the primes in a sense, by making it so we can only express things in terms of it via combinations of the other remaining primes.
+
+=== Rank and nullity ===
+Let's review what we've seen so far. 5-limit JI is 3-dimensional. When we have a rank-3 temperament of 5-limit JI, 0 commas vanish. When we have a rank-2 temperament of 5-limit JI, 1 comma vanishes. When we have a rank-1 temperament of 5-limit JI, 2 commas vanish.<ref group="note">Probably, a rank-0 temperament of 5-limit JI would make 3 commas vanish. All we can think a rank-0 temperament could be is a single pitch, or in other words, every interval vanishes (becomes a unison).</ref>
+
+There's a straightforward formula here: <math>d - n = r</math>, where <math>d</math> is dimensionality, <math>n</math> is nullity, and <math>r</math> is rank.<ref group="note">If you wanted a trio of words that all end in "-ity" as a mnemonic device, you could use "rowity" or "rangity" for <math>r</math>, where "row" refers to rows of mappings, and "range" refers to the domain/range distinction of functions such as mappings (and along those lines, you'd also get "domainity" for <math>d</math> if you like).</ref> We've seen every one of those words so far except '''nullity'''. [[Nullity]] simply means the minimum number of vanishing commas whose multiples can be added and subtracted to span the entire space of vanishing commas, or in other words, the count of commas in a basis for the nullspace ''(see Figure 2c)''.
+
+So far, everything we've done has been in terms of 5-limit, which has dimensionality of 3. Before we generalize our knowledge upwards, into the 7-limit, let's take a look at how things one step downwards, in the simpler direction, in the 3-limit, which is only 2-dimensional.
+
+We don't have a ton of options here! The PTS diagram for 3-limit JI could be a simple line. This axis would define the relative tuning of primes 2 and 3, which are the only harmonic building blocks available. Along this line we'll find some points, which familiarly are ETs. For example, we find 12-ET. Its map here is {{map|12 19}}; no need to mention the 5-term because we have no vectors that will use it here. At this ET, being a rank-1 temperament, <math>r</math> = 1. So if <math>d</math> = 2, then solve for <math>n</math> and we find that it only makes a single comma vanish (unlike the rank-1 temperaments in 5-limit JI, which made two commas vanish). We can use our familiar nullspace function to find what this comma is:
+
+
+<math>
+\left[ \begin{matrix}
+12 & 19 \\
+\hline
+1 & 0 \\
+0 & 1
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+12 & 228 \\
+\hline
+1 & 0 \\
+0 & 12
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+12 & 0 \\
+\hline
+1 & {-19} \\
+0 & 12
+\end{matrix} \right]
+</math>
+
+
+Let's try it out in Wolfram Language:
+
+ <nowiki>In:   nullSpaceBasis["⟨12 19]"]
+Out:  "[-19 12⟩"</nowiki>
+
+Unsurprisingly, the comma is {{vector|-19 12}}, the compton comma. Basically, any 3-limit comma that would vanish is going to be obvious from the ET's map. Another option would be the blackwood comma, {{vector|-8 5}} which vanishes in 5-ET, {{map|5 8}}. Exciting stuff! Okay, not really. But good to ground yourself with.
+
+But now you shouldn't be afraid even of 11-limit or beyond. The 11-limit is 5D. So if you make 2 commas vanish there, you'll have a rank-3 temperament.
+
+[[File:Mapping and comma basis dnr.png|400px|thumb|right|'''Figure 2c.''' The relationship between dimensionality d, rank r, and nullity n]]
+
+Here we've mentioned the term "rank". We warned you that it wasn't actually the same thing as dimensionality, even though we could use dimensionality in the PTS to help differentiate rank-2 from rank-1 temperaments. Now it's time to learn the true meaning of rank: it's how many generators a temperament has. So, it ''is'' the dimensionality of the ''tempered'' lattice; but it's still important to stay clear about the fact that it's different from the dimensionality of the original system from which you are tempering.
+
+=== Beyond the 5-limit ===
+So far we've only been dealing with RTT in terms of prime limits, which is by far the most common and simplest way to use it. But nothing is stopping you from using other types of spaces. What is a space? Well, I'll explain in terms of what we already know: prime limits. Prime limits are basically the simplest type of space. A prime limit is shorthand for the space whose basis consists of all the primes up to that prime which is your limit; for example, the 7-limit is the same thing as the domain with the basis "2.3.5.7". So a [[basis]] is just a set of JI intervals, and they are notated by separating the selected intervals with dots.
+
+Sometimes you may want to use a [[Domain basis#Nonstandard domains|nonstandard domain]], i.e. anything other than a prime limit. For example, you could create a 3D tuning space out of primes 2, 3, and 7 instead, skipping prime 5. You would call it "the 2.3.7 domain".<ref group="note">Some people refer to these as subspaces. But even standard domains are subspaces of all of the primes, so who really cares that it's a subspace of another space or not?</ref>
+
+You could even choose a domain with combinations of primes, such as the 2.5/3.7 space. Note that since the dots are what separate intervals, that should be parsed as 2.(5/3).7. Here, we still care about approximating primes 2, 3, 5, and 7, however there's something special about 3 and 5: we don't specifically care about approximating 3 or 5 individually, but only about approximating their combination. Note that this is different yet from the 2.15.7 space, where the combinations of 3 and 5 we care about approximating are when they're on the same side of the fraction bar.
+
+As you can see from the 2.15.7 example, you don't even have to use primes. Simple and common examples of this situation are the 2.9.5 or the 2.3.25 spaces, where you're targeting multiples of the same prime, rather than combinations of different primes.
+
+You can even use irrationals, like the 2.<math>\phi</math>.5.7 space! But now you won't be tempering JI, but that's fine, if that's what you want. The sky is the limit. Whatever you choose, though, this core structural rule <math>d - n = r</math> holds strong ''(see Figure 2d)''.
+
+The order you list the pitches you're approximating with your temperament is not standardized; generally you increase them in size from left to right, though as you can see from the 2.9.5 and 2.15.7 examples above it can often be less surprising to list the numbers in prime limit order instead. Whatever order you choose, the important thing is that you stay consistent about it, because that's the only way any of your vectors and maps are going to match up correctly!
+
+[[File:Temperaments by rnd.png|400px|thumb|left|'''Figure 2d.''' Some temperaments by dimensionality, rank, and nullity]]
+
+Alright, here's where things start to get pretty fun. 7-limit JI is 4D. We can no longer refer to our 5-limit PTS diagram for help. Maps and vectors here will have four terms; the new fourth term being for prime 7. So the map for 12-ET here is {{map|12 19 28 34}}.
+
+Because we're starting in 4D here, if we make one comma vanish, we still have a rank-3 temperament, with 3 independent generators. Make two commas vanish, and we have a rank-2 temperament, with 2 generators (remember, one of them is the period, which is usually the octave). And we'd need to make 3 commas vanish here to pinpoint a single ET.
+
+The particular case I'd like to focus our attention on here is the rank-2 case. This is the first situation we've been able to achieve which boasts both an infinitude of matrices made from comma vectors which can represent the temperament by a comma basis, as well as an infinitude of matrices made from ET maps which can represent a temperament by a mapping-row-basis. These are not contradictory. Let's look at an example: septimal meantone.
+
+Septimal meantone may be thought of as the temperament which makes the meantone comma and the starling comma (126/125) vanish, or "meantone|starling". But it may also be thought of as "meantone|marvel", where the marvel comma is 225/224. We don't even necessarily need the meantone comma at all: it can even be "starling|marvel"! This speaks to the fact that any temperament with a nullity greater than 1 has an infinitude of equivalent comma bases. It's up to you which one to use.
+
+On the other side of duality, septimal meantone's mapping-row-basis has two rows, corresponding to its two generators. We don't have PTS for 7-limit JI handy, but because septimal meantone includes, or extends plain meantone, we can still refer to 5-limit PTS, and pick ETs from the meantone line there. The difference is that this time we need to include their 7-term. So the map-merge of {{map|12 19 28 34}} and {{map|19 30 44 53}} would work. But so would {{map|19 30 44 53}} and {{map|31 49 72 87}}. We have an infinitude of options on this side of duality too, but here it's not because our nullity is greater than 1, but because our rank is greater than 1.
+
+=== Canonical form ===
+Recently we reduced
+
+
+<math>
+\left[ \begin{matrix}
+5 & 8 & 12 \\
+7 & 11 & 16 \\
+\end{matrix} \right]
+</math>
+
+to
+
+<math>
+\left[ \begin{matrix}
+1 & 1 & 0 \\
+0 & 1 & 4
+\end{matrix} \right]
+</math>
+
+
+In this form, as we observed, the period is an octave and the generator is a fifth, which is a popular and convenient way to think about meantone. But there are other good forms this mapping could be put into.
+
+For example, you might want the form that Graham Breed's temperament finder puts them in, where all values in a mapping-row may be negative, but this is in the service of the generator being positive, and less than half the size of the period. For example, for meantone, we'd want the fourth instead of the fifth, and we can see that
+
+
+<math>
+\left[ \begin{matrix}
+1 & 2 & 4 \\
+0 & {-1} & {-4}
+\end{matrix} \right]
+</math>
+
+
+maps the fourth (4/3, {{vector|2 -1 0 }}) to {{vector|0 1}}. That form is called [[mingen]] form. 
+
+But there are still more forms! One very important form is called [[defactored Hermite form]] (DHF), or we may call it here '''canonical form'''.
+
+It's often the case that a temperament's rank is greater than 1, and therefore we have an infinitude of equivalent ways of expressing the mapping.<ref group="note">The same is true of the comma basis when the nullity is greater than 1, but we'll deal with that in a later article.</ref> This can be problematic, if we want to efficiently communicate about and catalog temperaments. It's good to have a standardized form in these cases. The approach RTT takes here is to get these matrices into canonical form. In plain words, this just means: we have a function which takes in a matrix and spits out a matrix of the same shape, and no matter which matrix we input from a set of matrices which we consider all to be equivalent to each other, it will spit out the same result. This output is thereby "canonical", and it can therefore uniquely identify a temperament.
+
+To be clear, canonical form isn't necessary to avoid ambiguity: you will never find a mapping that could represent more than one temperament.
+
+For example, the canonical form of meantone is:
+
+
+<math>
+\left[ \begin{matrix}
+1 & 0 & {-4} \\
+0 & 1 & 4
+\end{matrix} \right]
+</math>
+
+
+So if you take the canonical form of {{rket|{{map|5 8 12}} {{map|7 11 16}}}}, that's what you get. It's also what you get if you take the canonical form of {{rket|{{map|12 19 28}} {{map|19 30 44}}}}, or any equivalent other mapping. That's the power of canonicalization.
+
+Let's try it out in Wolfram Language:
+
+ <nowiki>In:  canonicalForm["[⟨5 8 12] ⟨7 11 16]}"]
+Out:  "[⟨1 0 -4] ⟨0 1 4]}"</nowiki>
+
+Canonical form can be done by hand, but it's a bit involved, because it requires first [[Defactoring_algorithms#Column_Hermite_defactoring|defactoring]] and then putting into [[Hermite normal form|Hermite Normal Form]]. We've demonstrated how to do these processes at the links provided.
+
+Canonicalization used to be achieved in RTT through the use of the "wedgie", an object that involves more advanced math. So while you may see "wedgies" around on the wiki and elsewhere, don't worry — you don't need to worry about them in order to do RTT. If you want to learn more anyway, we've gathered up everything we figured out about those here: [[Intro to exterior algebra for RTT]].
+
+We can also use canonical form for comma bases. One comma basis for 12-ET is:
+
+ <nowiki>In: dual[{{{12,19,28}},"mapping"}]
+Out: {{{-19,12,0},{-15,8,1}},"comma basis"}</nowiki>
+
+So that's the Pythagorean comma and the schisma. We might think 12-ET is defined by the meantone comma and augmented comma, though. Well…
+
+ <nowiki>In: canonicalForm[{{{-4, 4,-1},{7,0,-3}},"comma basis"}] 
+Out: {{{-19,12,0},{-15,8,1}},"comma basis"}</nowiki>
+
+So those are the same thing.
+
+There's one difference when we find the canonical form of a comma basis: we enclose the DHF operation in an <i>antitranspose sandwich</i>, which is to say we perform an antitranspose operation before and after the DHF operation. 
+
+What's an <i>anti</i>transpose, you ask? Well, while an ordinary transpose operation flips a matrix about its main diagonal —  which is the diagonal that begins in the upper left corner — an <i>anti</i>transpose operation flips it about its <i>anti</i>diagonal, which is perpendicular to the main diagonal. 
+
+For more information on why we do that, see: [[Normal lists#Antitransposed Defactored Hermite form]]. Basically, it's because we want our canonical comma basis to have zeros in its bottom-left corner just like a mapping, and an antitranspose sandwich coaxes the HNF into giving us just that.
+
+=== Summary table ===
+{| class="wikitable" style="text-align: center;"
+|+ style="font-size: 105%;" | RTT terminology
+|- style="white-space: nowrap;"
+! Terminology category
+! Building block &rarr;
+! Temperament ID
+! Temperament ID dual
+! &larr; Building block
+|-
+! RTT application
+| Map (often an ET), mapping-row
+| Mapping, mapping-row-basis
+| Comma basis
+| Interval, comma
+|-
+! RTT structure
+| (Generator-count-per-prime) map
+| List of maps
+| List of vectors
+| (Prime-count) vector
+|-
+! Linear algebra structure
+| Row vector, matrix row
+| Matrix, list of row vectors
+| Matrix, list of vectors
+| (Column) vector, matrix column, vector
+|-
+! Extended bra-ket<br />notation representation
+| Bra
+| Ket of bras
+| Bra of kets
+| Ket
+|-
+! RTT jargon
+| Val
+| List of vals
+| List of monzos
+| Monzo
+|}
+
+== See also ==
+Congrats! You've made it to the end of the basic section of our article series. You have plenty of information now to go and make some music using RTT. If you just want to keep learning all the things, though (or just want to procrastinate, like us) then please check out the intermediate section of our series here:
+* 5. {{subpage|Units analysis|prev}}: To look at temperament and tuning in a new way, think about the units of the values in frequently used matrices
+* 6. {{subpage|Tuning computation|prev}}: For methods and derivations; learn how to compute tunings, and why these methods work
+* 7. {{subpage|All-interval tuning schemes|prev}}: The variety of tuning scheme that is most commonly named and written about on the Xenharmonic wiki
+
+You may also be interested in checking out Chris Kline's web app for exploring PTS, available here: https://www.projectivetuningspace.com
+
+== Footnotes ==
+<references group="note" />
+
+[[Category:Dave Keenan & Douglas Blumeyer's guide to RTT]]

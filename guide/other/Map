@@ -1,0 +1,15 @@
+The word '''map''' could refer to:
+
+* In general mathematics, a "map" is any function from one set to another. For more information, see [[Wikipedia: Map (mathematics)]].
+
+* In [[regular temperament theory]], the term "map" is used in the more specific sense of a [[Wikipedia:Linear_map|''linear'' map]], which, informally, can be thought of as a function that can be represented by a matrix. Examples include [[tuning map]]s, [[projection matrix|projection map]]s (sometimes called projection matrices), and [[temperament mapping matrix|temperament map]]s (usually called "temperament mapping matrices", or "mapping matrices" or even just "mappings" for short). In the past, the terms "M-map"  and "V-map" were also sometimes used to refer to temperament mappings and [[subgroup basis matrices]], although the terminology has since changed on this wiki. A rank-1 temperament mapping is also called a [[val]].
+
+* [[Douglas Blumeyer]] and [[Dave Keenan]] recommend reserving the word "map" for a mapping with one row, so that all maps are mappings but not all mappings are maps; a simple tip to remember this usage is that the shorter word refers to the simpler object. In all occurrences at present on this wiki, as well as in Graham Breed's temperament finder, the term "map" (and not "mapping") consistently refers to a single-row mapping, so following this suggestion would be seamless moving forward. A "tuning map", which maps from generators to cents, is a map in "tuning space"; by analogy, a val is a map in "temperament space", and so it would be perfectly consistent with existing terminology to refer to a val as a "temperament map" as opposed to a "temperament mapping", and then when it is clear from the context that it is a ''temperament'' map, the qualifier "temperament" can be dropped, as is done with "temperament mapping matrix" being abbreviated to "mapping matrix". So the suggestion is equivalent to unqualified occurrences of "map" being assumed to be temperament maps, or in other words, synonymous with vals (except for the integer entry requirement), not tuning maps. Dave and Douglas recommend using "map" rather than "val", for two reasons. First, "map" is a basic linear algebra term with wide familiarity (being specialized for this purpose) while "val" is unnecessary jargon that creates a barrier to understanding by newcomers. Second, the coinage of "val" from the obscure mathematical term "valuation" is tenuous and unlikely to provide helpful insight: "p-adic valuation" is an obscure term for "prime count", which would be an element of a prime-count vector ("monzo"), not a map ("val").
+
+{{Disambiguation}}
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]
+[[Category:Val]]
+[[Category:Mapping]]

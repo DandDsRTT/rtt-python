@@ -1,0 +1,833 @@
+{{breadcrumb}}{{texmap}}
+This is article 2 of 9 in [[Dave Keenan]] & [[Douglas Blumeyer]]'s guide to RTT, or "[[D&D's guide]]" for short. 
+
+Having given {{subpage|introductions|uprev|text=our high-level introduction to RTT itself}}, in this article we will be learning about ''[[mappings]]'', the most important of all RTT objects. Mappings describe how exactly [[JI]] [[interval]]s are regularly [[tempered]] by a given [[regular temperament]].
+
+== Maps ==
+In order to best understand mappings, let's first take a look at the basic building block of mappings, which we can call ''[[map]]s''. In particular, we want to understand the effect they have on musical intervals.
+
+=== Maps and vectors ===
+We've got to go one step further down into the bedrock of RTT here, but we assure you this is as far down as we need to go.
+
+In order to understand maps, we should first understand ''vectors''. 
+
+If you've previously worked with JI, you may already be familiar with '''[[Wikipedia:vector|vectors]]'''. A vector is a mathematical structure. It comes to us from the relatively low-level mathematical subfield of [[Wikipedia:Linear_algebra|linear algebra]]. In a sense a vector is the next level up in complicatedness from a plain old number, that sense being that it's essentially a "multi-number". Here's an example of a vector:
+
+<math>
+\left[ \begin{matrix} -2 \\ 0 \\ 1 \\ \end{matrix} \right]
+</math>
+
+This is the conventional mathematical notation for a vector, which lists the numbers in a column from top to bottom, but it is often more convenient to use the textual form {{vector|-2 0 1}}, which lists them from left to right, beginning with a square bracket and ending with a right-pointing angle bracket. Either way, a vector is simply an ordered list of numbers that work together, following certain mathematical rules; just as with ordinary numbers, we can add, multiply, and do all sorts of other operations to vectors, but they just follow some different mathematical rules. These vector rules may be new or surprising to you, but we'll work through examples of them, and we hope you'll come to see them as reasonable generalizations of what you already understood about ordinary numbers.
+
+Numbers come up in a huge variety of situations, of course, from astrophysics to video games. Vectors come up in all sorts of disciplines, too. The particular way that we xenharmonic musicians use vectors is as a convenient structure to represent JI intervals in terms of their [[Wikipedia:Integer_factorization#Prime_decomposition|prime factorization]], or in other words, their harmonic components. In JI&mdash;and in most contexts in RTT&mdash;vectors simply list the count of each prime, in order.
+
+For example, {{sfrac|16|15}} is the quotient form of a JI interval, and its equivalent vector form is {{vector|4 -1 -1}}, because it has four <math>2</math>'s, negative one <math>3</math>, and also negative one <math>5</math>. The negative numbers simply mean the factor is found in the denominator (bottom) rather than the numerator (top), i.e. we have <math>\frac{2×2×2×2}{3×5}</math>. If helpful, we can look at each term as an exponent: <math>2^4 × 3^{-1} × 5^{-1} = \frac{16}{15}</math>. These vectors can also be described as an exponent array notation.<ref group="note">This description was inspired by [[Kyle Gann]]'s book ''The Arithmetic of Listening'', where he referred to prime-count vectors as "exponential array notation" (p271, p158).</ref> The idea of representing ratios as prime-count vectors has occurred to many people independently over many decades.<ref group="note">For a purely mathematical explanation of prime-count vectors, see: https://rjwagner49.com/Mathematics/PrimeVector/. For an early application of them to musical harmony (albeit in an octave-equivalent form) see the writings of the Dutch physicist Adriaan Fokker, 1947. https://www.huygens-fokker.org/docs/mm4.html [https://www-huygens--fokker-org.translate.goog/docs/mm4.html?_x_tr_sl=auto&_x_tr_tl=en&_x_tr_hl=en English translation].</ref>
+
+So a vector is simply a more concise way to give this product-of-prime-powers information. The key thing is how we've assumed the sequence of primes (bases). So we can get away with listing only their counts (exponents). As an exercise, you should work out what interval ratio our first example vector {{vector|-2 0 1}} corresponds to. Answer:<ref group="note"><math>\monzo{-2 & 0 & 1} = 2^{-2} × 3^0 × 5^1 = \frac{5}{2×2} = \frac{5}{4}</math>, a just major third.</ref>
+
+Prime-count vectors are far and away the most common application for vectors in RTT, so we simply call them '''vectors''' and use qualifiers for the other kinds.<ref group="note">We can also call them PC-vectors for short, though Paul Erlich has noted that this risks confusion with a possible abbreviation for "pitch-class vector".</ref>
+
+There's also something called a "[[Wikipedia:covector|row vector]]"<ref group="note">You may also see row vectors referred to as a "covectors", particularly when RTT is described using [[Dave Keenan & Douglas Blumeyer's guide to EA for RTT|Exterior Algebra]] instead of Linear Algebra.</ref>. But because of what a row vector does to a vector when we multiply the two together, a row vector can also be called a '''map''', and that's the term we'll use from now on. Here's an example of a map:
+
+<math>
+\left[ \begin{matrix} 5 & 8 & 12 \end{matrix} \right]
+</math>
+
+To distinguish maps from vectors, the corresponding textual form is {{map|5 8 12}}, which begins with a left-pointing angle bracket and ends with a square bracket. Maps are the yin to the yang of vectors. Like a vector, a map is an ordered list of numbers that work together, following certain mathematical rules. The difference is that a map follows slightly different rules (which you'll learn about very soon).
+
+If you've previously worked with [[EDOs]], you may already be familiar with maps in the form of step-count-per-prime maps. These are a compact way to express EDOs in terms of the count of its steps it takes to reach its approximation of each prime harmonic, in order. For example, 12-EDO is sometimes represented as {{map|12 19 28}}. The first term here is the same as the name of the EDO, because the first prime harmonic is {{sfrac|2|1}}, or in other words: the [[octave]]. So this map tells us that it takes 12 steps to reach the octave, 19 steps to reach this EDO's approximation of {{sfrac|3|1}} (the [[tritave]]), and 28 steps to reach its approximation of {{sfrac|5|1}} (the [[pentave]]).<ref group="note">We described the latter two as approximations because the most typical case is to divide the octave exactly and approximate the other prime harmonics, which in this case seems obvious because the unit of the cent is based on that tuning so each step is exactly 100{{cent}} that way, but nothing's stopping anyone from interpreting this map as a tuning where the pentave is exactly divided into 28 equal steps of about 99.511{{c}} each, which would thereby only approximate the octave and tritave. But we'll have much more to say on this topic in the next article, on {{subpage|tuning fundamentals|uprev}}.</ref>
+
+Step-count-per-prime maps are the most common application for maps in RTT, so we simply call them '''maps''' and use qualifiers for the other kinds. As an exercise, you should work out what EDO our first example map {{map|5 8 12}} corresponds to. Answer:<ref group="note">{{map|5 8 12}} is the 5-edo map.</ref>
+
+So if the mathematical structure called a vector represents the musical structure called an '''interval''', then the mathematical structure called a map (or row vector) represents the musical structure that we still call a '''map'''. Elsewhere you may see maps and interval vectors referred to as "vals" and "monzos" respectively, but we will be avoiding unhelpful jargon like that here.<ref group="note">We feel that "val" creates an unnecessary barrier to understanding for those already familiar with established terms for concepts RTT borrows from linear algebra. Even if it does have some connection to the mathematical concept of a "valuation", this is of no help in illuminating its music-theory meaning, which is simply that of being a mapping from a single generator to primes. The first sentence in the Xenharmonic Wiki article for "val" says, "a val is a linear map". And the first sentence of the Wikipedia article where "covector" redirects to is: "... a covector is a linear map from a vector space to its field of scalars". In mathematics generally, "map" and "mapping" are synonyms, but we find it useful to use the smaller word for the smaller object&mdash;a "map" being a single-row mapping. So that is why we use "map" in this material instead of "val".<br /><br />As for "monzo", the man Joseph Monzo deserves to be celebrated for his promotion of prime-count vectors, and his [http://tonalsoft.com/enc/default.aspx Tonalsoft Encyclopedia] among other things. He is a friend of ours (and has even sung for Douglas in a recording of a piece of music he composed). But we simply prefer descriptive, established, obvious names for things, and eponyms do not fit that bill.</ref>
+
+A reminder about the different direction of the brackets between maps and vectors: maps {{map|...}} point left, vectors {{vector|...}} point right. A mnemonic is that "map", "left" and "row" are all short words while "vector", "right" and "column" are all longer words.
+
+[[File:Map and vector.png|500px|thumb|right|'''Figure 1a.''' Mapping example]]
+
+=== The dot product ===
+Maps and vectors give us a way to bridge JI and EDOs. If the vector gives us a list of primes in a JI interval, and the map tells us how many steps it takes to reach the approximation of each of those primes individually in an EDO, then when we put them together, we can see how many steps of the EDO should give its approximation of that JI interval. We say that the JI interval '''maps''' to that number of steps in the EDO. Calculating this looks like {{vmp|12 19 28|4 -1 -1}}, and all that means is to multiply matching terms and sum the results. 
+
+So, {{sfrac|16|15}} maps to one step in 12-EDO ''(see Figure 1a)''.
+
+In linear algebra, this operation is called the ''dot product''. If the ordinary product is the way we multiply ordinary numbers, then the dot product is the way we multiply maps and vectors. We're glossing over some details that will make more sense to explain later, but for now please just accept the following on face value: don't dot two maps together or two vectors together; only dot a map on the left with a vector on the right. It's called the dot product because in 3D geometry there is another kind of product between two vectors, called the cross product. They are distinguished by using a dot "•" for one and a cross "×" for the other. But we simply place a map and a vector side by side to represent their dot product, and we don't use the cross product at all.
+
+For another interval mapping example, we can quickly find the fifth size for 12-EDO from its map, because {{sfrac|3|2}} is {{vector|-1 1 0}}, and so <math>\vmp{12 & 19 & 28}{-1 & 1 & 0} = (12 \times -1) + (19 \times 1) = 7</math>. Similarly, the major third &mdash; {{sfrac|5|4}}, or {{vector|-2 0 1}} &mdash; is simply <math>28 - 12 - 12 = 4</math>.
+
+=== Representing JI ===
+[[File:5-limit lattice example.png|left|thumb|The 5-limit JI lattice. No subunison intervals are shown here. The diagram could be extended further outwards; this one leaves off somewhat arbitrarily wherever intervals would be too large, small, or complex]]
+Writing e.g {{sfrac|10|9}} as {{vector|1 -2 1}} is not merely a mathematical exercise. In a very real musical sense, this tells us that if we go up by one octave (prime harmonic 2), down by two tritaves (prime harmonic 3), and up again by one pentave (prime harmonic 5), then we will find ourselves {{sfrac|10|9}} above where we began. This may seem like a cumbersome way of thinking about the interval {{sfrac|10|9}}, but it's actually of critical importance to the theory of music written using JI, ETs, and RTT in general.
+
+The motivation is that the prime harmonics are the atomic elements of harmony, imbuing intervals with distinct characteristics, sometimes associated with or attributed to particular emotions, imagery, colors, or abstract concepts. And there are no exact substitutions; beginning from a shared pitch, with one voice moving only by e.g. prime 3's and another voice moving only by e.g. prime 5's, the two voices will never find another exact match besides the original pitch (for more information on this idea, see [[Wikipedia:Fundamental_theorem_of_arithmetic|the fundamental theorem of arithmetic]]). 
+
+And so the prime harmonics define completely independent harmonic dimensions, such as can be visualized on lattices of points and connecting edges, where music composed from only two prime harmonics can be seen in a 2D grid of squares, music composed from only three prime harmonics can be seen in a 3D grid of cubes, and so forth. We often call this the "JI lattice". We can then use vectors as coordinates in these lattices. They tell us how far apart two intervals are from each other&mdash;not in terms of their size (such as would be measured in cents), but in terms of their harmonic content. 
+
+For example, {{sfrac|9|8}} is very close to {{sfrac|10|9}} in pitch, but harmonically speaking it is quite different, whereas {{sfrac|5|3}} is far from {{sfrac|10|9}} in pitch, but harmonically speaking it is quite close. {{sfrac|10|9}}, as we know, has the vector {{vector|1 -2 1}}, and it is about 182.4{{c}} in size. {{sfrac|9|8}} has the vector {{vector|-3 2 0}} and is about 203.9{{c}}. {{sfrac|5|3}} has the vector {{vector|0 -1 1}} and is about 884.4{{c}}. So the difference in the vectors of {{sfrac|9|8}} and {{sfrac|10|9}} is {{nowrap|{{vector|-3 2 0}} &minus; {{vector|1 -2 1}} {{=}} {{vector|-4 4 -1}}}}, a rather complex interval of {{sfrac|81|80}}, while the difference in the vectors of {{sfrac|5|3}} and {{sfrac|10|9}} is only {{nowrap|{{vector|0 -1 1}} &minus; {{vector|1 -2 1}} {{=}} {{vector|-1 1 0}}}}, the simple interval of {{sfrac|3|2}}. (Note that subtracting vectors is the same thing as dividing quotients; if this is not apparent to you, we suggest working out these or other examples until you feel comfortable with this relationship.) So while {{sfrac|9|8}} is only 21.5{{c}} away from {{sfrac|10|9}} on a pitch line, it is worlds away on a JI lattice compared to {{sfrac|5|3}}, which while 702{{c}} away from {{sfrac|10|9}} on a pitch line, it is only two steps away from {{sfrac|10|9}} on a JI lattice. This tells us that it is closely related and will function well together in chords and scales.
+
+So in other words, the vector format is more than just a convenience. It also gives us critical insight into how harmony works.
+
+=== Making commas vanish ===
+[[File:Meantone temper out.png|200px|frame|right|'''Figure 1b.''' meantone equates four fifths (3/2) with one major third (5/4)]]
+
+Here's where things start to get really interesting.
+
+We can also see that the small JI interval {{sfrac|81|80}} maps to zero steps in 12-EDO, because {{nowrap|{{vmp|12 19 28|-4 4 -1}} {{=}} 0}}; we therefore say this JI interval '''vanishes''' in 12-EDO, or sometimes that it is '''[[Tempered out|tempered out]]''' (we prefer the former because the meaning of "temper" can get a bit ambiguous). And we say the map "makes (the interval) vanish". This type of JI interval is called a '''[[comma]]''', and this particular one is called the [[meantone comma]].
+
+The immediate conclusion is that 12-EDO is not equipped to approximate the meantone comma directly as a melodic or harmonic interval, and this shouldn't be surprising because {{sfrac|81|80}} is only 21.5{{c}}, while the (smallest) step in 12-EDO is five times that.
+
+But a more interesting way to think about this result involves treating {{vector|-4 4 -1}} not as a single interval, but as the end result of moving by a combination of intervals. For example, moving up four {{sfrac|3|2}} fifths, {{nowrap|4 × {{vector|-1 1 0}} {{=}} {{vector|-4 4 0}}}}, and then moving down one pentave {{vector|0 0 -1}}, gets you right back where you started in 12-EDO. Or, in other words, moving by one pentave is the same thing as moving by four fifths ''(see Figure 1b)''. One can make compelling music that [[Keenan's comma pump page|exploits such harmonic mechanisms]].
+
+From this perspective, the vanishing of {{sfrac|81|80}} is not a shortcoming, but a fascinating feature of 12-EDO; we say that 12-EDO '''[[support]]s''' meantone temperament. And {{sfrac|81|80}} in 12-EDO is only the beginning of that journey. For many people, choosing which commas to make vanish is one of the biggest draws to RTT.
+
+But we're still only talking about JI and EDOs here. If you're familiar with meantone as a historical temperament, you may be aware already that it is neither JI nor an EDO. It's something in between. But we're still working on building up our foundational understanding at this point; we'll get to what exactly meantone is in a little bit.
+
+One thing we can easily handle now, though, for the remainder of this series: switch from thinking of things as EDOs to thinking of them instead as ''ET''s, or '''[[equal temperaments]]'''. The two terms are [[EDO_vs_ET|roughly synonymous]], but they have different implications and connotations. To put it briefly, the difference can be found in the names: 12 '''E'''qual '''D'''ivisions of the '''O'''ctave suggests only that your goal is to equally divide the octave; on the other hand, 12 '''E'''qual '''T'''emperament suggests that your goal is to temper, and that you have decided that every step will be equal (the same size) in your particular temperament. So because we're learning about temperament theory here, it would be more appropriate and accurate for us to use the local terminology. "12-EDO" it isn't, then; "12-ET" it is.
+
+=== Mapping together ===
+A related effect temperaments have is ''mapping together'' intervals. Note how in 12-ET, {{sfrac|9|8}} maps to <math>\vmp{12 & 19 & 28}{-3 & 2 & 0} = (12×{-3}) + (19×2) + (28×0) = {-36} + 38 + 0 = 2</math> steps. But also, {{sfrac|10|9}} maps to <math>\vmp{12 & 19 & 28}{1 & -2 & 1} = (12×1) + (19×{-2}) + (28×1) = 12 + {-38} + 28 = 2</math> steps as well. So we can say that {{sfrac|10|9}} and {{sfrac|9|8}} are mapped together by 12-ET. Their difference is made to vanish. They end up the same size. In fact that's where the name "meantone" comes from. It takes two kinds of tone and replaces them with a single mean tone.
+
+We can understand this in terms of the comma that vanishes. {{sfrac|81|80}} is the difference between these two intervals. We can see it by dividing one quotient by the other, which is the same as multiplying one by the reciprocal of the other, like this: <math>\frac{9}{8} × \frac{9}{10} = \frac{81}{80}</math>. But it may be even easier to see in their vector form, where can just subtract them to see that {{nowrap|{{vector|-3 2 0}} &minus; {{vector|1 -2 1}} {{=}} {{vector|-4 4 -1}}}}.
+
+=== Frequency vs. pitch ===
+Has it ever bothered you that to reach one octave higher by a perfect fifth and perfect fourth, we do so by multiplication when we think in terms of pure harmonic ratios, i.e. it's <math>\frac{3}{2} × \frac{4}{3} = \frac{2}{1}</math>, and yet when we move by steps of 12-ET, we do so by addition, i.e. it's 7 piano keys + 5 piano keys = 12 piano keys?
+ 
+The difference here is between ''frequency'' and ''pitch''. With frequency we get from A to B using multiplication (often repeated multiplication, AKA exponentiation). With pitch we get from A to B using addition (again, often repeated, AKA multiplication). We can convert between these two spaces using mathematical functions called logarithms (frequency → pitch) and exponentials (other way, pitch → frequency). We'll address what exactly logarithms and exponentials ''are'' in more detail soon; for now, if you're unfamiliar with them, you can just think of them as a black box.
+
+For example, we can take the natural logarithm <math>\ln = \log_e</math> of every term in the equation <math>\frac{3}{2} × \frac{4}{3} = \frac{2}{1}</math>, and if we change multiplication to addition, it will still hold true:
+
+<math>
+\begin{array} {c}
+\ln\left(\frac{3}{2}\right) & + & \ln\left(\frac{4}{3}\right) & = & \ln\left(\frac{2}{1}\right) \\
+0.405 & + & 0.288 & = & 0.693 \\
+\end{array}
+</math>
+
+We can also take the base-10 log, another common default logarithmic base:
+
+<math>
+\begin{array} {c}
+\log_{10}\left(\frac{3}{2}\right) & + & \log_{10}\left(\frac{4}{3}\right) & = & \log_{10}\left(\frac{2}{1}\right) \\
+0.176 & + & 0.125 & = & 0.301 \\
+\end{array}
+</math>
+
+Regardless which logarithmic base we choose, the relationship will still work. But in our case, we have a strong preference for a particular logarithmic base: 2. This is because of the prominence of the octave in music theory, it being the typical interval of human pitch equivalence. And choosing this as our base gives us the handy feature that the logarithmic form of the octave is simply 1:
+
+<math>
+\begin{array} {c}
+\log_2\left(\frac{3}{2}\right) & + & \log_2\left(\frac{4}{3}\right) & = & \log_2\left(\frac{2}{1}\right) \\
+0.585 & + & 0.415 & = & 1 \\
+\end{array}
+</math>
+
+Owing to this convenient fact, we can actually attribute real-world meaning to these numbers. They're all amounts of octaves. Unsurprisingly, {{sfrac|2|1}} is exactly 1 octave. And so {{sfrac|3|2}} is 0.585 octaves, and {{sfrac|4|3}} is 0.415 octaves.
+
+But we can do even better. Since it can be unpleasant to work with such small numbers, where we're always thinking in three decimal places and lack some intuition, we tend to scale these numbers up. One solution is to convert to [[millioctave]]s, which simply means to multiply everything by 1000:
+
+<math>
+\begin{array} {c}
+( & 0.585 & + & 0.415 & = & 1 & )×1000 \\
+  &   585 & + &   415 & = & 1000 \\
+\end{array}
+</math>
+
+Which is fine and all. However, it's much more common to scale everything up by 1200 instead, which puts things in units of [[cents]]:
+
+<math>
+\begin{array} {c}
+( & 0.585 & + & 0.415 & = & 1 & )×1200 \\
+  &   702 & + &   498 & = & 1200 \\
+\end{array}
+</math>
+
+The disadvantage here, of course, is that we're not following the SI principle of using powers of 10 with its well-established numerical prefixes like milli-, centi-, deci-, etc. But the advantage is quite important: it lets us express things in familiar terms, at least familiar within the European-influenced tradition which we expect most of our readership is strongly influenced by, where 12-ET is the standard pitch system, and thus each of the 12 steps per octave of this system is divided into 100 pieces (hence "cents"). Also importantly, we can see that this scaling factor has resulted in values that are quite close to round numbers of cents&mdash;702 near 700, and 498 near 500&mdash;which leverages the fact that 12-ET provides such good approximations of the simplest (5-limit) harmonies for its complexity. There is a strong "anti-12" vibe in the xenharmonic community, to be sure, but most theorists nonetheless set this aside in order to accept cents as a pretty decent means of communicating about interval size.
+
+For more information on this topic, see {{subpage|tuning fundamentals|uprev|s=Logarithms|text=this section of the next article}}.
+
+=== Approximating JI ===
+If you've seen one map before, it's probably {{map|12 19 28}}. That's because this map is the foundation of the conventional tuning for European-influenced music: [[12edo|12 equal temperament]]. A major reason it stuck is because, as we just stated above, for its low complexity it has remarkably close approximations of all three of the first prime harmonics 2, 3, and 5 at the same time.
+
+One way to think of this is that <math>12:19:28</math> is an excellent low integer approximation of <math>\log(2):\log(3):\log(5)</math>. In other words, the ratios between the numbers <math>12</math>, <math>19</math>, and <math>28</math> are remarkably close to the ratios between <math>\log(2)</math>, <math>\log(3)</math>, and <math>\log(5)</math>. 
+
+* <math>\dfrac{19}{12} = 1.583 ≈ \dfrac{\log(3)}{\log(2)} = 1.585</math>
+* <math>\dfrac{28}{12} = 2.333 ≈ \dfrac{\log(5)}{\log(2)} = 2.322</math>
+* <math>\dfrac{28}{19} = 1.474 ≈ \dfrac{\log(5)}{\log(3)} = 1.465</math>
+
+You may be more familiar with seeing the base specified for a logarithm, but in this case the base is irrelevant as long as you use the same base for both numbers. If you don't see why, try experimenting with different bases and see that the ratio comes out the same.<ref group="note">[[Wikipedia:List_of_logarithmic_identities|This list of logarithmic identities]] has been an excellent resource for us in getting our heads around logarithmic thinking. As you can see there, <math>\frac{\log_{10}{a}}{\log_{10}{b}} = \log_{b}{a}</math>, so the base doesn't matter; you could put anything in there&mdash;10, 2, e&mdash;and it still reduces to <math>\log_{b}{a}</math>.</ref>
+
+But why take the logarithm at all? The reasoning is simple: a) the things we're approximating, <math>2</math>, <math>3</math>, and <math>5</math>, are ''not'' exponents; b) <math>12</math>, <math>19</math>, and <math>28</math>, the things we're approximating them with, ''are'' exponents; and c) logarithms give exponents, so we convert the things we're approximating to exponents in order to approximate them with exponents. And when we say "approximate", what we mean is that while the actual values are ''irrational'', we're going to try to find some small ''integer'' values which have about the same proportions to each other.
+
+<ol style="list-style-type: lower-alpha;">
+<li>'''2, 3, and 5 are not exponents.''' They're multipliers. To be specific, they're multipliers of frequency. If the root frequency {{sfrac|1|1}} is 440 Hz, then {{sfrac|2|1}} is 880 Hz, {{sfrac|3|1}} is 1320 Hz, and {{sfrac|5|1}} is 2200 Hz.</li>
+<li>'''12, 19, and 28 are exponents.''' Think of it this way: this map can be interpreted as a request for a special number <math>g</math>, called a '''generator''', which is shared between all three of its entries, such that <math>g^{12} \approx 2</math>, <math>g^{19} \approx 3</math>, and <math>g^{28} \approx 5</math>. It doesn't tell us whether or not all of those approximations can be good at the same time, but it at least tells us that that's what we're aiming for. For this map, it happens to be the case that a generator <math>g</math> of about <math>1.059</math> will be best. Note that this generator is the same thing as one step of our ET. Also note that by thinking this way, we are thinking in terms of frequency (e.g. in Hz), not pitch (e.g. in cents): when we move repeatedly in pitch, we repeatedly add, e.g. 100{{c}} + 100{{c}} + 100{{c}} + 100{{c}} + 100{{c}} + 100{{c}} + 100{{c}} + 100{{c}} + 100{{c}} + 100{{c}} + 100{{c}} + 100{{c}}, which can be expressed as multiplication, i.e. 12 × 100{{c}} = 1200{{c}}, while when we move repeatedly in frequency, we repeatedly multiply, e.g. 1.059 × 1.059 × 1.059 × 1.059 × 1.059 × 1.059 × 1.059 × 1.059 × 1.059 × 1.059 × 1.059 × 1.059, which can be expressed as exponentiation, i.e. {{nowrap|1.059<sup>12</sup> ≈ 2}}.</li>
+<li>'''Logarithms give exponents.''' A logarithm answers the question, "What exponent do we raise this base to in order to get this value?" So when we say <math>12 = \log_{g}{2}</math> we're saying that there's some base <math>g</math> which to the twelfth power gives <math>2</math>, and when we say <math>19 = \log_g{3}</math> we're saying there's some base <math>g</math> which to the nineteenth power gives <math>3</math>, etc. (That's how we found that <math>1.059</math> value, by the way; if <math>g^{12} \approx 2</math>, and we take the twelfth root of both sides, we get <math>g = \sqrt[12]{2} \approx 1.05946</math>, and we could have just easily taken <math>\sqrt[19]{3} \approx 1.05952</math> or <math>\sqrt[28]{5} \approx 1.05916</math>.</li>
+</ol>
+
+[[File:Approximation of logs.png|600px|thumb|left|'''Figure 1c.''' visualization of an ET as a logarithmic approximation. The curve of the blue line is the familiar logarithmic curve of the harmonic series (harmonic 4 was skipped because it's not prime). Each rectangular brick is one of our generators, or in other words, one of the same ET step. The goal is to choose a size of brick that allows us to build stacks which most closely matches the position of the blue line at all three of these primes' positions.]]
+
+For convenience we could write <math>\log(2):\log(3):\log(5)</math> more succinctly as <math>\log(2:3:5)</math>. So when we say <math>12:19:28 \approx \log(2:3:5)</math> what we're saying is that there is indeed some shared generator <math>g</math> for which <math>\log_g{2} \approx 12</math>, <math>\log_g{3} \approx 19</math>, and <math>\log_g{5} \approx 28</math> are all good approximations all at the same time, or, equivalently, a shared generator <math>g</math> for which <math>g^{12} \approx 2</math>, <math>g^{19} \approx 3</math>, and <math>g^{28} \approx 5</math> are all good approximations at the same time ''(see Figure 1c)''. And that's a pretty cool thing to find! To be clear, with <math>g = 1.059</math>, we get <math>g^{12} \approx 1.9982</math>, <math>g^{19} \approx 2.9923</math>, and <math>g^{28} \approx 5.0291</math>, which is indeed close to <math>2</math>, <math>3</math>, and <math>5</math>, respectively.
+
+But it may not be obvious why this is so cool at first. The main reason is: it's rare. It's rare to find sets of small integers like this whose ratios approximate those of log-primes. Another glowing example is the map {{map|53 84 123}}, for which a good generator will give you <math>g^{53} \approx 2.0002</math>, <math>g^{84} \approx 3.0005</math>, <math>g^{123} \approx 4.9974</math>. This speaks to historical attention given to [[53edo|53-ET]]. So while <math>53:84:123</math> is an even better approximation of <math>\log(2:3:5)</math> (and [https://en.xen.wiki/images/a/a2/Generalized_Patent_Vals.png you won't find a better one] until <math>118:187:274</math>, though you'll have to zoom in on this linked image and scroll across it horizontally to convince yourself of it, because it's an extremely wide image), of course its integers aren't as low, so that lessens its appeal.
+
+Why is this rare? Well, it's like a game of trying to get the centers of these numbered bricks to line up ''(see Figure 1d)'':
+
+[[File:Near linings up rare2.png|900px|thumb|right|'''Figure 1d.''' Texture of ETs approximating prime harmonics. Where the ''numerals'' line up (that is, the centers of the bricks, not their edges), all primes are closely approximated by a single generator size (the boundaries between cells are midpoints between perfect approximations, or in other words, the point where the closest approximation switches over from one generator count to the next) (the numerals are meant to be centered in each cell). Nudging one of the maps' vertical lines to the right would mean decreasing the generator size, flattening the tunings of all the primes, and vice versa, nudging it to the left would mean increasing the generator size, sharpening the tunings of all the primes. You can visualize this on Figure 1c. as shrinking or growing the height of the rectangular bricks. The positions of each map's vertical line, or in other words the tuning of its generator, has been optimized using some formula to distribute the deviations amongst the three primes; that's why you do not see any vertical line here for which the closest generator counts for each prime are all on one side of it.]]
+
+If the distance between entries in the row for prime 2 is defined as <math>1</math> length-unit (e.g. 1 centimetre), then the distance between entries in the row for prime 3 is <math>\frac{1}{\log_2{3}} ≈ 0.63</math> length-units, and <math>\frac{1}{\log_2{5}} ≈ 0.43</math> length-units for the prime 5. So, near-linings up don't happen all that often!<ref group="note">For more information, see: [[The_Riemann_zeta_function_and_tuning|The Riemann zeta function and tuning]].</ref> 
+
+By the way, any vertical line drawn through a chart like this is what we'll be calling here a [[uniform map]]; it has in the past been called a "[[generalized patent val]]", but we are critical of that terminology.<ref group="note">See our thoughts on that here: https://en.xen.wiki/w/Talk:Patent_val</ref> Drawing a vertical line through the chart is equivalent to starting with the '''log-prime map''' <math>\small {\normalsize\textbf{𝓁}}\hspace{2mu} = \val{\log_2{2} & \log_2{3} & \log_2{5} } ≈ \val{1 & 1.58 & 2.32}</math> and multiplying all its entries by the same positive real number before rounding them to the nearest integer.
+
+But what can we do with one of these rare good maps? Well, if {{map|12 19 28}} approximates the harmonic building blocks well individually, then JI intervals built out of them, like {{sfrac|16|15}}, {{sfrac|5|4}}, {{sfrac|10|9}}, etc. should also be reasonably closely approximated overall, and thus recognizable as their JI counterparts in musical context. You could think of it like taking all the primes in a prime factorization and swapping in their approximations. For example, if <math>\frac{16}{15} = 2^4 × 3^{-1} × 5^{-1} \approx 1.067</math>, and {{map|12 19 28}} approximates <math>2</math>, <math>3</math>, and <math>5</math> by <math>1.059^{12} \approx 1.998</math>, <math>1.059^{19} \approx 2.992</math>, and <math>1.059^{28} \approx 5.029</math>, respectively, then {{map|12 19 28}} maps {{sfrac|16|15}} to <math>1.998^4 × 2.992^{-1} × 5.029^{-1} \approx 1.059</math>, which is indeed pretty close to <math>1.067</math>. 
+
+(We might also note that <math>1.059</math> is the same as our generator of {{map|12 19 28}}, which checks out with our calculation we made in the previous section that the best approximation of {{sfrac|16|15}} in {{map|12 19 28}} would be 1 step.)
+
+=== Tuning & pure octaves ===
+Now, because the octave is the [[interval of equivalence]] in terms of human pitch perception, it's a major convenience to enforce pure octaves, and so many people prefer the first term to be exact. In fact, we'll bet many readers have never even heard of or imagined impure octaves, if our own anecdotal experiences are any indicator.
+
+Well, we didn't make a big deal of it, but back in the previous section, we ''did'' approximate the octave, using <math>1.998</math> instead of <math>2</math>, and no one got hurt. That said, another thing {{map|12 19 28}} has going for it is that it excels at approximating 5-limit JI even when we constrain ourselves to pure octaves, locking <math>g^{12}</math> to exactly <math>2</math>. That gives us <math>(\sqrt[12]{2})^{19} \approx 2.997</math> for our approximation of <math>3</math> and <math>(\sqrt[12]{2})^{28} = 2^{\frac{7}{3}} \approx 5.040</math> for our approximation of <math>5</math>. You can see that actually the approximation of 3 is even better here than when that particular tempered octave tuning we tried out in the previous section, marginally anyway; it's the error on 5 which is a bit lamentable here.
+
+When we don't enforce pure octaves, tuning becomes a more interesting problem. Approximating all three primes at once with the same generator is a balancing act. Usually at least one of the primes will be tuned a bit sharp while at least one of them will be tuned a bit flat. In the case of {{map|12 19 28}}, the 5 is a bit sharp, and the 2 and 3 are each a tiny bit flat (as you can see in Figure 1c).
+
+This matter of choosing the exact generator for a map is called '''tuning''', and we'll look at that in detail in the next article of this series. Temperament&mdash;the first 'T' in "RTT"&mdash;is the discipline concerned with choosing interesting ''maps'', and the exact tunings of the generators they represent can remain largely independent from it. The temperament is only concerned with the fact that&mdash;no matter what exact size you ultimately make the generator&mdash;it is the case e.g. that 12 of them make a 2, 19 of them make a 3, and 28 of them make a 5. This can sometimes feel frustrating or hard to understand, but ultimately it’s a big part of the power of temperament theory that we have this level of abstraction available to work with.
+
+=== A multitude of maps ===
+Suppose we want to experiment with the {{map|12 19 28}} map a bit. We'll change one of the terms by 1, so now we have {{map|12 20 28}}. Because the previous map did such a great job of approximating the 5-limit (i.e. <math>\log(2:3:5)</math>), though, it should be unsurprising that this new map does not achieve that effect. The proportions of <math>12:20:28</math>&mdash;at least the two new ones using the <math>20</math>, namely <math>12:20 = 3:5</math> and <math>20:28 = 5:7</math>&mdash;should now be about as out of whack as they can get. The best generator we can do here is about <math>1.0583</math> (we've increased the count of decimal places, getting a little more precise now to better illustrate this point), and <math>1.0583^{12} \approx 1.9738</math> which isn't so bad of an approximation of <math>2</math>, but <math>1.0583^{19} \approx 3.1058</math> and <math>1.0583^{28} \approx 4.8870</math> which are both ''way'' off from <math>3</math> and <math>5</math>, respectively! And they're way off in the opposite direction&mdash;<math>3.1058</math> is too big and <math>4.8870</math> is too small&mdash;which is why we can't improve the situation: whether we widen or narrow the tuning of <math>g</math>, we can only help one approximation while hurting the other.
+
+The results of such drastically inaccurate approximations are too chaotic to be musically interesting. A ratio like {{sfrac|16|15}}&mdash;where the factors of <math>3</math> and <math>5</math> are on the same side of the fraction bar and therefore counteract each other's poor approximations, is made to vanish despite being about 112{{c}} in JI (for comparison, recall that the meantone comma is only about 22{{c}}, which is a much more reasonably-sized interval to find vanishing in a temperament). And on the other extreme, consider an interval like {{sfrac|27|25}} where the factors of <math>3</math> and <math>5</math> are on opposite sides of the fraction bar and thus their poor approximations compound: it gets mapped to a whopping 4 generator steps&mdash;about 400{{c}}&mdash;despite only being about 133{{c}} in JI!
+
+If your goal is to evoke JI-like harmony, then, {{map|12 20 28}} is not your friend. Feel free to work out some other variations on {{map|12 19 28}} if you like, such as {{map|12 19 29}} maybe, but we guarantee you won't find a better one that starts with 12 than {{map|12 19 28}}.
+
+[[File:17-ET mistunings.png|thumb|600px|right|'''Figure 1e.''' Deviations from JI for various 17-ET maps, showing how the simple map's total error can be improved upon by allowing tempered octaves and second-closest mappings of primes. It also shows how pure octave 17c has no primes tuned flat.]]
+
+So the case is cut-and-dry for {{map|12 19 28}}, and therefore from now on we're simply going to refer to this ET by "12-ET" rather than spelling out its map. But other ETs find themselves in trickier situations. Consider [[17-ET]]. One option we have is the map {{map|17 27 39}}, with a generator of about <math>1.0418</math>, and prime approximations of <math>2.0045</math>, <math>3.0177</math>, and <math>4.9302</math>. But we have a second reasonable option here, too, where {{map|17 27 40}} gives us a generator of <math>1.0414</math>, and prime approximations of <math>1.9929</math>, <math>2.9898</math>, and <math>5.0659</math>. All we've changed here is the third entry, the one for prime <math>5</math>. With either map, the approximations of <math>2</math> and <math>3</math> are close, but the approximation of <math>5</math> is way off. For ⟨17 27 <span style="color: red">39</span>], it's way small, while for ⟨17 27 <span style="color: red">40</span>] it's way big. The conundrum could be described like this: any generator we could find that divides <math>2</math> into about 17 equal steps can do a good job dividing <math>3</math> into equal steps, too (about 27 of them, it so happens), but it will not also be able to do a good job of dividing <math>5</math> into equal steps; <math>5</math> is going to land, unfortunately, right about in the middle between the 39<sup>th</sup> and 40<sup>th</sup> steps, as far as possible from either of these two nearest approximations. To do a good job approximating prime <math>5</math>, we'd really wish we could have a 39.5 there! But we only use integer steps in RTT, so when we wish for {{map|17 27 39.5}} what we're really asking for is {{nowrap|2 × {{map|17 27 39.5}} {{=}} {{map|34 54 79}}}}, or in other words we want [[34edo|34-ET]], where each step of 17-ET has been subdivided in half.
+
+[[File:17-ET.png|thumb|300px|left|'''Figure 1f.''' Visualization of some 17-ETs on the uniform map continuum, along with their minimax-ES tunings, as well as the pure octave tuning. The pure octave tuning is always, by definition, inside the region for the simple map, denoted with the "p". (If this diagram is unclear, please refer back to Figure 1d., which has the same type of information but with more thorough labeling.)]]
+
+Curiously, {{map|17 27 39}} is the map for which each prime individually is as closely approximated as possible when prime <math>2</math> is exact, so it is in a sense the naively best map for 17-ET, however, if that constraint is lifted, and we're allowed to either approximate prime <math>2</math> and/or choose the next-closest approximations for prime <math>5</math>, the overall approximation can be improved; in other words, even though 39 steps can take you just a tiny bit closer to prime <math>5</math> than 40 steps can, the tiny amount by which it is closer is not as valuable as the improvements to the approximations of primes <math>2</math> and <math>3</math> we can get by using {{map|17 27 40}}. So again, the choice is not always cut-and-dry; there's still a lot of personal preference going on in the tempering process.
+
+So some musicians may conclude "17-ET is clearly not cut out for 5-limit music," and move on to another ET. Other musicians may snicker maniacally, and choose one or the other map, and begin exploiting the profound and unusual 5-limit harmonic mechanisms it affords. We note that {{map|17 27 40}}, just like {{map|12 19 28}}, makes the meantone comma vanish {{vector|-4 4 -1}}, so even though fifths and major thirds are different sizes in these two ETs, the effect that four fifths exactly equals one major third is shared. On the other hand, the {{map|17 27 39}} version of 17-ET does ''not'' support meantone, but it does do something that that neither 12-ET nor the other 17-ET map do, and that's make {{sfrac|25|24}} vanish, {{vector|-3 -1 2}}; this means that it equates one {{sfrac|3|2}} fifth with two {{sfrac|5|4}} major thirds.
+
+Note that if we enforce pure octaves, the difference between {{map|17 27 39}} and {{map|17 27 40}} is nominal, or contextual. The steps in either case are identically sized: exactly <math>\sqrt[17]{2}</math>, or <math>\frac{1200}{17} = 70.588</math>{{c}}. Depending on the map, we simply choose to think of prime <math>5</math> as being approximated by either 39 or 40 of those same-sized steps, or imply our choice in the music somehow. But when octaves are freed to be tempered, then the difference between these two maps may become quite pronounced. When optimizing for {{map|17 27 39}}, the best generator size is around 70{{c}}, but when optimizing for {{map|17 27 40}}, the best generator size is more like 71{{c}}. That may look like a small difference when comparing the generators themselves, but don't forget that this difference compounds with each iteration of the generator; since the octave takes 17 iterations of the generator to reach, this means that the first temperament has got a {{nowrap|70 × 17 {{=}} 1190{{c}}}} octave, while the second one's got a {{nowrap|71 × 17 {{=}} 1207{{c}}}} octave; now that's a rather striking 17{{c}} difference!
+
+You will sometimes see maps like 17-ET's distinguished from each other using names like 17 versus 17c. This is called [[wart notation]]. Basically, the 'c' marks that map as warted, specifically, that prime 5 is at its second-nearest approximation, because prime 5 is the 3<sup>rd</sup> prime and 'c' is the 3<sup>rd</sup> letter of the alphabet.
+
+=== Regularity ===
+You may be wondering: but why do we need all these vectors and maps? If we know the size of our generator, can't we simply round each interval to the nearest step size? 
+
+Well, that may seem like an obvious and appealing solution at first, but we'll run into problems pretty quickly if we approach things that way. 
+
+Let's work through an illustrative example of one kind of problem we would encounter. Suppose we decide we'd like to explore [[17-ET]]. And for simplicity's sake, let's say we tune our octave pure, so our generator is simply <math>\sqrt[17]{2}</math>, which in cents is {{nowrap|1200/17 {{=}} 70.588{{c}}}}. 
+
+If we choose to approximate the JI interval {{sfrac|5|4}} by rounding to the nearest available step, that will be the 5<sup>th</sup> step of 17-ET. This is because the just {{sfrac|5|4}} is found at <math>1200×\log_2{\frac{5}{4}} = 386.314 ¢</math>, which is 37.215{{c}} off from the 6<sup>th</sup> step at 423.529{{c}}, but only 33.373{{c}} off from the 5<sup>th</sup> step at 352.941{{c}}. So it's not too close to either step, unfortunately&mdash;pretty much right in the middle, actually&mdash;but that's sort of how it goes with 17-ET.
+
+By the way, it is common to notate the <math>m</math><sup>th</sup> step of <math>n</math>-ET as "<math>m</math>\<math>n</math>". It looks like how we write quotients (e.g. 5/17), but with the slash slanted the other way to distinguish them (they're completely different things). So the 5<sup>th</sup> step of 17-ET would be written as "5\17". We'll be using this convenient shorthand notation moving forward.
+
+Next, let's approximate the JI interval {{sfrac|6|5}} by rounding it to the nearest 17-ET step in the same way. This leads us to 4\17, because the just {{sfrac|6|5}} is <math>1200×\log_2{\frac{6}{5}} = 315.641 ¢</math>, which is 37.300{{c}} off from 5\17 at 352.941{{c}} but only 33.288{{c}} off from 4\17 at 282.353{{c}}. Again, it's not great either way, but it is what it is. 
+
+For our third and final JI interval that we need to complete this illustrative example, we'll approximate {{sfrac|3|2}} in the same way. This one's easy, since 17-ET has a pretty good fifth; at <math>1200×\log_2{\frac{3}{2}} = 701.955 ¢</math>, the obvious choice is 10\17 at 705.882{{c}}, only 3.927{{c}} away. 
+
+So what's the problem, then? Well, we're ready to show it now! 
+
+The problem is this: in JI, if we moved by the interval {{sfrac|5|4}}, then by the interval {{sfrac|6|5}}, we'd expect to end up in the same place as if we moved by the interval {{sfrac|3|2}}, because <math>\frac{6}{5} × \frac{5}{4} = \frac{3}{2}</math>, or in cents, because {{nowrap|386.314{{c}} + 315.641{{c}} {{=}} 701.955{{c}}}}. ''But that doesn't happen with this set of approximations we chose.'' Plainly put, {{nowrap|4 + 5 &ne; 10}}, which is to say that moving by 4\17 and then 5\17 doesn't get us to 10\17 (or in cents, {{nowrap|352.941{{c}} + 282.353{{c}} {{=}} 635.294{{c}} &ne; 701.955{{c}}}}). 
+
+One way to describe what happened here, where <math>\text{~}\frac{5}{4} × \text{~}\frac{6}{5} \neq \text{~}\frac{3}{2}</math>, is that we created an ''irregular'' temperament. And so we can solve the problem by using a ''regular'' temperament<ref group="note">From a more technical point of view, we can say that the meaning of "regular" in "regular temperament" means that tempering, when considered as a mathematical function, can be shown to obey the [[Wikipedia:Superposition_principle|superposition principle]]. This "regular" condition is comparable with the meaning of the word "linear" in "linear algebra", and so "regular temperament theory" might have been called "linear temperament theory" instead. A big reason why it didn't was because "linear temperament" was already an established term with a more specific meaning. A linear temperament meant what we now call a rank-2 temperament, but with one generator assumed to be a pure octave, and therefore not even recognised as a generator. This term was in contrast with "equal temperament" (rank-1) and "planar temperament" (rank-3 with a pure octave generator). All three of these types of temperaments are "linear" in the superposition principle sense, i.e. "regular" as we call them today. Now if you're not comfortable with the meaning of linear in linear algebra, a quick summary would be that its vectors and matrices are great at modeling algebraic problems where no variable has an exponent other than 1, i.e. all expressions of the form <math>m_1x_1 + m_2x_2 + … + m_nx_n + c</math> (but not anything like <math>x^2</math>,  <math>\frac1x</math>,  <math>\log{x}</math>,  <math>\sin{x}</math>, etc.); the superposition principle enforces expressions of this type with its two rules, one of them enforcing good behavior with respect to addition, and the other enforcing good behavior with respect to multiplication.</ref>. So let's get right on that. Get ready, because we're bringing back the vectors and maps! 
+
+Another by the way: in RTT, that <math>\text{~}</math> symbol, called a "tilde", just means "our approximation of".
+
+So we'll stick with 17-ET, but if we're doing a regular temperament, we don't actually need to know the exact generator size (if you like, you may assume it's still 70.588{{c}}). All we need to know is our map. Suppose we use the {{map|17 27 40}} map, then. In that case (and with {{sfrac|5|4}} = {{vector|-2 0 1}}, {{sfrac|6|5}} = {{vector|1 1 -1}}, and {{sfrac|3|2}} = {{vector|-1 1 0}} ), we find interval sizes of:
+* {{sfrac|5|4}}: <math>\vmp{17 & 27 & 40}{-2 & 0 & 1} = (17×{-2}) + (27×0) + (40×1) = {-34} + 0 + 40 = 6</math>
+* {{sfrac|6|5}}: <math>\vmp{17 & 27 & 40}{1 & 1 & -1} = (17×1) + (27×1) + (40×{-1}) = 17 + 27 + {-40} = 4</math>
+* {{sfrac|3|2}}: <math>\vmp{17 & 27 & 40}{-1 & 1 & 0} = (17×{-1}) + (27×1) + (40×0) = {-17} + 27 + 0 = 10</math>
+
+So we find that under our regular temperament here <math>\text{~}\frac{5}{4} × \text{~}\frac{6}{5}</math> ''does'' manage to equal our <math>\text{~}\frac{3}{2}</math>. What has changed is our approximation of {{sfrac|5|4}}; we've switched it over to its second-closest approximation. Now, that doesn't necessarily make it the "wrong" approximation, nor is it "unhearable" as 6\17 or anything like that. At least, questions of that nature are incredibly subtle and complex and beyond the scope of this discussion. Suffice it to say here that neither 5\17 nor 6\17 are particularly close, so getting people to hear either one as <math>\text{~}\frac{5}{4}</math> is going to involve a lot of musical context, leveraging some social conditioning, etc. But whether or not these are actually convincing as the JI intervals we're approximating is not the point here; we note that this would be under question even with the naive nearest-approximation method. What is under review at this time is whether or not the approximation method is ''consistent'' with respect to a single unified way how the underlying harmonic principles might have worked if the piece had been JI instead.
+
+That's right: there's more than one way. For example, we also find that things work out regularly with our {{map|17 27 39}} map, but in a different way:
+* {{sfrac|5|4}}: <math>\vmp{17 & 27 & 39}{-2 & 0 & 1} = (17×{-2}) + (27×0) + (39×1) = {-34} + 0 + 39 = 5</math>
+* {{sfrac|6|5}}: <math>\vmp{17 & 27 & 39}{1 & 1 & -1} = (17×1) + (27×1) + (39×{-1}) = 17 + 27 + {-39} = 5</math>
+* {{sfrac|3|2}}: <math>\vmp{17 & 27 & 39}{-1 & 1 & 0} = (17×{-1}) + (27×1) + (39×0) = {-17} + 27 + 0 = 10</math>
+
+With this map, {{sfrac|6|5}} and {{sfrac|5|4}} get ''mapped together'', i.e. both to 5\17 (which means that their difference, {{sfrac|25|24}}, is made to vanish by this map; to confirm, <math>\vmp{17 & 27 & 40}{-3 & -1 & 2} = (17×{-3}) + (27×{-1}) + (39×2) = {-51} + {-27} + 78 = 0)</math>. And this time it's the {{sfrac|6|5}} that has been swapped to its second-best approximation. So this is a completely different way of interpreting 17-ET than the {{map|17 27 40}}. But again, the point is that either of these ways would allow us to adapt JI to 17-ET without running into all sorts of crazy conundrums as soon as a major chord (4:5:6) appeared. 
+
+We could say that regular temperaments cope with this situation way better than a naive nearest-approximation approach does. It's not the case that rough approximations like we get in 17-ET inevitably cause this sort of problem and it's insurmountable. 
+
+As a side effect of this regularity, we sometimes see surprising things happen. Sometimes positive intervals will even get mapped to a negative number of steps. This happens, for example, in 16-ET, where the [[Pythagorean chromatic semitone]] {{sfrac|2187|2048}} maps to -1 step: <math>\vmp{16 & 25 & 37}{-11 & 7 & 0} = (16×{-11}) + (25×7) + (37×0) = {-176} + 175 + 0 = {-1}</math>. In effect, this means that sharps ''lower'' pitch in 16-ET, and flats ''raise'' pitch. Absolutely wild. Which is a good argument for not using sharps or flats in notating 16-ET, at least when using its closest circle-of-fifths notation. And relatedly, we find cases where interval A is larger than interval B in JI, but once mapped, it's interval B which comes out larger.<ref group="note">For example, in 51-ET, we have {{vmp|51 81 118 143|-4 4 -1 0}} =
+<br /><br />
+<math>\small
+`\begin{array} {c}
+(51×{-4}) & + & (81×4) & + & (118×{-1}) & + & (143×0) & = \\ 
+{-204}    & + & 324    & + & {-118}     & + &  0      & = \\
+\end{array}
+\\ 2
+</math>
+<br /><br />
+but {{vmp|51 81 118 143|6 -2 0 -1}} = 
+<br /><br />
+<math>\small
+\begin{array} {c}
+(51×6) & + & (81×{-2}) & + & (118×0) & + & (143×{-1}) & = \\
+ 306   & + & {-162}    & + & 0       & + & {-143}     & = \\
+\end{array}
+\\ 1
+</math>
+<br /><br />
+which tells us that {{sfrac|81|80}} is sent to 2 steps but {{sfrac|64|63}} is sent to only 1 step, despite {{sfrac|64|63}} being a larger interval than {{sfrac|81|80}}.</ref> But that's just the way harmonic reality warps when you approach it regularly. 
+
+And regularity is not a lie. It reasonably reflects the way our ears will rewire to interpret harmony when immersed in music that uses those approximations. We could even say that RTT gives a couple different good suggestions&mdash;in the form of these two maps&mdash;about how to use 17-ET that we wouldn't have otherwise.
+
+If you're new to regular temperaments, it's totally okay if this situation is a bit of a head-scratcher, or even mind-blower. But it gets right at the crux of why they're so powerful and important, too. So please take your time with this idea if need be.
+
+== Mappings ==
+So far we've only looked at the most basic kind of temperament: ''equal'' temperaments, the kind where every step is ''equal'' in size; and at the other extreme just intonation, where we essentially have one different step size for each prime (and that step is exactly the same size as the prime itself). A key reason to use a temperament is for its lower complexity versus JI; specifically, temperaments reduce the count of step sizes we need to use. But ETs, which reduce us all the way down to a single step size, are the extreme solution: in limiting ourselves to approximating every prime through only a single generator we may force ourselves to make some fairly painful compromises on the accuracy of some of those approximations.
+
+But we don't have to go that far. Instead we may reduce only some of the complexity of JI, while preserving more of the approximation accuracy. And that's what RTT is largely about: by reducing our count of generators without going all the way down to only one of them, we may explore the musical possibilities between JI and ETs. For 5-limit JI, this means finding a good ''pair'' of generators. For each generator of a temperament, we need one map, and so with a pair of generators, we have to learn how to put two maps together and how they work together to approximate JI intervals. We can even have three or more generators, depending on the starting JI prime-limit and the temperament in question. For temperaments like this, we'll need mappings.
+
+A temperament can be represented by an object called a '''mapping''', which contains one map for each generator of the temperament.<ref group="note">While it is true that, in mathematics generally, ''mapping'' and ''map'', when used as nouns, are synonyms, and both are synonymous with ''function''. But there is very little difference between an individual row of a mapping, and a mapping with only one row. So if we were to agree that, in RTT, only an individual row should be called a ''map'', and someone new to the field assumes that a map is the same as a mapping, then there are almost no consequences of that temporary confusion, if it can even be called confusion. For 12edo, its 5-limit ''map'' is {{map|12 19 28}}, and its 5-limit ''mapping'' is {{rket|{{map|12 19 28}}}}. The mnemonic is simple: The shorter term applies to the smaller object. The difference rarely matters to anyone.<br /><br />Dave Keenan is one of the founders of regular temperament theory along with Paul Erlich, Graham Breed, Gene Smith and others, since 1998. In online discussions of regular temperaments, and in their writings, all four of them have referred to any array of numbers whose units are "generators per prime", as a mapping, ever since they first referred to them as anything at all, which seems to have been in early 2001. Only rarely has this been shortened to "map"&mdash;typically only as a heading in tables of temperament data generated by Gene Ward Smith. But even Gene is on record as defining a "prime mapping" as a "list of vals", here: http://www.tonalsoft.com/enc/p/prime-mapping.aspx Evidence of this history of usage of map and mapping can be found in the [[YahooTuningListArchival|Yahoo tuning groups archive]].<br /><br />Most of the temperament data in the Xen Wiki was generated by Gene, so it is not surprising if it contained "map" as an abbreviation of "mapping".<br /><br />In the Xen Wiki and Graham Breed's temperament finder and the tuning archives, the term "map" (and not "mapping") already consistently refers to an individual row of the form {{map|...}}. This is in the case of a "[[tuning map]]", which maps from generators to cents. This is a map in "tuning space". By analogy, a row of a mapping is therefore a map in "temperament space", and so it would be perfectly consistent with existing terminology, to refer to a mapping-row or one-row mapping as a "temperament map" as opposed to a temperament mapping. So an unqualified "map" should be assumed to be a temperament map, not a tuning map. Or at least when it is clear from the context that it is a temperament map, the qualifier "temperament" can be dropped.</ref> As we mentioned in the introduction of this article, mappings are the most important objects in the subfield of RTT. And so these will be our focus of study in this section of this article.
+
+=== Matrices ===
+We've learned that the mathematical structure that maps use is called a "row vector". As for mappings, the name of the mathematical structure that they use is called a "''matrix''". Its plural is "matrices", which is pronounced "MAY-tra-seez".
+
+When we introduced vectors, we described them as the next step up in complicatedness from a basic number, in the sense of them being multi-numbers&mdash;an ordered list of numbers that work together following special new rules for operations like addition, multiplication, and so on. (And we saw a key example of this: how vectors multiply with each other using the dot product.) Well, we can think of matrices as the next step up in complicatedness again, from a vector. They're not just a list of numbers working together, but a whole box of them, laid out in a grid of rows and columns. And these have their own rules for adding, multiplying, etc., which generalize those of maps and vectors. Here's an example:
+
+<math>
+\left[ \begin{matrix}
+12 & 19 & 28 \\
+17 & 27 & 40 \\
+\end{matrix} \right]
+</math>
+
+So ordinary numbers or "scalars" are 0-dimensional values, akin to points. Vectors are 1-dimensional arrays of numbers, or lines of numbers. And matrices are 2-dimensional arrays of numbers, or planes of numbers. But in RTT, and in math and science generally, there are so many different possible uses of the word "dimensional" that we will use the word "order"<ref group="note">This is also called the (tensor) "rank", but we need to reserve "rank" for its linear algebra meaning as the number of linearly independent rows in a matrix.</ref> when referring to the dimensionality of the mathematical structure as we are here. A scalar is order-0, a vector is order-1, and a matrix is order-2. We'll reserve "dimensionality" to refer to the musical information they represent. For instance, the vector {{vector|1 1 -1}} is order-1 like any other vector is, because it is a single list of numbers; the musical interval it represents; however, if it were plotted on a JI lattice, that JI lattice would be 3-dimensional, with one axis for each of the three prime numbers (2, 3, and 5) used. And the matrix just above is an order-2 mathematical structure&mdash;a list of lists of numbers, in a way&mdash;but it happens to represent information about 5-limit JI, which as we've just explained is 3-dimensional. We note that we'll never need to use any mathematical structure of higher order than matrices; when doing RTT, you will probably one day work with JI lattices of higher dimensionality than 3&mdash;such as 7-limit JI which is 4D, or 11-limit JI which is 5D, and so on&mdash;but you'll never need any mathematical structure with more than 2 orders to represent them. 
+
+Here's another way in which we'd be tempted to use "dimension". We might want to say that a matrix with two rows and three columns has dimensions of 2×3. Instead, we'll say it has the "shape" (2,3). The number of rows (the height) is given first.
+
+Now that we've brought the 2<sup>nd</sup> order (dimension of mathematical structure) into play, we're ready to explain more about the difference between vectors and maps, which we had left in suspense previously. 
+
+As you may be able to tell, this mapping is built out of two maps, and not just any two maps, but two maps we should recognize from the previous section. We've got the first map there as {{map|12 19 28}}, the map for 12-ET, and the second map there as {{map|17 27 40}}, one of the two maps we looked at for 17-ET. All we did was set these two maps together, and now we have a mapping. 
+
+Notably, when we merged the maps for 12-ET and 17-ET, we took them as rows, and set them one on top of another. This was not an arbitrary decision. The mathematical convention where maps are treated as ''rows'' of numbers, while vectors are treated as ''columns'' turns out to be important. When we write a vector amid text for convenience, like this: {{vector|-2 0 1}}, it looks like a row of numbers just like a map does. But when we think of its mathematical reality or render it on the page like this:
+
+<math>
+\left[ \begin{matrix}
+-2 \\
+0 \\
+1 \\
+\end{matrix} \right]
+</math>
+
+we find it laid out as a column. This is actually a good way to think about what the notational difference between a vector and map is meant to convey: when the arrow bracket points to the left, like {{map|12 19 28}} the numbers occur in a row, and when the arrow bracket points to the right, like {{vector|-2 0 1}}, the numbers occur in a column. That mnemonic again: "map", "left" and "row" are short words while "vector", "right" and "column" are longer.
+
+So we can notate a mapping in text using a clever combination of these notations, like this: <math>\rket{\val{12 & 19 & 28}\,\val{17 & 27 & 40}}</math>. You can think of this notation as saying&mdash;from the outside, working in&mdash;that we have a column of information, and its first entry is a row of three numbers, and its second entry is another row of three numbers. (As for the use of the curly bracket rather than an angle bracket, we'll explain that stylistic choice shortly.)
+
+=== Rank ===
+Another name for an ET is a '''rank-1 temperament''', where "rank" is the specialized word used in RTT to refer to the count of generators / different step sizes. An ET, as we know, has only one generator, so it is rank-1. Higher-rank temperaments, then, such as rank-2 temperaments, have more than one generator. This mapping matrix shown above&mdash;the one we built out of the maps for 12-ET and 17-ET&mdash;is for a rank-2 temperament, because it has two rows, i.e. it's built out of two maps. 
+
+We note that a single map can be used as a mapping. Or in other words, it's perfectly reasonable for a mapping to be built out of only a single map. An ET like 12-ET or 17-ET is a temperament like any other temperament: it can be represented by a mapping. It's just the case that their mappings have only one row. One row, one rank, one generator, one step size: these are all one and the same concept. 
+
+If it's ever important to distinguish a map from a single-row mapping, you can put the map inside a column vector wrapper, e.g. {{map|12 19 28}} is a map but {{rket|{{map|12 19 28}}}} is a single-row mapping.
+
+=== Matrix multiplication ===
+It's time to learn how to map intervals with higher-rank mappings. It's actually not that complicated, since we already know how to do rank-1 (ET) mappings. All we have to do, really, is map the interval by each row of the mapping (just like we would if it was a standalone map!) and then assemble the results together at the end.
+
+Let's see how this plays out for {{sfrac|10|9}}, or {{vector|1 -2 1}}, and the {{rket|{{map|12 19 28}} {{map|17 27 40}}}} example mapping. Inline, we have <math>\vmp{12 & 19 & 28}{1 & -2 & 1} = (12×1) + (19×{-2}) + (28×1) = 12 + {-38} + 28 = 2</math>, and <math>\vmp{17 & 27 & 40}{1 & -2 & 1} = (17×1) + (27×{-2}) + (40×1) = 17 + {-54} + 40 = 3</math>, so our results are <math>2</math> and <math>3</math>. We've been asked to assemble them together. Meaning… that's right! A new multi-number, or vector: {{vector|2 3}}. 
+
+This one, you'll almost certainly notice right away, unlike the 5-limit JI vectors we've looked at so far, has only ''two'' numbers, not three. That's because while the three entries of 5-limit JI vectors give counts of ''primes'', namely primes 2, 3, and 5, these two entries of this mapped vector give counts of ''generators''. So these vectors representing mapped intervals are called '''generator-count vectors'''.<ref group="note">Generator-count vectors can be called GC-vectors for short. Since interval vectors are often called monzos, and tempered sometimes means mapped in this sense, you'll sometimes see these called tempered monzos, or [[Tmonzos_and_Tvals|tmonzos]] for short.</ref> What this mapping is telling us is that in this temperament, we will find <math>\text{~}\frac{10}{9}</math> to be approximated by 2 of the first generator and 3 of the second generator. 
+
+If, for example, the first generator was tuned to 33{{c}} and the second generator to 45¢, this would give us an approximation of {{nowrap|33×2 + 45×3 {{=}} 66 + 135 {{=}} 201{{c}}}}, which is 19{{c}} sharp from the just tuning of {{sfrac|10|9}} of 182{{c}}, which isn't great, but the point here was only to do a sanity-check that our process basically worked. And this is as good a time as any to emphasize again that temperaments are abstract; they are not ready-to-go as tunings, but more like instructions for a tuning to follow. 
+
+We have suggested a notational variation where we use [[Extended_bra-ket_notation#Variant_including_curly_and_square_brackets|curly brackets instead of angle brackets]] for vectors and matrices whose height or width equals the rank (the count of generators, as opposed to the count of primes being approximated). So we write this <math>\text{~}\frac{10}{9}</math> as [2 3}. (The curliness is meant to evoke the curliness of the tilde symbol used to identify approximate intervals.)
+
+Here's a cool observation. Remember when we mapped intervals by ET maps earlier in this article, we took 3-entry vectors and mapped them down to a ''single ordinary number'', rather than a 2-entry vector; well, another way to look at what we were doing there was mapping them down to a ''1-entry vector''! For example, when we mapped {{sfrac|16|15}} by 12-ET, we could see that as <math>\rket{\val{12 & 19 & 28}}\monzo{4 & -1 & -1} = \rket{1}</math>. It's just that there's no difference between a 1-entry vector like {{rket|1}} and an ordinary number like 1, so it's not usually helpful to think of them in that way. But we hope that recognizing this interpretation may help reinforce your understanding of what's happening here (and we can think of JI in this way too: prime-count vectors are also generator-count vectors, when we recognize that JI can be thought of as the trivial temperament where we have one generator for each prime, that's exactly the same size as that prime).
+
+To conclude this section, it may also be helpful to visualize this higher-rank mapping using full mathematical style:
+
+{| style="margin: auto auto auto auto;"
+| <math>
+\Large\left[ \begin{matrix}
+\style{background-color: #C6DC67; padding: 5px;}{12} & \style{background-color: #8DC73E; padding: 5px;}{19} & \style{background-color: #3FBC9D; padding: 5px;}{28} \\
+\style{background-color: #7977B8; padding: 5px;}{17} & \style{background-color: #AF72B0; padding: 5px;}{27} & \style{background-color: #D883B7; padding: 5px;}{40} \\
+\end{matrix} \right]
+
+\left[ \begin{matrix}
+\style{background-color: #FDBC42; padding: 5px;}{1} \\
+\style{background-color: #FFDF42; padding: 5px;}{{-2}} \\
+\style{background-color: #FFF200; padding: 5px;}{1} \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+(\style{background-color: #C6DC67; padding: 5px;}{12}×\style{background-color: #FDBC42; padding: 5px;}{1}) & + & (\style{background-color: #8DC73E; padding: 5px;}{19}×\style{background-color: #FFDF42; padding: 5px;}{{-2}}) & + & (\style{background-color: #3FBC9D; padding: 5px;}{28}×\style{background-color: #FFF200; padding: 5px;}{1}) \\
+(\style{background-color: #7977B8; padding: 5px;}{17}×\style{background-color: #FDBC42; padding: 5px;}{1}) & + & (\style{background-color: #AF72B0; padding: 5px;}{27}×\style{background-color: #FFDF42; padding: 5px;}{{-2}}) & + & (\style{background-color: #D883B7; padding: 5px;}{40}×\style{background-color: #FFF200; padding: 5px;}{1}) \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+2 \\
+3 \\
+\end{matrix} \right]
+</math>
+|}
+
+(The coloration is just a flourish we've added to illuminate what's happening, in case it helps those who are less familiar with this operation.)
+
+Technically what we've just done here is called ''matrix multiplication''. This is the generalized set of rules we follow to define multiplication for multi-multi-numbers, AKA matrices. The dot product is multiplication for vectors, AKA multi-numbers, and it works by pairing up corresponding numbers, doing ordinary number multiplication, and then putting the results together (by addition). Matrix multiplication continues this pattern: it pairs up row vectors on the left with (column) vectors on the right, doing vector multiplication (taking their dot product), and then puts the results together (assembling the resulting numbers into a new matrix, in this case consisting of a single column, in other words a vector). One difference is that a dot product only multiplies pairs of ''corresponding'' numbers (first with first, second with second, etc.), while a matrix product takes the dot products of ''all possible'' pairs of row-vector with vector.
+
+It turns out that because we've climbed up the ladder from number to vector to matrix multiplication in just this way, we can now throw away the ladder! Matrix multiplication is now the ''only'' kind of multiplication we need. Multiplying a map by a vector is the same as multiplying a one-row matrix by a one-column matrix. Even multiplying two scalars (ordinary numbers) is the same as multiplying two (1,1)-shaped matrices. This is what makes Linear Algebra so expressive and so powerful. And now you know the basics of linear algebra.
+
+=== Meantone ===
+If you are a student of historical temperaments, you may be familiar with meantone temperament. And if you're new to RTT, all of the other temperaments besides meantone&mdash;such as "[[porcupine]]" and "[[mavila]]"&mdash;are unfamiliar and their names may seem sort of random and bizarre. Well, you'd not be wrong about the names (and not everyone's a fan of them). But mathematically and musically, these temperaments are every bit as real and of interest as meantone. One day you too may compose a piece of music in or write an academic paper about one such temperament.
+
+Let's begin with meantone, though. It's historical for a reason: it's simple and what it does is appealing. Without further ado, here is the mapping for meantone:
+
+<math>
+\left[ \begin{matrix}
+1 & 0 & {-4} \\
+0 & 1 & 4 \\
+\end{matrix} \right]
+</math>
+
+Your first reaction to this mapping might be surprise. Its rows certainly seem quite a bit different than the maps and mapping-rows we've looked at thus far. Those have all been lists of increasing positive numbers, and in particular, numbers that increase at a rate so as to proportionally approximate the logarithms of primes. These two maps, however, {{map|1 0 -4}} and {{map|0 1 4}}, do not resemble that sort of contour at all. And each map has a zero in it. The first map even has a freaking ''negative'' number in it. What's going on?
+
+Don't freak out. Mechanically speaking, this mapping matrix works in exactly the same way as the one we looked at above. If we want to know how an interval is mapped by it, we map it by the first mapping-row, and then by the second mapping-row, and then put them together as a vector. 
+
+Considering our {{sfrac|10|9}} example again, we find:
+
+<math>
+\left[ \begin{matrix}
+1 & 0 & {-4} \\
+0 & 1 & 4 \\
+\end{matrix} \right]
+
+\left[ \begin{matrix}
+1 \\
+{-2} \\
+1 \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+(1×1) & + & (0×{-2}) & + & ({-4}×1) \\
+(0×1) & + & (1×{-2}) & + & (4×1) \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+1 & + & 0 & + & {-4} \\
+0 & + & {-2} & + & 4 \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+{-3} \\
+2 \\
+\end{matrix} \right]
+</math>
+
+Which tells us that <math>\text{~}\frac{10}{9}</math> is [-3 2}, or said aloud, is approximated by three of our first generator down, and two of our second generator up. 
+
+So {{map|12 19 28}} and {{map|17 27 40}} have some use on their own, as maps for 12-ET and 17-ET, respectively. But these maps {{map|1 0 -4}} and {{map|0 1 4}} do not have much use on their own. The first map, {{map|1 0 -4}}, is some sort of ridiculous 1-ET map, in that it maps the octave {{vector|1 0 0}} to 1 step: <math>\vmp{1 & 0 & -4}{1 & 0 & 0} = (1×1) + (0×0) + ({-4}×0) = 1 + 0 + 0 = 1</math>. But it makes the tritave vanish, a "comma" bigger than the octave! And it maps the pentave to negative four steps, so if octaves were pure, the pentave would be tuned to -4800{{c}}, which is 7586.3{{c}} off from its just tuning of 2786.3{{c}}. Clearly this situation is absurd. The point is that when we put these two seemingly absurd maps together, they work together to describe a reasonable temperament. Because if we look at the second map, it does sort of the opposite: it makes the octave vanish, but maps the tritave to one step. And it maps the pentave to four steps. So as long as the size of that second generator is around {{nowrap|7586.3 / 4 {{=}} 1896.575{{c}}}} (which is about the size of a tritave, as we also need it to be!) we'll find that together with what the other map does to prime 5, it'll work out to a good approximation in the end.
+
+It may be helpful to think of this mapping using a vertical-slice technique, i.e. by slicing it the other way, by columns. When we look at it this way, it tells us what happens to each prime. Prime 2 is described by the first column, and so it's approximated by 1 of the first generator and 0 of the second generator. Prime 3 is described by the second column, so it's approximated by 0 of the first generator and 1 of the second generator. And prime 5 is the trickier one, being approximated by negative 4 of the first generator and positive 4 of the second generator. So one good way to think about this mapping is by comparing it with JI, and seeing that we keep our prime-2-sized generator and prime-3-sized generators around but drop our prime-5-sized generator in favor of approximating prime 5 using some numbers of the other two generators. 
+
+Looking at it this way, we can see that a mapping can also be understood as a list of the generator-count vectors for each of our primes, like this: 
+<br />{{map|{{rket|1 0}} {{rket|0 1}} {{rket|-4 4}}}}. That is, 
+<br />{{rket|{{map|1 0 -4}} {{map|0 1 4}}}} {{vector|1 0 0}} = {{rket|1 0}}, 
+<br />{{rket|{{map|1 0 -4}} {{map|0 1 4}}}} {{vector|0 1 0}} = {{rket|0 1}}, and 
+<br />{{rket|{{map|1 0 -4}} {{map|0 1 4}}}} {{vector|0 0 1}} = {{rket|-4 4}}. 
+
+Note that this doesn't necessarily mean that we will choose to tune primes 2 and 3 exactly and prime 5 inexactly. We could choose to tune prime 5 exactly but then we need to have one or both of prime 2 and prime 3 tuned inexactly. We cannot tune all three primes exactly with only two generators. Or we might choose to tune all three primes inexactly, if that's the way things sounded best in this temperament. The temperament doesn't stipulate one way or the other. That's up to the tuning of it.
+
+With a bit of practice, we can learn to read mappings like this with fluency, plucking out these insights about how the prime approximations relate to each other.
+
+=== Lattices ===
+Earlier we mentioned that we can interpret (prime-count) vectors as coordinates of a ''JI lattice'', a grid of points connected by edges, where each point represents a different pitch, and each edge connects pitches which differ by exactly one prime factor. Every JI lattice starts in the center with unity, the JI pitch {{sfrac|1|1}}, and has one axis for each prime, each oriented in its own dimension. A 2-limit lattice is 1-dimensional, that is, a single line, with {{sfrac|2|1}}, {{sfrac|4|1}}, {{sfrac|8|1}} and so on in one direction and {{sfrac|1|2}}, {{sfrac|1|4}}, {{sfrac|1|8}} and so on in the other direction. A 3-limit lattice is a 2D plane, then; if the axis for prime 2 runs horizontally across the page, then the axis for prime 3 runs vertically, with {{sfrac|3|1}}, {{sfrac|9|1}}, and so on upwards and {{sfrac|1|3}}, {{sfrac|1|9}} and so on downwards, and between these axes, in the four diagonal regions, we find intervals containing both factors of 2 and factors of 3, such as {{sfrac|3|2}}, {{sfrac|4|3}}, and {{sfrac|6|1}}. And a 5-limit lattice is a 3-dimensional volume, like the space you and I physically inhabit, with the axes for primes 2, 3, and 5 akin to the familiar <math>x</math>, <math>y</math>, and <math>z</math> axes. 7-limit, 11-limit, and beyond require higher-dimensional hypervolumes to lay out, which is outside our everyday intuition and so they're a little trickier to understand, but are feasible enough when cleverly visualized.
+
+Organizing pitches in this way can be very helpful when scale-smithing, chord-crafting, progression-producing, notating, composing, or just trying to get your head around an existing piece of JI music. When it comes to just intonation, there's really no end to the use case for the lattice. It's an indispensable map of harmonic reality.
+
+RTT generalizes this way of organizing pitches. Once we realize that primes are just a specific type of generator&mdash;a generator of JI&mdash;it's straightforward to assign one axis instead to each generator of our ''temperament''. Now what we're working with are ''tempered lattices'', and in these sorts of lattices, our coordinates are given not by our prime-count vectors, but by our ''generator''-count vectors. And as we know, any non-trivial temperament has fewer generators than primes it approximates. This reduction in complexity is the main purpose for the temperament's existence, of course! Comparing a tempered lattice with the original JI lattice, then, we can visually bear witness to the reduction in complexity we've effected. Consider the following representation of a common 5-limit scale on the JI lattice, compared with its representation on the meantone lattice:
+
+[[File:Lattices 2.png|none|thumb|605x605px]]
+
+The JI lattice on the left is 3-dimensional, so in order to understand it, we have to think about a grid of cubes, and locate pitches relative to each other along three different axes: vertical, horizontal, and into / out of the page. These correspond to the first, second, and third entries in our prime-count vectors. For example, we find {{sfrac|16|15}}, with vector {{vector|4 -1 -1}}, up four steps vertically, back (left) one step horizontally, and back (into the page) one step.
+
+Meanwhile, the tempered lattice on the right is only 2-dimensional, so we only have to think about a grid of squares, and locate pitches relative to each other along ''two'' different axes: horizontal and vertical. The tempered version of the same example pitch, i.e. ~{{sfrac|16|15}}, is found at {{rket|3 -5}}, which tells us that it's three steps left and five steps up.
+
+To help convey the difference between these two lattices, we've used subtly different colorations on the JI lattice, which differentiate between the three layers of depth it contains. There's a bluish hue to the pitches with one negative factor of 5, and a yellowish hue to the pitches with one ''positive'' factor of 5. But over on the tempered lattice, everything's a straight green color, because that lattice is completely flat.
+
+Another key difference between these two lattices has to do with the vanishing comma. In the JI lattice, we have a couple pairs of pitches that are very close in size, but not very close on the lattice. These are the ones connected by dotted lines, and each of these pairs are off by one meantone comma (you can check for yourself that each pair can be found by moving {{vector|4 -4 1}}, four steps up, four steps left, and one step out of the page). But on the tempered lattice, these pitches have been mapped together, and so they are found at the same point. So for this JI scale&mdash;which mostly likely would not play either of these comma-separated pairs of pitches together, but instead treats them as variations upon the same pitch&mdash;applying the meantone temperament has not only simplified the space needed to visualize the scale, but it has actually ''illuminated'' an important part of how we think about the interrelations of pitches in it.
+
+To be clear, we chose this particular JI scale and this particular temperament because they go well together. Not every pair of JI scale and temperament will have such good synergy.
+
+=== Periods and generators ===
+When we speak of "the" generator for a rank-2 temperament such as meantone, we are taking advantage of the fact that the other generator is generally assumed to be the octave (or a unit fraction of the octave) and it gets its own special name: the period. It's technically a generator too, but when we say "the" generator of a rank-2 temperament, we mean the one that's not the period.
+
+The period, usually being the largest generator, serves as the [[interval of repetition]]. Rank-1 temperaments have only one generator, so that generator technically is the period, though we usually don't think of it that way; that's because the word "period" is designed to convey the way in which the other smaller generators can be understood to cycle within it, and so without any smaller generators doing that ''(see Figure 2a)'', it sort of loses its meaning. Sometimes the octave (or a fraction thereof) is treated as the "period" of an ET, especially when comparing the ET with a related rank-2 temperament; that may make sense in context, though technically this interval could only be the [[interval of equivalence]], not also the interval of repetition ''(see Figure 2b)''.
+
+[[File:Period vs generator wrt interval of repetition.png|400px|thumb|left|'''Figure 2a.''' The period is the interval of repetition.]]
+
+[[File:Interval of repetition vs interval of equivalence.png|200px|thumb|'''Figure 2b.''' Basically, the octave is usually the interval of equivalence, except in cases like tritave-based systems such as [[Bohlen-Pierce]]. And the period is always the interval of repetition. So when the period is the octave, then it is both the interval of repetition and of equivalence.]]
+
+== Multiple forms ==
+Check out this mapping:
+
+<math>
+\left[ \begin{matrix}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{matrix} \right]
+</math>
+
+What temperament might ''this'' mapping be for? We might guess whatever it is, it is a temperament closely related to meantone, because it looks rather similar. In fact, its second map, {{map|0 1 4}}, is an exact match for the second map of meantone.
+
+Well, the temperament this mapping represents ''is in fact'' meantone temperament. That's right, both this map {{rket|{{map|1 1 0}} {{map|0 1 4}}}} and the previous map {{rket|{{map|1 0 -4}} {{map|0 1 4}}}} represent the ''same'' temperament. 
+
+We can say that a given mapping will always represent only one temperament, but that a given temperament may be able to be represented with more than one mapping. In this section of the article we'll look into why this is the case, and how to work with it.
+
+=== Differently-sized generators ===
+First, let's concern ourselves with understanding the difference between these two mappings. How can they both be mappings for meantone temperament? Well, it comes down to different ways of ''thinking'' about how meantone works. Specifically, these two mappings implement meantone with differently sized-generators, but reach all the same intervals in the end. 
+
+Let's try our vertical-slice technique again, but for reading this mapping now. This time though let's call the first generator <math>g_1</math> and the second generator <math>g_2</math>, for conciseness. So we can see that prime 2 will be approximated by <math>1g_1 + 0g_2</math>, or simply <math>g_1</math>. So we already know, even before we reach the second column of our mapping, that our first generator has got to be about an octave in size. Nice. So let's check the second column now. This tells us that prime 3 is approximated by <math>g_1 + g_2</math>. Alright, then, so by process of elimination, if <math>g_1</math> approximates the octave, then <math>g_2</math> has got to be about a fifth in size, because that's what it takes to reach prime 3 from prime 2, or in other words, <math>\frac{2}{1} × \frac{3}{2} = \frac{3}{1}</math>. And so prime 5 is approximated by <math>4g_2</math>, which should check out with your understanding of meantone if you're previously familiar with it: four fifths take us to exactly a [[Wikipedia:Interval_(music)#Compound_intervals|compound]] (two octaves up) major third.
+
+One way to convince ourselves that both these mappings represent meantone would be to give a pair of equivalent tunings, and confirm that they both tune intervals to the same size. Suppose for {{rket|{{map|1 0 -4}} {{map|0 1 4}}}} we tune <math>g_1</math> to 1200{{c}} exactly and tune <math>g_2</math> to 1896.578{{c}}. And for {{rket|{{map|1 1 0}} {{map|0 1 4}}}} we tune <math>g_1</math> to 1200{{c}} as well but <math>g_2</math> to 696.578{{c}}. Let's compare what happens to {{sfrac|10|9}} in both of these versions of the same tuned temperament. Recall that <math>\text{~}\frac{10}{9}</math> is [-3 2} by the first mapping. Well, it is 
+<br />{{rket|{{map|1 1 0}} {{map|0 1 4}}}} {{vector|1 -2 1}} 
+<br />= [{(1×1) + (1×-2) + (0×1)] {(0×1) + (1×-2) + (4×1)]} 
+<br />= [{1 + -2 + 0] {0 + -2 + 4]} 
+<br />= [-1 2} 
+<br />by the second mapping. So in the first version we have <math>-3g_1 + 2g_2 = -3(1200) + 2(1896.578) = 193.156</math>{{c}}, and in the second version we have <math>{-1}g_1 + 2g_2 = {-1}(1200) + 2(696.578) = 193.156</math>{{c}}. So that checks out so far. If you're not convinced, you can check any interval you like, and the results will match.<ref group="note">In more technical parlance, changing between equivalent mappings like this may be called a "change of form", or equivalently, a "change of generator basis" and correspondingly a "change of mapping-row-basis". We'll learn more about the concept of a [[basis]] later on, in the article on {{subpage|exploring temperaments|uprev}}.</ref>
+
+We hope this gives you some feel for how what matters in a mapping is not so much the actual numbers themselves, but rather it is these numbers ''relationships'' with each other. It's a ''relative'' sort of thing, rather than an ''absolute'' sort of thing.
+
+=== Generators vs mapping-rows ===
+Note that {{map|1 0 -4}} or {{map|0 1 4}} are not "the generators" for meantone. They are generator ''mappings'': when assembled together, they collectively describe behavior of the generators, but they are ''not'' themselves the generators. At least, the map {{map|1 0 -4}} in isolation does not inherently have a connection with the octave generator of meantone. 
+
+This situation can be confusing (Douglas: I know firsthand; I was stuck on it for weeks). I thought of it this way: because the first generator is {{sfrac|2|1}}&mdash;i.e. {{vector|1 0 0}} maps to {{rket|1 0}}&mdash;referring to {{map|1 0 -4}} as the octave seemed reasonable. And similarly, because the second generator is {{sfrac|3|1}}&mdash;i.e. {{vector|0 1 0}} maps to {{rket|0 1}}&mdash;referring to {{map|0 1 4}} as the twelfth seemed reasonable. But it's critical to understand that the first generator "being" the octave here is ''contingent upon the definition of the second generator'', and vice versa, the second generator "being" the twelfth here is ''contingent upon the definition of the first generator''. This is a continuation of the point about how rows of mappings ''work together'' to describe the behavior of the temperament.
+
+Considering {{map|1 0 -4}} or {{map|0 1 4}} individually, we cannot say what intervals the generators are. We need look no further than our example of how {{map|0 1 4}} appears in both {{rket|{{map|1 0 -4}} {{map|0 1 4}}}} and {{rket|{{map|1 1 0}} {{map|0 1 4}}}}, yet in the former case it represents an approximate twelfth while in the latter case it represents an approximate fifth.
+
+=== Same commas ===
+But we don't need to bring up tuning to recognize these two mappings as representing the same temperament. In fact, in the long run, looking at tunings is a sort of messy way to demonstrate their equivalence; we did it here mostly for the benefit of those for whom the notion of abstract temperaments may not stick so quickly. One purer way to demonstrate this truth&mdash;i.e. using only logic about temperaments&mdash;is to compare which commas these mappings make vanish; they're the same temperament if they make the same comma(s) vanish.
+
+Previously we showed that a comma is made to vanish by a rank-1 temperament (ET) if that interval is mapped to 0 generator steps of the temperament. Well, the definition of vanishing is the same for higher-rank temperaments, except we must recognize here now that an interval must be mapped to 0 steps of ''all'' generators in the temperament. In other words, they must be mapped to an all-zeros generator-count vector, like [0 0} for a rank-2 temperament. 
+
+Let's investigate. We'd like to think that meantone temperament should make the meantone comma vanish, which as we stated earlier is {{sfrac|81|80}}, or {{vector|-4 4 -1}}. How do these two mappings fare?
+
+<math>
+\left[ \begin{matrix}
+1 & 0 & {-4} \\
+0 & 1 & 4 \\
+\end{matrix} \right]
+
+\left[ \begin{matrix}
+{-4} \\
+4 \\
+{-1} \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+(1×{-4}) & + & (0×4) & + & (-4×{-1}) \\
+(0×{-4}) & + & (1×4) & + & (4×{-1}) \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+{-4} & + & 0 & + & 4 \\
+0 & + & 4 & + & {-4} \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+0 \\
+0 \\
+\end{matrix} \right]
+</math>
+
+So {{rket|{{map|1 0 -4}} {{map|0 1 4}}}} is definitely meantone. How about {{rket|{{map|1 1 0}} {{map|0 1 4}}}}?
+
+<math>
+\left[ \begin{matrix}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{matrix} \right]
+
+\left[ \begin{matrix}
+{-4} \\
+4 \\
+{-1} \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+(1×{-4}) & + & (1×4) & + & (0×{-1}) \\
+(0×{-4}) & + & (1×4) & + & (4×{-1}) \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+{-4} & + & 4 & + & 0 \\
+0 & + & 4 & + & {-4} \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+0 \\
+0 \\
+\end{matrix} \right]
+</math>
+
+So that one's meantone too.
+
+And if you really want your mind blown, check this out. Remember the first rank-2 mapping we looked at, {{rket|{{map|12 19 28}} {{map|17 27 40}}}}? 
+
+<math>
+\left[ \begin{matrix}
+12 & 19 & 28 \\
+17 & 27 & 40 \\
+\end{matrix} \right]
+
+\left[ \begin{matrix}
+{-4} \\
+4 \\
+{-1} \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+(12×{-4}) & + & (19×4) & + & (28×{-1}) \\
+(17×{-4}) & + & (27×4) & + & (40×{-1}) \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+{-48} & + & 76 & + & {-28} \\
+{-68} & + & 108 & + & {-40} \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+0 \\
+0 \\
+\end{matrix} \right]
+</math>
+
+So that mapping represents meantone temperament, too! Though in retrospect this shouldn't be terribly surprising, since we already knew that this 12-ET map {{map|12 19 28}} and this 17-ET map {{map|17 27 40}} individually make the meantone comma vanish (so why would either of those cases change when we put them together? They wouldn't).
+
+If you wish, you may try to hunt for other intervals that are made to vanish by any of these three mappings, but we assure you: you will not find any. Meantone (at least this most basic 5-limit historical meantone temperament) only makes this one comma vanish (well, and its multiples, of course, such as {{vector|-8 8 2}}). 
+
+=== Adding and subtracting rows ===
+So, like… how many meantone mappings are there? Is every rank-2 temperament meantone? Well, there are infinite meantone mappings. But no, not every rank-2 temperament is meantone. Pick any one of those three mappings and change just one number in it&mdash;you'll have a new temperament. It won't make the meantone comma vanish anymore.
+
+The quick trick to finding new versions of the same temperament is just to add or subtract rows from each other. It's not hard to understand why this works: because anything that vanished before will still vanish after we do this. We're just adding or subtracting copies of sets of numbers that we know send the given intervals to zero.
+
+That's how, for instance, we got from {{rket|{{map|1 0 -4}} {{map|0 1 4}}}} to {{rket|{{map|1 1 0}} {{map|0 1 4}}}}; notice that all we have to do is add one copy of the second row to the first row to change it from its form in the first mapping to the second: {{nowrap|{{map|1 0 -4}} + {{map|0 1 4}} {{=}} {{map|(1+0) (0+1) (-4+4)}} {{=}} {{map|1 1 0}}}}. 
+
+Using this trick you can get from {{rket|{{map|12 19 28}} {{map|17 27 40}}}} to either of the other mappings by subtracting those two rows from each other a half-dozen times or so. 
+
+<math>
+\left[ \begin{matrix}
+12 & 19 & 28 \\
+17 & 27 & 40 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+12 & 19 & 28 \\
+5 & 8 & 12 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+7 & 11 & 16 \\
+5 & 8 & 12 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+2 & 3 & 4 \\
+5 & 8 & 12 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+2 & 3 & 4 \\
+3 & 5 & 8 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+2 & 3 & 4 \\
+1 & 2 & 4 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+1 & 1 & 0 \\
+1 & 2 & 4 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+1 & 1 & 0 \\
+0 & 1 & 4 \\
+\end{matrix} \right]
+</math>
+
+And you can get back to {{rket|{{map|12 19 28}} {{map|17 27 40}}}} by reversing this process, ''adding'' rows together repeatedly.<ref group="note">Though it should be noted that it's much, much harder to go in that direction to something useful; checking Graham's `etsForMapping` function here https://bitbucket.org/x31eq/regular/src/9bc9b5bd8c8e0ced6223b29c3ea487719d120c43/parametric.py#lines-124, we can see that it basically does it by brute force.</ref> (Note that a couple times we subtracted the same row from the other twice in a row. That's no problem. To save time, we could have simply subtracted 2× that row in one go. That's equivalent, and so it's also allowed.)
+
+We can understand why there are ''infinite'' meantones out there, because nothing's stopping us from using this trick over and over ad infinitum, adding rows to each other way past the point of reason, getting higher and higher and higher numbers. 
+
+<math>
+\left[ \begin{matrix}
+12 & 19 & 28 \\
+17 & 27 & 40 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+29 & 46 & 68 \\
+17 & 27 & 40 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+29 & 46 & 68 \\
+46 & 73 & 108 \\
+\end{matrix} \right]
+
+→
+
+\left[ \begin{matrix}
+75 & 119 & 176 \\
+46 & 73 & 108 \\
+\end{matrix} \right]
+
+\ldots
+</math>
+
+But it should be clear enough that these versions of meantone with big numbers in the mappings are tougher to make practical use of than the ones with small numbers. 
+
+(By the way, the technical math term for adding and subtracting matrix rows from each other is "[[Wikipedia:Elementary_matrix#Elementary_row_operations|elementary row operations]]", if you would like to learn more about them.)
+
+=== Grouping generator steps ===
+The explanation we gave earlier&mdash;that anything that was made to vanish before will still be made to vanish after adding or subtracting rows&mdash;may be quite intuitive to some readers. But we have another way of presenting this idea visually that may be more appealing to other readers. Let's pick up about halfway through that process from {{rket|{{map|12 19 28}} {{map|17 27 40}}}} to {{rket|{{map|1 1 0}} {{map|0 1 4}}}}, at the point where we had it as {{rket|{{map|5 8 12}} {{map|7 11 16}}}}. We can imagine this mapping as approximating primes 2, 3, and 5 with two differently sized generators, with <math>g_1</math> for the 5-ET map in yellow, and <math>g_2</math> for the 7-ET map in green:
+
+[[File:Grouping generator steps 1.png|frameless|600x600px]]
+
+So we may ask: when we change from this mapping to {{rket|{{map|5 8 12}} {{map|2 3 4}}}}, how would we show that on this diagram? Well, consider those instances of <math>g_2</math> that have "gone away" when we subtracted the row for <math>g_1</math> from the row for <math>g_2</math>. Don't throw them away completely. Just set them aside for a moment. So we still leave a gap behind where they used to be&mdash;we no longer reach anywhere near the primes we're trying to approximate&mdash;but this is only temporary.
+
+[[File:Grouping generator steps 2.png|frameless|600x600px]]
+
+So note that for each prime, we have the same count of set-aside <math>g_2</math>'s as we have of <math>g_1</math>'s that are still there (that's because, of course, the number of set-aside <math>g_2</math>'s was determined by subtracting the counts of <math>g_1</math>'s). So let's pair them up, and then merge each set-aside <math>g_2</math> in with its paired <math>g_1</math>.  
+
+[[File:Grouping generator steps 3.png|frameless|600x600px]]  
+
+The end result is that each <math>g_1</math> has grown bigger than it used to be, and by exactly the size of one of the <math>g_2</math>. And critically, the top of the stack of generators is now back to the exact same position it was before we set aside the <math>g_2</math>. So we're achieving the exact same prime approximations that we used to, but now with fewer generator steps.  
+
+[[File:Grouping generator steps 4.png|frameless|600x600px]]  
+
+So: subtraction normally evokes the sense of something having vanished completely. But here the more helpful way to think about things is as a ''consolidation'' effect. We didn't throw away the subtracted generators. We merged them in with others. In other words, by subtracting the row for <math>g_1</math> from the row for <math>g_2</math>, we weren't so much ''deleting'' any generator steps so much as we were ''grouping up'' as many generator steps as we could manage, to simplify things.
+
+(If one feels compelled to recourse to sanity-checking this with tunings, one will find that as long as you follow the same tuning scheme, our new <math>g_1</math> here will come out to exactly the same size as the previous <math>g_1</math> plus our <math>g_2</math>.)
+
+=== Standard forms ===
+Which meantone mapping is most useful?
+
+We said earlier that the mappings with smaller numbers are more generally useful than the ones with big numbers. The version that shows how meantone is equivalent to merging 12-ET and 17-ET gives some interesting insight into the nature of meantone through its existence but isn't super practical to use directly. But as for the {{rket|{{map|1 0 -4}} {{map|0 1 4}}}} version and the {{rket|{{map|1 1 0}} {{map|0 1 4}}}} version, it may not be obvious which one we should prefer.
+
+And if we consult Graham Breed's temperament finding tool, we find it uses yet another mapping for meantone that we haven't looked at yet: {{rket|{{map|1 2 4}} {{map|0 -1 -4}}}}. This one's intriguing because the second mapping row has no positive numbers. All this means is that when approximating primes with this temperament, we always overshoot the prime using <math>g_1</math> and step our way back a bit with <math>g_2</math>. In this form of meantone, <math>g_1</math> is an approximate octave, and <math>g_2</math> is an approximate perfect fourth.
+
+Wouldn't it be nice if when we wanted to refer to meantone in general, i.e. independent of any particular choice of generator sizes, we had one version, one specific mapping, we could use for that purpose? Well, we're in luck, because we do. That's called its canonical form. And it happens to be the {{rket|{{map|1 0 -4}} {{map|0 1 4}}}} version we looked at first. So this one's great for purposes of documenting meantone and referring to it as an abstract temperament. We'll look at this more in a later article of this series.
+
+But when we want to get to making some actual music, it may not be the most practical version, given that its <math>g_2</math> is a compound interval&mdash;a perfect twelfth. Another standard has been developed for rank-2 temperaments like meantone is called "minimum generator", or "mingen" form where we get <math>g_1</math> to represent as few divisions of the first prime as possible (usually prime 2, the octave, and usually it's divided into 1 division, i.e. not divided at all), and then make <math>g_2</math> less than half the size of <math>g_1</math>. So that's what Graham's tool follows, and that's why it gives <math>g_2</math> as a perfect fourth rather than a perfect fifth.
+
+=== ETs have only one form ===
+Be careful to note that the idea that there's more than one form of meantone (or any other rank-2 temperament) is very different from the idea that there's more than one 17-ET (or any other rank-1 temperament). 
+
+Remember, the two 17-ETs we've looked at&mdash;{{map|17 27 40}}, and {{map|17 27 39}}&mdash;make different commas vanish. Therefore, these are different temperaments. The fact that both can be called "17-ET" reflects only on the limitations of that naming style. To distinguish them, we have to use something like that "wart" notation. So these are 17c and 17, respectively.
+
+Unlike meantone, there's only one version of the mapping for 17c, and that's {{rket|{{map|17 27 40}}}}. And there's only one version of the mapping for 17, and that's {{rket|{{map|17 27 39}}}}. We can think of it this way: because we only have one row here to work with, we have no other rows to add it to or subtract from it, in order that we could find new variations on this mapping that make the same commas vanish. We're stuck. This one-row, rank-1 temperament simply is what it is.
+
+(Technically, we could try adding the one row of an ET mapping to ''itself''. For example, with {{rket|{{map|12 19 28}}}}, we can add another copy of {{map|12 19 28}} to get {{rket|{{map|24 38 56}}}}. But as a temperament, this 24-ET is degenerate. It brings nothing new to the table that 12-ET didn't already bring. We can see this by the fact that any JI interval we map by this temperament will come out to an even number of steps; the odd steps will never be used, so we might as well use 12-ET instead. When we come across this sort of needlessly complex variant on a temperament, we might call it a "temperoid". If you're interested in more information on this problem, please see the article [[Pathology of enfactoring]].)
+
+With respect to making commas vanish, maps are atomic elements. Each different map makes a different set of commas vanish.
+
+== Choosing a temperament ==
+So, let's assume we've gotten you excited about the possibilities of higher-rank temperaments&mdash;the cool stuff in between JI and EDOs&mdash;and confident about working with them and reasoning about them now. Great! So which temperaments should you use? And how should you find them? Meantone may be a bit boring for some, but what else is out there?
+
+Since October 2011, probably the best way out there to find new temperaments is the web tool built by Graham Breed, found here: http://x31eq.com/temper/ 
+
+In order for such a tool to exist&mdash;i.e. to be able to automatically search for good tunings&mdash;theorists needed to determine a formula for the goodness of a temperament. Rather, they came up with a formula for badness. The exact formula is beyond the scope of this article, but it will be helpful at this point at least to understand it as some function of a temperament's complexity and inaccuracy. The more complex it is, and the more damage it does to the tunings of the intervals we care about, the badder it is. So Graham and other theorists developed a formula, and Graham built the code that runs for free on the web so we can all benefit from it. You're an RTT hero, Graham. 
+
+=== Srutal ===
+Let's try an example. Just open the first link there, the "temperament search": http://x31eq.com/temper/pregular.html
+For now, let's stick to temperaments of 5-limit JI, but we can leave the 5.0{{c}} of target error field alone. 
+http://x31eq.com/cgi-bin/pregular.cgi?limit=5&error=5.0
+
+These results are ranked by ascending badness, which we can see in the rightmost column. So the top hit is meantone, with only 1.899{{c}}/oct. It's historical for a reason! At the 5-limit, it's got such good accuracy for such low complexity, it's an obvious choice. 
+
+But the second option here, with 2.828{{c}}/oct badness, you may not recognize. This temperament is called "[[Diaschismic_family#Five-limit_srutal_.28aka_diaschismic.29|srutal]]". Let's click on that result, then: http://x31eq.com/cgi-bin/rt.cgi?ets=12_22&limit=5
+
+The first thing we might notice is that srutal is described as "12&22". This is along the lines of how we found one form of meantone to be the merging of the maps for 12-ET and 17-ET. So if 12-ET is one of the ETs that merge to make srutal, then 12-ET supports srutal. Though Graham's app uses wart notation, so it'd specify "12&17c"; the notation "12&17" refers to a different temperament, called "helmholtz", which we'll look at later (and if we want to describe meantone as the merger of two unwarted maps, then what we want is "12&19"). Anyway, so we know right away that srutal is a temperament which makes a comma vanish that is made to vanish by both 12-ET and 22-ET. (To know what that comma is, we can look to almost the bottom of the page, where it gives "unison vector"&mdash;another way of saying comma, i.e. a vector which is mapped to unison AKA <math>\frac{1}{1} = \monzo{0 & 0 & 0}</math>&mdash;as {{vector|11 -4 -2}}.) Making this comma vanish can be also understood as making both {{sfrac|45|32}} and {{sfrac|64|45}}&mdash;the two 5-limit tritones&mdash;map together.
+
+Then we find its "reduced mapping". That's the mingen form, which we get from adding and subtracting rows from each other until we get something much simpler. That's {{rket|{{map|2 3 5}} {{map|0 1 -2}}}}. A reading of this mapping tells us that this is where prime 2, the octave, is divided into 2 steps&mdash;that's our <math>g_1</math>, which should be around 600{{c}} in size. And we find prime 3 as 3 of those same steps, but then up another of the 2nd generator. So if <math>3g_1</math> gets us to about 1800{{c}}, then <math>g_2</math> must be around 100{{c}}. And then we have prime 5, which is found by going up <math>5g_1</math> to around 3000¢ and back down <math>2g_2</math>, which checks out because a just prime 5 is around 2800{{c}}. 
+
+There's a lot more information on this page, much of it about tuning. Feel free to do your own exploration, but for purposes of this article, we're going to push the back button in our browser and check out the next temperament instead.
+
+=== Augmented ===
+The next temperament by badness is called "[[Augmented_family#Augmented|augmented]]" (that's the wiki link; here's the link inside Graham's tool: http://x31eq.com/cgi-bin/rt.cgi?ets=12_15&limit=5). This one can also be described as 12&15. The presence again of 12-ET here speaks to 12-ET's prowess at the 5-limit. It also means that 12-ET makes the augmented comma vanish, {{sfrac|128|125}} {{vector|7 0 -3}} (precocious readers may note that this comma is related to the other two commas we've seen 12-ET make vanish&mdash;the meantone comma {{vector|-4 4 -1}}, and the srutal comma {{vector|11 -4 -2}}&mdash;by {{nowrap|{{vector|11 -4 -2}} + {{vector|-4 4 -1}} {{=}} {{vector|7 0 -3}}}}; yes, this is related to the adding and subtracting of mapping rows we've looked at in this article, but again, we'll wait to dig into this until later). The augmented comma maps together {{sfrac|125|64}} and {{sfrac|2|1}}, which is another way of saying that this temperament is in effect whenever three of your <math>\text{~}\frac{5}{4}</math> get you to one approximate octave, because <math>(\frac{5}{4})^3 = \frac{125}{64}</math>.
+
+Its reduced mapping is {{rket|{{map|3 5 7}} {{map|0 -1 0}}}}. So this is an interesting one: <math>g_2</math> only affects a single prime. As a result, it doesn't make sense not to tune that prime justly, since that generator doesn't have any other conflicting priorities. Its only job, its only reason to be there, is to nail the tuning of prime 3, relative to whatever this 3-ET map in the first row is capable of otherwise. And indeed we can see this among the tuning information below, where it says "TE Mistunings (cents)" {{map|-2.947 0.000 6.810}}. 
+
+This temperament is another split-octave temperament, this time splitting the octave into three equal parts, and reaching prime 5 with seven of those same step sizes; this is going to result in an ~2800{{c}} {{sfrac|5|1}}, since {{nowrap|~1200/4 {{=}} ~400}} and {{nowrap|~400×7 {{=}}}} ~2800. And as for <math>g_2</math> that should be ~100{{c}} (as it was in srutal) because {{nowrap|~400×5 {{=}} ~2000}} which is ~100 wide of a just {{sfrac|3|1}}.
+
+=== Porcupine ===
+Let's look at one more temperament back on that results page. The next one in terms of badness is called "[[porcupine]]". This is the first temperament we've seen that's not described as a merger of the 12-ET map with another map, and thus it's the first one we're coming across that handles 5-limit JI well but will sound pretty "xen" if you're coming from a mostly 12-ET background. Porcupine is 7&22. Its reduced mapping is {{rket|{{map|1 2 3}} {{map|0 -3 -5}}}}. So that's a <math>g_1</math> that's ~1200{{c}}. But how about <math>g_2</math>? We reach prime 3 by moving two approximate octaves up and three <math>g_2</math> back down. And we reach prime 5 by moving three approximate octaves up and five <math>g_2</math> back down. So this <math>g_2</math> has be both {{nowrap|~500/3 {{=}} ~167{{c}}}} to approximate prime 3, and ~800/5 = ~160{{c}} to approximate prime 5. And unsurprisingly we see Graham's app finds a <math>g_2</math> of about 163.9{{c}}. 
+
+The porcupine comma is {{sfrac|250|243}} {{vector|1 -5 3}} and is not a sum or difference of the meantone, srutal, and/or augmented commas. It's its own thing. The porcupine comma maps together two minor whole tones <math>\left(\frac{10}{9}\right)^2 = \frac{100}{81}</math> and a {{sfrac|6|5}} minor third (compare this with meantone which maps together {{sfrac|100|81}} and a {{sfrac|5|4}} ''major'' third). This leads to some cool new melodies and harmonies.
+
+=== Helmholtz ===
+Now let's see what happens if we change our search a bit. Go back to the temperament search and keep it 5-limit, but this time change the target error from 5.0{{c}} to 1.0{{c}} so we can see how that changes the results.
+
+You might wonder why the default was 5.0{{c}} rather than 1.0{{c}} in the first place. Why would we look for temperaments that do about 5{{c}} of damage to the primes when we could just look for those that only do 1{{c}} instead? Well, that may not be the most helpful way to think about it. Remember that accuracy doesn't come for free. With temperaments, accuracy costs complexity (and conversely, simplicity costs inaccuracy). So this parameter of Graham's tool can be thought of as a knob where we adjust the balance of simplicity and accuracy in our search results toward more accurate (and less simple) temperaments.
+
+So, when we submit this query, we don't get back meantone anymore as our top result. Instead, we receive a temperament called "[[Helmholtz (temperament)|helmholtz]]". This one is 53&65. So already we can witness the increased complexity (and hopefully we'll recognize the 53-ET from the attention we gave it earlier in this article, for being another superstar ET in the 5-limit). The complexity of helmholtz is less visible in the reduced form of the mapping {{rket|{{map|1 2 -1}} {{map|0 -1 8}}}}, but we can still see the evidence in the fact that prime 5 takes ''eight'' steps of <math>g_2</math> to reach. 
+
+As can be seen from the vector form of its comma, {{vector|-15 8 1}} (and not easily seen from its monstrous quotient form, which is {{sfrac|32805|32768}}) is that it's what happens when you map together eight {{sfrac|4|3}} with one {{sfrac|10|1}} (note that <math>\left(\frac{4}{3}\right)^8 \approx 9.988</math>).
+
+=== Other searches ===
+We've learned how to think about higher-rank temperaments as mergings of rank-1 temperament maps. Graham's tool gives you the ability to search for temperaments using this understanding. All you need to do is use the link http://x31eq.com/temper/net.html (or choose "Temperament class from ETs" from the main page). The key thing is to understand the instruction for the first field: "list of steps to the octave". So here you can give not just one ET number, but several. So if we plug in "7, 22" there and 5-limit, then we should be taken straight to the page for porcupine. And "53, 65" takes us to helmholtz. Excellent.
+
+We've also learned how to think of temperaments in terms of the commas they make vanish. That's the other key search power Graham's app grants. Visit http://x31eq.com/temper/uv.html (or choose "Unison vector search" from the main page). If we plug in "81/80" here, it'll default to the minimum prime limit of that comma (5-limit here) and give all temperaments that make it vanish, so we find meantone as the only result in the list of rank-2 temperaments, and "12, 7, 19, 5, 24, 31, 14c, 26, 17c, 2c" as a list of rank-1 temperaments just above. In this list we see 12-ET, of course, as well as our old friend 17c (the version of 17-ET with the map {{map|17 27 40}}). And a bunch of other ETs that make the meantone comma vanish.
+
+We encourage you to spend some time playing around with Graham Breed's finder, until you find a temperament you'd like to try working with, or get your head around the ideas and get inspired to discover your own temperament.
+
+== See also ==
+Thank you so much for making it with us this far. If you're interested in continuing your journey along the Dave Keenan & Douglas Blumeyer's guide to RTT, we recommend the next article you check out is either:
+* 3. {{subpage|Tuning fundamentals|prev}}: You're satisfied with how mappings work, and want to figure out how to choose exact generator sizes and get to making music
+* 4. {{subpage|Exploring temperaments|prev}}: You want to unravel more about the mysteries of the relationships between mappings and commas, and how all these mappings of different ranks are interconnected
+
+== Footnotes ==
+<references group="note" />
+
+[[Category:Dave Keenan & Douglas Blumeyer's guide to RTT]]

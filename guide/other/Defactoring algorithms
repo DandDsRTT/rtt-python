@@ -1,0 +1,909 @@
+{{Todo|inline=1| rework |text=Try explaining without wedgies outside historical notes.}}
+
+This article discusses how to identify [[enfactoring]] in [[regular temperament]] [[mapping]]s and then [[defactoring|defactor]] it.
+
+A major use case for defactoring is to enable a [[canonical form]], or in other words, to achieve a unique ID for temperaments in the form of a matrix. Previously this was only available by using lists of largest possible minor determinants aka [[wedgie|wedge products of mapping rows]], which by virtue of reducing the information down to a single list of numbers, could be checked for enfactoring by simply checking the single row's GCD. 
+
+== Heuristics ==
+Sometimes enfactoring can be identified naked-eye and removed by trial and error, particularly when it is immediately apparent. For example:
+
+<math>\displaystyle \begin{bmatrix} 24 & 38 & 56 \end{bmatrix}</math>
+
+This mapping has only a single row, and we can see that every element in that row is even. Therefore we have a common factor of at least 2. In this case it is in fact exactly 2. So we can say that this is a 2-enfactored mapping. By dividing out the common factor we obtain
+
+<math>\displaystyle \begin{bmatrix} 12 & 19 & 28 \end{bmatrix}</math>
+
+<!--
+Being enfactored tells us that it's wasteful to use this mapping. Specifically, being 2-enfactored tells us that we have 2x as many pitches as we need. Said another way, half of the pitches in our system are bringing nothing to the table, at least not in terms of approximating intervals built out of the 5-limit primes 2, 3, and 5, which is the primary goal of a temperament.
+
+This is the mapping for [[5-limit]] [[24-ET]]. To be clear, we're not saying there's a major problem with 24 as an [[EDO]]. The point here is only that&mdash;if you're after a 5-limit temperament&mdash;you may as well use [[12-ET]]<ref group="note">The mathematical term for this idea is [[Wikipedia:Surjective_function|surjective]]: if we understand a mapping as a function, we expect there to be no elements in the range of this function which no domain inputs map to.</ref>. So we would consider 24-ET to stand for 24 Equal Temperoid.
+
+Think of it this way: because every element is even, any [[JI]] interval you'd map with with the mapping must come out as an even number of steps of 24-ET, by the definition of the dot product, and every even step of 24-ET is just a step of 12-ET. Examples: {{vector|1 -2 1}}.{{map|24 38 56}} = 24 - 76 + 56 = 4, {{vector|1 1 -1}}.{{map|24 38 56}} = 24 + 38 - 56  = 6.
+-->
+However, enfactoring is often not apparent. Consider this example:
+
+<math>\displaystyle 
+\begin{bmatrix} 
+3 & 0 & -1 \\
+0 & 3 & 5 \\
+\end{bmatrix}
+</math>
+
+This is a form of 5-limit [[porcupine]], a [[rank-2 temperament]] (in fact it is the result of putting it into [[IRREF]]). Looking at either row, neither map has a common factor. But remember that we also need to check linear combinations of rows. If we subtract the 2nd row from the 1st row, we can produce the row {{map| 3 -3 -6 }}, which has a common factor of 3. So this mapping is also enfactored, even though it is not obvious from just looking at it.
+
+<!--
+If you're unsure why this {{map| 3 -3 -6 }} matters despite not being in {{rket| {{map| 3 0 -1 }} {{map| 0 3 5 }} }}, we may need to quickly review some linear algebra fundamentals. It may take some getting used to, but a mapping can be changed to another equivalent mapping (both mappings will map input vectors to the same scalars) by replacing any row with linear combinations of its rows. That is, we could replace either {{map| 3 0 -1 }} or {{map| 0 3 5 }} in our original matrix {{rket| {{map| 3 0 -1 }} {{map| 0 3 5 }} }} to get {{rket|{{map|3 -3 -6}} {{map| 0 3 5 }} }} or {{rket| {{map| 3 0 -1 }} {{map| 3 -3 -6 }} }} and any of these mappings represent the same temperament.
+-->
+Sometimes the hidden common factor is even harder to find. Consider the mapping:
+
+<math>\displaystyle 
+\begin{bmatrix} 
+6 & 5 & -4 \\
+4 & -4 & 1 \\
+\end{bmatrix}
+</math>
+
+To find this common factor, we need to linearly combine two of the first row {{map| 6 5 -4 }} and negative three of the 2nd row {{map| 4 -4 1 }} to produce {{map| 0 22 -11 }}. So we can see here that its common factor is 11. But there is no clear relationship between the numbers 2 and 3 and the number 11. And so we can begin to see that the problem of identifying enfactored mapping may not be very simple or straightforward.
+
+== Algorithms ==
+In this section, we discuss three methods that defactors the mapping: Smith defactoring, developed by Gene Ward Smith<ref group="note">but the name comes from a different Smith: [[Wikipedia: Henry John Stephen Smith|Henry John Stephen Smith]], for whom the [[Smith normal form]] is named, which this method uses</ref>; Pernet-Stein defactoring, described by Clément Pernet and William Stein; and column Hermite defactoring, developed by Dave and Douglas (the name comes, of course, from Hermite normal form, which it uses). 
+
+Smith defactoring has not yet been mathematically proven to always defactor mappings, while Pernet-Stein and column Hermite defactoring have been proven. Tests Douglas ran on thousands of random mappings, however, have empirically proven that all three methods work all of the time. Pernet-Stein and column Hermite are more closely related, and so they give the exact same results as each other every time, whereas Smith defactoring sometimes gives different results; however, after taking the HNF of the results, all three do become exactly the same. 
+
+Douglas argues that Column Hermite defactoring is the preferable defactoring algorithm particularly when the routine for Hermite normal form also gives a [[Wikipedia: Unimodular matrix|unimodular]] transformation matrix, such as that in [[Wikipedia: Wolfram Language|Wolfram Language]] (formerly Mathematica, see [https://www.wolfram.com/language/ site]). The following reasons are listed:
+
+* It is computationally cheap, wasting little resources computing things irrelevant to the result<ref group="note">
+Using the following code in Wolfram Language:
+
+<pre style="font-size: 75%;">
+hermiteUnimodular[m_] := Transpose[First[HermiteDecomposition[Transpose[m]]]]
+columnEchelonDefactor[m_] := Take[Inverse[hermiteUnimodular[m]], MatrixRank[m]]
+rightReducingMatrix[m_] := Last[SmithDecomposition[m]]
+smithDefactor[m_] := Take[Inverse[rightReducingMatrix[m]], MatrixRank[m]]
+
+ms = {};
+Do[
+    d = RandomInteger[{2, 6}];
+    r = RandomInteger[{1, d}];
+    m = RandomInteger[{-99, 99}, {r, d}];
+    ms = Join[ms, {m}],
+    1000
+]
+
+AbsoluteTiming[Do[smithDefactor[m], {m, ms}]]
+</pre>
+
+The first several results for Smith defactoring took (in ms) 3.55919, 3.45199, 3.58493, 3.63464, 3.80917, 3.77151, while the first several results for column Hermite defactoring took 3.30063, 3.39137, 3.33808, 3.21195, 3.16469, 3.20419. So this suggests a slight edge for column Hermite defactoring. Later, Pernet-Stein was also timed, and gave very slightly slower results than column Hermite defactoring, which makes sense because it is almost identical conceptually, except requires an additional matrix multiplication step.
+</ref>,
+* The way it works is easy to understand, and can be worked out by hand (as we will demonstrate below),
+* It is possible to find what the common factor is, if there was any.
+
+[[Flora Canou]] has contended that these features are shared by the Pernet-Stein method, and that the Pernet-Stein method is simpler when the unimodular matrix is not provided. 
+
+Column Hermite defactoring could not have been developed, however, were it not for Gene's pioneering work with the Smith defactoring (what he calls the process of "saturating" a mapping). At first Dave and Douglas had no idea what the right reducing matrix of the Smith decomposition (the process which also provides the Smith normal form) had to do with common factors, only that it somehow magically worked. So they analyzed the Smith decomposition until they isolated its key actions which actually effect the defactoring, and then honed their method down to do only these necessary actions. Again, they wouldn't have known where to start were it not for Gene.
+
+=== Smith defactoring ===
+Dave and Douglas did much of their work in Wolfram Language, a popular programming language used for math problems. Flora provided the mathematical formulae and [https://www.python.org/ Python] implementations based on their result. 
+
+An input mapping <math>m</math>, such as the example Gene gives in [[Saturation]], {{rket| {{map| 12 19 28 34 }} {{map| 26 41 60 72 }} }}, in Wolfram Language you would have to write as a list:
+
+<pre>
+m = {{12, 19, 28, 34}, {26, 41, 60, 72}};
+</pre>
+
+The implementation of Gene's method in Wolfram Language is simple. Just two lines:
+
+<pre>
+rightReducingMatrix[m_] := Last[SmithDecomposition[m]]
+smithDefactor[m_] := Take[Inverse[rightReducingMatrix[m]], MatrixRank[m]]
+</pre>
+
+So the first thing that happens to <math>m</math> when you pass it in to <code>smithDefactor[]</code> is that it calls <code>rightReducingMatrix[]</code> on it. This will find the Smith decomposition (using a function built in to Wolfram Language), which gives you three outputs: the Smith normal form, flanked by its left and right reducing matrices. Gene asks only for the right reducing matrix, so we grab that with <code>Last[]</code>. So that's what the function on the first line, <code>rightReducingMatrix[]</code>, does.
+
+Then Gene asks us to invert this result and take its first <math>r</math> rows, where <math>r</math> is the rank of the temperament. <code>Invert[]</code> takes care of the inversion, of course. <code>MatrixRank[m]</code> gives the count of linearly independent rows to the mapping, AKA the rank, or count of generators in this temperament. In this case that's 2. And so <code>Take[list, 2]</code> simply returns the first 2 entries of the list.
+
+Almost done! Except Gene not only defactors, he also calls for HNF, as we would, to achieve canonical (unique ID) form.
+
+<pre>
+normalForm[m_] := Last[HermiteDecomposition[m]]
+</pre>
+
+Similar to the Smith Normal Form, we do a decomposition, which gives you the normal form plus some other bonus results. In this case we actually want the normal form itself, and it happens to be the last element in the result list. So putting it all together, we defactor and then put into normal form:
+
+<pre>
+rightReducingMatrix[m_] := Last[SmithDecomposition[m]];
+smithDefactor[m_] := Take[Inverse[rightReducingMatrix[m]], MatrixRank[m]];
+normalForm[m_] := Last[HermiteDecomposition[m]];
+
+m = {{12, 19, 28, 34}, {26, 41, 60, 72}};
+normalForm[smithDefactor[m]]
+</pre>
+
+<pre>
+→ {{1, 0, -4, -13}, {0, 1, 4, 10}}
+</pre>
+
+And that result matches what Gene finds in that article. Defactoring and putting into normal form is equivalent to canonicalization.
+
+=== Pernet-Stein defactoring ===
+This algorithm was described in the 2009 paper ''Fast Computation of HNF of Random Integer Matrices'' by Clément Pernet and William Stein.<ref group="note">[https://www.wstein.org/papers/hnf/pernet-stein-fast_computation_of_hnf_of_random_integer_matrices.pdf Clément Pernet and William Stein. ''Fast Computation of HNF of Random Integer Matrices''. Journal of Number Theory.]</ref>
+
+For a mapping V of rank ''r'', its defactored form is given by
+
+<math>\displaystyle \left(\operatorname {hnf} (V)_{:, 1:r}\right)^{-1} \cdot V</math>
+
+where hnf is the column-style Hermite normal form, and :, 1:''r'' is taking the first ''r'' columns. 
+
+Here is an implementation in Python (with [https://scipy.org/ SciPy] and [https://www.sympy.org/en/index.html SymPy]): 
+
+<syntaxhighlight lang="python">
+import numpy as np
+from scipy import linalg
+from sympy import Matrix, normalforms
+
+def __hnf_col(main):
+    return np.flip(np.array(normalforms.hermite_normal_form(Matrix(np.flip(main))), dtype = int))
+
+def __sat(main):
+    return np.rint(linalg.inv(__hnf_col(main)) @ main).astype(int)
+</syntaxhighlight>
+
+Note that <code>__hnf_col</code> is just a wrapper for the column-style Hermite normal form, which takes the first ''r'' columns already. Here is the same functionality implemented in Wolfram: 
+
+<pre>
+getGreatestFactorA[a_] := Transpose[Take[hnf[Transpose[a]], MatrixRank[a]]];
+pernetSteinDefactor[m_] := Inverse[getGreatestFactorA[m].m;
+</pre>
+
+Note that the <code>hnf</code> is only available in row-style, so we have added a transpose at each end to convert it to column-style. 
+
+==== Development note ====
+At the time Dave and Douglas wrote the first draft of this article and developed column Hermite defactoring, they were unaware of this algorithm. After publicizing column Hermite defactoring, they were referred by [[Graham Breed]] to a similar method in [http://x31eq.com/temper/ Graham's popular online regular temperament tool], implemented as <code>saturate</code><ref group="note">[https://bitbucket.org/x31eq/regular/src/9bc9b5bd8c8e0ced6223b29c3ea487719d120c43/kernel.py#lines-178 Bitbucket | x31eq / regular / kernel.py]</ref> since 2011, and which includes in its commented documentation a link to the aforementioned paper. Unable to reverse-engineer Gene Ward Smith's saturation algorithm, Graham had gone back to the same source Gene had supposedly gotten his inspiration from&mdash;the Sage software developed by William Stein, co-author of this paper&mdash;and came across this paper. Graham's implementation turned out to be much more similar to the original description by Pernet and Stein than Gene's, differing only by an additional unnecessary use of the HNF at the beginning (while Gene's, by virtue of using the Smith Normal Form, could be said to essentially use some variable number of extraneous uses of HNF). It is not clear how Gene derived his saturation algorithm from Pernet and Stein's work, however, if the fact that Dave and Douglas derived something almost identical to Pernet and Stein's algorithm from Gene's, it suggests that it is not unreasonable for development to lead someone in the opposite direction along the same path. The very close relationship between column Hermite defactoring and Pernet-Stein defactoring will be discussed shortly.
+
+It should also be noted that toward the very beginning of Dave and Douglas's effort to develop a defactoring algorithm, Thomas McMurray Price described&mdash;in a message sent to the Xenharmonic Alliance Discord server&mdash;an algorithm almost identical to the Pernet-Stein algorithm, while also still being unaware of the Pernet-Stein paper. At this time, Dave and Douglas could not understand Tom's math well enough to realize that he'd just dropped the solution in their laps. Again, it was not until column Hermite defactoring was published that Tom commented on the findings and brought his ideas back into the conversation that Dave and Douglas realized the close connection between his ideas, Pernet-Stein defactoring, and column Hermite defactoring.
+
+=== Column Hermite defactoring ===
+For a mapping V of rank ''r'', its defactored form is found through the following steps. First, we must find the unimodular transformation matrix U associated with the Hermite normal form. This can be obtained by performing the column-style Hermite normal form operator on the mapping vertically augmented with an identity matrix: 
+
+<math>\displaystyle
+\operatorname {hnf}: 
+\begin{bmatrix}
+V \\
+\hline
+I
+\end{bmatrix}
+\rightarrow
+\begin{bmatrix}
+H \\
+\hline
+U
+\end{bmatrix}
+</math>
+
+Then the defactored form is given by
+
+<math>\displaystyle (U^{-1})_{1:r}</math>
+
+where hnf is the column-style Hermite normal form, and 1:''r'' is taking the first ''r'' rows. 
+
+Here is an implementation in Python (with SciPy and SymPy): 
+
+<syntaxhighlight lang="python">
+import numpy as np
+from scipy import linalg
+from sympy import Matrix, normalforms
+
+def __hnf_col (main):
+    return np.flip (np.array (normalforms.hermite_normal_form (Matrix (np.flip (main))), dtype = int))
+
+def __sat (main):
+    r = Matrix (main).rank ()
+    unimodular = __hnf_col (np.vstack ((main, np.eye (main.shape[1], dtype = int))))[r:]
+    return np.rint (linalg.inv (unimodular)[:r]).astype (int)
+</syntaxhighlight>
+
+Note that <code>__hnf_col</code> is just a wrapper for the column-style Hermite normal form. Here is the same functionality implemented in Wolfram: 
+
+<pre>
+hermiteUnimodular[m_] := Transpose[First[HermiteDecomposition[Transpose[m]]]]
+columnHermiteDefactor[m_] := Take[Inverse[hermiteUnimodular[m]],MatrixRank[m]]
+</pre>
+
+So this implementation begins by finding the unimodular matrix from a column Hermite decomposition. Note that the <code>HermiteDecomposition[]</code> is only available in row-style, so we first transpose the matrix to convert it to column-style. The decomposition in Wolfram returns two items&mdash;the unimodular matrix, and the input matrix in Hermite normal form, in that order&mdash;and in this case we actually want the unimodular matrix. So we take that with <code>First[]</code>. Then we transpose it again to in effect undo the transposition we did at the beginning. 
+
+The next step is to invert that matrix, which is doable because it is unimodular; a key property of unimodular matrices is that they are always invertible, and because their determinant is &#177;1, if they contain all integer entries, their inverse will also contain all integer entries (which it does, and we need it to)<ref group="note">Interesting tidbit regarding [[full-rank]] matrices and unimodular matrices: for square matrices, unimodularity implies full-rank, and while full-rank does not imply unimodularity, it does imply a non-zero determinant.</ref>.
+
+Finally we take only the top ''r'' rows of this. That is found with <code>MatrixRank[m]</code>.
+
+==== How/why it works ====
+The basic idea is that the column Hermite decomposition leaves any common row factor the mapping might have had in the HNF part, while preserving in the unimodular part everything that's still meaningful about how the mapping works. So that's why we throw the column HNF away and keep the unimodular part. The rest of the algorithm is basically just "undoing" stuff so we get back to the structure of the matrix that we input.
+
+So inverting is one of those "undo" type operations. To understand why, we have to understand the nature of this decomposition. What the Hermite decomposition does is return a unimodular matrix U and a Hermite normal form matrix H such that if you left-multiply your original matrix A by the unimodular matrix U you get the normal form matrix H, or in other words, {{nowrap|UA {{=}} H}}. So, think of it this way. If A is what we input, and we want something sort of like A, but U is what we've taken, and U is multiplied with A in this equality to get H, where H is also kind of like A, then probably what we really want is something like U, but inverted.
+
+Finally, we take only the top <math>r</math> rows, which again is an "undo" type operation. Here what we're undoing is that we had to graduate from a rectangle to a square temporarily, storing our important information in the form of this invertible square unimodular matrix temporarily, so we could invert it while keeping it integer, but now we need to get it back into the same type of rectangular shape as we put in. So that's what this part is for.<ref group="note">There is probably some special meaning or information in the rows you throw away here, but we're not sure what it might be.</ref>
+
+===== The actual defactoring conditions =====
+The HNF is used out of convenience, but in fact the conditions necessary to achieve defactoring are less strict. This was pointed out by Tom Price when he explained his defactoring method. 
+
+The conditions for attaining the HNF are strict enough to enforce uniqueness, in particular the condition that entries in pivot columns must be between 0 and the pivot. This part is not relevant to defactoring. The only thing that is critical is that all-zero columns are created such that all the information in the matrix has been compressed into a single square submatrix, i.e. into a single non-zero minor determinant, and of course that this transformation has been achieved using only unimodular operations, so that the [[image]] of the matrix remains the same. 
+
+So fitting the information from a rectangle into a square is the target, although in practice this is usually only possible by getting the information into echelon form. 
+
+However, no method has been invented in mathematics that finds matrices like this; i.e. while it seems like it might be strictly easier to do this, to do the same stuff but stop earlier, it's not actually as simple as that or it would already exist. If such a thing did exist it would have massive ramifications for linear algebra in a broader sense, because it could be used for more basic things like finding nullspace bases. And so if such a thing were possible to develop, it is probably very challenging to create. The Hermite decomposition is just a practical and commonly available resource for attaining the state we need to defactor, even if it is slightly overkill. 
+
+And we need the HNF otherwise to achieve canonical form, so pedagogically speaking, we may as well just explain it and that be it; why explain a second method for being simpler, if it's simplest to just use the one method. 
+
+The specific conditions for HNF are not firmly established and vary slightly from application to application, but one thing they do share is a level of strictness to enforce uniqueness. But Tom's square-only conditions are not that strict; there are many unimodular decompositions one can find for any given matrix that will lead you to the defactored result. So, Tom's conditions, which are the true conditions for defactoring, are not technically speaking HNF conditions. And so column Hermite defactoring can not truly be said to be named after a thing that is fundamental to its function, but merely a present-day practicality in implementing it. But we find this acceptable (and haven't found a better alternative).
+
+===== Proof of why column Hermite defactoring (and Pernet-Stein defactoring) work =====
+The following proof is adapted primarily from Tom Price's thinking:
+# The input matrix is an ''m''&#215;''n'' matrix A.
+# It decomposes into a slightly bigger and square (''n''&#215;''n'') unimodular matrix U and another ''m''&#215;''n'' matrix which is not exactly A in HNF (because we only have to use unimodular operations so far as to get all the all-zero columns off to one side of A; we don't need to satisfy all of the conventional constraints of HNF), but we'll still call it H. The unimodular matrix is a transformation from A into H, so, {{nowrap|AU {{=}} H}}.
+# If we were to actually slice off the all-zero cols we've isolated in H, we'd end up with a slightly smaller and square (''m''&#215;''m'') matrix. So let's call this little square matrix S (this is our "[[Defactoring algorithms#Finding the greatest factor|greatest factor matrix]]", because its determinant is the greatest factor of A).
+# We can left-multiply both sides of our equation by the inverse of S (S{{inv}}) and right-multiply both sides of our equation by the inverse of U (U{{inv}}) to get {{nowrap|S{{inv}}AUU{{inv}} {{=}} S{{inv}}HU{{inv}}}}. The U's cancel out on the left so we end up with {{nowrap|S{{inv}}A {{=}} S{{inv}}HU{{inv}}}}. At first glance we don't seem to have gained any further insight. But there's more we can do from here. 
+# Because H is just S with a bunch of 0 cols appended, S{{inv}}H is just the identity matrix with a bunch of zero columns appended, in other words it is a truncated identity matrix. We could call that T, and now we have {{nowrap|S{{inv}}A {{=}} TU{{inv}}}}.
+# Multiplying U{{inv}} on the left by a truncated identity matrix is the same as truncating U{{inv}}. That's how we think of the output of column Hermite defactoring&mdash;our supposedly defactored matrix&mdash;so let's call that D. We now have {{nowrap|S{{inv}}A {{=}} D}}. (This is how we can see that the Pernet-Stein method of multiplying the input matrix by a transformation matrix that is a truncated and inversed column Hermite normal form of the input is equivalent to our column Hermite method, which takes the other route to the same result: inverting and truncating the unimodular result of the Hermite decomposition.)
+# We need to prove now that D has three qualities:
+:: a) It's defactored, 
+:: b) It still represents the same temperament (i.e. it has the same nullspace as A), and
+:: c) It's an integer.
+# Proving (a) is easy. It's defactored because U was unimodular. U's determinant was 1, and neither inverting it nor truncating it would change that. Alternatively, we can prove this by showing how on the other side of the equation, S{{inv}}A is surjective as a function on lattice points (in other words, there's no points in the tempered lattice that JI lattice points don't map to). We begin with the fact that H has the same image as A, because right-multiplication with a unimodular matrix such as U doesn't change the image. Then S has the same image as H, too, and therefore the same image as A, because removing the all-zero columns doesn't change the image either. Now that we've established this, we can assert that S{{inv}}A is surjective by describing a lattice point ''x'' such that {{nowrap|''y'' {{=}} S{{inv}}A''x''}} for any given lattice point ''y''. And because S and A have the same image, we know that {{nowrap|S''y'' {{=}} A''x''}}, and therefore {{nowrap|''y'' {{=}} S{{inv}}A''x''}}.
+# Proving (b) is even easier. Multiplying any matrix with an invertible matrix on the left keeps the nullspace the same. S{{inv}} is clearly invertible, being itself the inverse of S. A way to understand this is: a non-invertible matrix is the same as a singular matrix, i.e. one whose determinant is 0. So as long as you don't wipe things out by essentially multiplying by 0, the nullspace information is preserved, just scaled.
+# Proving (c) is a bit trickier, because S{{inv}} is not necessarily an integer matrix. But can show that S{{inv}}A is an integer matrix by showing that it maps lattice points to lattice points. Suppose we have that same equation from the proof of (a), namely that {{nowrap|''y'' {{=}} S{{inv}}A''x''}}, where ''x'' is a lattice point. We want to show that ''y'' is a lattice point. Again, since A and S have the same image (when considered as functions on lattice points), there must be some lattice point ''z'' with {{nowrap|S''z'' {{=}} A''x''}}. But we also know that {{nowrap|S''y'' {{=}} A''x''}}. Since S is invertible, and therefore injective, {{nowrap|''y'' {{=}} ''z''}}, so ''y'' is a lattice point.
+
+===== Relationship with other defactoring methods =====
+[[File:Comparison of defactoring algorithms.png|400px|thumb|right|Comparison of defactoring algorithms using Wolfram Language. Notice how HermiteDecomposition simultaneously returns the HNF and the unimodular matrix]]
+
+If column Hermite defactoring is described as "column-Hermite inverse take-r-rows", the analogous way to describe Smith defactoring would be like "row-Hermite column-Hermite row-Hermite column-Hermite row-Hermite column-Hermite … inverse take-r-rows". In other words, the nature of Smith decomposition is to essentially repeatedly Hermite decompose from either angle until Smith normal form has been achieved, which is wasteful and unnecessary in this context, when all that is required is a single column-Hermite decomposition. This helps explain why column Hermite defactoring is more performant in general than Smith defactoring, when code is run against thousands of examples at a time.
+
+According to Wolfram<ref group="note">[https://reference.wolfram.com/language/ref/SmithDecomposition.html Wolfram Language Documentation | SmithDecomposition]</ref>, "the Smith decomposition can often be found by two iterations of the Hermite decomposition". This notion is echoed in the Sage docs<ref group="note">[https://doc.sagemath.org/html/en/reference/matrices/sage/matrix/matrix_integer_dense.html Sage Reference Manual | Dense matrices over the integer ring]</ref>, which read, "Use Hermite normal form twice to find an invertible matrix whose inverse transforms a matrix with the same row span as self to its saturation," remembered that saturation is the same as defactoring. The reason for the multiple applications of Hermite decomposition to achieve Smith normal form is that you will not necessarily get a diagonal matrix on the first go. But as we know from Smith defactoring, the center matrix of the Smith decomposition&mdash;the Smith normal form one&mdash;is not the target matrix, so its exact form is not necessary to achieve to accomplish defactoring. 
+
+Column Hermite defactoring is very similar to Pernet-Stein defactoring. If you compare the set of methods that they call, they are almost identical; Pernet-Stein just uses matrix multiplication in exchange of column Hermite's concatenation and slice. 
+
+{| class="wikitable center-all"
+|+ style="font-size: 105%;" | Comparison of steps in column Hermite and Pernet-Stein defactoring
+|-
+! Column Hermite !! Pernet-Stein
+|-
+| Concatenation || 
+|-
+| Hermite normal form || Hermite normal form
+|-
+| Slice || 
+|-
+| Inversion || Inversion
+|-
+| Slice || Slice
+|-
+| || Matrix multiplication
+|}
+
+===== Relationship with EA =====
+Another thought that might help congeal the notion of column Hermite defactoring for you is to use what you know about multimaps (AKA "wedgies"), in particular a) what they are, and b) how to defactor them. The answer to a) is that they are just the list of the largest possible minor determinants (or "largest-minors" for short) of rectangular matrices, or in other words, the closest thing rectangular matrices such as mappings have to a real determinant. And the answer to b) is that you simply divide out the GCD of the entries in this list of largest-minors. So if defactoring a list of largest-minors means dividing common factors out, then it should be little surprise that achieving a real determinant of &#177;1 is equivalent to defactoring, and thereby that leveraging the unimodularity of the other matrix produced by the Hermite decomposition should be valuable in this capacity.
+
+==== By hand ====
+In an effort to demystify the effects of column Hermite defactoring, let us walk though an example manually. 
+
+First we need to learn how to perform its two building blocks by hand: 
+# Hermite decomposition
+# Inversion
+
+After we know how to do these two things individually, we will learn how to tweak them and assemble them together in order to perform a complete column Hermite defactoring.
+
+Fortunately, both of these two processes can be done using a technique you may already be familiar with if you have learned how to calculate the nullspace of a mapping by hand (as demonstrated [[Dave Keenan & Douglas Blumeyer's guide to RTT/Exploring temperaments#Nullspace|here]]): 
+
+# Augmenting your matrix with an identity matrix
+# Performing elementary row or column operations until a desired state is achieved<ref group="note">For convenience, here is a summary of the three different techniques and their targets:<br />
+* Nullspace: augment to the bottom, go until you get columns with all zeros.
+* Hermite: augment to the right, go until echelon form.
+* Inverse: augment to the right, go until identity matrix.
+</ref>
+
+===== Hermite decomposition by hand =====
+{{Databox|Hermite decomposition tutorial|
+Let us do a Hermite decomposition example first. We begin with the mapping for the temperament 12 & 26bbb, which looks like {{rket| {{map| 12 19 28 }} {{map| 26 43 60 }} }}, or as a matrix:
+
+<math>
+\left[ \begin{matrix}
+12 & 19 & 28 \\
+26 & 43 & 60 \\
+\end{matrix} \right]
+</math>
+
+Then we augment it with an identity matrix. However, unlike with the method for finding the nullspace, we do not augment it on the bottom, but to the right:
+
+<math>
+\left[ \begin{array} {ccc|cc}
+12 & 19 & 28  &  1 & 0 \\
+26 & 43 & 60  &  0 & 1 \\
+\end{array} \right]
+</math>
+
+Now we begin applying elementary row operations until the part on the left is in Hermite Normal Form. If you need to review the definition of HNF and its constraints, you can find more detail [[matrix echelon forms#HNF|here]]. The quick and dirty is: 
+
+# All pivots &gt; 0
+# All entries in pivot columns below the pivots {{=}} 0
+# All entries in pivot columns above the pivots &ge; 0 and strictly less than the pivot
+
+One special thing about computing the HNF is that we're not allowed to use all elementary operations; in particular we're not allowed to multiply (or divide) rows. Our main technique, then, will be adding or subtract rows from each other. This, of course, includes adding or subtracting ''multiples'' of rows from each other, because doing so is equivalent to performing those additions or subtractions one at a time (note that adding or subtracting ''multiples'' of rows from each other is significantly different than simply ''multiplying'' a row by itself).<ref group="note">The fact that you're not allowed to multiply or divide is equivalent to the fact that at every step along the way, the augmented matrix remains unimodular.</ref>
+
+So let's begin by subtracting the 1st row from the 2nd row, and let's do it 2 times, because we can see that would get the pivot of the 2nd row pretty close to 0, which is where we're trying to get it, per the 2nd HNF constraint above. 
+
+<math>
+\left[ \begin{array} {ccc|cc}
+12 & 19 & 28  &  1 & 0\\
+2 & 5 & 4  &  -2 & 1\\
+\end{array} \right]
+</math>
+
+Okay. We can see now that if we subtract 6 times the 2nd row back from the 1st row now, we'll create a 0 in the first column. It's not in the bottom left where we need it, but that's no big deal; reordering the rows is an allowed row operation. So let's do that subtraction:
+
+<math>
+\left[ \begin{array} {ccc|cc}
+0 & -11 & 4  &  13 & -6 \\
+2 & 5 & 4  &  -2 & 1 \\
+\end{array} \right]
+</math>
+
+And then reorder the rows:
+
+<math>
+\left[ \begin{array} {ccc|cc}
+2 & 5 & 4  &  -2 & 1 \\
+0 & -11 & 4  &  13 & -6 \\
+\end{array} \right]
+</math>
+
+We're actually quite close to done! All we need to do is flip the signs on the 2nd row. But wait, you protest! Isn't that multiplying a row by &minus;1, which we specifically forbade? Well, sure, but that just shows we need to clarity what we're concerned about, which is essentially enfactoring. Multiplying by &minus;1 does not change the GCD of the row, where multiplying by &minus;2 or 2 would. Note that because the process for taking the HNF forbids multiplying ''or dividing'', it will never introduce enfactoring where was there was none previously, but it also does not remove enfactoring that is there. 
+
+Perhaps another helpful way of thinking about this is that multiplying the row by &minus;1 does not alter the potential effects this row could have being added or subtracted from other rows. It merely swaps addition and subtraction. Whereas multiplying the row by any integer with absolute value greater than 1 ''would'' affect the potential effects this row could have being added or subtracted from other rows: it would limit them.
+
+So, let's do that sign flip:
+
+<math>
+\left[ \begin{array} {ccc|cc}
+2 & 5 & 4  &  -2 & 1 \\
+0 & 11 & -4  &  -13 & 6 \\
+\end{array} \right]
+</math>
+
+And we're done! Let's confirm though. 
+
+# '''All pivots &gt; 0?''' Check. The 1st row's pivot is 2 and the 2nd row's pivot is 11.
+# '''All entries in pivot columns below the pivots {{=}} 0'''? Check. This only applies to one entry&mdash;the bottom right one, below the 1st row's pivot&mdash;but it is indeed 0.
+# '''All entries in pivot columns above the pivots &ge; 0 and strictly less than the pivot'''? Check. Again, this only applies to one entry&mdash;the center top one, above the 2nd row's pivot of 11&mdash;but it is 5, and 5 is indeed non-negative and &lt; 11.
+
+And so, we have performed the Hermite decomposition. The matrix to the left of the augmentation line&mdash;the one in place of our original matrix&mdash;is that original matrix in HNF:
+
+<math>\left[ \begin{matrix}
+2 & 5 & 4 \\
+0 & 11 & -4 \\
+\end{matrix} \right]</math>
+
+And the matrix to the right of the augmentation line is the other output of the Hermite decomposition: a unimodular matrix with a special property. 
+
+<math>\left[ \begin{matrix}
+-2 & 1 \\
+-13 & 6 \\
+\end{matrix} \right]</math>
+
+This special property is that if you take the original matrix and left multiply it by this unimodular matrix, you will get the HNF. 
+
+<math>\begin{array} {l} \left[ \begin{matrix}
+-2 & 1 \\
+-13 & 6 \\
+\end{matrix} \right] & × & \left[ \begin{matrix}
+12 & 19 & 28 \\
+26 & 43 & 60 \\
+\end{matrix} \right] & = & \left[ \begin{matrix}
+2 & 5 & 4 \\
+0 & 11 & -4 \\
+\end{matrix} \right] \end{array}
+</math>
+
+And that's all there is to the Hermite decomposition.
+}}
+
+===== Inversion by hand =====
+{{Databox|Inversion tutorial|
+Now let's take a look at how to do inversion by hand. The first thing to note is that this process only works for rectangular matrices. So you will not be using on non-trivial mappings or comma bases directly. But, as you know, there is a useful application for this process on the unimodular matrix which is the other result of the Hermite decomposition than the HNF, and unimodular matrices are always square. 
+
+Here's a random example matrix (well, one I stole from a quick web search, anyway):
+
+<math>
+\left[ \begin{matrix}
+3 & -2 & 4 \\
+1 & 0 & 2 \\
+0 & 1 & 0 \\
+\end{matrix} \right]
+</math>
+
+The first step is to augment it. Similar to the Hermite decomposition process, we augment it to the right:
+
+<math>
+\left[ \begin{array} {ccc|ccc}
+3 & -2 & 4  &  1 & 0 & 0 \\
+1 & 0 & 2  &  0 & 1 & 0 \\
+0 & 1 & 0  &  0 & 0 & 1 \\
+\end{array} \right]
+</math>
+
+Our goal now is to use elementary row operations until the original matrix&mdash;the one to the left of the augmentation line&mdash;is an identity matrix. At that point, the matrix on the right side of the augmentation line&mdash;the one that started out as an identity matrix&mdash;will be the inverse of the original matrix. I don't know about you, but for me, this relationship was instantly intuitive and memorable, and I'm super glad I learned how to this one by hand!
+
+As our first step, let's rearrange the rows of the matrix. Just some obvious-looking moves (that ''probably'' won't backfire) to get us superficially closer to the identity matrix on the left: 
+
+<math>
+\left[ \begin{array} {ccc|ccc}
+1 & 0 & 2  &  0 & 1 & 0 \\
+0 & 1 & 0  &  0 & 0 & 1 \\
+3 & -2 & 4  &  1 & 0 & 0 \\
+\end{array} \right]
+</math>
+
+Okay, now let's target the bottom-right entry. How can we make that 3 into a 0? Let's subtract the 1st row from the 3rd row 3 times:
+
+<math>
+\left[ \begin{array} {ccc|ccc}
+\color{blue}1 & \color{blue}0 & \color{blue}2  &  \color{blue}0 & \color{blue}1 & \color{blue}0 \\
+0 & 1 & 0  &  0 & 0 & 1 \\
+\color{red}0 & \color{red}-2 & \color{red}-2  &  \color{red}1 & \color{red}-3 & \color{red}0 \\
+\end{array} \right]
+</math>
+
+Okay, let's next target the bottom-center entry. How can we make that &minus;2 into a 0? Let's add the 2nd row to the 3rd row 2 times:
+
+<math>
+\left[ \begin{array} {ccc|ccc}
+1 & 0 & 2  &  0 & 1 & 0 \\
+\color{blue}0 & \color{blue}1 & \color{blue}0  &  \color{blue}0 & \color{blue}0 & \color{blue}1 \\
+\color{red}0 & \color{red}0 & \color{red}-2  &  \color{red}1 & \color{red}-3 & \color{red}2 \\
+\end{array} \right]
+</math>
+
+Next, let's target the top-right entry, making that a 0 by adding the 3rd row to the 1st row:
+
+<math>
+\left[ \begin{array} {ccc|ccc}
+\color{red}1 & \color{red}0 & \color{red}0  &  \color{red}1 & \color{red}-2 & \color{red}2 \\
+0 & 1 & 0  &  0 & 0 & 1 \\
+\color{blue}0 & \color{blue}0 & \color{blue}-2  &  \color{blue}1 & \color{blue}-3 & \color{blue}2 \\
+\end{array} \right]
+</math>
+
+Finally, we just need to divide the 3rd row by &minus;2. Yes, unlike with the Hermite decomposition, all elementary row operations are permitted, including multiplying or dividing rows. And in this case there's no restrictions against non-integers (which we didn't even explicitly mention when doing the HNF, but yes, HNF requires integers). So here's where we end up:
+
+<math>
+\left[ \begin{array} {ccc|ccc}
+1 & 0 & 0  &  1 & -2 & 2 \\
+0 & 1 & 0  &  0 & 0 & 1 \\
+\color{red}0 & \color{red}0 & \color{red}1  &  \color{red}-\frac12 & \color{red}\frac32 & \color{red}-1 \\
+\end{array} \right]
+</math>
+
+As with the Hermite decomposition, we have a convenient way to check our work at the end, which involves matrix multiplication. With Hermite, we verified that left-multiplying our original matrix by the unimodular matrix resulted in the HNF. With inversion, we verify that left-multiplying<ref group="note">or right-multiplying, in this case; it doesn't matter</ref> our original matrix by the inverse results in the identity matrix. And indeed:
+
+<math>
+\begin{array} {1} 
+\left[ \begin{matrix}
+3 & -2 & 4 \\
+1 & 0 & 2 \\
+0 & 1 & 0 \\
+\end{matrix} \right]
+
+& × & 
+
+\left[ \begin{matrix}
+1 & -2 & 2 \\
+0 & 0 & 1 \\
+-\frac12 & \frac32 & -1 \\
+\end{matrix} \right]
+
+& = & 
+
+\left[ \begin{matrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{matrix} \right]
+\end{array}
+</math>
+
+This matrix is chosen specifically to demonstrate the importance of the unimodularity of the other matrix produced by the Hermite decomposition. A unimodular matrix is defined by having a determinant of ±1. And what does this have to do with inverses? Well, take a look at the determinant of our original matrix here, {{rket|{{map|3 -2 4}} {{map|1 0 2}} {{map|0 1 0}}}}. It's 2. The determinant of an invertible matrix will tell you what the LCM of all the denominators in the inverse will be.<ref group="note">If you're familiar with the formula for the Moore-Penrose inverse of rectangular matrices, you may recognize this fact as akin to how you multiply the outside of the pseudoinverse by the reciprocal of the determinant of the matrix.</ref><ref group="note">This may also shed some light on the fact that the only square matrices that are not invertible are those with determinants equal to 0.</ref> And so, the fact that the other matrix produced by the Hermite decomposition is unimodular means that not only is it invertible, if it has only integer terms (which it will, being involved in HNF), then its inverse will also have only integer terms. And this is important because the inverse of a Hermite unimodular matrix is just one step away from the defactored form of an input matrix.
+}}
+
+===== Putting it all together =====
+{{Databox|Defactoring tutorial|
+In the Wolfram Language algorithm described above, the input matrix is first transposed and then Hermite decomposed. In fact, this is due to a limitation of the built-in <code>HermiteDecomposition[]</code> function in Wolfram Language. The HNF is well understood both in its more common and default row-style as well as a column-style, so it might be expected for Wolfram Language to provide an option for the <code>HermiteDecomposition[]</code> function to perform it by columns. Alas, it does not. So the transposition our code does is a workaround for this lack. 
+
+When doing a column-style Hermite decomposition by hand, we have two options:
+#Mimic this workaround that we're doing in the code: transpose the matrix, and then do a Hermite decomposition as demonstrated above: augment to the right and perform row operations;
+#Augment the matrix to the ''bottom'', and then use elementary column operations instead of elementary row operations (such that it looks more similar to the process for computing the nullspace by hand).
+
+Here, we'll be demonstrating the process using the first option, because we might as well follow the same approach as the code unless we have a compelling reason not to. And we don't! If we were to follow the second option&mdash;rotating everything 90&deg;&mdash;we'd have to rewire our brains to recognize matrices in HNF but rotated 90 degrees, which is certainly harder than just transposing a matrix 90 degrees and then treating it the same way with respect to the complexities of Hermite decomposition as we've already become accustomed to.
+
+So, while it's a silly example, let's suppose we want to defactor the mapping {{rket|{{map|6 5 4}} {{map|4 -4 1}}}}. Spoiler alert: it is 11-enfactored:
+
+<math>\left[ \begin{matrix}
+6 & 5 & -4 \\
+4 & -4 & 1 \\
+\end{matrix} \right]</math>
+
+Our first step is to transpose it:
+
+<math>\left[ \begin{matrix}
+6 & 4 \\
+5 & -4 \\
+-4 & 1 \\
+\end{matrix} \right]</math>
+
+And now we're going to augment it to the right, so we can do the first step of the Hermite decomposition. But we're actually going to go a bit further. We're going to go ahead and augment it to the right and also augment the augmenting matrix to the bottom, because that's where we're going to perform the next step, which is the inversion. We learned inversion using augmentation to the right, but remember: everything we're doing here is transposed! So augmenting to the bottom is the correct thing to do there. When we're all done, we'll transpose one more time to undo it. (In the Wolfram Language code it was more natural to transpose things between the Hermite decomposition and the inversion, but here I think the process is better illustrated with this rotated-L-shape structure.)
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+6 & 4 \\
+5 & -4 \\
+-4 & 1 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+Alright. So our first goal is to get the top-left matrix into HNF. Let's subtract the 2nd row from the 1st row&mdash;that will get us a 1 in the top-left entry, which is what we want if we can.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+\color{red}1 & \color{red}8 \\
+\color{blue}5 & \color{blue}-4 \\
+-4 & 1 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+\color{red}1 & \color{red}-1 & \color{red}0 \\
+\color{blue}0 & \color{blue}1 & \color{blue}0 \\
+0 & 0 & 1 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+Now let's subtract the 1st row from the 2nd row 5 times. That'll get us a 0 below that first pivot, which is what we need.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+\color{blue}1 & \color{blue}8 \\
+\color{red}0 & \color{red}-44 \\
+-4 & 1 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+\color{blue}1 & \color{blue}-1 & \color{blue}0 \\
+\color{red}-5 & \color{red}6 & \color{red}0 \\
+0 & 0 & 1 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+Now let's add the 1st row to the 3rd row 4 times. That'll allow us to achieve all 0's below the first pivot.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+\color{blue}1 & \color{blue}8 \\
+0 & -44 \\
+\color{red}0 & \color{red}33 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+\color{blue}1 & \color{blue}-1 & \color{blue}0 \\
+-5 & 6 & 0 \\
+\color{red}4 & \color{red}-4 & \color{red}1 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+Now let's add the 3rd row to the 2nd row. We can see that if we do that, we'll simplify their relationship. If it's not clear now, it'll be clear in the next step.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+1 & 8 \\
+\color{red}0 & \color{red}-11 \\
+\color{blue}0 & \color{blue}33 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+1 & -1 & 0 \\
+\color{red}-1 & \color{red}2 & \color{red}1 \\
+\color{blue}4 & \color{blue}-4 & \color{blue}1 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+So now we can add the 2nd row to the 3rd row 3 times, and that'll get the entry below the 2nd pivot to be 0.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+1 & 8 \\
+\color{blue}0 & \color{blue}-11 \\
+\color{red}0 & \color{red}0 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+1 & -1 & 0 \\
+\color{blue}-1 & \color{blue}2 & \color{blue}1 \\
+\color{red}1 & \color{red}2 & \color{red}4 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+We can flip the signs of the second row, because we need pivots to be positive.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+1 & 8 \\
+\color{red}0 & \color{red}11 \\
+0 & 0 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+1 & -1 & 0 \\
+\color{red}1 & \color{red}-2 & \color{red}-1 \\
+1 & 2 & 4 \\
+\hline
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+And we've completed the first step!<ref group="note">Note that while the HNF is unique, the unimodular matrix is not. Because the 3rd row of the left matrix&mdash;the one in HNF&mdash;is all 0's, any number of that row can be added to either of the other two rows without altering the HNF at all, but with affecting the unimodular matrix on the right. Please feel free to experiment yourself, but I expect you will find that the inverse of any matrix you come up with this way, transposed, trimmed, and HNF'd, will give you the same canonical form&mdash;no need to worry about the exact path you happen to take to the HNF in the first step.</ref> The original matrix is now in HNF. So the next step is to take the other matrix we've been working on&mdash;the unimodular one from the Hermite decomposition&mdash;and invert it. Again, since we're in a transposed state, we're going to do the by-hand inversion technique, but to the bottom using elementary column operations rather than to the right using elementary row operations. 
+
+For our first step, let's add the 1st column to the 2nd column. That will get us a 0 in the top-center entry. Remember, we're trying to get the top-right matrix to look like an identity matrix.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+1 & 8 \\
+0 & 11 \\
+0 & 0 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+\color{blue}1 & \color{red}0 & 0 \\
+\color{blue}1 & \color{red}-1 & -1 \\
+\color{blue}1 & \color{red}3 & 4 \\
+\hline
+\color{blue}1 & \color{red}1 & 0 \\
+\color{blue}0 & \color{red}1 & 0 \\
+\color{blue}0 & \color{red}0 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+Now let's add the new 2nd column back to the 1st column. This will get the entry in the center-left to be 0.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+1 & 8 \\
+0 & 11 \\
+0 & 0 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+\color{red}1 & \color{blue}0 & 0 \\
+\color{red}0 & \color{blue}-1 & -1 \\
+\color{red}4 & \color{blue}3 & 4 \\
+\hline
+\color{red}2 & \color{blue}1 & 0 \\
+\color{red}1 & \color{blue}1 & 0 \\
+\color{red}0 & \color{blue}0 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+Now let's subtract the 2nd column from the 3rd column. This is sweet because it gets the center-right entry to be 0 as well as the bottom-right entry to be 1. A twofer! Plus it gives us our first column which has all zeros except for one row, which gives us the power to affect the entry in that row of other columns without messing up any of the other rows of those columns.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+1 & 8 \\
+0 & 11 \\
+0 & 0 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+1 & \color{blue}0 & \color{red}0 \\
+0 & \color{blue}-1 & \color{red}0 \\
+4 & \color{blue}3 & \color{red}1 \\
+\hline
+2 & \color{blue}1 & \color{red}-1 \\
+1 & \color{blue}1 & \color{red}-1 \\
+0 & \color{blue}0 & \color{red}1 \\
+\end{matrix} \right] \end{array} </math>
+
+Okay. So if we now subtract the 3rd column from the 1st column 4 times, we can get the bottom-left entry to be a 0.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+1 & 8 \\
+0 & 11 \\
+0 & 0 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+\color{red}1 & 0 & \color{blue}0 \\
+\color{red}0 & -1 & \color{blue}0 \\
+\color{red}0 & 3 & \color{blue}1 \\
+\hline
+\color{red}6 & 1 & \color{blue}-1 \\
+\color{red}5 & 1 & \color{blue}-1 \\
+\color{red}-4 & 0 & \color{blue}1 \\
+\end{matrix} \right] \end{array} </math>
+
+And now we can subtract the 3rd column from the 2nd column 3 times, so we can get the bottom-center entry to be a 0.
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+1 & 8 \\
+0 & 11 \\
+0 & 0 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+1 & \color{red}0 & \color{blue}0 \\
+0 & \color{red}-1 & \color{blue}0 \\
+0 & \color{red}0 & \color{blue}1 \\
+\hline
+6 & \color{red}4 & \color{blue}-1 \\
+5 & \color{red}4 & \color{blue}-1 \\
+-4 & \color{red}-3 & \color{blue}1 \\
+\end{matrix} \right] \end{array} </math>
+
+As our last step to achieve an identity matrix in the top-right matrix, let's just flip the signs of the 2nd column:
+
+<math> \begin{array} {l} \begin{array} {l} \left[ \begin{matrix}
+1 & 8 \\
+0 & 11 \\
+0 & 0 \\
+\end{matrix} \right. \\ \begin{array} {l} \\ \\ \\ \end{array} \end{array} & \rule[2.5mm]{0.375mm}{18mm} & \left. \begin{matrix}
+1 & \color{red}0 & 0 \\
+0 & \color{red}1 & 0 \\
+0 & \color{red}0 & 1 \\
+\hline
+6 & \color{red}-4 & -1 \\
+5 & \color{red}-4 & -1 \\
+-4 & \color{red}3 & 1 \\
+\end{matrix} \right] \end{array} </math>
+
+And so we've inverted the Hermite unimodular matrix. That's our result in the bottom-right matrix, isolated here:
+
+<math>\left[ \begin{matrix}
+6 & -4 & -1 \\
+5 & -4 & -1 \\
+-4 & 3 & 1 \\
+\end{matrix} \right]</math>
+
+But we're not quite to our defactored result. We're very close though! All we've got to do now is take that result and transpose it, to get us out of the transposed state we've been in (in other words, flip every entry across the main diagonal, running from the top-left entry to the bottom-right entry):
+
+<math>\left[ \begin{matrix}
+6 & 5 & -4 \\
+-4 & -4 & 3 \\
+-1 & -1 & 1 \\
+\end{matrix} \right]</math>
+
+And we take from this thing the top <math>r</math> rows, where <math>r</math> is the rank of the input matrix, which in this case is 2: 
+
+<math>\left[ \begin{matrix}
+6 & 5 & -4 \\
+-4 & -4 & 3 \\
+\end{matrix} \right]</math>
+
+And that's all there is to defactoring! 
+
+Note that this is not yet the canonical form. Remember that to achieve canonical form, we still have to take this result and get it into HNF. We won't work through that here, though if you'd like to practice by-hand Hermite decomposition, this would be a perfect example to try it on! The result you should end up with is {{rket|{{map|2 1 -1}} {{map|0 2 -1}}}}.
+
+But what have we accomplished here, really? You may well feel underwhelmed by this matrix's transformation from {{rket|{{map|6 5 -4}} {{map|4 -4 1}}}} to {{rket|{{map|6 5 -4}} {{map|-4 -4 3}}}}. It seems barely to have even changed!
+
+Well, the difference becomes clearer when we compare the HNF of the original matrix, which is {{rket|{{map|2 9 -5}} {{map|0 22 -11}}}}, a clearly 11-enfactored mapping. One thing that's cool about performing this defactoring process by hand is that you can clearly see any common factor that you've removed as a result: all you have to do is look at the pivots of the HNF of the original matrix that you left behind, which in this case was:
+
+<math>\left[ \begin{matrix}
+1 & 8 \\
+0 & 11 \\
+0 & 0 \\
+\end{matrix} \right]</math>
+
+The pivots are 1 and 11, so that 11 tells us that we had a common factor of 11<ref group="note">In the doubly-enfactored case of {{rket|{{map|17 16 -4}} {{map|4 -4 1}}}}, i.e. with a common factor of {{nowrap|33 {{=}} 3 &#215; 11}}, the two pivots of the HNF are 3 and 11, putting each of them on display separately.</ref><ref group="note">It's interesting to observe that while the 11-enfactoring can be observed in the original matrix as a linear combination of 2 of the 1st row with &minus;3 of the 2nd row, i.e. 2{{map|6 5 -4}} + (&minus;3){{map|4 -4 1}} {{=}} {{map|0 22 -11}}, the linear combination of ''columns'', i.e. slicing the original {{rket|{{map|6 5 -4}} {{map|4 -4 1}}}} mapping the other direction like {{rbra|{{vector|6 4}} {{vector|5 -4}} {{vector|-4 1}}}}, that leads to the revelation of this 11 is completely different: (&minus;1){{vector|6 4}} + 2{{vector|5 -4}} + 1{{vector|-4 1}} {{=}} {{vector|0 11}}.</ref>. You could say that the HNF is useful for identifying common factors, but not for removing them. But if you leave them behind in the column-style HNF, the information that is retained in the unimodular matrix which is the other product of the Hermite decomposition, is enough to preserve everything important about the temperament, to get you back to where you started via an inverse and a trimming of extraneous rows.
+}}
+
+== Development ==
+At the time [[Dave Keenan]] and [[Douglas Blumeyer]] began their investigation into exterior algebra (EA), most of the math involved in RTT could be handled using only linear algebra (LA), a relatively basic and commonplace subject that many people get a chance to learn in high school or university along with subjects like calculus or trigonometry. But there was one crucial task which LA had not proven able to handle yet: providing a "fingerprint"&mdash;a unique mathematical representation&mdash;for each distinct temperament, to allow it to be recognized as the same temperament even though it might be derived in different ways, or in other words, a canonical form for them. For many years, EA had provided this service for RTT, using a structure called a "[[wedgie]]".
+
+Dave and Douglas began their investigations with the hypothesis that canonicalization via wedgies was the primary reason it was important for RTT beginners to learn EA, and that if a canonical form could be developed using only LA, then EA could be reframed as an advanced topic. Gene himself, upon introducing the wedgie (which he initially called a "wedge invariant"), dismissed it as a bad idea to use for identifying temperaments: 
+
+<blockquote>''Since this is an invariant of the temperament, it would be a good thing to use to refer to it, but for the fact that it is opaque and does not immediately tell us how to define the temperament.''<ref group="note">[https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_1545.html#1545 Yahoo! Tuning Group | ''Standardizing our wedge product'']</ref></blockquote>
+
+Regarding any other advantages EA brought to the RTT table for beginners: they did not find any. The only minor advantage identified was how the largest-minors of the mapping which wedgies are a list of could also be read as a list of denominators of unit fractions of the tempered lattice which are capable of being generated by the associated combination of primes whose columns in the mapping were used in the calculation of the corresponding largest-minor (this idea is discussed in more detail [[Dave Keenan & Douglas Blumeyer's guide to EA for RTT#Multicomma entries: tempered lattice fractions generated by prime combinations|here]]). Furthermore, several disadvantages of EA were identified, the main one being that it is more challenging to learn and use, involving higher level mathematical concepts than LA.
+
+Regarding the development of a canonical form for temperaments using only linear algebra, Dave and Douglas did manage to develop such a form, which is documented here: [[defactored Hermite form]]. It was Gene himself who first described this form (as the result of his "saturation" algorithm), so he either did not realize the full implications of his discovery, or it was simply not popularized and plugged in with the rest of the hive knowledge.
+
+=== Failed defactoring methods ===
+When in development on an ideal defactoring method&mdash;the effort which culminated in column Hermite defactoring&mdash;Dave and Douglas experimented on other methods, which are imperfect (don't work all the time, are very slow, or too complicated).
+
+==== Nullspace'n'back defactoring ====
+It's fairly self-explanatory: '''Nullspace'n'back defactoring''' is a defactoring algorithm that works by finding a basis for the nullspace of a mapping, and then finding a basis for the nullspace of that result, which brings one back to a mapping. Depending on the implementation of your math library, nullspace'n'back defactoring ''may'' work<ref group="note">It is proven to work in this other paper by Pernet, where the terms "right kernel basis" and "left kernel basis" are used instead: https://hal.archives-ouvertes.fr/hal-01829139, however, no one involved in the xenharmonic project as of yet has invested the time and effort necessary to understand and confirm this proof. Pernet uses (and indeed has contributed in major part to) the Sage math library, where nullspace'n'back ''does'' work, but it seems likely to work only because their code explicitly defactors matrices whenever taking the nullspace, per our appraisal of their source code! Wolfram Language, on the other hand, which our RTT library uses, does not do this. Sintel has recommended that it does not make sense to return enfactored nullspace bases and that this therefore constitutes a bug in Wolfram Language; they have been subsequently contacted about the issue. Pernet himself has yet to weigh in but has been contacted about this by email.</ref>. For example, {{rket|{{map|7 11 16}} {{map|22 35 51}}}} has a nullspace basis of [{{vector|1 -5 3}}], and when we take the nullspace of that with Wolfram Language, we get {{rket|{{map|3 0 -1}} {{map|0 3 5}}}} which is a classic case of hidden enfactoring as described above, so it does not work in this case.
+
+==== Sum-and-difference defactoring ====
+When in development on an ideal defactoring method&mdash;the effort which culminated in [[column Hermite defactoring]]&mdash;Dave and Douglas invested a great deal of time in a defactoring method which still has some advantages over column Hermite defactoring but was ultimately rejected. This other method is called '''"sum-and-difference" defactoring''', or '''SAD defactor''' (it is sad partially because it didn't work out). 
+
+[[Dave Keenan]] and [[Douglas Blumeyer]] record a summary of their work here in case it may be helpful to anyone else who might want to iterate on this later. The other major failed experimental defactoring technique was [[MADAM defactoring]].
+
+SAD defactoring's key advantage over column Hermite defactoring is that its mechanism for removing common factors is more straightforward to see and understand, as we will see in the next section.
+
+SAD defactoring's key reason for rejection is that a number of edge cases were discovered that caused its algorithm to balloon in complexity, both insofar as it could be implemented in code as well as understood by humans.
+
+===== How it works =====
+Originally Dave was inspired by what [[Paul Erlich]] wrote on [http://tonalsoft.com/enc/t/torsion.aspx the article for torsion on the Tonalsoft site]. The algorithm simply checks every possible combination of sums and differences of rows. You have to check all {{sfrac|3<sup>''r''</sup> &minus; 1|2}} sums and differences where ''r'' is the rank of the mapping. For example, for a rank-3 mapping with rows {{vector|A B C}}, you would need to check
+
+* A
+* B
+* C
+* {{nowrap|A + B}}
+* {{nowrap|A &minus; B}}
+* {{nowrap|A + C}}
+* {{nowrap|A &minus; C}}
+* {{nowrap|B + C}}
+* {{nowrap|B &minus; C}}
+* {{nowrap|A + B + C}}
+* {{nowrap|A + B&minus;C}}
+* {{nowrap|A &minus; B + C}}
+* {{nowrap|A &minus; B &minus; C}}
+
+In other words, for each of A, B, and C, you have to check &minus;1 of it, 0 of it, or 1 of it. You don't need to check any counts less than &minus;1 or greater than 1, because then you'd of course be introducing a common factor to the mapping!
+
+Anyway, the point is, if any of these combinations has a common factor, you simply remove the common factor, then replace a row in the mapping with this combined-and-defactored row.
+
+===== Problem 1. Edge case: Multiple common factors =====
+Some matrices can have multiple common factors, such as {{rket| {{map| 17 16 -4}} {{map| 4 -4 1 }} }}. The SNF of this mapping is {{rket| {{map| 1 0 0 }} {{map| 0 33 0}} }}, and that 33 is actually a double common factor because it's not prime, but the product of 3 and 11. SAD defactoring unfortunately only removes one of these factors at a time, and so it therefore needs to be designed to perform recursively until no change occurs in an iteration, at which point all common factors have been removed.
+
+===== Problem 2. Edge case: well-hidden common factors =====
+SAD defactoring was found to fail in the case of well-hidden common factors, i.e. ones where there are no common factors to be found in sums or differences of the rows, but are to be found in sums or differences of ''multiples of'' these rows (what is described above as "well-hidden" enfactoring). In order to solve this problem, SAD defactoring would need to be reworked to check every possible combination of integer multiples of each row, potentially up to the largest absolute value of integer in the given mapping, which would cause it to become intractably slow to compute.
+
+Fortunately this did not turn out to be necessary. The solution here was to do one pass of HNF before doing the defactoring (and still do the HNF pass at the end too, when going for a canonical form). This pre-pass of HNF does not manage to remove the common factor, but it does at least unearth it from the well-hidden state into at least a less hidden state, and possibly a revealed state. For example, in the case of {{rket| {{map| 6 5 -4 }} {{map| 4 -4 1 }} }}, the HNF is {{rket| {{map| 2 9 -5 }} {{map| 0 22 -11 }} }}, so that hidden common factor of 11 has now been completely revealed to humans, but more importantly put in a form where SAD defactoring is capable of removing it. 
+
+So this is better than initially thought. But still not great to have to add another HNF pass at the onset.
+
+===== Problem 3. Picking the correct row to replace =====
+Initially it was thought that, upon finding a common factor in a combination of rows and removing it, it would be acceptable to replace any row of the mapping with the fixed row, and that we could then simply replace the first row. However this is not the case. When replacing a row with a defactored sum or difference, the replaced row has to be one of those involved in the sum or difference. It can always be the topmost one of those, but it cannot always be the topmost row of the matrix. So this increases the complexity of the algorithm.
+
+===== Problem 4. Failure to remove rank-deficient rows =====
+The way Smith defactoring works, and column Hermite defactoring works, a step which ensures that the final number of rows of the output is equal to the rank is built into how the core of the implementation works already. However, for SAD defactoring, a special extra pass is required to ensure that [[rank-deficient|rank-deficiencies]] are removed.
+
+At this point, SAD defactor was considered "a mess".
+
+===== Wolfram Language implementation =====
+This is the furthest progress that was made on SAD defactor before efforts were shifted to column Hermite defactor. This implementation still exhibits problems 2 and 3; only problems 1 and 4 were solved here. Problem 3 started to be solved, but was not quite quashed.
+
+{{Databox|Wolfram Language code for SAD defactoring|
+<pre>
+confirmEnfactoredRowReplaced[m_] := Module[{i, enfactoredRowReplaced},
+  enfactoredRowReplaced = True;
+  For[i = 1, i <= Length[m], i++,
+    If[Apply[GCD, m[[i]]] > 1, enfactoredRowReplaced = False]
+  ];
+  enfactoredRowReplaced
+];
+
+handleEnfactored[m_, maybeDisarmedRow_] := Module[{defactored, attemptedReplacementOfEnfactoredRow, i, enfactoredRowReplaced},
+  For[i = 1, i <= Length[m], i++,
+    attemptedReplacementOfEnfactoredRow = Prepend[Drop[m, {i}], First[maybeDisarmedRow]];
+    enfactoredRowReplaced = confirmEnfactoredRowReplaced[attemptedReplacementOfEnfactoredRow];
+    If[enfactoredRowReplaced, defactored = enhancedSadDefactor[attemptedReplacementOfEnfactoredRow]];
+  ];
+  defactored
+];
+
+enhancedSadDefactor[m_] := Module[{mNoAllZeros, reduced, linCombs, linCombsDisarmed, maybeDisarmedRow},
+  mNoAllZeros = removeAllZeroRows[m];
+  linCombs = linCombsToCheck[mNoAllZeros];
+  linCombsDisarmed = Map[divideOutGcd, linCombs];
+  maybeDisarmedRow = Complement[linCombsDisarmed, linCombs];
+  If[Length[maybeDisarmedRow] == 0, mNoAllZeros, handleEnfactored[mNoAllZeros, maybeDisarmedRow]]
+];</pre>
+}}
+
+==== MADAM defactoring ====
+A failed defactoring technique which was experimented with during the development of [[column Hermite defactoring]] took advantage of the fact that the list of largest-minors of a mapping is guaranteed to include any common factor as its entries' GCD. So, if one simply converted a mapping to its list of largest-minors, removed the GCD (at which point you would have a [[Douglas Blumeyer and Dave Keenan%27s Intro to exterior algebra for RTT #Canonical form|canonical multimap]], or [[wedgie]]), and then performed an "anti-minors" operation to get back to a mapping form, any common factors should be removed. 
+
+Inspired by Gene Ward Smith's method for computing anti-minors as described in [[Mathematical theory of regular temperaments #Wedgies]] and in [[Basic abstract temperament translation code]], an anti-minors method was implemented in Wolfram Language. It was found that a defactoring algorithm based on <u>M</u>inors <u>A</u>nd <u>D</u>ivide-out-GCD, <u>A</u>nti-<u>M</u>inors, or '''MADAM defactoring''', does indeed work. However, it runs 10 to 20 times slower than Smith defactoring and column Hermite defactoring, and it is not compellingly easier to understand than either of them, so it is not considered to be of significant interest.
+
+==== Addabilization defactoring ====
+This defactoring technique is used specifically in the process of preparing matrices for [[temperament addition]]; it defactors while managing to change only a single row of the original matrix, a necessary constraint of that problem. But this method is not computationally efficient or easier to understand, so unless you have this specific need, it is not your best option. Details can be found in [[Temperament addition #3. Addabiliziation defactoring]].
+
+== Finding the greatest factor ==
+To find the greatest factor of a mapping, put it into column HNF, and remove the extra columns of zeros. This gives the "greatest factor matrix". Its determinant is the greatest factor. A similar operation can be used for a comma basis.
+
+<code>
+getGreatestFactor[a_] := Det[getGreatestFactorA[a]];
+
+getGreatestFactorA[a_] := Transpose[Take[hnf[Transpose[a]], MatrixRank[a]]];
+</code>
+
+== Footnotes ==
+<references group="note" />
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]
+[[Category:Pages with proofs]]
+[[Category:Algorithms]]

@@ -1,0 +1,139 @@
+'''Extended bra–ket notation''', or '''EBK''' for short, is the name for the notation system for [[regular temperament theory]] (RTT) objects in the linear algebra formalism that has gradually developed over time, with contributions from various theoreticians. EBK involves enclosing lists of values in sets of brackets, with pointed brackets used to distinguish different types of lists. 
+
+Per the name, EBK extends {{w|Bra–ket notation}}, which is used in quantum mechanics. The use of bra–ket notation for RTT was originally proposed by [[Gene Ward Smith]] in February 2002<ref>https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_3355#3356</ref>.
+
+== Basics ==
+The name ''bra–ket notation'' refers to its two basic structures: the '''bra''' and the '''ket'''. A bra is a list which has a pointed bracket on its ''left'' side, and a ket is a list which has a pointed bracket on its ''right'' side. Bras are used for covectors (such as [[val]]s), and kets are used for vectors (such as [[monzo]]s). In a basic sense, vectors can be thought of as tangible objects (like intervals), and covectors are used for things you do to those objects (like temperaments). 
+
+The usage patterns described in this section are the same as the standard usage of bra–ket notation in quantum mechanics.
+
+=== Common applications ===
+In RTT, covectors are used most frequently for vals (including [[tuning map]]s). For example, the val for 7-ET is notated as {{bra| 7 11 16 }}, and a tuning map for it might be {{bra| 1209.682 1900.930 2764.988 }}.
+
+The most common type of vectors used in RTT is the monzo (both [[prime-count vector]]s and [[generator-count vector]]s). For example, the monzo for 45/32 is {{ket| -5 2 1 }}, and the tempered monzo for ~45/32 in porcupine temperament is {{ket| 2 -11 }} (for the generators ~2/1 and ~11/10).
+
+=== Combining ===
+When a bra and a ket are put together, the dot product is taken, and the result is a scalar (a single number). In order to be compatible in this way, the bra and ket must at least have the same number of entries, so that each of their entries will pair up for a product. The {{w|dot product}} corresponds to "applying" the covector to the vector.
+
+Mapping 45/32 with 7-ET would be notated as {{nowrap|{{vmp| 7 11 16 | -5 2 1 }} {{=}} {{nowrap|7 ⋅ −5}} + {{nowrap|11 ⋅ 2}} + {{nowrap|16 ⋅ 1}}}} {{nowrap|{{=}} −35 + 22 + 16}} =&nbsp;3. This means that 45/32 can be found at 3 steps of 7-ET. 
+
+Mapping porcupine's ~45/32 with a generator tuning map like {{bra| 1200 162.737 }} (reasonable tunings for ~2/1 and ~11/10 in porcupine) would look like {{nowrap|{{vmp| 1200 162.737 | 2 -11 }} {{=}} 1200 ⋅ 2 + 162.737 ⋅ −11}} {{nowrap|{{=}} 2400 + −1790.107}} =&nbsp;609.893.
+
+== Extensions ==
+EBK extends standard bra–ket notation using two different kinds of nesting: 
+# ''Alternating'', to allow for notating matrices, and 
+# ''Repeating'', to allow for notating multivectors.
+
+=== Alternating, for matrices ===
+Vectors (including covectors) are used to represent tuning theory objects of various dimensionality. For example, the monzo {{ket| 1 -2 1 }} represents the interval 10/9, which would be found as a point in the ''three''-dimensional space of 5-limit JI lattice, while the monzo {{ket| 0 -1 1 1 -1 }} represents the interval 35/33, which would be found as a point in the ''five''-dimensional space of the 11-limit JI lattice. However, regardless of the dimensionality of the musical object represented, a vector itself will always be a ''one''-dimensional structure, in the sense that it is a simple list of numbers. Due to this, vectors are always fairly easy to embed in similarly one-dimensional strings of text or data cells of tables.
+
+But RTT uses a number of ''two''-dimensional structures as well – i.e. numbers arranged in a grid of rows and columns – which are called matrices. Having the ability to present these objects one-dimensionally can be quite helpful too, and so the first way in which EBK extends bra–ket notation is designed to provide that.
+
+==== Advantage ====
+One catch is that some matrices in RTT are more naturally thought of in terms of their ''rows'', while other matrices are more naturally thought of in terms of their ''columns''. EBK offers a good solution to this problem, though: it allows us to notate matrices ''either'' in terms of their rows ''or'' in terms their columns. 
+
+EBK is capable of doing this because of how vectors and covectors are interpreted as matrices. Specifically, a vector can be thought of as a <math>(x,1)</math>-shaped matrix (many rows, one column), while a covector can be thought of as a <math>(1,x)</math>-shaped matrix (one row, many columns). 
+
+So, one way to think of a matrix would be as a single vector column which contains a number of covector rows. Another way to think of a matrix would be as a single covector row which contains a number of vector columns. Either way is possible, but in most cases, one of these two ways will be easier to understand.
+
+==== Examples ====
+For example, the [[mapping]] for meantone temperament is a matrix <math>M</math> that looks like this:
+
+<math>
+\left[ \begin{matrix}
+1 & 0 & -4 \\
+0 & 1 & 4 \\
+\end{matrix} \right]
+</math>
+
+RTT mappings are typically thought of in terms of their ''rows''. This mapping <math>M</math> has two rows; following mathematical conventions, let's call them <math>𝒎_1</math> and <math>𝒎_2</math>. And so to notate this mapping in EBK, we can first imagine capturing the rows as bras like we would normally: <math>𝒎_1</math> = {{bra| 1 0 -4 }} and <math>𝒎_2</math> = {{bra| 0 1 4 }}. Then, to put them together, we can think of this matrix as a single column containing these two rows, or in other words, a ket containing the two bras: {{ket| <math>𝒎_1</math> <math>𝒎_2</math> }}, or fully written out, {{ket| {{bra| 1 0 -4 }} {{bra| 0 1 4 }} }}.
+
+For another example, the canonical [[comma basis]] for 7-ET in the 5-limit consists of the two commas 2187/2048 and 135/128, with monzos {{ket|-11 7}} and {{ket| -7 3 1 }}, respectively. As a matrix <math>\mathrm{C}</math>, we'd see this as:
+
+<math>
+\left[ \begin{matrix}
+-11 & -7 \\
+7 & 3 \\
+0 & 1 \\
+\end{matrix} \right]
+</math>
+
+RTT comma bases, as opposed to mappings, are more naturally thought of in terms of their ''columns''. This comma basis has two columns; let's call them <math>\textbf{c}_1</math> and <math>\textbf{c}_2</math> (in this case, that conveniently works out as both 'c' for "column" and 'c' for "comma"!). And so to notate this comma basis in EBK, we can first imagine capturing the columns as kets like we would normally: <math>\textbf{c}_1</math> = {{ket| -11 7 0 }} and <math>\textbf{c}_2</math> = {{ket| -7 3 1 }}. Then, to put them together, we can think of this matrix as a single row containing these two columns, or in other words, a bra containing the two kets: {{bra| <math>\textbf{c}_1</math> <math>\textbf{c}_2</math> }}, or fully written out, {{bra| {{ket| -11 7 0 }} {{ket| -7 3 1 }} }}.
+
+==== History ====
+The alternating-for-matrices extension was contributed by [[Graham Breed]], dating at least from March 2008 when he used it in his paper "Provably Complete Rank 2 Temperament Searches"<ref>http://x31eq.com/complete.pdf, beginning on page 4</ref>. 
+
+==== Usage ====
+The alternating-for-matrices extension is used in Graham Breed's writings and web app, as well as the writings on the wiki of [[Douglas Blumeyer]] and [[Dave Keenan]]. 
+
+==== Alternatives ====
+In many wiki writings, mappings and comma bases are provided as ''lists'' of vectors, notated using square brackets on both sides and commas between entries, like this: [''a'', ''b'', ''c'', …]. So meantone's mapping would look like [{{bra| 1 0 -4 }}, {{bra| 0 1 4 }}], and a comma basis for 7-ET would look like [{{ket| -11 7 0 }}, {{ket| -7 3 1 }}]. This notation is completely sufficient and unambiguous, but – for better or worse – does not emphasize the matrix-like structure of the data quite as strongly.
+
+=== Repetition, for multivectors ===
+The second extension of EBK from standard bra–ket notation is the repetition of brackets, allowing for the representation of [[multivector]]s.
+
+It is sometimes useful to use multivectors as an alternative way to represent temperaments (usually in the form of [[wedgies]]), besides mappings and comma bases. These multivectors come in various grades, such as 2-vectors and 3-vectors. In fact, ordinary vectors are simply 1-vectors. In order to distinguish a <math>g</math>-vector from a 1-vector, the brackets that would normally be used can be repeated <math>g</math> times, where <math>g</math> is the grade. 
+
+For example, the 2-vector (bivector) representing meantone temperament (written in standard math notation as <math>
+\left[ \begin{matrix}
+0 & 1 & 4 \\
+-1 & 0 & 4 \\
+-4 & -4 & 0 \\
+\end{matrix} \right]
+</math>) uses two sets of brackets: {{multivector| 1 4 4 }}. Note that only 3 entries are written down, but in fact the entire value of the 2-vector can be determined from the value of these 3 entries. 
+
+The repetition-for-multivectors extension was developed in November of 2003 by Dave Keenan<ref>https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_7525#7749</ref>. 
+
+For more information, see [[Douglas Blumeyer and Dave Keenan's Intro to exterior algebra for RTT#From vectors to multivectors]].
+
+== Stylistic variations ==
+=== Greater than and less than signs versus angle brackets ===
+
+Standard bra–ket notation uses angle brackets:
+
+{| class="wikitable"
+|-
+! Symbol !! Unicode !! Description
+|-
+| ⟨ || [https://symbl.cc/en/27E8/ U+27E8] || MATHEMATICAL LEFT ANGLE BRACKET
+|-
+| ⟩ || [https://symbl.cc/en/27E9/ U+27E9] || MATHEMATICAL RIGHT ANGLE BRACKET
+|}	
+
+[http://x31eq.com/temper/ Graham Breed's RTT web app] uses these, as do his tuning-related papers<ref>For example http://x31eq.com/badness.pdf or http://x31eq.com/complete.pdf</ref>, and the templates on this wiki itself (as of 2020 per Dave Keenan and Douglas Blumeyer's suggestion). In ASCII-only environments, the greater-than and less-than signs (available on standard keyboards) are a reasonable substitute, and these are used in many pages on this wiki that haven't been updated to the templates, and in [[Paul Erlich]]'s [https://dkeenan.com/Music/MiddlePath.pdf Middle Path paper]. For help typing angle brackets, you may want to try [[Dave Keenan & Douglas Blumeyer's guide to RTT/Conventions for names, variables, units, and notations #WinCompose|WinCompose on Windows, or the replication of its behavior on Macs]].
+
+=== Square brackets versus pipes ===
+Standard bra–ket notation uses pipes on the opposite side of bras and kets from the angle brackets. Graham's papers do this too. His temperament finder, though, uses square brackets. Paul's Middle Path paper uses pipes when bras and kets are combined, but square brackets when they are separate, which is a reasonable style that was discussed on the Yahoo Groups tuning lists<ref>https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_7476#10278</ref>.
+
+The motivation for the square bracket deviation from standard bra–ket is largely for visual clarity, due to JI and RTT's differing needs from quantum mechanics. With quantum mechanics, the values typically enclosed by bra–ket notation are variables, which are easily distinguished from the simple vertical line appearance of the pipe. But in RTT we frequently represent actual numerals in the EBK notation, and the numeral 1 (the most common numeral) looks very similar to the pipe<ref>https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_7476#10354</ref>. So the square brackets are easier to distinguish at a glance.
+
+=== Commas ===
+Originally, it was common for entries of bras and kets to be separated by (punctuation) commas, like {{ket| -4, 4, 1 }}. Nowadays, this is almost never seen.
+
+=== Separated sections ===
+A method for visually breaking up the entries of longer bras and kets was proposed by [[George Secor]] in November of 2003<ref>https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_7286.html#7429 The original proposal was made back when separating every entry by a (punctuation) comma was popular, and so the semicolon was used as the special separator; the modern interpretation of this proposal is given in the main text, where the comma is used as the special separator.</ref>. The proposal was for a comma to be placed after the entry for prime 3, and thereafter a comma is placed after every third prime. So for example, 13/8 would be given as {{ket| -3 0, 0 0 0, 1 }}.
+
+A further variation is to drop sequences of three zeros thus enclosed by commas, so that 13/8 would appear as {{ket| -3 0, , 1 }}.
+
+The stylistic reasoning is that it resembles the use of commas in large numbers to separate every third digit (e.g. 1,000,000). The first comma being after prime 3 rather than after the third prime (prime 5) is due to the notational specialness of primes 2 and 3, those being the primes capable of being encoded by standard sheet music (prime 2 by clefs and staff positions and prime 3 by Pythagorean nominals A, B, C, D, E, F, G and sharp and flat symbols).
+
+This may be useful to retain for wedgies, to hint at the multi-dimensional structure. For example: {{Multival|1 4, 4}}.
+
+=== Variant including curly and square brackets ===
+Dave Keenan and Douglas Blumeyer propose that it may be helpful to distinguish objects with distinctive shapes, such as [[generator tuning map]]s and generator-count vectors, by using curly brackets {…] […} in place of angle brackets ⟨…] […⟩, wherever the height or width of a vector or matrix is equal to the [[rank]] of the temperament, <math>r</math>. A mnemonic for the curly bracket is that it resembles the tilde (~) which is commonly used to mark approximated or tempered intervals, e.g. ~3/2 is an approximation of 3/2.
+
+For example, while the monzo representing 5/4 in just intonation would be written {{vector| -2 0 1 }}, the mapped version of this in meantone could be written {{rket| -2 4 }}. And while the ordinary tuning map for quarter-comma meantone might be written {{bra| 1200.000 1896.578 2786.314 }}, the generator tuning map could be written {{rbra| 1200.000 696.578 }}. 
+
+They further propose that the use of the normal angle bracket could be restricted to matrix widths and heights equal only to the [[dimensionality]] of the temperament, <math>d</math>, and any other width or height besides <math>d</math> and <math>r</math> would be given with plain square brackets […]. So, for example, a comma basis could be written [{{ket| 4 -4 1 }} {{ket| 7 0 -3 }}] because its width is equal to the [[nullity]] of the temperament, <math>n</math>. This is consistent with the fact that it is common for linear algebra texts to treat a nullspace basis not as a matrix but as a mere list of vectors.
+
+Instead of curly brackets, they considered using round brackets (parentheses), (…] […), however it is sometimes necessary to include parenthesized expressions as entries in the bra or ket, which would be difficult to parse if we had round bra or ket brackets. 
+
+They also considered using curved angle brackets <span style="font-family: STIXGeneral, 'Cambria Math', 'STIX Two Math', serif">⧼</span>…] […<span style="font-family: STIXGeneral, 'Cambria Math', 'STIX Two Math', serif">⧽</span>, (Unicode U+29FC and U+29FD), however in some fonts these are almost indistinguishable from ordinary angle brackets. If you see distinctly-curved angle brackets in the preceding sentence, it may only be because they have been specified to be shown in one of the fonts 'STIXGeneral', 'Cambria Math' (Windows) or 'STIX Two Math' (Mac). Here's an ordinary angle bracket followed by a curved angle bracket without special treatment: ⟩⧽. If this situation should change in future, a mnemonic for the curved angle brackets is that they can also be called "rounded" angle brackets, and a rounded number is an approximate number in the same way that a tempered interval is an approximation of a just interval. Curly brackets would still be used as a substitute in ASCII-only environments.
+
+== Notes ==
+<references />
+
+{{Navbox notation}}
+
+[[Category:Regular temperament theory]]
+[[Category:Notation]]

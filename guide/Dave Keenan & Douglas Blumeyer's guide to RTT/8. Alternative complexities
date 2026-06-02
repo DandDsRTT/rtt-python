@@ -1,0 +1,2301 @@
+{{breadcrumb}}{{texmap}}{{texzz}}
+In this article we will investigate one of the most advanced tuning concepts that have been developed for [[regular temperaments]]: alternative complexities (besides [[log-product complexity]])
+
+This is article 8 of 9 in [[Dave Keenan]] & [[Douglas Blumeyer]]'s guide to RTT, or "[[D&D's guide]]" for short. It assumes that you have read all of these prior articles in the series:
+
+* 3. {{subpage|Tuning fundamentals|prev}}: Learn about minimizing damage to target-intervals
+* 5. {{subpage|Units analysis|prev}}: To look at temperament and tuning in a new way, think about the units of the values in frequently used matrices
+* 6. {{subpage|Tuning computation|prev}}: For methods and derivations; learn how to compute tunings, and why these methods work
+* 7. {{subpage|All-interval tuning schemes|prev}}: The variety of tuning most commonly named and written about on the Xenharmonic wiki
+
+In particular, most of these advanced tuning concepts have been developed in the context of {{subpage|all-interval tuning schemes|uprev}}, so a firm command of the ideas in that article will be very helpful for getting the most out of this article.
+
+= Introduction =
+So far, we've used three different functions for determining interval complexity:
+
+# In an early article of this series, we introduced the most obvious possible function for determining the complexity of a rational number {{sfrac|''n''|''d''}} such as those that represent JI intervals: '''[[product complexity]]''', the product of the ratio's numerator and denominator. 
+# However, since that time, we've been doing most of our work using a variant on this function, not product complexity itself; this variant is the '''[[log-product complexity]]''', which is the base-2 logarithm of product complexity.
+# It wasn't until late in our all-interval tuning schemes article that we introduced our third complexity function, which arises in the explanation of a popular tuning scheme that we call minimax-ES; this uses the [[Euclideanized]] version of the log-product complexity. 
+
+But these three functions are not the only ones that have been discussed in the context of temperament tuning theory. In this article we will be taking a brief look at several other functions which some theorists have investigated for possible use in the tuning of regular temperaments: 
+
+* '''[[#sum-of-prime-factors-with-repetition|Sum-of-prime-factors-with-repetition]] (sopfr) complexity'''
+* '''[[#count-of-prime-factors-with-repetition|Count-of-prime-factors-with-repetition]] (copfr) complexity'''
+* '''[[#log-integer-limit-squared|Log-integer-limit-squared]] (lils) complexity'''
+* '''[[#log-odd-limit-squared|Log-odd-limit-squared]] (lols) complexity'''
+
+We'll also consider the Euclideanized versions of each of these four functions. 
+
+This is not meant to be an exhaustive list of complexity functions that may be argued to have relevance for tuning theory. It seems like every few months someone suggests a new one. We prepared this article as a survey of these relatively well-established use cases in order to demystify what's out there already and to demonstrate some principles of this nook of the theory, in case this is an area our readers would like to explore further.
+
+= Not just for all-interval tuning schemes =
+These alternative complexity functions were all introduced to regular temperament theory through the use of {{subpage|all-interval tuning schemes|uprev}}, the kind that use a series of clever mathematical tricks in order to avoid the choice of a specific, finite set of intervals to be their tuning damage minimization targets. 
+
+Historically speaking, ordinary tuning schemes—those which ''do'' tune a specific finite target-interval set—have not involved complexity functions at all, not even log-product complexity. For the most part, anyway, users of ordinary tuning schemes have instead leaned on the careful choice of their target-intervals, achieving fine control of their tuning in this way, and it has been sufficient for them to define damage as the absolute error to their target-intervals. In other words, they have not felt the need to weight their chosen target-intervals' errors relative to each other according to the intervals' complexities. 
+
+The argument could be made, then, that this lack of control over the tuning via the choice of specific target-intervals is what caused all-interval tuning schemes to become such a breeding ground for interest in alternative complexity functions. With all-interval tuning schemes, this was the only other way they could achieve that sort of fine control. 
+
+And so, while all-interval tuning schemes are where these innovations in complexity functions occurred historically, we note that there's nothing restricting their use to all-interval tuning schemes. There's no reason why ordinary tuning schemes cannot take advantage of ''both'' opportunities for fine control that are available to them: target-interval set choice, ''and'' alternative complexity functions. In fact, we will later argue that some of these alternative complexity functions may actually be ''more'' appropriate to use for ordinary tuning schemes than they are for all-interval tuning schemes. 
+
+= Naming =
+The use of alternative functions for determining complexity is what accounts for the profusion of eponymous tuning schemes you may have come across: Benedetti, Weil, Kees, and Frobenius. This is because some theorists have preferred to refer to these functions by a person's name—whether this is the discoverer of the generic math function, the first person to apply it to tuning, or just a person somehow associated with the function—perhaps because eponyms are distinctive and memorable. But if you're like us, the connection between these historical personages and these functions is not obvious, and so
+we can never seem to remember which one of these tuning schemes is which! We've had to rely on awkward mnemonics to keep the mapping from eponym to function straight. So if you're struggling with this as well, then we hope you'll appreciate and adopt our tuning scheme naming system which drops the eponyms in favor of the actual names of the math functions used, e.g. the minimax-sopfr-S tuning scheme minimaxes the sopfr-simplicity-weight damage to all intervals, where "sopfr" is a standard math function that you can look up, which stands for "sum of prime factors with repetitions" (isn't that better than "Benedetti Optimal"?). Because the math function names are descriptive, we ''encode'' meaning rather than ''encrypt'' it. And by naming them ''systematically'', we isolate their differences through the structural patterns shared among each name, so we can contrast them at a glance. 
+
+This approach is also good because it can accommodate any complexity one might dream up; as long as you can name the complexity function, you can use its name in the name of the corresponding tuning scheme.
+
+This is an extension of the tuning scheme naming system initially laid out {{subpage|tuning fundamentals|uprev|s=systematic tuning scheme names|text=at the end of the tuning fundamentals article}}, and so it also allows for easy comparison with those simpler, ordinary tuning schemes, e.g. the (all-interval) minimax-sopfr-S scheme is very closely related to the TILT minimax-sopfr-S scheme, which is the same except instead of using prime proxy targets in order to target all intervals, it specifically targets only the [[TILT]]. So basically the name breaks down into [optimization]-[complexity]-[damage weight slope]. The [complexity] part can be broken down further into [norm power if {{nowrap|''q'' &ne; 1}}] &minus; [{{nowrap|''q'' {{=}} 1}} complexity]; for example, in minimax-E-lils-S, we have minimax is our optimization, E-lils (Euclideanized log-integer-limit-squared) is our complexity function, and S (simplicity-weight) is our damage weight slope. And our complexity can be further broken down into 'E' which is its norm power other than taxicab ({{nowrap|''q'' {{=}} 1}}) ("Euclideanized" means {{nowrap|''q'' {{=}} 2}}) and "lils" is the log-integer-limit-squared, which is what the complexity function would be, when using the taxicab norm.
+
+= Comparing overall complexity qualities =
+In this first section, we'll be comparing how these functions rank intervals differently. This information is important because if you don't feel that a function does an effective job at determining the relative complexity of musical intervals, then you probably shouldn't use this function as a complexity function in the service of tuning temperaments of those musical intervals! Well, you might choose to anyway, if you perceived a worthwhile tradeoff, such as computational expediency. We'll save discussion of that until [[#later|later]].
+
+== Complexity contours ==
+Here's a diagram comparing 10 of our 12 functions (not including "product" or its Euclideanized version; we'll explain why later).
+
+[[File:Constant damage contours - self-sorted.png|thumbnail|800x800px|alt=|none]]
+
+With this diagram, you can look at how each function sorts intervals, and decide for yourself whether you think that's a reasonable order, i.e. does it make musical sense, as a way you might weight errors, whether complexity-weighted or simplicity-weighted. (These happen to be shown simplicity-weighted.)
+And here's a diagram where they're all sorted according to product complexity. This one, then, comes at the problem from the assumption that product complexity is the "correct" way to sort them, so we can see in the textures of these curves to what extent they deviate from it. This is an assumption we mostly hold (deets on dispute later). You can see how the Euclideanized versions are all worse (more jagged) than their corresponding original version.
+
+[[File:Constant_damage_contours_-_prod-sorted.png|alt=|none|thumb|800x800px]]
+
+Any complexity function has a corresponding simplicity function which simply returns for any given interval the reciprocal of what the complexity function would have returned. Therefore, it is unnecessary to separately provide diagrams like these for simplicity functions. We can find the simplicity contours by turning these inside-out; the ranking won't change other than the order will exactly reverse, with big bars becoming small, and small bars becoming big. We simply reciprocate each individual value.
+
+== Explaining the impact of Euclideanization ==
+To review, [[Euclideanization]] is when we take a function which can be expressed in the form of a 1-norm (or equivalent summation form) and—preserving its {{subpage|all-interval tuning schemes|uprev|s=Dual-norm prescalers|norm prescaler}}, if any—change its norm power from 1 to 2. 
+
+The 2-norm is how we calculate distance in the physical reality you and I walk around within everyday: 3-dimensional ''Euclidean'' space. So it may seem to be a natural choice for measuring distances between notes arranged on a JI lattice such as we might build out of rods and hubs like one might find in a chemistry modeling kit. (Perhaps some readers have actually done this as part of their learning process, or for experimenting with new scales.)
+
+However, it is unfortunately ''not'' the case that calculating distances in this sort of space like this gives a realistic notion of ''harmonic distance''. 
+
+Let's imagine, for example, a three-dimensional JI lattice with prime 2 on one axis, prime 3 on another axis, and prime 5 on the remaining axis; so we choose a 3D example that's as similar to our physical space as can be. Now let's imagine the vectors for {{sfrac|9|8}} and {{sfrac|10|9}}: {{vector|-3 2 0}} and {{vector|1 -2 1}}, respectively, each one drawn out from the origin at unison {{sfrac|1|1}} {{vector|0 0 0}} diagonally through the lattice. The norm for {{sfrac|9|8}} is <math>\sqrt{|{-3}|^2 + |2|^2 + |0|^2} = \sqrt{13} ≈ 3.605</math>, while the norm for {{sfrac|10|9}} is <math>\sqrt{|1|^2 + |{-2}|^2 + |1|^2} = \sqrt{6} ≈ 2.449</math>. This suggests that {{sfrac|9|8}} is a ''more'' complex interval than {{sfrac|10|9}}, a suggestion that most musicians would ''disagree'' with, being that {{sfrac|9|8}} is both lower (prime) limit than {{sfrac|10|9}} (3-limit vs. 5-limit), and also that {{sfrac|9|8}} contains smaller numbers than {{sfrac|10|9}}.
+
+To gain some intuition for why the 2-norm gets this comparison wrong, begin by thinking about the space these vectors are traveling through diagonally. What ''is'' this space? Imagine stopping at some point along it, floating between nodes of the lattice—what would you say is the pitch at that point? Don't worry about these two questions ''too'' much; you probably won't be able to come up with good answers to them. But that's just the point. They don't really make sense here.
+
+We can say that JI lattices like this are convenient tricks for helping us to visualize, understand, and analyze JI scales and chords. But there's no meaning to diagonal travel through this space. We can add a factor of 5 and remove a couple factors of 2 from {{sfrac|9|8}} to find {{sfrac|10|9}}, but really those are three separate, discrete actions. When we travel from {{sfrac|9|8}} to {{sfrac|10|9}}, we can only really think of doing it ''along the lattice edges'', not between and through them. So while there's nothing stopping us from thinking about the space between nodes as if it were like the physical space we live in, and measuring it accordingly, in an important sense none of that space really exists, and the only distances in this harmonic world that are "real" are the distances straight along the edges of the lattice connecting each node to its neighbor nodes. In other words, diagonal travel between JI nodes is a lie. But we choose to accept this lie whenever we use a Euclideanized complexity.
+
+Astute readers may have realized that even if we compare these same two intervals by a 1-norm, i.e. where we measure their distance from the unison at the origin by a series of separate straight segments along the edges between pitches, we still find that the norm for {{sfrac|9|8}} is <math>\sqrt[1]{|{-3}|^1 + |2|^1 + |0|^1} = 5</math>, while the norm for {{sfrac|10|9}} is <math>\sqrt[1]{|1|^1 + |-2|^1 + |1|^1} = 4</math>, that is, we still find that {{sfrac|9|8}} is ranked ''more'' complex than {{sfrac|10|9}}. The remaining discrepancy is that we haven't ''scaled'' the lattice so that edge lengths are proportional to the sizes of the primes in pitch, which is to say, scaled each axis according to the ''logarithm'' of the prime that axis is meant to represent. If every occurrence of a prime 2 is the standard complexity point of 1, but prime 3 counts for <math>\log_2{3} \approx 1.585</math> points, and prime 5 counts for <math>\log_2{5} \approx 2.232</math> points, then we see {{sfrac|9|8}} come out to <math>|{-3}\times1| + |2\times1.585| + |0\times2.232| = 6.170</math> and {{sfrac|10|9}} come out to <math>|1·1| + |{-2}\times1.585| + |1\times2.232| = 6.402</math>, which finally gives us a reasonable comparison between these two intervals. This logarithmically-scaled 1-norm may be recognized as log-product complexity. As for unscaled 1-norm—that's actually the count of prime factors with repetition, a different one of the functions we'll be looking at in more detail soon. You can find {{sfrac|9|8}} and {{sfrac|10|9}} in the previous section's diagrams and see how these are all ranked differently by the different complexities to confirm the points made right here.
+
+<span id=later>Why do we (or some theorists anyway) accept the lie of Euclideanized harmonic space sometimes? The answer is: computational expediency. It's not easier to compute individual 2-norms than it is to compute individual 1-norms, of course. However, it turns out that it ''is'' easier to compute the entire optimized tuning of a temperament when you pretend that Euclidean distance is a reasonable way to measure the complexity of an interval, than it is when you insist on measuring it using the truer along-the-edges distance. We can therefore think of Euclideanized distance as a decent approximation of the true harmonic distances, which some theorists decide is acceptable.</span>
+
+Our opinion? There are very few situations where the difference in computation speed for a tuning optimized with a 1-norm and a 2-norm will make a difference. Perhaps an automated script that runs upon loading a web page, where web page load times are famously important to get as lighting fast as possible. But in general, if you know ''how'' to compute the answer with a 1-norm, the computer is going to calculate the answer just about as fast as it would with a 2-norm approximation, so just use the 1-norm. The listeners of your music for eternities to come will thank you for giving your computer a few extra seconds to get the tunings as nice as you knew how to ask it for them.
+
+== Why we don't "maxize" ==
+You may wonder why we have three norm powers of special interest—1, 2, and <math>\infty</math>—yet the only norms we're looking at are prescaled (or not prescaled) 1-norms (original) or 2-norms (Euclideanized). Why do we not consider any <math>\infty</math>-norms? 
+
+The short answer is because no theorist has yet demonstrated significant interest in them. And the reason for ''that'' is because they're even less harmonically realistic than Euclideanized norms, but without a computational expediency boost to counteract this. Here's a diagram that shows what happens to interval rankings with a <math>\infty</math> norm, showing how they're even more scrambled than before:
+
+[[File:Maxize contour.png|thumbnail|alt=|none]]
+
+And we can also think of this in terms of what measuring this distance would be like. Please review the way of conceptualizing maxization given {{subpage|all-interval tuning schemes|uprev|s=Maxization|text=here}}, and then realize that if the shortcoming of measuring harmonic distance with Euclideanized measurement is how it takes advantage of the not-truly-existent diagonal space between lattice nodes, then maxized measurement is the absolute extreme of that shortcoming, or should we say short-cutting, in that it allows you to go as diagonally as possible at all times for no cost. 
+
+== Why we don't use any other norm power ==
+Too complicated? Who cares? But seriously, no theorist has yet demonstrated interest in any norm power for complexities other than 1 or 2, whether <math>\infty</math> or otherwise.
+
+== Prescaling vs. pretransforming ==
+Some of the alternative complexities discussed in this article cannot be said to merely pre''scale'' the vectors they take the norm of. For example, the integer-limit type complexities have a shearing effect. So, we may tend to prefer the more general term pre''transform'' in this article, and accordingly the '''complexity pretransformer''' X and '''inverse pretransformer''' <math>X^{-1}</math>.
+
+= The complexities =
+Here's a monster table, listing all the complexities we'll look at in this article.
+
+{| class="wikitable" style="white-space: nowrap; vertical-align: top;"
+|-
+! colspan="5" | For ordinary tuning schemes and all-interval tuning schemes
+! colspan="3" | For all-interval tuning schemes only
+|-
+! rowspan="1" | Interval complexity norm or function
+! colspan="2" | Interval complexity function in<br>quotient-based {{sfrac|''n''|''d''}} form
+! colspan="2" | Interval complexity norm in<br>vector-based <math>\small \textbf{i}</math> form
+! colspan="2" | Retuning magnitude norm (to be minimized)<br>dual to the interval complexity norm<br> Only has (co)vector-based 𝒓 form
+! All-interval tuning scheme
+|-
+! Name ('''bold''' = systematic)<br>(''italic'' = general math)<br>(plain = RTT historical)
+! Formula
+! Example: <math>\small \frac{10}{9}</math>
+! Formula
+! Example: [1 -2 1⟩
+! Formula
+! Example: ⟨1.617 -2.959 3.202]
+! Name ('''bold''' = systematic)<br />(plain = RTT historical)
+|-
+| 
+* [[#Count-of-prime-factors-with-repetition|'''''copfr''''']]
+* ''[[{{ROOTPAGENAME}}/All-interval tuning schemes#Power norms|1-norm]]''
+* ''[[{{ROOTPAGENAME}}/All-interval tuning schemes#Power norms|L<sup>1</sup> norm]]''
+| <math>\small \begin{align} &\text{copfr-C}\left(\dfrac{n}{d}\right) \\ &= \text{copfr}(nd) \\ \small
+&= \text{copfr}(n) + \text{copfr}(d)
+\end{align}</math>
+| <math>\small = \text{copfr}(10·9) \\ \small
+= \text{copfr}(2·5·3·3) \\ \small
+= 2^0 + 5^0 + 3^0 + 3^0 \\ \small
+= 4</math>
+| <math>\small \begin{align} &\text{copfr-C}(\textbf{i}) \\ &= \left\|\textbf{i}\right\|_1 \\ \small
+&= \sqrt[1]{\strut \sum\limits_{n=1}^d \left|\mathrm{i}_n\right|^1} \\ \small
+&= \sqrt[1]{\strut \left|\mathrm{i}_1\right|^1 + \left|\mathrm{i}_2\right|^1 + \ldots + \left|\mathrm{i}_d\right|^1} \\ \small
+&= \left|\mathrm{i}_1\right| + \left|\mathrm{i}_2\right| + \ldots + \left|\mathrm{i}_d\right|
+\end{align} </math>
+| <math>\small = |1| + |{-2}| + |1| \\ \small
+= 4</math>
+| <math>\small \begin{align} &\text{copfr-C}^{*}(𝒓) \\ &= \left\|𝒓\right\|_\infty \\ \small
+&= \sqrt[\infty]{\strut \sum\limits_{n=1}^d |r_n|^\infty} \\ \small
+&= \sqrt[\infty]{\strut \left|r_1\right|^\infty + \left|r_2\right|^\infty + \ldots + \left|r_d\right|^\infty} \\ \small
+&= \max\left(\left|r_1\right|, \left|r_2\right|, \ldots, \left|r_d\right|\right)
+\end{align}</math>
+| <math>\small = \max\left(|1.617|, |{-2.959}|, |3.202|\right) \\ \small
+= 3.202</math>
+| 
+* [[minimax-copfr-S|'''Minimax-copfr-S''']]
+|-
+| 
+* [[#Euclideanized copfr|'''Euclideanized copfr (E-copfr)''']]
+* ''[[{{ROOTPAGENAME}}/All-interval tuning schemes#Power norms|2-norm]]''
+* ''[[{{ROOTPAGENAME}}/All-interval tuning schemes#Power norms|L<sup>2</sup> norm]]''
+! colspan="2" |
+| <math>\small \begin{align} &\text{E-copfr-C}(\textbf{i}) \\ &= \left\|\textbf{i}\right\|_2 \\ \small
+&= \sqrt[2]{\strut \sum\limits_{n=1}^d \left|\mathrm{i}_n\right|^2} \\ \small
+&= \sqrt[2]{\strut \left|\mathrm{i}_1\right|^2 + \left|\mathrm{i}_2\right|^2 + \ldots + \left|\mathrm{i}_d\right|^2} \\ \small
+&= \sqrt{\strut \mathrm{i}_1^2 + \mathrm{i}_2^2 + \ldots + \mathrm{i}_d^2}
+\end{align}</math>
+| <math>\small = \sqrt{\strut 1^2 + -2^2 + 1^2} \\ \small
+= \sqrt{\strut 1 + 4 + 1} \\ \small
+= \sqrt6 \\ \small
+\approx 2.449</math>
+| <math>\small \begin{align} &\text{E-copfr-C}^{*}(𝒓) \\ &= \text{E-copfr-C}(𝒓) \\ \small
+&= \left\|𝒓\right\|_2 \\ \small
+&= \sqrt[2]{\strut \sum\limits_{n=1}^d \left|r_n\right|^2} \\ \small
+&= \sqrt{\strut r_1^2 + r_2^2 + \ldots + r_2^2}
+\end{align}</math>
+| <math>\small = \sqrt{\strut 1.617^2 + -2.959^2 + 3.202^2} \\ \small
+\approx \sqrt{\strut 2.615 + 8.756 + 10.253} \\ \small
+= \sqrt{\strut 21.624} \\ \small
+\approx 4.650</math>
+| 
+* [[minimax-E-copfr-S|'''minimax-E-copfr-S''']]
+* [[Tenney-Euclidean tuning#Otherwise normed tunings|Frobenius]]
+|-
+| 
+* [[#log-product|'''''log-product (default)''''']]
+* [[Tenney height]]
+* [[Generalized Tenney Norms and Tp Interval Space#The Tenney Norm .28T1 norm.29|Tenney norm]]
+* [[Generalized Tenney Norms and Tp Interval Space#The Tenney Norm .28T1 norm.29|T1 norm]]
+| <math>\small \begin{align} &\text{lp-C}\left(\dfrac{n}{d}\right) \\ &= \log_2(nd) \\ \small
+&= \log_2(n) + \log_2(d)
+\end{align}</math>
+| <math>\small = \log_2(10·9) \\ \small
+= \log_2(90) \\ \small
+\approx 6.492</math>
+| <math>\small \begin{align} &\text{lp-C}(\textbf{i}) \\ &= \left\|L\textbf{i}\right\|_1 \\ \small
+&= \sqrt[1]{\strut \sum\limits_{n=1}^d \left|\log_2{p_n} · \mathrm{i}_n\right|^1} \\ \small
+&= \sqrt[1]{\strut \left|\log_2{p_1} · \mathrm{i}_1\right|^1 + \left|\log_2{p_2} · \mathrm{i}_2\right|^1 + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right|^1} \\ \small
+&= \left|\log_2{p_1} · \mathrm{i}_1\right| + \left|\log_2{p_2} · \mathrm{i}_2\right| + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right|
+\end{align}</math>
+| <math>\small = \left|\log_2{2} · 1\right| + \left|\log_2{3} · {-2}\right| + \left|\log_2{5} · 1\right| \\ \small
+\approx 1 + 3.170 + 2.322 \\ \small
+= 6.492</math>
+| <math>\small \begin{align} &\text{lp-C}^{*}(𝒓) \\ &= \left\|𝒓L^{-1}\right\|_\infty \\ \small
+&= \sqrt[\infty]{\strut \sum\limits_{n=1}^d \left|\frac{r_n}{\log_2{p_n}}\right|^\infty} \\ \small
+&= \sqrt[\infty]{\strut \left|\frac{r_1}{\log_2{p_1}}\right|^\infty + \left|\frac{r_2}{\log_2{p_2}}\right|^\infty + \ldots + \left|\frac{r_d}{\log_2{p_d}}\right|^\infty} \\ \small
+&= \max\left(\dfrac{\left|r_1\right|}{\log_2{p_1}}, \dfrac{\left|r_2\right|}{\log_2{p_2}}, \ldots, \dfrac{\left|r_d\right|}{\log_2{p_d}}\right)
+\end{align}</math>
+| <math>\small = \max\left(\dfrac{|1.617|}{\log_2{2}}, \dfrac{|{-2.959}|}{\log_2{3}}, \dfrac{|3.202|}{\log_2{5}}\right) \\ \small
+= \max\left(1.617, 1.867, 1.379\right) \\ \small
+= 1.867</math>
+| 
+* [[minimax-S|'''minimax-S''']]
+* [[TOP]]
+* [[{{ROOTPAGENAME}}/All-interval tuning schemes#cite note-13|TIPTOP]]
+* [[Generalized Tenney Norms and Tp Interval Space#The Tenney Norm .28T1 norm.29|T1]]
+|-
+| 
+* [[#Euclideanized log-product|'''Euclideanized log-product (E)''']]
+* [[Generalized Tenney Norms and Tp Interval Space#The Tenney-Euclidean Norm .28TE norm.2C T2 norm.29|Tenney-Euclidean norm]]
+* [[Generalized Tenney Norms and Tp Interval Space#The Tenney-Euclidean Norm .28TE norm.2C T2 norm.29|Tenney-Euclidean height]]
+* [[Generalized Tenney Norms and Tp Interval Space#The Tenney-Euclidean Norm .28TE norm.2C T2 norm.29|T2 norm]]
+! colspan="2" |
+| <math>\small \begin{align} &\text{E-lp-C}(\textbf{i}) \\ &= \left\|L\textbf{i}\right\|_2 \\ \small
+&= \sqrt[2]{\strut \sum\limits_{n=1}^d \left|\log_2{p_n} · \mathrm{i}_n\right|^2} \\ \small
+&= \sqrt[2]{\strut \left|\log_2{p_1} · \mathrm{i}_1\right|^2 + \left|\log_2{p_2} · \mathrm{i}_2\right|^2 + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right|^2} \\ \small
+&= \sqrt{\strut (\log_2{p_1} · \mathrm{i}_1)^2 + (\log_2{p_2} · \mathrm{i}_2)^2 + \ldots + (\log_2{p_d} · \mathrm{i}_d)^2}
+\end{align}</math>
+| <math>\small = \sqrt{\strut \left(\log_2{2} · 1\right)^2 + \left(\log_2{3} · {-2}\right)^2 + \left(\log_2{5} · 1\right)^2} \\ \small
+\approx \sqrt{\strut 1 + 10.048 + 5.391} \\ \small
+= \sqrt{\strut 16.439} \\ \small
+\approx 4.055</math>
+| <math>\small \begin{align} &\text{E-lp-C}^{*}(𝒓) \\ &= \left\|𝒓L^{-1}\right\|_2 \\ \small
+&= \sqrt[2]{\strut \sum\limits_{n=1}^d \left|\frac{r_n}{\log_2{p_n}}\right|^2} \\ \small
+&= \sqrt[2]{\strut \left|\frac{r_1}{\log_2{p_1}}\right|^2 + \left|\frac{r_2}{\log_2{p_2}}\right|^2 + \ldots + \left|\frac{r_d}{\log_2{p_d}}\right|^2} \\ \small
+&= \sqrt{\strut (\frac{r_1}{\log_2{p_1}})^2 + (\frac{r_2}{\log_2{p_2}})^2 + \ldots + (\frac{r_d}{\log_2{p_d}})^2}
+\end{align}</math>
+| <math>\small = \sqrt{\strut \left(\frac{1.617}{\log_2{2}}\right)^2 + \left(\frac{{-2.959}}{\log_2{3}}\right)^2 + \left(\frac{3.202}{\log_2{5}}\right)^2} \\ \small
+\approx \sqrt{\strut 2.615 + 3.485 + 1.902} \\ \small
+= \sqrt{\strut 8.002} \\ \small
+\approx 2.829</math>
+| 
+* [[minimax-ES|'''Minimax-ES''']]
+* [[Generalized Tenney norms and Tp interval space#The Tenney–Euclidean Norm .28TE norm.2C T2 norm.29|Tenney-Euclidean (TE)]]
+* [[Tp tuning#T2 tuning|T2]]
+|-
+| rowspan="2" |
+* [[#log-integer-limit-squared|'''''log-integer-limit-squared (lils)''''']]
+* 2 &times; [[Weil norm, Tenney–Weil norm, and TWp interval and tuning space|Logarithmic Weil height]]
+* 2 &times; [[Weil height]]
+| <math>\small \text{lils-C}\left(\dfrac{n}{d}\right) \\ = \log_2\left(\max(n, d)^2\right)</math>
+| <math>\small = \log_2\left(\max(10, 9)^2\right) \\ \small
+= \log_2(10·10) \\ \small
+= \log_2(100) \\ \small
+\approx 6.644</math>
+! colspan="2" |
+! colspan="2" |
+| rowspan="2" |
+* [[minimax-lils-S|'''Minimax-lils-S''']]
+* [[Weil norm, Tenney–Weil norm, and TWp interval and tuning space|Weil]]
+|-
+| <math>\small \text{lils-C}\left(\dfrac{n}{d}\right) \\ = \log_2{nd} + \left|\log_2{\frac{n}{d}}\right|</math>
+| <math>\small = \log_2(10·9) + \left|\log_2(\frac{10}{9})\right| \\ \small
+\approx 6.492 + |0.152| \\ \small
+= 6.644</math>
+| <math>\small \begin{align} &\text{lils-C}(\textbf{i}) \\ &= \left\|ZL\textbf{i}\right\|_1 \\ \small
+&= \left\| \; \left[ \; L\textbf{i} \; \vert \; \smallLLzigzag L\textbf{i} \smallRRzigzag_1 \; \right] \; \right\|_1 \\ \small
+&= \sum\limits_{n=1}^d\left|\log_2{p_n} · \mathrm{i}_n\right| + \left|\sum\limits_{n=1}^d\left(\log_2{p_n} · \mathrm{i}_n\right)\right| \\ \small
+&= \left|\log_2{p_1} · \mathrm{i}_1\right| + \left|\log_2{p_2} · \mathrm{i}_2\right| + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right| \; + \\ \small
+& \quad\quad\quad \left|\left(\log_2{p_1} · \mathrm{i}_1\right) + \left(\log_2{p_2} · \mathrm{i}_2\right) + \ldots + \left(\log_2{p_d} · \mathrm{i}_d\right)\right|
+\end{align}</math>
+| <math>\small \begin{align} &= \left|\log_2{2} · 1\right| + \left|\log_2{3} · {-2}\right| + \left|\log_2{5} · 1\right| \; + \\ \small
+& \quad\quad\quad \left|\left(\log_2{2} · 1\right) + \left(\log_2{3} · {-2}\right) + \left(\log_2{5} · 1\right)\right| \\[5pt] \small
+&= |1| + |-3.170| + |2.322| + \left|1 + {-3.170} + 2.322\right| \\ \small
+&= 1 + 3.170 + 2.322 + 0.152 \\ \small
+&\approx 6.644
+\end{align}</math>
+| <math>\small \begin{align} &\text{lils-C}^{*}(\textbf{𝒓}) \\ &= \max\left( \frac{r_1}{\log_2{p_1}}, \frac{r_2}{\log_2{p_2}}, \ldots, \frac{r_d}{\log_2{p_d}}, 0\right) \; - \\ \small
+& \quad\quad\quad \min\left(\frac{r_1}{\log_2{p_1}}, \frac{r_2}{\log_2{p_2}}, \ldots, \frac{r_d}{\log_2{p_d}}, 0\right)
+\end{align}</math>
+| <math>\small = \max\left(\frac{1.617}{\log_2{2}}, \frac{{-2.959}}{\log_2{3}}, \frac{3.202}{\log_2{5}}\right) \; - \\ \small
+\quad \min\left(\frac{1.617}{\log_2{2}}, \frac{{-2.959}}{\log_2{3}}, \frac{3.202}{\log_2{5}}\right) \\ \small
+\approx \max\left(1.617, {-1.867}, 1.379\right) \; - \\ \small
+\quad \min\left(1.617, {-1.867}, 1.379\right) \\ \small
+= 1.617 - {-1.867} \\ \small
+= 3.484</math>
+|-
+| 
+* '''[[#Euclideanized log-integer-limit-squared|Euclideanized]]<br>[[#Euclideanized log-integer-limit-squared|log-integer-limit-squared (E-lils)]]'''
+* 2&times;[[Weil norm, Tenney–Weil norm, and TWp interval and tuning space#Weil-Euclidean norm|Weil-Euclidean norm]]
+! colspan="2" |
+| <math>\small \begin{align} &\text{E-lils-C}(\textbf{i}) \\ &= \left\| ZL\textbf{i} \right\|_2 \\ \small &= \left\| \; \left[ \; L\textbf{i} \; \vert \; \smallLLzigzag L\textbf{i} \smallRRzigzag_1 \; \right] \; \right\|_2 \\ \small
+&= \sqrt{ \sum\limits_{n=1}^d\left|\log_2{p_n} · \mathrm{i}_n\right|^2 + \left|\sum\limits_{n=1}^d(\log_2{p_n} · \mathrm{i}_n)\right|^2 } \\ \small
+&= \sqrt{\strut \left|\log_2{p_1} · \mathrm{i}_1\right|^2 + \left|\log_2{p_2} · \mathrm{i}_2\right|^2 + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right|^2) \; +} \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \\ \small
+& \quad\quad\quad \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\left|(\log_2{p_1} · \mathrm{i}_1) + \left(\log_2{p_2} · \mathrm{i}_2\right) + \ldots + \left(\log_2{p_d} · \mathrm{i}_d\right)\right|^2}
+\end{align}</math>
+| <math>\small \begin{align} &= \sqrt{\strut \left|\log_2{2} · 1\right|^2 + \left|\log_2{3} · {-2}\right|^2 + \left|\log_2{5} · 1\right|^2 \; +} \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \\ \small
+& \quad\quad\quad \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\left|\left(\log_2{2} · 1\right) + \left(\log_2{3} · {-2}\right) + \left(\log_2{5} · 1\right)\right|^2} \\[5pt] \small
+&= \sqrt{\strut 1^2 + -3.170^2 + 2.322^2 + \left|1 + -3.170 + 2.322\right|^2} \\ \small
+&= \sqrt{\strut 1 + 10.048 + 5.391 + 0.023} \\ \small
+&= \sqrt{\strut 16.462} \\ \small
+&\approx 4.057
+\end{align}</math>
+| colspan="2" | (unsure; handled via matrix augmentations)
+| 
+* [[minimax-E-lils-S|'''Minimax-E-lils-S''']]
+* [[Weil norm, Tenney–Weil norm, and TWp interval and tuning space#Weil.E2.80.93Euclidean norm|Weil–Euclidean (WE)]]
+|-
+| rowspan="2" |
+* [[#log-odd limit|'''''log-odd-limit-squared (lols)''''']]
+* 2&times;[[Kees semi-height|Kees expressibility]]
+| <math>\begin{align} \small &\text{lols-C}\left(\dfrac{n}{d}\right) \\ &= \log_2\left(\max\left(\right.\right. &&\text{rough}(n, 3), \\ &&&\left.\left.\text{rough}(d, 3)\right)^2\right) \end{align}</math>
+| <math>\small = \log_2\left(\max(5, 9)^2\right) \\ \small
+= \log_2{9·9} \\ \small
+= \log_2{81} \\ \small
+\approx 6.340</math>
+! colspan="2" |
+! colspan="2" |
+| rowspan="2" |
+* [[minimax-lols-S|'''minimax-lols-S''']]
+* '''{{subpage|tuning fundamentals|uprev|s=Held-intervals 2|text=held-octave}} [[minimax-lils-S]]'''
+* [[Kees semi-height|Kees]] (note: formerly ''not'' considered equivalent)
+* [[Constrained tuning|constrained-octave Weil (CW)]]
+|-
+| <math>\small \text{lols-C}\left(\dfrac{n}{d}\right) \\ = \log_2{\text{rough}(nd, 3)} + \left|\log_2{\frac{\text{rough}(n,3)}{\text{rough}(d,3)}}\right|</math>
+| <math>\small = \log_2(5 · 9) + \left|\log_2\left(\frac{5}{9}\right)\right| \\ \small
+\approx 5.492 + \left|{-0.848}\right| \\ \small
+= 6.340</math>
+| <math>\small \begin{align} &\text{lols-C}(\textbf{i}) \\ &= \sum\limits_{n=2}^d\left|\log_2{p_n} · \mathrm{i}_n\right| + \left|\sum\limits_{n=2}^d\left(\log_2{p_n} · \mathrm{i}_n\right)\right| \\ \small
+&= |\log_2{p_2} · \mathrm{i}_2| + \ldots + |\log_2{p_d} · \mathrm{i}_d| \; + \\ \small
+& \quad\quad\quad \left|\left(\log_2{p_2} · \mathrm{i}_2\right) + \ldots + \left(\log_2{p_d} · \mathrm{i}_d\right)\right|
+\end{align}</math>
+| <math>\small \begin{align} &= \left|\log_2{3} · {-2}\right| + \left|\log_2{5} · 1\right| \; + \\ \small
+& \quad\quad\quad \left|\left(\log_2{3} · {-2}\right) + \left(\log_2{5} · 1\right)\right| \\ \small
+&\approx 3.170 + 2.322 + \left|{-3.170} + 2.322\right| \\ \small
+&= 6.340
+\end{align}</math>
+| colspan="2" | (unsure; handled via matrix augmentations)
+|-
+| 
+* '''[[#Euclideanized log-odd-limit-squared|Euclideanized]]'''<br />'''[[#Euclideanized log-odd-limit-squared|log-odd-limit-squared (E-lols)]]'''
+* 2&times;[[Weil norm, Tenney–Weil norm, and TWp interval and tuning space#Kees.E2.80.93Euclidean seminorm|Kees–Euclidean seminorm]]
+! colspan="2" |
+| <math>\small \begin{align} &\text{E-lols-C}(\textbf{i}) \\ &= \sqrt{ \sum\limits_{n=2}^d\left|\log_2{p_n} · \mathrm{i}_n\right|^2 + \left|\sum\limits_{n=2}^d\left(\log_2{p_n} · \mathrm{i}_n\right)\right|^2 } \\ \small
+&= \sqrt{\strut \left|\log_2{p_2} · \mathrm{i}_2\right|^2 + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right|^2) \; +} \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \\ \small
+& \quad\quad\quad \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\left|\left(\log_2{p_2} · \mathrm{i}_2\right) + \ldots + \left(\log_2{p_d} · \mathrm{i}_d\right)\right|^2}
+\end{align}</math>
+| <math>\small \begin{align} &= \sqrt{\strut \left|\log_2{3} · {-2}\right|^2 + \left|\log_2{5} · 1\right|^2 \; +} \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[11pt]{0pt}{0pt} } \\ \small
+& \quad\quad\quad \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\rule[12pt]{0pt}{0pt} } \hspace{1mu} \overline{\left|\left(\log_2{3} · {-2}) + (\log_2{5} · 1\right)\right|^2} \\[5pt] \small
+&\approx\sqrt{\strut {-3.170}^2 + 2.322^2 + \left|{-3.170} + 2.322\right|^2} \\ \small
+&= \sqrt{\strut 10.048 + 5.391 + 0.719} \\ \small
+&= \sqrt{\strut 16.158} \\ \small
+&= 4.020
+\end{align}</math>
+| colspan="2" | (unsure; handled via matrix augmentations)
+|
+* [[minimax-E-lols-S|'''Minimax-E-lols-S''']]
+* '''{{subpage|tuning fundamentals|uprev|s=Held-intervals 2|text=held-octave}} [[Minimax-E-lils-S]]'''
+* [[Constrained tuning|Kees-Euclidean (KE)]] (Note: Formerly ''not'' considered equivalent)
+* [[Constrained tuning|constrained-octave Weil-Euclidean (CWE)]]
+|-
+| 
+* [[#product|'''''Product (prod)''''']]
+* [[Benedetti height]]
+| <math>\small \text{prod-C}\left(\dfrac{n}{d}\right) \\ = nd</math>
+| <math>\small = 10·9 \\ \small
+= 90</math>
+| <math>\small \begin{align} &\text{prod-C}(\textbf{i}) \\ &= \prod\limits_{n=1}^d{p_n^{\left|\mathrm{i}_n\right|}} \\ \small
+&= p_1^{|\mathrm{i}_1|} \times p_2^{\left|\mathrm{i}_2\right|} \times \ldots \times p_d^{\left|\mathrm{i}_d\right|}
+\end{align}</math>
+| <math>\small = 2^{|1|} \times 3^{|{-2}|} \times 5^{|1|} \\ \small
+= 2 + 9 + 5 \\ \small
+= 16</math>
+! colspan="2" |
+| rowspan="2" |
+* [[minimax-sopfr-S|'''Minimax-sopfr-S''']]
+* [[BOP tuning|BOP]]
+|-
+| 
+* [[#sum of prime factors with repetition|'''''sopfr''''']]
+* [[Wilson height]]
+| <math>\small \begin{align} &\text{sopfr-C}\left(\dfrac{n}{d}\right) \\ &= \text{sopfr}(nd) \\ \small
+&= \text{sopfr}(n) + \text{sopfr}(d) \end{align}</math>
+| <math>\small = \text{sopfr}(10·9) \\ \small
+= \text{sopfr}(2·5·3·3) \\ \small
+= 2^1+ 5^1 + 3^1 + 3^1 \\ \small
+= 13</math>
+| <math>\small \begin{align} &\text{sopfr-C}(\textbf{i}) \\ &= \left\|\text{diag}(𝒑)\textbf{i}\right\|_1 \\ \small
+&= \sqrt[1]{\strut \sum\limits_{n=1}^d\left|p_n · \mathrm{i}_n\right|^1 } \\ \small
+&= \sqrt[1]{\strut \left|p_1 · \mathrm{i}_1\right|^1 + \left|p_2 · \mathrm{i}_2\right|^1 + \ldots + \left|p_d · \mathrm{i}_d\right|^1} \\ \small
+&= \left|p_1\mathrm{i}_1\right| + \left|p_2\mathrm{i}_2\right| + \ldots + \left|p_d\mathrm{i}_d\right|
+\end{align}</math>
+| <math>\small = |2 · 1| + |3 · {-2}| + |5 · 1| \\ \small
+= 2 + 6 + 5 \\ \small
+= 13</math>
+| <math>\small \begin{align} &\text{sopfr-C}^{*}(\textbf{𝒓}) \\ &= \left\|𝒓\,\text{diag}(𝒑)^{-1}\right\|_\infty \\ \small
+&= \sqrt[\infty]{\strut \sum\limits_{n=1}^d \left|\frac{r_n}{p_n}\right|^\infty} \\ \small
+&= \sqrt[\infty]{\strut \left|\frac{r_1}{p_1}\right|^\infty + \left|\frac{r_2}{p_2}\right|^\infty + \ldots + \left|\frac{r_d}{p_d}\right|^\infty} \\ \small
+&= \max\left(\frac{\left|r_1\right|}{p_1}, \frac{\left|r_2\right|}{p_2}, \ldots, \frac{\left|r_d\right|}{p_d}\right)
+\end{align}</math>
+| <math>\small = \max\left(\frac{|1.617|}{2}, \frac{|{-2.959}|}{3}, \frac{|3.202|}{5}\right) \\ \small
+\approx \max(0.809, 0.986, 0.640) \\ \small
+= 0.986</math>
+|-
+| 
+* '''[[#Euclideanized sopfr|Euclideanized sopfr (E-sopfr)]]'''
+! colspan="2" |
+| <math>\small \begin{align} &\text{E-sopfr-C}(\textbf{i}) \\ &= \left\|\text{diag}(𝒑)\textbf{i}\right\|_2 \\ \small
+&= \sqrt[2]{\strut \sum\limits_{n=1}^d \left|p_n · \mathrm{i}_n\right|^2} \\ \small
+&= \sqrt[2]{\strut \left|p_1 · \mathrm{i}_1\right|^2 + \left|p_2 · \mathrm{i}_2\right|^2 + \ldots + \left|p_d · \mathrm{i}_d\right|^2} \\ \small
+&= \sqrt{\strut \left(p_1\mathrm{i}_1\right)^2 + \left(p_2\mathrm{i}_2\right)^2 + \ldots + \left(p_d\mathrm{i}_d\right)^2}
+\end{align}</math>
+| <math>\small = \sqrt{\strut |2 · 1|^2 + |3 · {-2}|^2 + |5 · 1|^2} \\ \small
+= \sqrt{\strut 2^2 + 6^2 + 5^2} \\ \small
+= \sqrt{\strut 4 + 36 + 25} \\ \small
+= \sqrt{\strut 65} \\ \small
+\approx 8.062</math>
+| <math>\small \begin{align} &\text{E-sopfr-C}^{*}(𝒓) \\ &= \left\|𝒓\,\text{diag}(𝒑)^{-1}\right\|_2 \\ \small
+&= \sqrt[2]{\strut \sum\limits_{n=1}^d \left|\frac{r_n}{p_n}\right|^2} \\ \small
+&= \sqrt[2]{\strut \left|\frac{r_1}{p_1}\right|^2 + \left|\frac{r_2}{p_2}\right|^2 + \ldots + \left|\frac{r_d}{p_d}\right|^2} \\ \small
+&= \sqrt{\strut \left(\frac{r_1}{p_1}\right)^2 + \left(\frac{r_2}{p_2}\right)^2 + \ldots + \left(\frac{r_d}{p_d}\right)^2}
+\end{align}</math>
+| <math>\small = \sqrt{\strut \left(\frac{1.617}{2}\right)^2 + \left(\frac{{-2.959}}{3}\right)^2 + \left(\frac{3.202}{5}\right)^2} \\ \small
+\approx \sqrt{\strut 0.654 + 0.973 + 0.410} \\ \small
+= \sqrt{\strut 2.037} \\ \small
+\approx 1.427</math>
+| 
+* [[minimax-E-sopfr-S|'''Minimax-E-sopfr-S''']]
+* [[Tenney-Euclidean tuning#Benedetti-Euclidean tuning|Benedetti-Euclidean (BE)]]
+|}
+
+In the next section of this article, we will be taking a look at each of these complexities individually. Formulas, examples, and associated tuning schemes can be found in the reference table above, and below we'll go through each complexity in detail, disambiguating any variable names in the table, suggesting helpful ways to think about the relationships between their formulas, and explaining why some theorists may favor them for regular temperament tuning.
+Before we begin to look at the complexity functions which we haven't discussed before, though, we'll first be reviewing in this level of detail those few of them that we have already used. This will help us set the stage properly for the newer ones. We'll actually start with the log-product complexity here, that is, we'll look at it before the product complexity, even though the product complexity is conceptually simpler than it, and technically came up first in our article series. We're doing this for similar reasons to why we adopted the log-product complexity as our default complexity in all our theory thus far: it's easier to work with given our LA setup for RTT. 
+
+This section is structured so that we follow each function's discussion with a discussion of its Euclideanized version, so we end up with an alternating pattern of original and Euclideanized function discussions.
+
+We've adopted the notational choice for functions which are getting applied for computing complexity by suffixing them with <math>\text{-C}</math>. For example, <math>\text{sopfr}()</math> is simply the mathematical function "sum of prime factors with repetition", while <math>\text{sopfr-C}()</math> is that applied for computing complexity. And any such complexity function has a corresponding simplicity function which returns its reciprocal values, and which is notated instead with the <math>\text{-S}</math> suffix.
+
+Previously we've referred to a norm form of a complexity as having a dual ''norm'' as well as an inverse ''prescaler''. For the remainder of this article, we will be switching nomenclature to inverse pre-''transformer'' for the latter, on account of the fact that some of the alternative complexity functions described here have norm forms which use a non-rectangular matrix in that position, and so it would be somewhat of a misnomer to consider them merely pre-''scalers'' in general.
+
+As a final note before we begin: for purposes of this discussion, a "vector-based form" of a complexity's formula refers specifically to the ''[[prime-count vector]]s'' that we use for JI ratios; the notion of a "vector-based form" of a mathematical function defined for quotients, i.e. in terms of a numerator and a denominator, has no meaning unless the nature of that vector is specified, and in our case we specify it as a vectorization of the quotients' prime factorization. So for purposes of this article, when we see the quotient {{sfrac|n|d}}, this refers to the same interval as the vector <math>\textbf{i}</math>.
+
+== Log-product ==
+Log-product complexity <math>\text{lp-C}()</math> was famously used by Paul Erlich in the simplicity-weight damage of the "Tenney OPtimal" tuning scheme he introduced in his Middle Path paper, though he referred to it there as "[[harmonic distance]]", that being [[James Tenney]]'s term for it, and Tenney being the first person to apply it to tuning theory (indeed this function is still known to some theorists as "[[Tenney height]]"). We still consider this tuning scheme to be the gold standard among the all-interval tuning schemes, and this reflects in how our tuning scheme naming system gives it the simplest name it is capable of giving: "minimax-S". The use of <math>\text{lp-C}()</math> for the minimax-S tuning scheme is discussed at length in the previous article of this series on all-interval tuning schemes, but it can be used to weight error in ordinary tuning schemes too.
+
+=== Default status ===
+Log-product complexity was chosen by us (Douglas and Dave) to be our default complexity function. By this it is meant that if one says "miniaverage-C" tuning, the assumption is that the complexity-weight damage is log-product complexity; there is no need to spell out "miniaverage-lp-C". It was chosen as the default for its excellent balance of easy-to-understand and easy-to-compute qualities, while doing a good job capturing the reality of harmonic complexity. For a more in-depth defense of this choice and exploration of other possibilities, see the later section [[#A defense of our choice of log product as our default complexity|A defense of our choice of log product as our default complexity]].
+
+=== Formulas ===
+The quotient form of the log-product complexity function is the base-2 logarithm of the product of a quotient's numerator and denominator:
+
+
+<math>\text{lp-C}\left(\frac{n}{d}\right) = \log_2(n·d)</math>
+
+
+Or, equivalently, the sum of the base-2 logarithm of each separately:
+
+
+<math>\text{lp-C}\left(\frac{n}{d}\right) = \log_2(n) + \log_2(d)</math>
+
+
+The equivalent vector-based form of the log-product complexity function, to be called on the equivalent vector <math>\textbf{i}</math>, is given as a norm by:
+
+
+<math>\text{lp-C}(\textbf{i}) = \left\|L\textbf{i}\right\|_1</math>
+
+
+where L is the [[log-prime matrix]], a diagonalized list of the base-2 logs of each prime.
+
+The vector-based form may also be understood as a summation:
+
+
+<math>
+\begin{align}
+\text{lp-C}(\textbf{i}) &= \sqrt[1]{\strut \sum\limits_{n=1}^d \log_2{p_n}\left|\mathrm{i}_n\right|^1} \\
+&= \sum\limits_{n=1}^d \log_2{p_n}\left|\mathrm{i}_n\right|
+\end{align}
+</math>
+
+
+where p_n is the n<sup>th</sup> prime (assuming this is a temperament of a standard domain, i.e. its basis is a [[prime limit]]; in general p_n is the n<sup>th</sup> entry of whichever '''prime list''' 𝒑 your temperament is working with (or in the general case a basis element list). We also note that n is not the numerator and d is not the denominator here; their reappearance together is a coincidence. What n is here is a generic summation index that increments each step of the sum (matching the n<sup>th</sup> prime up with the n<sup>th</sup> entry of <math>\textbf{i}</math>), and d is the [[dimensionality]] of <math>\textbf{i}</math> (and the temperament in general). 
+
+Either way of writing this vector-based form—norm, or summation—may be expanded to:
+
+
+<math>
+\text{lp-C}(\textbf{i}) = \left|\log_2{p_1} · \mathrm{i}_1\right| + \left|\log_2{p_2} · \mathrm{i}_2\right| + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right|
+</math>
+
+
+In order to understand how the vector-based form is equivalent to the quotient form, please refer to our explanation using the logarithmic identities <math>\log(a·b) = \log(a) + \log(b)</math> and <math>\log\left(a^c\right) = c·\log(a)</math> in the {{subpage|all-interval tuning schemes|uprev|s=quotient-based versus vector-based formulas|text=all-interval tuning schemes article}}.
+
+=== Proportionality to size ===
+Because the log-prime matrix L can also be understood to figure into how we compute the sizes of intervals in cents, we see an interesting effect for tunings that use complexities such as <math>\text{lp-C}()</math> which use it as (or as part of) their complexity pretransformer X. A complexity pretransformer's ''inverse'' pretransformer <math>X^{-1}</math>, appears in the minimization target according to RTT's take on the dual norm inequality: <math>\left\|𝒓X^{-1}\right\|_{\text{dual}(q)}</math>. So given the following:
+
+* The retuning map is the tuning map minus the just tuning map: <math>𝒓 = 𝒕 - 𝒋</math>
+* The just tuning map can be understood to be the log-prime matrix left-multiplied by a '''summation map''' <math>\slant{\mathbf{1}} = \val{1 & 1 & 1 & …}</math> and then scaled to cents with an '''octave-to-cents conversion''' factor of 1200, that is: <math>𝒋 = 1200\times\slant{\mathbf{1}}L</math>
+* In <math>\text{lp-C}()</math> it is the case that <math>X = L</math>.
+
+Then we find:
+
+
+<math>
+\left\|𝒓X^{-1}\right\|_{\text{dual}(q)}
+</math>
+
+
+Substituting in for <math>𝒓 = 𝒕 - 𝒋</math> and <math>X^{-1} = X^{-1} = (L)^{-1}</math>
+
+
+<math>
+\left\|(𝒕 - 𝒋)(L^{-1})\right\|_{\text{dual}(q)}
+</math>
+
+
+Distributing:
+
+
+<math>
+\left\|𝒕L^{-1} - 𝒋L^{-1}\right\|_{\text{dual}(q)}
+</math>
+
+ 
+
+Substituting in for <math>𝒋 = 1200\times\slant{\mathbf{1}}L</math>:
+
+
+<math>
+\left\|𝒕L^{-1} - (1200\times\slant{\mathbf{1}}L)L^{-1}\right\|_{\text{dual}(q)}
+</math>
+
+
+And now canceling out the <math>LL^{-1}</math> on the second term:
+
+
+<math>
+\left\|𝒕L^{-1} - 1200\times\slant{\mathbf{1}}\cancel{L}\cancel{L^{-1}}\right\|_{\text{dual}(q)}
+</math>
+
+
+Note that <math>𝒕 = 1200\times\slant{\mathbf{1}}LGM</math>, and so the left term could also be expressed as <math>1200\times\slant{\mathbf{1}}LGML^{-1}</math>, but L and <math>L^{-1}</math> do not cancel here, because they are not immediate neighbors. We meaningfully transform into <math>L^{-1}</math> space, deal with M and G there, and then transform back out with L here. So we find that the retuning magnitude is:
+
+
+<math>
+\left\|𝒕L^{-1} - 1200\times\slant{\mathbf{1}}\right\|_{\text{dual}(q)}
+</math>
+
+
+And so this is the minimization target for tuning schemes whose complexity pretransformer equals L. What's cool about this is how we're tuning each prime proportionally to its own size. The second term here is a map consisting of a string of 1200's, one for each prime. And the first term is the tuning map, but with each term scaled proportionally to the log of the corresponding prime, such that ''if the tempered version of the prime were to be pure, it would equal 1200 here''. If we took the 1200 out of the picture, we could perhaps see even more clearly that we were weightingeach prime proportionally to its own size. In other words, since we're minimizing the difference between each prime's tuning and 1, this would mean that a perfect tuning equals 1, narrow tunings are values like 0.99, and wide tunings are values like 1.01. This is in contrast to the non-pretransformed case, where every cent off from any prime makes the same impact to its difference with its just size.
+
+We could think of it this way: while 𝒓 simply gives us the straight amount of error to each prime interval, <math>𝒓L^{-1}</math> gives us that error ''relative to the size'' of each of those intervals, i.e in terms of a proportion such as could be expressed with a percentage. In other words, since the interval {{sfrac|7|1}} is much bigger than the interval {{sfrac|2|1}}, if they both had the same amount of error, then that'd actually be quite a bit ''less'' error ''per octave'' for prime 7 (specifically, {{sfrac|1|\log_2{7}}} as much). So, if we're using an optimizer to minimize a norm of a vector containing this error value and others, by reducing it in this way, we are telling the optimizer—for each next prime bigger than the last—worry about its error proportionally less than the prime before. This is the rationale Paul used when basing his tuning scheme on a Tenney lattice, and we think that if you're going to use an all-interval tuning, then this is a pretty darn appealing reason to use <math>\text{lp}</math> as the interval complexity function in the simplicity-weighting of your damage. As with non-all-interval tuning schemes, we consider <math>\text{lp}</math> to be the clear default interval complexity function; this is just a new perspective on that same old intuition.
+
+We might also call attention to the fact that cents and octaves are both logarithmic pitch units. Which is to say that we could simplify the units of such quantities down to nothing if we wanted. That is, we know the conversion factor between these two units, so multiplying by 1/1200 octaves/cent would cancel out the units, leaving us with a dimensionless quantity. So why do we keep these values in the more complicated units of cents per octave? The main reason is convenient size. When tuning temperaments, we tend to deal with smallish damage values: usually less than 10, almost always less than 100. If that gets divided by 1200 (~1000) then we'd typically be comparing amounts in the hundredths. Who wants to compare damages of 0.001 and 0.002, i.e. essentially proportions of octaves? As Graham puts it in his paper ''Prime Based Error and Complexity Measures'', "Because the dimensionless error is quite a small number, using cents per octave instead is a good practical idea."<ref group="note" name="x31p4">http://x31eq.com/primerr.pdf, page 4.</ref>
+
+This L-canceling proportionality effect occurs for all-interval tunings that use any complexity with L as its pretransformer (or a component thereof), such as minimax-ES, minimax-lils-S, and minimax-E-lils-S described later in this article. 
+
+This effect does not occur for ordinary tunings with simplicity weight damage, i.e. where the simplicity matrix is <math>S = \dfrac1L = L^{-1}</math>. At least, it doesn't whenever they use anything other than the primes as target-intervals, i.e. <math>\mathrm{T} ≠ I</math>, because having <math>\mathrm{T}</math> sandwiched between the L and the <math>L^{-1}</math> prevents them from canceling:
+
+
+<math>
+ \llzigzag \textbf{d} \rrzigzag _p =  \llzigzag 1200\times\slant{\mathbf{1}}LGM\mathrm{T}L^{-1} - 1200\times\slant{\mathbf{1}}L\mathrm{T}L^{-1} \, \rrzigzag _p
+</math>
+
+
+We'll briefly look at a units analysis of this situation. Interestingly, even though this <math>LL^{-1}</math> cancels out mathematically, the units do not. That's because these really aren't the ''same'' L, conceptually speaking anyway. They have the same shape and entries, but different purposes. The first one is there to convert prime counts into octave amounts, i.e. from frequency space where we multiply primes to pitch space where we add their logs; this L logically has units of oct/'''p'''. The second one is there to scale prime factors according to a particular idea of interval complexity, which happens to be (well, we'd say, was ''engineered'' to be) in direct correlation with their octave amounts; this pretransformer L has no actual units but carries a unit annotation (C) that it applies to whatever it pretransforms (and <math>L^{-1}</math> thereby has the annotation (S), for simplicity, being the inverse of L).<ref group="note">Previously we entertained the idea that the <math>L\textbf{i}</math> object inside the norm bars of the log-product interval complexity could be called an "octavector", on the interpretation that this was the identical L to the other, i.e. that it had units of oct/'''p''' rather than (C). Now we believe those are only complexity-annotated primes inside the bars, and upon evaluating the norm, all that remains are annotations or non-vectorized units ('''p''' is a vectorized unit). And then you augment the annotation per the norm power. But more on that in the units analysis article.</ref> And so when we consider the whole expression <math>1200\times\slant{\mathbf{1}}LL^{-1}</math>, we find that 1200 has units of ¢/oct, <math>\slant{\mathbf{1}}</math> has units of oct/oct, L has units of oct/'''p''', and <math>L^{-1}</math> has units of (S), and when everything's done canceling out, you end up with ¢/'''p'''(S). Note that the annotation is not "in the denominator"; it applies equally to the entire unit. And the most logical way to read this would be as if the annotation was on the numerator, in fact, as "simplicity-weighted cents per prime". You can check that this is the same units you'd get for the other term <math>𝒕L^{-1}</math>, and thus for their difference, <math>𝒓L^{-1}</math>. Since the noteworthy thing here was that the matched L's had no effect on the units analysis, we further note that this analysis is valid for any inverse pretransformed retuning map. But we should also say that it's not entirely ''wrong'' to think of <math>L^{-1}</math> as having units of '''p'''/oct, i.e. as being the inverse of the L that's used for sizing interval vectors, in which case we end up with ¢/oct units instead; both Keenan Pepper (in his tiptop.py script) calls the units of damage in minimax-S tuning "cents per octave", and Graham Breed considers them cents per octave as well.<ref group="note" name="x31p4" />
+
+== Euclideanized log-product ==
+To Euclideanize log-product complexity, we simply take the powers and roots of 1 from the vector-based forms (norm, summation, and expanded) and swap them out for 2's. This also changes its name from "(taxicab) log-product complexity" to "Euclideanized" same. Note that the quotient form does not have these powers and thus we have no quotient form of <math>\text{E-lp-C}()</math>.
+
+
+<math>
+\begin{array} {rcl}
+
+{\color{red}\text{(t-)}}\text{lp-C} & \text{name} & {\color{red}\text{E-}}\text{lp-C} \\
+
+\log_2(n·d) & \text{quotient} & \text{—} \\
+
+\left\|L\textbf{i}\right\|_{\color{red}1} & \text{norm} & \left\|L\textbf{i}\right\|_{\color{red}2} \\
+
+\sqrt[{\color{red}1}]{\strut \sum\limits_{n=1}^d \log_2{p_n}\left|\mathrm{i}_n\right|^{\color{red}1}} & \text{summation} & \sqrt[{\color{red}2}]{\strut \sum\limits_{n=1}^d \log_2{p_n}\left|\mathrm{i}_n\right|^{\color{red}2}} \\
+
+\sqrt[{\color{red}1}]{\strut \left|\log_2{p_1} · \mathrm{i}_1\right|^{\color{red}1} + \left|\log_2{p_2} · \mathrm{i}_2\right|^{\color{red}1} + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right|^{\color{red}1}} & \text{expanded} & \sqrt[{\color{red}2}]{\strut \left|\log_2{p_1} · \mathrm{i}_1\right|^{\color{red}2} + \left|\log_2{p_2} · \mathrm{i}_2\right|^{\color{red}2} + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right|^{\color{red}2}}
+
+\end{array}
+</math>
+
+=== Tunings used in ===
+This complexity was introduced to tuning theory by Graham Breed, for his Tenney-Euclidean tuning scheme (our "minimax-ES"). 
+
+Minimax-ES is also sometimes referred to as the "T2" tuning scheme, in recognition of its falling along a continuum of tunings that include minimax-S ("TOP"), or "T1" tuning. The '1' and '2' refers to the norm power, so in "T1" the '1' refers to the ordinary case of taxicab norm, and in "T2" the '2' refers to the Euclideanization (and, theoretically, "T3" would refer to an analogous tuning that used a 3-norm instead, etc.). Unfortunately, because the meaning of the 'T' is "Tenney", a reference to his harmonic lattice which uses a harmonic distance measure that is a pretransformed 1-norm, this is not the cleanest terminology, since any value other than '1' here is overriding that aspect of the meaning of the 'T'. We prefer our systematic naming, which uses an optional "t-" (for taxicab, not Tenney) or an "E-" (for Euclidean) in place of special norm power values of '1' and '2', respectively, and otherwise just uses the number, for example "T3" would be "minimax-3S".
+
+== Product ==
+Product complexity is found as the product of a quotient's numerator and denominator:
+
+
+<math>\small \text{prod-C}\left(\dfrac{n}{d}\right) = nd</math>
+
+
+It doesn't get any simpler than that.
+
+=== Vectorifiable, but not normifiable ===
+We are able to express product complexity in vector-based form. However, unlike every other one of the complexities we look at in this article, it does not work out as a ''summation''; rather, it works out as a ''product'', using the analogous but less-familiar Big-Pi notation instead of Big-Sigma notation ('Π' for 'P' for "product"; 'Σ' for 'S' for "summation").  
+
+
+<math>\small \text{prod-C}(\textbf{i}) = \prod\limits_{n=1}^d{p_n^{\left|\mathrm{i}_n\right|}}</math>
+
+
+Which expands like this:
+
+
+<math>p_1^{\left|\mathrm{i}_1\right|} \times p_2^{\left|\mathrm{i}_2\right|} \times \ldots \times p_d^{\left|\mathrm{i}_d\right|}</math>
+
+
+For this same reason—being a product, not a summation—product complexity has no way to be expressed as a norm, and so cannot be used directly for all-interval tuning schemes. And this is one of the key reasons why it hasn't seen as much use in tuning theory as its logarithmic cousin, <math>\text{lp-C}()</math>. The logarithmic version exhibits that L-canceling effect (which also underpins {{subpage|all-interval tuning schemes|uprev|s=Bonus trick: Paul's method for nullity-1 minimax-S|text=Paul's trick}} for computing minimax-S tunings of nullity-1 temperaments), and also we believe accounts for it simply "feeling about right" to the typical tuning theorist we've discussed with. Log-product complexity feels like it was designed expressly for measuring complexity of ''relative pitch'', i.e. pitch ''deltas'', whereas product complexity feels better suited for measuring complexity of ''relative frequency'', i.e. frequency ''qoppas''.<ref group="note">"Qoppa" is a term we (D&D) coined for a small quotient between two numbers, analogous to, but one level up the operator hierarchy from a "delta" being a small difference. Like uppercase delta Δ, uppercase qoppa Ϙ is a Greek letter, albeit an archaic one. It can be typed as ⎄QQ using our {{subpage|conventions for names, variables, units, and notations|uprev|s=WinCompose}} sequences.</ref> For more information on this problem, please see the later section [[#Systematizing norms|Systematizing norms]].
+
+=== Tunings used in ===
+Curiously, even though <math>\text{prod-C}()</math> cannot be normified, and if it can't be a norm then there can't be a ''dual'' norm for it, which means we cannot directly create an all-interval tuning "minimax-prod-S" which minimaxes the product-simplicity-weight damage across all intervals, we ''can nevertheless achieve this'' (if one feels like experimenting with a sort of conceptual mismatch between frequency and pitch, in terms of complexity measurement), albeit it comes with a further step of indirection. This is because of a special relationship between product complexity <math>\text{prod-C}()</math> and sum-of-prime factors-with-repetition complexity <math>\text{sopfr-C}()</math>: when sopfr-simplicity-weight damage is minimaxed, as is done in the minimax-sopfr-S tuning, it turns out that simultaneously the prod-simplicity-weight damage is also minimized. This is the reason why the historical name for minimax-sopfr-S has been "BOP", short for "Benedetti OPtimal", where "Benedetti height" is an alternative name for product complexity, even though minimax-sofpr-S is computed not with the product complexity but with sum-of-prime-factors-with-repetition complexity. We'll explain this in the later section on sopfr.
+
+== Euclideanized product ==
+This is a trick section, here only for parallelism. There is no Euclideanized product complexity <math>\text{“E-prod-C”}()</math>. Despite product complexity boasting a ''vector'' form, that vector-based form involves a ''product'', not a ''summation'', and therefore cannot be expressed as a norm, and Euclideanization is something that can only be done to a norm (or equivalent summation). Compare:
+
+
+<math>
+\begin{array} {rcl}
+
+\sqrt[{\color{red}1}]{\strut \sum\limits_{n=1}^d \log_2{p_n}\left|\mathrm{i}_n\right|^{\color{red}1}} & {\color{red}\text{(T-)}}\text{lp-C} \rightarrow {\color{red}\text{E-}}\text{lp-C} & \sqrt[{\color{red}2}]{\strut \sum\limits_{n=1}^d \log_2{p_n}\left|\mathrm{i}_n\right|^{\color{red}2}} \\
+
+\prod\limits_{n=1}^d \log_2{p_n}^{\left|\mathrm{i}_n\right|} & {\color{red}\text{(T-)}}\text{prod-C} \rightarrow \text{“}{\color{red}\text{E-}}\text{prod-C”} & {\Large\quad\quad\text{?}} \\
+
+\end{array}
+</math>
+
+
+We simply don't have the matching power and root of a norm to work with here. Since this complexity function does not exist, of course, there are no tuning schemes which use it.
+
+== Sum-of-prime-factors-with-repetition ==
+The "sum of prime factors with repetition" function, due to its ungainly six-word-long name, is usually initialized to <math>\text{sopfr}()</math>, in all lowercase, and curiously missing the 'w', though perhaps that's for easier comparison with its close cousin function, the "sum of prime factors" (without repetition), which is notated as <math>\text{sopf}()</math>. And "sopfr" is a dam site more pronounceable than "sopfwr" would be. By "repetition" here it is meant that if a prime factor appears more than once, it is counted for each appearance. It may seem obvious to count all the occurrences of each prime, but there are valuable applications to the without-repetition version of this function (though it's unlikely that it will see much use in tuning theory).
+
+The quotient form of sum-of-prime-factors-with-repetition-''complexity'' <math>\text{sopfr-C}\left(\frac{n}{d}\right)</math> is simply the sum-of-prime-factors-with-repetition of the numerator times the denominator, <math>\text{sopfr}(nd)</math>, or, equivalently, the <math>\text{sopfr}()</math> for each of the numerator and denominator separately then added together <math>\text{sopfr}(n) + \text{sopfr}(d)</math>.<ref group="note">Actually, <math>\text{sopfr}()</math> is not typically defined for rationals, only for integers, leaving the question open as to whether factors in the denominator should count positive or negative (i.e. is the <math>\text{sopfr}()</math> of <math>\frac{7}{5} = 7 + 5 = 12</math>, or does it <math>= 7 - 5 = 2</math>?).</ref>
+
+The vector-based form of <math>\text{sopfr-C}</math> looks like so:
+
+
+<math>
+\text{sopfr-C}(\textbf{i}) = \sum\limits_{n=1}^d(p_{n}·\left|\mathrm{i}_{n}\right|)
+</math>
+
+
+Where, as we've been doing so far, p_n is the n<sup>th</sup> entry of 𝒑, the list of primes that match with the counts in each entry <math>\mathrm{i}_n</math> of the interval vectors <math>\textbf{i}</math>.
+
+=== Variations ===
+The tuning theorist Carl Lumma has advocated<ref group="note">Missing link, but this was stated somewhere on the Yahoo archives.</ref> for a variation on this tuning where the primes are all ''squared'' before prescaling. This is supported in the RTT Library in Wolfram Language. In fact, it also supports pretransforming by <math>p^a·\log_2{p}^b</math>, for any power a or b.
+
+=== Tunings used in ===
+<math>\text{sopfr-C}()</math> is used in the '''minimax-sopfr-S''' tuning scheme, historically known as "BOP". As explained above, this tuning is named "Benedetti OPtimal" because "Benedetti" is associated with product complexity—''not'' the sopfr complexity we use as our damage weight when computing it. Apparently more theorists care about minimizing product complexity than about minimizing sopfr, which is fine. We have to minimize with <math>\text{sopfr-C}()</math> weight instead of <math>\text{prod-C}()</math> weight because <math>\text{prod-C}()</math> is not normifiable, being a product, not a summation. And minimizing with <math>\text{sopfr-C}()</math> works because we have a proof that if sopfr-S-weight damage is minimized, then so too is prod-S-weight damage. What follows is an adaptation of the proof found here [[BOP tuning#Proof of Benedetti optimality on all rationals]].
+
+By the dual norm inequality, we have:
+
+
+<math>
+\dfrac{\left|𝒓\textbf{i}\right|}{\left\|\text{diag}(𝒑)\textbf{i}\right\|_1} \leq \left\|𝒓\text{diag}(𝒑)^{-1}\right\|_\infty
+</math>
+
+
+This numerator on the left is the absolute error of an arbitrary interval <math>\textbf{i}</math> according to some temperament's retuning map 𝒓. And the denominator on the left is equivalent to the sopfr complexity. Dividing by complexity is the same as multiplying by simplicity. And so the entire left-hand side is the ''sopfr-S-weight damage'' to an arbitrary interval. We can therefore minimize the damage to all such intervals by minimizing the right-hand side, since that's the direction the inequality points. And minimizing the right-hand side is easier. This much should all be review if you've gone through the all-interval tuning schemes article; we're just taking the same concept that we taught with the log-product complexity, but here doing it with sopfr-complexity.
+
+We said the denominator on the left half is <math>\text{sopfr-C}(\textbf{i})</math>. Let's actually substitute that in, for improved clarity in upcoming steps.
+
+
+<math>
+\dfrac{\left|𝒓\textbf{i}\right|}{\text{sopfr-C}(\textbf{i})} \leq \left\|𝒓\text{diag}(𝒑)^{-1}\right\|_\infty
+</math>
+
+
+Our goal is to show that prod-S-weight damage across all intervals is also minimized by minimizing the right-hand side of this inequality:
+
+
+<math>
+\dfrac{\left|𝒓\textbf{i}\right|}{\text{prod-C}(\textbf{i})} \leq \left\|𝒓\text{diag}(𝒑)^{-1}\right\|_\infty
+</math>
+
+
+Now that's not so easy. But what we can do instead is show that this damage is less or equal to the ''left-hand'' side of the original inequality. Another level of minimization down:
+
+
+<math>
+\dfrac{\left|𝒓\textbf{i}\right|}{\text{prod-C}(\textbf{i})} \leq \dfrac{\left|𝒓\textbf{i}\right|}{\text{sopfr-C}(\textbf{i})} \leq \left\|𝒓\text{diag}(𝒑)^{-1}\right\|_\infty
+</math>
+
+
+We can just take the first chunk of that and eliminate the redundant numerators:
+
+
+<math>
+\dfrac{\cancel{\left|𝒓\textbf{i}\right|}}{\text{prod-C}(\textbf{i})} \leq \dfrac{\cancel{\left|𝒓\textbf{i}\right|}}{\text{sopfr-C}(\textbf{i})}
+</math>
+
+
+And then reciprocate both sides (which flips the direction of the inequality symbol):
+
+
+<math>
+\text{prod-C}(\textbf{i}) \geq \text{sopfr-C}(\textbf{i})
+</math>
+
+
+So we now just have to prove that the product complexity of any given interval will always be greater or equal than its sopfr complexity. And if we do this, we will have proven that minimax-sopfr-S tuning is the same as minimax-prod-S tuning. So let's consider an exhaustive set of two cases: either <math>\textbf{i}</math> is prime, or it is not prime.
+
+# If <math>\textbf{i}</math> ''is'' prime, then <math>\text{prod-C}(\textbf{i}) = \text{sopfr-C}(\textbf{i})</math>. This is because with only a single prime factor, the trivial product of it with nothing else, and the trivial sum of it with nothing else, will give the same result. 
+# If <math>\textbf{i}</math> is ''not'' prime, then we have a single case where <math>\text{prod-C}(\textbf{i}) = \text{sopfr-C}(\textbf{i})</math>, which is {{sfrac|4|1}} because 2&times;2 = 2+2, but in every other case<ref group="note">Including trivially {{sfrac|1|1}}, where <math>\text{prod-C}(\textbf{i}) = 1</math> and <math>\text{sopfr-C}(\textbf{i}) = 0</math>.</ref> we find <math>\text{prod-C}(\textbf{i}) > \text{sopfr-C}(\textbf{i})</math>
+
+
+And so since 
+
+
+<math>
+\text{prod-C}(\textbf{i}) \geq \text{sopfr-C}(\textbf{i})
+</math>
+
+
+implies 
+<math>
+\dfrac{\left|𝒓\textbf{i}\right|}{\text{prod-C}(\textbf{i})} \leq \dfrac{\left|𝒓\textbf{i}\right|}{\text{sopfr-C}(\textbf{i})}
+</math>
+
+
+and 
+
+
+<math>
+\dfrac{\left|𝒓\textbf{i}\right|}{\text{sopfr-C}(\textbf{i})} \leq \left\|𝒓\text{diag}(𝒑)^{-1}\right\|_\infty
+</math>
+
+
+therefore
+
+
+<math>
+\dfrac{\left|𝒓\textbf{i}\right|}{\text{prod-C}(\textbf{i})} \leq \left\|𝒓\text{diag}(𝒑)^{-1}\right\|_\infty
+</math>
+
+
+Done.
+
+== Euclideanized sum-of-prime-factors-with-repetition ==
+Not much to see here; only Euclideanized <math>\text{sopfr-C}()</math>, which is to say:
+
+<math>
+\begin{align}
+\text{sopfr-C} &= \left\|\text{diag}(𝒑)\textbf{i}\right\|_{\color{red}1} \\
+{\color{red}\text{E-}}\text{sopfr-C} &= \left\|\text{diag}(𝒑)\textbf{i}\right\|_{\color{red}2} \\
+\end{align}
+</math>
+
+=== Tunings used in ===
+As one should expect, <math>\text{E-sopfr-C}()</math> is used in the '''minimax-E-sopfr-S''' tuning scheme, historically known as "BE", where the 'B' is for "Benedetti" as in the Benedetti height as in the product complexity (which has that special relationship with the sum-of-prime-factors-with-repetition complexity), and the 'E' is as in "Euclidean".
+
+== Count-of-prime-factors-with-repetition ==
+The ''count'' of prime factors with repetition function is closely related to the ''sum'' of prime factors with repetition function, as one might expect considering how their names are off by just this one word. The only difference is that where in <math>\text{sopfr}()</math> we sum each prime factor, we can think of <math>\text{copfr}()</math> as doing the same thing except replacing each prime factor—regardless of its size—with the number 1.
+ 
+=== Tunings used in ===
+The count of prime factors with repetition has not actually been used in a tuning scheme before to our knowledge. However, we've included it here on the possibility that it might be, but mostly for parallelism with the other pairs of taxicab and Euclideanized versions of the otherwise same complexity function, due to the fact that the Euclideanized version of <math>\text{copfr-C}()</math> has seen use.
+
+If this '''minimax-copfr-S''' tuning ''were'' to be used, a noteworthy property it has is that whenever a temperament has only one comma (i.e. is nullity-1) every prime receives an equal amount of absolute error in cents. Compare this with the effect we see for minimax-S tuning {{subpage|all-interval tuning schemes|uprev|s=Bonus trick: Paul's method for nullity-1 minimax-S|text=as observed by Paul Erlich}} in his Middle Path paper. 
+
+== Euclideanized count-of-prime-factors-with-repetition ==
+In terms of its formulas, <math>\text{E-copfr-C}()</math> is fairly straightforward: it's just the <math>\text{copfr-C}()</math> but with the powers and roots changed from 1 to 2, so said another way, it's the (un-pretransformed) 2-norm:
+
+
+<math>\small \begin{align} \text{E-copfr-C}(\textbf{i}) &= \left\|\textbf{i}\right\|_2 \\ \small
+&= \sqrt[2]{\strut \sum\limits_{n=1}^d \left|\mathrm{i}_n\right|^2} \\ \small
+&= \sqrt[2]{\strut \left|\mathrm{i}_1\right|^2 + \left|\mathrm{i}_2\right|^2 + \ldots + \left|\mathrm{i}_d\right|^2} \\ \small
+&= \sqrt{\strut \mathrm{i}_1^2 + \mathrm{i}_2^2 + \ldots + \mathrm{i}_d^2} \\ 
+\end{align} </math>
+
+
+Thinking about how this actually ranks intervals, it should become clear soon enough that this is complete garbage as a complexity function. It treats all prime numbers as having equal complexity—the lowest complexity possible—and it treats powers of 2 as the most complex numbers in their vicinity. e.g. It considers 8 to be more complex than 9, 10, 11, 12, 13, 14 and 15. So it's a far cry from monotonicity over the integers, i.e. any higher integer is more complex than the previous one.
+
+=== Tunings used in ===
+How, you might ask, did such a ridiculously-named<ref group="note">We have noted with some amusement that "Euclideanized" in many cases could be replaced with the five-letter initialism "rosos", standing for "root of sum of squares". So leveraging this, we'd find Euclideanized copfr to be "rososcopfr" ([https://www.dictionary.com/e/memes/roflcopter ROFLcopter!])</ref> complexity function, that completely flattens the influence of the different prime factors, and suffers the tuning shortcomings of any Euclideanized tuning scheme of measuring harmonic distance through the non-real diagonal space of the lattice, come to be used as an error weight in tuning schemes? The answer is: because of the pseudoinverse. It happens to be the case that when the pseudoinverse of the temperament mapping is taken to be the generator embedding, this is equivalent to having optimized for minimizing the <math>\text{E-copfr-S}()</math>-weight (note the 'S' for simplicity) damage across all intervals—no target list, no prescaling, no nothing. Why exactly this works out like this is a topic for the later section where we work through the computations of this tuning. For now we will simply note that the historical name of this tuning scheme is "Frobenius", on account of the fact that it also minimizes the [https://mathworld.wolfram.com/FrobeniusNorm.html Frobenius norm] (a matrix norm that generalizes the 2-norm we use for vectors) of the [[projection matrix]], while in our systematic name this is simply the minimax-E-copfr-S tuning scheme. And we'll say that while this pseudoinverse method is basically the easiest possible method for "optimizing" a tuning that could possibly exist, and was fascinating upon its initial discovery, it does come with the tradeoff of probably not being worth doing in the first place—the ultimate example of [[Wikipedia:streetlight effect|streetlight effect]] in RTT—especially in a modern environment where many tools are available for automatically computing better tunings just as quickly and easily, from the average musician's perspective. 
+
+Also of note, this all-interval tuning scheme '''minimax-E-copfr-S''' is equivalent to an ordinary tuning that would be called, in our system, "primes miniRMS-U", even though these have different target interval sets ("all" versus "primes"), optimization powers (<math>\infty</math> versus 2), and damage weight (copfr-S versus unity). The reason being that with minimax-E-copfr-S, we're just minimizing <math>\left\|𝒓X^{-1}\right\|_2</math> where <math>X^{-1} = I</math> and <math>𝒓 = 𝒈M - 𝒋</math>, and with primes miniRMS-U we're minimizing <math>\llangle|𝒈M - 𝒋|\mathrm{T}W\rrangle_2</math> where both <math>\mathrm{T} = I</math> on account of "primes" and <math>W = I</math> on account of the unity-weight. And it doesn't matter whether we compute the minimum of a power norm <math>\left\| · \right\|_q</math> or a power mean <math>\llangle · \rrangle_p</math>; we'll find the same tuning either way. Put another way, with either scheme, we find the optimal tuning as the pseudoinverse of M.
+
+A similar equivalence is found between the minimax-copfr-S tuning scheme and the primes minimax-U tuning scheme; the only difference here is that the optimization power of the latter is <math>\infty</math> which matches with the dual norm power of copfr. And a similar equivalence would also be found between the minimax-M-copfr-S tuning scheme (the "maxized" variant) and the primes-minisum-U tuning scheme, if anyone used maxized variants of complexities.
+
+== Log-integer-limit-squared ==
+Before looking at the log-integer-limit-squared complexity, let's first cover the plain integer-limit-squared complexity. Actually, let's just look at the integer limit function. Called on an integer, it would return the integer itself. Called on a rational, well, now we have two integers to look at, so it's going to give us whichever one of the two is greater. 
+
+
+<math>
+\text{il}\left(\frac{n}{d}\right) = \max(n, d)
+</math>
+
+
+And in the context of RTT tuning, where tuning a [[subunison]] interval is equivalent to tuning its superunison equivalent, we typically normalize to all superunisons, i.e. intervals where the numerator is greater than the denominator, so the integer limit typically means simply to return the numerator and throw away the denominator:
+
+
+assuming <math>\; n > d, \quad \text{il}\left(\frac{n}{d}\right) = n</math>
+
+
+The integer-limit-squared, then, is typically just the numerator squared. It's as if instead of dropping the denominator, we replaced it with a copy of the numerator and then took the product complexity.
+
+
+<math>
+\text{assuming} \; n > d, \quad \text{ils}\left(\frac{n}{d}\right) = n\times n = n^2
+</math>
+
+
+And the ''log'' integer limit, then, is just the logarithm of the above:
+
+
+<math>
+{\color{red}\text{l}}\text{ils-C}\left(\frac{n}{d}\right) = {\color{red}\log_2}\left(\max(n, d)^2\right)
+</math>
+
+
+Owing to the base-2 logarithmic nature of octave-equivalence in human pitch perception, we tend to go with 2 as our logarithm base, as we've done here.
+
+=== Why squared? ===
+Why use log-integer-limit-squared rather than simply log-integer-limit? The main reason is: for important use cases of tuning schemes based on this complexity, it simplifies formulas. In short, squaring it here actually eliminates annoying factors of {{sfrac|1|2}} elsewhere. 
+
+There's also an argument that this makes it more nearly equivalent to log-product complexity in concept, as they now are both the log of the product of two 'ators; in the log-product case, it's a numerator and denominator, while in the log-integer-limit-squared case, it's two numerators.
+
+Note that the log of anything squared is the same as two times the log of the original thing. So <math>\log\left(\max(n,d)^2\right) = 2\times\log\left(\max(n,d)\right)</math>.
+
+Also note that "log-integer-limit-squared" tuning is parsed as "log-" of "integer-limit-squared", not as "log-integer-limit" then "squared."
+
+=== Normifying: The cancelling-out machine ===
+As we've seen many times by now, in order to use this complexity in an all-interval tuning, we need to get it into the form of a norm, so that we can minimize its dual norm. So, how to normify this formula that involves the taking of a maximum value? At first, this may not seem possible. However, theoreticians have developed a clever trick for this. Now this is only the first step to normifying this function;  as we will see in a moment, it is indeed ''still'' quotient-based. However, we'll also find that this quotient-based formula—since it has gotten rid of the <math>\max()</math> function which we didn't know how to normify—will eventually be normifiable. Check it out:
+
+
+<math>\text{lils-C}\left(\dfrac{n}{d}\right) = \log_2{nd} + \left|\log_2{\frac{n}{d}}\right|</math>
+
+
+It turns out that the log of the max of the numerator and denominator is always equivalent to the log of their ''product'' plus the absolute value of the log of their ''quotient''. On first appearances, this transformation may be completely opaque. To understand how this trick works, let's take a look at the simplest possible version of it, and then adapt that back into our particular use case.
+
+So here's the purest distillation of the idea: <math>2\times\max(a, b) = a + b + |a - b|</math>. The key thing is to notice what happens with the absolute value bars. Think about it this way: to extract the maximum value between a and b, we need some way to throw away the smaller of the two values completely, while retaining the greater of the two values exactly as it came in. So, we cleverly leverage the absolute value bars here as a sort of canceling-out machine.  
+
+We can prove that trick works by exhaustively checking all three of the possible cases: 
+
+* <math>a > b</math>
+* <math>a < b</math>
+* <math>a = b</math>
+
+First, let's check <math>a > b</math>. In this case, <math>|a - b| = a - b</math>, which is to say that we can simply drop the absolute value bars, because we know that the value inside of them is positive. That gives us:
+
+
+<math>
+\begin{align}
+\text{if} \; a > b, 2\times\max(a, b) &=  a + b + |a - b| \\
+&= a + b + {\color{red}(a - b)} \\
+&= a \cancel{+ b} + a \cancel{- b} \\
+&= a + a \\
+&= 2a 
+\end{align}
+</math>
+
+
+And when <math>a < b</math>, then <math>|a - b| = b - a</math>. It's always going to be the big one minus the small one. So ''that'' gives us:
+
+
+<math>
+\begin{align}
+\text{if} \; a < b, 2\times\max(a, b) &= a + b + |a - b| \\
+&= a + b + {\color{red}(b - a)} \\
+&= \cancel{a} + b + b \cancel{- a} \\
+&= b + b \\
+&= 2b 
+\end{align}
+</math>
+
+
+Voilà. We've achieved our canceling-out machine. We can also notice that as a side-effect of the canceling-out machine we not only preserve the greater of a and b, but create an extra copy of it. So that's the reason for the factor of 2: to deal with that side-effect. (Alternatively, we could have looked at the <math>\max(a, b)</math> and kept a factor of {{sfrac|1|2}} on the ''right'' side of the equality.)
+
+But just to be careful, let's also check the edge case of <math>a = b</math>. Here, the stuff inside the absolute value bars goes to zero, and we can substitute a for b (or vice versa), so we get:
+
+
+<math>
+\begin{align}
+\text{if} \; a = b, 2\times\max(a, b) &= a + b + |a - b| \\
+&= a + {\color{red}a} + {\color{red}(0)} \\
+&= a + a \\
+&= 2a 
+\end{align}
+</math>
+
+
+Okay, now that we've proved that <math>2\times\max(a, b) = a + b + |a - b|</math> we substitute <math>\log_2{n}</math> for a and <math>\log_2{d}</math> for b to obtain:
+
+
+<math>2\times\max\left(\log_2{n}, \log_2{d}\right) = \log_2{n} + \log_2{d} + \left| \log_2{n} - \log_2{d} \right|</math>
+
+
+First notice that the ordering of two numbers is not changed by taking their logarithm. We say that the logarithm function is monotonic. Then recall the logarithmic identities <math>\log{ab} = \log{a} + \log{b}</math>, and <math>\log{\frac{a}{b}} = \log{a} - \log{b}</math>.
+
+
+<math>
+\begin{array} {c}
+& 2\times\max\left(\log_2{n}, \log_2{d}\right) & = & \log_2{n} + \log_2{d} & + & \left| \log_2{n} - \log_2{d} \right| \\
+& \downarrow & & \downarrow & & & \downarrow \\
+\text{lils-C}\left(\dfrac{n}{d}\right) = \log_2\left(\max(n, d)^2\right) &= \log_2{nd} + \left| \log_2{\frac{n}{d}} \right| \\
+\end{array}
+</math>
+
+
+=== Normifying: Complexity and size ===
+Alright. So with the above, even though its argument is still in quotient form, we've taken one step towards normification by removing the un-normifiable element of the <math>\max()</math> function.
+
+We'll take this next step in two parts. Let's first focus in on the first term:
+
+
+<math>\log_2{nd}</math>
+
+
+Notice something about this? It's identical to log-product complexity, <math>\text{lp-C}\left(\frac{n}{d}\right)</math>. Very cool, if you weren't expecting to find something so familiar in here.
+
+And as for the second term:
+
+
+<math>\left|\log_2{\frac{n}{d}}\right|</math>
+
+
+This too has a straightforward interpretation: it is the size of the interval {{sfrac|''n''|''d''}} in logarithmic pitch (specifically, on account of the base-2 of this logarithm, in octaves), which we might at least for this isolated context denote as <math>\text{size}\left(\frac{n}{d}\right)</math>. 
+
+Putting these two insights together, we find that the log-integer-limit-squared complexity may be described as the sum of the interval's log-product complexity and size in octaves:
+
+
+<math>\text{lils-C}\left(\dfrac{n}{d}\right) = \text{lp-C}\left(\frac{n}{d}\right) + \text{size}\left(\frac{n}{d}\right)</math>
+
+
+And so, we can describe log-integer-limit-squared complexity in comparison with log-product complexity: it's the same thing, except that it also accounts for the size of the interval. As a tuning theorist, this an exciting idea, and may make one wonder how anyone was okay before with discarding that information, which certainly seems relevant enough to determining the musical importance of JI intervals. But don't get too excited too quickly, because there are tradeoffs.
+
+We can see how <math>\text{lp-C}()</math> throws away the size-related information in how it treats the '''numinator''' and '''diminuator''' indiscriminately. (Apologies for the neologisms, but we find them helpful enough to be worth the offense in this case; hopefully it is apparent enough that the "numinator" is the greater of the numerator and denominator, referencing the word "numinous", while the "diminuator" is the lesser of those two, referencing the word "diminutive".) This can be seen in how both {{sfrac|6|1}} and {{sfrac|3|2}} have the same log-product complexity of <math>\log_2{6}</math>, with <math>\text{lp-C}()</math> paying no heed to the fact that {{sfrac|6|1}} is a larger interval. 
+
+On the other hand, <math>\text{lils-C}()</math> records this size-related information, with {{sfrac|6|1}} having complexity of <math>\log_2{6}</math> while {{sfrac|3|2}} only has complexity of <math>\log_2{3}</math>. However, there's something that <math>\text{lp-C}()</math> makes use of that <math>\text{lils-C}()</math> does not use at all: ''the diminuator''. Notice how it doesn't matter to <math>\text{lils-C}()</math> what value we insert in the diminuator, so long as it remains the diminuator, i.e. smaller than the numinator; sure, {{sfrac|6|1}} has complexity of <math>\log_2{6}</math>, but so does {{sfrac|6|5}}, which many tuning theorists are sure to balk at.
+
+Mike Battaglia has proposed a continuum of complexity functions that exist in the space between the these two extreme poles of log-product <math>\text{lp-C}()</math> and log-integer-limit-squared <math>\text{lils-C}()</math> complexity. We will discuss these in more detail below, in the [[#Hybrids between integer-limit-squared and product complexity]] section.
+
+=== Normifying: Flattened absolute value sums ===
+Alright, well that was some interesting insight into the motivation behind using this complexity for tuning, but we're ''still'' not to a normified form! 
+# In our first pass at normification, we managed to convert the obvious quotient form of <math>\text{lils-C}()</math> into a form that didn't use the mathematical <math>\max()</math> function, instead only using operations which we know better how to work with. 
+# In our second pass at normification, we merely made the observation that this new form of the formula is akin to asking for the average of the interval's complexity and size, for a particular definition of complexity, anyway, that being the log-product complexity.
+# In our third pass at normification here, then, we will show how to leverage this knowledge about complexity and size to attain norm form.
+
+The first step here is to recognize how close we already are. We've identified the first of our two main terms, the one representing complexity, as exactly equivalent to the ''log-product'' complexity, <math>\text{lp-C}()</math>. And notably, ''we already know the norm form for that'': <math>\left\|L\textbf{i}\right\|_1</math>. So we're already about halfway there. Nice.
+
+But what about the other term, the one representing size? Can this be represented as a norm? Well, the short answer is: no, not directly. To understand why, it may be helpful to remind ourselves of the summation form of <math>\text{lp-C}(\textbf{i}) = \left\|L\textbf{i}\right\|_1</math>:
+
+
+<math>
+\text{lp-C}\left(\frac{n}{d}\right) = \log_2{nd} = \sum\limits_{n=1}^d {\color{red}\left|\right.}\log_2{p_n} · \mathrm{i}_n{\color{red}\left.\right|}
+</math>
+
+
+Note in particular the presence of the absolute value bars, highlighted in red. This is exactly what caused the denominator d of the argument to no longer divide the numerator n, but to ''multiply'' it in the <math>\log_2{nd}</math> form. So if we hadn't done that, we'd instead have the summation that appears inside the absolute value bars of the size formula:
+
+
+<math>
+\text{size}\left(\frac{n}{d}\right) = \left|\log_2{\frac{n}{d}}\right| = \left|\sum\limits_{n=1}^d {\color{red}(}\log_2{p_n} · \mathrm{i}_n{\color{red})}\right|
+</math>
+
+
+The summation here is identical, except that it now lacks the absolute value bars, i.e the ones around each term; we've replaced them here with simple parentheses (of course we can still see some absolute value bars here, but these are different; these are taken of the resultant value of the summation itself in the end, and come from the size formula that uses this summation). In other words, we have this vector <math>\textbf{i}</math> which is the vector-based form of the ratio {{sfrac|''n''|''d''}}, and it may have some negative entries—for example {{nowrap|{{sfrac|5|4}} = {{vector|-2 0 1}}}}—and those negative entries correspond to the prime factors that appear in the denominator. When we absolute value them, it's the same thing as moving them all into the numerator instead, or in other words, changing {{sfrac|''n''|''d''}} into nd, or in our example, changing <math>\frac{5}{4} = \monzo{-2 & 0 & 1}</math> into <math>\frac{20}{1} = \monzo{2 & 0 & 1}</math>.
+
+So what's the problem, then? The problem is that the definition of a norm ''includes taking the absolute value'' of each entry of the vector. So we can't change the <math>\text{size}()</math> itself into a power norm if it does not take the absolute value of each of its entries. We can at least turn it into a power ''sum'', however, and represent it using our double-zigzag-bracket notation: <math> \llzigzag L\mathbf{i} \rrzigzag _1</math>.
+
+So, for now, we're stuck with this:
+
+
+<math>
+\begin{array} {c}
+\text{lils-C}\left(\frac{n}{d}\right) & = & \log_2{nd} & + & \left| \log_2{\frac{n}{d}} \right| \\
+& & \downarrow & & & \downarrow \\
+& = & \sum\limits_{n=1}^d \left|\log_2{p_n} · \mathrm{i}_n\right| & + & \left| \sum\limits_{n=1}^d (\log_2{p_n} · \mathrm{i}_n) \right|\\
+& & \downarrow & & & \downarrow \\
+& = & \left\|L\textbf{i}\right\|_1 & + & \left| \llzigzag L\mathbf{i} \rrzigzag _1 \right| 
+\end{array}
+</math>
+
+
+However, there is still a way forward. It's perhaps easiest to see if we get the vector-based form of the complexity into its most fundamental form: no norms, no summations, just expand every term all the way out. So the expanded form of <math>‖L\textbf{i}‖_1</math> is:
+
+
+<math>
+\left|\log_2{p_1} · \mathrm{i}_1\right| + \left|\log_2{p_2} · \mathrm{i}_2\right| + \ldots + \left|\log_2{p_d} · \mathrm{i}_d\right|
+</math>
+
+
+When we use this instead in our formula for <math>\text{lils-C}()</math>, we can attain a new insight, as hinted at through the red highlights below:
+
+
+<math>
+\text{lils-C}\left(\frac{n}{d}\right) = {\color{red}\left|\right.}\log_2{p_1} · \mathrm{i}_1{\color{red}\left.\right| + \left|\right.}\log_2{p_2} · \mathrm{i}_2{\color{red}\left.\right| \; + \;} \ldots {\color{red}\; + \; \left|\right.}\log_2{p_d} · \mathrm{i}_d{\color{red}\left.\right| + \left|\right.} \llzigzag L\mathbf{i} \rrzigzag _1{\color{red}\left.\right|}
+</math>
+
+
+Notice how in a way we've flattened things out now. The final term, the one which represents the size of the interval, is just one more item ''which is an absolute value of something'' and which is tacked on to a list of things being added together. Therefore, we can reinterpret this formula as if the whole thing is one big 1-norm, of a vector which is just like <math>\textbf{i}</math> except that it also includes one extra entry at the end, whose value is this interval's own size!
+
+We could write this vector using block matrix notation, or in other words, as an augmented vector, like so:
+
+
+<math>
+\left[ \begin{array} {l|l} L\textbf{i} &  \llzigzag L\mathbf{i} \rrzigzag _1 \end{array} \right]
+</math>
+
+
+And so here's the entire norm again, so we can see that we have a power sum nested inside the power norm:
+
+
+<math>
+\text{lils-C}(\textbf{i}) = \left\| \; \left[ \; L\textbf{i} \; \vert \;  \llzigzag L\textbf{i} \rrzigzag _1 \; \right] \; \right\|_1
+</math>
+
+
+We certainly acknowledge that this is can be pretty confusing: how we can look at this complexity as a pair of very similar looking summations:
+
+
+<math>
+\text{lils-C}(\textbf{i}) = \sum\limits_{n=1}^d\left|\log_2{p_n} · \mathrm{i}_n\right| + \sum\limits_{n=1}^d\left(\log_2{p_n} · \mathrm{i}_n\right)
+</math>
+
+
+And yet when we convert this into the form of a norm, it is not the case that each of these two summations converts into its own norm, but rather the case that the second summation becomes nothing but an extra entry in the vector that the norm form of the first summation is called on. But that's just how it is! Who knows how they came up with this stuff.<ref group="note">Well, it's not a complete mystery. According to Mike Battaglia, he and Keenan Pepper collaborated together to figure out most of the ideas we've explained in this section, with input also potentially coming from Ryan Avela and Gene Ward Smith.</ref>
+
+=== Normifying: Example ===
+This is fairly tricky, so we'll supplement with an example. Suppose the interval in question is {{sfrac|10|9}}, which as a vector is <math>\textbf{i}</math> = {{vector|1 -2 1}}. Then we have:
+
+
+<math>
+\begin{array} {c}
+\text{lils-C}\left(\left[ \; \textbf{i} \; \vert \; \text{size}(\textbf{i}) \; \right]\right) & = & \left|\log_2{2} · 1\right| & + & \left|\log_2{3} · {-2}\right| & + & \left|\log_2{5} · 1\right| & + & \left|\log_2{2} · 1\right) + \left(\log_2{3} · {-2}\right) + \left(\log_2{5} · 1\right| \\
+& \approx & |1| & + & |{-3.170}| & +  & |2.322| & + & |1 + {-3.170} + 2.322| \\
+& = & 1 & + & 3.170 & +  & 2.322 & + & 0.152 \\
+\end{array}
+</math>
+
+
+Which equals <math>6.644</math>, which is good, because that's <math>\approx \log_2{10·10}</math>, which is the log of the numinator of {{sfrac|10|9}}, squared.
+
+You'll notice that in the final term, we see all the same values repeated: the 1, the -3.170, and the 2.322. It's just that here we could informally say that we let each of these values "duke it out", i.e. that we let the negative ones be negative so they counteract each other. Whereas outside this final term, each of the values gets to be positive and express itself. So the inside is the actual size of the interval irrespective of its complexity, and the outside is the complexity of that interval irrespective of its size (all sizes in octaves here, not cents as we typically work with). And then we just add it all up and done.
+
+=== Normifying: Size-sensitizing matrix ===
+While this augmented vector situation works, it's quite tough to read and work with. It would be nice if we had a simpler way to present the same information. Fortunately, we're in luck! There is. For the next step, we will show how the same effect of including the size of an interval as an extra entry at the end can be achieved by introducing a new transformation matrix, the '''size-sensitizing matrix''', Z. Here's a 5-limit example:
+
+
+<math>
+\begin{array} {c}
+Z \\
+\left[ \begin{matrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\hline
+1 & 1 & 1 \\
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+In action, this lets us rewrite:
+
+
+<math>
+\text{lils-C}(\textbf{i}) = \left| \; \left[ \; L\textbf{i} \; \vert \;  \llzigzag L\textbf{i} \rrzigzag _1 \; \right] \; \right|_1
+</math>
+
+
+as
+
+
+<math>
+\text{lils-C}(\textbf{i}) = \left\| ZL\textbf{i} \right\|_1
+</math>
+
+
+Excellent! That's a big win. At last we have lils-C as a pretransformed norm, like every other complexity we've seen. Why don't we convince ourselves this works by rerunning it on the example we just tried above, with {{sfrac|10|9}}:
+
+
+<math>
+\text{lils-C}(\textbf{i}) = \left\| 
+
+\begin{array} {c}
+Z \\
+\left[ \begin{matrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\hline
+1 & 1 & 1 \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {c}
+L \\
+\left[ \begin{matrix}
+\log_2{2} & 0 & 0 \\
+0 & \log_2{3} & 0 \\
+0 & 0 & \log_2{5} \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{matrix}
+1 \\
+{-2} \\
+1 \\
+\end{matrix} \right]
+\end{array}
+
+\right\|_1
+</math>
+
+
+Let's actually work through this two different ways. First, we'll do it the way of multiplying L and <math>\textbf{i}</math> together first, and seeing how Z affects that; second, we'll do it the way of multiplying Z and L together first, and seeing how that affects <math>\textbf{i}</math>. 
+
+
+<math>
+\begin{align}
+
+\text{lils-C}(\textbf{i}) &= \left\|
+\begin{array} {c}
+Z \\
+\left[ \begin{matrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\hline
+1 & 1 & 1 \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {c}
+L\textbf{i} \\
+\left[ \begin{matrix}
+\log_2{2} \\
+{-2}\log_2{3} \\
+\log_2{5} \\
+\end{matrix} \right]
+\end{array}
+\right\|_1
+
+\\ &=
+
+\left\| 
+\begin{array} {c}
+ZL\textbf{i} \\
+\left[ \begin{array} {c}
+\log_2{2} & + & 0 & + & 0 \\
+0 & + & {-2}\log_2{3} & + & 0 \\
+0 & + & 0 & + &  \log_2{5}  \\
+\hline
+\log_2{2} & + & {-2}\log_2{3} & + &  \log_2{5} \\
+\end{array} \right]
+\end{array}
+\right\|_1
+
+\\ &=
+
+\left\|
+\begin{array} {c}
+ZL\textbf{i} \\
+\left[ \begin{array} {c}
+\log_2{2} \\
+{-2}\log_2{3} \\
+\log_2{5} \\
+\hline
+\log_2{2} + {-2}\log_2{3} + \log_2{5} \\
+\end{array} \right]
+\end{array}
+\right\|_1
+
+\\ &=
+
+\left|\log_2{2}\right| + \left|{-2}\log_2{3}\right| + \left|\log_2{5}\right| + \left|\log_2{2} + {-2}\log_2{3} + \log_2{5}\right|
+
+\\ &=
+
+\log_2{2} + \cancel{2\log_2{3}} + \log_2{5} + \log_2{2} + \cancel{{-2}\log_2{3}} + \log_2{5}
+
+\\ &=
+
+2\log_2{2} + 2\log_2{5}
+
+\\ &=
+
+2\log_2{10}
+
+\\ &=
+
+\log_2{10^2}
+
+\end{align}
+</math>
+
+
+Which is good, because that matches what we found previously, and what we expected: the log of the numerator of {{sfrac|10|9}}, squared.
+
+Doing it the other way we see:
+
+
+<math>
+\text{lils-C}(\textbf{i}) = \left\|
+\begin{array} {c}
+ZL \\
+\left[ \begin{matrix}
+\log_2{2} & 0 & 0 \\
+0 & \log_2{3} & 0 \\
+0 & 0 & \log_2{5} \\
+\hline
+\log_2{2} & \log_2{3} & \log_2{5} \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{matrix}
+1 \\
+{-2} \\
+1 \\
+\end{matrix} \right]
+\end{array}
+\right\|_1
+</math>
+
+
+So we can say that the complexity pretransformer for the log-integer-limit <math>X = ZL</math>, where the above is an example for the 5-limit. (From this point onward, the computation is the same as before). 
+
+=== Tunings used in ===
+The log-integer-limit-squared complexity is used in the '''minimax-lils-S''' tuning scheme, which historically has been called "Weil", for [[Wikipedia:Andr%C3%A9_Weil|André Weil]], the de facto early leader of the mathematical Bourbaki group<ref group="note">The same group which presented itself as a single mathematician by the pseudonym of Nicolas Bourbaki, who brought us the term [[saturation]] (see: [[Saturation,_torsion,_and_contorsion#Saturation]] and [[Defactoring_terminology_proposal#Defactoring,%20to%20replace%20saturation]]) and the use of the symbol "∧" for the exterior product (see: [[Talk:Meet_and_join#Suggestion_to_change_symbols.2C_and_simultaneously_strengthen_conceptual_connection_with_the_existing_.26_operator_used_by_Graham_Breed.27s_app|Talk:Meet_and_join#Suggestion_to_change_symbols]]), but who knows, "he" may have been a force for good in other areas.</ref>, on account of "Weil height" being another name for "integer limit". This comes to us from Gene Ward Smith<ref group="note">
+https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_14472#14513, and I suppose we can be grateful that we didn't end up with "Diophantine tuning", then. We almost had "Farey tuning", also, per: https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_20956#20966</ref>, who himself acknowledges the ambiguity in this name between its ordinary and logarithmic forms. We really don't understand how these sorts of obscurings of otherwise straightforward ideas seem to take root so easily in RTT. As a mnemonic to remember that Weil height gives you the (log/not-log) integer limit AKA max of numerator and denominator, you can recall that Maxwell is a real given name, which associates "max" with "well" and "well" is close to "Weil". But how much easier it is, to remember that "lil" stands for "log integer limit". Encode, don't encrypt.
+
+Note that Weil tuning is thought of as being computed with the "Weil height", which is the same as log-integer-limit complexity, not log-integer-limit-''squared'' complexity. These give the same tuning. We prefer squaring because it makes the computation in certain key circumstances easier.
+
+== Euclideanized log-integer-limit-squared ==
+There's not much to see here. As with other Euclideanized complexities, we have no quotient form for <math>\text{E-lils-C}()</math>, and the vector (norm) form is simply the normal (taxicab) form but with the power and root of 1 swapped for 2: 
+
+
+<math>
+\begin{align}
+\text{lils-C}(\textbf{i}) &= \left\| \; \left[ \; L\textbf{i} \; \vert \;  \llzigzag L\textbf{i} \rrzigzag _1 \; \right] \; \right\|_1 = \left\| \; ZL\textbf{i}\; \right\|_1 \\
+{\color{red}\text{E-}}\text{lils-C}(\textbf{i}) &= \left\| \; \left[ \; L\textbf{i} \; \vert \;  \llzigzag L\textbf{i} \rrzigzag _1 \; \right] \; \right\|_{\color{red}2} = \left\| \; ZL\textbf{i}\; \right\|_{\color{red}2} 
+\end{align}
+</math>
+
+
+=== Example wonky result ===
+To illustrate some of the wonkiness we can expect with <math>\text{E-lils-C}()</math>, we note that it ranks {{sfrac|5|3}} as ''less'' complex than {{sfrac|5|1}}. Remember that integer-limit-based complexities watch for product-type complexity but also watch for the size of the interval, so we can say that in this case, the size difference between {{sfrac|5|1}} and {{sfrac|5|3}} was considered more important than the different in their product complexities, so that {{sfrac|5|1}} comes out as more complex.  
+
+So we have:
+
+
+<math>
+\text{E-lils-C}(\textbf{i}) = \left\| \; \left[ \; L\textbf{i} \; \vert \; \text{size}(L\textbf{i}) \; \right\rangle \; \right\|_2
+</math>
+
+
+Let's compute the size part first, for our first interval, {{sfrac|5|1}}, which is {{vector|0 0 1}} as a vector:
+
+
+<math>
+\begin{align}
+\text{size}\left(L \left[ \; 0 \; 0 \; 1 \; \right\rangle \right) &= \llzigzag L \left[ \; 0 \; 0 \; 1 \; \right\rangle \rrzigzag _1 \\
+&\approx \llzigzag \left[ \; 0 \;\;\; 0 \;\;\; 2.322 \; \right\rangle \rrzigzag _1 \\
+&= 0 + 0 + 2.322 \\
+&= 2.322
+\end{align}
+</math> 
+
+
+So we can use that in the below:
+
+
+<math>
+\begin{align}
+\text{E-lils-C}\left( \left[ \; 0 \; 0 \; 1 \; \right\rangle \right) 
+&=        \left\| \; \left[ \; L \left[ \; 0 \; 0 \; 1 \; \right\rangle \; \vert \; \text{size}(L \left[ \; 0 \; 0 \; 1 \; \right\rangle) \; \right\rangle \; \right\|_2 \\
+&\approx  \left\| \; \left[ \; 0 \;\;\; 0 \;\;\; 2.322 \;\;\; \vert \;\;\; 2.322                               \; \right\rangle \; \right\|_2 \\
+&=        \sqrt{\strut 0^2 + 0^2 + 2.322^2 + 2.322^2} \\
+&\approx  \sqrt{\strut 0 + 0 + 5.391 + 5.391} \\
+&=        \sqrt{\strut 10.782} \\
+&\approx  3.284 \\
+\end{align}
+</math>
+
+
+And compare with the result for {{sfrac|5|3}}, which is {{vector|0 -1 1}} as a vector. First, its size:
+
+
+<math>
+\begin{align}
+\text{size}\left(L \left[ \; 0 \; {-1} \; 1 \; \right\rangle \right) &= \llzigzag  L \left[ \; 0 \; {-1} \; 1 \; \right\rangle \rrzigzag _1 \\
+&\approx \llzigzag \left[ \; 0 \;\;\; {-1.585} \;\;\; 2.322 \; \right\rangle \rrzigzag _1 \\
+&= 0 + {-1.585} + 2.322 \\
+&= 0.737
+\end{align}
+</math> 
+
+
+And now the rest:
+
+
+<math>
+\begin{align}
+\text{E-lils-C}( \left[ \; 0 \; {-1} \; 1 \; \right\rangle ) 
+&=        \left\| \; \left[ \; L \left[ \; 0 \; 0 \; 1 \; \right\rangle \; \vert \; \text{size}(L \left[ \; 0 \; {-1} \; 1 \; \right\rangle) \; \right\rangle \; \right\|_2 \\
+&\approx  \left\| \; \left[ \; 0 \;\;\; {-1.585} \;\;\; 2.322 \;\;\; \vert \;\;\; 0.737                               \; \right\rangle \; \right\|_2 \\
+&=        \sqrt{\strut 0^2 + \left(-1.585\right)^2 + 2.322^2 + 0.737^2} \\
+&\approx  \sqrt{\strut 0 + 2.512 + 5.391 + 0.543} \\
+&=        \sqrt{\strut 8.446} \\
+&\approx  2.906 \\
+\end{align}
+</math>
+
+
+And so the Euclideanized-log-integer-limit squared complexity of {{sfrac|5|3}} is indeed slightly less than that of {{sfrac|5|1}}.
+
+=== Tunings used in ===
+The <math>\text{E-lils-C}()</math> is used for simplicity-weight damage in the '''minimax-E-lils-S''' tuning scheme, known elsewhere as "Weil-Euclidean".
+
+== Log-odd-limit-squared ==
+Out of all the other complexity functions under consideration in this article, the log-odd-limit-squared complexity <math>\text{lols-C}()</math> is most similar to the log-integer-limit-squared complexity <math>\text{lils-C}()</math>, and not only in name. The formula for it is exactly the same, with the one key difference being that all factors of 2 are removed from the interval as an initial step. So if both n and d already happen to be odd, this gives the same complexity as the log-integer-limit-squared would.
+
+(Switching to non-log for this paragraph to make a point efficiently that applies whether log or not.) When we ask for the integer limit of, say, {{sfrac|10|3}}, we simply want the bigger of the numerator and denominator, which in this case is 10. But for the odd limit, we'd first find the factors of 2—there's exactly one of them, in the numerator—remove them, and ''then'' ask for the integer limit again. So we'd change {{sfrac|10|3}} into {{sfrac|5|3}}, then find the integer limit of that to be 5. Note that sometimes removing the factors of 2 will change which one of the 'ators is greatest; for example, the odd limit of {{sfrac|10|9}} is 9, owing to the fact that after removing the factors of 2 (again, just one of them, in the numerator) we're left with {{sfrac|5|9}}, so now it's the denominator with the largest integer.
+
+With its quotient-based form, this removing of prime 2's can perhaps most succinctly be achieved using the mathematical function <math>\text{rough}(n, k)</math>, which takes a number n and makes it k-rough (yes, that's a technical term: [[Wikipedia:Rough_number|rough number]]) by dividing out every prime factor less than k. That's why k here is equal to 3, not 2, because you have to be 3-rough in order to contain no 2's:
+
+
+<math>
+\begin{align}
+\text{lils-C}\left(\dfrac{n}{d}\right) &= \log_2(\max(n, d)) \\
+\text{lols-C}\left(\dfrac{n}{d}\right) &= \log_2\left(\max\left({\color{red}\text{rough}}(n, 3), {\color{red}\text{rough}}(d, 3)\right)\right) \\
+\end{align}
+</math>
+
+
+When we look at the vector-based forms, we just need to drop the first entry of the vector, assuming that is the entry which contains the count of prime 2's as is typical. Otherwise you can drop whichever entry contains prime 2, or if none of them do, then perhaps you should reconsider which complexity function you're using. Unfortunately there's not a particularly clean notation for a variation on a vector which has had its first (or some arbitrary) entry dropped. However, we do have a pretty clean way to express this in summation form. You just set the initial summation index to 2 instead of the typical 1, so you skip the 1st entry, 1st prime, etc.:
+
+
+<math>
+\begin{align}
+\text{E-l}{\color{red}\text{i}}\text{l-C}(\textbf{i}) &= \sqrt{ \sum\limits_{n={\color{red}1}}^d\left|\log_2{p_n} · \mathrm{i}_n\right|^2 + \left|\sum\limits_{n={\color{red}1}}^d(\log_2{p_n} · \mathrm{i}_n)\right|^2 } \\ \small
+\text{E-l}{\color{red}\text{o}}\text{l-C}(\textbf{i}) &= \sqrt{ \sum\limits_{n={\color{red}2}}^d\left|\log_2{p_n} · \mathrm{i}_n\right|^2 + \left|\sum\limits_{n={\color{red}2}}^d(\log_2{p_n} · \mathrm{i}_n)\right|^2 } \\ \small
+\end{align}
+</math>
+
+
+Because all we've done is deleted an entry from the vector, nothing has changed between <math>\text{lils-C}()</math> and <math>\text{lols-C}()</math> that would affect the elaborate process we followed to get it into the form of a norm. So that all works the same way here. 
+
+=== Tunings used in ===
+The log-odd limit is also known within the community as the "Kees height". This name comes from the tuning theorist Kees Van Prooijen, though the explanation for the attribution is not known to us. 
+
+Minimizing the Kees-simplicity-weight damage across all intervals turns out to be equivalent to minimizing the Weil-simplicity-weight damage across all intervals accompanied by an held-octave constraint. This equivalence is clearer when we use our systematic naming: minimizing the log-''odd''-limit-simplicity-weight damage across all intervals is equivalent to minimizing the log-''integer''-limit-simplicity-weight damage across all intervals with an held-octave constraint. 
+
+Historically, the community used the name "Kees" to refer to the ''destretched'' version of the log-integer-limit-squared tuning (in other words, the dumb way of achieving unchanged octaves). This was an absolute worse-case scenario, where the Kees tuning didn't correspond with the Kees complexity, and what it did refer to was something dumb that probably shouldn't be given a second thought anyway. In 2024, conventions shifted toward matching tunings named after Kees to complexities named after Kees.
+
+If you want a mnemonic for when you see "Kees" used around town and can never remember what Kees is supposed to be known for, you can remember that "odd" has a double 'd', and "Kees" has a double 'e', so "Kees" is associated with odd-limit-squared complexity. But how much easier it is to remember that "lol" stands, not only for "laugh out loud", but also for "log odd limit".
+
+== Euclideanized log-odd-limit-squared ==
+By this point, there's little more that needs to be said. This is a Euclideanized version of the log-odd limit, so substitute 2's for 1's in the powers and roots. And log-odd-limit-squared is like log-integer-limit-squared but with the factors of 2 removed from the interval. So the Euclideanized log-odd-limit-squared complexity <math>\text{E-lols-C}()</math> is twice removed from the log-integer-limit-squared complexity <math>\text{lils-C}()</math>. 
+
+=== Tunings used in ===
+The <math>\text{E-lols-C}()</math> is used in '''minimax-E-lols-S''' tuning scheme.
+
+= Alternative norm powers =
+As we did in the conventions article table, we did not show any tuning schemes with norm power other than 1 or 2, i.e normal (taxicab) schemes or Euclideanized schemes, respectively. If we were to have shown any other norm power, it would be <math>\infty</math>, for completeness, given that it is the dual power of 1 and that set of three powers are the ones with special qualities that show up again and again. But we chose not to include it because it would take up so much space and for so little value, since no one actually uses tuning schemes that use those types of complexity. If you want to, it's not hard to name. Simply use 'M' for "maxize" in the same way we use 'E' for "Euclideanize". Why an uppercase 'M'? Because it's named after {{subpage|all-interval_tuning_schemes|uprev|s=Shape: Square, Distance: Max|text=Max the magician}}, of course.
+
+But some folks may want to use still other norm powers besides the three key powers of <math>\infty</math>, 2, and 1. To name such tuning schemes where we don't have a letter to alias it, just use the number in the same position. So a tuning midway between minimax-(t)S and minimax-ES, or in other words minimax-1S and minimax-2S, would simply be minimax-1.5-S (hyphenation is up to you, but we feel once you've gone beyond a single character number, adding the hyphen makes it clearer). And this isn't just for all-interval tuning schemes; e.g. we could see something like the TILT miniRMS-5-copfr-C tuning scheme, where the RMS of 5-ized copfr-complexity-weight damage to the TILT is minimized.. 
+
+We note that all-interval tuning schemes involve two norms each: the interval complexity norm that actually weights the absolute error to obtain the damage which we minimize over the intervals, and the retuning magnitude norm which is what we minimize in order to achieve the indirect minimaxing of said damage across all intervals, by leveraging the dual norm inequality. Which of these two norms do we name the tuning scheme after? As can be seen throughout this article, and centralized in the table later [[#Alternative complexity all-interval tuning scheme table]], we choose the interval complexity norm, because the general idea with our tuning scheme systematic names is to describe what type of damage is minimized and how it is minimized, so explaining the complexity or simplicity weight of the damage is the more direct way to answer that, while the dual norm that's minimized on the retuning magnitude is little but an implementation detail that doesn't even necessarily need to be known about in order to understand the gist of the tunings the scheme produces. And for ordinary (non all-interval) tuning schemes there ''is'' no dual norm minimized on the retuning magnitude.
+
+= Systematizing norms =
+Perhaps unsurprisingly, all of the complexity functions we investigate in this article for their value in tuning theory are related in a systematic way, and can be understood in terms of four complexity traits:
+
+# '''Operation''': Is it a ''sum'' (arithmetic), or a ''product'' (geometric)
+# '''Pretransformer''': Do we pretransform such that we ''count'' the primes, take their ''logs'', or take them ''themselves''
+# '''Euclideanize''': Do we change the norm power from 1 to 2
+# '''replace-diminuator''': Do we replace the smaller of the numerator and denominator with the larger of the two, or not
+
+(We could choose to include an additional trait, '''odd''', that would optionally drop all occurrences of prime 2. However, since the results of this complexity effect on tuning is achievable outside of complexity—via a held-octave constraint—we find it insufficiently valuable to warrant exploding our option set by another twofold here.)
+
+With 2, 3, 2, and 2 possibilities for each of those traits, respectively, that's a total of 2&times;3&times;2&times;2 complexity functions. Except there are a few combinations of these which aren't productive: 
+
+* We can't Euclideanize product-type complexities, as they aren't expressible as norms in the first place.
+* We can't use counts of primes with product-type complexities either, or at least, that will result in the complexity always coming out to 1 (because 1 times itself n times is still 1)
+
+So, we actually only have 16 total complexities in this family. Of these, we've already discussed 10. And of those 6 remaining, 4 of them are of potential interest for tuning. We'll discuss those soon. But first, here's a table:
+
+{| class="wikitable"
+! colspan="2" rowspan="2" | 
+! colspan="3" | —
+! rowspan="2" | 
+! colspan="3" | Replace-diminuator
+|-
+! colspan="3" | 
+! colspan="3" | 
+|-
+! rowspan="4" | Sum
+! rowspan="4" |
+! Prime \ norm power
+! 1
+! 2
+! rowspan="4" |
+! Prime \ norm power
+! 1
+! 2
+|-
+! Count
+| copfr
+| E-copfr
+! Count
+| Double-copfr-limit
+| Double-E-copfr-limit
+|-
+! Log
+| lp
+| E-lp
+! Log
+| lils
+| E-lils
+|-
+! Itself
+| sopfr
+| E-sopfr
+! Itself
+| double-sopfr-limit
+| double-E-sopfr-limit
+|-
+! colspan="2" | 
+! colspan="3" | 
+!
+! colspan="3" | 
+|-
+! rowspan="4" | Product
+! rowspan="4" |
+! Prime \ norm power
+! 1
+! 2
+! rowspan="4" |
+! Prime \ norm power
+! 1
+! 2
+|-
+! Count
+| —
+| —
+! Count
+| —
+| —
+|-
+! Log
+| Prod-of-log
+| —
+! Log
+| Prod-of-log-limit-squared
+| —
+|-
+! Itself
+| Prod
+| —
+! Itself
+| ils
+| —
+|}<ref group="note">Yes, we did consider whether systemizing the names of these complexities would be an improvement to our systematic tuning scheme naming. However, unlike other components of our tuning scheme naming, such as target-interval set schemes, damage weight slope, etc. there actually are many established mathematical conventions for these complexities, and we believe we should defer to those when possible. Overconsistentiation is definitely a thing that can happen!</ref>
+
+Every one of the 6 members of the top-left box is one of the 10 complexities we've talked about already: copfr, lp, sopfr, and the Euclideanized versions of each. Another 2 can be found in the bottom two boxes, one each: product complexity (prod), and integer-limit-squared complexity (ils). The remaining 2 can be found in the top-right box, along its middle row: log-integer-limit-squared and its Euclideanized version. 
+
+So of the 6 remaining, the 2 that are likely of no further interest are the other 2 in the lower boxes, i.e. the other two product-type complexities. These cannot be normified, being products, so they are already of no use as all-interval tunings. And the proof that lets us minimize the prod simplicity weight damage via the sopfr simplicity weight damage will not analogously hold for these complexities and their arithmetic equivalents, on account of the fact that some logs of primes are less than 2 (namely 2 and 3) and thus their products are actually less than their sums; so this is to say that we cannot proxy minimize them via their arithmetic analogs. And, they're just sort of strange; the "prod-of-log" complexity takes the product of the logs of the primes, such that the complexity of 9/5 would be <math>1.585 \times 1.585 \times 2.322 \approx 5.833</math>, which feels a bit like an abomination, a thing that should not be. 
+
+But let's take a moment to reflect on the other 4 remaining. Essentially what we've done with this "replace-diminuator" trait is generalized the "integer-limit-squared effect" whereby only the greater of the numerator and denominator is retained, with the lesser being replaced with a copy of the one retained. But there's no reason we can't apply this idea outside the context of product or log-product complexity. For example, the double-copfr-limit complexity of 9/5 would be 4, because we have 2 total primes in the numerator and only 1 total prime in the denominator so the greater of those 2 values, doubled, is our complexity. 
+
+Before proceeding, let's review the natures of the relationships between the complexities we already know about, though.
+
+== Product-type complexities ==
+Another way to look at the problem with product complexity—how it has no norm form, being a product rather than a sum—is that all of the complexities that are useful for all-interval tunings are ''arithmetic'', insofar as they are calculated as sums. It's not just log-product complexity that is like this. Copfr and sopfr are also like this. Sopfr has it in the name: it's a ''sum'' of prime factors. We could alternatively call log-product complexity the "solopfr" for "''sum'' of logs of prime factors with repetition" to make this clearer, and copfr could be rephrased as "''sum'' of 1s per each prime factor with repetition". So our arithmetic functions are cofpr, lp, sopfr, lil, and lol. Our geometric functions are prod, il, and ol. 
+
+Note that prod is not actually the direct geometrification of lp; it's actually the direct geometrification of sopfr. The direct geometrification of lp would be the function that found the products of the logs of the primes; the abomination mentioned a moment ago.
+
+And you might think that since the 1-norm of a log-prime-pretransformed vector is the same as <math>\log(n·d)</math>, that the 1-norm of a prime-pretransformed vector would be the same as <math>n·d</math>—not so; it's obvious what <math>n·d</math> should be when you think about it in isolation; it's the product of the primes raised to the absolute values of the respective entries. If you just sum the primes' products with the absolute values of the respective entries, you get sopfr.
+
+== Comparing sopfr-C, prod-C, and lp-C ==
+<math>\text{sopfr-C}()</math> bears a close similarity to product complexity <math>\text{prod-C}()</math>, as we can see through their summation and product forms. <math>\text{prod-C}()</math> is the same thing as <math>\text{sopfr-C}()</math> except that it multiplies rather than exponentiates, and sums rather than multiplies:
+
+
+<math>
+\begin{array} {c}
+\text{sopfr-C}(\textbf{i}) & = & {\color{red}\sum\limits_{{\color{black}n=1}}^{{\color{black}d}}}\left(p_n {\color{red}·} \left|\mathrm{i}_n\right|\right) & = & p_1 {\color{red}·} \left|\mathrm{i}_1\right| & {\color{red}+} & p_2 {\color{red}·} \left|\mathrm{i}_2\right| & {\color{red}+} & \ldots & {\color{red}+} & p_d {\color{red}·} \left|\mathrm{i}_d\right| \\
+\text{prod-C}(\textbf{i}) & = & {\color{red}\prod\limits_{{\color{black}n=1}}^{{\color{black}d}}}\left(p_n^{\left|\mathrm{i}_n\right|}\right) & = & p_1^{\left|\mathrm{i}_1\right|} & {\color{red}\times} & p_2^{\left|\mathrm{i}_2\right|} & {\color{red}\times} & \ldots & {\color{red}\times} & p_d^{\left|\mathrm{i}_d\right|} \\
+\end{array}
+</math>
+
+
+<math>\text{sopfr-C}()</math> also bears a close similarity to ''log'' product complexity <math>\text{lp-C}()</math> (which we'll look at through their norm forms here), on account of the fact that the L in <math>\text{lp-C}(\textbf{i}) = \left\|L\textbf{i}\right\|_1</math> can be replaced with <math>L = \text{diag}(\textbf{ℓ}) = \text{diag}\left(\log_2{𝒑}\right)</math>, it's the same thing except that it pretransforms entries by ''the primes themselves'', rather than their logs:
+
+
+<math>
+\begin{array} {c}
+\text{sopfr-C}(\textbf{i}) & = & \left\|\text{diag}({\color{red}𝒑})\textbf{i}\right\|_1 & = & {\color{red}p_1} · \left|\mathrm{i}_1\right| & + & {\color{red}p_2} · \left|\mathrm{i}_2\right| & + & \ldots & + & {\color{red}p_d} · \left|\mathrm{i}_d\right| \\
+\text{lp-C}(\textbf{i}) & = & \left\|\text{diag}({\color{red}\log_2{𝒑}})\textbf{i}\right\|_1 & = & {\color{red}\log_2{p_1}} · \left|\mathrm{i}_1\right| & + & {\color{red}\log_2{p_2}} · \left|\mathrm{i}_2\right| & + & \ldots & + & {\color{red}\log_2{p_d}} · \left|\mathrm{i}_d\right| \\
+\end{array}
+</math>
+
+== Comparing copfr and sopfr ==
+In this way we could imagine <math>\text{sopfr}()</math> as summing each prime factor raised to the 1<sup>st</sup> power, while <math>\text{copfr}()</math> sums each prime factor raised to the 0<sup>th</sup> power:
+
+
+<math>
+\text{copfr}(20) = \text{copfr}(2·2·5) = 2^{\color{red}0} + 2^{\color{red}0} + 5^{\color{red}0} = 1 + 1 + 1 = 3 \\
+\text{sopfr}(20) = \text{sopfr}(2·2·5) = 2^{\color{red}1} + 2^{\color{red}1} + 5^{\color{red}1} = 2 + 2 + 5 = 9 \\
+</math>
+
+
+Also like <math>\text{sopfr-C}()</math>, the <math>\text{copfr-C}()</math> function can be expressed as the <math>\text{copfr}()</math> of the numerator times the denominator, or as the sum of the <math>\text{copfr}()</math> of them separately. <math>\text{lp-C}()</math> follows this pattern too, with <math>\log_2()</math> as its sub-function:
+
+
+<math>
+\begin{array} {c}
+\text{copfr-C}\left(\frac{n}{d}\right) & = & \text{copfr}(nd) & = & \text{copfr}(n) & + & \text{copfr}(d) \\
+\text{lp-C}\left(\frac{n}{d}\right) & = & \log_2(nd) & = & \log_2(n) & + & \log_2(d) \\ 
+\text{sopfr-C}\left(\frac{n}{d}\right) & = & \text{sopfr}(nd) & = & \text{sopfr}(n) & + & \text{sopfr}(d) \\
+\end{array}
+</math>
+
+
+We placed the functions in that order—with <math>\text{lp-C}()</math> in the middle—as preparation for the following observation, which is that these three functions set up a sort of progression in relative influence of the prime factors, from being flat, to being proportional to their size. That is, we could insert <math>\text{lp-c}()</math> into the middle of the previous example as a sort of midway point between <math>\text{copfr-C}()</math> and <math>\text{sopfr-C}()</math>. 
+
+
+<math>
+\begin{array} {c}
+\text{copfr-C}\left(\frac{9}{5}\right) & = & \text{copfr} & ( & 3 & · & 3 & · & 5 & ) & = & 1 & + & 1 & + & 1 & = & 3 \\
+\text{lp-C}\left(\frac{9}{5}\right) & = & \text{lp} & ( & 3 & · & 3 & · & 5 & ) & \approx & 1.585 & + & 1.585 & + & 2.322 & \approx & 5.491 \\
+\text{sopfr-C}\left(\frac{9}{5}\right) & = & \text{sopfr} & ( & 3 & · & 3 & · & 5 & ) & = & 3 & + & 3 & + & 5 & = & 11 \\
+\end{array}
+</math>
+
+
+In vector-based form, <math>\text{copfr-C}()</math> is exactly equivalent to the 1-norm of the interval vector <math>\textbf{i}</math>, not pretransformed in any way, which is to say, the sum of the absolute values of each entry:
+
+
+<math>
+\small \begin{align} \text{copfr-C}(\textbf{i}) &= \left\|\textbf{i}\right\|_1 \\ \small
+&= \sqrt[1]{\strut \sum\limits_{n=1}^d \left|\mathrm{i}_n\right|^1} \\ \small
+&= \sqrt[1]{\strut \left|\mathrm{i}_1\right|^1 + \left|\mathrm{i}_2\right|^1 + \ldots + \left|\mathrm{i}_d\right|^1} \\ \small
+&= \left|\mathrm{i}_1\right| + \left|\mathrm{i}_2\right| + \ldots + \left|\mathrm{i}_d\right|
+\end{align} 
+</math>
+
+== Replacing-diminuator: Shear ==
+The "replacing-diminuator" trait can be visualized on a lattice by ''shearing'' the lattice (sometimes confusingly called "skewing"<ref group="note">The word "skew" means something very different from "shear", no matter whether we are talking geometry or linear algebra. And in everyday language, "skew" tends to mean "rotate". That's not what we are doing here. "Shear" is the word we want.</ref>). The horizontal coordinate becomes the sum of the original horizontal coordinate plus some fraction of the vertical coordinate (and any other coordinates). This is how it is related to making the size of intervals count toward their complexity: this stretches the lattice along the all-dimensional diagonal where in one direction every prime count is increasing and in the other direction every prime count is decreasing, in order to make distances in that direction longest. 
+
+Here is a series of diagrams that show how this affects things for primes 3 and 5 via the 12 complexities in the top two boxes of the table above: 
+
+[[File:Norms and shears.png|thumbnail|800x800px]]
+
+If you're struggling to compute the complexities on the right half of the screen, here's an example that might help. The bottom right E-double-sopfr-limit of 5/3. Normally that vector is [0 -1 1⟩. But we're doing sofpr here so it's prescaled by the primes themselves, so that's [0 -3 5⟩. But we're doing the double-sopfr-limit, which means we only want stuff from the numinator, and to achieve that we augment the vector with the sum of all the entries. Not their absolute values. So that's {{nowrap|0 + &minus;3 + 5 {{=}} 2}}. So the augmented vector is [0 -3 5 | 2⟩. And we take the norm of that, so just sum those absolute values up: {{nowrap|{{!}}0{{!}} + {{!}}&minus;3{{!}} + {{!}}5{{!}} + {{!}}2{{!}} {{=}} 10}}. But wait, that's actually just the double-sopfr-limit; I said we'd do the E-double-sopfr-limit. Well, same deal but sum squares and root, so {{nowrap|0<sup>2</sup> + (&minus;3)<sup>2</sup> + 5<sup>2</sup> + 2<sup>2</sup> {{=}} 38}}, so the result is {{nowrap|√38 &#8776; 6.164}}, as you can see in the diagram. Note that for this tuning, 5/3 is considered less complex than 5/1, because the issue of size apparently outweighs the product complexity issue. 
+
+It's important to recognize that norms measure from origin to point, not point to point; measurements between arbitrary points are instead handled by something called "metrics" (yes, that's a technical mathematical term). So while one might wish for the underlying lattices in the 3rd column to reflect the fact that 5/3 and 5/1 have the same complexity, and thus occupy the same point in space with 0 distance between them, that's simply not the right way to think about it. One should have no more problem with the fact that the difference in complexity along the edge that connects 5/3 and 5/1 causes a change in complexity of 0 when you're on the log-integer-limit-squared diagram than I should for how in any Euclideanized diagram, let's take the E-copfr one for the simplest example, one can go diagonally to 15/1 from 1/1 for a complexity of √2 and straight from 1/1 to 5/1 for a complexity of 1, but one doesn't complain that between 5/1 and 15/1 should be a move worth 1 yet considered in and of itself but in this context seems like it should be {{nowrap|√2 &minus; 1}}. The conclusion is: you don't worry about that, because you never travel along that path when reaching points straight from the origin. It's irrelevant to the definition of the norm.
+
+= Hybrids between integer-limit-squared and product complexity =
+This section develops upon ideas introduced earlier in the [[#Normifying: complexity and size|Normifying: complexity and size]] section. 
+
+This section is as much about hybrids between ''log''-integer-limit-squared and ''log''-product complexity as it is about the non-log versions of its title. In fact the log versions are more useful. But it is simpler to discuss the ideas we want to discuss here without having to mention logs all the time. So that's what we'll do.
+
+== Reviewing the problem ==
+The concept of ''integer limit'' was introduced by Paul Erlich as a replacement for ''odd limit'' when octaves are tempered. But it was Mike Battaglia who realised that integer-limit complexities could be expressed as norms, and could therefore one could be used as the basis for an all-interval tuning scheme in the way Paul had used product complexity.<ref group="note">At least, Mike advocated for integer-limit complexity; it's we who are pushing for squaring it, for better parity with product complexity, and to simplify our presentation of Mike's hybrids.</ref> Essentially, Paul's "Tenney" tunings use <math>n \times d</math>, while Mike's "Weil" tunings use <math>\max(n,d)</math>. The main idea behind this innovation was that product complexity ''does not account for interval size''. Said another way, product complexity does not account for the ''balance'' of integers across the fraction bar. For example, {{sfrac|5|3}} has the same product complexity as {{sfrac|15|1}}, since both 5&times;3 and 15&times;1 are equal to 15. By comparison, according to integer-limit-squared complexity, {{sfrac|15|1}} with complexity 15 is considered much more complex than {{sfrac|5|3}}, which only has a complexity of 5.
+
+But as we noted earlier, integer-limit complexity has its own blind spot (we use integer-limit-squared complexity, and will use that in this discussion moving forward). Where product complexity is blind to the balance between the numerator and denominator, integer-limit-squared complexity is blind to the denominator completely (this statement assumes that we deal only with [[superunison]] intervals, but that is a safe assumption because all subunison intervals have reciprocal equivalent with a superunison interval and so we only need to deal with one set or the other, and conventionally we deal only with the superunison set<ref group="note">Alternatively, we can think of our ratios as consisting of a "numinator" and "diminuator", where the numinator is always the greater of the two and the diminuator is always the lesser of the two.</ref>). For example, according to integer-limit-squared complexity, both {{sfrac|5|3}} and {{sfrac|5|4}} have the same complexity of 5, while according to product complexity these are differentiated, with complexities of 15 and 20, respectively.
+
+A complexity statistic which is blind neither to balance nor to the denominator itself is of theoretical interest for use with musical intervals, because both of these aspects contribute to auditory perception of harmonic complexity. 
+
+Such a complexity statistic may be constructed as a hybridization of product complexity and integer-limit-squared complexity, with each of the two primitive complexities filling in for the blind spot of the other.
+
+We could present the relationship between these three complexities thusly:
+
+{| class="wikitable"
+! rowspan="2" | Complexity
+! colspan="2" | Interval property
+|-
+! Balance
+! Diminuator
+|-
+! Product
+| Blind
+| Aware
+|-
+! Integer-limit-squared
+| Aware
+| Blind
+|-
+! Hybrid
+| Aware
+| Aware
+|}
+
+== The proposed solution ==
+A complexity statistic like this has already been described, by Mike, at the same time he introduced integer limits to the theory. In fact, ''any'' tuning scheme along his "[[Weil norm, Tenney–Weil norm, and TWp interval and tuning space|Tenney–Weil continuum]]"—other than the extremes of pure Tenney and pure Weil—uses a complexity statistic that is a hybrid of product and integer-limit-squared complexities in this way. Thus, tunings resulting from these schemes are blind neither to interval size nor to their full rational content. 
+
+The primary means by which this is achieved is a tradeoff factor that Mike deems k<ref group="note">This hybrid tradeoff factor k is very different from our k for [[target-interval count]], which isn't used for all-interval tuning schemes.</ref> which appears in the bottom row of the size-sensitizing matrix Z. We taught (here: [[#Normifying: size-sensitizing matrix]]) that matrix as having a bottom row of all 1's. Technically speaking, though, those are all k, like so:
+
+
+<math>
+\begin{array} {c}
+Z \\
+\left[ \begin{matrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\hline
+\style{background-color:#FFF200;padding:5px}{k} & \style{background-color:#FFF200;padding:5px}{k} & \style{background-color:#FFF200;padding:5px}{k} \\
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+This is because minimax-lils-S is the tuning where this k value equals 1. And minimax-S is the tuning where it equals 0, and thus we can simply drop the extra bottom row of the matrix, leaving the rest as an identity matrix to vaporize. There's no reason k can't go higher than 1, but at that point you're exploring tunings where you've theoretically ''more than'' ignored the value of the diminuator, so your results will likely become unpredictable or strange. The values of most interest, clearly, are values somewhere between 0 and 1. 
+
+So 0 is log-product complexity and 1 is log-integer-limit-squared. In terms of the size and complexity components, 1 is where they are perfectly balanced, half and half, as is seen in the formula. 0 is where size is not considered. And \infty is where ''only'' size is considered (whatever that means).
+
+While we're on the topic, we may note that when computing tunings with hybrid norms like this, the required augmentation to <math>M\mathrm{T}S_\text{p}</math> follows a similar change. An example for an all-interval tuning (where <math>\mathrm{T} = \mathrm{T}_{\text{p}} = \mathrm{I}</math>) is visualized here:
+
+
+<math>
+\left[ \begin{array} {rrr|r}
+\frac{1}{\log_2{2}} & \frac{2}{\log_2{3}} & \frac{3}{\log_2{5}} & \style{background-color:#FFF200;padding:5px}{0} \\
+0 & \frac{-3}{\log_2{3}} & \frac{-5}{\log_2{5}} & \style{background-color:#FFF200;padding:5px}{0} \\
+\hline
+\style{background-color:#FFF200;padding:5px}{k} & \style{background-color:#FFF200;padding:5px}{k} & \style{background-color:#FFF200;padding:5px}{k} & \style{background-color:#FFF200;padding:5px}{-1} \\
+\end{array} \right]
+</math>
+{{texmap}}
+
+In our systematic nomenclature, Tenney tuning is minimax-S and Weil tuning is minimax-lils-S. We will be continuing onward using those preferred descriptive names. And as for hybrids, we suggest naming the complexity <math>k-\text{iph-C}()</math> where "iph" stands for "integer-limit-squared/product hybrid''. So a corresponding tuning could be the TILT minimax-½-iph-C.
+
+And for the logarithmic variants, we suggest <math>k-\text{liph-C}()</math> where "liph" stands for "log- integer-limit-squared/product hybrid''. This version is normifiable, and could be used for all-interval tunings, such as minimax-½-liph-S. 
+
+Here's a continuum of (all-interval) minimax-k-liph-S tunings of meantone:
+
+* <math>k=0\hs: \, \val{1201.699 & 1899.263 & 2790.258}</math> (minimax-S)
+* <math>k=\frac{1}{4}\hs: \, \val{1201.273 & 1898.591 & 2789.271}</math> (minimax-¼-liph-S)
+* <math>k=\frac{1}{2}\hs: \, \val{1200.849 & 1897.920 & 2788.284}</math> (minimax-½-liph-S)
+* <math>k=1\hs: \, \val{1200.000 & 1896.578 & 2786.314}</math> (minimax-lils-S)
+* <math>k=2\hs: \, \val{1198.306 & 1893.902 & 2782.381}</math> (minimax-2-liph-S) 
+
+And here is a diagram showing constant damage contours for these k-values:
+
+[[File:Lp-lils continuum.png|thumbnail|alt=|none]]
+
+== Limitations of hybridization ==
+We must be clear that while functions along the iph and liph complexity continua do evaluate intervals based on a combination of their size and (a particular notion of) their complexity, these functions are not suitable ''substitutes or replacements'' for a dedicated size limit. They do not combine size and complexity in a way that is as meaningful as it may seem at first.
+
+At least, in the context of tuning problems such as we face in RTT—systematic selection of intervals to use as tuning targets, and then among the ones which do pass the filter to be considered as targets at all, how to distribute priority amongst them—one may not cite hybrid size/complexity functions like these as a comparable solution to independently setting a size limit and a complexity limit (see {{subpage|tuning fundamentals|uprev|s=Truncated integer limit triangle (TILT)}} for more information on this sort of programmatic target-interval set selection). Perhaps the most succinct way to explain why would be: because these hybrids are literally ''averages'' of their size and complexity components, and so could never on their own fulfill a role that is more like the intersection of a size limit and a complexity limit. Or said another way: ultimately it is still just a single complexity measurement, though it may be sensitive to size where other complexity functions aren't at all. 
+
+[[File:Comparison of integer & complexity limits with hybrid limit only.png|thumbnail|800x800px]]
+
+What might be fair to say is that an integer limit and a complexity limit fulfill similar roles in the selection and weighting of a target-interval set, but neither of them have anything like the same effect as a true size limit does, as can be seen clearly in this diagram, where we can see that hybrids of integer-limit-squared complexity and log-product complexity will vary between the shapes of the green and blue, but will never look anything like radiating red lines from the origin.
+
+An illuminating way we found to frame this limitation is: sure, it sounds great to say that an integer limit combines a size limit and complexity limit, but it could just as easily be said the converse, that a complexity limit combines a size limit and an integer limit! At a certain point, there just isn't as meaningful of a difference between integer and complexity limits as there is between either of these two things and a size limit. An integer limit is really just a special k-value of a complexity limit, where the contour line ends up going straight vertical on this diagram. 
+
+So perhaps the greatest thing we could hope to get out of a hybrid like this would be to consolidate our integer and complexity limits down into a single hybrid-integer-complexity limit. But you would always still need a size limit, too.
+
+At least, this is what we might say when speaking of ordinary tunings that use target-interval set schemes such as TILT which have the possibility of enforcing a size limit. If your thinking is limited to all-interval tuning schemes, then something like one of these hybrid functions may be your best bet.
+
+== Value for all-interval tunings vs. ordinary tunings ==
+The minimax-lils-S tuning scheme—the one Mike introduced integer limits to our theory in the service of—is an [[all-interval tuning scheme]]. Tuning schemes such as these (as discussed in more detail on their dedicated article) are not best suited for finding tunings good in actual musical performance; rather they are favored for their computational expediency as well as the benefit of not having to specify a target-intervals set to tune with respect to (which can be a fuzzy and contentious process), both of which lead to this category of tuning schemes being preferred when documenting temperaments, especially in computer automated situations. This is all to say that the actual tuning schemes in the minimax-''k''-liph-S (Weil-Tenney) continuum are of dubious value themselves, because their complicated hybrid nature, as well as the fuzzy and contentious choice of exact position along the continuum, should counteract the primary motivations for using all-interval tuning schemes in the first place. The whole raison d'être of these schemes is their mathematical simpleness, so if you take that away, what's the point? It would be better to stick with simply minimax-S, or perhaps even minimax-lils-S, then.
+
+However, the hybrid complexity statistics that Mike developed for them are of potentially massive value in non-all-interval tuning schemes, that is to say the ordinary kind for which the specification of a target-intervals set to tune with respect to is required. For these tuning schemes, computational complexity is not at as much of a premium as it is with all-interval tuning schemes, and also there's no check on the arbitrary interests of the particular human doing the tuning; what's more important here is to nail as best as possible the distribution of damage across the intervals whose damage is being minimized. So hybrids of product and integer-limit-squared complexity may be of interest here. Theoretically, tunings in the middle of the liph continuum could be superior to either log-product or log-integer-limit-squared on the extremes. But the tradeoff versus complexity is not clear enough at this time that we would dislodge log-product from our position of default complexity.
+
+In the development of the [[N2D3P9]] statistic, we found an approximate 3:2 ratio in how the size of a ratio's numerator and denominator affected its popularity in musical scales. This fact cannot be directly applied to RTT tuning, as in N2D3P9's case we're actually dealing with interval classes that are not only 2-free (octave-reduced) but also 3-free (essentially fifth-reduced), and popularity in scales is only hand-wavily akin to intervallic complexity, but we cite it here anecdotally, as a speculation on how various balances of product and integer-limit-squared complexity may come to be preferred.
+
+= A defense of our choice of log-product as default complexity =
+Probably the most important factor for us in considering a complexity function to be high quality is this: is it monotonic over the integers, and hence is psychoacoustically plausible. For anything to be rightfully called damage, we believe the weighting of absolute error must have psychoacoustic plausibility; otherwise, while it may be of interest otherwise, it is not what we are looking for in this application: a way of optimizing approximations of harmonic music for humans to listen to.
+
+Several of the complexity functions we look at in this article have this property. Product complexity and integer-limit-squared complexity both do, as do all their hybrids, and their logarithmic variants. Any Euclideanized complexity will lose this effect. And copfr and sopfr do not have it.
+
+Between these "integer-monotonic complexities", however, there may not be a strong case for any one of them having any more ''specific'' audible plausibility than another. This question probably can't be answered legitimately with a computer algorithm or clever math trick; it would probably need to be answered with experimentation on actual human subjects. 
+
+And so, barring that level of real-world effort, for now, we find it's a reasonable position to choose among these integer-monotonic complexities the one which has several pluses:
+* Relatively long history of use in tuning
+* Relative ease of understanding and computation
+* That special proportional effect to size in cents (discussed [[#Proportionality to size|here]])
+
+= Computing ordinary tunings using these complexities =
+For ordinary tunings with finite target-interval sets, we already have everything you need to tune with respect to any complexity you might dream of. In the computations article we relied only on a single complexity function, our default of log-product complexity. This meant that whenever it came time to prepare our weight matrix W, we simply found <math>\log_2{nd}</math> for each of our target-intervals and put them in a diagonal matrix:
+
+
+<math>
+\begin{align}
+\text{if} \; \mathrm{T} = \left[ \frac{2}{1}, \frac{3}{1}, \frac{3}{2}, \frac{4}{3}, \frac{5}{2}, \frac{5}{3}, \frac{5}{4}, \frac{6}{5} \right], 
+
+\\
+
+W &=
+\left[ \begin{matrix}
+\log_2{2·1} & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & \log_2{3·1} & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & \log_2{3·2} & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & \log_2{4·3} & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & \log_2{5·2} & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & \log_2{5·3} & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & \log_2{5·4} & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & \log_2{6·5} \\
+\end{matrix} \right]
+
+\\
+
+&=
+\left[ \begin{matrix}
+1.000 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 1.585 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 2.585 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 3.585 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 3.322 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 3.907 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 4.322 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 4.907 \\
+\end{matrix} \right]
+\end{align}
+</math>
+
+
+We could reciprocate the whole thing to find a simplicity-weight matrix S and if we leave this as is then it's our complexity-weight matrix C. 
+
+But the point is here that there's nothing stopping us from using whatever bizarre complexity function we might dream up, such as, let's say, the "sum" complexity, which by analogy with product complexity, takes the ''sum'' of the numerator and denominator rather than their product. In that case, we'd find:
+
+
+<math>
+C =
+\left[ \begin{matrix}
+2+1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 3+1 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 3+2 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 4+3 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 5+2 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 5+3 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 5+4 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 6+5 \\
+\end{matrix} \right]
+=
+ \left[ \begin{matrix}
+3 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 4 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 5 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 7 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 7 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 8 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 9 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 11 \\
+\end{matrix} \right]
+</math>
+
+
+For ordinary tunings, there are no constraints on your complexity function at all, other than it return real numbers, perhaps. Go as crazy as you like. There's no need for it to be in norm form so that its dual norm can be figured out so that you can use it in a dual norm inequality or anything like that. Anything goes. Have fun. Or maybe just stick with log-product complexity.
+
+=Computing all-interval tuning schemes with alternative complexities=
+{{texzz}}
+As opposed to ordinary tunings, which were briefly covered in the previous section, for all-interval tunings, we do have restrictions: specifically, we needed to get our complexity into the form of a pretransformed norm, for which we could then find its dual, as the norm with the dual power and inverse pretransformer. 
+
+As covered in our all-interval tuning schemes article {{subpage|all-interval tuning schemes|uprev|s=formula relating dual powers}}, the dual power is found by <math>\frac{1}{p} + \frac{1}{\text{dual}(p)} = 1</math>. And typically the inverse pretransformer is found by the matrix inverse (but this is not always so simple). 
+
+The common setup for every all-interval tuning scheme is that we're going to find our generator tuning map 𝒈 for a given temperament's mapping matrix M, and we're going to do it by minimizing the greater side of the dual norm inequality, <math>‖𝒓X^{-1}‖_q</math>. What makes the difference from one tuning scheme to the next, with their different alternative complexities, is what we use for <math>X^{-1}</math>, the inverse pretransformer matrix which is the inverse of the complexity pretransformer matrix we've chosen; this is the one that we've been using on intervals when computing their complexities using the norm form of their formulas. And also the choice of optimization power p, which for these examples will always either be <math>\infty</math> or 2 (2 for the Euclideanized ones).
+
+To unpack the 𝒈 and M, we can expand the expression we're minimizing like so:
+
+
+<math>
+\left\|𝒓X^{-1}\right\|_q \\
+\left\|(𝒕 - 𝒋)X^{-1}\right\|_q \\
+\left\|(𝒈M - 𝒋)X^{-1}\right\|_q
+</math>
+
+
+For the following set of examples, we'll be using porcupine temperament, with M = {{rket|{{map|1 2 3}} {{map|0 -3 -5}}}}. Thus we find <math>𝒕 = 𝒈M = </math> {{map|g_1 <math>2g_1+3g_2</math> <math>3g_1+5g_2</math>}}. And being in the 5-limit, we find 𝒋 = {{map|1200 1901.955 2786.314}}. So:
+
+
+<math>
+\min\left(
+\left\| 
+\left(
+
+\begin{array}
+𝒕
+\left[ \begin{array} {l}
+g_1 & & 2g_1-3g_2 & & 3g_1-5g_2 
+\end{array} \right]
+\end{array}
+
+-
+
+\begin{array}
+𝒋
+\left[ \begin{array} {l}
+1200 & & 1901.955 & & 2786.314
+\end{array} \right]
+\end{array}
+
+\right)X^{-1}
+\right\|_q 
+\right)
+</math>
+
+
+Simplifying down to one map there in the middle, instead of subtraction (i.e. going back from <math>𝒕 - 𝒋</math> to 𝒓):
+
+
+<math>
+\min\left(
+\left\| 
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+X^{-1}
+\right\|_q 
+\right)
+</math>
+
+
+And then recognizing that we actually substitute a simpler and in this case equivalent power mean for the power norm when computing these:
+
+
+<math>
+\min\left(
+ \largeLLzigzag 
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+X^{-1}
+ \largeRRzigzag _p
+\right)
+</math>
+
+
+So that's going to be our starting point for all of the following computations. 
+
+== Log-product ==
+In the cases of the minimax-S and minimax-ES tuning schemes, which use log-product complexity, our complexity pretransformer is the log prime matrix L and thus our inverse pretransformer, is <math>L^{-1}</math>. So we substitute that in for <math>X^{-1}</math>:
+
+
+<math>
+\min\left(
+ \largeLLzigzag 
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+{\color{red}\left(L^{-1}\right)}
+ \largeRRzigzag _p
+\right)
+
+= \\
+
+\min\left(
+ \largeLLzigzag 
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+
+\left[ \begin{array} {l}
+\frac{1}{\log_2{2}} & 0 & 0 \\
+0 & \frac{1}{\log_2{3}} & 0 \\
+0 & 0 & \frac{1}{\log_2{5}} \\
+\end{array} \right]
+
+ \largeRRzigzag _p
+\right)
+
+= \\
+
+\min\left(
+ \largeLLzigzag 
+\left[ \begin{array} {l}
+\frac{g_1 - 1200}{\log_2{2}} & & \frac{2g_1-3g_2-1901.955}{\log_2{3}} & & \frac{3g_1-5g_2-2786.314}{\log_2{5}}
+\end{array} \right]
+ \largeRRzigzag _p
+\right)
+
+= \\
+
+\min\left(
+ \largeLLzigzag 
+\left[ \begin{array} {l}
+\frac{g_1}{\log_2{2}}  - 1200 & & \frac{2g_1-3g_2}{\log_2{3}} - 1200 & & \frac{3g_1-5g_2}{\log_2{5}} - 1200
+\end{array} \right]
+ \largeRRzigzag _p
+\right)
+</math>
+
+
+Here we can see the L-canceling proportionality as we talked about briefly earlier: [[#Proportionality to size]].
+
+To see these tunings worked out with exact solutions in the form of generator embeddings, see [[Generator embedding optimization#Minimax-S]] and [[Generator embedding optimization#Minimax-ES]].
+
+== Sum-of-prime-factors-with-repetition ==
+In the cases of the minimax-sopfr-S and minimax-E-sopfr-S tuning schemes, which use log-product complexity, our complexity pretransformer is a diagonalized list of the primes <math>\text{diag}(𝒑)</math> and thus our inverse pretransformer, is <math>\text{diag}(𝒑)^{-1}</math>. So we substitute that in for <math>X^{-1}</math>:
+
+
+<math>
+\min\left(
+ \largeLLzigzag 
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+{\color{red}\left(\text{diag}(𝒑)^{-1}\right)}
+ \largeRRzigzag _p
+\right)
+
+= \\
+
+\min\left(
+ \largeLLzigzag 
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+
+\left[ \begin{array} {l}
+\frac{1}{2} & 0 & 0 \\
+0 & \frac{1}{3} & 0 \\
+0 & 0 & \frac{1}{5} \\
+\end{array} \right]
+
+ \largeRRzigzag _p
+\right)
+
+= \\
+
+\min\left(
+ \largeLLzigzag 
+\left[ \begin{array} {l}
+\frac{g_1 - 1200}{2} & & \frac{2g_1-3g_2-1901.955}{3} & & \frac{3g_1-5g_2-2786.314}{5}
+\end{array} \right]
+ \largeRRzigzag _p
+\right)
+
+</math>
+
+
+Since we're prescaling by the primes themselves, not their logs as we did with minimax-(E)S, we didn't do the final step where we show how each term has a 1200 subtracted from it, in other words, because the scalings aren't proportional to the ''pitch'' sizes of the primes like we're using here, but instead their ''frequencies''.
+
+To see these tunings worked out with exact solutions in the form of generator embeddings, see [[Generator embedding optimization#Minimax-sopfr-S]] and [[Generator embedding optimization#Minimax-E-sopfr-S]].
+
+== Count-of-prime-factors-with-repetition ==
+In the cases of the minimax-copfr-S and minimax-E-copfr-S tuning schemes, which use copfr complexity, our complexity pretransformer is an identity matrix I and thus our inverse pretransformer, is also an identity matrix I. In other words, we have no pretransformer here! So we can just delete occurrences of <math>X^{-1}</math>:
+
+
+<math>
+\min\left(
+ \largeLLzigzag 
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+{\color{red}(I)}
+ \largeRRzigzag _p
+\right)
+
+= \\
+
+\min\left(
+ \largeLLzigzag 
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+ \largeRRzigzag _p
+\right)
+</math>
+
+
+We should already be able to see that this computation is going to be easier than ever. To see these tunings worked out with exact solutions in the form of generator embeddings, see [[Generator embedding optimization#Minimax-copfr-S]] and [[Generator embedding optimization#Minimax-E-copfr-S]].
+
+== Log-integer-limit-squared ==
+Here's where things start to get pretty weird.
+
+In the cases of the minimax-lils-S and minimax-E-lils-S tuning schemes, our complexity pretransformer is the size-sensitizing matrix composed with the log prime matrix, ZL and thus its inverse is <math>(ZL)^{-1}</math>. Unfortunately, though, even though it looks like we should be able to say the dual norm <math>\text{lils-C}^{*}()</math> should be <math>\left\|𝒓(ZL)^{-1}\right\|_\infty</math>, it's not that simple, that is, it's not as simple as the typical case where we can just take the dual power and the inverse pretransformer. For starters, ZL is rectangular and so it could only have a ''pseudo''inverse, <math>(ZL)^{+}</math>, not a true inverse; this might not have been an insurmountable problem, except that for whatever reason (reasons beyond these authors, anyway) this doesn't actually work.<ref group="note">At least, the Moore-Penrose inverse which is the definition of pseudoinverse that we have been assuming throughout this article series thus far does not reliably work for this purpose. That said, if X is a rectangular complexity pretransformer such as the one used for <math>\text{lils-C}()</math>, there are alternative inverses available which will still effectively leverage the dual norm inequality in order to cap the maximum damage across all intervals. Specifically, any matrix <math>X^{-}</math> (that's X but with a superscript ''minus'', as opposed to the superscript ''plus'' that we use for the standard Moore-Penrose inverse) which satisfies <math>X^{-}X=I</math> will suffice. These alternatives follow a parameterized pattern (which you can learn about here: https://mathworld.wolfram.com/Matrix1-Inverse.html) which can itself be the subject of an optimization procedure, with the optimization of the generators treated as a ''nested optimization problem'', which understandably is staggeringly computationally intensive. It would be much better if we had a simple closed-form expression for the parameters on this pseudoinverse. Since completing this article, we have discovered a truly remarkable proof of such an expression, which this footnote is too small to contain. ;-) You can however find it as a work-in-progress here: [[Lils using left inverse]].</ref> Mike Battaglia has worked out [[Dual_of_the_Weil_norm_proof|a proof]] that it's this:
+
+
+<math>
+\begin{align} 
+\text{lils-C}^{*}(\textbf{𝒓}) &= \max\left( \frac{r_1}{\log_2{p_1}}, \frac{r_2}{\log_2{p_2}}, \ldots, \frac{r_d}{\log_2{p_d}}, 0\right) \; - \\
+& \quad\quad\quad \min\left(\frac{r_1}{\log_2{p_1}}, \frac{r_2}{\log_2{p_2}}, \ldots, \frac{r_d}{\log_2{p_d}}, 0\right)
+\end{align}
+</math>
+
+
+And in any case, the way we achieve the dual norm is through custom-applied augmentations to the matrices that are used in computing optimized tunings with methods that give exact solutions. So the theory has not quite yet arrived at a truly generalizable approach to dual-norm-ification (though we'd be delighted to be corrected on this matter, if someone has indeed cracked this).
+
+Here's what <math>(ZL)^{+}</math> looks like for our porcupine example:
+
+
+<math>
+\dfrac12
+\left[ \begin{array} {rrr|r}
+\log_2{2} & {-\log_2{2}} & {-\log_2{2}} & \log_2{2} \\
+{-\log_2{3}} & \log_2{3} & {-\log_2{3}} & \log_2{3} \\
+{-\log_2{5}} & {-\log_2{5}} & \log_2{5} & \log_2{5} \\
+\end{array} \right]
+</math>
+
+
+Which is maybe better understood factored into <math>L^{-1}Z^{+}</math>, which it is equivalent to:
+
+
+<math>
+
+\begin{array} {c}
+L^{-1} \\
+\left[ \begin{matrix}
+\frac{1}{\log_2{2}} & 0 & 0 \\
+0 & \frac{1}{\log_2{3}} & 0 \\
+0 & 0 & \frac{1}{\log_2{5}} \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {c}
+Z^{+} \\
+\dfrac12
+\left[ \begin{array} {ccc|c}
+1 & -1 & -1 & 1 \\
+-1 & 1 & -1 & 1 \\
+-1 & -1 & 1 & 1 \\
+\end{array} \right]
+\end{array}
+</math>
+
+
+When we substitute <math>(ZL)^{+}</math> in for <math>X^{-1}</math>:
+
+
+<math>
+
+\min\left(
+ \largeLLzigzag 
+
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+{\color{red}\left((ZL)^{+}\right)}
+ \largeRRzigzag _p
+\right)
+
+= \\
+
+\min\left(
+ \largeLLzigzag 
+\begin{array} {c}
+𝒓 \\
+\left[ \begin{array} {l}
+g_1 - 1200 & & 2g_1-3g_2-1901.955 & & 3g_1-5g_2-2786.314 
+\end{array} \right]
+\end{array}
+
+\begin{array} {c}
+(ZL)^{+} \\
+\dfrac12
+\left[ \begin{array} {rrr|r}
+\log_2{2} & {-\log_2{2}} & {-\log_2{2}} & \log_2{2} \\
+{-\log_2{3}} & \log_2{3} & {-\log_2{3}} & \log_2{3} \\
+{-\log_2{5}} & {-\log_2{5}} & \log_2{5} & \log_2{5} \\
+\end{array} \right]
+\end{array}
+
+ \largeRRzigzag _p
+\right)
+</math>
+
+
+But we won't bother continuing with this approach because whether we use the generic method (such as Wolfram Language's <code>NMinimize[]</code>) which gives approximate solutions, or the [[Generator_embedding_optimization#Coinciding-damage_method|coinciding-damage method]] which gives exact solutions, we won't get a correct answer. In order to achieve this, we must use the pattern of matrix augmentation that Mike Battaglia has described. 
+
+To see these tunings worked out with exact solutions in the form of generator embeddings, see [[Generator embedding optimization#Minimax-lils-S]] and [[Generator embedding optimization#Minimax-E-lils-S]].
+
+== Log-odd-limit-squared ==
+As mentioned above, the log-odd limit based tunings can be computed using the same approach as the log-integer-limit-squared tunings, except with a held-octave constraint applied. There are apparently other methods of achieving these same result by taking entries corresponding to prime 2 and setting them to zero, in various objects, but we felt that this approach was simpler in the key way insofar as it merely composes computational tricks we already know how to do. But since both the coinciding-damage method and the pseudoinverse method handle constrained optimizations using augmentations already, we end up with ''doubly-augmented'' situations, which are fairly gnarly in their own way. But let's work it all out.
+
+To see these tunings worked out with exact solutions in the form of generator embeddings, following the custom technique that Mike worked out, see [[Generator embedding optimization#Minimax-lols-S]] and [[Generator embedding optimization#Minimax-E-lolsS]].
+
+== Alternative complexity all-interval tuning scheme table ==
+We'll conclude things here with another monster table. Please compare this with the table of tuning schemes found in the {{subpage|conventions for names, variables, units, and notations|uprev|s=Advanced|text=advanced section of our conventions appendix}} (you'll need to click the "[Expand]" link there. Everything that can be found in the table below is collapsed into just the top 4 data rows of the table in that conventions article, and that's because the conventions article table does not explode out all of the different alternative complexities like we do here.<ref group="note">A pedantic note: this table implies a parallelism between "multipliers" and "powers", but truly any multiplier's analog would be an exponent, not a power. A power is the (result of the) entire operation: a base raised to an exponent. For example, 3 to the 2nd power is 9, so 9 is a power (of 3), whereas 2 here is not the power but rather the exponent. However, this pedantic distinction is not important enough here to warrant complicating matters, since in this application we work with power sums, norms, means, and minima, and "power" is a perfectly appropriate word to use in those contexts.</ref>:
+
+{| class="wikitable"
+! colspan="2" rowspan="4" | Pure
+octaves
+! colspan="4" rowspan="3" | Retuning magnitude
+! colspan="8" | Damage
+! rowspan="5" | Target
+
+intervals
+! colspan="2" rowspan="4" | Systematic name
+! rowspan="5" | Historical name
+|-
+! colspan="6" | Weighting
+! colspan="2" | Optimization
+|-
+! colspan="4" | Interval complexity
+! colspan="2" | Slope
+! colspan="1" rowspan="3" | Name
+! colspan="1" rowspan="3" | Power
+|-
+! colspan="2" | Dual norm pretransformer
+! colspan="2" | Dual norm power
+! colspan="2" | Norm pretransformer
+! colspan="2" | Norm power
+! colspan="1" rowspan="2" | Name
+! colspan="1" rowspan="2" | Multiplier
+|-
+! Held
+! Destretched
+! Name
+! Multiplier
+! Name
+! Power
+! Name
+! Multiplier
+! Name
+! Power
+! colspan="1" | Abbreviated
+! colspan="1" | Read ("____ tuning scheme")
+|-
+|
+|
+| rowspan="3" | Inverse log-prime matrix
+| rowspan="3" | L<sup>&minus;1</sup>
+| rowspan="9" | Maximum
+| rowspan="9" | &#8734;
+| rowspan="3" | Log-prime matrix
+| rowspan="3" | {{nowrap|''L'' {{=}} diag(log<sub>2</sub>𝒑)}}
+| rowspan="9" | Taxicab
+| rowspan="9" | 1
+| rowspan="18" | Simplicity-weight (S)
+| rowspan="18" | 1/complexity
+| rowspan="18" | Minimax
+| rowspan="18" | &#8734;
+| rowspan="18" | All
+| Minimax-S
+| Minimax simplicity-weight damage
+| "[[TOP|Tenney Optimal (TOP)]]" / "[[TIPTOP]]"*
+|-
+| Yes
+| 
+| Held-octave minimax-S
+| Held-octave minimax simplicity-weight damage
+| "[[CTOP|Constrained-octave Tenney Optimal (CTOP)]]"
+|-
+| 
+| Yes
+| Destretched-octave minimax-S
+| Destretched-octave minimax simplicity-weight damage
+| "[[POTOP|Pure-octave Tenney Optimal (POTOP)]]" / "[[POTT]]"*
+|-
+| 
+| 
+| (Identity matrix)
+| ''I''
+| (Identity matrix)
+| ''I''
+| Minimax-copfr-S
+| Minimax count-of-prime-factors-with-repetition-simplicity-weight damage
+| Not named
+|-
+| 
+| 
+| Inverse diagonal matrix of primes
+| diag(𝒑)<sup>&minus;1</sup>
+| Diagonal matrix of primes
+| diag(𝒑)
+| Minimax-sopfr-S
+| Minimax sum-of-prime-factors-with-repetition-simplicity-weight damage
+| "[[BOP tuning|Benedetti/Wilson Optimal (BOP)]]"
+|-
+| 
+| 
+| colspan="2" rowspan="4" | (Custom handling required, involving augmented matrices)
+| rowspan="4" | Size-sensitizing matrix, and log-prime matrix
+| rowspan="4" | ''ZL''
+| Minimax-lils-S
+| Minimax log-integer-limit-squared-simplicity-weight damage
+| "[[Weil_tuning|Weil]]" / "[[Weil_tuning|WOP]]"
+|-
+| 
+| Yes
+| Destretched-octave minimax-lils-S
+| Destretched-octave minimax log-integer-limit-squared--simplicity-weight damage
+| "[[Kees]]" / "[[POWOP|Pure-octave Weil (POWOP)]]"
+|-
+| rowspan="2" | Yes
+| rowspan="2" | 
+| Held-octave minimax-lils-S
+| Held-octave minimax log-integer-limit-squared-simplicity-weight damage
+| rowspan="2" | "[[CWOP|Constrained-octave Weil (CWOP)]]"
+|-
+| Minimax-lols-S
+| Minimax log-odd-limit-squared-simplicity-weight damage
+|-
+| 
+| 
+| rowspan="3" | Inverse log-prime matrix
+| rowspan="3" | ''L''<sup>&minus;1</sup>
+| rowspan="9" | Euclidean
+| rowspan="9" | 2
+| rowspan="3" | Log-prime matrix
+| rowspan="3" | {{nowrap|L {{=}} diag(log<sub>2</sub>𝒑)}}
+| rowspan="9" | Euclidean (E)
+| rowspan="9" | 2
+| Minimax-ES
+| Minimax Euclideanized-simplicity-weight damage
+| "[[Tenney-Euclidean|TE]]" / "[[TOP-RMS]]"
+|-
+| Yes
+| 
+| Held-octave minimax-ES
+| Held-octave minimax Euclideanized-simplicity-weight damage
+| "[[CTE tuning|Constrained-octave Tenney-Euclidean (CTE)]]"
+|-
+| 
+| Yes
+| Destretched-octave minimax-ES
+| Destretched-octave minimax Euclideanized-simplicity-weight damage
+| "[[POTE tuning|Pure-octave Tenney-Euclidean (POTE)]]"
+|-
+| 
+| 
+| (Identity matrix)
+| ''I''
+| (Identity matrix)
+| ''I''
+| Minimax-E-copfr-S
+| Minimax Euclideanized-count-of-prime-factors-with-repetition-simplicity-weight damage
+| "[[Frobenius]]"
+|-
+| 
+| 
+| Inverse diagonal matrix of primes
+| diag(𝒑<sup>&minus;1</sup>)
+| Diagonal matrix of primes
+| diag(𝒑)
+| Minimax-E-sopfr-S
+| Minimax Euclideanized-sum-of-prime-factors-with-repetition-simplicity-weight damage
+| "[[BE|Benedetti/Wilson-Euclidean (BE)]]"
+|-
+| 
+| 
+| colspan="2" rowspan="4" | (Custom handling required, involving augmented matrices)
+| rowspan="4" | Size-sensitizing matrix, and log-prime matrix
+| rowspan="4" | ''ZL''
+| Minimax-E-lils-S
+| Minimax Euclideanized-log-integer-limit-squared-simplicity-weight damage
+| "[[WE|Weil-Euclidean (WE)]]"
+|-
+| rowspan="2" | Yes
+| rowspan="2" | 
+| Held-octave minimax-E-lils-S
+| Held-octave minimax Euclideanized-log-integer-limit-squared-simplicity-weight damage
+| rowspan="2" | "[[CWE|Constrained-octave Weil-Euclidean (CWE)]]" / "[[KE]]"
+|-
+| Minimax-E-lols-S
+| Minimax Euclideanized-log-odd-limit-squared-simplicity-weight damage
+|-
+| 
+| Yes
+| Destretched-octave minimax-E-lils-S
+| Destretched-octave minimax Euclideanized-log-integer-limit-squared-simplicity-weight damage
+| "[[POWE|Pure-octave Weil-Euclidean (POWE)]]"<br><small>(formerly "KE")</small>
+|}
+
+We've included some data rows for popular held-octave and destretched-octave tuning schemes.
+
+= Alternative optimization powers =
+This topic isn't exactly an "alternative complexity", but it is closely tangential to the topics discussed here, so we felt it was fitting to keep it close by. 
+
+The computations article tells us that the general method can handle optimization powers like 3, <math>1.4</math>, or whatever, with a method that gives approximate solutions.
+
+Why would someone use a different optimization power? Well, there's no optimization powers possible that are greater than <math>\infty</math> or less than 1. And the tuning qualities imbued by the optimization power change gradually between <math>\infty</math> and 1, with 2 representing the exact midpoint in-between them. So if you understand the qualities at those extremes of <math>\infty</math> and 1, and that the midpoint of this continuum is 2, then you should be able to have a sense about the quality any given optimization power would imbue. We covered this a bit in the fundamentals article already, but as a reminder, <math>p = \infty</math> is like the "weakest link" approach, where a tuning is only as good as its worst-tuned target. On the other extreme, <math>p = 1</math> is the straightforward "all damage counts" approach, meaning if you add a bit more damage to your best-tuned interval, that makes the tuning worse; damage is damage. For a more thorough refresher, you can review {{subpage|tuning fundamentals|uprev|s=rationales for choosing your interpretation}}. So, if you decide that neither of those extremes work for you, but that you nonetheless lean more one way or the other and don't want to simply accept the midway power of 2, then you may be one of the weirdos who wants an optimization power <math>\infty > p > 2</math> or <math>2 > p > 1</math>.
+
+If you do want to do such a thing, how to refer to the tuning scheme? We remind you that when <math>p=\infty</math> we name it "minimax", when <math>p=2</math> we name it "miniRMS", and when <math>p=1</math> we name it "miniaverage". But we also remind you that technically speaking these are all minimization of power ''means'', just means of different powers (i.e. optimization powers). So essentially we just un-alias these p-means in the name. So a tuning scheme that minimized the 2-mean of damage to the TILT would be the "TILT mini-2-mean" tuning scheme or for short "TILT miniRMS", while 3-mean of damage to the TILT would be "TILT mini-3-mean", which has no shorter form. 
+
+We remind the reader that optimization powers are different than norm powers, such as appear in all-interval tuning schemes. For example, the minimax-ES tuning scheme uses a Euclideanized complexity, meaning its norm power q is 2. But it's still a minimax tuning, because it only uses this pretransformed 2-norm in the calculations of the complexities, the inverse of which it pretransforms the prime errors by when minimizing their norm; ultimately this dual norm inequality trick is always in service of minimizing the maximum damage across all intervals, i.e. minimaxing that damage. Thus the optimization power of an all-interval tuning scheme is always <math>p = \infty</math>. As with optimization powers, the powers <math>\infty</math>, 2, and 1 have special qualities. We already explained briefly above how to handle naming with respect to these and other norm powers: [[#Alternative norm powers|Alternative norm powers]]
+
+So, it is possible to devise a tuning scheme with both the optimization power p and the norm power q as something other than one of those three key powers. For example, we could have the TILT mini-3-mean-1.5-C tuning. This minimizes the 1.5-ized-log-product-complexity-weight damage to the TILT, where the minimization is minimizing the 3-mean of the target-interval damage list. (1.5-izing, like Euclideanizing AKA 2-izing, would mean to take the powers and roots of 1 in the norm form of the log-product complexity and swap them out for 1.5's.)
+
+= See also =
+You've almost made it to the end of our article series. Kudos for sticking it out. One article remains, if you are thus inclined to read it too: 
+* 9. {{subpage|Tuning in nonstandard domains|prev}}
+
+= Footnotes and references =
+<references group="note" />
+
+[[Category:Dave Keenan & Douglas Blumeyer's guide to RTT]]
+[[Category:Tuning]]
+[[Category:Pages with proofs]]

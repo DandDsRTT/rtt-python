@@ -1,0 +1,270 @@
+:''"Domain" redirects here. For the temperament, see [[Domain (temperament)]].'' 
+
+A '''domain basis''' is a [[basis]] for a ''domain'', or space of inputs to a function, such as a [[regular temperament]] [[mapping]]. Since the basis for the domain is more fundamental than other types of bases, such as [[comma basis|comma bases]] or [[unchanged-interval basis|unchanged-interval bases]], we can typically shorten this to simply "basis", and we will be largely adopting that shorthand for the remainder of the article.
+
+= Basis elements and nonstandard domain bases =
+Bases are expressed as lists of '''[[basis element]]s''', the building blocks of the corresponding space, and domain bases are no different. They are notated by separating these basis elements with periods. The most common bases consist of prime numbers, which are the building blocks of the [[Wikipedia:Rational_number|rational numbers]] we use for [[just intonation|justly intoned]] interval ratios. Examples of such bases are 2.3.5, or 2.3.7.11. 
+
+When left unspecified, the basis is the <math>d</math> [[prime limit]], or in other words, the sequence of the first <math>d</math> primes where <math>d</math> is the [[dimensionality]]. So, for example, given the [[mapping|regular temperament mapping]] {{rket|{{map|1 0 -4 -13 -25}} {{map|0 1 4 10 18}}}}, we should assume that its domain basis is 2.3.5.7.11. This is called a '''standard basis''', and any other basis would therefore be a '''nonstandard basis'''.
+
+Bases are possible which use nonprimes as their building blocks, such as 2.9.5, or 2.15.7. There are also those with rational numbers, like 2.3/5.11/7, or even those with irrational numbers, like 2.√5.e.π. The only real requirement is that each basis element be positive and not equal to 1 (and we usually use basis elements ''greater'' than 1; the canonical form enforces this).
+
+= Bases for intervals =
+In the simplest case, a basis is like a label for an interval vector; the entries of the vector provide the ''counts'' of harmonics in the interval, and the basis tells us what those harmonic values actually ''are''. So the vector {{vector|-1 -1 1}} with the basis 2.5.11 represents 11/10.
+
+<math>
+\begin{array} {ccc}
+\scriptsize{2} \\
+\scriptsize{5} \\
+\scriptsize{11} \\
+\end{array}
+
+\left[ \begin{array} {rrr}
+-1 \\
+-1 \\
+1 \\
+\end{array} \right]
+
+= 2^{-1}5^{-1}11^{1} = \dfrac{11}{2·5} = \dfrac{11}{10}
+</math>
+
+And the same vector {{vector|-1 -1 1}} but without any specified domain basis is assumed to be the standard prime-limit based one. In this case, the interval has 3 entries, so that means the dimensionality <math>d</math> is equal to 3. So we want the prime limit up through the 3rd prime. The 3rd prime is 5, so our domain basis is 2.3.5. With that basis, this vector represents the interval 5/6.
+
+<math>
+\begin{array} {ccc}
+\scriptsize{(2)} \\
+\scriptsize{(3)} \\
+\scriptsize{(5)} \\
+\end{array}
+
+\left[ \begin{array} {rrr}
+-1 \\
+-1 \\
+1 \\
+\end{array} \right]
+
+= 2^{-1}3^{-1}5^{1} = \dfrac{5}{2·3} = \dfrac{5}{6}
+</math>
+
+= Bases for temperaments =
+In the context of a regular temperament, a domain basis serves as a minimal representation of all the intervals this temperament can map (some of which it completely makes to [[vanish]]). The full set of these mappable intervals is called the domain; it, in turn, is a ''sub''space with respect to a theoretically ''full'' domain which would include all conceivable intervals able to be built from the infinitude of greater and greater primes.
+
+So, for instance, a temperament in the 2.3.5 domain cannot map the intervals 7/6 or 11/8, because there is no way to represent either of those intervals using only the primes 2, 3, and 5. It could, however, temper 6/5, 5/4, 10/9, or 9/8, etc., because those intervals ''can'' be represented using only those three primes.
+
+A basis may be used to label the columns of a mapping, with one basis element per column. Here's [[Gamelismic clan#Slendric|slendric]], a temperament of the 2.3.7 domain: 
+
+<math>
+\begin{array} {ccc}
+\begin{array} {ccc}
+\scriptsize{2} & \scriptsize{3} & \scriptsize{7} \\
+\end{array} \\
+\left[ \begin{array} {rrr}
+1 & 1 & 3 \\
+0 & 3 & -1 \\
+\end{array} \right]
+\end{array}
+</math>
+
+
+Similarly, a basis may be used to label the rows of a [[comma basis]]: one (domain) basis element per row, just how we initially described could be done for individual interval vectors. Here's the comma basis for 5-ET with a 2.3.7 domain basis:
+
+<math>
+\begin{array} {ccc}
+\scriptsize{2} \\
+\scriptsize{3} \\
+\scriptsize{7} \\
+\end{array}
+\left[ \begin{array} {rrr}
+-8 & -6  \\
+5 & 2 \\
+0 & 1 \\
+\end{array} \right]
+</math>
+
+Note for comparison that a comma basis is also a type of basis. In the same way that a domain basis is a minimal representation of all the ''intervals'' in the temperament, a comma basis is a minimal representation of all the ''commas'' in the temperament&mdash;to be precise, the subspace of all commas that are made to vanish.
+
+In the case of a comma basis, both the basis vectors and all of the spanned vectors are commas. But in the case of a domain basis, neither of these things is true. The basis vectors constitute an identity matrix, which is why they're our "mother of all bases"; at the point one hits basis identity matrix bedrock like this, the only place to go is defining what the entries of these vectors actually stand for, which in our case is prime bases of exponents. 
+
+= Nonstandard domains =
+Here's a couple tables breaking down possibilities for nonstandard domains, and the nomenclature for them and their basis elements:
+
+{| class="wikitable center-all"
+|+
+! Examples
+! 2.3.5
+! 2.3.7
+! 2.9.5<br />2.5/3.7
+! 2.√3.5<br />2.ɸ.5
+|-
+! rowspan="6" | (Domain) basis<br />&<br />(domain) space
+| colspan="4" | -
+|-
+| prime-limit / standard
+| colspan="3" | nonstandard
+|-
+| colspan="3" | JI
+| non-JI
+|-
+| colspan="2" | prime-only
+| colspan="2" | nonprime
+|-
+! rowspan="2" |
+| colspan="2" | nonstandard JI
+! rowspan="2" |
+|-
+| nonstandard prime-only / prime-subgroup 
+| nonprime JI
+|}
+
+{| class="wikitable center-all"
+|+
+! Examples
+! 2, 3, 5, 7
+! 9, 5/3, √3, ɸ
+|-
+! rowspan="2" | &mdash;
+| colspan="2" | (domain) basis element
+|-
+| prime
+| nonprime (domain) basis element
+|}
+
+To get the full name for any class of objects, you take what's in the content cell, and combine it with what's in the leftmost cell. There's nothing in the leftmost cell for the bottom table because there is no one word that all objects end with. So 2.3.5 is a "standard basis". And 5/3 is a "nonprime basis element"
+
+For additional information about nonstandard just intonation (JI) domains, as well as a gateway to browse temperaments within popular domains of this sort, see [[Just intonation subgroup|this page]].
+
+= Canonical form =
+The canonical form of a domain basis requires a few steps to achieve:
+# Find the matrix representation of the basis in terms of primes, which we can call a '''basis matrix'''.
+# Put the basis matrix into column Hermite normal form. This step has the effect of sorting the basis elements so that those with higher primes in their factorizations come later, e.g. so that 7 comes after 9 even though 9 is a bigger number, because 9 factors into 3's.
+# Eliminate any columns that are all zeros.
+# Convert the basis matrix back into a list of numbers (separated by periods).
+# Take the [[undirected value]] of each number; that is, if it is less than 1, replace it with its reciprocal (which will be greater than 1). So this would flip e.g. the "subunison" 3/5 into its "superunison" form of 5/3, or little phi φ (~0.618) into big phi Φ (~1.618).
+
+== Basis matrix conversion ==
+The reduction method we will use as part of canonicalization is the [[Hermite normal form]]. If you are previously familiar with it, you may be surprised to see it here, because you may realize that it is defined for matrices, not lists of numbers. So far, when we've looked at subspaces&mdash;or at least looked at the bases that represent them&mdash;we've simply notated them as lists of numbers, such as 2.3.7. And in most contexts this number list notation is sufficient. However, in order to merge domains, we need to temporarily convert their bases them into matrix form, in order to use the Hermite normal form.
+
+Well, let's get to the matrix-ifying! 
+
+We can do this by factorizing the basis elements in just the same way we factor intervals into [[prime-count vector]]s, such as 5/4 factorizing to {{vector|-2 0 1}}. This is also the same way we represent comma intervals within the other key RTT basis: the comma basis. 
+
+But here, we're going one step deeper down! Now we're breaking down our basis elements&mdash;the building blocks of our intervals&mdash;into ''their own building blocks''. And these, finally, are just actual prime numbers.
+
+Then, each resulting vector becomes a column of our desired matrix. 
+
+So, for example, 2.9/7.5 in the form of a matrix <math>B</math> (a '''domain basis change matrix''', or "basis matrix" for short) looks like this. For convenience, we've labeled each column with the basis element, and each row with the prime:
+
+<math>
+\begin{array} {ccc}
+\begin{array} {rrr}
+ \\
+\end{array} \\
+\begin{array} {rrr}
+\scriptsize{2} \\
+\scriptsize{3} \\
+\scriptsize{5} \\
+\scriptsize{7} \\
+\end{array}
+\end{array}
+
+\begin{array} {ccc}
+\begin{array} {ccc}
+\scriptsize{2} & \scriptsize{9/7} & \scriptsize{5} \\
+\end{array} \\
+
+\left[ \begin{array} {rrr}
+1 & 0 & 0 \\
+0 & 2 & 0 \\
+0 & 0 & 1 \\
+0 & -1 & 1 \\
+\end{array} \right] 
+\end{array}
+</math>
+
+To make a popular culture reference, you may be starting to get an [[Wikipedia:Inception|Inception]] vibe here: we're breaking primes into deeper primes (perhaps we could call this "intervalception"?). Indeed, this might all seem dizzyingly abstract, but fortunately, we don't need to go any deeper than this. And we assure you that this matrix representation of the domain basis (again, called the "basis matrix") will be quite helpful for comparing different domain bases.
+
+== Column Hermite normal form ==
+To be exact, we want to use the ''column-style'' Hermite normal form, sometimes called column Hermite normal form for short. All this means is that we put the HNF call in an antitranspose sandwich, [[Normal_lists#Antitransposed defactored Hermite form|as described here]]).
+
+== Vs. canonical form for temperaments themselves: do not defactor ==
+There's an important difference between the canonical form of comma bases and mappings and the canonical form of domain bases (in their basis matrix form). With the former, it's typical to fully [[defactoring|defactor]] them as well as put them into [[normal form]], because [[The_pathology_of_enfactoring|enfactored representations of temperaments are pathological]]. Enfactored basis matrices, however, are ''not'' pathological; they represent meaningfully distinct domains.<ref>Here's a key difference between an enfactored comma basis and an enfactored basis matrix, by example. 2-enfactored meantone is [{{vector|-8 8 -2}}], representing a [[temperoid]] where somehow 6561/6400 = (81/80)² is made to vanish but 81/80 is not, a situation which is musically absurd, and this is the crux of why comma basis enfactoring is pathological. We can achieve a similar but non-pathological situation with a nonstandard domain basis. In the 2.3.25 domain basis, the comma basis [{{vector|-8 8 1}}] represents the temperament where 6561/6400 is made to vanish. But this isn't absurd, because the temperament doesn't explicitly say that 81/80 is ''not'' made to vanish. In this temperament, 81/80 doesn't even exist! The page [[Sane and insane temperaments]] contains some more discussion of ideas in this vicinity.</ref>
+
+For example, if we were to defactor the basis matrix for the 2.9.5 domain basis, we'd get 2.3.5. But 2.9.5 is a perfectly reasonable domain basis that we don't wish to conflate with 2.3.5<ref>Even 4.9.25 is an acceptable domain basis. It's not a special situation where there's a common factor in the powers on each basis element, which in this case is 2.</ref>. 
+
+== Example ==
+Let's canonicalize 2.5/3.7/5.
+
+First, we get a matrix representation of that, <math>B</math>:
+
+<math>
+\begin{array} {ccc}
+\begin{array} {ccc}
+\\
+\end{array} \\
+
+ \begin{array} {rrr}
+\scriptsize{2} \\
+\scriptsize{3} \\
+\scriptsize{5} \\
+\scriptsize{7} \\
+\end{array}  \\
+\end{array}
+
+\begin{array} {lll}
+\begin{array} {lll}
+ & \scriptsize{2} & \scriptsize{5/3} & \scriptsize{7/5}  \\
+\end{array} \\
+\left[ \begin{array} {rrr}
+1 & 0 & 0 \\
+0 & -1 & 0 \\
+0 & 1 & -1 \\
+0 & 0 & 1 \\
+\end{array} \right] \\
+\end{array}
+</math>
+
+Now, column HNF it.
+
+<math>
+\begin{array} {ccc}
+\begin{array} {ccc}
+\\
+\end{array} \\
+ \begin{array} {rrr}
+\scriptsize{2} \\
+\scriptsize{3} \\
+\scriptsize{5} \\
+\scriptsize{7} \\
+\end{array}  \\
+\end{array}
+
+\begin{array} {lll}
+\begin{array} {lll}
+ & \scriptsize{2} & \scriptsize{5/3} & \scriptsize{7/3}  \\
+\end{array} \\
+\left[ \begin{array} {rrr}
+1 & 0 & 0 \\
+0 & -1 & -1 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+\end{array} \right] \\
+\end{array}
+</math>
+
+There are no zero columns to eliminate, we've already got the thing as a list of numbers since we've updated the labels on the matrix columns, and all of those numbers are super already, so we're done! The answer is 2.5/3.7/3.
+
+= Non-JI domains =
+The behavior of these are not yet well-described. For instance, is it best to represent them as matrices? If a basis element is <math>π/ɸ</math>, does the vinculum allow us to treat the two irrational numbers as separate basis elements (where the basis elements are expanded to include not only prime numbers)? Perhaps, but as far as this author understands, this hasn't been pinned down yet. And so, for example, irrational numbers are not supported yet in the RTT library in Wolfram Language.
+
+= Domain basis operations =
+* Merging: see [[Cross-domain temperament merging#Merging]].
+* Intersecting: see [[Cross-domain temperament merging#Intersecting]].
+* Changing: see [[Cross-domain temperament merging#Changing basis]].
+* Determining whether an interval exists in a given domain: add it to the domain basis. Compare the canonical form of the new basis to the canonical form of the original basis. If they are the same, then the interval exists in this domain already.
+
+= Footnotes =
+<references />
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]

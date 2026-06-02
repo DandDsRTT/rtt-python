@@ -1,0 +1,48 @@
+{{interwiki
+| de = 
+| en = Saturation, torsion, and contorsion
+| es = 
+| ja = 飽和、ねじれ、contorsion
+}}
+: ''This is a general introduction to this concept; for a more mathematical take on this, see [[Mathematical theory of saturation]].''
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]
+In [[regular temperament theory]], a [[temperament]] is '''saturated''' or ''defactored'' if its set of available intervals matches what is suggested by its mapping or comma basis. A temperament's mapping can fail with respect to saturation by being contorted, and its comma basis can fail through torsion.
+
+This article briefly explains these issues; for lattice-based visualizations and intuitive explanations, see [[Pathology of enfactoring|Pathology of saturation]].
+
+== Contorsion ==
+A temperament (more specifically, its [[mapping]]) displays '''contorsion''' or '''enfactoring''' if there is some generatable interval which no [[just intonation]] interval maps to. This generatable interval is a '''contorted generator''', which has the property that under any appropriate generator basis, every just interval's mapping has a multiple of ''c'' of that generator, where ''c'', the '''contorsion order''', is greater than one. In a contorted temperament, all generator bases will contain at least one contorted generator. The overall contorsion order of the temperament is the product of all the seperate orders.<ref>H. J. S. Smith [https://www.jstor.org/stable/pdf/108738.pdf ''On Systems of Linear Indeterminate Equations and Congruences''], the overall order is equivalent to the GCD of a matrix's minor determinants, which Smith calls the "greatest divisor".</ref>.
+
+For example, [[5-limit]] [[36edo|36et]] (with mapping {{mapping|36 57 84}}) uses 12 of its pitches per octave (the ones within [[12edo]]) to map the entire 5-limit gamut. As a result, no 5-limit just intonation interval maps to any of the other 24 pitches, making 36et contorted in the 5-limit. Therefore there is a contorted generator; since there is only one generator of 36et (namely, the 36th-octave), that generator must be contorted. Every pitch is mapped to a number of [[Generator|generators]] that is a multiple of 3 (where the generator of 36et is a 36th of the octave), so this generator has contorsion order 3. For a higher-rank example, the 13-limit {{nowrap|87 &amp; 111}} temperament Hemimist, with mapping [{{mapping|3 0 26 56 8}}, {{mapping|0 2 -8 -20 1}}], when restricted to the 2.5.7.11 subgroup, has no just intonation interval corresponding to the period or the square of the period, although there is a just intonation interval (namely, 2/1) corresponding to the cube of the period. Thus, this a contorted generator with contorsion order 3.
+
+If a temperament has a subgroup which is contorted, especially a subgroup with small primes (for example, the 11-limit subgroup of 23-limit [[44edo|44et]]), that temperament will likely be easier to traverse than the number of generators required according to the mapping would suggest.
+
+== Torsion in temperaments ==
+A temperament (more specifically, its [[comma basis]]) displays '''torsion''' or ''enfactoring'' if there is some interval mapped to zero which is not formable by multiplying commas in the basis. This interval is a '''comma with torsion''', which has the property that commas in the basis can be multiplied to form the ''c''th power of this ratio, but not that ratio itself or any smaller power, where ''c'' is the '''torsion order'''.
+
+For instance, in a temperament with comma basis {[[6561/6250]], [[128/125]]}, there is an interval 81/80 which is not formable by multiplying commas in the basis, but is nevertheless forced to be mapped to zero because {{nowrap|(81/80)^2 {{=}} (6561/6250)/(128/125)}} is part of the basis. Thus, 81/80 displays torsion with torsion order 2.
+
+== Torsion in periodicity blocks ==
+A comma basis in the context of periodicity blocks displays torsion if it displays torsion as a temperament—precisely when there is some comma with torsion where commas in the basis can be multiplied to form the ''c''th power of this ratio, but not that ratio itself or any smaller power, where ''c'' is the torsion order.
+
+Within periodicity blocks, no mapping needs to be defined from a comma basis, so comma bases with torsion are able to form periodicity blocks where the smallest comma with torsion is not tempered out.
+
+== Saturation algorithms ==
+An unsaturated mapping or comma basis can be made saturated, ensuring our ability to most simply—and thereby uniquely—identify temperaments using only matrices. The simplest and fastest algorithm for saturating matrices is called [[column Hermite defactoring]]. For more information on such algorithms, see [[Defactoring algorithms]].
+
+== History and terminology ==
+The term ''saturation'' was coined by {{w|Nicolas Bourbaki}} in 1972<ref>[https://pdfcoffee.com/commutative-algebra-bourbaki-pdf-free.html Nicolas Bourbaki. ''Commutative Algebra'']</ref>, working in the field of commutative algebra. It came to RTT via [[Gene Ward Smith]] and [[Graham Breed]]'s observations of the work of the mathematician {{w|William A. Stein|William Stein}} and his {{w|SageMath}} software<ref>It may also have come through PARI/GT<!-- typo of PARI/GP? -->.</ref>. The earliest identified terminology for this concept was in 1861 by {{w|Henry John Stephen Smith|H. J. S. Smith}}<ref>H. J. S. Smith is the creator of the {{w|Smith normal form}} used in [[Defactoring algorithms #Precedent: Smith defactoring|Gene Ward Smith's saturation algorithm]].</ref> who called saturated matrices "prime matrices"<ref>Also from ''On Systems of Linear Indeterminate Equations and Congruences'', linked above. Neither ''prime matrix'' nor ''greatest divisor'' seems to have caught on in the mathematical community.</ref>.
+
+The term ''torsion'' has been used since at least as early as 1932<ref>[https://scholar.google.com/scholar?q=%22torsion+group%22&hl=en&as_sdt=0%2C5&as_ylo=1900&as_yhi=1940 Google Scholar: Torsion group]</ref><ref>[https://math.stackexchange.com/questions/300586/where-does-the-word-torsion-in-algebra-come-from Stack Exchange | ''Where does the word "torsion" in algebra come from?'']</ref> and came to RTT from the mathematical field of group theory. Historically, a group-theory formalism was used to analyze comma bases with torsion, where the smallest comma displaying torsion was not made to vanish although a power of that comma was, which is musically impossible; using a linear algebra formalism as is preferred now, no such impossibility is suggested. The term ''contorsion'' was invented for RTT in 2002 by [[Paul Erlich]]<ref>[https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_2033.html#2456 Yahoo! Tuning Group | ''My top 5--for Paul'']</ref>, as a play on the word "co-torsion", being dual to the situation with "torsion" above.
+
+In the case of temperaments, [[Dave Keenan]] and [[Douglas Blumeyer]] have proposed<ref>See [[Defactoring terminology proposal]] for details.</ref> and used '''defactoring''' as a replacement for ''saturation'' and '''enfactoring''' as a replacement for both ''torsion'' and ''contorsion''. So, a mapping or comma basis of a temperament is either defactored (saturated) or enfactored (unsaturated, having torsion/contorsion).
+
+== See also ==
+* [http://www.tonalsoft.com/enc/t/torsion.aspx Tonalsoft's page on torsion]
+* [http://www.tonalsoft.com/enc/c/contortion.aspx Tonalsoft's page on contorsion]
+
+== References and footnotes ==
+<references />

@@ -1,0 +1,610 @@
+{{breadcrumb}}{{texops}}{{texmap}}{{LaTeX zigzag}}
+This is article 6 of 9 in [[Dave Keenan]] & [[Douglas Blumeyer]]'s guide to RTT, or "[[D&D's guide]]" for short. To get the most out of this article, we suggest that you have read the previous article in this series, on {{subpage|tuning fundamentals|uprev}}. In this article, we will show how to compute optimized tunings of [[regular temperament]]s according to the tuning schemes discussed there.
+
+However, if you just want to find an optimal tuning and get off to making music, you don't really need to go through this article. Our [[RTT library in Wolfram Language]] is ready to go, and if you already understand the fundamentals of tuning, then you should have a firm enough grasp on the concepts to make great use of that tool now. That said, if you think like an engineer and want to understand how that library works under the hood, then the information here will be of great interest to you. It may also give helpful insight if you decide to pursue understanding intermediate and advanced tuning concepts, such as are discussed in the {{subpage|all-interval tuning schemes|uprev}}, {{subpage|alternative complexities|uprev}}, and {{subpage|tuning in nonstandard domains|uprev}} articles later in this series.
+
+= Visualizing the problem =
+We can visualize tuning optimization problems on a ''tuning damage graph'', where we have all of the target-intervals' [[damage]]s graphed in one place, as a function of the choice of tuning (i.e. exact generator size(s))&mdash;the colored lines. We also include graphs of some key power means of those damages (the <math>1</math>-mean, <math>2</math>-mean, and <math>∞</math>-mean)&mdash;the dashed black lines. 
+
+[[File:2D tuning damage graph - without labels.png|frameless|900x900px]] 
+
+We looked at a graph like this in the tuning fundamentals article. But this time around, there's a key difference: our graph here hasn't come to us pre-labeled with each of those <math>p</math>-means' points of minimum value (the [[miniaverage]], [[miniRMS]], and {{subpage|tuning fundamentals|uprev|s=Common interpretations|text=minimax}}, respectively). Nope. That's our problem! We're here specifically to find (at least one of) those points. Each of those points represents a tuning that we might want to use. 
+
+But&mdash;you may protest&mdash;that's freaking easy! They're obviously right here:
+
+[[File:2D tuning damage graph - w sharpie - updated.png|frameless|900x900px]]
+
+Well, touché. And if that's good enough for you, then you're done already. Write that generator size down and go off and tune up your instruments. Or, if you want higher precision, just zoom the graph in some more, then read the minimum value off again.
+
+But what if we told you we were working with a temperament with ''any number of generators greater than one''? We challenge you to read your values straight off of a 3D graph like this:
+
+[[File:All graphs and means.png|frameless|900x900px]]
+
+The tuning damage graph for a rank-2 temperament needs to be 3D&mdash;one dimension for each of the generators, and then one more for the damage values. Now, it's still maybe ''possible'' to pinpoint your optimum generator tunings using your naked eye and graphs like these, but one can certainly appreciate that the approach is getting somewhat unwieldy. And good luck finding rank-3 generators on a 4D graph!
+
+The main point here is that while tuning damage graphs are an excellent tool for grounding ourselves and developing an intuitive, geometric sense for the optimization problems we're solving here, reading directly off of them is not going to generally be the most practical way to get final answers. To find those, we're going to want to pull out some linear algebra. 
+
+= Basic algebraic setup =
+Algebraically, we can express our tuning optimization problem like so:
+
+
+<math>
+𝒈M\mathrm{T}W \approx 𝒋\mathrm{T}W
+</math>
+
+
+At first glance, this likely looks like a hunk of gibberish. Well, like lots of mathematical expressions, it may look intimidating at first, but if we take a high level summary, and then go over it carefully one piece at a time, it turns out to actually not be so bad. 
+
+Basically what we have here is just a bunch of matrices being multiplied together. The left side is the tempered side. The right side is the just side. And so with the <math>\approx</math> in the middle we're saying how we want the tempered side to be as close as possible to just.
+
+We've already met all these matrices back in the tuning fundamentals article: <math>𝒈</math> is the ''generator tuning map'', <math>M</math> is the ''(temperament) mapping'', <math>𝒋</math> is the ''just tuning map'', <math>\mathrm{T}</math> is the ''target-interval list'', and <math>W</math> is the ''target-interval weights''.
+
+We might think a first step should be to cancel out the redundant stuff on either side:
+
+
+<math>
+𝒈M\cancel{\mathrm{T}W} \approx 𝒋\cancel{\mathrm{T}W} = 𝒈M \approx 𝒋
+</math>
+
+
+But it's not quite that simple. The <math>\mathrm{T}W</math> part is important to keep around. We can think of them as calibrating us to the particular desired target-intervals and weights. Another way to think about this is: it's not allowed to cancel out things on opposite sides of an ''approximation''; that can only be done to opposite sides of an ''equality'' expression.
+
+So this little thought experiment has revealed a critical flaw in thinking about this problem as an approximation. It was helpful to get our foot in the door, but too simple to proceed with. We'll still be able to use this approximation form as a starting point for illustrating some points throughout this article, but not this section. For now, let's rewrite things, this time in terms of damage:
+
+
+<math>
+\textbf{d} = \abs{\,𝒈M\mathrm{T}W - 𝒋\mathrm{T}W\,}
+</math>
+
+
+And so now instead of saying that we're shooting for as close of an approximation as possible, we're just saying things a slightly different way: we're trying to make the (absolute) ''difference'' between the two things ''as close as possible to zero''.
+
+And with this way of writing the expression, it's clear that we can't simply cancel out <math>\mathrm{T}W</math>. What we can do, at least, is factor it out, which eliminates the redundancy:
+
+
+<math>
+\textbf{d} = \abs{\,(𝒈M - 𝒋)\,\mathrm{T}W\,}
+</math>
+
+
+And so our goal now is to find the <math>𝒈</math> which minimizes some power mean of this damage, <math>\llangle\textbf{d}\rrangle_p</math>. Our only unknown in this problem is <math>𝒈</math>; it's the one thing that we're here to figure out. We want to find whichever <math>𝒈</math> makes the temperament as close to just as possible, per the choices we've made of temperament, optimization power, [[damage weight slope]], and target-interval set, and this <math>𝒈</math> will correspond with the minimum point we might be able to visually pick out on a graph of the problem.
+
+= Power sums =
+In the fundamentals article, we presented the problem of tuning optimization as one of minimizing power ''means''. And this is still the simplest way to approach the situation for the average musician. But in practice, engineers will want to implement tuning optimization by writing code that instead minimizes '''power sums'''<ref group="note">The terminology "power sum" is not nearly as commonplace as "power norm", which we will be discussing in a later article. But we find it an intelligent and natural choice, owing to its clarity and its consistency with "power norm" as well as "power mean".</ref> This is because the use of a power sum in place of a power mean does not affect the outcome, but is simpler computationally. 
+
+In short: <math>p</math>-means are better for labeling and graphing tuning damage for direct human consumption, but <math>p</math>-sums are better for computers to compute results by (except in the <math>p=∞</math> case). You will see <math>p</math>-sums in computer code and in the computation examples worked through on these pages, but probably rarely see them otherwise. 
+
+== Steps ==
+Power sums are very similar to power means, and strictly simpler. Where power means have four total steps, power sums have only two steps, and those are the same first two steps as the power mean:
+# Raise each item to the ''p''<sup>th</sup> power.
+# Sum the items.
+
+== Formula ==
+Here is the formula for the ''p''-sum:<ref group="note">This power sum notation <math>\llzigzag · \,\rrzigzag_p</math> is not a conventional notation, but like the power mean notation <math>{\llangle · \rrangle}_p</math> we gave in the fundamentals article, this is another one of our (Dave’s and Douglas's) variations on the double straight lines used to represent power norms. These zigzag lines are meant to evoke the shape of the big Greek letter sigma used to represent summation. They don't exist in LaTeX or Unicode. We made them by using the HTML CSS <code>transform</code> attribute to narrow, lower and reflect the character {{nowrap|"&#xA5E8;" (U+A5E8 : VAI SYLLABLE PE)}}. We call the result "double zigzag brackets" and they are available on the wiki as the templates <code>{{<nowiki />llzigzag}}</code> and <code>{{<nowiki />rrzigzag}}</code>, or <code>{{<nowiki />llzz}}</code> and <code>{{<nowiki />rrzz}}</code>. In a plain Unicode environment the "double wiggly fence" characters "&#x29DB;" and "&#x29DA;" (U+29DB, U+29DA) are suitable substitutes, typed as <code>⎄⎄{{((}}</code> and <code>⎄⎄{{))}}</code> using {{subpage|conventions for names, variables, units, and notations|uprev|s=WinCompose}}, and in a plain ASCII environment, <code>{{((}}</code> and <code>{{))}}</code>.<br />In case you're tempted to write it as <math>S_p(\textbf{d})</math>, we note that we prefer to save our single letters for variables or constants when we can. (<math>S_\text{p}</math> could in future be some kind of "pre-scaler" or "prime" related matrix). We recognize that, in cases where the data is non-negative, such as our damage lists, power sums can already be written in terms of power norms, as <math>\norm{·}_{p}^{p}</math>, although it's kind of annoying that a simpler thing has a more complicated symbol, relying on the <math>p</math><sup>th</sup> power to undo the effect of the <math>p</math><sup>th</sup> root within the norm.</ref>
+
+<math>
+ \llzigzag \textbf{d} \rrzigzag _p = \sum\limits_{n=1}^k \mathrm{d}_n^p
+</math>
+
+We can expand this out like so:
+
+<math>
+ \llzigzag \textbf{d} \rrzigzag _p = \mathrm{d}_1^p + \mathrm{d}_2^p + ... + \mathrm{d}_k^p
+</math>
+
+== Examples ==
+Consider the damage list <math>\textbf{d} = \left[ \begin{array}{r} 3.380 & 0.000 & 4.567 \end{array} \right]</math>. 
+* Its <math>1</math>-sum is <math>3.380^1 + 0.000^1 + 4.567^1 = 3.380 + 4.567 = 7.947</math>. 
+* Its <math>2</math>-sum is <math>3.380^2 + 0.000^2 + 4.567^2 = 11.424 + 20.857 = 32.281</math>.
+* Its <math>∞</math>-sum would be <math>3.380^∞ + 0.000^∞ + 4.567^∞ = ∞ + ∞ = ∞</math> which is never going to change, no matter what <math>𝒈</math> is, so we stay with the <math>∞</math>-mean, which is already simple enough, being the maximum value.
+
+== Substituting power sums for power means ==
+In order to understand how we can substitute a <math>p</math>-sum for a <math>p</math>-mean, we must begin by making an important observation: the extra two steps at the end of the <math>p</math>-mean&mdash;the division step and the root step&mdash;while they do change the value of the result, of course, critically, neither of these two steps change how results for ''different tunings compare against each other''. That is to say, if one result was bigger than another result before dividing by the item count and taking the matching root, it will ''still'' be bigger after doing so. What this means is that anywhere we might compare the overall damages of various tunings of a temperament using power sums, we ''could'' also unambiguously compare them using power means. 
+
+And when computing optimum tunings, we (or our computers anyway) do zillions of little calculations, and every little bit of compute resources we can save is welcome. And so if neither dividing by the count of items nor taking the matching root at the end have any effect on how tunings sort relative to each other, then that means that power means are unnecessarily complex when it comes to doing the minimizing calculations. We may as well only do the absolute fewest steps necessary to achieve the comparisons we need, and those two steps are the raising to powers and the summing.
+
+== Why we still need power means ==
+Okay, well then why wouldn't we just always use power ''sums''? Why did we bother introducing power ''means'' in the fundamentals article? Well, in the case of <math>p = ∞</math>, we have no choice, we need to stay with the <math>∞</math>-mean, but in the other cases the short answer is: the values of power means are more reasonably-sized.
+
+Think of it this way: the two extra steps of a power mean are designed so that its output values are of comparable size to its input values. Specifically:
+* The dividing by the count cancels out the size-increasing effect of summing the items.
+* The taking of the root cancels out the size-increasing effect of the taking of the power. 
+
+In our case, the input values are damages to our target-intervals. So already, the fact that the power mean outputs values of similar size is a nice feature to have, as it gives us an immediate sense of how much damage we can expect to those individual intervals that we know and care about.
+
+= General method =
+We call this method "the general method" because there are other methods that are specific to a single minimization power <math>1</math>, <math>2</math> or <math>∞</math>. We describe one for <math>p=2</math> later in this article. Others can be found in the advanced article [[Generator embedding optimization]]. But this method works for any power, because it consists in asking a computer to minimize our damage function using black-box algorithms designed to minimize any kind of function as quickly as possible. These are still being honed by mathematicians and computer scientists, who have been locked in a room since the 1940s, with [[Wikipedia:Jolt Cola|Jolt Cola]] and pizzas slid under the door.
+
+We can understand in general terms how these algorithms work, if we imagine trying to find by hand, the miniRMS generator as shown in the graph that began this article. If you set up a spreadsheet, or use a math package like Wolfram Language, to take a generator value and compute the RMS damage to the given set of target intervals, for the given temperament mapping, then you could start with say 600 ¢ as a guess for the generator size and see what damage you get. Then change that to 500 ¢ and if that made the damage decrease, try 400 ¢. Otherwise try 700 ¢. Then when you've found the best multiple of 100 ¢, you can start changing the tens digit, then the single cents digit and eventually you could get down to the third decimal place of cents, and if you've always "gone downhill", i.e. in the direction that reduces the damage, then you will be close enough to the minimum for all practical purposes. These algorithms not only save you from such tedium, but can do the same thing with multiple generators simultaneously, and their cleverness lies in, at each step, figuring out how far to jump, and in what direction, so as not to waste too much time by overshooting or falling a long way short of the minimum.
+
+You may be wondering: what does the computer code that handles optimization using a general method look like? Here's some pseudocode, inspired by how we do it in our [[RTT library in Wolfram Language]], but equally applicable to using the Solver in Excel:
+
+<pre>Minimize(Sum(((g.M-j).T.W)^p), byChanging: g);</pre>
+
+The dots represent matrix multiplication in Wolfram Language. In Excel, you need to use the array function <code>MMult()</code>.
+
+This <code>Minimize</code> function accepts two inputs. 
+# The first input is a mathematical function, in particular the function which you want to find the minimum possible output value of. 
+# The second input is itself a list of inputs&mdash;inputs for your mathematical function you're trying to minimize. 
+
+So in our context, the second input is <code>g</code>, our generator tuning map. And so ''that'''s what <code>Minimize</code> treats as the variables to fiddle with to minimize the value of the first input, which is the <code>Sum</code> of the <code>p</code>-th powers of the entries in the target-interval damage list, which is computed by <code>(g.M-j).T.W</code> as the matrix product of the retuning <code>(g.M-j)</code>, the target-intervals <code>T</code>, and the weights <code>W</code>, where the retuning <code>(g.M-j)</code> is the row-vector difference between the temperament tuning <code>g.M</code> and the just tuning <code>j</code>, and the temperament tuning <code>g.M</code> is the matrix product of the generators <code>g</code> and the mapping <code>M</code>.  
+
+The above pseudocode shows what we use when our sum power <math>p</math> is an even number, because when <math>p</math> is even we don't need to take the absolute value, and this gives the minimizer a smooth (continuous and differentiable) function to work with, which allows for the use of "gradient descent" methods which are usually faster than other general methods. This is true for the two most common cases in RTT, miniRMS (<math>p=2</math>) and nested minimax (<math>p→∞</math>) which is described in more detail in the next section.
+
+General minimizers may also allow us, or even require us, to choose the (sub)method they will use. Excel works best with the method "GRG Nonlinear" for <math>p</math> even. "GRG" stands for "Generalized Reduced Gradient". For the other cases, Excel's "Evolutionary" method is best. In pseudocode, for <math>p</math> even:
+
+<pre>Minimize(Sum(((g.M-j).T.W)^p), byChanging: g, usingMethod: "GRG Nonlinear");</pre>
+
+For non-even <math>p</math> values, including the nested miniaverage (<math>p→1</math>) (explained in the next section) and the ordinary (possibly non-unique) miniaverage (<math>p=1</math>), we need to take the absolute value as follows:
+
+<pre>Minimize(Sum(Abs((g.M-j).T.W)^p), byChanging: g, usingMethod: "Evolutionary");</pre>
+
+And it is sometimes useful to compute the ordinary (possibly non-unique) minimax (<math>p=∞</math>) using:
+
+<pre>Minimize(Max(Abs(g.M-j).T.W)), byChanging: g, usingMethod: "Evolutionary");</pre>
+
+And that's all there is to it, really. 
+
+== Tie breaking: power limit method ==
+[[File:Absolute errors demonstrating convergence on a true optimum minimax generator.png|right|frameless|600x600px]]
+
+With the optimisation powers <math>1</math> and <math>∞</math> it is possible to have a whole ''range'' of generator sizes that are tied for the same minimum damage&mdash;a horizontal line or plane at the bottom of a flat-faced polyhedral bowl. A general-purpose optimizer will typically assume that you will be happy to have ''any'' generator tuning map that gives the minimum damage. And it won't even know to tell you that others exist. But we can do better than that.
+
+Our goal, in tie-breaking, is to find the generator tuning map that doesn't just minimize the overall damage, but also minimizes the damage to the largest subset of the target-intervals whose damage can be further minimized, and if that too turns out to give a range, the next-largest subset, and so on, until a single point is reached. We call this the '''nested optimum'''.
+
+The power-limit method is a way of using the general method to automatically find the nested optimum for minimax or miniaverage without having to think about subsets.
+
+This method is an application of the general method. We repeatedly run a general minimization, but each time, we bump the optimization power slightly closer to our desired limit, whether that limit is <math>1</math> or <math>∞</math>. We can always start in the middle, at <math>p = 2</math>, and in the case of the limit being <math>∞</math>, proceed through powers <math>4, 8, 16, 32</math> etc., i.e. the powers used for our <math>p</math>-sums are successive powers of <math>2</math>. Or when the limit is <math>1</math>, proceed through powers <math>1\frac{1}{2}, 1\frac{1}{4}, 1\frac{1}{8}, 1\frac1{16}, 1\frac1{32}</math> etc., i.e. the powers used for our <math>p</math>-sums are one plus successive negative powers of <math>2</math>. And then we just keep going until we find no further significant change in the generators. Or, if at some point we find a change that's much greater than previous changes, we know we've run into floating-point arithmetic limitations and should either back off the power and be happy with whatever we've got, or, if our software allows it, increase the number of digits or bits of precision. This is possible in Wolfram Language, but not in Excel where we typically can't go much past <math>p = 32</math> or <math>p = 1\frac1{32}</math>.
+
+Here's a handy way to visualize this process. Imagine the selection of an optimum tuning like a marble that always rolls to the lowest point of a surface. The surface is the graph of the damage <math>p</math>-sum, and wherever the marble comes to rest is the mini-<math>p</math>-mean. Well, if there is a range of ties, as there can be with <math>p=∞</math> (minimax), the marble has no specific resting position. We could instead imagine starting with <math>p=2</math>, where the marble always has a single final resting position, and cranking a knob that brings <math>p</math> closer and closer to <math>∞</math>, and stretching the surface out, gradually approaching the state it will have at <math>p=∞</math> where it has a flat section at its lowest height. As long as you stop cranking the knob when the marble hasn't moved noticeably in a long time, you can record the generator values corresponding to its position. That'll be close enough for music-making. The diagram on the right shows the results of cranking such a knob.
+
+This method works because&mdash;so long as the power is finite&mdash;all damages remain capable of influencing the sum, even though the influence of most of them (other than the maxima) becomes smaller and smaller as the power is increased.
+
+We describe these nested minima not as <math>p=∞</math> or <math>p=1</math> but as "p approaches infinity" or "p approaches one", written as <math>p→∞</math> or <math>p→1</math>.
+
+(Note: the example given in the diagram here is a bit silly. The easiest way to break the tie in this case would be to remove the offending target-interval from the set, since with constant damage, it will not aid in preferring one tuning to another. However, more natural examples of tied tunings&mdash;that cannot be resolved so easily&mdash;require 3D tuning damage space, and we sought to demonstrate the basic principle of the power limit method as simply as possible, so we stuck with 2D here.)
+
+== With held-intervals ==
+Most mathematical software offering something like Minimize() will also have the ability to specify constraints, such as [[held-interval]]s. We simply include the equivalent of <math>𝒈M\mathrm{H} = 𝒋\mathrm{H}</math> as a constraint, where <math>\mathrm{H}</math> is our '''[[held-interval basis]]''', a set of vectors which represent the infinite set of intervals that will be held unchanged by this tuning of this temperament. In pseudocode, for <math>p</math> even:
+
+<pre>Minimize(Sum(((g.M-j).T.W)^p), byChanging: g, withConstraints: {g.M.H == j.H});</pre>
+
+= Only held-intervals method =
+When we find ourselves with a target-interval count <math>k</math> so small that <math>k = r</math>, that is, the exact same number of target-intervals as we have generators, then the general method described above will still work, but the "only held-intervals" method described here will be the most straightforward way to a solution.
+
+Hand-picking the maximum <math>r</math> count of held-intervals is unlikely to give an optimized tuning, {{subpage|tuning fundamentals|uprev|s=The importance of exclusivity 2|text=as we observed in the tuning fundamentals article}}. When seeking a tuning optimized to a temperament, it's better to keep the count of held-intervals to a minimum, so as to not excessively constrain the possibilities for optimization. Once <math>h = r</math>, there's no room left for optimization, because the tuning is entirely determined by these held-intervals. The method discussed here is how we find such a tuning.<ref group="note">It ''can'' be used directly, however unlikely it is to lead to an optimal tuning when the held-intervals are hand-picked. And it is also used as a substep of the [[Generator_embedding_optimization#Zero-damage_method|zero-damage method]] for finding miniaverage tunings, which works by gathering a number of candidate tunings each determined by a held-interval basis <math>\mathrm{H}</math> sampled from the target-interval set.</ref>
+
+For an example of another type of situation&mdash;one outside the topic of optimization&mdash;where we seek tunings that are completely specified by held-intervals, we can look at the computation of the [[diamond tradeoff]] tuning ''range'' of a temperament. Here, a series of held-interval bases with <math>h = r</math> is the way we find each extreme of a temperament's reasonable tuning. This again just speaks to the nature of tunings determined entirely by held-intervals: they tend to be extreme, and aren't the best approach for optimization.
+
+== Solving for the generators ==
+Suppose we have a matrix whose columns are prime-count vectors representing the held-intervals of a tuning. Let's call this our '''held-interval basis''', and notate it as <math>\mathrm{H}</math>. By the definition of "unchanged', the following is true for some generator tuning map <math>𝒈</math> and mapping <math>M</math>:
+
+
+<math>
+𝒈M\mathrm{H} = 𝒋\mathrm{H}
+</math>
+
+
+In other words, the tempered tunings of these intervals are each equal to their just tunings. But which <math>𝒈</math> makes this so? To find out, we can right-multiply both sides by the inverse of <math>M\mathrm{H}</math>, in order to cancel out the <math>M\mathrm{H}</math> on the left-hand side, and thereby isolate <math>𝒈</math>:
+
+
+<math>
+𝒈M\mathrm{H}(M\mathrm{H})^{-1} = 𝒋\mathrm{H}(M\mathrm{H})^{-1} \\
+𝒈\cancel{M\mathrm{H}}\cancel{(M\mathrm{H})^{-1}} = 𝒋\mathrm{H}(M\mathrm{H})^{-1} \\
+𝒈 = 𝒋\mathrm{H}(M\mathrm{H})^{-1}
+</math>
+
+
+And so when we know the mapping <math>M</math> and the held-interval basis <math>H</math>, we can simply plug them into this formula to find <math>𝒈</math>.<ref group="note">For a more advanced take on this idea using projection matrices, see [[Projection matrix#The_generator_embedding_2|Projection#Obtaining objects from the projection#The generator embedding]].</ref> In pseudocode:
+
+<pre>g = j.H.Inverse(M.H);</pre>
+
+In Excel, you'd use the array function <code>MInverse()</code> (in addition to <code>MMult()</code>).
+
+== Edge cases ==
+This method works as long as you do not include among your held-intervals any pair of intervals that are separated from each other by a comma of the temperament. In that case, <math>M\mathrm{H}</math> will come out ''singular'', which means its determinant is 0, and therefore that it has no inverse, which is the math's way of telling us that there's no way to avoid changing one of the intervals when they must both map to the same thing. 
+
+For example, we couldn't set both <math>\frac{3}{2}</math> and <math>\frac{40}{27}</math> to be held-intervals of meantone, because they're off from each other by the [[meantone comma]] <math>\frac{81}{80}</math>. 
+
+= Pseudoinverse method for <math>𝑝=2</math> =
+One benefit of choosing a miniRMS tuning scheme is that they come with a special easy trick for computing them. This doesn't necessarily mean that the miniRMS tunings themselves are better than miniaverage or minimax tunings.
+
+We're calling this the "pseudoinverse method", because of how the mathematical concept of the pseudoinverse figures prominently in it. (More detail on what the deal is with the pseudoinverse later.)
+
+This method is not only used when the optimization power is <math>2</math>. A variation on it can also be used for minimax [[all-interval tuning scheme]]s when the power norm used for computing the retuning magnitude has power <math>2</math>. (We'll discuss all-interval tuning schemes in the next article.)
+
+Although we won't be going into it in this article, the reason this method works is because, when the power is 2, it is possible to use vector calculus to find an algebraic expression for the lowest point in the RMS damage surface, which has the form of a smooth bowl. On a smooth bowl, the only point that has zero slope is the lowest point. So we differentiate the 2-sum of the damage with respect to the generators, to get an expression for the slope (or gradient), then we set this expression equal to zero and solve for the generators. The result is given below.
+
+Even if you don't like the sound of miniRMS tunings, this property of having a direct algebraic solution makes it very useful as an initial guess for the generators in the general method. 
+
+==Formulæ==
+===Method formula===
+This method uses a linear algebra trick called the [[Wikipedia:Moore–Penrose_inverse|Moore-Penrose inverse]], which has a startlingly simple formula; with experience, you could probably work this method out by hand on just a few lines of paper. To solve for <math>𝒈</math> here, all we have to do is plug things into this expression and be done with it:
+
+
+<math>
+𝒈 = 𝒋\mathrm{T}W(M\mathrm{T}W)^{+}
+</math>
+
+
+The superscript plus symbol is the part where we take the pseudoinverse. (The Moore-Penrose inverse is the de facto standard definition of a pseudoinverse, and so its name is often shortened to simply "pseudoinverse". We will be following that moving forward.)
+
+So at this point, if you already know how to find a pseudoinverse, you should be ready to go. The pseudocode is:
+
+<pre>g = j.T.W.PseudoInverse(M.T.W);</pre>
+
+=== Pseudoinverse formula ===
+If you don't already know how to find a pseudoinverse, though, you will want this formula too, the one for the pseudoinverse itself:
+
+
+<math>
+A^{+} = A^\mathsf{T}(AA^\mathsf{T})^{-1}
+</math>
+
+
+The pseudoinverse of a matrix, then, is equal to itself times its transpose, inverted, then finally left-multiplied by its transpose again.<ref group="note">Strictly speaking, this definition of pseudoinverse only applies to matrices that are full-rank and not higher than they are wide (have linearly independent rows), but in RTT we always reduce mapping matrices to this form.</ref>
+
+=== Combined formula ===
+If we plug <math>M\mathrm{T}W</math> in for <math>A</math> in the pseudoinverse formula, things look like this:
+
+
+<math>
+(M\mathrm{T}W)^{+} = (M\mathrm{T}W)^\mathsf{T}(M\mathrm{T}W(M\mathrm{T}W)^\mathsf{T})^{-1}
+</math>
+
+
+And if we plug ''that'' back in to our original formula, then it looks like this:
+
+
+<math>
+𝒈 = 𝒋\mathrm{T}W(M\mathrm{T}W)^\mathsf{T}(M\mathrm{T}W(M\mathrm{T}W)^\mathsf{T})^{-1}
+</math>
+
+
+So from here, it's just a matter of busywork to calculate the solution.
+
+Excel needs this form, as it doesn't have pseudoinverse() built-in. The pseudocode is:
+
+<pre>TW = T.W;
+MTW = M.TW;
+g = j.TW.Transpose(MTW).Inverse(MTW.Transpose(MTW));</pre>
+
+And, as before, the function that is called <code>Inverse[]</code> in Wolfram Language, is called <code>MInverse()</code> in Excel, and the dot for matrix multiplication in Wolfram Language is the <code>MMult()</code> function in Excel.
+
+=== Deeper dives ===
+For deeper dives into how and why the pseudoinverse provides the solution to miniRMS and related tuning optimization schemes, please see [[Generator embedding optimization#Pseudoinverse: the "how"]] and [[Generator embedding optimization#Pseudoinverse: the "why"]].
+
+== Example ==
+Time for some busywork! Let's work through one example, just as a proof of concept. 
+
+Suppose we're finding a miniRMS tuning of [[porcupine]] temperament, with the TILT as our target-interval set scheme, and with complexity-weight damage. 
+
+Since we're using complexity-weight damage, let's be more specific and use <math>C</math> rather than the generic <math>W</math>. So our formula becomes:
+
+
+<math>
+𝒈 = 𝒋\mathrm{T}C(M\mathrm{T}C)^\mathsf{T}(M\mathrm{T}C(M\mathrm{T}C)^\mathsf{T})^{-1}
+</math>
+
+
+=== The mapped side ===
+First let's just compute the <math>M\mathrm{T}C</math> part:
+
+
+<math>
+\scriptsize
+\begin{array} {ccc}
+M \\
+\left[ \begin{matrix}
+1 & 2 & 3 \\
+0 & {-3} & {-5} \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {ccc}
+\mathrm{T} \\
+\left[ \begin{array} {c|c|c|c|c|c|c|c}
+1 & 0 & {-1} & 2 & {-1} & 0 & {-2} & 1 \\
+0 & 1 & 1 & {-1} & 0 & {-1} & 0 & 1 \\
+0 & 0 & 0 & 0 & 1 & 1 & 1 & {-1} \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {ccc}
+C \\
+\left[ \begin{matrix}
+\log_2{2} & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & \log_2{3} & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & \log_2{6} & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & \log_2{12} & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & \log_2{10} & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & \log_2{15} & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & \log_2{20} & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & \log_2{30} \\
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+First we can multiply <math>M</math> and <math>\mathrm{T}</math>. This will give us a matrix of [[generator-count vector]]s, or in other words, vectors representing versions of each of these target-intervals as they exist mapped by porcupine.
+
+
+<math>
+\scriptsize	
+\begin{array} {ccc}
+M\mathrm{T} \\
+\left[ \begin{array} {c|c|c|c|c|c|c|c}
+1 & 2 & 1 & 0 & 2 & 1 & 1 & 0 \\
+0 & {-3} & {-3} & 3 & {-5} & {-2} & {-5} & 2 \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {ccc}
+C \\
+\left[ \begin{matrix}
+1.000 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 1.585 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 2.585 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 3.585 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 3.322 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 3.907 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 4.322 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 4.907 \\
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+We've also resolved the values in <math>C</math> to decimals, so as to better see what happens in the next step, when we weight these mapped intervals. Although we show most results here rounded to 3 decimal places, we retain the full machine precision of the Wolfram results, to pass on to the next calculation.
+
+
+<math>
+\scriptsize
+\begin{array} {ccc}
+M\mathrm{T}C \\
+\left[ \begin{array} {c|c|c|c|c|c|c|c}
+1.000 & 3.170 & 2.585 & 0.000 & 6.644 & 3.907 & 4.322 & 0.000 \\
+0.000 & {-4.755} & {-7.755} & 10.755 & {-16.610} & {-7.814} & {-21.610} & 9.814 \\
+\end{array} \right]
+\end{array}
+
+</math>
+
+
+Our formula also calls for <math>\mathrm{T}C</math>, so here's what that looks like:
+
+
+<math>
+\scriptsize
+\begin{array} {ccc}
+\mathrm{T} \\
+\left[ \begin{array} {c|c|c|c|c|c|c|c}
+1 & 0 & {-1} & 2 & {-1} & 0 & {-2} & 1 \\
+0 & 1 & 1 & {-1} & 0 & {-1} & 0 & 1 \\
+0 & 0 & 0 & 0 & 1 & 1 & 1 & {-1} \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {ccc}
+C \\
+\left[ \begin{matrix}
+\log_2{2} & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & \log_2{3} & 0 & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & \log_2{6} & 0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & \log_2{12} & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & \log_2{10} & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & \log_2{15} & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & \log_2{20} & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & \log_2{30} \\
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+And multiplied out:
+
+
+<math>
+\scriptsize
+\begin{array} {ccc}
+\mathrm{T}C \\
+\left[ \begin{array} {c|c|c|c|c|c|c|c}
+1.000 & 0.000 & {-2.585} & 7.170 & {-3.322} & 0.000 & {-8.644} & 4.907 \\
+0.000 & 1.585 & 2.585 & {-3.585} & 0.000 & {-3.907} & 0.000 & 4.907 \\
+0.000 & 0.000 & 0.000 & 0.000 & 3.322 & 3.907 & 4.322 & {-4.907} \\
+\end{array} \right]
+\end{array}
+</math>
+
+=== Plugging back in ===
+Now that we have <math>M\mathrm{T}C</math> and <math>\mathrm{T}C</math>, we can plug them into our formula for <math>G</math>:
+
+
+<math>
+\scriptsize
+𝒈 = 
+\begin{array} {ccc}
+𝒋 \\
+\left[ \begin{matrix}
+1200.000 & 1901.955 & 2786.314 \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {ccc}
+\mathrm{T}C \\
+\left[ \begin{array} {c|c|c|c|c|c|c|c}
+1.000 & 0.000 & {-2.585} & 7.170 & {-3.322} & 0.000 & {-8.644} & 4.907 \\
+0.000 & 1.585 & 2.585 & {-3.585} & 0.000 & {-3.907} & 0.000 & 4.907 \\
+0.000 & 0.000 & 0.000 & 0.000 & 3.322 & 3.907 & 4.322 & {-4.907} \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {ccc}
+(M\mathrm{T}C)^\mathsf{T} \\
+\left[ \begin{matrix}
+1.000 & 0.000 \\ \hline
+3.170 & {-4.755} \\ \hline
+2.585 & {-7.755} \\  \hline
+0.000 & 10.755 \\ \hline
+6.644 & {-16.610} \\  \hline
+3.907 & {-7.814} \\ \hline
+4.322 & {-21.610} \\ \hline
+0.000 & 9.814 \\ 
+\end{matrix} \right]
+\end{array}
+
+\normalsize ...
+
+\\[20pt]
+
+\quad\quad\quad ...
+
+\left( 
+\scriptsize	
+
+\begin{array} {ccc}
+M\mathrm{T}C \\
+\left[ \begin{array} {c|c|c|c|c|c|c|c}
+1.000 & 3.170 & 2.585 & 0.000 & 6.644 & 3.907 & 4.322 & 0.000 \\
+0.000 & {-4.755} & {-7.755} & 10.755 & {-16.610} & {-7.814} & {-21.610} & 9.814 \\
+\end{array} \right]
+\end{array}
+\begin{array} {ccc}
+(M\mathrm{T}C)^\mathsf{T} \\
+\left[ \begin{matrix}
+1.000 & 0.000 \\ \hline
+3.170 & {-4.755} \\ \hline
+2.585 & {-7.755} \\  \hline
+0.000 & 10.755 \\ \hline
+6.644 & {-16.610} \\ \hline
+3.907 & {-7.814} \\  \hline
+4.322 & {-21.610} \\ \hline
+0.000 & 9.814 \\ 
+\end{matrix} \right]
+\end{array}
+\right)^{\Large -1}
+</math>
+
+
+So <math>M\mathrm{T}C</math> here is a <math>(2, 8)</math>-shaped matrix, and in general it is a <math>(r, k)</math>-shaped matrix: it has one row for each generator of the temperament, and one column for each target-interval. When we multiply it by its transpose, such as what happens inside the parenthetical part of the pseudoinverse formula, we get <math>M\mathrm{T}C(M\mathrm{T}C))^\mathsf{T}</math>, which is a <math>(r, r)</math>-shaped matrix:
+
+
+<math>
+\scriptsize
+𝒈 = 
+\begin{array} {ccc}
+𝒋 \\
+\left[ \begin{matrix}
+1200.000 & 1901.955 & 2786.314 \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {ccc}
+\mathrm{T}C \\
+\left[ \begin{array} {c|c|c|c|c|c|c|c}
+1.000 & 0.000 & {-2.585} & 7.170 & {-3.322} & 0.000 & {-8.644} & 4.907 \\
+0.000 & 1.585 & 2.585 & {-3.585} & 0.000 & {-3.907} & 0.000 & 4.907 \\
+0.000 & 0.000 & 0.000 & 0.000 & 3.322 & 3.907 & 4.322 & {-4.907} \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {ccc}
+\left(M\mathrm{T}C\right)^\mathsf{T} \\
+\left[ \begin{matrix}
+1.000 & 0.000 \\ \hline
+3.170 & {-4.755} \\ \hline
+2.585 & {-7.755} \\  \hline
+0.000 & 10.755 \\ \hline
+6.644 & {-16.610} \\  \hline
+3.907 & {-7.814} \\  \hline
+4.322 & {-21.610} \\ \hline
+0.000 & 9.814 \\
+\end{matrix} \right]
+\end{array}
+\left( \scriptsize
+
+\begin{array} {ccc}
+M\mathrm{T}C\left(M\mathrm{T}C\right)^\mathsf{T} \\
+\left[ \begin{matrix}
+95.814 & {-269.394} \\
+{-269.394} & 1098.637 \\
+\end{matrix} \right]
+\end{array}
+\right)^{\normalsize -1}
+</math>
+
+
+Let's go ahead and invert that part:
+
+
+<math>
+\scriptsize
+𝒈 = 
+\begin{array} {ccc}
+𝒋 \\
+\left[ \begin{matrix}
+1200.000 & 1901.955 & 2786.314 \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {ccc}
+\mathrm{T}C \\
+\left[ \begin{array} {c|c|c|c|c|c|c|c}
+1.000 & 0.000 & {-2.585} & 7.170 & {-3.322} & 0.000 & {-8.644} & 4.907 \\
+0.000 & 1.585 & 2.585 & {-3.585} & 0.000 & {-3.907} & 0.000 & 4.907 \\
+0.000 & 0.000 & 0.000 & 0.000 & 3.322 & 3.907 & 4.322 & {-4.907} \\
+\end{array} \right]
+\end{array}
+
+\begin{array} {ccc}
+(M\mathrm{T}C)^\mathsf{T} \\
+\left[ \begin{matrix}
+1.000 & 0.000 \\ \hline
+3.170 & {-4.755} \\ \hline
+2.585 & {-7.755} \\  \hline
+0.000 & 10.755 \\ \hline
+6.644 & {-16.610} \\  \hline
+3.907 & {-7.814} \\  \hline
+4.322 & {-21.610} \\ \hline
+0.000 & 9.814 \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {ccc}
+(M\mathrm{T}C(M\mathrm{T}C)^\mathsf{T})^{-1} \\
+\left[ \begin{matrix}
+0.0336 & 0.00824 \\
+0.00824 & 0.00293 \\
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+Then all that's left to do is multiply everything through. 
+
+
+<math>
+𝒈 = 
+\begin{array} {ccc}
+𝒋\mathrm{T}C\left(M\mathrm{T}C)^\mathsf{T}(M\mathrm{T}C(M\mathrm{T}C)^\mathsf{T}\right)^{-1} \\
+\left[ \begin{matrix}
+1200.159 & 162.664 \\
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+And so we've found what we were looking for, <math>𝒈 = 𝒋\mathrm{T}C(M\mathrm{T}C)^\mathsf{T}\left(M\mathrm{T}C(M\mathrm{T}C)^\mathsf{T}\right)^{-1}</math>. The TILT miniRMS-C tuning of porcupine is {{rbra|1200.159 162.664}}.
+
+= See also =
+Thus concludes our look into some of the simpler methods for computing RTT tuning schemes. Other articles in the intermediate section of our series, for scientists, engineers, and mathematicians are:
+* 5. {{subpage|Units analysis|prev}}: To look at temperament and tuning in a new way, think about the units of the values in frequently used matrices
+* 7. {{subpage|All-interval tuning schemes|prev}}: The variety of tuning scheme most commonly named and written about on this wiki
+
+If you are interested in computation methods which produce exact optimal tunings of [[regular temperament]]s in the form of [[generator embedding matrix|generator embedding]]s, or in other words, to find optimally-tuned generators as [[prime-count vector]]s with typically non-integer entries, see [[Generator embedding optimization]].
+
+= Footnotes and references =
+<references group="note" />
+
+[[Category:Dave Keenan & Douglas Blumeyer's guide to RTT]]
+[[Category:Tuning]]

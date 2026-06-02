@@ -1,0 +1,69 @@
+This is a library of functions for working with [[regular temperament theory]], implemented in Wolfram Language, which supplements [[Dave Keenan & Douglas Blumeyer's guide to RTT]]. It was developed by [[Dave Keenan]] and [[Douglas Blumeyer]] mostly between 2021 and 2022.
+
+The code is [http://github.com/cmloegcmluin/RTT maintained and shared on GitHub]. More details can be found on the README there.
+
+== Tuning ==
+<pre>
+optimizeGeneratorTuningMap[m, tuningSchemeSpec]
+optimizeTuningMap[m, tuningSchemeSpec]
+
+getGeneratorTuningMapMeanDamage[m, generatorTuningMap, tuningSchemeSpec]
+getTuningMapMeanDamage[m, tuningMap, tuningSchemeSpec]
+
+getGeneratorTuningMapDamages[m, generatorTuningMap, tuningSchemeSpec]
+getTuningMapDamages[m, tuningMap, tuningSchemeSpec]
+
+generatorTuningMapFromTAndTuningMap[m, tuningMap]
+</pre>
+
+== Temperament exploration == 
+The functions implemented include:
+
+<pre>canonicalForm[t]</pre>
+
+Puts the given [[mapping]] into canonical form (i.e. [[defactored Hermite form]]): it [[Defactoring|defactors]] it and puts it into [[HNF]].
+
+<pre>mapMerge[t1, t2...]
+commaMerge[t1, t2...]</pre>
+
+Per [[Temperament merging]].
+
+<pre>dual[t]</pre>
+
+For a mapping, returns the canonical form of the basis for its nullspace.
+For a comma basis, vice-versa: returns the canonical form of its mapping.
+
+== Temperament addition ==
+<pre>
+sum[t1, t2]
+diff[t1, t2]
+</pre>
+
+Per [[Temperament addition]].
+
+== Nonstandard domains ==
+<pre>changeBasis[t, targetBasis]</pre>
+
+Per [[Domain_basis#Changing_domain_basis|Doman basis#Changing domain basis]].
+
+== EA ==
+If you are interested in [[Intro to exterior algebra for RTT|exterior algebra]], this library also includes modules with helpful functions.
+
+<pre>
+eaCeanonicalForm[multivector]
+
+eaDual[multivector]
+
+progressiveProduct[multivector1, multivector2]
+regressiveProduct[multivector1, multivector2]
+interiorProduct[multivector1, multivector2]
+
+eaSum[multivector1, multivector2]
+eaDiff[multivector1, multivector2]
+
+multivectorToMatrix[multivector]
+matrixToMultivector[t]
+</pre>
+
+[[Category:Regular temperament theory]]
+[[Category:Exterior algebra]]

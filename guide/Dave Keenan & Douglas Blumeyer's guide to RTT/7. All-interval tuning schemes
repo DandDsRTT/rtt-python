@@ -1,0 +1,2010 @@
+{{breadcrumb}}{{texmap}}{{texops}}
+When tuning [[regular temperaments]]&mdash;that is, choosing exact sizes for their [[generator]]s (typically in [[cents]])&mdash;one of the fundamental choices we make is which consonant musical [[interval]]s to optimize the tuning for. In other words, we choose a set of intervals whose [[damage]]s we [[target-interval list|target for minimization]]. However, a special family of tuning schemes have been developed which do not require this choice; instead, a certain kind of damage is minimized for ''every'' interval. In this article, we will be discussing such '''all-interval tuning schemes'''. 
+
+This is article 7 of 9 in [[Dave Keenan]] & [[Douglas Blumeyer]]'s guide to RTT, or "[[D&D's guide]]" for short. In order to get the most out of this article, we suggest that you first familiarize yourself with all the concepts explained in the earlier article, {{subpage|tuning fundamentals|uprev}}; we're going to build upon a lot of the concepts introduced there (and introduce more). First, we'll touch quickly upon the pros and cons of using all-interval tuning schemes, and a bit on their history. Next, we'll explain them conceptually (continuing in the vein of our fundamentals article). After that, if you're interested in such things, stick around as we work through examples of computing them, discussing various methods and their derivations (and this section is in the vein of our article 6, {{subpage|tuning computation|uprev}}, which you should read before coming here). 
+
+= Pros and cons =
+All-interval tuning schemes have great value for consistently and reasonably documenting the tunings of regular temperaments, in large part because they don't require the specification of a target-interval set. Another major strength of all-interval tunings is that they are comparatively easy for computers to calculate. 
+
+On the other hand, all-interval tunings are somewhat tricky for humans to understand, as evidenced by our choice to break out an entire separate article dedicated to making sense of them. Also, they do not necessarily produce tunings which are ideal for use in real-life musical practice; when it comes to actually doing something&mdash;like building an instrument, or tuning a synth for a specific piece of music&mdash;a better approach would be to tune directly for the intervals you plan to use in the music. And as we'll see in more detail in a moment, all-interval tuning schemes require {{subpage|tuning fundamentals|uprev|s=Weight slope|text=simplicity-weighting}} of absolute error to obtain damage, which is not for everyone (for a more detailed discussion, see {{subpage|tuning fundamentals|uprev|s=Rationale for choosing your slope|text=this section of the fundamentals article}}).
+
+We could make a loose analogy, then, between all-interval tunings and [[canonical form|canonical mappings]] on one side&mdash;where both of these are good for mass categorization, sanity checking, and automated processes&mdash;while on the other side we'd compare non-all-interval tunings to [[Normal_lists#Minimal_generator_form|mingen mappings]], both of which are immediately reasonable for musicians to make good music with. 
+
+$$ \text{all-interval tunings : canonical mappings :: non-all-interval tunings : mingen mappings} $$
+
+So if there were to be a ''canonical tuning scheme'', then&mdash;a good compromise to avoid opinionated arguments over target-interval sets, and one whose use case might be appearing in infoboxes on wiki pages for temperaments to help give people an immediate sense of the ballpark for generator sizes&mdash;then that tuning scheme would likely be an all-interval tuning scheme. If you are working on something like that, or perhaps automated processes for searching or categorizing temperaments, then this article may be valuable to you.
+
+But on the other hand, if you consider yourself primarily a practical musician, and you do have an opinion about which consonances are most important to get right in your music, then 
+this article may not be of great value to you. In that case, please just tune for your favored intervals directly. Accommodating crazily complex intervals like 1953125/1259712&mdash;the ones out there among "all intervals" beyond the ones we typically look at&mdash;may be clouding the optimization of your tuning, i.e. making it optimize with respect to a ton of junk you'll never want, rather than having it be optimized precisely and only for the stuff you do want (see the beginning of the {{subpage|tuning fundamentals|uprev|s=The importance of exclusivity|text=target-intervals section of our fundamentals article}} for a review of why it's important for target-interval sets to be exclusive). 
+
+We certainly recognize the mathematical simplicity, and the beauty of the feat of all-interval tunings. And knowing ourselves to be susceptible to seduction by such qualities, we caution our readers to be mindful not to let themselves be seduced either. It can be a little like [[Wikipedia:Streetlight_effect|streetlight effect]].
+
+= History =
+All-interval tuning schemes are a relatively recent development in the history of temperament tuning. Non-all-interval tuning schemes, however, have been used for almost 200 years.<ref group="note">At least as early as Wesley Woolhouse's proposal to use 7/26-comma meantone in 1835; Woolhouse advocated it on the basis of being the held-octave OLD miniRMS-U tuning (though he didn't use our systematic name, of course). See http://tonalsoft.com/monzo/woolhouse/essay.aspx#book. And there is also an argument that the quarter-comma meantone tuning from 1523 was understood then as the held-octave OLD minimax-U tuning.</ref>
+
+The first proposed tuning scheme that leveraged dual norms&mdash;the key technology enabling all-interval tunings&mdash;was the [[TOP]] tuning scheme, from [[Paul Erlich]]'s ''[[A Middle Path]]'' paper, though Paul did not unpack it as such at that time. When it comes to plumbing the underlying mathematical reasons for how all-interval tunings work, we are indebted to [[Gene Ward Smith]] and [[Mike Battaglia]].<ref group="note">It was Gene who first pointed out the relevance of dual norms to TOP:
+http://lumma.org/tuning/gws/top.htm
+Then in 2012 Mike took the idea and ran with it, applying it to tunings in all the ways we understand today:
+https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_20461#20461
+https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_20929#20929
+https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_20996#20996
+https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_21052#21052
+https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_21054#21054
+https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_21082#21082
+https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_21415#21415
+https://www.facebook.com/groups/xenharmonic/posts/10150650778389482/
+</ref>
+
+= Concepts =
+By the end of this section, you will have a deep understanding of two of the most commonly-used all-interval tuning schemes: TOP, proposed by Paul Erlich; and [[Tenney-Euclidean tuning|TE]], proposed by [[Graham Breed]] (in {{subpage|tuning fundamentals|uprev|s=Systematic tuning scheme names|text=our naming system}}, these tunings are called "minimax-S" and "minimax-ES", respectively, where the 'S' stands for "simplicity-weight damage", as explained with the introduction of the naming system in the tuning fundamentals article, and the 'E' stands for "Euclideanized", which will be explained later). You'll be able to explain how they work, how they are similar to and different from each other, and also how they compare with the more basic tuning schemes that we've explained previously. 
+
+== The two conditions ==
+Being able to minimize the damage to every interval is contingent upon two conditions:
+# You define "least overall damage" as the minimization of the ''maximum'' damage dealt to any one target-interval; in other words, you use a [[Target tuning#Minimax_tuning|minimax]] tuning scheme.
+# You use a {{subpage|tuning fundamentals|uprev|s=Weight slope|text=simplicity-weight damage}}.
+
+=== Condition one: Minimax ===
+When we target ''no'' intervals specifically, it would be equivalent to say that we care about each interval the same as any other interval (at least in terms of the damage we're willing to let it take), or in other words that we have an ''infinite'' target-interval set, i.e. ''every'' interval in your domain, or said another way, every interval that can be generated by your primes (has only those primes as prime factors). Using the 5-limit, for example, would mean that every interval able to be generated by primes 2, 3, and 5 was in your set.
+
+We couldn't follow the instructions for computing generator tunings that were explained in the fundamentals article of this series with <math>k = \infty</math>, that is, with our target-interval list being a <math>(d, \infty)</math>-shaped matrix. We could never find the power mean (or power sum) of the resulting target-interval damage list, or at least we could never find the power sum when the power <math>p</math> is <math>1</math>, or <math>2</math>, or any finite number. We ''could'', however, theoretically do that when <math>p=\infty</math>. 
+
+It may not be immediately obvious why <math>p=\infty</math> makes this possible. Try thinking of it this way: it would be theoretically possible to establish a ''maximum'' of an infinitely long list, if you could prove that no matter what else comes up in the infinite remaining part of the list that you haven't observed yet, no item you'd ever find there could possibly be greater than some bound you'd established by whatever means. 
+
+In our case, we can prove that no matter which interval may appear in the list, we can guarantee that its damage will not be any greater than the magnitude of the retuning map. Don't worry if you don't know what we're talking about yet &mdash;consider that a sneak preview of where we're ultimately going with this. For now it is enough to for you to understand that this sort of proof by external bounding technique is why the first of the two conditions of an infinite target-interval set tuning scheme must be that it is a minimax tuning scheme (because minimax schemes are the ones where <math>p=\infty</math>).
+
+=== Condition two: Simplicity-weighting ===
+But how exactly ''would'' we prove such a situation as that? 
+
+Imagine the target-interval set starting out as a set of simple consonances, like a tonality diamond, and then think about continuously expanding it toward including all intervals in the prime limit, by adding each next complex interval to it, one by one. Think about what each of these new interval's absolute errors must be like. As we go further and further out, eventually to intervals like 1953125/1259712 and even crazier, will their absolute errors be getting generally bigger or smaller? 
+
+Well, bigger, to be sure. That's because we can find the error of any one of these intervals by multiplying it by the retuning map <math>𝒓</math>, and while this presents opportunities for some primes' errors to counteract other primes' errors, if some are positive and others negative (e.g. if prime 2 and prime 3 are both tuned narrow, then the ~3/2 may turn out to be near just, because 2 and 3 are on opposite sides of the quotient bar), in the worst cases their errors will compound all in one direction or the other (positive or negative, wide or narrow), which means the absolute error will be large, and there will always be some worst case types as we continue to add new complex intervals. 
+
+How could we possibly offset this inevitable increase in absolute error as we spiral further and further away from unison toward infinitely complex intervals, then? Well, the answer involves ''weighting''. 
+
+Note that we haven't specified our damage weight slope in this thought experiment thus far. What if we ''simplicity-weight'' damage, then? In that case, it may be possible to establish that no matter how much absolute error an interval may be capable of incurring, any additional complexity required to achieve that higher error will offset it when we simplicity-weight the result. 
+
+And that, in fact, is exactly how we do it. This is why simplicity-weighting is the second of the two conditions of all-interval tuning schemes. So these schemes essentially have an infinitely-sized target-interval set, with no hard bound on interval complexity, rather, the set just kind of "fades out" gradually, starting with the simplest consonance, the octave.
+
+There's not too much more left to say about the first condition, i.e. being a minimax tuning scheme. But the precise reasoning and execution of the second condition is quite the rabbit hole! It entails a fancy feat of mathematics known as a ''dual norm''. Fortunately we have been there and back for you. We think we have some good words and images to demystify how exactly it all works out, and hope you get a lot out of it.
+
+== Power norms ==
+In order to understand dual norms, we should begin by understanding ''norms'', which is to say ''power'' norms.
+
+A '''power norm'''<ref group="note">Every other mathematical use of the Latin root "norm" (a carpenter's square) relates to perpendicularity or standardization, as in the normal to a plane or to normalize a vector, which means to standardize it by giving it a length of 1 while retaining its direction. We could think of the "norm" in "power norm" as short for "normalizer", as it is the quantity you must divide all the entries of the vector by in order to normalize it. This is a very indirect way of saying that a power norm is a kind of length.
+<br><br>
+For a detailed history of "norm" in mathematics see: https://math.stackexchange.com/questions/465414/who-introduced-the-term-norm-into-mathematics
+</ref> is another type of statistic similar to the power mean which we covered in the fundamentals article (also similar to the power ''sum'', if you went through the computations article), just with slightly different steps. 
+
+=== Steps ===
+# Take the absolute value of each entry.
+# Raise each absolute entry to the <math>p</math><sup>th</sup> power.
+# Sum the powers of the absolute entries.
+# Take the matching <math>p</math><sup>th</sup> root of this sum.
+
+So power norms are like power sums with two extra steps: the absolute value taking step at the start, and the matching root step at the end. They can also be compared with power means, with which they share the matching root step, but means don’t take the absolute value and norms don’t divide by the count.
+
+=== Formula ===
+The formula for the <math>p</math>-norm, which we notate as <math>\|\textbf{i}\|_p</math><ref group="note">It can also be notated as <math>L^p(\textbf{i})</math>. The "L" doesn't stand for "norm", of course, but it is the conventional notation for power norms. The reasons for this are beyond the scope of this article, but we will at least note that it stands for Lebesgue, a mathematician who was involved in the pioneering of this topic. We especially don't prefer the <math>L^p</math> notation due to its conventionally being notated with superscript rather than subscript. Sometimes normal size script (neither superscript nor subscript) is used, but never subscript, as with the double-bar notation.</ref>, looks like this.
+
+
+<math>
+\norm{\textbf{i}}_p = \sqrt[p]{\strut \sum\limits_{n=1}^d \abs{\mathrm{i}_n}^p}
+</math>
+
+
+Though you'll notice that instead of doing this to a damage list <math>\textbf{d}</math> as we did for power means and sums, we're taking the power norm of an interval vector <math>\textbf{i}</math> here. And instead of iterating up to <math>k</math>, the count of target-intervals, we're iterating up to <math>d</math>, the dimensionality of the temperament (which is the same as the count of entries in any interval vector).
+
+We can expand this out like so:
+
+
+<math>
+\norm{\textbf{i}}_p =  \sqrt[p]{\strut \abs{\mathrm{i}_1}^p + \abs{\mathrm{i}_2}^p + ... + \abs{\mathrm{i}_d}^p}
+</math>
+
+
+This can also be written as:
+
+
+<math>
+\norm{\textbf{i}}_p =  \Big(\abs{\mathrm{i}_1}^p + \abs{\mathrm{i}_2}^p + ... + \abs{\mathrm{i}_d}^p\Big)^\frac{1}{p}
+</math>
+
+
+Expressing the <math>p</math><sup>th</sup> root as raising to the <math>\frac{1}{p}</math> power is how you are likely to have to do it on a calculator, spreadsheet or programming language.
+
+=== Examples ===
+Consider the vector for the interval <math>\frac{27}{20}</math>, which is {{vector|-2 3 1}}.
+
+* Its <math>1</math>-norm is <math>\sqrt[1]{\strut \abs{{-2}}^1 + \abs{3}^1 + \abs{1}^1} = \sqrt[1]{\strut 2^1 + 3^1 + 1^1} = \sqrt[1]{2 + 3 + 1} = \sqrt[1]{6} = 6</math>.
+* Its <math>2</math>-norm is <math>\sqrt[2]{\strut \abs{{-2}}^2 + \abs{3}^2 + \abs{1}^2} = \sqrt[2]{\strut 2^2 + 3^2 + 1^2} = \sqrt[2]{4 + 9 + 1} = \sqrt[2]{14} \approx 3.742</math>.
+* Its <math>\infty</math>-norm is <math>\sqrt[\infty]{\strut \abs{{-2}}^\infty + \abs{3}^\infty + \abs{1}^\infty} = \sqrt[\infty]{\strut 2^\infty + 3^\infty + 1^\infty} = \max(2, 3, 1) = 3</math>.
+
+When we write <math>\sqrt[\infty]{\strut 2^\infty + 3^\infty + 1^\infty}</math> this is shorthand for the more mathematically-correct <math>\lim_{p\to\infty}\sqrt[p]{\strut 2^p + 3^p + 1^p}</math>. For a refresher, {{subpage|tuning fundamentals|uprev|s=Max|text=click here}}.
+
+=== Relationship with distance ===
+When we introduced the power mean, we presented it as a generalization of the familiar formula for, well, the mean. We can also introduce the power norm as a generalization of a familiar formula: the formula for distance. As an example, if we move 3 meters to the right, and 4 meters forward, what's our distance from our starting position? Well, with a change along the  <math>x</math>-axis of 3 and along the <math>y</math>-axis of 4, many of us may already be ready to give the answer:
+
+
+<math>
+\sqrt{\strut x^2 + y^2} = \sqrt{\strut 3^2 + 4^2} = \sqrt{9 + 16} = \sqrt{25} = 5
+</math>
+
+
+The answer is that we're 5 meters from where we started, and we can find this readily using the 2D version of the distance formula (which in turn is often understood as a generalization of the Pythagorean formula, the one that shows how the hypotenuse of a right triangle squared is the same area as the sum of the squares of the two other sides). And in 3D the formula stays basically the same; no changes to the structure or to the power of 2, we just add another term: <math>\sqrt{\strut x^2 + y^2 + z^2}</math>.<ref group="note">In case you were wondering, the smallest 3D case with all integers is <math>\sqrt{\strut 1^2 + 2^2 + 2^2}=3</math>, and the next is <math>\sqrt{\strut 2^2 + 3^2 + 6^2}=7</math>. But integer-valued norms are of no particular interest in RTT.</ref>
+
+[[File:Distances2.png|frameless|400x400px]] 
+
+So the power norm is the same idea, but with a couple generalizations. 
+* Any power (and matching root) can be used, not only <math>2</math>, which is how we generalize the formula to be able to measure distance in other types of spaces besides those similar to the physical type we embody as humans together.
+* We take the absolute value at the beginning. When dealing with triangle side lengths and damage amounts, there are no negative values, but in other cases, such as those we'll use norms for in RTT&mdash;prime retunings, and prime counts&mdash;we certainly can have negative values, and it'll be important to get those positive. When the power is <math>2</math> (or any even number) this doesn't matter because the taking of the power will enforce positivity, but it's still an important part of the general formula.
+
+=== Comparison with power means and sums ===
+So if a power sum is a type of ''total'' and a power mean is a type of ''average'', then a power norm is sort of in between, but also sort of its own thing; it's a type of ''length''.
+
+Closely related though all three of these power statistics may be, we'd like to take this opportunity to drive home some important distinctions between this latest one&mdash;the power norm&mdash;and the two that we've looked at up to this point, the power sum and power mean. In the previous article of this guide, we showed how <math>p</math>-sums and <math>p</math>-means could be used roughly interchangeably, but certain use cases prefer one to the other. Well, norms are the odd man out here, and really shouldn't be thought of as applying in the same situations as sums and means. Norms are used on vectors (and row vectors) whose entries represent pieces of information that are in different dimensions from each other (different primes, for instance), in different units, and thus can't be directly compared; whereas sums and means are used on lists of things that are all of the same type with the same units (like lists of damages). This closer conceptual kinship between sums and means should be apparent through the coloration of this next table:
+
+<math>
+% \slant{} command approximates italics to allow slanted bold characters, including digits, in MathJax.
+\def\slant#1{\style{display:inline-block;margin:-.05em;transform:skew(-14deg)translateX(.03em)}{#1}}
+% Latex equivalents of the wiki templates llzigzag and rrzigzag for double zigzag brackets.
+\def\llzigzag{\hspace{-1.6mu}\style{display:inline-block;transform:scale(.62,1.24)translateY(.07em);font-family:sans-serif}{ꗨ\hspace{-3mu}ꗨ}\hspace{-1.6mu}}
+\def\rrzigzag{\hspace{-1.6mu}\style{display:inline-block;transform:scale(-.62,1.24)translateY(.07em);font-family:sans-serif}{ꗨ\hspace{-3mu}ꗨ}\hspace{-1.6mu}}
+</math>
+{| class="wikitable"
+! &nbsp; !! Power-sum !! Power-mean !! Power-norm
+|-
+| Operator:
+| style="background-color: #f8f8cc;" | <math>\llzigzag·\,\rrzigzag\!_p</math>
+| style="background-color: #f4cccc;" | <math>\llangle\,·\,\rrangle_p</math>
+| style="background-color: #c9daf8;" | <math>\norm{ · }_q</math>
+|-
+| Takes the absolute value:
+| style="background-color: #fff2cc;" | No
+| style="background-color: #fff2cc;" | No
+| style="background-color: #c9daf8;" | Yes
+|-
+| Raises to power:
+| style="background-color: #e4e4e4;" | Yes
+| style="background-color: #e4e4e4;" | Yes
+| style="background-color: #e4e4e4;" | Yes
+|-
+| Sums:
+| style="background-color: #e4e4e4;" | Yes
+| style="background-color: #e4e4e4;" | Yes
+| style="background-color: #e4e4e4;" | Yes
+|-
+| Divides by count:
+| style="background-color: #d9ead3;" | No
+| style="background-color: #f4cccc;" | Yes
+| style="background-color: #d9ead3;" | No
+|-
+| Takes the root:
+| style="background-color: #fff2cc;" | No
+| style="background-color: #d9d2e9;" | Yes
+| style="background-color: #d9d2e9;" | Yes
+|-
+| Input structure:
+| style="background-color: #fff2cc;" | List
+| style="background-color: #fff2cc;" | List
+| style="background-color: #c9daf8;" | Vector
+|-
+| Input values referred to as:
+| style="background-color: #fff2cc;" | Items
+| style="background-color: #fff2cc;" | Items
+| style="background-color: #c9daf8;" | Entries
+|-
+| Input values are in same dimension:
+| style="background-color: #fff2cc;" | Yes
+| style="background-color: #fff2cc;" | Yes
+| style="background-color: #c9daf8;" | No
+|-
+| Input quantity:
+| style="background-color: #fff2cc;" | Damage
+| style="background-color: #fff2cc;" | Damage
+| style="background-color: #c9daf8;" | Scaled interval, scaled retuning
+|-
+| Input units:
+| style="background-color: #fff2cc;" | ¢ ({{^(}}weighting{{)^}})
+| style="background-color: #fff2cc;" | ¢ ({{^(}}weighting{{)^}})
+| style="background-color: #c9daf8;" | '''p''' ({{^(}}weighting{{)^}}), ¢({{^(}}weighting{{)^}})
+|-
+| Output structure:
+| style="background-color: #e4e4e4;" | Scalar
+| style="background-color: #e4e4e4;" | Scalar
+| style="background-color: #e4e4e4;" | Scalar
+|-
+| Output quantity:
+| style="background-color: #f8f8cc;" | p-sum of damages
+| style="background-color: #f4cccc;" | p-mean damage
+| style="background-color: #c9daf8;" | Interval complexity, retuning magnitude
+|-
+| Output units:
+| style="background-color: #fff2cc;" | ¢ ({{^(}}weighting{{)^}})
+| style="background-color: #fff2cc;" | ¢ ({{^(}}weighting{{)^}})
+| style="background-color: #c9daf8;" | ({{^(}}weighting{{)^}}), ¢({{^(}}weighting{{)^}})
+|}
+
+=== Special note about the infinity norm ===
+If we ignore for the moment that means do not take the absolute value&mdash;which we can ignore in our application's case of ''damage'' means, because damages are never negative&mdash;we note that the <math>\infty</math>-norm is the same as the <math>\infty</math>-mean, that is, they are both equivalent to taking the max, despite the fact that the mean divides by the count of entries or items, and the norm does not. This is because the <math>\infty</math><sup>th</sup> root of this count is equal to <math>1</math>, and thus dividing by this count does not distinguish the <math>\infty</math>-mean from the <math>\infty</math>-norm. 
+
+We can see this by subtly rewriting our <math>p</math>-mean formula from 
+
+
+<math>
+\llangle\textbf{d}\rrangle_p = \sqrt[p]{\strut \dfrac{\sum\limits_{n=1}^k \mathrm{d}_n^p}{k}}
+</math> 
+
+
+to 
+
+
+<math>
+\llangle\textbf{d}\rrangle_p = \dfrac{\sqrt[p]{\strut \sum\limits_{n=1}^k \mathrm{d}_n^p}}{\sqrt[p]{k}}
+</math>
+
+
+We can now see that when <math>p =\infty</math>, whatever the value of <math>k</math> is, <math>\sqrt[p]{k} = \sqrt[\infty]{k} = 1</math>, and so <math>⟪\textbf{d}⟫_\infty</math> simplifies to <math>\sqrt[\infty]{\strut \sum\limits_{n=1}^k \mathrm{d}_n^\infty} = \max\limits_{n=1}^k \mathrm{d}_n</math> which would be the same as <math>\norm{\textbf{d}}_\infty</math>, considering that the items in <math>\textbf{d}</math> are always positive.
+
+However, we note that the <math>\infty</math>-mean and <math>\infty</math>-norm are ''not'' the same as the <math>\infty</math>-sum (which doesn't even exist). This fact is an interesting complement to the fact that (when we continue to ignore that norms take absolute values), the <math>1</math>-sum is the same as the <math>1</math>-norm (they're both the total), but not the same as the <math>1</math>-mean (which does exist, as the average).<ref group="note">A series of observations which may give insight to some readers:
+* When <math>p = 1</math>, taking the root (as in a power norm or mean) makes no difference.
+* When <math>p = 2</math>, taking the absolute value (as in a power norm) makes no difference, and this goes for any even <math>p</math>.
+* When <math>p = \infty</math>, dividing by the count (as in a power mean) makes no difference.</ref>
+
+== Dual norms ==
+Now that we understand norms, we can start taking a look at '''dual norms'''. And we're going to switch to using <math>q</math> for the norm power instead of <math>p</math>. You may have already noticed we did that in the table above. We did so because it is important to maintain a distinction between the optimization power <math>p</math> of a tuning scheme and the norm power <math>q</math> of its complexity calculation, which we will explain four subsections from now. Remember: the only optimization power for which all-interval tuning schemes work is <math>p=\infty</math>, the one for minimax. But, as you will learn, they can work with any complexity norm <math>q \geq 1</math>.
+
+It is still OK to refer to power norms in general as <math>p</math>-norms for short, but we'll avoid it for the rest of this article.
+
+=== Formula relating dual powers ===
+Let's begin by stating some key facts about the most commonly used norm powers that we'll be using with all-interval tunings. 
+
+* The <math>1</math>-norm is the dual norm of the <math>\infty</math>-norm, and the <math>\infty</math>-norm in turn is the dual of the <math>1</math>-norm; they are each other's dual norm. (These are the extreme norms, by the way; there's no norm with power less than <math>1</math> or greater than <math>\infty</math>.)<ref group="note">But interestingly, there are other power means. The <math>0</math>-mean is the geometric mean. The <math>{-1}</math>-mean is the harmonic mean, and the <math>{-\infty}</math>-mean is the minimum.</ref>
+* The <math>2</math>-norm is ''self-dual''. It is special in this way; no other norm boasts this property. It is the pivot point right in the middle of the norm continuum from <math>1</math> to <math>\infty</math>, and as such it finds itself to be ''its own dual norm''. 
+
+In general, we can find the '''dual power''' for a norm power <math>q</math> using the following equality<ref group="note">A demonstration of this relationship is fairly involved and we won't be getting into it. It involves Hölder and Young inequalities if you want to look into it yourself. Perhaps you might begin here: https://math.stackexchange.com/questions/1839906/inequality-ab-le-fracapp-fracbqq?noredirect=1&lq=1</ref>, where <math>\text{dual}(q)</math> gives the dual power: 
+
+
+<math>
+\dfrac{1}{q} + \dfrac{1}{\text{dual}(q)} = 1
+</math>
+
+
+and therefore
+
+
+<math>
+\text{dual}(q) = \dfrac{1}{1 - \frac{1}{q}}
+</math>
+
+
+With this formula we can see how the <math>1</math>-norm and <math>\infty</math>-norm relate by <math>\frac{1}{1} + \frac{1}{\infty} = 1 + 0 = 1</math>.
+
+We can also see the self-duality of the <math>2</math>-norm by <math>\frac{1}{2} + \frac{1}{2} = 1</math>. 
+
+For one further example, the dual norm of the <math>3</math>-norm would be the <math>\frac{3}{2}</math>-norm (or <math>1.5</math>-norm), because <math>\frac{1}{3} + \dfrac{1}{\frac{3}{2}} = \frac{1}{3} + \frac{2}{3} = 1</math>. 
+
+[[File:Dual power.png|frameless|900x900px]] 
+
+So when we speak of "dual norms", we speak of a ''pair'' of norms which are in a special relationship with each other. 
+
+=== The dual norm inequality ===
+We now know how the relationship between dual norms is defined. But what does this relationship ''mean'', and what can we ''use'' it for, exactly?
+
+Well, what's special about dual norms can be articulated as a single effect: ''the absolute value of the dot product of any two vectors is always less than or equal to the norm of one vector times the dual norm of the other vector.''
+
+That's a complete mouthful, to be sure. But this is just the sort of idea that natural language struggles to express, but mathematical notation excels at it. So let's now look at that same idea but in a new way&mdash;the mathematical way&mdash;using <math>\textbf{x}</math> and <math>\textbf{y}</math> for our two vectors:
+
+
+<math>
+\abs{\textbf{x}·\textbf{y}} \leq \norm{\textbf{x}}_q × \norm{\textbf{y}}_{\text{dual}(q)}
+</math>
+
+
+Let's do a couple examples. Suppose <math>\textbf{x} = \monzo{1 & 0 & 0}</math> and <math>\textbf{y} = \monzo{-4 & 4 & -1}</math>. If <math>p = 1</math>, we have:
+
+
+<math>
+\begin{align}
+\left|
+\left[ \begin{matrix} 1 & 0 & 0 \\ \end{matrix} \right]
+·
+\left[ \begin{matrix} {-4} & 4 & {-1} \\ \end{matrix} \right]
+\right| 
+\;\; \leq& \;\;
+\|
+\left[ \begin{matrix} 1 & 0 & 0 \\ \end{matrix} \right]
+\|_1 × \|
+\left[ \begin{matrix} {-4} & 4 & {-1} \\ \end{matrix} \right]
+\|_{\infty}
+
+\\[8pt]
+
+\left|
+(1)({-4}) + (0)(4) + (0)({-1})
+\right| 
+\;\; \leq& \;\;
+\sqrt[1]{\strut |1|^1 + |0|^1 + |0|^1} 
+× 
+\sqrt[\infty]{\strut |{-4}|^\infty + |4|^\infty + |-1|^\infty} 
+
+\\[8pt]
+
+\left|
+{-4} + 0 + 0
+\right| 
+\;\; \leq& \;\;
+\sqrt[1]{\strut 1^1 + 0^1 + 0^1} 
+× 
+\sqrt[\infty]{\strut 4^\infty + 4^\infty + 1^\infty} 
+
+\\[8pt]
+
+\left|
+{-4}
+\right| 
+\;\; \leq& \;\;
+\sqrt[1]{1 + 0 + 0}
+×
+\max(4, 4, 1)
+
+\\[8pt]
+
+4
+\;\; \leq& \;\;
+\sqrt[1]{1}
+×
+4
+
+\\[8pt]
+
+4 \;\; \leq& \;\; 1×4
+
+\\[8pt]
+
+4 \;\; \leq& \;\; 4
+\end{align}
+</math>
+
+
+So here we have the left-hand side exactly equal to the right hand side.
+
+Or suppose <math>\textbf{x} = \monzo{0 & -3 & -5}</math> and <math>\textbf{y} = \monzo{6 & 6 & 6}</math>, and <math>q = 2</math>:
+
+
+<math>
+\begin{align}
+\left|
+\left[ \begin{matrix} 0 & {-3} & {-5} \\ \end{matrix} \right]
+·
+\left[ \begin{matrix} 6 & 6 & 6 \\ \end{matrix} \right]
+\right| 
+\;\; \leq& \;\;
+\left\|
+\left[ \begin{matrix} 0 & {-3} & {-5} \\ \end{matrix} \right]
+\right\|_2 × \left\|
+\left[ \begin{matrix} 6 & 6 & 6 \\ \end{matrix} \right]
+\right\|_2
+
+\\[8pt]
+
+\left|
+(0)(6) + ({-3})(6) + ({-5})(6)
+\right| 
+\;\; \leq& \;\;
+\sqrt[2]{\strut |0|^2 + |{-3}|^2 + |{-5}|^2} 
+× 
+\sqrt[2]{\strut |6|^2 + |6|^2 + |6|^2} 
+
+\\[8pt]
+
+\left|
+0 + {-18} + {-30}
+\right| 
+\;\; \leq& \;\;
+\sqrt[2]{\strut 0^2 + 3^2 + 5^2} 
+× 
+\sqrt[2]{\strut 6^2 + 6^2 + 6^2} 
+
+\\[8pt]
+
+\left|
+{-48}
+\right| 
+\;\; \leq& \;\;
+\sqrt[2]{0 + 9 + 25} 
+× 
+\sqrt[2]{36 + 36 + 36} 
+
+\\[8pt]
+
+48
+\;\; \leq& \;\;
+\sqrt[2]{34} 
+× 
+\sqrt[2]{108} 
+
+\\[8pt]
+
+48 \;\; \leq& \;\; 5.831×10.392
+
+\\[8pt]
+
+48 \;\; \leq& \;\; 60.597
+\end{align}
+</math>
+
+
+In this case, the left-hand side is less than the right-hand side.
+
+Please feel free to run some more examples if you'd like, to convince yourself this is true. (Or see the later section of this article to develop your intuition for it.) Do not worry if the musical implications of this are not readily apparent to you yet. We have more work to do on this equation.
+
+=== Substituting RTT objects into the formula ===
+For our next step, let's substitute in some of our tuning-related objects for <math>\textbf{x}</math> and <math>\textbf{y}</math>. Specifically, we'll use the retuning map <math>𝒓</math> for <math>\textbf{x}</math>, and any old arbitrary interval <math>\textbf{i}</math> for <math>\textbf{y}</math>:
+
+
+<math>
+\abs{\color{red}𝒓\color{black}\color{red}\textbf{i}\color{black}} \leq \norm{\color{red}𝒓\color{black}}_{\text{dual}(q)} × \norm{\color{red}\textbf{i}\color{black}}_q
+</math>
+
+
+If you would like a refresher on the retuning map, please review {{subpage|tuning fundamentals|uprev|s=Alternative approach|text=this section}} of the fundamentals article. In brief, <math>𝒓 = 𝒕 - 𝒋</math>, which is to say, it is the difference between a tempered-prime tuning map and the just-prime tuning map. It is used to find the error for an interval in the tuning that is represented by <math>𝒕</math>.
+
+If you're paying close attention, you may have noticed that we dropped the dot in the dot product between the <math>𝒓</math> and the <math>\textbf{i}</math>. That's because it's optional to write here, since we chose a row vector for the left vector and a column vector for the right vector. The dot product of two vectors gives the same result as matrix multiplication between one row vector and one column vector of the same length, in that order.
+
+You may also have noticed that we changed the position of the <math>\text{dual}()</math>. Because duality is symmetrical, it doesn't matter which one we call <math>q</math> and which one we call <math>\text{dual}(q)</math>. We did this because the norm of the vector (the interval <math>\textbf{i}</math>) is more fundamental than the norm of the row vector (the retuning map <math>𝒓</math>), for reasons that will become clear later.
+
+As an example, consider the interval <math>\frac{6}{5}</math> with vector {{vector|1 1 -1}} and the retuning map {{map|1.699 -2.692 3.944}}, with <math>q=2</math>:
+
+
+<math>
+
+\begin{align}
+
+\left|
+\left[ \begin{matrix} 1.699 & {-2.692} & 3.944 \\ \end{matrix} \right]
+\left[ \begin{matrix} 1 \\ 1 \\ {-1} \\ \end{matrix} \right]
+\right| 
+\;\; \leq& \;\;
+\left\|
+\left[ \begin{matrix} 1.699 & {-2.692} & 3.944 \\ \end{matrix} \right]
+\right\|_2 × \left\|
+\left[ \begin{matrix} 1 \\ 1 \\ {-1} \\ \end{matrix} \right]
+\right\|_2
+
+\\[8pt]
+
+\left|
+(1.699)(1) + ({-2.692})(1) + (3.944)({-1})
+\right| 
+\;\; \leq& \;\;
+\sqrt[2]{\strut |1.699|^2 + |{-2.692}|^2 + |3.944|^2} 
+× 
+\sqrt[2]{\strut |1|^2 + |1|^2 + |-1|^2}
+
+\\[8pt]
+
+\left|
+1.699 + {-2.692} + {-3.944}
+\right| 
+\;\; \leq& \;\;
+\sqrt[2]{\strut 1.699^2 + 2.692^2 + 3.944^2} 
+× 
+\sqrt[2]{\strut 1^2 + 1^2 + 1^2}
+
+\\[8pt]
+
+\left|
+{-4.937}
+\right| 
+\;\; \leq& \;\;
+\sqrt[2]{2.887 + 7.247 + 15.555} 
+× 
+\sqrt[2]{1 + 1 + 1}
+
+\\[8pt]
+
+4.937
+\;\; \leq& \;\;
+\sqrt[2]{25.689} 
+× 
+\sqrt[2]{3}
+
+\\[8pt]
+
+4.937
+\;\; \leq& \;\;
+5.068
+× 
+1.732
+
+\\[8pt]
+
+4.937
+\;\; \leq& \;\;
+8.779
+\end{align}
+</math>
+
+
+And if we did <math>\frac{5}{1}</math> with vector {{vector|0 0 1}} with the same retuning map but <math>q=1</math>:
+
+
+<math>
+\begin{align}
+\left|
+\left[ \begin{matrix} 1.699 & {-2.692} & 3.944 \\ \end{matrix} \right]
+\left[ \begin{matrix} 0 \\ 0 \\ 1 \\ \end{matrix} \right]
+\right| 
+\;\; \leq& \;\;
+\left\|
+\left[ \begin{matrix} 1.699 & {-2.692} & 3.944 \\ \end{matrix} \right]
+\right\|_\infty × \left\|
+\left[ \begin{matrix} 0 \\ 0 \\ 1 \\ \end{matrix} \right]
+\right\|_1
+
+\\[8pt]
+
+\left|
+(1.699)(0) + ({-2.692})(0) + (3.944)(1)
+\right| 
+\;\; \leq& \;\;
+\sqrt[\infty]{\strut |1.699|^\infty + |{-2.692}|^\infty + |3.944|^\infty} 
+× 
+\sqrt[1]{\strut |0|^1 + |0|^1 + |1|^1}
+
+\\[8pt]
+
+\left|
+0 + 0 + {-3.944}
+\right| 
+\;\; \leq& \;\;
+\sqrt[\infty]{\strut 1.699^\infty + 2.692^\infty + 3.944^\infty} 
+× 
+\sqrt[1]{\strut 0^1 + 0^1 + 1^1}
+
+\\[8pt]
+
+\left|
+{-3.944}
+\right| 
+\;\; \leq& \;\;
+\max(1.699, 2.692, 3.944)
+×
+\sqrt[1]{0 + 0 + 1}
+
+\\[8pt]
+
+3.944
+\;\; \leq& \;\;
+3.944
+×
+\sqrt[1]{1}
+
+\\[8pt]
+
+3.944
+\;\; \leq& \;\;
+3.944
+× 
+1
+
+\\[8pt]
+
+3.944
+\;\; \leq& \;\;
+3.944
+\end{align}
+</math>
+
+
+But at this point we still haven't even explained what in the world we need another power for... isn't an optimization power enough? What use do we have for a norm power, now? Well, we assure you that we'll get to that as soon as we can.
+
+=== Isolating damage ===
+Let's take the next step toward understanding how this dual norm formula applies to regular temperament tuning. That step is multiplying both sides of the equation by the reciprocal of <math>\|\textbf{i}\|_q</math>:
+
+
+<math>
+\abs{𝒓\textbf{i}} \color{red} × \dfrac{1}{\norm{\textbf{i}}_q} \color{black} \leq \norm{𝒓}_{\text{dual}(q)} × \norm{\textbf{i}}_q \color{red} × \dfrac{1}{\norm{\textbf{i}}_q}
+</math>
+
+
+This causes the <math>\norm{\textbf{i}}_q</math> on the right-hand side of the equation to cancel out.
+
+
+<math>
+\abs{𝒓\textbf{i}} × \dfrac{1}{\norm{\textbf{i}}_q} \leq \|𝒓\|_{\text{dual}(q)} × \cancel{\norm{\textbf{i}}_q} × \cancel{\dfrac{1}{\norm{\textbf{i}}_q}}
+</math>
+
+
+Leaving us with:
+
+
+<math>
+\abs{𝒓\textbf{i}} × \dfrac{1}{\norm{\textbf{i}}_q} \leq \norm{𝒓}_{\text{dual}(q)}
+</math>
+
+
+So what sense can we make of this, now? It's generally a good thing whenever one manages to isolate some value on one side of the equation, so you may think we're immediately interested in <math>\norm{𝒓}_{\text{dual}(q)}</math>. Well, we will be interested in that soon enough, but for now this value is less interesting in and of itself. It's really more of a knob we'll turn later to get what we want on the left-hand side. 
+
+So let's start contemplating what we have on the left-hand side here, then. To begin with, can we answer the question: what's <math>|𝒓\textbf{i}|</math>? Well, if you recall from the fundamentals article, <math>𝒓\textbf{i}</math> is the ''error'' of the interval. Are the "ah-ha" alarms starting to go off?<ref group="note">If not, that's alright. I (Douglas here) spent weeks at this point following a red herring, where I was convinced that the best way forward was to understand the <math>\dfrac{\textbf{i}}{\norm{\textbf{i}}_q}</math> part as the normalized vector of <math>\textbf{i}</math>, i.e. a unit vector pointing in the same direction as the original vector, notated with a hat on the variable, like <math>\hat{\textbf{i}}</math>. I keep this thought here as a footnote in case it makes anyone feel any better, or maybe&mdash;in spite of it being an anti-insight with respect to Dave’s and my pedagogical work here&mdash;it may actually help someone one day.</ref>
+
+What if I told you that the entire left-hand side of this inequality could be understood as the ''damage'' to <math>\textbf{i}</math>? To see how this is possible, first we must recognize the <math>× \dfrac{1}{\norm{\textbf{i}}_q}</math> part of this expression as ''simplicity-weighting'': multiplying by the reciprocal of a complexity function. And if that's the case, then that tells us that the norm part must be (drumroll please) a complexity function!
+
+For example, if <math>\textbf{i}</math> is {{vector|1 1 -1}} and <math>𝒓</math> is {{map|1.699 -2.692 3.944}} (same as we chose for another recent example), then we have the interval error <math>e</math> equal to:
+
+
+<math>
+\begin{align}
+e
+\;\; =& \;\; 
+𝒓\textbf{i} 
+\\[8pt]
+\;\; =& \;\; 
+\left[ \begin{matrix} 1.699 & {-2.692} & 3.944 \\ \end{matrix} \right]
+\left[ \begin{matrix} 1 \\ 1 \\ {-1} \\ \end{matrix} \right]
+\\[8pt]
+\;\; =& \;\; 
+(1.699)(1) + ({-2.692})(1) + (3.944)({-1})
+\\[8pt]
+\;\; =& \;\; 
+1.699 + {-2.692} + {-3.944}
+\\[8pt]
+\;\; =& \;\; 
+{-4.937}
+\end{align}
+</math>
+
+
+So the absolute interval error <math>|e| = 4.937</math>. And the interval complexity <math>c</math>, when <math>q=1</math> is:
+
+
+<math>
+\begin{align}
+c
+\;\; =& \;\; 
+\norm{\textbf{i}}_1
+\\[8pt]
+\;\; =& \;\; 
+\norm{ \left[ \begin{matrix} 1 \\ 1 \\ {-1} \\ \end{matrix} \right] }_1
+\\[8pt]
+\;\; =& \;\; 
+\sqrt[1]{\strut |1|^1 + |1|^1 + |{-1}|^1}
+\\[8pt]
+\;\; =& \;\; 
+\sqrt[1]{\strut 1^1 + 1^1 + 1^1}
+\\[8pt]
+\;\; =& \;\; 
+\sqrt[1]{1 + 1 + 1}
+\\[8pt]
+\;\; =& \;\; 
+\sqrt[1]{3}
+\\[8pt]
+\;\; =& \;\; 
+3
+\end{align}
+</math>
+
+
+And so the damage <math>d</math> is
+
+
+<math>
+\begin{align}
+d
+\;\; =& \;\; 
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{\textbf{i}}_q}
+\\[8pt]
+\;\; =& \;\; 
+\dfrac{|e|}{c}
+\\[8pt]
+\;\; =& \;\; 
+\dfrac{4.937}{3}
+\\[8pt]
+\;\; =& \;\; 
+1.645
+\end{align}
+</math>
+
+
+And the norm on our retuning map {{map|1.699 -2.692 3.944}}, when <math>\text{dual}(q) = \infty</math>, would be <math>\max\left(|1.699|, |{-2.692}|, |3.944|\right) = 3.944</math>, so the inequality still holds here.
+
+=== Connecting norms and complexities ===
+So we've talked about norms, and we've talked about complexities too, but we haven't yet talked about them in the same context. It's now time to bring these two concepts together. 
+
+Yes, as it turns out, there is a way to ''define a complexity as a norm'', or we might say ''normify'' a complexity. At least, there are ways to "normify" ''many of'' the complexity functions we might wish to use in RTT (not all of them). We'll look at how to do that soon enough. 
+
+For now we'd just like to end a bit of the suspense regarding the difference between the power for a tuning scheme's power ''mean'' (its optimization power, for the mean of the target-interval damage list) and the power for its power ''norm'' (its interval complexity norm's power, for the simplicity-weighting of its damage statistic itself). We'll end it by giving the norm power for the default complexity we use in our text: the log-product complexity, or <math>\text{lp-C}()</math> for short. When defined as a power norm, <math>\text{lp-C}()</math> uses a norm power of <math>1</math>. So that's certainly different than the optimization power of <math>\infty</math> required for all-interval tuning schemes (but again, even if <math>\text{lp-C}()</math>'s norm power was also <math>\infty</math>, that'd just be a coincidence; the point is that conceptually speaking, these are completely different powers.) 
+
+In the following sections, we'll unpack the right-hand side of this inequality, so that we can finally explain why the dual norm inequality is useful to tuning at all. Before moving on, though, we should be able to see at this point that if our interval complexity function is defined as a norm, then the left-hand side of this equation (with the notation slightly simplified here now) represents the simplicity-weight damage to an arbitrary interval:
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{\textbf{i}}_q}
+</math>
+
+=== Retuning magnitude ===
+And now let's finally unpack the right-hand side of the inequality. Let's reproduce the whole thing here for convenience, along with that newly simplified left-hand side:
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{\textbf{i}}_q} \leq \norm{𝒓}_{\text{dual}(q)}
+</math>
+
+Inside the double bars we have our retuning map <math>𝒓</math>, and the double bars tell us to take its norm. And not just any norm: the ''dual'' norm of whichever norm that we're using for our interval complexity. So if, for example, our interval vector's norm power was <math>2</math>, then our retuning map's norm power would also be <math>2</math>. Or if our interval vector's norm power was <math>1</math>, then our retuning map's norm power would be <math>\infty</math>. 
+
+We have a special name for a norm on our interval vector <math>\textbf{i}</math>&mdash;a "complexity"&mdash;so let's give ourselves a special name for the norm on our retuning map <math>𝒓</math>, too, to help us compartmentalize these concepts (remember, a [[map]] is just another type of vector, specifically, a [[Wikipedia:Covector|row vector]]). We can refer to this norm as our '''retuning magnitude''' (or "mistuning magnitude", if you prefer). "Magnitude" is a near synonym for norm that nicely connotes size<ref group="note">Though we do recognize that it often connotes a norm with power of <math>2</math>, and that will certainly not always be the case here.</ref> (and perhaps in particular of things that are problems, like earthquakes). So by decreasing the magnitude of our retuning, we move toward a closer-to-just tuning. 
+
+And, since we're going to be using these phrases a lot moving forward, let's use "<math>\textbf{i}</math>-norm" as short for "interval complexity norm", and "<math>𝒓</math>-norm" as short for "retuning magnitude norm".
+
+=== How to use the inequality ===
+Next, let’s note which direction this inequality points. It's telling us that no matter which interval we choose&mdash;even a crazily complex one!&mdash;its simplicity-weight damage will always be less than or equal to whatever the dual norm is of our retuning map. In other words, if we can minimize the simpler right-hand side of this inequality, then we will also have thereby minimized the left-hand side, which is the side we more directly care about. This is what we meant earlier by the right-hand side being more of a knob we adjust, in order to get what we want out of the left-hand side.
+
+And this is an extremely powerful effect here, because remember, our <math>\textbf{i}</math> variable represents ''any'' old arbitrary interval in our entire interval subspace&mdash;in other words, an infinitude of possibilities. But the <math>𝒓</math> variable, the thing we can try minimizing, represents a ''singular'' object. Put another way: any given tuning we may check on our way to minimization has infinity different <math>\textbf{i}</math>'s, but only a single <math>𝒓</math>. 
+
+And so this is what we've been looking for: a way to dismiss the infinitude of damages we don't specifically know about, in our theoretically <math>(d, k)=(d,\infty)</math>-shaped target-interval set containing every possible interval in our interval subspace, because we know for a fact that not one of them could possibly be greater than the magnitude of the errors on our primes.
+
+What this has given us now is ''a new way to compute a minimax damage tuning''. Rather than using the method discussed already in the computations article for computing minimax tunings, we can instead minimize whichever norm we want on the retuning map, and due to the implications of the dual norm inequality, we will have thereby minimized the maximum damage across all intervals (here's where it's always the maximum! No optimization power other than <math>\infty</math> is possible here)&mdash; so long as, of course, we're satisfied with that damage being defined as a simplicity-weight damage whose  interval complexity is expressible as a norm, where the norm we minimized on the retuning map is its ''dual''. 
+
+And so we can think of the less-than-or-equals sign in the middle of the dual norm equality as setting the maximum&mdash;the equivalent of our ever-present optimization power of <math>p=\infty</math>.
+
+Finally, then, we can see why it is unnecessary to provide a target-interval set when using this minimax tuning technique: We've managed to minimize the damage to every interval in the prime limit.
+
+== Normifying complexities ==
+Time to tie up a loose end: we've established that ''some'' complexities ''can'' be norms, but ''when'' can a complexity be a norm, and ''how''?
+ 
+=== Quotient-based versus vector-based formulas ===
+Perhaps the best way to explain complexity normification is by example. And what better place to start than with our default complexity function: log-product complexity. We've even spoiled a couple things about it already: one, that it's one of the complexities that ''can'' indeed be a norm, and two, that when it is in norm form, its power is <math>1</math>.
+
+So how do we get from point A to point B&mdash;how to convert <math>\text{lp-C}()</math> into a norm? Let's begin at the beginning, at point A, i.e with the formula we've been using for <math>\text{lp-C}()</math> thus far. This formula is  ''quotient-based'', i.e. it takes as inputs <math>n</math> and <math>d</math>, the numerator and denominator of the JI interval expressed as a quotient:
+
+
+<math>
+\text{lp-C}\left(\frac{n}{d}\right) = \log_2\left(n×d\right)
+</math>
+
+
+We can see there are two steps to the log-product complexity. First we turn the quotient into a product. Then we take the base-2 log of that product. 
+
+
+<math>\text{lp-C}\left(\frac{10}{9}\right) = \log_2(10×9) = \log_2{90} \approx 6.492</math>.
+
+
+Now that looks obvious enough when the interval is in quotient form, but how about when the interval is in the form of a prime-count vector? Let's convert <math>\frac{10}{9}</math> to a vector.
+
+
+<math>\frac{10}{9} = \dfrac{2×5}{3×3} = \dfrac{2^1×5^1}{3^2}=2^1×3^{-2}×5^1 = \left[ \begin{matrix} 1 & {-2} & 1 \\ \end{matrix} \right]</math>
+
+
+Now we convert its product, <math>10×9</math>, to a vector.
+
+
+<math>10×9 = 2×5×3×3 = 2^1×3^2×5^1 = \left[ \begin{matrix} 1 & 2 & 1 \\ \end{matrix} \right]</math>
+
+
+So we see that changing the vector from a quotient to a product is equivalent to taking the absolute value of all its entries, which is the first step in taking any norm.
+
+Now we have:
+
+
+<math>\text{lp} \left[ \begin{matrix} 1 & {-2} & 1 \\ \end{matrix} \right] = \log_2 \left[ \begin{matrix} |1| & |{-2}| & |1| \\ \end{matrix} \right] = \log_2\left(2^{|1|} × 3^{|{-2}|} × 5^{|1|}\right)</math>
+
+
+We can now apply one of the many helpful logarithmic identities:
+
+
+<math>\log(a×b) = \log(a) + \log(b)</math>
+
+
+This lets us change from a single logarithm of a product of prime powers, to a sum of logarithms of individual prime powers:
+
+
+<math>\log_2\left(2^{|1|}\right) + \log_2\left(3^{|{-2}|}\right) + \log_2\left(5^{|1|}\right)</math>
+
+
+So we gear down from multiplication to addition. Good stuff.
+
+But that's not all. Here's another log identity we can make use of:
+
+
+<math>\log\left(a^b\right) = \log(a)×b</math>
+
+
+This lets us extract the exponents from inside the logarithm parentheses to coefficients outside of them. So again we gear down one level of operational hierarchy, from exponentiation to multiplication.
+
+
+<math>\log_2(2) × |1| + \log_2(3) × \abs{-2} + \log_2(5) × |1|</math>
+
+
+Now because the logs of the primes are always positive (primes are all greater than 1), there's no reason we can't extend the absolute value bars to encompass the logs as well:
+
+
+<math>\abs{\log_2(2) × 1} + \abs{\log_2(3) × -2} + \abs{\log_2(5) × 1}</math>
+
+
+And at last we have the log-product complexity in the form of a <math>1</math>-norm: a sum of vector entries, each absolute valued (and raised to the <math>1</math><sup>st</sup> power, then the <math>1</math><sup>st</sup> root is taken of the whole thing, but these are no-ops so we don't need to show them).
+
+Note that this is not the <math>1</math>-norm of the original vector, but the <math>1</math>-norm of ''a rescaled version of'' the original vector; each entry has been individually scaled by the log of its corresponding prime. One way to think about this is that we've converted each entry from a prime-count into an octave-count.
+
+
+<math>\norm{ \left[ \begin{matrix} \log_2(2) × 1 & \log_2(3) × {-2} & \log_2(5) × 1 \end{matrix} \right] }_1</math>
+
+=== Diagonal matrices ===
+We have a little more work to do before we can see the original vector in the expression. We begin with a row vector <math>{\large\textbf{𝓁}}\hspace{2mu}</math>, the '''log-prime map'''.
+
+
+<math>{\large\textbf{𝓁}}\hspace{2mu} = \left[ \begin{matrix} \log_2{2} & \log_2{3} & \log_2{5} \\ \end{matrix} \right]</math>
+
+
+One way to think about the scaled vector inside the norm-double-bars, which was the last thing we looked at in the previous section, is as the ''entry-wise'' product of <math>{\large\textbf{𝓁}}\hspace{2mu}</math> and {{vector|1 -2 1}}. If we simply took their ''matrix'' product (AKA ''dot'' product), then all the individual products would be added together as the last step, leaving us with a scalar, which we don't want. The way to prevent them from being added together like that is to convert one of these two vectors into a matrix, specifically by putting each entry into a different row and column. In other words, we ''diagonalize'' the vector, turning it into a ''diagonal matrix'', or in other words, a matrix with all zeros except the numbers along its main diagonal. 
+
+So when we wish to achieve an entry-wise product of two vectors in linear algebra, multiplying by a diagonal matrix is how we do that (diagonal matrices like these are sometimes called "scaling matrices" for this reason, because they're the way linear algebra scales entries of vectors individually.) We can think of it this way. The diagonal matrix is a special kind of linear mapping, where the first row says: take all the entries from the incoming vector other than its ''first'' entry and throw them out (multiply them by 0), then multiply that first entry by whatever this first entry is; then for the second row, take all the entries from the incoming vector other than the ''second'' entry and throw them out, then multiply that second entry by whatever this second entry is; and so on. 
+
+In this case&mdash;since we want the result to be a ''column'' vector&mdash;its the ''row'' vector that we convert into a diagonal matrix, leaving the existing column vector alone. 
+
+
+<math>
+\text{diag}\left({\large\textbf{𝓁}}\hspace{2mu}\right)
+\left[ \begin{matrix} 1 \\ {-2} \\ 1 \\ \end{matrix} \right] 
+
+= 
+
+\left[ \begin{matrix} \log_2{2} & 0 & 0 \\ 0 & \log_2{3} & 0 \\ 0 & 0 & \log_2{5} \\ \end{matrix} \right]
+\left[ \begin{matrix} 1 \\ {-2} \\ 1 \\ \end{matrix} \right]
+
+=
+
+\left[ \begin{matrix} \log_2(2) × 1 \\ \log_2(3) × {-2} \\ \log_2(5) × 1 \\ \end{matrix} \right]
+
+</math>
+
+
+Instead of writing <math>\text{diag}\left({\large\textbf{𝓁}}\hspace{2mu}\right)</math> we can define the variable <math>L</math> to be equal to that:
+
+
+<math>L = \text{diag}\left({\large\textbf{𝓁}}\hspace{2mu}\right) = \left[ \begin{matrix} \log_2{2} & 0 & 0 \\ 0 & \log_2{3} & 0 \\ 0 & 0 & \log_2{5} \\ \end{matrix}\right] \approx
+\left[ \begin{matrix}
+1.000 & 0 & 0 \\
+0 & 1.585 & 0 \\
+0 & 0 & 2.322 \\
+\end{matrix} \right]</math>
+
+
+We can call this <math>L</math> the '''log-prime matrix'''.
+
+Now we can write the log-product complexity of <math>\frac{10}{9}</math> as:
+
+
+<math>\text{lp}\,\left[1\ {-2}\ \ 1\right\rangle = \norm{L\,\left[1\ {-2}\ \ 1\right\rangle}_1</math>
+
+
+And in general, the log-product complexity of an interval <math>\textbf{i}</math> in vector form, can be written as:
+
+<math>\text{lp-C}\left(\textbf{i}\right) = \norm{L\textbf{i}}_1</math>  where <math>L</math> is a diagonal matrix containing the base-2 logs of the primes in our vector basis.
+
+And we can say that the log-product complexity of an interval in vector form is its log-prime prescaled<ref group="note">Many articles on the Xenharmonic wiki at the time of writing, describe this kind of thing as a "weighted norm", but this conflicts with general mathematical usage. Although it makes no difference in the case of a <math>1</math>-norm, we found two examples online where a "weighted <math>2</math>-norm" is defined so that the weight is applied 'after' the squaring, and no examples where it was applied beforehand (see
+https://math.stackexchange.com/questions/2263447/proximal-operator-of-weighted-l-2-norm, and https://www-users.cse.umn.edu/~olver/num_/lnn.pdf). Weighting after taking the powers is also standard for “weighted power-means” (see https://en.wikipedia.org/wiki/Generalized_mean#Definition). With "prescaled norm" we make it clear that the scaling occurs before any norm steps are taken.
+<br> <br>
+We also find "weighted norms" defined as things entirely different from what we use in RTT (see https://en.wikipedia.org/wiki/Weighted_space, and https://encyclopediaofmath.org/wiki/Weighted_space).
+<br> <br>
+As for our use of "scaled" over "weighted", we justify this choice in the main text of this article in a couple places: [[#we consciously|here]], beginning with "We consciously chose to avoid emphasizing these parallels", and [[#as for the weighting|here]], beginning with "And as for the 'weighting' vs. 'scaling' issue".</ref> <math>1</math>-norm.
+
+Let's confirm that we get the same result for our <math>\frac{10}{9}</math> example when we do it this way. First we apply the log-prime matrix as our prescaler.
+
+
+<math>
+L\textbf{i} \approx
+
+\left[ \begin{matrix}
+{1.000} & 0 & 0 \\
+0 & {1.585} & 0 \\
+0 & 0 & {2.322} \\
+\end{matrix} \right]
+
+\left[ \begin{matrix}
+{1} \\
+{-2} \\
+{1} \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+{1.000} & × & {1} \\
+{1.585} & × & {-2} \\
+{2.322} & × & {1} \\
+\end{matrix} \right]
+
+=
+
+\left[ \begin{matrix}
+1.000 \\
+{-3.170} \\
+2.322 \\
+\end{matrix} \right]
+</math>
+
+
+Then we apply the <math>1</math>-norm.
+
+
+<math>
+\begin{align}
+\norm{L\textbf{i}}_1 
+&\approx
+\norm{\left[ \begin{array} {r} 1.000 \\ {-3.170} \\ 2.322 \\ \end{array} \right]}_1
+\\[5pt] &=
+\sqrt[1]{|1.000|^1 + |{-3.170}|^1 + |2.322|^1}
+\\[5pt] &=
+|1.000|^1 + |{-3.170}|^1 + |2.322|^1
+\\[5pt] &=
+|1.000| + |{-3.170}| + |2.322| 
+\\[5pt] &= 
+1.000 + 3.170 + 2.322 
+\\[5pt] &= 
+6.492 
+\\[5pt] &\approx 
+\log_2(10×9)
+\end{align}
+</math>
+
+
+And so we have found the same answer with our input in vector form as we did with our input in quotient form.
+
+=== When normifying a complexity is not possible ===
+So in general, to normify a complexity function, we must find a way to express it as some power-norm of an interval's vector, that may be transformed by some scaling matrix before the norm is taken, as we managed to do above with log-product complexity. We can even allow off-diagonal entries in the scaling matrix, but in most cases the matrix must be invertible (exceptions to this will be dealt with in the advanced tuning concepts article). The reason for this will become apparent later.
+
+We can't accomplish this with the plain old (non-logarithmic) product complexity, that is, we can’t express that complexity function as a norm. 
+
+It’s not hard to see why. Let's go back to our <math>\frac{10}{9}</math> example. To get from {{vector|1 -2 1}} to <math>2^{|1|} × 3^{|{-2}|} × 5^{|1|}</math> we need to ''exponentiate'' each entry using a different prime base, then ''scale'' those exponentials together. All we can do with prescaled 1-norms is ''scale'' each entry by a different value, then ''add'' those products together. They are one gear lower in the hierarchy of operations. Other power-norms merely insert a constant power into that sequence, then take a constant root at the end, neither of which help us here.
+
+This illuminates one of the things that are powerful about logarithms: they can be understood as gearing down one level in the operational hierarchy, from multiplication to addition (and from exponentiation to multiplication). Using logarithms enables a factor of <math>2</math> to always be worth the same amount of complexity, from an additive perspective (in the case of log-product complexity, a factor of <math>2</math> is always worth <math>1</math> unit of complexity, which is intuitive enough). This is one key way, then, to appreciate why we typically use log-product complexity instead of (plain old) product complexity in RTT.
+
+== Dual-norm prescalers ==
+We've introduced the idea of dual norms, but so far we've only touched upon them in terms of their dual ''powers'', i.e. the <math>1</math>-norm is the dual norm of the <math>\infty</math>-norm, and vice versa. But it turns out that there's more to our dual norms than just dual powers. In the previous section we learned that a norm can have a ''prescaler'', represented by a diagonal matrix.
+
+To kick off this part of our discussion, we pose the question: if <math>\text{lp-C}()</math> can be expressed as a <math>1</math>-norm, with a log-prime prescaler, then what does its dual norm look like? We know it will be ''some sort of'' <math>\infty</math>-norm. But will it have a prescaler? And if so, what will its matrix look like?
+
+Before we answer that, we want to generalize our previous result for the case of log-product complexity, to allow for other kinds of complexities. So instead of <math>\text{lp-C}\left(\textbf{i}\right) = \norm{L\textbf{i}}_1</math> where <math>L</math> is a diagonal matrix containing the base-2 logs of the primes&mdash;the specific complexity prescaler we need for log-product complexity&mdash;we write, more generally <math>\text{complexity}\left(\textbf{i}\right) = \norm{X\textbf{i}}_q</math> where <math>q</math> is a norm power and <math>X</math> is whatever '''complexity prescaler''' we need at the time. 
+
+It is important to distinguish this complexity prescaler <math>X</math> from the complexity weight matrix <math>C</math>. While the complexity weight matrix <math>C</math> is always a <math>(k, k)</math>-shaped matrix&mdash;that is, with one diagonal entry for each ''targeted interval'', the complexity prescaler <math>X</math> is always a <math>(d, d)</math>-shaped matrix with just one diagonal entry for each ''prime''.
+
+=== Prescaled norms ===
+So a prescaled norm can be fully specified by these two things: 
+
+# Its power
+# Its prescaler
+
+The prescaler is a square matrix with shape <math>(d, d)</math>,<ref group="note">Except in some advanced tuning schemes, as described in the next article.</ref> so that it can take in any arbitrary interval <math>\textbf{i}</math> of our interval subspace, which has shape <math>(d, 1)</math>, and spit it out as a new vector of the same <math>(d, 1)</math> shape, but now rescaled.
+
+At this point in our understanding of all-interval tuning schemes, we are working with two different powers, and two different multipliers. We in fact have one pair of a power and a multiplier, and another separate pair of a power and a multiplier. In order to understand their interrelations better, let's visualize them on a diagram:
+
+[[File:Multipliers and powers.png|frameless|900x900px]] 
+
+Note, however, that reality is not actually so complicated as it may seem at first glance at this diagram. That's because analyzing the interval complexity in terms of being a norm with a prescaler and power is only of ''particular'' interest when dealing with an all-interval tuning scheme (and that's because you need to know the "duals" of each of these two things: the dual power, and the "dual" prescaler), and in that case, then everything else about the other higher-tier pair of multiplier and power&mdash;damage weight, and optimization power&mdash;are locked-in (to simplicity-weight, and <math>\infty</math>, respectively). In other words, even though there are four pieces of information on this diagram, whether you're using an all-interval tuning scheme or an ordinary one, you only ''need'' to worry about two of them at a time.
+
+We put "dual" in scare-quotes above, in the case of the prescaler, because dual matrices have previously been defined as those where one is a null-space basis for the other, like {{subpage|exploring temperaments|uprev|s=Duality|text=mappings and comma bases}}. That is not the case here. They are simply matrix inverses.
+
+=== Bringing it back to the dual norm inequality ===
+Suppose now that we want to use log-product complexity as our interval complexity when we simplicity-weight our absolute error to obtain our damage (remember, simplicity-weight is just the reciprocal of complexity-weight). Let's plug that into our dual norm inequality (reproduced here):
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\|\textbf{i}\|_q} \leq \|𝒓\|_{\text{dual}(q)}
+</math>
+
+
+That is, let's replace our generic and basic norm <math>\|\textbf{i}\|_q</math> with our specific prescaled one, <math>\|X\textbf{i}\|_1</math>:
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\color{red}\|X\textbf{i}\|_1\color{black}} \leq \norm{𝒓}_{\text{dual}(q)}
+</math>
+
+
+Oh, and by the dual power equality, we know our dual power must be <math>\infty</math>, so we can specify that, too:
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\|X\textbf{i}\|_1} \leq \|𝒓\|_{\color{red}\infty}
+</math>
+
+
+Hm. But even that's not quite right. Remember, we got here by plugging in our own special RTT objects into this dual norm inequality we got from general mathematics, the one that started out with these completely abstract <math>\textbf{x}</math> and <math>\textbf{y}</math> vector variables. We had plugged in <math>𝒓</math> for <math>\textbf{x}</math> and <math>\textbf{i}</math> for <math>\textbf{y}</math>, if you recall. So if we've just now substituted in a <math>X\textbf{i}</math> in place of one <math>\textbf{i}</math> here, then we really ought to substitute that <math>X\textbf{i}</math> in for ''every'' <math>\textbf{i}</math> here! Let's take care of that then:
+
+
+<math>
+\dfrac{\abs{𝒓\color{red}X\color{black}\textbf{i}}}{\norm{X\textbf{i}}_1} \leq \norm{𝒓}_\infty
+</math>
+
+
+Alright. But now here's the problem. What the heck is <math>𝒓X\textbf{i}</math>, the numerator on the left-hand side there? That no longer represents the error of <math>\textbf{i}</math>, which we've established is <math>𝒓\textbf{i}</math> (i.e. without the <math>X</math>). And if the inside of those absolute value bars doesn't represent the interval error, then the left-hand side of this inequality no longer represents the simplicity-weighted absolute value of the error, AKA damage. 
+
+So what do we do now?
+
+Well, it's not the end of the world. All we have to do, actually, is cancel out that annoying <math>X</math> that's cropped up in that numerator. And we can do this easily enough. Just as we've adjusted what we substitute in for <math>\textbf{y}</math>, from <math>\textbf{i}</math> to <math>X\textbf{i}</math>, we can adjust what we substitute in for <math>\textbf{x}</math>, in this case from <math>𝒓</math> to <math>𝒓\color{red}X^{-1}</math>! 
+
+Why <math>𝒓X^{-1}</math>? Well, by including the matrix-inverse of <math>X</math> here, we'll ensure that the extra <math>X</math> that we've ended up with in the numerator there gets canceled out, just in the same way that any scalar variable <math>x</math> would cancel out when multiplied with its multiplicative inverse <math>x^{-1}</math>. So where we multiplied <math>\textbf{i}</math> one way, we multiply <math>𝒓</math> the inverse (equal and opposite) way:
+
+
+<math>
+\dfrac{\abs{𝒓\color{red}X^{-1}\color{black}X\textbf{i}}}{\norm{X\textbf{i}}_1} \leq \norm{𝒓\color{red}X^{-1}\color{black}}_\infty
+</math>
+
+
+Cancelling out:
+
+
+<math>
+\dfrac{\abs{𝒓\cancel{X^{-1}}\cancel{X}\textbf{i}}}{\norm{X\textbf{i}}_1} \leq \norm{𝒓X^{-1}}_\infty
+</math>
+
+
+And we're left with:
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{X\textbf{i}}_1} \leq \norm{𝒓X^{-1}}_\infty
+</math>
+
+
+So now we're back to a representation of a simplicity-weight damage on the left-hand side, and as a byproduct of achieving this, the right-hand side has changed a bit. Specifically, just as our interval complexity <math>\text{fn-C}\left(\textbf{i}\right) = \norm{X\textbf{i}}_1</math> is a prescaled norm&mdash;the <math>1</math>-norm prescaled by <math>X</math>&mdash;so is our retuning magnitude a prescaled norm: the <math>\infty</math>-norm prescaled by <math>X^{\color{red}-1}</math>. So our "dual" prescaler <math>X^{-1}</math> is really our '''inverse prescaler.'''<ref group="note">You may be tempted to think that a complexity prescaler's matrix-inverse could be called a ''simplicity'' prescaler, but we note that in the case of target intervals, a simplicity prescaler is not defined as, and is not in general, the matrix-inverse of a complexity prescaler, but rather its entry-wise reciprocal. So this would only lead to confusion.</ref> 
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{X\textbf{i}}_1} \leq \norm{𝒓\color{red} X^{-1} \color{black}}_\infty
+</math>
+
+
+To wrap up here, we can say that if we want to minimize the maximum log-product-simplicity-weight damage across all intervals, we must minimize the <math>\infty</math>-norm of the retuning map prescaled by the inverse of the ''complexity'' prescaler that the intervals are prescaled by. And the <math>\infty</math>-norm, as we've seen earlier, just grabs whichever entry is the maximum out of all the entries in the given vector.
+
+We note that unlike the situation with the dual powers, there's nothing inherent to the dual norm inequality about inverse prescalers, which is to say that using inverse prescalers for <math>\textbf{i}</math> and <math>𝒓</math> is not at all ''necessary'' according to this general mathematical inequality. Doing so is simply the only ''useful'' thing for us to do here given our use case, since we wish to end up with <math>𝒓\textbf{i}</math> in the numerator on the left-hand side.
+
+=== Inverse prescaler for log-product complexity ===
+So, then, what is this <math>X^{-1}</math>? Finding the inverse of a matrix is a basic linear algebra operation you'll find in any math software package, or spreadsheet. But in the case of a diagonal matrix, as we have here, it's particularly simple. It's the same matrix but with each entry along the diagonal replaced with its reciprocal&mdash;AKA its inverse. So to review, if <math>X</math> is this:
+
+
+<math>
+\begin{align}
+X
+&=
+\left[ \begin{matrix}
+\log_2{2} & 0 & 0 \\
+0 & \log_2{3} & 0 \\
+0 & 0 & \log_2{5} \\
+\end{matrix} \right]
+
+\\[10pt] &\approx
+
+\left[ \begin{matrix}
+1.000 & 0 & 0 \\
+0 & 1.585 & 0 \\
+0 & 0 & 2.322 \\
+\end{matrix} \right]
+\end{align}
+</math>
+
+
+Then <math>X^{-1}</math> is this:
+
+
+<math>
+\begin{align}
+
+X^{-1} &= 
+
+\left[ \begin{matrix}
+\log_2{2} & 0 & 0 \\
+0 & \log_2{3} & 0 \\
+0 & 0 & \log_2{5} \\
+\end{matrix} \right]
+
+^{\Large -1} \normalsize
+
+\\[10pt] &= 
+
+\left[ \begin{matrix}
+(\log_2{2})^{-1} & 0 & 0 \\
+0 & (\log_2{3})^{-1} & 0 \\
+0 & 0 & (\log_2{5})^{-1} \\
+\end{matrix} \right]
+
+\\[10pt] &=
+
+\left[ \begin{matrix}
+\frac{1}{\log_2{2}} & 0 & 0 \\
+0 & \frac{1}{\log_2{3}} & 0 \\
+0 & 0 & \frac{1}{\log_2{5}} \\
+\end{matrix} \right]
+
+\\[10pt] & \approx
+
+\left[ \begin{matrix}
+1.000 & 0 & 0 \\
+0 & 0.631 & 0 \\
+0 & 0 & 0.431 \\
+\end{matrix} \right]
+\end{align}
+</math>
+
+
+And note that because, in this case, the inverse happens to equal the entry-wise reciprocal, <math>X^{-1} = \dfrac{1}{X}</math><ref group="note">The inverse prescaler is not defined as, and is not in general, the entry-wise reciprocal of the complexity prescaler, but rather its matrix-inverse. The complexity prescaler is not always a diagonal matrix, as in some advanced tuning schemes, as described in the next article.</ref> we could also rewrite our inequality as:
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{{\color{red} X}\textbf{i}}_1} \leq \norm{\dfrac{𝒓}{\color{red} X}}_\infty
+</math>
+
+
+This way of writing it illuminates how both sets of logs-of-primes, that have not canceled out with each other here, are now on the denominator side of the fraction bar (both occurrences of <math>\color{red}X</math> have been highlighted in red text above to drive this point home). They ended up on this side for two different reasons, but this side they've ended up on nonetheless.
+
+We'll present one last way of looking at this inequality, which uses a common mathematical notation for duals of functions: a superscript asterisk. So if <math>\text{fn-C}()</math> is our complexity function, which we call on our interval <math>\textbf{i}</math>, then <math>\text{fn-C}^{*}\!()</math> is that function's dual, which we call on our retuning map <math>𝒓</math>:
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{{\color{red}\text{fn-C}(}\textbf{i}{\color{red}t)}} \leq {\color{red} \text{fn-C}^{*}\!(}\color{black}𝒓{\color{red})}
+</math>
+
+
+But how can we actually minimize the right-hand side of this inequality? Well, in short, you can plug it into a computer; please give our RTT Library in Wolfram Language a shot. If you want to understand its inner workings, however, it uses specialized methods depending on the norm power, and we'll get into all that detail in the computation section below.
+
+=== Sanity-check example ===
+Let's replay an example from earlier, but this time using a prescaled norm, to make sure the inequality still holds as expected. So we have our interval <math>\textbf{i}</math> being <math>\frac{5}{1}</math> with vector {{vector|0 0 1}}, our retuning map <math>𝒓</math> being {{map|1.699 -2.692 3.944}}, and our <math>q</math> being <math>1</math>:
+
+
+<math>
+\begin{align}
+\dfrac{
+\left|
+\left[ \begin{matrix} 1.699 & {-2.692} & 3.944 \\ \end{matrix} \right]
+\left[ \begin{matrix} 0 \\ 0 \\ 1 \\ \end{matrix} \right]
+\right|
+}
+{ 
+\left\|
+\left[ \begin{matrix} \log_2{2} & 0 & 0 \\ 0 & \log_2{3} & 0 \\ 0 & 0 & \log_2{5} \\ \end{matrix} \right]
+\left[ \begin{matrix} 0 \\ 0 \\ 1 \\ \end{matrix} \right]
+\right\|_1
+}
+\;\; \leq& \;\;
+\left\|
+\left[ \begin{matrix} 1.699 & {-2.692} & 3.944 \\ \end{matrix} \right]
+\left[ \begin{matrix} \frac{1}{\log_2{2}} & 0 & 0 \\ 0 & \frac{1}{\log_2{3}} & 0 \\ 0 & 0 & \frac{1}{\log_2{5}} \\ \end{matrix} \right]
+\right\|_\infty
+
+\\[8pt]
+
+\dfrac{
+\left|
+(1.699)(0) + ({-2.692})(0) + (3.944)(1)
+\right| 
+}
+{ 
+\left\|
+\left[ \begin{matrix} (\log_2{2})(0) + (0)(0) + (0)(0) \\ (0)(0) + (\log_2{3})(0) + (0)(0) \\ (0)(0) + (0)(0) + (\log_2{5})(1) \\ \end{matrix} \right]
+\right\|_1
+}
+\;\; \leq& \;\;
+\left\|
+\left[ \begin{matrix} (1.699)\left(\frac{1}{\log_2{2}}\right) + ({-2.692})(0) + (3.944)(0) & (1.699)(0) + ({-2.692})\left(\frac{1}{\log_2{3}}\right) + (3.944)(0) & (1.699)(0) + ({-2.692})(0) + (3.944)\left(\frac{1}{\log_2{5}}\right) \\ \end{matrix} \right]
+\right\|_\infty
+
+\\[8pt]
+
+\dfrac{
+\left|
+0 + 0 + 3.944
+\right| 
+}
+{ 
+\left\|
+\left[ \begin{matrix} 0 + 0 + 0 \\ 0 + 0 + 0 \\ 0 + 0 + \log_2{5} \\ \end{matrix} \right]
+\right\|_1
+}
+\;\; \leq& \;\;
+\left\|
+\left[ \begin{matrix} \frac{1.699}{\log_2{2}} + 0 + 0 & 0 + \frac{{-2.692}}{\log_2{3}} + 0 & 0 + 0 + \frac{3.944}{\log_2{5}} \\ \end{matrix} \right]
+\right\|_\infty
+
+\\[8pt]
+
+\dfrac{
+\left|
+3.944
+\right|
+}
+{ 
+\left\|
+\left[ \begin{matrix} 0 \\ 0 \\ \log_2{5} \\ \end{matrix} \right]
+\right\|_1
+}
+\;\; \leq& \;\;
+\left\|
+\left[ \begin{matrix} \frac{1.699}{\log_2{2}} & \frac{{-2.692}}{\log_2{3}} & \frac{3.944}{\log_2{5}} \\ \end{matrix} \right]
+\right\|_\infty
+
+\\[8pt]
+
+\dfrac{
+3.944
+}
+{
+\sqrt[1]{\strut |0|^1 + |0|^1 + |\log_2{5}|^1}
+}
+\;\; \leq& \;\;
+\max\left(\abs{\frac{1.699}{\log_2{2}}}, \abs{\frac{{-2.692}}{\log_2{3}}}, \abs{\frac{3.944}{\log_2{5}}}\right)
+
+\\[8pt]
+
+\dfrac{
+3.944
+}
+{
+\sqrt[1]{\strut 0^1 + 0^1 + (\log_2{5})^1}
+}
+\;\; \leq& \;\;
+\abs{\frac{3.944}{\log_2{5}}}
+
+\\[8pt]
+
+\dfrac{
+3.944
+}
+{
+\sqrt[1]{0 + 0 + \log_2{5}}
+}
+\;\; \leq& \;\;
+\frac{3.944}{\log_2{5}}
+
+
+\\[8pt]
+
+\dfrac{
+3.944
+}
+{
+\sqrt[1]{\log_2{5}}
+}
+\;\; \leq& \;\;
+1.699
+
+
+\\[8pt]
+
+\dfrac{
+3.944
+}
+{
+\log_2{5}
+}
+\;\; \leq& \;\;
+1.699
+
+
+\\[8pt]
+
+1.699
+\;\; \leq& \;\;
+1.699
+\end{align}
+</math>
+
+== Example all-interval tuning schemes ==
+At the beginning of this Concepts section, you were promised that by the end of it, you'd have a deep understanding of two of the most commonly-used all-interval tuning schemes: minimax-S and minimax-ES. We claimed you'd be able to explain how they work, how they are similar to and different from each other, and also how they compare with the more basic tuning schemes that we've explained previously. Well, we've got great news: you're closer to the end than you may think!
+
+=== Minimax-S ===
+For starters, at this point, attaining a complete understanding of the minimax-S tuning scheme is a freebie. That's because it's the example we've been working through this entire article already. Yes, that's right, minimax-S is the scheme which gives us&mdash;for any given temperament&mdash;the tuning which minimizes the log-prime-simplicity-weight damage to all intervals in its subspace, i.e. where we choose our target-interval set to be literally every possible interval.
+
+It's the tuning that uses this take on the dual norm inequality:
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{L\textbf{i}}_1} \leq \norm{𝒓L^{-1}}_\infty
+</math>
+
+
+If you recall from the fundamentals article when we introduced our naming system for tuning schemes, by leaving off the target-interval set (as we have with the name "minimax-S"), we assume that all intervals are being targeted. And while all our talk about dual norms and normifying complexities in this article certainly might have distracted you&mdash;giving you a peek into the Pandora's box of the variety of complexities we could choose to use when weighting absolute error to obtain damage&mdash;if you recall, we made it all the way through the fundamentals article without needing any other complexity besides log-product complexity, and that's our default interval complexity, so it shouldn't surprise you in retrospect that it's the interval complexity minimax-S uses, either. If you like, you could imagine that the full name, without the default applied, would be "minimax-lp-S".
+
+As stated earlier, "minimax-S" is just our systematic name for the tuning introduced by Paul Erlich in his paper ''A Middle Path'', where he named it "TOP".<ref group="note">"TOP" is a double acronym. It stands either for "Tempered Octaves, Please" or for "Tenney OPtimal". 
+<br><br>
+At the time this tuning scheme was proposed, tempering octaves was a novel prospect. According to Paul, "almost all the types of optimal tuning my colleagues and I had considered until this year had pure octaves" (p173 of https://dkeenan.com/Music/MiddlePath.pdf). One of those examples&mdash;predating ''A Middle Path'' by 9 months&mdash;was the "What is a linear microtemperament?" section of Dave's article ''Optimising JI guitar designs using linear microtemperaments (or: If it aint Baroque don’t waste your lute fixing it)'' (p2-6 of https://www.dkeenan.com/Music/MicroGuitar.pdf); it mentions tempered octaves, though doesn't give them. Nowadays, however, tempering octaves is ubiquitous, so naming a tuning scheme for the practice is not nearly specific enough.
+<br><br>
+And regarding the second name, since Tenney refers to the Tenney lattice&mdash;which is to say, it only refers to the combination of scaling prime factors by the logs of the respective primes, then moving along the rungs only (using the taxicab norm, i.e. norm power <math>1</math>)&mdash;then ''any'' tuning scheme which weights absolute error to obtain damage using an interval complexity which uses the log-prime matrix <math>L</math> and norm power <math>1</math>, could be considered "optimal" with respect to "Tenney" no matter whether that's simplicity-weight damage or complexity-weight damage, or whether the target-interval set contains all intervals or not, so this name is not nearly specific enough anymore either. 
+<br><br>
+This lack of specificity, on both accounts, is what led to Graham adopting the alternative name of TOP-max (see https://yahootuninggroupsultimatebackup.github.io/tuning/topicId_88292#88470) for it, while what we now know as TE tuning he called TOP-RMS at that time (see https://yahootuninggroupsultimatebackup.github.io/tuning/topicId_88292#88375). Since then, a generalized naming was developed whereby "TOP" is "T1" and "TE" is "T2", but we think this doesn't improve the situation much.
+<br><br>
+The first issue is that since Tenney implies norm power <math>1</math>, Euclideanization of Tenney is already self-contradictory, or at best, Euclideanization involves a wasteful overriding of part of the meaning of Tenney where instead something referring only to log-prime prescaling should be used (such as we do in our naming system, by adding "lp-", though this is the default, so it is rarely shown).
+<br><br>
+But the main problem with this numeric naming scheme is that it's too easy to get confused about what the number refers to. Is it <math>p</math>, <math>q</math> or <math>\text{dual}(q)</math>? In fact, it refers to <math>q</math>, the norm power for the interval complexity. There's an argument that this makes sense because the user wants to know which norm power the interval complexity uses, i.e. the complexity which simplicity-weights the absolute errors in their target-intervals to obtain their damages, and that it doesn't matter what you have to do to achieve this minimization. But there's also an argument that the user of an all-interval tuning scheme tends to know too much about the tool they're using, and would expect to be told the power used for the retuning map norm, <math>\text{dual}(q)</math>, which is what they directly minimize to perform the minimax optimization of all intervals (this is how Flora Canou's temperament utilities library handles things, and we can also see that this is the thinking Graham used when he changed "TOP" to "TOP-max"). Our systematic name disambiguates what we refer to through context, because everything past the mini-<math>p</math>-mean name is part of the description of the damage minimized. So if an "E" for "Euclideanized" appears there, it is simply part of the name of the interval complexity used in weighting the absolute error to obtain damage.
+<br><br>
+The name "TOP-RMS", by the way, is a great example of the inherent danger of conflating optimization powers <math>p</math> and norm powers <math>q</math>. Remember, our systematic name for this scheme is "minimax-ES", which definitively shows it to be a tuning which minimizes the ''max'' (AKA (<math>p\!=\!\infty</math>)-mean), not the ''RMS'' (AKA (<math>p\!=\!2</math>)-mean) damage. What TOP-RMS really involves is not a <math>(p\!=\!2)</math>-''mean'', but a <math>(q\!=\!2)</math>-''norm'' (as the interval complexity function). (One might argue that because minimax-ES tuning is equivalent to primes miniRMS-S tuning, i.e. it is equivalent to minimizing the <math>2</math>-mean over a target-interval set consisting only of the primes, but this principle doesn't hold in general, and the argument is a bit of a stretch.)
+<br><br>
+Furthermore, the use of "Tenney" in the name of this tuning scheme seems to have set the stage for a procession of eponymous tuning scheme namings, tapping Benedetti, Weil, Kees, Wilson, and possibly more names we don't even know about yet; eponyms are no good because they don't convey any meaning unless you're already familiar with the history of the information, and so our naming system has stuck entirely to descriptive naming, with the notable exception of Euclid who shows up in "Euclideanized", but we consider this ancient Greek thinker's name to have [[Wikipedia:Euclid's Elements|transcended eponymity]], at least in the context of Euclidean space, distance, length, and geometry, which is where we, and other microtonal theorists before us, have applied it.
+<br><br>
+We have one final piece to this note regarding the naming of TOP. Historically, people have sometimes distinguished tuning schemes which find the true (unique) optimum tuning from the rest of the set of tunings that are tied for minimax or miniaverage damages (distinguished them, that is, from the tuning schemes that can return any or all of the tied tunings) by prefixing the tuning scheme name with "TIP", coined by [[Keenan Pepper]] to stand for "Tiebreaker in Polytope" (see: https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_20405.html#20412). This was intended to distinguish the "TIPTOP" tuning scheme from the "TOP" tuning scheme, but in fact Paul always intended his TOP tunings to be "TIPTOP", and all tunings given in the current version of ''A Middle Path'' are "TIPTOP" (there was a small error in one tuning out of the 55 in the first version). So this prefix is no longer necessary, now that the community has widely recognized that there is no use for tuning schemes which merely return an arbitrary value from a range of near-optimum tunings when the ability to acquire the true optimum tuning is readily available (the optimum in the limit as <math>\text{dual}(q)→\infty</math>), so we may as well use "TOP" and our equivalent "minimax-S" to refer to the scheme which returns the true optimum tuning. If ever necessary, we may call tunings which tie with the true optimum for basic minimax damage "tunings with the same maximum damage as the minimax tuning" or "same max as minimax" for short; we'd rather avoid dignifying them with formal naming.
+<br><br>
+No wait: one more gripe about the naming of "TOP" variants. Unfortunately, people decided to name a pure-octave version of it "POTOP", which is silly because one of the acronyms of TOP is "tempered octaves please", so that's self-contradictory: "pure octave tempered octaves please." (By the way, "POTT" is just short for "POTIPTOP", so you already know what we think of that.) POTE, which is pure-octave TE, is less bad; that is only interpretable as "pure-octave Tenney-Euclidean". But both of these PO-tunings were unfortunately defined to use the destretched-interval style rather than the held-intervals approach to unchanged octaves. For more information, see {{subpage|tuning fundamentals|uprev|s=Destretching vs. holding|text=destretching vs. holding}} and [[#Destretched-octave minimax-(E)S]].</ref> The equivalence between minimax-S and TOP may not be obvious, even if you are familiar with Paul's paper. Paul explains the concept in a very different way than we have (no mention of dual norms at all), and using different terminology, e.g. while we use the general mathematical terminology "log-product complexity", Paul used the terminology "harmonic distance". This is the terminology of [[James Tenney]], the first person to apply this function to microtonality.
+
+=== Minimax-ES ===
+The first thing you may notice about the minimax-ES tuning scheme is that its name appears very similar to that of minimax-S. The only difference is the insertion of that "E" in there. So let's start with that. What does it stand for, and how does it change our scheme?
+
+This 'E' stands for "'''Euclideanized'''", and so it is calling for us to "Euclideanize" whichever interval complexity function we use to simplicity-weight the absolute error to obtain the damage. The full name of this scheme might be read as "the minimized maximum of Euclideanized-simplicity-weight damage (to all intervals)".
+
+How, then, might we Euclideanize a complexity function? Maybe it's an alternative to normifying it? Well, not quite. Euclideanizing a complexity function is something you do ''after'' you already have a complexity function's formula in norm form (by normifying it from quotient form, if necessary). '''Euclideanization''' is quite simple: take what you have already, and change the norm power to <math>2</math>. (Usually the power changes ''from'' <math>1</math>, as it does when we Euclideanize <math>\text{lp-C}()</math>, but that part's not critical.) To be clear, leave the norm prescaler (if any) alone.
+
+So if this is the summation form of <math>\text{lp-C}()</math>, as we found earlier:
+
+
+<math>
+\text{lp-C}\left(\textbf{i}\right) = \sum\limits_{n=1}^d \log_2{p_n}\abs{\mathrm{i}_n}
+</math>
+
+
+And this is how that looks like before we eliminate the no-op <math>1</math><sup>st</sup> power and <math>1</math><sup>st</sup> root:
+
+
+<math>
+\text{lp-C}\left(\textbf{i}\right) =\color{red} \sqrt[ 1 ]{\strut  \color{black} \sum\limits_{n=1}^d \color{red}\left(\color{black}\log_2{p_n}\abs{\mathrm{i}_n} \color{red}\right)^{1} }
+</math>
+
+
+Then this is the summation form of Euclideanized log-product complexity, <math>\text{E-lp-C}()</math>. We keep the norm prescaler <math>\log_2{p_n}</math> as is, and swap out all powers and roots of <math>1</math> for <math>2</math>'s:
+
+
+<math>
+\text{lp-C}\left(\textbf{i}\right) = \sqrt[\color{red} 2 \color{black} ]{\strut \sum\limits_{n=1}^d \left(\log_2{p_n}\abs{\mathrm{i}_n}\right)^{\color{red}2} }
+</math>
+
+
+We could expand that out like this:
+
+
+<math>
+\text{lp-C}\left(\textbf{i}\right) = \sqrt[2]{\strut \left(\log_2{p_1} × \abs{\mathrm{i}_1}\right)^2 + \left(\log_2{p_2} × \abs{\mathrm{i}_2}\right)^2 + ... + \left(\log_2{p_d} × \abs{\mathrm{i}_d}\right)^2 }
+</math>
+
+
+Note that even if a complexity has a quotient form, its Euclideanized version will not. At least, it won't have a meaningfully distinct quotient form, i.e. one that works any way other than by unpacking the rational's prime factors, in which case it would merely be an extraneously complicated formulation of the same ideas which would be better expressed through a summation or norm form. 
+
+So why do we call this "Euclideanizing"? It's because a common name for the basic <math>2</math>-norm is the "Euclidean norm". And that, in turn, is because the Euclidean norm is how to find Euclidean distance (as we explained in the earlier section [[#Relationship with distance|Power norms: Relationship with distance]]), or in other words, distance in Euclidean space, which is just another way of saying the basic geometric space we understand as representing the way space works in our everyday reality. 
+
+So to be absolutely clear, minimax-ES is the all-interval tuning that uses <math>\text{E-lp-C}()</math> as its interval complexity function. As stated earlier, the original name for this tuning, per its inventor Graham Breed, is "TE", which stands for Tenney-Euclidean, in recognition of the fact that it's a Euclideanized version of the Tenney-style TOP tuning that Paul had innovated.<ref group="note">https://yahootuninggroupsultimatebackup.github.io/tuning-math/topicId_18357#18357</ref>
+
+And now that we have <math>\text{E-lp-C}()</math> defined as a type of <math>2</math>-norm, and understand that its prescaler (same as it is with <math>\text{lp-C}()</math>) is the logs of the primes, then we can know that if we want to minimize the log-product-simplicity-weight damage to all intervals in our subspace, we need to minimize the <math>2</math>-norm of our retuning map <math>𝒓</math>, where that map has been prescaled by the inverse of the logs of the primes:
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{X\textbf{i}}_{\color{red}2 \color{black}}} \leq \norm{𝒓X^{-1}}_{\color{red}2}
+</math>
+
+
+Note in particular how our dual norm, the one we're minimizing on <math>𝒓</math>, has a power of <math>2</math>. (You didn’t think we’d teach you all that stuff about the dual power continuum only to end the article only using a single norm power, did you?)
+
+Now why in the world would we use minimax-ES when we could use minimax-S? Well, the short answer is: not because it gives better tunings. It gives ''worse'' tunings, actually. The advantage here is that minimax-ES is easier to compute, because there's a special way to solve for it. 
+
+Regarding it being a worse tuning, this can be quickly addressed by noting that unlike <math>\text{lp-C}()</math>, <math>\text{E-lp-C}()</math> is ''not'' monotonic over the integers. We'll save a full audit of various complexity functions used as interval complexities until the advanced tuning concepts article, but for now we'll just note that from 5 to 6 to 7 we get complexities of 2.322, dipping down to 1.874, and back up to 2.807 (whereas for <math>\text{lp-C}()</math> we get the same values for 5 and 7 but for 6 we get 2.585, in between them). While there's an argument that 6 is lower complexity than 5 or 7&mdash;being that it's lower prime limit than either of them&mdash;in general this sort of irregularity leads to strangenesses like <math>\frac{9}{8}</math> being ranked more complex than <math>\frac{10}{9}</math>.<ref group="note">We note that there's nothing inextricably linking Euclideanized complexity functions to all-interval tuning schemes (or minimax tuning schemes, or simplicity-weight damage tuning schemes). For example, TILT minimax-ES, TILT minimax-EC, TILT miniaverage-ES, TILT miniaverage-EC, TILT miniRMS-ES, and TILT miniRMS-EC are all possible tuning schemes. Since it has less psychoacoustic plausibility than <math>\text{lp-C}()</math> and offers no computational benefits in these cases, we see no particular reason to use these schemes, but nothing is stopping you if you really want to.</ref> That said, <math>\text{E-lp-C}()</math> isn't complete garbage; it's close enough to <math>\text{lp-C}()</math> that the computational simplicity may be of interest to some people.
+
+Regarding minimax-ES being easier to compute, well, if you went through the computations article, then you may already have guessed: it's because we have the pseudoinverse to compute it with.
+
+Again, as with minimizing an <math>\infty</math>-norm, we do have specialized techniques for actually computing the answer, which will be discussed in the computations section below. Otherwise, you can just plug it into a library such as ours in Wolfram.
+
+Here is minimax-ES's take on the dual norm inequality. It's almost identical to minimax-S, except the dual powers of <math>1</math> and <math>\infty</math> have been replaced with dual powers of <math>2</math> and <math>2</math>:
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{L\textbf{i}}_2} \leq \norm{𝒓L^{-1}}_2
+</math>
+
+
+And tell you what, we'll throw in a third example all-interval tuning scheme for free. The [[CTE]] tuning scheme, the initialism for "Constrained Tenney-Euclidean", is just held-octave minimax-ES. In other words, by "constrained" it means a specific constraint: namely, on the octave, and that it is held unchanged.
+
+=== Others ===
+Most of the tunings that have been named and described on the wiki at the time of this writing are all-interval tunings. As you know, they all are minimax tuning schemes, and they all use simplicity-weight damage. The main trait that distinguishes them, then, is which interval complexity function they use. The relationship between these tunings is much clearer, of course, when using our systematic naming. For examples, "BOP" is just "minimax-<span style=color:red>p-</span>S", using product complexity (the non-logarithmic version), and "Weil" is just "minimax-<span style=color:red>lil-</span>S", using log-integer-limit complexity. The other half of these schemes are just Euclideanized versions, e.g. "BE" is just "minimax-<span style=color:red>E</span>-p-S" and "WE" is just "minimax-<span style=color:red>E-</span>lil-S". We also see tunings with held-intervals (like CTE, which is held-octave minimax-ES), or destretched intervals (POTE, which is destretched-octave minimax-ES), but anyway. If you're eager to learn more about other all-interval tuning schemes, you can then continue your studies here on our article about {{subpage|alternative complexities|uprev}}.
+
+== A geometric demonstration of dual norms ==
+So now we've learned basically everything we need to know to get cracking with all-interval tuning schemes. But maybe you're still a bit bothered. Our logic and equations check out, but you still just don't feel it in your bones. It doesn't really ''feel'' yet like minimizing the retuning magnitude should cap the max damage on all intervals. If you're lacking intuition for this effect (as we certainly did when we were learning it), then perhaps one or the other of the following two demonstrations will solidify things for you in a new and helpful way.
+
+Here we'll give a nice little demonstration of how <math>\abs{\textbf{x}·\textbf{y}} \leq \norm{\textbf{x}}_q × \norm{\textbf{y}}_{\text{dual}(q)}</math> using some geometry.
+
+=== Setup ===
+We'll represent vectors as arrows, and we'll use the double-bar notation <math>\norm{\mathbf{x}}</math> (with no subscript) for the ordinary geometrical length of the arrow representing the vector <math>\mathbf{x}</math>. Single bars <math>|x|</math> take the absolute value of a scalar.
+
+When you scale the length of a vector&mdash;that is, when you multiply all the vector's entries by the same factor&mdash;its norm scales by that factor too, no matter what kind of norm it is. In fact, this is one requirement for a function to be considered a norm. This applies to both norms on the right hand side of the inequality. Also when you scale a vector, its dot product with another vector scales by that factor too. This applies to both x and y in the dot product on the left side of the inequality. So we could simplify our demonstration by considering <math>\textbf{x}</math> and <math>\textbf{y}</math> to be of unit length, because multiplying both sides of the inequality by the same factors leaves the inequality unchanged. This is true even for negative scale factors, thanks to the absolute values being taken on both sides. 
+
+However, we think that going all the way to unit vectors would obscure some of what is going on, so we will merely make <math>\textbf{x}</math> and <math>\textbf{y}</math> have the same length. This will be simplification enough.
+
+If we fix the lengths of two vectors, their dot product is a measure of the degree to which they point in the same direction. The dot product is a maximum when they point in ''exactly'' the same direction. So if we're trying to show that <math>\abs{\textbf{x} · \textbf{y}}</math> is less than or equal to something, we only need to check its maximum value, and so not only can <math>\textbf{x}</math> and <math>\textbf{y}</math> be of the same length, they can be the ''same vector'', simplifying the demonstration still further.
+Let's use some arbitrary interval <math>\textbf{i}</math> as our <math>\textbf{x}</math> and <math>\textbf{y}</math>, then. 
+
+[[File:Dual_norm_geometric_demo_1.png|frameless|220x220px]]
+
+So our inequality now looks like:
+
+
+<math>
+\abs{\textbf{i} · \textbf{i}} \leq \norm{\textbf{i}}_q × \norm{\textbf{i}}_{\text{dual}(q)}
+</math>
+
+
+The dot product of a vector with itself is a simple scalar that corresponds numerically to the area of a square whose sides are the length of its arrow. So we can substitute <math>\norm{\textbf{i}}^2</math> in for <math>\abs{\textbf{i} · \textbf{i}}</math>:
+
+
+<math>
+\norm{\textbf{i}}^2 \leq \norm{\textbf{i}}_q × \norm{\textbf{i}}_{\text{dual}(q)}
+</math>
+
+
+We can visualize this <math>\|\textbf{i}\|^2</math> area as a square lying along the length of <math>\textbf{i}</math>.
+
+[[File:Dual_norm_geometric_demo_2.png|frameless|300x300px]]
+
+The first norm we'll check is the <math>2</math>-norm. It is self-dual, so our inequality looks like:
+
+
+<math>
+\norm{\textbf{i}}^2 \leq \norm{\textbf{i}}_2 × \norm{\textbf{i}}_2
+</math>
+
+
+This says that the square of the length of the vector is less than or equal to its <math>2</math>-norm times its <math>2</math>-norm. But, based on [[Pythagoras of Samos|Pythagoras]]' theorem, the <math>2</math>-norm of a vector is simply its ordinary length, which is why it's also called the Euclidean norm. Euclidean geometry is ordinary everyday geometry. So we have:
+
+
+<math>
+\norm{\textbf{i}}^2 \leq \norm{\textbf{i}}× \norm{\textbf{i}}
+</math>
+
+
+Which simplifies to:
+ 
+
+<math>
+\norm{\textbf{i}}^2 \leq \norm{\textbf{i}}^2
+</math>
+
+
+This inequality is therefore true, because the included equality is true, being this identity.
+
+
+<math>
+\norm{\textbf{i}}^2 = \norm{\textbf{i}}^2
+</math>
+
+
+[[File:Dual norm geometric demo 3.png|frameless|300x300px]]
+
+It's slightly trickier to demonstrate this inequality for the <math>1</math>-norm and its dual, the <math>\infty</math>-norm, but it's doable. We may begin with our arbitrary interval <math>\textbf{i}</math> and its dot product with itself equal to its length squared.
+
+But we'll need to find suitable substitutes for <math>\norm{\textbf{i}}_1</math> and <math>\norm{\textbf{i}}_\infty</math> in the inequality:
+
+
+<math>
+\norm{\textbf{i}}^2 \leq \norm{\textbf{i}}_1 × \norm{\textbf{i}}_\infty
+</math>
+
+
+To do this, we'll need to look at the entries of <math>\textbf{i}</math>.
+
+Let's make this example as simple as possible to illustrate the concept. Let's give our vector only two entries, which is enough entries that we can't treat it as a scalar, but no more entries than that. It could be a 3-limit vector, with its two entries corresponding to primes 2 and 3. But for our geometrical demonstration we will refer to them as <math>\mathrm{i}_{\text{h}}</math> and <math>\mathrm{i}_{\text{v}}</math> for horizontal and vertical. And we can visualize them as the legs (the two sides at right angles) of a right triangle with <math>\textbf{i}</math> as the hypotenuse. And let's also assume that <math>|\mathrm{i}_{\text{h}}| > |\mathrm{i}_{\text{v}}|</math>, that is, that <math>\mathrm{i}_{\text{h}}</math> is the longer side.
+
+[[File:Dual norm geometric demo 4.png|frameless|300x300px]]
+
+We know that the <math>1</math>-norm of an interval is simply the sum of the absolute values of its entries. So:
+
+
+<math>
+\norm{\textbf{i}}_1 = \abs{\mathrm{i}_{\text{h}}} + \abs{\mathrm{i}_{\text{v}}}
+</math>
+
+
+And we know that the <math>\infty</math>-norm of an interval is simply the maximum of the absolute value of its entries. And since we've assumed for this demonstration that <math>\abs{\mathrm{i}_{\text{h}}} > \abs{\mathrm{i}_{\text{v}}}</math>, we have:
+
+
+<math>
+\norm{\textbf{i}}_\infty = \abs{\mathrm{i}_{\text{h}}}
+</math>
+
+
+After substituting both of those in for our norms, our inequality now looks like:
+
+
+<math>
+\norm{\textbf{i}}^2 \leq \left(\abs{\mathrm{i}_{\text{h}}} + \abs{\mathrm{i}_{\text{v}}}\right) × \left(\abs{\mathrm{i}_{\text{h}}}\right)
+</math>
+
+
+We can distribute the <math>\abs{\mathrm{i}_{\text{h}}}</math>:
+
+
+<math>
+\norm{\textbf{i}}^2 \leq \abs{\mathrm{i}_{\text{h}}}^2 + \abs{\mathrm{i}_{\text{h}} × \mathrm{i}_{\text{v}}}
+</math>
+
+=== The key visualization ===
+Now for a particularly cool visualization! We can show <math>|\mathrm{i}_{\text{h}}|^2</math> as a square positioned along <math>\mathrm{i}_{\text{h}}</math>, and we can visualize <math>\abs{\mathrm{i}_{\text{h}} × \mathrm{i}_{\text{v}}}</math> as a rectangle positioned along <math>\mathrm{i}_{\text{v}}</math> extending <math>\mathrm{i}_{\text{h}}</math> outwards from the triangle.
+
+[[File:Dual norm geometric demo 5.png|frameless|450x450px]]
+
+Let's set up another similar diagram to compare the previous one with.
+
+[[File:Dual norm geometric demo 6.png|frameless|450x450px]]
+
+By the Pythagorean theorem, the square of a hypotenuse is equal to the sum of the squares of the legs. So in this case:
+
+
+<math>
+\norm{\textbf{i}}^2 = \abs{\mathrm{i}_{\text{h}}}^2 + \abs{\mathrm{i}_{\text{v}}}^2
+</math>
+
+
+We can visualize this in a similar way.
+
+[[File:Dual norm geometric demo 7.png|frameless|525x525px]]
+
+Comparing this with the previous diagram, we can see how the area of the square on the hypotenuse must always be less than the sum of the areas of the square and the rectangle positioned on the legs: because the <math>\abs{\mathrm{i}_{\text{h}} × \mathrm{i}_{\text{v}}}</math> rectangle will by definition always be at least the size of the <math>\abs{\mathrm{i}_{\text{v}}}^2 = \abs{\mathrm{i}_{\text{v}} × \mathrm{i}_{\text{v}}}</math> square that would make their sum equal, because <math>\abs{\mathrm{i}_{\text{h}}} \geq \abs{\mathrm{i}_{\text{v}}}</math>.
+
+=== Edge cases ===
+Now let's check some edge cases.
+
+At one extreme, where <math>\abs{\mathrm{i}_{\text{v}}}</math> is as large as possible, that is where <math>\abs{\mathrm{i}_{\text{v}}} = \abs{\mathrm{i}_{\text{h}}}</math>, then the rectangle becomes a square&mdash;<math>\abs{\mathrm{i}_{\text{h}} × \mathrm{i}_{\text{v}}}</math> becomes <math>|\mathrm{i}_{\text{v}}|^2</math>&mdash;and so the diagram becomes an instance of the Pythagorean theorem, where the right triangle happens to be isosceles. 
+
+And so, here the dual norm product is equal to the vector dot product, which satisfies the less-than-or-equal-to inequality.
+
+[[File:Dual norm geometric demo 8.png|frameless|450x450px]]
+
+At the other extreme, <math>\abs{\mathrm{i}_{\text{v}}}</math> is as ''small'' as possible. It certainly could be <math>0</math>, but we're showing it on this diagram as a value very close to <math>0</math>, so the associated rectangle can still be visualized.
+
+[[File:Dual norm geometric demo 9.png|frameless|450x450px]]
+
+If <math>\abs{\mathrm{i}_{\text{v}}} \approx 0</math>, then the rectangle's area is also <math>\approx 0</math>, and so the area of the hypotenuse's square simplifies to <math>\approx \abs{\mathrm{i}_{\text{h}}}^2</math>. At this point, it is approximately equal to the area of the other leg's square <math>\abs{\mathrm{i}_{\text{h}}}^2</math>, so again the inequality holds.
+
+We have thus demonstrated the dual norm inequality for the <math>2</math>-norm with itself and the <math>1</math>-norm with the <math>\infty</math>-norm. Because these are the worst cases, and it works for them, it must also work for all other pairs of dual norms in between these extremes.<ref group="note">For an interesting take on a similar idea, see Mathologer's animation here: https://www.youtube.com/watch?v=Y5wiWCR9Axc&t=1307</ref>
+
+== Unit shapes ==
+Here's another handy geometric way to think of the <math>1</math>, <math>2</math>, and <math>\infty</math> -norms: by their '''unit shapes'''. What is meant by "unit shape" is this: given a central point, what is the shape you get from drawing a line through all points that are exactly one unit away from that point, given the present definition of distance. 
+
+=== Shape: Circle, Distance: Crow ===
+Let's first consider the case of <math>q = 2</math>, because in terms of unit shapes, this is actually the power that gives the most familiar results: a unit circle. As mentioned earlier, <math>q = 2</math> is related to the distance formula. If you remember learning the Pythagorean formula&mdash;the formula that gives the length of the hypotenuse of a right triangle&mdash;this is that. One side of the triangle represents the coordinate in one dimension, and the other side of the triangle represents the coordinate in the other of the two dimensions. And so the hypotenuse is the shortest distance from the point you started at to the point you arrive at by moving by each side of the triangle. You could imagine a procession of right triangles which all have a hypotenuse of length 1, starting with a degenerate triangle where one side is length 1 and the other is length 0 (so the hypotenuse simply is the side of length 1), immediately transitioning into a really long flat triangle, then to an isosceles one in the middle, and finally a tall skinny one (and ultimately another degenerate triangle). If you locked one of the vertices with an acute angle in place, you'd see the other angle trace out a quarter of a circle. Repeating four copies of this triangle gives the unit circle. This is just a restatement of the definition of a circle, which is the set of all points that are the same distance from a shared center point. Also recall that the formula for a circle is <math>x^2 + y^2 = r</math>, where <math>r</math> here is not the temperament rank but rather the circle's radius. And this is generalizable to higher dimensions; a sphere is the set of points in three dimensions that are equidistant from a center point, and so on.
+
+This is distance "as the crow flies", or in other words, with no constraints, just as straight as possible from point A to point B.
+
+[[File:Unit shapes - circle.png|frameless|450x450px]] 
+
+=== Shape: Diamond, Distance: Cab ===
+Next let's look at the case of <math>q = 1</math>. This unit shape is a diamond. Again, this means that this is the shape of the set of points that are all 1 away from the center point. Think of it this way. If you go straight up and down or straight right or left, the coordinates whose absolute values sum to 1 will be (1, 0), (-1, 0), (0, 1), and (0, -1). But "distance" works differently in this space based on the <math>1</math>-norm. Think about how far we can go exactly diagonally here, that is, where we go the same distance along both the x and y axes. In physical space, the kind modeled by the <math>2</math>-norm, we could move by <math>\sqrt{\frac{1}{2}} \approx 0.707</math> in each dimension, because those each get squared before being summed, and <math>\sqrt{\frac{1}{2}}^2 = \frac{1}{2}</math>, and <math>\frac{1}{2} + \frac{1}{2} = 1</math>. But in <math>1</math>-normed space, we can only move by 0.5 in the x and y axes before we've moved a total of 1 between the two dimensions. Any amount extra we move in one direction has to come out exactly as much from how far we move in the other dimension. And so we trace out a sharp-cornered diamond.
+
+This is "taxicab distance", as it corresponds to the distance it would take a cab to get from point A to point B, constrained to a square grid of roads.
+
+[[File:Unit shapes - diamond.png|frameless|450x450px]] 
+
+=== Shape: Square, Distance: Max ===
+Finally, let's look at the case of <math>q = \infty</math>. Remember, this essentially gives us the max of the two coordinates' absolute values. So if we go straight left, right, up, or down, the coordinates (1, 0), (-1, 0), (0, 1), and (0, -1) all have a norm value of 1, just as with the other two norms. But notice what happens when we go exactly diagonally here. We can actually go all the way to the opposite corner, to (1, 1), (1, -1), (-1, 1), and (-1, -1), and the norm values of these points are all still just 1. So the unit shape for <math>q = \infty</math> is a ''square''. 
+
+We can call this the "maximum-leg distance". This is an even shorter distance than "as the crow flies". So, to continue the taxicab versus crow analogy we need "'''Max the magician'''" who can teleport through all the dimensions except the longest one.
+
+[[File:Unit shapes - square.png|frameless|450x450px]]
+
+=== How it helps ===
+So now we bet you're wondering how we can use these unit shapes to visualize the dual norm relationship. Well, just choose a pair of dual norms, and then pick a direction away from the center. For each of the two chosen norms, calculate the actual distance (yes, the <math>2</math>-norm) of the line segment from the center to its intersection with the unit shape. If you multiply these two distances together, you will always get 1. This is easy to see if the direction chosen is straight right, left, up, or down, since those distances will always be 1, and 1 × 1 = 1. But how about exactly diagonal? In the case of the <math>2</math>-norm, that distance is also exactly 1, so 1 × 1 = 1. In the case of the pair of <math>1</math>-norm and <math>\infty</math>-norm, those distances are <math>\frac{\sqrt{2}}{2}</math> and <math>\sqrt{2}</math>, respectively, and <math>\frac{\sqrt{2}}{2} × \sqrt{2}</math> also equals 1.
+
+So yet again we find <math>q = 2</math> as a curved entity halfway between two blocky entities for <math>q = 1</math> and <math>q = \infty</math>. And if we were to check the unit shapes of other powers between <math>1</math> and <math>2</math>, and <math>2</math> and <math>\infty</math>, we would find a series of shapes, like the diamond bulging outward until it's the shape of a circle, and then the circle spiking outwards until it's the shape of a square.
+
+All this is to say: we can see that pairs of vectors whose distances are measured by dual norms balance each other out.
+
+= Units analysis =
+In this section we're going to perform a units analysis of the dual norm inequality, in the vein of {{subpage|units analysis|uprev|text=article 5 of this guide}}:
+
+
+<math>
+\dfrac{\abs{𝒓\textbf{i}}}{\norm{X\textbf{i}}_q} \leq \norm{𝒓X^{-1}}_{\text{dual}(q)}
+</math>
+
+
+Let's break this problem down into three parts:
+# The left-hand side's numerator
+# The left-hand side's denominator
+# The right-hand side
+
+== Left-hand side's numerator ==
+Here's what we're working with:
+
+
+<math>
+\abs{𝒓\textbf{i}}
+</math>
+
+
+Our arbitrary interval vector <math>\textbf{i}</math> has units of primes <math>\small 𝗽</math>. And our [[retuning map]] <math>𝒓</math> has units of <math>\mathsf{¢}</math>/<math>\small 𝗽</math>. The absolute value bars have no effect on units. And so we have: (<math>\mathsf{¢}</math>/<math>\small 𝗽</math>)<math>\small ·𝗽</math>, the primes cancel, and the end result is cents <math>\mathsf{¢}</math>. This is unsurprising because we know the retuning map gives us the error for a given interval under a temperament, and so this is just that interval's absolute error here.
+
+== Left-hand side's denominator ==
+Here's the denominator of the left-hand side:
+
+
+<math>
+\norm{X\textbf{i}}_q
+</math>
+
+
+We'll be using the default complexity of [[log-product complexity]] here for our complexity prescaler, so let's substitute its log-prime matrix <math>L</math> in for the prescaler. And let's choose a norm power of <math>q=1</math>. (So we're doing the minimax-S tuning scheme here):
+
+
+<math>
+\norm{L\textbf{i}}_1
+</math>
+
+
+So again, the units of our arbitrary interval vector <math>\textbf{i}</math> are the vectorized unit <math>\small 𝗽</math>, for primes. So if we take a units-only view, this is what we have:
+
+
+<math>
+\norm{{\large\mathsf{𝟙}}\mathsf{(C)}·𝗽}_1
+</math>
+
+
+So our annotation has something visible to annotate now, so we could rewrite this as:
+
+
+<math>
+\norm{𝗽\mathsf{(C)}}_1
+</math>
+
+
+Let's suppose this is a 5-limit vector, and so we have:
+
+
+<math>
+\norm{[ \; \mathsf{p_1} \; \mathsf{p_2} \; \mathsf{p_3} \; ⟩\mathsf{(C)}}_1
+</math>
+
+
+Then we could distribute that annotation. Essentially, each of the entries in this vector is a complexity-annotated prime:
+
+
+<math>
+\norm{\left[ \; \mathsf{p_1}\mathsf{(C)} \; \mathsf{p_2}\mathsf{(C)} \; \mathsf{p_3}\mathsf{(C)} \; \right\rangle}_1
+</math>
+
+
+The formula for this <math>1</math>-norm is very simple. We sum the absolute values of each of the entries:
+
+
+<math>
+\abs{\mathsf{p_1}\mathsf{(C)}} + \abs{\mathsf{p_2}\mathsf{(C)}} + \abs{\mathsf{p_3}\mathsf{(C)}}
+</math>
+
+
+(Again, absolute value bars don't affect units, only quantity, so we can pretty much ignore them here too.) So the formula is simple, but what this means for our units analysis is not so simple! We're now summing quantities with different units! Sure, they're all primes, but they're all different primes, corresponding to completely different dimensions in the JI lattice. Your first reaction might be to think that this is only about as offensive as being asked to sum meters, feet, and furlongs; we just need to convert to the same unit and ''then'' we can sum them properly. But no! The idea behind these primes is deeper than that. Meters, feet, and furlongs are all units of ''length'', where ''length'' is their dimension; they're all measurements of the same dimension. Whereas our primes are meant to be interpreted as completely different dimensions. So what we're being asked to do here is actually more like being asked to sum meters, seconds, and kilograms! Can't do!
+
+So what ''do'' we do, then? Our intuition on this has been: drop the part of this that is nonsensical, and keep the part that still makes arguable sense. In other words, our annotation ''does'' appear in each term, so it makes some sense that it's still valid to keep around for the final result. But the primes don't. They get junked. And so our final units for this chunk of the expression are:
+
+<math>
+\mathsf{(C)}
+</math>
+<math>
+% \slant{} command approximates italics to allow slanted bold characters, including digits, in MathJax.
+\def\slant#1{\style{display:inline-block;margin:-.05em;transform:skew(-14deg)translateX(.03em)}{#1}}
+</math>
+
+Now, there is a good argument (which we considered for many months) that since the just tuning map can be broken down into <math>1200×\slant{\mathbf{1}}L</math>, where <math>L</math> is the log-prime matrix doing  a units conversion, taking all of our temperament information from its original units of the various prime harmonics, and consolidating it all into one shared unit type, that shared unit being octaves, in which case we think of it as having units of <math>\small\mathsf{oct}</math>/<math>\small 𝗽</math>. If this is taken to be the case, then all units would be in units of octaves before we take the norm, and therefore&mdash;being consistent between entries&mdash;the units would be preserved in the end by the norm. Further alternatively, we could have it ''both'' ways, i.e. convert each individual prime unit to a shared unit of octaves and ''also'' annotate. Like so:
+
+<math>
+\begin{align}
+\norm{(\mathsf{oct}/𝗽\mathsf{(C))}(𝗽)}_1 &= \\
+\norm{(\mathsf{oct}/\cancel{𝗽}\mathsf{(C))})(\cancel{𝗽})}_1 &= \\
+\norm{\mathsf{oct}\mathsf{(C)}}_1 &=  \\
+\norm{\left[ \; \mathsf{oct}\mathsf{(C)} \; \mathsf{oct}\mathsf{(C)} \; \mathsf{oct}\mathsf{(C)} \; \right\rangle}_1  &= \\
+\abs{\mathsf{oct}\mathsf{(C)}} + \abs{\mathsf{oct}\mathsf{(C)}} + \abs{\mathsf{oct}\mathsf{(C)}} &=  \\
+\mathsf{oct}\mathsf{(C)}
+\end{align}
+</math>
+
+
+and thus the units of the complexity could be interpreted as "weighted octaves", in a way we can't interpret results from complexities that use prescalers other than <math>L</math>. And so, we could say that prescaling by the log-prime matrix gives a complexity function a "badge of honor". 
+
+But we finally decided against this interpretation, after reflecting on the quotient-based form of the formula, <math>n·d</math>, numerator times denominator. What would the units of those be? They're not logarithmic pitch; they're more like frequency, or frequency multipliers against some base pitch. So they'd both be <math>\small\mathsf{Hz}</math> for units of <math>\small\mathsf{Hz}/\mathsf{Hz}</math> or equivalently dimensionless. Or perhaps it should be interpreted as ''squaring'' the two separate <math>\small\mathsf{Hz}</math> values? Who's to say:
+
+
+<math>
+\log_2{\!(n·d)} → \log_2{\!({\small\mathsf{Hz\!·\!Hz}})} → \log_2{\small\mathsf{Hz^2}}
+</math>
+
+
+On account of these two interpretations of the same value not agreeing on units, we decided that we couldn't accept any interpretation of a norm that preserves actual units in any such way.
+
+There's also the intuition that a complexity is an abstract measurement of an object, and no longer a real physical property of it, so it makes sense for it to be dimensionless. 
+
+Alright, but we're actually not ''quite'' done with this chunk yet, because there's another effect to recognize: the influence of the ''power'' of the norm we chose. The <math>1</math>-norm is sometimes also called the "taxicab" norm, and so we say that a complexity computed via a taxicab norm like this may include a 't' in its annotation symbol.<ref group="note">Although we normally use uppercase letters in annotations, we use lowercase 't' for taxicab to avoid possible confusion with "T" for "Tenney", which we don't use, but has been used by other authors to refer to (log-product) simplicity weighting, for which we use "S".</ref> So not only does the <math>\norm{·}_1</math> preserve whatever consistent units and annotations exist among the entries it is called on, it furthermore ''augments'' any existing annotation with this taxicab 't' element. Think of it this way: the annotation doesn't change the fact that a quantity with units is in those units or not; it's more like the annotation is there to give us a little extra background information about the context of these units&mdash;where they came from, and where they're going. So our end result is actually:
+
+
+<math>
+\mathsf{(tC)}
+</math>
+
+
+Except for the fact that since the taxicab norm (the <math>1</math>-norm) is our default norm for computing complexity (and simplicity), we don't have to show the 't', so this was fine as it was:
+
+
+<math>
+\mathsf{(C)}
+</math>
+
+
+But this step, of including the norm's effect on the units, will be important in the next step.
+
+== Right-hand side ==
+Here's what we have over here:
+
+
+<math>\norm{𝒓X^{-1}}_{\text{dual}(q)}</math>
+
+
+Again, the retuning map <math>𝒓</math> has units of <math>\mathsf{¢}</math>/<math>\small 𝗽</math>. But what about our inverse prescaler? Well, this is always supposed to be the inverse of our complexity prescaler. So if our complexity prescaler had units of <math>\small\mathsf{(C)}</math>, i.e. unitless but with a complexity annotation, then this has units of <math>\small\mathsf{(C^{-1})}</math>. Finally, we used <math>1</math> as our norm power for our interval complexity, so we must use the dual norm power here for our retuning magnitude's norm, that being <math>\infty</math>. So, we've got:
+
+
+<math>
+\norm{{\large\mathsf{¢}}/𝗽\mathsf{\left(C^{-1}\right)}}_\infty
+</math>
+
+
+(Note that when we write <math>\mathsf{¢}</math>/<math>\small 𝗽\mathsf{\left(C^{-1}\right)}</math>, we're not saying that the <math>\small\mathsf{\left(C^{-1}\right)}</math> annotation is in the denominator; the annotation is understood to apply to the unit as a whole, so it's sort of floating out to the conceptual side, here.)
+
+Let's evaluate the norm (remember, the <math>\infty</math> is equivalent to taking the max of the absolute values):
+
+
+<math>
+\max\left(\abs{{\large\mathsf{¢}}/\mathsf{p_1}\mathsf{\left(C^{-1}\right)}}, \abs{{\large\mathsf{¢}}/\mathsf{p_2}\mathsf{\left(C^{-1}\right)}}, \abs{{\large\mathsf{¢}}/\mathsf{p_3}\mathsf{\left(C^{-1}\right)}}\right)
+</math>
+
+
+Like with our left-hand side denominator, the primes are disparate here and are just going to have be thrown away (though it's a bit headier here; technically the max function returns exactly one of these options and throws away the others, so individual max calls could be said to preserve units, and yet in the general case sometimes it will be <math>\small\mathsf{p_1}</math>, sometimes <math>\small\mathsf{p_2}</math>, etc. so we can't really say). 
+
+But the other two things&mdash;the cents, and the annotation&mdash;are perfectly consistent across every entry. So those can stay. And our end result is:
+
+
+<math>{\large\mathsf{¢}}\mathsf{(C^{-1})}</math>
+
+
+Except, again, that's not quite it, because we still haven't applied the effect from the norm power. The letter we use for the <math>\infty</math>-norm is "M" for "Max", and this one is ''not'' our default, so we do have to show it:
+
+
+<math>{\large\mathsf{¢}}\mathsf{(MC^{-1})}</math>
+
+
+And ''now'' we're done here.
+
+== Putting it all back together ==
+Reassembling the dual norm inequality with the units we've found, we get 
+
+
+<math>\dfrac{{\large\mathsf{¢}}}{\mathsf{(C)}} \leq {\large\mathsf{¢}}\mathsf{(MC^{-1})}</math>
+
+
+And remember, <math>\dfrac{1}{\mathsf{(C)}} = \mathsf{(S)}</math>, so we can swap that out on the left, and we've got:
+
+
+<math>{\large\mathsf{¢}}\mathsf{(S)} \leq {\large\mathsf{¢}}\mathsf{(MC^{-1})}</math>
+
+
+And there's nowhere really further we can go with this from here. Our end result tells us that when we leverage the dual norm inequality, we say that the simplicity weight damage is less than or equal to the retuning magnitude as measured using the inverse of the complexity prescaler and using the dual power. The annotations on either side do not exactly match, but it's okay because this is an inequality, not an equality. Cool!
+
+= Computation =
+To get the most out of this section, we strongly suggest that you have read the previous article in this series, on [[Dave Keenan & Douglas Blumeyer's guide to RTT/Tuning computation|tuning computation]]. The material here builds upon it.
+
+Minimizing the power norm of a (possibly prescaled) retuning map is&mdash;for better or worse&mdash;a problem remarkably similar to minimizing the power mean of a target-interval damage list. We say this is "for better or worse" because while computationally speaking it means we can reuse much of the processes and computer code we developed already, it also means that the problem space is rife for confusion in human minds. 
+
+Conceptually speaking, all-interval tuning schemes are very different from ordinary tuning schemes, i.e. non-all-interval ones, the type where a finite set of target-intervals are specified, as were covered in the fundamentals article of this series. That is to say: leveraging the dual norm inequality to minimize damage via a proxy&mdash;the retuning (or prime-error) magnitude&mdash;is very different conceptually from simply minimizing the damage to a list of target-intervals. This is the same distinction we noted earlier when we described all-interval tuning schemes as representing an entirely other way of finding minimax tunings.
+
+Computationally speaking, however, all-interval tuning schemes turn out not to be that different after all. The computation process for an all-interval tuning scheme strongly parallels the process for computing an ordinary tuning. You'll see that there's actually not much new to learn here; the methodology is barely more than an alternative version of what we already taught in the computation article, when you swap out the optimization power for the norm power. Even more mercifully, these alternative versions are actually ''simpler'' to compute than the ones we worked through in the computations article; as we hinted at in the introduction of this article; the computational simplicity of all-interval tuning schemes, in fact, is the primary benefit of using them at all.
+
+Some readers of this article up to this point may already have been receiving parallelism alerts from the backs of their minds. <span id="we consciously">We consciously chose to avoid emphasizing these parallels during the concepts section of this article, and sometimes we even suppressed them, using our terminological choices to compartmentalize them. This is because we too struggled a lot with disentangling optimization powers and norm powers (quite different!), and between damage weights and norm prescalers (also quite different!). We've seen some of even the sharpest of xen theorists we know get stuck in the web of conflations here, too. So we figured it was a better choice, pedagogically, to avoid drawing attention to their similarities when introducing all-interval tuning schemes conceptually.</span> But now that we're in the computations section, it's time to wade into the dangerously murky waters of parallelism between these ideas.
+
+== Visualizing the problem ==
+Before we dig into the various methods, we're going to review the shared problem between them all, just as we did in the computations article.
+
+=== The analogous objects ===
+We can find a nearly one-to-one correspondence between tuning objects in the all-interval case and the ordinary case:
+
+{| class="wikitable"
+! colspan="2" | Ordinary tuning schemes
+! colspan="2" | All-interval tuning schemes
+|-
+| <math>\mathrm{T}</math>
+| Target-interval list
+| <math>\mathrm{T}_{\text{p}} = \mathrm{I}</math> 
+| Prime proxy target-interval list (an identity matrix)
+|-
+| <math>\textbf{e}</math> 
+| Target-interval error list 
+| <math>\textbf{e}_{\text{p}}</math> 
+| Prime proxy target-interval error list
+|-
+| <math>p</math> 
+| Optimization power
+| <math>\text{dual}(q)</math> 
+| Dual norm power (dual to the <math>\textbf{i}</math>-norm power)
+|-
+| <math>S</math> 
+| Target-interval simplicity weight matrix
+| <math>X^{-1}</math> 
+| Inverse prescaler (inverse of the <math>\textbf{i}</math>-norm prescaler)
+|}
+
+It's important not to confuse <math>S</math> and <math>X^{-1}</math>. There's only one case where the <math>S</math> for an ordinary tuning scheme would look the same as <math>X^{-1}</math> for an all-interval tuning scheme (applied to the same temperament), and that's if we ({{subpage|tuning fundamentals|uprev|s=Only the primes|text=ill-advisedly}}) used only the primes as our target-intervals.
+
+Another way to look at the difference is to imagine what <math>S</math> would look like for the all-interval tuning scheme. Being the ''target-interval'' simplicity weight matrix, <math>S</math> is a <math>(k, k)</math>-shaped matrix. But remember, for all-interval tunings, <math>k = \infty</math>; that's ''why'' they're called "all-interval" tuning schemes: because they target ''all'' intervals! So we can't see the entirety of <math>S</math> at once, because it's an infinitely-large matrix. But we can take a look at its top-left corner to get a sense for what's inside:
+
+
+<math>
+S =
+\text{diag}(𝒔) = 
+
+\left[ \begin{matrix}
+s_1 & 0 & 0 & \cdots \\
+0 & s_2 & 0 & \cdots \\
+0 & 0 & s_3 & \cdots \\
+\vdots & \vdots & \vdots & \ddots \\
+\end{matrix} \right] =
+
+\left[ \begin{matrix}
+\dfrac{1}{c_1} & 0 & 0 & \cdots \\
+0 & \dfrac{1}{c_2} & 0 & \cdots \\
+0 & 0 & \dfrac{1}{c_3} & \cdots \\
+\vdots & \vdots & \vdots & \ddots \\
+\end{matrix} \right] =
+
+\left[ \begin{matrix}
+\dfrac{1}{\norm{X\textbf{t}_1}_{q}} & 0 & 0 & \cdots \\
+0 & \dfrac{1}{\norm{X\textbf{t}_2}_{q}} & 0 & \cdots \\
+0 & 0 & \dfrac{1}{\norm{X\textbf{t}_3}_{q}} & \cdots \\
+\vdots & \vdots & \vdots & \ddots \\
+\end{matrix} \right]
+</math>
+
+
+The simplicity weight matrix for an all-interval tuning is a diagonalized version of the list of target-interval simplicities <math>𝒔</math>. Each element of this list <math>s_i</math> is the reciprocal of the corresponding complexity <math>c_i</math> of that target-interval <math>\textbf{t}_i</math>. And each of these interval complexities is a norm-ified complexity <math>\norm{X\textbf{t}_i}_{q}</math>, with complexity prescaler <math>X</math> and norm power <math>q</math>.
+
+You'll note above that the analogous object in the table above to the "target-interval" list <math>\mathrm{T}</math> is essentially "the primes": the '''prime proxy target-interval list'''. We've denoted this as <math>\mathrm{T}_{\text{p}}</math>, using the subscript <math>\text{p}</math> as short for "primes", meaning that this the same concept as before but with only members corresponding to the primes. We can give the <math>\text{p}</math> of <math>\mathrm{T}_{\text{p}}</math> a secondary meaning, as well: short for "proxy", as this matrix no longer truly represents our target-intervals (remember, all-interval tunings minimize damage across ''all'' intervals!), but actually just our ''proxy'' target-intervals, the primes, the things we use as a sort of intermediary targeting mechanism.<ref group="note">A minor note is that "target" here can refer both to the minimization procedure's consideration of an interval as well as our human choice to include the interval in a set, and for all-interval tunings, we have only the former property.</ref> 
+
+You'll also notice that <math>\mathrm{T}_{\text{p}}</math> is equivalent to <math>\mathrm{I}</math>, an identity matrix with units of primes <math>\small 𝗽</math>. This is because if you take the vector for each prime interval and assemble them into a matrix, that's just what you get: an identity matrix. Like so, for the 5-limit anyway:
+
+
+<math>
+\begin{array}{c}
+\frac{2}{1} \\
+\left[ \begin{matrix}
+1 \\
+0 \\
+0 \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array}{c}
+\\
+\Huge | \normalsize
+\end{array}
+
+\begin{array}{c}
+\frac{3}{1} \\
+\left[ \begin{matrix}
+0 \\
+1 \\
+0 \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array}{c}
+\\
+\Huge | \normalsize
+\end{array}
+
+\begin{array}{c}
+\frac{5}{1} \\
+\left[ \begin{matrix}
+0 \\
+0 \\
+1 \\
+\end{matrix} \right]
+\end{array}
+
+\begin{array}{c}
+\\
+=
+\end{array}
+
+\begin{array}{c}
+\mathrm{I} \\
+\left[ \begin{matrix}
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1\\
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+This identity matrix is, in fact, the crux of the computational simplicity of all-interval tuning schemes: wherever <math>\mathrm{T}</math> figured in computations for ordinary schemes, we can replace it with <math>\mathrm{I}</math>. And since an identity matrix is what it sounds like&mdash;it leaves things identical to how they started&mdash;we might as well just leave it out entirely, then! It has no effect on our computations. This is a particularly big win, considering that <math>\mathrm{T}</math> was typically the largest matrix we dealt with (tied with <math>W</math>, anyway, but then <math>W</math> is always just a diagonal matrix with shape matching those of our choice of <math>\mathrm{T}</math>).
+
+We've chosen to keep this matrix around anyway, in the form of <math>\mathrm{T}_{\text{p}}</math>, at least when setting up the overall problem, because we find that it aids in grasping the rationale behind the computations. It eliminates a potential for confusion that some other articles on the Xenharmonic wiki contain. Specifically, they speak about "weighted mappings", and they use this term because with all-interval tunings we seem to find <math>M</math> multiplied directly by the inverse prescaler which is the inverse of the <math>\textbf{i}</math>-norm's complexity prescaler (which they consider "weighting"; fine for now, but more on that in a second). But this is pretty confusing; there's no direct way to reason about what a "weighted mapping" would be or mean. However, when we recognize that between the mapping and inverse prescaler matrices we find an invisible identity matrix representing the primes, it all makes sense; we simply have <math>M\mathrm{T}_\text{p}X^{-1} = M\mathrm{I}X^{-1}</math> in place of where for ordinary tuning schemes we had our <math>M\mathrm{T}W</math> formation. <span id="as for the weighting">And as for the "weighting" vs. "prescaling" issue, we have avoided referring to the effect of multiplying retunings by an inverse prescaler as "weighting"; we've found that it's best to restrict the use of that word "weighting" exclusively to weighting absolute error to obtain ''damage'',<ref group="note">Though we certainly recognize that anyone familiar with the meaning of weighting from statistics will understand these multiplications as acts of weighting, we prefer to restrict our usage to cases where "weight" has the everyday meaning as in "these are weighty matters", i.e. of placing additional importance on things.</ref></span> and we restrict the use of "damage" to possibly-multiplied/weighted absolute error to (specific finite sets of) ''target-intervals'', while the primes here are only ''proxy'' target-intervals. That is, we restrain ourselves from defining <math>\textbf{d}_{\text{p}}</math> as "proxy damages" or "damages to the primes", since it's more confusion than it's worth. And we find it's valuable to use the specialized term "prescaled" in this case, so that both are distinct from generic multiplication, and where "prescaled" carries the helpful and important information that it occurs ''before'' the norm is taken.
+
+=== Substituting the all-interval objects into the expression ===
+To review, for ordinary tuning schemes, we seek to minimize the <math>p</math>-mean of the items in the target-interval damage list <math>\textbf{d}</math>, which is:
+
+
+<math>
+\textbf{d} = \abs{\textbf{e}}\phantom{_{\text{p}}}W\phantom{^{-\,}} = \abs{𝒓}\mathrm{T}\phantom{_{\text{p}}}W\phantom{^{-\,}} = \abs{𝒕 - 𝒋}\mathrm{T}\phantom{_{\text{p}}}W\phantom{^{-\,}} = \abs{𝒈M\mathrm{T}\phantom{_{\text{p}}}W\phantom{^{-\,}} - 𝒋M_{\text{j}}\mathrm{T}\phantom{_{\text{p}}}W\phantom{^{-\,}}}
+</math>
+
+
+Whereas for all-interval tuning schemes, we seek to minimize the <math>\color{red}\text{dual}(q)</math>-norm of the entries in the absolute errors of the primes prescaled by the inverse prescaler <math>\color{red}\abs{𝒓}X^{-1}</math>, which is similar looking:
+
+
+<math>
+\phantom{\textbf{d}} = \abs{\color{red}\textbf{e}_{\text{p}}\color{black}}\color{red}X^{-1}\color{black} = \abs{𝒓}\color{red}\mathrm{T}_{\text{p}}\color{red}X^{-1}\color{black} = \abs{𝒕 - 𝒋}\color{red}\mathrm{T}_{\text{p}}\color{red}X^{-1}\color{black} = \abs{𝒈M_{\text{j}}\color{red}\mathrm{T}_{\text{p}}\color{red}X^{-1}\color{black} - 𝒋M_{\text{j}}\color{red}\mathrm{T}_{\text{p}}\color{red}X^{-1}\color{black}}
+</math>
+
+
+Both <math>\mathrm{T}_{\text{p}}</math> and <math>M_{\text{j}}</math> are identity matrices.
+
+=== Power sum simplification ===
+In the computations article, we saw that we can simplify computation of a tuning per an ordinary tuning scheme by substituting a power sum for our power mean, i.e. skipping the steps of division-by-count and taking-the-matching-root-at-the-end, neither of which make a difference when comparing one candidate tuning to another. Well, it turns out we can also simplify computation of a tuning per an all-interval tuning scheme by substituting a power sum for our power norm, i.e. skipping the steps of taking-the-matching-root-at-the-end and taking-the-absolute-values-of-the-entries. The first of these two step skippings is already explained in the same way it is for substituting a power sum for a power mean. The second of these two step skippings is accounted for by the fact that our retunings have already had their absolute values taken by the definition of our process, so there's no need for the power statistic itself to do any absolute-value-taking.
+
+So this may be confusing in light of the earlier section [[#Comparison with power means and sums|Power norms: Comparison with power means and sums]] where we showed that sums have a much closer conceptual kinship with means in general. But so it goes.
+
+== General method ==
+The [[Dave Keenan & Douglas Blumeyer's guide to RTT/Tuning computation#General method|general method of optimizing tunings]] may be adapted to finding all-interval tunings. In fact, it is already discussed on the [[Tp_tuning]] page where it says: 
+"...we can choose a TOP tuning canonically by setting it to the limit as ''p'' tends to 1 of the T<sub>''p''</sub> tuning, thereby defining a unique tuning T<sub>''p''</sub>...". Though please note that this author is using ''p'' to refer to the power of the ''interval complexity norm'', not its dual, the ''retuning magnitude norm'', which is analogous (computation-wise) to the optimization power used for ordinary tunings, which ''we'' call <math>p</math>.
+
+So here's the original pseudocode for ordinary tunings:
+
+: <code>Minimize(Sum(((g.M - j).T.W)^p), byChanging: g);</code>
+
+Note that we omit the absolute value for efficiency reasons when p is even, which includes the p→\infty case.
+
+And here's the revised version, swapping our <code>T</code> out for <code>Tp</code> (that is, our proxy prime target-interval list <math>\mathrm{T}_{\text{p}}</math>), our <code>W</code> out for <code>Inverse(X)</code> (that is, our retuning magnitude norm prescaler <math>X^{-1}</math>), and our <code>p</code> out for <code>dual(q)</code> (that is, our retuning magnitude norm power <math>\text{dual}(q)</math>). 
+
+: <code>dual(q) := 1/(1-1/q);</code>
+: <code>Minimize(Sum(((g.M - j).Tp.Inverse(X))^dual(q)), byChanging: g);</code>
+
+Note that <code>g.M - j</code> is the same thing as <code>r</code>, our retuning map, and <code>Tp</code> is an identity matrix, so this may be as simple as:
+
+: <code>Minimize(Sum((r.Inverse(X))^dual(q)), byChanging: g);</code>
+
+That assumes you are comfortable with the <code>byChanging:</code> parameter not explicitly appearing in the expression whose value is to be <code>Minimize</code>d.
+
+== Paul's method for nullity-1 minimax-S ==
+In Paul's ''A Middle Path'' paper, he gives an alternative means of computing a minimax-S tuning. And this one can be done by hand! However, it only works when the nullity of the temperament <math>n</math> equals 1, or in other words, when only a single comma is made to vanish. To be clear, this is irrespective of the rank of the temperament; this trick works for rank-1, -2, -3, etc. temperaments as long as only a single comma vanishes.
+
+Basically, Paul's trick works by distributing the scaled absolute error equally across the tunings of the primes. (To be clear, this means one equal serving of scaled error for each basis element prime, ''not'' one equal serving of scaled error for each occurrence of a prime in the comma's prime factorization). 
+
+One way to understand how Paul's trick works is hinted at by the end result of our example above. When <math>r + 1</math> (proxy) target-intervals can be tied for the same minimum absolute scaled error, and <math>n = 1</math>, and <math>d = r + n</math>, we can see that <math>d</math> i.e. ''all'' of our (proxy) target-intervals can be tied, because <math>r + 1 = (d - n) + 1 = d - 1 + 1 = d</math>. 
+
+For comma <math>a/b</math>, this minimum scaled absolute error amount will be <math>1200 \dfrac{\log_2\left(\frac{a}{b}\right)}{\log_2{ab}}</math> ¢/oct. 
+
+In meantone's case, that's <math>1200 \dfrac{\log_2\left(\frac{81}{80}\right)}{\log_2{81·80}} \approx 1200 \frac{0.018}{12.662} \approx 1.699</math> ¢/oct.
+
+If we want to know the actual tuning that causes these tied-across-the-board values, though the first step is to get from the scaled absolute error we have already to the ''not''-scaled ''not''-absolute error:
+* To un-scale-ify, multiply by the log of the prime. 
+* To un-absolute-ify, i.e. to recover the sign, just look at the sign of the entries in the vector of the comma. If the entry is positive, the corresponding prime's error is negative; if it is negative, the error is positive.
+
+So for example, the meantone comma is {{vector|-4 4 -1}}, so the errors for prime 2 and 5 will be positive (primes tuned wide) and the error for prime 3 will be negative (tuned narrow). And prime 2's error will be unchanged by the log of the prime step, i.e. it's still 1.699, but prime 5's error will be <math>1.699 × \log_2{5} = 3.945</math>, and indeed when we take the {{map|1201.699 697.564}} generator tuning map and convert it to the tuning map by multiplying by meantone's mapping {{rket|{{map|1 1 0}} {{map|{0 1 4}}}}, we get {{map|1201.699 1899.260 2790.258}} and since a purely-tuned prime 5 is 2786.314{{c}}, that's indeed {{nowrap|2790.258 &minus; 2786.313 {{=}} 3.945{{cent}}}} error.
+
+= Unchanged-octave variants =
+== Destretched-octave minimax-(E)S ==
+This section is here on account of the historical popularity of tuning schemes called "POTOP",  "POTT", and "POTE". The first two are the same; that's just "pure octave TOP" (where "TOP" is "Tenney OPtimal"), and "pure octave TIP-TOP" (where "TIPTOP is nowadays an extraneously complicated name for "TOP"; see the footnote about naming issues in the previous section: [[#Minimax-S|Minimax-S]]. And the latter is just "pure octave TE" (where "TE" is "Tenney Euclidean"). Both of these "PO"-tunings were unfortunately defined to use the dumb destretched-interval approach rather than the smart held-intervals optimization approach to achieving unchanged octaves.
+
+To compute the destretched-octave minimax-S tuning of meantone, we begin with the minimax-S tuning we found above: {{map|1201.699 697.564}}. For a refresher on computing destretched-interval tunings, see {{subpage|tuning fundamentals|uprev|s=Destretching vs. holding}}. Basically we just multiply the thing by the ratio between its tuning of the interval in question and its pure size: {{map|1201.699 697.564}} <math>× \frac{1200}{1201.699}</math> = {{map|1200.000 696.578}}. And for the destretched-octave minimax-ES tuning, we take the minimax-ES tuning from above, {{map|1201.397 697.049}}, and destretch that by <math>\frac{1200}{1201.397}</math> to {{map|1200 696.239}}.
+
+== Held-octave minimax-(E)S ==
+Fortunately we do have some community momentum around shifting from the dumb destretched-octave variants of minimax-S and minimax-ES toward the constrained optimization variants, which are known as "CTOP" and "CTE": prefixing "TOP" and "TE", respectively, with a 'C' for "constrained." We feel it's not appropriate to assume both the fact that the constraint is the octave and that the constraint is that it's pure. We prefer our nomenclature here which prefixes the tuning scheme name with "held-octave" (this also works for any other interval, or set of intervals, one might wish to hold unchanged). 
+
+Because the computation of held-interval optimizations is more complex, we will instead refer you to {{subpage|tuning computation|uprev|s=with held-intervals|text=this section on held-intervals}}. You should find {{map|1200.000 696.578}} for held-octave minimax-S and {{map|1200.000 697.214}} for held-octave minimax-ES.
+
+= See also =
+Thus concludes our deep dive into all-interval tuning schemes! At this point, if you'd like to continue with our series of articles on this topic, don't miss the units analysis article in this intermediate section:
+* 5. {{subpage|Units analysis|prev}}: To look at temperament and tuning in a new way, think about the units of the values in frequently used matrices
+
+Or you might be interested in more advanced stuff that largely builds on all-interval tuning schemes:
+* 8. {{subpage|Alternative complexities|prev}}: For tuning optimizations with error weighted by something other than log-product complexity
+* 9. {{subpage|Tuning in nonstandard domains|prev}}: For temperaments of domains other than prime limits, and in particular nonprime domains
+
+= Footnotes and references =
+<references group="note" />
+
+[[Category:Dave Keenan & Douglas Blumeyer's guide to RTT]]
+[[Category:Tuning]]

@@ -1,0 +1,1085 @@
+{{breadcrumb}}
+This is article 5 of 9 in [[Dave Keenan]] & [[Douglas Blumeyer]]'s guide to RTT, or "[[D&D's guide]]" for short. This article is not strongly sequenced with the others, however, so it can be read at any time.
+
+In this article, we will be conducting units analyses of [[regular temperament]] structures in order to better understand how they connect with each other to give us the information we seek about sizes in cents, generator counts, and more.
+
+== Stylistic note ==
+It is a rule of the {{w|International System of Units}} (SI) that unit symbols, like <math>\small\mathsf{km}</math>/<math>\small\mathsf{h}</math>, are set in plain upright type. This helps to distinguish them from quantity symbols or variables like <math>d</math> for distance and <math>t</math> for time, which are usually set in italics (or bold, for vectors).
+
+It is also an SI rule that when one unit is divided by another, their symbols are written horizontally, either with a slash between them like <math>\small\mathsf{km}</math>/<math>\small\mathsf{h}</math> (the style we prefer), or with a middle dot or narrow no-break space between them and an exponent of -1 on the second unit, like <math>\small\mathsf{km\!·\!h^{-1}}</math> or <math>\small\mathsf{km\,h^{-1}}</math>. They should never be written in the "built-up" style <math>\frac{\mathsf{km}}{\mathsf{h}}</math> as variables often are, e.g. <math>\frac{d}{t}</math>.
+
+Nor are units ever subscripted, like <math>\small\mathsf{h_1}</math>, as variables often are, like <math>t_1</math>.
+
+But when performing a units analysis, we are essentially treating the units as if they are&mdash;if not variables&mdash;at least constants, and so in this article we will often violate these rules in the interest of explanation.
+
+Because we use multiple text styles for our variables to indicate the class of object they represent,<ref group="note">See the {{subpage|conventions for names, variables, units, and notations|uprev}}</ref> including plain and bold upright styles, and because we also use a plain upright style for our ordinary units and a bold upright style for what we call ''vectorized'' units, we distinguish unit symbols from variables by setting the unit symbols in a [[Wikipedia:Sans-serif|<math>\small\mathsf{sans}\text{-}\mathsf{serif}\text{ }\mathsf{font}</math>]] while variables are set in a <math>\text{serif font}</math>.
+
+== Introduction ==
+In [[regular temperament theory]] (RTT), vectors and matrices are used to represent information about intervals, temperaments, and tunings. Typically, the values in these objects are shown only as numerical ''amounts'', that is, without any indication of their ''units''. 
+
+For instance, the interval ratio <math>\frac{5}{4}</math> is represented by the vector {{vector|-2 0 1}}:
+
+
+<math>
+\left[ \begin{matrix}
+{-2} \\
+0 \\
+1 \\
+\end{matrix} \right]
+</math>
+
+
+One of the first things a student of RTT learns&mdash;if they haven't already learned it from studying [[JI]]&mdash;is that a [[prime-count vector]] like this is a concise way to represent an interval in terms of the prime harmonics which comprise it. In this example, the prime factorization of <math>\frac{5}{4}</math> is the product of prime powers <math>2^{{-2}}×3^{0}×5^{1}</math>. That representation isn't bad, but we can improve upon it. If we all agree to memorize the sequence of prime numbers (2, 3, 5), then we're able to assume that sequence of bases, and thereby get away with representing <math>\frac{5}{4}</math> as nothing more than that sequence of exponents: (-2, 0, 1).
+
+We can say that the prime harmonic bases that we've dropped here are the ''units'' of these values, where the exponents give the corresponding ''amounts'' (or ''counts''; the word "counts" is more natural when the amounts are integers). Calling these primes "units" is no different, really, than saying that the "Hz" in "440 Hz" answers the question,
+
+<blockquote>
+"440 ''what''?" 
+
+"hertz"
+</blockquote>
+
+or that the cents symbol "<math>\mathsf{¢}</math>" in the amount "1200 <math>\mathsf{¢}</math>" answers the question,
+
+<blockquote>
+"1200 ''what''?"
+
+"cents" 
+</blockquote>
+
+The answer to the question "-2 ''what''?" in the above vector for <math>\frac{5}{4}</math> is "prime 2's". Similarly, the answer to "0 ''what''?" is "prime 3's", and "1 ''what''?" is "prime 5's".
+
+What we have here, then, is not a singular unit "primes", as we have with the singular unit of hertz, or the singular unit of cents. In fact, each prime is its own separate unit. These separate prime units are certainly closely related, though. It may be helpful to think of them as a ''family'' of related units, which share a symbol, <math>\small\mathsf{p}</math>, distinguishing themselves from each other using subscripts. Prime 2, being the ''1<sup>st</sup>'' prime, would be represented as <math>\small\mathsf{p_1}</math>, read "p sub ''1''". And prime 3, being the ''2<sup>nd</sup>'' prime, may be represented as <math>\small\mathsf{p_2}</math>, read "p sub ''2''". And prime 5 is <math>\small\mathsf{p_3}</math>, "p sub ''3''". And so forth. 
+
+Explicitly labeling the vector in this way, then, we'd get: 
+
+
+<math>
+\left[ \begin{matrix}
+{-2} \mathsf{p_1} \\
+0 \mathsf{p_2} \\
+1 \mathsf{p_3} \\
+\end{matrix} \right]
+</math>
+
+
+Clearly, this version which includes both the counts ''and'' the units is a bit cumbersome, which is why we don't usually see this. In general, the representation without units is the right representation for day-to-day work in RTT; the conciseness we achieve by letting the prime units be implicit is critical to its usefulness. 
+
+We can use the shorthand of a bold <math>\small 𝗽</math> to represent all the <math>\small\mathsf{p}</math>'s collectively, in the same way we use bold variables to represent vectors. In many cases we can treat this as if it is a singular unit "primes", but the bolding is there to remind us that it isn't really. We call this sort of unit a ''vectorized unit'', and you can read more about them in [[#Vectorized_units|the later section of this article dedicated to that topic]]. Using the vectorized unit we could write the above vector, with units, as {{vector|-2 0 1}} <math>\small 𝗽</math>.
+
+But the purpose of this article is not to argue that the vector notated even with the single bold unit symbol is preferable for general use. The actual purpose here is to conduct a review of basic RTT concepts, but with particular attention paid to the units of the values involved. We may call such a review a "units analysis".
+
+We suggest that a heightened awareness of the units of RTT objects can help us compartmentalize our understanding of various RTT objects, as well as broaden and deepen our understanding of how RTT works overall. After all, in an important sense, practitioners of RTT share traits with physicists more so than pure mathematicians, because what we model are physical phenomena of sound, with units of measurement grounded in reality.<ref group="note">Further evidence of this can be seen in our use of an [[Extended bra-ket notation|extended form of bra-ket notation]], which comes from quantum physics.</ref>
+
+== Units vs. dimensions ==
+The type of analysis we're calling a "units analysis" here is more commonly called a "[[Wikipedia:Dimensional_analysis|dimensional analysis]]", where "dimension" here is a scientific term for ''physical'' properties such as length, time, and mass. However, the word "dimension" already has an important ''mathematical'' meaning in RTT, as the number of coordinates in our just interval vectors. In fact we have already avoided three other potential uses of "dimension" in RTT by using "order", "shape" and "rank" instead. So we will limit our use of the ''physical'' sense of "dimension" to this article, and elsewhere refer to it as ''units analysis''.
+
+In science and engineering, and indeed everyday life, values are understood to have both ''quantity'' and ''units'', where the quantity shows up as the number, and the units follow it, imbuing the number with meaning. The physical ''dimensions'', then, are properties that these units might have; for examples, kilometers and miles are both units ''of length'', minutes and seconds are both units ''of time'', and octaves and cents are both units ''of relative pitch'' (defined as log of frequency ratio, to avoid confusion with perceptual notions of pitch, such as mels). So by referring to a "dimensional analysis" as a "units analysis", we are not being disingenuous; we're merely highlighting a different aspect of the same idea.
+
+And while breaking from established terminology is always a con to some extent, we note that there are definitely pros to us highlighting the analysis differently in this way. It is plain to see that our needs as musicians practicing RTT are different from those of scientists who are generally modeling the physical world. To physicists, quantities having units is taken for granted, and so it makes sense that it would be a "dimensional analysis" whenever they get more deeply interested in how these units interrelate via their dimensions; in our RTT application, on the other hand, the units of our quantities are ''not'' widely acknowledged, and so it's helpful for us to illuminate the presence of these units in the first place by calling it a "units analysis". Furthermore, dimensions in physics do often get complicated enough that it's the actual dimensions which warrant analysis (for an example, the dimensions of pressure are mass over length by time squared), whereas in RTT the actual dimensions of our units never get too complicated, and it's really only the units that we're ever worried about. 
+
+We should also acknowledge that not all of the things we're calling "units" in our system would be properly considered units to a physicist, namely: our prime units and generator units. Primes and generators are countable things. So when we measure them, it's easy; we just ''count'' them. We don't need a standard meter engraved on precious metal and kept in a vault.<ref group="note">The irony is that we no longer rely on a standard meter engraved on precious metal and kept in a vault. The meter is now defined by counting! The meter is defined as the distance traveled by light in a vacuum in 1/299,792,458 of a second. And the ''second'' is defined by counting 9,192,631,770 ticks of a "clock" consisting of specially energized cesium atoms.</ref> In one way of thinking, our prime counts and generator counts have no units, but the standard description says that they have the unit one, or their unit is unity, which is usually invisible, but we (Dave and Douglas) choose to sometimes represent it as a double-struck digit <math>\mathsf{𝟙}</math> for explanatory purposes. The standard description says instead that they have no ''dimension'', they are called dimensionless units. However, outside this article we use the shorthand "is unitless" when we mean "has dimensionless units" in order to avoid confusion with the RTT meaning of "dimension".  And so while counts of primes and generators behave well enough within our physics-inspired analysis, we do recognize and respect the limitations of comparing what we're doing to what physicists actually do. We can say that <math>\small\mathsf{p_1}</math> is just the unit of the quantity "prime-one count" and <math>\small\mathsf{g_2}</math> is the unit of the quantity "generator-two count", and define each prime and each generator as a having its own different dimension, which is different still from the log-frequency-ratio dimension of octaves and cents, so that none of these cancel with each other. However, if you're a hardline physicist, or for whatever reason object to thinking of these things as "units", then we suggest you might be amenable to thinking of them as "identifiers", which serve to identify the kinds of objects we're counting.<ref group="note">We're not alone in thinking that the description of what is being counted deserves to be treated as a first-class unit. See section 5 of [[https://iopscience.iop.org/article/10.1088/0026-1394/52/1/40 |"Dimensionless units in the SI", Mohr & Phillips, 2014]].</ref>
+
+== Illustrative examples ==
+=== Size of JI interval ===
+As a basic illustrative example of the power of such a units analysis, let's find the size in cents of our <math>\frac{5}{4}</math> interval. This interval is [[5-limit]], and the [[just tuning map]] for this prime limit is represented by the vector <math>𝒋</math> = {{map|1200 1901.955 2786.314}}:
+
+
+<math>
+\begin{array} {c}
+𝒋 \\
+\left[ \begin{matrix}
+1200 & 1901.955 & 2786.314
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+In the typical fashion, without thinking about units, we'd tune <math>\frac{5}{4}</math>'s vector with this tuning map to find its size. Let's start calling the <math>\frac{5}{4}</math> vector <math>\textbf{i}</math>, for "interval". So in other words, we do <math>𝒋·\textbf{i}</math>:
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+𝒋 \\
+\left[ \begin{matrix}
+1200 & 1901.955 & 2786.314
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{matrix}
+{-2} \\
+0 \\
+1 \\
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒋\textbf{i} = \mathrm{o} \\
+\left[ \begin{matrix}
+(1200×{-2}) + (1901.955×0) + (2786.314×1)
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{o} \\
+\left[ \begin{matrix}
+{-2400} + 0 + 2786.314
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{o} \\
+\left[ \begin{matrix}
+386.314
+\end{matrix} \right] 
+\end{array}
+\end{align}
+</math>
+
+
+Now let's take a look at how this basic operation works out when we include units. We've already determined the units of the prime-count vector are the primes <math>\small\mathsf{p_1}</math>, <math>\small\mathsf{p_2}</math>, and <math>\small\mathsf{p_3}</math>. But what about the tuning map? Our instinct may be to go with the simplest take, that every entry is in cents:
+
+
+<math>
+\begin{array} {c}
+𝒋 \\
+\left[ \begin{matrix}
+1200\,{\large\mathsf{¢}} & 1901.955\,{\large\mathsf{¢}} & 2786.314\,{\large\mathsf{¢}}
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+Well, let's give this a shot and see what we get.
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+𝒋 \\
+\left[ \begin{matrix}
+1200\,{\large\mathsf{¢}} & 1901.955\,{\large\mathsf{¢}} & 2786.314\,{\large\mathsf{¢}}
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{matrix}
+{-2}\,\mathsf{p_1} \\
+0\,\mathsf{p_2} \\
+1\,\mathsf{p_3} \\
+\end{matrix} \right]
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒋\textbf{i} = \mathrm{o} \\
+\left[\begin{matrix}
+\left(1200\,{\large\mathsf{¢}}×{-2}\,\mathsf{p_1}\right) + \left(1901.955\,{\large\mathsf{¢}}×0\,\mathsf{p_2}\right) + \left(2786.314\,{\large\mathsf{¢}}×1\,\mathsf{p_3}\right)
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{o} \\
+\left[ \begin{matrix}
+{-2400}\,{\large\mathsf{¢}}\mathsf{p_1} + 0\,{\large\mathsf{¢}}\mathsf{p_2} + 2786.314\,{\large\mathsf{¢}}\mathsf{p_3}
+\end{matrix} \right] 
+\end{array}
+\end{align}
+</math>
+
+
+But now we're stuck. We appear to have three different amounts which can not be reconciled with each other and thus cannot be combined. Furthermore, the units for each of these three amounts are compound units that don't seem to make much sense: what would a <math>\mathsf{¢}\small\mathsf{p_1}</math> be, exactly? No idea. We must have gone wrong at an earlier step.
+
+Indeed, we went wrong back when we accepted the units of the just tuning map <math>𝒋</math> to be simply cents. We failed to recognize the ''function'' of this tuning map, which is to ''convert'' prime-count vectors&mdash;such as the one for <math>\frac{5}{4}</math> we looked at earlier&mdash;''from'' units of primes ''into'' units of cents. 
+
+'''Compound units''' allow for the conversion of amounts from one type of unit into another (they are as opposed to '''simple units''' which, as the name suggests, are simply one type of unit). A familiar everyday example of a compound unit is <math>\small\mathsf{km}/\mathsf{h}</math> (while both <math>\small\mathsf{km}</math> and <math>\small\mathsf{h}</math> are separately simple units). We often think of amounts in <math>\small\mathsf{km}/\mathsf{h}</math> in and of themselves; through experience, we've developed an association with what 100 <math>\small\mathsf{km}/\mathsf{h}</math> is like. But there's another important sense in which values with the compound unit <math>\small\mathsf{km}/\mathsf{h}</math> allow us to ''convert'' values in hours (<math>\small\mathsf{h}</math>) to values in kilometers (<math>\small\mathsf{km}</math>). For example, if I drive for two hours at 100 <math>\small\mathsf{km}/\mathsf{h}</math>, then I can see how I will have gone 200 <math>\small\mathsf{km}</math>:
+
+
+<math>
+2\,\mathsf{h} × 100\,\frac{\mathsf{km}}{\mathsf{h}} = 2×100\,\cancel{\mathsf{h}}\frac{\mathsf{km}}{\cancel{\mathsf{h}}} = 200\,\mathsf{km}
+</math>
+
+
+So the type of units we're looking for in our just tuning map <math>𝒋</math> are something more like this <math>\small\mathsf{km}/\mathsf{h}</math> example. We need compound units that capture the fact that the tuning map converts each different prime into cents. 
+
+For starters, we know that there are 1200 cents per octave, and since the octave is the same as prime 2, the first prime harmonic, <math>\small\mathsf{p_1}</math>, we can express that relationship as 1200 <math>\mathsf{¢}/\small\mathsf{p_1}</math>. So following the same pattern for the units of the other two entries of the just tuning map, we find <math>𝒋</math> to be:
+
+
+<math>
+\left[ \begin{matrix}
+1200\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} & 1896.578\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} & 2786.314\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}}
+\end{matrix} \right]
+</math>
+
+
+And repeating our mapping experiment <math>𝒋·\textbf{i}</math>, then, but this time using these compound units:
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+𝒋 \\
+\left[ \begin{matrix}
+1200\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} & 1901.955\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} & 2786.314\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}}
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{matrix}
+{-2}\,\mathsf{p_1} \\
+0\,\mathsf{p_2} \\
+1\,\mathsf{p_3} \\
+\end{matrix} \right]
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒋\textbf{i} = \mathrm{o} \\
+\left[\begin{matrix}
+\left(1200\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}}×{-2}\,\mathsf{p_1}\right) + \left(1901.955\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}}×0\,\mathsf{p_2}\right) + \left(2786.314\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}}×1\,\mathsf{p_3}\right)
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{o} \\
+\left[ \begin{matrix}
+{-2400}\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{p_1}}}\cancel{\mathsf{p_1}} + 0\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{p_2}}}\cancel{\mathsf{p_2}} + 2786.314\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{p_3}}}\cancel{\mathsf{p_3}}
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{o} \\
+\left[ \begin{matrix}
+386.314\,{\large\mathsf{¢}}
+\end{matrix} \right] 
+\end{array}
+\end{align}
+</math>
+
+
+So now we get a reasonable result. The compound units lead to all of the prime units canceling out and disappearing, so we are left with all values in cents. At this point, they can all be combined into a single amount.
+
+Becoming aware of the fact that the units of tuning maps are not simply cents, but rather cents per prime, <math>\mathsf{¢}</math>/<math>\small 𝗽</math>, may not feel revelatory. Really, none of the results of a proper units analysis should be terribly surprising. The expectation here is simply that as we expand our survey, we find that all the units of the various RTT objects collaborate well together, coming together in a big picture where everything makes sense together.
+
+At this point, we've actually only looked at a JI interval tuned by a just tuning map. We haven't even begun to apply our units analysis to distinctively RTT objects yet.
+
+=== Size of tempered interval ===
+Let's take a look at another tuning map, the one for 5-limit 12-ET with an unchanged octave: {{map|1200 1900 2800}}. Imbued with its units, that looks like:
+
+
+<math>
+\begin{array} {c}
+𝒕 \\
+\left[ \begin{matrix}
+1200\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} & 1900\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} & 2800\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+</math>
+
+
+And we could tune the same vector we've been looking at so far&mdash;the one for <math>\frac{5}{4}</math>, {{vector|-2 0 1}}&mdash;with this new tuning map:
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+𝒕 \\
+\left[ \begin{matrix}
+1200\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} & 1900\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} & 2800\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{matrix}
+{-2}\,\mathsf{p_1} \\
+0\,\mathsf{p_2} \\
+1\,\mathsf{p_3} \\
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒕\textbf{i} = \mathrm{a} \\
+\left[\begin{matrix}
+\left(1200\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}}×{-2}\,\mathsf{p_1}\right) + \left(1900\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}}×0\,\mathsf{p_2}\right) + \left(2800\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}}×1\,\mathsf{p_3}\right)
+\end{matrix} \right]
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{a} \\
+\left[ \begin{matrix}
+{-2400}\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{p_1}}}\cancel{\mathsf{p_1}} + 0\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{p_2}}}\cancel{\mathsf{p_2}} + 2800\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{p_3}}}\cancel{\mathsf{p_3}}
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{a} \\
+\left[ \begin{matrix}
+400\,{\large\mathsf{¢}}
+\end{matrix} \right]
+\end{array}
+\end{align}
+</math>
+
+
+Unsurprisingly, since the structure is the exact same here, we end up with a result in the same units, just a different amount.
+
+=== Mapped interval ===
+Now it's also very common to look at temperaments as mappings. The mapping for 12-ET is {{rket|{{map|12 19 28}}}}. This is clearly not going to cents; it's taking us instead to steps of the ET. For better consistency with temperaments that are rank-2 and beyond, we're going to go ahead and refer to steps here as generators, and even label this generator as <math>\small\mathsf{g_1}</math> even though here there's only one of them:
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+M\textbf{i} \\
+\left[ \begin{matrix}
+12\,\frac{\mathsf{g_1}}{\mathsf{p_1}} & 19\,\frac{\mathsf{g_1}}{\mathsf{p_2}} & 28\,\frac{\mathsf{g_1}}{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{matrix}
+{-2}\,\mathsf{p_1} \\
+0\,\mathsf{p_2} \\
+1\,\mathsf{p_3} \\
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+M\textbf{i} = \textbf{y} \\
+\left[\begin{matrix}
+\left(12\,\frac{\mathsf{g_1}}{\mathsf{p_1}}×{-2}\,\mathsf{p_1}\right) + \left(19\,\frac{\mathsf{g_1}}{\mathsf{p_2}}×0\,\mathsf{p_2}\right) + \left(28\,\frac{\mathsf{g_1}}{\mathsf{p_3}}×1\,\mathsf{p_3}\right)
+\end{matrix} \right]  
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\textbf{y} \\
+\left[ \begin{matrix}
+{-24}\,\frac{\mathsf{g_1}}{\cancel{\mathsf{p_1}}}\cancel{\mathsf{p_1}} + 0\,\frac{\mathsf{g_1}}{\cancel{\mathsf{p_2}}}\cancel{\mathsf{p_2}} + 28\,\frac{\mathsf{g_1}}{\cancel{\mathsf{p_3}}}\cancel{\mathsf{p_3}}
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\textbf{y} \\
+\left[ \begin{matrix}
+4\,\mathsf{g_1}
+\end{matrix} \right]
+\end{array}
+\end{align}
+</math>
+
+=== Rank-2 mapped interval ===
+So what about rank-2? Suppose we have more than one generator. Let's try meantone temperament. Looking at this mapping, we can see by columns we have the different primes
+and by rows we have the different generators:
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+M \\
+\left[ \begin{matrix}
+1\,\frac{\mathsf{g_1}}{\mathsf{p_1}} & 1\,\frac{\mathsf{g_1}}{\mathsf{p_2}} & 0\,\frac{\mathsf{g_1}}{\mathsf{p_3}} \\
+0\,\frac{\mathsf{g_2}}{\mathsf{p_1}} & 1\,\frac{\mathsf{g_2}}{\mathsf{p_2}} & 4\,\frac{\mathsf{g_2}}{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{matrix}
+{-2}\,\mathsf{p_1} \\
+0\,\mathsf{p_2} \\
+1\,\mathsf{p_3} \\
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+M\textbf{i} = \textbf{y} \\
+\left[\begin{matrix}
+\left(1\,\frac{\mathsf{g_1}}{\mathsf{p_1}}×{-2}\,\mathsf{p_1}\right) + \left(1\,\frac{\mathsf{g_1}}{\mathsf{p_2}}×0\,\mathsf{p_2}\right) + \left(0\,\frac{\mathsf{g_1}}{\mathsf{p_3}}×1\,\mathsf{p_3}\right) \\
+\left(0\,\frac{\mathsf{g_2}}{\mathsf{p_1}}×{-2}\,\mathsf{p_1}\right) + \left(1\,\frac{\mathsf{g_2}}{\mathsf{p_2}}×0\,\mathsf{p_2}\right) + \left(4\,\frac{\mathsf{g_2}}{\mathsf{p_3}}×1\,\mathsf{p_3}\right) \\
+\end{matrix} \right]  
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\textbf{y} \\
+\left[ \begin{matrix}
+{-2}\,\frac{\mathsf{g_1}}{\cancel{\mathsf{p_1}}}\cancel{\mathsf{p_1}} + 0\,\frac{\mathsf{g_1}}{\cancel{\mathsf{p_2}}}\cancel{\mathsf{p_2}} + 0\,\frac{\mathsf{g_1}}{\cancel{\mathsf{p_3}}}\cancel{\mathsf{p_3}} \\
+0\,\frac{\mathsf{g_2}}{\cancel{\mathsf{p_1}}}\cancel{\mathsf{p_1}} + 0\,\frac{\mathsf{g_2}}{\cancel{\mathsf{p_2}}}\cancel{\mathsf{p_2}} + 4\,\frac{\mathsf{g_2}}{\cancel{\mathsf{p_3}}}\cancel{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\textbf{y} \\
+\left[ \begin{matrix}
+{-2}\,\mathsf{g_1} \\
+4\,\mathsf{g_2} \\
+\end{matrix} \right]
+\end{array}
+\end{align}
+</math>
+
+
+Our result here is a [[generator-count vector]]. This is useful itself. It tells us that <math>\frac{5}{4}</math> in this form of meantone is represented by two approximate-octave generators down and four approximate-fifth generators back up. 
+
+Just as we used the shorthand of a bold <math>\small 𝗽</math> to represent all the <math>\small\mathsf{p}</math>'s collectively, we can use a bold <math>\small 𝗴</math> to represent all the <math>\small\mathsf{g}</math>'s collectively. Using this vectorized unit we could write the above vector, with units, as {{rket|-2 4}} <math>\small 𝗴</math>.
+
+=== Rank-2 size of tempered interval ===
+But what if we now want to get from here to a size in cents? Well, we can't use a meantone tuning map anymore. Here's an example meantone tuning map, specifically quarter-comma tuning:
+
+
+<math>
+\begin{array} {c}
+𝒕 \\
+\left[ \begin{matrix}
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} & 1896.578\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} & 2786.314\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+</math>
+
+
+We can't combine this with our generator-count vector. For starters, they have different proportions; our generator-count vector is a <math>(r, 1)</math>-shaped vector, while this tuning map is a <math>(1, d)</math>-shaped row vector; <math>d</math> and <math>r</math> are what need to match here, and they don't. But we can also use our units analysis to help realize why we can't use this here: the tuning map is designed to convert things from units of primes <math>\small 𝗽</math> into units of cents <math>\mathsf{¢}</math>, but our generator-count vector isn't in units of primes; it's in units of generators <math>\small 𝗴</math>.
+
+What we need to use instead if we want to get from our generator-count vector to its cents is a generator tuning map. Here's the generator tuning map for quarter-comma meantone:
+
+
+<math>
+\begin{array} {c}
+𝒈 \\
+\left[ \begin{matrix}
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{g_1}} & 696.578\,\frac{{\large\mathsf{¢}}}{\mathsf{g_2}} \\
+\end{matrix} \right] 
+\end{array}
+</math>
+
+
+With this we can straightforwardly tune whichever mapped interval to its cents size. Let's do it for our example:
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+𝒈 \\
+\left[ \begin{matrix}
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{g_1}} & 696.578\,\frac{{\large\mathsf{¢}}}{\mathsf{g_2}} \\
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+M\textbf{i} \\
+\left[ \begin{matrix}
+{-2}\,\mathsf{g_1} \\
+4\,\mathsf{g_2} \\
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒈M\textbf{i} = \mathrm{a} \\
+\left[\begin{matrix}
+\left(1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{g_1}}×{-2}\,\mathsf{g_1}\right) + \left(696.578\,\frac{{\large\mathsf{¢}}}{\mathsf{g_2}}×4\,\mathsf{g_2}\right) \\
+\end{matrix} \right]  
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{a} \\
+\left[ \begin{matrix}
+\left(1200.000\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{g_1}}}×{-2}\,\cancel{\mathsf{g_1}}\right) + \left(696.578\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{g_2}}}×4\,\cancel{\mathsf{g_2}}\right) \\
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{a} \\
+\left[ \begin{matrix}
+{-2400}\,{\large\mathsf{¢}} + 2786.314\,{\large\mathsf{¢}} \\
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{a} \\
+\left[ \begin{matrix}
+386.314\,{\large\mathsf{¢}} \\
+\end{matrix} \right] 
+\end{array}
+\end{align}
+</math>
+
+=== Relationship between generator tuning map and tempered-prime tuning map ===
+But where did this generator tuning map come from? More importantly, perhaps, how does it relate to the (tempered-prime) tuning map? We can see that they're definitely somewhat related, because if we give the tempered-prime tuning map the original prime-count vector for <math>\frac{5}{4}</math> then we'll get the same answer as we got with the generator-count vector through the generator tuning map:
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+𝒕 \\
+\left[ \begin{matrix}
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} & 1896.578\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} & 2786.314\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+\textbf{i} \\
+\left[ \begin{matrix}
+{-2}\,\mathsf{p_1} \\
+0\,\mathsf{p_2} \\
+1\,\mathsf{p_3} \\
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒕\textbf{i} = \mathrm{a} \\
+\left[\begin{matrix}
+\left(1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}}×{-2}\,\mathsf{p_1}\right) + \left(1896.578\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}}×0\,\mathsf{p_2}\right) +
+\left(2786.314\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}}×1\,\mathsf{p_3}\right) \\
+\end{matrix} \right]  
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{a} \\
+\left[ \begin{matrix}
+\left(1200.000\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{p_1}}}×{-2}\,\cancel{\mathsf{p_1}}\right) + \left(1896.578\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{p_2}}}×0\,\cancel{\mathsf{p_2}}\right) +
+\left(2786.314\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{p_3}}}×1\,\cancel{\mathsf{p_3}2}\right) +
+\\
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{a} \\
+\left[ \begin{matrix}
+{-2400}\,{\large\mathsf{¢}} + 0\,{\large\mathsf{¢}} + 2786.314\,{\large\mathsf{¢}} \\
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+\mathrm{a} \\
+\left[ \begin{matrix}
+386.314\,{\large\mathsf{¢}} \\
+\end{matrix} \right] 
+\end{array}
+\end{align}
+</math>
+
+
+The relationship between the (tempered-primes) tuning map and the generator tuning map is simple. Every tuning map has a matching generator tuning map. And the tuning map is simply the generator tuning map times the temperament mapping:
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+𝒕 \\
+\left[ \begin{matrix}
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} & 1896.578\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} & 2786.314\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒈 \\
+\left[ \begin{matrix}
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{g_1}} & 696.578\,\frac{{\large\mathsf{¢}}}{\mathsf{g_2}} \\
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+M \\
+\left[ \begin{matrix}
+1\,\frac{\mathsf{g_1}}{\mathsf{p_1}} & 1\,\frac{\mathsf{g_1}}{\mathsf{p_2}} & 0\,\frac{\mathsf{g_1}}{\mathsf{p_3}} \\
+0\,\frac{\mathsf{g_2}}{\mathsf{p_1}} & 1\,\frac{\mathsf{g_2}}{\mathsf{p_2}} & 4\,\frac{\mathsf{g_2}}{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+\end{align}
+</math>
+
+
+In other words, if you do you make a <math>{\large\mathsf{¢}}/𝗴</math> matrix times a <math>\small 𝗴</math>/<math>\small 𝗽</math> matrix you get a <math>{\large\mathsf{¢}}/𝗽</math> matrix again. So the tempered-prime tuning map basically does both things together, the mapping and the tuning, composing the mapping and the tuning steps into one:
+
+
+<math>
+\begin{align}
+\begin{array} {c}
+𝒈 \\
+\left[ \begin{matrix}
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{g_1}} & 696.578\,\frac{{\large\mathsf{¢}}}{\mathsf{g_2}} \\
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c}
+M \\
+\left[ \begin{matrix}
+1\,\frac{\mathsf{g_1}}{\mathsf{p_1}} & 1\,\frac{\mathsf{g_1}}{\mathsf{p_2}} & 0\,\frac{\mathsf{g_1}}{\mathsf{p_3}} \\
+0\,\frac{\mathsf{g_2}}{\mathsf{p_1}} & 1\,\frac{\mathsf{g_2}}{\mathsf{p_2}} & 4\,\frac{\mathsf{g_2}}{\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒈M = 𝒕 \\
+\left[ \begin{matrix}
+(1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{g_1}}×1\,\frac{\mathsf{g_1}}{\mathsf{p_1}}) + (696.578\,\frac{{\large\mathsf{¢}}}{\mathsf{g_2}}×0\,\frac{\mathsf{g_2}}{\mathsf{p_1}}) &
+(1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{g_1}}×1\,\frac{\mathsf{g_1}}{\mathsf{p_2}}) + (696.578\,\frac{{\large\mathsf{¢}}}{\mathsf{g_2}}×1\,\frac{\mathsf{g_2}}{\mathsf{p_2}}) &
+(1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{g_1}}×0\,\frac{\mathsf{g_1}}{\mathsf{p_3}}) + (696.578\,\frac{{\large\mathsf{¢}}}{\mathsf{g_2}}×4\,\frac{\mathsf{g_2}}{\mathsf{p_3}}) 
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒕 \\
+\left[ \begin{matrix}
+\left(1200.000\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{g_1}}}\,\frac{\cancel{\mathsf{g_1}}}{\mathsf{p_1}}\right) + \left(0\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{g_2}}}\,\frac{\cancel{\mathsf{g_2}}}{\mathsf{p_1}}\right) &
+\left(1200.000\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{g_1}}}\,\frac{\cancel{\mathsf{g_1}}}{\mathsf{p_2}}\right) + \left(696.578\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{g_2}}}\,\frac{\cancel{\mathsf{g_2}}}{\mathsf{p_2}}\right) &
+\left(0\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{g_1}}}\,\frac{\cancel{\mathsf{g_1}}}{\mathsf{p_3}}\right) + \left(2786.314\,\frac{{\large\mathsf{¢}}}{\cancel{\mathsf{g_2}}}\,\frac{\cancel{\mathsf{g_2}}}{\mathsf{p_3}}\right) 
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒕 \\
+\left[ \begin{matrix}
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} + 0\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} &
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} + 696.578\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} &
+0\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}} + 2786.314\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}}
+\end{matrix} \right] 
+\end{array}
+
+\\[12pt] &\begin{array}{c}\\=\end{array} 
+
+\begin{array} {c}
+𝒕 \\
+\left[ \begin{matrix}
+1200.000\,\frac{{\large\mathsf{¢}}}{\mathsf{p_1}} &
+1896.578\,\frac{{\large\mathsf{¢}}}{\mathsf{p_2}} &
+2786.314\,\frac{{\large\mathsf{¢}}}{\mathsf{p_3}}
+\end{matrix} \right] 
+\end{array}
+\end{align}
+</math>
+
+== Units vs. quantities ==
+Be careful not to conflate ''units'' with ''quantities''. Here are some common quantity and unit pairs, for intervals:
+
+{| class="wikitable" style="margin: auto auto auto auto;"
+|-
+! Quantity !! Units
+|-
+| Size || rowspan="2" | Cents
+|-
+| Error
+|-
+| Damage || Weighted cents
+|-
+| Complexity || Complexity weight
+|-
+| Simplicity || Simplicity weight
+|-
+| Tuning || rowspan="2" | Cents per prime, or<br />cents per generator
+|-
+| Retuning
+|}
+
+== Annotated units ==
+In RTT, there is a quantity called ''damage'' that is intended to model the reduction in some desirable audible quality of a musical interval, due to its mistuning by some temperament. We start with the interval's error <math>\mathrm{e}</math> in cents, being the difference between the interval's tempered size and its just size, both of which are in cents. Then we take the absolute value of this error <math>|\mathrm{e}|</math> (still in cents) and multiply it by some weight <math>w</math> that is computed from the interval's vector <math>\mathbf{i}</math>. For reasons discussed elsewhere, this weight is best treated as a "unitless" scale factor and so the damage too has units of cents. And yet, damage is not directly comparable with absolute error, nor is it directly comparable with other kinds of damage that use different functions for computing the weight from the interval's prime components.
+
+This is analogous to calculating loudness by starting with acoustic pressure and weighting it by some factor computed from the frequency components of the sound. See [[Wikipedia:A-weighting]]. Both the acoustic pressure and the loudness (or sound pressure level) have units of decibels <math>\small\mathsf{dB}</math>. And yet, loudness is not directly comparable with acoustic pressure, nor is it directly comparable with other kinds of loudness that use different functions for computing the weight from the sound's frequency components.
+
+Although not part of the [[Wikipedia:SI|SI]], the solution adopted for loudness is to annotate the unit symbol <math>\small\mathsf{dB}</math> with an uppercase letter in parentheses that codes for the particular weighting scheme that was used in computing the loudness, e.g. <math>\small\mathsf{dB(A)}</math>, <math>\small\mathsf{dB(B)}</math>, <math>\small\mathsf{dB(Z)}</math>.
+
+We follow this precedent with our units for damage. The symbols <math>\mathsf{¢}\small\mathsf{(C)}</math>, <math>\mathsf{¢}\small\mathsf{(S)}</math> and <math>\mathsf{¢}\small\mathsf{(U)}</math> stand for "complexity weighted cents", "simplicity weighted cents" and "unweighted (or unity weighted) cents" (which just tells you that the absolute value was taken). These weighting functions are described in {{subpage|tuning fundamentals|uprev|s=damage|text=our article on tuning fundamentals}}.
+
+As a logical consequence of these units for damage, the weights <math>w</math> would have had units of weighted cents per cent; however, the cents cancel here, which leaves behind what appears to be a free-floating weight-annotation, unattached to any unit. But we know that no quantity is truly unitless (although it may be dimensionless), and so the annotations should be thought of as attached to the unit called "unity", which we symbolize in a non-standard manner as the double-struck <math>\mathsf{𝟙}</math>. And so you can think of <math>w</math> = 1.35 <math>\small\mathsf{(C)}</math> as equivalent to 1.35 <math>\mathsf{𝟙}\small\mathsf{(C)}</math> but with the <math>\mathsf{𝟙}</math> hidden, as is standard.
+
+To recap: Because damage is absolute error times weight, its units will be <math>\mathsf{¢}\!·\!\mathsf{𝟙}{\small\mathsf{(C)}} = \mathsf{¢}\small\mathsf{(C)}</math> or similar.
+
+== Vectorized units ==
+Our units analysis of RTT involves two special units which we call '''vectorized units''', which represent families of units. These are ''primes'', represented by the bold <math>\small 𝗽</math>, and ''generators'', represented by the bold <math>\small 𝗴</math>. We use the bold to distinguish them from the plain style used for ordinary unit symbols. The plain style is still used for their group members, such as <math>\small\mathsf{p_1}</math> or <math>\small\mathsf{g_2}</math>.
+
+Referring to units of scalars is straightforward. They are singular quantities. It can sometimes be helpful to refer to the units of higher-order objects such as vectors, for which it is often the case that each of their entries have similar but different units to each other. In such cases, we seek the ability to refer to the units of the vector as a group, all at once, especially when considering how these vectors interact with other vectors and matrices. This is the basic idea behind vectorized units: we recognize that for a given prime-count vector, the first entry gives a quantity with units of the first prime, the second entry gives a quantity with units of the second prime, and so forth, and so the vector as a whole can be said to have units of "primes".
+
+Just like ordinary units can be either simple (e.g. <math>\mathsf{¢}</math>) or compound (e.g. <math>\mathsf{¢}</math>/<math>\small\mathsf{oct}</math>), vectorized units can be either simple (e.g. <math>\small 𝗽</math>) or compound (e.g. <math>\small 𝗽</math>/<math>\small 𝗴</math>). We can even have compound units of vectorized and ordinary units, such as <math>\mathsf{¢}</math>/<math>\small 𝗽</math>.
+
+=== Matrix units ===
+Some of the matrices we use in RTT&mdash;such as [[comma basis|comma bases]], [[target-interval list]]s, etc.&mdash;are perhaps better thought of as ''lists of vectors''. They behave well as matrices in terms of matrix multiplication and such, so we often represent them as matrices (with vertical lines between columns to subtly hint at their status as lists of vectors that have been smooshed together) and give them capital-letter variable symbols like <math>\mathrm{C}</math> and <math>\mathrm{T}</math>, but one tell-tale sign is that they all have simple units, such as of <math>\small 𝗽</math>, <math>\small 𝗴</math>, etc. This is because these matrices are not transformations so much as they are the things to potentially be transformed by other matrices, such as mappings and projections.
+
+These other types of transformational matrices are matrices in a fuller, truer sense. And these tend to have compound units, because&mdash;in their capacity as machines that transform objects from one thing into another&mdash;they generally change the object's units. So their denominator unit cancels out the input's original units, and their numerator unit is given to the output. We can then think of each entry of such transformational matrices as relating a proportion of quantities of one unit to another. Their units are essentially the results of the outer product of two vectors containing only vector units. The result is that one of the vectorized units iterates through its members along the rows, and the other iterates through them along its columns. Ultimately this means that every combination of member unit from each vectorized group is accounted for.
+
+When we give the compound units as <math>\small\mathsf{x}</math>/<math>\small\mathsf{y}</math>, it's always the case that the <math>\small\mathsf{x}</math>'s increment by rows, and the <math>\small\mathsf{y}</math>'s increment by cols. This is because the units are defined based on how matrix multiplication is defined.
+
+For example, a generator embedding matrix <math>G</math>, has units of <math>\small 𝗽</math>/<math>\small 𝗴</math>, here shown with units only:
+
+
+<math>
+\begin{array} {c} G \\[6pt]
+\left[\begin{matrix}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\end{matrix} \right]
+\end{array}
+</math>
+
+
+The <math>\small\mathsf{p}</math>'s increment 1, 2, 3 as we go down the rows, and the <math>\small\mathsf{g}</math>'s increment 1, 2 as we go across the cols.
+
+By the way, we'd read <math>\small 𝗽</math>/<math>\small 𝗴</math> as "primes per generator". We can think of this as short for "(count-of-each-one-of-the-)primes per (count-of-each-of-one-of-the-)generator(s)".
+
+We can even see this effect in the case of tuning maps, such as <math>𝒕</math> = ⟨1200 <math>\mathsf{¢}</math>/<math>\small\mathsf{p_1}\;</math> 1900 <math>\mathsf{¢}</math>/<math>\small\mathsf{p_2}\;</math> 2800 <math>\mathsf{¢}</math>/<math>\small\mathsf{p_3}</math>], with units of <math>\mathsf{¢}</math>/<math>\small 𝗽</math>, where the <math>\small\mathsf{p}</math>'s increment by cols and <math>\mathsf{¢}</math> increments by rows (trivially; there's only one row). Or <math>𝒈</math> = {1202 <math>\mathsf{¢}</math>/<math>\small\mathsf{g_1}\;</math> 504 <math>\mathsf{¢}</math>/<math>\small\mathsf{g_2}</math>], with units of <math>\mathsf{¢}</math>/<math>\small 𝗴</math>, where again the index of each <math>\small\mathsf{g}</math> increments by cols and <math>\mathsf{¢}</math> trivially increments by the single row.
+
+=== Inverting matrix units ===
+We can make this point even stronger. When you invert a matrix, its units reciprocate from <math>\small\mathsf{x}</math>/<math>\small\mathsf{y}</math> to <math>\small\mathsf{y}</math>/<math>\small\mathsf{x}</math> of course, but this not only changes which unit type is in the numerator within each entry, it also changes whether that unit type's indices increment by rows or by columns.
+
+For instance, the inverse of:
+
+
+<math>
+\left[ \begin{matrix}
+\color{ForestGreen}\mathsf{p_1} & \color{ForestGreen}\mathsf{p_1} & \color{ForestGreen}\mathsf{p_1} \\[6pt]
+\color{NavyBlue}\mathsf{p_2} & \color{NavyBlue}\mathsf{p_2} & \color{NavyBlue}\mathsf{p_2} \\[6pt]
+\color{Plum}\mathsf{p_3} & \color{Plum}\mathsf{p_3} & \color{Plum}\mathsf{p_3} \\[6pt]
+\end{matrix} \right]
+</math>
+
+
+is:
+
+
+<math>
+\left[ \begin{matrix}
+\frac{1}{\color{ForestGreen}\mathsf{p_1}} & \frac{1}{\color{NavyBlue}\mathsf{p_2}} & \frac{1}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{1}{\color{ForestGreen}\mathsf{p_1}} & \frac{1}{\color{NavyBlue}\mathsf{p_2}} & \frac{1}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{1}{\color{ForestGreen}\mathsf{p_1}} & \frac{1}{\color{NavyBlue}\mathsf{p_2}} & \frac{1}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{matrix} \right]
+</math>
+
+
+''not'':
+
+
+<math>
+\left[ \begin{matrix}
+\frac{1}{\color{ForestGreen}\mathsf{p_1}} & \frac{1}{\color{ForestGreen}\mathsf{p_1}} & \frac{1}{\color{ForestGreen}\mathsf{p_1}} \\[6pt]
+\frac{1}{\color{NavyBlue}\mathsf{p_2}} & \frac{1}{\color{NavyBlue}\mathsf{p_2}} & \frac{1}{\color{NavyBlue}\mathsf{p_2}} \\[6pt]
+\frac{1}{\color{Plum}\mathsf{p_3}} & \frac{1}{\color{Plum}\mathsf{p_3}} & \frac{1}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{matrix} \right]
+</math>
+
+
+Note how in the correct inversion, the colors are arranged by ''columns'' now, no longer ''rows''.
+
+=== Cancellation ===
+The units of a [[projection matrix]] <math>P</math> are given as <math>\small 𝗽</math>/<math>\small 𝗽</math>, primes per primes. The reason these don't cancel out is because they are vectorized units, and thus one of them increments along the rows, and the other along the cols:
+
+
+<math>
+\left[ \begin{array} {c}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{Plum}\mathsf{p_3}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{array} \right]
+</math>
+
+
+And so, technically speaking, we could say the units along the main diagonal, where the indices match, ''do'' cancel out, leaving dimensionless quantities:
+
+
+<math>
+\left[ \begin{array} {c}
+{\large\mathsf{𝟙}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{ForestGreen}\mathsf{p_1}} & {\large\mathsf{𝟙}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}} & {\large\mathsf{𝟙}} \\[6pt]
+\end{array} \right]
+</math>
+
+
+However, we would still use <math>\small 𝗽</math>/<math>\small 𝗽</math> to refer to the units of the matrix as a whole, on account of all the other entries of the matrix which retain compound units relating different primes to each other, so this doesn't really buy us much here. (For a counterexample to this situation, please see {{subpage|units analysis|uprev|s=The JI mapping times the JI generator embedding|text=this later section}}).
+
+Here's how to fully understand why. When performing matrix multiplication here, between the mapping and the generator embedding:
+
+
+<math>
+
+\begin{array} {c}
+G \\[6pt]
+\left[ \begin{matrix}
+\frac{\color{ForestGreen}\mathsf{p_1}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{ForestGreen}\mathsf{p_1}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{NavyBlue}\mathsf{p_2}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{NavyBlue}\mathsf{p_2}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\frac{\color{Plum}\mathsf{p_3}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\end{matrix} \right]
+\end{array}
+
+\begin{array} {c}
+M \\[6pt]
+\left[ \begin{matrix}
+\frac{\color{BurntOrange}\mathsf{g_1}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{BurntOrange}\mathsf{g_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{BurntOrange}\mathsf{g_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{OrangeRed}\mathsf{g_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{OrangeRed}\mathsf{g_2}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{OrangeRed}\mathsf{g_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{matrix} \right]
+\end{array}
+
+</math>
+
+
+Each time we grab a col of the right-hand matrix and a row of the left-hand matrix. Within each of these right-col and left-row, the specific units (i.e. which <math>\small\mathsf{g}</math> among <math>\small\color{BurntOrange}\mathsf{g_1}</math>, <math>\small\color{OrangeRed}\mathsf{g_2}</math>, etc.) are all different for the inner unit, while the specific units are all the same for the outer unit. 
+
+For example, let's take a look at how we find entry <math>p_{32}</math> of <math>P</math>, the center bottom entry. This is the result of the dot product between the 2<sup>nd</sup> col of <math>M</math> and the 3<sup>rd</sup> row of <math>G</math>:
+
+
+<math>
+\left[ \begin{array} {c}
+\frac{\color{Plum}\mathsf{p_3}}{\color{BurntOrange}\mathsf{g_1}} & \frac{\color{Plum}\mathsf{p_3}}{\color{OrangeRed}\mathsf{g_2}} \\[6pt]
+\end{array} \right]
+
+\left[ \begin{array} {c}
+\frac{\color{BurntOrange}\mathsf{g_1}}{\color{NavyBlue}\mathsf{p_2}} \\[6pt]
+\frac{\color{OrangeRed}\mathsf{g_2}}{\color{NavyBlue}\mathsf{p_2}} \\[6pt]
+\end{array} \right]
+</math>
+
+
+Notice how in the col of <math>M</math>, the <math>\small\mathsf{p}</math>'s are all the same, while the <math>\small\mathsf{g}</math>'s are all different. It's the same situation in the row of <math>G</math>: the <math>\small\mathsf{p}</math>'s are all the same, and the <math>\small\mathsf{g}</math>'s are all different. And yet, despite the fact that it's the <math>\small\mathsf{g}</math>'s that are all different, they're the ones that are going to cancel out and go away. This is because while they may be different from each other ''within the individual row and within the individual col'', when we combine these objects together, the <math>\small\mathsf{g}</math>'s of different indices all get matched up with a <math>\small\mathsf{g}</math> of the matching index:
+
+
+<math>
+\begin{align}
+\left(\frac{\color{Plum}\mathsf{p_3}}{\color{BurntOrange}\mathsf{g_1}}\right)\left(\frac{\color{BurntOrange}\mathsf{g_1}}{\color{NavyBlue}\mathsf{p_2}}\right) + \left(\frac{\color{Plum}\mathsf{p_3}}{\color{OrangeRed}\mathsf{g_2}}\right)\left(\frac{\color{OrangeRed}\mathsf{g_2}}{\color{NavyBlue}\mathsf{p_2}}\right) &=
+\left(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{BurntOrange}\mathsf{g_1}}}\right)\left(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{NavyBlue}\mathsf{p_2}}\right) + \left(\frac{\color{Plum}\mathsf{p_3}}{\cancel{\color{OrangeRed}\mathsf{g_2}}}\right)\left(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{NavyBlue}\mathsf{p_2}}\right) \\[6pt]
+&= \frac{\color{Plum}\mathsf{p_3}}{\color{NavyBlue}\mathsf{p_2}}
+\end{align}
+</math>
+
+
+And conversely, while the <math>\small\mathsf{p}</math>'s were the same within the individual row and individual col, ''they're different between the row and col'', so we end the day with a quantity in terms of one prime per another prime.
+
+== Units-only analyses ==
+In this section, we'll demonstrate a series of examples isolating only the units of certain combinations of RTT matrices. The following all use a rank-2, 5-limit temperament.
+
+More advanced examples of similar units-only analyses can be found here: [[Projection#Units]].
+
+=== Generator tuning map, mapping: tuning map ===
+A <math>\mathsf{¢}</math>/<math>\small 𝗴</math> generator tuning map and a <math>\small 𝗴</math>/<math>\small 𝗽</math> mapping combine to make a <math>\mathsf{¢}</math>/<math>\small 𝗽</math> tuning map.
+
+
+<math>
+\begin{align}
+\begin{array} {c} 𝒈 \\[4pt]
+\left[ \begin{matrix}
+\frac{{\large\mathsf{¢}}}{\color{BurntOrange}\mathsf{g_1}} & \frac{{\large\mathsf{¢}}}{\color{OrangeRed}\mathsf{g_2}}
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c} M \\[4pt]
+\left[ \begin{matrix}
+\frac{\color{BurntOrange}\mathsf{g_1}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{BurntOrange}\mathsf{g_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{BurntOrange}\mathsf{g_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{OrangeRed}\mathsf{g_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{OrangeRed}\mathsf{g_2}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{OrangeRed}\mathsf{g_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒈M \\[4pt]
+\left[\begin{matrix}
+\left(\frac{{\large\mathsf{¢}}}{\cancel{\color{BurntOrange}\mathsf{g_1}}}\right)\left(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{ForestGreen}\mathsf{p_1}}\right) + \left(\frac{{\large\mathsf{¢}}}{\cancel{\color{OrangeRed}\mathsf{g_2}}}\right)\left(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{ForestGreen}\mathsf{p_1}}\right) &
+\left(\frac{{\large\mathsf{¢}}}{\cancel{\color{BurntOrange}\mathsf{g_1}}}\right)\left(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{NavyBlue}\mathsf{p_2}}\right) + \left(\frac{{\large\mathsf{¢}}}{\cancel{\color{OrangeRed}\mathsf{g_2}}}\right)\left(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{NavyBlue}\mathsf{p_2}}\right) &
+\left(\frac{{\large\mathsf{¢}}}{\cancel{\color{BurntOrange}\mathsf{g_1}}}\right)\left(\frac{\cancel{\color{BurntOrange}\mathsf{g_1}}}{\color{Plum}\mathsf{p_3}}\right) + \left(\frac{{\large\mathsf{¢}}}{\cancel{\color{OrangeRed}\mathsf{g_2}}}\right)\left(\frac{\cancel{\color{OrangeRed}\mathsf{g_2}}}{\color{Plum}\mathsf{p_3}}\right) \\
+\end{matrix} \right] 
+\end{array}
+
+\\ &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒕 \\[4pt]
+\left[ \begin{matrix}
+\frac{{\large\mathsf{¢}}}{\color{ForestGreen}\mathsf{p_1}} & \frac{{\large\mathsf{¢}}}{\color{NavyBlue}\mathsf{p_2}} & \frac{{\large\mathsf{¢}}}{\color{Plum}\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+
+\end{align}
+</math>
+
+
+=== Mapping, interval: mapped interval ===
+A <math>\small 𝗴</math>/<math>\small 𝗽</math> mapping and a prime-count vector (units of <math>\small 𝗽</math>) combine to make a generator-count vector (units of <math>\small 𝗴</math>) .
+
+
+<math>
+\begin{align}
+
+\begin{array} {c} M \\[4pt]
+\left[ \begin{matrix}
+\frac{\color{BurntOrange}\mathsf{g_1}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{BurntOrange}\mathsf{g_1}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{BurntOrange}\mathsf{g_1}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\frac{\color{OrangeRed}\mathsf{g_2}}{\color{ForestGreen}\mathsf{p_1}} & \frac{\color{OrangeRed}\mathsf{g_2}}{\color{NavyBlue}\mathsf{p_2}} & \frac{\color{OrangeRed}\mathsf{g_2}}{\color{Plum}\mathsf{p_3}} \\[6pt]
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c} \textbf{i} \\[4pt]
+\left[ \begin{matrix}
+\color{ForestGreen}\mathsf{p_1} \\[6pt]
+\color{NavyBlue}\mathsf{p_2} \\[6pt]
+\color{Plum}\mathsf{p_3} \\[6pt]
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} M\textbf{i} \\[6pt]
+\left[ \begin{matrix}
+\left(\frac{\color{BurntOrange}\mathsf{g_1}}{\cancel{\color{ForestGreen}\mathsf{p_1}}}\right)\left(\cancel{\color{ForestGreen}\mathsf{p_1}}\right) + \left(\frac{\color{BurntOrange}\mathsf{g_1}}{\cancel{\color{NavyBlue}\mathsf{p_2}}}\right)\left(\cancel{\color{NavyBlue}\mathsf{p_2}}\right) + \left(\frac{\color{BurntOrange}\mathsf{g_1}}{\cancel{\color{Plum}\mathsf{p_3}}}\right)\left(\cancel{\color{Plum}\mathsf{p_3}}\right) \\[6pt]
+\left(\frac{\color{OrangeRed}\mathsf{g_2}}{\cancel{\color{ForestGreen}\mathsf{p_1}}}\right)\left(\cancel{\color{ForestGreen}\mathsf{p_1}}\right) + \left(\frac{\color{OrangeRed}\mathsf{g_2}}{\cancel{\color{NavyBlue}\mathsf{p_2}}}\right)\left(\cancel{\color{NavyBlue}\mathsf{p_2}}\right) + \left(\frac{\color{OrangeRed}\mathsf{g_2}}{\cancel{\color{Plum}\mathsf{p_3}}}\right)\left(\cancel{\color{Plum}\mathsf{p_3}}\right) \\[6pt]
+\end{matrix} \right] 
+\end{array}
+
+\\[20pt] &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} M\textbf{i} \\[4pt]
+\left[ \begin{matrix}
+\color{BurntOrange}\mathsf{g_1} \\[6pt]
+\color{OrangeRed}\mathsf{g_2} \\[6pt]
+\end{matrix} \right] 
+\end{array}
+
+\end{align}
+</math>
+
+
+=== Tuning map, interval: tempered interval size ===
+A <math>\mathsf{¢}</math>/<math>\small 𝗽</math> tuning map and a prime-count vector (units of <math>\small 𝗽</math>) representing an interval combine to give the interval's size in <math>\mathsf{¢}</math>.
+
+
+<math>
+\begin{align}
+
+\begin{array} {c} 𝒕 \\[4pt]
+\left[ \begin{matrix}
+\frac{{\large\mathsf{¢}}}{\color{ForestGreen}\mathsf{p_1}} & \frac{{\large\mathsf{¢}}}{\color{NavyBlue}\mathsf{p_2}} & \frac{{\large\mathsf{¢}}}{\color{Plum}\mathsf{p_3}} \\
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c} \textbf{i} \\[4pt]
+\left[ \begin{matrix}
+\color{ForestGreen}\mathsf{p_1} \\[6pt]
+\color{NavyBlue}\mathsf{p_2} \\[6pt]
+\color{Plum}\mathsf{p_3} \\[6pt]
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒕\textbf{i} \\[4pt]
+\left[ \begin{matrix}
+\left(\frac{{\large\mathsf{¢}}}{\cancel{\color{ForestGreen}\mathsf{p_1}}}\right)\left(\cancel{\color{ForestGreen}\mathsf{p_1}}\right) + \left(\frac{{\large\mathsf{¢}}}{\cancel{\color{NavyBlue}\mathsf{p_2}}}\right)\left(\cancel{\color{NavyBlue}\mathsf{p_2}}\right) + \left(\frac{{\large\mathsf{¢}}}{\cancel{\color{Plum}\mathsf{p_3}}}\right)\left(\cancel{\color{Plum}\mathsf{p_3}}\right) 
+\end{matrix} \right] 
+\end{array}
+
+\\ &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒕\textbf{i} \\[4pt]
+\left[ \begin{matrix}
+{\large\mathsf{¢}}
+\end{matrix} \right] 
+\end{array}
+
+\end{align}
+</math>
+
+
+=== Generator tuning map, mapped interval: tempered interval size ===
+A <math>\mathsf{¢}</math>/<math>\small 𝗴</math> generator tuning map and a generator-count vector (units of <math>\small 𝗴</math>) representing an interval combine to give the interval's size in <math>\mathsf{¢}</math>.
+
+
+<math>
+\begin{align}
+
+\begin{array} {c} 𝒈 \\[4pt]
+\left[ \begin{matrix}
+\frac{{\large\mathsf{¢}}}{\color{BurntOrange}\mathsf{g_1}} & \frac{{\large\mathsf{¢}}}{\color{OrangeRed}\mathsf{g_2}}
+\end{matrix} \right] 
+\end{array}
+
+\begin{array} {c} M\textbf{i} \\[4pt]
+\left[ \begin{matrix}
+\color{BurntOrange}\mathsf{g_1} \\[6pt]
+\color{OrangeRed}\mathsf{g_2} \\[6pt]
+\end{matrix} \right] 
+\end{array}
+
+&\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒕\textbf{i} \\[4pt]
+\left[ \begin{matrix}
+\left(\frac{{\large\mathsf{¢}}}{\cancel{\color{BurntOrange}\mathsf{g_1}}}\right)\left(\cancel{\color{BurntOrange}\mathsf{g_1}}\right) + \left(\frac{{\large\mathsf{¢}}}{\cancel{\color{OrangeRed}\mathsf{g_2}}}\right)\left(\cancel{\color{OrangeRed}\mathsf{g_2}}\right)
+\end{matrix} \right] 
+\end{array}
+
+\\[20pt] &\begin{array}{c}\\[4pt]=\end{array} 
+
+\begin{array} {c} 𝒕\textbf{i} \\[4pt]
+\left[ \begin{matrix}
+{\large\mathsf{¢}}
+\end{matrix} \right] 
+\end{array}
+
+\end{align}
+</math>
+
+== See also ==
+Other articles in the intermediate section of our series, for scientists, engineers, and mathematicians:
+* 6. {{Subpage|Tuning computation|prev}}: For methods and derivations; learn how to compute tunings, and why these methods work
+* 7. {{Subpage|All-interval tuning schemes|prev}}: The variety of tuning scheme that is most commonly named and written about on the Xenharmonic wiki
+
+== Footnotes ==
+<references group="note" />
+
+[[Category:Dave Keenan & Douglas Blumeyer's guide to RTT]]
+[[Category:Tuning]]

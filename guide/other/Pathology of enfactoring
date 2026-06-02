@@ -1,0 +1,86 @@
+In this article that relates to [[regular temperaments]], we will use lattices to demonstrate the musical implications of [[mappings]] that contain common factors, and the lack of musical implications of [[comma basis|comma bases]] that contain common factors.
+
+== Defactored case ==
+
+[[File:Unenfactored mapping.png|365px|thumb|right|A 3-limit tempered lattice, superimposed on the JI lattice]]
+
+First, let's look at a [[defactoring|defactored]] mapping. This example temperament is so simple that it is not of practical musical interest. It was chosen because it's basically the numerically simplest possible example, where this type of simplicity empowers us to visualize the problem at a practical scale as clearly as possible. Please consider the diagram at right. 
+
+This is a representation of 2-ET, a 3-limit, rank-1 (equal) temperament, with mapping {{rket|{{map|2 3}}}}, meaning it has a single generator which takes two steps to reach the octave, and three steps to reach the tritave. This temperament makes a single comma [[vanish]], a comma whose vector representation looks similar to the mapping: {{vector|-3 2}}, AKA 9/8, the 3-limit major 2nd. And so the comma basis for this temperament is [{{vector|-3 2}}]. The generator is both 4/3 and 3/2. In musical terms, both the fourth and the fifth are so heavily tempered that they each become a half-octave.
+
+We can imagine that we started out with a JI lattice, where movement up and down correspond to prime 2 (the octave) and movements right and left correspond to prime 3 (the tritave). We have tempered JI here, and so we've faded the JI lattice out to a faint grey color in the background. What we've done specifically is made the comma {{vector|-3 2}} vanish so that any nodes in this lattice which are 2 over and 3 up from each other are equivalent. Therefore we only need to consider a thin swath of the lattice anymore, specifically, a swath which connects the origin {{vector|0 0}}, AKA 1/1, to {{vector|-3 2}}, and then runs perpendicularly to infinity in either direction. 
+
+There's a couple good ways to interpret this situation:
+# We've turned on a teleportation field for every point outside this swath, so that it moves by these (-3,2) intervals until it finds its way inside the swath. 
+# We've rolled up space, so that the line from 1/1 to 9/8 — the width of our swath — is like the circumference of a tube. In this case, since we're only working with 3-limit JI, "space" was only ever 2D, so we can just think of it as paper that we've rolled up, so the pair of dotted lines visualized here are touching along their entire lengths (and if you wanted to imagine further copies of these dotted lines at every (-3,2) interval farther out in either direction, and the paper is infinitely thin, just stack all the dotted lines on top of each other forever). 
+
+Either way, then we just superimpose the new tempered lattice on top. It's drawn in blue. 
+
+You can see that in the grey lattice underneath, coordinates have 2 values, e.g. {{vector|-1 2}}. That's because the JI lattice essentially had two generators: the octave and the tritave. But tempering has helped us simplify things by reducing us to a single generator, so here, in the new blue-colored tempered lattice, the coordinates have only 1 value, e.g. {{vector|8}}, and they simply indicate how many iterations of the single generator here that we've taken to reach the given point. 
+
+We've superimposed the tempered lattice atop the former JI lattice so we can see which JI intervals map to which tempered intervals. For example, {{vector|-1 2}}, AKA 9/2, maps to {{vector|8}}. That tells us that if we want to use the temperament's approximation of the JI interval 9/2, then we want the tempered pitch arrived at by moving by the generator 8 times.
+
+Note that whenever the path the generator takes leaves the main swath, it wraps around to the point on the opposite side. Again, you can think of this either way you prefer: the world is still flat, and you've just warped over there; or, the world has been curled up, and in reality you've been looping back around toward that point the whole time, and the dotted line in this flat representation just represents the point you cut the tube and unrolled it so it could be better visualized on a screen.
+
+The tempered vector for the generator of this temperament is of course {{vector|1}}, but the simplest JI pitch that maps to this generator is {{vector|-1 1}}, or 3/2. It's visually clear why this is the generator. We need to choose an interval which if we repeatedly move by it, while wrapping around the swath, we'll visit every node inside the swath. The best way to do that is to move from the origin to the node that's nearest to the dotted line labelled "tube circumference". We want this node because we want to move away from the tube circumference as little as possible each time, so we avoid skipping any nodes. If it's not obvious, you may want to experiment with drawing the generator line as if it had gone to any other point inside the swath; if you repeated that movement, would you visit every node? No.
+
+All of this so far is actually only just explaining the basic setup for any tempered lattice. But we've got to lay the basics down first in order to discuss the effect of enfactoring. We'll do that now!
+
+== Enfactored mapping ==
+
+[[File:2-enfactored mapping.png|365px|thumb|right|A 2-enfactored mapping represents a temperoid for which every other step of its generator lands on a pitch which no JI interval would ever temper to.]]
+
+We are now comparing the previous diagram, which had the mapping {{rket|{{map|2 3}}}}, with the 2-enfactored version of it, i.e. the mapping 2×{{rket|{{map|2 3}}}} = {{rket|{{map|4 6}}}}, AKA 4-ET.
+
+If you compare this lattice of an enfactored mapping with the previous lattice for a healthy, defactored mapping, they should look almost the same. They have the same comma and tube circumference. And the generator follows the same path through that tube/swath. The key difference is how far the generator moves with each step along that path. 
+
+Starting from the origin, we can see that it takes us 2 moves of the generator to reach the approximation of {{vector|-1 1}}, AKA 3/2, where before we made that step in one go. Then another 2 moves to reach the approximation of {{vector|-2 2}}, AKA 9/4, for a total of 4 moves, where before it only took us 2 steps. As you keep going, you'll see that each node it has taken us 2x as many steps as before to reach it.
+
+And for what? What happens in the steps that are halfway between nodes that were on the JI lattice? These are shown with hollow blue circles instead of filled blue circles, to indicate that there's no JI lattice node underneath them. In other words, while these are legitimate musical intervals, there is no JI interval which would be said to temper to them. In still other words, since this is 4-ET, that first generator step is to a node {{vector|1}} that's about 300¢. But {{vector|0 0}} tempers to {{vector|0}} and {{vector|-1 1}} tempers to {{vector|2}}; nothing tempers to {{vector|1}}. It's an interval that can certainly at least be heard and understood musically, but it has no meaning with respect to tempering JI, or said another way, it has no RTT purpose. 
+
+And so this 4-ET doesn't bring anything to the table that isn't already brought by 2-ET. And so it is fitting to consider it only a temperoid, rather than a true temperament. Were this as bad as things got, it might not be worth pushing for distinguishing temperoids from temperaments. But once we look at enfactored comma bases, we'll see why things get pretty pathological.
+
+== Enfactored comma bases ==
+
+[[File:2-enfactored comma-basis.png|365px|thumb|left|enfactored comma bases are garbage]]
+
+Here's where things get kind of nuts. Most recently we experimented with enfactoring our healthy temperament's mapping. Now let's experiment with enfactoring its comma basis. In the defactored situation, if our comma basis was [{{vector|-3 2}}] = 9/8, then 2-enfactoring it produces 2×[{{vector|-3 2}}] = [{{vector|-6 4}}] = 81/64, the 3-limit major 3rd.
+
+We know that in the original diagram, the large-labelled {{vector|-3 2}} represented our comma, and this was the point that our dotted line ran through, the one that represented our boundary of warp/wrap. So our first thought should be: we must alter our diagram so that now {{vector|-6 4}} is that point instead. Fine. 
+
+But here's the problem. It simply doesn't make sense to double the width of our swath/tube! If {{vector|-6 4}} is made to vanish, then so is {{vector|-3 2}}. That is, while nothing would stop you from drawing a diagram with a double-width swath/tube, the musical reality is that it is impossible to make {{vector|-6 4}} vanish without also making {{vector|-3 2}} vanish. In musical terms, the 3-limit major 3rd is the sum of two 3-limit major 2nds. If the major 3rd vanishes, the major 2nd must also. And so there is no meaning or purpose to the comma basis {{vector|-6 4}}, whether RTT-wise or musically in general. It is garbage. 
+
+And so our lattice for an enfactored comma basis looks almost identical to the original defactored lattice. The only difference here is that we've drawn a "supposed (but false)" tube circumference out to {{vector|-6 4}}, while the half of this length which is real is now labelled the "true" circumference.
+
+== Enfactored comma bases vs. periodicity blocks with torsion ==
+
+[[File:Torsion.png|400px|thumb|right|a reworking of the classic torsion example from Tonalsoft to reveal the twinned generator paths]]
+
+And now we're prepared to confront the key difference between the enfactored comma basis of a temperament, and torsion of a periodicity block. 
+
+What they have in common is that both take the form of a common factor found somewhere in linear combinations of entries in a list of commas defining a pitch structure, and that these commas can be visualized by slicing the JI lattice into swaths of "periodicity" (that's just a fancy word for the effect we've already been observing for temperaments, where nodes outside the swath related by the size of that comma are considered equivalent and therefore redundant, or repetitions of the same pitch class).
+
+The key difference is that the former (temperaments) tempers the commas out, while the latter (periodicity blocks) does not.
+
+Why is this the key difference? Well, remember how in the previous section, the reason we couldn't actually extend the width of the swath/tube to {{vector|-6 4}} was because the tempering: if {{vector|-6 4}} is made to vanish, then {{vector|-3 2}} is as well, so the swath/tube cannot legitimately be extended. Since there is no tempering in the case of periodicity blocks, however, the width ''can'' legitimately be extended in this way.
+
+Let's take a look at the example given in Tonalsoft's page for torsion. The diagram there has been reworked here to help clarify things. The origin, 1/1, has been placed in the corner of this parallelogram-shaped block, and the two commas that define it are in two of the other corners: [[2048/2025]] ({{vector|11 -4 -2}}) and 625/324 ({{vector|-2 -4 4}}). The value at the fourth corner, 12800/6561, is the product of those two and is the octave complement of 6561/6400 which has vector {{vector|-8 8 -2}}. This is the meantone comma squared, (81/80)^2, and its vector is 2-enfactored, {{vector|-4 4 -1}}×2. You can see that the node at the very center of this block is 160/81, the octave complement of the meantone comma. 
+
+The red and blue lines that wrap around this block are two different generator paths. The point here is to show that by doubling the size of this periodicity block, we have made it impossible to choose a node to travel to from the origin, i.e. a generator, such that you can reach every node in the block. Instead, the best you can do is reach half of the nodes; that's the red path from the origin 1/1. The blue path is an exact copy of the red path, but offset. 
+
+So we can see how tempting the duality can be here. In the case of a 2-enfactored mapping, the generator path reaches ''twice'' as many nodes as there were JI nodes. But in the case of a 2-enfactored comma basis — if we could legitimately extend the width of the block, as we do in untempered periodicity blocks! — we would reach ''half'' as many nodes. But this duality just is not musically, audibly real.
+
+== Enfactored mappings vs. enfactored comma bases ==
+
+One may pose the question: is there any relationship between an enfactored mapping and an enfactored comma basis? Does one imply the other. Does one imply the absence of the other? Or are they completely independent?
+
+We note that there is no such thing as an enfactored temperament, only enfactored matrices. And these essentially result from an arithmetic oversight, namely failing to defactor, and as such they are completely independent<ref>as observed on the page [[Color_notation/Temperament_Names|color notation]], which reads "it's possible that there is both torsion and contorsion"</ref>. When we use matrix math for RTT we defactor as a matter of course. For example, defactoring is built in to the NullSpace matrix operation in the Wolfram Language.
+
+However, if you have an artistic or other reason to generate scales using generators derived directly from enfactored mappings, and therefore to treat enfactored mappings as representing different musical objects, which we call temperoids, not temperaments, then you might choose to encode the same common factor into the comma basis representation of the temperoid with the understanding that this is a mere bookkeeping exercise and has no mathematical basis.
+
+=Footnotes=
+<references/>
+
+[[Category:Regular temperament theory]]
+[[Category:Terms]]
+[[Category:Math]]

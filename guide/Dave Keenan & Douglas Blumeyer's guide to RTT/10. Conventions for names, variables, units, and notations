@@ -1,0 +1,4704 @@
+{{breadcrumb}}{{texops}}{{texmap}}{{texzz}}
+This is an appendix to [[Dave Keenan]] & [[Douglas Blumeyer]]'s guide to RTT. The tables in this article present our recommendations for communicating about [[regular temperament theory]] (RTT), in particular the names and notations for temperament matrices, tuning schemes, interval complexities, and measurement units. 
+
+Our recommendations are designed to make this topic easy to learn for musicians who do not have technical backgrounds, though we have generally deferred to established mathematical, scientific, and engineering conventions for the benefit of those who do.
+
+See [[Extended bra-ket notation#Variant including curly and square brackets|here]] for more information on our variation on extended bra-ket notation.
+
+We've followed a variable styling convention, explained in the table below, which we hope serves as an aid to quickly identifying objects and remembering their properties and purposes, but at the least we hope our choices are unobtrusive. In short, the objects with simple units of primes, generators or cents, i.e. the things which are actually audible in our application, are distinguished by upright formatting, while other variables are italic as is conventional. This is crossed with the linear-algebra convention that objects of order-1 like vectors are bolded and order-2 like matrices are uppercased:
+
+{| class="wikitable center-all"
+|-
+! 
+| Units &rarr;
+! rowspan="2" | &nbsp;
+| Simple units
+| Compound or no units
+|-
+| &darr; Order
+| &darr; Style &rarr;
+| Roman (upright)
+| ''Italic''
+|-
+! scope="col" height="8px" ! colspan="2" |
+!
+! colspan="2" |
+|-
+| 0
+| lowercase
+! rowspan="3" | &nbsp;
+| scalar (with simple unit)
+| ''scalar'' (with no unit)
+|-
+| 1
+| '''bold lowercase'''
+| '''vector'''
+| '''''map''''' (row vector)
+|-
+| 2
+| UPPERCASE
+| BASIS or LIST (of vectors)
+| ''MATRIX''
+|}
+
+We present our conventions here in three separate sections, one for each level of this article series: '''basic''', '''intermediate''', and '''advanced'''. The basic section contains only information covered in the basic part of the series, the intermediate section contains both basic and intermediate, and the advanced section contains it all (that is to say, the sections are cumulative)<ref group="note">The advanced section also contains conventions collected from other RTT-related articles Dave and Douglas have contributed to but are outside the main guide to RTT series.</ref>. We expect that for most readers, the basic tier will be the best reference (this is the reference designed primarily for musicians interested in RTT, as opposed to scientists, engineers, mathematicians, or theoreticians), and so we've left the other two sections initially collapsed.
+
+== Basic ==
+=== Objects ===
+{| class="wikitable mw-collapsible"
+|+ style="font-size: 105%;" | 
+|-
+! rowspan="2" | Equivalent<br />expressions
+! rowspan="2" | Variable
+! rowspan="2" | Name
+! colspan="3" | Units
+! colspan="2" | Shape
+! colspan="2" | Type
+! colspan="2" | EBK notation
+! colspan="4" | Subobjects
+! rowspan="2" | Notes
+|-
+! Unreduced
+! Reduced
+! Read as
+! Unreduced
+! Reduced
+! Numeric
+! Structural
+! Row-first
+! Col-first
+! Row
+! Column
+! Diagonal
+! Entry
+|-
+! colspan="17" | Mapping
+|-
+| 
+| <math>\textbf{i}</math>
+| [[interval|(Just) interval]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, 1)</math>
+| Integer
+| Vector
+| 
+| [...⟩
+| 
+| 
+| 
+| <math>\mathrm{i}_i</math>
+| Specific type: Vector ([[prime-count vector]] or PC-vector)
+Jargon name: Monzo
+|-
+| 
+| <math>M</math>
+| [[Mapping|(Temperament) mapping (matrix)]]
+| 
+| <math>\small 𝗴</math>/<math>\small 𝗽</math>
+| Generators per prime
+| 
+| <math>\scriptsize (r, d)</math>
+| Integer
+| Matrix
+| [⟨...] ...}
+| ⟨[...} ...]
+| <math>𝒎_i</math>
+| 
+| 
+| <math>m_{ij}</math>
+| Jargon name: Val list
+|-
+| <math>M\textbf{i}</math>
+| <math>\textbf{y}</math>
+| [[Mapped interval]]
+| <math>\scriptsize 
+\begin{array} {c} M \\[-2pt] 𝗴 \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\small 𝗴</math>
+| Generators
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} M \\[-3pt] (r, \cancel{d}) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] (\cancel{d}, 1) \end{array} 
+\! \! 
+</math>
+| <math>\scriptsize (r, 1)</math>
+| Integer
+| Vector
+| 
+| [...}
+| 
+| 
+| 
+| 
+| Specific type: [[Generator-count vector]] (GC-vector)
+Jargon name: tmonzo; mnemonic: <math>\textbf{y}</math>nterval
+|-
+| 
+| <math>𝒎</math>
+| [[map|(Temperament) map]]
+| 
+| <math>\small 𝗴</math>/<math>\small 𝗽</math>
+| Generators per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Integer
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>m_i</math>
+| Jargon name: val
+|-
+| 
+| <math>d</math>
+| [[dimensionality]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>r</math>
+| [[Rank]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Tuning
+|-
+| 
+| <math>{\large\textbf{𝓁}}\hspace{2mu}</math>
+| [[Log-prime map]]
+| 
+| <math>\small\mathsf{oct}</math>/<math>\small 𝗽</math>
+| Octaves per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>{\large 𝓁}\hspace{2mu}_i</math>
+| 
+|-
+| <math>1200×{\large\textbf{𝓁}}\hspace{2mu}</math>
+| <math>𝒋</math>
+| [[just tuning map|Just(-prime) tuning map]]
+| 
+| <math>\mathsf{¢}</math>/<math>\small 𝗽</math>
+| Cents per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>j_i</math>
+| 
+|-
+| 
+| <math>𝒈</math>
+| [[Generator tuning map]]
+| 
+| <math>\mathsf{¢}</math>/<math>\small 𝗴</math>
+| Cents per generator
+| 
+| <math>\scriptsize (1, r)</math>
+| Real
+| Vector
+| {...]
+| 
+| 
+| 
+| 
+| <math>g_i</math>
+| 
+|-
+| <math>𝒈M</math>
+| <math>𝒕</math>
+| [[tuning map|(Tempered-prime) tuning map]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒈 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗴} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} 𝑀 \\[-2pt] \cancel{𝗴} \hspace{-2mu} / \hspace{-2mu} 𝗽 \end{array} 
+</math>
+| <math>\mathsf{¢}</math>/<math>\small 𝗽</math>
+| Cents per prime
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒈 \\[-3pt] \left(1, \cancel{r}\right) \end{array} 
+\! \! 
+\begin{array} {c} M \\[-3pt] \left(\cancel{r}, d\right) \end{array} 
+\! \! 
+</math>
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>t_i</math>
+| 
+|-
+| <math>𝒕 - 𝒋</math>
+| <math>𝒓</math>
+| [[retuning map|Retuning (or mistuning) map]]
+| 
+| <math>\mathsf{¢}</math>/<math>\small 𝗽</math>
+| Cents per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>r_i</math>
+| Previous name: prime error map
+|-
+| <math>𝒋\textbf{i}</math>
+| <math>\mathrm{o}</math>
+| [[interval span|(Just) (interval) size]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒋 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒋 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| Mnemonic: <math>\mathrm{o}</math>riginal size
+|-
+| <math>𝒈M\textbf{i}</math><br />
+<math>𝒕\textbf{i}</math>
+| <math>\mathrm{a}</math>
+| {{subpage|tuning_fundamentals|uprev|s=Example 3|text=Tempered (interval) size}}
+| <math>\scriptsize 
+\begin{array} {c} 𝒕 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒕 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| Mnemonic: <math>\mathrm{a}</math>ltered size
+|-
+| <math>𝒕\textbf{i} - 𝒋\textbf{i}</math><br />
+<math>a - o</math><br />
+<math>𝒓\textbf{i}</math>
+| <math>\mathrm{e}</math>
+| [[error|(Interval) error]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒓 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒓 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Optimization
+|-
+| 
+| <math>p</math>
+| [[Optimization power]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>\llangle\,·\,\rrangle_p</math>
+| [[Power mean]] (<math>p</math>-mean)
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Damage
+|-
+| 
+| <math>c</math>
+| {{subpage|tuning_fundamentals|uprev|s=Complexity}}
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(C)}</math><ref group="note">For educational purposes, we use the 𝟙 symbol here to represent the implicit [[Wikipedia:Dimensionless_quantity| dimensionless unit]] that the weighting annotation "(C)" is attached to. But this symbol should not be shown in the reduced result. Another way to understand how we arrive at a bare annotation for the units of this quantity is to consider that {{nowrap|''w'' {{=}} ''d''/{{!}}''e''{{!}}}} whose units are {{nowrap|¢(W) / ¢}} and the cents cancel.</ref>
+| <math>\small\mathsf{(C)}</math>
+| Complexity weight
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\dfrac1c</math>
+| <math>s</math>
+| [[Simplicity]]
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(S)}</math>
+| <math>\small\mathsf{(S)}</math>
+| Simplicity weight
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>c</math> or <math>s</math>
+| <math>w</math>
+| [[Weight]]
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(C)}</math> or 𝟙<math>\small\mathsf{(S)}</math>
+| <math>\small\mathsf{(C)}</math> or <math>\small\mathsf{(S)}</math>
+| Complexity weight or simplicity weight
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\abs{\mathrm{e}} w</math>
+| <math>\mathrm{d}</math>
+| [[Damage]]
+| <math>\scriptsize 
+\begin{array} {c} \abs{\mathrm{e}} \\[-2pt] {\small\mathsf{¢}} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} w \\[-2pt] \mathsf{(U, C, \text{or}\,S)} \end{array} 
+</math>
+| <math>\mathsf{¢}\small\mathsf{(U)}</math> or <math>\mathsf{¢}\small\mathsf{(C)}</math> or <math>\mathsf{¢}\small\mathsf{(S)}</math>
+| (See damages table)
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} \abs{\mathrm{e}} \\[-3pt] \left(1, \cancel{1}\right) \end{array} 
+\! \! 
+\begin{array} {c} w \\[-3pt] \left(\cancel{1}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Target-intervals
+|-
+| 
+| <math>\mathrm{T}</math>
+| [[Target-interval list]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, k)</math>
+| Integer
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{t}_i</math>
+| 
+| <math>\mathrm{t}_{ij}</math>
+| 
+|-
+| <math>M\mathrm{T}</math>
+| <math>\mathrm{Y}</math>
+| [[Mapped target-interval list]]
+| <math>\scriptsize 
+\begin{array} {c} M \\[-2pt] 𝗴 \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\small 𝗴</math>
+| Generators
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} M \\[-3pt] \left(r, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array} 
+\! \! 
+</math>
+| <math>\scriptsize (r, k)</math>
+| Integer
+| Matrix
+| 
+| [[...} ...]
+| 
+| <math>\textbf{y}_i</math>
+| 
+| <math>\mathrm{y}_{ij}</math>
+| Mnemonic: looks like bent-up 'T', or cross between 'M' and 'T'
+|-
+| <math>𝒋\mathrm{T}</math>
+| <math>\textbf{o}</math>
+| {{subpage|tuning_fundamentals|uprev|s=primes|text=Target-interval (just) size list}}
+| <math>\scriptsize 
+\begin{array} {c} 𝒋 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒋 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{o}_i</math>
+| Mnemonic: <math>\textbf{o}</math>riginal size list
+|-
+| <math>𝒕\mathrm{T}</math><br />
+<math>𝒈M\mathrm{T}</math>
+| <math>\textbf{a}</math>
+| [[Tempered target-interval size list]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒕 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒕 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{a}_i</math>
+| Mnemonic: <math>\textbf{a}</math>ltered size list
+|-
+| <math>𝒕\mathrm{T} - 𝒋\mathrm{T}</math><br />
+<math>\textbf{a} - \textbf{o}</math><br />
+<math>𝒓\mathrm{T}</math>
+| <math>\textbf{e}</math>
+| [[Target-interval error list]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒓 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒓 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{e}_i</math>
+| 
+|-
+| <math>C</math> or <math>S</math>
+| <math>W</math>
+| [[Target-interval weight matrix]]
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(C)}</math> or <math>\small\mathsf{𝟙}\scriptsize\mathsf{(S)}</math> or <math>\small\mathsf{𝟙}\scriptsize\mathsf{(U)}</math>
+| <math>\small\mathsf{(C)}</math> or <math>\small\mathsf{(S)}</math> or <math>\small\mathsf{(U)}</math>
+| Complexity weight or simplicity weight
+| 
+| <math>\scriptsize (k, k)</math>
+| Real
+| Matrix
+| 
+| [[...] ...]
+| 
+| 
+| <math>𝒘</math>
+| <math>w_i</math>
+| 
+|-
+| 
+| <math>C</math>
+| {{subpage|tuning_fundamentals|uprev|s=complexity-weight_damage|text=Target-interval complexity weight matrix}}
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(C)}</math>
+| <math>\small\mathsf{(C)}</math>
+| Complexity weight
+| 
+| <math>\scriptsize (k, k)</math>
+| Real
+| Matrix
+| 
+| [[...] ...]
+| 
+| 
+| <math>𝒄</math>
+| <math>c_i</math>
+| 
+|-
+| <math>\dfrac1C</math>
+| <math>S</math>
+| {{subpage|tuning fundamentals|uprev|s=complexity-weight_damage|text=Target-interval simplicity weight matrix}}
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(S)}</math>
+| <math>\small\mathsf{(S)}</math>
+| Simplicity weight
+| 
+| <math>\scriptsize (k, k)</math>
+| Real
+| Matrix
+| 
+| [[...] ...]
+| 
+| 
+| <math>𝒔</math>
+| <math>s_i</math>
+| Entry-wise reciprocal of <math>C</math>
+|-
+| <math>\abs{\textbf{e}} W</math>
+| <math>\textbf{d}</math>
+| [[Target-interval damage list]]<ref group="note">You may sometimes see annotated units without parentheses, such as "dBA", but this is not compliant with SI standards, so we always keep the parentheses.</ref>
+| <math>\scriptsize 
+\begin{array} {c} \abs{\textbf{e}} \\[-2pt] {\small\mathsf{¢}} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} W \\[-2pt] (\mathsf{U, C, \text{or}\,S}) \end{array} 
+</math>
+| <math>\mathsf{¢}\small\mathsf{(U)}</math>, <math>\mathsf{¢}\small\mathsf{(C)}</math>, or <math>\mathsf{¢}\small\mathsf{(S)}</math>
+| Weighted cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} \abs{\textbf{e}} \\[-3pt] \left(1, \cancel{k}\right) \end{array} 
+\! \! 
+\begin{array} {c} W \\[-3pt] \left(\cancel{k}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{d}_i</math>
+| 
+|-
+| 
+| <math>k</math>
+| [[Target-interval count]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| Mnemonic: <math>k</math>ount
+|-
+! colspan="17" | Held-intervals
+|-
+| 
+| <math>\mathrm{H}</math>
+| [[Held-interval basis]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, h)</math>
+| 
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{h}_i</math>
+| 
+| <math>\mathrm{h}_{ij}</math>
+| 
+|-
+| 
+| <math>h</math>
+| [[Held-interval count]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Exploring temperaments
+|-
+| 
+| <math>\mathrm{C}</math>
+| [[Comma basis]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, n)</math>
+| Integer
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{c}_i</math>
+| 
+| <math>\mathrm{c}_{ij}</math>
+| Jargon name: monzo list
+|-
+| 
+| <math>\textbf{c}</math>
+| [[Comma]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, 1)</math>
+| Integer
+| Vector
+| 
+| [...⟩
+| 
+| 
+| 
+| <math>\mathrm{c}_i</math>
+| Specific type: vector ([[prime-count vector]] or PC-vector)
+|}
+
+=== Units ===
+We recommend using a narrow no-break space (U+202F) between quantities and their units.<ref group="note">Per https://physics.nist.gov/cuu/Units/checklist.html and https://academia.stackexchange.com/questions/54885/should-there-be-a-space-between-a-value-and-the-units-used
+.</ref> For how to type this, see the [[#WinCompose|WinCompose]] section below.
+
+{| class="wikitable center-all mw-collapsible"
+|+ style="font-size: 105%;" | 
+|-
+! Symbol
+! Name
+! Vectorized
+|-
+| <math>\small 𝗴</math>
+| Generators
+| Yes
+|-
+| <math>\small 𝗽</math>
+| Primes
+| Yes
+|-
+| <math>\mathsf{¢}</math><ref group="note">It seems there is no standard symbol for a musical cent, except the word spelled in full (see https://en.wikipedia.org/wiki/Cent_(music)). But it seems unlikely anyone will interpret the cent currency symbol "¢" following a number in a musical context as anything other than musical cents.</ref>
+| Cents
+| 
+|-
+| <math>\mathsf{¢}\small\mathsf{(U)}</math>
+| Unity-weighted cents
+| 
+|-
+| <math>\mathsf{¢}\small\mathsf{(C)}</math>
+| Complexity-weighted cents
+| 
+|-
+| <math>\mathsf{¢}\small\mathsf{(S)}</math>
+| Simplicity-weighted cents
+| 
+|-
+| <math>\small\mathsf{oct}</math>
+| Octaves
+| 
+|-
+| <math>\small\mathsf{(C)}</math>
+| Complexity weight
+| 
+|-
+| <math>\small\mathsf{(S)}</math>
+| Simplicity weight
+| 
+|}
+
+=== Tuning schemes ===
+Copied from {{subpage|tuning fundamentals|uprev|s=Systematic tuning scheme names}}.
+
+{| class="wikitable center-all mw-collapsible"
+|+ style="font-size: 105%;" | 
+|-
+! Damage weight
+! Optimization power
+! Systematic name
+|-
+| <none>
+| rowspan="3" | &infin;
+| Minimax-U
+|-
+| Complexity
+| Minimax-C
+|-
+| 1/Complexity
+| Minimax-S
+|-
+| <none>
+| rowspan="3" | 2
+| MiniRMS-U
+|-
+| Complexity
+| MiniRMS-C
+|-
+| 1/Complexity
+| MiniRMS-S
+|-
+| &lt;none&gt;
+| rowspan="3" | 1
+| Miniaverage-U
+|-
+| Complexity
+| Miniaverage-C
+|-
+| 1/Complexity
+| Miniaverage-S
+|}
+
+=== Damages ===
+{| class="wikitable center-all mw-collapsible"
+|+ style="font-size: 105%;" | 
+|-
+! colspan="2" | Quantity
+! colspan="2" | Unit
+|-
+! Abbreviation
+! Name
+! Symbol
+! Name
+|-
+| U-damage
+| Unity-weight damage
+| <math>\mathsf{¢}\small\mathsf{(U)}</math>
+| Unity-weighted cents
+|-
+| C-damage
+| Complexity-weight damage
+| <math>\mathsf{¢}\small\mathsf{(C)}</math>
+| Complexity-weighted cents
+|-
+| S-damage
+| Simplicity-weight damage
+| <math>\mathsf{¢}\small\mathsf{(S)}</math>
+| Simplicity-weighted cents
+|}
+
+=== Complexity and simplicity ===
+{| class="wikitable center-all mw-collapsible"
+|+ style="font-size: 105%;" | 
+|-
+! colspan="2" | Quantity
+! colspan="2" | Unit
+|-
+! Abbreviation
+! Name
+! Symbol
+! Name
+|-
+| C
+| Complexity
+| <math>\small\mathsf{(C)}</math>
+| Complexity weight
+|-
+| S
+| Simplicity
+| <math>\small\mathsf{(S)}</math>
+| Simplicity weight
+|}
+
+== Intermediate ==
+=== Objects ===
+{| class="wikitable mw-collapsible mw-collapsed"
+|+ style="font-size: 105%;" | 
+|-
+! rowspan="2" | Equivalent expressions
+! rowspan="2" | Variable
+! rowspan="2" | Name
+! colspan="3" | Units
+! colspan="2" | Shape
+! colspan="2" | Type
+! colspan="2" | EBK notation
+! colspan="4" | Subobjects
+! rowspan="2" | Notes
+|-
+! Unreduced
+! Reduced
+! Read as
+! Unreduced
+! Reduced
+! Numeric
+! Structural
+! Row-first
+! Col-first
+! Row
+! Col
+! Diag
+! Entry
+|-
+! colspan="17" | Mapping
+|-
+| 
+| <math>\textbf{i}</math>
+| [[interval|(Just) interval]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, 1)</math>
+| Integer
+| Vector
+| 
+| [...⟩
+| 
+| 
+| 
+| <math>\mathrm{i}_i</math>
+| Specific type: vector ([[prime-count vector]] or PC-vector)
+Jargon name: monzo
+|-
+| 
+| <math>M</math>
+| [[Mapping|(Temperament) mapping (matrix)]]
+| 
+| <math>\small 𝗴</math>/<math>\small 𝗽</math>
+| Generators per prime
+| 
+| <math>\scriptsize (r, d)</math>
+| Integer
+| Matrix
+| [⟨...] ...}
+| ⟨[...} ...]
+| <math>𝒎_i</math>
+| 
+| 
+| <math>m_{ij}</math>
+| Jargon name: val list
+|-
+| <math>M\textbf{i}</math>
+| <math>\textbf{y}</math>
+| [[Mapped interval]]
+| <math>\scriptsize 
+\begin{array} {c} M \\[-2pt] 𝗴 \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\small 𝗴</math>
+| Generators
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} M \\[-3pt] \left(r, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (r, 1)</math>
+| Integer
+| Vector
+| 
+| [...}
+| 
+| 
+| 
+| 
+| Specific type: [[generator-count vector]] (GC-vector)
+Jargon name: tmonzo; mnemonic: <math>\textbf{y}</math>nterval
+|-
+| 
+| <math>𝒎</math>
+| [[map|(Temperament) map]]
+| 
+| <math>\small 𝗴</math>/<math>\small 𝗽</math>
+| Generators per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Integer
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>m_i</math>
+| Jargon name: val
+|-
+| <math>n + r</math>
+| <math>d</math>
+| [[Dimensionality]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>d - n</math>
+| <math>r</math>
+| [[Rank]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>d - r</math>
+| <math>n</math>
+| [[Nullity]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Tuning
+|-
+| 
+| <math>{\large\textbf{𝓁}}\hspace{2mu}</math>
+| [[Log-prime map]]
+| 
+| <math>\small\mathsf{oct}</math>/<math>\small 𝗽</math>
+| Octaves per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>{\large 𝓁}\hspace{2mu}_i</math>
+| 
+|-
+| <math>1200×{\large\textbf{𝓁}}\hspace{2mu}</math>
+| <math>𝒋</math>
+| [[just tuning map|Just(-prime) tuning map]]
+| 
+| <math>\mathsf{¢}</math>/<math>\small 𝗽</math>
+| Cents per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>j_i</math>
+| 
+|-
+| 
+| <math>𝒈</math>
+| [[Generator tuning map]]
+| 
+| <math>\mathsf{¢}</math>/<math>\small 𝗴</math>
+| Cents per generator
+| 
+| <math>\scriptsize (1, r)</math>
+| Real
+| Vector
+| {...]
+| 
+| 
+| 
+| 
+| <math>g_i</math>
+| 
+|-
+| 
+| <math>𝒕</math>
+| [[tuning map|(Tempered-prime) tuning map]]
+| 
+| <math>\mathsf{¢}</math>/<math>\small 𝗽</math>
+| Cents per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>t_i</math>
+| 
+|-
+| <math>𝒕 - 𝒋</math><br />
+<math>1200×\slant{\mathbf{1}}L(P - I)</math>
+| <math>𝒓</math>
+| [[retuning map|Retuning (or mistuning) map]]
+| 
+| <math>\mathsf{¢}</math>/<math>\small 𝗽</math>
+| Cents per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>r_i</math>
+| Previous name: prime error map
+|-
+| <math>𝒋\textbf{i}</math>
+| <math>\mathrm{o}</math>
+| [[interval span|(Just) (interval) size]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒋 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒋 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| Mnemonic: <math>\mathrm{o}</math>riginal size
+|-
+| <math>𝒈M\textbf{i}</math><br />
+<math>𝒕\textbf{i}</math>
+| <math>\mathrm{a}</math>
+| {{subpage|tuning fundamentals|uprev|s=Example 3|text=Tempered (interval) size}}
+| <math>\scriptsize 
+\begin{array} {c} 𝒕 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒕 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| Mnemonic: <math>\mathrm{a}</math>ltered size
+|-
+| <math>𝒕\textbf{i} - 𝒋\textbf{i}</math><br />
+<math>a - o</math><br />
+<math>𝒓\textbf{i}</math>
+| <math>\mathrm{e}</math>
+| [[error|(Interval) error]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒓 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒓 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Optimization
+|-
+| 
+| <math>p</math>
+| [[Optimization power]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>\llangle\,·\,\rrangle_p</math>
+| [[Power mean]] (<math>p</math>-mean)
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Damage
+|-
+| 
+| <math>c</math>
+| {{subpage|tuning_fundamentals|uprev|s=Complexity}}
+| colspan="3" | (See complexities section of complexities and simplicities table)
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\dfrac1c</math>
+| <math>s</math>
+| [[Simplicity]]
+| colspan="3" | (See simplicities section of complexities and simplicities table)
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>c</math> or <math>s</math>
+| <math>w</math>
+| [[weight]]
+| colspan="3" | (See complexities and simplicities table)
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\abs{\mathrm{e}} w</math>
+| <math>\mathrm{d}</math>
+| [[Damage]]
+| colspan="3" | (See damages table)
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Target-intervals
+|-
+| 
+| <math>\mathrm{T}</math>
+| [[Target-interval list]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, k)</math>
+| Integer
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{t}_i</math>
+| 
+| <math>\mathrm{t}_{ij}</math>
+| 
+|-
+| <math>M\mathrm{T}</math>
+| <math>\mathrm{Y}</math>
+| [[Mapped target-interval list]]
+| <math>\scriptsize 
+\begin{array} {c} M \\[-2pt] 𝗴 \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\small 𝗴</math>
+| Generators
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} M \\[-3pt] \left(r, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array} 
+\! \! 
+</math>
+| <math>\scriptsize (r, k)</math>
+| Integer
+| Matrix
+| 
+| [[...} ...]
+| 
+| <math>\textbf{y}_i</math>
+| 
+| <math>\mathrm{y}_{ij}</math>
+| Mnemonic: looks like bent-up 'T', or cross between 'M' and 'T'
+|-
+| <math>𝒋\mathrm{T}</math>
+| <math>\textbf{o}</math>
+| {{subpage|tuning fundamentals|uprev|s=primes|text=Target-interval (just) size list}}
+| <math>\scriptsize 
+\begin{array} {c} 𝒋 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒋 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{o}_i</math>
+| Mnemonic: <math>\textbf{o}</math>riginal size list
+|-
+| <math>𝒕\mathrm{T}</math>
+| <math>\textbf{a}</math>
+| [[Tempered target-interval size list]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒕 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒕 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{a}_i</math>
+| Mnemonic: <math>\textbf{a}</math>ltered size list
+|-
+| <math>𝒕\mathrm{T} - 𝒋\mathrm{T}</math><br />
+<math>𝒓\mathrm{T}</math><br />
+<math>\textbf{a} - \textbf{o}</math>
+| <math>\textbf{e}</math>
+| [[Target-interval error list]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒓 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒓 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{e}_i</math>
+| 
+|-
+| <math>C</math> or <math>S</math>
+| <math>W</math>
+| [[Target-interval weight matrix]]
+| colspan="3" | (See complexities and simplicities table)
+| 
+| <math>\scriptsize (k, k)</math>
+| Real
+| Matrix
+| 
+| [[...] ...]
+| 
+| 
+| <math>𝒘</math>
+| <math>w_i</math>
+| 
+|-
+| 
+| <math>C</math>
+| {{subpage|tuning_fundamentals|uprev|s=complexity-weight damage|text=Target-interval complexity weight matrix}}
+| colspan="3" | (See complexities section of complexities and simplicities table)
+| 
+| <math>\scriptsize (k, k)</math>
+| Real
+| Matrix
+| 
+| [[...] ...]
+| 
+| 
+| <math>𝒄</math>
+| <math>c_i</math>
+| 
+|-
+| <math>\dfrac1C</math>
+| <math>S</math>
+| {{subpage|tuning_fundamentals|uprev|s=complexity-weight_damage|text=Target-interval simplicity weight matrix}}
+| colspan="3" | (See simplicities section of complexities and simplicities table)
+| 
+| <math>\scriptsize (k, k)</math>
+| Real
+| Matrix
+| 
+| [[...] ...]
+| 
+| 
+| <math>𝒔</math>
+| <math>s_i</math>
+| Entry-wise reciprocal of <math>C</math>
+|-
+| <math>\abs{\textbf{e}} W</math>
+| <math>\textbf{d}</math>
+| [[Target-interval damage list]]
+| colspan="3" | (See damages table)
+| 
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{d}_i</math>
+| 
+|-
+| 
+| <math>k</math>
+| [[Target-interval count]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| Mnemonic: <math>k</math>ount
+|-
+! colspan="17" | Held-intervals
+|-
+| 
+| <math>\mathrm{H}</math>
+| [[Held-interval basis]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, h)</math>
+| 
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{h}_i</math>
+| 
+| <math>\mathrm{h}_{ij}</math>
+| 
+|-
+| 
+| <math>h</math>
+| [[Held-interval count]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Exploring temperaments
+|-
+| 
+| <math>\mathrm{C}</math>
+| [[Comma basis]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, n)</math>
+| Integer
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{c}_i</math>
+| 
+| <math>\mathrm{c}_{ij}</math>
+| Jargon name: monzo list
+|-
+| 
+| <math>\textbf{c}</math>
+| [[Comma]]
+| 
+| <math>\small 𝗽</math>
+| primes
+| 
+| <math>\scriptsize (d, 1)</math>
+| Integer
+| Vector
+| 
+| [...⟩
+| 
+| 
+| 
+| <math>\mathrm{c}_i</math>
+| Specific type: vector ([[prime-count vector]] or PC-vector)
+|-
+! colspan="17" | Computation
+|-
+| 
+| {{llzigzag}}<math>\,·\,</math>{{rrzigzag}}<math>_p</math>
+| [[Power sum]] (<math>p</math>-sum)
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | All-interval tuning schemes
+|-
+| <math>\mathrm{I}</math>
+| <math>\mathrm{T}_{\text{p}}</math>
+| [[Prime proxy target-interval list]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, d)</math>
+| Integer
+| Matrix
+| 
+| ⟨[...⟩ ...]
+| 
+| 
+| <math>\mathbf{1}</math>
+| 
+| 
+|-
+| 
+| <math>X</math>
+| [[Complexity prescaler]]
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(C)}</math>
+| <math>\small\mathsf{(C)}</math>
+| Complexity weight
+| 
+| <math>\scriptsize (d, d)</math>
+| Real
+| Matrix
+| [⟨...] ...⟩
+| 
+| 
+| 
+| <math>𝒙</math>
+| <math>x_i</math>
+| 
+|-
+| <math>\text{diag}({\large\textbf{𝓁}}\hspace{2mu})</math>
+| <math>L</math>
+| [[Log-prime matrix]]
+| 
+| <math>\small\mathsf{oct}</math>/<math>\small 𝗽</math>
+| Octaves per prime
+| 
+| <math>\scriptsize (d, d)</math>
+| Real
+| Matrix
+| [⟨...] ...⟩
+| ⟨[...⟩ ...]
+| <math>{\large\textbf{𝓁}}\hspace{2mu}_i</math>
+| 
+| <math>{\large\textbf{𝓁}}\hspace{2mu}</math>
+| <math>{\large 𝓁}\hspace{2mu}_{ij}</math>
+| 
+|-
+| 
+| <math>q</math>
+| {{subpage|all-interval_tuning_schemes|uprev|s=Dual norms|text=Interval complexity norm power}}
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>\norm{·}_q</math>
+| [[Power norm]] (<math>p</math>-norm)
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\dfrac1{1-\frac1q}</math>
+| <math>\text{dual}(q)</math>
+| {{subpage|all-interval tuning schemes|uprev|s=Dual norms|text=Dual norm power}}
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>\norm{X\mathbf{i}}_q</math>
+| [[interval complexity]]
+| 
+| <math>\small\mathsf{(C)}</math>
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>\norm{𝒓X^{-1}}_{\text{dual}(q)}</math>
+| [[Retuning magnitude]]
+| 
+| <math>\mathsf{¢}\small\mathsf{(C^{-1})}</math>
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|}
+
+=== Units ===
+Same as the basic level. 
+
+=== Tuning schemes ===
+{| class="wikitable center-all mw-collapsible mw-collapsed"
+|+ style="font-size: 105%;" | 
+|-
+! colspan="3" rowspan="3" | Retuning (or mistuning) magnitude
+! colspan="9" | Damage
+! rowspan="4" | Target<br />intervals
+! colspan="2" rowspan="3" | Systematic name
+! rowspan="4" | Previously named tuning schemes that are specific types of this tuning scheme
+! rowspan="4" | Of interest?
+|-
+! colspan="6" | Weight
+! colspan="3" rowspan="1" | Optimization
+|-
+! colspan="3" | Interval complexity
+! colspan="3" rowspan="1" | Slope
+! colspan="1" rowspan="2" | Initial
+! colspan="1" rowspan="2" | Name
+! colspan="1" rowspan="2" | Power
+|-
+! Initial
+! Name
+! Power
+! Initial
+! Name
+! Power
+! Initial
+! Name
+! Multiplier
+! colspan="1" | Abbreviated
+! colspan="1" | Read ("____ tuning scheme")
+|-
+| <n/a>
+| Maximum
+| &infin;
+| (t)
+| Taxicab
+| 1
+| rowspan="2" | ''S''
+| rowspan="2" | Simplicity-weight
+| rowspan="2" | 1/Complexity
+| rowspan="17" | <n/a>
+| rowspan="7" | Minimax
+| rowspan="7" | ∞
+| rowspan="2" | All
+| Minimax-S
+| Minimax simplicity-weight damage
+| "[[TOP]]"/"[[T1]]"/"[[TIPTOP]]"*, "[[CTOP]]", "[[POTOP]]"/"[[POTT]]"*, "[[BOP tuning|BOP]]", "[[Weil Norms, Tenney-Weil Norms, and TWp Interval and Tuning Space|Weil]]", "[[Kees]]"
+| Yes
+|-
+| <n/a>
+| Euclidean
+| 2
+| E
+| Euclidean
+| 2
+| Minimax-ES
+| Minimax Euclideanized-simplicity-weight damage
+| "[[Tenney-Euclidean tuning|TE]]"/"[[T2]]"/"[[TOP-RMS]]", "[[CTE tuning|CTE]]", "[[POTE tuning|POTE]]", "[[Frobenius]]", "[[BE]]", "[[WE]]", "[[KE]]"
+| 
+|-
+| colspan="3" rowspan="15" | <n/a>
+| colspan="3" | <n/a>
+| U
+| Unity-weight
+| <none>
+| rowspan="15" | <set>
+| <set> Minimax-U
+| <set> Minimax unity-weight-damage
+| "[[Minimax tuning| minimax]]"
+| yes
+|-
+| (t)
+| taxicab
+| 1
+| rowspan="2" | S
+| rowspan="2" | Simplicity-weight
+| rowspan="2" | 1/Complexity
+| <set> Minimax-S
+| <set> Minimax simplicity-weight damage
+| 
+| Yes
+|-
+| E
+| Euclidean
+| 2
+| <set> Minimax-ES
+| <set> Minimax Euclideanized-simplicity-weight damage
+| 
+| 
+|-
+| (t)
+| Taxicab
+| 1
+| rowspan="2" | C
+| rowspan="2" | Complexity-weight
+| rowspan="2" | Complexity
+| <set> Minimax-C
+| <set> Minimax complexity-weight damage
+| 
+| Yes
+|-
+| E
+| Euclidean
+| 2
+| <set> Minimax-EC
+| <set> Minimax Euclideanized-complexity-weight damage
+| 
+| 
+|-
+| colspan="3" | <n/a>
+| U
+| Unity-weight
+| <none>
+| rowspan="5" | MiniRMS
+| rowspan="5" | 2
+| <set> MiniRMS-U
+| <set> MiniRMS unity-weight damage
+| "[[Least squares]]"
+| Yes
+|-
+| (t)
+| Taxicab
+| 1
+| rowspan="2" | S
+| rowspan="2" | Simplicity-weight
+| rowspan="2" | 1/Complexity
+| <set> MiniRMS-S
+| <set> MiniRMS simplicity-weight damage
+| 
+| Yes
+|-
+| E
+| Euclidean
+| 2
+| <set> MiniRMS-ES
+| <set> MiniRMS Euclideanized-simplicity-weight damage
+| 
+| 
+|-
+| (t)
+| Taxicab
+| 1
+| rowspan="2" | C
+| rowspan="2" | Complexity-weight
+| rowspan="2" | Complexity
+| <set> MiniRMS-C
+| <set> MiniRMS complexity-weight damage
+| 
+| Yes
+|-
+| E
+| Euclidean
+| 2
+| <set> MiniRMS-EC
+| <set> MiniRMS Euclideanized-complexity-weight damage
+| 
+| 
+|-
+| colspan="3" | <n/a>
+| U
+| Unity-weight
+| <none>
+| rowspan="5" | Miniaverage
+| rowspan="5" | 1
+| <set> Miniaverage-U
+| <set> Miniaverage unity-weight damage
+| 
+| Yes
+|-
+| (t)
+| Taxicab
+| 1
+| rowspan="2" | S
+| rowspan="2" | Simplicity-weight
+| rowspan="2" | 1/Complexity
+| <set> Miniaverage-S
+| <set> Miniaverage simplicity-weight damage
+| 
+| Yes
+|-
+| E
+| Euclidean
+| 2
+| <set> Miniaverage-ES
+| <set> Miniaverage Euclideanized-simplicity-weight damage
+| 
+| 
+|-
+| (t)
+| Taxicab
+| 1
+| rowspan="2" | C
+| rowspan="2" | Complexity-weight
+| rowspan="2" | Complexity
+| <set> Miniaverage-C
+| <set> Miniaverage complexity-weight damage
+| 
+| Yes
+|-
+| E
+| Euclidean
+| 2
+| <set> Miniaverage-EC
+| <set> Miniaverage Euclideanized-complexity-weight damage
+| 
+| 
+|}
+
+=== Damages ===
+{| class="wikitable center-all mw-collapsible mw-collapsed"
+|+ style="font-size: 105%;" | 
+|-
+! colspan="2" | Quantity
+! colspan="2" | Unit
+|-
+! Abbreviation
+! Name
+! Symbol
+! Name
+|-
+| U-damage
+| Unity-weight damage
+| <math>\mathsf{¢}\small\mathsf{(U)}</math>
+| Unity-weighted cents
+|-
+| C-damage
+| Complexity-weight damage
+| <math>\mathsf{¢}\small\mathsf{(C)}</math>
+| Complexity-weighted cents
+|-
+| EC-damage
+| Euclideanized-complexity-weight damage
+| <math>\mathsf{¢}</math><math>\small\mathsf{(EC)}</math>
+| Euclideanized-complexity-weighted cents
+|-
+| S-damage
+| Simplicity-weight damage
+| <math>\mathsf{¢}\small\mathsf{(S)}</math>
+| Simplicity-weighted cents
+|-
+| ES-damage
+| Euclideanized-simplicity-weight damage
+| <math>\mathsf{¢}</math><math>\small\mathsf{(ES)}</math>
+| Euclideanized-simplicity-weighted cents
+|}
+
+=== Complexity and simplicity ===
+{| class="wikitable center-all mw-collapsible mw-collapsed"
+|+ style="font-size: 105%;" | 
+|-
+! colspan="2" | Quantity
+! colspan="2" | Unit
+|-
+! Abbreviation
+! Name
+! Symbol
+! Name
+|-
+| C
+| Complexity
+| <math>\small\mathsf{(C)}</math>
+| Complexity weight
+|-
+| EC
+| Euclideanized complexity
+| <math>\small\mathsf{(EC)}</math>
+| Euclideanized-complexity weight
+|-
+| S
+| Simplicity
+| <math>\small\mathsf{(S)}</math>
+| Simplicity weight
+|-
+| ES
+| Euclideanized simplicity
+| <math>\small\mathsf{(ES)}</math>
+| Euclideanized-simplicity weight
+|}
+
+== Advanced ==
+=== Objects ===
+{| class="wikitable mw-collapsible mw-collapsed"
+|+ style="font-size: 105%;" | 
+|-
+! rowspan="2" | Equivalent expressions
+! rowspan="2" | Variable
+! rowspan="2" | Name
+! colspan="3" | Units
+! colspan="2" | Shape
+! colspan="2" | Type
+! colspan="2" | EBK notation
+! colspan="4" | Subobjects
+! rowspan="2" | Notes
+|-
+! Unreduced
+! Reduced
+! Read as
+! Unreduced
+! Reduced
+! Numeric
+! Structural
+! Row-first
+! Col-first
+! Row
+! Column
+! Diagonal
+! Entry
+|-
+! colspan="17" | Mapping
+|-
+| 
+| <math>\textbf{i}</math>
+| [[interval|(Just) interval]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, 1)</math>
+| Integer
+| Vector
+| 
+| [...⟩
+| 
+| 
+| 
+| <math>\mathrm{i}_i</math>
+| Specific type: vector ([[prime-count vector]] or PC-vector)
+Jargon name: monzo
+|-
+| 
+| <math>M</math>
+| [[Mapping|(Temperament) mapping (matrix)]]
+| 
+| <math>\small 𝗴</math>/<math>\small 𝗽</math>
+| Generators per prime
+| 
+| <math>\scriptsize (r, d)</math>
+| Integer
+| Matrix
+| [⟨...] ...}
+| ⟨[...} ...]
+| <math>𝒎_i</math>
+| 
+| 
+| <math>m_{ij}</math>
+| Jargon name: val list
+|-
+| <math>M\textbf{i}</math>
+| <math>\textbf{y}</math>
+| [[Mapped interval]]
+| <math>\scriptsize 
+\begin{array} {c} M \\[-2pt] 𝗴 \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\small 𝗴</math>
+| generators
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} M \\[-3pt] \left(r, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (r, 1)</math>
+| Integer
+| Vector
+| 
+| [...}
+| 
+| 
+| 
+| 
+| Specific type: [[generator-count vector]] (GC-vector)
+Jargon name: tmonzo; mnemonic: <math>\textbf{y}</math>nterval
+|-
+| 
+| <math>𝒎</math>
+| [[map|(Temperament) map]]
+| 
+| <math>\small 𝗴</math>/<math>\small 𝗽</math>
+| Generators per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Integer
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>m_i</math>
+| Jargon name: val
+|-
+| <math>n + r</math>
+| <math>d</math>
+| [[Dimensionality]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>d - n</math>
+| <math>r</math>
+| [[Rank]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>d - r</math>
+| <math>n</math>
+| [[Nullity]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Tuning
+|-
+| <math>\slant{\mathbf{1}}L</math>
+| <math>{\large\textbf{𝓁}}\hspace{2mu}</math>
+| [[Log-prime map]]
+| 
+| <math>\small\mathsf{oct}</math>/<math>\small 𝗽</math>
+| Octaves per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>{\large 𝓁}\hspace{2mu}_i</math>
+| 
+|-
+| <math>1200×\slant{\mathbf{1}}LG_{\text{j}}M_{\text{j}}</math><br />
+<math>1200×\slant{\mathbf{1}}L</math><br />
+<math>𝒈_{\text{j}}M_{\text{j}}</math>
+| <math>𝒋</math>
+| [[just tuning map|Just(-prime) tuning map]]
+| <math>\scriptsize 
+\begin{array} {c} 1200 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{\mathsf{oct}} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \slant{\mathbf{1}} \\[-2pt] \cancel{\mathsf{oct}} \hspace{-2mu} / \hspace{-2mu} \cancel{\mathsf{oct}} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} L \\[-2pt] \cancel{\mathsf{oct}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\\ \scriptsize \quad 
+\begin{array} {c} G_{\text{j}} \\[-2pt] \cancel{𝗽} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗴} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} M_{\text{j}} \\[-2pt] \cancel{𝗴} \hspace{-2mu} / \hspace{-2mu} 𝗽 \end{array}
+</math>
+| <math>\mathsf{¢}</math>/<math>\small 𝗽</math>
+| Cents per prime
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 1200 \\[-3pt] \left(1, \cancel{1}\right) \end{array}
+\! \! 
+\begin{array} {c} \slant{\mathbf{1}} \\[-3pt] \left(\cancel{1}, \cancel{d}\right) \end{array}
+\! \! 
+\begin{array} {c} L \\[-3pt] \left(\cancel{d}, \cancel{d}\right) \end{array}
+\\ \scriptsize \quad 
+\! \! 
+\begin{array} {c} G_{\text{j}} \\[-3pt] \left(\cancel{d}, \cancel{r}\right) \end{array}
+\! \! 
+\begin{array} {c} M_{\text{j}} \\[-3pt] \left(\cancel{r}, d\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize \left(1, d_{\text{p}}\right)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>j_i</math>
+| 
+|-
+| <math>1200×\slant{\mathbf{1}}LG</math>
+| <math>𝒈</math>
+| [[Generator tuning map]]
+| <math>\scriptsize 
+\begin{array} {c} 1200 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{\mathsf{oct}} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \slant{\mathbf{1}} \\[-2pt] \cancel{\mathsf{oct}} \hspace{-2mu} / \hspace{-2mu} \cancel{\mathsf{oct}} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} L \\[-2pt] \cancel{\mathsf{oct}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\\ \scriptsize \quad 
+\begin{array} {c} G \\[-2pt] \cancel{𝗽} \hspace{-2mu} / \hspace{-2mu} 𝗴 \end{array}
+</math>
+| <math>\mathsf{¢}</math>/<math>\small 𝗴</math>
+| Cents per generator
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 1200 \\[-3pt] (1, \cancel{1}) \end{array}
+\! \! 
+\begin{array} {c} \slant{\mathbf{1}} \\[-3pt] (\cancel{1}, \cancel{d}) \end{array}
+\! \! 
+\begin{array} {c} L \\[-3pt] (\cancel{d}, \cancel{d}) \end{array}
+\\ \scriptsize \quad 
+\! \! 
+\begin{array} {c} G \\[-3pt] (\cancel{d}, r) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, r)</math>
+| Real
+| Vector
+| {...]
+| 
+| 
+| 
+| 
+| <math>g_i</math>
+| 
+|-
+| <math>1200×\slant{\mathbf{1}}LGM</math><br />
+<math>1200×\slant{\mathbf{1}}LP</math><br />
+<math>𝒈M</math>
+| <math>𝒕</math>
+| [[tuning map|(Tempered-prime) tuning map]]
+| <math>\scriptsize 
+\begin{array} {c} 1200 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{\mathsf{oct}} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \slant{\mathbf{1}} \\[-2pt] \cancel{\mathsf{oct}} \hspace{-2mu} / \hspace{-2mu} \cancel{\mathsf{oct}} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} L \\[-2pt] \cancel{\mathsf{oct}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\\ \scriptsize \quad 
+\begin{array} {c} G \\[-2pt] \cancel{𝗽} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗴} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} M \\[-2pt] \cancel{𝗴} \hspace{-2mu} / \hspace{-2mu} 𝗽 \end{array}
+</math>
+| <math>\mathsf{¢}</math>/<math>\small 𝗽</math>
+| Cents per prime
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 1200 \\[-3pt] \left(1, \cancel{1}\right) \end{array}
+\! \! 
+\begin{array} {c} \slant{\mathbf{1}} \\[-3pt] \left(\cancel{1}, \cancel{d}\right) \end{array}
+\! \! 
+\begin{array} {c} L \\[-3pt] \left(\cancel{d}, \cancel{d}\right) \end{array}
+\\ \scriptsize \quad 
+\! \! 
+\begin{array} {c} G \\[-3pt] \left(\cancel{d}, \cancel{r}\right) \end{array}
+\! \! 
+\begin{array} {c} M \\[-3pt] \left(\cancel{r}, d\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>t_i</math>
+| 
+|-
+| <math>𝒕 - 𝒋</math><br />
+<math>1200×\slant{\mathbf{1}}L(P - I)</math>
+| <math>𝒓</math>
+| [[retuning map|Retuning (or mistuning) map]]
+| 
+| <math>\mathsf{¢}</math>/<math>\small 𝗽</math>
+| Cents per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Real
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>r_i</math>
+| Previous name: prime error map
+|-
+| <math>𝒋\textbf{i}</math>
+| <math>\mathrm{o}</math>
+| [[interval span|(Just) (interval) size]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒋 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒋 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| Mnemonic: <math>\mathrm{o}</math>riginal size
+|-
+| <math>𝒈M\textbf{i}</math><br />
+<math>𝒕\textbf{i}</math>
+| <math>\mathrm{a}</math>
+| {{subpage|tuning fundamentals|uprev|s=Example 3|text=Tempered (interval) size}}
+| <math>\scriptsize 
+\begin{array} {c} 𝒕 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒕 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| Mnemonic: <math>\mathrm{a}</math>ltered size
+|-
+| <math>𝒕\textbf{i} - 𝒋\textbf{i}</math><br />
+<math>a - o</math><br />
+<math>𝒓\textbf{i}</math>
+| <math>\mathrm{e}</math>
+| [[error|(Interval) error]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒓 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒓 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Optimization
+|-
+| 
+| <math>p</math>
+| [[Optimization power]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>\llangle\,·\,\rrangle_p</math>
+| [[Power mean]] (<math>p</math>-mean)
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Damage
+|-
+| 
+| <math>c</math>
+| {{subpage|Tuning_fundamentals|prev|s=complexity}}
+| colspan="3" | (See complexities section of complexities and simplicities table)
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\dfrac1c</math>
+| <math>s</math>
+| [[Simplicity]]
+| colspan="3" | (See simplicities section of complexities and simplicities table)
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>c</math> or <math>s</math>
+| <math>w</math>
+| [[Weight]]
+| colspan="3" | (See complexities and simplicities table)
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\abs{\mathrm{e}} w</math>
+| <math>\mathrm{d}</math>
+| [[Damage]]
+| colspan="3" | (See damages table)
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Target-intervals
+|-
+| 
+| <math>\mathrm{T}</math>
+| [[Target-interval list]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, k)</math>
+| Integer
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{t}_i</math>
+| 
+| <math>\mathrm{t}_{ij}</math>
+| 
+|-
+| <math>M\mathrm{T}</math>
+| <math>\mathrm{Y}</math>
+| [[Mapped target-interval list]]
+| <math>\scriptsize 
+\begin{array} {c} M \\[-2pt] 𝗴 \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\small 𝗴</math>
+| Generators
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} M \\[-3pt] \left(r, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array} 
+\! \! 
+</math>
+| <math>\scriptsize (r, k)</math>
+| Integer
+| Matrix
+| 
+| [[...} ...]
+| 
+| <math>\textbf{y}_i</math>
+| 
+| <math>\mathrm{y}_{ij}</math>
+| Mnemonic: looks like bent-up 'T', or cross between 'M' and 'T'
+|-
+| <math>𝒋\mathrm{T}</math>
+| <math>\textbf{o}</math>
+| {{subpage|tuning fundamentals|uprev|s=primes|text=Target-interval (just) size list}}
+| <math>\scriptsize 
+\begin{array} {c} 𝒋 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒋 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{o}_i</math>
+| Mnemonic: <math>\textbf{o}</math>riginal size list
+|-
+| <math>𝒕\mathrm{T}</math>
+| <math>\textbf{a}</math>
+| [[Tempered target-interval size list]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒕 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒕 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{a}_i</math>
+| Mnemonic: <math>\textbf{a}</math>ltered size list
+|-
+| <math>𝒕\mathrm{T} - 𝒋\mathrm{T}</math><br />
+<math>𝒓\mathrm{T}</math><br />
+<math>\textbf{a} - \textbf{o}</math>
+| <math>\textbf{e}</math>
+| [[target-interval error list]]
+| <math>\scriptsize 
+\begin{array} {c} 𝒓 \\[-2pt] {\small\mathsf{¢}} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array} 
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \mathrm{T} \\[-2pt] \cancel{𝗽} \end{array} 
+</math>
+| <math>\mathsf{¢}</math>
+| Cents
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} 𝒕 \\[-3pt] \left(1, \cancel{d}\right) \end{array} 
+\! \! 
+\begin{array} {c} \mathrm{T} \\[-3pt] \left(\cancel{d}, k\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{e}_i</math>
+| 
+|-
+| <math>C</math> or <math>S</math>
+| <math>W</math>
+| [[Target-interval weight matrix]]
+| colspan="3" | (See complexities and simplicities table)
+| 
+| <math>\scriptsize (k, k)</math>
+| Real
+| Matrix
+| 
+| [[...] ...]
+| 
+| 
+| <math>𝒘</math>
+| <math>w_i</math> or <math>w_{ij}</math>
+| 
+|-
+| 
+| <math>C</math>
+| {{subpage|tuning fundamentals|uprev|s=complexity-weight damage|text=Target-interval complexity weight matrix}}
+| colspan="3" | (See complexities section of complexities and simplicities table)
+| 
+| <math>\scriptsize (k, k)</math>
+| Real
+| Matrix
+| 
+| [[...] ...]
+| 
+| 
+| <math>𝒄</math>
+| <math>c_i</math>
+| 
+|-
+| <math>\dfrac1C</math>
+| <math>S</math>
+| {{subpage|tuning fundamentals|uprev|s=complexity-weight_damage|text=Target-interval simplicity weight matrix}}
+| colspan="3" | (See simplicities section of complexities and simplicities table)
+| 
+| <math>\scriptsize (k, k)</math>
+| Real
+| Matrix
+| 
+| [[...] ...]
+| 
+| 
+| <math>𝒔</math>
+| <math>s_i</math>
+| Entry-wise reciprocal of <math>C</math>
+|-
+| <math>\abs{\textbf{e}} W</math><br />
+<math>1200×\slant{\mathbf{1}}L\abs{P - I} \mathrm{T}W</math>
+| <math>\textbf{d}</math>
+| [[Target-interval damage list]]
+| colspan="3" | (See damages table)
+| 
+| <math>\scriptsize (1, k)</math>
+| Real
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>\mathrm{d}_i</math>
+| 
+|-
+| 
+| <math>k</math>
+| [[Target-interval count]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| Mnemonic: <math>k</math>ount
+|-
+! colspan="17" | Held-intervals
+|-
+| 
+| <math>\mathrm{H}</math>
+| [[Held-interval basis]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, h)</math>
+| 
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{h}_i</math>
+| 
+| <math>\mathrm{h}_{ij}</math>
+| 
+|-
+| 
+| <math>h</math>
+| [[Held-interval count]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Exploring temperaments
+|-
+| 
+| <math>\mathrm{C}</math>
+| [[Comma basis]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, n)</math>
+| Integer
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{c}_i</math>
+| 
+| <math>\mathrm{c}_{ij}</math>
+| Jargon name: monzo list
+|-
+| 
+| <math>\textbf{c}</math>
+| [[Comma]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, 1)</math>
+| Integer
+| Vector
+| 
+| [...⟩
+| 
+| 
+| 
+| <math>\mathrm{c}_i</math>
+| Specific type: vector ([[prime-count vector]] or PC-vector)
+|-
+! colspan="17" | Computation
+|-
+| 
+| {{llzigzag}}<math>\,·\,</math>{{rrzigzag}}<math>_p</math>
+| [[Power sum]] (<math>p</math>-sum)
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | All-interval tuning schemes
+|-
+| <math>\mathrm{I}</math>
+| <math>\mathrm{T}_{\text{p}}</math>
+| [[Prime proxy target-interval list]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, d)</math>
+| Integer
+| Matrix
+| 
+| ⟨[...⟩ ...]
+| 
+| 
+| <math>\slant{\mathbf{1}}</math>
+| 
+| 
+|-
+| 
+| <math>X</math>
+| {{subpage|alternative complexities|uprev|s=Prescaling_vs._pretransforming|text=Complexity pretransformer}}
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(C)}</math> or <math>\small\mathsf{𝟙}\scriptsize\mathsf{(}</math><alt>-<math>\scriptsize\mathsf{C)}</math><ref group="note">In these tables, "alternative" means any complexity other than the default of log-product complexity, and "alt" stands for its abbreviation.</ref>
+| <math>\small\mathsf{(C)}</math> or <math>\small\mathsf{(}</math><alt>-<math>\small\mathsf{C)}</math>
+| Complexity weight or <alternative>-complexity weight
+| 
+| <math>\scriptsize (d, d)</math> or <math>\scriptsize (d+1, d+1)</math>
+| Real
+| Matrix
+| [⟨...] ...⟩
+| 
+| <math>𝒙_i</math>
+| 
+| <math>𝒙</math>
+| <math>x_i</math> or <math>x_{ij}</math>
+| 
+|-
+| <math>\text{diag}({\large\textbf{𝓁}}\hspace{2mu})</math>
+| <math>L</math>
+| [[Log-prime matrix]]
+| 
+| <math>\small\mathsf{oct}</math>/<math>\small 𝗽</math>
+| Octaves per prime
+| 
+| <math>\scriptsize (d, d)</math>
+| Real
+| Matrix
+| [⟨...] ...⟩
+| ⟨[...⟩ ...]
+| <math>{\large\textbf{𝓁}}\hspace{2mu}_i</math>
+| 
+| <math>{\large\textbf{𝓁}}\hspace{2mu}</math>
+| <math>{\large 𝓁}\hspace{2mu}_{ij}</math>
+| 
+|-
+| 
+| <math>q</math>
+| {{subpage|all-interval_tuning_schemes|uprev|s=dual_norms|text=Interval complexity norm power}}
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>\norm{·}_q</math>
+| [[Power norm]] (<math>p</math>-norm)
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\dfrac1{1-\frac1q}</math>
+| <math>\text{dual}(q)</math>
+| {{subpage|all-interval tuning schemes|uprev|s=dual_norms|text=Dual norm power}}
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>\norm{X\mathbf{i}}_q</math>
+| [[Interval complexity]]
+| 
+| <math>\small\mathsf{(C)}</math> or <math>\small\mathsf{(}</math><alt>-<math>\small\mathsf{C)}</math>
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>\norm{𝒓X^{-1}}_{\text{dual}(q)}</math>
+| [[Retuning magnitude]]
+| 
+| <math>\mathsf{¢}\small\mathsf{(C^{-1})}</math> or <math>\mathsf{¢}\small\mathsf{(}</math><alt>-<math>\small\mathsf{C^{-1})}</math>
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Real
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Alternative complexities
+|-
+| 
+| <math>𝒑</math>
+| {{subpage|alternative complexities|uprev|s=formulas|text=Prime list}}<ref group="note">May be used for a prime-limit or for any prime-only list.</ref>
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, d)</math>
+| Integer
+| List
+| [...]
+| 
+| 
+| 
+| 
+| <math>p_i</math>
+| 
+|-
+| 
+| <math>\slant{\mathbf{1}}</math>
+| {{subpage|alternative complexities|uprev|s=proportionality to size|text=Summation map}}
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, d)</math>
+| Integer
+| Vector
+| ⟨...]
+| 
+| 
+| 
+| 
+| <math>1</math>
+| 
+|-
+| 
+| <math>1200</math>
+| {{subpage|alternative complexities|uprev|s=Proportionality to size|text=Octaves-to-cents conversion}}
+| 
+| ¢/oct
+| Cents per octave
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>Z</math>
+| {{subpage|alternative complexities|uprev|s=Normifying: size-sensitizing matrix|text=Size-sensitizing matrix}}
+| 
+| 
+| 
+| 
+| <math>\scriptsize (d+1, d)</math>
+| Real
+| Matrix
+| [⟨…]...]
+| 
+| <math>𝒛_i</math>
+| 
+| 
+| <math>z_{ij}</math>
+| 
+|-
+! colspan="17" | Non-standard domain bases
+|-
+| rowspan="2" | 
+| <math>B_s</math>
+| rowspan="2" | [[Domain_basis#Basis_matrix_conversion|(Domain) basis (change) matrix]]
+| rowspan="2" | 
+| <math>\small 𝗽</math>/<math>\small 𝗯</math>
+| Primes per nonprime basis elements
+| rowspan="2" | 
+| <math>\scriptsize (d_p, d_b)</math>
+| rowspan="2" | Integer
+| rowspan="2" | Matrix
+| rowspan="2" | [[...] ...]
+| rowspan="2" | [[...] ...]
+| rowspan="2" | 
+| rowspan="2" | <math>b_i</math>
+| rowspan="2" | 
+| rowspan="2" | <math>b_{ij}</math>
+| rowspan="2" | 
+|-
+| <math>B_{Ls}</math>
+| <math>\small 𝗕</math>/<math>\small 𝗯</math>
+| Superspace basis elements per (subspace) basis elements
+| <math>\scriptsize (d_L, d_s)</math>
+|-
+! colspan="17" | Embedding and projection
+|-
+| 
+| <math>G</math>
+| [[generator embedding matrix|Generator embedding (matrix)]]
+| 
+| <math>\small 𝗽</math>/<math>\small 𝗴</math>
+| Primes per generator
+| 
+| <math>\scriptsize (d, r)</math>
+| Real
+| Matrix
+| [{...] ...⟩
+| {[...⟩ ...]
+| <math>𝒈_i</math>
+| 
+| 
+| <math>g_{ij}</math>
+| 
+|-
+| <math>G_cF^{-1}FM_c</math><br />
+<math>\mathrm{V}\textit{Λ}\mathrm{V}^{-1}</math>
+| <math>P</math>
+| [[Projection matrix|Projection (matrix)]]
+| <math>\scriptsize 
+\begin{array} {c} G \\[-2pt] 𝗽 \hspace{-2mu} / \hspace{-2mu} \cancel{𝗴} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} M \\[-2pt] \cancel{𝗴} \hspace{-2mu} / \hspace{-2mu} 𝗽 \end{array}
+</math>
+| <math>\small 𝗽</math>/<math>\small 𝗽</math>
+| Primes per prime
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} G \\[-3pt] \left(d, \cancel{r}\right) \end{array}
+\! \! 
+\begin{array} {c} M \\[-3pt] \left(\cancel{r}, d\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (d, d)</math>
+| Real
+| Matrix
+| [⟨...] ...⟩
+| ⟨[...⟩ ...]
+| <math>𝒑_i</math>
+| 
+| 
+| <math>p_i</math>
+| 
+|-
+| <math>GM\textbf{i}</math>
+| <math>P\textbf{i}</math>
+| [[Projected interval]]
+| <math>\scriptsize 
+\begin{array} {c} G \\[-2pt] 𝗽 \hspace{-2mu} / \hspace{-2mu} \cancel{𝗴} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} M \\[-2pt] \cancel{𝗴} \hspace{-2mu} / \hspace{-2mu} \cancel{𝗽} \end{array}
+\begin{array} {c} \\[-2pt] · \end{array}
+\begin{array} {c} \textbf{i} \\[-2pt] \cancel{𝗽} \end{array}
+</math>
+| <math>\small 𝗽</math>
+| Primes
+| <math>\scriptsize 
+\! \! 
+\begin{array} {c} G \\[-3pt] \left(d, \cancel{r}\right) \end{array}
+\! \! 
+\begin{array} {c} M \\[-3pt] \left(\cancel{r}, \cancel{d}\right) \end{array}
+\! \! 
+\begin{array} {c} \textbf{i} \\[-3pt] \left(\cancel{d}, 1\right) \end{array}
+\! \! 
+</math>
+| <math>\scriptsize (d, 1)</math>
+| Real
+| Vector
+| 
+| [...⟩
+| 
+| 
+| 
+| 
+| Specific type: vector ([[prime-count vector]] or PC-vector)
+|-
+| 
+| <math>\mathrm{U}</math>
+| [[Unchanged-interval basis]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, r)</math>
+| 
+| Matrix
+| 
+| [[...⟩ ...]
+| 
+| <math>\textbf{u}_i</math>
+| 
+| <math>\mathrm{u}_{ij}</math>
+| Jargon name: eigenmonzo list
+|-
+| 
+| <math>\textit{Λ}</math>
+| [[scaling factor matrix|Scaling factor (eigenvalue) matrix]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (d, d)</math>
+| 
+| Matrix
+| [⟨…] …⟩
+| ⟨[…⟩ …]
+| 
+| 
+| <math>𝝀</math>
+| <math>λ_i</math>
+| Mnemonic: <math>\mathrm{V}</math> is mirrored of <math>\textit{Λ}</math> which it combines with to create the projection matrix; previous name: eigenvalue matrix
+|-
+| 
+| <math>\mathrm{V}</math>
+| [[unrotated vector list|Unrotated vector (eigenvector) list]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (d, d)</math>
+| 
+| Matrix
+| 
+| ⟨[...⟩ ...]
+| 
+| <math>\textbf{v}_i</math>
+| 
+| <math>\mathrm{v}_{ij}</math>
+| Mnemonic: <math>\mathrm{V}</math> is mirrored of <math>\textit{Λ}</math> which it combines with to create the projection matrix; jargon name: eigenmonzo and comma list
+|-
+| 
+| <math>F</math>
+| [[Generator form matrix]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (r, r)</math>
+| 
+| Matrix
+| [{...] …}
+| 
+| 
+| <math>𝒇_i</math>
+| 
+| <math>f_{ij}</math>
+| 
+|-
+| <math>I</math>
+| <math>M_{\text{j}}</math>
+| [[Generator_embedding_optimization#Algebraic_setup|JI mapping (matrix)]]
+| 
+| <math>\small 𝗴</math>/<math>\small 𝗽</math>
+| Generators per prime
+| 
+| <math>\scriptsize (d, d)</math>
+| Integer
+| Matrix
+| [⟨...] ...}
+| ⟨[...} ...]
+| 
+| 
+| <math>\slant{\mathbf{1}}</math>
+| 
+| 
+|-
+| <math>I</math>
+| <math>G_{\text{j}}</math>
+| [[Generator_embedding_optimization#Algebraic_setup|JI generator embedding (matrix)]]
+| 
+| <math>\small 𝗽</math>/<math>\small 𝗴</math>
+| Primes per generator
+| 
+| <math>\scriptsize (d, d)</math>
+| Integer
+| Matrix
+| [{...] ...⟩
+| {[...⟩ ...]
+| 
+| 
+| <math>\slant{\mathbf{1}}</math>
+| 
+| 
+|-
+| 
+| <math>K</math>
+| [[Generator_embedding_optimization#How_to_build_constraint_matrices|Constraint (matrix)]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (k, r)</math>
+| <math>\scriptsize \{0, +1, -1\}</math>
+| Matrix
+| [[...] ...]
+| 
+| <math>𝒌_i</math>
+| 
+| 
+| <math>k_{ij}</math>
+| Mnemonic: <math>K</math>onstraint
+|-
+| 
+| <math>𝒃</math>
+| [[Generator embedding optimization#Generalizing to higher dimensions: The blend map|(Generator tuning map) blend map]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, τ-1)</math>
+| Real
+| Vector
+| [...]
+| 
+| 
+| 
+| 
+| <math>b_i</math>
+| 
+|-
+| 
+| <math>B</math>
+| [[Generator embedding optimization#How to identify tunings|(Generator tuning map) blend matrix]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (d, τ-1)</math>
+| Real
+| Matrix
+| [[...⟩...]
+| 
+| 
+| <math>𝒃_{i}</math>
+| 
+| <math>b_{ij}</math>
+| 
+|-
+| 
+| <math>D</math>
+| [[Generator embedding optimization#The deltas matrix|(Generator tuning map) deltas matrix]]
+| 
+| <math>\mathsf{¢}</math>/<math>\small 𝗴</math>
+| Cents per generator
+| 
+| <math>\scriptsize (τ-1,r)</math>
+| Real
+| Matrix
+| [{...] ...]
+| 
+| <math>𝜹_i</math>
+| 
+| 
+| <math>𝛿_{ij}</math>
+| 
+|-
+| 
+| <math>τ</math>
+| [[Generator embedding optimization#The deltas matrix|Tied basic minimax tuning count]]
+| 
+| 
+| 
+| 
+| 
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Exterior algebra
+|-
+| 
+| <math>𝕞</math>
+| [[Multimap]]
+| 
+| <math>\small 𝗴</math>/<math>\small 𝗽</math>
+| Generators per prime
+| 
+| <math>\scriptsize (1, d)</math>
+| Integer
+| Multivector
+| ⟨...] or ⟨⟨...]] or ⟨⟨⟨...]]] ...
+| 
+| 
+| 
+| 
+| <math>𝕞_i</math>
+| 
+|-
+| 
+| <math>𝕔</math>
+| [[Multicomma]]
+| 
+| <math>\small 𝗽</math>
+| Primes
+| 
+| <math>\scriptsize (1, n)</math>
+| Integer
+| Multivector
+| 
+| [...⟩ or [[...⟩⟩ or [[[...⟩⟩⟩ ...
+| 
+| 
+| 
+| <math>𝕔_i</math>
+| 
+|-
+| 
+| <math>𝕧</math>
+| (Generic temperament multivector)
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, {{d}\choose{r}})</math> or <math>\scriptsize (1, {{d}\choose{n}})</math>
+| Integer
+| Multivector
+| ⟨...] or ⟨⟨...]] or ⟨⟨⟨...]]] ...
+| [...⟩ or [[...⟩⟩ or [[[...⟩⟩⟩ ...
+| 
+| 
+| 
+| <math>𝕧_i</math>
+| 
+|-
+| 
+| <math>A</math>
+| (Generic temperament matrix)
+| 
+| 
+| 
+| 
+| <math>\scriptsize (g, d)</math> or <math>\scriptsize (d, g)</math>
+| Integer
+| Matrix
+| [⟨...] ...}
+| ⟨[...} ...] or [[...⟩ ...]
+| <math>𝒂_i</math>
+| <math>𝒂_i</math>
+| <math>𝒂</math>
+| <math>a_{ij}</math>
+| 
+|-
+| 
+| <math>v</math>
+| [[Variance]]
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>g</math>
+| [[Grade]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+! colspan="17" | Temperament addition
+|-
+| <math>\min(r, n)</math>
+| <math>g_\text{min}</math>
+| [[Temperament_addition#Introductory_examples|Min-grade]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\max(r, n)</math>
+| <math>g_\text{max}</math>
+| [[Temperament_addition#Introductory_examples|Max-grade]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| 
+| <math>L_\text{dep}</math>
+| [[Temperament_addition#1._Find_the_.5Bmath.5DL_.7B.5Ctext.7Bdep.7D.7D.5B.2Fmath.5D|Linear-dependence basis]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize \left(l_\text{dep}, d\right)</math> or <math>\scriptsize \left(d, l_\text{dep}\right)</math>
+| Integer
+| Matrix
+| [⟨...]] or [[...] ...⟩
+| ⟨[...]] or [[...⟩ ...]
+| <math>{\large\textbf{𝓁}}\hspace{2mu}_{\text{dep}i}</math>
+| <math>{\large\textbf{𝓁}}\hspace{2mu}_{\text{dep}i}</math>
+| <math>{\large\textbf{𝓁}}\hspace{2mu}_\text{dep}</math>
+| <math>{\large 𝓁}\hspace{2mu}_{\text{dep}ij}</math>
+| 
+|-
+| 
+| <math>L_\text{ind}</math>
+| [[Temperament_addition#Glossary|Linear-independence basis]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize \left(l_\text{ind}, d\right)</math> or <math>\scriptsize \left(d, l_\text{ind}\right)</math>
+| Integer
+| Matrix
+| [⟨...]] or [[...] ...⟩
+| ⟨[...]] or [[...⟩ ...]
+| <math>{\large\textbf{𝓁}}\hspace{2mu}_{\text{ind}i}</math>
+| <math>{\large\textbf{𝓁}}\hspace{2mu}_{\text{ind}i}</math>
+| <math>{\large\textbf{𝓁}}\hspace{2mu}_\text{ind}</math>
+| <math>{\large 𝓁}\hspace{2mu}_{\text{ind}ij}</math>
+| 
+|-
+| <math>\dim(L_\text{dep})</math>
+| <math>l_\text{dep}</math>
+| [[Temperament_addition#3._Linear_independence_between_temperaments|Linear-dependence]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|-
+| <math>\dim(L_\text{ind})</math>
+| <math>l_\text{ind}</math>
+| [[Temperament_addition#3._Linear_independence_between_temperaments|Linear-independence]]
+| 
+| 
+| 
+| 
+| <math>\scriptsize (1, 1)</math>
+| Integer
+| Scalar
+| 
+| 
+| 
+| 
+| 
+| 
+| 
+|}
+
+=== Units ===
+{| class="wikitable center-all mw-collapsible mw-collapsed"
+|+ style="font-size: 105%;" | 
+|-
+! Symbol
+! Name
+! Vectorized
+|-
+| <math>\small 𝗴</math>
+| Generators
+| Yes
+|-
+| <math>\small 𝗽</math>
+| Primes
+| Yes
+|-
+| <math>\small 𝗯</math>
+| (Subspace) basis elements
+| Yes
+|-
+| <math>\small 𝗕</math>
+| Superspace basis elements
+| Yes
+|-
+| <math>\mathsf{¢}</math>
+| Cents
+| 
+|-
+| <math>\mathsf{¢}\small{(}</math><weight><math>\small\mathsf{)}</math>
+| Weighted cents
+| 
+|-
+| <math>\small\mathsf{oct}</math>
+| Octaves
+| 
+|}
+
+=== Tuning schemes ===
+{| class="wikitable center-all mw-collapsible mw-collapsed"
+|+ style="font-size: 105%;" | 
+|-
+! colspan="6" rowspan="3" | Retuning (or mistuning) magnitude
+! colspan="12" rowspan="1" | Damage
+! rowspan="5" | Target<br />intervals
+! colspan="2" rowspan="4" | Systematic name
+! rowspan="5" | Previously named tuning schemes that are specific types of this tuning scheme
+! rowspan="5" | Of interest?
+|-
+! colspan="9" rowspan="1" | Weight
+! colspan="3" rowspan="1" | Optimization
+|-
+! colspan="6" rowspan="1" | Interval complexity
+! colspan="3" rowspan="1" | Slope
+! colspan="1" rowspan="3" | Initial
+! colspan="1" rowspan="3" | Name
+! colspan="1" rowspan="3" | Power
+|-
+! colspan="3" rowspan="1" | Norm pretransformer
+! colspan="3" rowspan="1" | Norm power
+! colspan="3" rowspan="1" | Norm pretransformer
+! colspan="3" rowspan="1" | Norm power
+! colspan="1" rowspan="2" | Initial
+! colspan="1" rowspan="2" | Name
+! colspan="1" rowspan="2" | Multiplier
+|-
+! Initial
+! Name
+! Multiplier
+! Initial
+! Name
+! Power
+! Initial
+! Name
+! Multiplier
+! Initial
+! Name
+! Power
+! colspan="1" | Abbreviated
+! colspan="1" | Read ("____ tuning scheme")
+|-
+| colspan="3" | <none>
+| rowspan="4" | <n/a>
+| rowspan="2" | Maximum
+| rowspan="2" | &infin;
+| colspan="3" | <none>
+| rowspan="2" | (t)
+| rowspan="2" | Taxicab
+| rowspan="2" | 1
+| rowspan="4" | S
+| rowspan="4" | Simplicity-weight
+| rowspan="4" | 1/Complexity
+| rowspan="31" | <n/a>
+| rowspan="13" | Minimax
+| rowspan="13" | &infin;
+| rowspan="4" | All
+| Minimax-S
+| Minimax simplicity-weight damage
+| "[[TOP]]"/"[[T1]]"/"[[TIPTOP]]"*, "[[CTOP]]", "[[POTOP]]"/"[[POTT]]"*
+| yes
+|-
+| colspan="3" | <various>
+| colspan="3" | <various>
+| Minimax-<alt>-S
+| Minimax <alternative>-simplicity-weight damage
+| "[[BOP tuning|BOP]]", "[[Weil Norms, Tenney-Weil Norms, and TWp Interval and Tuning Space|Weil]]", "[[Kees]]"
+| yes
+|-
+| colspan="3" | <none>
+| rowspan="2" | Euclidean
+| rowspan="2" | 2
+| colspan="3" | <none>
+| rowspan="2" | E
+| rowspan="2" | Euclidean
+| rowspan="2" | 2
+| Minimax-ES
+| Minimax Euclideanized-simplicity-weight damage
+| "[[Tenney-Euclidean tuning|TE]]"/"[[T2]]"/"[[TOP-RMS]]", "[[CTE tuning|CTE]]", "[[POTE tuning|POTE]]"
+| yes
+|-
+| colspan="3" | <various>
+| colspan="3" | <various>
+| Minimax-E-<alt>-S
+| Minimax Euclideanized-<alternative>-simplicity-weight damage
+| "[[Frobenius]]", "[[BE]]", "[[WE]]", "[[KE]]"
+| Yes
+|-
+| colspan="6" rowspan="27" | <n/a>
+| colspan="6" | <n/a>
+| U
+| Unity-weight
+| <none>
+| rowspan="27" | <set>
+| <set> Minimax-U
+| <set> Minimax unity-weight damage
+| "[[Minimax tuning|Minimax]]"
+| yes
+|-
+| colspan="3" | <none>
+| rowspan="2" | (t)
+| rowspan="2" | Taxicab
+| rowspan="2" | 1
+| rowspan="4" | S
+| rowspan="4" | Simplicity-weight
+| rowspan="4" | 1/Complexity
+| <set> Minimax-S
+| <set> Minimax simplicity-weight damage
+| 
+| Yes
+|-
+| colspan="3" | <various>
+| <set> Minimax-<alt>-S
+| <set> Minimax <alternative>-simplicity-weight damage
+| 
+| 
+|-
+| colspan="3" | <none>
+| rowspan="2" | E
+| rowspan="2" | Euclidean
+| rowspan="2" | 2
+| <set> Minimax-ES
+| <set> Minimax Euclideanized-simplicity-weight damage
+| 
+| 
+|-
+| colspan="3" | <various>
+| <set> Minimax-E-<alt>-S
+| <set> Minimax Euclideanized-<alternative>-simplicity-weight damage
+| 
+| 
+|-
+| colspan="3" | <none>
+| rowspan="2" | (t)
+| rowspan="2" | Taxicab
+| rowspan="2" | 1
+| rowspan="4" | C
+| rowspan="4" | Complexity-weight
+| rowspan="4" | Complexity
+| <set> Cinimax-C
+| <set> Cinimax complexity-weight damage
+| 
+| Yes
+|-
+| colspan="3" | <various>
+| <set> Minimax-<alt>-C
+| <set> Minimax <alternative>-complexity-weight damage
+| 
+| 
+|-
+| colspan="3" | <none>
+| rowspan="2" | E
+| rowspan="2" | Euclidean
+| rowspan="2" | 2
+| <set> Minimax-EC
+| <set> Minimax Euclideanized-complexity-weight damage
+| 
+| 
+|-
+| colspan="3" | <various>
+| <set> Minimax-E-<alt>-C
+| <set> Minimax Euclideanized-<alternative>-complexity-weight damage
+| 
+| 
+|-
+| colspan="6" | <n/a>
+| U
+| Unity-weight
+| <none>
+| rowspan="9" | MiniRMS
+| rowspan="9" | 2
+| <set> MiniRMS-U
+| <set> MiniRMS unity-weight damage
+| "[[Least squares]]"
+| yes
+|-
+| colspan="3" | <none>
+| rowspan="2" | (t)
+| rowspan="2" | Taxicab
+| rowspan="2" | 1
+| rowspan="4" | S
+| rowspan="4" | Simplicity-weight
+| rowspan="4" | 1/Complexity
+| <set> MiniRMS-S
+| <set> MiniRMS simplicity-weight damage
+| 
+| Yes
+|-
+| colspan="3" | <various>
+| <set> MiniRMS-<alt>-S
+| <set> MiniRMS <alternative>-simplicity-weight damage
+| 
+| 
+|-
+| colspan="3" | <none>
+| rowspan="2" | E
+| rowspan="2" | Euclidean
+| rowspan="2" | 2
+| <set> MiniRMS-ES
+| <set> MiniRMS Euclideanized-simplicity-weight damage
+| 
+| 
+|-
+| colspan="3" | <various>
+| <set> MiniRMS-E-<alt>-S
+| <set> MiniRMS Euclideanized-<alternative>-simplicity-weight damage
+| 
+| 
+|-
+| colspan="3" | <none>
+| rowspan="2" | (t)
+| rowspan="2" | Taxicab
+| rowspan="2" | 1
+| rowspan="4" | C
+| rowspan="4" | Complexity-weight
+| rowspan="4" | Complexity
+| <set> MiniRMS-C
+| <set> MiniRMS complexity-weight damage
+| 
+| yes
+|-
+| colspan="3" | <various>
+| <set> MiniRMS-<alt>-C
+| <set> MiniRMS <alternative>-complexity-weight damage
+| 
+| 
+|-
+| colspan="3" | <none>
+| rowspan="2" | E
+| rowspan="2" | Euclidean
+| rowspan="2" | 2
+| <set> MiniRMS-EC
+| <set> MiniRMS Euclideanized-complexity-weight damage
+| 
+| 
+|-
+| colspan="3" | <various>
+| <set> MiniRMS-E-<alt>-C
+| <set> MiniRMS Euclideanized-<alternative>-complexity-weight damage
+| 
+| 
+|-
+| colspan="6" | <n/a>
+| U
+| Unity-weight
+| <none>
+| rowspan="9" | Miniaverage
+| rowspan="9" | 1
+| <set> Miniaverage-U
+| <set> Miniaverage unity-weight damage
+| 
+| yes
+|-
+| colspan="3" | <none>
+| rowspan="2" | (t)
+| rowspan="2" | Taxicab
+| rowspan="2" | 1
+| rowspan="4" | S
+| rowspan="4" | Simplicity-weight
+| rowspan="4" | 1/Complexity
+| <set> Miniaverage-S
+| <set> Miniaverage simplicity-weight damage
+| 
+| Yes
+|-
+| colspan="3" | <various>
+| <set> Miniaverage-<alt>-S
+| <set> Miniaverage <alternative>-simplicity-weight damage
+| 
+| 
+|-
+| colspan="3" | <none>
+| rowspan="2" | E
+| rowspan="2" | Euclidean
+| rowspan="2" | 2
+| <set> Miniaverage-ES
+| <set> Miniaverage Euclideanized-simplicity-weight damage
+| 
+| 
+|-
+| colspan="3" | <various>
+| <set> Miniaverage-E-<alt>-S
+| <set> Miniaverage Euclideanized-<alternative>-simplicity-weight damage
+| 
+| 
+|-
+| colspan="3" | <none>
+| rowspan="2" | (t)
+| rowspan="2" | Taxicab
+| rowspan="2" | 1
+| rowspan="4" | C
+| rowspan="4" | Complexity-weight
+| rowspan="4" | Complexity
+| <set> Miniaverage-C
+| <set> Miniaverage complexity-weight damage
+| 
+| Yes
+|-
+| colspan="3" | <various>
+| <set> Miniaverage-<alt>-C
+| <set> Miniaverage <alternative>-complexity-weight damage
+| 
+| 
+|-
+| colspan="3" | <none>
+| rowspan="2" | E
+| rowspan="2" | Euclidean
+| rowspan="2" | 2
+| <set> Miniaverage-EC
+| <set> Miniaverage Euclideanized-complexity-weight damage
+| 
+| 
+|-
+| colspan="3" | <various>
+| <set> Miniaverage-E-<alt>-C
+| <set> Miniaverage Euclideanized-<alternative>-complexity-weight damage
+| 
+| 
+|}
+
+=== Damages ===
+{| class="wikitable center-all mw-collapsible mw-collapsed"
+|+ style="font-size: 105%;" | 
+|-
+! colspan="2" | Quantity
+! colspan="2" | Unit
+|-
+! Abbreviation
+! Name
+! Symbol
+! Name
+|-
+| U-damage
+| Unity-weight damage
+| <math>\mathsf{¢}\small\mathsf{(U)}</math>
+| Unity-weighted cents
+|-
+| C-damage
+| Complexity-weight damage
+| <math>\mathsf{¢}\small\mathsf{(C)}</math>
+| Complexity-weighted cents
+|-
+| <alt>-C-damage
+| <alternative>-complexity-weight damage
+| <math>\mathsf{¢}</math><math>\small\mathsf{(}</math><alt>-<math>\small\mathsf{C)}</math>
+| <alternative>-complexity-weighted cents
+|-
+| EC-damage
+| Euclideanized-complexity-weight damage
+| <math>\mathsf{¢}</math><math>\small\mathsf{(EC)}</math>
+| Euclideanized-complexity-weighted cents
+|-
+| E-<alt>-C-damage
+| Euclideanized-<alternative>-complexity-weight damage
+| <math>\mathsf{¢}</math><math>\small\mathsf{(E}</math>-<alt>-<math>\small\mathsf{C)}</math>
+| Euclideanized-<alternative>-complexity-weighted cents
+|-
+| S-damage
+| Simplicity-weight damage
+| <math>\mathsf{¢}\small\mathsf{(S)}</math>
+| Simplicity-weighted cents
+|-
+| <alt>-S-damage
+| <alternative>-simplicity-weight damage
+| <math>\mathsf{¢}</math><math>\small\mathsf{(}</math><alt>-<math>\small\mathsf{S)}</math>
+| <alternative>-simplicity-weighted cents
+|-
+| ES-damage
+| Euclideanized-simplicity-weight damage
+| <math>\mathsf{¢}</math><math>\small\mathsf{(ES)}</math>
+| Euclideanized-simplicity-weighted cents
+|-
+| E-<alt>-S-damage
+| Euclideanized-<alternative>-simplicity-weight damage
+| <math>\mathsf{¢}</math><math>\small\mathsf{(E}</math>-<alt>-<math>\small\mathsf{S)}</math>
+| Euclideanized-<alternative>-simplicity-weighted cents
+|}
+
+=== Complexity and simplicity ===
+{| class="wikitable center-all mw-collapsible mw-collapsed"
+|+ style="font-size: 105%;" | 
+|-
+! colspan="2" | Quantity
+! colspan="2" | Unit
+|-
+! Abbreviation
+! Name
+! Unit
+! Name
+|-
+| C
+| Complexity
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(C)}</math> = <math>\small\mathsf{(C)}</math>
+| Complexity weight
+|-
+| <alt>-C
+| <alternative> complexity
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(}</math><alt>-<math>\scriptsize\mathsf{C)}</math> = <math>\small\mathsf{(}</math><alt>-<math>\small\mathsf{C)}</math>
+| <alternative>-complexity weight
+|-
+| EC
+| Euclideanized complexity
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(EC)}</math> = <math>\small\mathsf{(EC)}</math>
+| Euclideanized-complexity weight
+|-
+| E-<alt>-C
+| Euclideanized-<alternative> complexity
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(E}</math>-<alt>-<math>\scriptsize\mathsf{C)}</math> = <math>\small\mathsf{(E}</math>-<alt>-<math>\small\mathsf{C)}</math>
+| Euclideanized-<alternative>-complexity weight
+|-
+| S
+| Simplicity
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(S)}</math> = <math>\small\mathsf{(S)}</math>
+| Simplicity weight
+|-
+| <alt>-S
+| <alternative> simplicity
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(}</math><alt>-<math>\scriptsize\mathsf{S)}</math> = <math>\small\mathsf{(}</math><alt>-<math>\small\mathsf{S)}</math>
+| <alternative>-simplicity weight
+|-
+| ES
+| Euclideanized simplicity
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(ES)}</math> = <math>\small\mathsf{(ES)}</math>
+| Euclideanized-simplicity weight
+|-
+| E-<alt>-S
+| Euclideanized-<alternative> simplicity
+| <math>\small\mathsf{𝟙}\scriptsize\mathsf{(E}</math>-<alt>-<math>\scriptsize\mathsf{S)}</math> = <math>\small\mathsf{(E}</math>-<alt>-<math>\small\mathsf{S)}</math>
+| Euclideanized-<alternative>-simplicity weight
+|}
+
+== WinCompose ==
+Are you tired of every time web-searching for and copy-pasting special characters that you use over and over in RTT discussions, or would like to use if only it were easy, such as ♯, ♭, ¢, √, °, ₂, ×, {{inv}}, ⟩, ∞, and ϕ? Well, try [http://wincompose.info/ WinCompose]! This tool lets you communicate about these ideas without disrupting your train of thought, by typing these characters with simple and memorable key sequences. These sequences always begin with your chosen Compose-key, which defaults to being your right Alt key. When describing these sequences we represent this key with the symbol ⎄. So for example, you type {{nowrap|♯ as <code>⎄##</code>|♭ as <code>⎄bb</code>|¢ as <code>⎄c/</code>|√ as <code>⎄v/</code>|° as <code>⎄00</code>|₂ as <code>⎄-2</code>|× as <code>⎄xx</code>|{{inv}} as <code>⎄11</code>|⟩ as <code>⎄&gt;&gt;</code>|∞ as <code>⎄88</code>|and ϕ as <code>⎄8f</code>}}. 
+
+For Windows users, install WinCompose then copy-paste the contents of this file: https://dkeenan.com/XCompose.txt into your user sequences (Show sequences &rarr; User-defined sequences &rarr; Edit). Then save and reload. You can always choose to override or add alternatives to our sequences if you find others to be more intuitive.
+
+For Mac users, we refer you to this repo, which gives tools and instructions for setting up key bindings as compose rules in Mac OS, and even comes pre-packaged with our rules: https://github.com/cmloegcmluin/compose2keybindings
+
+=== Table of noteworthy sequences ===
+{| class="wikitable mw-collapsible mw-collapsed"
+|+ style="font-size: 105%; white-space: nowrap;" | Dave Keenan & Douglas Blumeyer's compose-key sequences
+|- style="white-space: nowrap;"
+! scope="col" style="width: 130px;" | Compose-key sequence
+! scope="col" style="width: 75px;" | Resulting text
+! Description
+|- style="white-space: nowrap;"
+! colspan="3" | Keyboard key symbols
+|-
+| ⎄⎄⎄
+| ⎄
+| Compose key symbol (the right alt key by default)
+|-
+| ⎄\␣
+| ␣
+| Spacebar symbol
+|-
+| ⎄\▶︎ etc.
+| ▶︎ etc.
+| Right etc. arrow key symbols
+|-
+| ⎄\A or ⎄\O
+| ⌥
+| Alt or option key symbol
+|-
+| ⎄\B
+| ⌫
+| Backspace key symbol
+|-
+| ⎄\C
+| ✲
+| Control key symbol
+|-
+| ⎄\D
+| ⌦
+| Delete key symbol
+|-
+| ⎄\E
+| ⎋
+| Escape key symbol
+|-
+| ⎄\L
+| ⇪
+| Caps lock key symbol
+|-
+| ⎄\R or ⎄\.E
+| ⏎
+| Return or enter key symbol
+|-
+| ⎄\S
+| ⇧
+| Shift key symbol
+|-
+| ⎄\T
+| ⭾
+| Tab key symbol
+|-
+| ⎄()
+| ◌
+| Dotted circle, represents any character (such as the character preceding a combining mark)
+|-
+! colspan="3" style="white-space: nowrap;" | Double key sequences
+|-
+| ⎄␣␣
+|  
+| Narrow no-break space (used between quantities and their units)
+|-
+| ⎄..
+| ·
+| Middle dot (used to multiply units when juxtaposition is ambiguous)
+|-
+| ⎄::
+| ÷
+| Divide sign
+|-
+| ⎄;;
+| ◌̲̅
+| Combining overline and low line (undirected value)
+|-
+| ⎄{{pipe}} {{pipe}}
+| ‖
+| Power norm bracket
+|-
+| ⎄<<
+| ⟨
+| Left angle bracket
+|-
+| ⎄>>
+| ⟩
+| Right angle bracket
+|-
+| ⎄~~
+| ≈
+| Approximately equal
+|-
+| ⎄**
+| ★
+| Black star
+|-
+| ⎄&#39;&#39;
+| ′
+| prime mark
+|-
+| ⎄11
+| ⁻¹
+| Power of &minus;1 or inverse
+|-
+| ⎄22 through ⎄77
+| ² ³ ⁴ ⁵ ⁶ ⁷
+| Squared, cubed, fourth through seventh power
+|-
+| ⎄88
+| ∞
+| Infinity
+|-
+| ⎄00
+| °
+| Degree sign
+|-
+| ⎄nn
+| ⁿ
+| Superscript small n
+|-
+| ⎄--
+| ₋
+| Subscript minus sign
+|-
+| ⎄__
+| ◌̲
+| Combining low line (underline)
+|-
+| ⎄==
+| ≡
+| Modular congruence
+|-
+| ⎄//
+| ⁄
+| Fraction slash (use with super and subscripts to create fractions)
+|-
+| ⎄##
+| ♯
+| Musical sharp
+|-
+| ⎄bb
+| ♭
+| Musical flat
+|-
+| ⎄dd
+| ∂
+| Partial derivative
+|-
+| ⎄ff
+| ϕ
+| Small phi symbol
+|-
+| ⎄gg
+| ɡ
+| Single-storey (opentail) small g
+|-
+| ⎄ll
+| ℓ
+| Script small L
+|-
+| ⎄uu
+| µ
+| Micro sign
+|-
+| ⎄xx
+| ×
+| Multiplication sign
+|-
+| ⎄DD
+| ∆
+| Delta (small difference) operator
+|-
+| ⎄FF
+| Φ
+| Greek capital phi
+|-
+| ⎄QQ
+| Ϙ
+| Greek capital letter archaic qoppa (small quotient operator)
+|-
+| ⎄TT
+| ᵀ
+| Superscript capital T (matrix transpose)
+|-
+| ⎄++
+| ⁺
+| Superscript plus sign (matrix pseudoinverse)
+|-
+| ⎄▶︎▶︎ etc.
+| → etc.
+| Right etc. arrows
+|-
+! colspan="3" style="white-space: nowrap;" | Multiplication operators
+|-
+| ⎄xx
+| ×
+| Multiplication sign
+|-
+| ⎄Xx or ⎄xX
+| ⨯
+| Vector or cross product (barely distinguishable from multiplication sign)
+|-
+| ⎄XX
+| ✕
+| Large multiplication sign (a better symbol for cross product)
+|-
+| ⎄x*
+| ⋆
+| Star operator (prefix: tensor complement, Hodge)
+|-
+| ⎄X*
+| ∗
+| Asterisk operator (infix: scalar product, Dorst)
+|-
+| ⎄x.
+| ⋅
+| Dot (product) operator
+|-
+| ⎄X.
+| •
+| Bullet (infix: fat dot product, Dorst)
+|-
+! colspan="3" style="white-space: nowrap;" | Other operators
+|-
+| ⎄v/
+| √
+| Square root sign
+|-
+| ⎄3v/
+| ∛
+| Cube root sign
+|-
+| ⎄4v/
+| ∜
+| Fourth root sign
+|-
+| ⎄-+
+| ₊
+| Subscript plus sign
+|-
+| ⎄--
+| ₋
+| Subscript minus sign
+|-
+| ⎄-=
+| ₌
+| Subscript equals sign
+|-
+| ⎄++
+| ⁺
+| Superscript plus sign (matrix pseudoinverse)
+|-
+| ⎄+- or ⎄+=
+| ±
+| Plus or minus sign
+|-
+| ⎄=+
+| ∓
+| Minus or plus sign
+|-
+| ⎄=-
+| −
+| Minus sign
+|-
+| ⎄==
+| ≡
+| Modular congruence
+|-
+| ⎄/\
+| ∧
+| Logical AND, wedge product, progressive product
+|-
+| ⎄\/
+| ∨
+| Logical OR, vee product, regressive product
+|-
+| ⎄⎄/\
+| ⋀
+| Larger logical AND, wedge product, progressive product
+|-
+| ⎄⎄\/
+| ⋁
+| Larger logical OR, vee product, regressive product
+|-
+| <nowiki>⎄| _</nowiki>
+| ⌊
+| Left floor (infix: right contraction, Dorst)
+|-
+| <nowiki>⎄_| </nowiki>
+| ⌋
+| Right floor (infix: left contraction, Dorst)
+|-
+| <nowiki>⎄| ^</nowiki>
+| ⌈
+| Left ceiling
+|-
+| <nowiki>⎄^| </nowiki>
+| ⌉
+| Right ceiling
+|-
+| ⎄'-
+| ⨽
+| Righthand interior product
+|-
+| ⎄-'
+| ⨼
+| (Left-hand) interior product
+|-
+| ⎄-,
+| ¬
+| Not sign (prefix: multivector complement)
+|-
+| ⎄⎄<>
+| ⋄
+| Diamond operator (prefix: multivector dual)
+|-
+| ⎄(.)
+| ⨀
+| Entry-wise vector multiplication operator
+|-
+| ⎄(..)
+| ⊙
+| Alternative entry-wise vector multiplication operator
+|-
+| ⎄(/)
+| ⊘
+| Entry-wise vector division operator
+|-
+! colspan="3" | Mathematical letter and digit prefixes
+|-
+| ⎄3◌
+| я
+| Cyrillic, ⎄3q is ya (example)
+|-
+| ⎄4◌
+| ℵ
+| Hebrew, ⎄4a is aleph (example)
+|-
+| ⎄5◌
+| 𝔞
+| Fraktur, ⎄5a
+|-
+| ⎄6◌
+| ᵃ ¹  ᪲  ⁸
+| Superscripts, ⎄6a ⎄61 ⎄688 ⎄68␣ (not all letters, some only approximate) (same key as ^ but without shift)
+|-
+| ⎄68◌
+| ᵝ
+| Superscript greek, ⎄68b is superscript beta (only a few)
+|-
+| ⎄7◌
+| 𝒶
+| Script, ⎄7a
+|-
+| ⎄8◌
+| α
+| Greek, ⎄8a is alpha (by sound where possible otherwise letter-shape)
+|-
+| ⎄8.◌
+| ς
+| Greek variants, ⎄8.s is final sigma
+|-
+| ⎄9◌
+| 𝐚 𝟏 𝟓 𝟕 𝟖 𝟎
+| Bold, ⎄9a ⎄91 ⎄95␣ ⎄97␣ ⎄98␣ ⎄90␣
+|-
+| ⎄95◌
+| 𝖆
+| Bold fraktur, ⎄95a
+|-
+| ⎄97◌
+| 𝓪
+| Bold script, ⎄97a
+|-
+| ⎄98◌
+| 𝛂
+| Bold greek, ⎄98a is bold alpha
+|-
+| ⎄90◌
+| 𝒂
+| Bold italic, ⎄90a
+|-
+| ⎄908◌
+| 𝜶
+| Bold italic greek, ⎄908a is bold italic alpha
+|-
+| ⎄0◌
+| 𝑎
+| Italic, ⎄0a
+|-
+| ⎄08◌
+| 𝛼
+| Italic greek, ⎄08a is italic alpha
+|-
+| ⎄-◌
+| ₐ ᴀ   ͚ ₈
+| Subscripts and small caps, ⎄-a ⎄-A ⎄-88 ⎄-8␣ (not all letters, some only approximate) (same key as _ but without shift)
+|-
+| ⎄-8◌
+| ᵦ
+| Subscript greek, ⎄-8b is subscript beta (only a few)
+|-
+| ⎄{◌
+| 𝖺 𝟣 𝟫
+| Sans-serif, ⎄{a ⎄{1 ⎄{9␣
+|-
+| ⎄{9◌
+| 𝗮 𝟭
+| Sans-serif bold, ⎄{9a ⎄{91
+|-
+| ⎄}◌
+| 𝚊 𝟷
+| Monospace, ⎄}a ⎄}1
+|-
+| ⎄{{pipe}} ◌
+| 𝕒 𝟙 𝟠 𝟘
+| Double-struck, ⎄{{pipe}} a ⎄{{pipe}} 1 ⎄{{pipe}} 8␣ ⎄{{pipe}} 0␣
+|-
+| ⎄{{pipe}} 8◌
+| ℼ
+| Double-struck greek, ⎄{{pipe}} 8p (only a few)
+|-
+| ⎄{{pipe}} 0◌
+| ⅇ ⅈ
+| Double-struck italic, ⎄{{pipe}} 0e ⎄{{pipe}} i (only a few)
+|-
+! colspan="3" style="white-space: nowrap;" | Power statistics brackets
+|-
+| ⎄{{pipe}} {{pipe}} 
+| ‖
+| Power-norm bracket
+|-
+| ⎄{{pipe}}-1
+| ‖₁
+| 1-Norm right bracket
+|-
+| ⎄{{pipe}}-2
+| ‖₂
+| 2-Norm right bracket
+|-
+| ⎄{{pipe}}-8
+| ‖ ͚
+| ∞-Norm right bracket
+|-
+| ⎄⎄<<
+| ⟪
+| Left power-mean bracket
+|-
+| ⎄⎄>>
+| ⟫
+| Right power-mean bracket
+|-
+| ⎄⎄{{((}}
+| ⧛
+| Left power-sum bracket (substitute for {{llzz}} when HTML is not available)
+|-
+| ⎄⎄{{))}}
+| ⧚
+| Right power-sum bracket (substitute for {{rrzz}} when HTML is not available)
+|-
+! colspan="3" style="white-space: nowrap;" | Combining marks
+|-
+| ⎄\-
+| ◌̶
+| Combining strike-thru
+|-
+| ⎄^_
+| ◌̅
+| Combining overline
+|-
+| ⎄__
+| ◌̲
+| Combining low line
+|-
+| ⎄;; or ⎄-_ or ⎄_^
+| ◌̲̅
+| Combining overline and low line (undirected value)
+|}
+
+=== Keyboard map ===
+[[File:WinCompose keyboard map.png|1000px]]
+
+== Footnotes ==
+<references group="note" />
+
+[[Category:Dave Keenan & Douglas Blumeyer's guide to RTT]]
+[[Category:Tuning]]
