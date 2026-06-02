@@ -3330,8 +3330,8 @@ def test_units_annotate_each_box_with_its_unit_string():
 
 
 def test_units_carry_a_per_value_unit_on_each_gridded_cell():
-    on = {c.id: c for c in _with(units=True).cells}
-    off = {c.id: c for c in _with(units=False).cells}
+    on = {c.id: c for c in _with(units=True, weighting=True).cells}
+    off = {c.id: c for c in _with(units=False, weighting=True).cells}
     # each gridded value cell carries its coordinate-specialized unit: the tile's unit
     # with its variables subscripted by the cell's generator/prime index (the mockup's
     # g/p mapping tile reads g₁/p₁ in its top-left cell)
@@ -3342,6 +3342,13 @@ def test_units_carry_a_per_value_unit_on_each_gridded_cell():
     assert on["tuning:target:0"].unit == "¢"         # a size list: plain cents, no index
     assert on["cell:mapped:0:0"].unit == "g₁"        # mapped target list: generators (gen index)
     assert on["cell:vec:targets:0:0"].unit == "p₁"   # interval vector: prime component
+    # the prescaler matrix's per-cell unit is octaves per its COLUMN's prime (oct/p), so the
+    # p subscripts by the column — its diagonal reads oct/pᵢ, and an off-diagonal zero tracks
+    # its column's prime, not its row (the matrix's d columns are the d domain primes)
+    assert on["cell:prescaling:primes:0:0"].unit == "oct/p₁"  # diagonal: log₂2 in oct/p₁
+    assert on["cell:prescaling:primes:1:1"].unit == "oct/p₂"  # diagonal: log₂3 in oct/p₂
+    assert on["cell:prescaling:primes:0:1"].unit == "oct/p₂"  # off-diagonal in prime-2 column
+    assert on["complexity:prime:0"].unit == "(C)/p₁"          # complexity map: (C) per prime
     # the unit is absent when units is off
     assert all(not c.unit for c in off.values())
 

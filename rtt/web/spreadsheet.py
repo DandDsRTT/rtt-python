@@ -2155,8 +2155,12 @@ def build(state, settings=None, collapsed=None,
         if not tile_open("prescaling", group):
             continue
         left = group_left[group]
-        u = cell_unit("prescaling", group)
         for c, vec in enumerate(prescale_vectors[group]):
+            # the prescaler over the primes is a d×d matrix whose columns ARE the domain
+            # primes, so each column's unit subscripts its p by that prime (oct/pᵢ) — like
+            # the mapping's /p denominator (and tval_row's primes rows). The other groups
+            # scale a vector set to plain octaves (no p), so there is nothing to subscript.
+            u = cell_unit("prescaling", group, prime=c if group == "primes" else None)
             for i in range(d):
                 value = prescaler[i] * vec[i]
                 cid = f"cell:prescaling:{group}:{i}:{c}"
