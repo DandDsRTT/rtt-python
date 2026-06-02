@@ -382,18 +382,20 @@ _CSS = f"""
    body — neither runs up alongside a frozen title. The strip can't ride the body's scroll via CSS
    (a left-frozen sticky row band needs the body itself to be the horizontal scroll container), so
    _FREEZE_JS translateX-syncs the strip to the body's horizontal scroll. The frozen regions are inset
-   _PAD from the pane's top-left; the body fills to the pane's right/bottom EDGES, so its scrollbars
-   sit flush there (no grey stranded outside them). render() sizes the pane _PAD larger than the body
-   content on the right/bottom too, so the board sits _PAD inside those flush edges — a grey margin on
-   all four sides, the scrollbars still at the very edge. The board (.rtt-gridcontent) holds the cells
-   at native coords shifted up by freeze_y (the strip's height), so a body cell lands at the same pane
-   position it always had. */
+   _PAD from the pane's top-left — that is the TOP and LEFT grey margin (outside the scroller, always
+   shown). The body fills to the pane's right/bottom EDGES, so its scrollbars sit flush there (no grey
+   stranded outside them); the RIGHT and BOTTOM margin is the body's own padding (padding:0 _PAD _PAD
+   0), which rides INSIDE the scroller so it shows past the last gridline even scrolled to the end —
+   sizing the pane larger would only show it until the board overflows. The board (.rtt-gridcontent)
+   holds the cells at native coords shifted up by freeze_y (the strip's height), so a body cell lands
+   at the same pane position it always had. */
 .rtt-colhead {{ position:absolute; top:{_PAD}px; left:{_PAD}px; right:0; z-index:4; overflow:hidden;
                background:#c0c0c0; box-sizing:border-box; border-bottom:1px solid transparent; }}
 .rtt-colhead-inner {{ position:absolute; top:0; left:0; will-change:transform; }}
 .rtt-corner {{ position:absolute; top:{_PAD}px; left:{_PAD}px; z-index:6; background:#c0c0c0;
               box-sizing:border-box; border-right:1px solid transparent; border-bottom:1px solid transparent; }}
-.rtt-gridbody {{ position:absolute; left:{_PAD}px; right:0; bottom:0; overflow:auto; }}
+.rtt-gridbody {{ position:absolute; left:{_PAD}px; right:0; bottom:0; overflow:auto;
+                padding:0 {_PAD}px {_PAD}px 0; }}
 /* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
    (the white wash bases), not the grey pane behind it */
 .rtt-gridcontent {{ position:relative; isolation:isolate; transition:width {_T}, height {_T}; }}
@@ -2111,14 +2113,13 @@ def index() -> None:
         # above. The strip (its inner is full grid width, translated horizontally by _FREEZE_JS) and
         # the corner keep native coords. gridbody drops below the strip (top = _PAD + fy).
         fx, fy = lay.freeze_x, lay.freeze_y
-        # the grid pane hugs the grid + a _PAD margin on EVERY side, so its grey backdrop shows past
-        # the gridlines all round (white beyond) rather than filling the window. The body still fills
-        # to the pane's right/bottom edges, so a scrolling grid's scrollbars sit flush there with no
-        # grey stranded outside them — the margin comes from sizing the PANE _PAD larger than the body
-        # content on each side, NOT from insetting the body. On the right the pane also clears the last
-        # column title's overhang (right_overhang: it renders unwrapped past the narrow interest column)
-        # so the long header shows instead of clipping. The CSS caps the pane at the window, past which
-        # the body scrolls.
+        # the grid pane is sized to enclose the grid + the column strip, a _PAD margin on every side,
+        # and the last column title's right overhang (right_overhang — the interest title renders
+        # unwrapped past its narrow column, so the pane widens to show it instead of clipping). Its
+        # grey backdrop then frames the gridlines all round, white beyond, rather than filling the
+        # window. The top/left margin is the frozen regions' _PAD inset; the right/bottom margin is the
+        # body's own scroll padding, so it survives scrolling to the end (see .rtt-gridbody). The CSS
+        # caps the pane at the window, past which the body scrolls.
         grid_pane.style(f"width:{lay.width + lay.right_overhang + 2 * _PAD}px; height:{lay.height + 2 * _PAD}px")
         board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
         colhead.style(f"height:{fy}px")

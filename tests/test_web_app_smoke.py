@@ -291,6 +291,19 @@ def test_titles_freeze_outside_or_sticky_within_the_body_scroller():
     assert _z(".rtt-cell") < _z(".rtt-colhead") < _z(".rtt-rowband") < _z(".rtt-corner")
 
 
+def test_grid_body_reserves_its_grey_margin_as_scroll_padding():
+    # the body fills to the pane's right/bottom EDGES so its scrollbars sit flush there (no grey
+    # stranded outside them). The _PAD grey margin past the gridlines must survive scrolling to the
+    # end, though: a margin from merely sizing the pane larger than the board vanishes once the board
+    # overflows and the body scrolls (the board's far edge reaches the flush pane edge at max scroll).
+    # So the body reserves the right/bottom margin as PADDING — it rides in the scrollable content and
+    # shows past the last gridline even at the scroll extreme, while the scrollbars stay flush. No
+    # top/left padding: those margins are structural (the body is already inset _PAD from the pane
+    # there, outside the scroller).
+    rule = _css_rule(".rtt-gridbody")
+    assert f"padding:0 {app._PAD}px {app._PAD}px 0" in rule  # top:0 right:PAD bottom:PAD left:0
+
+
 def test_shell_fixes_the_app_to_the_window_framed_by_a_white_margin():
     # The shell is position:fixed at a 6px inset from every window edge, so the app fills the window
     # exactly and the page itself never scrolls (the grid scrolls inside its own pane instead). The
