@@ -30,9 +30,9 @@ LABEL_W = 96  # row-label gutter width
 HEADER_H = 36  # column-header height — two text lines tall, so a multi-word title
 # stacks centered onto a second line (via explicit "\n" breaks in col_header, e.g.
 # "domain" / "primes"); single-word titles centre as one line
-BTN = 15  # px side of a domain +/− control — half the COL_W square mapping/prime cell
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
+BTN = TOGGLE  # a domain +/− control matches the fold toggle it now sits beside on the fan
 TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (off the edges and content)
 CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mockup —
 # ~0.2 of the cell height; the CSS .rtt-caption must use the same size)

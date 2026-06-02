@@ -722,14 +722,20 @@ _CSS = f"""
             align-items:center; justify-content:center; background:#fff; border:1px solid #888;
             border-radius:2px; padding:0 3px; color:#000; white-space:nowrap; overflow:hidden;
             font-family:'Cambria',Georgia,serif; }}
-/* the +/− controls are half the square mapping/prime cell, sharing its exact border */
-.rtt-btn {{ width:15px !important; min-width:15px !important; height:15px !important;
-           min-height:15px !important; background:#fff !important; border:{_CELL_BORDER} !important;
+/* the +/− controls now sit beside the fold toggles on the fan, so they match them: a small
+   (spreadsheet.BTN-sized) grey-on-white square with a light #bbb border that darkens on hover —
+   not the heavier black cell-border look. Explicit px, not 100%: the − is absolutely placed in a
+   larger hover zone, so it must size to the button, not fill the zone. */
+.rtt-btn {{ width:{spreadsheet.BTN}px !important; min-width:{spreadsheet.BTN}px !important;
+           height:{spreadsheet.BTN}px !important; min-height:{spreadsheet.BTN}px !important;
+           background:#fff !important; border:1px solid #bbb !important;
            border-radius:0 !important; padding:0 !important; box-shadow:none !important; }}
+.rtt-btn:hover {{ background:#ececec !important; }}
 /* center the glyph: Quasar's content box defaults to a tall line-height that
    overflowed the small square; pin it to the box so the flex centering can take over */
-.rtt-btn .q-btn__content {{ color:#000 !important; font-size:13px; line-height:1; min-height:0;
+.rtt-btn .q-btn__content {{ color:#666 !important; font-size:12px; line-height:1; min-height:0;
            font-family:'Cambria',Georgia,serif; }}
+.rtt-btn:hover .q-btn__content {{ color:#000 !important; }}
 /* the optimize button fills its cell (a normal rectangle hugging the word); its text is the
    same size as the optimization power number (the ∞ box, _CELL_FONT). It's a 3D button: a
    light-top/dark-bottom face with a crisp inset bevel (white highlight top-left, soft shadow
