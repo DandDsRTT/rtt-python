@@ -2809,5 +2809,16 @@ def build(state, settings=None, collapsed=None,
         cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
                  for cb in cells]
 
+    # Each column title renders unwrapped and centred on its gridline (see _title_w and the
+    # .rtt-colheader rule), so one wider than its content-hugging column overhangs it. Interior
+    # overhangs spill into the gaps over neighbours, but the LAST column's title spills past the
+    # grid's right edge — the narrow (empty) interest column's long "other intervals of interest"
+    # reaches well beyond total_w. Publish that reach so the renderer widens the grey pane to show
+    # the title rather than clip it. Computed from the final cells (after any blanking), so a mode
+    # that drops or empties the titles reports no overhang.
+    title_right = max((c.x + c.w / 2 + _title_w(c.text) / 2 for c in cells if c.kind == "colheader"),
+                      default=total_w)
+    right_overhang = max(0.0, title_right - total_w)
+
     return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells),
-                  freeze_x=node_edge, freeze_y=branch_top_y)
+                  freeze_x=node_edge, freeze_y=branch_top_y, right_overhang=right_overhang)

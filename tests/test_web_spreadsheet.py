@@ -38,6 +38,34 @@ def test_freeze_boundaries_sit_at_the_title_band_edges():
     assert lay.freeze_x == spreadsheet.LABEL_W + spreadsheet.GAP + spreadsheet.TOGGLE
 
 
+def test_layout_reports_the_rightmost_title_overhang():
+    # column titles render unwrapped and centred on their gridline, so one wider than its
+    # (content-hugging) column overhangs it. The last column's title spills past the grid's
+    # right edge: the empty "other intervals of interest" column is narrow, but its long title
+    # reaches well beyond total_w. The layout publishes that overhang so the renderer can widen
+    # the grey pane to SHOW the title rather than clip its trailing "…ls" (the clip the
+    # hug-to-content panes introduced). Titles never overhang the bottom, so only the right is
+    # reported.
+    lay = _layout()
+    rightmost = max(c.x + c.w / 2 + spreadsheet._title_w(c.text) / 2
+                    for c in lay.cells if c.kind == "colheader")
+    assert lay.right_overhang == rightmost - lay.width  # the interest title's reach past total_w
+    assert lay.right_overhang > 0  # it really does overhang (else there'd be nothing to fix)
+
+
+def test_no_title_overhang_reports_zero():
+    # when the rightmost title fits within the grid (nothing spills past the footprint's right
+    # edge), the layout reports no overhang and the pane carries only its plain margin — the
+    # clamp keeps a fitting title from reporting a NEGATIVE overhang that would shrink the pane
+    # below the grid. Hiding the long-titled interest column leaves "target intervals" last,
+    # whose title sits well within total_w.
+    lay = _with(interest=False)
+    rightmost = max(c.x + c.w / 2 + spreadsheet._title_w(c.text) / 2
+                    for c in lay.cells if c.kind == "colheader")
+    assert rightmost < lay.width  # no title reaches past the grid's right edge
+    assert lay.right_overhang == 0
+
+
 def _assert_freeze_partition(lay):
     # the frozen bands partition the board: column titles + their toggles lie wholly
     # above freeze_y, row titles + their toggles wholly left of freeze_x, the master

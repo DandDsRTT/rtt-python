@@ -19,6 +19,8 @@ from dataclasses import dataclass
 
 from rtt.web import service
 from rtt.web import settings as show_settings
+from rtt.web import spreadsheet
+from rtt.web.layout import Layout
 from rtt.web.service import TemperamentState
 
 INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))  # meantone, matching the original app
@@ -166,6 +168,19 @@ class Editor:
         if self.target_limit is not None:
             return f"{self.target_limit}-{self.target_family}"
         return self.target_family
+
+    def layout(self) -> Layout:
+        """Build the rendered spreadsheet model for the current document — the single
+        source of how the editor's state maps to the grid. The page render and the render
+        tests both go through here rather than re-spelling spreadsheet.build's arguments."""
+        return spreadsheet.build(
+            self.state, self.settings, self.collapsed, self.tuning_scheme, self.target_spec,
+            interest=self.interest_monzos, range_mode=self.range_mode,
+            pending_comma=self.pending_comma, held_monzos=self.held_monzos,
+            generator_tuning=self.effective_generator_tuning(),
+            target_override=self.target_override,
+            custom_prescaler=self.custom_prescaler,
+            optimize_locked=self.optimize_locked)
 
     @property
     def can_expand(self) -> bool:

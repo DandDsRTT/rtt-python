@@ -16,6 +16,8 @@ import nicegui.ui as ui
 import pytest
 from nicegui.testing import User
 
+from rtt.web.editor import Editor
+
 
 async def test_default_page_renders_without_error(user: User) -> None:
     await user.open("/")
@@ -411,17 +413,23 @@ def _px(el, prop: str) -> float:
     return float(el._style.get(prop).rstrip("px"))
 
 
-async def test_grid_pane_is_sized_to_hug_the_grid_plus_a_margin(user: User) -> None:
-    # the grey grid pane hugs the grid's footprint + a single _PAD (12px) margin at the top-left (the
-    # body fills to the pane's right/bottom edges, so its scrollbars sit there with no grey beyond
-    # them). render() sizes it from the layout: width = board (body) width + PAD, height = board height
-    # + the column strip + PAD.
+async def test_grid_pane_hugs_the_grid_with_a_margin_all_round(user: User) -> None:
+    # the grey grid pane hugs the grid + a _PAD (12px) margin on EVERY side, so its grey shows past
+    # the gridlines all round (white beyond). The body still fills to the pane's right/bottom edges
+    # (so a scrolling grid's scrollbars sit flush there, no grey stranded outside them) — the margin
+    # comes from sizing the PANE _PAD larger than the body content, not from insetting the body. On
+    # the right the pane also clears the last column's title overhang (it renders unwrapped past the
+    # narrow interest column), so the long header shows instead of clipping. width = board width +
+    # title overhang + 2·PAD; height = board + the column strip + 2·PAD.
     await user.open("/")
+    lay = Editor().layout()  # exactly the layout the fresh-page default render builds
     pane = next(iter(user.find(marker="gridpane").elements))
     board = next(iter(user.find(marker="board").elements))
     colhead = next(iter(user.find(marker="colhead").elements))
-    assert _px(pane, "width") == _px(board, "width") + 12            # grid width + a single 12px margin
-    assert _px(pane, "height") == _px(board, "height") + _px(colhead, "height") + 12  # body + strip + margin
+    assert _px(board, "width") == lay.width                          # the rendered board IS the footprint
+    assert lay.right_overhang > 0                                    # the interest title does overhang
+    assert _px(pane, "width") == _px(board, "width") + lay.right_overhang + 24   # footprint + overhang + both margins
+    assert _px(pane, "height") == _px(board, "height") + _px(colhead, "height") + 24  # body + strip + both margins
 
 
 async def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_fits(user: User) -> None:
