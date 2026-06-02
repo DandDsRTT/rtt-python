@@ -1250,8 +1250,8 @@ def index() -> None:
         render()
 
     def on_control_select(cid, value):
-        # the alt.-complexity choosers (box 𝐋 prescaler, box 𝒄 complexity norm, box 𝒘 weight
-        # slope): each swaps a scheme trait, re-weighting and retuning. The re-render echo is
+        # the weighting choosers (box 𝐋 prescaler, box 𝒄 complexity + norm, box 𝒘 weight slope):
+        # each swaps a scheme trait, re-weighting and retuning. The re-render echo is
         # ignored via the guards.
         if building[0] or value is None:
             return
@@ -1445,7 +1445,7 @@ def index() -> None:
                         .props(_select_props(cb.w)).classes("rtt-preselect")
                     _set_offlist_prompt(sel, scheme)
                     selects[cb.id] = sel
-            elif cb.kind == "control_select":  # an alt.-complexity chooser (prescaler / norm / weight slope)
+            elif cb.kind == "control_select":  # a weighting chooser (prescaler / complexity / norm / weight slope)
                 selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
                     .props(_select_props(cb.w)).classes("rtt-preselect")

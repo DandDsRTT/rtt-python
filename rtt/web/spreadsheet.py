@@ -1040,7 +1040,8 @@ def build(state, settings=None, collapsed=None,
     # box 𝒄 (the predefined-complexity dropdown + the q / dual(q) norm-power fields) shows with
     # WEIGHTING alone — the complexity norm is core to the weighting story, not an alt.-complexity
     # extra. alt_complexity (shelved) only widens the dropdown's OPTIONS (below); dual(q) within is
-    # gated separately on the all-interval scheme. Boxes 𝐋/𝒘 stay on show_alt_complexity.
+    # gated separately on the all-interval scheme. Box 𝒘's weight-slope chooser likewise shows with
+    # weighting (see slope_ctrl). Only box 𝐋 (the prescaler controls) stays on show_alt_complexity.
     _cbox_show = (show_weighting
                   and "col:targets" not in collapsed and "row:complexity" not in collapsed
                   and "tile:complexity:targets" not in collapsed)
@@ -1474,7 +1475,11 @@ def build(state, settings=None, collapsed=None,
     # caption + pad (the width is the targets column, floored to OPT_BOX_MIN_W).
     opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
                   + CAPTION_LINE + OPT_PAD_B) if opt_ctrl else 0)
-    slope_ctrl = (show_alt_complexity and "row:weight" not in collapsed
+    # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
+    # shows with WEIGHTING itself, not gated on the (shelved) alt. complexity extra. It is omitted
+    # in all-interval mode, where the weight is simplicity by construction, not a free choice.
+    slope_ctrl = (show_weighting and not service.is_all_interval(tuning_scheme)
+                  and "row:weight" not in collapsed
                   and col_open("targets") and "tile:weight:targets" not in collapsed)
     slope_extra = (RANGE_GAP + PRESELECT_H + CAPTION_LINE) if slope_ctrl else 0
     # Each of these nested controls lives at the bottom of one tile of its row, but its reserved
@@ -2302,7 +2307,7 @@ def build(state, settings=None, collapsed=None,
             tval_row("complexity", group, complexities[group])
     if row_open("weight"):  # weight is over the targets only, like damage (it scales them)
         tval_row("weight", "targets", target_weights)
-    if slope_ctrl:  # the alt.-complexity weight-slope chooser, nested at the bottom of box 𝒘,
+    if slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), nested at the bottom of the weight list,
         # with its "damage weight slope" caption beneath (the optimization box's caption pattern)
         py = tile_top["weight"] + tile_h["weight"] - slope_extra + RANGE_GAP
         cells.append(CellBox("control:slope", col_x["targets"], py, col_w["targets"], PRESELECT_H,

@@ -2019,11 +2019,11 @@ def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
     assert on["header:primes"].x <= ctrl.x
 
 
-def test_alt_complexity_captions_the_weight_slope_chooser():
+def test_weighting_captions_the_weight_slope_chooser():
     # the weight box's slope dropdown carries a "damage weight slope" caption beneath it,
     # like the optimization box's "optimization power" caption — single CAPTION_LINE band
-    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
-    assert "caption:slope" not in {c.id for c in _with(weighting=True, alt_complexity=False).cells}
+    on = {c.id: c for c in _with(weighting=True).cells}
+    assert "caption:slope" not in {c.id for c in _with(weighting=False).cells}
     cap = on["caption:slope"]
     assert cap.kind == "caption"
     assert cap.text == "damage weight slope"
@@ -2031,10 +2031,12 @@ def test_alt_complexity_captions_the_weight_slope_chooser():
     assert cap.y > on["control:slope"].y  # sits below the chooser
 
 
-def test_alt_complexity_adds_a_weight_slope_chooser_to_the_weight_box():
-    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
-    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
-    assert "control:slope" not in off  # no control unless alt. complexity is on
+def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box():
+    # the U/S/C chooser is core to box 𝒘, so it shows with weighting itself — not gated on the
+    # (shelved) alt. complexity feature the way box 𝐋's prescaler controls are
+    off = {c.id for c in _with(weighting=False).cells}
+    on = {c.id: c for c in _with(weighting=True).cells}
+    assert "control:slope" not in off  # no control unless weighting is on
     ctrl = on["control:slope"]
     assert ctrl.kind == "control_select"
     assert ctrl.text == "simplicity-weight"  # the default scheme's damage-weight slope
@@ -2042,6 +2044,14 @@ def test_alt_complexity_adds_a_weight_slope_chooser_to_the_weight_box():
     # it rides below the weight list (box 𝒘), spanning the targets column
     assert ctrl.y > on["weight:target:0"].y
     assert ctrl.x == on["header:targets"].x and ctrl.w == on["header:targets"].w
+
+
+def test_all_interval_omits_the_weight_slope_chooser():
+    # an all-interval scheme is simplicity-weighted by construction, so its weight is not a free
+    # choice — the U/S/C chooser (and its caption) are omitted, leaving the weight at simplicity
+    on = {c.id for c in _with(scheme="minimax-S", weighting=True).cells}
+    assert "control:slope" not in on
+    assert "caption:slope" not in on
 
 
 def test_alt_complexity_control_needs_weighting_and_the_primes_column():
