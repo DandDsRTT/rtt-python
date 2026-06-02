@@ -1523,7 +1523,7 @@ def test_prescaling_product_symbols_follow_the_active_prescaler():
     # the prescaler letter in every product symbol swaps with the scheme: log-prime → L,
     # prime → 𝑃, identity → 𝐼. So under identity the LC tile reads 𝐼C, the LT tile reads
     # 𝐼T, etc. — the column letter (C/T/H) stays put.
-    scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "identity")
+    scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "identity")
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "weighting": True, "optimization": True,
@@ -1541,7 +1541,7 @@ def test_prime_prescaler_renders_as_diag_p_not_the_projection_letter():
     # the prime (sopfr) prescaler is the guide's diag(𝒑), the diagonal matrix of primes —
     # NOT a bare 𝑃, which the guide reserves for the projection matrix (P = GM). "diag(" and
     # the trailing column letter render upright; only the prime list 𝒑 is bold-italic.
-    scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "prime")
+    scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "prime")
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "weighting": True, "optimization": True,
@@ -1812,25 +1812,15 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
     assert "control:norm" not in on
 
 
-def test_alt_complexity_hides_dual_q_outside_all_interval_mode():
-    # with the show-panel entry on, dual(q) is meaningful only when the scheme is all-interval (the
-    # dual norm enters only via the dual-norm inequality used to minimax over every interval). An
-    # all-interval scheme renders dual(q); a TILT-based scheme (the default) hides it.
-    on_all = {c.id for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True, all_interval=True).cells}
-    assert "control:dual" in on_all and "symbol:dual" in on_all and "caption:dual" in on_all
-    on_tilt = {c.id for c in _with(scheme="TILT minimax-S", weighting=True, alt_complexity=True, all_interval=True).cells}
-    assert "control:dual" not in on_tilt
-    assert "control:q" in on_tilt  # q itself still shows (the norm power is meaningful here)
-
-
-def test_dual_q_requires_the_all_interval_show_entry():
-    # the show-panel "all-interval" entry gates dual(q): even for an all-interval scheme, with the
-    # entry OFF box 𝒄 shows q but never dual(q). dual(q) surfaces only once the entry is on.
-    off = {c.id for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True).cells}  # entry off
-    assert "control:q" in off  # q itself is unaffected by the all-interval entry
-    assert not ({"control:dual", "symbol:dual", "caption:dual"} & off)
-    on = {c.id for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True, all_interval=True).cells}
-    assert {"control:dual", "symbol:dual", "caption:dual"} <= on
+def test_dual_q_shows_only_when_the_scheme_is_all_interval():
+    # dual(q) is gated on the all-interval CHECKBOX (is_all_interval), NOT the show-panel entry:
+    # an all-interval scheme renders dual(q); a target-based scheme hides it. The q field and the
+    # predefined-complexities dropdown always show with box 𝒄 — only the dual power is gated.
+    on_all = {c.id for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True).cells}
+    assert {"control:dual", "symbol:dual", "caption:dual"} <= on_all
+    on_tilt = {c.id for c in _with(scheme="TILT minimax-S", weighting=True, alt_complexity=True).cells}
+    assert not ({"control:dual", "symbol:dual", "caption:dual"} & on_tilt)
+    assert {"control:q", "control:complexity"} <= on_tilt  # q + dropdown show regardless of all-interval
 
 
 def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
@@ -1854,29 +1844,42 @@ def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
     assert on_ai["control:all_interval"].checked is True
 
 
-def test_all_interval_removes_the_redundant_size_and_error_target_tiles():
-    # all-interval (Tₚ = I) collapses each size/error list over the targets to its prime map
-    # (tempered 𝐚 → 𝒕, just 𝐨 → 𝒋, error 𝐞 → 𝒓), duplicating the prime-map row above it — so the
-    # three tiles are FULLY removed (cells AND their grey panel — never a blank box). A target-based
-    # scheme keeps them; the prime-map rows remain either way.
-    def ids(scheme):
-        lay = _with(scheme=scheme)
-        return {c.id for c in lay.cells} | {b.id for b in lay.blocks}  # cells + panels (blocks)
-    based, allint = ids("TILT minimax-S"), ids("minimax-S")
-    for row in ("tuning", "just", "retune"):
-        assert any(row in i and "target" in i for i in based), row       # present when target-based
-        assert not any(row in i and "target" in i for i in allint), row  # fully removed (no blank panel)
-        assert any(i.startswith(f"{row}:prime") for i in allint), row    # the prime-map row remains
+def test_all_interval_removes_all_redundant_target_tiles():
+    # all-interval (Tₚ = I) drops every target-column list that just re-expresses an existing column:
+    # mapped 𝑀T→𝑀, prescaled 𝐿T→𝐿, and the size/error lists 𝐚→𝒕, 𝐨→𝒋, 𝐞→𝒓. Each tile goes FULLY
+    # (its grey panel too — never a blank box). The kept target tiles — the prime-proxy list, the
+    # complexity, weight and damage — stay.
+    removed = ["block:mapped", "block:prescaling:targets", "block:tuning:targets",
+               "block:just:targets", "block:retune:targets"]
+    based = {b.id for b in _with(scheme="TILT minimax-S", weighting=True).blocks}  # weighting reveals prescaling/complexity/weight
+    allint = {b.id for b in _with(scheme="minimax-S", weighting=True).blocks}
+    for bid in removed:
+        assert bid in based, bid       # present when target-based
+        assert bid not in allint, bid  # fully removed (panel and all) when all-interval
+    assert {"block:vec:targets", "block:complexity:targets", "block:weight:targets",
+            "block:damage:targets"} <= allint  # the kept target tiles remain
 
 
 def test_all_interval_relabels_the_optimization_objective():
     # the optimization objective ⟪𝐝⟫ₚ is the minimized total damage; when all-interval that quantity
-    # IS the "retuning magnitude" ‖𝒓𝐿⁻¹‖ (the value already computes over the primes), so the symbol
-    # relabels. A target-based scheme keeps ⟪𝐝⟫ₚ.
+    # IS the retuning magnitude ‖𝒓𝐿⁻¹‖ at the dual norm power, so the symbol relabels with dual(q)
+    # as the norm subscript. A target-based scheme keeps ⟪𝐝⟫ₚ.
     based = {c.id: c for c in _with(scheme="TILT minimax-S", optimization=True).cells}
     assert based["optimization:objective:symbol"].text == "⟪𝐝⟫ₚ"
     allint = {c.id: c for c in _with(scheme="minimax-S", optimization=True).cells}
-    assert allint["optimization:objective:symbol"].text == "‖𝒓𝐿⁻¹‖"
+    expected = "‖𝒓𝐿⁻¹‖" + spreadsheet.NORM_SUB_OPEN + "dual(𝑞)" + spreadsheet.NORM_SUB_CLOSE
+    assert allint["optimization:objective:symbol"].text == expected
+
+
+def test_all_interval_relabels_the_target_list_as_prime_proxy():
+    # per the Guide, all-interval relabels the target list: symbol T → Tₚ, equivalence = I, and the
+    # name "Prime proxy target-interval list". A target-based scheme keeps T / "target interval list".
+    based = {c.id: c for c in _with(scheme="TILT minimax-S", symbols=True, equivalences=True).cells}
+    assert based["symbol:vectors:targets"].text == "T"  # no equivalence tail when target-based
+    assert based["caption:vectors:targets"].text == "target interval list"
+    allint = {c.id: c for c in _with(scheme="minimax-S", symbols=True, equivalences=True).cells}
+    assert allint["symbol:vectors:targets"].text == "Tₚ = I"  # symbol + equivalence tail
+    assert allint["caption:vectors:targets"].text == "Prime proxy target-interval list"
 
 
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
@@ -2387,7 +2390,7 @@ def test_math_expressions_under_prime_prescaler_drop_the_log():
     # form for the product tiles (LC/LD/LT/LH) is ``coeff · prime`` — no log₂. The bare
     # prescaler 𝐿's diagonal stays a prescalercell (the editable surface), so it shows
     # each prime as the plain value rather than a closed form.
-    scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "prime")
+    scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "prime")
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
                             {**settings.defaults(), "weighting": True, "math_expressions": True},
                             tuning_scheme=scheme)
@@ -2409,7 +2412,7 @@ def test_math_expressions_under_identity_prescaler_emit_no_closed_form():
     # prescaling cell stays as its plain tval. The bare prescaler 𝐿's diagonal is an
     # editable prescalercell regardless of scheme (the user types overrides here), so
     # it shows the plain value (1) too — same number, kinder kind.
-    scheme = service.scheme_with_prescaler(service.DEFAULT_TUNING_SCHEME, "identity")
+    scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "identity")
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
                             {**settings.defaults(), "weighting": True, "math_expressions": True},
                             tuning_scheme=scheme)

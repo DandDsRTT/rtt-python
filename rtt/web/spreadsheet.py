@@ -599,6 +599,15 @@ EQUIVALENCES = {
     ("retune", "held"): " = 𝟎",
 }
 
+# When all-interval (the checkbox is checked → Tₚ = I), the KEPT target-column tiles relabel to
+# their prime-proxy forms, per D&D's Guide. Keyed (row, col) → the all-interval symbol / caption /
+# equivalence, applied OVER SYMBOLS / CAPTIONS / EQUIVALENCES in build's caption loop. The target
+# list becomes the prime-proxy list Tₚ = I. (Extended as more tiles are specified; the redundant
+# tiles that get removed need no entry here.)
+ALL_INTERVAL_SYMBOLS = {("vectors", "targets"): "Tₚ"}
+ALL_INTERVAL_CAPTIONS = {("vectors", "targets"): "Prime proxy target-interval list"}
+ALL_INTERVAL_EQUIVALENCES = {("vectors", "targets"): " = I"}
+
 # Each box's "units:" annotation (the mockup's per-box unit line, shown below the name
 # caption when the general `units` toggle is on). The value is plain ASCII — a fraction
 # of base units (generators g, primes p, cents ¢) — which the view (app._units_html and
@@ -1197,11 +1206,13 @@ def build(state, settings=None, collapsed=None,
     # for a stray hardcoded column list to keep drawing a tile that no longer exists.
     declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in tiles}
     if service.is_all_interval(tuning_scheme):
-        # all-interval (Tₚ = I): each size/error list over the targets collapses to its prime map —
-        # tempered 𝐚 → 𝒕, just 𝐨 → 𝒋, error 𝐞 → 𝒓 — duplicating the prime-map row above it, so drop
-        # all three (the mockup's "get rid of this redundant box?" on each, resolved toward removal).
-        # Dropping them here clears their cells, brackets, captions, panels and fold toggles.
-        declared_tiles -= {("tuning", "targets"), ("just", "targets"), ("retune", "targets")}
+        # all-interval (Tₚ = I): every target-column list that just re-expresses an existing column
+        # collapses to a duplicate, so drop it — mapped 𝑀T → 𝑀, prescaled 𝐿T → 𝐿, and each size/error
+        # list to its prime map (tempered 𝐚 → 𝒕, just 𝐨 → 𝒋, error 𝐞 → 𝒓). The kept target tiles are
+        # the target list itself (Tₚ = I), the complexity ‖𝐿‖, and the weight/damage. Dropping a tile
+        # here clears its cells, bracket, caption, panel and fold toggle (never a blank box).
+        declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
+                           ("tuning", "targets"), ("just", "targets"), ("retune", "targets")}
 
     # Column bands left-to-right: (key, natural width, present, collapsible).
     # Each set-column belongs to a box toggle: generators, the domain primes and
@@ -2205,7 +2216,9 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
         cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
                              text="interval complexity norm power"))
-        if settings["all_interval"] and service.is_all_interval(tuning_scheme):
+        # the q field + dropdown above always show with box 𝒄; only dual(q) is gated — it is
+        # meaningful only when the scheme is all-interval (the all-interval checkbox is checked)
+        if service.is_all_interval(tuning_scheme):
             dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
             dual_x = dual_slot_x + (slot_w - COL_W) / 2
             dual_text = "2" if service.is_euclidean(tuning_scheme) else "∞"
@@ -2305,9 +2318,11 @@ def build(state, settings=None, collapsed=None,
         # value, the same COL_W cell as any damage value) over the symbol ⟪𝐝⟫ₚ
         cells.append(CellBox("optimization:objective", obj_x, content_top, COL_W, ROW_H, "tval",
                              text=service.cents(objective)))
-        # all-interval: the minimized objective IS the retuning magnitude ‖𝒓𝐿⁻¹‖ (the mockup's
-        # "becomes 'retuning magnitude'") — relabel the symbol; its value already computes over primes
-        obj_symbol = "‖𝒓𝐿⁻¹‖" if service.is_all_interval(tuning_scheme) else "⟪𝐝⟫ₚ"
+        # all-interval: the minimized objective IS the retuning magnitude ‖𝒓𝐿⁻¹‖ at the dual norm
+        # power (the mockup's "becomes 'retuning magnitude'") — relabel the symbol, with dual(q) as
+        # the norm subscript; its value already computes over the primes.
+        obj_symbol = (f"‖𝒓𝐿⁻¹‖{NORM_SUB_OPEN}dual(𝑞){NORM_SUB_CLOSE}"
+                      if service.is_all_interval(tuning_scheme) else "⟪𝐝⟫ₚ")
         cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, COL_W, SYMBOL_H,
                              "symbol", text=obj_symbol))
         # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — another COL_W gridded
@@ -2653,25 +2668,31 @@ def build(state, settings=None, collapsed=None,
     # (``𝑋 = L`` for log-prime, swapping to 𝐼/diag(𝒑) with the scheme); the product tiles
     # (LC/LD/LT/LH) carry the L as part of their SYMBOL instead (see prescaling_symbols
     # below) and don't print an "= …" line.
+    ai = service.is_all_interval(tuning_scheme)  # all-interval: kept target tiles use prime-proxy labels
     equivalences = {**EQUIVALENCES,
                     ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[service.damage_weight_slope(tuning_scheme)],
-                    ("prescaling", "primes"): f" = {_prescaler_letter}"}
+                    ("prescaling", "primes"): f" = {_prescaler_letter}",
+                    **(ALL_INTERVAL_EQUIVALENCES if ai else {})}
     for (rkey, ckey), name in CAPTIONS.items():
         if ckey == "interest" and not interest:
             continue
         if not tile_open(rkey, ckey):
             continue
+        if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:  # the prime-proxy name (per the Guide)
+            name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
         cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
         if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS:
             equiv = equivalences.get((rkey, ckey), "") if show_equiv else ""
             base_symbol = prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
+            if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
+                base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
             glyph = base_symbol if (show_symbols or equiv) else ""
             if glyph or equiv:
                 cells.append(CellBox(f"symbol:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
             cy += SYMBOL_H
         if show_captions:
             kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
-            underlines = ((name.index(kw), 1),) if kw else ()
+            underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
             # the caption spans the row's whole caption band (row_cap — the tallest wrapped
             # name in the row), and the CSS centres the text within it. So a one-line name
             # sits centred (half a blank line above and below) against a two-line sibling,
