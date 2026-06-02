@@ -2669,18 +2669,19 @@ def build(state, settings=None, collapsed=None,
 
     # the all-interval checkbox rides in the target control band, revealed by the show-panel
     # "all-interval" entry ALONE (not the preselects toggle): when the target chooser is shown it
-    # sits to the chooser's RIGHT (box-𝐋's checkbox-beside-dropdown layout, graying the chooser
+    # sits to the chooser's RIGHT (the box-𝐋 checkbox-beside-dropdown layout, graying the chooser
     # when checked); alone at the column's left otherwise. An 18px square over an "all-interval"
-    # caption, reflecting whether the scheme targets every interval (ticking it is wired in app.py).
+    # caption, centred on the chooser's control row, reflecting whether the scheme targets every
+    # interval (ticking it is wired in app.py).
     if settings["all_interval"] and tile_open("vectors", "targets"):
         t_top = ptext_band_y("vectors") + row_ptext["vectors"]
-        if show_preselects:  # ride to the right of the target chooser's titled box
-            t_box_w = _control_box_width(min(col_w["targets"], TARGET_PRESELECT_W),
-                                         "target interval set scheme")
-            check_x = col_x["targets"] + t_box_w + OPT_COL_GAP
+        ctrl_y = t_top + BOX_OUTER + BOX_INNER  # the control row, as control_box seats it
+        if show_preselects:  # ride to the right of the target chooser's box
+            dropdown_w = control_dims("targets", preselect_cap("target"), "target interval set scheme")[0]
+            check_x = col_x["targets"] + BOX_OUTER + dropdown_w + 2 * BOX_INNER + OPT_COL_GAP
         else:  # no chooser shown — the checkbox is the band's only control, at the column's left
-            check_x = col_x["targets"]
-        check_y = t_top + (BOX_PAD + BOX_TITLE_H + BOX_TITLE_GAP) + (PRESELECT_H - CHECK_SQUARE) / 2
+            check_x = col_x["targets"] + BOX_OUTER
+        check_y = ctrl_y + (PRESELECT_H - CHECK_SQUARE) / 2  # centre the square on the chooser's row
         cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, CHECK_SQUARE,
                              "control_check", text="",
                              checked=service.is_all_interval(tuning_scheme)))
