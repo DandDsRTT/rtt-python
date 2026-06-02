@@ -478,6 +478,20 @@ def test_every_option_square_renders_at_one_uniform_size():
     assert ".rtt-control-check .q-checkbox__label" not in app._CSS
 
 
+def test_checked_fill_insets_1_5px_so_it_centres_without_shifting():
+    # the checked square sits 1.5px inside the box — an 11px fill in the 14px interior, not 10px.
+    # The checkbox boxes land on HALF-pixel positions in this layout (e.g. a settings row at y=96.5
+    # seats its box at y=101.5), where an even (10px) fill's centre falls on a half-pixel and snap-
+    # rounds off-centre at 1x DPI — the "slightly toward one corner" look. An ODD (11px) fill is
+    # centred on the box centre, so any pixel rounding stays symmetric (it can only shrink/grow, never
+    # shift), and on the common half-pixel boxes its edges land on whole pixels (crisp). One shared
+    # inset drives the checked square, the mixed-master square, and the tuning-ranges radio fill.
+    for sel in (".q-checkbox__bg::after",
+                ".rtt-show-mixed .q-checkbox__bg::after",
+                ".rtt-rangeopt-on .rtt-rangebox::after"):
+        assert "inset:1.5px" in _css_rule(sel)
+
+
 def test_brace_is_one_filled_path_with_width_independent_end_curls():
     # the brace is ONE filled variable-width ribbon computed from the width — no
     # composite pieces (so no seams/overshoot). Only the arm length tracks the

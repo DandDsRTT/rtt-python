@@ -574,18 +574,21 @@ _CSS = f"""
 /* checked: ::after fills the box's interior in black. Two selectors (Quasar's truthy class
    + the standard aria-checked attribute) so the rule fires regardless of which Quasar
    version is in play. !important on every property is required because Quasar's stylesheets
-   set background:transparent !important on .q-checkbox__bg::after otherwise. */
+   set background:transparent !important on .q-checkbox__bg::after otherwise. The 1.5px inset
+   makes the fill ODD-sized (11px in the 14px interior): centred on the box centre, so pixel
+   rounding stays symmetric — it never snap-shifts off toward a corner the way an even 10px fill
+   does on the half-pixel box positions this layout produces (and on those it lands crisp). */
 .q-checkbox__inner--truthy .q-checkbox__bg::after,
 .q-checkbox[aria-checked="true"] .q-checkbox__bg::after {{
             content:"" !important; display:block !important; position:absolute !important;
-            inset:2px !important; background:#000 !important; border-radius:0 !important; }}
+            inset:1.5px !important; background:#000 !important; border-radius:0 !important; }}
 /* MIXED state for the select-all/none master: when some-but-not-all of its targets are on,
    render the inner square GREY (rather than black or empty) to convey the indeterminate
    third state. Applied via the .rtt-show-mixed class, toggled in render() based on
    any() && !all() over the implemented Show settings. */
 .rtt-show-mixed .q-checkbox__bg::after {{
             content:"" !important; display:block !important; position:absolute !important;
-            inset:2px !important; background:#888 !important; border-radius:0 !important; }}
+            inset:1.5px !important; background:#888 !important; border-radius:0 !important; }}
 /* each chooser's dropdown popup matches the field's Cambria text, with compact items */
 .rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
 /* compact items; the popup grows to max-content (see _select_props), widening past
@@ -644,7 +647,7 @@ _CSS = f"""
                 border:1px solid #555; background:#fff; box-sizing:border-box; position:relative; }}
 /* selected = a square "radio": the ring stays and a smaller filled square sits centred
    inside it (like a radio dot, but square) — not a solid fill */
-.rtt-rangeopt-on .rtt-rangebox::after {{ content:""; position:absolute; inset:2px; background:#000; }}
+.rtt-rangeopt-on .rtt-rangebox::after {{ content:""; position:absolute; inset:1.5px; background:#000; }}
 .rtt-rangelabel {{ font-family:'Cambria',Georgia,serif; font-size:10px; color:#000; white-space:nowrap; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
