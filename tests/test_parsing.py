@@ -87,8 +87,8 @@ def test_is_covariant_ebk(ebk, expected):
 
 
 # parseQuotientL (tests.m 199-204): parse a quotient (string, with synonym forms) to its
-# prime monzo(s), padded to the domain basis's prime dimension. The 5-limit cases use d = 3;
-# the nonstandard 2.9.7.11 basis has prime dimension 5, and 11/7 maps to its prime monzo.
+# prime vector(s), padded to the domain basis's prime dimension. The 5-limit cases use d = 3;
+# the nonstandard 2.9.7.11 basis has prime dimension 5, and 11/7 maps to its prime vector.
 @pytest.mark.parametrize(
     "text, domain_basis, expected",
     [

@@ -4,7 +4,7 @@ Each is a small, hand-picked menu the UI offers as a quick way to set one of the
 three things you actually *choose* (the rest of the grid is derived):
 
 * :data:`TEMPERAMENTS_BY_LIMIT` — named temperaments grouped by prime limit, each
-  given by its defining comma basis (monzos over the limit's primes). Loaded via
+  given by its defining comma basis (vectors over the limit's primes). Loaded via
   :func:`rtt.web.service.from_comma_basis`, so the mapping is the canonical dual;
   the sign/form of the commas is irrelevant (they span the same nullspace). Keyed
   as ``"limit:name"`` so the same name (e.g. Miracle) can appear at several limits.
@@ -53,7 +53,7 @@ def tuning_schemes(include_alternatives: bool) -> tuple[str, ...]:
 
 TARGET_SETS: tuple[str, ...] = ("TILT", "OLD")
 
-# prime limit -> ((name, comma basis), ...). A comma basis of nc monzos over the
+# prime limit -> ((name, comma basis), ...). A comma basis of nc vectors over the
 # limit's d primes makes a rank-(d - nc) temperament. Commas given as the standard
 # defining ones for each name (verified to temper out in test_web_presets).
 TEMPERAMENTS_BY_LIMIT: tuple[tuple[int, tuple[tuple[str, tuple[tuple[int, ...], ...]], ...]], ...] = (

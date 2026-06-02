@@ -129,7 +129,7 @@ VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
 # ROW_H row so neighbouring rows' brackets keep a clear gap (the enclosing
 # mapped-list [ ] is the tall exception and spans the whole matrix)
 MARK_INSET = 8  # inset of a mapped column's top/bottom mark, so it clears the rules
-SEP_W = 2  # width of a vertical rule between monzo columns (the renderer draws it
+SEP_W = 2  # width of a vertical rule between vector columns (the renderer draws it
 # as thick as a square bracket's main bar; this is just the cell it centres in)
 KET_INSET = 4  # inset (each side) of an intervals-of-interest ket box within its COL_W
 # slot: the interest column is a loose collection, not a matrix, so its boxes stand apart
@@ -960,7 +960,7 @@ def _bus_span(positions):
 
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
-          pending_comma=None, held_monzos=(), generator_tuning=None, target_override=None,
+          pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
           custom_prescaler=None, optimize_locked=False) -> Layout:
     if settings is None:
         settings = _default_settings()
@@ -1066,13 +1066,13 @@ def build(state, settings=None, collapsed=None,
     canon_mapping = service.canonical_mapping(state.mapping)  # M defactored + HNF (the form box)
     rc = len(canon_mapping)  # canonical rank (== r for a valid temperament)
     form_M = service.form_matrix(state.mapping)  # F: the generator form matrix (r×r), F·M = canonical
-    target_vectors = service.target_interval_monzos(targets, d, elements)  # k monzos, each d-tall
-    # held intervals: the optimization box's held-just constraints — user-edited monzos in the
+    target_vectors = service.target_interval_vectors(targets, d, elements)  # k vectors, each d-tall
+    # held intervals: the optimization box's held-just constraints — user-edited vectors in the
     # held column (like the intervals of interest). The tuning holds each exactly just, so
     # they are folded into service.tuning below. Present only with the optimization sub-control.
-    held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in held_monzos) if show_optimization else ()
+    held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in held_vectors) if show_optimization else ()
     nh = len(held)
-    held_ratios = service.comma_ratios(held, elements)  # monzo -> "num/den" (the shared renderer)
+    held_ratios = service.comma_ratios(held, elements)  # vector -> "num/den" (the shared renderer)
     # a frozen manual generator tuning (optimize lock off) drives the maps directly; otherwise
     # the scheme's optimum (holding the held intervals just). A stale tuning whose generator
     # count no longer matches the mapping (a rank change) falls back to the optimum.
@@ -1096,18 +1096,18 @@ def build(state, settings=None, collapsed=None,
     # not enter the nullity, the mapping, or the sizes — only the displayed column count.
     pending = list(pending_comma) if pending_comma is not None else None
     nc_shown = nc + (1 if pending is not None else 0)
-    # other intervals of interest: a user-built set held as monzos and edited like
-    # the comma basis (editable vector cells). Normalize each monzo to the current d
+    # other intervals of interest: a user-built set held as vectors and edited like
+    # the comma basis (editable vector cells). Normalize each vector to the current d
     # (pad/trim) so a domain change can't misalign them, then derive the ratios the
     # quantities row shows and the mapping/sizes the lower rows show. It carries no
     # damage row and contributes tiles only when populated, so an empty column adds no
     # panels or fold toggles — just its header and a single straight axis rule.
     interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in interest)
     mi = len(interest)
-    interest_ratios = service.comma_ratios(interest, elements)  # monzo -> "num/den" (shared renderer)
+    interest_ratios = service.comma_ratios(interest, elements)  # vector -> "num/den" (shared renderer)
     interest_mapped = service.mapped_intervals(state.mapping, interest_ratios, elements)
     interest_sizes = service.interval_sizes(tun, interest_ratios, elements)
-    # the complexity row norms each interval's prescaled monzo (𝒄): a covector over the
+    # the complexity row norms each interval's prescaled vector (𝒄): a covector over the
     # domain elements (each element's complexity, log₂ of it for the default log-prime
     # norm), a list over the comma / target / interest interval sets.
     complexities = {
@@ -1686,7 +1686,7 @@ def build(state, settings=None, collapsed=None,
     def canon_top(i):  # the y of canonical-mapping row i (the r stacked canonical maps)
         return row_y["canon"] + i * ROW_H
 
-    def vec_top(p):  # the y of monzo component p in the d-tall interval-vectors row
+    def vec_top(p):  # the y of vector component p in the d-tall interval-vectors row
         return row_y["vectors"] + p * ROW_H
 
     cells: list[CellBox] = []
@@ -1823,7 +1823,7 @@ def build(state, settings=None, collapsed=None,
                 cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
         if tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
             for i in range(nh):
-                # the derived ratio (read-only, from the editable monzo) heads each column
+                # the derived ratio (read-only, from the editable vector) heads each column
                 cells.append(CellBox(f"held:{i}", held_left(i), qy, COL_W, ROW_H, "commaratio", text=held_ratios[i], comma=i))
                 # each held interval carries its own − (a hover affordance over its header)
                 cells.append(CellBox(f"held_minus:{i}", held_left(i), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "held_minus", comma=i))
@@ -1833,14 +1833,14 @@ def build(state, settings=None, collapsed=None,
             cells.append(CellBox("held_plus", ctrl_x["held"], qy + (ROW_H - BTN) // 2, BTN, BTN, "held_plus"))
         if tile_open("quantities", "interest"):  # the user's other intervals of interest
             for i in range(mi):
-                # the derived ratio (read-only, from the monzo) heads each column, like a comma's
+                # the derived ratio (read-only, from the vector) heads each column, like a comma's
                 cells.append(CellBox(f"interest:{i}", interest_left(i), qy, COL_W, ROW_H, "commaratio", text=interest_ratios[i], comma=i))
                 # every interval carries its own − (a hover affordance over its header):
                 # any one is removable, unlike the domain/comma last-only −
                 cells.append(CellBox(f"interest_minus:{i}", interest_left(i), qy - MINUS_REVEAL_H, COL_W, MINUS_REVEAL_H + ROW_H, "interest_minus", comma=i))
         # the + rides col_open, not tile_open: an empty-but-open interest column declares
         # no tile yet, but must still show its + so the first interval can be added (a blank
-        # 1/1 — a zero monzo — to edit in the vectors row). With intervals present ctrl_x
+        # 1/1 — a zero vector — to edit in the vectors row). With intervals present ctrl_x
         # seats it inside the tile like the domain/comma +; empty, it centres on the gridline.
         if col_open("interest") and row_open("quantities"):
             cells.append(CellBox("interest_plus", ctrl_x["interest"], qy + (ROW_H - BTN) // 2, BTN, BTN, "interest_plus"))
@@ -1890,10 +1890,10 @@ def build(state, settings=None, collapsed=None,
                 for j in range(len(form_M)):
                     cells.append(CellBox(f"cell:form:{i}:{j}", gen_left(j), canon_top(i), COL_W, ROW_H, "formcell", text=str(form_M[i][j])))
 
-    # interval-vectors row: each column's intervals as monzos (d-tall columns over
+    # interval-vectors row: each column's intervals as vectors (d-tall columns over
     # the domain primes), on the same prime/comma/target axes as the quantities row.
-    # The comma basis is the editable raw monzos (the mapping's dual); the targets
-    # become a d x k matrix of monzo columns.
+    # The comma basis is the editable raw vectors (the mapping's dual); the targets
+    # become a d x k matrix of vector columns.
     if row_open("vectors"):
         # the domain basis lists the interval-vectors' rows: the d primes as boxed
         # COL_W squares (the same the quantities row heads its columns with) stacked
@@ -1916,11 +1916,11 @@ def build(state, settings=None, collapsed=None,
                     v = pending[p]
                     cells.append(CellBox(f"cell:comma:{p}:{nc}", comma_left(nc), vec_top(p), COL_W, ROW_H, "commacell",
                                          text="" if v is None else str(v), prime=p, comma=nc, pending=True, unit=cell_unit("vectors", "commas", prime=p)))
-        if tile_open("vectors", "targets"):  # the target interval list as EDITABLE monzo columns
+        if tile_open("vectors", "targets"):  # the target interval list as EDITABLE vector columns
             for j in range(k):                # (a hybrid input, like the comma basis): typing a
                 for p in range(d):            # column overrides the target set with those intervals
                     cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "targetcell", text=str(target_vectors[j][p]), prime=p, comma=j, unit=cell_unit("vectors", "targets", prime=p)))
-        if tile_open("vectors", "held"):  # the held intervals as editable monzos, like the intervals of interest
+        if tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
             for i in range(nh):
                 for p in range(d):
                     cells.append(CellBox(f"cell:held:{p}:{i}", held_left(i), vec_top(p), COL_W, ROW_H, "heldcell", text=str(held[i][p]), prime=p, comma=i, unit=cell_unit("vectors", "held", prime=p)))
@@ -1928,7 +1928,7 @@ def build(state, settings=None, collapsed=None,
             for i in range(r):
                 for p in range(d):
                     cells.append(CellBox(f"cell:vec:detempering:{i}:{p}", detempering_left(i), vec_top(p), COL_W, ROW_H, "vec", text=str(detempering_vectors[i][p]), unit=cell_unit("vectors", "detempering", prime=p)))
-        if tile_open("vectors", "interest"):  # the user's intervals of interest: editable monzos, like the comma basis
+        if tile_open("vectors", "interest"):  # the user's intervals of interest: editable vectors, like the comma basis
             for i in range(mi):
                 for p in range(d):
                     # inset within the COL_W slot (centred) so each ket is its own box with a
@@ -2356,7 +2356,7 @@ def build(state, settings=None, collapsed=None,
         # the interest mapped images stand alone (no outer [ … ]), mirroring the vectors row
         if nh and tile_open("mapping", "held"):  # held mapped list, like the targets / interest
             bracket("hmapped", LIST_BRACKETS, "held", row_y["mapping"], r * ROW_H, fit=True)
-    if row_open("vectors"):  # each group is a list of monzos: a [ ] spanning the d components
+    if row_open("vectors"):  # each group is a list of vectors: a [ ] spanning the d components
         for group in ("commas", "targets"):
             if tile_open("vectors", group):
                 bracket(f"vec:{group}", LIST_BRACKETS, group, row_y["vectors"], d * ROW_H, fit=True)
@@ -2797,8 +2797,8 @@ def build(state, settings=None, collapsed=None,
 
     # a matrix tile (the primes mapping and its canonical forms) is enclosed by a top
     # bracket + bottom curly brace spanning its whole column: the brace marks generator
-    # coordinates, so it's the right close for the mapping but not for raw monzos or
-    # prescaled vectors (those use per-column marks via monzo_list_marks). ``bid`` keeps
+    # coordinates, so it's the right close for the mapping but not for raw vectors or
+    # prescaled vectors (those use per-column marks via vector_list_marks). ``bid`` keeps
     # each frame's ids stable so two framed rows over the same column never collide.
     def matrix_frame(rkey, ckey, bid, foot="ebkbrace"):
         # The spanning frame hugs the CELL matrix — content_box, exactly as the per-row
@@ -2826,18 +2826,18 @@ def build(state, settings=None, collapsed=None,
     matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle")
     # the 𝐿·basis product matrices (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile use a
     # COLUMN-WISE construction instead — per-column ket ``[ … ⟩`` marks with outer ``[ … ]``
-    # left/right brackets (or no outer wrap for interest). See the monzo_list_marks +
+    # left/right brackets (or no outer wrap for interest). See the vector_list_marks +
     # bracket calls further below.
 
-    # a matrix of monzo columns: vertical rules separate the columns, and each is
+    # a matrix of vector columns: vertical rules separate the columns, and each is
     # marked top + bottom — inset so they stop short of the rules. ``top`` and ``foot``
     # pick the per-column shapes: a tempered/mapped column (generator coords) takes the
-    # default ``[ ... }`` (ebktop + ebkbrace curly close); a raw (untempered) monzo or a
+    # default ``[ ... }`` (ebktop + ebkbrace curly close); a raw (untempered) vector or a
     # prescaled vector is a ket, closing with the angle ⟩ (ebkangle) instead — ``[ ... ⟩``.
     # ``separators=False`` drops the dividing rules: for a bordered grid (the comma
     # basis — its own cell borders already divide the columns) or for the standalone
     # columns of the intervals-of-interest collection (which isn't a matrix at all).
-    def monzo_list_marks(rkey, name, ckey, left, n_cols, top="ebktop", foot="ebkbrace", separators=True, pending_col=-1):
+    def vector_list_marks(rkey, name, ckey, left, n_cols, top="ebktop", foot="ebkbrace", separators=True, pending_col=-1):
         if not tile_open(rkey, ckey):
             return
         mark_w = COL_W - 2 * MARK_INSET
@@ -2851,38 +2851,38 @@ def build(state, settings=None, collapsed=None,
         for c in range(1, n_cols):  # a rule on each interior column boundary
             cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, row_y[rkey], SEP_W, row_h[rkey], "vbar"))
 
-    monzo_list_marks("mapping", "mapped_comma", "commas", comma_left, nc)
-    monzo_list_marks("mapping", "mapped_detempering", "detempering", detempering_left, r)
-    monzo_list_marks("mapping", "mapped", "targets", target_left, k)
+    vector_list_marks("mapping", "mapped_comma", "commas", comma_left, nc)
+    vector_list_marks("mapping", "mapped_detempering", "detempering", detempering_left, r)
+    vector_list_marks("mapping", "mapped", "targets", target_left, k)
     # the interest column's mapped images stand alone — no separator rules between columns
-    monzo_list_marks("mapping", "imapped", "interest", interest_left, mi, separators=False)
-    monzo_list_marks("mapping", "hmapped", "held", held_left, nh)
-    # the interval-vectors row holds raw (untempered) monzos, so every column is a
+    vector_list_marks("mapping", "imapped", "interest", interest_left, mi, separators=False)
+    vector_list_marks("mapping", "hmapped", "held", held_left, nh)
+    # the interval-vectors row holds raw (untempered) vectors, so every column is a
     # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
     # (commacell), so it skips the separator rules (its cell borders divide the columns);
     # nc_shown includes the pending draft column so it gets its ket marks too. The
     # interest column's intervals likewise stand alone (no separators between columns).
-    monzo_list_marks("vectors", "vec:commas", "commas", comma_left, nc_shown, foot="ebkangle", separators=False,
+    vector_list_marks("vectors", "vec:commas", "commas", comma_left, nc_shown, foot="ebkangle", separators=False,
                      pending_col=(nc if pending is not None else -1))
-    monzo_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
-    monzo_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
-    monzo_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
-    monzo_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
+    vector_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
+    vector_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
+    vector_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
+    vector_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
     # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
     # Every 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile is a matrix of prescaled
     # VECTORS, so each column is a ket ``[ … ⟩`` — top = ebktop (square open ⌐), foot =
-    # ebkangle (angle/ket foot ∨) — the default monzo_list_marks shape (no overrides). The
+    # ebkangle (angle/ket foot ∨) — the default vector_list_marks shape (no overrides). The
     # bare prescaler 𝐿 is the exception: it has NO per-column marks (its EBK is mapping-
     # style — see the matrix_frame + per-row ⟨ … ] bracket calls above).
     #
     # Separators between columns are drawn for 𝐿T and 𝐿H per the mockup; the 𝐿C / 𝐿D tiles
     # keep their columns spaced without dividing rules. Interest stays standalone (no outer
     # wrap, no separators).
-    monzo_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkangle", separators=False)
-    monzo_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkangle", separators=False)
-    monzo_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkangle", separators=True)
-    monzo_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkangle", separators=True)
-    monzo_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
+    vector_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkangle", separators=False)
+    vector_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkangle", separators=False)
+    vector_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkangle", separators=True)
+    vector_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkangle", separators=True)
+    vector_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
 
     # a per-tile fold toggle inset into each content tile's top-left corner: it
     # sits in the head strip reserved above the content, TOGGLE_INSET in from the

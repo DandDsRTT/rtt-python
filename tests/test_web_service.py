@@ -113,7 +113,7 @@ def test_generators_as_ratios():
 
 def test_generators_over_a_nonstandard_domain_multiply_out_the_basis():
     # Barbados (2.3.13/5): its detempering generators are 2/1 and the ~15/13 neutral
-    # second — read over the basis, not as prime monzos
+    # second — read over the basis, not as prime vectors
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     assert service.generators(state.mapping, domain_basis=state.domain_basis) == ("2/1", "15/13")
 
@@ -166,15 +166,15 @@ def test_held_intervals_come_from_the_tuning_scheme():
     assert service.held_intervals("held-octave minimax-ES", 3) == ("2/1",)
 
 
-def test_comma_ratios_renders_each_comma_monzo_as_a_ratio():
+def test_comma_ratios_renders_each_comma_vector_as_a_ratio():
     # the comma basis as ratio strings, mirroring service.generators for the maps
     assert service.comma_ratios(((4, -4, 1),)) == ("80/81",)  # the syntonic comma, as-is
     assert service.comma_ratios(((4, -4, 1), (0, 0, 0))) == ("80/81", "1/1")
 
 
 def test_comma_ratios_over_a_nonstandard_domain_multiply_out_the_basis():
-    # the comma monzo (2 -3 2) is over the basis 2.3.13/5, so its ratio is
-    # 2^2·3^-3·(13/5)^2 = 676/675 (the Barbados comma) — not the prime-monzo reading 100/27
+    # the comma vector (2 -3 2) is over the basis 2.3.13/5, so its ratio is
+    # 2^2·3^-3·(13/5)^2 = 676/675 (the Barbados comma) — not the prime-vector reading 100/27
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     assert service.comma_ratios(state.comma_basis, domain_basis=state.domain_basis) == ("676/675",)
 
@@ -185,7 +185,7 @@ def test_mapped_intervals():
 
 
 def test_mapped_intervals_over_a_nonstandard_domain_express_in_the_basis():
-    # mapping the basis elements (unit monzos over 2.3.13/5) through M reproduces M itself,
+    # mapping the basis elements (unit vectors over 2.3.13/5) through M reproduces M itself,
     # which only holds if the ratios are expressed in the nonprime basis
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     mapped = service.mapped_intervals(
@@ -229,19 +229,19 @@ def test_canonical_comma_basis_defactors_and_canonicalizes():
     assert service.canonical_comma_basis([[4, -4, 1]]) == ((4, -4, 1),)
 
 
-def test_target_interval_monzos():
-    # the interval-vector (monzo) form of each target over the 2.3.5 domain
-    monzos = service.target_interval_monzos(("2/1", "3/2", "5/4", "6/5"), 3)
-    assert monzos == ((1, 0, 0), (-1, 1, 0), (-2, 0, 1), (1, 1, -1))
+def test_target_interval_vectors():
+    # the interval-vector form of each target over the 2.3.5 domain
+    vectors = service.target_interval_vectors(("2/1", "3/2", "5/4", "6/5"), 3)
+    assert vectors == ((1, 0, 0), (-1, 1, 0), (-2, 0, 1), (1, 1, -1))
 
 
-def test_target_interval_monzos_over_a_nonstandard_domain():
-    # the basis elements of 2.3.13/5 are the identity monzos over that basis
+def test_target_interval_vectors_over_a_nonstandard_domain():
+    # the basis elements of 2.3.13/5 are the identity vectors over that basis
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    monzos = service.target_interval_monzos(
+    vectors = service.target_interval_vectors(
         ("2/1", "3/1", "13/5"), state.d, domain_basis=state.domain_basis
     )
-    assert monzos == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+    assert vectors == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
 
 
 def test_tilt_target_interval_set_is_the_domains_tilt():
@@ -267,9 +267,9 @@ def test_target_interval_set_filters_to_a_nonstandard_subgroup():
     targets = service.target_interval_set("TILT", state.domain_basis)
     assert "5/4" not in targets and "7/3" not in targets
     assert "3/2" in targets and "13/5" in targets
-    # every survivor is expressible as an integer monzo over the (nonprime) basis
-    monzos = service.target_interval_monzos(targets, state.d, domain_basis=state.domain_basis)
-    assert len(monzos) == len(targets)
+    # every survivor is expressible as an integer vector over the (nonprime) basis
+    vectors = service.target_interval_vectors(targets, state.d, domain_basis=state.domain_basis)
+    assert len(vectors) == len(targets)
 
 
 def test_old_target_interval_set_is_the_odd_limit_diamond():
@@ -350,7 +350,7 @@ def test_interval_sizes_project_a_set_through_the_tuning():
 def test_interval_sizes_over_a_nonstandard_domain_express_intervals_in_the_basis():
     import pytest
 
-    # over 2.3.13/5 a basis element is a unit monzo, so its tempered/just size must equal
+    # over 2.3.13/5 a basis element is a unit vector, so its tempered/just size must equal
     # the corresponding map entry — only true if the ratio is expressed in the (nonprime)
     # basis, not parsed over standard primes (where 13/5 would lose its 13)
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
@@ -387,12 +387,12 @@ def test_interval_weights_of_the_empty_set_are_empty():
     assert service.interval_weights([[1, 1, 0], [0, 1, 4]], "minimax-S", ()) == ()
 
 
-def test_interval_complexities_norm_each_intervals_prescaled_monzo():
+def test_interval_complexities_norm_each_intervals_prescaled_vector():
     import pytest
 
     mapping = [[1, 1, 0], [0, 1, 4]]  # meantone over 2.3.5
     ratios = ("2/1", "3/2", "5/4")
-    # default log-prime taxicab complexity: sum of |monzo[i]| * log2(prime_i).
+    # default log-prime taxicab complexity: sum of |vector[i]| * log2(prime_i).
     # Independent of the damage slope (slope weights damage; complexity is the norm itself).
     expected = (1.0, 2.585, 4.322)
     assert service.interval_complexities(mapping, "minimax-S", ratios) == pytest.approx(expected, abs=1e-3)
@@ -600,11 +600,11 @@ def test_plain_text_basis_and_ratio_quantities():
     assert ("quantities", "targets") not in pt
 
 
-def test_plain_text_interval_vectors_are_monzo_lists():
-    # the interval-vectors row shows each basis as a list of monzos (close ⟩),
+def test_plain_text_interval_vectors_are_vector_lists():
+    # the interval-vectors row shows each basis as a list of vectors (close ⟩),
     # wrapped in an outer [ … ]
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
-    assert pt[("vectors", "targets")].startswith("[[1 0 0⟩ [0 1 0⟩ [-1 1 0⟩")  # target monzos
+    assert pt[("vectors", "targets")].startswith("[[1 0 0⟩ [0 1 0⟩ [-1 1 0⟩")  # target vectors
     assert ("vectors", "primes") not in pt  # the domain-basis identity is deferred to identity_objects
 
 
@@ -658,8 +658,8 @@ def test_plain_text_commas_column_mirrors_the_grid():
     def cents(vals):
         return " ".join(f"{v:.3f}" for v in vals)
 
-    # the comma basis (the editable monzo matrix) lives in the interval-vectors row,
-    # a list of monzos wrapped in an outer [ … ]
+    # the comma basis (the editable vector matrix) lives in the interval-vectors row,
+    # a list of vectors wrapped in an outer [ … ]
     assert pt[("vectors", "commas")] == "[[4 -4 1⟩]"
     # the mapping row's commas tile is the mapped comma basis — every comma vanishes,
     # shown in generator coords (close })
@@ -682,7 +682,7 @@ def test_plain_text_held_column_mirrors_the_grid():
     def cents(vals):
         return " ".join(f"{v:.3f}" for v in vals)
 
-    # the held interval basis lives in the interval-vectors row (monzos, close ⟩)
+    # the held interval basis lives in the interval-vectors row (vectors, close ⟩)
     assert pt[("vectors", "held")] == "[[-1 1 0⟩]"
     # mapped into generator coords (close }) — the fifth is one generator
     assert pt[("mapping", "held")] == "[[0 1}]"
@@ -691,7 +691,7 @@ def test_plain_text_held_column_mirrors_the_grid():
     assert pt[("just", "held")] == f"[{cents(sizes.just)}]"
     assert pt[("retune", "held")] == f"[{cents(sizes.errors)}]"
     assert abs(float(pt[("retune", "held")].strip("[]"))) < 1e-3  # held just ⇒ no error
-    # the prescaling row over the held basis: 𝐿 applied to each held monzo (like the comma
+    # the prescaling row over the held basis: 𝐿 applied to each held vector (like the comma
     # column's 𝐿·C). The fifth 3/2 = [-1, 1, 0] prescaled by log-prime 𝐿 = [-1, 1.585, 0].
     # The 𝐿·basis products (𝐿H here, 𝐿C / 𝐿D / 𝐿T elsewhere) are matrices of prescaled
     # VECTORS, so each column is a ket ``[ … ⟩`` inside the symmetric outer ``[ … ]``. (The
@@ -739,7 +739,7 @@ def test_plain_text_weighting_rows_mirror_the_grid():
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
     pt = service.plain_text_values(state)
     # complexity: a covector ⟨ … ] over the primes (their log-prime complexities), a
-    # list [ … ] over the commas (the comma's complexity is its prescaled monzo's norm)
+    # list [ … ] over the commas (the comma's complexity is its prescaled vector's norm)
     assert pt[("complexity", "primes")] == "⟨1.000 1.585 2.322]"
     assert pt[("complexity", "commas")] == "[12.662]"
     assert pt[("complexity", "targets")].startswith("[") and pt[("complexity", "targets")].endswith("]")
@@ -758,7 +758,7 @@ def test_plain_text_over_a_nonstandard_domain_uses_the_basis():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     pt = service.plain_text_values(state)
     assert pt[("quantities", "primes")] == "2.3.13/5"
-    assert pt[("vectors", "commas")] == "[[2 -3 2⟩]"  # the comma monzo, basis-relative
+    assert pt[("vectors", "commas")] == "[[2 -3 2⟩]"  # the comma vector, basis-relative
     tun = service.tuning(state.mapping, domain_basis=state.domain_basis)
     cents = " ".join(f"{v:.3f}" for v in tun.tuning_map)
     assert pt[("tuning", "primes")] == f"⟨{cents}]"

@@ -414,13 +414,13 @@ def test_cannot_shrink_below_one_dimension():
 
 def test_interest_intervals_add_edit_remove():
     editor = Editor()
-    assert editor.interest_monzos == []  # starts empty
+    assert editor.interest_vectors == []  # starts empty
     editor.add_interest()
-    assert editor.interest_monzos == [(0, 0, 0)]  # a blank 1/1 (zero monzo) at the current d
-    editor.set_interest_monzos([[-1, 1, 0], [0, 0, 0]])  # edit it to 3/2 and add a second
-    assert editor.interest_monzos == [(-1, 1, 0), (0, 0, 0)]
+    assert editor.interest_vectors == [(0, 0, 0)]  # a blank 1/1 (zero vector) at the current d
+    editor.set_interest_vectors([[-1, 1, 0], [0, 0, 0]])  # edit it to 3/2 and add a second
+    assert editor.interest_vectors == [(-1, 1, 0), (0, 0, 0)]
     editor.remove_interest(1)
-    assert editor.interest_monzos == [(-1, 1, 0)]
+    assert editor.interest_vectors == [(-1, 1, 0)]
 
 
 def test_interest_intervals_changes_are_undoable():
@@ -429,11 +429,11 @@ def test_interest_intervals_changes_are_undoable():
     editor = Editor()
     editor.add_interest()
     assert editor.can_undo is True  # adding an interval of interest is an undoable change
-    editor.set_interest_monzos([[-1, 1, 0]])  # edit it to 3/2
+    editor.set_interest_vectors([[-1, 1, 0]])  # edit it to 3/2
     editor.undo()
-    assert editor.interest_monzos == [(0, 0, 0)]  # undo reverts the edit (back to the blank)
+    assert editor.interest_vectors == [(0, 0, 0)]  # undo reverts the edit (back to the blank)
     editor.undo()
-    assert editor.interest_monzos == []  # ...then the add
+    assert editor.interest_vectors == []  # ...then the add
 
 
 def test_try_edit_mapping_text_applies_a_valid_ebk_map():
@@ -566,7 +566,7 @@ def test_set_tuning_scheme_clears_a_manual_generator_tuning_override():
     assert editor.displayed_tuning_scheme_name == "minimax-S"
 
 
-def test_set_target_override_text_and_monzos():
+def test_set_target_override_text_and_vectors():
     editor = Editor()
     # typing a vector list overrides the target set with those intervals, stored as ratios
     assert editor.set_target_override_text("[1 0 0⟩ [-1 1 0⟩") is True
@@ -575,8 +575,8 @@ def test_set_target_override_text_and_monzos():
     # junk is rejected, leaving the override untouched
     assert editor.set_target_override_text("garbage") is False
     assert editor.target_override == ("2/1", "3/2")
-    # editing the monzo grid sets the override from the typed columns (2^2 = 4/1, 5^1 = 5/1)
-    editor.set_target_override_monzos([[2, 0, 0], [0, 0, 1]])
+    # editing the vector grid sets the override from the typed columns (2^2 = 4/1, 5^1 = 5/1)
+    editor.set_target_override_vectors([[2, 0, 0], [0, 0, 1]])
     assert editor.target_override == ("4/1", "5/1")
 
 
@@ -712,7 +712,7 @@ def test_serialize_load_round_trips_the_whole_document():
     editor.edit_mapping([[1, 0, -4], [0, 1, 4]])
     editor.set_tuning_scheme("destretched-octave minimax-ES")
     editor.set_target_spec("9-OLD")
-    editor.set_interest_monzos([[-1, 1, 0]])
+    editor.set_interest_vectors([[-1, 1, 0]])
     editor.add_held()
     editor.set_range_mode("tradeoff")
     editor.set_show("charts", True)
@@ -725,8 +725,8 @@ def test_serialize_load_round_trips_the_whole_document():
     # the full target-based scheme round-trips (the chosen 9-OLD family is baked into its prefix)
     assert restored.tuning_scheme == "9-OLD destretched-octave minimax-ES"
     assert restored.target_spec == "9-OLD"
-    assert restored.interest_monzos == [(-1, 1, 0)]
-    assert restored.held_monzos == [(0, 0, 0)]
+    assert restored.interest_vectors == [(-1, 1, 0)]
+    assert restored.held_vectors == [(0, 0, 0)]
     assert restored.range_mode == "tradeoff"
     assert restored.settings["charts"] is True
     assert "col:commas" not in restored.collapsed

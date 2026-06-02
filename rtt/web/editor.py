@@ -41,8 +41,8 @@ class _Doc:
     tuning_scheme: object  # str (a named scheme) | TuningSchemeSpec (a control-refined one)
     target_family: str
     target_limit: int | None
-    interest_monzos: tuple[tuple[int, ...], ...]
-    held_monzos: tuple[tuple[int, ...], ...]
+    interest_vectors: tuple[tuple[int, ...], ...]
+    held_vectors: tuple[tuple[int, ...], ...]
     range_mode: str
     optimize_locked: bool
     generator_tuning: tuple[float, ...] | None
@@ -73,8 +73,8 @@ def _initial_doc() -> _Doc:
         tuning_scheme=f"{service.DEFAULT_TARGET_SPEC} {service.DEFAULT_TUNING_SCHEME}",
         target_family=service.DEFAULT_TARGET_SPEC,
         target_limit=None,
-        interest_monzos=(),
-        held_monzos=(),
+        interest_vectors=(),
+        held_vectors=(),
         range_mode="monotone",
         optimize_locked=False,
         generator_tuning=None,
@@ -89,7 +89,7 @@ class Editor:
     def __init__(self) -> None:
         self._undo_stack: list[_Doc] = []
         self._redo_stack: list[_Doc] = []
-        # A comma being added but not yet valid: a draft monzo (d components, each an
+        # A comma being added but not yet valid: a draft vector (d components, each an
         # int or None while blank). It is NOT part of the document — the mapping is
         # untouched, and a draft does not survive undo/redo/reset/load — until it is
         # filled in with a comma independent of the basis, at which point it commits.
@@ -105,8 +105,8 @@ class Editor:
             tuning_scheme=self.tuning_scheme,
             target_family=self.target_family,
             target_limit=self.target_limit,
-            interest_monzos=tuple(self.interest_monzos),
-            held_monzos=tuple(self.held_monzos),
+            interest_vectors=tuple(self.interest_vectors),
+            held_vectors=tuple(self.held_vectors),
             range_mode=self.range_mode,
             optimize_locked=self.optimize_locked,
             generator_tuning=self.generator_tuning,
@@ -124,8 +124,8 @@ class Editor:
         self.tuning_scheme = doc.tuning_scheme
         self.target_family = doc.target_family
         self.target_limit = doc.target_limit
-        self.interest_monzos = [tuple(m) for m in doc.interest_monzos]
-        self.held_monzos = [tuple(m) for m in doc.held_monzos]
+        self.interest_vectors = [tuple(m) for m in doc.interest_vectors]
+        self.held_vectors = [tuple(m) for m in doc.held_vectors]
         self.range_mode = doc.range_mode
         self.optimize_locked = doc.optimize_locked
         self.generator_tuning = doc.generator_tuning
@@ -178,8 +178,8 @@ class Editor:
         tests both go through here rather than re-spelling spreadsheet.build's arguments."""
         return spreadsheet.build(
             self.state, self.settings, self.collapsed, self.tuning_scheme, self.target_spec,
-            interest=self.interest_monzos, range_mode=self.range_mode,
-            pending_comma=self.pending_comma, held_monzos=self.held_monzos,
+            interest=self.interest_vectors, range_mode=self.range_mode,
+            pending_comma=self.pending_comma, held_vectors=self.held_vectors,
             generator_tuning=self.effective_generator_tuning(),
             target_override=self.target_override,
             custom_prescaler=self.custom_prescaler,
@@ -226,40 +226,40 @@ class Editor:
         self.edit_comma_basis(service.canonical_comma_basis(self.state.comma_basis))
 
     def add_interest(self) -> None:
-        """Append a blank interval of interest (a zero monzo = 1/1) for the user to
+        """Append a blank interval of interest (a zero vector = 1/1) for the user to
         edit, mirroring how add_comma seeds a blank comma."""
         self._snapshot()
-        self.interest_monzos.append((0,) * self.state.d)
+        self.interest_vectors.append((0,) * self.state.d)
 
     def remove_interest(self, i: int) -> None:
         """Drop the i-th interval of interest (each one carries its own − control)."""
         self._snapshot()
-        del self.interest_monzos[i]
+        del self.interest_vectors[i]
 
-    def set_interest_monzos(self, monzos) -> None:
+    def set_interest_vectors(self, vectors) -> None:
         """Replace the interest set from the edited vector cells."""
         self._snapshot()
-        self.interest_monzos = [tuple(int(x) for x in m) for m in monzos]
+        self.interest_vectors = [tuple(int(x) for x in m) for m in vectors]
 
     def add_held(self) -> None:
-        """Append a blank held interval (a zero monzo = 1/1) for the user to fill in —
+        """Append a blank held interval (a zero vector = 1/1) for the user to fill in —
         the held intervals column's + control, mirroring add_interest."""
         self._snapshot()
-        self.held_monzos.append((0,) * self.state.d)
+        self.held_vectors.append((0,) * self.state.d)
 
     def remove_held(self, i: int) -> None:
         """Drop the i-th held interval (each one carries its own − control)."""
         self._snapshot()
-        del self.held_monzos[i]
+        del self.held_vectors[i]
 
-    def set_held_monzos(self, monzos) -> None:
+    def set_held_vectors(self, vectors) -> None:
         """Replace the held interval set from the edited vector cells."""
         self._snapshot()
-        self.held_monzos = [tuple(int(x) for x in m) for m in monzos]
+        self.held_vectors = [tuple(int(x) for x in m) for m in vectors]
 
     def _optimum_generator_tuning(self) -> tuple[float, ...]:
         """The scheme's current optimal generator tuning, respecting any held intervals."""
-        held = service.comma_ratios(self.held_monzos) if self.held_monzos else ()
+        held = service.comma_ratios(self.held_vectors) if self.held_vectors else ()
         return service.tuning(self.state.mapping, self.tuning_scheme, held=held).generator_map
 
     def optimize(self) -> None:
@@ -482,19 +482,19 @@ class Editor:
         target interval list plain text). Stored as ratios, overriding the TILT/OLD spec until
         the spec is re-chosen or the domain changes. False (state untouched) when it is not a
         valid integer vector list, so the caller can flag the input."""
-        monzos = service.parse_comma_basis(text)
-        if monzos is None:
+        vectors = service.parse_comma_basis(text)
+        if vectors is None:
             return False
         self._snapshot()
-        self.target_override = service.comma_ratios(monzos, self.state.domain_basis)
+        self.target_override = service.comma_ratios(vectors, self.state.domain_basis)
         return True
 
-    def set_target_override_monzos(self, monzos) -> None:
-        """Set the explicit target list from edited monzo columns (the editable target
-        interval list cells), like :meth:`set_interest_monzos` — stored back as ratios."""
+    def set_target_override_vectors(self, vectors) -> None:
+        """Set the explicit target list from edited vector columns (the editable target
+        interval list cells), like :meth:`set_interest_vectors` — stored back as ratios."""
         self._snapshot()
         self.target_override = service.comma_ratios(
-            [tuple(int(x) for x in m) for m in monzos], self.state.domain_basis)
+            [tuple(int(x) for x in m) for m in vectors], self.state.domain_basis)
 
     def set_range_mode(self, mode: str) -> None:
         self._snapshot()
@@ -602,8 +602,8 @@ class Editor:
             "tuning_scheme": service.scheme_to_json(self.tuning_scheme),
             "target_family": self.target_family,
             "target_limit": self.target_limit,
-            "interest_monzos": [list(m) for m in self.interest_monzos],
-            "held_monzos": [list(m) for m in self.held_monzos],
+            "interest_vectors": [list(m) for m in self.interest_vectors],
+            "held_vectors": [list(m) for m in self.held_vectors],
             "range_mode": self.range_mode,
             "optimize_locked": self.optimize_locked,
             "generator_tuning": list(self.generator_tuning) if self.generator_tuning is not None else None,
@@ -628,8 +628,8 @@ class Editor:
             tuning_scheme=service.scheme_from_json(data["tuning_scheme"]),
             target_family=data.get("target_family", service.DEFAULT_TARGET_SPEC),
             target_limit=data.get("target_limit"),
-            interest_monzos=tuple(tuple(int(x) for x in m) for m in data.get("interest_monzos", ())),
-            held_monzos=tuple(tuple(int(x) for x in m) for m in data.get("held_monzos", ())),
+            interest_vectors=tuple(tuple(int(x) for x in m) for m in data.get("interest_vectors", ())),
+            held_vectors=tuple(tuple(int(x) for x in m) for m in data.get("held_vectors", ())),
             range_mode=data.get("range_mode", "monotone"),
             optimize_locked=bool(data.get("optimize_locked", False)),
             generator_tuning=tuple(data["generator_tuning"])

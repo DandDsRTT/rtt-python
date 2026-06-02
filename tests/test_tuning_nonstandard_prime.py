@@ -19,7 +19,7 @@ STARLINGTET = "2.5/3.7/3 [⟨1 1 2] ⟨0 -1 -3]}"
 
 
 def test_barbados_prime_based_explicit_targets():
-    # tests.m 3716-3726: targets given as monzos in 2.3.5.13; equivalently the quotients
+    # tests.m 3716-3726: targets given as vectors in 2.3.5.13; equivalently the quotients
     # {2, 5/4, 3/4, 3/5, 13/4, 13/5, 13/8, 13/3}.
     t = parse_temperament_data(BARBADOS)
     spec = TuningSchemeSpec(

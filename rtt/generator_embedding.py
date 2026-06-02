@@ -17,7 +17,7 @@ def get_tempering_projection(mapping: Temperament, held: Temperament):
 
 def get_generator_embedding(mapping: Temperament, held: Temperament):
     """The rational right inverse ``G = H·(M·H)⁻¹`` of the mapping ``M`` whose
-    columns are the generators expressed (as fractional monzos) in the just
+    columns are the generators expressed (as fractional vectors) in the just
     domain — the embedding that holds the ``held`` intervals justly."""
     m = _matrix_as(mapping, Variance.ROW)
     h = transpose(_matrix_as(held, Variance.COL))  # d x r: held intervals as columns

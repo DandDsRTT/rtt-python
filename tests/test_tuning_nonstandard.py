@@ -1,7 +1,7 @@
 """Nonstandard-domain (trait 7) tuning schemes (tests.m 3698-3874): temperaments over
 subgroups like 2.3.13/5, with the "nonprime-based" approach (treat each basis element as
 a prime) or the neutral default. Targets are filtered to the subgroup and expressed as
-monzos in the (nonprime) basis. Prime-based cases live in test_tuning_nonstandard_prime.py."""
+vectors in the (nonprime) basis. Prime-based cases live in test_tuning_nonstandard_prime.py."""
 
 from math import inf
 
@@ -19,7 +19,7 @@ STARLINGTET = "2.5/3.7/3 [⟨1 1 2] ⟨0 -1 -3]}"
 
 
 def test_barbados_nonprime_explicit_targets():
-    # tests.m 3703-3713: targets given as monzos in 2.3.13/5; equivalently the quotients
+    # tests.m 3703-3713: targets given as vectors in 2.3.13/5; equivalently the quotients
     # {2, 3, 13/5, 3/2, 13/10, 15/13}.
     t = parse_temperament_data(BARBADOS)
     spec = TuningSchemeSpec(

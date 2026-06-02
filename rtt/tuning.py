@@ -253,9 +253,9 @@ def _solve_generators(t: Temperament, spec: TuningSchemeSpec, prescaler_override
         return _optimize_augmented_all_interval(
             t, spec, mapping, just_tuning_map, d, prescaler_override=prescaler_override,
         )
-    monzos, weights, power = _optimization_setup(t, spec, d, prescaler_override=prescaler_override)
+    vectors, weights, power = _optimization_setup(t, spec, d, prescaler_override=prescaler_override)
     return _constrained_solve(
-        mapping, just_tuning_map, monzos, weights, power, _held_monzos(spec, d)
+        mapping, just_tuning_map, vectors, weights, power, _held_vectors(spec, d)
     )
 
 
@@ -280,7 +280,7 @@ def _retrieve_prime_domain_basis_generators(
             get_domain_basis(original_t), get_domain_basis(prime_t)
         ),
         dtype=float,
-    )  # original-basis elements as prime-basis monzos
+    )  # original-basis elements as prime-basis vectors
     tuning_over_original = tuning_over_primes @ basis_change.T
     return np.array(
         generator_tuning_map_from_t_and_tuning_map(original_t, tuple(tuning_over_original))
@@ -296,20 +296,20 @@ def _is_all_interval(spec: TuningSchemeSpec) -> bool:
 def _constrained_solve(
     mapping: np.ndarray,
     just_tuning_map: np.ndarray,
-    monzos: tuple[tuple[int, ...], ...],
+    vectors: tuple[tuple[int, ...], ...],
     weights: np.ndarray,
     power: float,
-    held_monzos: np.ndarray | None,
+    held_vectors: np.ndarray | None,
 ) -> np.ndarray:
     """The generators minimizing the weighted ``power``-norm of the target damages, holding
-    any ``held_monzos`` exactly justly (reparameterizing onto the held-justly subspace)."""
-    targets = np.array(monzos, dtype=float).reshape(-1, mapping.shape[1])  # k x d
+    any ``held_vectors`` exactly justly (reparameterizing onto the held-justly subspace)."""
+    targets = np.array(vectors, dtype=float).reshape(-1, mapping.shape[1])  # k x d
     tempered = (targets @ mapping.T) * weights[:, None]  # k x r
     just = (targets @ just_tuning_map) * weights  # k
-    if held_monzos is None:
+    if held_vectors is None:
         return _solve_optimum(tempered, just, power, mapping.shape[0])
-    tempered_side = held_monzos @ mapping.T  # n_held x r
-    held_generators, *_ = np.linalg.lstsq(tempered_side, held_monzos @ just_tuning_map, rcond=None)
+    tempered_side = held_vectors @ mapping.T  # n_held x r
+    held_generators, *_ = np.linalg.lstsq(tempered_side, held_vectors @ just_tuning_map, rcond=None)
     held_null = null_space(tempered_side)
     if held_null.shape[1] == 0:
         return held_generators  # held intervals pin the tuning
@@ -345,13 +345,13 @@ def _optimize_augmented_all_interval(
         t, replace(spec, complexity_size_factor=0), d,
         prescaler_override=prescaler_override,
     )
-    aug_monzos = np.eye(d + 1)
+    aug_vectors = np.eye(d + 1)
     weights = np.append(prime_weights, 1.0)  # phantom prime weighted 1
 
-    held = _held_monzos(spec, d)
+    held = _held_vectors(spec, d)
     aug_held = None if held is None else np.hstack([held, np.ones((held.shape[0], 1))])
 
-    generators = _constrained_solve(aug_mapping, aug_just, aug_monzos, weights, power, aug_held)
+    generators = _constrained_solve(aug_mapping, aug_just, aug_vectors, weights, power, aug_held)
     return generators[:rank]  # drop the phantom generator
 
 
@@ -372,7 +372,7 @@ def _destretch(
 def _optimization_setup(
     t: Temperament, spec: TuningSchemeSpec, d: int, prescaler_override=None,
 ) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
-    """The (target monzos, per-target damage weights, optimization power) for the scheme.
+    """The (target vectors, per-target damage weights, optimization power) for the scheme.
 
     An all-interval scheme (empty target set) instead optimizes over the primes with
     simplicity weighting, at the dual of the interval-complexity norm power — minimax
@@ -386,8 +386,8 @@ def _optimization_setup(
             prescaler_override=prescaler_override,
         )
         return primes, weights, get_dual_power(spec.complexity_norm_power)
-    monzos = resolve_target_intervals(spec.target_intervals, t, d)
-    return monzos, _damage_weights(monzos, t, spec, prescaler_override=prescaler_override), spec.optimization_power
+    vectors = resolve_target_intervals(spec.target_intervals, t, d)
+    return vectors, _damage_weights(vectors, t, spec, prescaler_override=prescaler_override), spec.optimization_power
 
 
 def optimize_tuning_map(
@@ -406,8 +406,8 @@ def get_tuning_map_damages(
 ) -> dict:
     """Each target interval's damage under a *given* tuning map (not an optimization):
     the scheme-weighted absolute error, keyed by the interval's quotient."""
-    monzos, damages, _ = _evaluate_damages(t, tuning_map, spec)
-    return {pcv_to_quotient(monzo): float(damage) for monzo, damage in zip(monzos, damages)}
+    vectors, damages, _ = _evaluate_damages(t, tuning_map, spec)
+    return {pcv_to_quotient(vector): float(damage) for vector, damage in zip(vectors, damages)}
 
 
 def get_generator_tuning_map_damages(
@@ -442,26 +442,26 @@ def _tuning_map_from_generators(t: Temperament, generator_tuning_map: tuple) -> 
 def _evaluate_damages(
     t: Temperament, tuning_map: tuple, spec: TuningSchemeSpec | str
 ) -> tuple[tuple[tuple[int, ...], ...], np.ndarray, float]:
-    """The (target monzos, per-target damages, mean power) for a given tuning map: each
+    """The (target vectors, per-target damages, mean power) for a given tuning map: each
     damage is the scheme's weight times the absolute mistuning of that target."""
     spec = resolve_tuning_scheme(spec)
     d = get_d(t)
     just_tuning_map = np.array(get_just_tuning_map(t), dtype=float)
-    monzos, weights, power = _optimization_setup(t, spec, d)
-    targets = np.array(monzos, dtype=float).reshape(-1, d)
+    vectors, weights, power = _optimization_setup(t, spec, d)
+    targets = np.array(vectors, dtype=float).reshape(-1, d)
     tempered = np.array(tuning_map, dtype=float)
     damages = np.abs(targets @ tempered - targets @ just_tuning_map) * weights
-    return monzos, damages, power
+    return vectors, damages, power
 
 
 def resolve_target_intervals(
     target_spec: str, t: Temperament, d: int
 ) -> tuple[tuple[int, ...], ...]:
-    """Resolve a target interval spec to monzos: an explicit ``{...}`` quotient list, a
+    """Resolve a target interval spec to vectors: an explicit ``{...}`` quotient list, a
     TILT/OLD named scheme, or ``"primes"`` (the identity).
 
     Over a nonstandard domain basis the resolved quotients are filtered to those that lie
-    in the subgroup and expressed as monzos in that (possibly nonprime) basis."""
+    in the subgroup and expressed as vectors in that (possibly nonprime) basis."""
     domain_basis = get_domain_basis(t)
     if target_spec == "primes":
         return tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
@@ -480,19 +480,19 @@ def resolve_target_intervals(
 
 
 def _parse_interval_spec(text: str, d: int) -> tuple[tuple[int, ...], ...]:
-    """Parse an interval-set spec (``"octave"``, ``"2"``, ``"2/1"``, ``"{2/1, 3/2}"``) into monzos."""
+    """Parse an interval-set spec (``"octave"``, ``"2"``, ``"2/1"``, ``"{2/1, 3/2}"``) into vectors."""
     return parse_quotient_list(text.replace("octave", "2"), d)
 
 
-def _held_monzos(spec: TuningSchemeSpec, d: int) -> np.ndarray | None:
-    """The monzos of the scheme's held intervals (tuned exactly justly), or ``None``."""
+def _held_vectors(spec: TuningSchemeSpec, d: int) -> np.ndarray | None:
+    """The vectors of the scheme's held intervals (tuned exactly justly), or ``None``."""
     if not spec.held_intervals:
         return None
     return np.array(_parse_interval_spec(spec.held_intervals, d), dtype=float)
 
 
 def _damage_weights(
-    monzos: tuple[tuple[int, ...], ...],
+    vectors: tuple[tuple[int, ...], ...],
     t: Temperament,
     spec: TuningSchemeSpec,
     prescaler_override=None,
@@ -503,11 +503,11 @@ def _damage_weights(
     the same diagonal the matrix tile shows), so a custom diagonal reaches the tuning
     solve too rather than only the displayed prescaler."""
     if spec.damage_weight_slope == "unityWeight":
-        return np.ones(len(monzos))
+        return np.ones(len(vectors))
     complexities = np.array(
         [
             get_complexity(
-                monzo,
+                vector,
                 t,
                 spec.complexity_norm_power,
                 spec.complexity_log_prime_power,
@@ -516,7 +516,7 @@ def _damage_weights(
                 spec.nonprime_basis_approach,
                 prescaler_override=prescaler_override,
             )
-            for monzo in monzos
+            for vector in vectors
         ]
     )
     if spec.damage_weight_slope == "complexityWeight":
@@ -673,7 +673,7 @@ def get_complexity_prescaler(
 ) -> list[float]:
     """The diagonal of the complexity prescaler L: each domain basis element's pre-norm
     weight, log2(prime)**a · prime**b (log-prime by default, a=1, b=0). An interval's
-    complexity is a norm of L applied to its monzo, so this is the matrix that defines it.
+    complexity is a norm of L applied to its vector, so this is the matrix that defines it.
 
     ``override`` is a per-call escape hatch: when set, the four trait arguments are
     ignored and the override is returned verbatim. Threaded through the optimization and
@@ -708,9 +708,9 @@ def get_complexity(
     nonprime_basis_approach: str,  # trait 7
     prescaler_override=None,
 ) -> float:
-    """An interval's complexity: a (pre-transformed) norm of its monzo.
+    """An interval's complexity: a (pre-transformed) norm of its vector.
 
-    A nonzero ``size_factor`` augments the pre-transformed monzo with one extra entry
+    A nonzero ``size_factor`` augments the pre-transformed vector with one extra entry
     (the size-weighted sum, ``size_factor`` times the interval's log size), then divides
     the norm by ``1 + size_factor`` — the Weil/lils family of complexities.
 

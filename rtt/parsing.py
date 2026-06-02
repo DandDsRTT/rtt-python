@@ -42,7 +42,7 @@ def parse_quotients(text: str) -> list[Fraction]:
 
 
 def parse_quotient_list(text: str, d: int) -> tuple[tuple[int, ...], ...]:
-    """Parse a quotient-list string like ``"{2/1, 3/2, 5/4}"`` into monzos (each a
+    """Parse a quotient-list string like ``"{2/1, 3/2, 5/4}"`` into vectors (each a
     prime-count vector padded to ``d`` entries)."""
     pcvs = tuple(quotient_to_pcv(q) for q in parse_quotients(text))
     return pad_vectors_with_zeros_up_to_d(pcvs, d)

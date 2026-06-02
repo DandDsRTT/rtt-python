@@ -171,7 +171,7 @@ def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
         "]2": app._square_bracket(16, 60, "right"),
         "<": app._angle_bracket(16, 16),
         "top": app._top_bracket(120, 9),
-        "angle": app._angle_foot(14, 7),  # the raw-monzo column's ket foot (a down-chevron)
+        "angle": app._angle_foot(14, 7),  # the raw-vector column's ket foot (a down-chevron)
         "vbar": app._vbar(2, 60),
     }
     for svg in marks.values():

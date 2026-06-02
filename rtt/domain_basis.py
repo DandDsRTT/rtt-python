@@ -76,7 +76,7 @@ def _factorization_acceptable(a: int, b: int) -> bool:
 
 
 def is_numerator_factor(subspace_entry: tuple, superspace_entry: tuple) -> bool:
-    """Whether subtracting the superspace monzo moves the subspace monzo toward 0."""
+    """Whether subtracting the superspace vector moves the subspace vector toward 0."""
     return all(
         _factorization_acceptable(s, s - sup)
         for s, sup in zip(subspace_entry, superspace_entry)
@@ -84,7 +84,7 @@ def is_numerator_factor(subspace_entry: tuple, superspace_entry: tuple) -> bool:
 
 
 def is_denominator_factor(subspace_entry: tuple, superspace_entry: tuple) -> bool:
-    """Whether adding the superspace monzo moves the subspace monzo toward 0."""
+    """Whether adding the superspace vector moves the subspace vector toward 0."""
     return all(
         _factorization_acceptable(s, s + sup)
         for s, sup in zip(subspace_entry, superspace_entry)
@@ -141,8 +141,8 @@ def get_simplest_prime_only_basis(domain_basis: tuple) -> tuple[int, ...]:
 
 
 def express_quotients_in_domain_basis(quotients: tuple, domain_basis: tuple) -> tuple:
-    """Express each quotient (assumed to lie in the subgroup) as an integer monzo over the
-    domain basis. Solves the exact linear system ``monzo · basis = prime_monzo(quotient)``
+    """Express each quotient (assumed to lie in the subgroup) as an integer vector over the
+    domain basis. Solves the exact linear system ``vector · basis = prime_vector(quotient)``
     (via the normal equations), which — unlike the greedy factoring of
     ``get_domain_basis_change_for_m`` — handles basis elements that share primes."""
     dimension = get_domain_basis_dimension(domain_basis)
@@ -152,18 +152,18 @@ def express_quotients_in_domain_basis(quotients: tuple, domain_basis: tuple) -> 
         )
     )  # d_basis x dimension
     gram = basis_a * basis_a.T
-    monzos = []
+    vectors = []
     for quotient in quotients:
-        prime_monzo = sp.Matrix(
+        prime_vector = sp.Matrix(
             pad_vectors_with_zeros_up_to_d((quotient_to_pcv(quotient),), dimension)[0]
         )
-        solution = gram.solve(basis_a * prime_monzo)
-        monzos.append(tuple(int(value) for value in solution))
-    return tuple(monzos)
+        solution = gram.solve(basis_a * prime_vector)
+        vectors.append(tuple(int(value) for value in solution))
+    return tuple(vectors)
 
 
 def get_basis_a(t: Temperament) -> Temperament:
-    """A temperament's domain basis as a comma-basis matrix of monzos."""
+    """A temperament's domain basis as a comma-basis matrix of vectors."""
     domain_basis = get_domain_basis(t)
     matrix = pad_vectors_with_zeros_up_to_d(
         tuple(quotient_to_pcv(q) for q in domain_basis),
@@ -175,7 +175,7 @@ def get_basis_a(t: Temperament) -> Temperament:
 def canonical_domain_basis_private(domain_basis: tuple) -> tuple:
     """Canonicalize a domain basis: order by prime limit, drop redundancies.
 
-    Treats each generator as a monzo, canonicalizes the lattice (the rotate-180/
+    Treats each generator as a vector, canonicalizes the lattice (the rotate-180/
     HNF sandwich), then reads the rows back as "super" quotients (>= 1).
     """
     dimension = get_domain_basis_dimension(domain_basis)

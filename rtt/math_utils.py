@@ -11,7 +11,7 @@ def get_primes(count: int) -> tuple[int, ...]:
 
 
 def quotient_to_pcv(quotient: Fraction | int) -> tuple[int, ...]:
-    """Quotient to prime-count vector (monzo) over the first N primes."""
+    """Quotient to prime-count vector over the first N primes."""
     q = Fraction(quotient)
     if q == 0:
         return (0,)
@@ -28,7 +28,7 @@ def quotient_to_pcv(quotient: Fraction | int) -> tuple[int, ...]:
 
 
 def pcv_to_quotient(pcv: tuple[int, ...]) -> Fraction:
-    """Prime-count vector (monzo) back to its quotient."""
+    """Prime-count vector back to its quotient."""
     quotient = Fraction(1)
     for index, power in enumerate(pcv):
         quotient *= Fraction(int(sp.prime(index + 1))) ** power

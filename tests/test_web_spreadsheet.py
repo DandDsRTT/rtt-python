@@ -404,12 +404,12 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
     lay = _with(gridded_values=False)
     ids = {c.id for c in lay.cells}
     # no value numbers anywhere: header primes/ratios, matrix, mapped list, cents,
-    # interval-vectors monzos
+    # interval-vector cells
     assert not any(c.startswith(("prime:", "target:", "gen:", "cell:mapping:",
                                  "cell:mapped:", "cell:vec:", "comma:", "cell:comma:",
                                  "tuning:", "just:", "retune:", "damage:"))
                    for c in ids)
-    # no EBK marks (brackets, top brackets, braces, monzo rules) and no domain/comma controls
+    # no EBK marks (brackets, top brackets, braces, vector rules) and no domain/comma controls
     assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
     assert {"minus", "plus", "comma_minus", "comma_plus"}.isdisjoint(ids)
     # ...but the tiles stand empty save their fold toggles and name captions, and
@@ -474,7 +474,7 @@ def test_temperament_boxes_off_removes_the_mapping_and_vectors_rows_and_domain_c
     # the mapping quantities (matrix, mapped list, generator ratios) are gone
     assert "label:mapping" not in off
     assert not any(c.startswith(("cell:mapping:", "cell:mapped:", "gen:")) for c in off)
-    # the interval-vectors row is the temperament's too -- its monzos are read over the
+    # the interval-vectors row is the temperament's too -- its vectors are read over the
     # domain basis -- so it goes with the domain rather than lingering as a lone row when
     # every specific box is off (it owned no toggle before, so it was the sole survivor)
     assert "label:vectors" not in off
@@ -741,9 +741,9 @@ def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis
     assert not any(c.id.startswith("formchooser:") for c in _layout().cells)
 
 
-def test_mapped_list_rules_its_monzo_columns_apart_clear_of_the_marks():
+def test_mapped_list_rules_its_vector_columns_apart_clear_of_the_marks():
     cells = {c.id: c for c in _layout().cells}
-    # the mapped target interval list separates its monzo columns with vertical
+    # the mapped target interval list separates its vector columns with vertical
     # bars, and the per-column top/bottom marks are inset so they never touch one
     assert "sep:mapped:1" in cells  # a bar between columns 0 and 1
     sep, first = cells["sep:mapped:1"], cells["cell:mapped:0:0"]
@@ -1123,7 +1123,7 @@ def test_plain_text_values_adds_a_string_band_under_each_tile():
     # each value group gets its natural plain-text form (from the service seam)
     assert on["ptext:mapping:primes"].text == "[⟨1 1 0] ⟨0 1 4]}"
     assert on["ptext:mapping:targets"].text.startswith("[[1 0}")  # generator-coord vectors (close })
-    assert on["ptext:vectors:commas"].text == "[[4 -4 1⟩]"  # comma basis: monzo list, outer [ ]
+    assert on["ptext:vectors:commas"].text == "[[4 -4 1⟩]"  # comma basis: vector list, outer [ ]
     assert on["ptext:quantities:primes"].text == "2.3.5"
     assert on["ptext:tuning:primes"].text.startswith("⟨")  # a tuning map
 
@@ -1203,7 +1203,7 @@ def test_names_toggles_in_tile_captions_but_never_the_row_col_titles():
     assert not any(c.startswith("caption:") for c in off)
 
 
-# --- the interval-vectors row (each column's intervals as monzos) ---
+# --- the interval-vectors row (each column's intervals as vectors) ---
 
 def test_interval_vectors_row_sits_between_quantities_and_mapping():
     cells = {c.id: c for c in _layout().cells}
@@ -1212,9 +1212,9 @@ def test_interval_vectors_row_sits_between_quantities_and_mapping():
     assert cells["label:quantities"].y < cells["label:vectors"].y < cells["label:mapping"].y
 
 
-def test_interval_vectors_show_targets_as_monzos():
+def test_interval_vectors_show_targets_as_vectors():
     cells = {c.id: c for c in _layout().cells}
-    # each target interval as a d-tall monzo column: 2/1->[1,0,0], 3/2->[-1,1,0], 5/4->[-2,0,1]
+    # each target interval as a d-tall vector column: 2/1->[1,0,0], 3/2->[-1,1,0], 5/4->[-2,0,1]
     assert [cells[f"cell:vec:targets:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
     assert [cells[f"cell:vec:targets:2:{p}"].text for p in range(3)] == ["-1", "1", "0"]
     assert [cells[f"cell:vec:targets:6:{p}"].text for p in range(3)] == ["-2", "0", "1"]
@@ -1224,7 +1224,7 @@ def test_interval_vectors_show_targets_as_monzos():
 
 
 def test_interval_vectors_domain_primes_identity_is_deferred_to_identity_objects():
-    # the domain primes as monzos over themselves are the d x d identity — an
+    # the domain primes as vectors over themselves are the d x d identity — an
     # "identity object" the grid won't show until the identity_objects setting is
     # built (the basis is already listed down the quantities spine). Until then the
     # primes column carries NOTHING at the interval-vectors row: no cells, ket marks,
@@ -1281,7 +1281,7 @@ def test_commas_column_sits_between_primes_and_targets_with_its_comma_ratios():
     assert cells["prime:2"].x < cells["comma:0"].x < cells["target:0"].x
 
 
-def test_comma_basis_renders_as_raw_monzos_in_the_interval_vectors_row():
+def test_comma_basis_renders_as_raw_vectors_in_the_interval_vectors_row():
     cells = {c.id: c for c in _layout().cells}
     # the raw comma basis lives in the interval-vectors row's commas column, d-tall;
     # the syntonic comma [4, -4, 1] reads top-to-bottom (prime 2, 3, 5) down its column
@@ -1504,7 +1504,7 @@ def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
         # would skip rather than verify the symbol/equivalence wiring.
         {**settings.defaults(), "weighting": True, "optimization": True,
          "symbols": True, "equivalences": True},
-        held_monzos=((-1, 1, 0),),  # 3/2 held, so the held column appears
+        held_vectors=((-1, 1, 0),),  # 3/2 held, so the held column appears
     )
     on = {c.id: c for c in lay.cells}
     # bare prescaler tile: the only one with an equivalence (the equation form). 𝐿
@@ -1525,7 +1525,7 @@ def test_prescaling_product_symbols_follow_the_active_prescaler():
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "weighting": True, "optimization": True,
          "symbols": True, "equivalences": True},
-        tuning_scheme=scheme, held_monzos=((-1, 1, 0),),
+        tuning_scheme=scheme, held_vectors=((-1, 1, 0),),
     )
     on = {c.id: c for c in lay.cells}
     assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐼"   # bare: scheme-aware equivalence
@@ -1543,7 +1543,7 @@ def test_prime_prescaler_renders_as_diag_p_not_the_projection_letter():
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "weighting": True, "optimization": True,
          "symbols": True, "equivalences": True},
-        tuning_scheme=scheme, held_monzos=((-1, 1, 0),),
+        tuning_scheme=scheme, held_vectors=((-1, 1, 0),),
     )
     on = {c.id: c for c in lay.cells}
     assert on["symbol:prescaling:primes"].text == "𝑋 = diag(𝒑)"
@@ -2054,9 +2054,9 @@ def test_commas_column_has_panels_that_fold_away_and_converge_when_collapsed():
     assert by_id["bus:commas:top"].length == 0  # the comma axis converges to one line
 
 
-def test_comma_basis_is_framed_as_a_monzo_list_spanning_its_d_tall_height():
+def test_comma_basis_is_framed_as_a_vector_list_spanning_its_d_tall_height():
     cells = {c.id: c for c in _layout().cells}
-    # the comma basis (in the interval-vectors row) is a list of monzos: an enclosing
+    # the comma basis (in the interval-vectors row) is a list of vectors: an enclosing
     # [ ] plus per-column ket marks
     assert cells["bracket:vec:commas:l"].text == "[" and cells["bracket:vec:commas:r"].text == "]"
     assert "ebktop:vec:commas:0" in cells and "ebkangle:vec:commas:0" in cells
@@ -2066,9 +2066,9 @@ def test_comma_basis_is_framed_as_a_monzo_list_spanning_its_d_tall_height():
     assert cb.y + cb.h >= cells["cell:comma:2:0"].y + cells["cell:comma:2:0"].h
 
 
-def test_untempered_monzo_columns_get_angle_feet_while_mapped_lists_keep_braces():
+def test_untempered_vector_columns_get_angle_feet_while_mapped_lists_keep_braces():
     cells = {c.id: c for c in _layout().cells}
-    # the interval-vectors row holds RAW (untempered) monzos — each column is a ket,
+    # the interval-vectors row holds RAW (untempered) vectors — each column is a ket,
     # so its foot is the angle ⟩ (drawn as a down-chevron), not the curly brace
     for group in ("commas", "targets"):
         assert f"ebkangle:vec:{group}:0" in cells       # the ket's angle foot
@@ -2090,7 +2090,7 @@ def test_comma_tuning_rows_get_list_brackets_hugging_their_values():
 
 def test_comma_basis_grid_has_no_separator_rules_that_double_its_cell_borders():
     # the comma basis is an editable BORDERED grid (the same cell as the mapping),
-    # so its cell borders already divide the columns; also drawing the monzo
+    # so its cell borders already divide the columns; also drawing the vector
     # separator rules would lay a second line over each shared border (a visible
     # double). The bare-label target-list vecs keep theirs.
     two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real comma columns
@@ -2193,7 +2193,7 @@ def test_comma_columns_get_in_tile_captions_consistent_with_the_targets():
 
 def test_interval_vectors_tiles_are_captioned_by_what_each_column_holds():
     on = {c.id: c for c in _with(names=True).cells}
-    assert on["caption:vectors:commas"].text == "comma basis"  # the raw monzos (the dual)
+    assert on["caption:vectors:commas"].text == "comma basis"  # the raw vectors (the dual)
     assert on["caption:vectors:targets"].text == "target interval list"
 
 
@@ -2217,7 +2217,7 @@ def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 1 real comma, mapping r=2
     cells = {c.id: c for c in spreadsheet.build(base, pending_comma=[None, None, None]).cells}
     assert cells["comma:0"].text == "80/81"  # the real comma stays
-    # a draft column rides to its right: a "?" quantity and blank, red-flagged monzo cells
+    # a draft column rides to its right: a "?" quantity and blank, red-flagged vector cells
     assert cells["comma:pending"].text == "?" and cells["comma:pending"].pending
     assert cells["comma:pending"].x > cells["comma:0"].x
     assert cells["cell:comma:0:1"].text == "" and cells["cell:comma:0:1"].pending
@@ -2460,7 +2460,7 @@ def test_custom_prescaler_override_flows_into_the_product_tiles():
 
 
 def test_custom_prescaler_override_drives_the_complexity_row():
-    # the complexity row norms each interval's prescaled monzo — so a custom diagonal
+    # the complexity row norms each interval's prescaled vector — so a custom diagonal
     # rewrites every complexity cell. With diag (1, 1, 1) (an identity-style override
     # over 2.3.5), the comma 80/81's complexity equals its taxicab norm = 4+4+1 = 9.
     s = settings.defaults() | {"weighting": True}
@@ -2629,14 +2629,14 @@ def test_empty_interest_column_is_just_a_header_and_axis():
     assert "v:interest:0" not in lids and "bus:interest:top" not in lids
 
 
-# the user enters intervals of interest as monzos (like the comma basis); these are
+# the user enters intervals of interest as vectors (like the comma basis); these are
 # 3/2, 9/8, 10/9, 8/5 over the 2.3.5 domain, used across the populated-interest tests
 _INTEREST = ((-1, 1, 0), (-3, 2, 0), (1, -2, 1), (3, 0, -1))
 
 
 def test_populated_interest_renders_ratios_mapped_and_sizes_minus_damage():
     cells = {c.id: c for c in _with_interest(_INTEREST).cells}
-    # quantities row: the ratio derived from each entered monzo
+    # quantities row: the ratio derived from each entered vector
     assert cells["interest:0"].text == "3/2" and cells["interest:3"].text == "8/5"
     # mapping row: each interval mapped to generator coords (M . i), like the targets
     assert cells["cell:imapped:0:0"].text == "0" and cells["cell:imapped:1:0"].text == "1"  # 3/2 -> [0,1]
@@ -2663,8 +2663,8 @@ def test_populated_interest_renders_plain_text_for_all_its_value_tiles():
     assert cells["ptext:just:interest"].text == "701.955 203.910 182.404 813.686"
 
 
-def test_interest_intervals_are_editable_monzo_vectors_like_the_comma_basis():
-    # in the interval-vectors row each interval is an editable d-tall monzo column
+def test_interest_intervals_are_editable_vectors_like_the_comma_basis():
+    # in the interval-vectors row each interval is an editable d-tall vector column
     # (kind "interestcell", the comma-basis editing affordance), prime exponents down
     cells = {c.id: c for c in _with_interest(_INTEREST).cells}
     assert cells["cell:interest:0:0"].text == "-1"  # 3/2 = [-1 1 0>: prime-2 exponent
@@ -3193,7 +3193,7 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
     s["optimization"] = True           # opens the held column
     s["generator_detempering"] = True  # opens the detempering column
     on = {c.id: c for c in spreadsheet.build(
-        base, s, held_monzos=((-1, 1, 0),)
+        base, s, held_vectors=((-1, 1, 0),)
     ).cells}
     # The trailing q is italic-subscripted (per the mockup) — emitted with sentinel
     # markers around it that the matlabel renderer converts to <sub><i>q</i></sub>.
@@ -3220,7 +3220,7 @@ def test_prescaling_matrix_row_and_col_labels():
     s["optimization"] = True
     s["generator_detempering"] = True
     on = {c.id: c for c in spreadsheet.build(
-        base, s, held_monzos=((-1, 1, 0),)
+        base, s, held_vectors=((-1, 1, 0),)
     ).cells}
     # row labels on the 𝑋 matrix: d=3 rows, one 𝒙ᵢ per dimension
     assert on["matlabel:row:prescaling:primes:0"].text == "𝒙₁"
@@ -3463,7 +3463,7 @@ def test_a_target_override_drives_the_target_columns():
     cells = {c.id: c for c in spreadsheet.build(base, s, target_override=("2/1", "3/2")).cells}
     assert cells["target:0"].text == "2/1" and cells["target:1"].text == "3/2"
     assert "target:2" not in cells  # exactly two columns
-    assert cells["cell:vec:targets:0:0"].kind == "targetcell"  # the editable monzo cells
+    assert cells["cell:vec:targets:0:0"].kind == "targetcell"  # the editable vector cells
     for row in ("tuning", "just", "damage"):  # the size lists follow the override (two columns)
         assert f"{row}:target:1" in cells and f"{row}:target:2" not in cells
 
@@ -3541,15 +3541,15 @@ def test_optimization_on_adds_an_addable_held_intervals_column():
 
 
 def test_held_intervals_are_a_user_editable_counted_interval_list():
-    # the held column is a user-edited monzo list (like the intervals of interest): each
-    # held interval heads its column as a derived ratio, with EDITABLE monzo cells below
+    # the held column is a user-edited vector list (like the intervals of interest): each
+    # held interval heads its column as a derived ratio, with EDITABLE vector cells below
     # and its own − to remove it; the held count h tracks how many there are
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["optimization"], s["counts"] = True, True
-    cells = {c.id: c for c in spreadsheet.build(base, s, held_monzos=[(-1, 1, 0)]).cells}
+    cells = {c.id: c for c in spreadsheet.build(base, s, held_vectors=[(-1, 1, 0)]).cells}
     assert cells["held:0"].text == "3/2"               # the derived ratio (3/2) heads the column
-    assert cells["cell:held:0:0"].kind == "heldcell"   # the monzo cells are editable inputs
+    assert cells["cell:held:0:0"].kind == "heldcell"   # the vector cells are editable inputs
     assert [cells[f"cell:held:{p}:0"].text for p in range(3)] == ["-1", "1", "0"]
     assert "held_minus:0" in cells                     # each held interval is removable
     assert cells["count:held"].text == "ℎ = 1"         # h = 1 (Planck-glyph math-italic h)
@@ -3565,7 +3565,7 @@ def test_held_intervals_show_across_the_rows_like_the_other_intervals():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["optimization"] = True
-    cells = {c.id: c for c in spreadsheet.build(base, s, held_monzos=[(-1, 1, 0)]).cells}
+    cells = {c.id: c for c in spreadsheet.build(base, s, held_vectors=[(-1, 1, 0)]).cells}
     assert "cell:hmapped:0:0" in cells   # M·held in the mapping row
     assert "tuning:held:0" in cells      # tempered size
     assert "just:held:0" in cells        # just size
@@ -3579,7 +3579,7 @@ def _held(**overrides):
     s = settings.defaults()
     s["optimization"] = True
     s.update(overrides)
-    return {c.id: c for c in spreadsheet.build(base, s, held_monzos=[(-1, 1, 0)]).cells}
+    return {c.id: c for c in spreadsheet.build(base, s, held_vectors=[(-1, 1, 0)]).cells}
 
 
 def test_held_column_symbols_are_map_times_basis_products():
@@ -3627,7 +3627,7 @@ def test_held_column_equivalences_show_the_held_just_identities():
 def test_held_column_shows_plain_text_values():
     on = _held(plain_text_values=True)
     # the held column's tiles get plain-text EBK boxes like every other value tile
-    assert on["ptext:vectors:held"].text == "[[-1 1 0⟩]"   # the held basis (monzo list)
+    assert on["ptext:vectors:held"].text == "[[-1 1 0⟩]"   # the held basis (vector list)
     assert on["ptext:mapping:held"].text == "[[0 1}]"      # mapped into generator coords
     assert "ptext:tuning:held" in on and "ptext:just:held" in on
     # held just ⇒ the retuning error vanishes
@@ -3821,7 +3821,7 @@ def test_gridline_ids_are_unique_across_every_fan_and_spine():
         {**settings.defaults(), "generator_detempering": True, "optimization": True,
          "weighting": True, "form_controls": True},
         interest=((-1, 1, 0), (2, 0, -1)),
-        held_monzos=((1, 0, 0), (-1, 1, 0)),
+        held_vectors=((1, 0, 0), (-1, 1, 0)),
     )
     ids = [ln.id for ln in lay.lines]
     dupes = sorted({i for i in ids if ids.count(i) > 1})
@@ -3881,7 +3881,7 @@ def test_every_open_tile_in_the_retuning_row_is_charted():
     on = {c.id: c for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
         interest=((-3, 2, 0),),       # 9/8, an interval of interest (the interest column)
-        held_monzos=((-1, 1, 0),),    # 3/2 held (the held column)
+        held_vectors=((-1, 1, 0),),    # 3/2 held (the held column)
     ).cells}
     elem = {"primes": "prime", "commas": "comma", "targets": "target",
             "interest": "interest", "held": "held", "detempering": "detempering"}
@@ -3901,7 +3901,7 @@ def test_chart_bars_centre_on_their_value_gridlines():
     s.update(charts=True, symbols=True, optimization=True, generator_detempering=True)
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
-        interest=((-3, 2, 0),), held_monzos=((-1, 1, 0),))
+        interest=((-3, 2, 0),), held_vectors=((-1, 1, 0),))
     on = {c.id: c for c in lay.cells}
     gridline = {ln.id: ln.pos for ln in lay.lines if ln.orientation == "v"}
     bw, cw = spreadsheet.BRACKET_W, spreadsheet.COL_W
@@ -4098,7 +4098,7 @@ def _colormap_layout():
     s["temperament_colorization"] = True
     s["optimization"] = True  # reveal the held-intervals column (a tuning-box sub-control)
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
-                             interest=((-1, 1, 0),), held_monzos=((-1, 1, 0),))
+                             interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
 
 
 def test_colorization_follows_the_content_map():
@@ -4165,7 +4165,7 @@ def test_off_by_default_rows_colorize_by_content_too():
     s["weighting"] = True       # reveal the prescaling + complexity rows (a tuning-boxes sub-control)
     s["optimization"] = True    # reveal the held column
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
-                            interest=((-1, 1, 0),), held_monzos=((-1, 1, 0),))
+                            interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
@@ -4227,7 +4227,7 @@ def _spine_colormap():
     s["counts"] = s["domain_units"] = s["domain_quantities"] = True
     s["weighting"] = s["optimization"] = s["generator_detempering"] = True
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
-                             interest=((-1, 1, 0),), held_monzos=((-1, 1, 0),))
+                             interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
 
 
 def test_spine_rows_and_columns_colorize_by_their_band():
@@ -4456,7 +4456,7 @@ def _audio_colormap():
     s["tuning_colorization"] = s["temperament_colorization"] = s["audio"] = True
     s["optimization"] = True  # reveal the held-intervals column (and its audio tiles)
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
-                             interest=((-1, 1, 0),), held_monzos=((-1, 1, 0),))
+                             interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
 
 
 def test_audio_rows_colorize_by_content_like_the_rows_they_sound():

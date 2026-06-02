@@ -43,7 +43,7 @@ def _doc_store() -> dict:
     production, an in-process dict under the test simulation (see :data:`_MEMORY_STORE`)."""
     return _MEMORY_STORE if helpers.is_user_simulation() else app.storage.user
 
-# One weight and colour for every EBK bracket, brace and monzo rule. Each mark is
+# One weight and colour for every EBK bracket, brace and vector rule. Each mark is
 # drawn as an SVG whose viewBox maps 1:1 to the cell's px size (see _svg), so a
 # stroke specified as N px is exactly N px tall AND wide at any span — no scaling.
 _BR_COLOR = "#1a1a1a"
@@ -55,7 +55,7 @@ _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the 
 _CELL_BORDER_W = 1  # px
 _CELL_BORDER = f"{_CELL_BORDER_W}px solid {_BR_COLOR}"
 _CELL_FONT = 17  # px for the single-digit values in the square cells (≈0.37 of the cell)
-_BR_BAR = 2  # main bar / monzo-rule / square-bracket bar thickness (px)
+_BR_BAR = 2  # main bar / vector-rule / square-bracket bar thickness (px)
 _BR_SERIF_T = 0.9  # square + top bracket serif thickness — a thin foot, well under the bar
 _BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches) — also
 # the shared footprint width every value bracket (square AND angle) draws within
@@ -555,7 +555,7 @@ _CSS = f"""
 .rtt-cell-united.rtt-cell-input .rtt-cellunit {{ position:absolute; left:0; right:0; bottom:2.5px;
             pointer-events:none; z-index:1; }}
 .rtt-cell-united.rtt-cell-input .rtt-cellinput .q-field__native {{ padding-bottom:11px !important; }}
-/* every EBK mark (⟨ ] [, top bracket, brace, monzo rule) is one SVG that fills
+/* every EBK mark (⟨ ] [, top bracket, brace, vector rule) is one SVG that fills
    its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
 .rtt-svgfill {{ width:100%; height:100%; line-height:0; }}
 /* the symbol + caption (and the units line) hold off their fade-in until the tile has expanded */
@@ -1041,9 +1041,9 @@ def _curly_bracket(w, h):
 
 
 def _angle_foot(w, h):
-    """The ket's ``⟩`` turned a quarter-turn to close a raw (untempered) monzo column:
+    """The ket's ``⟩`` turned a quarter-turn to close a raw (untempered) vector column:
     a shallow downward chevron from the top corners to a centre vertex, the calligraphic
-    weight of the ⟨ angle bracket (heavier at the vertex than the open tips). A monzo
+    weight of the ⟨ angle bracket (heavier at the vertex than the open tips). A vector
     thus reads ``[ … ⟩`` down its column — square top, angle foot — telling it apart
     from a tempered column, which closes with the curly brace (:func:`_brace`)."""
     cx = w / 2
@@ -1061,7 +1061,7 @@ def _angle_foot(w, h):
 
 
 def _vbar(w, h):
-    """A vertical rule between the mapped list's monzo columns, the bar's weight."""
+    """A vertical rule between the mapped list's vector columns, the bar's weight."""
     return _svg(w, h, _rect((w - _BR_BAR) / 2, 0, _BR_BAR, h))
 
 
@@ -1647,35 +1647,35 @@ def index() -> None:
         render()
 
     def on_interest_change():
-        # the intervals of interest are edited as monzos in the interval-vectors row,
+        # the intervals of interest are edited as vectors in the interval-vectors row,
         # like the comma basis; read the d-tall columns and replace the set
         if building[0]:
             return
-        d, mi = editor.state.d, len(editor.interest_monzos)
+        d, mi = editor.state.d, len(editor.interest_vectors)
         if any(f"cell:interest:{p}:{i}" not in inputs for i in range(mi) for p in range(d)):
             return  # the interest cells aren't currently shown (folded away)
-        monzos = [[_parse_int(inputs[f"cell:interest:{p}:{i}"].value) for p in range(d)] for i in range(mi)]
-        if any(v is None for m in monzos for v in m):
+        vectors = [[_parse_int(inputs[f"cell:interest:{p}:{i}"].value) for p in range(d)] for i in range(mi)]
+        if any(v is None for m in vectors for v in m):
             return
-        editor.set_interest_monzos(monzos)
+        editor.set_interest_vectors(vectors)
         render()
 
     def on_held_change():
-        # the held intervals are edited as monzos in the interval-vectors row, like the
+        # the held intervals are edited as vectors in the interval-vectors row, like the
         # intervals of interest; read the d-tall columns and replace the held set
         if building[0]:
             return
-        d, nh = editor.state.d, len(editor.held_monzos)
+        d, nh = editor.state.d, len(editor.held_vectors)
         if any(f"cell:held:{p}:{i}" not in inputs for i in range(nh) for p in range(d)):
             return  # the held cells aren't currently shown (folded away / optimization off)
-        monzos = [[_parse_int(inputs[f"cell:held:{p}:{i}"].value) for p in range(d)] for i in range(nh)]
-        if any(v is None for m in monzos for v in m):
+        vectors = [[_parse_int(inputs[f"cell:held:{p}:{i}"].value) for p in range(d)] for i in range(nh)]
+        if any(v is None for m in vectors for v in m):
             return
-        editor.set_held_monzos(monzos)
+        editor.set_held_vectors(vectors)
         render()
 
     def on_target_cells_change():
-        # the target interval list is edited as monzo columns, like the comma basis; read the
+        # the target interval list is edited as vector columns, like the comma basis; read the
         # d-tall columns (id is cell:vec:targets:{column}:{prime}) and replace the target set
         if building[0]:
             return
@@ -1685,10 +1685,10 @@ def index() -> None:
         k = len(targets)
         if any(f"cell:vec:targets:{j}:{p}" not in inputs for j in range(k) for p in range(d)):
             return  # the target cells aren't currently shown (folded away)
-        monzos = [[_parse_int(inputs[f"cell:vec:targets:{j}:{p}"].value) for p in range(d)] for j in range(k)]
-        if any(v is None for m in monzos for v in m):
+        vectors = [[_parse_int(inputs[f"cell:vec:targets:{j}:{p}"].value) for p in range(d)] for j in range(k)]
+        if any(v is None for m in vectors for v in m):
             return
-        editor.set_target_override_monzos(monzos)
+        editor.set_target_override_vectors(vectors)
         render()
 
     def on_power_change(cid):
@@ -1913,15 +1913,15 @@ def index() -> None:
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_comma_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "interestcell":  # an editable interval of interest monzo component
+            elif cb.kind == "interestcell":  # an editable interval of interest vector component
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "heldcell":  # an editable held interval monzo component (constrains the tuning)
+            elif cb.kind == "heldcell":  # an editable held interval vector component (constrains the tuning)
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_held_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "targetcell":  # an editable target interval list monzo component (overrides the set)
+            elif cb.kind == "targetcell":  # an editable target interval list vector component (overrides the set)
                 wrap.classes("rtt-cell-input")
                 inputs[cb.id] = ui.input(on_change=lambda e: on_target_cells_change()) \
                     .props("dense borderless").classes("rtt-cellinput")
@@ -1942,11 +1942,11 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val rtt-pending-q")
             elif cb.kind in ("target", "commaratio"):
                 _ratio(cb, approx=False)
-            elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, monzo components)
+            elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, vector components)
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "count":  # a scalar "symbol = value" (the counts row's 𝑑 = 3 etc.)
                 math_cells[cb.id] = ui.html("").classes("rtt-count")  # content set in render()
-            elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, monzo rule
+            elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, vector rule
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
             elif cb.kind == "chart":
                 htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # bar chart drawn in render()
@@ -2266,11 +2266,11 @@ def index() -> None:
                 inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
                                       remove="" if cb.pending else "rtt-pending")
             elif cb.kind == "interestcell":
-                inputs[cb.id].value = cb.text  # the normalized monzo component build computed
+                inputs[cb.id].value = cb.text  # the normalized vector component build computed
             elif cb.kind == "heldcell":
-                inputs[cb.id].value = cb.text  # the normalized held monzo component build computed
+                inputs[cb.id].value = cb.text  # the normalized held vector component build computed
             elif cb.kind == "targetcell":
-                inputs[cb.id].value = cb.text  # the target monzo component build computed (blank when quantities off)
+                inputs[cb.id].value = cb.text  # the target vector component build computed (blank when quantities off)
             elif cb.kind == "prescalercell":  # reflect the live prescaler diagonal (the override if set,
                 # else the scheme-derived value — spreadsheet.build resolves that and emits the final
                 # text already). Blank when quantities are off, mirroring the other editable matrix cells

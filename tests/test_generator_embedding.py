@@ -23,7 +23,7 @@ def test_quarter_comma_meantone_projection_holds_2_and_5():
 
 def test_quarter_comma_meantone_embedding_generator_is_quarter_root_of_5():
     """The embedding's generators (its columns) are the octave 2/1 and the
-    fractional monzo 5^(1/4) — quarter-comma meantone's defining fifth."""
+    fractional vector 5^(1/4) — quarter-comma meantone's defining fifth."""
     held = Temperament(((1, 0, 0), (0, 0, 1)), COL)  # 2/1 and 5/1
     assert get_generator_embedding(MEANTONE, held) == (
         (1, 0),

@@ -18,6 +18,12 @@ class Variance(Enum):
         raise ValueError(f"Unrecognized variance: {text!r}")
 
 
+# Accepted INPUT synonyms for the column (vector) variance. Beside D&D's preferred terms
+# this keeps a few legacy/jargon ones SOLELY as a translation layer — so a user who types
+# the old word is still understood, not because we endorse it: "monzo"/"monzos" (the
+# abandoned eponym for a vector) and the abbreviations pcv/gcv. (The parallel _ROW_SYNONYMS
+# likewise keeps "val"/"vals".) These are the only place "monzo" survives in the codebase;
+# everywhere else uses "vector". Don't remove them unless dropping that input compatibility.
 _COL_SYNONYMS = frozenset(
     {
         "vector", "vectors", "contra", "contravector", "contravectors",

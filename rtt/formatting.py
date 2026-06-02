@@ -40,7 +40,7 @@ def _outer_brackets(
 
 
 def vector_to_ebk(vector: tuple, t: Temperament) -> str:
-    """Format one vector (comma/monzo) as EBK, bracketed per its length vs d/r."""
+    """Format one vector as EBK, bracketed per its length vs d/r."""
     body = " ".join(_format_number(x) for x in vector)
     n = len(vector)
     if n == get_d(t):

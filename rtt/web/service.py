@@ -170,20 +170,20 @@ def default_target_limit(family: str, domain_basis) -> int:
     return default_old_limit(domain) if "OLD" in family else default_tilt_limit(domain)
 
 
-def _monzos_to_ratios(monzos, domain_basis=None) -> tuple[str, ...]:
-    """Each monzo as a ``"num/den"`` ratio string (the shared rendering for generators
-    and commas). A monzo's components are exponents on the domain basis: the standard
+def _vectors_to_ratios(vectors, domain_basis=None) -> tuple[str, ...]:
+    """Each vector as a ``"num/den"`` ratio string (the shared rendering for generators
+    and commas). A vector's components are exponents on the domain basis: the standard
     primes (``pcv_to_quotient``) or, for a nonstandard basis, its (nonprime) elements —
     so a comma over ``2.3.13/5`` multiplies those out (676/675), not the primes (100/27)."""
     standard = domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis)
     elements = None if standard else tuple(Fraction(e) for e in domain_basis)
     ratios = []
-    for monzo in monzos:
+    for vector in vectors:
         if standard:
-            quotient = pcv_to_quotient(monzo)  # exponents on the standard primes
+            quotient = pcv_to_quotient(vector)  # exponents on the standard primes
         else:
             quotient = Fraction(1)
-            for element, exponent in zip(elements, monzo):
+            for element, exponent in zip(elements, vector):
                 quotient *= element**exponent
         ratios.append(f"{quotient.numerator}/{quotient.denominator}")
     return tuple(ratios)
@@ -191,10 +191,10 @@ def _monzos_to_ratios(monzos, domain_basis=None) -> tuple[str, ...]:
 
 def generators(mapping, domain_basis=None) -> tuple[str, ...]:
     """Each generator as an approximate ratio string, e.g. ``('2/1', '2/3')``. The
-    detempering's monzos are over the domain basis, so a nonstandard one multiplies out
-    its (nonprime) elements rather than reading the monzo over primes."""
+    detempering's vectors are over the domain basis, so a nonstandard one multiplies out
+    its (nonprime) elements rather than reading the vector over primes."""
     m = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
-    return _monzos_to_ratios(get_generator_detempering(m).matrix, domain_basis)
+    return _vectors_to_ratios(get_generator_detempering(m).matrix, domain_basis)
 
 
 def generator_detempering(mapping) -> Matrix:
@@ -218,34 +218,34 @@ def comma_ratios(comma_basis, domain_basis=None) -> tuple[str, ...]:
     """Each comma in the basis as a ratio string, e.g. ``('80/81',)`` — the
     comma-column analogue of :func:`generators`. Rendered as-is (the canonical
     dual's sign), so the syntonic comma reads ``80/81`` (a descending interval).
-    Over a nonstandard ``domain_basis`` the monzo is multiplied out over its elements."""
-    return _monzos_to_ratios(comma_basis, domain_basis)
+    Over a nonstandard ``domain_basis`` the vector is multiplied out over its elements."""
+    return _vectors_to_ratios(comma_basis, domain_basis)
 
 
-def _monzos(ratios, d) -> tuple:
-    """Parse a ratio list into monzos over the first ``d`` primes (``()`` if empty)."""
+def _vectors(ratios, d) -> tuple:
+    """Parse a ratio list into vectors over the first ``d`` primes (``()`` if empty)."""
     return parse_quotient_list("{" + ", ".join(ratios) + "}", d)
 
 
-def _interval_monzos(ratios, domain_basis, d) -> tuple:
-    """Each ratio as a monzo over the domain basis: parsed over the first ``d`` primes for a
+def _interval_vectors(ratios, domain_basis, d) -> tuple:
+    """Each ratio as a vector over the domain basis: parsed over the first ``d`` primes for a
     standard basis, or expressed over the (possibly nonprime) elements for a nonstandard one
     (so e.g. ``13/5`` keeps its 13 over ``2.3.13/5`` instead of being truncated to the d primes)."""
     if domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis):
-        return _monzos(ratios, d)
+        return _vectors(ratios, d)
     return express_quotients_in_domain_basis(tuple(Fraction(r) for r in ratios), tuple(domain_basis))
 
 
-def _over(prime_map, monzo):
-    """Project a monzo through a prime map (their dot product)."""
-    return sum(prime_map[p] * monzo[p] for p in range(len(prime_map)))
+def _over(prime_map, vector):
+    """Project a vector through a prime map (their dot product)."""
+    return sum(prime_map[p] * vector[p] for p in range(len(prime_map)))
 
 
-def _map_through(mapping, monzos) -> Matrix:
-    """Map each monzo through ``M`` — columns of monzos taken to generator coords."""
+def _map_through(mapping, vectors) -> Matrix:
+    """Map each vector through ``M`` — columns of vectors taken to generator coords."""
     d = len(mapping[0])
     return tuple(
-        tuple(sum(mapping[i][p] * monzo[p] for p in range(d)) for monzo in monzos)
+        tuple(sum(mapping[i][p] * vector[p] for p in range(d)) for vector in vectors)
         for i in range(len(mapping))
     )
 
@@ -256,7 +256,7 @@ def mapped_intervals(mapping, ratios, domain_basis=None) -> Matrix:
     the empty set yields one empty generator row per mapping row, keeping the shape.
     Over a nonstandard ``domain_basis`` each ratio is expressed in that basis first."""
     mapping = _to_matrix(mapping)
-    return _map_through(mapping, _interval_monzos(ratios, domain_basis, len(mapping[0])))
+    return _map_through(mapping, _interval_vectors(ratios, domain_basis, len(mapping[0])))
 
 
 def mapped_commas(mapping, comma_basis) -> Matrix:
@@ -282,7 +282,7 @@ def canonical_comma_basis(comma_basis) -> Matrix:
 def form_matrix(mapping) -> Matrix:
     """The generator form matrix ``F``: the unimodular r×r change of generator basis with
     ``F·M = canonical(M)``. Computed as ``F = canonical(M)·Dᵀ`` where ``D`` is the
-    generator detempering (its rows the generators as monzos), since ``M·Dᵀ = I``."""
+    generator detempering (its rows the generators as vectors), since ``M·Dᵀ = I``."""
     m = _to_matrix(mapping)
     canon = canonical_ma(m)
     detemper = get_generator_detempering(Temperament(m, Variance.ROW)).matrix
@@ -293,10 +293,10 @@ def form_matrix(mapping) -> Matrix:
     )
 
 
-def target_interval_monzos(ratios, d: int, domain_basis=None) -> Matrix:
-    """Each target interval as a monzo — its interval-vector form over the d domain
+def target_interval_vectors(ratios, d: int, domain_basis=None) -> Matrix:
+    """Each target interval as a vector — its interval-vector form over the d domain
     elements (expressed in the basis when it is nonstandard)."""
-    return tuple(tuple(int(x) for x in monzo) for monzo in _interval_monzos(ratios, domain_basis, d))
+    return tuple(tuple(int(x) for x in vector) for vector in _interval_vectors(ratios, domain_basis, d))
 
 
 def tuning(
@@ -371,44 +371,44 @@ def held_intervals(scheme: str = DEFAULT_TUNING_SCHEME, d: int = 3) -> tuple[str
     held = resolve_tuning_scheme(scheme).held_intervals
     if not held:
         return ()
-    return _monzos_to_ratios(parse_quotient_list(held.replace("octave", "2"), d))
+    return _vectors_to_ratios(parse_quotient_list(held.replace("octave", "2"), d))
 
 
 def interval_sizes(tun: Tuning, ratios, domain_basis=None) -> IntervalSizes:
     """Project an interval set through ``tun`` — its tempered/just sizes, error, damage.
     Over a nonstandard ``domain_basis`` each ratio is expressed in that basis (matching the
     basis ``tun`` runs over)."""
-    monzos = _interval_monzos(ratios, domain_basis, len(tun.tuning_map))
-    tempered = tuple(_over(tun.tuning_map, m) for m in monzos)
-    just = tuple(_over(tun.just_map, m) for m in monzos)
+    vectors = _interval_vectors(ratios, domain_basis, len(tun.tuning_map))
+    tempered = tuple(_over(tun.tuning_map, m) for m in vectors)
+    just = tuple(_over(tun.just_map, m) for m in vectors)
     errors = tuple(t_ - j for t_, j in zip(tempered, just))
     return IntervalSizes(tempered, just, errors, tuple(abs(e) for e in errors))
 
 
-def _temperament_spec_monzos(mapping, scheme, ratios):
-    """The (Temperament, resolved spec, monzos-over-the-domain) triple the complexity and
-    weight projections share — both norm a set of monzos through the scheme's complexity."""
+def _temperament_spec_vectors(mapping, scheme, ratios):
+    """The (Temperament, resolved spec, vectors-over-the-domain) triple the complexity and
+    weight projections share — both norm a set of vectors through the scheme's complexity."""
     t = Temperament(_to_matrix(mapping), Variance.ROW)
-    return t, resolve_tuning_scheme(scheme), _monzos(ratios, get_d(t))
+    return t, resolve_tuning_scheme(scheme), _vectors(ratios, get_d(t))
 
 
 def interval_complexities(
     mapping, scheme: str = DEFAULT_TUNING_SCHEME, ratios=(), prescaler_override=None,
 ) -> tuple[float, ...]:
     """Each interval's complexity under ``scheme``'s complexity norm — the (pre-transformed)
-    norm of its monzo (log-prime by default). Independent of the damage slope, which
+    norm of its vector (log-prime by default). Independent of the damage slope, which
     only decides how complexity becomes a weight.
 
     ``prescaler_override`` (a d-tuple) replaces the trait-derived diagonal — the seam the
     bare prescaler tile rides into the complexity row."""
-    t, spec, monzos = _temperament_spec_monzos(mapping, scheme, ratios)
+    t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios)
     return tuple(
         get_complexity(
             m, t, spec.complexity_norm_power, spec.complexity_log_prime_power,
             spec.complexity_prime_power, spec.complexity_size_factor, spec.nonprime_basis_approach,
             prescaler_override=prescaler_override,
         )
-        for m in monzos
+        for m in vectors
     )
 
 
@@ -420,9 +420,9 @@ def interval_weights(
 
     ``prescaler_override`` (a d-tuple) flows into each per-target complexity via
     :func:`_damage_weights`, so a hand-edited diagonal reaches the weights row."""
-    t, spec, monzos = _temperament_spec_monzos(mapping, scheme, ratios)
+    t, spec, vectors = _temperament_spec_vectors(mapping, scheme, ratios)
     return tuple(
-        float(w) for w in _damage_weights(monzos, t, spec, prescaler_override=prescaler_override)
+        float(w) for w in _damage_weights(vectors, t, spec, prescaler_override=prescaler_override)
     )
 
 
@@ -671,7 +671,7 @@ def plain_text_values(
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
     show the same numbers two ways — the EBK string is the inline notation. ``held``
-    (the held interval monzos), ``interest`` (the other-intervals-of-interest monzos),
+    (the held interval vectors), ``interest`` (the other-intervals-of-interest vectors),
     ``generator_tuning`` (a frozen manual tuning) and ``target_override`` (a typed explicit
     target list) are threaded into the same tuning/targets the grid builds, so the two views
     can't diverge."""
@@ -680,7 +680,7 @@ def plain_text_values(
     commas = comma_ratios(state.comma_basis, db)
     mapped = mapped_intervals(state.mapping, targets, db)
     mapped_comma = mapped_commas(state.mapping, state.comma_basis)
-    target_monzos = target_interval_monzos(targets, state.d, db)
+    target_vectors = target_interval_vectors(targets, state.d, db)
     held_ratios = comma_ratios(held, db) if held else ()
     # match the grid's tuning exactly: a frozen manual generator tuning (optimize lock off)
     # drives the maps directly; otherwise the scheme's optimum holding the held intervals just
@@ -692,7 +692,7 @@ def plain_text_values(
     comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
     detemper_ratios = generators(state.mapping, db)  # the detempering as ratios (= service.generators)
     detemper_sizes = interval_sizes(tun, detemper_ratios, db)  # tempered = the genmap, plus just/error
-    detemper_monzos = generator_detempering(state.mapping)  # D's vectors, for the prescaling matrix
+    detemper_vectors = generator_detempering(state.mapping)  # D's vectors, for the prescaling matrix
     # the weighting region: complexity (a covector over the primes, lists elsewhere), the
     # per-target weight list, and the prescaling matrices (L applied to each vector set, as
     # ket lists). Complexity over the primes is the complexity of each domain basis element.
@@ -703,7 +703,7 @@ def plain_text_values(
     def _prescaled(vectors):
         return tuple(tuple(prescaler[i] * v[i] for i in range(state.d)) for v in vectors)
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
-    # monzo lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
+    # vector lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
     # are the mapping (mapping/primes) and the comma basis (vectors/commas). The
     # quantities-row ratios get a per-column plain text in the layout, not here; the
@@ -711,7 +711,7 @@ def plain_text_values(
     values = {
         ("quantities", "primes"): ".".join(str(e) for e in db),
         ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
-        ("vectors", "targets"): _ket_list(target_monzos, "⟩"),
+        ("vectors", "targets"): _ket_list(target_vectors, "⟩"),
         ("mapping", "primes"): mapping_ebk(state),
         ("mapping", "commas"): _ket_list(zip(*mapped_comma), "}"),
         ("mapping", "detempering"): _ket_list(zip(*mapped_detempering(state.mapping)), "}"),
@@ -740,15 +740,15 @@ def plain_text_values(
         # product with another basis.
         ("prescaling", "primes"): _prescale_vector_list(_prescaled(prime_units), col="⟨]", outer="[⟩"),
         ("prescaling", "commas"): _prescale_vector_list(_prescaled(state.comma_basis)),
-        ("prescaling", "detempering"): _prescale_vector_list(_prescaled(detemper_monzos)),
-        ("prescaling", "targets"): _prescale_vector_list(_prescaled(target_monzos)),
+        ("prescaling", "detempering"): _prescale_vector_list(_prescaled(detemper_vectors)),
+        ("prescaling", "targets"): _prescale_vector_list(_prescaled(target_vectors)),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
         ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas)),
         ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios)),
         ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets)),
         ("weight", "targets"): _cents_list(interval_weights(state.mapping, scheme, targets)),
     }
-    # the held interval column mirrors the comma column: the basis as a monzo list, mapped
+    # the held interval column mirrors the comma column: the basis as a vector list, mapped
     # into generator coords, then the held-just sizes/errors and complexity. Added only when
     # the user has held intervals (an empty set declares no held tiles, like the commas).
     if held:
@@ -784,7 +784,7 @@ def plain_text_values(
 
 
 def _ket_list(vectors, close: str, wrap: bool = True) -> str:
-    """A list of column vectors: ``[[1 0 0⟩ [0 1 0⟩]`` for monzos (close ``⟩``),
+    """A list of column vectors: ``[[1 0 0⟩ [0 1 0⟩]`` for vectors (close ``⟩``),
     ``[[1 0} [0 1}]`` for generator-coordinate vectors (close ``}``). The outer ``[ ]``
     wraps the whole list (a matrix presentation, even a single vector); ``wrap=False``
     drops it for the intervals-of-interest column, whose intervals stand alone."""

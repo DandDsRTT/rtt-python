@@ -12,7 +12,7 @@ from rtt.temperament import Variance
         ("mapping", Variance.ROW),
         ("comma", Variance.COL),
         ("map", Variance.ROW),
-        ("monzo", Variance.COL),
+        ("vector", Variance.COL),
         ("covariant", Variance.ROW),
         ("contravariant", Variance.COL),
     ],
