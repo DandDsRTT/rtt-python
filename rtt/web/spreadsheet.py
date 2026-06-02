@@ -105,6 +105,11 @@ OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred u
 BOX_OUTER = 4  # gap between a control box and its tile's edges
 BOX_INNER = 5  # inset of the dropdown within the box (off the border)
 CTRL_LABEL_GAP = 2  # padding below the label, to the box's bottom edge
+# box 𝐓's footprint: the target chooser dropdown + the all-interval checkbox slot on one row,
+# both inside one bordered box. Unlike the un-boxed LBOX_W/CBOX_W above, this includes the box
+# padding (BOX_OUTER off the tile, BOX_INNER off the border, each side) so _control_floor can
+# widen the target column enough that the box never overhangs the tile.
+TBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + TARGET_PRESELECT_W + 8 + LBOX_DIM_W  # 8 = OPT_COL_GAP
 BOX_TITLE_H = 14  # px height of the optimization / tuning-ranges boxes' bold title strip
 BOX_TITLE_GAP = 4  # gap below that title, before the box's content
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
@@ -1275,6 +1280,8 @@ def build(state, settings=None, collapsed=None,
             floor = LBOX_W
         if key == "targets" and _cbox_show:
             floor = max(floor, CBOX_W)
+        if key == "targets" and show_preselects and settings["all_interval"]:
+            floor = max(floor, TBOX_W)  # box 𝐓: target chooser + all-interval checkbox, one box
         # the preselect / form dropdowns' one-line labels (the .rtt-caption-left asset) must fit
         # the column too, so a long label like "established tuning scheme" widens its (narrow)
         # tile rather than spilling it — e.g. the generator tuning map's tuning-scheme copy
@@ -2652,15 +2659,27 @@ def build(state, settings=None, collapsed=None,
     # the top and the standard dropdown-label underneath — a left-justified one-line caption
     # (.rtt-caption-left: 6px left, 2px top) hugging the dropdown's bottom edge, the same asset
     # every other labelled control uses. Returns the (x, width, y) to seat the dropdown at.
-    def control_box(box_id, ckey, top, cap_w, label):
+    def control_box(box_id, ckey, top, cap_w, label, extra_w=0):
+        # extra_w widens the box to the right of the dropdown to enclose an adjacent control (the
+        # target chooser's all-interval checkbox); 0 leaves a plain dropdown-only box.
         dropdown_w, label_h, box_h = control_dims(ckey, cap_w, label)
         box_x, box_y = col_x[ckey] + BOX_OUTER, top + BOX_OUTER
-        blocks.append(Block(box_id, box_x, box_y, dropdown_w + 2 * BOX_INNER, box_h, boxed=True))
+        blocks.append(Block(box_id, box_x, box_y, dropdown_w + extra_w + 2 * BOX_INNER, box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
         if label:
             cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESELECT_H, dropdown_w, label_h,
                                  "caption", text=label, align="left"))
         return ctrl_x, dropdown_w, ctrl_y
+
+    def emit_all_interval_check(check_x, ctrl_y):
+        # the all-interval checkbox + its caption, seated on a control row at ctrl_y: an 18px square
+        # over an "all-interval" caption in an LBOX_DIM_W slot (the box-𝐋 diminuator's shape). It
+        # reflects whether the scheme targets every interval (ticking it is wired in app.py).
+        check_y = ctrl_y + (PRESELECT_H - CHECK_SQUARE) / 2  # centre the square on the control row
+        cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, CHECK_SQUARE,
+                             "control_check", text="", checked=service.is_all_interval(tuning_scheme)))
+        cells.append(CellBox("caption:all_interval", check_x, check_y + CHECK_SQUARE, LBOX_DIM_W,
+                             CAPTION_LINE, "caption", text="all-interval"))
 
     # preselect chooser dropdowns, in the reserved band below each governing tile's
     # plain-text box. The tuning/target choosers carry the live selection; the
@@ -2676,34 +2695,27 @@ def build(state, settings=None, collapsed=None,
             if not tile_open(rkey, ckey):
                 return
             top = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
-            cx, cw, cy = control_box(f"block:{cid}", ckey, top, preselect_cap(name), label)
+            # the target chooser carries the all-interval checkbox to the dropdown's right, both
+            # inside one box (box 𝐓): the box widens by the checkbox slot to enclose it.
+            with_check = name == "target" and settings["all_interval"]
+            extra = OPT_COL_GAP + LBOX_DIM_W if with_check else 0
+            cx, cw, cy = control_box(f"block:{cid}", ckey, top, preselect_cap(name), label, extra_w=extra)
             cells.append(CellBox(cid, cx, cy, cw, PRESELECT_H, "preselect", text=preselect_text[name]))
+            if with_check:
+                emit_all_interval_check(cx + cw + OPT_COL_GAP, cy)
 
         for name, rkey, ckey, label in PRESELECTS:
             emit_preselect(f"preselect:{name}", name, rkey, ckey, label)
         for name, rkey, ckey, label in PRESELECT_COPIES:  # the same control in a second tile
             emit_preselect(f"preselect:{name}:{ckey}", name, rkey, ckey, label)
 
-    # the all-interval checkbox rides in the target control band, revealed by the show-panel
-    # "all-interval" entry ALONE (not the preselects toggle): when the target chooser is shown it
-    # sits to the chooser's RIGHT (the box-𝐋 checkbox-beside-dropdown layout, graying the chooser
-    # when checked); alone at the column's left otherwise. An 18px square over an "all-interval"
-    # caption, centred on the chooser's control row, reflecting whether the scheme targets every
-    # interval (ticking it is wired in app.py).
-    if settings["all_interval"] and tile_open("vectors", "targets"):
-        t_top = ptext_band_y("vectors") + row_ptext["vectors"]
-        ctrl_y = t_top + BOX_OUTER + BOX_INNER  # the control row, as control_box seats it
-        if show_preselects:  # ride to the right of the target chooser's box
-            dropdown_w = control_dims("targets", preselect_cap("target"), "target interval set scheme")[0]
-            check_x = col_x["targets"] + BOX_OUTER + dropdown_w + 2 * BOX_INNER + OPT_COL_GAP
-        else:  # no chooser shown — the checkbox is the band's only control, at the column's left
-            check_x = col_x["targets"] + BOX_OUTER
-        check_y = ctrl_y + (PRESELECT_H - CHECK_SQUARE) / 2  # centre the square on the chooser's row
-        cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, CHECK_SQUARE,
-                             "control_check", text="",
-                             checked=service.is_all_interval(tuning_scheme)))
-        cells.append(CellBox("caption:all_interval", check_x, check_y + CHECK_SQUARE, LBOX_DIM_W,
-                             CAPTION_LINE, "caption", text="all-interval"))
+    # the all-interval checkbox is revealed by the show-panel "all-interval" entry ALONE (not the
+    # preselects toggle). When the target chooser is shown, emit_preselect seats the checkbox inside
+    # the chooser's box (box 𝐓, above); when it is hidden the checkbox is the band's only target
+    # control, alone at the column's left. The vectors row reserves the band either way.
+    if settings["all_interval"] and not show_preselects and tile_open("vectors", "targets"):
+        top = ptext_band_y("vectors") + row_ptext["vectors"]
+        emit_all_interval_check(col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
     # the form chooser, one box below the preselect chooser: it canonicalizes the mapping /
     # comma basis it rides (an undoable edit). A control, so it ignores the value-display

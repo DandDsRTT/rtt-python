@@ -1807,6 +1807,21 @@ def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown():
     assert on["control:all_interval"].x > on["preselect:target"].x
 
 
+def test_all_interval_checkbox_sits_inside_the_target_chooser_box():
+    # box 𝐓: the checkbox + its caption share the target chooser's box (to the dropdown's right),
+    # so the border encloses them rather than stranding them past its right edge — and the widened
+    # box still stays within the target column's tile (it never overhangs).
+    lay = _with(all_interval=True, preselects=True)
+    cells = {c.id: c for c in lay.cells}
+    blocks = {b.id: b for b in lay.blocks}
+    box, tile = blocks["block:preselect:target"], blocks["block:vec:targets"]
+    for cid in ("control:all_interval", "caption:all_interval"):
+        c = cells[cid]
+        assert box.x <= c.x and c.x + c.w <= box.x + box.w  # enclosed horizontally
+        assert box.y <= c.y and c.y + c.h <= box.y + box.h  # enclosed vertically
+    assert tile.x <= box.x and box.x + box.w <= tile.x + tile.w  # box stays within the tile
+
+
 def test_all_interval_show_entry_is_live_not_a_greyed_stub():
     # it now builds content (the target-controls checkbox + the dual(q) gate), so the Show panel
     # offers it live (interactive), not greyed out as an unbuilt stub
