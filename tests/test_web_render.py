@@ -101,6 +101,16 @@ def _cell_text(user: User, cell_id: str) -> str:
     return getattr(_cell_child(user, cell_id), "text", "")
 
 
+def _stacked_face(user: User, cell_id: str):
+    """The (int label, fraction label) of an editable cents cell's stacked face — the
+    overlay that makes the value read like a read-only tval cell (the whole part big, the
+    decimal small and below). The editable input is child[0]; the face is child[1] (a
+    .rtt-tval div holding the .rtt-cents-int / .rtt-cents-frac labels)."""
+    wrap = next(iter(user.find(marker=cell_id).elements))
+    face = wrap.default_slot.children[1]
+    return face.default_slot.children[0], face.default_slot.children[1]
+
+
 async def test_tuning_preselect_offers_only_lp_while_alternatives_are_shelved(user: User) -> None:
     # alternative-complexity schemes are gated behind the (shelved) alt. complexity setting,
     # so with it off the tuning chooser lists only the strictly log-product scheme.
@@ -127,6 +137,19 @@ async def test_editing_a_generator_tuning_cell_applies_an_override(user: User) -
     _cell_child(user, "tuning:gen:1").set_value("700.000")
     await user.should_see(marker="tuning:gen:1")
     assert _cell_child(user, "tuning:gen:1").value == "700.000"
+
+
+async def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(user: User) -> None:
+    # the generator tuning map cells are editable inputs, but a 3-dp cents value (e.g. 697.564)
+    # overflows the 30px square as a single line. They must show the same stacked int-over-
+    # fraction face as the read-only cents cells — the whole part big over a smaller dot-led
+    # fraction — so the value fits. Assert the live value splits across the two face labels.
+    await user.open("/")
+    value = _cell_child(user, "tuning:gen:1").value  # the single-line cents value, e.g. "697.564"
+    int_lbl, frac_lbl = _stacked_face(user, "tuning:gen:1")
+    assert "." not in int_lbl.text                  # the whole part stands alone (no decimal)
+    assert frac_lbl.text.startswith(".")            # the fraction stacks under, dot-led
+    assert int_lbl.text + frac_lbl.text == value    # and the two reconstruct the cell's value
 
 
 async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
@@ -158,6 +181,20 @@ async def test_editing_a_prescaler_diagonal_cell_overrides_the_scheme(user: User
     # the off-diagonal cell is plain tval "0" (the rtt-tval div, no editable input); a render
     # error in that branch would surface here via the fixture's ERROR-log guard
     await user.should_see(marker="cell:prescaling:primes:0:1")
+
+
+async def test_editable_prescaler_cell_renders_a_stacked_cents_face(user: User) -> None:
+    # the bare prescaler 𝐋 diagonal cells are editable too; the 5-limit default seeds prime 3's
+    # diagonal at log₂3 = 1.585, a 3-dp value that overflows the square as a single line. It must
+    # read as the same stacked int-over-fraction face. Enable weighting (gates the prescaling row).
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()
+    await user.should_see(marker="cell:prescaling:primes:1:1")
+    value = _cell_child(user, "cell:prescaling:primes:1:1").value  # the single-line value, e.g. "1.585"
+    int_lbl, frac_lbl = _stacked_face(user, "cell:prescaling:primes:1:1")
+    assert "." not in int_lbl.text                  # the whole part stands alone
+    assert frac_lbl.text.startswith(".")            # the fraction stacks under, dot-led
+    assert int_lbl.text + frac_lbl.text == value    # and the two reconstruct the cell's value
 
 
 async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:

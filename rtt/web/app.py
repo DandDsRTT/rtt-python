@@ -607,6 +607,19 @@ _CSS = f"""
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }}
 .rtt-cents-int {{ font-size:10px; }}
 .rtt-cents-frac {{ font-size:7px; color:#000; }}
+/* an editable cents cell (the generator tuning map 𝒈, the bare prescaler 𝐋 diagonal): a
+   single-line input overflows the square with a 3-dp value, so it carries the SAME stacked
+   int-over-fraction face as a read-only cents cell, overlaid on top of the input. The face
+   ignores pointer events (a click falls through and focuses the input); focusing the cell
+   then swaps to the raw single-line text for editing and hides the face. */
+.rtt-cellface {{ position:absolute; top:0; left:0; width:100%; height:100%;
+            pointer-events:none; z-index:1; }}
+.rtt-cell-stacked .rtt-cellinput .q-field__native {{ color:transparent; font-size:10px; }}
+.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native {{ color:#000; }}
+.rtt-cell-stacked:focus-within .rtt-cellface {{ display:none; }}
+/* with the per-cell unit on, lift the face's centred value to clear the unit pinned at the
+   cell's bottom (a read-only cents cell stacks value-over-unit; this overlay pads instead) */
+.rtt-cell-united.rtt-cell-stacked .rtt-cellface {{ padding-bottom:9px; }}
 /* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
    line's font is scaled (inline) to fit the narrow value square, so it never overflows.
    No fixed height (like .rtt-tval): the cell centres it, and when a per-cell unit is
@@ -1471,6 +1484,14 @@ def index() -> None:
                   opt_buttons):
             d.pop(eid, None)
 
+    def set_cents_face(cid, text):
+        """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
+        fraction blank when the value is an integer or the cell is blanked). Shared by the
+        read-only tval cells and the editable cents cells (whose face overlays their input)."""
+        whole, frac = _cents_parts(text)
+        cents[cid][0].set_text(whole)
+        cents[cid][1].set_text(f".{frac}" if frac else "")
+
     def on_mapping_change():
         if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
             return
@@ -1740,6 +1761,18 @@ def index() -> None:
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
+
+        def cents_face(cls):
+            """Build the stacked int-over-fraction cents face (the read-only tval look: the
+            whole part big over a smaller dot-led fraction) and register its labels so render()
+            keeps them synced. Shared by the read-only tval cell and the editable cents cells —
+            the latter pass the overlay class and lay it over their input."""
+            whole, frac = _cents_parts(cb.text)
+            with ui.element("div").classes(cls):
+                w = ui.label(whole).classes("rtt-cents-int")
+                f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
+            cents[cb.id] = (w, f)
+
         with wrap:
             if cb.kind == "mapping":
                 wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
@@ -1765,9 +1798,10 @@ def index() -> None:
                 # override (off-diagonal cells stay tval "0" — 𝐿 is diagonal). Each input dispatches
                 # to set_custom_prescaler_entry; the cid carries the diagonal slot, so the lambda
                 # closes over it (a free cb would be the LAST cell's id by the time the user types)
-                wrap.classes("rtt-cell-input")
+                wrap.classes("rtt-cell-input rtt-cell-stacked")
                 inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_prescaler_change(cid)) \
                     .props("dense borderless").classes("rtt-cellinput")
+                cents_face("rtt-tval rtt-cellface")  # the stacked face overlaid on the input
             elif cb.kind in ("prime", "formcell"):  # a read-only bordered cell (domain prime / form-matrix entry)
                 with ui.element("div").classes("rtt-white"):
                     labels[cb.id] = ui.label(cb.text)
@@ -1873,11 +1907,7 @@ def index() -> None:
                 # draft is typed into the red grid cells, not here), content set in render()
                 htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
             elif cb.kind == "tval":
-                whole, frac = _cents_parts(cb.text)
-                with ui.element("div").classes("rtt-tval"):
-                    w = ui.label(whole).classes("rtt-cents-int")
-                    f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
-                cents[cb.id] = (w, f)
+                cents_face("rtt-tval")
             elif cb.kind == "mathexpr":  # a just value's stacked closed form, fit to the cell
                 exprs[cb.id] = ui.html("").classes("rtt-mathexpr")  # content drawn in render()
             elif cb.kind == "colheader":
@@ -1948,9 +1978,10 @@ def index() -> None:
                 inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_power_change(cid)) \
                     .props("dense borderless").classes("rtt-cellinput")
             elif cb.kind == "gentuningcell":  # an editable generator-tuning-map cell (per-generator override)
-                wrap.classes("rtt-cell-input")
+                wrap.classes("rtt-cell-input rtt-cell-stacked")
                 inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_gentuning_change(cid)) \
                     .props("dense borderless").classes("rtt-cellinput")
+                cents_face("rtt-tval rtt-cellface")  # the stacked face overlaid on the input
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
@@ -2065,7 +2096,9 @@ def index() -> None:
             elif cb.kind == "powerinput":  # reflect the live optimization power (∞ / 2 / 1)
                 inputs[cb.id].value = cb.text
             elif cb.kind == "gentuningcell":  # reflect the live generator tuning (blank when quantities off)
-                inputs[cb.id].value = "" if cb.blank else cb.text
+                text = "" if cb.blank else cb.text
+                inputs[cb.id].value = text
+                set_cents_face(cb.id, text)  # the overlaid stacked face mirrors the input
             elif cb.kind == "mapping":
                 inputs[cb.id].value = "" if cb.blank else str(st.mapping[cb.gen][cb.prime])
             elif cb.kind == "commacell":
@@ -2086,6 +2119,7 @@ def index() -> None:
                 # else the scheme-derived value — spreadsheet.build resolves that and emits the final
                 # text already). Blank when quantities are off, mirroring the other editable matrix cells
                 inputs[cb.id].value = cb.text
+                set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
             elif cb.kind == "ptext":  # read-only value: keep its text and shrink-to-fit font in sync
                 labels[cb.id].set_text(cb.text)
                 labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
@@ -2107,10 +2141,8 @@ def index() -> None:
                 num, den = _ratio_parts(cb.text) or (cb.text, "")
                 fracs[cb.id][0].set_text(num)
                 fracs[cb.id][1].set_text(den)
-            elif cb.id in cents:
-                whole, frac = _cents_parts(cb.text)
-                cents[cb.id][0].set_text(whole)
-                cents[cb.id][1].set_text(f".{frac}" if frac else "")
+            elif cb.id in cents:  # a read-only cents (tval) cell: split into the stacked face
+                set_cents_face(cb.id, cb.text)
             elif cb.kind == "preselect":
                 # mirror the live selection: the temperament chooser shows the matched
                 # preset (or its placeholder), the target chooser splits into limit +
