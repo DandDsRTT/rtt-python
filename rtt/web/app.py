@@ -223,8 +223,7 @@ _CSS_VARS = f""":root {{
 _CSS = _CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
 
 
-_LABEL_KINDS = {"prime", "formcell", "colheader", "rowlabel", "mapped", "vec"}  # "ptext" has its own
-# font-sync branch; the fold toggles are inline-SVG glyphs (_FOLD_KINDS), updated via set_content
+# the fold toggles are inline-SVG glyphs (_FOLD_KINDS), updated via set_content
 _FOLD_KINDS = {"rowtoggle", "coltoggle", "tiletoggle", "alltoggle"}
 
 # Which sticky band each title/toggle kind renders into; every other cell goes to the body
@@ -1452,6 +1451,34 @@ def index() -> None:
     cell_kinds["commaratio"] = _KindHandlers(_build_commaratio, _update_ratio)
     cell_kinds["tval"] = _KindHandlers(_build_tval, _update_tval)
 
+    # ---- plain label cells: a ui.label whose text the update keeps in sync (set_text). prime /
+    # formcell sit in a white-bordered box; ptext also tracks a shrink-to-fit font; boxtitle is static ----
+    def _label_builder(cls):  # a build that drops a classed ui.label into the cell, registered in labels
+        def build(cb, wrap):
+            labels[cb.id] = ui.label(cb.text).classes(cls)
+        return build
+
+    def _build_white_label(cb, wrap):  # prime / formcell: a read-only bordered cell
+        with ui.element("div").classes("rtt-white"):
+            labels[cb.id] = ui.label(cb.text)
+
+    def _update_label(cb):  # prime / formcell / colheader / rowlabel / mapped / vec
+        labels[cb.id].set_text(cb.text)
+
+    def _update_ptext(cb):  # a read-only value: keep its text and shrink-to-fit font in sync
+        labels[cb.id].set_text(cb.text)
+        labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
+
+    cell_kinds["prime"] = _KindHandlers(_build_white_label, _update_label)
+    cell_kinds["formcell"] = _KindHandlers(_build_white_label, _update_label)
+    _val_builder = _label_builder("rtt-val")
+    cell_kinds["mapped"] = _KindHandlers(_val_builder, _update_label)
+    cell_kinds["vec"] = _KindHandlers(_val_builder, _update_label)
+    cell_kinds["colheader"] = _KindHandlers(_label_builder("rtt-colheader"), _update_label)
+    cell_kinds["rowlabel"] = _KindHandlers(_label_builder("rtt-rowlabel"), _update_label)
+    cell_kinds["ptext"] = _KindHandlers(_label_builder("rtt-ptext"), _update_ptext)
+    cell_kinds["boxtitle"] = _KindHandlers(_label_builder("rtt-boxtitle"), None)  # a static in-tile title
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1461,11 +1488,6 @@ def index() -> None:
             entry = cell_kinds.get(cb.kind)
             if entry is not None:
                 entry.build(cb, wrap)
-            elif cb.kind in ("prime", "formcell"):  # a read-only bordered cell (domain prime / form-matrix entry)
-                with ui.element("div").classes("rtt-white"):
-                    labels[cb.id] = ui.label(cb.text)
-            elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, vector components)
-                labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "rangemode":  # the monotone/tradeoff range selector under the ranges chart
                 wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
                 opts = {}
@@ -1541,12 +1563,6 @@ def index() -> None:
                 selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
                         on_change=lambda e, n=name: on_form_choose(n, e.value)) \
                     .props(_select_props(cb.w)).classes("rtt-preselect")
-            elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
-                labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
-            elif cb.kind == "colheader":
-                labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
-            elif cb.kind == "rowlabel":
-                labels[cb.id] = ui.label(cb.text).classes("rtt-rowlabel")
             elif cb.kind in ("rowtoggle", "coltoggle", "tiletoggle"):
                 item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
                 htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
@@ -1596,8 +1612,6 @@ def index() -> None:
                 opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: act(editor.optimize), color=None) \
                     .props("unelevated dense no-caps").classes("rtt-optimize")
                 opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
-            elif cb.kind == "boxtitle":  # an in-tile box title (e.g. "optimization")
-                labels[cb.id] = ui.label(cb.text).classes("rtt-boxtitle")
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
@@ -1720,9 +1734,6 @@ def index() -> None:
             elif cb.kind == "optimize":  # mark the button when its auto-optimize lock is on
                 (opt_buttons[cb.id].classes(add="rtt-optimize-locked") if editor.optimize_locked
                  else opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
-            elif cb.kind == "ptext":  # read-only value: keep its text and shrink-to-fit font in sync
-                labels[cb.id].set_text(cb.text)
-                labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
             elif cb.kind == "preselect":
                 # mirror the live selection: the temperament chooser shows the matched
                 # preset (or its placeholder), the target chooser splits into limit +
@@ -1764,8 +1775,6 @@ def index() -> None:
                 if fold_state.get(cb.id) != cb.text:
                     htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
                     fold_state[cb.id] = cb.text
-            elif cb.kind in _LABEL_KINDS:
-                labels[cb.id].set_text(cb.text)
 
             # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
             # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
