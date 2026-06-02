@@ -229,6 +229,20 @@ async def test_chooser_popups_open_wide_enough_for_one_line_entries(user: User) 
         assert style.startswith("min-width:"), f"{cell_id}: {style}"
 
 
+async def test_temperament_divider_rows_render_as_disabled_options(user: User) -> None:
+    # the prime-limit divider rows (── N-limit ──) read as headers, not choices: each is
+    # passed to Quasar with disable=True, so the q-item takes no hover highlight and a
+    # click on it neither picks it nor closes the popup. The named presets and the
+    # "choose temperament" placeholder stay pickable.
+    await _enable(user, "preselects")
+    select = _cell_child(user, "preselect:temperament")
+    option_by_value = dict(zip(select._values, select._props["options"]))
+    assert option_by_value["hdr:5"]["disable"] is True
+    assert option_by_value["hdr:13"]["disable"] is True
+    assert "disable" not in option_by_value["13:Marvel"]
+    assert "disable" not in option_by_value[""]
+
+
 async def test_optimization_renders_the_optimize_button(user: User) -> None:
     # the optimize button renders in the damage tile when optimization is on (its single/
     # double-click optimize+lock behaviour is covered by the editor tests). The fixture

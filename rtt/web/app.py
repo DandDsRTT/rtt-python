@@ -572,6 +572,13 @@ _CSS = f"""
    highlight (the focus-helper, at Quasar's own hover/focus opacity) */
 .rtt-select-popup .q-item--active {{ color:#000 !important; background:#ededed; }}
 .rtt-select-popup .q-focus-helper {{ background:#000 !important; }}
+/* the prime-limit divider rows are disabled (non-selectable): Quasar renders a disabled
+   q-item with no focus-helper (so no hover highlight) and skips it on click, so it can't be
+   picked and a click leaves the popup open. Undo Quasar's disabled styling so it reads as a
+   plain static header, not a thwarted choice — full opacity, default cursor (never the
+   not-allowed cursor, on the item and its label) */
+.rtt-select-popup .q-item.disabled {{ opacity:1 !important; cursor:default !important; }}
+.rtt-select-popup .q-item.disabled * {{ cursor:default !important; }}
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
 .rtt-preselect-target {{ width:100%; height:30px; display:flex; gap:3px; align-items:center; }}
 .rtt-preselect-target .rtt-preselect-num {{ flex:0 0 30px; }}  /* a gridded value square (COL_W x ROW_H) */
@@ -1428,6 +1435,26 @@ def _select_props(min_width: float) -> str:
             f"popup-content-style=min-width:{min_width}px;width:max-content")
 
 
+class _GroupedSelect(ui.select):
+    """A chooser whose group-divider rows are non-selectable. Each option whose value
+    satisfies ``is_divider`` is handed to Quasar with ``disable=True``, so its q-item
+    takes no hover highlight, can't be picked, and a click on it leaves the popup open —
+    it reads purely as a section header among the selectable entries."""
+
+    def __init__(self, options, *, is_divider, **kwargs) -> None:
+        self._is_divider = is_divider
+        super().__init__(options, **kwargs)
+
+    def _update_options(self) -> None:
+        # NiceGUI rebuilds the Quasar option dicts here (value/label); flag the divider
+        # rows so Quasar renders them disabled. Runs on every rebuild, so it survives a
+        # later set_options()/update() too.
+        super()._update_options()
+        for option, value in zip(self._props["options"], self._values):
+            if self._is_divider(value):
+                option["disable"] = True
+
+
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
@@ -1670,9 +1697,11 @@ def index() -> None:
         if building[0]:
             return
         if name == "temperament":
+            # the divider rows are disabled, so only a preset or the "" sentinel reaches
+            # here; the sentinel makes no edit but render() still snaps the box back
             if value in presets.TEMPERAMENT_COMMAS:
                 editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
-            render()  # inert divider rows re-render too, snapping back to the live temperament
+            render()
         elif name == "tuning" and value is not None:
             editor.set_tuning_scheme(value)
             render()
@@ -1878,7 +1907,8 @@ def index() -> None:
                     # sentinel ("choose temperament") shows only when none matches.
                     # Grouped by prime limit (divider rows) in the open list.
                     options = {"": "choose temperament", **presets.temperament_options()}
-                    selects[cb.id] = ui.select(options, value=presets.identify(editor.state) or "",
+                    selects[cb.id] = _GroupedSelect(options, value=presets.identify(editor.state) or "",
+                            is_divider=presets.is_divider,
                             on_change=lambda e: on_preselect("temperament", e.value)) \
                         .props(_select_props(cb.w)).classes("rtt-preselect")
                 else:  # tuning — systematic scheme names; a control-refined scheme has no name

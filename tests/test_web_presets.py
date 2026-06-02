@@ -41,6 +41,14 @@ def test_temperament_options_groups_by_limit_with_a_divider_before_each_group():
     assert "7:Miracle" in options and "11:Miracle" in options
 
 
+def test_is_divider_flags_only_limit_headers_not_presets():
+    # the prime-limit header rows are inert dividers; the named presets and the ""
+    # placeholder stay pickable. (Drives the chooser's disabled-row rendering.)
+    assert presets.is_divider("hdr:11")
+    assert not presets.is_divider("11:Miracle")
+    assert not presets.is_divider("")
+
+
 def test_every_tuning_scheme_preset_optimizes_to_a_finite_tuning():
     mapping = ((1, 1, 0), (0, 1, 4))  # the initial meantone
     for scheme in presets.TUNING_SCHEMES:

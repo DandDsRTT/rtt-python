@@ -95,14 +95,25 @@ TEMPERAMENT_COMMAS: dict[str, tuple[tuple[int, ...], ...]] = {
 }
 
 
+# prefix marking a temperament-chooser value as a prime-limit divider header rather
+# than a pickable preset (the chooser renders these as disabled, non-selectable rows).
+_DIVIDER_PREFIX = "hdr:"
+
+
+def is_divider(value: str) -> bool:
+    """Whether a temperament-chooser value is an inert prime-limit divider header
+    (see :func:`temperament_options`) rather than a pickable preset."""
+    return value.startswith(_DIVIDER_PREFIX)
+
+
 def temperament_options() -> dict[str, str]:
     """Ordered ``{value: label}`` for the temperament chooser: a divider row before
-    each prime-limit group, then the temperaments in it. The divider rows are inert
-    selections (the app re-renders, snapping the shown value back to the live
-    temperament), so they read as group headers without being pickable values."""
+    each prime-limit group, then the temperaments in it. The divider rows carry the
+    :data:`_DIVIDER_PREFIX` so the chooser renders them disabled — they read as group
+    headers without being pickable values (see :func:`is_divider`)."""
     options: dict[str, str] = {}
     for limit, group in TEMPERAMENTS_BY_LIMIT:
-        options[f"hdr:{limit}"] = f"── {limit}-limit ──"
+        options[f"{_DIVIDER_PREFIX}{limit}"] = f"── {limit}-limit ──"
         for name, _ in group:
             options[f"{limit}:{name}"] = name
     return options
