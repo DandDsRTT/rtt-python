@@ -1254,13 +1254,15 @@ def build(state, settings=None, collapsed=None,
     # the value cells are inset by BRACKET_W within the group. The primes column
     # additionally reserves a MATLABEL_W gutter on the left when symbols is on AND
     # the mapping row will render, so its row labels (𝒎₁, 𝒎₂, …) seat left of each
-    # row's ⟨ bracket without overflowing the panel.
+    # row's ⟨ bracket without overflowing the panel. An equal empty gutter is mirrored
+    # on the RIGHT (see col_bands below) so the row labels don't shove the matrix
+    # off-centre in its tile — the left label gutter is balanced by the empty right one.
     matlabel_primes_w = MATLABEL_W if (show_symbols and show_temp) else 0
     col_bands = (
         ("quantities", COL_W, show_domain_quantities, True),
         ("units", COL_W, show_domain_units, True),
         ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
-        ("primes", 2 * BRACKET_W + d * COL_W + matlabel_primes_w, show_temp, True),
+        ("primes", 2 * BRACKET_W + d * COL_W + 2 * matlabel_primes_w, show_temp, True),
         ("detempering", 2 * BRACKET_W + r * COL_W, show_detempering, True),
         ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
         ("held", 2 * BRACKET_W + nh * COL_W, show_optimization, True),
@@ -1628,26 +1630,29 @@ def build(state, settings=None, collapsed=None,
             u = u.replace("p", f"p{_sub(prime + 1)}")
         return u
 
-    def matlabel_left_w(group_key):
-        # The MATLABEL_W gutter on the left of a content footprint reserved for row
-        # labels (𝒎₁, …) — only the primes column under the mapping matrix needs it
-        # in the built layout. Shared by prime_left and the bracket placement so the
-        # cells, the left ⟨ and the labels stay in lockstep.
+    def matlabel_gutter_w(group_key):
+        # The MATLABEL_W gutter reserved on EACH side of a content footprint for row
+        # labels (𝒎₁, …) — only the primes column under the mapping matrix needs it in
+        # the built layout. The LEFT gutter carries the labels; the RIGHT one is empty,
+        # mirroring it so the matrix stays centred in its tile (see content_w above).
+        # Shared by prime_left and the bracket placement so the cells, the left ⟨ and the
+        # labels stay in lockstep.
         return matlabel_primes_w if group_key == "primes" else 0
 
     def matrix_span(group_key):
         # The (x, width) of a group's CELL matrix — its content_box minus the row-label
-        # gutter on the left. This is the region the EBK encloses: the per-row ⟨ … ]
+        # gutter, which content_w carries on BOTH sides (the left holds the labels, the
+        # right balances them). This is the region the EBK encloses: the per-row ⟨ … ]
         # brackets seat their ⟨ at its left edge and ] at its right, and the spanning
-        # ebktop/ebkbrace/ebkangle frame runs its full width. Anchored to the content
-        # (not the wider grey footprint), so a column widened past its cells keeps the
-        # EBK hugging them and the row labels sitting outside it.
+        # ebktop/ebkbrace/ebkangle frame runs its full width. Anchored to the cells (not
+        # the wider grey footprint), so a column widened past them keeps the EBK hugging
+        # the matrix with the row labels sitting outside it.
         x, w = content_box(group_key)
-        mx = matlabel_left_w(group_key)
-        return x + mx, w - mx
+        mx = matlabel_gutter_w(group_key)
+        return x + mx, w - 2 * mx
 
     def prime_left(p):
-        return primes_x + matlabel_left_w("primes") + BRACKET_W + p * COL_W
+        return primes_x + matlabel_gutter_w("primes") + BRACKET_W + p * COL_W
 
     def comma_left(c):
         return commas_x + BRACKET_W + c * COL_W
@@ -1736,12 +1741,12 @@ def build(state, settings=None, collapsed=None,
 
     # column headers (always shown; a collapsed column keeps its title) plus a
     # fold toggle in the header band for collapsible ones. A matlabel-widened column
-    # (primes when symbols is on) shifts its header + toggle right by the gutter so
-    # both stay centred over the CELLS rather than the wider column footprint — the
-    # gutter only carries row labels, never participates in title centring.
+    # (primes when symbols is on) carries the gutter on both sides, so the header + toggle
+    # drop the gutter from each edge and stay centred over the CELLS rather than the wider
+    # column footprint — the gutters only frame the row labels, never the title.
     for key in col_x:
-        hx = col_x[key] + matlabel_left_w(key)
-        hw = col_w[key] - matlabel_left_w(key)
+        hx = col_x[key] + matlabel_gutter_w(key)
+        hw = col_w[key] - 2 * matlabel_gutter_w(key)
         cells.append(CellBox(f"header:{key}", hx, header_y, hw, HEADER_H, "colheader", text=col_header[key]))
         if col_collapsible[key]:
             glyph = _fold_glyph(f"col:{key}" in collapsed)

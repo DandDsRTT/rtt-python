@@ -3226,6 +3226,20 @@ def test_mapping_top_frame_hugs_the_cells_not_the_row_label_gutter():
     assert ebkbrace.x + ebkbrace.w == right_bracket.x + right_bracket.w
 
 
+def test_row_labels_balance_the_primes_tile_with_an_equal_right_gutter():
+    # symbols on adds the 𝒎ᵢ / 𝒙ᵢ row-label gutter on the LEFT of the domain-primes matrix.
+    # With no counterpart it shoves the matrix right-of-centre in its grey tile, so we mirror
+    # it with an equal empty gutter on the RIGHT. The matrix's per-row ⟨ … ⟩ brackets then sit
+    # centred in the primes tile (block:mapping), with a full label width of room each side.
+    lay = _with(symbols=True)
+    on = {c.id: c for c in lay.cells}
+    panel = {b.id: b for b in lay.blocks}["block:mapping"]
+    left = on["bracket:map:0:l"].x - panel.x
+    right = (panel.x + panel.w) - (on["bracket:map:0:r"].x + on["bracket:map:0:r"].w)
+    assert abs(left - right) < 0.01, f"primes matrix off-centre in its tile: left={left}, right={right}"
+    assert left >= spreadsheet.MATLABEL_W  # the label gutter (and its mirror) reserve real room
+
+
 def test_complexity_col_labels_spell_out_the_norm_definition():
     # Complexity is the q-norm of L (the prescaler) applied to each basis vector; per
     # the mockup each cell is labelled with that closed form rather than a bare 𝒄
