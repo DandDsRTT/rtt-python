@@ -519,6 +519,14 @@ def is_all_interval(scheme) -> bool:
     return targets is not None and targets.strip() in ("{}", "")
 
 
+def scheme_with_targets(scheme, target_intervals: str):
+    """``scheme`` with its target set replaced — ``"{}"`` for all-interval (every interval, by
+    duality) or a target family/list spec (e.g. ``"TILT"``) for a target-based scheme — keeping
+    every other trait. The target-controls all-interval checkbox flips between the two. Returns a
+    resolved spec (accepted anywhere a scheme name is)."""
+    return replace(resolve_tuning_scheme(scheme), target_intervals=target_intervals)
+
+
 def scheme_with_weight_slope(scheme, slope: str):
     """``scheme`` with its damage-weight slope swapped to ``slope`` (a :data:`WEIGHT_SLOPES`
     key) — the weight box's chooser — keeping the complexity and optimization power. Returns

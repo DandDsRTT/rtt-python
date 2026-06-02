@@ -417,6 +417,15 @@ class Editor:
         self._snapshot()
         self.tuning_scheme = service.scheme_with_diminuator(self.tuning_scheme, ignored)
 
+    def set_all_interval(self, all_interval: bool) -> None:
+        """Toggle the target-controls all-interval checkbox: checked targets every interval (the
+        empty set — an all-interval scheme), unchecked targets the displayed interval list (the
+        live target spec). Switches the scheme's target set accordingly (an undoable edit)."""
+        self._snapshot()
+        self.tuning_scheme = service.scheme_with_targets(
+            self.tuning_scheme, "{}" if all_interval else self.target_spec
+        )
+
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
         or ``"OLD"``. A manual limit is weakly held — the next domain change forgets it.

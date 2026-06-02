@@ -178,6 +178,19 @@ def test_set_diminuator_ignored_toggles_the_size_factor():
     assert service.diminuator_ignored(editor.tuning_scheme) is False
 
 
+def test_set_all_interval_toggles_the_scheme_target_set():
+    editor = Editor()
+    assert service.is_all_interval(editor.tuning_scheme) is True  # default minimax-S targets all
+    editor.set_all_interval(False)  # the target-controls checkbox: switch to a target-based scheme
+    assert service.is_all_interval(editor.tuning_scheme) is False
+    # unchecking targets the displayed interval-list family (the editor's live target spec)
+    assert service.resolve_tuning_scheme(editor.tuning_scheme).target_intervals == editor.target_spec
+    editor.set_all_interval(True)
+    assert service.is_all_interval(editor.tuning_scheme) is True
+    editor.undo()  # the toggle is an undoable edit
+    assert service.is_all_interval(editor.tuning_scheme) is False
+
+
 def test_set_weight_slope_swaps_the_damage_weight_slope():
     editor = Editor()
     assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"  # minimax-S default

@@ -1814,6 +1814,8 @@ def index() -> None:
             editor.set_complexity_name(internal)
         elif cid == "control:diminuator":  # the checkbox passes a bool (ignore the diminuator?)
             editor.set_diminuator_ignored(bool(value))
+        elif cid == "control:all_interval":  # the target-controls checkbox: all-interval vs target-based
+            editor.set_all_interval(bool(value))
         render()
 
     def on_range_mode(value):
