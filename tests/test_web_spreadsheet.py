@@ -529,6 +529,21 @@ def test_collapsed_column_keeps_its_title_at_a_width_that_fits_it():
     assert spreadsheet.STRIP < coll.w < full.w  # folded narrower, but wide enough to read the title
 
 
+def test_collapsed_column_gridline_stays_centred_in_its_fold_node():
+    # Folding a column shrinks its footprint to the title strip; its gridline must follow,
+    # staying centred in the fold toggle (the node) and under the title -- not stranded at the
+    # centre of where the OPEN cells used to sit. (commas drifted 2px right; targets, with more
+    # cells, drifted 95px -- the gridline sat well outside the collapsed strip.)
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    for key in ("commas", "targets"):
+        lay = spreadsheet.build(base, collapsed={f"col:{key}"})
+        trunk = {ln.id: ln for ln in lay.lines}[f"trunk:{key}"]
+        cells = {c.id: c for c in lay.cells}
+        toggle, header = cells[f"toggle:col:{key}"], cells[f"header:{key}"]
+        assert abs(trunk.pos - (toggle.x + toggle.w / 2)) < 0.51, key  # centred in the node
+        assert abs(trunk.pos - (header.x + header.w / 2)) < 0.51, key  # and under the title
+
+
 def test_a_collapsed_multiline_title_strip_fits_its_widest_line():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     # a populated interest column (open wider than its title) folds to its title strip: sized

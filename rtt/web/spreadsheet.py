@@ -2428,13 +2428,14 @@ def build(state, settings=None, collapsed=None,
         if key not in col_x:
             return
         fanned_columns.add(key)
-        # the trunk centres on the cell array, not the column footprint: the two diverge
-        # when a matrix-label gutter widens the footprint asymmetrically (primes under
-        # the mapping), so following the cells keeps the trunk aligned with the fan-out
-        if n > 0:
-            cx = (center_open(0) + center_open(n - 1)) / 2
-        else:
-            cx = col_x[key] + col_w[key] / 2
+        # the trunk centres on the cell SPAN (matrix_span), not the wider column footprint:
+        # the two diverge when a matrix-label gutter offsets the cells (primes under the
+        # mapping). matrix_span is collapse-aware -- it shrinks to the title strip when the
+        # column folds -- so a collapsed column's gridline tracks its fold node and the
+        # panels converging onto it, instead of stranding at the centre of where the OPEN
+        # cells used to sit (which left it off-centre by half the width the fold shed).
+        mx, mw = matrix_span(key)
+        cx = mx + mw / 2
         if n == 0:  # an empty interval set (interest, before any are entered) is one straight axis
             lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y))
             lines.append(Line(f"foot:{key}", "v", cx, fanout_y, total_h - fanout_y))
