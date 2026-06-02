@@ -1514,10 +1514,10 @@ def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
 
 
 def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
-    # the bare prescaler tile carries the abstract-name = concrete-name equation form
-    # ``𝑋 = L`` (italic 𝑋 placeholder, upright L for the active log-prime prescaler) —
-    # per the mockup. The product tiles (LC/LD/LT/LH) show just the concrete product
-    # name, no equivalence: they're already the matrix, no abstract stand-in named.
+    # the active prescaler IS the log-prime matrix (the default scheme, no typed override),
+    # so it takes its standard letter 𝐿 everywhere and the bare tile names it in words —
+    # ``𝐿 = log-prime matrix``. The product tiles carry the same 𝐿 (𝐿C / 𝐿D / 𝐿T / 𝐿H),
+    # so 𝐿 and 𝑋 never mix within the row; they print no "= …" (already the matrix).
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         # ``optimization`` brings the held column out (held lives in the optimization layer);
@@ -1528,19 +1528,18 @@ def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
         held_vectors=((-1, 1, 0),),  # 3/2 held, so the held column appears
     )
     on = {c.id: c for c in lay.cells}
-    # bare prescaler tile: the only one with an equivalence (the equation form). 𝐿
-    # (log-prime) is math-italic like 𝐼 / 𝑋 / 𝑀 (the prime prescaler is written diag(𝒑))
-    assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
-    # product tiles: just the concrete name, no "= …" — scheme-aware (𝐿 → 𝐼 / diag(𝒑) elsewhere)
+    # bare prescaler tile: 𝐿 with the words-equivalence naming what 𝐿 is
+    assert on["symbol:prescaling:primes"].text == "𝐿 = log-prime matrix"
+    # product tiles: the same 𝐿, no "= …" — they're already the matrix
     assert on["symbol:prescaling:commas"].text == "𝐿C"
     assert on["symbol:prescaling:targets"].text == "𝐿T"
     assert on["symbol:prescaling:held"].text == "𝐿H"
 
 
-def test_prescaling_product_symbols_follow_the_active_prescaler():
-    # the prescaler letter in every product symbol swaps with the scheme: log-prime → L,
-    # prime → 𝑃, identity → 𝐼. So under identity the LC tile reads 𝐼C, the LT tile reads
-    # 𝐼T, etc. — the column letter (C/T/H) stays put.
+def test_non_log_prime_prescaler_stays_generic_X_named_in_the_equivalence():
+    # when the prescaler is NOT the log-prime matrix it keeps the generic placeholder 𝑋
+    # everywhere — the products read 𝑋C / 𝑋T / 𝑋H, not the concrete matrix. The concrete
+    # form surfaces only in the bare tile's equivalence: 𝐼 for the identity (count) scheme.
     scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "identity")
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
@@ -1549,16 +1548,17 @@ def test_prescaling_product_symbols_follow_the_active_prescaler():
         tuning_scheme=scheme, held_vectors=((-1, 1, 0),),
     )
     on = {c.id: c for c in lay.cells}
-    assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐼"   # bare: scheme-aware equivalence
-    assert on["symbol:prescaling:commas"].text == "𝐼C"     # product: scheme-aware letter
-    assert on["symbol:prescaling:targets"].text == "𝐼T"
-    assert on["symbol:prescaling:held"].text == "𝐼H"
+    assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐼"   # generic symbol, concrete equivalence
+    assert on["symbol:prescaling:commas"].text == "𝑋C"     # product keeps the generic 𝑋
+    assert on["symbol:prescaling:targets"].text == "𝑋T"
+    assert on["symbol:prescaling:held"].text == "𝑋H"
 
 
-def test_prime_prescaler_renders_as_diag_p_not_the_projection_letter():
+def test_prime_prescaler_names_diag_p_in_the_equivalence_not_the_projection_letter():
     # the prime (sopfr) prescaler is the guide's diag(𝒑), the diagonal matrix of primes —
-    # NOT a bare 𝑃, which the guide reserves for the projection matrix (P = GM). "diag(" and
-    # the trailing column letter render upright; only the prime list 𝒑 is bold-italic.
+    # NOT a bare 𝑃, which the guide reserves for the projection matrix (P = GM). It surfaces
+    # in the bare tile's equivalence; the symbol itself stays the generic 𝑋 ("diag(" and the
+    # prime list 𝒑 render per the guide). The product tiles keep the generic 𝑋, too.
     scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "prime")
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
@@ -1568,8 +1568,35 @@ def test_prime_prescaler_renders_as_diag_p_not_the_projection_letter():
     )
     on = {c.id: c for c in lay.cells}
     assert on["symbol:prescaling:primes"].text == "𝑋 = diag(𝒑)"
-    assert on["symbol:prescaling:commas"].text == "diag(𝒑)C"
-    assert on["symbol:prescaling:targets"].text == "diag(𝒑)T"
+    assert on["symbol:prescaling:commas"].text == "𝑋C"
+    assert on["symbol:prescaling:targets"].text == "𝑋T"
+
+
+def test_prescaler_symbol_never_mixes_L_and_X_within_a_tile():
+    # regression: the "complexity prescaled generator detempering" tile read 𝐿D as its big
+    # symbol but 𝑋𝐝 over its columns. Under the default (log-prime) scheme the prescaler IS
+    # the log-prime matrix, so BOTH must use 𝐿 — the symbol and the column headers in lockstep.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "symbols": True, "weighting": True,
+         "generator_detempering": True}
+    on = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert on["symbol:prescaling:detempering"].text == "𝐿D"          # the tile's big symbol
+    assert on["matlabel:col:prescaling:detempering:0"].text == "𝐿𝐝₁"  # its column headers — same 𝐿
+
+
+def test_custom_prescaler_diagonal_keeps_the_generic_symbol():
+    # typing a custom prescaler diagonal makes it no longer THE log-prime matrix, so the symbol
+    # stays the generic 𝑋 everywhere (no 𝐿 promotion, no "= log-prime matrix") — the typed
+    # diagonal speaks for itself, so the bare tile prints no equivalence.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "symbols": True, "equivalences": True,
+         "weighting": True, "generator_detempering": True}
+    on = {c.id: c for c in spreadsheet.build(
+        base, s, custom_prescaler=(1.0, 1.5, 2.0)).cells}
+    assert on["symbol:prescaling:primes"].text == "𝑋"               # generic, no "= …"
+    assert on["symbol:prescaling:commas"].text == "𝑋C"              # generic product
+    assert on["matlabel:col:prescaling:detempering:0"].text == "𝑋𝐝₁"
+    assert on["matlabel:row:prescaling:primes:0"].text == "𝒙₁"
 
 
 def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
@@ -1743,7 +1770,8 @@ def test_outer_matrix_frame_hugs_the_cells_leaving_subrow_labels_outside():
 
 def test_prescaling_matrix_carries_its_symbol_and_caption():
     cells = {c.id: c for c in _with(weighting=True, symbols=True, names=True).cells}
-    assert cells["symbol:prescaling:primes"].text == "𝑋"  # math italic, the prescaler matrix (X = L)
+    # the default prescaler IS the log-prime matrix, so its glyph is 𝐿 (math italic, like 𝑀)
+    assert cells["symbol:prescaling:primes"].text == "𝐿"
     assert cells["caption:prescaling:primes"].text == "complexity prescaler"
 
 
@@ -3291,10 +3319,11 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
 
 
 def test_prescaling_matrix_row_and_col_labels():
-    # The prescaler 𝑋 is a covector stack like 𝑀, so prescaling/primes gets ROW labels
-    # 𝒙ᵢ (one per dimension, parallel to 𝒎ᵢ on the mapping). Its applications to comma/
-    # held/detempering/target sets are matrices of vectors, so each gets COLUMN labels
-    # 𝑋𝐜ᵢ / 𝑋𝐡ᵢ / 𝑋𝐝ᵢ / 𝑋𝐭ᵢ, parallel to the mapping row's 𝑀𝐜ᵢ family.
+    # The prescaler is a covector stack like 𝑀, so prescaling/primes gets ROW labels — and
+    # since the default prescaler IS the log-prime matrix, every label uses its letter 𝐿:
+    # rows 𝒍ᵢ (one per dimension, parallel to 𝒎ᵢ on the mapping), and the product matrices
+    # get COLUMN labels 𝐿𝐜ᵢ / 𝐿𝐡ᵢ / 𝐿𝐝ᵢ / 𝐿𝐭ᵢ — never the generic 𝑋, which would clash with
+    # the tiles' 𝐿-lettered big symbols.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["symbols"] = True
@@ -3304,15 +3333,15 @@ def test_prescaling_matrix_row_and_col_labels():
     on = {c.id: c for c in spreadsheet.build(
         base, s, held_vectors=((-1, 1, 0),)
     ).cells}
-    # row labels on the 𝑋 matrix: d=3 rows, one 𝒙ᵢ per dimension
-    assert on["matlabel:row:prescaling:primes:0"].text == "𝒙₁"
-    assert on["matlabel:row:prescaling:primes:1"].text == "𝒙₂"
-    assert on["matlabel:row:prescaling:primes:2"].text == "𝒙₃"
-    # col labels on the prescaled vector lists: 𝑋·basis, 𝑋·detempering, 𝑋·held, 𝑋·targets
-    assert on["matlabel:col:prescaling:commas:0"].text == "𝑋𝐜₁"
-    assert on["matlabel:col:prescaling:held:0"].text == "𝑋𝐡₁"
-    assert on["matlabel:col:prescaling:detempering:0"].text == "𝑋𝐝₁"
-    assert on["matlabel:col:prescaling:targets:0"].text == "𝑋𝐭₁"
+    # row labels on the 𝐿 matrix: d=3 rows, one 𝒍ᵢ per dimension
+    assert on["matlabel:row:prescaling:primes:0"].text == "𝒍₁"
+    assert on["matlabel:row:prescaling:primes:1"].text == "𝒍₂"
+    assert on["matlabel:row:prescaling:primes:2"].text == "𝒍₃"
+    # col labels on the prescaled vector lists: 𝐿·basis, 𝐿·detempering, 𝐿·held, 𝐿·targets
+    assert on["matlabel:col:prescaling:commas:0"].text == "𝐿𝐜₁"
+    assert on["matlabel:col:prescaling:held:0"].text == "𝐿𝐡₁"
+    assert on["matlabel:col:prescaling:detempering:0"].text == "𝐿𝐝₁"
+    assert on["matlabel:col:prescaling:targets:0"].text == "𝐿𝐭₁"
 
 
 def test_units_annotate_each_box_with_its_unit_string():

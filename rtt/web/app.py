@@ -1381,9 +1381,12 @@ def index() -> None:
                 rangeopts[cb.id] = opts
             elif cb.kind == "symbol":
                 wrap.classes("rtt-symbol-cell")
-                # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off)
-                cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
-                math_cells[cb.id] = ui.html("").classes(cls)  # content set in render()
+                # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off);
+                # so does the bare prescaler's equivalence ("𝐿 = log-prime matrix") — the only
+                # word-length symbol text, which would otherwise wrap down into the caption band.
+                # Both overhang into the side gaps (like a title) rather than wrapping.
+                one_line = cb.id.startswith("optimization:") or cb.id == "symbol:prescaling:primes"
+                math_cells[cb.id] = ui.html("").classes("rtt-symbol rtt-opt-1line" if one_line else "rtt-symbol")  # content set in render()
             elif cb.kind == "matlabel":  # per-row / per-column matrix label (𝒎ᵢ, 𝐜ᵢ, 𝒕ᵢ, …):
                 # routed through _math_html so its bold-italic / bold-upright glyphs draw in
                 # the same styled face as the tile symbol it indexes. The complexity row's
