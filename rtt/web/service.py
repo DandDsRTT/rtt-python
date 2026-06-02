@@ -42,6 +42,7 @@ from rtt.tuning import (
     optimize_generator_tuning_map,
     optimize_tuning_map,
     resolve_tuning_scheme,
+    tuning_map_from_generators,
 )
 from rtt.tuning_ranges import get_generator_tuning_range
 
@@ -342,9 +343,7 @@ def tuning_from_generators(mapping, generators, domain_basis=None) -> Tuning:
     optimize lock is off and the user has frozen/edited the generator tuning. Just map and
     generator ranges are temperament properties, computed as for the optimum."""
     t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
-    m = _to_matrix(mapping)
-    d = len(m[0])
-    tempered = tuple(sum(generators[i] * m[i][p] for i in range(len(m))) for p in range(d))
+    tempered = tuple(float(x) for x in tuning_map_from_generators(t, generators))
     just = get_just_tuning_map(t)
     return Tuning(
         generator_map=tuple(generators),

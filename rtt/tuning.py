@@ -414,7 +414,7 @@ def get_generator_tuning_map_damages(
     t: Temperament, generator_tuning_map: tuple, spec: TuningSchemeSpec | str
 ) -> dict:
     """Each target interval's damage under a given *generator* tuning map."""
-    return get_tuning_map_damages(t, _tuning_map_from_generators(t, generator_tuning_map), spec)
+    return get_tuning_map_damages(t, tuning_map_from_generators(t, generator_tuning_map), spec)
 
 
 def get_tuning_map_mean_damage(
@@ -432,10 +432,12 @@ def get_generator_tuning_map_mean_damage(
     t: Temperament, generator_tuning_map: tuple, spec: TuningSchemeSpec | str
 ) -> float:
     """The scheme's mean damage of a given generator tuning map."""
-    return get_tuning_map_mean_damage(t, _tuning_map_from_generators(t, generator_tuning_map), spec)
+    return get_tuning_map_mean_damage(t, tuning_map_from_generators(t, generator_tuning_map), spec)
 
 
-def _tuning_map_from_generators(t: Temperament, generator_tuning_map: tuple) -> np.ndarray:
+def tuning_map_from_generators(t: Temperament, generator_tuning_map: tuple) -> np.ndarray:
+    """The tuning map a generator tuning produces: the generators applied to the mapping
+    (``generators @ M``). The manual-tuning counterpart of an optimized tuning map."""
     return np.array(generator_tuning_map, dtype=float) @ np.array(mapping_matrix(t), dtype=float)
 
 
