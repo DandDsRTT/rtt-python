@@ -108,6 +108,19 @@ def test_overloaded_kinds_resolve_to_distinct_text_per_role():
     assert _help("preselect", "preselect:tuning:gens") == _help("preselect", "preselect:tuning")
 
 
+def test_objective_help_names_a_different_quantity_per_mode():
+    # the optimization objective is a read-only value but still carries help, and that help must
+    # track the scheme: target-based it is the minimized damage ⟪𝐝⟫ₚ over the target list;
+    # all-interval it is the retuning magnitude minimized over every interval. Two distinct,
+    # non-empty wordings, each naming the quantity the live symbol shows.
+    target = tooltips.objective_help(all_interval=False)
+    allint = tooltips.objective_help(all_interval=True)
+    assert target.strip() and allint.strip()
+    assert target != allint
+    assert "⟪𝐝⟫ₚ" in target and "target" in target
+    assert "retuning" in allint and "every interval" in allint
+
+
 def test_every_editable_dual_has_a_distinct_tooltip():
     # the editable plain-text duals are exactly EDITABLE_PTEXT (the layout's source of truth);
     # each must carry its own hover text so no editable value is left unexplained
@@ -134,10 +147,12 @@ def test_every_rendered_cell_is_classified_for_tooltips():
     # the safety net behind control_help: sweep a full build and require each rendered cell to
     # be either a declared read-only output (no tooltip) or an interactive control with hover
     # text. A brand-new control kind with no tooltips.py entry trips this — closing the gap a
-    # hardcoded test list would leave open.
+    # hardcoded test list would leave open. The optimization objective is the lone read-only
+    # exception (OBJECTIVE_IDS): it carries help despite being a value, so it must read like a
+    # control here, not like a bare output.
     for cb in _rendered_cells():
         text = tooltips.control_help(cb.kind, cb.id)
-        if cb.kind in tooltips.READONLY_KINDS:
+        if cb.kind in tooltips.READONLY_KINDS and cb.id not in tooltips.OBJECTIVE_IDS:
             assert text is None, f"read-only {cb.kind!r} ({cb.id}) should carry no tooltip"
         else:
             assert (text or "").strip(), (

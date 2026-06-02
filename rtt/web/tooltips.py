@@ -9,11 +9,14 @@ text of their own.
   - :data:`CHROME_HELP` — the app-chrome buttons (undo / redo / reset / settings / select-all).
   - :func:`control_help` — a grid cell's ``(kind, id)`` → its hover text, or ``None`` for
     the read-only output kinds listed in :data:`READONLY_KINDS`.
+  - :func:`objective_help` — the optimization objective's hover text, which names a different
+    quantity per mode (see :data:`OBJECTIVE_IDS`); the renderer swaps it live as all-interval flips.
 
 Coverage is test-enforced (``tests/test_web_tooltips.py``): ``SHOW_HELP`` must match
 ``settings.DEFAULTS``, every editable dual must match ``spreadsheet.EDITABLE_PTEXT``, and
 every kind a full-feature build renders must be either in ``READONLY_KINDS`` or carry help
-— so a new setting or control can't ship without its hover text.
+(the lone read-only exceptions are the :data:`OBJECTIVE_IDS` cells) — so a new setting or
+control can't ship without its hover text.
 """
 
 from __future__ import annotations
@@ -76,6 +79,14 @@ READONLY_KINDS: frozenset[str] = frozenset({
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",
 })
+
+# The lone read-only OUTPUT values that nonetheless carry help: the optimization objective's
+# value cell (a ``tval``) and its symbol cell (a ``symbol``). Unlike the power 𝑝, the objective
+# has no caption, so its hover text is the only place its meaning lives — and that meaning flips
+# with all-interval mode (the damage ⟪𝐝⟫ₚ vs the retuning magnitude). Both ids hang the tooltip
+# so the whole displayed value is hoverable; :func:`control_help` returns help for them ahead of
+# the READONLY_KINDS check, and the completeness sweep exempts them from the no-tooltip rule.
+OBJECTIVE_IDS: frozenset[str] = frozenset({"optimization:objective", "optimization:objective:symbol"})
 
 # Hover text per interactive cell kind whose meaning is fixed by the kind alone.
 # (Kinds backing several controls are disambiguated by id in _ID_HELP below.)
@@ -152,12 +163,32 @@ _PTEXT_HELP: dict[str, str] = {
 }
 
 
+def objective_help(all_interval: bool) -> str:
+    """Hover text for the optimization objective, which names a DIFFERENT quantity per mode.
+
+    Target-based, the objective is the minimized damage ⟪𝐝⟫ₚ over the target list (the
+    targets' damage combined by the optimization power 𝑝). All-interval, that quantity IS the
+    retuning magnitude — the size of the prescaled retuning map 𝒓 at the dual-norm power
+    dual(𝑞), minimized over every interval at once — matching the symbol's live relabel (see
+    :mod:`rtt.web.spreadsheet`). The prescaler is named in words, never glyphed (it is 𝐿 or 𝑋
+    depending on the scheme). :func:`control_help` returns the target-based wording as the static
+    default for the objective cells; the renderer swaps in the all-interval wording in place."""
+    if all_interval:
+        return ("Optimization objective — the retuning magnitude that the tuning minimizes over "
+                "every interval at once: the size of the prescaled retuning map 𝒓 at the "
+                "dual-norm power dual(𝑞).")
+    return ("Optimization objective ⟪𝐝⟫ₚ — the damage that the tuning minimizes over the target "
+            "list: the targets' damage combined by the optimization power 𝑝.")
+
+
 def control_help(kind: str, cid: str) -> str | None:
     """Hover text for an interactive grid control, or ``None`` for a read-only cell.
 
     Keyed on the cell's ``kind`` (see :mod:`rtt.web.spreadsheet`), with a few kinds
     disambiguated by their ``id`` where one kind backs several controls (e.g. a
     ``powerinput`` is the optimization power 𝑝, the norm power 𝑞, or its dual)."""
+    if cid in OBJECTIVE_IDS:  # a read-only value that still carries help (text swapped live by the renderer)
+        return objective_help(all_interval=False)
     if kind in READONLY_KINDS:
         return None
     if kind == "preselect":

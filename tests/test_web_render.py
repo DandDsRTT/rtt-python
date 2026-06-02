@@ -478,6 +478,32 @@ async def test_optimization_renders_the_optimize_button(user: User) -> None:
         await user.should_see(marker=marker)
 
 
+async def test_objective_tooltip_tracks_the_all_interval_mode(user: User) -> None:
+    # the optimization objective is read-only but carries help, and that help names a different
+    # quantity per mode: target-based the minimized damage ⟪𝐝⟫ₚ, all-interval the retuning
+    # magnitude. The objective cells are NOT rebuilt when the mode flips, so render() must swap
+    # the tooltip text in place. Scan the client's Tooltip registry (it holds even un-hovered
+    # tooltips, which the visible-only search can't reach).
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal the objective box
+
+    def objective_tips() -> list[str]:
+        return [el.text for el in user.client.elements.values()
+                if isinstance(el, Tooltip) and "Optimization objective" in el.text]
+
+    assert any("⟪𝐝⟫ₚ" in t for t in objective_tips())                 # the target-based wording
+    assert not any("retuning magnitude" in t for t in objective_tips())
+
+    user.find(marker="toggle:row:vectors").click()                    # expand the target-list row
+    user.find(kind=ui.checkbox, content="weighting").click()          # reveal the all-interval entry
+    user.find(kind=ui.checkbox, content="all-interval").click()       # show the target-controls checkbox
+    await user.should_see(marker="control:all_interval")
+    _cell_child(user, "control:all_interval").set_value(True)         # check it -> flip to all-interval
+
+    assert any("retuning magnitude" in t for t in objective_tips())   # the wording swapped in place
+    assert not any("⟪𝐝⟫ₚ" in t for t in objective_tips())
+
+
 async def test_optimization_renders_the_held_column_and_its_add_control(user: User) -> None:
     # enabling optimization shows the held column with a + (rendered even when empty) for
     # adding the first held interval — driving the held_plus render branch. The editable

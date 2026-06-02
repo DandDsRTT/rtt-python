@@ -861,6 +861,7 @@ def index() -> None:
     ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
     rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
     opt_buttons: dict = {}  # optimize-button cell id -> its ui.button (for the auto-lock visual)
+    objective_tips: dict = {}  # optimization-objective cell id -> its ui.tooltip (text swaps with all-interval mode)
     captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
     math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
@@ -878,7 +879,7 @@ def index() -> None:
         for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, exprs, expr_state, kinds,
                   selects, ptext_inputs, captions, caption_html, math_cells, math_rendered, fold_state,
                   cell_units, cell_unit_text, chart_keys, range_keys, audio_keys, rangeopts,
-                  opt_buttons):
+                  opt_buttons, objective_tips):
             d.pop(eid, None)
 
     def set_cents_face(cid, text):
@@ -1448,7 +1449,14 @@ def index() -> None:
         # The mark/data-eid ride the wrap, so the tooltip hangs off it too — one shared anchor.
         help_text = tooltips.control_help(cb.kind, cb.id)
         if help_text:
-            wrap.tooltip(help_text)
+            if cb.id in tooltips.OBJECTIVE_IDS:
+                # the read-only objective's help names a different quantity per mode (damage
+                # ⟪𝐝⟫ₚ vs the all-interval retuning magnitude); keep the Tooltip handle so
+                # render() can swap its wording in place when the mode flips, like the symbol glyph
+                with wrap:
+                    objective_tips[cb.id] = ui.tooltip(help_text)
+            else:
+                wrap.tooltip(help_text)
         return wrap
 
     def render():
@@ -1686,6 +1694,15 @@ def index() -> None:
 
         for eid in [e for e in els if e not in seen]:
             drop(eid)
+
+        # the optimization objective is read-only yet helped, and that help names a different
+        # quantity per mode — the minimized damage ⟪𝐝⟫ₚ over the targets, or (all-interval) the
+        # retuning magnitude. Swap its tooltip(s) to match the live scheme, the same in-place
+        # relabel the symbol glyph makes; set_text only pushes when the wording actually changes.
+        if objective_tips:
+            obj_help = tooltips.objective_help(service.is_all_interval(editor.tuning_scheme))
+            for tip in objective_tips.values():
+                tip.set_text(obj_help)
 
         refs["undo"].set_enabled(editor.can_undo)
         refs["redo"].set_enabled(editor.can_redo)
