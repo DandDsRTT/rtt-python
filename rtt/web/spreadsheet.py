@@ -1538,8 +1538,12 @@ def build(state, settings=None, collapsed=None,
         # for every united row, like the symbol slot above the caption
         uni = UNIT_H if (show_units and key in UNITED_ROWS and not folded) else 0
         # below the caption/units a tile reserves bands for the plain-text value box and
-        # the preselect chooser (its row), stacked in that order
-        pre = preselect_band_h(key) if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
+        # the preselect chooser (its row), stacked in that order. The all-interval checkbox rides
+        # the vectors row's band too, so the show-panel "all-interval" entry reserves it there even
+        # when preselects is off (preselect_band_h("vectors") gives the target chooser's box height).
+        pre = preselect_band_h(key) if ((show_preselects and key in PRESELECT_ROWS
+                                         or settings["all_interval"] and key == "vectors")
+                                        and not folded) else 0
         # the form chooser rides one box below the preselect chooser, in the mapping and
         # comma-basis boxes, when form controls are shown
         formctrl = formchooser_band_h(key) if (show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
@@ -2663,22 +2667,25 @@ def build(state, settings=None, collapsed=None,
         for name, rkey, ckey, label in PRESELECT_COPIES:  # the same control in a second tile
             emit_preselect(f"preselect:{name}:{ckey}", name, rkey, ckey, label)
 
-        # the all-interval checkbox: the show-panel "all-interval" entry adds it to the RIGHT of
-        # the target interval set scheme chooser (box-𝐋's checkbox-beside-dropdown layout — an
-        # 18px square over an "all-interval" caption, vertically centred on the chooser's row). It
-        # reflects whether the scheme targets every interval; ticking it (wired in app.py) switches
-        # the scheme all-interval and greys the chooser.
-        if settings["all_interval"] and tile_open("vectors", "targets"):
-            t_top = ptext_band_y("vectors") + row_ptext["vectors"]
+    # the all-interval checkbox rides in the target control band, revealed by the show-panel
+    # "all-interval" entry ALONE (not the preselects toggle): when the target chooser is shown it
+    # sits to the chooser's RIGHT (box-𝐋's checkbox-beside-dropdown layout, graying the chooser
+    # when checked); alone at the column's left otherwise. An 18px square over an "all-interval"
+    # caption, reflecting whether the scheme targets every interval (ticking it is wired in app.py).
+    if settings["all_interval"] and tile_open("vectors", "targets"):
+        t_top = ptext_band_y("vectors") + row_ptext["vectors"]
+        if show_preselects:  # ride to the right of the target chooser's titled box
             t_box_w = _control_box_width(min(col_w["targets"], TARGET_PRESELECT_W),
                                          "target interval set scheme")
             check_x = col_x["targets"] + t_box_w + OPT_COL_GAP
-            check_y = t_top + (BOX_PAD + BOX_TITLE_H + BOX_TITLE_GAP) + (PRESELECT_H - CHECK_SQUARE) / 2
-            cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, CHECK_SQUARE,
-                                 "control_check", text="",
-                                 checked=service.is_all_interval(tuning_scheme)))
-            cells.append(CellBox("caption:all_interval", check_x, check_y + CHECK_SQUARE, LBOX_DIM_W,
-                                 CAPTION_LINE, "caption", text="all-interval"))
+        else:  # no chooser shown — the checkbox is the band's only control, at the column's left
+            check_x = col_x["targets"]
+        check_y = t_top + (BOX_PAD + BOX_TITLE_H + BOX_TITLE_GAP) + (PRESELECT_H - CHECK_SQUARE) / 2
+        cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, CHECK_SQUARE,
+                             "control_check", text="",
+                             checked=service.is_all_interval(tuning_scheme)))
+        cells.append(CellBox("caption:all_interval", check_x, check_y + CHECK_SQUARE, LBOX_DIM_W,
+                             CAPTION_LINE, "caption", text="all-interval"))
 
     # the form chooser, one box below the preselect chooser: it canonicalizes the mapping /
     # comma basis it rides (an undoable edit). A control, so it ignores the value-display

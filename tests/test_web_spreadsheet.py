@@ -1764,24 +1764,28 @@ def test_dual_q_requires_the_all_interval_show_entry():
 
 
 def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
-    # the show-panel "all-interval" entry adds an "all-interval" checkbox to the target-interval-
-    # list controls, riding to the RIGHT of the target interval set scheme chooser (box-𝐋's
-    # checkbox-beside-dropdown pattern: a square over an "all-interval" caption). It reflects
-    # whether the scheme targets every interval — the shipped minimax-S does, so it reads checked.
-    # It rides in the target control band, so it needs that band (preselects on); entry off => none.
-    off = {c.id for c in _with(preselects=True).cells}  # entry off (default)
+    # the show-panel "all-interval" entry ALONE adds an "all-interval" checkbox to the target-
+    # interval-list controls (it does NOT need the target chooser / preselects): an 18px square
+    # over an "all-interval" caption. It reflects whether the scheme targets every interval — the
+    # shipped minimax-S does, so it reads checked. Entry off => no checkbox.
+    off = {c.id for c in _with().cells}  # entry off (default)
     assert "control:all_interval" not in off and "caption:all_interval" not in off
-    on = {c.id: c for c in _with(preselects=True, all_interval=True).cells}
+    on = {c.id: c for c in _with(all_interval=True).cells}  # entry on, no preselects
     chk = on["control:all_interval"]
     assert chk.kind == "control_check"
     assert chk.text == ""  # the square only — "all-interval" is a caption beneath
     assert chk.checked is True  # the shipped minimax-S targets every interval
     cap = on["caption:all_interval"]
     assert cap.kind == "caption" and cap.text == "all-interval"
-    # rides to the RIGHT of the target chooser, the square centred above its caption
-    assert chk.x > on["preselect:target"].x
-    assert abs((chk.x + chk.w / 2) - (cap.x + cap.w / 2)) < 1
+    assert abs((chk.x + chk.w / 2) - (cap.x + cap.w / 2)) < 1  # square centred above its caption
     assert cap.y == chk.y + chk.h  # the caption hugs the square's bottom
+
+
+def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown():
+    # when the target interval set scheme chooser is shown (preselects on), the checkbox sits to
+    # its RIGHT (the box-𝐋 checkbox-beside-dropdown layout); the chooser greys when it is checked
+    on = {c.id: c for c in _with(all_interval=True, preselects=True).cells}
+    assert on["control:all_interval"].x > on["preselect:target"].x
 
 
 def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdown():
