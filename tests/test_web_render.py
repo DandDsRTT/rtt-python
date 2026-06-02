@@ -621,3 +621,42 @@ async def test_state_persists_across_a_refresh(user: User) -> None:
     await user.open("/")  # the refresh
     await user.should_see(marker="cell:mapped:1:6")
     assert _cell_text(user, "cell:mapped:1:6") == "7"  # the edit survived
+
+
+# --- tier 3: the #3 drift guard. _make_cell builds each cell-kind, render() fills each kind,
+# in two parallel cb.kind ladders. For the kinds whose visible content is a single ui.html the
+# renderer must populate (built empty in _make_cell), a dropped render branch leaves the cell
+# silently blank — should_see only checks the wrap is present, so it slips through. One
+# representative cell per such kind, asserting the html actually carries content. ---
+
+# Off-by-default html kinds: enable the Show layer that surfaces the kind, then assert a
+# representative cell's html actually carries content. Each exercises a distinct fill-in-render
+# path — _math_html (count/symbol), _units_html (units), _bar_chart / _range_chart SVGs.
+_ENABLE_HTML_CELLS = [
+    ("counts", "count:primes"),                   # _math_html "d = 3"
+    ("symbols", "symbol:mapping:primes"),         # _math_html quantity glyph
+    ("units", "units:mapping:primes"),            # _units_html "units: g/p"
+    ("charts", "chart:retune:targets"),           # _bar_chart SVG
+    ("tuning ranges", "rangechart:tuning:gens"),  # _range_chart SVG
+]
+
+
+@pytest.mark.parametrize("label, cell_id", _ENABLE_HTML_CELLS)
+async def test_enabled_html_cell_renders_non_blank_content(user: User, label: str, cell_id: str) -> None:
+    await _enable(user, label)
+    await user.should_see(marker=cell_id)
+    assert getattr(_cell_child(user, cell_id), "content", ""), \
+        f"{cell_id} rendered with empty html content — did render() drop its kind's branch?"
+
+
+# On-by-default html kinds, present in the plain opened page: the tile-name captions
+# (_underline_html) and the matrix-frame EBK bracket SVGs (_ebk_svg, the most numerous kind).
+_DEFAULT_HTML_CELLS = ["caption:mapping:primes", "bracket:map:0:l"]
+
+
+@pytest.mark.parametrize("cell_id", _DEFAULT_HTML_CELLS)
+async def test_default_view_html_cell_renders_non_blank_content(user: User, cell_id: str) -> None:
+    await user.open("/")
+    await user.should_see(marker=cell_id)
+    assert getattr(_cell_child(user, cell_id), "content", ""), \
+        f"{cell_id} rendered with empty html content — did render() drop its kind's branch?"
