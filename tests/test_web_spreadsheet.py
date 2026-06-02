@@ -646,9 +646,11 @@ def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis
     # a "<choose form>" chooser rides in the mapping box and the comma-basis box
     assert cells["formchooser:mapping"].kind == "formchooser"
     assert cells["formchooser:comma_basis"].kind == "formchooser"
-    # each over its box's column (mapping over the primes, comma basis over the commas)
-    assert cells["formchooser:mapping"].x == cells["header:primes"].x
-    assert cells["formchooser:comma_basis"].x == cells["header:commas"].x
+    # each over its box's column (mapping over the primes, comma basis over the commas), inset
+    # from the column edge by the box's outer + inner padding
+    inset = spreadsheet.BOX_OUTER + spreadsheet.BOX_INNER
+    assert cells["formchooser:mapping"].x == cells["header:primes"].x + inset
+    assert cells["formchooser:comma_basis"].x == cells["header:commas"].x + inset
     # seated below the tile's value rows, never over the matrix
     assert cells["formchooser:mapping"].y > cells["cell:mapping:1:0"].y
     # the control adds nothing while form_controls is off
@@ -851,11 +853,12 @@ def test_preselects_off_shows_no_chooser_dropdowns():
 def test_preselects_on_adds_the_three_chooser_dropdowns_under_their_tiles():
     cells = {c.id: c for c in _with(preselects=True).cells}
     assert {"preselect:temperament", "preselect:tuning", "preselect:target"} <= set(cells)
-    # the temperament chooser sits under the mapping matrix, aligned to its column
+    inset = spreadsheet.BOX_OUTER + spreadsheet.BOX_INNER  # the control sits inside its padded box
+    # the temperament chooser sits under the mapping matrix, in its column
     temp, matrix = cells["preselect:temperament"], cells["cell:mapping:0:0"]
-    assert temp.y > matrix.y and temp.x == cells["header:primes"].x
-    # the target chooser sits under the target interval list, aligned to its column
-    assert cells["preselect:target"].x == cells["header:targets"].x
+    assert temp.y > matrix.y and temp.x == cells["header:primes"].x + inset
+    # the target chooser sits under the target interval list, in its column
+    assert cells["preselect:target"].x == cells["header:targets"].x + inset
 
 
 def test_tuning_and_target_choosers_show_the_live_selection_temperament_is_a_placeholder():
@@ -913,13 +916,14 @@ def test_tuning_and_temperament_dropdowns_are_copied_into_more_tiles():
     boxes = {b.id: b for b in lay.blocks}
     # a copy of the tuning chooser rides the generator tuning map tile (gens column),
     # mirroring the live scheme like the tuning map copy in the primes column
+    inset = spreadsheet.BOX_OUTER + spreadsheet.BOX_INNER
     gt = cells["preselect:tuning:gens"]
-    assert gt.x == cells["header:gens"].x and gt.text == "destretched-octave minimax-ES"
+    assert gt.x == cells["header:gens"].x + inset and gt.text == "destretched-octave minimax-ES"
     # it shares the tuning row's control band with the tuning map dropdown (primes box)
     assert boxes["block:preselect:tuning:gens"].y == boxes["block:preselect:tuning"].y
     # a copy of the temperament chooser rides the comma basis tile (commas column)
     ct = cells["preselect:temperament:commas"]
-    assert ct.x == cells["header:commas"].x and ct.text == ""  # a placeholder, like the mapping copy
+    assert ct.x == cells["header:commas"].x + inset and ct.text == ""  # a placeholder, like the mapping copy
 
 
 def test_target_preselect_now_lives_in_the_target_interval_list_tile():
@@ -930,34 +934,38 @@ def test_target_preselect_now_lives_in_the_target_interval_list_tile():
     s["preselects"] = True
     cells = {c.id: c for c in spreadsheet.build(base, s).cells}
     target = cells["preselect:target"]
-    assert target.x == cells["header:targets"].x  # still under the targets column
+    # still under the targets column (inset inside its padded box)
+    assert target.x == cells["header:targets"].x + spreadsheet.BOX_OUTER + spreadsheet.BOX_INNER
     # it now sits in the interval-vectors row (the target interval list), below those cells
     assert target.y > cells["cell:vec:targets:0:0"].y
     # and below the quantities-row target ratios it used to sit under
     assert target.y > cells["target:0"].y
 
 
-def test_control_dropdowns_are_enclosed_in_titled_boxes():
-    # every dropdown rides inside a thin-bordered box with a left-aligned title, like
-    # the optimization box -- one consistent control-box style across the grid
+def test_control_dropdowns_are_boxed_within_their_tiles():
+    # every dropdown rides inside a thin-bordered box that STAYS WITHIN its tile, with a small
+    # field label above the control naming it (not a bold box title that spills the tile)
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["preselects"], s["form_controls"] = True, True
     lay = spreadsheet.build(base, s)
     cells = {c.id: c for c in lay.cells}
     boxes = {b.id: b for b in lay.blocks}
-    for cid, title in (("preselect:tuning", "established tuning scheme"),
-                       ("preselect:temperament", "temperament"),
-                       ("preselect:target", "target interval set scheme"),
-                       ("formchooser:mapping", "form"),
-                       ("formchooser:comma_basis", "form")):
-        ctrl, box = cells[cid], boxes[f"block:{cid}"]
+    for cid, label, tile in (("preselect:tuning", "established tuning scheme", "block:tuning:primes"),
+                             ("preselect:tuning:gens", "established tuning scheme", "block:tuning:gens"),
+                             ("preselect:temperament", "temperament", "block:mapping"),
+                             ("preselect:target", "target interval set scheme", "block:vec:targets"),
+                             ("formchooser:mapping", "form", "block:mapping"),
+                             ("formchooser:comma_basis", "form", "block:vec:commas")):
+        ctrl, box, panel = cells[cid], boxes[f"block:{cid}"], boxes[tile]
         assert box.boxed is True  # a bordered box, not a plain tile
         assert box.x <= ctrl.x and box.x + box.w >= ctrl.x + ctrl.w  # encloses the control
         assert box.y <= ctrl.y and box.y + box.h >= ctrl.y + ctrl.h
-        title_cell = cells[f"block:{cid}:title"]
-        assert title_cell.kind == "boxtitle" and title_cell.text == title
-        assert title_cell.y < ctrl.y  # the title sits above the control it labels
+        # the box stays WITHIN its tile -- never spilling out (the reported bug)
+        assert box.x >= panel.x - 0.5 and box.x + box.w <= panel.x + panel.w + 0.5
+        # a field label names the dropdown, sitting above it (a control label, not a box title)
+        lbl = cells[f"block:{cid}:label"]
+        assert lbl.kind == "controllabel" and lbl.text == label and lbl.y < ctrl.y
 
 
 def test_build_honors_the_target_interval_spec():

@@ -451,6 +451,11 @@ _CSS = f"""
 .rtt-caption {{ width:100%; text-align:center; text-wrap:balance; font-size:9px; line-height:10px;
                color:#333; overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }}
 .rtt-caption-cell {{ align-items:center; }}
+/* a control box's field label: a small grey label above the dropdown it names, wrapping to
+   the box's width so a long label ("established tuning scheme") stacks rather than spilling
+   the tile. Left-aligned and lighter than the bold box titles (optimization / tuning ranges). */
+.rtt-control-label {{ width:100%; text-align:left; font-size:9px; line-height:10px; color:#555;
+                     font-family:'Cambria',Georgia,serif; white-space:normal; overflow-wrap:break-word; }}
 /* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power", "double-click
    to lock") stay on ONE line — centred under their control, overflowing sideways if need be —
    so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
@@ -590,8 +595,8 @@ _CSS = f"""
   .rtt-select-popup .q-item.disabled * {{ cursor:default !important; }}
 }}
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
-.rtt-preselect-target {{ width:100%; height:30px; display:flex; gap:3px; align-items:center; }}
-.rtt-preselect-target .rtt-preselect-num {{ flex:0 0 30px; }}  /* a gridded value square (COL_W x ROW_H) */
+.rtt-preselect-target {{ width:100%; height:30px; display:flex; gap:0; align-items:center; }}
+.rtt-preselect-target .rtt-preselect-num {{ flex:0 0 30px; }}  /* a gridded value square (COL_W x ROW_H), touching the select */
 .rtt-preselect-target .rtt-preselect {{ flex:1 1 auto; width:auto; }}
 .rtt-preselect-num .q-field__control {{ min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }}
@@ -1909,6 +1914,9 @@ def index() -> None:
                 if cb.align == "left":
                     cls += " rtt-caption-left"
                 captions[cb.id] = ui.html("").classes(cls)  # content set in render()
+            elif cb.kind == "controllabel":  # a field label above a control box's dropdown
+                wrap.classes("rtt-caption-cell")
+                captions[cb.id] = ui.html("").classes("rtt-control-label")  # content set in render()
             elif cb.kind == "preselect":
                 name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
                 if name == "target":
@@ -1920,7 +1928,7 @@ def index() -> None:
                             .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
                         sel = ui.select(list(presets.TARGET_SETS), value=editor.target_family,
                                 on_change=lambda e: on_target_change()) \
-                            .props(_select_props(cb.w - 33)).classes("rtt-preselect")  # field = cell − 30px square − 3px gap
+                            .props(_select_props(cb.w - 30)).classes("rtt-preselect")  # field = cell − the 30px square (touching, no gap)
                     selects[cb.id] = (num, sel)
                 elif name == "temperament":
                     # a normal dropdown: the chosen preset shows in the box; the ""
@@ -2249,6 +2257,10 @@ def index() -> None:
                 if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
                     captions[cb.id].set_content(html)
                     caption_html[cb.id] = html
+            elif cb.kind == "controllabel":  # a plain field label, no underlines
+                if caption_html.get(cb.id) != cb.text:
+                    captions[cb.id].set_content(cb.text)
+                    caption_html[cb.id] = cb.text
             elif cb.kind in _LABEL_KINDS:
                 labels[cb.id].set_text(cb.text)
 

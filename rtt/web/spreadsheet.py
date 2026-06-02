@@ -96,17 +96,17 @@ OPT_COL_GAP = 8  # gap between the three left-packed controls (the min-damage / 
 # into the empty space on the rows below. The captions stay on ONE line each.
 OPT_BTN_W = 94   # optimize button — wide enough to seat "double-click to unlock" on one line beneath it
 OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred under the ∞ cell)
-# An in-tile control box: a dropdown / checkbox enclosed in a thin-bordered frame with a
-# left-aligned title, like the optimization box. The title is one line that overhangs the
-# column to the right (the box widens to fit it, like a tile name) rather than wrapping —
-# matching the grid's "hug content, overhang titles" rule. Pads inset the control off the
-# border. A row reserves PRESELECT_BOX_H for its control band so following rows clear it.
-BOX_TITLE_H = 14  # px height of a control box's single-line title strip
-BOX_TITLE_FONT = 11  # the .rtt-boxtitle font size (for estimating the title's width)
-BOX_TITLE_CHAR_W = 0.6  # bold-serif glyph width fraction, to size a box wide enough for its title
-BOX_PAD = 3  # inset around the control within the box (off the border)
-BOX_TITLE_GAP = 3  # gap between the title strip and the control row
-PRESELECT_BOX_H = BOX_PAD + BOX_TITLE_H + BOX_TITLE_GAP + PRESELECT_H + BOX_PAD  # a titled box's height
+# An in-tile control box: a dropdown / checkbox enclosed in a thin-bordered frame, with a
+# small field LABEL above the control naming what it sets ("established tuning scheme"). The
+# box stays WITHIN its tile (never spilling into a neighbour) — the label wraps to fit the
+# box's width rather than widening it. BOX_OUTER pads the box off the tile's edges; BOX_INNER
+# insets the control + label off the box border; CTRL_LABEL_GAP sits between the label and
+# the control. Box heights vary with the label's wrap, so a row reserves its tallest.
+BOX_OUTER = 4  # gap between a control box and its tile's edges
+BOX_INNER = 5  # inset of the control + its label within the box (off the border)
+CTRL_LABEL_GAP = 2  # gap between a control's field label and the control below it
+BOX_TITLE_H = 14  # px height of the optimization / tuning-ranges boxes' bold title strip
+BOX_TITLE_GAP = 4  # gap below that title, before the box's content
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -516,11 +516,10 @@ PRESELECTS = (
 )
 # Extra copies of a preselect chooser in another governing tile (the same control, its own
 # id so the renderer keeps both): the tuning scheme also under the generator tuning map, the
-# temperament also in the comma basis (which it loads). The gens tuning copy is untitled
-# (its label is established by the tuning map copy) so it doesn't overhang the open
-# domain-primes column to its right; it shares the tuning row's control band with that copy.
+# temperament also in the comma basis (which it loads). Each carries the same field label as
+# its primary; the boxes stay within their own tiles, so the labels don't collide.
 PRESELECT_COPIES = (
-    ("tuning", "tuning", "gens", ""),
+    ("tuning", "tuning", "gens", "established tuning scheme"),
     ("temperament", "vectors", "commas", "temperament"),
 )
 PRESELECT_ROWS = frozenset(row for _, row, _, _ in PRESELECTS + PRESELECT_COPIES)
@@ -933,16 +932,6 @@ def _min_width_for_lines(text: str, max_lines: int, font: float = CAPTION_FONT) 
         if _wrap_chars(words, chars) <= max_lines:
             return int(chars * font * CAPTION_CHAR_W + 4) + 1  # invert _chars_per_line (round up)
     return int(len(text) * font * CAPTION_CHAR_W + 4) + 1
-
-
-def _control_box_width(ctrl_w: float, title: str) -> float:
-    """A control box hugs its control, but widens to seat its single-line title (which
-    overhangs the column to the right, like a tile name) so the label is never clipped.
-    An untitled box is exactly its control's width."""
-    if not title:
-        return ctrl_w
-    title_w = len(title) * BOX_TITLE_FONT * BOX_TITLE_CHAR_W + 2 * BOX_PAD + 8  # + the .rtt-boxtitle left pad
-    return max(ctrl_w, title_w)
 
 
 def _bus_span(positions):
@@ -1485,6 +1474,31 @@ def build(state, settings=None, collapsed=None,
         if not (show_ptext and key in PTEXT_ROWS and not folded):
             return 0
         return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
+
+    # a titled control box (preselect / form chooser) fits WITHIN its column's tile: the field
+    # label wraps to the box's width rather than widening it past the tile. Box heights vary
+    # with the wrap, so a row reserves its tallest control's band.
+    def control_dims(ckey, cap_w, label):
+        dropdown_w = max(40, min(col_w[ckey] - 2 * BOX_OUTER - 2 * BOX_INNER, cap_w))
+        label_h = _wrap_lines(label, dropdown_w) * CAPTION_LINE if label else 0
+        box_h = BOX_INNER + label_h + (CTRL_LABEL_GAP if label else 0) + PRESELECT_H + BOX_INNER
+        return dropdown_w, label_h, box_h
+
+    def control_band_h(ckey, cap_w, label):  # the box plus outer padding above and below
+        return 2 * BOX_OUTER + control_dims(ckey, cap_w, label)[2]
+
+    def preselect_cap(name):
+        return TARGET_PRESELECT_W if name == "target" else PRESELECT_W
+
+    def preselect_band_h(key):  # the tallest preselect control box riding this row
+        return max((control_band_h(ckey, preselect_cap(name), label)
+                    for name, rk, ckey, label in PRESELECTS + PRESELECT_COPIES
+                    if rk == key and ckey in col_w), default=0)
+
+    def formchooser_band_h(key):
+        return max((control_band_h(ckey, PRESELECT_W, label)
+                    for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in col_w), default=0)
+
     y = rows_top_y
     for key, natural, present, collapsible, label in row_bands:
         if not present:
@@ -1517,10 +1531,10 @@ def build(state, settings=None, collapsed=None,
         uni = UNIT_H if (show_units and key in UNITED_ROWS and not folded) else 0
         # below the caption/units a tile reserves bands for the plain-text value box and
         # the preselect chooser (its row), stacked in that order
-        pre = PRESELECT_BOX_H if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
+        pre = preselect_band_h(key) if (show_preselects and key in PRESELECT_ROWS and not folded) else 0
         # the form chooser rides one box below the preselect chooser, in the mapping and
         # comma-basis boxes, when form controls are shown
-        formctrl = PRESELECT_BOX_H if (show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
+        formctrl = formchooser_band_h(key) if (show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
         ptext = ptext_band(key, folded)
         row_h[key] = STRIP if folded else natural
         tile_top[key] = y
@@ -2595,19 +2609,19 @@ def build(state, settings=None, collapsed=None,
     def ptext_band_y(rkey):
         return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_units[rkey]
 
-    # a titled control box: a bordered frame around a PRESELECT_H control with an optional
-    # left-aligned title strip above it (the box widens to seat the title, which overhangs
-    # the column to the right). Returns the control's y-offset from the box top so the caller
-    # seats it below the title.
-    def control_box(box_id, x, top, ctrl_w, title):
-        box_w = _control_box_width(ctrl_w, title)
-        ctrl_dy = BOX_PAD + (BOX_TITLE_H + BOX_TITLE_GAP if title else 0)
-        box_h = ctrl_dy + PRESELECT_H + BOX_PAD
-        blocks.append(Block(box_id, x, top, box_w, box_h, boxed=True))
-        if title:
-            cells.append(CellBox(f"{box_id}:title", x, top + BOX_PAD, box_w, BOX_TITLE_H,
-                                 "boxtitle", text=title, align="left"))
-        return ctrl_dy
+    # a titled control box: a thin-bordered frame that fits WITHIN its column's tile, with a
+    # small field LABEL above the control naming what it sets. The label wraps to the box's
+    # width (never widening it past the tile). Returns the (x, width, y) to seat the control at.
+    def control_box(box_id, ckey, top, cap_w, label):
+        dropdown_w, label_h, box_h = control_dims(ckey, cap_w, label)
+        box_x, box_y = col_x[ckey] + BOX_OUTER, top + BOX_OUTER
+        blocks.append(Block(box_id, box_x, box_y, dropdown_w + 2 * BOX_INNER, box_h, boxed=True))
+        ctrl_x = box_x + BOX_INNER
+        if label:
+            cells.append(CellBox(f"{box_id}:label", ctrl_x, box_y + BOX_INNER, dropdown_w, label_h,
+                                 "controllabel", text=label, align="left"))
+        ctrl_y = box_y + BOX_INNER + label_h + (CTRL_LABEL_GAP if label else 0)
+        return ctrl_x, dropdown_w, ctrl_y
 
     # preselect chooser dropdowns, in the reserved band below each governing tile's
     # plain-text box. The tuning/target choosers carry the live selection; the
@@ -2619,32 +2633,28 @@ def build(state, settings=None, collapsed=None,
         preselect_text = {"temperament": "", "target": target_spec,
                           "tuning": tuning_scheme if isinstance(tuning_scheme, str) else ""}
 
-        def emit_preselect(cid, name, rkey, ckey, title):
+        def emit_preselect(cid, name, rkey, ckey, label):
             if not tile_open(rkey, ckey):
                 return
             top = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
-            pw = min(col_w[ckey], TARGET_PRESELECT_W if name == "target" else PRESELECT_W)
-            ctrl_dy = control_box(f"block:{cid}", col_x[ckey], top, pw, title)
-            cells.append(CellBox(cid, col_x[ckey], top + ctrl_dy, pw, PRESELECT_H,
-                                 "preselect", text=preselect_text[name]))
+            cx, cw, cy = control_box(f"block:{cid}", ckey, top, preselect_cap(name), label)
+            cells.append(CellBox(cid, cx, cy, cw, PRESELECT_H, "preselect", text=preselect_text[name]))
 
-        for name, rkey, ckey, title in PRESELECTS:
-            emit_preselect(f"preselect:{name}", name, rkey, ckey, title)
-        for name, rkey, ckey, title in PRESELECT_COPIES:  # the same control in a second tile
-            emit_preselect(f"preselect:{name}:{ckey}", name, rkey, ckey, title)
+        for name, rkey, ckey, label in PRESELECTS:
+            emit_preselect(f"preselect:{name}", name, rkey, ckey, label)
+        for name, rkey, ckey, label in PRESELECT_COPIES:  # the same control in a second tile
+            emit_preselect(f"preselect:{name}:{ckey}", name, rkey, ckey, label)
 
     # the form chooser, one box below the preselect chooser: it canonicalizes the mapping /
     # comma basis it rides (an undoable edit). A control, so it ignores the value-display
     # toggles, like the preselect choosers.
     if show_form_controls:
-        for name, rkey, ckey, title in FORM_CHOOSERS:
+        for name, rkey, ckey, label in FORM_CHOOSERS:
             if not tile_open(rkey, ckey):
                 continue
             top = ptext_band_y(rkey) + row_ptext[rkey] + row_pre[rkey]  # below the preselect box
-            pw = min(col_w[ckey], PRESELECT_W)
-            ctrl_dy = control_box(f"block:formchooser:{name}", col_x[ckey], top, pw, title)
-            cells.append(CellBox(f"formchooser:{name}", col_x[ckey], top + ctrl_dy, pw, PRESELECT_H,
-                                 "formchooser"))
+            cx, cw, cy = control_box(f"block:formchooser:{name}", ckey, top, PRESELECT_W, label)
+            cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESELECT_H, "formchooser"))
 
     # plain-text value band: each tile's value as its natural EBK string, directly
     # below the symbol/caption stack (above the preselect chooser). The two editable
