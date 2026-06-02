@@ -1514,10 +1514,9 @@ def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
 
 
 def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
-    # the active prescaler IS the log-prime matrix (the default scheme, no typed override),
-    # so it takes its standard letter 𝐿 everywhere and the bare tile names it in words —
-    # ``𝐿 = log-prime matrix``. The product tiles carry the same 𝐿 (𝐿C / 𝐿D / 𝐿T / 𝐿H),
-    # so 𝐿 and 𝑋 never mix within the row; they print no "= …" (already the matrix).
+    # the bare prescaler tile keeps the abstract symbol 𝑋 with its concrete equivalence — the
+    # active prescaler IS the log-prime matrix, so "𝑋 = 𝐿". Everywhere 𝑋 further appears (the
+    # product tiles) it's written with the concrete 𝐿: 𝐿C / 𝐿D / 𝐿T / 𝐿H, which print no "= …".
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         # ``optimization`` brings the held column out (held lives in the optimization layer);
@@ -1528,9 +1527,9 @@ def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
         held_vectors=((-1, 1, 0),),  # 3/2 held, so the held column appears
     )
     on = {c.id: c for c in lay.cells}
-    # bare prescaler tile: 𝐿 with the words-equivalence naming what 𝐿 is
-    assert on["symbol:prescaling:primes"].text == "𝐿 = log-prime matrix"
-    # product tiles: the same 𝐿, no "= …" — they're already the matrix
+    # bare prescaler tile: the abstract 𝑋 with its concrete equivalence (the symbol line is unchanged)
+    assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
+    # product tiles: the concrete 𝐿, no "= …" — they're already the matrix
     assert on["symbol:prescaling:commas"].text == "𝐿C"
     assert on["symbol:prescaling:targets"].text == "𝐿T"
     assert on["symbol:prescaling:held"].text == "𝐿H"
@@ -1544,7 +1543,7 @@ def test_non_log_prime_prescaler_stays_generic_X_named_in_the_equivalence():
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "weighting": True, "optimization": True,
-         "symbols": True, "equivalences": True},
+         "symbols": True, "names": True, "equivalences": True},
         tuning_scheme=scheme, held_vectors=((-1, 1, 0),),
     )
     on = {c.id: c for c in lay.cells}
@@ -1552,6 +1551,8 @@ def test_non_log_prime_prescaler_stays_generic_X_named_in_the_equivalence():
     assert on["symbol:prescaling:commas"].text == "𝑋C"     # product keeps the generic 𝑋
     assert on["symbol:prescaling:targets"].text == "𝑋T"
     assert on["symbol:prescaling:held"].text == "𝑋H"
+    # the NAME gains its "= log-prime matrix" equivalence ONLY when 𝑋 = 𝐿 — not here
+    assert on["caption:prescaling:primes"].text == "complexity prescaler"
 
 
 def test_prime_prescaler_names_diag_p_in_the_equivalence_not_the_projection_letter():
@@ -1570,6 +1571,20 @@ def test_prime_prescaler_names_diag_p_in_the_equivalence_not_the_projection_lett
     assert on["symbol:prescaling:primes"].text == "𝑋 = diag(𝒑)"
     assert on["symbol:prescaling:commas"].text == "𝑋C"
     assert on["symbol:prescaling:targets"].text == "𝑋T"
+
+
+def test_log_prime_prescaler_name_gains_the_equivalence():
+    # when 𝑋 = 𝐿, the NAME (caption) reads "complexity prescaler = log-prime matrix" with the
+    # equivalences layer on — paralleling the symbol line's OWN, UNCHANGED "𝑋 = 𝐿".
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "weighting": True, "symbols": True, "names": True,
+         "equivalences": True}
+    on = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"  # the symbol line is unchanged
+    assert on["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
+    # without the equivalences layer the name is just the plain caption
+    on2 = {c.id: c for c in spreadsheet.build(base, {**s, "equivalences": False}).cells}
+    assert on2["caption:prescaling:primes"].text == "complexity prescaler"
 
 
 def test_prescaler_symbol_never_mixes_L_and_X_within_a_tile():
@@ -1770,8 +1785,9 @@ def test_outer_matrix_frame_hugs_the_cells_leaving_subrow_labels_outside():
 
 def test_prescaling_matrix_carries_its_symbol_and_caption():
     cells = {c.id: c for c in _with(weighting=True, symbols=True, names=True).cells}
-    # the default prescaler IS the log-prime matrix, so its glyph is 𝐿 (math italic, like 𝑀)
-    assert cells["symbol:prescaling:primes"].text == "𝐿"
+    # the bare prescaler matrix is the abstract symbol 𝑋 (math italic, like 𝑀); with no
+    # equivalences layer the name is just the plain caption
+    assert cells["symbol:prescaling:primes"].text == "𝑋"
     assert cells["caption:prescaling:primes"].text == "complexity prescaler"
 
 
@@ -3350,11 +3366,10 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
 
 
 def test_prescaling_matrix_row_and_col_labels():
-    # The prescaler is a covector stack like 𝑀, so prescaling/primes gets ROW labels — and
-    # since the default prescaler IS the log-prime matrix, every label uses its letter 𝐿:
-    # rows 𝒍ᵢ (one per dimension, parallel to 𝒎ᵢ on the mapping), and the product matrices
-    # get COLUMN labels 𝐿𝐜ᵢ / 𝐿𝐡ᵢ / 𝐿𝐝ᵢ / 𝐿𝐭ᵢ — never the generic 𝑋, which would clash with
-    # the tiles' 𝐿-lettered big symbols.
+    # The bare prescaler matrix is a covector stack like 𝑀, labelled with its abstract symbol's
+    # rows 𝒙ᵢ (one per dimension, parallel to 𝒎ᵢ on the mapping). Its products, where 𝑋 further
+    # appears as the concrete 𝐿 (the default log-prime matrix), get COLUMN labels 𝐿𝐜ᵢ / 𝐿𝐡ᵢ /
+    # 𝐿𝐝ᵢ / 𝐿𝐭ᵢ — matching those product tiles' 𝐿-lettered big symbols.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["symbols"] = True
@@ -3364,11 +3379,11 @@ def test_prescaling_matrix_row_and_col_labels():
     on = {c.id: c for c in spreadsheet.build(
         base, s, held_vectors=((-1, 1, 0),)
     ).cells}
-    # row labels on the 𝐿 matrix: d=3 rows, one 𝒍ᵢ per dimension
-    assert on["matlabel:row:prescaling:primes:0"].text == "𝒍₁"
-    assert on["matlabel:row:prescaling:primes:1"].text == "𝒍₂"
-    assert on["matlabel:row:prescaling:primes:2"].text == "𝒍₃"
-    # col labels on the prescaled vector lists: 𝐿·basis, 𝐿·detempering, 𝐿·held, 𝐿·targets
+    # row labels on the bare 𝑋 matrix: d=3 rows, one 𝒙ᵢ per dimension
+    assert on["matlabel:row:prescaling:primes:0"].text == "𝒙₁"
+    assert on["matlabel:row:prescaling:primes:1"].text == "𝒙₂"
+    assert on["matlabel:row:prescaling:primes:2"].text == "𝒙₃"
+    # col labels on the prescaled product lists: 𝐿·basis, 𝐿·detempering, 𝐿·held, 𝐿·targets
     assert on["matlabel:col:prescaling:commas:0"].text == "𝐿𝐜₁"
     assert on["matlabel:col:prescaling:held:0"].text == "𝐿𝐡₁"
     assert on["matlabel:col:prescaling:detempering:0"].text == "𝐿𝐝₁"

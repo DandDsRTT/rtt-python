@@ -275,12 +275,12 @@ SYMBOLS = {
     ("retune", "commas"): "𝒓C",
     ("retune", "detempering"): "𝒓D",
     ("retune", "targets"): "𝐞",
-    # the prescaler tiles carry an upright-``L`` placeholder that build() resolves to the live
-    # prescaler glyph (see prescaling_symbols): 𝐿 when the prescaler IS the log-prime matrix,
-    # else the generic 𝑋. The bare matrix is just the letter; the products append their basis
-    # letter (so 𝐿C/𝐿D/… or 𝑋C/𝑋D/…). The bare tile's " = …" equivalence — naming the concrete
-    # prescaler in words or symbol — is set scheme-aware at build time (see prescaler_equivalence).
-    ("prescaling", "primes"): "L",   # the complexity prescaler matrix (math italic, like 𝑀)
+    # the bare prescaler matrix keeps the abstract symbol 𝑋 (math italic, like 𝑀); its " = …"
+    # equivalence is set scheme-aware at build time ("𝑋 = 𝐿" / "𝑋 = diag(𝒑)" / "𝑋 = 𝐼" — see
+    # prescaler_equivalence). The product tiles carry an upright-``L`` placeholder that build()
+    # resolves to the LIVE glyph (see prescaling_symbols): 𝐿C/𝐿D/… when 𝑋 = 𝐿 (the log-prime
+    # matrix), else generic 𝑋C/𝑋D/… — so a product tile and its column headers never mix 𝐿 and 𝑋.
+    ("prescaling", "primes"): "𝑋",   # the complexity prescaler matrix (math italic, like 𝑀)
     ("prescaling", "commas"): "LC",   # the product over the comma basis C
     ("prescaling", "detempering"): "LD",   # over the generator detempering D
     ("prescaling", "targets"): "LT",   # over the target interval list T
@@ -316,10 +316,7 @@ SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symb
 # list itself, the italic form its scalar entries.
 ROW_LABEL_LETTERS = {
     ("mapping", "primes"): "𝒎",      # 𝑀 → 𝒎: each row of the mapping is a covector 𝒎ᵢ
-    # each row of the prescaler is a covector — labelled with the lowercase of the live
-    # prescaler glyph, which build() swaps in (see row_labels): 𝒍ᵢ for the log-prime matrix
-    # 𝐿, else the generic 𝒙ᵢ. The static value here is the generic fallback.
-    ("prescaling", "primes"): "𝒙",
+    ("prescaling", "primes"): "𝒙",   # 𝑋 → 𝒙: each row of the bare prescaler matrix (always 𝑋)
 }
 ROW_LABELED_TILES = frozenset(ROW_LABEL_LETTERS)
 COL_LABEL_LETTERS = {
@@ -553,9 +550,8 @@ FORM_CHOOSER_ROWS = frozenset(row for _, row, _, _ in FORM_CHOOSERS)
 # "target interval damage list" -> d). Each value is a substring of the caption whose
 # first letter — found at the substring's first occurrence — is the one underlined.
 # That letter is usually a word-initial (so the value is that word), but it may fall
-# mid-word: the complexity prescaler marks the x in "compleXity", so its value is the bare
-# "x" — tied to the name (the prescaler scales compleXity), not the matrix glyph, which is
-# 𝐿 under the log-prime default. Keep these in step with SYMBOLS. Symbols with no meaningful
+# mid-word: the complexity prescaler's symbol 𝑋 marks the x in "compleXity", so its
+# value is the bare "x". Keep these in step with SYMBOLS. Symbols with no meaningful
 # letter in their caption carry no entry — the abstract size-list letters of the
 # mapped list (Y), the tempered (𝐚) and just (𝐨) lists.
 MNEMONICS = {
@@ -685,12 +681,12 @@ WEIGHT_EQUIVALENCE_BY_SLOPE = {
     "simplicityWeight": " = 1/𝒄",
 }
 
-# The concrete form the prescaler takes, by scheme — named in the bare tile's equivalence
-# when the generic 𝑋 is shown (a NON-log-prime prescaler). The log-prime entry 𝐿 is the
-# inline glyph itself (the prescaler IS that matrix, so it shows 𝐿 and the equivalence reads
-# the words "log-prime matrix" instead — see prescaler_equivalence in build). The prime
-# diagonal is written diag(𝒑) per the guide — a bare 𝑃 would clash with the guide's projection
-# matrix (P = GM); 𝐼 (identity) is a math-italic capital like 𝑀 / 𝑋. See PRESCALERS.
+# The concrete form the prescaler takes, by scheme — named in the bare tile's SYMBOL
+# equivalence: the log-prime matrix 𝐿 for the default prescaler, the prime diagonal diag(𝒑) for
+# sopfr, the identity 𝐼 for the unweighted count (copfr). 𝐿 and 𝐼 are math-italic capitals (like
+# 𝑀 / 𝑋); the prime diagonal is written diag(𝒑) per the guide — a bare 𝑃 would clash with the
+# guide's projection matrix (P = GM). So the bare tile reads 𝑋 = 𝐿 / 𝑋 = diag(𝒑) / 𝑋 = 𝐼. The
+# 𝐿 here is also the glyph the products and column headers use when 𝑋 = 𝐿 (see prescaler_symbol).
 PRESCALER_LETTER = {"log-prime": "𝐿", "prime": "diag(𝒑)", "identity": "𝐼"}
 
 # Always-present content tiles (a row×column intersection) as (grey-panel id, row,
@@ -1074,32 +1070,33 @@ def build(state, settings=None, collapsed=None,
     # where one exists ("1200 · log₂3 = 1901.96", the = cents kept when quantities is
     # on); a cell with no closed form is untouched and keeps its plain cents value.
     show_math = settings["math_expressions"]
-    # The prescaler matrix's glyph, resolved once and threaded through every prescaling/
-    # complexity tile so 𝐿 and 𝑋 never mix. 𝑋 = 𝐿 exactly when the active prescaler IS the
-    # log-prime matrix — the default scheme's log-prime diagonal, with no custom diagonal typed
-    # over it; then it takes its standard letter 𝐿 (and the bare tile names it "= log-prime
-    # matrix"). A prime/identity scheme or a typed override leaves it the generic placeholder 𝑋,
-    # whose concrete form is named in the equivalence instead (diag(𝒑) / 𝐼; a typed override
-    # has no closed form, so none). One glyph flows to the bare matrix, the products, the row/
-    # column labels, the equivalence, and the all-interval objective.
+    # The prescaler's concrete glyph 𝐿, used everywhere the abstract 𝑋 "further appears" — the
+    # product tiles and their complexity-norm column headers — when 𝑋 = 𝐿: i.e. when the active
+    # prescaler IS the log-prime matrix (the default scheme's log-prime diagonal, with no custom
+    # diagonal typed over it). A prime/identity scheme or a typed override leaves the generic
+    # placeholder 𝑋 everywhere instead. The bare prescaler tile itself is the DEFINITION locus:
+    # it keeps the abstract symbol 𝑋 (and rows 𝒙ᵢ), with the equivalence "= 𝐿" (or "= diag(𝒑)" /
+    # "= 𝐼"; nothing for a typed override), and — when 𝑋 = 𝐿 — its NAME gains "= log-prime matrix"
+    # (see effective_captions). So a tile never mixes the two: the bare matrix is all 𝑋, every
+    # product and column header is all 𝐿.
     _scheme_prescaler = service.prescaler_of(tuning_scheme)
     prescaler_is_log_prime = custom_prescaler is None and _scheme_prescaler == "log-prime"
-    prescaler_symbol = "𝐿" if prescaler_is_log_prime else "𝑋"  # capital, for matrices/products
-    if prescaler_is_log_prime:
-        prescaler_equivalence = " = log-prime matrix"
-    elif custom_prescaler is not None:
+    prescaler_symbol = "𝐿" if prescaler_is_log_prime else "𝑋"  # the glyph products/headers use
+    if custom_prescaler is not None:
         prescaler_equivalence = ""  # a typed diagonal shows its own values — no closed form to name
     else:
-        prescaler_equivalence = f" = {PRESCALER_LETTER[_scheme_prescaler]}"  # diag(𝒑) / 𝐼
-    # the static SYMBOLS dict's upright-L prefix is the placeholder this resolves: "L" → the
-    # glyph alone (bare matrix), "LC"/"LD"/… → glyph + basis letter.
+        prescaler_equivalence = f" = {PRESCALER_LETTER[_scheme_prescaler]}"  # = 𝐿 / diag(𝒑) / 𝐼
+    # the bare matrix keeps the literal abstract 𝑋 (SYMBOLS); only the products' "L" placeholder
+    # resolves to the live glyph ("LC"/"LD"/… → 𝐿C/… or 𝑋C/…), matching their column headers.
     prescaling_symbols = {(r, c): prescaler_symbol + s[1:] for (r, c), s in SYMBOLS.items()
-                          if r == "prescaling"}
-    # the row labels (covector rows of the prescaler) and column headers (its products and
-    # their complexity norms) carry the SAME live glyph — its lowercase 𝒍/𝒙 for the rows.
-    row_labels = {**ROW_LABEL_LETTERS,
-                  ("prescaling", "primes"): "𝒍" if prescaler_is_log_prime else "𝒙"}
+                          if r == "prescaling" and s.startswith("L")}
     col_labels = {**COL_LABEL_LETTERS, **_prescaler_col_labels(prescaler_symbol)}
+    # the bare tile's NAME gains its equivalence when 𝑋 = 𝐿 — "complexity prescaler = log-prime
+    # matrix" — shown with the equivalences layer (like the symbol line's own "𝑋 = 𝐿"). Threaded
+    # through the caption sizing + emission below so the tile reserves space for the longer name.
+    effective_captions = dict(CAPTIONS)
+    if prescaler_is_log_prime and show_equiv:
+        effective_captions[("prescaling", "primes")] += " = log-prime matrix"
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
     header_h = HEADER_H
@@ -1355,9 +1352,9 @@ def build(state, settings=None, collapsed=None,
         # zero when names are hidden (no caption renders) so the column keeps its content size
         if not show_captions:
             return 0
-        return max((_min_width_for_lines(CAPTIONS[(rk, key)], MAX_CAPTION_LINES)
+        return max((_min_width_for_lines(effective_captions[(rk, key)], MAX_CAPTION_LINES)
                     for rk in present_caption_rows
-                    if (rk, key) in CAPTIONS and (rk, key) in declared_tiles), default=0)
+                    if (rk, key) in effective_captions and (rk, key) in declared_tiles), default=0)
 
     def _control_floor(key):
         # the width an open column needs so its in-tile choosers fit without overhanging the
@@ -1530,8 +1527,8 @@ def build(state, settings=None, collapsed=None,
         # no captions at all.
         if not (show_captions and key in CAPTIONED_ROWS and not folded):
             return 0
-        lines = [_wrap_lines(CAPTIONS[(key, c)], open_col_w[c]) for c in col_x
-                 if (key, c) in CAPTIONS and (key, c) in declared_tiles]
+        lines = [_wrap_lines(effective_captions[(key, c)], open_col_w[c]) for c in col_x
+                 if (key, c) in effective_captions and (key, c) in declared_tiles]
         return max(lines, default=1) * CAPTION_LINE
 
     # pass the held intervals + any frozen manual tuning so the plain text builds the SAME
@@ -2506,7 +2503,7 @@ def build(state, settings=None, collapsed=None,
             ("prescaling", "primes"): lambda i: row_y["prescaling"] + i * ROW_H,
         }
         row_count = {("mapping", "primes"): r, ("prescaling", "primes"): d}
-        for (rkey, ckey), glyph in row_labels.items():
+        for (rkey, ckey), glyph in ROW_LABEL_LETTERS.items():
             if not tile_open(rkey, ckey):
                 continue
             top = row_top[(rkey, ckey)]
@@ -2728,10 +2725,11 @@ def build(state, settings=None, collapsed=None,
     # Two equations resolve per build from the live scheme's damage-weight slope rather than
     # being baked in: the weight row (𝒘 = 𝒄 / 1 / 1/𝒄), and the damage row, which drops its
     # diag(𝒘) factor under unity weight — 𝒘 = 1 makes diag(𝒘) the identity, so 𝐝 = |𝐞| (per
-    # the guide). The bare prescaling tile is the only one whose equivalence names the live
-    # prescaler (``𝐿 = log-prime matrix`` when it IS that matrix; otherwise the generic 𝑋 named
-    # by its concrete form, ``𝑋 = 𝐼`` / ``𝑋 = diag(𝒑)``, or nothing for a typed override — see
-    # prescaler_equivalence); the product tiles carry the glyph as their SYMBOL and print no "= …".
+    # the guide). The bare prescaling tile is the only one whose SYMBOL equivalence names the live
+    # prescaler concretely (``𝑋 = 𝐿`` for log-prime, ``𝑋 = diag(𝒑)`` / ``𝑋 = 𝐼`` otherwise, or
+    # nothing for a typed override — see prescaler_equivalence). Its NAME additionally gains
+    # "= log-prime matrix" when 𝑋 = 𝐿 (see effective_captions). The product tiles carry the live
+    # glyph as their SYMBOL (𝐿C/…) and print no "= …".
     ai = service.is_all_interval(tuning_scheme)  # all-interval: kept target tiles use prime-proxy labels
     slope = service.damage_weight_slope(tuning_scheme)
     equivalences = {**EQUIVALENCES,
@@ -2740,7 +2738,7 @@ def build(state, settings=None, collapsed=None,
                     **(ALL_INTERVAL_EQUIVALENCES if ai else {})}
     if slope == "unityWeight":  # no real weight to apply, so the list is just 𝐝 = |𝐞|
         equivalences[("damage", "targets")] = " = |𝐞|"
-    for (rkey, ckey), name in CAPTIONS.items():
+    for (rkey, ckey), name in effective_captions.items():
         if ckey == "interest" and not interest:
             continue
         if not tile_open(rkey, ckey):
