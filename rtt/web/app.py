@@ -876,6 +876,13 @@ def index() -> None:
     fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
     cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
     cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
+    # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
+    # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
+    # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
+    _handle_dicts = (els, inputs, labels, fracs, cents, htmls, ebk_sizes, chart_keys, range_keys,
+                     audio_keys, exprs, expr_state, kinds, selects, checks, ptext_inputs, rangeopts,
+                     opt_buttons, objective_tips, captions, caption_html, math_cells, math_rendered,
+                     fold_state, cell_units, cell_unit_text)
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
@@ -886,12 +893,9 @@ def index() -> None:
     cell_kinds: dict[str, _KindHandlers] = {}
 
     def drop(eid):
-        """Remove an entity's element and forget every per-id handle for it."""
+        """Remove an entity's element and forget every per-id handle for it (see _handle_dicts)."""
         els[eid].delete()
-        for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, exprs, expr_state, kinds,
-                  selects, ptext_inputs, captions, caption_html, math_cells, math_rendered, fold_state,
-                  cell_units, cell_unit_text, chart_keys, range_keys, audio_keys, rangeopts,
-                  opt_buttons, objective_tips):
+        for d in _handle_dicts:
             d.pop(eid, None)
 
     def set_cents_face(cid, text):
