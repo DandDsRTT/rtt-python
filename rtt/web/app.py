@@ -1449,11 +1449,16 @@ def _line_style(ln, y_shift: float = 0) -> str:
     border). The border grows off one edge, so shift the box back by half the line width
     to seat the rule centred on its coordinate (its toggle-node / cell-column centre).
     ``y_shift`` lifts the rule into the body's scroll space (the frozen column strip's
-    height), since every gridline lives on the scrolling board."""
+    height), since every gridline lives on the scrolling board. A folded band's rule is
+    dotted (placeholder for the hidden content); the border style is set here, every
+    update, so re-expanding a band restores the solid rule rather than leaving a stuck
+    inline override -- v rules carry border-left, h rules border-top (per the CSS)."""
     half = spreadsheet.LINE_W / 2
+    edge = "left" if ln.orientation == "v" else "top"
+    border = f"border-{edge}-style:{'dotted' if ln.dotted else 'solid'}"
     if ln.orientation == "v":
-        return f"left:{ln.pos - half}px; top:{ln.start - y_shift}px; height:{ln.length}px"
-    return f"top:{ln.pos - half - y_shift}px; left:{ln.start}px; width:{ln.length}px"
+        return f"left:{ln.pos - half}px; top:{ln.start - y_shift}px; height:{ln.length}px; {border}"
+    return f"top:{ln.pos - half - y_shift}px; left:{ln.start}px; width:{ln.length}px; {border}"
 
 
 def _select_props(min_width: float) -> str:

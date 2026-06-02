@@ -628,6 +628,26 @@ def test_collapsing_a_column_folds_its_panels_away_and_converges_the_lines():
     assert by_id["bus:primes:top"].length == 0  # ...and the buses shrink to nothing
 
 
+def test_a_collapsed_bands_gridline_is_dotted_while_open_bands_stay_solid():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    lay = spreadsheet.build(base, collapsed={"row:tuning", "col:primes"})
+    by_id = {ln.id: ln for ln in lay.lines}
+    # a collapsed row's lone rule, and every converged vertical of a collapsed
+    # column (its trunk + the per-element lines), read as a dotted placeholder
+    assert by_id["h:tuning"].dotted
+    assert by_id["trunk:primes"].dotted
+    assert by_id["v:prime:0"].dotted
+    # open bands keep their solid rules
+    assert not by_id["h:quantities"].dotted
+    assert not by_id["trunk:gens"].dotted
+
+
+def test_a_collapsed_fanned_mapping_row_dots_its_converged_rules():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    by_id = {ln.id: ln for ln in spreadsheet.build(base, collapsed={"row:mapping"}).lines}
+    assert by_id["trunk:mapping"].dotted and by_id["h:gen:0"].dotted
+
+
 def test_the_mapping_matrix_is_framed_top_and_bottom():
     cells = {c.id: c for c in _layout().cells}
     # the mapping matrix gets a spanning top bracket and bottom curly brace

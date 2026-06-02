@@ -2418,6 +2418,12 @@ def build(state, settings=None, collapsed=None,
     # animates the merge into a single straight gridline.
     bot_bus_y = total_h - FAN
 
+    # the single place a gridline is recorded. ``dotted`` marks a rule whose band is
+    # collapsed: a folded row/column converges its fan onto one centre rule, drawn dotted
+    # so the band reads as a placeholder for its hidden content (see Line.dotted).
+    def gridline(lid, orientation, pos, start, length, *, dotted):
+        lines.append(Line(lid, orientation, pos, start, length, dotted=dotted))
+
     # the columns that fan into one rule per element — recorded by column_axis as it runs, so
     # the spine loop below can skip EXACTLY these. A single source of truth: a fanned column
     # therefore can never ALSO be drawn a full-height centre trunk (which left a spurious
@@ -2428,6 +2434,7 @@ def build(state, settings=None, collapsed=None,
         if key not in col_x:
             return
         fanned_columns.add(key)
+        dotted = f"col:{key}" in collapsed  # the whole fan dots when the column folds
         # the trunk centres on the cell SPAN (matrix_span), not the wider column footprint:
         # the two diverge when a matrix-label gutter offsets the cells (primes under the
         # mapping). matrix_span is collapse-aware -- it shrinks to the title strip when the
@@ -2437,17 +2444,17 @@ def build(state, settings=None, collapsed=None,
         mx, mw = matrix_span(key)
         cx = mx + mw / 2
         if n == 0:  # an empty interval set (interest, before any are entered) is one straight axis
-            lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y))
-            lines.append(Line(f"foot:{key}", "v", cx, fanout_y, total_h - fanout_y))
+            gridline(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y, dotted=dotted)
+            gridline(f"foot:{key}", "v", cx, fanout_y, total_h - fanout_y, dotted=dotted)
             return
-        xs = [cx] * n if f"col:{key}" in collapsed else [center_open(i) for i in range(n)]
+        xs = [cx] * n if dotted else [center_open(i) for i in range(n)]
         for i in range(n):
-            lines.append(Line(f"v:{prefix}:{i}", "v", xs[i], fanout_y, bot_bus_y - fanout_y))
+            gridline(f"v:{prefix}:{i}", "v", xs[i], fanout_y, bot_bus_y - fanout_y, dotted=dotted)
         bx, bw = _bus_span(xs)
-        lines.append(Line(f"bus:{key}:top", "h", fanout_y, bx, bw))
-        lines.append(Line(f"bus:{key}:bot", "h", bot_bus_y, bx, bw))
-        lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y))
-        lines.append(Line(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y))
+        gridline(f"bus:{key}:top", "h", fanout_y, bx, bw, dotted=dotted)
+        gridline(f"bus:{key}:bot", "h", bot_bus_y, bx, bw, dotted=dotted)
+        gridline(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y, dotted=dotted)
+        gridline(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y, dotted=dotted)
 
     column_axis("primes", "prime", d, lambda p: prime_left(p) + COL_W / 2)
     column_axis("commas", "comma", nc_shown, lambda c: comma_left(c) + COL_W / 2)
@@ -2466,7 +2473,8 @@ def build(state, settings=None, collapsed=None,
         if key in fanned_columns:
             continue
         cx = col_x[key] + col_w[key] / 2
-        lines.append(Line(f"trunk:{key}", "v", cx, branch_top_y, total_h - branch_top_y))
+        gridline(f"trunk:{key}", "v", cx, branch_top_y, total_h - branch_top_y,
+                 dotted=f"col:{key}" in collapsed)
 
     # mapping rows: the horizontal mirror of a column axis — fan out at the node
     # into one line per generator, fan back in on the right to a foot past the data.
@@ -2477,12 +2485,12 @@ def build(state, settings=None, collapsed=None,
         ys = [cy] * r if folded else [map_top(i) + ROW_H / 2 for i in range(r)]
         left_bus_x = node_edge + FAN if (r > 1 and not folded) else node_edge
         for i in range(r):
-            lines.append(Line(f"h:gen:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x))
+            gridline(f"h:gen:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
         bus_y, bus_h = _bus_span(ys)
-        lines.append(Line("vbar:mapping:left", "v", left_bus_x, bus_y, bus_h))
-        lines.append(Line("vbar:mapping:right", "v", right_bus_x, bus_y, bus_h))
-        lines.append(Line("trunk:mapping", "h", cy, node_edge, left_bus_x - node_edge))
-        lines.append(Line("foot:mapping", "h", cy, right_bus_x, total_w - right_bus_x))
+        gridline("vbar:mapping:left", "v", left_bus_x, bus_y, bus_h, dotted=folded)
+        gridline("vbar:mapping:right", "v", right_bus_x, bus_y, bus_h, dotted=folded)
+        gridline("trunk:mapping", "h", cy, node_edge, left_bus_x - node_edge, dotted=folded)
+        gridline("foot:mapping", "h", cy, right_bus_x, total_w - right_bus_x, dotted=folded)
 
     # every present row except the mapping (which fans into per-generator rules above) gets
     # ONE horizontal rule across its band. Derived from row_y (not a hand-kept list) so a row
@@ -2491,7 +2499,8 @@ def build(state, settings=None, collapsed=None,
     for key in row_y:
         if key == "mapping":
             continue
-        lines.append(Line(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge))
+        gridline(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge,
+                 dotted=f"row:{key}" in collapsed)
 
     # #e0e0e0 panels behind each content group. A panel folds to zero size along
     # any collapsed axis (collapsing toward the band centre), so the renderer

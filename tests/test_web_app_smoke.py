@@ -220,6 +220,16 @@ def test_line_style_centres_the_rule_on_its_coordinate():
     assert "left:10px" in h and "width:300px" in h
 
 
+def test_line_style_dots_a_collapsed_bands_rule_and_restores_it_when_open():
+    # a collapsed row/column converges to one rule, drawn dotted as a placeholder. The
+    # border style is emitted on every update (not just at creation), so re-expanding a
+    # band restores the solid rule rather than leaving the inline dotted override stuck.
+    assert "border-left-style:dotted" in app._line_style(Line("trunk:x", "v", 100, 0, 50, dotted=True))
+    assert "border-left-style:solid" in app._line_style(Line("trunk:x", "v", 100, 0, 50))
+    assert "border-top-style:dotted" in app._line_style(Line("h:x", "h", 60, 0, 50, dotted=True))
+    assert "border-top-style:solid" in app._line_style(Line("h:x", "h", 60, 0, 50))
+
+
 def test_shared_axis_gridlines_render_two_pixels_thick():
     # the shared coordinate axes (.rtt-line, the rules the cells sit on, threading the
     # gaps between tiles) are the board's gridlines; doubled from 1px to 2px so they read

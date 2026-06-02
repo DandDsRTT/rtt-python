@@ -23,6 +23,8 @@ class Line:
     pos: float  # cross-axis position (x for v, y for h)
     start: float  # along-axis start (y for v, x for h)
     length: float
+    dotted: bool = False  # a folded row/column converges to one rule; dot it so the
+    # collapsed band reads as a dotted placeholder for its hidden content
 
 
 @dataclass(frozen=True)
