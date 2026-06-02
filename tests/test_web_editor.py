@@ -547,6 +547,18 @@ def test_displayed_tuning_scheme_name_keeps_the_name_when_the_tuning_still_match
     assert editor.displayed_tuning_scheme_name == "minimax-S"
 
 
+def test_set_tuning_scheme_clears_a_manual_generator_tuning_override():
+    # picking a scheme from the chooser means "tune to this scheme": any manual generator-tuning
+    # override (a hand-edited generator tuning map) is dropped, snapping back to the scheme's
+    # optimum — so re-selecting the scheme after deviating actually re-applies it.
+    editor = Editor()
+    editor.set_generator_tuning_component(1, 700.0)  # deviate from the optimum
+    assert editor.displayed_tuning_scheme_name is None
+    editor.set_tuning_scheme("minimax-S")  # re-apply the scheme from the chooser
+    assert editor.effective_generator_tuning() is None  # override cleared -> the scheme's optimum
+    assert editor.displayed_tuning_scheme_name == "minimax-S"
+
+
 def test_set_target_override_text_and_monzos():
     editor = Editor()
     # typing a vector list overrides the target set with those intervals, stored as ratios
