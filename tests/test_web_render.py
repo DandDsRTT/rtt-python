@@ -82,6 +82,18 @@ async def test_optimization_with_charts_renders_the_damage_indicator(user: User)
     await user.should_see(marker="chart:damage:targets")
 
 
+async def test_enabling_all_interval_renders_the_target_controls_checkbox(user: User) -> None:
+    # the show-panel "all-interval" entry (now interactive, nested under weighting) reveals the
+    # target-controls "all-interval" checkbox — a control_check in the target list controls. Those
+    # ride the vectors row (folded by default), so expand it, enable weighting (the entry's parent
+    # in the panel), then the entry itself, and drive the checkbox's render branch.
+    await user.open("/")
+    user.find(marker="toggle:row:vectors").click()  # expand the target-list row (folded by default)
+    user.find(kind=ui.checkbox, content="weighting").click()  # reveal the nested all-interval entry
+    user.find(kind=ui.checkbox, content="all-interval").click()
+    await user.should_see(marker="control:all_interval")
+
+
 async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> None:
     # both colorization sub-toggles share the label "colorization", so one click matches
     # and flips both on. They paint wash blocks behind the tiles — drive that branch and
