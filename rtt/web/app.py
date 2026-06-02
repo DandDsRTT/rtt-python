@@ -1486,13 +1486,14 @@ class _GroupedSelect(ui.select):
                 option["disable"] = True
 
 
-def _set_temperament_prompt(select: ui.select, value) -> None:
-    """Show the 'choose temperament' prompt in the temperament chooser's closed box only
-    when the current temperament matches no preset (``value`` is None). It is a Quasar
-    display-value placeholder, so the prompt never appears as a pickable row in the open
-    list; when a preset matches, the override is cleared and Quasar shows its label."""
+def _set_offlist_prompt(select: ui.select, value) -> None:
+    """Show a "-" prompt in a preselect chooser's closed box when its current state matches
+    no named entry (``value`` is None) — the temperament chooser with no matching preset, or
+    the tuning chooser on a control-refined scheme with no name. It is a Quasar display-value
+    placeholder, so "-" never appears as a pickable row in the open list; when a named entry
+    matches, the override is cleared and Quasar shows its label."""
     if value is None:
-        select.props('display-value="choose temperament"')
+        select.props('display-value="-"')
     else:
         select.props(remove="display-value")
 
@@ -1953,22 +1954,26 @@ def index() -> None:
                 elif name == "temperament":
                     # a normal dropdown listing only the prime-limit dividers and their
                     # presets (grouped in the open list). The chosen preset shows in the
-                    # box; when none matches, a "choose temperament" prompt shows there as
-                    # a display-value placeholder — never a pickable row in the list.
+                    # box; when none matches, a "-" prompt shows there as a display-value
+                    # placeholder — never a pickable row in the list.
                     value = presets.identify(editor.state)
                     sel = _GroupedSelect(presets.temperament_options(), value=value,
                             is_divider=presets.is_divider,
                             on_change=lambda e: on_preselect("temperament", e.value)) \
                         .props(_select_props(cb.w)).classes("rtt-preselect")
-                    _set_temperament_prompt(sel, value)
+                    _set_offlist_prompt(sel, value)
                     selects[cb.id] = sel
-                else:  # tuning — systematic scheme names; a control-refined scheme has no name
+                else:  # tuning — systematic scheme names; a control-refined scheme has no
+                    # name, shown as the same "-" display-value placeholder as the temperament
+                    # chooser (never a pickable row)
                     scheme = editor.tuning_scheme if isinstance(editor.tuning_scheme, str) else None
                     # alternative-complexity schemes are gated behind the alt. complexity setting
                     options = presets.tuning_schemes(editor.settings["alt_complexity"])
-                    selects[cb.id] = ui.select(list(options), value=scheme,
+                    sel = ui.select(list(options), value=scheme,
                             on_change=lambda e: on_preselect("tuning", e.value)) \
                         .props(_select_props(cb.w)).classes("rtt-preselect")
+                    _set_offlist_prompt(sel, scheme)
+                    selects[cb.id] = sel
             elif cb.kind == "control_select":  # an alt.-complexity chooser (prescaler / norm / weight slope)
                 selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
                         on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
@@ -2250,7 +2255,7 @@ def index() -> None:
                 if cb.id.startswith("preselect:temperament"):  # base + the comma-basis copy
                     value = presets.identify(editor.state)
                     selects[cb.id].value = value
-                    _set_temperament_prompt(selects[cb.id], value)
+                    _set_offlist_prompt(selects[cb.id], value)
                 elif cb.id == "preselect:target":
                     num, sel = selects[cb.id]
                     family = editor.target_family
@@ -2259,8 +2264,10 @@ def index() -> None:
                     num.value = limit if limit is not None else \
                         service.default_target_limit(family, service.standard_primes(editor.state.d))
                     sel.value = family
-                else:  # tuning
-                    selects[cb.id].value = cb.text or None
+                else:  # tuning — off-list (a refined spec) shows the "-" placeholder
+                    scheme = cb.text or None
+                    selects[cb.id].value = scheme
+                    _set_offlist_prompt(selects[cb.id], scheme)
             elif cb.kind == "control_select":  # mirror the live alt.-complexity choice
                 selects[cb.id].value = cb.text or None
             elif cb.kind == "control_check":  # mirror the live "ignore diminuator" state

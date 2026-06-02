@@ -276,25 +276,38 @@ async def test_temperament_divider_rows_render_as_disabled_options(user: User) -
     assert "disable" not in option_by_value["13:Marvel"]
 
 
-async def test_temperament_chooser_omits_the_choose_temperament_prompt_from_its_list(user: User) -> None:
-    # "choose temperament" is a placeholder prompt, not a temperament. The open list holds
-    # only the prime-limit dividers and their presets — there is no pickable "choose
-    # temperament" row, and no "" sentinel value sitting behind one.
+async def test_temperament_chooser_omits_the_offlist_prompt_from_its_list(user: User) -> None:
+    # the "-" prompt is a placeholder, not a temperament. The open list holds only the
+    # prime-limit dividers and their presets — there is no pickable "-" row, and no ""
+    # sentinel value sitting behind one.
     await _enable(user, "preselects")
     select = _cell_child(user, "preselect:temperament")
     assert "" not in select._values
-    assert "choose temperament" not in select._labels
+    assert "-" not in select._labels
 
 
 async def test_temperament_chooser_shows_the_prompt_as_a_placeholder_when_no_preset_matches(user: User) -> None:
     # the prompt lives in the closed box, not the list: with a preset active (the default
     # meantone) the box shows that preset and no override; once the mapping leaves every
-    # preset the box falls back to "choose temperament" via Quasar's display-value.
+    # preset the box falls back to "-" via Quasar's display-value.
     await _enable(user, "preselects")
     assert "display-value" not in _cell_child(user, "preselect:temperament")._props
     _cell_child(user, "cell:mapping:1:2").set_value("7")  # 4 -> 7 leaves the meantone preset
     await user.should_see(marker="preselect:temperament")
-    assert _cell_child(user, "preselect:temperament")._props.get("display-value") == "choose temperament"
+    assert _cell_child(user, "preselect:temperament")._props.get("display-value") == "-"
+
+
+async def test_tuning_chooser_shows_the_prompt_as_a_placeholder_when_off_list(user: User) -> None:
+    # the tuning chooser names the active scheme; refine it past the named list (here by
+    # setting a finite optimization power, which resolves to an unnamed spec) and the closed
+    # box falls back to "-" via Quasar's display-value — never a blank field, never a row.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="preselects").click()
+    user.find(kind=ui.checkbox, content="optimization").click()
+    assert "display-value" not in _cell_child(user, "preselect:tuning")._props
+    _cell_child(user, "optimization:power").set_value("2")  # minimax (∞) -> a miniRMS spec (no name)
+    await user.should_see(marker="preselect:tuning")
+    assert _cell_child(user, "preselect:tuning")._props.get("display-value") == "-"
 
 
 async def test_optimization_renders_the_optimize_button(user: User) -> None:
