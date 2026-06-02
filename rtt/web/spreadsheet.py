@@ -1212,9 +1212,10 @@ def build(state, settings=None, collapsed=None,
     # wider than it was open — so collapsing a column only ever narrows it (see col_w below).
     # The domain/comma + controls ride just right of their blocks when open; each −
     # is a hover affordance on the removable highest-prime / last-comma column.
-    # the domain column reads "domain elements" over a nonstandard subgroup (whose basis
-    # may be nonprime) and "domain primes" over a standard prime limit (per the mockup note)
-    domain_title = "domain\nprimes" if service.is_standard_domain(elements) else "domain\nelements"
+    # the domain column reads "basis elements" over a nonstandard subgroup (whose basis may
+    # be nonprime — "basis elements" is the guide's term for these columns; the mockup had
+    # "domain elements") and "domain primes" over a standard prime limit
+    domain_title = "domain\nprimes" if service.is_standard_domain(elements) else "basis\nelements"
     col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
                   "primes": domain_title, "detempering": "generator\ndetempering",
                   "commas": "commas",

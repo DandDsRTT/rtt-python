@@ -106,7 +106,7 @@ def test_build_renders_a_nonstandard_domain_in_its_elements():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     cells = {c.id: c for c in spreadsheet.build(state).cells}
     assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "13/5"]
-    assert cells["header:primes"].text == "domain\nelements"
+    assert cells["header:primes"].text == "basis\nelements"  # the guide's term for the columns
     assert cells["gen:1"].text == "15/13"  # the Barbados generator, read over the basis
 
 
