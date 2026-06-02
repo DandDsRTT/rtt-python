@@ -223,9 +223,6 @@ _CSS_VARS = f""":root {{
 _CSS = _CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
 
 
-# the fold toggles are inline-SVG glyphs (_FOLD_KINDS), updated via set_content
-_FOLD_KINDS = {"rowtoggle", "coltoggle", "tiletoggle", "alltoggle"}
-
 # Which sticky band each title/toggle kind renders into; every other cell goes to the body
 # board. The column titles + their fold toggles ride the column band (sticky to the window top);
 # the row titles + toggles the row band (sticky to the left); the master toggle (and the undo/
@@ -1479,6 +1476,59 @@ def index() -> None:
     cell_kinds["ptext"] = _KindHandlers(_label_builder("rtt-ptext"), _update_ptext)
     cell_kinds["boxtitle"] = _KindHandlers(_label_builder("rtt-boxtitle"), None)  # a static in-tile title
 
+    # ---- interactive controls with an update: range-mode selector, optimize button, fold toggles ----
+    def _build_rangemode(cb, wrap):
+        wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
+        opts = {}
+        for mode in ("monotone", "tradeoff"):
+            opt = ui.element("div").classes("rtt-rangeopt")
+            with opt:
+                ui.element("span").classes("rtt-rangebox")  # the square (filled when selected)
+                ui.label(mode).classes("rtt-rangelabel")
+            opt.on("click", lambda _=None, m=mode: on_range_mode(m))
+            opts[mode] = opt
+        rangeopts[cb.id] = opts
+
+    def _update_rangemode(cb):  # fill the live mode's square (the other's is hollow)
+        for mode, opt in rangeopts[cb.id].items():
+            (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
+             else opt.classes(remove="rtt-rangeopt-on"))
+
+    def _build_optimize(cb, wrap):
+        # single click optimizes once (freeze at the optimum); double click toggles the auto-
+        # optimize lock. A double-click also fires its two single clicks, but optimize() is
+        # idempotent, so a double-click's net effect is the lock toggle.
+        opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: act(editor.optimize), color=None) \
+            .props("unelevated dense no-caps").classes("rtt-optimize")
+        opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
+
+    def _update_optimize(cb):  # mark the button when its auto-optimize lock is on
+        (opt_buttons[cb.id].classes(add="rtt-optimize-locked") if editor.optimize_locked
+         else opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
+
+    def _build_foldtoggle(cb, wrap):  # rowtoggle / coltoggle / tiletoggle: a clickable chevron over its band
+        item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
+        htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
+        fold_state[cb.id] = cb.text  # the glyph swaps on collapse/expand (see _update_foldtoggle)
+        wrap.on("click", lambda _=None, it=item: on_toggle(it))
+
+    def _build_alltoggle(cb, wrap):  # the master expand/collapse-all control in the node corner
+        htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
+        fold_state[cb.id] = cb.text
+        wrap.on("click", lambda _=None: on_toggle_all())
+
+    def _update_foldtoggle(cb):  # swap the chevron SVG when the band folds / unfolds
+        if fold_state.get(cb.id) != cb.text:
+            htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
+            fold_state[cb.id] = cb.text
+
+    cell_kinds["rangemode"] = _KindHandlers(_build_rangemode, _update_rangemode)
+    cell_kinds["optimize"] = _KindHandlers(_build_optimize, _update_optimize)
+    cell_kinds["rowtoggle"] = _KindHandlers(_build_foldtoggle, _update_foldtoggle)
+    cell_kinds["coltoggle"] = _KindHandlers(_build_foldtoggle, _update_foldtoggle)
+    cell_kinds["tiletoggle"] = _KindHandlers(_build_foldtoggle, _update_foldtoggle)
+    cell_kinds["alltoggle"] = _KindHandlers(_build_alltoggle, _update_foldtoggle)
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1488,17 +1538,6 @@ def index() -> None:
             entry = cell_kinds.get(cb.kind)
             if entry is not None:
                 entry.build(cb, wrap)
-            elif cb.kind == "rangemode":  # the monotone/tradeoff range selector under the ranges chart
-                wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
-                opts = {}
-                for mode in ("monotone", "tradeoff"):
-                    opt = ui.element("div").classes("rtt-rangeopt")
-                    with opt:
-                        ui.element("span").classes("rtt-rangebox")  # the square (filled when selected)
-                        ui.label(mode).classes("rtt-rangelabel")
-                    opt.on("click", lambda _=None, m=mode: on_range_mode(m))
-                    opts[mode] = opt
-                rangeopts[cb.id] = opts
             elif cb.kind == "preselect":
                 name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
                 if name == "target":
@@ -1563,15 +1602,6 @@ def index() -> None:
                 selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
                         on_change=lambda e, n=name: on_form_choose(n, e.value)) \
                     .props(_select_props(cb.w)).classes("rtt-preselect")
-            elif cb.kind in ("rowtoggle", "coltoggle", "tiletoggle"):
-                item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
-                htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
-                fold_state[cb.id] = cb.text  # the glyph swaps on collapse/expand (see render)
-                wrap.on("click", lambda _=None, it=item: on_toggle(it))
-            elif cb.kind == "alltoggle":  # the master expand/collapse-all control in the node corner
-                htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
-                fold_state[cb.id] = cb.text
-                wrap.on("click", lambda _=None: on_toggle_all())
             elif cb.kind == "minus":  # remove the highest prime; a hover − centred on the last
                 wrap.classes("rtt-minus-zone")  # prime's branch point, clear of the editable cell below
                 ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
@@ -1605,13 +1635,6 @@ def index() -> None:
             elif cb.kind == "held_plus":
                 ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
                     .on("click", lambda _=None: act(editor.add_held))
-            elif cb.kind == "optimize":
-                # single click optimizes once (freeze at the optimum); double click toggles
-                # the auto-optimize lock. A double-click also fires its two single clicks, but
-                # optimize() is idempotent, so a double-click's net effect is the lock toggle.
-                opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: act(editor.optimize), color=None) \
-                    .props("unelevated dense no-caps").classes("rtt-optimize")
-                opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
@@ -1727,13 +1750,6 @@ def index() -> None:
             entry = cell_kinds.get(cb.kind)
             if entry is not None and entry.update is not None:
                 entry.update(cb)
-            elif cb.kind == "rangemode":  # fill the live mode's square (the other's is hollow)
-                for mode, opt in rangeopts[cb.id].items():
-                    (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
-                     else opt.classes(remove="rtt-rangeopt-on"))
-            elif cb.kind == "optimize":  # mark the button when its auto-optimize lock is on
-                (opt_buttons[cb.id].classes(add="rtt-optimize-locked") if editor.optimize_locked
-                 else opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
             elif cb.kind == "preselect":
                 # mirror the live selection: the temperament chooser shows the matched
                 # preset (or its placeholder), the target chooser splits into limit +
@@ -1771,10 +1787,6 @@ def index() -> None:
                 checks[cb.id].value = cb.checked
             elif cb.kind == "formchooser":  # a one-shot action: snap back to the placeholder
                 selects[cb.id].value = ""
-            elif cb.kind in _FOLD_KINDS:  # swap the chevron SVG when the band folds / unfolds
-                if fold_state.get(cb.id) != cb.text:
-                    htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
-                    fold_state[cb.id] = cb.text
 
             # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
             # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
