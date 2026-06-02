@@ -590,14 +590,16 @@ _CSS = f"""
   .rtt-select-popup .q-item.disabled * {{ cursor:default !important; }}
 }}
 /* ...and the divider reads as a section header: a centred dark-grey label flanked by rules
-   that span the whole popup. The label flex-centres its text, with the lines as its
-   ::before/::after (flex:1, so they fill the space on either side); negative margins cancel
-   the item's 8px horizontal padding so those rules reach the popup's edges. Dark grey (#555),
-   not the items' black. Normal (unlayered) declarations — they win on specificity, and
-   unlayered beats Quasar's lower layers (the !important reversal above is only for the dim
-   reset). */
+   that span the whole popup. The disabled item drops its horizontal padding so the row runs
+   edge to edge (rather than bleeding past it — Quasar caps .q-item__label at max-width:100%,
+   which would clip a negative-margin overhang); the label then flex-centres its text with the
+   lines as its ::before/::after (flex:1, filling the space on either side), so those rules
+   reach the popup's edges. Dark grey (#555), not the items' black. Normal (unlayered)
+   declarations — they win on specificity, and unlayered beats Quasar's lower layers (the
+   !important reversal above is only for the dimming reset). */
+.rtt-select-popup .q-item.disabled {{ padding-left:0; padding-right:0; }}
 .rtt-select-popup .q-item.disabled .q-item__label {{ display:flex; align-items:center;
-            justify-content:center; gap:6px; margin:0 -8px; white-space:nowrap; color:#555; }}
+            justify-content:center; gap:6px; white-space:nowrap; color:#555; }}
 .rtt-select-popup .q-item.disabled .q-item__label::before,
 .rtt-select-popup .q-item.disabled .q-item__label::after {{ content:""; flex:1;
             border-top:1px solid #555; }}

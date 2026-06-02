@@ -239,12 +239,13 @@ def test_temperament_divider_headers_read_as_centred_grey_full_width_rules():
     # the prime-limit divider rows read as section headers, not choices: a centred dark-grey
     # label flanked by rules that span the whole popup (the lines are CSS now, not the old
     # ── dashes baked into the label text). The label flex-centres its text in dark grey
-    # (#555, not the items' black) and, with the rules as its ::before/::after, negative
-    # margins cancel the item's 8px padding so the flex:1 lines reach the popup's edges.
+    # (#555, not the items' black); the disabled item drops its horizontal padding so the row
+    # runs edge to edge and the label's flex:1 ::before/::after lines reach the popup's edges.
     label = _css_rule(".rtt-select-popup .q-item.disabled .q-item__label")
     assert "justify-content:center" in label   # centred text
     assert "color:#555" in label                # dark grey, not black
-    assert "margin:0 -8px" in label             # cancels the item padding -> rules reach the edges
+    # the divider item loses its horizontal padding, so the flanking rules run to the edges
+    assert ".q-item.disabled { padding-left:0; padding-right:0; }" in app._CSS
     assert ".q-item.disabled .q-item__label::before" in app._CSS  # the flanking rules...
     assert "border-top:1px solid #555" in app._CSS                # ...are dark-grey lines
 
