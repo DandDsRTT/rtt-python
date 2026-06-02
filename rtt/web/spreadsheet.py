@@ -1447,6 +1447,9 @@ def build(state, settings=None, collapsed=None,
     row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
     tile_h, tile_top, row_frame, row_sym, row_cap, row_units, row_ptext, chart_top = {}, {}, {}, {}, {}, {}, {}, {}
     row_pre = {}  # the preselect band height, so the <choose form> chooser can stack below it
+    row_nsub = {}  # each row's natural cell-row count (a matrix's height in cells), so the
+    # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
+    # drawing all of them, converged, while it's folded, so the fold animates as a merge
     row_matlabel_top = {}  # y of the column-label band when reserved (one MATLABEL_H slot above
     # the value cells), so column labels (𝐜₁, 𝒕₁, …) can be emitted at a fixed row-relative y
 
@@ -1549,6 +1552,7 @@ def build(state, settings=None, collapsed=None,
         formctrl = formchooser_band_h(key) if (show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
         ptext = ptext_band(key, folded)
         row_h[key] = STRIP if folded else natural
+        row_nsub[key] = round(natural / ROW_H)  # matrix height in cells (fold-independent)
         tile_top[key] = y
         if charted:
             chart_top[key] = y + head + top_frame  # the chart sits below the top frame
@@ -2486,31 +2490,38 @@ def build(state, settings=None, collapsed=None,
         gridline(f"trunk:{key}", "v", cx, branch_top_y, total_h - branch_top_y,
                  dotted=f"col:{key}" in collapsed)
 
-    # mapping rows: the horizontal mirror of a column axis — fan out at the node
-    # into one line per generator, fan back in on the right to a foot past the data.
+    # A matrix row is the horizontal mirror of a group column: it fans out at the node into
+    # one rule per cell-row, runs through the data, and rejoins on the right to a foot past it.
+    # The matrices are exactly FRAMED_ROWS, so membership there — not a hand-named special case
+    # (it used to be just "mapping") — decides what fans, and the count is the row's own cell
+    # height. So vectors/canon/prescaling fan like the mapping, automatically. Sub-rules are
+    # keyed by the row (h:mapping:i, h:vectors:i): unlike a column, whose element type picks
+    # one column, several rows share an element type (vectors and prescaling are both d primes
+    # tall), so the row key — not the element — is what keeps the ids unique.
     right_bus_x = total_w - FAN
-    if "mapping" in row_y:
-        folded = "row:mapping" in collapsed
-        cy = row_y["mapping"] + row_h["mapping"] / 2
-        ys = [cy] * r if folded else [map_top(i) + ROW_H / 2 for i in range(r)]
-        left_bus_x = node_edge + FAN if (r > 1 and not folded) else node_edge
-        for i in range(r):
-            gridline(f"h:gen:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
+    def row_axis(key):
+        n = row_nsub[key]
+        folded = f"row:{key}" in collapsed  # the whole fan dots and converges when the row folds
+        cy = row_y[key] + row_h[key] / 2
+        ys = [cy] * n if folded else [row_y[key] + i * ROW_H + ROW_H / 2 for i in range(n)]
+        left_bus_x = node_edge + FAN if (n > 1 and not folded) else node_edge
+        for i in range(n):
+            gridline(f"h:{key}:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
         bus_y, bus_h = _bus_span(ys)
-        gridline("vbar:mapping:left", "v", left_bus_x, bus_y, bus_h, dotted=folded)
-        gridline("vbar:mapping:right", "v", right_bus_x, bus_y, bus_h, dotted=folded)
-        gridline("trunk:mapping", "h", cy, node_edge, left_bus_x - node_edge, dotted=folded)
-        gridline("foot:mapping", "h", cy, right_bus_x, total_w - right_bus_x, dotted=folded)
+        gridline(f"vbar:{key}:left", "v", left_bus_x, bus_y, bus_h, dotted=folded)
+        gridline(f"vbar:{key}:right", "v", right_bus_x, bus_y, bus_h, dotted=folded)
+        gridline(f"trunk:{key}", "h", cy, node_edge, left_bus_x - node_edge, dotted=folded)
+        gridline(f"foot:{key}", "h", cy, right_bus_x, total_w - right_bus_x, dotted=folded)
 
-    # every present row except the mapping (which fans into per-generator rules above) gets
-    # ONE horizontal rule across its band. Derived from row_y (not a hand-kept list) so a row
-    # can never lack its gridline — present or collapsed (a folded row still leaves its rule).
-    # Covers the quantities/units spine rows and the d-tall vectors/prescaling matrices alike.
+    # one pass over the present rows (top to bottom): fan the matrices, give every other row a
+    # single full-width rule across its band. Derived from row_y, so a row can never lack its
+    # gridline — present or collapsed (a folded row still leaves its rule, fanned or spine).
     for key in row_y:
-        if key == "mapping":
-            continue
-        gridline(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge,
-                 dotted=f"row:{key}" in collapsed)
+        if key in FRAMED_ROWS:
+            row_axis(key)
+        else:
+            gridline(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge,
+                     dotted=f"row:{key}" in collapsed)
 
     # #e0e0e0 panels behind each content group. A panel folds to zero size along
     # any collapsed axis (collapsing toward the band centre), so the renderer

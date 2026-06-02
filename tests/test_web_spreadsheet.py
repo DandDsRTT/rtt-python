@@ -251,7 +251,7 @@ def test_shared_axes_and_branching():
     ids = {ln.id for ln in lay.lines}
     assert {"v:prime:0", "v:prime:1", "v:prime:2"} <= ids  # per-prime axes
     assert {"v:target:0", "v:target:1", "v:target:2", "v:target:3"} <= ids
-    assert {"h:gen:0", "h:gen:1", "h:tuning", "h:just", "h:retune", "h:damage"} <= ids
+    assert {"h:mapping:0", "h:mapping:1", "h:tuning", "h:just", "h:retune", "h:damage"} <= ids
     # each column fans out from a top bus and back in to a bottom bus + foot
     assert {"trunk:primes", "trunk:targets", "trunk:gens"} <= ids
     assert {"bus:primes:top", "bus:primes:bot", "foot:primes"} <= ids
@@ -283,7 +283,7 @@ def test_mapping_rejoin_bars_span_the_full_generator_fan():
     # generator rows, like the column buses, so the far (right-hand) rejoin corner stays solid
     by = {ln.id: ln for ln in _layout().lines}  # rank-2 -> 2 generator rows
     half = spreadsheet.LINE_W / 2
-    g0, glast = by["h:gen:0"], by["h:gen:1"]
+    g0, glast = by["h:mapping:0"], by["h:mapping:1"]
     for bar_id in ("vbar:mapping:left", "vbar:mapping:right"):
         bar = by[bar_id]
         assert bar.start == g0.pos - half
@@ -366,14 +366,23 @@ def test_generators_column_fans_into_per_generator_axes():
     assert by_id["trunk:gens"].length < by_id["trunk:quantities"].length
 
 
-def test_interval_vectors_row_has_a_horizontal_gridline():
-    lay = _layout()
+def test_interval_vectors_row_fans_into_per_component_axes():
+    # the interval-vectors matrix is d prime-components tall, so its row fans into one
+    # horizontal rule per component -- the horizontal mirror of the domain-primes column
+    # fanning per prime -- rather than a single spine across the band (which is what it was).
+    lay = _layout()  # 2.3.5 -> d = 3 components
     by_id = {ln.id: ln for ln in lay.lines}
     cells = {c.id: c for c in lay.cells}
-    assert "h:vectors" in by_id  # the interval-vectors row gets a gridline like the rest
-    line, vrow = by_id["h:vectors"], cells["label:vectors"]
-    assert vrow.y <= line.pos <= vrow.y + vrow.h  # centred on the vectors row band
-    assert line.start + line.length >= cells["header:targets"].x  # across the data columns
+    ids = set(by_id)
+    assert {"h:vectors:0", "h:vectors:1", "h:vectors:2"} <= ids  # one rule per component
+    assert {"trunk:vectors", "foot:vectors", "vbar:vectors:left", "vbar:vectors:right"} <= ids
+    assert "h:vectors" not in ids  # no single spine: it fans like the mapping
+    vrow = cells["label:vectors"]
+    rules = [by_id[f"h:vectors:{i}"].pos for i in range(3)]
+    assert rules == sorted(rules)  # top-to-bottom in component order
+    for pos in rules:
+        assert vrow.y <= pos <= vrow.y + vrow.h  # each within the vectors row band
+    assert by_id["h:vectors:0"].start + by_id["h:vectors:0"].length >= cells["header:targets"].x
 
 
 def test_tuning_boxes_off_removes_the_tuning_rows_and_the_target_intervals_column():
@@ -655,7 +664,7 @@ def test_a_collapsed_bands_gridline_is_dotted_while_open_bands_stay_solid():
 def test_a_collapsed_fanned_mapping_row_dots_its_converged_rules():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     by_id = {ln.id: ln for ln in spreadsheet.build(base, collapsed={"row:mapping"}).lines}
-    assert by_id["trunk:mapping"].dotted and by_id["h:gen:0"].dotted
+    assert by_id["trunk:mapping"].dotted and by_id["h:mapping:0"].dotted
 
 
 def test_the_mapping_matrix_is_framed_top_and_bottom():
@@ -1596,8 +1605,8 @@ def test_every_present_row_and_column_has_a_gridline():
     line_ids = {ln.id for ln in lay.lines}
     rows = {c.id.split("label:", 1)[1] for c in lay.cells if c.id.startswith("label:")}
     for key in rows:
-        if key == "mapping":
-            assert "h:gen:0" in line_ids  # the mapping fans into per-generator rules instead
+        if key in spreadsheet.FRAMED_ROWS:
+            assert f"h:{key}:0" in line_ids, f"matrix row {key!r} has no fanned gridline"
         else:
             assert f"h:{key}" in line_ids, f"row {key!r} has no gridline"
     cols = {c.id.split("header:", 1)[1] for c in lay.cells if c.id.startswith("header:")}
@@ -3672,16 +3681,18 @@ def test_generator_detempering_column_fans_without_a_centre_trunk():
     assert sum(1 for ln in lay.lines if ln.id.startswith("v:detempering:")) == 2
 
 
-def test_gridline_ids_are_unique_across_fanning_and_spine_columns():
+def test_gridline_ids_are_unique_across_every_fan_and_spine():
     # every gridline id must be unique (the reconciling renderer keys on ids). A fanned
-    # column — one rule per element, drawn by column_axis — must NEVER also get a full-height
-    # spine trunk at its centre: that duplicated "trunk:<col>" and drew a spurious middle
-    # gridline through a 2+-element column (the detempering / held bug, when those columns
-    # were added to column_axis but not the spine loop's skip-set). Build with every fanning
-    # column populated to guard the whole class structurally.
+    # column or row — one rule per element — must NEVER also get a spine rule across its
+    # centre: that duplicated id drew a spurious middle gridline (the detempering / held bug,
+    # when those columns were added to the fan but not the spine loop's skip-set). Build with
+    # every fanning column AND every matrix row (weighting, form controls) populated, so the
+    # whole class — gens/primes/commas/targets/held/detempering columns and vectors/canon/
+    # mapping/prescaling rows — is guarded structurally.
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
-        {**settings.defaults(), "generator_detempering": True, "optimization": True},
+        {**settings.defaults(), "generator_detempering": True, "optimization": True,
+         "weighting": True, "form_controls": True},
         interest=((-1, 1, 0), (2, 0, -1)),
         held_monzos=((1, 0, 0), (-1, 1, 0)),
     )

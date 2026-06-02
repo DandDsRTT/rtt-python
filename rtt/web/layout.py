@@ -4,7 +4,7 @@ The layout (:mod:`rtt.web.spreadsheet`) produces these positioned entities with
 *stable, semantic ids* so the reconciling renderer can keep them across state
 changes and animate add/remove/move:
 
-* :class:`Line` — one entity per coordinate axis (``v:prime:2``, ``h:gen:0``), a
+* :class:`Line` — one entity per coordinate axis (``v:prime:2``, ``h:mapping:0``), a
   continuous line, not per-cell segments.
 * :class:`Block` — an #e0e0e0 panel rectangle (``block:mapping`` ...).
 * :class:`CellBox` — an input / label / button / caption (``cell:mapping:0:1``,
