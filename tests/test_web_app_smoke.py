@@ -253,8 +253,10 @@ def test_shared_axis_gridlines_render_two_pixels_thick():
     # the shared coordinate axes (.rtt-line, the rules the cells sit on, threading the
     # gaps between tiles) are the board's gridlines; doubled from 1px to 2px so they read
     # clearly. Both orientations carry the same #e0e0e0 weight.
-    assert "border-left:2px solid #e0e0e0" in app._CSS  # the vertical gridlines
-    assert "border-top:2px solid #e0e0e0" in app._CSS   # the horizontal gridlines
+    assert spreadsheet.LINE_W == 2
+    assert f"--line-w:{spreadsheet.LINE_W}px" in app._CSS  # the gridline weight, set in :root
+    assert "border-left:var(--line-w) solid #e0e0e0" in app._CSS  # the vertical gridlines
+    assert "border-top:var(--line-w) solid #e0e0e0" in app._CSS   # the horizontal gridlines
 
 
 def _css_rule(selector):
@@ -320,7 +322,8 @@ def test_grid_body_reserves_its_grey_margin_as_scroll_padding():
     # top/left padding: those margins are structural (the body is already inset _PAD from the pane
     # there, outside the scroller).
     rule = _css_rule(".rtt-gridbody")
-    assert f"padding:0 {app._PAD}px {app._PAD}px 0" in rule  # top:0 right:PAD bottom:PAD left:0
+    assert "padding:0 var(--pad) var(--pad) 0" in rule  # top:0 right:PAD bottom:PAD left:0
+    assert f"--pad:{app._PAD}px" in app._CSS  # the grey-margin width, set in :root
 
 
 def test_shell_fixes_the_app_to_the_window_framed_by_a_white_margin():
@@ -399,8 +402,9 @@ def test_seam_appears_only_when_the_body_is_scrolled():
     css = app._CSS
     assert "border-bottom:1px solid transparent" in css  # column-strip seam, hidden at rest
     assert "border-right:1px solid transparent" in css   # row-band seam, hidden at rest
-    assert ".rtt-app.rtt-scrolled-y .rtt-colhead" in css and f"border-bottom-color:{app._SEAM}" in css
-    assert ".rtt-app.rtt-scrolled-x .rtt-rowband" in css and f"border-right-color:{app._SEAM}" in css
+    assert ".rtt-app.rtt-scrolled-y .rtt-colhead" in css and "border-bottom-color:var(--seam)" in css
+    assert ".rtt-app.rtt-scrolled-x .rtt-rowband" in css and "border-right-color:var(--seam)" in css
+    assert f"--seam:{app._SEAM}" in css  # the seam colour, set in :root
 
 
 def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scroll():
@@ -527,14 +531,15 @@ def test_every_option_square_renders_at_one_uniform_size():
     # SAME square. Previously the in-grid control checkboxes were forced larger (font-size:40px
     # → an 18px box) than the settings (13.5px) and range (16px) boxes; now every q-checkbox box
     # and the range box are pinned to the one shared option-box size so they read identically.
-    px = f"{spreadsheet.OPTION_BOX_PX}px"
     assert spreadsheet.OPTION_BOX_PX == 16
+    assert f"--option-box:{spreadsheet.OPTION_BOX_PX}px" in app._CSS  # the one shared size, set in :root
+    box = "var(--option-box)"
     bg = _css_rule(".q-checkbox__bg")
-    assert f"width:{px}" in bg and f"height:{px}" in bg  # the visible bordered square
+    assert f"width:{box}" in bg and f"height:{box}" in bg  # the visible bordered square
     inner = _css_rule(".q-checkbox__inner")
-    assert f"width:{px}" in inner and f"height:{px}" in inner  # ...and its box model
+    assert f"width:{box}" in inner and f"height:{box}" in inner  # ...and its box model
     rangebox = _css_rule(".rtt-rangebox")
-    assert f"width:{px}" in rangebox and f"height:{px}" in rangebox
+    assert f"width:{box}" in rangebox and f"height:{box}" in rangebox
     # the per-control overrides that made the in-grid control checkboxes oversized are gone —
     # the universal rules above now size every box, so nothing re-diverges
     assert ".rtt-control-check .q-checkbox__inner" not in app._CSS
@@ -547,11 +552,14 @@ def test_option_box_renders_as_one_svg_for_zoom_stable_appearance():
     # device-pixel grid independently and distort the square / gap at fractional zooms (the reported
     # zoom-dependent jank). The checked SVG carries the black fill, the mixed master a grey fill, the
     # unchecked box only the outline; the tuning-ranges radio box reuses the same art.
+    # the box art is one SVG per state, defined once as a :root custom property and referenced
+    # everywhere (so the same vector backs the checkbox, the mixed master, and the range box)
+    assert app._CSS.count("data:image/svg") == 3  # unchecked / checked / disabled, defined once each
     bg = _css_rule(".q-checkbox__bg")
-    assert "data:image/svg" in bg and "border:none" in bg
-    assert "data:image/svg" in _css_rule('.q-checkbox[aria-checked="true"] .q-checkbox__bg')
-    assert "data:image/svg" in _css_rule(".rtt-show-mixed .q-checkbox__bg")
-    assert "data:image/svg" in _css_rule(".rtt-rangebox")
+    assert "var(--option-box-unchecked)" in bg and "border:none" in bg
+    assert "var(--option-box-checked)" in _css_rule('.q-checkbox[aria-checked="true"] .q-checkbox__bg')
+    assert "var(--option-box-disabled)" in _css_rule(".rtt-show-mixed .q-checkbox__bg")
+    assert "var(--option-box-unchecked)" in _css_rule(".rtt-rangebox")
     # the per-edge CSS fill is gone for both the checkbox and the range box
     assert ".q-checkbox__bg::after" not in app._CSS
     assert ".rtt-rangebox::after" not in app._CSS

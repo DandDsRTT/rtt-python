@@ -1,0 +1,557 @@
+/* the grid's empty top-left corner cell now holds only the undo/redo buttons (the app
+   title moved to the left rail). It fills the corner exactly — LABEL_W wide so its right
+   edge meets the row-label column, HEADER_H tall so its bottom meets the column-header row
+   — i.e. aligned with both the row titles and the column titles. Square (no radius), on the
+   same light grey as the rail and pane; the buttons centre within it. It sits in the fixed
+   .rtt-corner region (top-left of the frozen panes), positioned at the corner's origin. */
+.rtt-titletile { position:absolute; top:0; left:0; box-sizing:border-box;
+                 width:var(--label-w); height:var(--header-h); background:#e0e0e0;
+                 display:flex; align-items:center; justify-content:center; }
+.rtt-tile-btns { display:flex; gap:3px; }
+/* square bordered icon buttons (undo/redo), matching the mockup's framed glyphs */
+.rtt-iconbtn { width:18px !important; min-width:18px !important; height:18px !important;
+            min-height:18px !important; padding:0 !important; background:#fff !important;
+            border:1px solid #000; border-radius:2px !important; box-shadow:none !important; }
+.rtt-iconbtn .q-icon { color:#000 !important; font-size:13px; }
+/* a disabled undo/redo button greys out like the disabled Show toggles. NiceGUI marks a
+   set_enabled(False) button with the generic `.disabled` class (NOT Quasar's
+   q-btn--disable), so target that: grey the icon AND border to #999/#bbb, well off the
+   crisp black of an active button — so against Quasar's own disabled fade the button
+   reads unmistakably inactive, matching the #999 of a disabled toggle. */
+.rtt-iconbtn.disabled { border-color:#bbb !important; }
+.rtt-iconbtn.disabled .q-icon { color:#999 !important; }
+/* Quasar's reset gives EVERY disabled control -- `.disabled`/`[disabled]` and their
+   descendants -- a `not-allowed` cursor (the slashed "no-entry" circle on hover). This app
+   never wants it: a greyed button or checkbox already reads as inactive from its dim, so the
+   slashed circle is just noise. Neutralise the cursor app-wide (the dim STAYS -- that's the
+   real disabled cue). Quasar's rule is `cursor:not-allowed !important` in its
+   `quasar_importants` cascade layer; because !important REVERSES layer precedence, a layered
+   !important in the earlier `overrides` layer beats it regardless of specificity (an unlayered
+   !important would lose). The dropdown-header undim below rides the same trick. */
+@layer overrides {
+  .disabled, .disabled *, [disabled], [disabled] * { cursor:default !important; }
+}
+/* the left rail: a light-grey column at the screen's left edge holding the hamburger (top)
+   and, under it, the app title turned a quarter-turn. It sits to the LEFT of the pane and
+   stays #e0e0e0 whether the pane is open or closed, so opening the pane never moves the
+   title. It carries no align-self, so the pane group (align-items:stretch) makes it as tall
+   as the group — and the group hugs the drawer (below), so the rail matches the settings
+   panel's height: a short title tab when the pane is collapsed, the full panel height when
+   it is open, regardless of how much taller the grid beside it runs. */
+.rtt-rail { flex:none; width:var(--rail-w); background:#e0e0e0;
+            display:flex; flex-direction:column; align-items:center; gap:10px; padding:7px 0 14px; }
+/* the app title, turned a quarter-turn (writing-mode) so it reads top-to-bottom down the
+   rail. Noticeably larger than the 13px row/column titles, yet narrow enough to fit the rail. */
+.rtt-sidetitle { writing-mode:vertical-rl; font-family:'Cambria',Georgia,serif; font-size:22px;
+                 font-weight:bold; color:#000; white-space:nowrap; line-height:1; }
+/* the hamburger, parked at the top of the rail */
+.rtt-hamburger { width:28px !important; min-width:28px !important; height:28px !important;
+                 min-height:28px !important; padding:0 !important; background:#fff !important;
+                 border:1px solid #999; border-radius:3px !important; box-shadow:none !important; }
+.rtt-hamburger .q-icon { color:#333 !important; font-size:19px; }
+/* the shell lays the fixed left sidebar (rail + settings pane) and the grid pane in a row. It is
+   position:fixed at a 6px inset from every window edge, so it fills the window exactly (the page
+   itself never scrolls) and the 6px of white body shows as a margin framing the whole app. The
+   grid spills inside its OWN pane (.rtt-app) rather than off the page, which keeps the sidebar
+   frozen at the left. align-items:flex-start lets each pane HUG its content height (white showing
+   below the shorter one) rather than stretching its grey to the full window; the shell's fixed
+   size is what each pane caps against (max-height / flex-shrink) before scrolling internally. */
+.rtt-shell { position:fixed; top:6px; left:6px; right:6px; bottom:6px;
+             display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }
+/* the rail+pane group is the fixed left sidebar: a flex:none column the shell holds at the left
+   edge for the whole session. align-self defaults to the shell's align-items:flex-start, so the
+   sidebar HUGS its content — the rail's title tab when the drawer is collapsed, the settings panel's
+   height when open — rather than stretching its grey down the whole window. The page no longer
+   scrolls, so it needs no position:sticky; it stays put while the grid pane to its right scrolls.
+   Opening the drawer widens it, narrowing the grid pane (which reflows). */
+.rtt-panelgroup { display:flex; flex-wrap:nowrap; flex:none; }
+/* the drawer animates BOTH width (the slide-over) and height (grid-template-rows 0fr->1fr, growing
+   the pane to its content height) so the sidebar's grey hugs the settings rather than the window.
+   align-self:flex-start stops the panelgroup stretching it (which would defeat the content-fr
+   sizing); a collapsed 0fr drawer contributes no height, so the sidebar falls to the rail's tab. */
+.rtt-drawer { display:grid; grid-template-rows:0fr; align-self:flex-start; width:0; overflow:hidden;
+              transition:width var(--t), grid-template-rows var(--t); flex:none; }
+.rtt-drawer.rtt-drawer-open { width:var(--panel-w); grid-template-rows:1fr; }
+/* the pane is a flex column: a frozen header (select-all/none + show/example) over a scrolling body
+   (the toggle groups), mirroring the grid pane's frozen titles above its scrolling body. It hugs its
+   content; the window-height cap lives on the body (.rtt-show-scroll's max-height) so the frozen
+   header + a body capped to (window − inset − header) never exceeds the window. overflow:hidden lets
+   the drawer's grid-rows open/close animation clip and grow it. */
+.rtt-drawer-inner { width:var(--panel-w); box-sizing:border-box; background:#e0e0e0; overflow:hidden;
+                    min-height:0; display:flex; flex-direction:column;
+                    font-family:'Cambria',Georgia,serif; color:#000; }
+/* the grid pane sits right of the sidebar. It HUGS the grid (render() sizes it to the grid's full
+   footprint + a _PAD margin on every side, plus the last column title's right overhang) so its grey
+   backdrop frames the grid all round — white shows beyond it — rather than stretching into empty
+   space. flex:0 1 auto + max-width:100% let it shrink to the room left of the sidebar, and
+   max-height:100% caps it at the window; past either cap the body (.rtt-gridbody) scrolls. It is
+   the positioning context for the frozen column strip, corner and body scroller (absolutely placed,
+   so render() must size it explicitly); overflow:hidden clips them to the pane. */
+.rtt-app { flex:0 1 auto; min-width:0; max-width:100%; max-height:100%; position:relative;
+           overflow:hidden; background:#c0c0c0; font-family:'Cambria',Georgia,serif; }
+
+/* The grid pane is split so the body's scrollbars stop AT the frozen titles (like the settings
+   pane): the column-title strip (.rtt-colhead) and the corner sit OUTSIDE the body scroller
+   (.rtt-gridbody), which holds only the value cells + the sticky-left row band. So the body's
+   vertical scrollbar starts BELOW the column titles, and its horizontal scrollbar spans only the
+   body — neither runs up alongside a frozen title. The strip can't ride the body's scroll via CSS
+   (a left-frozen sticky row band needs the body itself to be the horizontal scroll container), so
+   _FREEZE_JS translateX-syncs the strip to the body's horizontal scroll. The frozen regions are inset
+   _PAD from the pane's top-left — that is the TOP and LEFT grey margin (outside the scroller, always
+   shown). The body fills to the pane's right/bottom EDGES, so its scrollbars sit flush there (no grey
+   stranded outside them); the RIGHT and BOTTOM margin is the body's own padding (padding:0 _PAD _PAD
+   0), which rides INSIDE the scroller so it shows past the last gridline even scrolled to the end —
+   sizing the pane larger would only show it until the board overflows. The board (.rtt-gridcontent)
+   holds the cells at native coords shifted up by freeze_y (the strip's height), so a body cell lands
+   at the same pane position it always had. */
+.rtt-colhead { position:absolute; top:var(--pad); left:var(--pad); right:0; z-index:4; overflow:hidden;
+               background:#c0c0c0; box-sizing:border-box; border-bottom:1px solid transparent; }
+.rtt-colhead-inner { position:absolute; top:0; left:0; will-change:transform; }
+.rtt-corner { position:absolute; top:var(--pad); left:var(--pad); z-index:6; background:#c0c0c0;
+              box-sizing:border-box; border-right:1px solid transparent; border-bottom:1px solid transparent; }
+.rtt-gridbody { position:absolute; left:var(--pad); right:0; bottom:0; overflow:auto;
+                padding:0 var(--pad) var(--pad) 0; }
+/* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
+   (the white wash bases), not the grey pane behind it */
+.rtt-gridcontent { position:relative; isolation:isolate; transition:width var(--t), height var(--t); }
+.rtt-band { position:absolute; inset:0; pointer-events:none; }
+.rtt-rowband { position:sticky; left:0; z-index:5; background:#c0c0c0; box-sizing:border-box;
+               pointer-events:auto; border-right:1px solid transparent; }
+/* the seam on each frozen region's body-facing edge stays transparent until the body is scrolled
+   on that axis (classes toggled on .rtt-app in _FREEZE_JS); the border is always 1px so revealing
+   it shifts nothing */
+.rtt-app.rtt-scrolled-y .rtt-colhead, .rtt-app.rtt-scrolled-y .rtt-corner { border-bottom-color:var(--seam); }
+.rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner { border-right-color:var(--seam); }
+@keyframes rtt-in { from { opacity:0; } to { opacity:1; } }
+.rtt-line, .rtt-block, .rtt-block-boxed, .rtt-cell, .rtt-wash, .rtt-washbase { animation:rtt-in var(--t) ease; }
+
+.rtt-line { position:absolute; z-index:1; opacity:1; transition:left var(--t), top var(--t),
+            width var(--t), height var(--t), opacity var(--t); }
+.rtt-line-v { border-left:var(--line-w) solid #e0e0e0; width:0; }
+.rtt-line-h { border-top:var(--line-w) solid #e0e0e0; height:0; }
+/* a colorization wash: a colour band behind the grey tiles (below the gridlines too)
+   filling a colorized group's row/column background. Each group's band has a white
+   base on a LOWER layer (z-index:-1) than its darken colour layer (z-index:0), so the
+   opaque bases can never cover another group's colour — wherever two colour bands
+   cross, the darken min's them over white into the mockup's blend (cyan ⊓ yellow =
+   green), independent of which group was toggled on first. */
+.rtt-washbase, .rtt-wash { position:absolute; opacity:1;
+            transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
+.rtt-washbase { z-index:-1; background:#fff; }
+.rtt-wash { z-index:0; mix-blend-mode:darken; }
+.rtt-block { position:absolute; z-index:2; background:#e0e0e0; opacity:1;
+             transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
+/* the nested tuning-ranges box: a thin-bordered frame on the generator tuning map tile
+   (per the mockup), above the grey tile but below the chart/selector cells */
+.rtt-block-boxed { position:absolute; z-index:2; background:#e8e8e8; border:1px solid #8a8a8a;
+             opacity:1;
+             transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
+.rtt-cell { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
+            opacity:1; transition:left var(--t), top var(--t), opacity var(--t); }
+.rtt-white { position:absolute; top:0; left:0;
+             width:calc(100% + var(--cell-border-w)); height:calc(100% + var(--cell-border-w));
+             box-sizing:border-box; display:flex; align-items:center; justify-content:center;
+             background:#fff; border:var(--cell-border); color:#000; font-size:var(--cell-font); }
+/* titles carry explicit "\n" breaks (col_header) so a multi-word header stacks to two
+   lines (e.g. "domain" / "primes"); `pre` honors them AND never auto-wraps, so a title
+   wider than its (content-hugging) column overflows it rather than rewrapping. It is
+   absolutely centred on the cell (= the column gridline) so that overflow spills EVENLY
+   to both sides — a balanced overhang into the gaps, not clamped against one neighbour the
+   way a flow-positioned flex child is. Tight line-height keeps the stacked lines close. */
+.rtt-colheader { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                 font-size:13px; font-weight:bold; color:#000; white-space:pre;
+                 text-align:center; line-height:1.1; }
+.rtt-rowlabel { font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
+                padding-right:8px; line-height:1.1; }
+.rtt-val { font-size:var(--cell-font); color:#000; }
+/* the in-tile quantity name: small (≈0.2 of the cell, per the mockup), capped at two
+   lines (the column is widened to fit) and balanced across them by text-wrap:balance —
+   an even split, not a long first line and a single trailing word. It centres in the
+   row's caption band (the cell is the band's full height), so a one-line name sits
+   half a line below a two-line sibling's top rather than hugging the cells. */
+.rtt-caption { width:100%; text-align:center; text-wrap:balance; font-size:9px; line-height:10px;
+               color:#333; overflow-wrap:break-word; font-family:'Cambria',Georgia,serif; }
+.rtt-caption-cell { align-items:center; }
+/* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power", "double-click
+   to lock") stay on ONE line — centred under their control, overflowing sideways if need be —
+   so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
+.rtt-opt-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
+/* the all-interval objective relabels to the retuning magnitude ‖𝒓𝐿⁻¹‖dual(q), far wider than
+   the short ⟪𝐝⟫ₚ — shrink it so it reads within (and stays centred over) its COL_W value cell,
+   overflowing symmetrically rather than clipping if it still spills */
+.rtt-opt-wide { font-size:9px; overflow:visible; }
+/* a left-justified caption sits flush against its left edge (the dropdown it labels), free
+   to overhang to the right on one line rather than wrapping (e.g. "predefined prescalers").
+   The small left inset aligns the caption's first character vertically with the dropdown's
+   inner text (which sits a few px from the dropdown's border, per q-field padding); the
+   2px top inset nudges it down off the dropdown's bottom border. */
+.rtt-caption-left { text-align:left !important; white-space:nowrap; overflow:visible;
+                    text-wrap:nowrap; padding:2px 0 0 6px; }
+.rtt-caption-cell:has(> .rtt-caption-left) { align-items:flex-start; overflow:visible; }
+/* most mnemonic underlines sit snug at the baseline; only a marked descender
+   (g/j/p/q/y — e.g. the j of "just tuning map") drops its underline below the tail
+   so it reads instead of hiding under the glyph */
+.rtt-caption u.rtt-desc { text-underline-position:under; }
+.rtt-count { font-size:16px; color:#000; white-space:nowrap; }
+/* a read-only plain-text value: serif text on ONE line, no box. Its font-size is set
+   inline per box (shrunk to fit its column), so a long value never wraps or spills. */
+.rtt-ptext { width:100%; text-align:center; color:#000; white-space:nowrap; line-height:1;
+             font-family:'Cambria',Georgia,serif; }
+/* the two editable duals (mapping, comma basis): a white bordered input filling its
+   cell; an unparseable entry turns the border red (rtt-ptext-error) and is not applied.
+   Its font-size is set inline per box too, so the value stays on one line. */
+.rtt-ptextedit { width:100%; height:100%; }
+.rtt-ptextedit .q-field__control { min-height:0 !important; height:100%;
+            background:#fff; border:1px solid #888; border-radius:2px; padding:0 3px; }
+.rtt-ptextedit .q-field__control::before, .rtt-ptextedit .q-field__control::after { display:none !important; }
+.rtt-ptextedit .q-field__native { color:#000; min-height:0 !important; padding:0; text-align:center;
+            line-height:var(--ptext-edit-h); white-space:nowrap; font-size:inherit !important;
+            font-family:'Cambria',Georgia,serif; }
+.rtt-ptextedit .q-field__marginal, .rtt-ptextedit .q-field__bottom { display:none !important; }
+.rtt-ptextedit.rtt-ptext-error .q-field__control { border-color:#d33; }
+/* the quantity symbol above the caption: _math_html renders the base letter in the
+   UI serif with explicit weight/slant (bold-italic for maps, bold-upright for
+   vectors/matrices) — not a maths-font glyph, whose styling font fallback dropped */
+.rtt-symbol { width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
+              font-family:'Cambria',Georgia,serif; }
+/* the per-row / per-column matrix label (𝒎ᵢ at the left of each mapping row, 𝐜ᵢ
+   above each comma, 𝒕ᵢ above each tuned prime, …): same _math_html serif as .rtt-symbol
+   but smaller, so the subscript reads at a glance without dominating the value below */
+.rtt-matlabel { width:100%; text-align:center; font-size:11px; color:#000; line-height:1;
+              font-family:'Cambria',Georgia,serif; white-space:nowrap; }
+/* the complexity row's column labels spell out the q-norm (‖L𝐜ᵢ‖q), which is much
+   wider than a plain subscripted letter. Drop the font size so the labels don't
+   collide and let them overflow the COL_W cell width without clipping (overflow:visible). */
+.rtt-matlabel-norm { font-size:8px; overflow:visible; }
+.rtt-matlabel sub { font-size:70%; vertical-align:sub; line-height:0; }
+/* the per-box "units: …" line below the caption, and the domain-units row/col labels.
+   The unit VALUE is set in a single-story-g sans face (the mockup's distinct unit style):
+   Corbel (the ClearType sans companion to the body Cambria) has a single-story g —
+   Cambria, Calibri, Verdana, Segoe UI all draw a double-story g, so they're excluded.
+   The per-box "units:" label keeps the serif body face via .rtt-units-pre. */
+.rtt-units { width:100%; text-align:center; font-size:10px; color:#333; line-height:1;
+            white-space:nowrap; font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }
+.rtt-units-pre { font-family:'Cambria',Georgia,serif; }
+/* the per-value unit (the `units` toggle): a tiny line in the same single-story-g sans,
+   stacked right beneath the value so the value + unit read as one centred pair — like the
+   cents int-over-fraction stack, the unit hugging its value rather than floating away. */
+.rtt-cellunit { font-size:6px; line-height:1; color:#555; white-space:nowrap; text-align:center;
+            font-family:'Corbel','Candara','Trebuchet MS',sans-serif; }
+/* a read-only value cell simply stacks [value, unit] in a centred column; the value's
+   line-height is tightened so the value + unit pair fits the square and stays centred */
+.rtt-cell-united:not(.rtt-cell-input) { flex-direction:column; line-height:1; }
+.rtt-cell-united:not(.rtt-cell-input) .rtt-val { line-height:1; }
+/* an editable value cell keeps its full-size white input box (border stays on the input)
+   and overlays the unit INSIDE it, with the number nudged up to clear the unit */
+.rtt-cell-united.rtt-cell-input .rtt-cellunit { position:absolute; left:0; right:0; bottom:2.5px;
+            pointer-events:none; z-index:1; }
+.rtt-cell-united.rtt-cell-input .rtt-cellinput .q-field__native { padding-bottom:11px !important; }
+/* every EBK mark (⟨ ] [, top bracket, brace, vector rule) is one SVG that fills
+   its cell at a 1:1 viewBox, so its strokes keep a constant px weight at any span */
+.rtt-svgfill { width:100%; height:100%; line-height:0; }
+/* the symbol + caption (and the units line) hold off their fade-in until the tile has expanded */
+.rtt-caption-cell, .rtt-symbol-cell, .rtt-units-cell, .rtt-matlabel-cell { animation-delay:var(--t); animation-fill-mode:backwards; }
+/* the preselect chooser dropdowns: a compact bordered q-select that fills its
+   PRESELECT_H cell, with a thin grey rule and a small caret — like the mockup */
+.rtt-preselect { width:100%; }
+.rtt-preselect .q-field__control { min-height:0 !important; height:30px;
+            background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 6px; }
+.rtt-preselect .q-field__control::before, .rtt-preselect .q-field__control::after { display:none !important; }
+.rtt-preselect .q-field__native, .rtt-preselect .q-field__input { font-size:12px; color:#000;
+            min-height:0 !important; padding:0; line-height:30px; font-family:'Cambria',Georgia,serif; }
+.rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append { height:30px; min-height:0 !important; }
+.rtt-preselect .q-icon { font-size:16px; color:#555; }
+.rtt-control-check { width:100%; height:100%; display:flex; justify-content:center;
+            align-items:center; }  /* visually centres the q-checkbox inside its cell wrap */
+/* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the box-𝐋
+   diminuator, the target-controls all-interval check, anywhere else) renders as ONE uniform
+   square pinned to OPTION_BOX_PX: __inner sets the box model, __bg carries the mark. The mark —
+   a white square with a 1px #555 border, plus a centred inner fill when checked — is drawn as a
+   single SVG BACKGROUND image (see _option_box_svg), NOT a CSS border + inset ::after fill. A CSS
+   border and a separately-positioned fill snap to the device-pixel grid INDEPENDENTLY, so at
+   fractional zooms / sub-pixel box positions the border thickness and gap drift and the fill stops
+   looking square; one SVG scales as a coherent vector, staying square with an even border at every
+   zoom. Sizes are pinned !important to override Quasar's dense/size scaling so every box matches;
+   Quasar's own checkmark SVG and ::before ripple are neutralised. */
+.q-checkbox__inner { width:var(--option-box) !important;
+            min-width:var(--option-box) !important; height:var(--option-box) !important; }
+.q-checkbox__bg { top:0 !important; left:0 !important; width:var(--option-box) !important;
+            height:var(--option-box) !important; box-sizing:border-box !important;
+            border:none !important; border-radius:0 !important; opacity:1 !important;
+            background-color:transparent !important; background-repeat:no-repeat !important;
+            background-position:center !important; background-size:100% 100% !important;
+            background-image:var(--option-box-unchecked) !important; }
+.q-checkbox__bg::before { background:transparent !important; border-radius:0 !important; }
+.q-checkbox__svg { display:none !important; }
+/* checked: swap in the SVG that carries the black inner fill (two selectors — Quasar's truthy
+   class + the standard aria-checked attribute — so it fires regardless of Quasar version). */
+.q-checkbox__inner--truthy .q-checkbox__bg,
+.q-checkbox[aria-checked="true"] .q-checkbox__bg {
+            background-image:var(--option-box-checked) !important; }
+/* MIXED state for the select-all/none master (some-but-not-all targets on): a GREY inner fill for
+   the indeterminate third state, via the .rtt-show-mixed class toggled in render(). */
+.rtt-show-mixed .q-checkbox__bg {
+            background-image:var(--option-box-disabled) !important; }
+/* each chooser's dropdown popup matches the field's Cambria text, with compact items */
+.rtt-select-popup { font-family:'Cambria',Georgia,serif; }
+/* compact items; the popup grows to max-content (see _select_props), widening past
+   the field so a long name (e.g. a systematic tuning) shows on one line */
+.rtt-select-popup .q-item { min-height:22px; padding:1px 8px; font-size:11px; }
+.rtt-select-popup .q-item__label { font-size:11px; white-space:normal;
+              font-family:'Cambria',Georgia,serif; }
+/* greyscale the selection (no Quasar primary blue): the chosen item keeps a steady
+   light-grey wash so it stays visible, lighter than the darker grey hover/keyboard
+   highlight (the focus-helper, at Quasar's own hover/focus opacity) */
+.rtt-select-popup .q-item--active { color:#000 !important; background:#ededed; }
+.rtt-select-popup .q-focus-helper { background:#000 !important; }
+/* the prime-limit divider rows are disabled (non-selectable): Quasar renders a disabled
+   q-item with no focus-helper (so no hover highlight) and skips it on click, so it can't be
+   picked and a click leaves the popup open. But Quasar's reset also DIMS a disabled item
+   (opacity .6), unwanted on what is really a header — so undim it back to full opacity.
+   (Its not-allowed cursor is already cleared app-wide above, in this same `overrides` layer
+   — see that block for the !important-layer-reversal that lets the override win.) */
+@layer overrides {
+  .rtt-select-popup .q-item.disabled { opacity:1 !important; }
+}
+/* ...and the divider reads as a section header: a centred grey label flanked by rules. It
+   keeps the items' horizontal padding (it does NOT run to the popup's literal edges), so the
+   rules stop the same 8px in from each edge as the item text. The label flex-centres its text
+   with the lines as its ::before/::after (flex:1, filling the inset space on either side).
+   Grey (#777), lighter than the items' black. Normal (unlayered) declarations — they win on
+   specificity, and unlayered beats Quasar's lower layers (the !important reversal above is only
+   for the dimming reset). */
+.rtt-select-popup .q-item.disabled .q-item__label { display:flex; align-items:center;
+            justify-content:center; gap:6px; white-space:nowrap; color:#777; }
+.rtt-select-popup .q-item.disabled .q-item__label::before,
+.rtt-select-popup .q-item.disabled .q-item__label::after { content:""; flex:1;
+            border-top:1px solid #777; }
+/* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
+.rtt-preselect-target { width:100%; height:30px; display:flex; gap:0; align-items:center; }
+.rtt-preselect-target .rtt-preselect-num { flex:0 0 30px; }  /* a gridded value square (COL_W x ROW_H), touching the select */
+.rtt-preselect-target .rtt-preselect { flex:1 1 auto; width:auto; }
+.rtt-preselect-num .q-field__control { min-height:0 !important; height:30px;
+            background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }
+.rtt-preselect-num .q-field__control::before, .rtt-preselect-num .q-field__control::after { display:none !important; }
+.rtt-preselect-num .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
+            line-height:30px; text-align:center; font-family:'Cambria',Georgia,serif; }
+.rtt-preselect-num .q-field__native::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.rtt-preselect-num .q-field__marginal, .rtt-preselect-num .q-field__append { display:none !important; }
+/* the monotone/tradeoff range selector under the ranges chart: two square indicators
+   stacked vertically (filled = selected), per the mockup, with small Cambria labels.
+   Vertical stack because the bumped 16px boxes don't fit side by side. Each row is
+   LEFT-aligned (align-items:flex-start) so the two boxes line up at the same x, with
+   their labels extending to the right — the labels have different widths and would look
+   awkward if the boxes were centred and so didn't align vertically. */
+.rtt-rangemode { width:100%; display:flex; flex-direction:column; align-items:flex-start;
+                  justify-content:center; gap:3px; line-height:1; overflow:hidden;
+                  padding:5px 5px 5px 10px; }  /* top/bottom 5 so the bottom row doesn't touch the box edge */
+.rtt-rangeopt { display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }
+.rtt-rangebox { width:var(--option-box); height:var(--option-box); flex:none;
+                box-sizing:border-box; background-repeat:no-repeat; background-size:100% 100%;
+                background-image:var(--option-box-unchecked); }
+/* selected = a square "radio": the SAME SVG art with a centred black inner square (a radio dot,
+   but square) — one vector, so it stays square with an even border at any zoom (see _option_box_svg) */
+.rtt-rangeopt-on .rtt-rangebox { background-image:var(--option-box-checked); }
+.rtt-rangelabel { font-family:'Cambria',Georgia,serif; font-size:10px; color:#000; white-space:nowrap; }
+.rtt-ratio { display:flex; align-items:center; justify-content:center; gap:1px;
+             font-size:13px; color:#000; }
+.rtt-approx { font-size:13px; align-self:center; }
+.rtt-frac { display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }
+.rtt-frac-num { border-bottom:1px solid #000; padding:0 3px; }
+.rtt-frac-den { padding:0 3px; }
+.rtt-tval { display:flex; flex-direction:column; align-items:center; justify-content:center;
+            width:100%; color:#000; white-space:nowrap; line-height:1.05; }
+.rtt-cents-int { font-size:10px; }
+.rtt-cents-frac { font-size:7px; color:#000; }
+/* an editable cents cell (the generator tuning map 𝒈, the bare prescaler 𝐋 diagonal): a
+   single-line input overflows the square with a 3-dp value, so it carries the SAME stacked
+   int-over-fraction face as a read-only cents cell, overlaid on top of the input. The face
+   ignores pointer events (a click falls through and focuses the input); focusing the cell
+   then swaps to the raw single-line text for editing and hides the face. */
+.rtt-cellface { position:absolute; top:0; left:0; width:100%; height:100%;
+            pointer-events:none; z-index:1; }
+.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent; font-size:10px; }
+.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:#000; }
+.rtt-cell-stacked:focus-within .rtt-cellface { display:none; }
+/* with the per-cell unit on, lift the face's centred value to clear the unit pinned at the
+   cell's bottom (a read-only cents cell stacks value-over-unit; this overlay pads instead) */
+.rtt-cell-united.rtt-cell-stacked .rtt-cellface { padding-bottom:9px; }
+/* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
+   line's font is scaled (inline) to fit the narrow value square, so it never overflows.
+   No fixed height (like .rtt-tval): the cell centres it, and when a per-cell unit is
+   added the value+unit hug as one pair — height:100% would float the unit to the bottom. */
+.rtt-mathexpr { width:100%; display:flex; align-items:center; justify-content:center; }
+.rtt-mathexpr-stack { display:flex; flex-direction:column; align-items:center; justify-content:center;
+                      line-height:1.15; color:#000; white-space:nowrap; }
+.rtt-cellinput { width:100% !important; height:100%; min-height:0; overflow:visible; }
+.rtt-cellinput .q-field__inner { overflow:visible; }
+.rtt-cellinput .q-field__control { position:absolute !important; top:0; left:0;
+            width:calc(100% + var(--cell-border-w)) !important; height:calc(100% + var(--cell-border-w)) !important;
+            max-width:none !important; min-height:0 !important;
+            box-sizing:border-box; padding:0 !important; background:#fff; border:var(--cell-border); }
+.rtt-cellinput .q-field__control::before, .rtt-cellinput .q-field__control::after { display:none !important; }
+.rtt-cellinput .q-field__native { text-align:center; padding:0 !important; color:#000; font-size:var(--cell-font);
+            min-height:0; font-family:'Cambria',Georgia,serif; }
+.rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal { display:none !important; }
+/* a pending comma's draft cells: red-outlined and empty until the user types a valid
+   independent comma, at which point it commits and reverts to a normal black cell. The
+   typed entries are red too, matching the brackets, the "?" quantity, and the plain text */
+.rtt-cellinput.rtt-pending .q-field__control { border-color:var(--pending-color) !important; }
+.rtt-cellinput.rtt-pending .q-field__native { color:var(--pending-color) !important; }
+/* a pending comma's "?" quantity (and the draft vector in the plain text), in the same
+   red as its draft cells/brackets */
+.rtt-pending-q { color:var(--pending-color) !important; }
+/* the comma basis plain text while a comma is pending: not an editable input (which is
+   one colour) but a static box matching the input's frame, holding the committed commas
+   in black and the red draft vector — you edit the draft in the red grid cells */
+.rtt-ptextpending { width:100%; height:100%; box-sizing:border-box; display:flex;
+            align-items:center; justify-content:center; background:#fff; border:1px solid #888;
+            border-radius:2px; padding:0 3px; color:#000; white-space:nowrap; overflow:hidden;
+            font-family:'Cambria',Georgia,serif; }
+/* the +/− controls now sit beside the fold toggles on the fan, so they match them: a small
+   (spreadsheet.BTN-sized) grey-on-white square with a light #bbb border that darkens on hover —
+   not the heavier black cell-border look. Explicit px, not 100%: the − is absolutely placed in a
+   larger hover zone, so it must size to the button, not fill the zone. */
+.rtt-btn { width:var(--btn) !important; min-width:var(--btn) !important;
+           height:var(--btn) !important; min-height:var(--btn) !important;
+           background:#fff !important; border:1px solid #bbb !important;
+           border-radius:0 !important; padding:0 !important; box-shadow:none !important; }
+.rtt-btn:hover { background:#ececec !important; }
+/* center the glyph: Quasar's content box defaults to a tall line-height that
+   overflowed the small square; pin it to the box so the flex centering can take over */
+.rtt-btn .q-btn__content { color:#666 !important; font-size:12px; line-height:1; min-height:0;
+           font-family:'Cambria',Georgia,serif; }
+.rtt-btn:hover .q-btn__content { color:#000 !important; }
+/* the optimize button fills its cell (a normal rectangle hugging the word); its text is the
+   same size as the optimization power number (the ∞ box, _CELL_FONT). It's a 3D button: a
+   light-top/dark-bottom face with a crisp inset bevel (white highlight top-left, soft shadow
+   bottom-right) just inside the black cell border, so it reads as raised off the row. Pressing
+   it (:active) or latching it (.rtt-optimize-locked, the double-click auto-optimize lock)
+   inverts the shading — the face flips dark-top/light-bottom, the bevel becomes an inset
+   shadow, and the label nudges down-right — so a held click and a locked latch both look
+   pushed in. Hover/active are scoped :not(-locked) so the latched look stays put under either. */
+.rtt-optimize { width:100% !important; min-width:0 !important; height:100% !important;
+            background:linear-gradient(#fafafa,#cfcfcf) !important;
+            box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 1px rgba(0,0,0,0.30) !important;
+            transition:background .06s linear, box-shadow .06s linear !important; }
+.rtt-optimize .q-btn__content { font-size:var(--cell-font);
+            transition:transform .06s linear; }
+.rtt-optimize:hover:not(.rtt-optimize-locked) { background:linear-gradient(#fff,#dadada) !important; }
+.rtt-optimize:active:not(.rtt-optimize-locked) { background:linear-gradient(#c2c2c2,#e6e6e6) !important;
+            box-shadow:inset 1px 1px 2px rgba(0,0,0,0.38), inset -1px -1px 0 rgba(255,255,255,0.65) !important; }
+.rtt-optimize:active:not(.rtt-optimize-locked) .q-btn__content { transform:translate(1px,1px); }
+.rtt-optimize-locked { background:linear-gradient(#1f1f1f,#3c3c3c) !important;
+            box-shadow:inset 1px 1px 3px rgba(0,0,0,0.75), inset -1px -1px 0 rgba(255,255,255,0.18) !important; }
+.rtt-optimize-locked .q-btn__content { color:#fff !important; transform:translate(1px,1px); }
+/* an in-tile box title (the optimization box's "optimization" header, and every titled
+   control box): left-aligned at the top-left of the box (its cell otherwise centres it),
+   padded off the left border. One line that overhangs to the right rather than wrapping —
+   the box is sized to seat it, so it never clips. */
+.rtt-boxtitle { font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
+                 color:#000; width:100%; text-align:left; padding-left:8px;
+                 white-space:nowrap; overflow:visible; }
+/* the audio rows' speaker buttons (one per pitch). Flat and transparent so the cyan/green
+   wash shows through; the icon fills the (square) cell. .rtt-spk-on highlights it while sounding. */
+.rtt-audio-btn { width:100% !important; height:100% !important; min-width:0 !important;
+           min-height:0 !important; padding:0 !important; box-shadow:none !important;
+           background:transparent !important; color:#444 !important; }
+.rtt-audio-btn .q-btn__content { min-height:0; padding:0; }
+.rtt-audio-btn .q-icon, .rtt-audio-btn .material-icons { font-size:15px; color:#444 !important; }
+.rtt-spk-on .q-icon, .rtt-spk-on .material-icons { color:#000 !important; }
+.rtt-spk-on { background:#bdbdbd !important; border-radius:3px; }
+/* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
+   12px box as the fold toggle; .rtt-audio-on marks the active hold/1-1 (greyscale, not blue). */
+.rtt-audio-ctrl { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+           color:#666; cursor:pointer; user-select:none; }
+.rtt-audio-ctrl:hover { color:#000; }
+.rtt-audio-ctrl.rtt-audio-on { background:#666; color:#fff; border-radius:2px; }
+.rtt-audio-glyph { width:12px; height:12px; display:block; }
+.material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
+.rtt-audio-rootglyph { font-size:8px; font-family:'Cambria',Georgia,serif; line-height:1; }
+/* the domain − is a hover affordance: an invisible zone dropping from the removable
+   element's branch point (the column's top-bus split) down over its header reveals the
+   button centred ON that branch point — up at the fan, clear of the editable cells below.
+   The zone sits above the cells (z-index) so a column added via + can't paint over it and
+   shrink the hover target down to just the button itself. */
+.rtt-minus-zone { background:transparent; z-index:4; }
+.rtt-minus-btn { position:absolute !important; top:0; left:50%; transform:translate(-50%,-50%);
+           opacity:0; pointer-events:none; transition:opacity var(--t); }
+.rtt-minus-zone:hover .rtt-minus-btn { opacity:1; pointer-events:auto; }
+/* the horizontal basis's domain −: its zone spans the bottom prime's sub-row from the
+   row's left bus; the button reveals centred ON that left-bus branch point (out to the
+   left of the primes), the row mirror of a column −'s top-bus reveal */
+.rtt-minus-btn-v { position:absolute !important; left:0; top:50%; transform:translate(-50%,-50%);
+           opacity:0; pointer-events:none; transition:opacity var(--t); }
+.rtt-minus-zone:hover .rtt-minus-btn-v { opacity:1; pointer-events:auto; }
+
+.rtt-toggle { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+              font-size:12px !important; line-height:1; color:#666; background:#fff;
+              border:1px solid #bbb; cursor:pointer; user-select:none; }
+.rtt-toggle:hover { background:#ececec; color:#000; }
+/* the pane's frozen header: the select-all/none master + the show/example titles, pinned above
+   the scrolling toggle groups exactly as the column band pins the column titles above the grid.
+   Its height is set in render() to the layout's freeze_y, so it matches the main app's frozen band
+   to the pixel; the two rows centre within that height (compressed to both fit). Its bottom border
+   is the frozen/scrolling seam — the darker rule that used to sit under select-all/none. The full
+   330px-wide border (drawn on the border-box edge despite the 14px side padding) reads as one
+   clean divider across the pane, like the column band's seam. */
+.rtt-show-frozen { flex:none; box-sizing:border-box; display:flex; flex-direction:column;
+                   justify-content:center; gap:3px; padding:0 14px; border-bottom:1px solid #c4c4c4; }
+/* the scrolling body: the two toggle groups. It sizes to its OWN content (flex:none) capped by a
+   max-height set in render() to the window less the inset and the frozen header — NOT by filling the
+   flex column. That decoupling matters: when the panel fits, the body equals its content exactly, so
+   a sub-pixel rounding in the flex/grid hug would otherwise leave it a hair short and pop a spurious
+   scrollbar; sizing to its own content makes any rounding a 1px gap instead. It scrolls (overflow-y:
+   auto) only once its content genuinely exceeds the max-height. */
+.rtt-show-scroll { flex:none; overflow-y:auto; padding:0 14px 16px; }
+/* the select-all/none master toggle — the header's first line (above the show/example titles);
+   one click flips every implemented Show toggle. The rule that set it apart now sits below the
+   whole header (.rtt-show-frozen's border), so it keeps only its horizontal inset. */
+.rtt-show-all { padding:0 9px; }
+/* the panel's two column headers: "show" (the toggles) and "example" (their sample
+   renders), aligned over the grid columns the rows below use. Both share one font and
+   sit on a common baseline so the two words line up. */
+.rtt-show-head { display:grid; grid-template-columns:160px 1fr; align-items:baseline;
+                 padding:0 9px; }
+.rtt-show-title { font-size:14px; font-weight:bold; }
+.rtt-show-examplehdr { font-size:14px; font-weight:bold; }
+/* general and specific each sit in their own rounded, lightly-bordered sub-card,
+   stacked vertically (general above specific) */
+.rtt-show-group { border:1px solid #c4c4c4; border-radius:5px; background:#e6e6e6;
+                  padding:6px 8px; margin-top:8px; }
+.rtt-show-grouptitle { font-size:13px; font-weight:bold; text-align:center;
+                       color:#000; margin-bottom:4px; }
+/* one toggle row: the checkbox+label in the Show column, its sample in the example column */
+.rtt-show-row { display:grid; grid-template-columns:160px 1fr; align-items:center; min-height:26px; }
+.rtt-show-item .q-checkbox__label { font-family:'Cambria',Georgia,serif; font-size:13px;
+                                    color:#000; white-space:pre-line; line-height:1; }
+/* a not-yet-built toggle is disabled — make that unmistakable: render its label AND
+   its checkbox box the same light grey (vs the crisp black of an active toggle), a
+   far clearer "inactive" cue than Quasar's faint default opacity dim alone */
+.rtt-show-item.disabled .q-checkbox__label { color:#999; }
+.rtt-show-item.disabled .q-checkbox__inner { color:#999 !important; }
+.rtt-ex-cell { font-family:'Cambria',Georgia,serif; font-size:14px; color:#000;
+               display:flex; align-items:center; min-height:24px; }
+/* a disabled toggle's sample greys to match its label — color for the glyph examples,
+   plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
+.rtt-ex-cell.rtt-ex-disabled { color:#999; opacity:0.75; }
+.rtt-ex { white-space:nowrap; }
+/* the "general" group's dummy tile: a value-tile-styled panel (lighter than the grey card,
+   thin-bordered, hugging its stacked layers) whose parts are clicked directly to toggle, in
+   place of a column of checkboxes. The tile is centred in its sub-card. */
+.rtt-show-tile { display:inline-flex; flex-direction:column; align-items:center; gap:2px;
+                 margin:2px auto 4px; padding:7px 14px; background:#f2f2f2;
+                 border:1px solid #b4b4b4; border-radius:4px;
+                 font-family:'Cambria',Georgia,serif; }
+/* one stacked layer line; the symbol and name lines seat two parts (parent + sub-control) */
+.rtt-tile-line { display:flex; justify-content:center; align-items:center;
+                 min-height:16px; line-height:1.1; }
+/* every part is a click target. The on/off classes carry the live state — black + opaque when
+   the layer is shown, grey + dimmed when hidden (the dim also fades the SVG samples, whose
+   baked-in strokes a colour change alone can't grey). A sub-control whose parent is off is
+   inert until the parent is on. Inline so the paired parts flow as one glyph/word. */
+.rtt-tile-part { cursor:pointer; display:inline-flex; align-items:center; white-space:pre; }
+.rtt-part-on { color:#000; opacity:1; }
+.rtt-part-off { color:#999; opacity:0.5; }
+.rtt-part-inert { pointer-events:none; }
+.rtt-mnem-underline { text-decoration:underline; }
