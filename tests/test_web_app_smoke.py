@@ -455,6 +455,62 @@ def test_interest_example_is_the_bold_interval_symbol():
     assert app._math_html("𝐢") in app._example_html("interest")
 
 
+def test_general_tile_covers_every_general_layer_exactly_once():
+    # the "general" group is rendered as a single clickable dummy tile (the alternative to a
+    # column of checkboxes); _GENERAL_TILE_LINES lays the layers out in tile order, so it must
+    # account for EVERY general toggle exactly once — a new general layer can't slip in without
+    # earning a place (and a click target) in the tile.
+    general = [key for key, _label, _default in dict(show_settings.SHOW_GROUPS)["general"]]
+    placed = [key for line in app._GENERAL_TILE_LINES for key in line]
+    assert sorted(placed) == sorted(general)
+    assert len(placed) == len(set(placed))  # no layer placed twice
+    for key in placed:  # every placed part renders a non-empty sample (the builder uses this)
+        assert app._general_part_html(key).strip(), f"empty tile part for {key}"
+
+
+def test_general_tile_rides_each_subcontrol_on_its_parents_line():
+    # a sub-control refines its parent layer, so in the tile it shares that layer's line rather
+    # than getting a line of its own: equivalences extends the symbol (𝒕 = 𝒈M), mnemonics
+    # underlines the name. Every general sub-control must sit on a line WITH its parent.
+    lines = app._GENERAL_TILE_LINES
+    general_subs = {k: p for k, p in show_settings.SUBCONTROLS.items()
+                    if k in [key for key, *_ in dict(show_settings.SHOW_GROUPS)["general"]]}
+    assert general_subs  # guard the test itself: there are general sub-controls to check
+    for sub, parent in general_subs.items():
+        assert any(sub in line and parent in line for line in lines), (sub, parent)
+
+
+def test_general_part_html_splits_the_equation_and_reuses_the_legend_samples():
+    # symbols renders the bare covector; equivalences renders only the "= 𝒈M" tail, so the two
+    # parts joined read as the equivalences legend sample (one source of truth). Every other
+    # part defers to _example_html, so the tile never drifts from the legend.
+    assert app._general_part_html("symbols") == app._math_html(app._EXAMPLE_TEXT["symbols"])
+    assert app._general_part_html("symbols") + app._general_part_html("equivalences") \
+        == app._math_html(app._EXAMPLE_TEXT["equivalences"])
+    assert app._general_part_html("gridded_values") == app._example_html("gridded_values")
+
+
+def test_general_tile_name_exposes_its_mnemonic_letter_as_a_separate_target():
+    # the name word is split so the mnemonic letter (the symbol-spelling letter the underline
+    # marks) is its own click target; re-joined, the pieces are exactly the names sample.
+    assert app._NAME_LETTER + app._NAME_REST == app._EXAMPLE_TEXT["names"]
+    assert len(app._NAME_LETTER) == 1
+
+
+def test_general_tile_part_reads_black_when_on_grey_when_off_and_inert_under_an_off_parent():
+    # each clickable part of the dummy tile shows its toggle's state directly: black + full
+    # opacity when on, grey + dimmed when off (the dim also fades the SVG samples, whose strokes
+    # a color alone can't grey). Parts carry a pointer cursor; a sub-control whose parent is off
+    # is inert (no click) until the parent is on. Mnemonics is an underline on the name letter.
+    assert "cursor:pointer" in _css_rule(".rtt-tile-part")
+    on = _css_rule(".rtt-part-on")
+    assert "color:#000" in on and "opacity:1" in on
+    off = _css_rule(".rtt-part-off")
+    assert "color:#999" in off and "opacity:" in off
+    assert "pointer-events:none" in _css_rule(".rtt-part-inert")
+    assert "text-decoration:underline" in _css_rule(".rtt-mnem-underline")
+
+
 def test_show_toggle_labels_wrap_long_names_onto_two_lines():
     # most toggle labels are short and fit the narrow label column on one line, but "other
     # intervals of interest" needs two — the label honours its embedded newline (pre-line)

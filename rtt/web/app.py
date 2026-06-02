@@ -850,6 +850,25 @@ _CSS = f"""
    plus the same 0.75 dim Quasar puts on the checkbox so the two read as one shade */
 .rtt-ex-cell.rtt-ex-disabled {{ color:#999; opacity:0.75; }}
 .rtt-ex {{ white-space:nowrap; }}
+/* the "general" group's dummy tile: a value-tile-styled panel (lighter than the grey card,
+   thin-bordered, hugging its stacked layers) whose parts are clicked directly to toggle, in
+   place of a column of checkboxes. The tile is centred in its sub-card. */
+.rtt-show-tile {{ display:inline-flex; flex-direction:column; align-items:center; gap:2px;
+                 margin:2px auto 4px; padding:7px 14px; background:#f2f2f2;
+                 border:1px solid #b4b4b4; border-radius:4px;
+                 font-family:'Cambria',Georgia,serif; }}
+/* one stacked layer line; the symbol and name lines seat two parts (parent + sub-control) */
+.rtt-tile-line {{ display:flex; justify-content:center; align-items:center;
+                 min-height:16px; line-height:1.1; }}
+/* every part is a click target. The on/off classes carry the live state — black + opaque when
+   the layer is shown, grey + dimmed when hidden (the dim also fades the SVG samples, whose
+   baked-in strokes a colour change alone can't grey). A sub-control whose parent is off is
+   inert until the parent is on. Inline so the paired parts flow as one glyph/word. */
+.rtt-tile-part {{ cursor:pointer; display:inline-flex; align-items:center; white-space:pre; }}
+.rtt-part-on {{ color:#000; opacity:1; }}
+.rtt-part-off {{ color:#999; opacity:0.5; }}
+.rtt-part-inert {{ pointer-events:none; }}
+.rtt-mnem-underline {{ text-decoration:underline; }}
 """
 
 
@@ -1390,6 +1409,55 @@ def _example_html(key: str) -> str:
     return f'<span class="rtt-ex">{_math_html(_EXAMPLE_TEXT[key])}</span>'
 
 
+# The "general" Show group, composed into a single clickable dummy tile — the panel's
+# alternative to a column of checkboxes. Each line stacks one (or, for a sub-control, its
+# parent + the sub-control) of the layers a real value tile carries, top to bottom roughly as
+# a decorated tile reads: the symbol glyph, the name caption, the units line, then the value's
+# representations and adornments. Every part is a dummy sample (reusing the example-legend
+# renders) shown black when its toggle is on and grey when off; clicking it flips the toggle in
+# the live grid. Keys within a line are in left-to-right render order, so a sub-control sits next
+# to its parent exactly where it reads: equivalences as the "= 𝒈M" tail AFTER the symbol 𝒕, the
+# mnemonic letter BEFORE the rest of the name (it underlines the name's leading symbol letter).
+_GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
+    ("symbols", "equivalences"),
+    ("mnemonics", "names"),
+    ("units",),
+    ("gridded_values",),
+    ("plain_text_values",),
+    ("math_expressions",),
+    ("quantities",),
+    ("charts",),
+    ("preselects",),
+)
+
+# The symbols layer's sample is the bare covector 𝒕; the equivalences layer extends it to the
+# defining equation 𝒕 = 𝒈M (the example-legend text). The dummy tile makes each its own click
+# target, so the equivalence part is just that equation's tail (everything after the symbol).
+_EQUIV_TAIL = _EXAMPLE_TEXT["equivalences"][len(_EXAMPLE_TEXT["symbols"]):]
+
+# The name caption sample, split so the mnemonic letter — the one the mnemonics underline marks,
+# here the 't' that spells the symbol 𝒕 — is its own click target, distinct from the rest of the
+# name word (the names target). Re-joined they are exactly the names sample.
+_NAME_LETTER, _NAME_REST = _EXAMPLE_TEXT["names"][:1], _EXAMPLE_TEXT["names"][1:]
+
+
+def _general_part_html(key: str) -> str:
+    """The dummy sample for one part of the general tile. Symbols and equivalences split the
+    'symbols' equation 𝒕 = 𝒈M into the bare covector and its '= 𝒈M' tail; mnemonics and names
+    split the name word into its leading symbol letter and the rest — each half a click target.
+    Every other layer reuses its example-legend render, so the tile and the legend stay one
+    source of truth."""
+    if key == "symbols":
+        return _math_html(_EXAMPLE_TEXT["symbols"])
+    if key == "equivalences":
+        return _math_html(_EQUIV_TAIL)
+    if key == "mnemonics":
+        return _escape(_NAME_LETTER)
+    if key == "names":
+        return _escape(_NAME_REST)
+    return _example_html(key)
+
+
 def _demath(ch):
     """A Mathematical Alphanumeric letter (or bold digit) as ``(base, bold, italic)``,
     or None for an ordinary character. Covers the bold, italic and bold-italic letter
@@ -1803,6 +1871,20 @@ def index() -> None:
         if building[0]:
             return
         editor.set_all_show(value)
+        render()
+
+    def on_part_click(key):
+        # a click on one part of the general dummy tile flips that layer's toggle (the tile is
+        # the checkbox column's alternative). A sub-control is inert until its parent is shown —
+        # mnemonics needs a name to underline, equivalences a symbol to expand — so a click on it
+        # while the parent is off does nothing (the CSS also makes it unclickable; this guards the
+        # state too). render() then re-styles the tile and animates the grid.
+        if building[0]:
+            return
+        parent = show_settings.SUBCONTROLS.get(key)
+        if parent is not None and not editor.settings[parent]:
+            return
+        editor.set_show(key, not editor.settings[key])
         render()
 
     def on_preselect(name, value):
@@ -2405,6 +2487,27 @@ def index() -> None:
         for key, box in boxes.items():
             if box.value != editor.settings[key]:
                 box.value = editor.settings[key]
+        # the general dummy tile: style each layer's part by its live setting — black + opaque
+        # when shown, grey + dimmed when hidden — so the tile both mirrors and drives the grid. A
+        # sub-control whose parent is hidden is inert (its click does nothing; the CSS also drops
+        # its pointer events). Mnemonics is special: it is an underline ON the name, so its COLOUR
+        # tracks the name (its parent) while only the underline tracks mnemonics itself — else a
+        # name-shown/mnemonic-hidden state would grey just the one symbol letter mid-word.
+        for key, part in tile_parts.items():
+            shown = editor.settings["names"] if key == "mnemonics" else editor.settings[key]
+            if shown:
+                part.classes(add="rtt-part-on", remove="rtt-part-off")
+            else:
+                part.classes(add="rtt-part-off", remove="rtt-part-on")
+            parent = show_settings.SUBCONTROLS.get(key)
+            if parent is not None and not editor.settings[parent]:
+                part.classes(add="rtt-part-inert")
+            else:
+                part.classes(remove="rtt-part-inert")
+        if editor.settings["mnemonics"]:
+            tile_parts["mnemonics"].classes(add="rtt-mnem-underline")
+        else:
+            tile_parts["mnemonics"].classes(remove="rtt-mnem-underline")
         # the master checkbox: checked (true / black fill) when all on, unchecked (false /
         # empty) when all off, MIXED (grey fill) when some-but-not-all are on
         states = [editor.settings[k] for k in show_settings.IMPLEMENTED]
@@ -2456,12 +2559,30 @@ def index() -> None:
                         ui.label("example").classes("rtt-show-examplehdr")
                 # the scrolling body: the toggle groups, which scroll under the frozen header when
                 # the panel outgrows the window (rather than spilling off the bottom of the screen)
-                boxes: dict = {}  # toggle key -> checkbox, so a sub-control row can bind to its parent
+                boxes: dict = {}  # specific-group toggle key -> checkbox, so a sub-control row can bind to its parent
+                tile_parts: dict = {}  # general-group layer key -> its clickable dummy-tile part (render() styles these)
                 show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
                 with show_scroll:
                     for group_name, items in show_settings.SHOW_GROUPS:
                         with ui.element("div").classes("rtt-show-group"):
                             ui.label(group_name).classes("rtt-show-grouptitle")
+                            if group_name == "general":
+                                # the general layers render as ONE clickable dummy tile rather than a
+                                # checkbox column: each part is a sample of that layer (reusing the
+                                # example-legend renders), clicked directly to show/hide it. render()
+                                # styles every part by the live setting; on_part_click flips it. Each
+                                # part keeps the layer's hover help, the same text the checkbox carried.
+                                # Keys per line are in render order, so a sub-control sits beside its parent.
+                                with ui.element("div").classes("rtt-show-tile"):
+                                    for line in _GENERAL_TILE_LINES:
+                                        with ui.element("div").classes("rtt-tile-line"):
+                                            for key in line:
+                                                part = ui.html(_general_part_html(key)) \
+                                                    .classes("rtt-tile-part").mark(f"showpart:{key}") \
+                                                    .tooltip(tooltips.SHOW_HELP[key])
+                                                part.on("click", lambda k=key: on_part_click(k))
+                                                tile_parts[key] = part
+                                continue
                             for key, label, _ in items:
                                 row = ui.element("div").classes("rtt-show-row")
                                 with row:

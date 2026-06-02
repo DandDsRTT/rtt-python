@@ -17,6 +17,7 @@ import pytest
 from nicegui.elements.tooltip import Tooltip
 from nicegui.testing import User
 
+from rtt.web import settings as show_settings
 from rtt.web.editor import Editor
 
 
@@ -29,10 +30,26 @@ async def test_default_page_renders_without_error(user: User) -> None:
 
 # --- tier 2: each Show feature's render branch (paths the default render never reaches) ---
 
+# The "general" Show layers are toggled by clicking their part of the dummy tile (located by
+# key); the "specific boxes & controls" group is still a checkbox column (located by label).
+# _toggle hides that split so a test just names the layer it wants and doesn't care which.
+_GENERAL_KEY_BY_LABEL = {label: key for key, label, _d in dict(show_settings.SHOW_GROUPS)["general"]}
+
+
+def _toggle(user: User, label: str) -> None:
+    """Flip the Show layer carrying ``label`` — a general layer via its dummy-tile part, a
+    specific-group layer via its checkbox."""
+    key = _GENERAL_KEY_BY_LABEL.get(label)
+    if key is not None:
+        user.find(marker=f"showpart:{key}").click()
+    else:
+        user.find(kind=ui.checkbox, content=label).click()
+
+
 async def _enable(user: User, label: str) -> None:
     """Open the page and turn on the Show toggle carrying ``label``."""
     await user.open("/")
-    user.find(kind=ui.checkbox, content=label).click()
+    _toggle(user, label)
 
 
 # (Show-toggle label, a cell id its render branch must produce). Each exercises a
@@ -78,7 +95,7 @@ async def test_optimization_with_charts_renders_the_damage_indicator(user: User)
     # optimization + charts: the damage chart gains the minimized-damage indicator line.
     # Drive that _bar_chart(indicator=…) branch and confirm the chart still renders.
     await user.open("/")
-    user.find(kind=ui.checkbox, content="charts").click()
+    _toggle(user, "charts")
     user.find(kind=ui.checkbox, content="optimization").click()
     await user.should_see(marker="chart:damage:targets")
 
@@ -110,8 +127,43 @@ async def test_settings_and_controls_carry_hover_tooltips(user: User) -> None:
     # search can't see one — scan the client's element registry for the attached Tooltips.
     await user.open("/")
     tips = [el.text for el in user.client.elements.values() if isinstance(el, Tooltip)]
-    assert any("name caption" in t for t in tips)       # the "names" Show toggle's help
+    assert any("name caption" in t for t in tips)       # the "names" Show toggle's help (now a tile part)
     assert any("map to this prime" in t for t in tips)  # the always-present mapping cells' help
+
+
+def _part_classes(user: User, key: str) -> list[str]:
+    """The CSS classes render() has put on the general dummy tile's part for ``key``."""
+    return next(iter(user.find(marker=f"showpart:{key}").elements))._classes
+
+
+async def test_dummy_tile_parts_reflect_and_drive_the_live_show_state(user: User) -> None:
+    # the general tile is the checkbox column's alternative: render() must paint each part by the
+    # live setting (black-on / grey-off), keep a sub-control inert until its parent is shown, and
+    # — for mnemonics specifically — track the NAME's colour while only the underline tracks the
+    # mnemonics toggle (so a shown name with mnemonics off isn't greyed mid-word). And a click on
+    # a part must flip that layer, which the rest of the suite leans on.
+    await user.open("/")
+    # default view: names + gridded values shown, symbols hidden
+    assert "rtt-part-on" in _part_classes(user, "names")
+    assert "rtt-part-on" in _part_classes(user, "gridded_values")
+    assert "rtt-part-off" in _part_classes(user, "symbols")
+    # equivalences rides the (hidden) symbol, so it is inert — no click target until symbols show
+    assert "rtt-part-inert" in _part_classes(user, "equivalences")
+    # mnemonics' colour follows the shown name (on), but its underline is off until toggled
+    assert "rtt-part-on" in _part_classes(user, "mnemonics")
+    assert "rtt-mnem-underline" not in _part_classes(user, "mnemonics")
+    # click the symbol -> symbols shown, and equivalences becomes live (no longer inert)
+    user.find(marker="showpart:symbols").click()
+    assert "rtt-part-on" in _part_classes(user, "symbols")
+    assert "rtt-part-inert" not in _part_classes(user, "equivalences")
+    # click the mnemonic letter -> the name's underline turns on
+    user.find(marker="showpart:mnemonics").click()
+    assert "rtt-mnem-underline" in _part_classes(user, "mnemonics")
+    # turning the name off cascades mnemonics off (set_show) and re-greys + re-inerts its letter
+    user.find(marker="showpart:names").click()
+    assert "rtt-part-off" in _part_classes(user, "names")
+    assert "rtt-mnem-underline" not in _part_classes(user, "mnemonics")
+    assert "rtt-part-inert" in _part_classes(user, "mnemonics")
 
 
 # --- tier 3: the edit -> render -> undo pipeline (input -> handler -> render) ---
@@ -142,7 +194,7 @@ async def test_tuning_preselect_offers_only_lp_while_alternatives_are_shelved(us
     # options are {value: label}, the labels T-prefixed for the target-based default; check the
     # offered values.)
     await user.open("/")
-    user.find(kind=ui.checkbox, content="preselects").click()
+    _toggle(user, "preselects")
     await user.should_see(marker="preselect:tuning")
     assert list(_cell_child(user, "preselect:tuning").options) == ["minimax-S"]
 
@@ -153,7 +205,7 @@ async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(
     # value), so the label updates — regression for them going stale on re-render.
     await user.open("/")
     user.find(marker="toggle:row:vectors").click()             # expand the target-list row
-    user.find(kind=ui.checkbox, content="preselects").click()  # show the chooser dropdowns
+    _toggle(user, "preselects")  # show the chooser dropdowns
     user.find(kind=ui.checkbox, content="weighting").click()   # reveal the nested all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
@@ -214,7 +266,7 @@ async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) 
     # on re-render — would otherwise be the scheme's log₂3 = 1.585 default.
     await user.open("/")
     user.find(kind=ui.checkbox, content="weighting").click()  # opens the prescaling row
-    user.find(kind=ui.checkbox, content="plain text values").click()  # the ptext band
+    _toggle(user, "plain text values")  # the ptext band
     await user.should_see(marker="ptext:prescaling:primes")
     _cell_child(user, "ptext:prescaling:primes").set_value("[⟨1 0 0] ⟨0 4 0] ⟨0 0 2.322]⟩")
     await user.should_see(marker="cell:prescaling:primes:1:1")
@@ -229,7 +281,7 @@ async def test_unparseable_prescaler_plain_text_reddens_the_box(user: User) -> N
     # would otherwise have written a non-diagonal 𝐿, which the math layer can't honour).
     await user.open("/")
     user.find(kind=ui.checkbox, content="weighting").click()
-    user.find(kind=ui.checkbox, content="plain text values").click()
+    _toggle(user, "plain text values")
     await user.should_see(marker="ptext:prescaling:primes")
     _cell_child(user, "ptext:prescaling:primes").set_value("[⟨1 0.5 0] ⟨0 1 0] ⟨0 0 1]⟩")
     # the input box surfaces the rejection via the same red-outline class the other duals use
@@ -343,7 +395,7 @@ async def test_tuning_chooser_shows_the_prompt_as_a_placeholder_when_off_list(us
     # setting a finite optimization power, which resolves to an unnamed spec) and the closed
     # box falls back to "-" via Quasar's display-value — never a blank field, never a row.
     await user.open("/")
-    user.find(kind=ui.checkbox, content="preselects").click()
+    _toggle(user, "preselects")
     user.find(kind=ui.checkbox, content="optimization").click()
     assert "display-value" not in _cell_child(user, "preselect:tuning")._props
     _cell_child(user, "optimization:power").set_value("2")  # minimax (∞) -> a miniRMS spec (no name)
@@ -357,7 +409,7 @@ async def test_tuning_chooser_shows_the_prompt_when_the_generator_tuning_is_over
     # tuning-scheme dropdowns (under the tuning map 𝒕 and the generator tuning map 𝒈) fall
     # back to "-", even though the scheme name (minimax-S) is unchanged.
     await user.open("/")
-    user.find(kind=ui.checkbox, content="preselects").click()
+    _toggle(user, "preselects")
     both = ("preselect:tuning", "preselect:tuning:gens")
     assert all("display-value" not in _cell_child(user, cid)._props for cid in both)
     _cell_child(user, "tuning:gen:1").set_value("700.000")  # off the minimax-S optimum fifth
@@ -370,7 +422,7 @@ async def test_selecting_a_scheme_clears_a_manual_tuning_override(user: User) ->
     # from the dropdown must re-apply it: the override clears, the tuning snaps back to the
     # scheme's optimum, and the box shows the scheme name again.
     await user.open("/")
-    user.find(kind=ui.checkbox, content="preselects").click()
+    _toggle(user, "preselects")
     optimum = _cell_child(user, "tuning:gen:1").value  # the minimax-S optimum fifth
     _cell_child(user, "tuning:gen:1").set_value("700.000")  # deviate
     await user.should_see(marker="preselect:tuning")
@@ -427,7 +479,7 @@ async def test_select_all_turns_on_every_implemented_feature(user: User) -> None
 async def test_reset_restores_settings_expand_collapse_and_values(user: User) -> None:
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")  # a value change
-    user.find(kind=ui.checkbox, content="charts").click()  # a settings change
+    _toggle(user, "charts")  # a settings change
     await user.should_see(marker="chart:retune:targets")
     assert _cell_text(user, "cell:mapped:1:6") == "7"
     user.find(marker="reset").click()  # reset everything to the defaults
@@ -440,7 +492,7 @@ async def test_undo_button_reverts_a_settings_change(user: User) -> None:
     # the unified history covers Show settings too: toggling charts on then pressing undo
     # turns it back off (the chart cells disappear)
     await user.open("/")
-    user.find(kind=ui.checkbox, content="charts").click()
+    _toggle(user, "charts")
     await user.should_see(marker="chart:retune:targets")
     user.find(marker="undo").click()
     await user.should_see(marker="cell:mapping:0:0")  # the board re-rendered
