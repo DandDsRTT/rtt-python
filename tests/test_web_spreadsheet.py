@@ -1405,9 +1405,9 @@ def test_charts_on_adds_a_weight_bar_chart_over_the_targets():
 
 def test_weight_row_carries_its_symbol_and_caption():
     on = {c.id: c for c in _with(weighting=True, symbols=True, names=True).cells}
-    # 𝒘 (bold italic, the same glyph the damage equivalence's diag(𝒘) uses)
+    # 𝒘 (bold italic, the same glyph the damage equivalence's 𝒘 factor uses)
     assert on["symbol:weight:targets"].text == "𝒘"
-    assert spreadsheet.EQUIVALENCES[("damage", "targets")].endswith("diag(𝒘)")  # same 𝒘
+    assert spreadsheet.EQUIVALENCES[("damage", "targets")].endswith("𝒘")  # same 𝒘
     assert on["caption:weight:targets"].text == "target interval weight list"
 
 
@@ -2157,24 +2157,30 @@ def test_weight_equivalence_reflects_the_schemes_damage_slope():
         return {c.id: c for c in lay.cells}["symbol:weight:targets"].text
 
     assert equiv("minimax-C") == "𝒘 = 𝒄"      # complexity weight
-    assert equiv("minimax-U") == "𝒘 = 1"      # unity weight (the document default)
+    assert equiv("minimax-U") == "𝒘 = 𝟏"      # unity weight (document default): bold-1 all-ones vector
     assert equiv("minimax-S") == "𝒘 = 1/𝒄"    # simplicity weight (the all-interval weight)
 
 
-def test_damage_equivalence_drops_the_weight_factor_under_unity_weight():
-    # 𝐝 = |𝐞|diag(𝒘), but unity weight makes 𝒘 = 1 — so diag(𝒘) is the identity and the
-    # damage list is simply 𝐝 = |𝐞| (per the guide). Only the weighted schemes keep the factor.
-    def equiv(scheme):
+def test_damage_equivalence_names_the_weight_only_when_the_weight_row_is_shown():
+    # 𝐝 = |𝐞|𝒘 (𝒘 the weight LIST, not a matrix — so 𝒘, never diag(𝒘)). The equivalence
+    # names that 𝒘 factor only while the weight row is on screen; with weighting hidden it
+    # drops to 𝐝 = |𝐞| rather than dangle a reference to a row the reader can't see. The
+    # factor is the same whatever the slope — even the unity all-ones weight shows as 𝒘 once
+    # visible (its 𝒘 = 𝟏 value lives on the weight row).
+    def equiv(scheme, weighting):
         lay = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
-            {**settings.defaults(), "symbols": True, "equivalences": True},
+            {**settings.defaults(), "weighting": weighting, "symbols": True, "equivalences": True},
             tuning_scheme=scheme,
         )
         return {c.id: c for c in lay.cells}["symbol:damage:targets"].text
 
-    assert equiv("minimax-C") == "𝐝 = |𝐞|diag(𝒘)"   # complexity weight keeps the factor
-    assert equiv("minimax-U") == "𝐝 = |𝐞|"           # unity weight (document default): no factor
-    assert equiv("minimax-S") == "𝐝 = |𝐞|diag(𝒘)"   # simplicity weight keeps it (all-interval weight)
+    # weighting hidden → bare |𝐞|, regardless of the scheme's weight slope
+    assert equiv("minimax-U", False) == "𝐝 = |𝐞|"
+    assert equiv("minimax-S", False) == "𝐝 = |𝐞|"
+    # weighting shown → the 𝒘 factor appears, even under unity weight
+    assert equiv("minimax-U", True) == "𝐝 = |𝐞|𝒘"
+    assert equiv("minimax-S", True) == "𝐝 = |𝐞|𝒘"
 
 
 def test_commas_have_a_shared_vertical_axis_per_comma():
@@ -4332,7 +4338,7 @@ def test_colorization_follows_the_content_map():
     assert at("just:interest:0") == C           # just × other-intervals (𝒋·interest)
     assert at("just:held:0") == C               # just × held intervals (𝒋H, both cyan → cyan)
     # the damage row rides the error chain 𝐞 = (𝒈𝑀 − 𝒋)T → green
-    assert at("damage:target:0") == G           # damage × targets (𝐝 = |𝐞|diag(𝒘))
+    assert at("damage:target:0") == G           # damage × targets (𝐝 = |𝐞|𝒘)
 
 
 def test_off_by_default_rows_colorize_by_content_too():
@@ -4494,13 +4500,13 @@ def test_collapsing_a_tile_removes_its_colorization():
 
 
 def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
-    # a simplicity-weighted scheme so the damage equivalence keeps its diag(𝒘) weight factor
-    # (the default unity weight drops it); the bold-italic 𝒘 is what this checks
-    on = {c.id: c for c in _with("TILT minimax-S", symbols=True, equivalences=True).cells}
+    # weighting shown so the damage equivalence names its 𝒘 weight factor (hidden it drops to
+    # |𝐞|); the bold-italic 𝒘 — matching the maps, not the bold-upright list glyphs — is the check
+    on = {c.id: c for c in _with(weighting=True, symbols=True, equivalences=True).cells}
     # the mapped comma basis is exactly the zero matrix
     assert on["symbol:mapping:commas"].text == "𝑀C = 𝑂"
     # the damage weight w is bold-italic (matching the maps), not bold-upright
-    assert on["symbol:damage:targets"].text == "𝐝 = |𝐞|diag(𝒘)"
+    assert on["symbol:damage:targets"].text == "𝐝 = |𝐞|𝒘"
 
 
 # --- audio rows (hear just & mapped intervals) -------------------------------

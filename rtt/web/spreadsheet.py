@@ -297,7 +297,7 @@ SYMBOLS = {
     # only the target interval complexity list carries the bare 𝒄 symbol; the domain-prime
     # map, comma list and interest complexity are derived auxiliaries and carry none
     ("complexity", "targets"): "𝒄",
-    ("weight", "targets"): "𝒘",  # bold italic, as in the damage row's diag(𝒘)
+    ("weight", "targets"): "𝒘",  # bold italic, as in the damage row's 𝒘 factor
     ("damage", "targets"): "𝐝",
 }
 SYMBOLED_ROWS = frozenset(row for row, _ in SYMBOLS)  # rows that reserve a symbol slot
@@ -457,7 +457,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("retune", "targets"): frozenset({"G", "M", "T", "J"}),  # 𝐞 = 𝒓T
     ("retune", "interest"): frozenset({"G", "M", "J"}),
     ("retune", "held"): frozenset({"G", "M", "H", "J"}),    # 𝒓H (≈ 𝟎 since held just, but keeps the factors)
-    ("damage", "targets"): frozenset({"G", "M", "T", "J"}),  # 𝐝 = |𝐞|diag(𝒘), via 𝐞 = 𝒓T
+    ("damage", "targets"): frozenset({"G", "M", "T", "J"}),  # 𝐝 = |𝐞|𝒘, via 𝐞 = 𝒓T
     # the prescaler 𝑋 is cyan; it carries to every column it scales — the primes (P) and comma
     # (C) columns add yellow (→ green), the target / held columns add the cyan T / H, and the
     # other-intervals and (neutral) detempering list ride the bare cyan 𝑋
@@ -593,7 +593,7 @@ EQUIVALENCES = {
     ("just", "targets"): " = 𝒋T",
     ("retune", "primes"): " = 𝒕 − 𝒋",
     ("retune", "targets"): " = 𝒓T",
-    ("damage", "targets"): " = |𝐞|diag(𝒘)",  # build() drops diag(𝒘) under unity weight (𝒘 = 1 ⇒ 𝐝 = |𝐞|)
+    ("damage", "targets"): " = |𝐞|𝒘",  # 𝒘 is the weight LIST, not a matrix; build() drops it when the weight row is hidden (→ 𝐝 = |𝐞|)
     # the held intervals are tuned exactly just: the tempered size equals the just size (and
     # vice versa — the just row carries the inverse identity), so the retuning error vanishes
     ("tuning", "held"): " = 𝒋H",
@@ -680,7 +680,7 @@ UNITED_ROWS = frozenset(row for row, _ in UNITS)  # rows that reserve a units-li
 # so build() picks the right-hand side from this map rather than a fixed headline.
 WEIGHT_EQUIVALENCE_BY_SLOPE = {
     "complexityWeight": " = 𝒄",
-    "unityWeight": " = 1",
+    "unityWeight": " = 𝟏",  # bold one — the all-ones weight vector (not a scalar)
     "simplicityWeight": " = 1/𝒄",
 }
 
@@ -1153,7 +1153,7 @@ def build(state, settings=None, collapsed=None,
     held_sizes = service.interval_sizes(tun, held_ratios, elements)  # tempered/just/error sizes
     target_weights = service.interval_weights(state.mapping, tuning_scheme, targets,
                                               prescaler_override=custom_prescaler,
-                                              domain_basis=elements)  # the damage row's diag(𝒘)
+                                              domain_basis=elements)  # the damage row's 𝒘
     comma_ratios = service.comma_ratios(state.comma_basis, elements)
     nc = len(comma_ratios)  # the real commas (those that define the temperament)
     mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
@@ -2732,21 +2732,22 @@ def build(state, settings=None, collapsed=None,
     # reserved for every captioned column so the names stay aligned; the glyph and
     # equation are drawn only where defined (the comma columns have none yet). An
     # empty interest column has no tiles. Mnemonics underlines the symbol letter.
-    # Two equations resolve per build from the live scheme's damage-weight slope rather than
-    # being baked in: the weight row (𝒘 = 𝒄 / 1 / 1/𝒄), and the damage row, which drops its
-    # diag(𝒘) factor under unity weight — 𝒘 = 1 makes diag(𝒘) the identity, so 𝐝 = |𝐞| (per
-    # the guide). The bare prescaling tile is the only one whose SYMBOL equivalence names the live
-    # prescaler concretely (``𝑋 = 𝐿`` for log-prime, ``𝑋 = diag(𝒑)`` / ``𝑋 = 𝐼`` otherwise, or
-    # nothing for a typed override — see prescaler_equivalence). Its NAME additionally gains
-    # "= log-prime matrix" when 𝑋 = 𝐿 (see effective_captions). The product tiles carry the live
-    # glyph as their SYMBOL (𝐿C/…) and print no "= …".
+    # The weight row's equation resolves per build from the live scheme's damage-weight slope
+    # (𝒘 = 𝒄 / 𝟏 / 1/𝒄 — the bold 𝟏 is the all-ones weight vector). The damage row names its
+    # weight factor 𝒘 (a LIST, so 𝒘 — never diag(𝒘)) only while the weight row is on screen; with
+    # weighting hidden it drops to 𝐝 = |𝐞| rather than dangle a reference to a row the reader can't
+    # see. The bare prescaling tile is the only one whose SYMBOL equivalence names the live prescaler
+    # concretely (``𝑋 = 𝐿`` for log-prime, ``𝑋 = diag(𝒑)`` / ``𝑋 = 𝐼`` otherwise, or nothing for a
+    # typed override — see prescaler_equivalence). Its NAME additionally gains "= log-prime matrix"
+    # when 𝑋 = 𝐿 (see effective_captions). The product tiles carry the live glyph as their SYMBOL
+    # (𝐿C/…) and print no "= …".
     ai = service.is_all_interval(tuning_scheme)  # all-interval: kept target tiles use prime-proxy labels
     slope = service.damage_weight_slope(tuning_scheme)
     equivalences = {**EQUIVALENCES,
                     ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                     ("prescaling", "primes"): prescaler_equivalence,
                     **(ALL_INTERVAL_EQUIVALENCES if ai else {})}
-    if slope == "unityWeight":  # no real weight to apply, so the list is just 𝐝 = |𝐞|
+    if not show_weighting:  # the weight row 𝒘 is hidden, so don't dangle it: 𝐝 = |𝐞|
         equivalences[("damage", "targets")] = " = |𝐞|"
     for (rkey, ckey), name in effective_captions.items():
         if ckey == "interest" and not interest:
