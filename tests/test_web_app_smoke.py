@@ -280,17 +280,18 @@ def test_shell_fixes_the_app_to_the_window_framed_by_a_white_margin():
 def test_settings_pane_stacks_a_frozen_header_over_a_scrolling_body():
     # The settings panel can outrun the screen, so — like the grid pane's frozen column titles over
     # its scrolling body — the pane freezes its header and scrolls the toggle groups under it. The
-    # drawer-inner is a flex column that hugs its content but caps at the window height (less the 6px
-    # inset top+bottom); the body scrolls within it so a tall panel never runs off the screen.
+    # drawer-inner is a flex column that hugs its content (no max-height of its own).
     inner = _css_rule(".rtt-drawer-inner")
     assert "display:flex" in inner and "flex-direction:column" in inner
-    assert "max-height:calc(100vh - 12px)" in inner  # hugs content, capped at the window (not height:100%)
     # the header (select-all/none + the show/example titles) never shrinks or scrolls...
     assert "flex:none" in _css_rule(".rtt-show-frozen")
-    # ...and the groups scroll within the capped pane (min-height:0 lets the flex child shrink
-    # below its content so the overflow scrolls rather than forcing the pane taller)
+    # ...and the groups sit in a body that sizes to its OWN content (flex:none, NOT flex:1) and scrolls
+    # (overflow-y:auto) only past a max-height set in render() to (window − inset − header). Sizing to
+    # its own content — rather than the flex remainder — stops a sub-pixel rounding popping a spurious
+    # scrollbar when the panel fits; render() sets the cap (asserted in test_web_render).
     body = _css_rule(".rtt-show-scroll")
-    assert "overflow-y:auto" in body and "min-height:0" in body
+    assert "flex:none" in body and "overflow-y:auto" in body
+    assert "flex:1" not in body  # NOT the flex-fill hug that rounded a hair short and scrolled
 
 
 def test_settings_frozen_seam_sits_below_the_header_not_inside_it():

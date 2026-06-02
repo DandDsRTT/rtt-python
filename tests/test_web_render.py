@@ -393,15 +393,27 @@ def _px(el, prop: str) -> float:
 
 
 async def test_grid_pane_is_sized_to_hug_the_grid_plus_a_margin(user: User) -> None:
-    # the grey grid pane hugs the grid's footprint + a _PAD (12px) margin all round, so render()
-    # sizes it from the layout rather than letting it stretch to fill the window: its width is the
-    # board (body) width + 2·PAD, its height the board height + the column strip + 2·PAD.
+    # the grey grid pane hugs the grid's footprint + a single _PAD (12px) margin at the top-left (the
+    # body fills to the pane's right/bottom edges, so its scrollbars sit there with no grey beyond
+    # them). render() sizes it from the layout: width = board (body) width + PAD, height = board height
+    # + the column strip + PAD.
     await user.open("/")
     pane = next(iter(user.find(marker="gridpane").elements))
     board = next(iter(user.find(marker="board").elements))
     colhead = next(iter(user.find(marker="colhead").elements))
-    assert _px(pane, "width") == _px(board, "width") + 24            # grid width + a 12px margin each side
-    assert _px(pane, "height") == _px(board, "height") + _px(colhead, "height") + 24  # body + strip + margins
+    assert _px(pane, "width") == _px(board, "width") + 12            # grid width + a single 12px margin
+    assert _px(pane, "height") == _px(board, "height") + _px(colhead, "height") + 12  # body + strip + margin
+
+
+async def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_fits(user: User) -> None:
+    # the settings body sizes to its own content but render() caps it at the window less the inset and
+    # the frozen header (calc(100vh - (12 + freeze_y)px)), so it scrolls only once its content genuinely
+    # exceeds that — a self-contained cap that doesn't depend on the flex hug rounding out exactly.
+    await user.open("/")
+    scroll = next(iter(user.find(marker="showscroll").elements))
+    colhead = next(iter(user.find(marker="colhead").elements))
+    fy = _px(colhead, "height")  # the frozen header / column-strip height (freeze_y)
+    assert scroll._style.get("max-height") == f"calc(100vh - {12 + fy}px)"
 
 
 async def test_state_persists_across_a_refresh(user: User) -> None:
