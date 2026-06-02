@@ -160,6 +160,13 @@ def test_math_html_gives_each_maths_letter_explicit_weight_and_slant():
     # ordinary characters (an equivalence tail's " = " and operators) pass through
     assert app._math_html(" = 𝒈𝑀") == (' = <span style="font-weight:700;font-style:italic">g</span>'
                                          '<span style="font-style:italic">M</span>')
+    # the NORM_SUB sentinels force an italic subscript (the complexity row's trailing q)
+    assert app._math_html(spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE) == \
+        '<sub style="font-style:italic">q</sub>'
+    # the SUB sentinels are a PLAIN subscript: in "dual(𝑞)" the function name "dual" stays upright
+    # and only the math-italic 𝑞 slants (the all-interval objective's dual(q) norm power)
+    assert app._math_html(spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE) == \
+        '<sub>dual(<span style="font-style:italic">q</span>)</sub>'
 
 
 def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():

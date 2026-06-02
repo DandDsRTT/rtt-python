@@ -76,6 +76,12 @@ MATLABEL_W = 22  # width reserved left of an EBK ⟨ bracket for row labels (�
 # source text. Two Private-Use-Area code points so they never collide with content.
 NORM_SUB_OPEN = ""
 NORM_SUB_CLOSE = ""
+# A plain (non-italic) subscript. NORM_SUB above forces italic on its whole range, which suits a
+# bare "q" but not "dual(q)" — there "dual" is a function name and must stay upright like everywhere
+# else, with only the math-italic 𝑞 slanting. app._math_html maps these to a bare <sub>, leaving each
+# glyph's slant to its own code point. Next two Private-Use code points after NORM_SUB.
+SUB_OPEN = ""
+SUB_CLOSE = ""
 UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when units shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
@@ -605,8 +611,8 @@ EQUIVALENCES = {
 # list becomes the prime-proxy list Tₚ = I. (Extended as more tiles are specified; the redundant
 # tiles that get removed need no entry here.)
 ALL_INTERVAL_SYMBOLS = {("vectors", "targets"): "Tₚ"}
-ALL_INTERVAL_CAPTIONS = {("vectors", "targets"): "Prime proxy target-interval list"}
-ALL_INTERVAL_EQUIVALENCES = {("vectors", "targets"): " = I"}
+ALL_INTERVAL_CAPTIONS = {("vectors", "targets"): "prime proxy target-interval list"}
+ALL_INTERVAL_EQUIVALENCES = {("vectors", "targets"): " = 𝐼"}
 
 # Each box's "units:" annotation (the mockup's per-box unit line, shown below the name
 # caption when the general `units` toggle is on). The value is plain ASCII — a fraction
@@ -2322,7 +2328,7 @@ def build(state, settings=None, collapsed=None,
         # all-interval: the minimized objective IS the retuning magnitude ‖𝒓𝐿⁻¹‖ at the dual norm
         # power (the mockup's "becomes 'retuning magnitude'") — relabel the symbol, with dual(q) as
         # the norm subscript; its value already computes over the primes.
-        obj_symbol = (f"‖𝒓𝐿⁻¹‖{NORM_SUB_OPEN}dual(𝑞){NORM_SUB_CLOSE}"
+        obj_symbol = (f"‖𝒓𝐿⁻¹‖{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
                       if service.is_all_interval(tuning_scheme) else "⟪𝐝⟫ₚ")
         cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, COL_W, SYMBOL_H,
                              "symbol", text=obj_symbol))

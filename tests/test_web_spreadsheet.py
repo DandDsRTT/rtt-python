@@ -1863,23 +1863,26 @@ def test_all_interval_removes_all_redundant_target_tiles():
 def test_all_interval_relabels_the_optimization_objective():
     # the optimization objective ⟪𝐝⟫ₚ is the minimized total damage; when all-interval that quantity
     # IS the retuning magnitude ‖𝒓𝐿⁻¹‖ at the dual norm power, so the symbol relabels with dual(q)
-    # as the norm subscript. A target-based scheme keeps ⟪𝐝⟫ₚ.
+    # as the norm subscript — a PLAIN subscript (SUB_*) so the function name "dual" stays upright and
+    # only the math-italic 𝑞 slants. A target-based scheme keeps ⟪𝐝⟫ₚ.
     based = {c.id: c for c in _with(scheme="TILT minimax-S", optimization=True).cells}
     assert based["optimization:objective:symbol"].text == "⟪𝐝⟫ₚ"
     allint = {c.id: c for c in _with(scheme="minimax-S", optimization=True).cells}
-    expected = "‖𝒓𝐿⁻¹‖" + spreadsheet.NORM_SUB_OPEN + "dual(𝑞)" + spreadsheet.NORM_SUB_CLOSE
+    expected = "‖𝒓𝐿⁻¹‖" + spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE
     assert allint["optimization:objective:symbol"].text == expected
 
 
 def test_all_interval_relabels_the_target_list_as_prime_proxy():
-    # per the Guide, all-interval relabels the target list: symbol T → Tₚ, equivalence = I, and the
-    # name "Prime proxy target-interval list". A target-based scheme keeps T / "target interval list".
+    # per the Guide, all-interval relabels the target list: symbol T → Tₚ, equivalence = 𝐼 (the
+    # math-italic identity, per the Guide's conventions), and the lowercase name "prime proxy
+    # target-interval list" (this app never capitalizes names). Target-based keeps T / "target
+    # interval list".
     based = {c.id: c for c in _with(scheme="TILT minimax-S", symbols=True, equivalences=True).cells}
     assert based["symbol:vectors:targets"].text == "T"  # no equivalence tail when target-based
     assert based["caption:vectors:targets"].text == "target interval list"
     allint = {c.id: c for c in _with(scheme="minimax-S", symbols=True, equivalences=True).cells}
-    assert allint["symbol:vectors:targets"].text == "Tₚ = I"  # symbol + equivalence tail
-    assert allint["caption:vectors:targets"].text == "Prime proxy target-interval list"
+    assert allint["symbol:vectors:targets"].text == "Tₚ = 𝐼"  # symbol + math-italic equivalence tail
+    assert allint["caption:vectors:targets"].text == "prime proxy target-interval list"
 
 
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():

@@ -489,6 +489,10 @@ _CSS = f"""
    to lock") stay on ONE line — centred under their control, overflowing sideways if need be —
    so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
 .rtt-opt-1line {{ white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }}
+/* the all-interval objective relabels to the retuning magnitude ‖𝒓𝐿⁻¹‖dual(q), far wider than
+   the short ⟪𝐝⟫ₚ — shrink it so it reads within (and stays centred over) its COL_W value cell,
+   overflowing symmetrically rather than clipping if it still spills */
+.rtt-opt-wide {{ font-size:9px; overflow:visible; }}
 /* a left-justified caption sits flush against its left edge (the dropdown it labels), free
    to overhang to the right on one line rather than wrapping (e.g. "predefined prescalers").
    The small left inset aligns the caption's first character vertically with the dropdown's
@@ -1417,6 +1421,12 @@ def _math_html(text):
         if ch == spreadsheet.NORM_SUB_CLOSE:
             out.append('</sub>')
             continue
+        if ch == spreadsheet.SUB_OPEN:  # a plain subscript: each glyph keeps its own slant
+            out.append('<sub>')          # (so "dual" stays upright while the math-italic 𝑞 slants)
+            continue
+        if ch == spreadsheet.SUB_CLOSE:
+            out.append('</sub>')
+            continue
         styled = _demath(ch)
         if styled is None:
             out.append(_escape(ch))
@@ -2337,6 +2347,13 @@ def index() -> None:
                 if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
                     math_cells[cb.id].set_content(html)
                     math_rendered[cb.id] = html
+                    if cb.id == "optimization:objective:symbol":
+                        # all-interval relabels this to the wide retuning magnitude ‖𝒓𝐿⁻¹‖dual(q);
+                        # shrink it (rtt-opt-wide) so it stays centred over its COL_W value
+                        wide = "‖" in cb.text
+                        math_cells[cb.id].classes(
+                            replace="rtt-symbol rtt-opt-1line rtt-opt-wide" if wide
+                            else "rtt-symbol rtt-opt-1line")
             elif cb.kind == "caption":
                 html = _underline_html(cb.text, cb.underlines)
                 if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
