@@ -1409,6 +1409,18 @@ def index() -> None:
     cell_kinds["powerinput"] = _KindHandlers(_build_powerinput, _update_input_text)
     cell_kinds["gentuningcell"] = _KindHandlers(_build_gentuningcell, _update_gentuningcell)
 
+    def _build_ptextedit(cb, wrap):
+        # an editable dual: typing a valid EBK string drives the grid (its own ptext_inputs dict)
+        ptext_inputs[cb.id] = ui.input(value=cb.text,
+                on_change=lambda e, cid=cb.id: on_ptext_edit(cid, e.value)) \
+            .props("dense borderless").classes("rtt-ptextedit")
+
+    def _update_ptextedit(cb):  # reflect the canonical string + its shrink-to-fit font
+        ptext_inputs[cb.id].value = cb.text
+        ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
+
+    cell_kinds["ptextedit"] = _KindHandlers(_build_ptextedit, _update_ptextedit)
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1506,10 +1518,6 @@ def index() -> None:
                     .props(_select_props(cb.w)).classes("rtt-preselect")
             elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
                 labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
-            elif cb.kind == "ptextedit":  # an editable dual: typing a valid EBK string drives the grid
-                ptext_inputs[cb.id] = ui.input(value=cb.text,
-                        on_change=lambda e, cid=cb.id: on_ptext_edit(cid, e.value)) \
-                    .props("dense borderless").classes("rtt-ptextedit")
             elif cb.kind == "tval":
                 cents_face(cb, "rtt-tval")
             elif cb.kind == "colheader":
@@ -1692,9 +1700,6 @@ def index() -> None:
             elif cb.kind == "ptext":  # read-only value: keep its text and shrink-to-fit font in sync
                 labels[cb.id].set_text(cb.text)
                 labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
-            elif cb.kind == "ptextedit":  # reflect the canonical string + its shrink-to-fit font
-                ptext_inputs[cb.id].value = cb.text
-                ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
             elif cb.id in fracs:
                 num, den = _ratio_parts(cb.text) or (cb.text, "")
                 fracs[cb.id][0].set_text(num)
