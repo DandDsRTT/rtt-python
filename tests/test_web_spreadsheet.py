@@ -1784,8 +1784,8 @@ def test_dual_q_requires_the_all_interval_show_entry():
 
 def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
     # the show-panel "all-interval" entry ALONE adds an "all-interval" checkbox to the target-
-    # interval-list controls (it does NOT need the target chooser / preselects): an 18px square
-    # over an "all-interval" caption. It reflects whether the scheme targets every interval — the
+    # interval-list controls (it does NOT need the target chooser / preselects): an OPTION_BOX_PX
+    # square over an "all-interval" caption. It reflects whether the scheme targets every interval — the
     # shipped minimax-S does, so it reads checked. Entry off => no checkbox.
     off = {c.id for c in _with().cells}  # entry off (default)
     assert "control:all_interval" not in off and "caption:all_interval" not in off
@@ -1798,6 +1798,15 @@ def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
     assert cap.kind == "caption" and cap.text == "all-interval"
     assert abs((chk.x + chk.w / 2) - (cap.x + cap.w / 2)) < 1  # square centred above its caption
     assert cap.y == chk.y + chk.h  # the caption hugs the square's bottom
+
+
+def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
+    # the all-interval (and diminuator) checkbox CELL is sized to the rendered square so its
+    # caption hugs it; that square is the SINGLE shared option-box size (OPTION_BOX_PX = 16),
+    # identical to the settings-panel checkboxes and the tuning-ranges monotone/tradeoff boxes.
+    assert spreadsheet.OPTION_BOX_PX == 16
+    chk = {c.id: c for c in _with(all_interval=True).cells}["control:all_interval"]
+    assert chk.h == spreadsheet.OPTION_BOX_PX
 
 
 def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown():
@@ -1845,7 +1854,7 @@ def test_alt_complexity_lays_box_l_out_with_checkbox_to_the_right_of_the_dropdow
     assert cap_p.x == on["control:prescaler"].x
     assert cap_p.y == on["control:prescaler"].y + on["control:prescaler"].h
     # the diminuator caption HUGS the checkbox square's bottom: the cell is sized to the rendered
-    # square (CHECK_SQUARE), so its bottom IS the square's bottom and the caption sits right under it
+    # square (OPTION_BOX_PX), so its bottom IS the square's bottom and the caption sits right under it
     cap_d = on["caption:diminuator"]
     assert cap_d.kind == "caption"
     assert cap_d.text == "ignore diminuator"

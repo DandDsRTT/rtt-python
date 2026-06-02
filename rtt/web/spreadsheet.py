@@ -53,9 +53,10 @@ LBOX_W = LBOX_DROP_W + 8 + LBOX_DIM_W  # the box-𝐋 controls' total footprint 
 CBOX_DROP_W = 170   # the predefined-complexities dropdown (inverted display names "lp (log-product)" …)
 CBOX_SLOT_W = 60    # the q / dual(q) symbol/caption slots (the value cell is COL_W centred within)
 CBOX_W = CBOX_DROP_W + 8 + CBOX_SLOT_W + 8 + CBOX_SLOT_W  # the box-𝒄 controls' total footprint
-CHECK_SQUARE = 18   # the rendered checkbox square's px footprint: the .rtt-control-check q-checkbox
-# draws an 18px bg square (a 20px inner at its 40px font-size). The diminuator cell is sized to this
-# so the square centres on the prescaler dropdown's row and its caption hugs the square's own bottom
+OPTION_BOX_PX = 16   # the one shared size for every small option square: every q-checkbox box (the
+#                      settings panel, the box-𝐋 diminuator, the target-controls all-interval check)
+#                      and the tuning-ranges monotone/tradeoff radio boxes. app.py pins the q-checkbox
+#                      CSS and the .rtt-rangebox to this, and the control-check CELL hugs the square.
 PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 TARGET_PRESELECT_W = 144  # wider: the target chooser seats a 30px gridded limit square + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
@@ -2118,7 +2119,7 @@ def build(state, settings=None, collapsed=None,
     if lbox_ctrl:  # box 𝐋's controls sit on one row at the bottom of the prescaling matrix:
         # the prescaler dropdown on the left (LBOX_DROP_W wide, PRESELECT_H tall), the "ignore
         # diminuator" checkbox SQUARE on the right (no inline label — it wraps broken in the narrow
-        # primes column). The diminuator's CELL is sized to the rendered square (CHECK_SQUARE) and
+        # primes column). The diminuator's CELL is sized to the rendered square (OPTION_BOX_PX) and
         # rides vertically CENTRED on the dropdown's row, so the square aligns with the dropdown's
         # middle rather than sagging below it. EACH caption HUGS its own control's bottom: the
         # prescaler's under the dropdown (at PRESELECT_H), the diminuator's right under the square —
@@ -2126,11 +2127,11 @@ def build(state, settings=None, collapsed=None,
         # The column was widened up front (by _control_floor) to LBOX_W so nothing overhangs.
         py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
         dim_slot_x = col_x["primes"] + LBOX_DROP_W + OPT_COL_GAP
-        check_y = py + (PRESELECT_H - CHECK_SQUARE) / 2  # centre the square on the dropdown's row
+        check_y = py + (PRESELECT_H - OPTION_BOX_PX) / 2  # centre the square on the dropdown's row
         cells.append(CellBox("control:prescaler", col_x["primes"], py, LBOX_DROP_W, PRESELECT_H,
                              "control_select", text=service.prescaler_of(tuning_scheme),
                              values=tuple(service.PRESCALERS)))
-        cells.append(CellBox("control:diminuator", dim_slot_x, check_y, LBOX_DIM_W, CHECK_SQUARE,
+        cells.append(CellBox("control:diminuator", dim_slot_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
                              "control_check", text="",  # square only; label moves to a caption below
                              checked=service.diminuator_ignored(tuning_scheme)))
         # the prescaler's caption is one line, left-justified to the dropdown's edge,
@@ -2138,7 +2139,7 @@ def build(state, settings=None, collapsed=None,
         cells.append(CellBox("caption:prescaler", col_x["primes"], py + PRESELECT_H,
                              col_w["primes"], CAPTION_LINE, "caption",
                              text="predefined prescalers", align="left"))
-        cells.append(CellBox("caption:diminuator", dim_slot_x, check_y + CHECK_SQUARE, LBOX_DIM_W,
+        cells.append(CellBox("caption:diminuator", dim_slot_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="ignore diminuator"))
     if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
         # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q
@@ -2672,13 +2673,13 @@ def build(state, settings=None, collapsed=None,
         return ctrl_x, dropdown_w, ctrl_y
 
     def emit_all_interval_check(check_x, ctrl_y):
-        # the all-interval checkbox + its caption, seated on a control row at ctrl_y: an 18px square
-        # over an "all-interval" caption in an LBOX_DIM_W slot (the box-𝐋 diminuator's shape). It
+        # the all-interval checkbox + its caption, seated on a control row at ctrl_y: an OPTION_BOX_PX
+        # square over an "all-interval" caption in an LBOX_DIM_W slot (the box-𝐋 diminuator's shape). It
         # reflects whether the scheme targets every interval (ticking it is wired in app.py).
-        check_y = ctrl_y + (PRESELECT_H - CHECK_SQUARE) / 2  # centre the square on the control row
-        cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, CHECK_SQUARE,
+        check_y = ctrl_y + (PRESELECT_H - OPTION_BOX_PX) / 2  # centre the square on the control row
+        cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
                              "control_check", text="", checked=service.is_all_interval(tuning_scheme)))
-        cells.append(CellBox("caption:all_interval", check_x, check_y + CHECK_SQUARE, LBOX_DIM_W,
+        cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="all-interval"))
 
     # preselect chooser dropdowns, in the reserved band below each governing tile's

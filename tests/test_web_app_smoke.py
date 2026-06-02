@@ -458,6 +458,26 @@ def test_show_toggle_labels_wrap_long_names_onto_two_lines():
     assert "line-height:1" in rule
 
 
+def test_every_option_square_renders_at_one_uniform_size():
+    # The settings-panel checkboxes, the box-𝐋 diminuator / target-controls all-interval
+    # checkboxes, and the tuning-ranges monotone/tradeoff radio boxes must all render as the
+    # SAME square. Previously the in-grid control checkboxes were forced larger (font-size:40px
+    # → an 18px box) than the settings (13.5px) and range (16px) boxes; now every q-checkbox box
+    # and the range box are pinned to the one shared option-box size so they read identically.
+    px = f"{spreadsheet.OPTION_BOX_PX}px"
+    assert spreadsheet.OPTION_BOX_PX == 16
+    bg = _css_rule(".q-checkbox__bg")
+    assert f"width:{px}" in bg and f"height:{px}" in bg  # the visible bordered square
+    inner = _css_rule(".q-checkbox__inner")
+    assert f"width:{px}" in inner and f"height:{px}" in inner  # ...and its box model
+    rangebox = _css_rule(".rtt-rangebox")
+    assert f"width:{px}" in rangebox and f"height:{px}" in rangebox
+    # the per-control overrides that made the in-grid control checkboxes oversized are gone —
+    # the universal rules above now size every box, so nothing re-diverges
+    assert ".rtt-control-check .q-checkbox__inner" not in app._CSS
+    assert ".rtt-control-check .q-checkbox__label" not in app._CSS
+
+
 def test_brace_is_one_filled_path_with_width_independent_end_curls():
     # the brace is ONE filled variable-width ribbon computed from the width — no
     # composite pieces (so no seams/overshoot). Only the arm length tracks the

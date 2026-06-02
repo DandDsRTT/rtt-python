@@ -555,15 +555,19 @@ _CSS = f"""
 .rtt-preselect .q-icon {{ font-size:16px; color:#555; }}
 .rtt-control-check {{ width:100%; height:100%; display:flex; justify-content:center;
             align-items:center; }}  /* visually centres the q-checkbox inside its cell wrap */
-.rtt-control-check .q-checkbox__inner {{ font-size:40px; color:#555; }}  /* big in-tile size */
-.rtt-control-check .q-checkbox__label {{ font-size:11px; color:#000; padding-left:3px;
-            line-height:40px; font-family:'Cambria',Georgia,serif; }}
-/* Universal checkbox look — every q-checkbox in the app (settings panel, the box-𝐋
-   diminuator, anywhere else) renders as a plain white square with a thin dark border, no
-   rounded corners, and an INNER filled square when checked (square-radio-dot style,
-   matching the tuning-ranges options). The Material checkmark SVG is hidden and replaced
-   by an ::after pseudo-element painted black when the inner is truthy. */
-.q-checkbox__bg {{ background:#fff !important; border:1px solid #555 !important;
+/* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the box-𝐋
+   diminuator, the target-controls all-interval check, anywhere else) renders as ONE uniform
+   square: a plain white box of OPTION_BOX_PX, thin dark border, no rounded corners, and an
+   INNER filled square when checked (square-radio-dot style, matching the tuning-ranges
+   options). The box model (__inner) and the visible bordered square (__bg) are BOTH pinned to
+   the shared size, overriding Quasar's dense/size scaling, so every box reads identically — no
+   per-control size (the old in-tile font-size:40px) drifts larger than the rest. The Material
+   checkmark SVG is hidden and replaced by an ::after pseudo-element painted black when truthy. */
+.q-checkbox__inner {{ width:{spreadsheet.OPTION_BOX_PX}px !important;
+            min-width:{spreadsheet.OPTION_BOX_PX}px !important; height:{spreadsheet.OPTION_BOX_PX}px !important; }}
+.q-checkbox__bg {{ top:0 !important; left:0 !important; width:{spreadsheet.OPTION_BOX_PX}px !important;
+            height:{spreadsheet.OPTION_BOX_PX}px !important; box-sizing:border-box !important;
+            background:#fff !important; border:1px solid #555 !important;
             border-radius:0 !important; opacity:1 !important; }}
 .q-checkbox__bg::before {{ background:transparent !important; border-radius:0 !important; }}
 .q-checkbox__svg {{ display:none !important; }}
@@ -636,8 +640,8 @@ _CSS = f"""
                   justify-content:center; gap:3px; line-height:1; overflow:hidden;
                   padding:5px 5px 5px 10px; }}  /* top/bottom 5 so the bottom row doesn't touch the box edge */
 .rtt-rangeopt {{ display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }}
-.rtt-rangebox {{ width:16px; height:16px; flex:none; border:1px solid #555; background:#fff;
-                box-sizing:border-box; position:relative; }}
+.rtt-rangebox {{ width:{spreadsheet.OPTION_BOX_PX}px; height:{spreadsheet.OPTION_BOX_PX}px; flex:none;
+                border:1px solid #555; background:#fff; box-sizing:border-box; position:relative; }}
 /* selected = a square "radio": the ring stays and a smaller filled square sits centred
    inside it (like a radio dot, but square) — not a solid fill */
 .rtt-rangeopt-on .rtt-rangebox::after {{ content:""; position:absolute; inset:2px; background:#000; }}
