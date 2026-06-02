@@ -34,9 +34,10 @@ def test_temperament_options_groups_by_limit_with_a_divider_before_each_group():
     options = presets.temperament_options()
     keys = list(options)
     assert [k for k in keys if k.startswith("hdr:")] == ["hdr:5", "hdr:7", "hdr:11", "hdr:13"]
-    # a divider precedes its group's members, and "13-limit" appears in its label
+    # a divider precedes its group's members; its label is just the plain limit name —
+    # the flanking rules are CSS in the chooser popup, not dashes baked into the text
     assert keys.index("hdr:13") < keys.index("13:Marvel")
-    assert "13-limit" in options["hdr:13"] and options["13:Marvel"] == "marvel"
+    assert options["hdr:13"] == "13-limit" and options["13:Marvel"] == "marvel"
     # the same name recurs across limits under distinct values (no collision)
     assert "7:Miracle" in options and "11:Miracle" in options
 

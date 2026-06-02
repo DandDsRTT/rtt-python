@@ -263,7 +263,7 @@ async def test_chooser_popups_open_wide_enough_for_one_line_entries(user: User) 
 
 
 async def test_temperament_divider_rows_render_as_disabled_options(user: User) -> None:
-    # the prime-limit divider rows (── N-limit ──) read as headers, not choices: each is
+    # the prime-limit divider rows (the "N-limit" headers) read as headers, not choices: each is
     # passed to Quasar with disable=True, so the q-item takes no hover highlight and a
     # click on it neither picks it nor closes the popup. The named presets stay pickable.
     await _enable(user, "preselects")

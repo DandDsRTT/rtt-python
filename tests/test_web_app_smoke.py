@@ -235,6 +235,20 @@ def _css_rule(selector):
     return m.group(1)
 
 
+def test_temperament_divider_headers_read_as_centred_grey_full_width_rules():
+    # the prime-limit divider rows read as section headers, not choices: a centred dark-grey
+    # label flanked by rules that span the whole popup (the lines are CSS now, not the old
+    # ── dashes baked into the label text). The label flex-centres its text in dark grey
+    # (#555, not the items' black) and, with the rules as its ::before/::after, negative
+    # margins cancel the item's 8px padding so the flex:1 lines reach the popup's edges.
+    label = _css_rule(".rtt-select-popup .q-item.disabled .q-item__label")
+    assert "justify-content:center" in label   # centred text
+    assert "color:#555" in label                # dark grey, not black
+    assert "margin:0 -8px" in label             # cancels the item padding -> rules reach the edges
+    assert ".q-item.disabled .q-item__label::before" in app._CSS  # the flanking rules...
+    assert "border-top:1px solid #555" in app._CSS                # ...are dark-grey lines
+
+
 def test_sidebar_hugs_its_content_as_a_fixed_left_column():
     # The rail + settings drawer share .rtt-panelgroup, the app's fixed left sidebar (flex:none, and
     # no position:sticky — the page never scrolls). Under the shell's align-items:flex-start it HUGS

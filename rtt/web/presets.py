@@ -110,10 +110,12 @@ def temperament_options() -> dict[str, str]:
     """Ordered ``{value: label}`` for the temperament chooser: a divider row before
     each prime-limit group, then the temperaments in it, each shown lowercase. The
     divider rows carry the :data:`_DIVIDER_PREFIX` so the chooser renders them disabled
-    — they read as group headers without being pickable values (see :func:`is_divider`)."""
+    — they read as group headers without being pickable values (see :func:`is_divider`).
+    The label is the plain limit name; the chooser styles it as a centred header with rules
+    flanking it (CSS in the popup), so no decorative dashes are baked into the text."""
     options: dict[str, str] = {}
     for limit, group in TEMPERAMENTS_BY_LIMIT:
-        options[f"{_DIVIDER_PREFIX}{limit}"] = f"── {limit}-limit ──"
+        options[f"{_DIVIDER_PREFIX}{limit}"] = f"{limit}-limit"
         for name, _ in group:
             # the value key keeps the canonical proper-name casing (it is the stable id
             # shared with TEMPERAMENT_COMMAS / identify); only the shown label is lowercased
