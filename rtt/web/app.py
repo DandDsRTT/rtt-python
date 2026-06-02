@@ -1036,7 +1036,7 @@ def _chart_ticks(lo, hi):
     to span the returned ticks therefore always shows a gridline past its tallest bar."""
     span = hi - lo
     if span <= 0:
-        return [lo, lo + 1.0]
+        return [lo, lo + 1.0]  # flat data (e.g. all-equal values): a unit axis around it
     raw = span / 4
     mag = 10 ** math.floor(math.log10(raw))
     step = next(m * mag for m in (1, 2, 2.5, 5, 10) if raw <= m * mag)
@@ -1045,7 +1045,9 @@ def _chart_ticks(lo, hi):
     while v <= stop + step * 1e-9:
         ticks.append(round(v, 6))
         v += step
-    return ticks
+    if ticks[-1] == ticks[0]:  # a sub-precision span (floating-point dust ~1e-13, e.g. a
+        return [ticks[0], ticks[0] + 1.0]  # "made to vanish" retuning) rounded to one value:
+    return ticks                           # numerically flat, so scale it flat as for span<=0
 
 
 def _bar_chart(w, h, values, indicator=None, indicator_label=""):

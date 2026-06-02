@@ -473,6 +473,19 @@ def test_bar_chart_indicator_line_is_broken_by_its_power_labelled_objective():
     assert "⟪" not in plain
 
 
+def test_bar_chart_renders_numerically_flat_dust_without_dividing_by_zero():
+    # a retuning that is "made to vanish" (held/comma intervals) cancels to floating-point
+    # dust (~1e-13), not exact zero. That all-but-zero range slips past the exact-equal tick
+    # guard yet collapses to a single value once the ticks are rounded — which zeroed the
+    # axis span and crashed the chart's y-scaling with ZeroDivisionError (hit by clicking
+    # optimize with charts on). Numerically-flat data must render flat, not raise.
+    svg = app._bar_chart(272, 64, (1e-13, -2e-14, 3e-14))  # must not raise
+    assert svg.startswith("<svg") and 'viewBox="0 0 272.00 64.00"' in svg
+    bars = _bars(svg)
+    assert len(bars) == 3  # one (flat) bar per value
+    assert all(abs(h) < 0.01 for _y, h in bars)  # dust rests on the baseline, not blown up
+
+
 def test_range_chart_draws_an_i_beam_with_min_max_labels_for_a_ranged_generator():
     # the generator tuning-ranges chart: a tall I-beam (stem + two caps) for a generator
     # with a range, the max/min cents labelled at its top/bottom caps. The "tuning ranges"
