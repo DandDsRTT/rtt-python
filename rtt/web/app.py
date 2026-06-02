@@ -1288,6 +1288,30 @@ def index() -> None:
     cell_kinds["units"] = _KindHandlers(_build_units, _update_mathcell)
     cell_kinds["caption"] = _KindHandlers(_build_caption, _update_caption)
 
+    def _build_ptextpending(cb, wrap):
+        # comma basis mid-draft: a static two-tone box (the draft is typed into the red grid
+        # cells, not here); content set in the update
+        htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
+
+    def _update_ptextpending(cb):
+        # the committed commas black and the draft vector red (same red as its grid cells)
+        prefix, draft, suffix = service.comma_basis_pending_text(editor.state.comma_basis, editor.pending_comma)
+        htmls[cb.id].set_content(
+            f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
+        htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
+
+    def _build_mathexpr(cb, wrap):
+        exprs[cb.id] = ui.html("").classes("rtt-mathexpr")  # a just value's stacked closed form; drawn in update
+
+    def _update_mathexpr(cb):
+        # redraw (with refit fonts) whenever the expression text or cell width changes
+        if expr_state.get(cb.id) != (cb.text, cb.w):
+            exprs[cb.id].set_content(_mathexpr_html(cb.text, cb.w))
+            expr_state[cb.id] = (cb.text, cb.w)
+
+    cell_kinds["ptextpending"] = _KindHandlers(_build_ptextpending, _update_ptextpending)
+    cell_kinds["mathexpr"] = _KindHandlers(_build_mathexpr, _update_mathexpr)
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1428,13 +1452,8 @@ def index() -> None:
                 ptext_inputs[cb.id] = ui.input(value=cb.text,
                         on_change=lambda e, cid=cb.id: on_ptext_edit(cid, e.value)) \
                     .props("dense borderless").classes("rtt-ptextedit")
-            elif cb.kind == "ptextpending":  # comma basis mid-draft: a static two-tone box (the
-                # draft is typed into the red grid cells, not here), content set in render()
-                htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
             elif cb.kind == "tval":
                 cents_face("rtt-tval")
-            elif cb.kind == "mathexpr":  # a just value's stacked closed form, fit to the cell
-                exprs[cb.id] = ui.html("").classes("rtt-mathexpr")  # content drawn in render()
             elif cb.kind == "colheader":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":
@@ -1656,17 +1675,6 @@ def index() -> None:
             elif cb.kind == "ptextedit":  # reflect the canonical string + its shrink-to-fit font
                 ptext_inputs[cb.id].value = cb.text
                 ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
-            elif cb.kind == "ptextpending":  # comma basis with a draft comma: two-tone, the
-                # committed commas black and the draft vector red (same red as its grid cells)
-                prefix, draft, suffix = service.comma_basis_pending_text(st.comma_basis, editor.pending_comma)
-                htmls[cb.id].set_content(
-                    f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
-                htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
-            elif cb.kind == "mathexpr":
-                # redraw (with refit fonts) whenever the expression text or cell width changes
-                if expr_state.get(cb.id) != (cb.text, cb.w):
-                    exprs[cb.id].set_content(_mathexpr_html(cb.text, cb.w))
-                    expr_state[cb.id] = (cb.text, cb.w)
             elif cb.id in fracs:
                 num, den = _ratio_parts(cb.text) or (cb.text, "")
                 fracs[cb.id][0].set_text(num)
