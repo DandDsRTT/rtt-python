@@ -1196,6 +1196,41 @@ def index() -> None:
             else:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
 
+    # ---- cell-kind handlers (audit #3): each kind's build + update, co-located here so a
+    # built-but-not-filled drift between the two ladders becomes structurally impossible ----
+    # The html-content families build an empty ui.html; the update fills it (re-drawing only
+    # when the cached key changes). The EBK marks, bar chart and range chart share the build.
+    def _build_svgfill(cb, wrap):
+        htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in the update from the cell's px box
+
+    def _update_ebk(cb):
+        # the mark is drawn 1:1 to its px box, so redraw it whenever the box changes size (e.g.
+        # the brace/top bracket as the domain grows) or its pending (red) state flips (a draft
+        # comma's marks committing to black)
+        if ebk_sizes.get(cb.id) != (cb.w, cb.h, cb.pending):
+            htmls[cb.id].set_content(_ebk_svg(cb))
+            ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
+
+    def _update_chart(cb):
+        # redraw when the box resizes OR the underlying data / indicator changes
+        key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
+        if chart_keys.get(cb.id) != key:
+            htmls[cb.id].set_content(
+                _bar_chart(cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label))
+            chart_keys[cb.id] = key
+
+    def _update_rangechart(cb):
+        # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit)
+        key = (cb.w, cb.h, cb.ranges, cb.values)
+        if range_keys.get(cb.id) != key:
+            htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges, cb.values))
+            range_keys[cb.id] = key
+
+    for _ebk_kind in _EBK_SVG_KINDS:  # bracket / ebktop / ebkbrace / ebkangle / vbar
+        cell_kinds[_ebk_kind] = _KindHandlers(_build_svgfill, _update_ebk)
+    cell_kinds["chart"] = _KindHandlers(_build_svgfill, _update_chart)
+    cell_kinds["rangechart"] = _KindHandlers(_build_svgfill, _update_rangechart)
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1257,12 +1292,6 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "count":  # a scalar "symbol = value" (the counts row's 𝑑 = 3 etc.)
                 math_cells[cb.id] = ui.html("").classes("rtt-count")  # content set in render()
-            elif cb.kind in _EBK_SVG_KINDS:  # ⟨ ] [, top bracket, brace, vector rule
-                htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in render() from its px box
-            elif cb.kind == "chart":
-                htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # bar chart drawn in render()
-            elif cb.kind == "rangechart":
-                htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # I-beam ranges chart drawn in render()
             elif cb.kind == "rangemode":  # the monotone/tradeoff range selector under the ranges chart
                 wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
                 opts = {}
@@ -1556,26 +1585,6 @@ def index() -> None:
             entry = cell_kinds.get(cb.kind)
             if entry is not None and entry.update is not None:
                 entry.update(cb)
-            elif cb.kind in _EBK_SVG_KINDS:
-                # the mark is drawn 1:1 to its px box, so redraw it whenever the box
-                # changes size (e.g. the brace/top bracket as the domain grows) or its
-                # pending (red) state flips (a draft comma's marks committing to black)
-                if ebk_sizes.get(cb.id) != (cb.w, cb.h, cb.pending):
-                    htmls[cb.id].set_content(_ebk_svg(cb))
-                    ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
-            elif cb.kind == "chart":
-                # redraw when the box resizes OR the underlying data / indicator changes
-                key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
-                if chart_keys.get(cb.id) != key:
-                    htmls[cb.id].set_content(
-                        _bar_chart(cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label))
-                    chart_keys[cb.id] = key
-            elif cb.kind == "rangechart":
-                # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit)
-                key = (cb.w, cb.h, cb.ranges, cb.values)
-                if range_keys.get(cb.id) != key:
-                    htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges, cb.values))
-                    range_keys[cb.id] = key
             elif cb.kind == "rangemode":  # fill the live mode's square (the other's is hollow)
                 for mode, opt in rangeopts[cb.id].items():
                     (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
