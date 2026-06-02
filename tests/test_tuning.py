@@ -4,15 +4,17 @@ import pytest
 
 from rtt.parsing import parse_temperament_data
 from rtt.tuning import (
-    TuningSchemeSpec,
-    complexity_name_traits,
-    damage_name_traits,
     generator_tuning_map_from_t_and_tuning_map,
     get_complexity,
     get_dual_power,
     get_just_tuning_map,
     optimize_generator_tuning_map,
     optimize_tuning_map,
+)
+from rtt.tuning_scheme_names import (
+    TuningSchemeSpec,
+    complexity_name_traits,
+    damage_name_traits,
 )
 from rtt.temperament import Temperament, Variance
 

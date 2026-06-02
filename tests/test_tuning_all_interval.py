@@ -10,9 +10,11 @@ import pytest
 
 from rtt.parsing import parse_temperament_data
 from rtt.tuning import (
-    TuningSchemeSpec,
     optimize_generator_tuning_map,
     optimize_tuning_map,
+)
+from rtt.tuning_scheme_names import (
+    TuningSchemeSpec,
     tuning_scheme_from_systematic_name,
 )
 

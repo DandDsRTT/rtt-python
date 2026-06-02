@@ -10,12 +10,12 @@ import pytest
 
 from rtt.parsing import parse_temperament_data
 from rtt.tuning import (
-    TuningSchemeSpec,
     get_generator_tuning_map_damages,
     get_generator_tuning_map_mean_damage,
     get_tuning_map_damages,
     get_tuning_map_mean_damage,
 )
+from rtt.tuning_scheme_names import TuningSchemeSpec
 
 TOL = 1e-3
 MEANTONE = "[⟨1 1 0] ⟨0 1 4]}"

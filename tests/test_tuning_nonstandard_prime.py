@@ -9,7 +9,8 @@ from math import inf
 import pytest
 
 from rtt.parsing import parse_temperament_data
-from rtt.tuning import TuningSchemeSpec, optimize_generator_tuning_map
+from rtt.tuning import optimize_generator_tuning_map
+from rtt.tuning_scheme_names import TuningSchemeSpec
 
 TOL = 1e-2
 

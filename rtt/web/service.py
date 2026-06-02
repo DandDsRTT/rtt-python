@@ -33,18 +33,20 @@ from rtt.target_intervals import (
 )
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
-    TuningSchemeSpec,
-    complexity_name_traits,
     damage_weights,
     get_complexity,
     get_complexity_prescaler,
     get_just_tuning_map,
     optimize_generator_tuning_map,
     optimize_tuning_map,
-    resolve_tuning_scheme,
     tuning_map_from_generators,
 )
 from rtt.tuning_ranges import get_generator_tuning_range
+from rtt.tuning_scheme_names import (
+    TuningSchemeSpec,
+    complexity_name_traits,
+    resolve_tuning_scheme,
+)
 
 DEFAULT_TUNING_SCHEME = "minimax-S"  # the as-shipped scheme
 DEFAULT_TARGET_SPEC = "TILT"  # the default target interval set family (tracks the domain)
