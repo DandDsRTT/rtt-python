@@ -636,15 +636,16 @@ UNITS = {
     ("retune", "targets"): "¢",
     ("retune", "interest"): "¢",
     ("damage", "targets"): "¢",
-    # the weighting region (per the mockup): the prescaler matrix L is octaves per basis
-    # element (oct/b), L applied to a vector set is plain octaves (oct); complexity is in
-    # complexity units (C) — a map over the primes (C)/b, a list elsewhere (C); weight too.
-    ("prescaling", "primes"): "oct/b",
+    # the weighting region (per the mockup): the prescaler matrix L is octaves per prime
+    # (oct/p — the prescaler has one diagonal entry per prime, like the mapping's g/p), L
+    # applied to a vector set is plain octaves (oct); complexity is in complexity units (C)
+    # — a map over the primes (C)/p, a list elsewhere (C); weight too.
+    ("prescaling", "primes"): "oct/p",
     ("prescaling", "commas"): "oct",
     ("prescaling", "detempering"): "oct",
     ("prescaling", "targets"): "oct",
     ("prescaling", "interest"): "oct",
-    ("complexity", "primes"): "(C)/b",
+    ("complexity", "primes"): "(C)/p",
     ("complexity", "commas"): "(C)",
     ("complexity", "detempering"): "(C)",
     ("complexity", "targets"): "(C)",

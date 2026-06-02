@@ -196,9 +196,9 @@ def test_units_html_bolds_variables_but_not_cents_oct_or_slash():
     assert per_box == '<span class="rtt-units-pre">units: </span><b>g</b>/<b>p</b>'
     assert app._units_html("units: ¢/g") == '<span class="rtt-units-pre">units: </span>¢/<b>g</b>'
     assert app._units_html("units: ¢") == '<span class="rtt-units-pre">units: </span>¢'
-    # "oct" is a unit like ¢, so it stays un-bold; the basis-element "b" denominator is bold
+    # "oct" is a unit like ¢, so it stays un-bold; the prime "p" denominator is bold
     assert app._units_html("units: oct") == '<span class="rtt-units-pre">units: </span>oct'
-    assert app._units_html("units: oct/b") == '<span class="rtt-units-pre">units: </span>oct/<b>b</b>'
+    assert app._units_html("units: oct/p") == '<span class="rtt-units-pre">units: </span>oct/<b>p</b>'
     # bare domain-units coordinate labels: variables bold, ¢/oct and / plain, the "1" placeholder bold
     assert app._units_html("g₁/") == "<b>g₁</b>/"
     assert app._units_html("/p₁") == "/<b>p₁</b>"

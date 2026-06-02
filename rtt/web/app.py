@@ -1435,10 +1435,10 @@ _UNIT_PLAIN = ("oct", "¢", "/", " ")
 
 
 def _bold_units(value):
-    """A unit value with its variable symbols bold (the unit letters g/p/b and the
+    """A unit value with its variable symbols bold (the unit letters g/p and the
     placeholder 1, plus any subscript), leaving the units ¢ and ``oct`` and the ``/``
     separator un-bold. Bolds maximal runs of variable characters so e.g. ``g₁/`` →
-    ``<b>g₁</b>/``, ``oct/b`` → ``oct/<b>b</b>``. All text HTML-escaped."""
+    ``<b>g₁</b>/``, ``oct/p`` → ``oct/<b>p</b>``. All text HTML-escaped."""
     out, run = [], []
 
     def flush():

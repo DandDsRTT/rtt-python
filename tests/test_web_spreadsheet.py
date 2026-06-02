@@ -1601,9 +1601,9 @@ def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
 def test_weighting_rows_show_their_units_line_when_units_on():
     cells = {c.id: c for c in _with(weighting=True, units=True).cells}
     # the per-box "units:" line below each caption, per the mockup
-    assert cells["units:prescaling:primes"].text == "units: oct/b"   # the prescaler matrix L
+    assert cells["units:prescaling:primes"].text == "units: oct/p"   # the prescaler matrix L
     assert cells["units:prescaling:targets"].text == "units: oct"     # L applied to a vector set
-    assert cells["units:complexity:primes"].text == "units: (C)/b"    # the domain-prime complexity map
+    assert cells["units:complexity:primes"].text == "units: (C)/p"    # the domain-prime complexity map
     assert cells["units:complexity:targets"].text == "units: (C)"     # a complexity list
     assert cells["units:weight:targets"].text == "units: (C)"
 
