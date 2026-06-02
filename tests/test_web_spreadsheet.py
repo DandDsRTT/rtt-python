@@ -1759,29 +1759,33 @@ def test_alt_complexity_adds_a_prescaler_dropdown_to_the_prescaling_box():
     assert ctrl.w < on["header:primes"].w
 
 
-def test_alt_complexity_adds_a_predefined_complexity_chooser_to_box_c():
-    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
-    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
-    assert "control:complexity" not in off  # no control unless alt. complexity is on
+def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_complexity():
+    # box 𝒄's predefined-complexities dropdown shows with WEIGHTING alone — it no longer waits on
+    # the shelved alt_complexity. Until alt-complexities are un-shelved it offers ONLY the current
+    # complexity (lp for every scheme today), so the user can't pick an unimplemented complexity;
+    # turning alt_complexity on restores the full preset list (+ the inert "custom").
+    on = {c.id: c for c in _with(weighting=True).cells}  # weighting on, alt_complexity OFF (shelved)
     ctrl = on["control:complexity"]
     assert ctrl.kind == "control_select"
     # the dropdown shows the friendly display name (abbreviation first, expansion in parens) —
     # for the default scheme (log-prime taxicab) that's "lp (log-product)"
     assert ctrl.text == "lp (log-product)"
-    # the dropdown's options are the friendly display names (abbreviation + parenthetical
-    # expansion), plus the inert "custom" shown when the fine controls leave the shape off-preset
-    assert ctrl.values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
+    assert ctrl.values == ("lp (log-product)",)  # lp-only while alt-complexities are shelved
     # the master chooser sits below the complexity list (box 𝒄), at the targets-column left edge
     assert ctrl.y > on["complexity:target:0"].y
     assert ctrl.x == on["header:targets"].x
+    # un-shelving alt_complexity restores the full preset list + custom
+    full = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
 
 
-def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
+def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields():
     # box 𝒄 lays its three controls left-to-right: [predefined complexities ▼] | q | dual(q),
-    # each with a caption beneath. The q (norm power) and dual(q) fields follow the optimization
-    # box's value-over-symbol-over-caption pattern (the 𝑝 / "optimization power" style); the
-    # dropdown has just a caption (no symbol slot). dual(q) needs an all-interval scheme.
-    on = {c.id: c for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True, all_interval=True).cells}
+    # each with a caption beneath. It shows with WEIGHTING alone (no alt_complexity); the q (norm
+    # power) and dual(q) fields follow the optimization box's value-over-symbol-over-caption pattern
+    # (the 𝑝 / "optimization power" style); the dropdown has just a caption (no symbol slot).
+    # dual(q) needs an all-interval scheme.
+    on = {c.id: c for c in _with(scheme="minimax-S", weighting=True, all_interval=True).cells}
     # the predefined-complexities dropdown carries its caption HUGGING its bottom (rather than
     # bottom-aligned with the q/dual captions further down the row)
     assert on["caption:complexity"].kind == "caption"
@@ -1815,10 +1819,11 @@ def test_alt_complexity_lays_box_c_out_with_q_and_dual_q_norm_power_fields():
 def test_dual_q_shows_only_when_the_scheme_is_all_interval():
     # dual(q) is gated on the all-interval CHECKBOX (is_all_interval), NOT the show-panel entry:
     # an all-interval scheme renders dual(q); a target-based scheme hides it. The q field and the
-    # predefined-complexities dropdown always show with box 𝒄 — only the dual power is gated.
-    on_all = {c.id for c in _with(scheme="minimax-S", weighting=True, alt_complexity=True).cells}
+    # predefined-complexities dropdown show with WEIGHTING regardless of all-interval — only the
+    # dual power is gated.
+    on_all = {c.id for c in _with(scheme="minimax-S", weighting=True).cells}
     assert {"control:dual", "symbol:dual", "caption:dual"} <= on_all
-    on_tilt = {c.id for c in _with(scheme="TILT minimax-S", weighting=True, alt_complexity=True).cells}
+    on_tilt = {c.id for c in _with(scheme="TILT minimax-S", weighting=True).cells}
     assert not ({"control:dual", "symbol:dual", "caption:dual"} & on_tilt)
     assert {"control:q", "control:complexity"} <= on_tilt  # q + dropdown show regardless of all-interval
 

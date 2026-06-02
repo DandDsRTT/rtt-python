@@ -1017,7 +1017,11 @@ def build(state, settings=None, collapsed=None,
     _lbox_show = (show_alt_complexity and settings["temperament_boxes"]
                   and "col:primes" not in collapsed and "row:prescaling" not in collapsed
                   and "tile:prescaling:primes" not in collapsed)
-    _cbox_show = (show_alt_complexity and settings["tuning_boxes"]
+    # box 𝒄 (the predefined-complexity dropdown + the q / dual(q) norm-power fields) shows with
+    # WEIGHTING alone — the complexity norm is core to the weighting story, not an alt.-complexity
+    # extra. alt_complexity (shelved) only widens the dropdown's OPTIONS (below); dual(q) within is
+    # gated separately on the all-interval scheme. Boxes 𝐋/𝒘 stay on show_alt_complexity.
+    _cbox_show = (show_weighting
                   and "col:targets" not in collapsed and "row:complexity" not in collapsed
                   and "tile:complexity:targets" not in collapsed)
     # audio is a top-level toggle (not nested under the tuning boxes): it adds the just /
@@ -2201,13 +2205,15 @@ def build(state, settings=None, collapsed=None,
         slot_w = CBOX_SLOT_W
         # the predefined-complexities master dropdown. The dropdown stores the short internal
         # key ("lp", "copfr", …) but presents the inverted-form display name ("lp (log-product)",
-        # …). "custom" is always an option (the reconciler keeps a control_select's options
-        # fixed), shown when the fine controls leave the shape off the preset list; selecting
-        # it is inert. The dropdown's caption hugs its bottom (rather than bottom-aligning with
-        # the q/dual captions further down).
+        # …). While alt-complexities are shelved it offers ONLY the current complexity (lp for every
+        # scheme today) so the user can't pick an unimplemented one; un-shelving alt_complexity opens
+        # the full preset list + the inert "custom" (shown when the fine controls leave the shape
+        # off-preset). The caption hugs its bottom (rather than bottom-aligning with the q/dual
+        # captions further down).
         complexity_key = service.complexity_name_of(tuning_scheme)
         complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
-        complexity_values = tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
+        complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
+                             if settings["alt_complexity"] else (complexity_text,))
         cells.append(CellBox("control:complexity", col_x["targets"], cy, drop_w, PRESELECT_H,
                              "control_select", text=complexity_text, values=complexity_values))
         cells.append(CellBox("caption:complexity", col_x["targets"], cy + PRESELECT_H, drop_w,
