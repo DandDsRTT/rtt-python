@@ -22,6 +22,9 @@ bare glyph — so it only makes sense when symbols are shown.
 
 from __future__ import annotations
 
+# NB: every key here also needs a hover-text entry in ``rtt.web.tooltips.SHOW_HELP`` — the
+# settings panel reads it for each toggle's tooltip, and ``test_web_tooltips`` enforces the
+# match (``SHOW_HELP`` == ``DEFAULTS``), so adding a toggle without its help text fails the suite.
 SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
         "general",

@@ -1,11 +1,19 @@
 """Hover text (tooltips) for the Show settings and the interactive grid controls.
 
-One place for every control's explanatory hover text, so the wording can be revised
-without touching the layout (:mod:`rtt.web.spreadsheet`) or the renderer
-(:mod:`rtt.web.app`). :data:`SHOW_HELP` keys by Show-toggle key (see
-:mod:`rtt.web.settings`); :data:`CHROME_HELP` covers the app-chrome buttons; and
-:func:`control_help` maps a grid cell's ``(kind, id)`` to its hover text, returning
-``None`` for the read-only value/label cells that aren't controls.
+THIS MODULE IS THE SINGLE HOME for every hover string in the app — to refine any wording,
+edit it here and nowhere else. The settings panel, the layout (:mod:`rtt.web.spreadsheet`)
+and the renderer (:mod:`rtt.web.app`) only *reference* these tables; they hold no hover
+text of their own.
+
+  - :data:`SHOW_HELP`   — one entry per Show-toggle key (see :mod:`rtt.web.settings`).
+  - :data:`CHROME_HELP` — the app-chrome buttons (undo / redo / reset / settings / select-all).
+  - :func:`control_help` — a grid cell's ``(kind, id)`` → its hover text, or ``None`` for
+    the read-only output kinds listed in :data:`READONLY_KINDS`.
+
+Coverage is test-enforced (``tests/test_web_tooltips.py``): ``SHOW_HELP`` must match
+``settings.DEFAULTS``, every editable dual must match ``spreadsheet.EDITABLE_PTEXT``, and
+every kind a full-feature build renders must be either in ``READONLY_KINDS`` or carry help
+— so a new setting or control can't ship without its hover text.
 """
 
 from __future__ import annotations
@@ -57,6 +65,17 @@ CHROME_HELP: dict[str, str] = {
     "reset": "Reset everything — settings, layout, and values — to the defaults.",
 }
 
+
+# The read-only OUTPUT kinds — value cells, labels, symbols, captions, brackets, charts.
+# They are not controls, so control_help returns None for them. Declared here (not only in
+# the test) so the whole tooltip taxonomy lives in one place; the completeness test asserts
+# every kind a full build renders is either listed here or carries help.
+READONLY_KINDS: frozenset[str] = frozenset({
+    "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tval",
+    "genratio", "target", "commaratio", "mathexpr", "ptext", "ptextpending",
+    "symbol", "matlabel", "units", "caption", "count", "boxtitle",
+    "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",
+})
 
 # Hover text per interactive cell kind whose meaning is fixed by the kind alone.
 # (Kinds backing several controls are disambiguated by id in _ID_HELP below.)
@@ -139,6 +158,8 @@ def control_help(kind: str, cid: str) -> str | None:
     Keyed on the cell's ``kind`` (see :mod:`rtt.web.spreadsheet`), with a few kinds
     disambiguated by their ``id`` where one kind backs several controls (e.g. a
     ``powerinput`` is the optimization power 𝑝, the norm power 𝑞, or its dual)."""
+    if kind in READONLY_KINDS:
+        return None
     if kind == "preselect":
         return _PRESELECT_HELP.get(cid.split(":")[1])
     if kind == "ptextedit":

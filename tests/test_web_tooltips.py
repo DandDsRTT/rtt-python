@@ -5,6 +5,7 @@ import pytest
 from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
 from rtt.web import tooltips
+from rtt.web.editor import Editor
 
 
 def test_show_help_covers_every_toggle_with_nonempty_text():
@@ -13,17 +14,9 @@ def test_show_help_covers_every_toggle_with_nonempty_text():
     assert all(text.strip() for text in tooltips.SHOW_HELP.values())
 
 
-# read-only cell kinds are outputs, not controls, so they get no tooltip
-_READONLY_KINDS = [
-    "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tval",
-    "genratio", "target", "commaratio", "mathexpr", "ptext", "ptextpending",
-    "symbol", "matlabel", "units", "caption", "count", "boxtitle",
-    "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",
-]
-
-
-@pytest.mark.parametrize("kind", _READONLY_KINDS)
+@pytest.mark.parametrize("kind", sorted(tooltips.READONLY_KINDS))
 def test_control_help_is_none_for_readonly_kinds(kind):
+    # the read-only output kinds are declared once, in tooltips.READONLY_KINDS
     assert tooltips.control_help(kind, f"{kind}:mapping:primes") is None
 
 
@@ -122,6 +115,33 @@ def test_every_editable_dual_has_a_distinct_tooltip():
     texts = [tooltips.control_help("ptextedit", cid) for cid in ids]
     assert all((t or "").strip() for t in texts)
     assert len(set(texts)) == len(ids)
+
+
+def _rendered_cells():
+    """Cells from a broad sweep of builds: the out-of-box document, plus one with every
+    implemented Show layer on and nothing collapsed. The union covers the reachable
+    interactive + read-only surface, so a new unclassified kind can't slip through."""
+    cells = list(Editor().layout().cells)
+    full = Editor()
+    for key in full.settings:
+        full.settings[key] = key in show_settings.IMPLEMENTED
+    full.collapsed = set()  # expand every row / column / tile so all their cells render
+    cells += full.layout().cells
+    return cells
+
+
+def test_every_rendered_cell_is_classified_for_tooltips():
+    # the safety net behind control_help: sweep a full build and require each rendered cell to
+    # be either a declared read-only output (no tooltip) or an interactive control with hover
+    # text. A brand-new control kind with no tooltips.py entry trips this — closing the gap a
+    # hardcoded test list would leave open.
+    for cb in _rendered_cells():
+        text = tooltips.control_help(cb.kind, cb.id)
+        if cb.kind in tooltips.READONLY_KINDS:
+            assert text is None, f"read-only {cb.kind!r} ({cb.id}) should carry no tooltip"
+        else:
+            assert (text or "").strip(), (
+                f"control {cb.kind!r} ({cb.id}) has no hover text — add it in rtt/web/tooltips.py")
 
 
 def test_chrome_help_covers_the_app_chrome_buttons():

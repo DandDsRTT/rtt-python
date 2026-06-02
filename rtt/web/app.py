@@ -1388,6 +1388,8 @@ def index() -> None:
                     .props(f'data-audio="{tile}" data-actrl="{ctrl}"') \
                     .on("click", js_handler=f"() => window.rttAudio.{fn}('{tile}')")
         # explanatory hover text for the interactive controls (read-only value cells get none).
+        # All wording lives in rtt.web.tooltips; a NEW cell kind must be classified there
+        # (in READONLY_KINDS or with a help entry) or test_web_tooltips' completeness sweep fails.
         # The mark/data-eid ride the wrap, so the tooltip hangs off it too — one shared anchor.
         help_text = tooltips.control_help(cb.kind, cb.id)
         if help_text:
