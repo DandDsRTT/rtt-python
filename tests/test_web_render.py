@@ -265,15 +265,34 @@ async def test_chooser_popups_open_wide_enough_for_one_line_entries(user: User) 
 async def test_temperament_divider_rows_render_as_disabled_options(user: User) -> None:
     # the prime-limit divider rows (── N-limit ──) read as headers, not choices: each is
     # passed to Quasar with disable=True, so the q-item takes no hover highlight and a
-    # click on it neither picks it nor closes the popup. The named presets and the
-    # "choose temperament" placeholder stay pickable.
+    # click on it neither picks it nor closes the popup. The named presets stay pickable.
     await _enable(user, "preselects")
     select = _cell_child(user, "preselect:temperament")
     option_by_value = dict(zip(select._values, select._props["options"]))
     assert option_by_value["hdr:5"]["disable"] is True
     assert option_by_value["hdr:13"]["disable"] is True
     assert "disable" not in option_by_value["13:Marvel"]
-    assert "disable" not in option_by_value[""]
+
+
+async def test_temperament_chooser_omits_the_choose_temperament_prompt_from_its_list(user: User) -> None:
+    # "choose temperament" is a placeholder prompt, not a temperament. The open list holds
+    # only the prime-limit dividers and their presets — there is no pickable "choose
+    # temperament" row, and no "" sentinel value sitting behind one.
+    await _enable(user, "preselects")
+    select = _cell_child(user, "preselect:temperament")
+    assert "" not in select._values
+    assert "choose temperament" not in select._labels
+
+
+async def test_temperament_chooser_shows_the_prompt_as_a_placeholder_when_no_preset_matches(user: User) -> None:
+    # the prompt lives in the closed box, not the list: with a preset active (the default
+    # meantone) the box shows that preset and no override; once the mapping leaves every
+    # preset the box falls back to "choose temperament" via Quasar's display-value.
+    await _enable(user, "preselects")
+    assert "display-value" not in _cell_child(user, "preselect:temperament")._props
+    _cell_child(user, "cell:mapping:1:2").set_value("7")  # 4 -> 7 leaves the meantone preset
+    await user.should_see(marker="preselect:temperament")
+    assert _cell_child(user, "preselect:temperament")._props.get("display-value") == "choose temperament"
 
 
 async def test_optimization_renders_the_optimize_button(user: User) -> None:

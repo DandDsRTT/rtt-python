@@ -1475,6 +1475,17 @@ class _GroupedSelect(ui.select):
                 option["disable"] = True
 
 
+def _set_temperament_prompt(select: ui.select, value) -> None:
+    """Show the 'choose temperament' prompt in the temperament chooser's closed box only
+    when the current temperament matches no preset (``value`` is None). It is a Quasar
+    display-value placeholder, so the prompt never appears as a pickable row in the open
+    list; when a preset matches, the override is cleared and Quasar shows its label."""
+    if value is None:
+        select.props('display-value="choose temperament"')
+    else:
+        select.props(remove="display-value")
+
+
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
@@ -1722,8 +1733,9 @@ def index() -> None:
         if building[0]:
             return
         if name == "temperament":
-            # the divider rows are disabled, so only a preset or the "" sentinel reaches
-            # here; the sentinel makes no edit but render() still snaps the box back
+            # the divider rows are disabled and the prompt is a display-value placeholder
+            # (not a row), so only a preset reaches here; load its comma basis as an
+            # undoable edit, then re-render to snap the box onto the now-matching preset.
             if value in presets.TEMPERAMENT_COMMAS:
                 editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
             render()
@@ -1931,14 +1943,17 @@ def index() -> None:
                             .props(_select_props(cb.w - 30)).classes("rtt-preselect")  # field = cell − the 30px square (touching, no gap)
                     selects[cb.id] = (num, sel)
                 elif name == "temperament":
-                    # a normal dropdown: the chosen preset shows in the box; the ""
-                    # sentinel ("choose temperament") shows only when none matches.
-                    # Grouped by prime limit (divider rows) in the open list.
-                    options = {"": "choose temperament", **presets.temperament_options()}
-                    selects[cb.id] = _GroupedSelect(options, value=presets.identify(editor.state) or "",
+                    # a normal dropdown listing only the prime-limit dividers and their
+                    # presets (grouped in the open list). The chosen preset shows in the
+                    # box; when none matches, a "choose temperament" prompt shows there as
+                    # a display-value placeholder — never a pickable row in the list.
+                    value = presets.identify(editor.state)
+                    sel = _GroupedSelect(presets.temperament_options(), value=value,
                             is_divider=presets.is_divider,
                             on_change=lambda e: on_preselect("temperament", e.value)) \
                         .props(_select_props(cb.w)).classes("rtt-preselect")
+                    _set_temperament_prompt(sel, value)
+                    selects[cb.id] = sel
                 else:  # tuning — systematic scheme names; a control-refined scheme has no name
                     scheme = editor.tuning_scheme if isinstance(editor.tuning_scheme, str) else None
                     # alternative-complexity schemes are gated behind the alt. complexity setting
@@ -2227,7 +2242,9 @@ def index() -> None:
                 # preset (or its placeholder), the target chooser splits into limit +
                 # family, the tuning chooser shows its scheme. building[0] guards echoes.
                 if cb.id.startswith("preselect:temperament"):  # base + the comma-basis copy
-                    selects[cb.id].value = presets.identify(editor.state) or ""
+                    value = presets.identify(editor.state)
+                    selects[cb.id].value = value
+                    _set_temperament_prompt(selects[cb.id], value)
                 elif cb.id == "preselect:target":
                     num, sel = selects[cb.id]
                     family = editor.target_family
