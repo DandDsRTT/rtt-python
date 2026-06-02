@@ -331,9 +331,13 @@ class Editor:
             return False
         return True
 
-    def set_tuning_scheme(self, scheme: str) -> None:
+    def set_tuning_scheme(self, name: str) -> None:
+        """Apply a systematic scheme name from the established-tuning-scheme chooser, preserving
+        the current target mode: all-interval when the scheme currently targets every interval,
+        else over the displayed target list (the chooser's 𝑇-prefixed entries). Undoable."""
         self._snapshot()
-        self.tuning_scheme = scheme
+        self.tuning_scheme = name if service.is_all_interval(self.tuning_scheme) \
+            else service.scheme_with_targets(name, self.target_spec)
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
         """Swap the complexity prescaler (the alt.-complexity control in box 𝐋), which

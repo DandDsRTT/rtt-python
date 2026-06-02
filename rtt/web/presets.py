@@ -123,6 +123,16 @@ def temperament_options() -> dict[str, str]:
     return options
 
 
+def tuning_scheme_options(all_interval: bool, include_alternatives: bool) -> dict[str, str]:
+    """The established-tuning-scheme chooser's ``{value: label}``. The offered names are those of
+    :func:`tuning_schemes` (so alternative-complexity schemes stay gated behind that feature); the
+    values are the bare systematic names, and the labels prefix a 𝑇 when the scheme is NOT all-
+    interval, marking that it optimizes over the target interval list rather than every interval
+    (the all-interval checkbox in the target controls flips this)."""
+    prefix = "" if all_interval else "𝑇 "
+    return {name: f"{prefix}{name}" for name in tuning_schemes(include_alternatives)}
+
+
 @functools.lru_cache(maxsize=1)
 def _signature_to_value() -> dict[tuple[tuple[int, ...], ...], str]:
     """Each preset's canonical comma-basis signature -> its chooser value. The

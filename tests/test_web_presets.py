@@ -12,6 +12,21 @@ def test_every_temperament_preset_loads_to_a_state_that_tempers_out_its_commas()
                 assert sum(m * c for m, c in zip(row, comma)) == 0, value
 
 
+def test_tuning_scheme_options_prefix_T_when_not_all_interval():
+    # the established-tuning-scheme chooser prefixes a 𝑇 (target-list) onto each name when the
+    # scheme is NOT all-interval — marking that it optimizes over the target interval list rather
+    # than every interval. All-interval => bare names. Either way the VALUES stay the bare names.
+    all_interval = presets.tuning_scheme_options(True, include_alternatives=True)
+    targeted = presets.tuning_scheme_options(False, include_alternatives=True)
+    assert set(all_interval) == set(targeted) == set(presets.TUNING_SCHEMES)
+    assert all_interval["minimax-S"] == "minimax-S"
+    assert targeted["minimax-S"] == "𝑇 minimax-S"
+    assert all(label.startswith("𝑇 ") for label in targeted.values())
+    assert not any(label.startswith("𝑇") for label in all_interval.values())
+    # composes with the alternative-complexity gate: without alternatives, only the lp scheme
+    assert set(presets.tuning_scheme_options(True, include_alternatives=False)) == {"minimax-S"}
+
+
 def test_temperament_presets_span_prime_limits_5_through_13():
     assert [limit for limit, _ in presets.TEMPERAMENTS_BY_LIMIT] == [5, 7, 11, 13]
     # each limit's commas have one component per prime in that limit (d = π(limit))

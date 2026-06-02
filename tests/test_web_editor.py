@@ -191,6 +191,18 @@ def test_set_all_interval_toggles_the_scheme_target_set():
     assert service.is_all_interval(editor.tuning_scheme) is False
 
 
+def test_set_tuning_scheme_preserves_the_target_mode():
+    # picking a scheme from the chooser keeps the current target mode (the all-interval checkbox):
+    # all-interval by default, but target-based once the box is unchecked (its 𝑇-prefixed entries)
+    editor = Editor()
+    editor.set_tuning_scheme("minimax-ES")  # all-interval by default => applied as-is
+    assert editor.tuning_scheme == "minimax-ES" and service.is_all_interval(editor.tuning_scheme)
+    editor.set_all_interval(False)  # switch to target-based
+    editor.set_tuning_scheme("minimax-ES")  # now applies over the target list, NOT all-interval
+    assert not service.is_all_interval(editor.tuning_scheme)
+    assert service.resolve_tuning_scheme(editor.tuning_scheme).target_intervals == editor.target_spec
+
+
 def test_set_weight_slope_swaps_the_damage_weight_slope():
     editor = Editor()
     assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"  # minimax-S default

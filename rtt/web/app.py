@@ -1759,7 +1759,7 @@ def index() -> None:
                 editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
             render()
         elif name == "tuning" and value is not None:
-            editor.set_tuning_scheme(value)
+            editor.set_tuning_scheme(value)  # the bare name, applied in the live target mode
             render()
 
     def on_form_choose(name, value):
@@ -1972,13 +1972,14 @@ def index() -> None:
                         .props(_select_props(cb.w)).classes("rtt-preselect")
                     _set_offlist_prompt(sel, value)
                     selects[cb.id] = sel
-                else:  # tuning — systematic scheme names; a control-refined scheme has no
-                    # name, shown as the same "-" display-value placeholder as the temperament
-                    # chooser (never a pickable row)
-                    scheme = editor.tuning_scheme if isinstance(editor.tuning_scheme, str) else None
-                    # alternative-complexity schemes are gated behind the alt. complexity setting
-                    options = presets.tuning_schemes(editor.settings["alt_complexity"])
-                    sel = ui.select(list(options), value=scheme,
+                else:  # tuning — systematic scheme names, 𝑇-prefixed when targeting a list (not all-
+                    # interval); a control-refined scheme has no name, shown as the "-" placeholder.
+                    # Alternative-complexity schemes are gated behind the alt. complexity setting.
+                    options = presets.tuning_scheme_options(
+                        service.is_all_interval(editor.tuning_scheme), editor.settings["alt_complexity"])
+                    scheme = editor.tuning_scheme if (isinstance(editor.tuning_scheme, str)
+                                                      and editor.tuning_scheme in options) else None
+                    sel = ui.select(options, value=scheme,
                             on_change=lambda e: on_preselect("tuning", e.value)) \
                         .props(_select_props(cb.w)).classes("rtt-preselect")
                     _set_offlist_prompt(sel, scheme)
