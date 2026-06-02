@@ -1323,6 +1323,92 @@ def index() -> None:
     cell_kinds["ptextpending"] = _KindHandlers(_build_ptextpending, _update_ptextpending)
     cell_kinds["mathexpr"] = _KindHandlers(_build_mathexpr, _update_mathexpr)
 
+    # ---- editable grid-input cells: an input registered in the inputs dict, its value mirrored
+    # in the update. interestcell / heldcell / targetcell / powerinput share the plain-value fill;
+    # prescalercell / gentuningcell also overlay a stacked cents face. ----
+    def _build_mapping(cb, wrap):
+        wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
+        inputs[cb.id] = ui.input(on_change=lambda e: on_mapping_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _update_mapping(cb):
+        inputs[cb.id].value = "" if cb.blank else str(editor.state.mapping[cb.gen][cb.prime])
+
+    def _build_commacell(cb, wrap):
+        wrap.classes("rtt-cell-input")
+        inputs[cb.id] = ui.input(on_change=lambda e: on_comma_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _update_commacell(cb):
+        if cb.pending:  # the draft column: show the typed component (blank if None), red-outlined
+            v = editor.pending_comma[cb.prime] if editor.pending_comma is not None else None
+            inputs[cb.id].value = "" if v is None else str(v)
+        else:
+            inputs[cb.id].value = "" if cb.blank else str(editor.state.comma_basis[cb.comma][cb.prime])
+        inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                              remove="" if cb.pending else "rtt-pending")
+
+    def _build_interestcell(cb, wrap):
+        wrap.classes("rtt-cell-input")
+        inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _build_heldcell(cb, wrap):
+        wrap.classes("rtt-cell-input")
+        inputs[cb.id] = ui.input(on_change=lambda e: on_held_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _build_targetcell(cb, wrap):
+        wrap.classes("rtt-cell-input")
+        inputs[cb.id] = ui.input(on_change=lambda e: on_target_cells_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _update_input_text(cb):  # interestcell / heldcell / targetcell / powerinput: mirror cb.text
+        inputs[cb.id].value = cb.text
+
+    def _build_prescalercell(cb, wrap):
+        # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
+        # tval "0" — 𝐿 is diagonal). Each input dispatches to set_custom_prescaler_entry; the cid
+        # carries the diagonal slot, so the lambda closes over it (a free cb would be the LAST
+        # cell's id by the time the user types)
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
+        inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_prescaler_change(cid)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
+
+    def _update_prescalercell(cb):
+        # reflect the live prescaler diagonal (the override if set, else the scheme-derived value —
+        # spreadsheet.build emits the final text). Blank when quantities are off, like the other cells
+        inputs[cb.id].value = cb.text
+        set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
+
+    def _build_powerinput(cb, wrap):
+        # the optimization power 𝑝, or the box-𝒄 norm power 𝑞. The symbol label rides as a separate
+        # cell below; the field itself shows only the value, in the bordered cell-input box
+        wrap.classes("rtt-cell-input")
+        inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_power_change(cid)) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _build_gentuningcell(cb, wrap):
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
+        inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_gentuning_change(cid)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
+
+    def _update_gentuningcell(cb):
+        text = "" if cb.blank else cb.text  # blank when quantities off
+        inputs[cb.id].value = text
+        set_cents_face(cb.id, text)  # the overlaid stacked face mirrors the input
+
+    cell_kinds["mapping"] = _KindHandlers(_build_mapping, _update_mapping)
+    cell_kinds["commacell"] = _KindHandlers(_build_commacell, _update_commacell)
+    cell_kinds["interestcell"] = _KindHandlers(_build_interestcell, _update_input_text)
+    cell_kinds["heldcell"] = _KindHandlers(_build_heldcell, _update_input_text)
+    cell_kinds["targetcell"] = _KindHandlers(_build_targetcell, _update_input_text)
+    cell_kinds["prescalercell"] = _KindHandlers(_build_prescalercell, _update_prescalercell)
+    cell_kinds["powerinput"] = _KindHandlers(_build_powerinput, _update_input_text)
+    cell_kinds["gentuningcell"] = _KindHandlers(_build_gentuningcell, _update_gentuningcell)
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1332,34 +1418,6 @@ def index() -> None:
             entry = cell_kinds.get(cb.kind)
             if entry is not None:
                 entry.build(cb, wrap)
-            elif cb.kind == "mapping":
-                wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
-                inputs[cb.id] = ui.input(on_change=lambda e: on_mapping_change()) \
-                    .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "commacell":
-                wrap.classes("rtt-cell-input")
-                inputs[cb.id] = ui.input(on_change=lambda e: on_comma_change()) \
-                    .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "interestcell":  # an editable interval of interest vector component
-                wrap.classes("rtt-cell-input")
-                inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
-                    .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "heldcell":  # an editable held interval vector component (constrains the tuning)
-                wrap.classes("rtt-cell-input")
-                inputs[cb.id] = ui.input(on_change=lambda e: on_held_change()) \
-                    .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "targetcell":  # an editable target interval list vector component (overrides the set)
-                wrap.classes("rtt-cell-input")
-                inputs[cb.id] = ui.input(on_change=lambda e: on_target_cells_change()) \
-                    .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "prescalercell":  # a bare prescaler 𝐿 diagonal cell, the user's editable
-                # override (off-diagonal cells stay tval "0" — 𝐿 is diagonal). Each input dispatches
-                # to set_custom_prescaler_entry; the cid carries the diagonal slot, so the lambda
-                # closes over it (a free cb would be the LAST cell's id by the time the user types)
-                wrap.classes("rtt-cell-input rtt-cell-stacked")
-                inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_prescaler_change(cid)) \
-                    .props("dense borderless").classes("rtt-cellinput")
-                cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
             elif cb.kind in ("prime", "formcell"):  # a read-only bordered cell (domain prime / form-matrix entry)
                 with ui.element("div").classes("rtt-white"):
                     labels[cb.id] = ui.label(cb.text)
@@ -1509,17 +1567,6 @@ def index() -> None:
                 opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
             elif cb.kind == "boxtitle":  # an in-tile box title (e.g. "optimization")
                 labels[cb.id] = ui.label(cb.text).classes("rtt-boxtitle")
-            elif cb.kind == "powerinput":  # an editable cell-input number (the optimization power
-                # 𝑝, or the box-𝒄 norm power 𝑞). The symbol label rides as a separate cell
-                # below; the field itself shows only the value, in the bordered cell-input box.
-                wrap.classes("rtt-cell-input")
-                inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_power_change(cid)) \
-                    .props("dense borderless").classes("rtt-cellinput")
-            elif cb.kind == "gentuningcell":  # an editable generator-tuning-map cell (per-generator override)
-                wrap.classes("rtt-cell-input rtt-cell-stacked")
-                inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_gentuning_change(cid)) \
-                    .props("dense borderless").classes("rtt-cellinput")
-                cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
@@ -1642,33 +1689,6 @@ def index() -> None:
             elif cb.kind == "optimize":  # mark the button when its auto-optimize lock is on
                 (opt_buttons[cb.id].classes(add="rtt-optimize-locked") if editor.optimize_locked
                  else opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
-            elif cb.kind == "powerinput":  # reflect the live optimization power (∞ / 2 / 1)
-                inputs[cb.id].value = cb.text
-            elif cb.kind == "gentuningcell":  # reflect the live generator tuning (blank when quantities off)
-                text = "" if cb.blank else cb.text
-                inputs[cb.id].value = text
-                set_cents_face(cb.id, text)  # the overlaid stacked face mirrors the input
-            elif cb.kind == "mapping":
-                inputs[cb.id].value = "" if cb.blank else str(st.mapping[cb.gen][cb.prime])
-            elif cb.kind == "commacell":
-                if cb.pending:  # the draft column: show the typed component (blank if None), red-outlined
-                    v = editor.pending_comma[cb.prime] if editor.pending_comma is not None else None
-                    inputs[cb.id].value = "" if v is None else str(v)
-                else:
-                    inputs[cb.id].value = "" if cb.blank else str(st.comma_basis[cb.comma][cb.prime])
-                inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                      remove="" if cb.pending else "rtt-pending")
-            elif cb.kind == "interestcell":
-                inputs[cb.id].value = cb.text  # the normalized vector component build computed
-            elif cb.kind == "heldcell":
-                inputs[cb.id].value = cb.text  # the normalized held vector component build computed
-            elif cb.kind == "targetcell":
-                inputs[cb.id].value = cb.text  # the target vector component build computed (blank when quantities off)
-            elif cb.kind == "prescalercell":  # reflect the live prescaler diagonal (the override if set,
-                # else the scheme-derived value — spreadsheet.build resolves that and emits the final
-                # text already). Blank when quantities are off, mirroring the other editable matrix cells
-                inputs[cb.id].value = cb.text
-                set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
             elif cb.kind == "ptext":  # read-only value: keep its text and shrink-to-fit font in sync
                 labels[cb.id].set_text(cb.text)
                 labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
