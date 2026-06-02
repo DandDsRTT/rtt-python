@@ -235,19 +235,19 @@ def _css_rule(selector):
     return m.group(1)
 
 
-def test_temperament_divider_headers_read_as_centred_grey_full_width_rules():
-    # the prime-limit divider rows read as section headers, not choices: a centred dark-grey
-    # label flanked by rules that span the whole popup (the lines are CSS now, not the old
-    # ── dashes baked into the label text). The label flex-centres its text in dark grey
-    # (#555, not the items' black); the disabled item drops its horizontal padding so the row
-    # runs edge to edge and the label's flex:1 ::before/::after lines reach the popup's edges.
+def test_temperament_divider_headers_read_as_centred_grey_rules_inset_like_the_items():
+    # the prime-limit divider rows read as section headers, not choices: a centred grey label
+    # flanked by rules (the lines are CSS now, not the old ── dashes baked into the label text).
+    # The label flex-centres its text in grey (#777); the divider keeps the items' horizontal
+    # padding rather than running to the popup's literal edges, so its flex:1 ::before/::after
+    # lines stop the same 8px in from each edge as the item text.
     label = _css_rule(".rtt-select-popup .q-item.disabled .q-item__label")
     assert "justify-content:center" in label   # centred text
-    assert "color:#555" in label                # dark grey, not black
-    # the divider item loses its horizontal padding, so the flanking rules run to the edges
-    assert ".q-item.disabled { padding-left:0; padding-right:0; }" in app._CSS
+    assert "color:#777" in label                # grey, lighter than the items' black
+    # the divider does NOT zero its padding -> its rules align with the item text, not the edges
+    assert "padding-left:0" not in app._CSS
     assert ".q-item.disabled .q-item__label::before" in app._CSS  # the flanking rules...
-    assert "border-top:1px solid #555" in app._CSS                # ...are dark-grey lines
+    assert "border-top:1px solid #777" in app._CSS                # ...are grey lines
 
 
 def test_sidebar_hugs_its_content_as_a_fixed_left_column():
