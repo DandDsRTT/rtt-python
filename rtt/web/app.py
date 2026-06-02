@@ -1421,6 +1421,37 @@ def index() -> None:
 
     cell_kinds["ptextedit"] = _KindHandlers(_build_ptextedit, _update_ptextedit)
 
+    # ---- ratio faces (a stacked fraction via _ratio) + the read-only cents (tval) face ----
+    def _build_genratio(cb, wrap):
+        _ratio(cb, approx=True)  # a generator ratio, shown ~approximate
+
+    def _build_target(cb, wrap):
+        _ratio(cb, approx=False)  # a target / comma ratio (exact)
+
+    def _build_commaratio(cb, wrap):
+        if cb.pending:  # the draft comma's "?" quantity, red
+            labels[cb.id] = ui.label(cb.text).classes("rtt-val rtt-pending-q")
+        else:
+            _ratio(cb, approx=False)
+
+    def _update_ratio(cb):  # genratio / target / commaratio: refresh the stacked fraction face
+        # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
+        if cb.id in fracs:
+            num, den = _ratio_parts(cb.text) or (cb.text, "")
+            fracs[cb.id][0].set_text(num)
+            fracs[cb.id][1].set_text(den)
+
+    def _build_tval(cb, wrap):
+        cents_face(cb, "rtt-tval")  # the read-only stacked int-over-fraction cents face
+
+    def _update_tval(cb):
+        set_cents_face(cb.id, cb.text)
+
+    cell_kinds["genratio"] = _KindHandlers(_build_genratio, _update_ratio)
+    cell_kinds["target"] = _KindHandlers(_build_target, _update_ratio)
+    cell_kinds["commaratio"] = _KindHandlers(_build_commaratio, _update_ratio)
+    cell_kinds["tval"] = _KindHandlers(_build_tval, _update_tval)
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1433,12 +1464,6 @@ def index() -> None:
             elif cb.kind in ("prime", "formcell"):  # a read-only bordered cell (domain prime / form-matrix entry)
                 with ui.element("div").classes("rtt-white"):
                     labels[cb.id] = ui.label(cb.text)
-            elif cb.kind == "genratio":
-                _ratio(cb, approx=True)
-            elif cb.kind == "commaratio" and cb.pending:  # the draft comma's "?" quantity, red
-                labels[cb.id] = ui.label(cb.text).classes("rtt-val rtt-pending-q")
-            elif cb.kind in ("target", "commaratio"):
-                _ratio(cb, approx=False)
             elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, vector components)
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
             elif cb.kind == "rangemode":  # the monotone/tradeoff range selector under the ranges chart
@@ -1518,8 +1543,6 @@ def index() -> None:
                     .props(_select_props(cb.w)).classes("rtt-preselect")
             elif cb.kind == "ptext":  # a read-only value: plain wrapping text, no box
                 labels[cb.id] = ui.label(cb.text).classes("rtt-ptext")
-            elif cb.kind == "tval":
-                cents_face(cb, "rtt-tval")
             elif cb.kind == "colheader":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":
@@ -1700,12 +1723,6 @@ def index() -> None:
             elif cb.kind == "ptext":  # read-only value: keep its text and shrink-to-fit font in sync
                 labels[cb.id].set_text(cb.text)
                 labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
-            elif cb.id in fracs:
-                num, den = _ratio_parts(cb.text) or (cb.text, "")
-                fracs[cb.id][0].set_text(num)
-                fracs[cb.id][1].set_text(den)
-            elif cb.id in cents:  # a read-only cents (tval) cell: split into the stacked face
-                set_cents_face(cb.id, cb.text)
             elif cb.kind == "preselect":
                 # mirror the live selection: the temperament chooser shows the matched
                 # preset (or its placeholder), the target chooser splits into limit +
