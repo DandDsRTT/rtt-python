@@ -1943,14 +1943,31 @@ def test_all_interval_relabels_the_optimization_objective():
 def test_all_interval_relabels_the_target_list_as_prime_proxy():
     # per the Guide, all-interval relabels the target list: symbol T → Tₚ, equivalence = 𝐼 (the
     # math-italic identity, per the Guide's conventions), and the lowercase name "prime proxy
-    # target-interval list" (this app never capitalizes names). Target-based keeps T / "target
-    # interval list".
+    # target interval list" — no hyphen in "target interval" (this app never capitalizes names).
+    # Target-based keeps T / "target interval list".
     based = {c.id: c for c in _with(scheme="TILT minimax-S", symbols=True, equivalences=True).cells}
     assert based["symbol:vectors:targets"].text == "T"  # no equivalence tail when target-based
     assert based["caption:vectors:targets"].text == "target interval list"
     allint = {c.id: c for c in _with(scheme="minimax-S", symbols=True, equivalences=True).cells}
     assert allint["symbol:vectors:targets"].text == "Tₚ = 𝐼"  # symbol + math-italic equivalence tail
-    assert allint["caption:vectors:targets"].text == "prime proxy target-interval list"
+    assert allint["caption:vectors:targets"].text == "prime proxy target interval list"
+
+
+def test_all_interval_mnemonics_underline_the_prime_proxy_p_subscript():
+    # the all-interval target list's symbol is Tₚ, so its caption "prime proxy target interval list"
+    # underlines the symbol's letters: the base T marks the t of "target" (as the target-based list
+    # does), and the ₚ subscript marks BOTH p's it stands for — "prime" and "proxy".
+    based = {c.id: c for c in _with(scheme="TILT minimax-S", names=True, mnemonics=True).cells}
+    based_cap = based["caption:vectors:targets"]
+    assert based_cap.underlines == ((based_cap.text.index("target"), 1),)  # just the T's "target"
+    allint = {c.id: c for c in _with(scheme="minimax-S", names=True, mnemonics=True).cells}
+    cap = allint["caption:vectors:targets"]
+    assert cap.text == "prime proxy target interval list"
+    # the t of target plus BOTH p's (prime, proxy) — order-independent
+    assert set(cap.underlines) == {(cap.text.index("target"), 1),
+                                   (cap.text.index("prime"), 1),
+                                   (cap.text.index("proxy"), 1)}
+    assert sorted(cap.text[s:s + n] for s, n in cap.underlines) == ["p", "p", "t"]
 
 
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
@@ -3530,7 +3547,7 @@ def test_optimization_box_lays_out_objective_power_and_button_in_columns():
 
 
 def test_optimization_box_fills_the_full_width_of_the_damage_tile():
-    # the box no longer hugs its controls — it spans the entire target-interval damage list
+    # the box no longer hugs its controls — it spans the entire target interval damage list
     # tile (like the tuning-ranges box spans the generator tuning map tile), giving the
     # controls room to spread out across it
     lay = _with(optimization=True)

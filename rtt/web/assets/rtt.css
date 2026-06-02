@@ -177,9 +177,12 @@
    so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
 .rtt-opt-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
 /* the all-interval objective relabels to the retuning magnitude ‖𝒓𝐿⁻¹‖dual(q), far wider than
-   the short ⟪𝐝⟫ₚ — shrink it so it reads within (and stays centred over) its COL_W value cell,
-   overflowing symmetrically rather than clipping if it still spills */
-.rtt-opt-wide { font-size:9px; overflow:visible; }
+   the short ⟪𝐝⟫ₚ — shrink it (to the .rtt-matlabel-norm size used for the other wide ‖…‖q norm
+   labels) so it reads within and stays centred over its COL_W value cell, overflowing symmetrically
+   rather than clipping if it still spills. The selector is compounded (.rtt-symbol.rtt-opt-wide, not
+   a bare .rtt-opt-wide) so it OUT-SPECIFIES .rtt-symbol's own font-size:15px, which is declared later
+   in this sheet and would otherwise win the tie. */
+.rtt-symbol.rtt-opt-wide { font-size:8px; overflow:visible; }
 /* a left-justified caption sits flush against its left edge (the dropdown it labels), free
    to overhang to the right on one line rather than wrapping (e.g. "predefined prescalers").
    The small left inset aligns the caption's first character vertically with the dropdown's

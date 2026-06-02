@@ -608,8 +608,11 @@ EQUIVALENCES = {
 # list becomes the prime-proxy list Tₚ = I. (Extended as more tiles are specified; the redundant
 # tiles that get removed need no entry here.)
 ALL_INTERVAL_SYMBOLS = {("vectors", "targets"): "Tₚ"}
-ALL_INTERVAL_CAPTIONS = {("vectors", "targets"): "prime proxy target-interval list"}
+ALL_INTERVAL_CAPTIONS = {("vectors", "targets"): "prime proxy target interval list"}
 ALL_INTERVAL_EQUIVALENCES = {("vectors", "targets"): " = 𝐼"}
+# all-interval mnemonics: the Tₚ subscript's "p" underlines BOTH p's it stands for — "prime"
+# and "proxy" — on top of the base symbol-letter underline (the T's "target"). See the caption loop.
+ALL_INTERVAL_MNEMONICS = {("vectors", "targets"): ("prime", "proxy")}
 
 # Each box's "units:" annotation (the mockup's per-box unit line, shown below the name
 # caption when the general `units` toggle is on). The value is plain ASCII — a fraction
@@ -2757,6 +2760,9 @@ def build(state, settings=None, collapsed=None,
         if show_captions:
             kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
             underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
+            if show_mnemonics and ai:  # all-interval subscript letters (Tₚ → the p's in prime/proxy)
+                underlines += tuple((name.index(w), 1)
+                                    for w in ALL_INTERVAL_MNEMONICS.get((rkey, ckey), ()) if w in name)
             # the caption spans the row's whole caption band (row_cap — the tallest wrapped
             # name in the row), and the CSS centres the text within it. So a one-line name
             # sits centred (half a blank line above and below) against a two-line sibling,
