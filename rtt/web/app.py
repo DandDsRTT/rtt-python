@@ -1529,6 +1529,120 @@ def index() -> None:
     cell_kinds["tiletoggle"] = _KindHandlers(_build_foldtoggle, _update_foldtoggle)
     cell_kinds["alltoggle"] = _KindHandlers(_build_alltoggle, _update_foldtoggle)
 
+    # ---- chooser dropdowns + the diminuator checkbox ----
+    def _build_preselect(cb, wrap):
+        name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
+        if name == "target":
+            # a numeric limit override beside the TILT/OLD family select, seeded from the editor's
+            # live target family + (optional) manual limit
+            with ui.element("div").classes("rtt-preselect-target"):
+                num = ui.number(value=editor.target_limit, min=2,
+                        on_change=lambda e: on_target_change()) \
+                    .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
+                sel = ui.select(list(presets.TARGET_SETS), value=editor.target_family,
+                        on_change=lambda e: on_target_change()) \
+                    .props(_select_props(cb.w - 30)).classes("rtt-preselect")  # field = cell − the 30px square (touching, no gap)
+            selects[cb.id] = (num, sel)
+        elif name == "temperament":
+            # a normal dropdown listing only the prime-limit dividers and their presets (grouped in
+            # the open list). The chosen preset shows in the box; when none matches, a "-" prompt
+            # shows there as a display-value placeholder — never a pickable row in the list.
+            value = presets.identify(editor.state)
+            sel = _GroupedSelect(presets.temperament_options(), value=value,
+                    is_divider=presets.is_divider,
+                    on_change=lambda e: on_preselect("temperament", e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preselect")
+            _set_offlist_prompt(sel, value)
+            selects[cb.id] = sel
+        elif name == "prescaler":
+            # the predefined-prescalers chooser: log-prime always, the rest (identity / prime) gated
+            # behind alt-complexities. "-" when a manual diagonal edit deviates from the named
+            # prescaler (editor.displayed_prescaler_name returns None then).
+            options = list(presets.prescaler_options(editor.settings["alt_complexity"]))
+            value = editor.displayed_prescaler_name
+            value = value if value in options else None
+            sel = ui.select(options, value=value,
+                    on_change=lambda e: on_preselect("prescaler", e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preselect")
+            _set_offlist_prompt(sel, value)
+            selects[cb.id] = sel
+        else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-interval);
+            # a control-refined scheme has no name, shown as the "-" placeholder. Alternative-
+            # complexity schemes are gated behind the alt. complexity setting.
+            options = presets.tuning_scheme_options(
+                service.is_all_interval(editor.tuning_scheme), editor.settings["alt_complexity"])
+            # "-" when the displayed tuning is off the named list — a refined spec, or a manual
+            # override deviating from the scheme's optimum; else the offered name
+            name = editor.displayed_tuning_scheme_name
+            scheme = name if name in options else None
+            sel = ui.select(options, value=scheme,
+                    on_change=lambda e: on_preselect("tuning", e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preselect")
+            _set_offlist_prompt(sel, scheme)
+            selects[cb.id] = sel
+
+    def _update_preselect(cb):
+        # mirror the live selection: the temperament chooser shows the matched preset (or its
+        # placeholder), the target chooser splits into limit + family, the tuning chooser shows its
+        # scheme. building[0] guards echoes.
+        if cb.id.startswith("preselect:temperament"):  # base + the comma-basis copy
+            value = presets.identify(editor.state)
+            selects[cb.id].value = value
+            _set_offlist_prompt(selects[cb.id], value)
+        elif cb.id == "preselect:target":
+            num, sel = selects[cb.id]
+            family = editor.target_family
+            # always show the number in use: the manual limit, or the domain default
+            limit = editor.target_limit
+            num.value = limit if limit is not None else \
+                service.default_target_limit(family, service.standard_primes(editor.state.d))
+            sel.value = family
+        elif cb.id == "preselect:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
+            # option list widens/narrows as alt-complexities flips, so refresh it too
+            options = list(presets.prescaler_options(editor.settings["alt_complexity"]))
+            value = editor.displayed_prescaler_name
+            value = value if value in options else None
+            selects[cb.id].set_options(options, value=value)
+            _set_offlist_prompt(selects[cb.id], value)
+        else:  # tuning — a refined spec or a deviating manual override shows "-"
+            scheme = editor.displayed_tuning_scheme_name
+            # the option LABELS T-prefix only while target-based, so recompute them as the all-
+            # interval checkbox flips (set once at creation, they would otherwise go stale)
+            options = presets.tuning_scheme_options(
+                service.is_all_interval(editor.tuning_scheme), editor.settings["alt_complexity"])
+            selects[cb.id].set_options(options, value=scheme)
+            _set_offlist_prompt(selects[cb.id], scheme)
+
+    def _build_control_select(cb, wrap):  # a weighting chooser (complexity / norm / weight slope)
+        selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
+                on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
+            .props(_select_props(cb.w)).classes("rtt-preselect")
+
+    def _update_control_select(cb):  # mirror the live alt.-complexity choice
+        selects[cb.id].value = cb.text or None
+
+    def _build_control_check(cb, wrap):  # the box-𝐋 "replace diminuator" checkbox (size factor)
+        checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
+                on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
+            .props("dense").classes("rtt-control-check")
+
+    def _update_control_check(cb):  # mirror the live "replace diminuator" state
+        checks[cb.id].value = cb.checked
+
+    def _build_formchooser(cb, wrap):  # the <choose form> control: canonicalizes its matrix on select
+        name = cb.id.split(":", 1)[1]  # mapping / comma_basis
+        selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
+                on_change=lambda e, n=name: on_form_choose(n, e.value)) \
+            .props(_select_props(cb.w)).classes("rtt-preselect")
+
+    def _update_formchooser(cb):  # a one-shot action: snap back to the placeholder
+        selects[cb.id].value = ""
+
+    cell_kinds["preselect"] = _KindHandlers(_build_preselect, _update_preselect)
+    cell_kinds["control_select"] = _KindHandlers(_build_control_select, _update_control_select)
+    cell_kinds["control_check"] = _KindHandlers(_build_control_check, _update_control_check)
+    cell_kinds["formchooser"] = _KindHandlers(_build_formchooser, _update_formchooser)
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1538,70 +1652,6 @@ def index() -> None:
             entry = cell_kinds.get(cb.kind)
             if entry is not None:
                 entry.build(cb, wrap)
-            elif cb.kind == "preselect":
-                name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
-                if name == "target":
-                    # a numeric limit override beside the TILT/OLD family select, seeded
-                    # from the editor's live target family + (optional) manual limit
-                    with ui.element("div").classes("rtt-preselect-target"):
-                        num = ui.number(value=editor.target_limit, min=2,
-                                on_change=lambda e: on_target_change()) \
-                            .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
-                        sel = ui.select(list(presets.TARGET_SETS), value=editor.target_family,
-                                on_change=lambda e: on_target_change()) \
-                            .props(_select_props(cb.w - 30)).classes("rtt-preselect")  # field = cell − the 30px square (touching, no gap)
-                    selects[cb.id] = (num, sel)
-                elif name == "temperament":
-                    # a normal dropdown listing only the prime-limit dividers and their
-                    # presets (grouped in the open list). The chosen preset shows in the
-                    # box; when none matches, a "-" prompt shows there as a display-value
-                    # placeholder — never a pickable row in the list.
-                    value = presets.identify(editor.state)
-                    sel = _GroupedSelect(presets.temperament_options(), value=value,
-                            is_divider=presets.is_divider,
-                            on_change=lambda e: on_preselect("temperament", e.value)) \
-                        .props(_select_props(cb.w)).classes("rtt-preselect")
-                    _set_offlist_prompt(sel, value)
-                    selects[cb.id] = sel
-                elif name == "prescaler":
-                    # the predefined-prescalers chooser: log-prime always, the rest (identity /
-                    # prime) gated behind alt-complexities. "-" when a manual diagonal edit deviates
-                    # from the named prescaler (editor.displayed_prescaler_name returns None then).
-                    options = list(presets.prescaler_options(editor.settings["alt_complexity"]))
-                    value = editor.displayed_prescaler_name
-                    value = value if value in options else None
-                    sel = ui.select(options, value=value,
-                            on_change=lambda e: on_preselect("prescaler", e.value)) \
-                        .props(_select_props(cb.w)).classes("rtt-preselect")
-                    _set_offlist_prompt(sel, value)
-                    selects[cb.id] = sel
-                else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-
-                    # interval); a control-refined scheme has no name, shown as the "-" placeholder.
-                    # Alternative-complexity schemes are gated behind the alt. complexity setting.
-                    options = presets.tuning_scheme_options(
-                        service.is_all_interval(editor.tuning_scheme), editor.settings["alt_complexity"])
-                    # "-" when the displayed tuning is off the named list — a refined spec, or a
-                    # manual override deviating from the scheme's optimum; else the offered name
-                    name = editor.displayed_tuning_scheme_name
-                    scheme = name if name in options else None
-                    sel = ui.select(options, value=scheme,
-                            on_change=lambda e: on_preselect("tuning", e.value)) \
-                        .props(_select_props(cb.w)).classes("rtt-preselect")
-                    _set_offlist_prompt(sel, scheme)
-                    selects[cb.id] = sel
-            elif cb.kind == "control_select":  # a weighting chooser (complexity / norm / weight slope)
-                selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
-                        on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
-                    .props(_select_props(cb.w)).classes("rtt-preselect")
-            elif cb.kind == "control_check":  # the box-𝐋 "replace diminuator" checkbox (size factor)
-                checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
-                        on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
-                    .props("dense").classes("rtt-control-check")
-            elif cb.kind == "formchooser":  # the <choose form> control: canonicalizes its matrix on select
-                name = cb.id.split(":", 1)[1]  # mapping / comma_basis
-                selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
-                        on_change=lambda e, n=name: on_form_choose(n, e.value)) \
-                    .props(_select_props(cb.w)).classes("rtt-preselect")
             elif cb.kind == "minus":  # remove the highest prime; a hover − centred on the last
                 wrap.classes("rtt-minus-zone")  # prime's branch point, clear of the editable cell below
                 ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
@@ -1750,43 +1800,6 @@ def index() -> None:
             entry = cell_kinds.get(cb.kind)
             if entry is not None and entry.update is not None:
                 entry.update(cb)
-            elif cb.kind == "preselect":
-                # mirror the live selection: the temperament chooser shows the matched
-                # preset (or its placeholder), the target chooser splits into limit +
-                # family, the tuning chooser shows its scheme. building[0] guards echoes.
-                if cb.id.startswith("preselect:temperament"):  # base + the comma-basis copy
-                    value = presets.identify(editor.state)
-                    selects[cb.id].value = value
-                    _set_offlist_prompt(selects[cb.id], value)
-                elif cb.id == "preselect:target":
-                    num, sel = selects[cb.id]
-                    family = editor.target_family
-                    # always show the number in use: the manual limit, or the domain default
-                    limit = editor.target_limit
-                    num.value = limit if limit is not None else \
-                        service.default_target_limit(family, service.standard_primes(editor.state.d))
-                    sel.value = family
-                elif cb.id == "preselect:prescaler":  # the scheme's prescaler, "-" on a deviating edit;
-                    # the option list widens/narrows as alt-complexities flips, so refresh it too
-                    options = list(presets.prescaler_options(editor.settings["alt_complexity"]))
-                    value = editor.displayed_prescaler_name
-                    value = value if value in options else None
-                    selects[cb.id].set_options(options, value=value)
-                    _set_offlist_prompt(selects[cb.id], value)
-                else:  # tuning — a refined spec or a deviating manual override shows "-"
-                    scheme = editor.displayed_tuning_scheme_name
-                    # the option LABELS T-prefix only while target-based, so recompute them as the
-                    # all-interval checkbox flips (set once at creation, they would otherwise go stale)
-                    options = presets.tuning_scheme_options(
-                        service.is_all_interval(editor.tuning_scheme), editor.settings["alt_complexity"])
-                    selects[cb.id].set_options(options, value=scheme)
-                    _set_offlist_prompt(selects[cb.id], scheme)
-            elif cb.kind == "control_select":  # mirror the live alt.-complexity choice
-                selects[cb.id].value = cb.text or None
-            elif cb.kind == "control_check":  # mirror the live "replace diminuator" state
-                checks[cb.id].value = cb.checked
-            elif cb.kind == "formchooser":  # a one-shot action: snap back to the placeholder
-                selects[cb.id].value = ""
 
             # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
             # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
