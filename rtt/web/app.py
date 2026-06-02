@@ -1231,6 +1231,63 @@ def index() -> None:
     cell_kinds["chart"] = _KindHandlers(_build_svgfill, _update_chart)
     cell_kinds["rangechart"] = _KindHandlers(_build_svgfill, _update_rangechart)
 
+    def _build_count(cb, wrap):
+        math_cells[cb.id] = ui.html("").classes("rtt-count")  # a scalar "symbol = value"; filled in update
+
+    def _build_symbol(cb, wrap):
+        wrap.classes("rtt-symbol-cell")
+        # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off)
+        cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
+        math_cells[cb.id] = ui.html("").classes(cls)
+
+    def _build_matlabel(cb, wrap):
+        # routed through _math_html so its bold-italic / bold-upright glyphs draw in the same
+        # styled face as the tile symbol it indexes; the complexity row's longer labels (‖L𝐜ᵢ‖q)
+        # take a smaller variant to avoid colliding
+        cls = "rtt-matlabel rtt-matlabel-norm" if "‖" in cb.text else "rtt-matlabel"
+        wrap.classes("rtt-matlabel-cell")
+        math_cells[cb.id] = ui.html("").classes(cls)
+
+    def _build_units(cb, wrap):
+        wrap.classes("rtt-units-cell")
+        math_cells[cb.id] = ui.html("").classes("rtt-units")
+
+    def _update_mathcell(cb):  # shared by symbol / count / units / matlabel
+        # symbols/equivalence tails/counts and matrix row/col labels go through _math_html (styled
+        # math glyphs); units use _units_html (a single-story-g sans value, serif label)
+        html = _units_html(cb.text) if cb.kind == "units" else _math_html(cb.text)
+        if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
+            math_cells[cb.id].set_content(html)
+            math_rendered[cb.id] = html
+            if cb.id == "optimization:objective:symbol":
+                # all-interval relabels this to the wide retuning magnitude ‖𝒓𝐿⁻¹‖dual(q); shrink
+                # it (rtt-opt-wide) so it stays centred over its COL_W value
+                wide = "‖" in cb.text
+                math_cells[cb.id].classes(
+                    replace="rtt-symbol rtt-opt-1line rtt-opt-wide" if wide
+                    else "rtt-symbol rtt-opt-1line")
+
+    def _build_caption(cb, wrap):
+        wrap.classes("rtt-caption-cell")
+        # the optimization box's captions stay on one line (no wrap), unlike tile names; a caption
+        # with align="left" reads left-justified under its control (e.g. a preselect chooser's label)
+        cls = "rtt-caption rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-caption"
+        if cb.align == "left":
+            cls += " rtt-caption-left"
+        captions[cb.id] = ui.html("").classes(cls)
+
+    def _update_caption(cb):
+        html = _underline_html(cb.text, cb.underlines)
+        if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
+            captions[cb.id].set_content(html)
+            caption_html[cb.id] = html
+
+    cell_kinds["count"] = _KindHandlers(_build_count, _update_mathcell)
+    cell_kinds["symbol"] = _KindHandlers(_build_symbol, _update_mathcell)
+    cell_kinds["matlabel"] = _KindHandlers(_build_matlabel, _update_mathcell)
+    cell_kinds["units"] = _KindHandlers(_build_units, _update_mathcell)
+    cell_kinds["caption"] = _KindHandlers(_build_caption, _update_caption)
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1290,8 +1347,6 @@ def index() -> None:
                 _ratio(cb, approx=False)
             elif cb.kind in ("mapped", "vec"):  # plain integer values (mapped lists, vector components)
                 labels[cb.id] = ui.label(cb.text).classes("rtt-val")
-            elif cb.kind == "count":  # a scalar "symbol = value" (the counts row's 𝑑 = 3 etc.)
-                math_cells[cb.id] = ui.html("").classes("rtt-count")  # content set in render()
             elif cb.kind == "rangemode":  # the monotone/tradeoff range selector under the ranges chart
                 wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
                 opts = {}
@@ -1303,30 +1358,6 @@ def index() -> None:
                     opt.on("click", lambda _=None, m=mode: on_range_mode(m))
                     opts[mode] = opt
                 rangeopts[cb.id] = opts
-            elif cb.kind == "symbol":
-                wrap.classes("rtt-symbol-cell")
-                # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off)
-                cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
-                math_cells[cb.id] = ui.html("").classes(cls)  # content set in render()
-            elif cb.kind == "matlabel":  # per-row / per-column matrix label (𝒎ᵢ, 𝐜ᵢ, 𝒕ᵢ, …):
-                # routed through _math_html so its bold-italic / bold-upright glyphs draw in
-                # the same styled face as the tile symbol it indexes. The complexity row's
-                # labels are longer (‖L𝐜ᵢ‖q) so they use a smaller variant to avoid colliding
-                cls = "rtt-matlabel rtt-matlabel-norm" if "‖" in cb.text else "rtt-matlabel"
-                wrap.classes("rtt-matlabel-cell")
-                math_cells[cb.id] = ui.html("").classes(cls)  # content set in render()
-            elif cb.kind == "units":  # the per-box units line and the domain-units row/col labels
-                wrap.classes("rtt-units-cell")
-                math_cells[cb.id] = ui.html("").classes("rtt-units")  # content set in render()
-            elif cb.kind == "caption":
-                wrap.classes("rtt-caption-cell")
-                # the optimization box's captions stay on one line (no wrap), unlike tile names.
-                # a caption with align="left" reads left-justified under its control (e.g. a
-                # preselect chooser's label, like "predefined prescalers" under the prescaler chooser)
-                cls = "rtt-caption rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-caption"
-                if cb.align == "left":
-                    cls += " rtt-caption-left"
-                captions[cb.id] = ui.html("").classes(cls)  # content set in render()
             elif cb.kind == "preselect":
                 name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
                 if name == "target":
@@ -1679,26 +1710,6 @@ def index() -> None:
                 checks[cb.id].value = cb.checked
             elif cb.kind == "formchooser":  # a one-shot action: snap back to the placeholder
                 selects[cb.id].value = ""
-            elif cb.kind in ("symbol", "count", "units", "matlabel"):  # text rendered as HTML:
-                # symbols/equivalence tails/counts and matrix row/col labels go through
-                # _math_html (styled math glyphs); units use _units_html (a single-story-g
-                # sans value, serif label)
-                html = _units_html(cb.text) if cb.kind == "units" else _math_html(cb.text)
-                if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
-                    math_cells[cb.id].set_content(html)
-                    math_rendered[cb.id] = html
-                    if cb.id == "optimization:objective:symbol":
-                        # all-interval relabels this to the wide retuning magnitude ‖𝒓𝐿⁻¹‖dual(q);
-                        # shrink it (rtt-opt-wide) so it stays centred over its COL_W value
-                        wide = "‖" in cb.text
-                        math_cells[cb.id].classes(
-                            replace="rtt-symbol rtt-opt-1line rtt-opt-wide" if wide
-                            else "rtt-symbol rtt-opt-1line")
-            elif cb.kind == "caption":
-                html = _underline_html(cb.text, cb.underlines)
-                if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
-                    captions[cb.id].set_content(html)
-                    caption_html[cb.id] = html
             elif cb.kind in _FOLD_KINDS:  # swap the chevron SVG when the band folds / unfolds
                 if fold_state.get(cb.id) != cb.text:
                     htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
