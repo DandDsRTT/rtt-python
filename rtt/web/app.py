@@ -1972,7 +1972,7 @@ def index() -> None:
                         .props(_select_props(cb.w)).classes("rtt-preselect")
                     _set_offlist_prompt(sel, value)
                     selects[cb.id] = sel
-                else:  # tuning — systematic scheme names, 𝑇-prefixed when targeting a list (not all-
+                else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-
                     # interval); a control-refined scheme has no name, shown as the "-" placeholder.
                     # Alternative-complexity schemes are gated behind the alt. complexity setting.
                     options = presets.tuning_scheme_options(

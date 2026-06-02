@@ -334,7 +334,7 @@ class Editor:
     def set_tuning_scheme(self, name: str) -> None:
         """Apply a systematic scheme name from the established-tuning-scheme chooser, preserving
         the current target mode: all-interval when the scheme currently targets every interval,
-        else over the displayed target list (the chooser's 𝑇-prefixed entries). Undoable."""
+        else over the displayed target list (the chooser's T-prefixed entries). Undoable."""
         self._snapshot()
         self.tuning_scheme = name if service.is_all_interval(self.tuning_scheme) \
             else service.scheme_with_targets(name, self.target_spec)

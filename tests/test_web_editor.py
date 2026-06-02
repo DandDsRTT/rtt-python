@@ -193,7 +193,7 @@ def test_set_all_interval_toggles_the_scheme_target_set():
 
 def test_set_tuning_scheme_preserves_the_target_mode():
     # picking a scheme from the chooser keeps the current target mode (the all-interval checkbox):
-    # all-interval by default, but target-based once the box is unchecked (its 𝑇-prefixed entries)
+    # all-interval by default, but target-based once the box is unchecked (its T-prefixed entries)
     editor = Editor()
     editor.set_tuning_scheme("minimax-ES")  # all-interval by default => applied as-is
     assert editor.tuning_scheme == "minimax-ES" and service.is_all_interval(editor.tuning_scheme)
