@@ -119,6 +119,19 @@ def test_displayed_prescaler_name_tracks_the_scheme_and_falls_back_on_a_manual_e
     assert editor.displayed_prescaler_name == "log-prime"  # reverts with the override gone
 
 
+def test_round_trip_prescaler_edit_returns_to_the_scheme_name():
+    # deviate one cell, then type its SHOWN value back (what the user actually does). The cell shows
+    # the rounded value, so the stored diagonal isn't bit-identical to the scheme's, but it displays
+    # the same — so displayed_prescaler_name must recover "log-prime" (and the grid's 𝑋 = 𝐿 awareness)
+    editor = Editor()
+    shown = float(service.prescale_text(
+        service.complexity_prescaler(editor.state.mapping, editor.tuning_scheme)[1]))
+    editor.set_custom_prescaler_entry(1, 9.9)     # deviate
+    assert editor.displayed_prescaler_name is None
+    editor.set_custom_prescaler_entry(1, shown)   # return it to the shown log-prime value
+    assert editor.displayed_prescaler_name == "log-prime"
+
+
 def test_set_custom_prescaler_text_holds_a_typed_diagonal():
     # the bare prescaler 𝐿 tile's editable plain text (the matrix-form EBK) parses to a
     # d-tuple diagonal, replaces the override wholesale (the d-1 untouched cells take the

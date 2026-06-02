@@ -699,10 +699,19 @@ def displayed_prescaler_name(mapping, scheme=DEFAULT_TUNING_SCHEME, custom_presc
     for which the prescaler chooser shows "-". ``None`` when a ``custom_prescaler`` override
     deviates from the scheme's computed diagonal (the user hand-edited the bare prescaler tile),
     so the shown diagonal no longer matches a named prescaler. An override equal to the scheme's
-    own diagonal keeps the scheme's name, mirroring ``Editor.displayed_tuning_scheme_name``."""
-    if custom_prescaler is not None and \
-            tuple(float(x) for x in custom_prescaler) != complexity_prescaler(mapping, scheme):
-        return None
+    own diagonal keeps the scheme's name, mirroring ``Editor.displayed_tuning_scheme_name``.
+
+    The match is at DISPLAY precision (:func:`prescale_text`): a cell shows its value rounded, and
+    editing stores that shown value, so a round-trip — deviate a cell, then type the shown value
+    back — leaves a diagonal differing from the full-precision scheme diagonal only by rounding.
+    Comparing what's shown lets that read as "no deviation" (the chooser and the grid's 𝑋 = 𝐿
+    awareness recover), where a bit-exact compare would wrongly keep showing "-"."""
+    if custom_prescaler is not None:
+        computed = complexity_prescaler(mapping, scheme)
+        shown = tuple(float(x) for x in custom_prescaler)
+        if len(shown) != len(computed) or any(
+                prescale_text(a) != prescale_text(b) for a, b in zip(shown, computed)):
+            return None
     return prescaler_of(scheme)
 
 

@@ -1614,6 +1614,22 @@ def test_custom_prescaler_diagonal_keeps_the_generic_symbol():
     assert on["matlabel:row:prescaling:primes:0"].text == "𝒙₁"
 
 
+def test_returning_the_prescaler_to_its_shown_log_prime_diagonal_restores_the_L_awareness():
+    # regression: deviating 𝑋 from 𝐿 then typing the SHOWN log-prime values back must RESTORE the
+    # 𝑋 = 𝐿 awareness — symbol equivalence, concrete-𝐿 products, and the name equivalence — even
+    # though the stored diagonal carries the rounded shown values (build derives the awareness from
+    # service.displayed_prescaler_name at display precision, not "custom_prescaler is None").
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    scheme = f"TILT {service.DEFAULT_TUNING_SCHEME}"
+    shown = tuple(float(service.prescale_text(v))  # the rounded diagonal a round-trip cell edit stores
+                  for v in service.complexity_prescaler(((1, 1, 0), (0, 1, 4)), scheme))
+    s = {**settings.defaults(), "weighting": True, "symbols": True, "names": True, "equivalences": True}
+    on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme=scheme, custom_prescaler=shown).cells}
+    assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
+    assert on["symbol:prescaling:commas"].text == "𝐿C"
+    assert on["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
+
+
 def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
     lay = spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),

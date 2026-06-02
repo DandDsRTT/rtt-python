@@ -1071,21 +1071,24 @@ def build(state, settings=None, collapsed=None,
     # on); a cell with no closed form is untouched and keeps its plain cents value.
     show_math = settings["math_expressions"]
     # The prescaler's concrete glyph 𝐿, used everywhere the abstract 𝑋 "further appears" — the
-    # product tiles and their complexity-norm column headers — when 𝑋 = 𝐿: i.e. when the active
-    # prescaler IS the log-prime matrix (the default scheme's log-prime diagonal, with no custom
-    # diagonal typed over it). A prime/identity scheme or a typed override leaves the generic
-    # placeholder 𝑋 everywhere instead. The bare prescaler tile itself is the DEFINITION locus:
-    # it keeps the abstract symbol 𝑋 (and rows 𝒙ᵢ), with the equivalence "= 𝐿" (or "= diag(𝒑)" /
-    # "= 𝐼"; nothing for a typed override), and — when 𝑋 = 𝐿 — its NAME gains "= log-prime matrix"
-    # (see effective_captions). So a tile never mixes the two: the bare matrix is all 𝑋, every
-    # product and column header is all 𝐿.
-    _scheme_prescaler = service.prescaler_of(tuning_scheme)
-    prescaler_is_log_prime = custom_prescaler is None and _scheme_prescaler == "log-prime"
+    # product tiles and their complexity-norm column headers — when 𝑋 = 𝐿: i.e. when the prescaler
+    # the DISPLAYED diagonal realises is the log-prime matrix. A prime/identity scheme, or a custom
+    # diagonal that genuinely deviates, leaves the generic placeholder 𝑋 everywhere instead. The
+    # bare prescaler tile itself is the DEFINITION locus: it keeps the abstract symbol 𝑋 (and rows
+    # 𝒙ᵢ), with the equivalence "= 𝐿" (or "= diag(𝒑)" / "= 𝐼"; nothing for a real deviation), and —
+    # when 𝑋 = 𝐿 — its NAME gains "= log-prime matrix" (see effective_captions). So a tile never
+    # mixes the two: the bare matrix is all 𝑋, every product and column header is all 𝐿.
+    _scheme_prescaler = service.prescaler_of(tuning_scheme)  # the scheme's nominal prescaler (math-expr form / box-𝐋 control)
+    # the prescaler the DISPLAYED diagonal realises — "log-prime"/"prime"/"identity", or None when a
+    # custom diagonal genuinely deviates. Matched at display precision, so editing a cell to its
+    # shown value and back recovers the named prescaler (and the 𝑋 = 𝐿 awareness); "custom_prescaler
+    # is None" never restored after such a round-trip, since the stored value keeps the shown rounding.
+    _realized_prescaler = service.displayed_prescaler_name(state.mapping, tuning_scheme, custom_prescaler)
+    prescaler_is_log_prime = _realized_prescaler == "log-prime"
     prescaler_symbol = "𝐿" if prescaler_is_log_prime else "𝑋"  # the glyph products/headers use
-    if custom_prescaler is not None:
-        prescaler_equivalence = ""  # a typed diagonal shows its own values — no closed form to name
-    else:
-        prescaler_equivalence = f" = {PRESCALER_LETTER[_scheme_prescaler]}"  # = 𝐿 / diag(𝒑) / 𝐼
+    # the bare tile's SYMBOL equivalence names the realised prescaler concretely; a real deviation
+    # has no closed form, so none.
+    prescaler_equivalence = f" = {PRESCALER_LETTER[_realized_prescaler]}" if _realized_prescaler else ""
     # the bare matrix keeps the literal abstract 𝑋 (SYMBOLS); only the products' "L" placeholder
     # resolves to the live glyph ("LC"/"LD"/… → 𝐿C/… or 𝑋C/…), matching their column headers.
     prescaling_symbols = {(r, c): prescaler_symbol + s[1:] for (r, c), s in SYMBOLS.items()

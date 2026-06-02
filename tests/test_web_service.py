@@ -501,6 +501,18 @@ def test_displayed_prescaler_name_falls_back_to_none_on_a_deviating_override():
     assert service.displayed_prescaler_name(mapping, "minimax-S", (1.0, 9.9, 2.322)) is None
 
 
+def test_displayed_prescaler_name_recognizes_a_rounded_return_to_the_scheme_diagonal():
+    # a prescaler cell shows its value rounded (prescale_text, 3-dp), and editing stores that shown
+    # value — so a round-trip (deviate a cell, then type the shown log-prime value back) leaves a
+    # diagonal differing from the full-precision scheme diagonal only by display rounding. That must
+    # still read as the scheme's prescaler — not "-" — so the chooser and the 𝑋 = 𝐿 awareness recover.
+    mapping = ((1, 1, 0), (0, 1, 4))
+    computed = service.complexity_prescaler(mapping, "minimax-S")           # (1, 1.5849625…, 2.3219281…)
+    shown = tuple(float(service.prescale_text(v)) for v in computed)        # (1.0, 1.585, 2.322)
+    assert shown != computed                                               # the rounding really differs
+    assert service.displayed_prescaler_name(mapping, "minimax-S", shown) == "log-prime"
+
+
 def test_scheme_with_weight_slope_swaps_the_damage_slope_preserving_the_rest():
     # the weight box's "damage weight slope" chooser: swap how complexity becomes a weight
     # (unity 𝒘=1, complexity 𝒘=𝒄, simplicity 𝒘=1/𝒄) without disturbing the complexity itself.
