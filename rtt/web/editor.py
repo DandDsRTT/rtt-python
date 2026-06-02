@@ -68,9 +68,10 @@ def _initial_doc() -> _Doc:
     return _Doc(
         state=service.from_mapping(INITIAL_MAPPING),
         # all-interval is OFF by default: the as-shipped scheme targets the displayed interval
-        # list (the default TILT family), so the target-controls "all-interval" checkbox starts
-        # unchecked. It stays a named string ("TILT minimax-S") so the chooser still names it.
-        tuning_scheme=f"{service.DEFAULT_TARGET_SPEC} {service.DEFAULT_TUNING_SCHEME}",
+        # list (the default TILT family) at unity weight, so the target-controls "all-interval"
+        # checkbox starts unchecked. It stays a named string ("TILT minimax-U") so the chooser
+        # still names it.
+        tuning_scheme=service.DEFAULT_DOCUMENT_SCHEME,
         target_family=service.DEFAULT_TARGET_SPEC,
         target_limit=None,
         interest_vectors=(),
@@ -449,15 +450,20 @@ class Editor:
     def set_all_interval(self, all_interval: bool) -> None:
         """Toggle the target-controls all-interval checkbox: checked targets every interval (the
         empty set — an all-interval scheme), unchecked targets the displayed interval list (the
-        live target spec). Switches the scheme's target set accordingly (an undoable edit). A
-        named scheme keeps its name (the target prefix is added/dropped) so the chooser can still
-        name it; a control-refined spec stays a spec."""
+        live target spec). Switches the scheme's target set accordingly (an undoable edit). The
+        weight slope flips with the mode: an all-interval scheme is simplicity-weighted by
+        construction, while the target-based default is unity weight — so checking forces
+        simplicity, unchecking forces unity. A named scheme keeps its name (the target prefix is
+        added/dropped); a control-refined spec stays a spec."""
         self._snapshot()
+        slope = "simplicity-weight" if all_interval else "unity-weight"
         base = service.base_scheme_name(self.tuning_scheme)
         if base is None:  # a refined spec has no name — keep the spec form
+            spec = service.scheme_with_weight_slope(self.tuning_scheme, slope)
             self.tuning_scheme = service.scheme_with_targets(
-                self.tuning_scheme, "{}" if all_interval else self.target_spec)
+                spec, "{}" if all_interval else self.target_spec)
         else:
+            base = service.scheme_with_weight_slope(base, slope)  # name in, name out
             self.tuning_scheme = base if all_interval else f"{self.target_spec} {base}"
 
     def set_target_spec(self, spec: str) -> None:
@@ -626,7 +632,7 @@ class Editor:
         doc = _Doc(
             state=state,
             tuning_scheme=service.scheme_from_json(
-                data.get("tuning_scheme", service.DEFAULT_TUNING_SCHEME)),
+                data.get("tuning_scheme", service.DEFAULT_DOCUMENT_SCHEME)),
             target_family=data.get("target_family", service.DEFAULT_TARGET_SPEC),
             target_limit=data.get("target_limit"),
             interest_vectors=tuple(tuple(int(x) for x in m) for m in data.get("interest_vectors", ())),

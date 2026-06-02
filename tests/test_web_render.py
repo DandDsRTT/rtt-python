@@ -189,14 +189,14 @@ def _stacked_face(user: User, cell_id: str):
 
 
 async def test_tuning_preselect_offers_only_lp_while_alternatives_are_shelved(user: User) -> None:
-    # alternative-complexity schemes are gated behind the (shelved) alt. complexity setting,
-    # so with it off the tuning chooser offers only the strictly log-product scheme. (The chooser's
-    # options are {value: label}, the labels T-prefixed for the target-based default; check the
-    # offered values.)
+    # alternative-complexity schemes are gated behind the (shelved) alt. complexity setting, so with
+    # it off the tuning chooser offers only the log-product family — but at all three weight slopes
+    # (its simplicity / unity / complexity variants), since the target-based default is unity. (The
+    # chooser's options are {value: label}, the labels T-prefixed; check the offered values.)
     await user.open("/")
     _toggle(user, "preselects")
     await user.should_see(marker="preselect:tuning")
-    assert list(_cell_child(user, "preselect:tuning").options) == ["minimax-S"]
+    assert list(_cell_child(user, "preselect:tuning").options) == ["minimax-S", "minimax-U", "minimax-C"]
 
 
 async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(user: User) -> None:
@@ -407,12 +407,12 @@ async def test_tuning_chooser_shows_the_prompt_when_the_generator_tuning_is_over
     # hand-editing the generator tuning map freezes a manual tuning that deviates from the
     # scheme's optimum, so the shown tuning no longer realises the selected scheme — BOTH
     # tuning-scheme dropdowns (under the tuning map 𝒕 and the generator tuning map 𝒈) fall
-    # back to "-", even though the scheme name (minimax-S) is unchanged.
+    # back to "-", even though the scheme name (minimax-U) is unchanged.
     await user.open("/")
     _toggle(user, "preselects")
     both = ("preselect:tuning", "preselect:tuning:gens")
     assert all("display-value" not in _cell_child(user, cid)._props for cid in both)
-    _cell_child(user, "tuning:gen:1").set_value("700.000")  # off the minimax-S optimum fifth
+    _cell_child(user, "tuning:gen:1").set_value("700.000")  # off the minimax-U optimum fifth
     await user.should_see(marker="preselect:tuning")
     assert all(_cell_child(user, cid)._props.get("display-value") == "-" for cid in both)
 
@@ -423,11 +423,11 @@ async def test_selecting_a_scheme_clears_a_manual_tuning_override(user: User) ->
     # scheme's optimum, and the box shows the scheme name again.
     await user.open("/")
     _toggle(user, "preselects")
-    optimum = _cell_child(user, "tuning:gen:1").value  # the minimax-S optimum fifth
+    optimum = _cell_child(user, "tuning:gen:1").value  # the default (minimax-U) optimum fifth
     _cell_child(user, "tuning:gen:1").set_value("700.000")  # deviate
     await user.should_see(marker="preselect:tuning")
     assert _cell_child(user, "preselect:tuning")._props.get("display-value") == "-"
-    _cell_child(user, "preselect:tuning").set_value("minimax-S")  # re-select the scheme
+    _cell_child(user, "preselect:tuning").set_value("minimax-U")  # re-select the scheme
     await user.should_see(marker="preselect:tuning")
     assert "display-value" not in _cell_child(user, "preselect:tuning")._props  # name shown again
     assert _cell_child(user, "tuning:gen:1").value == optimum  # tuning snapped back to the optimum

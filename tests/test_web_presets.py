@@ -13,18 +13,26 @@ def test_every_temperament_preset_loads_to_a_state_that_tempers_out_its_commas()
 
 
 def test_tuning_scheme_options_prefix_T_when_not_all_interval():
-    # the established-tuning-scheme chooser prefixes an upright "T " (the target-list symbol) onto
-    # each name when the scheme is NOT all-interval — marking that it optimizes over the target
-    # interval list rather than every interval. All-interval => bare names. The VALUES stay bare.
+    # all-interval schemes are simplicity-weighted by construction, so the all-interval list is the
+    # bare canonical family names. The target-based list instead offers each family at all three
+    # weight slopes (its simplicity / unity / complexity variants), each label prefixing an upright
+    # "T " (the target-list symbol) to mark it optimizes over the target list, not every interval.
     all_interval = presets.tuning_scheme_options(True, include_alternatives=True)
     targeted = presets.tuning_scheme_options(False, include_alternatives=True)
-    assert set(all_interval) == set(targeted) == set(presets.TUNING_SCHEMES)
+    assert set(all_interval) == set(presets.TUNING_SCHEMES)  # the bare canonical (simplicity) names
     assert all_interval["minimax-S"] == "minimax-S"
-    assert targeted["minimax-S"] == "T minimax-S"
-    assert all(label.startswith("T ") for label in targeted.values())
     assert all(label == name for name, label in all_interval.items())  # bare when all-interval
-    # composes with the alternative-complexity gate: without alternatives, only the lp scheme
+    # the lp family's three weight variants, each T-prefixed
+    assert {"minimax-S", "minimax-U", "minimax-C"} <= set(targeted)
+    assert targeted["minimax-S"] == "T minimax-S"
+    assert targeted["minimax-U"] == "T minimax-U"
+    assert targeted["minimax-C"] == "T minimax-C"
+    assert all(label.startswith("T ") for label in targeted.values())
+    # composes with the alternative-complexity gate: without alternatives, only the lp family —
+    # its single bare simplicity name (all-interval) or its three weight variants (target-based)
     assert set(presets.tuning_scheme_options(True, include_alternatives=False)) == {"minimax-S"}
+    assert set(presets.tuning_scheme_options(False, include_alternatives=False)) == {
+        "minimax-S", "minimax-U", "minimax-C"}
 
 
 def test_temperament_presets_span_prime_limits_5_through_13():

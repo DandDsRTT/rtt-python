@@ -48,8 +48,14 @@ from rtt.tuning_scheme_names import (
     resolve_tuning_scheme,
 )
 
-DEFAULT_TUNING_SCHEME = "minimax-S"  # the as-shipped scheme
+DEFAULT_TUNING_SCHEME = "minimax-S"  # the canonical all-interval scheme — the compute/helper
+# default (where a complete self-contained scheme is wanted) and the all-interval form the chooser
+# anchors on. NOT the as-shipped document scheme (see DEFAULT_DOCUMENT_SCHEME).
 DEFAULT_TARGET_SPEC = "TILT"  # the default target interval set family (tracks the domain)
+# The as-shipped document scheme the editor and a fresh build start from: target-based (the
+# default TILT family) and UNITY-weighted. All-interval schemes are simplicity-weighted by
+# construction, but the target-based default is plain unity weight (minimax-U, not minimax-S).
+DEFAULT_DOCUMENT_SCHEME = f"{DEFAULT_TARGET_SPEC} minimax-U"
 
 
 @dataclass(frozen=True)
@@ -366,7 +372,7 @@ def optimization_power(scheme: str = DEFAULT_TUNING_SCHEME) -> float:
 
 def held_intervals(scheme: str = DEFAULT_TUNING_SCHEME, d: int = 3) -> tuple[str, ...]:
     """The intervals the scheme tunes exactly justly (trait 0), as ratio strings — the
-    optimization's held interval constraints. The shipped minimax-S holds nothing;
+    optimization's held interval constraints. The canonical minimax-S holds nothing;
     a held-octave scheme (e.g. held-octave minimax-ES) holds ``2/1``. ``"octave"`` reads as the prime 2."""
     held = resolve_tuning_scheme(scheme).held_intervals
     if not held:
@@ -452,6 +458,15 @@ WEIGHT_SLOPES = {
     "simplicity-weight": "simplicityWeight",
 }
 
+# the trailing letter each weight slope carries in a systematic scheme name (minimax-U/-S/-C) —
+# the slope is always the name's final character, so a named scheme's slope is swapped by
+# replacing that letter, keeping the scheme nameable rather than degrading it to an unnamed spec.
+WEIGHT_SLOPE_LETTERS = {"unity-weight": "U", "simplicity-weight": "S", "complexity-weight": "C"}
+
+# the order the weight variants are offered (per complexity family) in the scheme chooser:
+# simplicity, unity, complexity — the slope running from 1/𝒄 through 1 to 𝒄
+_WEIGHT_VARIANT_ORDER = ("simplicity-weight", "unity-weight", "complexity-weight")
+
 # The predefined complexities the master chooser in box 𝒄 offers, each mapping its display
 # name to the systematic interval-complexity token whose traits it sets (prescaler + size
 # factor + norm power). It is the master that overrides the box 𝐋 prescaler and box 𝒄 norm:
@@ -523,7 +538,7 @@ def is_euclidean(scheme) -> bool:
 
 def is_all_interval(scheme) -> bool:
     """Whether ``scheme`` is an all-interval tuning scheme — its target set is the empty
-    quotient list ``{}`` (every interval, by duality). The shipped minimax-S is."""
+    quotient list ``{}`` (every interval, by duality). The canonical minimax-S is."""
     targets = resolve_tuning_scheme(scheme).target_intervals
     return targets is not None and targets.strip() in ("{}", "")
 
@@ -548,9 +563,22 @@ def scheme_with_targets(scheme, target_intervals: str):
 
 def scheme_with_weight_slope(scheme, slope: str):
     """``scheme`` with its damage-weight slope swapped to ``slope`` (a :data:`WEIGHT_SLOPES`
-    key) — the weight box's chooser — keeping the complexity and optimization power. Returns
-    a resolved spec (taken anywhere a scheme name is)."""
+    key) — the weight box's chooser — keeping the complexity and optimization power. A named
+    scheme keeps its name (the trailing U/S/C letter is swapped, e.g. ``minimax-S`` →
+    ``minimax-U``) so the chooser can still name it; a control-refined spec stays a spec."""
+    if isinstance(scheme, str):
+        bare = scheme.rstrip()
+        if bare and bare[-1] in "USC":  # a systematic name ends in its slope letter
+            return bare[:-1] + WEIGHT_SLOPE_LETTERS[slope]
     return replace(resolve_tuning_scheme(scheme), damage_weight_slope=WEIGHT_SLOPES[slope])
+
+
+def weight_slope_variants(name: str) -> tuple[str, ...]:
+    """``name``'s simplicity / unity / complexity weight variants — its trailing U/S/C letter
+    swapped to each slope. The established-tuning-scheme chooser lists these per complexity family
+    so a weight slope is pickable by name (T minimax-S / -U / -C), staying in sync with the box-𝒘
+    weight chooser (both set the same scheme trait)."""
+    return tuple(scheme_with_weight_slope(name, slope) for slope in _WEIGHT_VARIANT_ORDER)
 
 
 def weight_slope_of(scheme) -> str:

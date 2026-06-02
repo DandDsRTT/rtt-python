@@ -39,7 +39,7 @@ SHOW_HELP: dict[str, str] = {
     "tuning_ranges": "Chart each generator's tuning range as an I-beam under the generator tuning map.",
     "weighting": "Show the weighting boxes — the prescaler, the complexity 𝒄, and the weight 𝒘.",
     "all_interval": "Show the all-interval control — optimize over every interval rather than a finite target list.",
-    "alt_complexity": "Show the alternate-complexity choosers — prescaler, norm power, and weight slope.",
+    "alt_complexity": "Show the alternate-complexity controls — the prescaler box 𝐋 and the wider choice of interval-complexity measures.",
     "projection": "Show the projection box — the rational projection 𝑃 = 𝐺𝑀 holding the just primes.",
     "tuning_colorization": "Tint each cell by what derives it — the generator tuning map 𝒈. Refines “tuning boxes”.",
     "interest": "Show the “other intervals of interest” column.",
@@ -102,7 +102,7 @@ _ID_HELP: dict[str, str] = {
     "optimization:power": "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean.",
     "control:q": "Interval-complexity norm power 𝑞.",
     "control:dual": "Dual norm power — the dual exponent of 𝑞, used to minimax over every interval.",
-    # control_select: the three alternate-complexity choosers
+    # control_select: the prescaler, complexity, and weight-slope choosers
     "control:prescaler": "Choose a predefined prescaler — the per-prime weighting applied before optimizing.",
     "control:complexity": "Choose the interval-complexity measure used to weight damage.",
     "control:slope": "Choose the damage weight slope — how a target's weight scales with its complexity.",

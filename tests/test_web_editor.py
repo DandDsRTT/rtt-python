@@ -181,14 +181,18 @@ def test_set_diminuator_replaced_toggles_the_size_factor():
 def test_set_all_interval_toggles_the_scheme_target_set():
     editor = Editor()
     assert service.is_all_interval(editor.tuning_scheme) is False  # all-interval OFF by default
-    assert editor.displayed_tuning_scheme_name == "minimax-S"  # still a named scheme (target-based)
+    assert editor.displayed_tuning_scheme_name == "minimax-U"  # target-based default is unity-weighted
     # the unchecked state targets the displayed interval-list family (the editor's live target spec)
     assert service.resolve_tuning_scheme(editor.tuning_scheme).target_intervals == editor.target_spec
     editor.set_all_interval(True)  # the target-controls checkbox: switch to all-interval
     assert service.is_all_interval(editor.tuning_scheme) is True
-    assert editor.displayed_tuning_scheme_name == "minimax-S"  # named in all-interval mode too
-    editor.set_all_interval(False)
+    # an all-interval scheme is simplicity-weighted by construction, so the toggle forces it
+    assert editor.displayed_tuning_scheme_name == "minimax-S"
+    assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"
+    editor.set_all_interval(False)  # back to target-based -> the unity-weighted default
     assert service.is_all_interval(editor.tuning_scheme) is False
+    assert editor.displayed_tuning_scheme_name == "minimax-U"
+    assert service.weight_slope_of(editor.tuning_scheme) == "unity-weight"
     editor.undo()  # the toggle is an undoable edit
     assert service.is_all_interval(editor.tuning_scheme) is True
 
@@ -209,24 +213,29 @@ def test_set_tuning_scheme_preserves_the_target_mode():
 
 def test_set_weight_slope_swaps_the_damage_weight_slope():
     editor = Editor()
-    assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"  # minimax-S default
-    editor.set_weight_slope("unity-weight")  # the weight box's damage-weight-slope chooser
-    assert service.weight_slope_of(editor.tuning_scheme) == "unity-weight"
-    # the swap re-weights the targets: unity weight makes every target weight 1
+    assert service.weight_slope_of(editor.tuning_scheme) == "unity-weight"  # minimax-U default
+    # the default unity weight makes every target weight 1
+    flat = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True},
+                             tuning_scheme=editor.tuning_scheme)
+    assert all(c.text == "1.000" for c in flat.cells if c.id.startswith("weight:target:"))
+    # the weight box's damage-weight-slope chooser swaps it; simplicity weight makes each weight
+    # 1/complexity, so they are no longer all 1
+    editor.set_weight_slope("simplicity-weight")
+    assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"
     lay = spreadsheet.build(editor.state, {**settings.defaults(), "weighting": True},
                             tuning_scheme=editor.tuning_scheme)
     weights = [c.text for c in lay.cells if c.id.startswith("weight:target:")]
-    assert weights and all(w == "1.000" for w in weights)
+    assert weights and not all(w == "1.000" for w in weights)
 
 
 def test_the_weighting_choosers_are_undoable_like_every_other_change():
     # the weight-slope / predefined-complexity / ignore-diminuator choosers are document
     # changes like the other alt.-complexity controls, so they join the one undo history
     editor = Editor()
-    editor.set_weight_slope("unity-weight")
+    editor.set_weight_slope("simplicity-weight")  # off the unity default
     assert editor.can_undo is True
     editor.undo()
-    assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"
+    assert service.weight_slope_of(editor.tuning_scheme) == "unity-weight"  # reverted to the default
     editor.set_complexity_name("sopfr")
     editor.undo()
     assert service.complexity_name_of(editor.tuning_scheme) == "lp"  # reverted
@@ -314,7 +323,7 @@ def test_removing_a_real_comma_drops_the_last_when_no_draft_is_pending():
 
 def test_editor_starts_with_default_tuning_scheme_and_target_spec():
     editor = Editor()
-    assert service.base_scheme_name(editor.tuning_scheme) == service.DEFAULT_TUNING_SCHEME
+    assert editor.tuning_scheme == service.DEFAULT_DOCUMENT_SCHEME  # target-based, unity-weighted
     assert service.is_all_interval(editor.tuning_scheme) is False  # all-interval OFF by default
     assert editor.target_spec == "TILT"
 
@@ -366,7 +375,8 @@ def test_scheme_and_target_spec_changes_are_undoable():
     editor.undo()
     assert editor.target_spec == "TILT"  # undo reverts the target choice
     editor.undo()
-    assert service.base_scheme_name(editor.tuning_scheme) == service.DEFAULT_TUNING_SCHEME  # ...then the scheme
+    assert service.base_scheme_name(editor.tuning_scheme) \
+        == service.base_scheme_name(service.DEFAULT_DOCUMENT_SCHEME)  # ...then the scheme
     editor.redo()
     assert service.base_scheme_name(editor.tuning_scheme) == "held-octave minimax-ES"  # redo reapplies it
 
@@ -529,7 +539,7 @@ def test_displayed_tuning_scheme_name_drops_to_none_when_the_tuning_deviates():
     # the tuning chooser shows the scheme name only while the displayed tuning realises that
     # scheme; once it deviates the name drops to None (the chooser then shows "-").
     editor = Editor()
-    assert editor.displayed_tuning_scheme_name == "minimax-S"  # default: the scheme's own optimum
+    assert editor.displayed_tuning_scheme_name == "minimax-U"  # default: the scheme's own optimum
     # hand-editing the generator tuning map off the optimum is a deviation
     editor.set_generator_tuning_component(1, 700.0)
     assert editor.displayed_tuning_scheme_name is None
@@ -545,13 +555,13 @@ def test_displayed_tuning_scheme_name_keeps_the_name_when_the_tuning_still_match
     editor = Editor()
     editor.optimize()
     assert editor.effective_generator_tuning() is not None  # a tuning is frozen
-    assert editor.displayed_tuning_scheme_name == "minimax-S"
+    assert editor.displayed_tuning_scheme_name == "minimax-U"
     # a stale frozen tuning the grid ignores (its generator count no longer fits the mapping,
     # here after the domain expands and re-ranks) also keeps the name — the grid then shows the
     # scheme's optimum, not the stale override
     editor.expand()
     assert len(editor.effective_generator_tuning()) != editor.state.r
-    assert editor.displayed_tuning_scheme_name == "minimax-S"
+    assert editor.displayed_tuning_scheme_name == "minimax-U"
 
 
 def test_set_tuning_scheme_clears_a_manual_generator_tuning_override():
@@ -695,7 +705,8 @@ def test_reset_restores_every_default_as_one_undoable_action():
     assert editor.can_reset is True
     editor.reset()
     assert editor.state.mapping == INITIAL_MAPPING
-    assert service.base_scheme_name(editor.tuning_scheme) == service.DEFAULT_TUNING_SCHEME
+    assert service.base_scheme_name(editor.tuning_scheme) \
+        == service.base_scheme_name(service.DEFAULT_DOCUMENT_SCHEME)
     assert service.is_all_interval(editor.tuning_scheme) is False  # reset restores all-interval OFF
     assert editor.settings == settings.defaults()
     assert "col:commas" in editor.collapsed
@@ -802,7 +813,8 @@ def test_load_falls_back_when_the_core_fields_are_missing():
     del no_scheme["tuning_scheme"]
     restored = Editor()
     restored.load(no_scheme)  # must not raise
-    assert service.base_scheme_name(restored.tuning_scheme) == service.DEFAULT_TUNING_SCHEME
+    assert service.base_scheme_name(restored.tuning_scheme) \
+        == service.base_scheme_name(service.DEFAULT_DOCUMENT_SCHEME)
 
     # both core fields absent: still no raise (an absent mapping just leaves the editor
     # untouched, exactly like an unparseable one).

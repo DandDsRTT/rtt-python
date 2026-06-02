@@ -1000,8 +1000,8 @@ def build(state, settings=None, collapsed=None,
     if settings is None:
         settings = _default_settings()
     if tuning_scheme is None:
-        # the as-shipped scheme is target-based (all-interval OFF), matching the editor's default
-        tuning_scheme = f"{service.DEFAULT_TARGET_SPEC} {service.DEFAULT_TUNING_SCHEME}"
+        # the as-shipped scheme is target-based and unity-weighted, matching the editor's default
+        tuning_scheme = service.DEFAULT_DOCUMENT_SCHEME
     if target_spec is None:
         target_spec = service.DEFAULT_TARGET_SPEC
     collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips

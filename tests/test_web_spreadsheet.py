@@ -1371,7 +1371,7 @@ def test_weighting_on_adds_a_weight_row_over_the_targets():
         service.DEFAULT_TARGET_SPEC, service.standard_primes(3)
     )
     weights = service.interval_weights(
-        ((1, 1, 0), (0, 1, 4)), service.DEFAULT_TUNING_SCHEME, targets
+        ((1, 1, 0), (0, 1, 4)), service.DEFAULT_DOCUMENT_SCHEME, targets
     )
     assert len(weights) == 8
     assert on["weight:target:0"].text == service.cents(weights[0])
@@ -2039,7 +2039,7 @@ def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box():
     assert "control:slope" not in off  # no control unless weighting is on
     ctrl = on["control:slope"]
     assert ctrl.kind == "control_select"
-    assert ctrl.text == "simplicity-weight"  # the default scheme's damage-weight slope
+    assert ctrl.text == "unity-weight"  # the default scheme's damage-weight slope (unity)
     assert ctrl.values == ("complexity-weight", "unity-weight", "simplicity-weight")
     # it rides below the weight list (box 𝒘), spanning the targets column
     assert ctrl.y > on["weight:target:0"].y
@@ -2105,8 +2105,8 @@ def test_weight_equivalence_reflects_the_schemes_damage_slope():
         return {c.id: c for c in lay.cells}["symbol:weight:targets"].text
 
     assert equiv("minimax-C") == "𝒘 = 𝒄"      # complexity weight
-    assert equiv("minimax-U") == "𝒘 = 1"      # unity weight
-    assert equiv("minimax-S") == "𝒘 = 1/𝒄"    # simplicity weight (the shipped default)
+    assert equiv("minimax-U") == "𝒘 = 1"      # unity weight (the document default)
+    assert equiv("minimax-S") == "𝒘 = 1/𝒄"    # simplicity weight (the all-interval weight)
 
 
 def test_damage_equivalence_drops_the_weight_factor_under_unity_weight():
@@ -2121,8 +2121,8 @@ def test_damage_equivalence_drops_the_weight_factor_under_unity_weight():
         return {c.id: c for c in lay.cells}["symbol:damage:targets"].text
 
     assert equiv("minimax-C") == "𝐝 = |𝐞|diag(𝒘)"   # complexity weight keeps the factor
-    assert equiv("minimax-U") == "𝐝 = |𝐞|"           # unity weight: no weight factor
-    assert equiv("minimax-S") == "𝐝 = |𝐞|diag(𝒘)"   # simplicity weight keeps it (shipped default)
+    assert equiv("minimax-U") == "𝐝 = |𝐞|"           # unity weight (document default): no factor
+    assert equiv("minimax-S") == "𝐝 = |𝐞|diag(𝒘)"   # simplicity weight keeps it (all-interval weight)
 
 
 def test_commas_have_a_shared_vertical_axis_per_comma():
@@ -2573,15 +2573,16 @@ def test_custom_prescaler_override_drives_the_complexity_row():
 
 
 def test_custom_prescaler_override_drives_the_weight_row():
-    # the weight row reads each target's complexity (under the live prescaler) — so a
-    # custom diagonal MUST rewrite the weights too. With diag (1, 1, 1) and the default
-    # simplicity-weight slope, every weight is 1/complexity of its target. Spot-check by
-    # comparing the override case to the scheme's: the override's weights are NOT the
-    # default's (the prescaler changed, so the complexities did too).
+    # the weight row reads each target's complexity (under the live prescaler) — so a custom
+    # diagonal MUST rewrite the weights too. That coupling only shows when the slope isn't unity
+    # (unity weight is 1 regardless of complexity), so use a simplicity-weighted scheme: every
+    # weight is then 1/complexity. Spot-check by comparing the override case to the scheme's: the
+    # override's weights are NOT the default's (the prescaler changed, so the complexities did too).
     s = settings.defaults() | {"weighting": True}
-    default = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+    scheme = f"TILT {service.DEFAULT_TUNING_SCHEME}"  # target-based simplicity weight
+    default = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, tuning_scheme=scheme)
     override = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
-                                  custom_prescaler=(1.0, 1.0, 1.0))
+                                  tuning_scheme=scheme, custom_prescaler=(1.0, 1.0, 1.0))
     d_weights = [c.text for c in default.cells if c.id.startswith("weight:target:")]
     o_weights = [c.text for c in override.cells if c.id.startswith("weight:target:")]
     assert d_weights and o_weights and len(d_weights) == len(o_weights)
@@ -3551,15 +3552,15 @@ def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box():
 
 
 def test_a_manual_generator_tuning_drives_the_displayed_maps():
-    # a frozen manual generator tuning (optimize lock off) drives the tuning maps directly,
-    # not the scheme optimum: a pure octave + fifth tunes prime 2 to exactly 1200 cents
+    # a frozen manual generator tuning (optimize lock off) drives the tuning maps directly, not the
+    # scheme optimum: a pure octave + pure fifth tunes prime 3 (= g0 + g1) to exactly the just fifth
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     manual = {c.id: c for c in spreadsheet.build(base, s, generator_tuning=(1200.0, 701.955)).cells}
-    assert manual["tuning:prime:0"].text == "1200.000"          # prime 2 = the pure octave
-    # the default optimum stretches the octave, so it differs
+    assert manual["tuning:prime:1"].text == "1901.955"          # prime 3 = g0 + g1 = the pure fifth
+    # the default optimum tempers the fifth, so it differs
     auto = {c.id: c for c in spreadsheet.build(base, s).cells}
-    assert auto["tuning:prime:0"].text != "1200.000"
+    assert auto["tuning:prime:1"].text != "1901.955"
 
 
 def test_typing_the_generator_tuning_map_drives_the_grid_through_the_editor():
@@ -4046,7 +4047,7 @@ def test_generator_tuning_map_tile_shows_the_generator_map_cents_in_the_default_
     # the generator tuning map (the tuning row over the generators) is a default-view
     # tile, like the tuning map over the primes — present without any toggle
     st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    tun = service.tuning(st.mapping)
+    tun = service.tuning(st.mapping, service.DEFAULT_DOCUMENT_SCHEME)  # the default view's scheme
     cells = {c.id: c for c in _layout().cells}  # default settings (charts off)
     assert cells["tuning:gen:0"].text == service.cents(tun.generator_map[0])
     assert cells["tuning:gen:1"].text == service.cents(tun.generator_map[1])
@@ -4066,7 +4067,8 @@ def test_generator_tuning_map_gets_a_plain_text_value_band():
     st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     on = {c.id: c for c in _with(plain_text_values=True).cells}
     assert "ptext:tuning:gens" in on
-    assert on["ptext:tuning:gens"].text == service.plain_text_values(st)[("tuning", "gens")]
+    assert on["ptext:tuning:gens"].text == service.plain_text_values(
+        st, service.DEFAULT_DOCUMENT_SCHEME)[("tuning", "gens")]
     assert on["ptext:tuning:gens"].text.startswith("{") and on["ptext:tuning:gens"].text.endswith("]")
 
 
@@ -4440,7 +4442,9 @@ def test_collapsing_a_tile_removes_its_colorization():
 
 
 def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
-    on = {c.id: c for c in _with(symbols=True, equivalences=True).cells}
+    # a simplicity-weighted scheme so the damage equivalence keeps its diag(𝒘) weight factor
+    # (the default unity weight drops it); the bold-italic 𝒘 is what this checks
+    on = {c.id: c for c in _with("TILT minimax-S", symbols=True, equivalences=True).cells}
     # the mapped comma basis is exactly the zero matrix
     assert on["symbol:mapping:commas"].text == "𝑀C = 𝑂"
     # the damage weight w is bold-italic (matching the maps), not bold-upright

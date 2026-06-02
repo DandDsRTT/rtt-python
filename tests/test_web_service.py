@@ -16,10 +16,10 @@ def test_base_scheme_name_strips_the_target_prefix():
 
 def test_optimization_power_is_the_schemes_lp_norm_order():
     # the optimization power p is trait 2 of the tuning scheme: the order of the
-    # Lp norm minimized over the damages. minimax-S (the shipped default) is a minimax
+    # Lp norm minimized over the damages. minimax-S (the canonical scheme) is a minimax
     # scheme, so p = ∞; miniRMS is least-squares (p = 2); miniaverage is p = 1.
     assert service.optimization_power("minimax-S") == math.inf
-    assert service.optimization_power() == math.inf  # defaults to the shipped scheme (minimax-S)
+    assert service.optimization_power() == math.inf  # defaults to the canonical scheme (minimax-S)
     assert service.optimization_power("least squares") == 2
     assert service.optimization_power("miniaverage-U") == 1
 
@@ -159,10 +159,10 @@ def test_tuning_holds_user_specified_intervals_just():
 
 def test_held_intervals_come_from_the_tuning_scheme():
     # the held intervals (tuned exactly justly) are trait 0 of the tuning scheme,
-    # surfaced as ratios. The shipped minimax-S holds nothing; a held-octave
+    # surfaced as ratios. The canonical minimax-S holds nothing; a held-octave
     # scheme like held-octave minimax-ES holds the octave.
     assert service.held_intervals("minimax-S", 3) == ()
-    assert service.held_intervals() == ()  # defaults to the shipped scheme (minimax-S)
+    assert service.held_intervals() == ()  # defaults to the canonical scheme (minimax-S)
     assert service.held_intervals("held-octave minimax-ES", 3) == ("2/1",)
 
 
@@ -501,7 +501,7 @@ def test_scheme_with_weight_slope_swaps_the_damage_slope_preserving_the_rest():
 
 
 def test_weight_slope_of_reports_the_schemes_current_slope():
-    assert service.weight_slope_of("minimax-S") == "simplicity-weight"  # the shipped default
+    assert service.weight_slope_of("minimax-S") == "simplicity-weight"  # the canonical all-interval scheme
     assert service.weight_slope_of("minimax-U") == "unity-weight"
     assert service.weight_slope_of("minimax-C") == "complexity-weight"
     # it round-trips with scheme_with_weight_slope
@@ -782,7 +782,7 @@ def test_plain_text_weighting_rows_mirror_the_grid():
     assert pt[("complexity", "primes")] == "⟨1.000 1.585 2.322]"
     assert pt[("complexity", "commas")] == "[12.662]"
     assert pt[("complexity", "targets")].startswith("[") and pt[("complexity", "targets")].endswith("]")
-    # the per-target weight list (simplicity-weighted by default → 1/complexity)
+    # the per-target weight list (the canonical minimax-S is simplicity-weighted → 1/complexity)
     assert pt[("weight", "targets")].startswith("[") and pt[("weight", "targets")].endswith("]")
     # the prescaling row is 𝐿 applied to each vector set, a […⟩-per-vector matrix:
     # 𝐿·[4,-4,1] = [4,-6.34,2.322] — each prescaled vector a ket ``[ … ⟩`` (square open +
