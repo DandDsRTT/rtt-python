@@ -1643,6 +1643,86 @@ def index() -> None:
     cell_kinds["control_check"] = _KindHandlers(_build_control_check, _update_control_check)
     cell_kinds["formchooser"] = _KindHandlers(_build_formchooser, _update_formchooser)
 
+    # ---- static controls (build only, no update): the domain/comma/interest/held ± buttons,
+    # the speaker, and the audio bank glyphs. Their click / JS handlers are baked at build time. ----
+    def _build_minus(cb, wrap):  # remove the highest prime; a hover − centred on the last prime's branch point
+        wrap.classes("rtt-minus-zone")  # clear of the editable cell below
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None: act(editor.shrink))
+
+    def _build_plus(cb, wrap):  # add a prime; the always-shown + on the bus stub
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: act(editor.expand))
+
+    def _build_basis_minus(cb, wrap):  # the domain − on the interval-vectors row's left bus
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
+            .on("click", lambda _=None: act(editor.shrink))
+
+    def _build_comma_minus(cb, wrap):  # drop the last comma, or cancel the pending draft
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None: act(editor.remove_comma))
+
+    def _build_comma_plus(cb, wrap):
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: act(editor.add_comma))
+
+    def _build_interest_minus(cb, wrap):  # one per interval (each independently removable)
+        i = int(cb.id.split(":", 1)[1])
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None, idx=i: act(lambda: editor.remove_interest(idx)))
+
+    def _build_interest_plus(cb, wrap):
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: act(editor.add_interest))
+
+    def _build_held_minus(cb, wrap):  # one per held interval; its − drops just that one
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None, idx=cb.comma: act(lambda: editor.remove_held(idx)))
+
+    def _build_held_plus(cb, wrap):
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: act(editor.add_held))
+
+    def _build_speaker(cb, wrap):  # play this pitch per its tile's mode (client-side engine)
+        tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
+        idx = int(cb.id.rsplit(":", 1)[1])
+        pitches = ",".join(f"{float(v):.6f}" for v in cb.values)  # the whole tile (for arp/chord)
+        # color=None drops Quasar's default primary (blue): the app is greyscale, leaving colour to
+        # the yellow/cyan/magenta colorization. .rtt-spk + the data attrs let the engine highlight
+        # this speaker while it sounds.
+        ui.button(icon="volume_up", color=None) \
+            .props(f'flat dense round data-audio="{tile}" data-idx="{idx}"') \
+            .classes("rtt-audio-btn rtt-spk") \
+            .on("click", js_handler=f"() => window.rttAudio.hit('{tile}', {idx}, [{pitches}])")
+
+    def _build_audio_ctrl(cb, wrap):  # a bank control: cycles its state + glyph client-side
+        tile = cb.id.split(":", 1)[1]      # "<row>:<group>"
+        ctrl = cb.kind.split("_", 1)[1]     # wave | mode | hold | root
+        glyph = {"wave": _AUDIO_GLYPHS["wave"][0], "mode": _AUDIO_GLYPHS["mode"][0],
+                 "hold": _AUDIO_GLYPHS["lock"][0], "root": _AUDIO_GLYPHS["root"]}[ctrl]
+        fn = {"wave": "cycleWave", "mode": "cycleMode",
+              "hold": "toggleHold", "root": "toggleRoot"}[ctrl]
+        ui.html(glyph).classes("rtt-audio-ctrl") \
+            .props(f'data-audio="{tile}" data-actrl="{ctrl}"') \
+            .on("click", js_handler=f"() => window.rttAudio.{fn}('{tile}')")
+
+    cell_kinds["minus"] = _KindHandlers(_build_minus)
+    cell_kinds["plus"] = _KindHandlers(_build_plus)
+    cell_kinds["basis_minus"] = _KindHandlers(_build_basis_minus)
+    cell_kinds["comma_minus"] = _KindHandlers(_build_comma_minus)
+    cell_kinds["comma_plus"] = _KindHandlers(_build_comma_plus)
+    cell_kinds["interest_minus"] = _KindHandlers(_build_interest_minus)
+    cell_kinds["interest_plus"] = _KindHandlers(_build_interest_plus)
+    cell_kinds["held_minus"] = _KindHandlers(_build_held_minus)
+    cell_kinds["held_plus"] = _KindHandlers(_build_held_plus)
+    cell_kinds["speaker"] = _KindHandlers(_build_speaker)
+    for _audio_ctrl in _AUDIO_CTRLS:  # audio_wave / audio_mode / audio_hold / audio_root
+        cell_kinds[_audio_ctrl] = _KindHandlers(_build_audio_ctrl)
+
     def _make_cell(cb):
         # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
         # letting the User-fixture render tests locate a cell by its stable id
@@ -1652,60 +1732,6 @@ def index() -> None:
             entry = cell_kinds.get(cb.kind)
             if entry is not None:
                 entry.build(cb, wrap)
-            elif cb.kind == "minus":  # remove the highest prime; a hover − centred on the last
-                wrap.classes("rtt-minus-zone")  # prime's branch point, clear of the editable cell below
-                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-                    .on("click", lambda _=None: act(editor.shrink))
-            elif cb.kind == "plus":  # add a prime; the always-shown + on the bus stub
-                ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-                    .on("click", lambda _=None: act(editor.expand))
-            elif cb.kind == "basis_minus":  # the domain − on the interval-vectors row's left bus
-                wrap.classes("rtt-minus-zone")
-                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
-                    .on("click", lambda _=None: act(editor.shrink))
-            elif cb.kind == "comma_minus":  # drop the last comma, or cancel the pending draft
-                wrap.classes("rtt-minus-zone")
-                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-                    .on("click", lambda _=None: act(editor.remove_comma))
-            elif cb.kind == "comma_plus":
-                ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-                    .on("click", lambda _=None: act(editor.add_comma))
-            elif cb.kind == "interest_minus":  # one per interval (each independently removable)
-                i = int(cb.id.split(":", 1)[1])
-                wrap.classes("rtt-minus-zone")
-                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-                    .on("click", lambda _=None, idx=i: act(lambda: editor.remove_interest(idx)))
-            elif cb.kind == "interest_plus":
-                ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-                    .on("click", lambda _=None: act(editor.add_interest))
-            elif cb.kind == "held_minus":  # one per held interval; its − drops just that one
-                wrap.classes("rtt-minus-zone")
-                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-                    .on("click", lambda _=None, idx=cb.comma: act(lambda: editor.remove_held(idx)))
-            elif cb.kind == "held_plus":
-                ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-                    .on("click", lambda _=None: act(editor.add_held))
-            elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
-                tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
-                idx = int(cb.id.rsplit(":", 1)[1])
-                pitches = ",".join(f"{float(v):.6f}" for v in cb.values)  # the whole tile (for arp/chord)
-                # color=None drops Quasar's default primary (blue): the app is greyscale,
-                # leaving colour to the yellow/cyan/magenta colorization. .rtt-spk + the data
-                # attrs let the engine highlight this speaker while it sounds.
-                ui.button(icon="volume_up", color=None) \
-                    .props(f'flat dense round data-audio="{tile}" data-idx="{idx}"') \
-                    .classes("rtt-audio-btn rtt-spk") \
-                    .on("click", js_handler=f"() => window.rttAudio.hit('{tile}', {idx}, [{pitches}])")
-            elif cb.kind in _AUDIO_CTRLS:  # a bank control: cycles its state + glyph client-side
-                tile = cb.id.split(":", 1)[1]      # "<row>:<group>"
-                ctrl = cb.kind.split("_", 1)[1]     # wave | mode | hold | root
-                glyph = {"wave": _AUDIO_GLYPHS["wave"][0], "mode": _AUDIO_GLYPHS["mode"][0],
-                         "hold": _AUDIO_GLYPHS["lock"][0], "root": _AUDIO_GLYPHS["root"]}[ctrl]
-                fn = {"wave": "cycleWave", "mode": "cycleMode",
-                      "hold": "toggleHold", "root": "toggleRoot"}[ctrl]
-                ui.html(glyph).classes("rtt-audio-ctrl") \
-                    .props(f'data-audio="{tile}" data-actrl="{ctrl}"') \
-                    .on("click", js_handler=f"() => window.rttAudio.{fn}('{tile}')")
         # explanatory hover text for the interactive controls (read-only value cells get none).
         # All wording lives in rtt.web.tooltips; a NEW cell kind must be classified there
         # (in READONLY_KINDS or with a help entry) or test_web_tooltips' completeness sweep fails.
