@@ -1729,9 +1729,9 @@ def index() -> None:
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
 
         with wrap:
-            entry = cell_kinds.get(cb.kind)
-            if entry is not None:
-                entry.build(cb, wrap)
+            # every cell kind is registered (audit #3); indexing rather than .get means an
+            # unregistered kind raises loudly here — drift surfaces as a crash, not a silent blank cell
+            cell_kinds[cb.kind].build(cb, wrap)
         # explanatory hover text for the interactive controls (read-only value cells get none).
         # All wording lives in rtt.web.tooltips; a NEW cell kind must be classified there
         # (in READONLY_KINDS or with a help entry) or test_web_tooltips' completeness sweep fails.
@@ -1823,9 +1823,9 @@ def index() -> None:
             # keep native coords in their frozen strip / corner
             top = cb.y - (fy if container in ("body", "row") else 0)
             els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
-            entry = cell_kinds.get(cb.kind)
-            if entry is not None and entry.update is not None:
-                entry.update(cb)
+            handlers = cell_kinds[cb.kind]  # registered for every kind (see _make_cell); raises on drift
+            if handlers.update is not None:
+                handlers.update(cb)
 
             # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
             # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so

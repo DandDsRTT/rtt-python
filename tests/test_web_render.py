@@ -729,3 +729,15 @@ async def test_default_view_html_cell_renders_non_blank_content(user: User, cell
     await user.should_see(marker=cell_id)
     assert getattr(_cell_child(user, cell_id), "content", ""), \
         f"{cell_id} rendered with empty html content — did render() drop its kind's branch?"
+
+
+async def test_a_maximal_render_dispatches_every_emitted_cell_kind(user: User) -> None:
+    # the cell-kind registry (audit #3) indexes cell_kinds[cb.kind] with no fallback, so any kind the
+    # layout emits without a registered build/update handler raises rather than rendering a silent
+    # blank cell. Drive a broad render — every implemented Show layer on, the folded vector rows
+    # expanded so the comma / target / interest / held vector cells and their ± controls also emit.
+    # A missing handler crashes the render, which the user fixture surfaces (any raised error fails it).
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="select all / none").click()  # every implemented feature on
+    user.find(marker="toggle:row:vectors").click()                    # expand the comma / target / interest / held vectors
+    await user.should_see(marker="cell:mapping:0:0")                  # the board re-rendered, no dispatch error
