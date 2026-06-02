@@ -2304,7 +2304,11 @@ def index() -> None:
                     sel.value = family
                 else:  # tuning — a refined spec or a deviating manual override shows "-"
                     scheme = editor.displayed_tuning_scheme_name
-                    selects[cb.id].value = scheme
+                    # the option LABELS T-prefix only while target-based, so recompute them as the
+                    # all-interval checkbox flips (set once at creation, they would otherwise go stale)
+                    options = presets.tuning_scheme_options(
+                        service.is_all_interval(editor.tuning_scheme), editor.settings["alt_complexity"])
+                    selects[cb.id].set_options(options, value=scheme)
                     _set_offlist_prompt(selects[cb.id], scheme)
             elif cb.kind == "control_select":  # mirror the live alt.-complexity choice
                 selects[cb.id].value = cb.text or None

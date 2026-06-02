@@ -128,12 +128,28 @@ def _stacked_face(user: User, cell_id: str):
 async def test_tuning_preselect_offers_only_lp_while_alternatives_are_shelved(user: User) -> None:
     # alternative-complexity schemes are gated behind the (shelved) alt. complexity setting,
     # so with it off the tuning chooser offers only the strictly log-product scheme. (The chooser's
-    # options are {value: label}, the labels T-prefixed when target-based; here the default scheme
-    # is all-interval, so check the offered values.)
+    # options are {value: label}, the labels T-prefixed for the target-based default; check the
+    # offered values.)
     await user.open("/")
     user.find(kind=ui.checkbox, content="preselects").click()
     await user.should_see(marker="preselect:tuning")
     assert list(_cell_child(user, "preselect:tuning").options) == ["minimax-S"]
+
+
+async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(user: User) -> None:
+    # the chooser's option LABELS T-prefix only while target-based; checking the all-interval box
+    # must flip them to the bare names. The options are recomputed on the toggle (not just the
+    # value), so the label updates — regression for them going stale on re-render.
+    await user.open("/")
+    user.find(marker="toggle:row:vectors").click()             # expand the target-list row
+    user.find(kind=ui.checkbox, content="preselects").click()  # show the chooser dropdowns
+    user.find(kind=ui.checkbox, content="weighting").click()   # reveal the nested all-interval entry
+    user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
+    await user.should_see(marker="control:all_interval")
+    assert _cell_child(user, "preselect:tuning").options["minimax-S"] == "T minimax-S"  # target-based default
+    _cell_child(user, "control:all_interval").set_value(True)  # check the box -> all-interval
+    await user.should_see(marker="preselect:tuning")
+    assert _cell_child(user, "preselect:tuning").options["minimax-S"] == "minimax-S"  # T prefix dropped
 
 
 async def test_editing_a_mapping_cell_updates_the_mapped_list(user: User) -> None:
