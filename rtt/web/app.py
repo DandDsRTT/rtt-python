@@ -906,6 +906,17 @@ def index() -> None:
         cents[cid][0].set_text(whole)
         cents[cid][1].set_text(f".{frac}" if frac else "")
 
+    def cents_face(cb, cls):
+        """Build the stacked int-over-fraction cents face (the read-only tval look: the whole
+        part big over a smaller dot-led fraction) and register its labels so the update keeps
+        them synced. Shared by the read-only tval cell and the editable cents cells — the latter
+        pass the overlay class and lay it over their input. Builds into the active cell container."""
+        whole, frac = _cents_parts(cb.text)
+        with ui.element("div").classes(cls):
+            w = ui.label(whole).classes("rtt-cents-int")
+            f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
+        cents[cb.id] = (w, f)
+
     def on_mapping_change():
         if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
             return
@@ -1317,17 +1328,6 @@ def index() -> None:
         # letting the User-fixture render tests locate a cell by its stable id
         wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
 
-        def cents_face(cls):
-            """Build the stacked int-over-fraction cents face (the read-only tval look: the
-            whole part big over a smaller dot-led fraction) and register its labels so render()
-            keeps them synced. Shared by the read-only tval cell and the editable cents cells —
-            the latter pass the overlay class and lay it over their input."""
-            whole, frac = _cents_parts(cb.text)
-            with ui.element("div").classes(cls):
-                w = ui.label(whole).classes("rtt-cents-int")
-                f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
-            cents[cb.id] = (w, f)
-
         with wrap:
             entry = cell_kinds.get(cb.kind)
             if entry is not None:
@@ -1359,7 +1359,7 @@ def index() -> None:
                 wrap.classes("rtt-cell-input rtt-cell-stacked")
                 inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_prescaler_change(cid)) \
                     .props("dense borderless").classes("rtt-cellinput")
-                cents_face("rtt-tval rtt-cellface")  # the stacked face overlaid on the input
+                cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
             elif cb.kind in ("prime", "formcell"):  # a read-only bordered cell (domain prime / form-matrix entry)
                 with ui.element("div").classes("rtt-white"):
                     labels[cb.id] = ui.label(cb.text)
@@ -1453,7 +1453,7 @@ def index() -> None:
                         on_change=lambda e, cid=cb.id: on_ptext_edit(cid, e.value)) \
                     .props("dense borderless").classes("rtt-ptextedit")
             elif cb.kind == "tval":
-                cents_face("rtt-tval")
+                cents_face(cb, "rtt-tval")
             elif cb.kind == "colheader":
                 labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
             elif cb.kind == "rowlabel":
@@ -1519,7 +1519,7 @@ def index() -> None:
                 wrap.classes("rtt-cell-input rtt-cell-stacked")
                 inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_gentuning_change(cid)) \
                     .props("dense borderless").classes("rtt-cellinput")
-                cents_face("rtt-tval rtt-cellface")  # the stacked face overlaid on the input
+                cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
             elif cb.kind == "speaker":  # play this pitch per its tile's mode (client-side engine)
                 tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
                 idx = int(cb.id.rsplit(":", 1)[1])
