@@ -803,9 +803,6 @@ _CSS = f"""
    far clearer "inactive" cue than Quasar's faint default opacity dim alone */
 .rtt-show-item.disabled .q-checkbox__label {{ color:#999; }}
 .rtt-show-item.disabled .q-checkbox__inner {{ color:#999 !important; }}
-/* a sub-control's checkbox sits indented under its parent toggle; only the Show
-   column indents, so the example column stays aligned with the other rows */
-.rtt-show-sub .rtt-show-item {{ margin-left:18px; }}
 .rtt-ex-cell {{ font-family:'Cambria',Georgia,serif; font-size:14px; color:#000;
                display:flex; align-items:center; min-height:24px; }}
 /* a disabled toggle's sample greys to match its label — color for the glyph examples,
@@ -2412,8 +2409,10 @@ def index() -> None:
                                         example.classes(add="rtt-ex-disabled")  # ...and its sample greys to match
                                 boxes[key] = box
                                 parent = show_settings.SUBCONTROLS.get(key)
-                                if parent:  # indent the row under its parent and show it only while the parent is on
-                                    row.classes(add="rtt-show-sub")
+                                if parent:  # indent by nesting depth (so a grandchild sits further right
+                                    # than its parent) and show the row only while the parent is on. Only the
+                                    # checkbox shifts within its grid column, so the example column stays aligned.
+                                    box.style(f"margin-left:{show_settings.depth_of(key) * 18}px")
                                     row.bind_visibility_from(boxes[parent], "value")
 
         grid_pane = ui.element("div").classes("rtt-app").mark("gridpane")

@@ -101,6 +101,19 @@ def defaults() -> dict[str, bool]:
     return dict(DEFAULTS)
 
 
+def depth_of(key: str) -> int:
+    """How many levels ``key`` is nested under a top-level toggle (see :data:`SUBCONTROLS`):
+    0 for a top-level toggle, 1 for a sub-control, 2 for a sub-sub-control. The panel indents
+    each row by its depth, so a grandchild (all-interval, under weighting, under tuning boxes)
+    sits further right than its parent instead of level with it."""
+    depth = 0
+    parent = SUBCONTROLS.get(key)
+    while parent is not None:
+        depth += 1
+        parent = SUBCONTROLS.get(parent)
+    return depth
+
+
 def subcontrols_of(key: str) -> set[str]:
     """Every sub-control nested under ``key`` — its direct sub-controls and theirs,
     transitively (see :data:`SUBCONTROLS`). Deselecting a toggle deselects all of

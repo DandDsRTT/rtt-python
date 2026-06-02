@@ -1912,6 +1912,18 @@ def test_weighting_subcontrols_are_registered_under_weighting():
     assert settings.SUBCONTROLS["alt_complexity"] == "weighting"
 
 
+def test_subcontrol_nesting_depth_drives_panel_indentation():
+    # the panel indents each row by its nesting depth, so a grandchild sits further right than
+    # its parent rather than level with it: all-interval / alt. complexity (under weighting,
+    # under tuning boxes) are depth 2 and indent twice as far as weighting (depth 1). A
+    # single-level sub-control is depth 1; a top-level toggle is depth 0.
+    assert settings.depth_of("tuning_boxes") == 0
+    assert settings.depth_of("weighting") == 1
+    assert settings.depth_of("all_interval") == 2
+    assert settings.depth_of("alt_complexity") == 2
+    assert settings.depth_of("mnemonics") == 1
+
+
 def test_weight_equivalence_reflects_the_schemes_damage_slope():
     # the weight = complexity / 1 / 1-over-complexity by the scheme's slope, so the
     # equivalence tells the truth about the live scheme rather than a fixed headline
