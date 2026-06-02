@@ -7,6 +7,7 @@ a temperament's mapping and its dual comma basis (kept in sync) plus dimensions.
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, replace
 from fractions import Fraction
 
@@ -517,6 +518,16 @@ def is_all_interval(scheme) -> bool:
     quotient list ``{}`` (every interval, by duality). The shipped minimax-S is."""
     targets = resolve_tuning_scheme(scheme).target_intervals
     return targets is not None and targets.strip() in ("{}", "")
+
+
+def base_scheme_name(scheme) -> str | None:
+    """The bare systematic scheme name — any leading target-set prefix (``"TILT "``, ``"OLD "``,
+    ``"9-TILT "``, …) stripped — i.e. the all-interval form the chooser lists. The prefix marks a
+    target-based scheme; stripping it gives the base the chooser shows (its label is T-prefixed
+    when target-based). ``None`` for a control-refined spec, which has no name."""
+    if not isinstance(scheme, str):
+        return None
+    return re.sub(r"^\d*-?(?:TILT|OLD)\s+", "", scheme)
 
 
 def scheme_with_targets(scheme, target_intervals: str):

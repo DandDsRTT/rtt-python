@@ -180,27 +180,31 @@ def test_set_diminuator_ignored_toggles_the_size_factor():
 
 def test_set_all_interval_toggles_the_scheme_target_set():
     editor = Editor()
-    assert service.is_all_interval(editor.tuning_scheme) is True  # default minimax-S targets all
-    editor.set_all_interval(False)  # the target-controls checkbox: switch to a target-based scheme
-    assert service.is_all_interval(editor.tuning_scheme) is False
-    # unchecking targets the displayed interval-list family (the editor's live target spec)
+    assert service.is_all_interval(editor.tuning_scheme) is False  # all-interval OFF by default
+    assert editor.displayed_tuning_scheme_name == "minimax-S"  # still a named scheme (target-based)
+    # the unchecked state targets the displayed interval-list family (the editor's live target spec)
     assert service.resolve_tuning_scheme(editor.tuning_scheme).target_intervals == editor.target_spec
-    editor.set_all_interval(True)
+    editor.set_all_interval(True)  # the target-controls checkbox: switch to all-interval
     assert service.is_all_interval(editor.tuning_scheme) is True
-    editor.undo()  # the toggle is an undoable edit
+    assert editor.displayed_tuning_scheme_name == "minimax-S"  # named in all-interval mode too
+    editor.set_all_interval(False)
     assert service.is_all_interval(editor.tuning_scheme) is False
+    editor.undo()  # the toggle is an undoable edit
+    assert service.is_all_interval(editor.tuning_scheme) is True
 
 
 def test_set_tuning_scheme_preserves_the_target_mode():
     # picking a scheme from the chooser keeps the current target mode (the all-interval checkbox):
-    # all-interval by default, but target-based once the box is unchecked (its T-prefixed entries)
+    # target-based by default (the chooser's T-prefixed entries), all-interval once the box is on
     editor = Editor()
-    editor.set_tuning_scheme("minimax-ES")  # all-interval by default => applied as-is
-    assert editor.tuning_scheme == "minimax-ES" and service.is_all_interval(editor.tuning_scheme)
-    editor.set_all_interval(False)  # switch to target-based
-    editor.set_tuning_scheme("minimax-ES")  # now applies over the target list, NOT all-interval
+    editor.set_tuning_scheme("minimax-ES")  # target-based by default => over the target list
     assert not service.is_all_interval(editor.tuning_scheme)
+    assert editor.displayed_tuning_scheme_name == "minimax-ES"  # named (chooser shows "T minimax-ES")
     assert service.resolve_tuning_scheme(editor.tuning_scheme).target_intervals == editor.target_spec
+    editor.set_all_interval(True)  # switch to all-interval
+    editor.set_tuning_scheme("minimax-S")  # now applies all-interval (bare name)
+    assert service.is_all_interval(editor.tuning_scheme)
+    assert editor.displayed_tuning_scheme_name == "minimax-S"
 
 
 def test_set_weight_slope_swaps_the_damage_weight_slope():
@@ -310,7 +314,8 @@ def test_removing_a_real_comma_drops_the_last_when_no_draft_is_pending():
 
 def test_editor_starts_with_default_tuning_scheme_and_target_spec():
     editor = Editor()
-    assert editor.tuning_scheme == service.DEFAULT_TUNING_SCHEME
+    assert service.base_scheme_name(editor.tuning_scheme) == service.DEFAULT_TUNING_SCHEME
+    assert service.is_all_interval(editor.tuning_scheme) is False  # all-interval OFF by default
     assert editor.target_spec == "TILT"
 
 
@@ -318,8 +323,10 @@ def test_selecting_a_tuning_scheme_and_target_spec_updates_them():
     editor = Editor()
     editor.set_tuning_scheme("destretched-octave minimax-ES")
     editor.set_target_spec("OLD")
-    assert editor.tuning_scheme == "destretched-octave minimax-ES"
+    assert service.base_scheme_name(editor.tuning_scheme) == "destretched-octave minimax-ES"
     assert editor.target_spec == "OLD"
+    # target-based: the scheme tracks the chosen family (its target set follows the displayed list)
+    assert service.resolve_tuning_scheme(editor.tuning_scheme).target_intervals == "OLD"
 
 
 def test_a_manual_target_limit_is_weakly_held_and_reverts_when_the_domain_changes():
@@ -359,9 +366,9 @@ def test_scheme_and_target_spec_changes_are_undoable():
     editor.undo()
     assert editor.target_spec == "TILT"  # undo reverts the target choice
     editor.undo()
-    assert editor.tuning_scheme == service.DEFAULT_TUNING_SCHEME  # ...then the scheme
+    assert service.base_scheme_name(editor.tuning_scheme) == service.DEFAULT_TUNING_SCHEME  # ...then the scheme
     editor.redo()
-    assert editor.tuning_scheme == "held-octave minimax-ES"  # redo reapplies it
+    assert service.base_scheme_name(editor.tuning_scheme) == "held-octave minimax-ES"  # redo reapplies it
 
 
 def test_range_mode_starts_monotone_and_is_undoable():
@@ -688,13 +695,14 @@ def test_reset_restores_every_default_as_one_undoable_action():
     assert editor.can_reset is True
     editor.reset()
     assert editor.state.mapping == INITIAL_MAPPING
-    assert editor.tuning_scheme == service.DEFAULT_TUNING_SCHEME
+    assert service.base_scheme_name(editor.tuning_scheme) == service.DEFAULT_TUNING_SCHEME
+    assert service.is_all_interval(editor.tuning_scheme) is False  # reset restores all-interval OFF
     assert editor.settings == settings.defaults()
     assert "col:commas" in editor.collapsed
     assert editor.can_reset is False
     editor.undo()  # a single undo brings the whole prior document back
     assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
-    assert editor.tuning_scheme == "held-octave minimax-ES"
+    assert service.base_scheme_name(editor.tuning_scheme) == "held-octave minimax-ES"
     assert editor.settings["charts"] is True
     assert "col:commas" not in editor.collapsed
 
@@ -714,7 +722,8 @@ def test_serialize_load_round_trips_the_whole_document():
     restored = Editor()
     restored.load(data)
     assert restored.state.mapping == ((1, 0, -4), (0, 1, 4))
-    assert restored.tuning_scheme == "destretched-octave minimax-ES"
+    # the full target-based scheme round-trips (the chosen 9-OLD family is baked into its prefix)
+    assert restored.tuning_scheme == "9-OLD destretched-octave minimax-ES"
     assert restored.target_spec == "9-OLD"
     assert restored.interest_monzos == [(-1, 1, 0)]
     assert restored.held_monzos == [(0, 0, 0)]

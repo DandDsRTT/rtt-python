@@ -4,6 +4,16 @@ from fractions import Fraction
 from rtt.web import service
 
 
+def test_base_scheme_name_strips_the_target_prefix():
+    # the bare systematic name (the chooser's all-interval form); a leading target-set prefix
+    # ("TILT ", "OLD ", with an optional manual limit) marks a target-based scheme and is stripped
+    assert service.base_scheme_name("minimax-S") == "minimax-S"  # all-interval: no prefix
+    assert service.base_scheme_name("TILT minimax-S") == "minimax-S"  # target prefix stripped
+    assert service.base_scheme_name("9-TILT minimax-ES") == "minimax-ES"  # with a manual limit
+    assert service.base_scheme_name("OLD held-octave minimax-ES") == "held-octave minimax-ES"
+    assert service.base_scheme_name(service.resolve_tuning_scheme("minimax-S")) is None  # a spec: no name
+
+
 def test_optimization_power_is_the_schemes_lp_norm_order():
     # the optimization power p is trait 2 of the tuning scheme: the order of the
     # Lp norm minimized over the damages. minimax-S (the shipped default) is a minimax

@@ -67,7 +67,10 @@ def _initial_doc() -> _Doc:
     from. Cached (and immutable) so the as-shipped baseline is computed once."""
     return _Doc(
         state=service.from_mapping(INITIAL_MAPPING),
-        tuning_scheme=service.DEFAULT_TUNING_SCHEME,
+        # all-interval is OFF by default: the as-shipped scheme targets the displayed interval
+        # list (the default TILT family), so the target-controls "all-interval" checkbox starts
+        # unchecked. It stays a named string ("TILT minimax-S") so the chooser still names it.
+        tuning_scheme=f"{service.DEFAULT_TARGET_SPEC} {service.DEFAULT_TUNING_SCHEME}",
         target_family=service.DEFAULT_TARGET_SPEC,
         target_limit=None,
         interest_monzos=(),
@@ -299,7 +302,9 @@ class Editor:
         if (override is not None and len(override) == len(self.state.mapping)
                 and override != self._optimum_generator_tuning()):
             return None
-        return self.tuning_scheme
+        # the chooser lists base names (its label T-prefixes a target-based scheme), so drop any
+        # target prefix here — a target-based "TILT minimax-S" shows as the "minimax-S" entry
+        return service.base_scheme_name(self.tuning_scheme)
 
     def set_generator_tuning_text(self, text: str) -> bool:
         """Freeze a typed manual generator tuning (the editable generator tuning map): parse a
@@ -356,7 +361,7 @@ class Editor:
         a scheme after hand-editing the tuning re-applies it. Undoable."""
         self._snapshot()
         self.tuning_scheme = name if service.is_all_interval(self.tuning_scheme) \
-            else service.scheme_with_targets(name, self.target_spec)
+            else f"{self.target_spec} {name}"  # keep it a named string so the chooser can name it
         self.generator_tuning = None
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
@@ -444,11 +449,16 @@ class Editor:
     def set_all_interval(self, all_interval: bool) -> None:
         """Toggle the target-controls all-interval checkbox: checked targets every interval (the
         empty set — an all-interval scheme), unchecked targets the displayed interval list (the
-        live target spec). Switches the scheme's target set accordingly (an undoable edit)."""
+        live target spec). Switches the scheme's target set accordingly (an undoable edit). A
+        named scheme keeps its name (the target prefix is added/dropped) so the chooser can still
+        name it; a control-refined spec stays a spec."""
         self._snapshot()
-        self.tuning_scheme = service.scheme_with_targets(
-            self.tuning_scheme, "{}" if all_interval else self.target_spec
-        )
+        base = service.base_scheme_name(self.tuning_scheme)
+        if base is None:  # a refined spec has no name — keep the spec form
+            self.tuning_scheme = service.scheme_with_targets(
+                self.tuning_scheme, "{}" if all_interval else self.target_spec)
+        else:
+            self.tuning_scheme = base if all_interval else f"{self.target_spec} {base}"
 
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
@@ -461,6 +471,11 @@ class Editor:
         self.target_family = family
         self.target_limit = int(n) if n else None
         self.target_override = None
+        # a target-based scheme tracks the displayed interval list: re-prefix it to the new
+        # family/limit (an all-interval scheme ignores the list, so leave it untouched)
+        base = service.base_scheme_name(self.tuning_scheme)
+        if base is not None and not service.is_all_interval(self.tuning_scheme):
+            self.tuning_scheme = f"{self.target_spec} {base}"
 
     def set_target_override_text(self, text: str) -> bool:
         """Set an explicit target interval list from a typed EBK vector string (the editable
