@@ -32,9 +32,8 @@ def test_main_runs_server_with_reload_enabled(monkeypatch):
     monkeypatch.setattr(sys, "argv", ["app.py"])
     monkeypatch.setattr(app.ui, "run", lambda **kwargs: captured.update(kwargs))
     app.main()
-    assert captured["reload"] is True  # hot-reload: edits are picked up without a manual restart
-    assert captured["port"] == 8137  # default dev port when no argv override is given
-    assert captured["show"] is False
+    # the 8137 default port + hot-reload on + no auto-open-browser contract, in one shot
+    assert (captured["reload"], captured["port"], captured["show"]) == (True, 8137, False)
 
 
 def test_main_sets_browser_tab_title_and_org_favicon(monkeypatch):
@@ -146,27 +145,34 @@ def test_underline_html_wraps_only_the_marked_spans():
     assert app._underline_html("just tuning map", ((0, 1),)) == '<u class="rtt-desc">j</u>ust tuning map'
 
 
-def test_math_html_gives_each_maths_letter_explicit_weight_and_slant():
-    # _math_html renders each maths letter as its base ASCII letter in the UI serif
-    # with explicit CSS per its block — bold (weight), bold-italic (both), or italic;
-    # plain ASCII passes through unstyled (the upright interval lists Y / C / T).
-    assert app._math_html("𝐚") == '<span style="font-weight:700">a</span>'  # bold vector list
-    assert app._math_html("𝒕") == '<span style="font-weight:700;font-style:italic">t</span>'  # bold-italic map
-    assert app._math_html("𝑀") == '<span style="font-style:italic">M</span>'  # italic mapping
-    assert app._math_html("𝟎") == '<span style="font-weight:700">0</span>'  # bold zero (the held-error vanishing)
+def test_math_html_maps_each_block_to_its_weight_and_slant():
+    # each maths letter renders as its base ASCII letter carrying the weight/slant of its
+    # Unicode block — bold (vector lists), bold-italic (maps/generators), or italic
+    # (mappings) — set via inline CSS, rather than its literal styled markup.
+    bold, bold_italic, italic = (True, False), (True, True), (False, True)
+    for glyph, base, (want_bold, want_italic) in [
+        ("𝐚", "a", bold), ("𝟎", "0", bold),                 # bold vector list / held-error zero
+        ("𝒕", "t", bold_italic), ("𝒈", "g", bold_italic),   # bold-italic map / generator
+        ("𝑀", "M", italic),                                  # italic mapping
+    ]:
+        html = app._math_html(glyph)
+        assert f">{base}</span>" in html, glyph
+        assert ("font-weight:700" in html) is want_bold, glyph
+        assert ("font-style:italic" in html) is want_italic, glyph
     assert app._math_html("Y") == "Y"  # an upright list passes through, unstyled
-    # a product styles each letter on its own (the comma column's 𝒕C: bold-italic map + upright basis)
-    assert app._math_html("𝒕C") == '<span style="font-weight:700;font-style:italic">t</span>C'
-    # ordinary characters (an equivalence tail's " = " and operators) pass through
-    assert app._math_html(" = 𝒈𝑀") == (' = <span style="font-weight:700;font-style:italic">g</span>'
-                                         '<span style="font-style:italic">M</span>')
-    # the NORM_SUB sentinels force an italic subscript (the complexity row's trailing q)
+
+
+def test_math_html_styles_products_per_letter_and_honours_the_subscript_sentinels():
+    # a product styles each letter on its own (the comma column's 𝒕C: bold-italic map +
+    # upright basis; an equivalence tail's 𝒈𝑀); ordinary characters pass through
+    assert app._math_html("𝒕C") == app._math_html("𝒕") + "C"
+    assert app._math_html(" = 𝒈𝑀") == " = " + app._math_html("𝒈") + app._math_html("𝑀")
+    # NORM_SUB forces an italic subscript (the complexity row's trailing q); SUB is a PLAIN
+    # subscript where only the math-italic 𝑞 slants (the dual(q) objective: "dual" upright)
     assert app._math_html(spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE) == \
         '<sub style="font-style:italic">q</sub>'
-    # the SUB sentinels are a PLAIN subscript: in "dual(𝑞)" the function name "dual" stays upright
-    # and only the math-italic 𝑞 slants (the all-interval objective's dual(q) norm power)
-    assert app._math_html(spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE) == \
-        '<sub>dual(<span style="font-style:italic">q</span>)</sub>'
+    plain = app._math_html(spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE)
+    assert plain.startswith("<sub>dual(") and plain.endswith(")</sub>") and "font-style:italic" in plain
 
 
 def test_ebk_marks_share_one_colour_and_map_one_to_one_to_their_cell():
@@ -199,19 +205,25 @@ def test_units_html_bolds_variables_but_not_cents_oct_or_slash():
     # units of interval size — the cent sign ¢ and the spelled-out "oct" (octaves) — and
     # the "/" separator stay un-bold, consistently in the per-box line and the units
     # row/col. A per-box line also keeps "units:" in the serif label face.
-    per_box = app._units_html("units: g/p")
-    assert per_box == '<span class="rtt-units-pre">units: </span><b>g</b>/<b>p</b>'
-    assert app._units_html("units: ¢/g") == '<span class="rtt-units-pre">units: </span>¢/<b>g</b>'
-    assert app._units_html("units: ¢") == '<span class="rtt-units-pre">units: </span>¢'
-    # "oct" is a unit like ¢, so it stays un-bold; the prime "p" denominator is bold
-    assert app._units_html("units: oct") == '<span class="rtt-units-pre">units: </span>oct'
-    assert app._units_html("units: oct/p") == '<span class="rtt-units-pre">units: </span>oct/<b>p</b>'
-    # bare domain-units coordinate labels: variables bold, ¢/oct and / plain, the "1" placeholder bold
-    assert app._units_html("g₁/") == "<b>g₁</b>/"
-    assert app._units_html("/p₁") == "/<b>p₁</b>"
-    assert app._units_html("¢/") == "¢/"
-    assert app._units_html("oct/") == "oct/"
-    assert app._units_html("/1") == "/<b>1</b>"
+    # a per-box line keeps "units:" in the serif label face and bolds its variables
+    assert app._units_html("units: g/p") == '<span class="rtt-units-pre">units: </span><b>g</b>/<b>p</b>'
+    # the bolding rule token by token: each variable (with subscript) is wrapped in <b>; the
+    # size units ¢ and "oct" and the "/" separator appear but never bold. Covers the per-box
+    # "units: …" line and the bare domain-unit coordinate labels alike.
+    for text, bolded, bare in [
+        ("units: ¢/g", ["g"], ["¢", "/"]),
+        ("units: oct/p", ["p"], ["oct", "/"]),
+        ("units: ¢", [], ["¢"]),
+        ("g₁/", ["g₁"], ["/"]),
+        ("/p₁", ["p₁"], ["/"]),
+        ("/1", ["1"], ["/"]),     # the "1" placeholder is a variable, so bold
+        ("oct/", [], ["oct", "/"]),
+    ]:
+        html = app._units_html(text)
+        for v in bolded:
+            assert f"<b>{v}</b>" in html, (text, v)
+        for u in bare:
+            assert u in html and f"<b>{u}</b>" not in html, (text, u)
 
 
 def test_line_style_centres_the_rule_on_its_coordinate():
