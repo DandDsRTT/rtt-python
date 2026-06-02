@@ -444,18 +444,14 @@ def _underline_html(text, spans):
     return "".join(out)
 
 
-# The "example" column of the Show panel: one illustrative sample per toggle, read
-# from the mockup's Show legend. Most are a glyph or short string (the maps' bold-
-# italic letters, the vectors/matrices' bold-upright ones, the plain captions); the
-# few graphical samples (the gridded EBK mark, the chart, the preselect chooser) are
-# built below from the same primitives the grid uses.
+# The "example" column of the Show panel's "specific boxes & controls" group: one illustrative
+# sample per toggle, read from the mockup's Show legend. Most are a glyph or short string (the
+# maps' bold-italic letters, the vectors/matrices' bold-upright ones, the plain captions); a few
+# (the colorization swatch, the audio speaker, the tuning-ranges I-beam) are graphical, built in
+# _example_html. The "general" group is no longer a checkbox column with samples — it is the
+# clickable dummy tile, which carries its own sample content (see the _TILE_* block below) — so
+# this table holds only the specific-group keys.
 _EXAMPLE_TEXT: dict[str, str] = {
-    "names": "tuning map",
-    "symbols": "𝒕",
-    "equivalences": "𝒕 = 𝒈𝑀",
-    "plain_text_values": "[ ⟨12 19 24] }",
-    "units": "𝐩",
-    "math_expressions": "log₂3",
     "counts": "𝑑",
     "domain_quantities": "2.3.5",
     "domain_units": "p₁/",
@@ -474,27 +470,6 @@ _EXAMPLE_TEXT: dict[str, str] = {
 }
 
 
-def _example_grid() -> str:
-    """The gridded-values sample: the ⟨12 19 24] EBK mark (angle bracket, three
-    boxed components, closing bracket) framed by the matrix top-bracket and brace —
-    the same hand-drawn marks the grid uses, shrunk to a legend sample."""
-    def box(x, text):
-        return (f'<div style="position:absolute;left:{x}px;top:11px;width:22px;height:20px;'
-                'border:1px solid #000;background:#fff;display:flex;align-items:center;'
-                f'justify-content:center;font-size:11px">{text}</div>')
-
-    def mark(x, y, w, h, svg):
-        return f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px">{svg}</div>'
-
-    return ('<div style="position:relative;width:90px;height:42px">'
-            + mark(11, 2, 66, 6, _top_bracket(66, 6))
-            + mark(0, 11, 10, 20, _angle_bracket(10, 20))
-            + box(12, "12") + box(33, "19") + box(54, "24")
-            + mark(78, 11, 10, 20, _square_bracket(10, 20, "right"))
-            + mark(11, 34, 66, 6, _brace(66, 6))
-            + '</div>')
-
-
 def _example_chart() -> str:
     """The charts sample: a tiny signed bar sparkline — a 5 / −5 axis with a bar
     dipping below the zero line, as the mockup's legend shows."""
@@ -511,30 +486,10 @@ def _example_chart() -> str:
             '</svg></div>')
 
 
-def _example_preselect() -> str:
-    """The preselects sample: the chooser as a bordered field with a caret box."""
-    return ('<span style="display:inline-flex;align-items:stretch;font-size:10px">'
-            '<span style="border:1px solid #000;border-right:none;padding:2px 6px;'
-            'color:#555">&lt;choose form&gt;</span>'
-            '<span style="border:1px solid #000;padding:2px 4px;display:flex;'
-            'align-items:center">▼</span></span>')
-
-
 def _example_html(key: str) -> str:
-    """The example-column sample for one Show toggle, as an HTML string."""
-    if key == "gridded_values":
-        return _example_grid()
-    if key == "charts":
-        return _example_chart()
-    if key == "preselects":
-        return _example_preselect()
-    if key == "mnemonics":  # the underlined mnemonic letters. Wrap in one element: the
-        # example cell is a flex box, which would split the words into separate items and
-        # trim the space between them — every branch here must return a single root element.
-        return f'<span class="rtt-ex">{_underline_html("canonical mapping", ((0, 1), (10, 1)))}</span>'
-    if key == "quantities":  # a generic quantity over its size: 1 above .585
-        return ('<span style="display:inline-flex;flex-direction:column;align-items:center;'
-                'line-height:1.05"><span>1</span><span style="font-size:9px">.585</span></span>')
+    """The example-column sample for one "specific boxes & controls" toggle, as an HTML string.
+    (The "general" group is no longer a checkbox column — it is the clickable dummy tile, which
+    renders its own samples; see _general_part_html.)"""
     if key in ("temperament_colorization", "tuning_colorization", "form_colorization"):
         # a swatch of the actual wash colour (one source of truth with _TINTS), stamped with
         # the fundamental matrix that drives it: 𝑀 (mapping), 𝐺 (generator embedding), 𝐹 (form)
@@ -552,53 +507,113 @@ def _example_html(key: str) -> str:
     return f'<span class="rtt-ex">{_math_html(_EXAMPLE_TEXT[key])}</span>'
 
 
-# The "general" Show group, composed into a single clickable dummy tile — the panel's
-# alternative to a column of checkboxes. Each line stacks one (or, for a sub-control, its
-# parent + the sub-control) of the layers a real value tile carries, top to bottom roughly as
-# a decorated tile reads: the symbol glyph, the name caption, the units line, then the value's
-# representations and adornments. Every part is a dummy sample (reusing the example-legend
-# renders) shown black when its toggle is on and grey when off; clicking it flips the toggle in
-# the live grid. Keys within a line are in left-to-right render order, so a sub-control sits next
-# to its parent exactly where it reads: equivalences as the "= 𝒈M" tail AFTER the symbol 𝒕, the
-# mnemonic letter BEFORE the rest of the name (it underlines the name's leading symbol letter).
+# --- the "general" Show group's dummy tile ---------------------------------------------------
+# The general layers render as ONE clickable dummy value tile (the alternative to a checkbox
+# column), laid out as a real tile reads: the boxed value cell on top — with its closed form and
+# value INSIDE the box, the way they appear on a tile rather than as rows of their own — then the
+# symbol, the name, units, the plain-text value, the presets chooser, and a chart. Each part is a
+# dummy sample shown black when its layer is shown and grey when hidden; clicking it flips the
+# layer in the live grid. The tile carries its OWN sample content (below); the specific group's
+# example column still uses _example_html / _EXAMPLE_TEXT.
+_TILE_NAME = "tile name"        # the name caption; its symbol-spelling letter (the n of "name") underlines for mnemonics
+_TILE_SYMBOL = "𝒏"              # the quantity symbol — a bold-italic n, matching the underlined letter
+_TILE_EQUIV = " = 𝒆𝒈"          # the symbol's defining-equation tail: 𝒏 = 𝒆𝒈, an "e.g." pun fitting an example tile
+_TILE_MATH = "1200·log₂(3/2)"   # math_expressions: a value's closed form, shown inside the boxed cell (just-row style)
+_TILE_VALUE = "701.96"          # quantities: the number the closed form evaluates to, inside the cell below the form
+_TILE_UNITS = "¢"               # units: the value's unit (cents)
+_TILE_PTEXT = "⟨1200 1902 2786]"  # plain_text_values: the same kind of value as a one-line EBK string
+
+# Where the mnemonic underline falls in the name: the letter the symbol spells (the 'n').
+_TILE_MNEMONIC_AT = _TILE_NAME.index("n")
+
+# Each line of the tile, top to bottom, listing its layer keys left-to-right in render order. The
+# value cell's line seats THREE layers — gridded_values (the EBK-framed box), math_expressions
+# (the closed form) and quantities (the value) — because on a real tile the form and value live
+# INSIDE the box, not on rows of their own. The symbol line seats the symbol + its equivalence
+# tail; the name line the mnemonic letter + the rest of the name.
 _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
+    ("gridded_values", "math_expressions", "quantities"),
     ("symbols", "equivalences"),
     ("mnemonics", "names"),
     ("units",),
-    ("gridded_values",),
     ("plain_text_values",),
-    ("math_expressions",),
-    ("quantities",),
-    ("charts",),
     ("preselects",),
+    ("charts",),
 )
 
-# The symbols layer's sample is the bare covector 𝒕; the equivalences layer extends it to the
-# defining equation 𝒕 = 𝒈M (the example-legend text). The dummy tile makes each its own click
-# target, so the equivalence part is just that equation's tail (everything after the symbol).
-_EQUIV_TAIL = _EXAMPLE_TEXT["equivalences"][len(_EXAMPLE_TEXT["symbols"]):]
+# A tile part is inert (greyed, unclickable) until its visual parent is shown — the dummy mirrors
+# the grid, where a sub-layer can't appear without its host: an underline needs a name, an
+# equation a symbol, and the value (and its closed form) the boxed cell to sit in.
+_TILE_PARENT: dict[str, str] = {
+    "mnemonics": "names",
+    "equivalences": "symbols",
+    "quantities": "gridded_values",
+    "math_expressions": "gridded_values",
+}
 
-# The name caption sample, split so the mnemonic letter — the one the mnemonics underline marks,
-# here the 't' that spells the symbol 𝒕 — is its own click target, distinct from the rest of the
-# name word (the names target). Re-joined they are exactly the names sample.
-_NAME_LETTER, _NAME_REST = _EXAMPLE_TEXT["names"][:1], _EXAMPLE_TEXT["names"][1:]
+
+def _tile_name_pieces() -> tuple[str, str, str]:
+    """The name caption split at its mnemonic letter — (before, letter, after) — so the letter
+    (the mnemonics target) and the rest of the word (the names target) are separate click targets
+    that still read as one word. For "tile name" with the 'n' marked: ("tile ", "n", "ame")."""
+    i = _TILE_MNEMONIC_AT
+    return _TILE_NAME[:i], _TILE_NAME[i], _TILE_NAME[i + 1:]
+
+
+def _tile_grid_frame_html() -> str:
+    """The boxed-cell FRAME of the value cell: the EBK angle/closing brackets, top bracket and
+    brace around one white value box — the gridded structure the closed form and value sit inside,
+    drawn with the same hand marks the grid uses. The builder lays the form and value over the box."""
+    def mark(x, y, w, h, inner):
+        return f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px">{inner}</div>'
+    return ('<div style="position:relative;width:108px;height:34px">'
+            + mark(11, 1, 86, 5, _top_bracket(86, 5))
+            + mark(0, 6, 9, 22, _angle_bracket(9, 22))
+            + mark(11, 6, 86, 22, '<div style="width:100%;height:100%;box-sizing:border-box;'
+                                  'border:1px solid #000;background:#fff"></div>')
+            + mark(98, 6, 9, 22, _square_bracket(9, 22, "right"))
+            + mark(11, 28, 86, 5, _brace(86, 5))
+            + '</div>')
+
+
+def _tile_preselect_html() -> str:
+    """The presets-chooser sample, styled like the app's real q-select dropdowns: a white bordered
+    field showing the "(presets)" placeholder with a dropdown caret."""
+    return ('<span style="display:inline-flex;align-items:center;justify-content:space-between;'
+            'gap:4px;width:94px;height:22px;box-sizing:border-box;background:#fff;border:1px solid #999;'
+            'border-radius:2px;padding:0 2px 0 6px;font-size:12px;color:#000">(presets)'
+            '<span class="material-icons" style="font-size:16px;color:#555">arrow_drop_down</span></span>')
 
 
 def _general_part_html(key: str) -> str:
-    """The dummy sample for one part of the general tile. Symbols and equivalences split the
-    'symbols' equation 𝒕 = 𝒈M into the bare covector and its '= 𝒈M' tail; mnemonics and names
-    split the name word into its leading symbol letter and the rest — each half a click target.
-    Every other layer reuses its example-legend render, so the tile and the legend stay one
-    source of truth."""
+    """The inner sample HTML for one general tile layer (every general key has one). The value
+    cell's three layers split apart — gridded_values is the EBK-framed box, math_expressions the
+    closed form, quantities the value (the builder stacks the form and value inside the box) — and
+    the rest are a glyph, the name word, the units, the plain-text string, the presets field, or a
+    chart sparkline."""
+    if key == "gridded_values":
+        return _tile_grid_frame_html()
+    if key == "math_expressions":
+        return _math_html(_TILE_MATH)
+    if key == "quantities":
+        return _math_html(_TILE_VALUE)
     if key == "symbols":
-        return _math_html(_EXAMPLE_TEXT["symbols"])
+        return _math_html(_TILE_SYMBOL)
     if key == "equivalences":
-        return _math_html(_EQUIV_TAIL)
-    if key == "mnemonics":
-        return _escape(_NAME_LETTER)
+        return _math_html(_TILE_EQUIV)
     if key == "names":
-        return _escape(_NAME_REST)
-    return _example_html(key)
+        return _escape(_TILE_NAME)
+    if key == "mnemonics":
+        return _escape(_tile_name_pieces()[1])
+    if key == "units":
+        return _math_html(_TILE_UNITS)
+    if key == "plain_text_values":
+        return _math_html(_TILE_PTEXT)
+    if key == "preselects":
+        return _tile_preselect_html()
+    if key == "charts":
+        return _example_chart()
+    raise KeyError(key)  # every general layer must have a sample
 
 
 def _demath(ch):
@@ -1018,14 +1033,14 @@ def index() -> None:
         render()
 
     def on_part_click(key):
-        # a click on one part of the general dummy tile flips that layer's toggle (the tile is
-        # the checkbox column's alternative). A sub-control is inert until its parent is shown —
-        # mnemonics needs a name to underline, equivalences a symbol to expand — so a click on it
-        # while the parent is off does nothing (the CSS also makes it unclickable; this guards the
-        # state too). render() then re-styles the tile and animates the grid.
+        # a click on one part of the general dummy tile flips that layer's toggle (the tile is the
+        # checkbox column's alternative). A part is inert until its visual parent is shown — the
+        # value and its closed form need the boxed cell, an underline a name, an equation a symbol —
+        # so a click while the parent is off does nothing (the CSS also makes it unclickable; this
+        # guards the state too). render() then re-styles the tile and animates the grid.
         if building[0]:
             return
-        parent = show_settings.SUBCONTROLS.get(key)
+        parent = _TILE_PARENT.get(key)
         if parent is not None and not editor.settings[parent]:
             return
         editor.set_show(key, not editor.settings[key])
@@ -1654,27 +1669,24 @@ def index() -> None:
         for key, box in boxes.items():
             if box.value != editor.settings[key]:
                 box.value = editor.settings[key]
-        # the general dummy tile: style each layer's part by its live setting — black + opaque
+        # the general dummy tile: style each layer's part(s) by its live setting — black + opaque
         # when shown, grey + dimmed when hidden — so the tile both mirrors and drives the grid. A
-        # sub-control whose parent is hidden is inert (its click does nothing; the CSS also drops
-        # its pointer events). Mnemonics is special: it is an underline ON the name, so its COLOUR
-        # tracks the name (its parent) while only the underline tracks mnemonics itself — else a
-        # name-shown/mnemonic-hidden state would grey just the one symbol letter mid-word.
-        for key, part in tile_parts.items():
+        # part is inert (no click) until its visual parent is shown (_TILE_PARENT), mirroring the
+        # grid where the value/closed-form need the boxed cell, the underline a name, the equation a
+        # symbol. Mnemonics is special: it is an underline ON the name, so its COLOUR tracks the
+        # name (its parent) while only the underline tracks mnemonics itself — else a name-shown/
+        # mnemonic-hidden state would grey just the one letter mid-word.
+        for key, parts in tile_parts.items():
             shown = editor.settings["names"] if key == "mnemonics" else editor.settings[key]
-            if shown:
-                part.classes(add="rtt-part-on", remove="rtt-part-off")
-            else:
-                part.classes(add="rtt-part-off", remove="rtt-part-on")
-            parent = show_settings.SUBCONTROLS.get(key)
-            if parent is not None and not editor.settings[parent]:
-                part.classes(add="rtt-part-inert")
-            else:
-                part.classes(remove="rtt-part-inert")
-        if editor.settings["mnemonics"]:
-            tile_parts["mnemonics"].classes(add="rtt-mnem-underline")
-        else:
-            tile_parts["mnemonics"].classes(remove="rtt-mnem-underline")
+            parent = _TILE_PARENT.get(key)
+            inert = parent is not None and not editor.settings[parent]
+            for part in parts:
+                part.classes(add="rtt-part-on" if shown else "rtt-part-off",
+                             remove="rtt-part-off" if shown else "rtt-part-on")
+                part.classes(add="rtt-part-inert") if inert else part.classes(remove="rtt-part-inert")
+                if key == "mnemonics":
+                    part.classes(add="rtt-mnem-underline") if editor.settings["mnemonics"] \
+                        else part.classes(remove="rtt-mnem-underline")
         # the master checkbox: checked (true / black fill) when all on, unchecked (false /
         # empty) when all off, MIXED (grey fill) when some-but-not-all are on
         states = [editor.settings[k] for k in show_settings.IMPLEMENTED]
@@ -1734,21 +1746,52 @@ def index() -> None:
                         with ui.element("div").classes("rtt-show-group"):
                             ui.label(group_name).classes("rtt-show-grouptitle")
                             if group_name == "general":
-                                # the general layers render as ONE clickable dummy tile rather than a
-                                # checkbox column: each part is a sample of that layer (reusing the
-                                # example-legend renders), clicked directly to show/hide it. render()
-                                # styles every part by the live setting; on_part_click flips it. Each
-                                # part keeps the layer's hover help, the same text the checkbox carried.
-                                # Keys per line are in render order, so a sub-control sits beside its parent.
+                                # the general layers render as ONE clickable dummy value tile rather
+                                # than a checkbox column: each part is a sample of that layer, clicked
+                                # directly to show/hide it. render() styles every part by the live
+                                # setting; on_part_click flips it. Each part keeps the layer's hover
+                                # help (the text its checkbox carried) and a showpart:<key> marker so
+                                # a test (and the user) can find it. tile_parts maps a key to its
+                                # element(s) — a list, since the name splits into two (around its letter).
+                                def part_el(key):
+                                    el = ui.html(_general_part_html(key)).classes("rtt-tile-part") \
+                                        .mark(f"showpart:{key}").tooltip(tooltips.SHOW_HELP[key])
+                                    el.on("click", lambda k=key: on_part_click(k))
+                                    tile_parts.setdefault(key, []).append(el)
+                                    return el
+
                                 with ui.element("div").classes("rtt-show-tile"):
                                     for line in _GENERAL_TILE_LINES:
-                                        with ui.element("div").classes("rtt-tile-line"):
-                                            for key in line:
-                                                part = ui.html(_general_part_html(key)) \
-                                                    .classes("rtt-tile-part").mark(f"showpart:{key}") \
-                                                    .tooltip(tooltips.SHOW_HELP[key])
-                                                part.on("click", lambda k=key: on_part_click(k))
-                                                tile_parts[key] = part
+                                        if "gridded_values" in line:
+                                            # the value cell: the EBK-framed box (gridded_values) with the
+                                            # closed form (math_expressions) over the value (quantities)
+                                            # stacked INSIDE it — three click targets layered over one box.
+                                            with ui.element("div").classes("rtt-tile-line"), \
+                                                    ui.element("div").style("position:relative;width:108px;height:34px"):
+                                                part_el("gridded_values").style("position:absolute;left:0;top:0")
+                                                part_el("math_expressions").style("position:absolute;left:11px;"
+                                                    "top:6px;width:86px;height:11px;justify-content:center;font-size:8px")
+                                                part_el("quantities").style("position:absolute;left:11px;"
+                                                    "top:17px;width:86px;height:11px;justify-content:center;font-size:10px")
+                                        elif "names" in line:
+                                            # the name word, split so the mnemonic letter is its own target
+                                            # while the word still reads whole: "tile " + "n" + "ame". Only
+                                            # the "tile " piece carries the showpart:names marker, so a test
+                                            # click lands one toggle (both name pieces flip names on click).
+                                            before, _letter, after = _tile_name_pieces()
+                                            with ui.element("div").classes("rtt-tile-line"):
+                                                pre = ui.html(_escape(before)).classes("rtt-tile-part") \
+                                                    .mark("showpart:names").tooltip(tooltips.SHOW_HELP["names"])
+                                                pre.on("click", lambda: on_part_click("names"))
+                                                part_el("mnemonics")
+                                                post = ui.html(_escape(after)).classes("rtt-tile-part") \
+                                                    .tooltip(tooltips.SHOW_HELP["names"])
+                                                post.on("click", lambda: on_part_click("names"))
+                                                tile_parts["names"] = [pre, post]
+                                        else:
+                                            with ui.element("div").classes("rtt-tile-line"):
+                                                for key in line:
+                                                    part_el(key)
                                 continue
                             for key, label, _ in items:
                                 row = ui.element("div").classes("rtt-show-row")

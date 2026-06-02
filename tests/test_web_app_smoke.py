@@ -438,34 +438,42 @@ def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scrol
 
 
 def test_every_show_toggle_has_a_non_empty_example():
-    # the panel's "example" column illustrates each toggle (per the mockup's Show
-    # legend), so no toggle may be missing its sample render
-    keys = [key for _g, items in show_settings.SHOW_GROUPS for key, _l, _d in items]
-    for key in keys:
+    # every Show layer must have a sample render: the "specific boxes & controls" toggles in the
+    # example column (_example_html), the "general" layers as parts of the dummy tile
+    # (_general_part_html). No layer may be missing its sample.
+    groups = dict(show_settings.SHOW_GROUPS)
+    for key, _l, _d in groups["general"]:
+        assert app._general_part_html(key).strip(), f"no tile sample for {key}"
+    for key, _l, _d in groups["specific boxes & controls"]:
         assert app._example_html(key).strip(), f"no example for {key}"
 
 
-def test_example_html_renders_each_special_sample_kind():
-    # plain glyph/text samples come through as text; the graphical ones carry their
-    # own markup — the EBK gridded mark and the chart are SVGs, the mnemonic sample
-    # underlines its symbol letters, the preselect sample shows the chooser caret
-    assert "log" in app._example_html("math_expressions")  # log₂3
-    # the symbols sample is the bold-italic tuning-map covector, styled (not a raw glyph)
-    assert 'font-style:italic">t</span>' in app._example_html("symbols")
-    assert "<svg" in app._example_html("gridded_values")  # the ⟨12 19 24] EBK mini-mark
-    assert "<svg" in app._example_html("charts")  # the little sparkline
-    assert "<u>" in app._example_html("mnemonics")  # underlined mnemonic letters
-    assert "▼" in app._example_html("preselects")  # the dropdown caret
-    # the colorization subcontrols preview a swatch of their actual wash colour (one
-    # source of truth with _TINTS), stamped with the fundamental matrix that drives it:
-    # 𝑀 (mapping) for temperament, 𝐺 (generator embedding) for tuning, 𝐹 (form) for form
+def test_example_html_renders_each_specific_groups_special_sample_kind():
+    # the "specific boxes & controls" group's graphical samples carry their own markup: the
+    # colorization swatches are wash-coloured chips stamped with their driving matrix (𝑀 mapping,
+    # 𝐺 generator embedding, 𝐹 form), audio a speaker glyph, tuning ranges the min/max I-beam SVG.
     for key, letter, group in (("temperament_colorization", "𝑀", "temperament"),
                                ("tuning_colorization", "𝐺", "tuning"),
                                ("form_colorization", "𝐹", "form")):
         html = app._example_html(key)
         assert app._TINTS[group] in html        # the swatch is the real wash colour...
         assert app._math_html(letter) in html   # ...stamped with its matrix letter
+    assert "volume_up" in app._example_html("audio")     # the speaker glyph
     assert "<svg" in app._example_html("tuning_ranges")  # the min/max I-beam
+
+
+def test_general_tile_renders_its_special_samples():
+    # the dummy tile's graphical / styled samples: the value cell is an EBK-framed box (hand-drawn
+    # SVG marks + a bordered cell) the closed form and value sit inside; the symbol is the styled
+    # bold-italic n; the presets field looks like a real dropdown ("(presets)" + a caret); charts a
+    # sparkline (the shared render).
+    assert "<svg" in app._general_part_html("gridded_values")   # the EBK frame marks...
+    assert "border" in app._general_part_html("gridded_values")  # ...around a bordered value box
+    assert "log" in app._general_part_html("math_expressions")  # 1200·log₂(3/2)
+    assert 'font-style:italic">n</span>' in app._general_part_html("symbols")  # the styled 𝒏
+    assert "(presets)" in app._general_part_html("preselects")       # the placeholder...
+    assert "arrow_drop_down" in app._general_part_html("preselects")  # ...and the dropdown caret
+    assert "<svg" in app._general_part_html("charts")           # the sparkline
 
 
 def test_interest_example_is_the_bold_interval_symbol():
@@ -489,7 +497,7 @@ def test_general_tile_covers_every_general_layer_exactly_once():
 
 def test_general_tile_rides_each_subcontrol_on_its_parents_line():
     # a sub-control refines its parent layer, so in the tile it shares that layer's line rather
-    # than getting a line of its own: equivalences extends the symbol (𝒕 = 𝒈M), mnemonics
+    # than getting a line of its own: equivalences extends the symbol (𝒏 = 𝒆𝒈), mnemonics
     # underlines the name. Every general sub-control must sit on a line WITH its parent.
     lines = app._GENERAL_TILE_LINES
     general_subs = {k: p for k, p in show_settings.SUBCONTROLS.items()
@@ -499,21 +507,27 @@ def test_general_tile_rides_each_subcontrol_on_its_parents_line():
         assert any(sub in line and parent in line for line in lines), (sub, parent)
 
 
-def test_general_part_html_splits_the_equation_and_reuses_the_legend_samples():
-    # symbols renders the bare covector; equivalences renders only the "= 𝒈M" tail, so the two
-    # parts joined read as the equivalences legend sample (one source of truth). Every other
-    # part defers to _example_html, so the tile never drifts from the legend.
-    assert app._general_part_html("symbols") == app._math_html(app._EXAMPLE_TEXT["symbols"])
+def test_general_tile_seats_the_value_layers_inside_the_gridded_cell():
+    # the value, its closed form and the gridded box are NOT separate tile rows: on a real tile
+    # the value and math expression live inside the boxed cell, so the three ride one line.
+    value_line = next(line for line in app._GENERAL_TILE_LINES if "gridded_values" in line)
+    assert set(value_line) == {"gridded_values", "math_expressions", "quantities"}
+
+
+def test_general_tile_symbol_and_equivalence_read_as_one_equation():
+    # the symbol part is the bold-italic n; the equivalence part is its defining-equation tail,
+    # so the two joined read 𝒏 = 𝒆𝒈 (the symbol's equation), one source of truth with _TILE_*.
+    assert app._general_part_html("symbols") == app._math_html(app._TILE_SYMBOL)
     assert app._general_part_html("symbols") + app._general_part_html("equivalences") \
-        == app._math_html(app._EXAMPLE_TEXT["equivalences"])
-    assert app._general_part_html("gridded_values") == app._example_html("gridded_values")
+        == app._math_html(app._TILE_SYMBOL + app._TILE_EQUIV)
 
 
 def test_general_tile_name_exposes_its_mnemonic_letter_as_a_separate_target():
-    # the name word is split so the mnemonic letter (the symbol-spelling letter the underline
-    # marks) is its own click target; re-joined, the pieces are exactly the names sample.
-    assert app._NAME_LETTER + app._NAME_REST == app._EXAMPLE_TEXT["names"]
-    assert len(app._NAME_LETTER) == 1
+    # the name word is split at its symbol-spelling letter so that letter (the mnemonics target)
+    # is distinct from the rest of the word (names); the three pieces rejoin to exactly the name.
+    before, letter, after = app._tile_name_pieces()
+    assert before + letter + after == app._TILE_NAME
+    assert letter == "n"  # the letter the symbol 𝒏 spells, underlined for mnemonics
 
 
 def test_general_tile_part_reads_black_when_on_grey_when_off_and_inert_under_an_off_parent():
