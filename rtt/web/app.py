@@ -170,6 +170,33 @@ def _option_box_svg(fill: str | None) -> str:
     return "data:image/svg+xml," + quote(svg)
 
 
+# the fan controls' glyphs, stroked centred in a 12-unit box: the +/− add/remove rules and the
+# fold toggles' outward (expand) / inward (collapse) double-chevrons. Drawn in currentColor so the
+# element's CSS colour (and :hover) tints them.
+_CONTROL_GLYPHS = {
+    "plus":     "M6 3V9M3 6H9",
+    "minus":    "M3 6H9",
+    "expand":   "M3.5 4.7L6 2.6L8.5 4.7M3.5 7.3L6 9.4L8.5 7.3",   # ∧ over ∨ — chevrons point OUT
+    "collapse": "M3.5 2.6L6 4.7L8.5 2.6M3.5 9.4L6 7.3L8.5 9.4",   # ∨ over ∧ — chevrons point IN
+}
+# a fold toggle's state token (spreadsheet._fold_glyph) -> its chevron glyph: a collapsed band
+# offers to expand out, an open one to collapse in.
+_FOLD_GLYPH = {"unfold_more": "expand", "unfold_less": "collapse"}
+
+
+def _control_svg(glyph: str) -> str:
+    """An inline SVG for a fan control — the +/− add/remove buttons and the fold toggles: a white
+    #bbb-bordered square with a centred glyph (a + or − rule, or the expand/collapse double-chevron)
+    stroked in currentColor, so the element's CSS colour (and :hover) tints the glyph while the
+    white box stays put against the grey fan. One coherent vector like the option-box checkbox, so
+    box and glyph stay square and centred at ANY zoom — unlike a font glyph or a CSS-bordered button,
+    whose edges the browser snaps to the device-pixel grid independently and drifts off-centre."""
+    return (f"<svg viewBox='0 0 12 12' xmlns='http://www.w3.org/2000/svg'>"
+            f"<rect x='.5' y='.5' width='11' height='11' fill='#fff' stroke='#bbb' stroke-width='1'/>"
+            f"<path d='{_CONTROL_GLYPHS[glyph]}' fill='none' stroke='currentColor' stroke-width='1.2'"
+            f" stroke-linecap='round' stroke-linejoin='round'/></svg>")
+
+
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --rail-w:{_RAIL_W}px; --panel-w:{_PANEL_W}px;
   --seam:{_SEAM}; --pending-color:{_PENDING_COLOR};
@@ -187,8 +214,9 @@ _CSS_VARS = f""":root {{
 _CSS = _CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
 
 
-_LABEL_KINDS = {"prime", "formcell", "colheader", "rowlabel", "mapped", "vec",
-                "rowtoggle", "coltoggle", "tiletoggle", "alltoggle"}  # "ptext" has its own font-sync branch
+_LABEL_KINDS = {"prime", "formcell", "colheader", "rowlabel", "mapped", "vec"}  # "ptext" has its own
+# font-sync branch; the fold toggles are inline-SVG glyphs (_FOLD_KINDS), updated via set_content
+_FOLD_KINDS = {"rowtoggle", "coltoggle", "tiletoggle", "alltoggle"}
 
 # Which sticky band each title/toggle kind renders into; every other cell goes to the body
 # board. The column titles + their fold toggles ride the column band (sticky to the window top);
@@ -992,6 +1020,7 @@ def index() -> None:
     caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
     math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
     math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
+    fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
     cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
     cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
     building = [False]
@@ -1002,7 +1031,7 @@ def index() -> None:
         """Remove an entity's element and forget every per-id handle for it."""
         els[eid].delete()
         for d in (els, inputs, labels, fracs, cents, htmls, ebk_sizes, exprs, expr_state, kinds,
-                  selects, ptext_inputs, captions, caption_html, math_cells, math_rendered,
+                  selects, ptext_inputs, captions, caption_html, math_cells, math_rendered, fold_state,
                   cell_units, cell_unit_text, chart_keys, range_keys, audio_keys, rangeopts,
                   opt_buttons):
             d.pop(eid, None)
@@ -1477,58 +1506,52 @@ def index() -> None:
                 labels[cb.id] = ui.label(cb.text).classes("rtt-rowlabel")
             elif cb.kind in ("rowtoggle", "coltoggle", "tiletoggle"):
                 item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
-                labels[cb.id] = ui.label(cb.text).classes("rtt-toggle material-icons")
+                htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
+                fold_state[cb.id] = cb.text  # the glyph swaps on collapse/expand (see render)
                 wrap.on("click", lambda _=None, it=item: on_toggle(it))
             elif cb.kind == "alltoggle":  # the master expand/collapse-all control in the node corner
-                labels[cb.id] = ui.label(cb.text).classes("rtt-toggle material-icons")
+                htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
+                fold_state[cb.id] = cb.text
                 wrap.on("click", lambda _=None: on_toggle_all())
-            elif cb.kind == "minus":
-                # the zone spans the removable prime's header (the hover target); the
-                # button hides at its top and reveals on hover, above the header so it
-                # never covers the editable mapping cell below
+            elif cb.kind == "minus":  # remove the highest prime; a hover − centred on the last
+                wrap.classes("rtt-minus-zone")  # prime's branch point, clear of the editable cell below
+                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+                    .on("click", lambda _=None: act(editor.shrink))
+            elif cb.kind == "plus":  # add a prime; the always-shown + on the bus stub
+                ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+                    .on("click", lambda _=None: act(editor.expand))
+            elif cb.kind == "basis_minus":  # the domain − on the interval-vectors row's left bus
                 wrap.classes("rtt-minus-zone")
-                ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn")
-            elif cb.kind == "plus":
-                ui.button("+", on_click=lambda: act(editor.expand), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn")
-            elif cb.kind == "basis_minus":
-                # the domain − for the vertical basis: a hover zone over the highest
-                # prime revealing the − to its right, so it never covers the box
+                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
+                    .on("click", lambda _=None: act(editor.shrink))
+            elif cb.kind == "comma_minus":  # drop the last comma, or cancel the pending draft
                 wrap.classes("rtt-minus-zone")
-                ui.button("-", on_click=lambda: act(editor.shrink), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn-v")
-            elif cb.kind == "comma_minus":
-                # the same hover affordance as the domain −, but on the last comma
-                wrap.classes("rtt-minus-zone")
-                ui.button("-", on_click=lambda: act(editor.remove_comma), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn")
+                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+                    .on("click", lambda _=None: act(editor.remove_comma))
             elif cb.kind == "comma_plus":
-                ui.button("+", on_click=lambda: act(editor.add_comma), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn")
-            elif cb.kind == "interest_minus":
-                # one per interval (every interval of interest is removable); the hover
-                # zone over its header reveals a − that drops just that interval
+                ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+                    .on("click", lambda _=None: act(editor.add_comma))
+            elif cb.kind == "interest_minus":  # one per interval (each independently removable)
                 i = int(cb.id.split(":", 1)[1])
                 wrap.classes("rtt-minus-zone")
-                ui.button("-", on_click=lambda _=None, idx=i: act(lambda: editor.remove_interest(idx)), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn")
+                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+                    .on("click", lambda _=None, idx=i: act(lambda: editor.remove_interest(idx)))
             elif cb.kind == "interest_plus":
-                ui.button("+", on_click=lambda: act(editor.add_interest), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn")
+                ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+                    .on("click", lambda _=None: act(editor.add_interest))
             elif cb.kind == "held_minus":  # one per held interval; its − drops just that one
                 wrap.classes("rtt-minus-zone")
-                ui.button("-", on_click=lambda _=None, idx=cb.comma: act(lambda: editor.remove_held(idx)), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn rtt-minus-btn")
+                ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+                    .on("click", lambda _=None, idx=cb.comma: act(lambda: editor.remove_held(idx)))
             elif cb.kind == "held_plus":
-                ui.button("+", on_click=lambda: act(editor.add_held), color=None) \
-                    .props("unelevated dense no-caps square").classes("rtt-btn")
+                ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+                    .on("click", lambda _=None: act(editor.add_held))
             elif cb.kind == "optimize":
                 # single click optimizes once (freeze at the optimum); double click toggles
                 # the auto-optimize lock. A double-click also fires its two single clicks, but
                 # optimize() is idempotent, so a double-click's net effect is the lock toggle.
                 opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: act(editor.optimize), color=None) \
-                    .props("unelevated dense no-caps").classes("rtt-btn rtt-optimize")
+                    .props("unelevated dense no-caps").classes("rtt-optimize")
                 opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
             elif cb.kind == "boxtitle":  # an in-tile box title (e.g. "optimization")
                 labels[cb.id] = ui.label(cb.text).classes("rtt-boxtitle")
@@ -1773,6 +1796,10 @@ def index() -> None:
                 if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
                     captions[cb.id].set_content(html)
                     caption_html[cb.id] = html
+            elif cb.kind in _FOLD_KINDS:  # swap the chevron SVG when the band folds / unfolds
+                if fold_state.get(cb.id) != cb.text:
+                    htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
+                    fold_state[cb.id] = cb.text
             elif cb.kind in _LABEL_KINDS:
                 labels[cb.id].set_text(cb.text)
 

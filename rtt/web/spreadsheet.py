@@ -919,8 +919,8 @@ def _title_w(title: str) -> int:
 
 
 def _fold_glyph(is_collapsed: bool) -> str:
-    """Material Icons name for the fold toggle: out-chevrons to expand a collapsed
-    band, in-chevrons to collapse an expanded one."""
+    """The fold toggle's state token (app._FOLD_GLYPH maps it to an SVG chevron): a collapsed
+    band offers to expand (out-chevrons), an open one to collapse (in-chevrons)."""
     return "unfold_more" if is_collapsed else "unfold_less"
 
 

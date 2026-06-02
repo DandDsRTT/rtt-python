@@ -408,20 +408,15 @@
             align-items:center; justify-content:center; background:#fff; border:1px solid #888;
             border-radius:2px; padding:0 3px; color:#000; white-space:nowrap; overflow:hidden;
             font-family:'Cambria',Georgia,serif; }
-/* the +/− controls now sit beside the fold toggles on the fan, so they match them: a small
-   (spreadsheet.BTN-sized) grey-on-white square with a light #bbb border that darkens on hover —
-   not the heavier black cell-border look. Explicit px, not 100%: the − is absolutely placed in a
-   larger hover zone, so it must size to the button, not fill the zone. */
-.rtt-btn { width:var(--btn) !important; min-width:var(--btn) !important;
-           height:var(--btn) !important; min-height:var(--btn) !important;
-           background:#fff !important; border:1px solid #bbb !important;
-           border-radius:0 !important; padding:0 !important; box-shadow:none !important; }
-.rtt-btn:hover { background:#ececec !important; }
-/* center the glyph: Quasar's content box defaults to a tall line-height that
-   overflowed the small square; pin it to the box so the flex centering can take over */
-.rtt-btn .q-btn__content { color:#666 !important; font-size:12px; line-height:1; min-height:0;
-           font-family:'Cambria',Georgia,serif; }
-.rtt-btn:hover .q-btn__content { color:#000 !important; }
+/* the fan controls — the +/− add/remove buttons and the fold toggles — are inline-SVG glyphs
+   (see _control_svg): a white #bbb-bordered square with a centred +/−/chevron in currentColor,
+   one coherent vector that stays square and centred at any zoom. The element carries only the
+   colour, the cursor and the size; :hover darkens just the GLYPH (#666 -> #333), so the white box
+   never greys into the grey fan behind it (the old #ececec-box hover did, blending the control away). */
+.rtt-glyph { color:#666; cursor:pointer; line-height:0; }
+.rtt-glyph:hover { color:#333; }
+.rtt-glyph > svg { display:block; width:100%; height:100%; }
+.rtt-fanbtn { width:100%; height:100%; }   /* the always-shown + fills its BTN-sized cell wrap */
 /* the optimize button fills its cell (a normal rectangle hugging the word); its text is the
    same size as the optimization power number (the ∞ box, _CELL_FONT). It's a 3D button: a
    light-top/dark-bottom face with a crisp inset bevel (white highlight top-left, soft shadow
@@ -431,6 +426,7 @@
    shadow, and the label nudges down-right — so a held click and a locked latch both look
    pushed in. Hover/active are scoped :not(-locked) so the latched look stays put under either. */
 .rtt-optimize { width:100% !important; min-width:0 !important; height:100% !important;
+            border:var(--cell-border) !important; border-radius:0 !important; padding:0 !important;
             background:linear-gradient(#fafafa,#cfcfcf) !important;
             box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 1px rgba(0,0,0,0.30) !important;
             transition:background .06s linear, box-shadow .06s linear !important; }
@@ -475,19 +471,19 @@
    shrink the hover target down to just the button itself. */
 .rtt-minus-zone { background:transparent; z-index:4; }
 .rtt-minus-btn { position:absolute !important; top:0; left:50%; transform:translate(-50%,-50%);
+           width:var(--btn); height:var(--btn);
            opacity:0; pointer-events:none; transition:opacity var(--t); }
 .rtt-minus-zone:hover .rtt-minus-btn { opacity:1; pointer-events:auto; }
 /* the horizontal basis's domain −: its zone spans the bottom prime's sub-row from the
    row's left bus; the button reveals centred ON that left-bus branch point (out to the
    left of the primes), the row mirror of a column −'s top-bus reveal */
 .rtt-minus-btn-v { position:absolute !important; left:0; top:50%; transform:translate(-50%,-50%);
+           width:var(--btn); height:var(--btn);
            opacity:0; pointer-events:none; transition:opacity var(--t); }
 .rtt-minus-zone:hover .rtt-minus-btn-v { opacity:1; pointer-events:auto; }
 
-.rtt-toggle { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-              font-size:12px !important; line-height:1; color:#666; background:#fff;
-              border:1px solid #bbb; cursor:pointer; user-select:none; }
-.rtt-toggle:hover { background:#ececec; color:#000; }
+/* the fold toggle fills its cell wrap; its boxed glyph is an inline SVG (see .rtt-glyph) */
+.rtt-toggle { width:100%; height:100%; }
 /* the pane's frozen header: the select-all/none master + the show/example titles, pinned above
    the scrolling toggle groups exactly as the column band pins the column titles above the grid.
    Its height is set in render() to the layout's freeze_y, so it matches the main app's frozen band
