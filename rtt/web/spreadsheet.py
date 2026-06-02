@@ -104,13 +104,13 @@ OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred u
 # clear of both neighbors — left pad | objective | gap | caption | gap | button | right pad. A
 # damage tile narrower than this floors its column up to fit (see _control_floor).
 OPT_BOX_MIN_W = OPT_PAD_L + COL_W + OPT_COL_GAP + OPT_POW_CAP_W + OPT_COL_GAP + OPT_BTN_W + OPT_PAD_R
-# An in-tile control box: a dropdown / checkbox enclosed in a thin-bordered frame, with a
-# small field LABEL above the control naming what it sets ("established tuning scheme"). The
-# box stays WITHIN its tile (never spilling into a neighbour) — the label wraps to fit the
-# box's width rather than widening it. BOX_OUTER pads the box off the tile's edges; BOX_INNER
-# insets the control + label off the box border; CTRL_LABEL_GAP sits between the label and
-# the control. Box heights vary with the label's wrap, so a row reserves its tallest.
-BOX_OUTER = 4  # gap between a control box and its tile's edges
+# An in-tile control box: a dropdown / checkbox enclosed in a thin-bordered frame that SPANS its
+# tile's full width (like the optimization / tuning-ranges boxes), with the control at its top-left
+# and a small field LABEL beneath naming what it sets ("established tuning scheme"). BOX_OUTER is
+# the vertical gap above/below the box; BOX_INNER insets the control + label off the box border;
+# CTRL_LABEL_GAP sits between the label and the control. Box heights vary with the label, so a
+# row reserves its tallest.
+BOX_OUTER = 4  # vertical gap above/below a control box (it spans its tile's width — see control_box)
 BOX_INNER = 5  # inset of the dropdown within the box (off the border)
 CTRL_LABEL_GAP = 2  # padding below the label, to the box's bottom edge
 # box 𝐓's footprint: the target chooser dropdown + the all-interval checkbox slot on one row,
@@ -1519,11 +1519,12 @@ def build(state, settings=None, collapsed=None,
             return 0
         return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
 
-    # a control box (preselect / form chooser) frames its dropdown WITHIN its column's tile.
-    # The label is the standard one-line left-justified caption hugging the dropdown's bottom
-    # (the .rtt-caption-left asset); it overflows the box to the right rather than widening it.
+    # a control box (preselect / form chooser): the box spans its column's tile (see control_box),
+    # and the dropdown keeps its NATURAL width (cap_w) seated at the box's left — only shrunk if a
+    # tiny tile can't seat even that. The label is the standard one-line left-justified caption
+    # hugging the dropdown's bottom (the .rtt-caption-left asset), overflowing right if long.
     def control_dims(ckey, cap_w, label):
-        dropdown_w = max(40, min(col_w[ckey] - 2 * BOX_OUTER - 2 * BOX_INNER, cap_w))
+        dropdown_w = max(40, min(col_w[ckey] - 2 * BOX_INNER, cap_w))
         label_h = CAPTION_LINE if label else 0  # one line (overflows right, never wraps the box wider)
         box_h = BOX_INNER + PRESELECT_H + (label_h + CTRL_LABEL_GAP if label else BOX_INNER)
         return dropdown_w, label_h, box_h
@@ -2684,16 +2685,17 @@ def build(state, settings=None, collapsed=None,
     def ptext_band_y(rkey):
         return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_units[rkey]
 
-    # a control box: a thin-bordered frame that fits WITHIN its column's tile, the dropdown at
-    # the top and the standard dropdown-label underneath — a left-justified one-line caption
-    # (.rtt-caption-left: 6px left, 2px top) hugging the dropdown's bottom edge, the same asset
-    # every other labelled control uses. Returns the (x, width, y) to seat the dropdown at.
-    def control_box(box_id, ckey, top, cap_w, label, extra_w=0):
-        # extra_w widens the box to the right of the dropdown to enclose an adjacent control (the
-        # target chooser's all-interval checkbox); 0 leaves a plain dropdown-only box.
+    # a control box: a thin-bordered frame SPANNING the full width of its column's tile (like the
+    # optimization / tuning-ranges boxes), with the dropdown seated at its top-left at the dropdown's
+    # natural width and the standard dropdown-label underneath — a left-justified one-line caption
+    # (.rtt-caption-left: 6px left, 2px top) hugging the dropdown's bottom edge, the same asset every
+    # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
+    # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
+    # the (x, width, y) to seat the dropdown at.
+    def control_box(box_id, ckey, top, cap_w, label):
         dropdown_w, label_h, box_h = control_dims(ckey, cap_w, label)
-        box_x, box_y = col_x[ckey] + BOX_OUTER, top + BOX_OUTER
-        blocks.append(Block(box_id, box_x, box_y, dropdown_w + extra_w + 2 * BOX_INNER, box_h, boxed=True))
+        box_x, box_y = col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
+        blocks.append(Block(box_id, box_x, box_y, col_w[ckey], box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
         if label:
             cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESELECT_H, dropdown_w, label_h,
@@ -2724,13 +2726,11 @@ def build(state, settings=None, collapsed=None,
             if not tile_open(rkey, ckey):
                 return
             top = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
-            # the target chooser carries the all-interval checkbox to the dropdown's right, both
-            # inside one box (box 𝐓): the box widens by the checkbox slot to enclose it.
-            with_check = name == "target" and settings["all_interval"]
-            extra = OPT_COL_GAP + LBOX_DIM_W if with_check else 0
-            cx, cw, cy = control_box(f"block:{cid}", ckey, top, preselect_cap(name), label, extra_w=extra)
+            cx, cw, cy = control_box(f"block:{cid}", ckey, top, preselect_cap(name), label)
             cells.append(CellBox(cid, cx, cy, cw, PRESELECT_H, "preselect", text=preselect_text[name]))
-            if with_check:
+            # the target chooser carries the all-interval checkbox to the dropdown's right, in the
+            # empty space of its now-tile-spanning box (box 𝐓); TBOX_W floors the column wide enough.
+            if name == "target" and settings["all_interval"]:
                 emit_all_interval_check(cx + cw + OPT_COL_GAP, cy)
 
         for name, rkey, ckey, label in PRESELECTS:

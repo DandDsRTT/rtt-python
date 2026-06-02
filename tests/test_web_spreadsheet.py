@@ -730,9 +730,9 @@ def test_form_controls_adds_a_choose_form_chooser_to_the_mapping_and_comma_basis
     # a "<choose form>" chooser rides in the mapping box and the comma-basis box
     assert cells["formchooser:mapping"].kind == "formchooser"
     assert cells["formchooser:comma_basis"].kind == "formchooser"
-    # each over its box's column (mapping over the primes, comma basis over the commas), inset
-    # from the column edge by the box's outer + inner padding
-    inset = spreadsheet.BOX_OUTER + spreadsheet.BOX_INNER
+    # each over its box's column (mapping over the primes, comma basis over the commas), seated
+    # one BOX_INNER inside its tile-spanning box's left edge
+    inset = spreadsheet.BOX_INNER
     assert cells["formchooser:mapping"].x == cells["header:primes"].x + inset
     assert cells["formchooser:comma_basis"].x == cells["header:commas"].x + inset
     # seated below the tile's value rows, never over the matrix
@@ -937,7 +937,7 @@ def test_preselects_off_shows_no_chooser_dropdowns():
 def test_preselects_on_adds_the_three_chooser_dropdowns_under_their_tiles():
     cells = {c.id: c for c in _with(preselects=True).cells}
     assert {"preselect:temperament", "preselect:tuning", "preselect:target"} <= set(cells)
-    inset = spreadsheet.BOX_OUTER + spreadsheet.BOX_INNER  # the control sits inside its padded box
+    inset = spreadsheet.BOX_INNER  # the dropdown sits one inner-pad inside its tile-spanning box
     # the temperament chooser sits under the mapping matrix, in its column
     temp, matrix = cells["preselect:temperament"], cells["cell:mapping:0:0"]
     assert temp.y > matrix.y and temp.x == cells["header:primes"].x + inset
@@ -999,8 +999,9 @@ def test_tuning_and_temperament_dropdowns_are_copied_into_more_tiles():
     cells = {c.id: c for c in lay.cells}
     boxes = {b.id: b for b in lay.blocks}
     # a copy of the tuning chooser rides the generator tuning map tile (gens column),
-    # mirroring the live scheme like the tuning map copy in the primes column
-    inset = spreadsheet.BOX_OUTER + spreadsheet.BOX_INNER
+    # mirroring the live scheme like the tuning map copy in the primes column. The dropdown seats
+    # at the box's left inset (the box spans the tile, so the dropdown is one BOX_INNER off it)
+    inset = spreadsheet.BOX_INNER
     gt = cells["preselect:tuning:gens"]
     assert gt.x == cells["header:gens"].x + inset and gt.text == "destretched-octave minimax-ES"
     # it shares the tuning row's control band with the tuning map dropdown (primes box)
@@ -1018,8 +1019,8 @@ def test_target_preselect_now_lives_in_the_target_interval_list_tile():
     s["preselects"] = True
     cells = {c.id: c for c in spreadsheet.build(base, s).cells}
     target = cells["preselect:target"]
-    # still under the targets column (inset inside its padded box)
-    assert target.x == cells["header:targets"].x + spreadsheet.BOX_OUTER + spreadsheet.BOX_INNER
+    # still under the targets column, seated one BOX_INNER inside its tile-spanning box
+    assert target.x == cells["header:targets"].x + spreadsheet.BOX_INNER
     # it now sits in the interval-vectors row (the target interval list), below those cells
     assert target.y > cells["cell:vec:targets:0:0"].y
     # and below the quantities-row target ratios it used to sit under
@@ -1068,10 +1069,10 @@ def test_a_long_control_label_widens_its_narrow_tile():
 
 
 def test_chooser_boxes_span_the_full_width_of_their_tiles():
-    # every single-dropdown chooser box spans the full width of its tile: seated at the standard
-    # inset on BOTH sides (so it sits centered in its panel), like the optimization and tuning-
-    # ranges boxes — not capped at the dropdown's natural width. The target chooser is the one
-    # documented exception (next test).
+    # EVERY control box spans the full width of its tile — its border sits on the tile footprint
+    # (equal insets each side, like the optimization and tuning-ranges boxes), regardless of how
+    # wide the dropdown inside it is. This includes the target chooser (a narrow dropdown in a
+    # wide box; the dropdown's own width is the next test's concern).
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["preselects"], s["form_controls"] = True, True
@@ -1079,24 +1080,26 @@ def test_chooser_boxes_span_the_full_width_of_their_tiles():
     for cid, tile in (("block:preselect:temperament", "block:mapping"),
                       ("block:preselect:tuning", "block:tuning:primes"),
                       ("block:preselect:tuning:gens", "block:tuning:gens"),
+                      ("block:preselect:target", "block:vec:targets"),
                       ("block:formchooser:mapping", "block:mapping"),
                       ("block:formchooser:comma_basis", "block:vec:commas")):
         box, panel = boxes[cid], boxes[tile]
         left, right = box.x - panel.x, (panel.x + panel.w) - (box.x + box.w)
-        assert abs(left - right) < 1  # equal insets == the box fills its tile's footprint
+        assert abs(left - right) < 1  # equal insets == the box spans its tile's footprint
 
 
-def test_target_chooser_stays_capped_not_filling_its_tile():
-    # the target chooser is the exception to the fill-the-tile rule: it keeps its natural (capped)
-    # width — seating the numeric limit square + family select — rather than stretching to fill its
-    # wide tile. (When all-interval is on, that capped dropdown + the checkbox make up box 𝐓.)
+def test_target_chooser_box_spans_its_tile_with_a_capped_dropdown_inside():
+    # widening control boxes is about the BOX (frame), not the dropdown: the target chooser's box
+    # spans its wide tile like every other box, while the dropdown inside keeps its natural (capped)
+    # width — the numeric limit square + family select, with empty room (box 𝐓's checkbox slot) to
+    # its right
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"] = True  # all-interval off: a plain capped dropdown box, well short of its tile
-    boxes = {b.id: b for b in spreadsheet.build(base, s).blocks}
-    box, panel = boxes["block:preselect:target"], boxes["block:vec:targets"]
-    left, right = box.x - panel.x, (panel.x + panel.w) - (box.x + box.w)
-    assert right > left + 30  # capped & left-biased — not filling the tile like the other choosers
+    s["preselects"] = True
+    lay = spreadsheet.build(base, s)
+    box = {b.id: b for b in lay.blocks}["block:preselect:target"]
+    dropdown = {c.id: c for c in lay.cells}["preselect:target"]
+    assert dropdown.w < box.w - 30  # the dropdown stays narrow inside the wide, tile-spanning box
 
 
 def test_build_honors_the_target_interval_spec():
