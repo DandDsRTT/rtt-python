@@ -648,12 +648,26 @@ _CSS = f"""
 .rtt-btn .q-btn__content {{ color:#000 !important; font-size:13px; line-height:1; min-height:0;
            font-family:'Cambria',Georgia,serif; }}
 /* the optimize button fills its cell (a normal rectangle hugging the word); its text is the
-   same size as the optimization power number (the ∞ box, _CELL_FONT). .rtt-optimize-locked
-   marks the auto-optimize lock (double-clicked on) by inverting it */
-.rtt-optimize {{ width:100% !important; min-width:0 !important; height:100% !important; }}
-.rtt-optimize .q-btn__content {{ font-size:{_CELL_FONT}px; }}
-.rtt-optimize-locked {{ background:#000 !important; }}
-.rtt-optimize-locked .q-btn__content {{ color:#fff !important; }}
+   same size as the optimization power number (the ∞ box, _CELL_FONT). It's a 3D button: a
+   light-top/dark-bottom face with a crisp inset bevel (white highlight top-left, soft shadow
+   bottom-right) just inside the black cell border, so it reads as raised off the row. Pressing
+   it (:active) or latching it (.rtt-optimize-locked, the double-click auto-optimize lock)
+   inverts the shading — the face flips dark-top/light-bottom, the bevel becomes an inset
+   shadow, and the label nudges down-right — so a held click and a locked latch both look
+   pushed in. Hover/active are scoped :not(-locked) so the latched look stays put under either. */
+.rtt-optimize {{ width:100% !important; min-width:0 !important; height:100% !important;
+            background:linear-gradient(#fafafa,#cfcfcf) !important;
+            box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 1px rgba(0,0,0,0.30) !important;
+            transition:background .06s linear, box-shadow .06s linear !important; }}
+.rtt-optimize .q-btn__content {{ font-size:{_CELL_FONT}px;
+            transition:transform .06s linear; }}
+.rtt-optimize:hover:not(.rtt-optimize-locked) {{ background:linear-gradient(#fff,#dadada) !important; }}
+.rtt-optimize:active:not(.rtt-optimize-locked) {{ background:linear-gradient(#c2c2c2,#e6e6e6) !important;
+            box-shadow:inset 1px 1px 2px rgba(0,0,0,0.38), inset -1px -1px 0 rgba(255,255,255,0.65) !important; }}
+.rtt-optimize:active:not(.rtt-optimize-locked) .q-btn__content {{ transform:translate(1px,1px); }}
+.rtt-optimize-locked {{ background:linear-gradient(#1f1f1f,#3c3c3c) !important;
+            box-shadow:inset 1px 1px 3px rgba(0,0,0,0.75), inset -1px -1px 0 rgba(255,255,255,0.18) !important; }}
+.rtt-optimize-locked .q-btn__content {{ color:#fff !important; transform:translate(1px,1px); }}
 /* an in-tile box title (the optimization box's "optimization" header, and every titled
    control box): left-aligned at the top-left of the box (its cell otherwise centres it),
    padded off the left border. One line that overhangs to the right rather than wrapping —
