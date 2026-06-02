@@ -997,6 +997,20 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
         assert lbl.kind == "caption" and lbl.text == label and lbl.align == "left" and lbl.y > ctrl.y
 
 
+def test_a_long_control_label_widens_its_narrow_tile():
+    # the generator tuning map (gens) column is naturally narrow (a couple of generators), too
+    # narrow for the one-line "established tuning scheme" label -- so enabling preselects widens
+    # that tile to fit the label rather than letting it spill, keeping the label on one line
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    gens_off = {b.id: b for b in spreadsheet.build(base, settings.defaults()).blocks}["block:tuning:gens"]
+    lay = spreadsheet.build(base, {**settings.defaults(), "preselects": True})
+    gens_on = {b.id: b for b in lay.blocks}["block:tuning:gens"]
+    box = {b.id: b for b in lay.blocks}["block:preselect:tuning:gens"]
+    assert gens_on.w > gens_off.w  # the tile widened for the label
+    assert gens_on.w >= spreadsheet._min_width_for_lines("established tuning scheme", 1)  # fits it on one line
+    assert box.x >= gens_on.x and box.x + box.w <= gens_on.x + gens_on.w  # the box stays inside the widened tile
+
+
 def test_build_honors_the_target_interval_spec():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5
     tilt = {c.text for c in spreadsheet.build(base, target_spec="TILT").cells if c.id.startswith("target:")}

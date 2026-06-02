@@ -1267,14 +1267,22 @@ def build(state, settings=None, collapsed=None,
                     if (rk, key) in CAPTIONS and (rk, key) in declared_tiles), default=0)
 
     def _control_floor(key):
-        # the width an open column needs so its alt.-complexity in-tile choosers fit without
-        # overhanging the column's right edge (e.g. d=3 primes is naturally 122px but box 𝐋's
-        # controls + diminuator caption need ~188px); widens the column to enclose them
+        # the width an open column needs so its in-tile choosers fit without overhanging the
+        # column's right edge (e.g. d=3 primes is naturally 122px but box 𝐋's controls +
+        # diminuator caption need ~188px); widens the column to enclose them
+        floor = 0
         if key == "primes" and _lbox_show:
-            return LBOX_W
+            floor = LBOX_W
         if key == "targets" and _cbox_show:
-            return CBOX_W
-        return 0
+            floor = max(floor, CBOX_W)
+        # the preselect / form dropdowns' one-line labels (the .rtt-caption-left asset) must fit
+        # the column too, so a long label like "established tuning scheme" widens its (narrow)
+        # tile rather than spilling it — e.g. the generator tuning map's tuning-scheme copy
+        labels = ([l for _n, _r, c, l in PRESELECTS + PRESELECT_COPIES if c == key and l] if show_preselects else [])
+        labels += [l for _n, _r, c, l in FORM_CHOOSERS if c == key and l] if show_form_controls else []
+        if labels:
+            floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(l, 1) for l in labels))
+        return floor
 
     # the domain, the comma basis and the interest set each ride an expand (+) control
     # just inside the right of their (open) tile — domain primes add a prime, commas
