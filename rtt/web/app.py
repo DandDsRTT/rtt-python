@@ -15,6 +15,7 @@ import math
 import sys
 from html import escape as _escape
 from pathlib import Path
+from urllib.parse import quote
 
 from nicegui import app, helpers, ui
 
@@ -293,6 +294,22 @@ window.rttFreeze = (function () {
 })();
 """
 
+
+def _option_box_svg(fill: str | None) -> str:
+    """A data-URI SVG of the option-box indicator: an n×n white square with a 1px #555 border
+    and, when ``fill`` is given, a centred inner square (inset by the 1px border + a 2px gap) of
+    that colour. Used as the BACKGROUND of every q-checkbox box and the tuning-ranges radio box,
+    so the whole mark scales as ONE vector — staying square with an even border at any zoom —
+    instead of separate CSS box edges (border + inset fill), which the browser snaps independently
+    to the device-pixel grid, distorting the square and the gap at fractional zooms / positions."""
+    n = spreadsheet.OPTION_BOX_PX
+    inner = f"<rect x='3' y='3' width='{n - 6}' height='{n - 6}' fill='{fill}'/>" if fill else ""
+    svg = (f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {n} {n}'>"
+           f"<rect x='.5' y='.5' width='{n - 1}' height='{n - 1}' fill='#fff' stroke='#555' stroke-width='1'/>"
+           f"{inner}</svg>")
+    return "data:image/svg+xml," + quote(svg)
+
+
 _CSS = f"""
 /* the grid's empty top-left corner cell now holds only the undo/redo buttons (the app
    title moved to the left rail). It fills the corner exactly — LABEL_W wide so its right
@@ -557,38 +574,33 @@ _CSS = f"""
             align-items:center; }}  /* visually centres the q-checkbox inside its cell wrap */
 /* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the box-𝐋
    diminuator, the target-controls all-interval check, anywhere else) renders as ONE uniform
-   square: a plain white box of OPTION_BOX_PX, thin dark border, no rounded corners, and an
-   INNER filled square when checked (square-radio-dot style, matching the tuning-ranges
-   options). The box model (__inner) and the visible bordered square (__bg) are BOTH pinned to
-   the shared size, overriding Quasar's dense/size scaling, so every box reads identically — no
-   per-control size (the old in-tile font-size:40px) drifts larger than the rest. The Material
-   checkmark SVG is hidden and replaced by an ::after pseudo-element painted black when truthy. */
+   square pinned to OPTION_BOX_PX: __inner sets the box model, __bg carries the mark. The mark —
+   a white square with a 1px #555 border, plus a centred inner fill when checked — is drawn as a
+   single SVG BACKGROUND image (see _option_box_svg), NOT a CSS border + inset ::after fill. A CSS
+   border and a separately-positioned fill snap to the device-pixel grid INDEPENDENTLY, so at
+   fractional zooms / sub-pixel box positions the border thickness and gap drift and the fill stops
+   looking square; one SVG scales as a coherent vector, staying square with an even border at every
+   zoom. Sizes are pinned !important to override Quasar's dense/size scaling so every box matches;
+   Quasar's own checkmark SVG and ::before ripple are neutralised. */
 .q-checkbox__inner {{ width:{spreadsheet.OPTION_BOX_PX}px !important;
             min-width:{spreadsheet.OPTION_BOX_PX}px !important; height:{spreadsheet.OPTION_BOX_PX}px !important; }}
 .q-checkbox__bg {{ top:0 !important; left:0 !important; width:{spreadsheet.OPTION_BOX_PX}px !important;
             height:{spreadsheet.OPTION_BOX_PX}px !important; box-sizing:border-box !important;
-            background:#fff !important; border:1px solid #555 !important;
-            border-radius:0 !important; opacity:1 !important; }}
+            border:none !important; border-radius:0 !important; opacity:1 !important;
+            background-color:transparent !important; background-repeat:no-repeat !important;
+            background-position:center !important; background-size:100% 100% !important;
+            background-image:url("{_option_box_svg(None)}") !important; }}
 .q-checkbox__bg::before {{ background:transparent !important; border-radius:0 !important; }}
 .q-checkbox__svg {{ display:none !important; }}
-/* checked: ::after fills the box's interior in black. Two selectors (Quasar's truthy class
-   + the standard aria-checked attribute) so the rule fires regardless of which Quasar
-   version is in play. !important on every property is required because Quasar's stylesheets
-   set background:transparent !important on .q-checkbox__bg::after otherwise. The 1.5px inset
-   makes the fill ODD-sized (11px in the 14px interior): centred on the box centre, so pixel
-   rounding stays symmetric — it never snap-shifts off toward a corner the way an even 10px fill
-   does on the half-pixel box positions this layout produces (and on those it lands crisp). */
-.q-checkbox__inner--truthy .q-checkbox__bg::after,
-.q-checkbox[aria-checked="true"] .q-checkbox__bg::after {{
-            content:"" !important; display:block !important; position:absolute !important;
-            inset:1.5px !important; background:#000 !important; border-radius:0 !important; }}
-/* MIXED state for the select-all/none master: when some-but-not-all of its targets are on,
-   render the inner square GREY (rather than black or empty) to convey the indeterminate
-   third state. Applied via the .rtt-show-mixed class, toggled in render() based on
-   any() && !all() over the implemented Show settings. */
-.rtt-show-mixed .q-checkbox__bg::after {{
-            content:"" !important; display:block !important; position:absolute !important;
-            inset:1.5px !important; background:#888 !important; border-radius:0 !important; }}
+/* checked: swap in the SVG that carries the black inner fill (two selectors — Quasar's truthy
+   class + the standard aria-checked attribute — so it fires regardless of Quasar version). */
+.q-checkbox__inner--truthy .q-checkbox__bg,
+.q-checkbox[aria-checked="true"] .q-checkbox__bg {{
+            background-image:url("{_option_box_svg('#000')}") !important; }}
+/* MIXED state for the select-all/none master (some-but-not-all targets on): a GREY inner fill for
+   the indeterminate third state, via the .rtt-show-mixed class toggled in render(). */
+.rtt-show-mixed .q-checkbox__bg {{
+            background-image:url("{_option_box_svg('#888')}") !important; }}
 /* each chooser's dropdown popup matches the field's Cambria text, with compact items */
 .rtt-select-popup {{ font-family:'Cambria',Georgia,serif; }}
 /* compact items; the popup grows to max-content (see _select_props), widening past
@@ -644,10 +656,11 @@ _CSS = f"""
                   padding:5px 5px 5px 10px; }}  /* top/bottom 5 so the bottom row doesn't touch the box edge */
 .rtt-rangeopt {{ display:flex; align-items:center; gap:4px; cursor:pointer; user-select:none; }}
 .rtt-rangebox {{ width:{spreadsheet.OPTION_BOX_PX}px; height:{spreadsheet.OPTION_BOX_PX}px; flex:none;
-                border:1px solid #555; background:#fff; box-sizing:border-box; position:relative; }}
-/* selected = a square "radio": the ring stays and a smaller filled square sits centred
-   inside it (like a radio dot, but square) — not a solid fill */
-.rtt-rangeopt-on .rtt-rangebox::after {{ content:""; position:absolute; inset:1.5px; background:#000; }}
+                box-sizing:border-box; background-repeat:no-repeat; background-size:100% 100%;
+                background-image:url("{_option_box_svg(None)}"); }}
+/* selected = a square "radio": the SAME SVG art with a centred black inner square (a radio dot,
+   but square) — one vector, so it stays square with an even border at any zoom (see _option_box_svg) */
+.rtt-rangeopt-on .rtt-rangebox {{ background-image:url("{_option_box_svg('#000')}"); }}
 .rtt-rangelabel {{ font-family:'Cambria',Georgia,serif; font-size:10px; color:#000; white-space:nowrap; }}
 .rtt-ratio {{ display:flex; align-items:center; justify-content:center; gap:1px;
              font-size:13px; color:#000; }}
