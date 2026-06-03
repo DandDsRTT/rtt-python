@@ -4676,3 +4676,29 @@ def test_every_audio_tile_gets_its_own_bank():
         assert {f"wave:{tile}", f"mode:{tile}", f"hold:{tile}", f"root:{tile}"} <= cells
 
 
+def test_show_flags_gate_sub_controls_under_their_parent():
+    # _resolve_show_flags (build's phase-1) ANDs each nested toggle with its parent: optimization /
+    # weighting nest under tuning_boxes, alt_complexity under weighting, mnemonics under names. So a
+    # sub-control can't render while its region is hidden, whatever its own toggle says.
+    s = settings.defaults()
+    s.update(tuning_boxes=False, optimization=True, weighting=True, alt_complexity=True,
+             names=False, mnemonics=True)
+    f = spreadsheet._resolve_show_flags(s, frozenset())
+    assert not (f.optimization or f.weighting or f.alt_complexity)  # all gated off by tuning_boxes
+    assert not f.mnemonics                                          # gated off by names
+    s.update(tuning_boxes=True, names=True)  # parents on -> sub-controls follow their own toggle
+    f = spreadsheet._resolve_show_flags(s, frozenset())
+    assert f.optimization and f.weighting and f.alt_complexity and f.mnemonics
+
+
+def test_show_flags_box_choosers_gate_on_the_collapsed_state():
+    # the box-𝐋 / box-𝒄 in-tile choosers (lbox/cbox) show only while their column + row + tile are
+    # open; collapsing any of them hides the chooser even with every toggle on.
+    s = settings.defaults()
+    s.update(tuning_boxes=True, weighting=True, alt_complexity=True, temperament_boxes=True)
+    assert spreadsheet._resolve_show_flags(s, frozenset()).lbox  # all open -> box-𝐋 chooser shows
+    assert spreadsheet._resolve_show_flags(s, frozenset()).cbox  # ...and box-𝒄
+    assert not spreadsheet._resolve_show_flags(s, frozenset({"row:prescaling"})).lbox  # collapsed -> hidden
+    assert not spreadsheet._resolve_show_flags(s, frozenset({"row:complexity"})).cbox
+
+

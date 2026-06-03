@@ -11,7 +11,7 @@ and out. Reuses the entity types in :mod:`rtt.web.layout`.
 
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from rtt.web import service
@@ -338,6 +338,95 @@ def _bus_span(positions):
     return positions[0] - ext / 2, (positions[-1] - positions[0]) + ext
 
 
+@dataclass(frozen=True)
+class _ShowFlags:
+    """The resolved Show-panel view settings: each toggle plus the cross-toggle / collapsed gating
+    that decides what actually renders. Resolved up front (the first build phase), independent of
+    any geometry, so the column-width floors can reserve room for in-tile controls before the
+    column-width loop runs. ``lbox`` / ``cbox`` gate the box-𝐋 / box-𝒄 in-tile choosers."""
+    captions: bool
+    mnemonics: bool
+    equiv: bool
+    preselects: bool
+    counts: bool
+    ptext: bool
+    charts: bool
+    ranges: bool
+    symbols: bool
+    units: bool
+    domain_units: bool
+    temp: bool
+    form_controls: bool
+    tuning: bool
+    optimization: bool
+    weighting: bool
+    alt_complexity: bool
+    lbox: bool
+    cbox: bool
+    audio: bool
+    detempering: bool
+    interest: bool
+    gridded: bool
+    quantities: bool
+    domain_quantities: bool
+    math: bool
+
+
+def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
+    """The first build phase: derive the view flags + their gating from the Show settings. Pure —
+    depends only on the settings dict and the collapsed set (no geometry)."""
+    captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
+    temp = settings["temperament_boxes"]
+    tuning = settings["tuning_boxes"]
+    # optimization / weighting are sub-controls of tuning boxes: they annotate / open the tuning
+    # region, so they only apply while that region (and its target column) shows. alt. complexity
+    # is a sub-control of weighting: it adds the box-𝐋 "replace diminuator" checkbox.
+    optimization = tuning and settings["optimization"]
+    weighting = tuning and settings["weighting"]
+    alt_complexity = weighting and settings["alt_complexity"]
+    return _ShowFlags(
+        captions=captions,
+        mnemonics=captions and settings["mnemonics"],  # underline a caption's symbol letter
+        equiv=settings["equivalences"],  # extend the symbol line with the defining equation
+        preselects=settings["preselects"],  # the per-quantity chooser dropdowns
+        counts=settings["counts"],
+        ptext=settings["plain_text_values"],  # the boxed EBK string under each tile
+        charts=settings["charts"],  # per-tile bar charts above the value cells
+        ranges=settings["tuning_ranges"],  # the generator tuning-ranges I-beam chart (in the gens box)
+        symbols=settings["symbols"],  # the in-tile quantity symbols, stacked above the captions
+        units=settings["units"],  # the in-tile "units: …" line, below each box's caption
+        domain_units=settings["domain_units"],  # the units row (spine) + units column
+        temp=temp,
+        form_controls=settings["form_controls"],  # the canonical-mapping form row + <choose form> chooser
+        tuning=tuning,
+        optimization=optimization,
+        weighting=weighting,
+        alt_complexity=alt_complexity,
+        # Whether each alt.-complexity in-tile chooser emits — evaluated up front (without col_x,
+        # which the column-width loop computes later) so the column-width floor can widen the
+        # primes / targets columns to fit the controls. box 𝒄 (the complexity chooser) shows with
+        # WEIGHTING alone (the norm is core to weighting, not an alt.-complexity extra); only box 𝐋
+        # (the prescaler controls) stays on alt_complexity.
+        lbox=(alt_complexity and settings["temperament_boxes"]
+              and "col:primes" not in collapsed and "row:prescaling" not in collapsed
+              and "tile:prescaling:primes" not in collapsed),
+        cbox=(weighting
+              and "col:targets" not in collapsed and "row:complexity" not in collapsed
+              and "tile:complexity:targets" not in collapsed),
+        audio=settings["audio"],  # the just / tempered audio rows between counts and quantities
+        detempering=settings["generator_detempering"],  # the generator-detempering column (matrix D)
+        interest=settings["interest"],  # the other-intervals-of-interest column (its own box toggle)
+        # Value-display toggles. "gridded values" is the master switch: off filters every value a
+        # tile holds (see GRIDDED_KINDS). "quantities" is gentler — it keeps boxes/EBK marks and
+        # only blanks the body numbers (BLANKED_NUMBER_KINDS); "domain_quantities" governs the
+        # quantities row and its spine column. "math" prefixes a tuning cent with its closed form.
+        gridded=settings["gridded_values"],
+        quantities=settings["quantities"],
+        domain_quantities=settings["domain_quantities"],
+        math=settings["math_expressions"],
+    )
+
+
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
@@ -350,72 +439,35 @@ def build(state, settings=None, collapsed=None,
     if target_spec is None:
         target_spec = service.DEFAULT_TARGET_SPEC
     collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
-    show_captions = settings["names"]  # the in-tile quantity captions; row/col titles always show
-    show_mnemonics = show_captions and settings["mnemonics"]  # underline a caption's symbol letter
-    show_equiv = settings["equivalences"]  # extend the symbol line with the defining equation
-    show_preselects = settings["preselects"]  # the per-quantity chooser dropdowns
-    show_counts = settings["counts"]
-    show_ptext = settings["plain_text_values"]  # the boxed EBK string under each tile
-    show_charts = settings["charts"]  # per-tile bar charts above the value cells
-    show_ranges = settings["tuning_ranges"]  # the generator tuning-ranges I-beam chart (in the gens box)
-    show_symbols = settings["symbols"]  # the in-tile quantity symbols, stacked above the captions
-    show_units = settings["units"]  # the in-tile "units: …" line, below each box's caption
-    show_domain_units = settings["domain_units"]  # the units row (spine) + units column
-    show_temp = settings["temperament_boxes"]
-    # the canonical-mapping form row (its matrices) and the <choose form> chooser in the
-    # mapping/comma-basis boxes ride together under the form_controls toggle
-    show_form_controls = settings["form_controls"]
-    show_tuning = settings["tuning_boxes"]
-    # optimization is a sub-control of tuning boxes: it annotates the tuning region with
-    # the scheme's optimization power, so it only applies while that region shows
-    show_optimization = show_tuning and settings["optimization"]
-    # weighting is likewise a sub-control of tuning boxes: it opens the complexity-
-    # prescaling -> complexity -> weight rows that feed the damage row, so it too only
-    # applies while the tuning region (and its target column) shows
-    show_weighting = show_tuning and settings["weighting"]
-    # alt. complexity is a sub-control of weighting: it adds the "replace diminuator" checkbox to
-    # box 𝐋 (the prescaling matrix), so it only applies while that region shows
-    show_alt_complexity = show_weighting and settings["alt_complexity"]
-    # Whether each alt.-complexity in-tile chooser will be emitted — evaluated up front
-    # (without depending on col_x, which the column-width loop computes later) so the column-
-    # width floor below can widen the primes / targets columns to fit the controls
-    _lbox_show = (show_alt_complexity and settings["temperament_boxes"]
-                  and "col:primes" not in collapsed and "row:prescaling" not in collapsed
-                  and "tile:prescaling:primes" not in collapsed)
-    # box 𝒄 (the predefined-complexity dropdown + the q / dual(q) norm-power fields) shows with
-    # WEIGHTING alone — the complexity norm is core to the weighting story, not an alt.-complexity
-    # extra. alt_complexity (shelved) only widens the dropdown's OPTIONS (below); dual(q) within is
-    # gated separately on the all-interval scheme. Box 𝒘's weight-slope chooser likewise shows with
-    # weighting (see slope_ctrl). Only box 𝐋 (the prescaler controls) stays on show_alt_complexity.
-    _cbox_show = (show_weighting
-                  and "col:targets" not in collapsed and "row:complexity" not in collapsed
-                  and "tile:complexity:targets" not in collapsed)
-    # audio is a top-level toggle (not nested under the tuning boxes): it adds the just /
-    # tempered audio rows between counts and quantities. Their per-column tiles still ride the
-    # column boxes (targets need tuning boxes; interest needs interest; primes/commas/gens
-    # need temperament).
-    show_audio = settings["audio"]
-    # the generator-detempering column (the matrix D) is an independent box toggle
-    show_detempering = settings["generator_detempering"]
-    # the other-intervals-of-interest column is its own box toggle too: a standalone grey
-    # column (a user-built interval list to inspect), independent of the cyan tuning boxes
-    # whose target column it merely sits beside
-    show_interest = settings["interest"]
-    # Value-display toggles. "gridded values" is the master switch: with it off
-    # (and plain-text values not yet built) every value a tile holds -- the numbers,
-    # the EBK marks framing them, the domain/comma ± controls -- is filtered out
-    # (see GRIDDED_KINDS at the end of build), leaving the tiles empty but for their
-    # fold toggles, name captions and (when on) plain-text value boxes.
-    # "quantities" (general) is gentler -- it keeps the boxes and EBK marks and only
-    # blanks the body numbers (BLANKED_NUMBER_KINDS); "domain_quantities" (specific)
-    # governs the quantities row and its spine column.
-    gridded = settings["gridded_values"]
-    show_quantities = settings["quantities"]
-    show_domain_quantities = settings["domain_quantities"]
-    # Math expressions PREFIXES a tuning cell's cents value with its exact closed form
-    # where one exists ("1200 · log₂3 = 1901.96", the = cents kept when quantities is
-    # on); a cell with no closed form is untouched and keeps its plain cents value.
-    show_math = settings["math_expressions"]
+    # Phase 1 — resolve the Show-panel view flags + their gating (see _resolve_show_flags above),
+    # then unpack into the local names the rest of build() reads.
+    _f = _resolve_show_flags(settings, collapsed)
+    show_captions = _f.captions
+    show_mnemonics = _f.mnemonics
+    show_equiv = _f.equiv
+    show_preselects = _f.preselects
+    show_counts = _f.counts
+    show_ptext = _f.ptext
+    show_charts = _f.charts
+    show_ranges = _f.ranges
+    show_symbols = _f.symbols
+    show_units = _f.units
+    show_domain_units = _f.domain_units
+    show_temp = _f.temp
+    show_form_controls = _f.form_controls
+    show_tuning = _f.tuning
+    show_optimization = _f.optimization
+    show_weighting = _f.weighting
+    show_alt_complexity = _f.alt_complexity
+    _lbox_show = _f.lbox
+    _cbox_show = _f.cbox
+    show_audio = _f.audio
+    show_detempering = _f.detempering
+    show_interest = _f.interest
+    gridded = _f.gridded
+    show_quantities = _f.quantities
+    show_domain_quantities = _f.domain_quantities
+    show_math = _f.math
     # The prescaler's concrete glyph 𝐿, used everywhere the abstract 𝑋 "further appears" — the
     # product tiles and their complexity-norm column headers — when 𝑋 = 𝐿: i.e. when the prescaler
     # the DISPLAYED diagonal realises is the log-prime matrix. A prime/identity scheme, or a custom
