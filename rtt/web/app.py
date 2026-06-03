@@ -827,6 +827,53 @@ def _set_offlist_prompt(select: ui.select, value) -> None:
         select.props(remove="display-value")
 
 
+class _Reconciler:
+    def __init__(self, editor):
+        self._editor = editor
+        self._cb = None  # callbacks (act, render, on_*) wired by index() after they are defined
+        self.els: dict = {}  # entity id -> outer element (persists across renders)
+        self.inputs: dict = {}  # mapping cell id -> q-input
+        self.labels: dict = {}  # cell id -> the label whose text tracks state
+        self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
+        self.cents: dict = {}  # cents cell id -> (whole label, fraction label), aligned on the point
+        self.htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
+        self.ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
+        self.chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
+        self.range_keys: dict = {}  # range-chart cell id -> last (w, h, ranges) drawn, to redraw on resize/data change
+        self.audio_keys: dict = {}  # speaker/arp/chord cell id -> last cents tuple, to rebuild its click handler on change
+        self.exprs: dict = {}  # math-expression cell id -> the ui.html holding its stacked lines
+        self.expr_state: dict = {}  # math-expression cell id -> last (text, w) rendered, to redraw on change
+        self.kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
+        self.selects: dict = {}  # preselect cell id -> its q-select
+        self.checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "replace diminuator")
+        self.ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
+        self.rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
+        self.opt_buttons: dict = {}  # optimize-button cell id -> its ui.button (for the auto-lock visual)
+        self.objective_tips: dict = {}  # optimization-objective cell id -> its ui.tooltip (text swaps with all-interval mode)
+        self.captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
+        self.caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
+        self.math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
+        self.math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
+        self.fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
+        self.cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
+        self.cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
+        # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
+        # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
+        # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
+        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.cents, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.audio_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build, update). Populated
+        # below as each kind family is migrated off the _make_cell / render if/elif ladders; a kind
+        # absent here still falls through to its ladder branch, so the registry and ladders coexist
+        # during the migration (and the ladders shrink to nothing once every kind is registered).
+        self.cell_kinds: dict[str, _KindHandlers] = {}
+
+    def drop(self, eid):
+        """Remove an entity's element and forget every per-id handle for it (see _handle_dicts)."""
+        self.els[eid].delete()
+        for d in self._handle_dicts:
+            d.pop(eid, None)
+
+
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
@@ -850,53 +897,39 @@ def index() -> None:
             editor.load(stored)
         except Exception:
             pass
-    els: dict = {}  # entity id -> outer element (persists across renders)
-    inputs: dict = {}  # mapping cell id -> q-input
-    labels: dict = {}  # cell id -> the label whose text tracks state
-    fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
-    cents: dict = {}  # cents cell id -> (whole label, fraction label), aligned on the point
-    htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
-    ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
-    chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
-    range_keys: dict = {}  # range-chart cell id -> last (w, h, ranges) drawn, to redraw on resize/data change
-    audio_keys: dict = {}  # speaker/arp/chord cell id -> last cents tuple, to rebuild its click handler on change
-    exprs: dict = {}  # math-expression cell id -> the ui.html holding its stacked lines
-    expr_state: dict = {}  # math-expression cell id -> last (text, w) rendered, to redraw on change
-    kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
-    selects: dict = {}  # preselect cell id -> its q-select
-    checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "replace diminuator")
-    ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
-    rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
-    opt_buttons: dict = {}  # optimize-button cell id -> its ui.button (for the auto-lock visual)
-    objective_tips: dict = {}  # optimization-objective cell id -> its ui.tooltip (text swaps with all-interval mode)
-    captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
-    caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
-    math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
-    math_rendered: dict = {}  # ...and its last html, to rewrite on an equivalences toggle / value change
-    fold_state: dict = {}  # fold-toggle cell id -> last state token (unfold_more/less), to swap its SVG on change
-    cell_units: dict = {}  # value cell id -> the ui.html holding its per-cell unit (the units toggle)
-    cell_unit_text: dict = {}  # ...and its last unit string, to rewrite on a units toggle / value change
-    # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
-    # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
-    # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-    _handle_dicts = (els, inputs, labels, fracs, cents, htmls, ebk_sizes, chart_keys, range_keys,
-                     audio_keys, exprs, expr_state, kinds, selects, checks, ptext_inputs, rangeopts,
-                     opt_buttons, objective_tips, captions, caption_html, math_cells, math_rendered,
-                     fold_state, cell_units, cell_unit_text)
+    rec = _Reconciler(editor)
+    els = rec.els
+    inputs = rec.inputs
+    labels = rec.labels
+    fracs = rec.fracs
+    cents = rec.cents
+    htmls = rec.htmls
+    ebk_sizes = rec.ebk_sizes
+    chart_keys = rec.chart_keys
+    range_keys = rec.range_keys
+    audio_keys = rec.audio_keys
+    exprs = rec.exprs
+    expr_state = rec.expr_state
+    kinds = rec.kinds
+    selects = rec.selects
+    checks = rec.checks
+    ptext_inputs = rec.ptext_inputs
+    rangeopts = rec.rangeopts
+    opt_buttons = rec.opt_buttons
+    objective_tips = rec.objective_tips
+    captions = rec.captions
+    caption_html = rec.caption_html
+    math_cells = rec.math_cells
+    math_rendered = rec.math_rendered
+    fold_state = rec.fold_state
+    cell_units = rec.cell_units
+    cell_unit_text = rec.cell_unit_text
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
-    # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build, update). Populated
-    # below as each kind family is migrated off the _make_cell / render if/elif ladders; a kind
-    # absent here still falls through to its ladder branch, so the registry and ladders coexist
-    # during the migration (and the ladders shrink to nothing once every kind is registered).
-    cell_kinds: dict[str, _KindHandlers] = {}
+    cell_kinds = rec.cell_kinds
 
-    def drop(eid):
-        """Remove an entity's element and forget every per-id handle for it (see _handle_dicts)."""
-        els[eid].delete()
-        for d in _handle_dicts:
-            d.pop(eid, None)
+    drop = rec.drop
 
     def set_cents_face(cid, text):
         """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
