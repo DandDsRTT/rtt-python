@@ -169,31 +169,44 @@ TEMPERAMENT_COMMAS: dict[str, tuple[tuple[int, ...], ...]] = {
 }
 
 
-# prefix marking a temperament-chooser value as a prime-limit divider header rather
-# than a pickable preset (the chooser renders these as disabled, non-selectable rows).
+# prefix marking a temperament-chooser value as a rank-and-limit section divider header
+# rather than a pickable preset (the chooser renders these as disabled, non-selectable rows).
 _DIVIDER_PREFIX = "hdr:"
 
 
 def is_divider(value: str) -> bool:
-    """Whether a temperament-chooser value is an inert prime-limit divider header
+    """Whether a temperament-chooser value is an inert section divider header
     (see :func:`temperament_options`) rather than a pickable preset."""
     return value.startswith(_DIVIDER_PREFIX)
 
 
 def temperament_options() -> dict[str, str]:
-    """Ordered ``{value: label}`` for the temperament chooser: a divider row before
-    each prime-limit group, then the temperaments in it, each shown lowercase. The
-    divider rows carry the :data:`_DIVIDER_PREFIX` so the chooser renders them disabled
-    — they read as group headers without being pickable values (see :func:`is_divider`).
-    The label is the plain limit name; the chooser styles it as a centred header with rules
-    flanking it (CSS in the popup), so no decorative dashes are baked into the text."""
+    """Ordered ``{value: label}`` for the temperament chooser: the temperaments grouped
+    by rank then prime limit, each group headed by a ``"rank R, L-limit"`` divider row and
+    its members shown lowercase. Groups are ordered by rank first, then limit, so every
+    rank-2 group precedes the rank-3 ones. A temperament's rank is ``d - nc`` for its
+    ``nc`` commas over the limit's ``d`` primes (``d`` = the comma vectors' length). The
+    divider rows carry the :data:`_DIVIDER_PREFIX` so the chooser renders them disabled —
+    they read as section headers without being pickable values (see :func:`is_divider`).
+    The chooser styles each header as a centred row with rules flanking it (CSS in the
+    popup), so no decorative dashes are baked into the text."""
+    # (rank, limit, name) for every preset; a *stable* sort by (rank, limit) keeps each
+    # group's authored order (Erlich's complexity order) within it.
+    entries = sorted(
+        ((len(commas[0]) - len(commas), limit, name)
+         for limit, group in TEMPERAMENTS_BY_LIMIT
+         for name, commas in group),
+        key=lambda e: (e[0], e[1]),
+    )
     options: dict[str, str] = {}
-    for limit, group in TEMPERAMENTS_BY_LIMIT:
-        options[f"{_DIVIDER_PREFIX}{limit}"] = f"{limit}-limit"
-        for name, _ in group:
-            # the value key keeps the canonical proper-name casing (it is the stable id
-            # shared with TEMPERAMENT_COMMAS / identify); only the shown label is lowercased
-            options[f"{limit}:{name}"] = name.lower()
+    current: tuple[int, int] | None = None
+    for rank, limit, name in entries:
+        if (rank, limit) != current:
+            current = (rank, limit)
+            options[f"{_DIVIDER_PREFIX}{rank}:{limit}"] = f"rank {rank}, {limit}-limit"
+        # the value key keeps the canonical proper-name casing (the stable id shared with
+        # TEMPERAMENT_COMMAS / identify); only the shown label is lowercased
+        options[f"{limit}:{name}"] = name.lower()
     return options
 
 

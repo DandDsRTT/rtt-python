@@ -1328,8 +1328,8 @@ class _Reconciler:
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
             self.selects[cb.id] = (num, sel)
         elif name == "temperament":
-            # a normal dropdown listing only the prime-limit dividers and their presets (grouped in
-            # the open list). The chosen preset shows in the box; when none matches, a "-" prompt
+            # a normal dropdown listing only the rank/limit section dividers and their presets
+            # (grouped in the open list). The chosen preset shows in the box; when none matches, a "-" prompt
             # shows there as a display-value placeholder — never a pickable row in the list.
             value = presets.identify(self._editor.state)
             sel = _GroupedSelect(presets.temperament_options(), value=value,

@@ -78,22 +78,28 @@ def test_identify_round_trips_every_preset_and_rejects_non_presets():
     assert presets.identify(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))) is None
 
 
-def test_temperament_options_groups_by_limit_with_a_divider_before_each_group():
+def test_temperament_options_group_by_rank_then_limit():
     options = presets.temperament_options()
     keys = list(options)
-    assert [k for k in keys if k.startswith("hdr:")] == ["hdr:5", "hdr:7", "hdr:11", "hdr:13"]
-    # a divider precedes its group's members; its label is just the plain limit name —
-    # the flanking rules are CSS in the chooser popup, not dashes baked into the text
-    assert keys.index("hdr:13") < keys.index("13:Marvel")
-    assert options["hdr:13"] == "13-limit" and options["13:Marvel"] == "marvel"
-    # the same name recurs across limits under distinct values (no collision)
+    # groups are ordered by rank first, then prime limit, each headed by a
+    # "rank R, L-limit" divider; so every rank-2 group precedes the rank-3 ones
+    assert [k for k in keys if k.startswith("hdr:")] == [
+        "hdr:2:5", "hdr:2:7", "hdr:2:11", "hdr:3:7", "hdr:3:11", "hdr:3:13"]
+    assert options["hdr:2:5"] == "rank 2, 5-limit"
+    assert options["hdr:3:13"] == "rank 3, 13-limit"
+    # a divider precedes its group's members; value keys stay "limit:name" (rank-free)
+    assert keys.index("hdr:3:13") < keys.index("13:Marvel")
+    assert options["13:Marvel"] == "marvel"
+    # rank sorts ahead of limit: the rank-2 11-limit group precedes the rank-3 7-limit one
+    assert keys.index("hdr:2:11") < keys.index("hdr:3:7")
+    # the same name recurs across limits/ranks under distinct values (no collision)
     assert "7:Miracle" in options and "11:Miracle" in options
 
 
-def test_is_divider_flags_only_limit_headers_not_presets():
-    # the prime-limit header rows are inert dividers; the named presets and the ""
+def test_is_divider_flags_only_section_headers_not_presets():
+    # the rank/limit header rows are inert dividers; the named presets and the ""
     # placeholder stay pickable. (Drives the chooser's disabled-row rendering.)
-    assert presets.is_divider("hdr:11")
+    assert presets.is_divider("hdr:2:11")
     assert not presets.is_divider("11:Miracle")
     assert not presets.is_divider("")
 

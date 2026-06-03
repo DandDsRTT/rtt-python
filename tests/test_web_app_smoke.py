@@ -282,7 +282,7 @@ def _css_rule(selector):
 
 
 def test_temperament_divider_headers_read_as_centred_grey_rules_inset_like_the_items():
-    # the prime-limit divider rows read as section headers, not choices: a centred grey label
+    # the rank/limit divider rows read as section headers, not choices: a centred grey label
     # flanked by rules (the lines are CSS now, not the old ── dashes baked into the label text).
     # The label flex-centres its text in grey (#777); the divider keeps the items' horizontal
     # padding rather than running to the popup's literal edges, so its flex:1 ::before/::after

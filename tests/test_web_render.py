@@ -358,20 +358,20 @@ async def test_chooser_popups_open_wide_enough_for_one_line_entries(user: User) 
 
 
 async def test_temperament_divider_rows_render_as_disabled_options(user: User) -> None:
-    # the prime-limit divider rows (the "N-limit" headers) read as headers, not choices: each is
-    # passed to Quasar with disable=True, so the q-item takes no hover highlight and a
+    # the rank/limit divider rows (the "rank R, L-limit" headers) read as headers, not choices:
+    # each is passed to Quasar with disable=True, so the q-item takes no hover highlight and a
     # click on it neither picks it nor closes the popup. The named presets stay pickable.
     await _enable(user, "presets")
     select = _cell_child(user, "preset:temperament")
     option_by_value = dict(zip(select._values, select._props["options"]))
-    assert option_by_value["hdr:5"]["disable"] is True
-    assert option_by_value["hdr:13"]["disable"] is True
+    assert option_by_value["hdr:2:5"]["disable"] is True
+    assert option_by_value["hdr:3:13"]["disable"] is True
     assert "disable" not in option_by_value["13:Marvel"]
 
 
 async def test_temperament_chooser_omits_the_offlist_prompt_from_its_list(user: User) -> None:
     # the "-" prompt is a placeholder, not a temperament. The open list holds only the
-    # prime-limit dividers and their presets — there is no pickable "-" row, and no ""
+    # rank/limit dividers and their presets — there is no pickable "-" row, and no ""
     # sentinel value sitting behind one.
     await _enable(user, "presets")
     select = _cell_child(user, "preset:temperament")
