@@ -381,30 +381,30 @@ SPINE_ROW_GROUP = {
 SPINE_ROWS = frozenset({"counts", "units"})
 SPINE_COLUMNS = frozenset({"quantities", "units"})
 
-# The "preselect" chooser dropdowns (settings["preselects"]) as (name, row, column,
+# The preset chooser dropdowns (settings["presets"]) as (name, row, column,
 # title): each is a quick menu for one of the things you actually choose, riding under
 # its governing tile in a titled control box — the temperament under the mapping matrix,
 # the tuning scheme under the tuning map, the target interval set under the target list,
 # the predefined prescaler under the prescaling matrix (box 𝐋, shown only with weighting).
-PRESELECTS = (
+PRESETS = (
     ("temperament", "mapping", "primes", "temperament"),
     ("tuning", "tuning", "primes", "established tuning scheme"),
     ("target", "vectors", "targets", "target interval set scheme"),
     ("prescaler", "prescaling", "primes", "predefined prescalers"),
 )
-# Extra copies of a preselect chooser in another governing tile (the same control, its own
+# Extra copies of a preset chooser in another governing tile (the same control, its own
 # id so the renderer keeps both): the tuning scheme also under the generator tuning map, the
 # temperament also in the comma basis (which it loads). Each carries the same field label as
 # its primary; the boxes stay within their own tiles, so the labels don't collide.
-PRESELECT_COPIES = (
+PRESET_COPIES = (
     ("tuning", "tuning", "gens", "established tuning scheme"),
     ("temperament", "vectors", "commas", "temperament"),
 )
-PRESELECT_ROWS = frozenset(row for _, row, _, _ in PRESELECTS + PRESELECT_COPIES)
+PRESET_ROWS = frozenset(row for _, row, _, _ in PRESETS + PRESET_COPIES)
 
 # The "form" chooser (settings["form_controls"]) as (name, row, column, title): a control
 # in the mapping and comma-basis boxes that re-stores that matrix in canonical form (an
-# undoable edit). Rides below the tile in its own titled box, like a preselect chooser.
+# undoable edit). Rides below the tile in its own titled box, like a preset chooser.
 FORM_CHOOSERS = (
     ("mapping", "mapping", "primes", "form"),
     ("comma_basis", "vectors", "commas", "form"),

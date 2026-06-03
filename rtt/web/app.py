@@ -549,7 +549,7 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("mnemonics", "names"),
     ("units",),
     ("plain_text_values",),
-    ("preselects",),
+    ("presets",),
     ("charts",),
 )
 
@@ -624,7 +624,7 @@ def _tile_grid_frame_html() -> str:
             + '</div>')
 
 
-def _tile_preselect_html() -> str:
+def _tile_preset_html() -> str:
     """The presets-chooser sample, styled like the app's real q-select dropdowns: a white bordered
     field showing the "(presets)" placeholder with a dropdown caret."""
     return ('<span style="display:flex;align-items:center;justify-content:space-between;'
@@ -657,8 +657,8 @@ def _general_part_html(key: str) -> str:
         return f'<span class="rtt-units-pre">units: </span>{_units_html(_TILE_UNITS)}'
     if key == "plain_text_values":
         return _math_html(_TILE_PTEXT)
-    if key == "preselects":
-        return _tile_preselect_html()
+    if key == "presets":
+        return _tile_preset_html()
     if key == "charts":
         return _example_chart()
     raise KeyError(key)  # every general layer must have a sample
@@ -797,7 +797,7 @@ def _line_style(ln, y_shift: float = 0) -> str:
 
 
 def _select_props(min_width: float) -> str:
-    """Shared Quasar props for every chooser dropdown (preselect / target / form / control
+    """Shared Quasar props for every chooser dropdown (preset / target / form / control
     select): a compact borderless field whose open popup is at least as wide as its trigger
     (``min_width`` px) but grows to ``max-content``, so each entry shows on one line rather
     than wrapping or truncating at the trigger's width."""
@@ -827,7 +827,7 @@ class _GroupedSelect(ui.select):
 
 
 def _set_offlist_prompt(select: ui.select, value) -> None:
-    """Show a "-" prompt in a preselect chooser's closed box when its current state matches
+    """Show a "-" prompt in a preset chooser's closed box when its current state matches
     no named entry (``value`` is None) — the temperament chooser with no matching preset, or
     the tuning chooser on a control-refined scheme with no name. It is a Quasar display-value
     placeholder, so "-" never appears as a pickable row in the open list; when a named entry
@@ -855,7 +855,7 @@ class _Reconciler:
         self.exprs: dict = {}  # math-expression cell id -> the ui.html holding its stacked lines
         self.expr_state: dict = {}  # math-expression cell id -> last (text, w) rendered, to redraw on change
         self.kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
-        self.selects: dict = {}  # preselect cell id -> its q-select
+        self.selects: dict = {}  # preset cell id -> its q-select
         self.checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "replace diminuator")
         self.ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
         self.rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
@@ -923,7 +923,7 @@ class _Reconciler:
         self.cell_kinds["tiletoggle"] = _KindHandlers(self._build_foldtoggle, self._update_foldtoggle)
         self.cell_kinds["alltoggle"] = _KindHandlers(self._build_alltoggle, self._update_foldtoggle)
 
-        self.cell_kinds["preselect"] = _KindHandlers(self._build_preselect, self._update_preselect)
+        self.cell_kinds["preset"] = _KindHandlers(self._build_preset, self._update_preset)
         self.cell_kinds["control_select"] = _KindHandlers(self._build_control_select, self._update_control_select)
         self.cell_kinds["control_check"] = _KindHandlers(self._build_control_check, self._update_control_check)
         self.cell_kinds["formchooser"] = _KindHandlers(self._build_formchooser, self._update_formchooser)
@@ -1103,7 +1103,7 @@ class _Reconciler:
     def _build_caption(self, cb, wrap):
         wrap.classes("rtt-caption-cell")
         # the optimization box's captions stay on one line (no wrap), unlike tile names; a caption
-        # with align="left" reads left-justified under its control (e.g. a preselect chooser's label)
+        # with align="left" reads left-justified under its control (e.g. a preset chooser's label)
         cls = "rtt-caption rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-caption"
         if cb.align == "left":
             cls += " rtt-caption-left"
@@ -1314,18 +1314,18 @@ class _Reconciler:
             self.fold_state[cb.id] = cb.text
 
     # ---- chooser dropdowns + the diminuator checkbox ----
-    def _build_preselect(self, cb, wrap):
+    def _build_preset(self, cb, wrap):
         name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
         if name == "target":
             # a numeric limit override beside the TILT/OLD family select, seeded from the editor's
             # live target family + (optional) manual limit
-            with ui.element("div").classes("rtt-preselect-target"):
+            with ui.element("div").classes("rtt-preset-target"):
                 num = ui.number(value=self._editor.target_limit, min=2,
                         on_change=lambda e: self._cb.on_target_change()) \
-                    .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
+                    .props("dense borderless hide-bottom-space").classes("rtt-preset-num")
                 sel = ui.select(list(presets.TARGET_SETS), value=self._editor.target_family,
                         on_change=lambda e: self._cb.on_target_change()) \
-                    .props(_select_props(cb.w - 30)).classes("rtt-preselect")  # field = cell − the 30px square (touching, no gap)
+                    .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
             self.selects[cb.id] = (num, sel)
         elif name == "temperament":
             # a normal dropdown listing only the prime-limit dividers and their presets (grouped in
@@ -1334,8 +1334,8 @@ class _Reconciler:
             value = presets.identify(self._editor.state)
             sel = _GroupedSelect(presets.temperament_options(), value=value,
                     is_divider=presets.is_divider,
-                    on_change=lambda e: self._cb.on_preselect("temperament", e.value)) \
-                .props(_select_props(cb.w)).classes("rtt-preselect")
+                    on_change=lambda e: self._cb.on_preset("temperament", e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
             self.selects[cb.id] = sel
         elif name == "prescaler":
@@ -1346,8 +1346,8 @@ class _Reconciler:
             value = self._editor.displayed_prescaler_name
             value = value if value in options else None
             sel = ui.select(options, value=value,
-                    on_change=lambda e: self._cb.on_preselect("prescaler", e.value)) \
-                .props(_select_props(cb.w)).classes("rtt-preselect")
+                    on_change=lambda e: self._cb.on_preset("prescaler", e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
             self.selects[cb.id] = sel
         else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-interval);
@@ -1360,20 +1360,20 @@ class _Reconciler:
             name = self._editor.displayed_tuning_scheme_name
             scheme = name if name in options else None
             sel = ui.select(options, value=scheme,
-                    on_change=lambda e: self._cb.on_preselect("tuning", e.value)) \
-                .props(_select_props(cb.w)).classes("rtt-preselect")
+                    on_change=lambda e: self._cb.on_preset("tuning", e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, scheme)
             self.selects[cb.id] = sel
 
-    def _update_preselect(self, cb):
+    def _update_preset(self, cb):
         # mirror the live selection: the temperament chooser shows the matched preset (or its
         # placeholder), the target chooser splits into limit + family, the tuning chooser shows its
         # scheme. building[0] guards echoes.
-        if cb.id.startswith("preselect:temperament"):  # base + the comma-basis copy
+        if cb.id.startswith("preset:temperament"):  # base + the comma-basis copy
             value = presets.identify(self._editor.state)
             self.selects[cb.id].value = value
             _set_offlist_prompt(self.selects[cb.id], value)
-        elif cb.id == "preselect:target":
+        elif cb.id == "preset:target":
             num, sel = self.selects[cb.id]
             family = self._editor.target_family
             # always show the number in use: the manual limit, or the domain default
@@ -1381,7 +1381,7 @@ class _Reconciler:
             num.value = limit if limit is not None else \
                 service.default_target_limit(family, service.standard_primes(self._editor.state.d))
             sel.value = family
-        elif cb.id == "preselect:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
+        elif cb.id == "preset:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
             # option list widens/narrows as alt-complexities flips, so refresh it too
             options = list(presets.prescaler_options(self._editor.settings["alt_complexity"]))
             value = self._editor.displayed_prescaler_name
@@ -1400,7 +1400,7 @@ class _Reconciler:
     def _build_control_select(self, cb, wrap):  # a weighting chooser (complexity / norm / weight slope)
         self.selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
                 on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
-            .props(_select_props(cb.w)).classes("rtt-preselect")
+            .props(_select_props(cb.w)).classes("rtt-preset")
 
     def _update_control_select(self, cb):  # mirror the live alt.-complexity choice
         self.selects[cb.id].value = cb.text or None
@@ -1417,7 +1417,7 @@ class _Reconciler:
         name = cb.id.split(":", 1)[1]  # mapping / comma_basis
         self.selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
                 on_change=lambda e, n=name: self._cb.on_form_choose(n, e.value)) \
-            .props(_select_props(cb.w)).classes("rtt-preselect")
+            .props(_select_props(cb.w)).classes("rtt-preset")
 
     def _update_formchooser(self, cb):  # a one-shot action: snap back to the placeholder
         self.selects[cb.id].value = ""
@@ -1714,7 +1714,7 @@ def index() -> None:
         editor.set_show(key, not editor.settings[key])
         render()
 
-    def on_preselect(name, value):
+    def on_preset(name, value):
         # the temperament chooser loads a mapping (an undoable edit); the tuning chooser
         # sets the view scheme. A re-render echo is ignored via the building guard.
         if building[0]:
@@ -1752,7 +1752,7 @@ def index() -> None:
         # disturbing the grid, mirroring how a half-typed mapping cell is ignored.
         if building[0]:
             return
-        num, sel = rec.selects["preselect:target"]
+        num, sel = rec.selects["preset:target"]
         family = sel.value or "TILT"
         spec = f"{int(num.value)}-{family}" if num.value else family
         try:
@@ -1767,7 +1767,7 @@ def index() -> None:
     def on_control_select(cid, value):
         # the weighting choosers (box 𝒄 complexity + norm, box 𝒘 weight slope): each swaps a
         # scheme trait, re-weighting and retuning. The re-render echo is ignored via the guards.
-        # (The prescaler chooser is a preselect now — see on_preselect.)
+        # (The prescaler chooser is a preset now — see on_preset.)
         if building[0] or value is None:
             return
         if cid == "control:norm":
@@ -1789,7 +1789,7 @@ def index() -> None:
 
     def on_range_mode(value):
         # which generator tuning range the ranges chart shows. A re-render echo (the radio
-        # mirroring editor.range_mode) is ignored via the building/None guards, like the preselects.
+        # mirroring editor.range_mode) is ignored via the building/None guards, like the presets.
         if building[0] or value is None:
             return
         editor.set_range_mode(value)
@@ -1815,7 +1815,7 @@ def index() -> None:
         on_mapping_change=on_mapping_change,
         on_power_change=on_power_change,
         on_prescaler_change=on_prescaler_change,
-        on_preselect=on_preselect,
+        on_preset=on_preset,
         on_ptext_edit=on_ptext_edit,
         on_range_mode=on_range_mode,
         on_target_cells_change=on_target_cells_change,
@@ -2060,12 +2060,12 @@ def index() -> None:
                                                 add_el("names", _escape(before), marked=True)
                                                 part_el("mnemonics")
                                                 add_el("names", _escape(after))
-                                        elif "preselects" in line:
+                                        elif "presets" in line:
                                             # the presets chooser sits in a control box (bordered, spanning the
                                             # full tile width like a real tile's control boxes); no label.
                                             with ui.element("div").classes("rtt-tile-line rtt-tile-line-wide"), \
                                                     ui.element("div").classes("rtt-tile-cbox"):
-                                                part_el("preselects")
+                                                part_el("presets")
                                         else:
                                             with ui.element("div").classes("rtt-tile-line"):
                                                 for key in line:

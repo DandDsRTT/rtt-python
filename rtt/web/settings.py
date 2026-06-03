@@ -36,7 +36,7 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("gridded_values", "gridded values", True),
             ("plain_text_values", "plain text values", False),
             ("charts", "charts", False),
-            ("preselects", "preselects", False),
+            ("presets", "presets", False),
             ("quantities", "quantities", True),
             ("units", "units", False),
             ("math_expressions", "math expressions", False),
@@ -93,7 +93,7 @@ SUBCONTROLS: dict[str, str] = {
 # (greys out) the rest until their content exists.
 IMPLEMENTED: frozenset[str] = frozenset(
     {"names", "symbols", "mnemonics", "equivalences", "gridded_values", "plain_text_values",
-     "quantities", "domain_quantities", "units", "domain_units", "counts", "preselects",
+     "quantities", "domain_quantities", "units", "domain_units", "counts", "presets",
      "temperament_boxes", "tuning_boxes", "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting", "audio",
      "generator_detempering", "optimization", "interest", "all_interval"}

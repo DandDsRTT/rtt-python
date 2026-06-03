@@ -58,8 +58,8 @@ _FEATURE_CELLS = [
     ("counts", "count:primes"),                      # the count scalar ("d = 3"), _math_html
     ("symbols", "symbol:mapping:primes"),            # the quantity-symbol glyph, _math_html
     ("plain text values", "ptext:mapping:primes"),   # the editable EBK dual input
-    ("preselects", "preselect:temperament"),         # the chooser dropdowns (q-select)
-    ("preselects", "preselect:tuning:gens"),         # a copied dropdown (its own :col-suffixed id)
+    ("presets", "preset:temperament"),         # the chooser dropdowns (q-select)
+    ("presets", "preset:tuning:gens"),         # a copied dropdown (its own :col-suffixed id)
     ("charts", "chart:retune:targets"),              # a per-tile bar-chart SVG
     ("tuning ranges", "rangechart:tuning:gens"),     # the generator-range I-beam chart SVG
     # "units" labels BOTH the general and specific toggles, so one click flips both on:
@@ -188,15 +188,15 @@ def _stacked_face(user: User, cell_id: str):
     return face.default_slot.children[0], face.default_slot.children[1]
 
 
-async def test_tuning_preselect_offers_only_lp_while_alternatives_are_shelved(user: User) -> None:
+async def test_tuning_preset_offers_only_lp_while_alternatives_are_shelved(user: User) -> None:
     # alternative-complexity schemes are gated behind the (shelved) alt. complexity setting, so with
     # it off the tuning chooser offers only the log-product family — but at all three weight slopes
     # (its simplicity / unity / complexity variants), since the target-based default is unity. (The
     # chooser's options are {value: label}, the labels T-prefixed; check the offered values.)
     await user.open("/")
-    _toggle(user, "preselects")
-    await user.should_see(marker="preselect:tuning")
-    assert list(_cell_child(user, "preselect:tuning").options) == ["minimax-S", "minimax-U", "minimax-C"]
+    _toggle(user, "presets")
+    await user.should_see(marker="preset:tuning")
+    assert list(_cell_child(user, "preset:tuning").options) == ["minimax-S", "minimax-U", "minimax-C"]
 
 
 async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(user: User) -> None:
@@ -205,14 +205,14 @@ async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(
     # value), so the label updates — regression for them going stale on re-render.
     await user.open("/")
     user.find(marker="toggle:row:vectors").click()             # expand the target-list row
-    _toggle(user, "preselects")  # show the chooser dropdowns
+    _toggle(user, "presets")  # show the chooser dropdowns
     user.find(kind=ui.checkbox, content="weighting").click()   # reveal the nested all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
-    assert _cell_child(user, "preselect:tuning").options["minimax-S"] == "T minimax-S"  # target-based default
+    assert _cell_child(user, "preset:tuning").options["minimax-S"] == "T minimax-S"  # target-based default
     _cell_child(user, "control:all_interval").set_value(True)  # check the box -> all-interval
-    await user.should_see(marker="preselect:tuning")
-    assert _cell_child(user, "preselect:tuning").options["minimax-S"] == "minimax-S"  # T prefix dropped
+    await user.should_see(marker="preset:tuning")
+    assert _cell_child(user, "preset:tuning").options["minimax-S"] == "minimax-S"  # T prefix dropped
 
 
 async def test_editing_a_mapping_cell_updates_the_mapped_list(user: User) -> None:
@@ -338,10 +338,10 @@ async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
 async def test_target_chooser_renders_in_the_expanded_target_interval_list(user: User) -> None:
     # the target chooser moved into the target interval list (the interval-vectors row,
     # folded by default); expanding that row renders its numeric-limit + TILT/OLD select
-    # (the one preselect branch the default view never reaches now)
-    await _enable(user, "preselects")
+    # (the one preset branch the default view never reaches now)
+    await _enable(user, "presets")
     user.find(marker="toggle:row:vectors").click()
-    await user.should_see(marker="preselect:target")
+    await user.should_see(marker="preset:target")
 
 
 async def test_chooser_popups_open_wide_enough_for_one_line_entries(user: User) -> None:
@@ -350,8 +350,8 @@ async def test_chooser_popups_open_wide_enough_for_one_line_entries(user: User) 
     # long names (e.g. the "established tuning scheme" list) were truncating. The popup
     # still stays at least as wide as the trigger (a min-width floor), so the open list is
     # never narrower than the box it drops from.
-    await _enable(user, "preselects")
-    for cell_id in ("preselect:temperament", "preselect:tuning"):
+    await _enable(user, "presets")
+    for cell_id in ("preset:temperament", "preset:tuning"):
         style = _cell_child(user, cell_id)._props["popup-content-style"]
         assert "width:max-content" in style, f"{cell_id}: {style}"
         assert style.startswith("min-width:"), f"{cell_id}: {style}"
@@ -361,8 +361,8 @@ async def test_temperament_divider_rows_render_as_disabled_options(user: User) -
     # the prime-limit divider rows (the "N-limit" headers) read as headers, not choices: each is
     # passed to Quasar with disable=True, so the q-item takes no hover highlight and a
     # click on it neither picks it nor closes the popup. The named presets stay pickable.
-    await _enable(user, "preselects")
-    select = _cell_child(user, "preselect:temperament")
+    await _enable(user, "presets")
+    select = _cell_child(user, "preset:temperament")
     option_by_value = dict(zip(select._values, select._props["options"]))
     assert option_by_value["hdr:5"]["disable"] is True
     assert option_by_value["hdr:13"]["disable"] is True
@@ -373,8 +373,8 @@ async def test_temperament_chooser_omits_the_offlist_prompt_from_its_list(user: 
     # the "-" prompt is a placeholder, not a temperament. The open list holds only the
     # prime-limit dividers and their presets — there is no pickable "-" row, and no ""
     # sentinel value sitting behind one.
-    await _enable(user, "preselects")
-    select = _cell_child(user, "preselect:temperament")
+    await _enable(user, "presets")
+    select = _cell_child(user, "preset:temperament")
     assert "" not in select._values
     assert "-" not in select._labels
 
@@ -383,11 +383,11 @@ async def test_temperament_chooser_shows_the_prompt_as_a_placeholder_when_no_pre
     # the prompt lives in the closed box, not the list: with a preset active (the default
     # meantone) the box shows that preset and no override; once the mapping leaves every
     # preset the box falls back to "-" via Quasar's display-value.
-    await _enable(user, "preselects")
-    assert "display-value" not in _cell_child(user, "preselect:temperament")._props
+    await _enable(user, "presets")
+    assert "display-value" not in _cell_child(user, "preset:temperament")._props
     _cell_child(user, "cell:mapping:1:2").set_value("7")  # 4 -> 7 leaves the meantone preset
-    await user.should_see(marker="preselect:temperament")
-    assert _cell_child(user, "preselect:temperament")._props.get("display-value") == "-"
+    await user.should_see(marker="preset:temperament")
+    assert _cell_child(user, "preset:temperament")._props.get("display-value") == "-"
 
 
 async def test_tuning_chooser_shows_the_prompt_as_a_placeholder_when_off_list(user: User) -> None:
@@ -395,12 +395,12 @@ async def test_tuning_chooser_shows_the_prompt_as_a_placeholder_when_off_list(us
     # setting a finite optimization power, which resolves to an unnamed spec) and the closed
     # box falls back to "-" via Quasar's display-value — never a blank field, never a row.
     await user.open("/")
-    _toggle(user, "preselects")
+    _toggle(user, "presets")
     user.find(kind=ui.checkbox, content="optimization").click()
-    assert "display-value" not in _cell_child(user, "preselect:tuning")._props
+    assert "display-value" not in _cell_child(user, "preset:tuning")._props
     _cell_child(user, "optimization:power").set_value("2")  # minimax (∞) -> a miniRMS spec (no name)
-    await user.should_see(marker="preselect:tuning")
-    assert _cell_child(user, "preselect:tuning")._props.get("display-value") == "-"
+    await user.should_see(marker="preset:tuning")
+    assert _cell_child(user, "preset:tuning")._props.get("display-value") == "-"
 
 
 async def test_tuning_chooser_shows_the_prompt_when_the_generator_tuning_is_overridden(user: User) -> None:
@@ -409,11 +409,11 @@ async def test_tuning_chooser_shows_the_prompt_when_the_generator_tuning_is_over
     # tuning-scheme dropdowns (under the tuning map 𝒕 and the generator tuning map 𝒈) fall
     # back to "-", even though the scheme name (minimax-U) is unchanged.
     await user.open("/")
-    _toggle(user, "preselects")
-    both = ("preselect:tuning", "preselect:tuning:gens")
+    _toggle(user, "presets")
+    both = ("preset:tuning", "preset:tuning:gens")
     assert all("display-value" not in _cell_child(user, cid)._props for cid in both)
     _cell_child(user, "tuning:gen:1").set_value("700.000")  # off the minimax-U optimum fifth
-    await user.should_see(marker="preselect:tuning")
+    await user.should_see(marker="preset:tuning")
     assert all(_cell_child(user, cid)._props.get("display-value") == "-" for cid in both)
 
 
@@ -422,29 +422,29 @@ async def test_selecting_a_scheme_clears_a_manual_tuning_override(user: User) ->
     # from the dropdown must re-apply it: the override clears, the tuning snaps back to the
     # scheme's optimum, and the box shows the scheme name again.
     await user.open("/")
-    _toggle(user, "preselects")
+    _toggle(user, "presets")
     optimum = _cell_child(user, "tuning:gen:1").value  # the default (minimax-U) optimum fifth
     _cell_child(user, "tuning:gen:1").set_value("700.000")  # deviate
-    await user.should_see(marker="preselect:tuning")
-    assert _cell_child(user, "preselect:tuning")._props.get("display-value") == "-"
-    _cell_child(user, "preselect:tuning").set_value("minimax-U")  # re-select the scheme
-    await user.should_see(marker="preselect:tuning")
-    assert "display-value" not in _cell_child(user, "preselect:tuning")._props  # name shown again
+    await user.should_see(marker="preset:tuning")
+    assert _cell_child(user, "preset:tuning")._props.get("display-value") == "-"
+    _cell_child(user, "preset:tuning").set_value("minimax-U")  # re-select the scheme
+    await user.should_see(marker="preset:tuning")
+    assert "display-value" not in _cell_child(user, "preset:tuning")._props  # name shown again
     assert _cell_child(user, "tuning:gen:1").value == optimum  # tuning snapped back to the optimum
 
 
 async def test_prescaler_chooser_shows_the_prompt_when_a_diagonal_is_overridden(user: User) -> None:
-    # the prescaler preselect names the scheme's prescaler; hand-editing the bare prescaler 𝐿
+    # the prescaler preset names the scheme's prescaler; hand-editing the bare prescaler 𝐿
     # diagonal freezes a custom override deviating from it, so the closed box falls back to "-"
     # via Quasar's display-value — the same fallback the tuning chooser uses for a manual tuning.
     await user.open("/")
     user.find(kind=ui.checkbox, content="weighting").click()  # opens the prescaling row (box 𝐋)
-    _toggle(user, "preselects")  # the chooser dropdowns
-    await user.should_see(marker="preselect:prescaler")
-    assert "display-value" not in _cell_child(user, "preselect:prescaler")._props  # names log-prime
+    _toggle(user, "presets")  # the chooser dropdowns
+    await user.should_see(marker="preset:prescaler")
+    assert "display-value" not in _cell_child(user, "preset:prescaler")._props  # names log-prime
     _cell_child(user, "cell:prescaling:primes:1:1").set_value("4.0")  # deviate from log₂3 = 1.585
-    await user.should_see(marker="preselect:prescaler")
-    assert _cell_child(user, "preselect:prescaler")._props.get("display-value") == "-"
+    await user.should_see(marker="preset:prescaler")
+    assert _cell_child(user, "preset:prescaler")._props.get("display-value") == "-"
 
 
 async def test_picking_a_prescaler_clears_a_manual_diagonal_override(user: User) -> None:
@@ -453,20 +453,20 @@ async def test_picking_a_prescaler_clears_a_manual_diagonal_override(user: User)
     # set_complexity_prescaler is the reset path, like re-selecting a tuning scheme.
     await user.open("/")
     user.find(kind=ui.checkbox, content="weighting").click()
-    _toggle(user, "preselects")
+    _toggle(user, "presets")
     await user.should_see(marker="cell:prescaling:primes:1:1")
     seed = _cell_child(user, "cell:prescaling:primes:1:1").value  # the scheme's log₂3 = 1.585
     _cell_child(user, "cell:prescaling:primes:1:1").set_value("4.0")  # deviate
-    await user.should_see(marker="preselect:prescaler")
-    assert _cell_child(user, "preselect:prescaler")._props.get("display-value") == "-"
-    _cell_child(user, "preselect:prescaler").set_value("log-prime")  # re-pick the named prescaler
-    await user.should_see(marker="preselect:prescaler")
-    assert "display-value" not in _cell_child(user, "preselect:prescaler")._props  # name shown again
+    await user.should_see(marker="preset:prescaler")
+    assert _cell_child(user, "preset:prescaler")._props.get("display-value") == "-"
+    _cell_child(user, "preset:prescaler").set_value("log-prime")  # re-pick the named prescaler
+    await user.should_see(marker="preset:prescaler")
+    assert "display-value" not in _cell_child(user, "preset:prescaler")._props  # name shown again
     assert _cell_child(user, "cell:prescaling:primes:1:1").value == seed  # diagonal snapped back
 
 
 async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -> None:
-    # the box-𝒄 complexity chooser is a control_select — a distinct kind from the preselect
+    # the box-𝒄 complexity chooser is a control_select — a distinct kind from the preset
     # dropdowns, with no other direct render coverage. Enabling weighting must build it carrying
     # its live complexity value (not blank) and a populated option list. A dropped control_select
     # build branch would leave an empty wrap; the value/option assertions catch that desync.
@@ -482,16 +482,16 @@ async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -
 
 async def test_weight_slope_chooser_mirrors_a_scheme_change(user: User) -> None:
     # the box-𝒘 weight-slope chooser is the other control_select. Its value tracks the scheme's
-    # weight slope, so picking a different slope variant of the scheme through the tuning preselect
+    # weight slope, so picking a different slope variant of the scheme through the tuning preset
     # (minimax-U default -> minimax-C) must flip the slope chooser on re-render — without the user
     # touching that chooser. A dropped control_select update branch leaves it stale at the old slope.
     await user.open("/")
     user.find(kind=ui.checkbox, content="weighting").click()  # box 𝒘 (the slope chooser)
-    _toggle(user, "preselects")                                # the tuning scheme dropdown
+    _toggle(user, "presets")                                # the tuning scheme dropdown
     await user.should_see(marker="control:slope")
-    await user.should_see(marker="preselect:tuning")
+    await user.should_see(marker="preset:tuning")
     before = _cell_child(user, "control:slope").value
-    _cell_child(user, "preselect:tuning").set_value("minimax-C")  # the complexity-weighted variant
+    _cell_child(user, "preset:tuning").set_value("minimax-C")  # the complexity-weighted variant
     await user.should_see(marker="control:slope")
     assert _cell_child(user, "control:slope").value != before  # the slope chooser mirrored the change
 

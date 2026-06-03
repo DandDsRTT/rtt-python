@@ -257,16 +257,16 @@
 .rtt-svgfill { width:100%; height:100%; line-height:0; }
 /* the symbol + caption (and the units line) hold off their fade-in until the tile has expanded */
 .rtt-caption-cell, .rtt-symbol-cell, .rtt-units-cell, .rtt-matlabel-cell { animation-delay:var(--t); animation-fill-mode:backwards; }
-/* the preselect chooser dropdowns: a compact bordered q-select that fills its
-   PRESELECT_H cell, with a thin grey rule and a small caret — like the mockup */
-.rtt-preselect { width:100%; }
-.rtt-preselect .q-field__control { min-height:0 !important; height:30px;
+/* the preset chooser dropdowns: a compact bordered q-select that fills its
+   PRESET_H cell, with a thin grey rule and a small caret — like the mockup */
+.rtt-preset { width:100%; }
+.rtt-preset .q-field__control { min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px 0 6px; }
-.rtt-preselect .q-field__control::before, .rtt-preselect .q-field__control::after { display:none !important; }
-.rtt-preselect .q-field__native, .rtt-preselect .q-field__input { font-size:12px; color:#000;
+.rtt-preset .q-field__control::before, .rtt-preset .q-field__control::after { display:none !important; }
+.rtt-preset .q-field__native, .rtt-preset .q-field__input { font-size:12px; color:#000;
             min-height:0 !important; padding:0; line-height:30px; font-family:'Cambria',Georgia,serif; }
-.rtt-preselect .q-field__marginal, .rtt-preselect .q-field__append { height:30px; min-height:0 !important; }
-.rtt-preselect .q-icon { font-size:16px; color:#555; }
+.rtt-preset .q-field__marginal, .rtt-preset .q-field__append { height:30px; min-height:0 !important; }
+.rtt-preset .q-icon { font-size:16px; color:#555; }
 .rtt-control-check { width:100%; height:100%; display:flex; justify-content:center;
             align-items:center; }  /* visually centres the q-checkbox inside its cell wrap */
 /* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the box-𝐋
@@ -332,16 +332,16 @@
 .rtt-select-popup .q-item.disabled .q-item__label::after { content:""; flex:1;
             border-top:1px solid #777; }
 /* the target chooser pairs a SQUARE numeric limit override with the TILT/OLD family select */
-.rtt-preselect-target { width:100%; height:30px; display:flex; gap:0; align-items:center; }
-.rtt-preselect-target .rtt-preselect-num { flex:0 0 30px; }  /* a gridded value square (COL_W x ROW_H), touching the select */
-.rtt-preselect-target .rtt-preselect { flex:1 1 auto; width:auto; }
-.rtt-preselect-num .q-field__control { min-height:0 !important; height:30px;
+.rtt-preset-target { width:100%; height:30px; display:flex; gap:0; align-items:center; }
+.rtt-preset-target .rtt-preset-num { flex:0 0 30px; }  /* a gridded value square (COL_W x ROW_H), touching the select */
+.rtt-preset-target .rtt-preset { flex:1 1 auto; width:auto; }
+.rtt-preset-num .q-field__control { min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }
-.rtt-preselect-num .q-field__control::before, .rtt-preselect-num .q-field__control::after { display:none !important; }
-.rtt-preselect-num .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
+.rtt-preset-num .q-field__control::before, .rtt-preset-num .q-field__control::after { display:none !important; }
+.rtt-preset-num .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
             line-height:30px; text-align:center; font-family:'Cambria',Georgia,serif; }
-.rtt-preselect-num .q-field__native::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-.rtt-preselect-num .q-field__marginal, .rtt-preselect-num .q-field__append { display:none !important; }
+.rtt-preset-num .q-field__native::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.rtt-preset-num .q-field__marginal, .rtt-preset-num .q-field__append { display:none !important; }
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
    stacked vertically (filled = selected), per the mockup, with small Cambria labels.
    Vertical stack because the bumped 16px boxes don't fit side by side. Each row is

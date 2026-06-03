@@ -44,7 +44,7 @@ CAPTION_CHAR_W = 0.52  # serif glyph width as a fraction of the font size: a con
 # short of the browser's render. Its inverse floors a column wide enough to keep its
 # captions within MAX_CAPTION_LINES rather than scaling the font or spilling.
 MAX_CAPTION_LINES = 2  # a name wraps to at most this many lines; a longer one widens its tile
-PRESELECT_H = 30  # height of a preselect chooser dropdown — aligned with the gridded value
+PRESET_H = 30  # height of a preset chooser dropdown — aligned with the gridded value
 # row (ROW_H), so dropdowns sit at the same height as the value cells beside them
 # The box-𝐋 diminuator slot width, hard-coded so the primes column can be widened up front to fit
 # it (also reused for the target-controls all-interval check, the same checkbox-over-caption shape).
@@ -56,8 +56,8 @@ OPTION_BOX_PX = 16   # the one shared size for every small option square: every 
 #                      settings panel, the box-𝐋 diminuator, the target-controls all-interval check)
 #                      and the tuning-ranges monotone/tradeoff radio boxes. app.py pins the q-checkbox
 #                      CSS and the .rtt-rangebox to this, and the control-check CELL hugs the square.
-PRESELECT_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
-TARGET_PRESELECT_W = 144  # wider: the target chooser seats a 30px gridded limit square + the family select
+PRESET_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
+TARGET_PRESET_W = 144  # wider: the target chooser seats a 30px gridded limit square + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
 # always fits on ONE line within its column (a long tuning row just gets smaller text)
 PTEXT_H = 13  # px height of a one-line read-only plain-text value
@@ -122,7 +122,7 @@ CTRL_LABEL_GAP = 2  # padding below the label, to the box's bottom edge
 # both inside one bordered box. Unlike the un-boxed LBOX_DIM_W/CBOX_W above, this includes the box
 # padding (BOX_OUTER off the tile, BOX_INNER off the border, each side) so _control_floor can
 # widen the target column enough that the box never overhangs the tile.
-TBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + TARGET_PRESELECT_W + 8 + LBOX_DIM_W  # 8 = OPT_COL_GAP
+TBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + TARGET_PRESET_W + 8 + LBOX_DIM_W  # 8 = OPT_COL_GAP
 BOX_TITLE_H = 14  # px height of the optimization / tuning-ranges boxes' bold title strip
 BOX_TITLE_GAP = 4  # gap below that title, before the box's content
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
@@ -347,7 +347,7 @@ class _ShowFlags:
     captions: bool
     mnemonics: bool
     equiv: bool
-    preselects: bool
+    presets: bool
     counts: bool
     ptext: bool
     charts: bool
@@ -388,7 +388,7 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         captions=captions,
         mnemonics=captions and settings["mnemonics"],  # underline a caption's symbol letter
         equiv=settings["equivalences"],  # extend the symbol line with the defining equation
-        preselects=settings["preselects"],  # the per-quantity chooser dropdowns
+        presets=settings["presets"],  # the per-quantity chooser dropdowns
         counts=settings["counts"],
         ptext=settings["plain_text_values"],  # the boxed EBK string under each tile
         charts=settings["charts"],  # per-tile bar charts above the value cells
@@ -511,7 +511,7 @@ class _GridBuilder:
         self.show_captions = _f.captions
         self.show_mnemonics = _f.mnemonics
         self.show_equiv = _f.equiv
-        self.show_preselects = _f.preselects
+        self.show_presets = _f.presets
         show_counts = _f.counts
         self.show_ptext = _f.ptext
         show_charts = _f.charts
@@ -846,8 +846,8 @@ class _GridBuilder:
         # ranges box in the gens tile): box 𝐋 (the prescaling matrix over the primes) carries the
         # "replace diminuator" checkbox, box 𝒄 (the complexity list over the targets) stacks the
         # predefined-complexity chooser then the norm chooser, and box 𝒘 (the weight list over the
-        # targets) carries the weight-slope chooser. (The prescaler chooser is a preselect now, riding
-        # the preselect band above — see PRESELECTS.) Each tile reserves its controls' height up front.
+        # targets) carries the weight-slope chooser. (The prescaler chooser is a preset now, riding
+        # the preset band above — see PRESETS.) Each tile reserves its controls' height up front.
         self.lbox_ctrl = self._lbox_show and self.col_open("primes")
         # box 𝐋's lone control is the diminuator checkbox at the column's left, over its "replace
         # diminuator" caption: a small square (OPTION_BOX_PX) plus a one-line caption sets the reserve.
@@ -878,7 +878,7 @@ class _GridBuilder:
         self.slope_ctrl = (self.show_weighting and not service.is_all_interval(self.tuning_scheme)
                       and "row:weight" not in self.collapsed
                       and self.col_open("targets") and "tile:weight:targets" not in self.collapsed)
-        self.slope_extra = (RANGE_GAP + PRESELECT_H + CAPTION_LINE) if self.slope_ctrl else 0
+        self.slope_extra = (RANGE_GAP + PRESET_H + CAPTION_LINE) if self.slope_ctrl else 0
         # Each of these nested controls lives at the bottom of one tile of its row, but its reserved
         # height (keyed here by row) is added to the whole row's tile_h: the rows below drop clear of
         # it AND every tile in the row grows to the same height, so the row stays one uniform band.
@@ -909,7 +909,7 @@ class _GridBuilder:
         # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
         self.row_y, self.row_h, self.row_label, self.row_collapsible = {}, {}, {}, {}
         self.tile_h, self.tile_top, self.row_frame, self.row_sym, self.row_cap, self.row_units, self.row_ptext, self.chart_top = {}, {}, {}, {}, {}, {}, {}, {}
-        self.row_pre = {}  # the preselect band height, so the <choose form> chooser can stack below it
+        self.row_pre = {}  # the preset band height, so the <choose form> chooser can stack below it
         self.row_nsub = {}  # each row's natural cell-row count (a matrix's height in cells), so the
         # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
         # drawing all of them, converged, while it's folded, so the fold animates as a merge
@@ -954,13 +954,13 @@ class _GridBuilder:
             # for every united row, like the symbol slot above the caption
             uni = UNIT_H if (self.show_units and key in UNITED_ROWS and not folded) else 0
             # below the caption/units a tile reserves bands for the plain-text value box and
-            # the preselect chooser (its row), stacked in that order. The all-interval checkbox rides
+            # the preset chooser (its row), stacked in that order. The all-interval checkbox rides
             # the vectors row's band too, so the show-panel "all-interval" entry reserves it there even
-            # when preselects is off (preselect_band_h("vectors") gives the target chooser's box height).
-            pre = self.preselect_band_h(key) if ((self.show_preselects and key in PRESELECT_ROWS
+            # when presets is off (preset_band_h("vectors") gives the target chooser's box height).
+            pre = self.preset_band_h(key) if ((self.show_presets and key in PRESET_ROWS
                                              or self.settings["all_interval"] and key == "vectors")
                                             and not folded) else 0
-            # the form chooser rides one box below the preselect chooser, in the mapping and
+            # the form chooser rides one box below the preset chooser, in the mapping and
             # comma-basis boxes, when form controls are shown
             formctrl = self.formchooser_band_h(key) if (self.show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
             ptext = self.ptext_band(key, folded)
@@ -978,9 +978,9 @@ class _GridBuilder:
             self.row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
             self.row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
             self.row_cap[key] = cap  # the units line and plain-text box sit below the caption
-            self.row_units[key] = uni  # the plain-text box and preselect chooser sit below the units line
-            self.row_ptext[key] = ptext  # the plain-text band, with the preselect chooser below it
-            self.row_pre[key] = pre  # the preselect band, with the <choose form> chooser below it
+            self.row_units[key] = uni  # the plain-text box and preset chooser sit below the units line
+            self.row_ptext[key] = ptext  # the plain-text band, with the preset chooser below it
+            self.row_pre[key] = pre  # the preset band, with the <choose form> chooser below it
             self.row_label[key] = label
             self.row_collapsible[key] = collapsible
             self.tile_h[key] = head + top_frame + chart_band + self.row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
@@ -1051,15 +1051,15 @@ class _GridBuilder:
             floor = LBOX_DIM_W  # box 𝐋's lone control now: the diminuator checkbox + its caption
         if key == "targets" and self._cbox_show:
             floor = max(floor, CBOX_W)
-        if key == "targets" and self.show_preselects and self.settings["all_interval"]:
+        if key == "targets" and self.show_presets and self.settings["all_interval"]:
             floor = max(floor, TBOX_W)  # box 𝐓: target chooser + all-interval checkbox, one box
         if (key == "targets" and self.show_optimization and "row:damage" not in self.collapsed
                 and "tile:damage:targets" not in self.collapsed):
             floor = max(floor, OPT_BOX_MIN_W)  # seat the box's spread-out controls (see opt_box)
-        # the preselect / form dropdowns' one-line labels (the .rtt-caption-left asset) must fit
+        # the preset / form dropdowns' one-line labels (the .rtt-caption-left asset) must fit
         # the column too, so a long label like "established tuning scheme" widens its (narrow)
         # tile rather than spilling it — e.g. the generator tuning map's tuning-scheme copy
-        labels = ([l for _n, _r, c, l in PRESELECTS + PRESELECT_COPIES if c == key and l] if self.show_preselects else [])
+        labels = ([l for _n, _r, c, l in PRESETS + PRESET_COPIES if c == key and l] if self.show_presets else [])
         labels += [l for _n, _r, c, l in FORM_CHOOSERS if c == key and l] if self.show_form_controls else []
         if labels:
             floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(l, 1) for l in labels))
@@ -1104,29 +1104,29 @@ class _GridBuilder:
             return 0
         return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
 
-    # a control box (preselect / form chooser): the box spans its column's tile (see control_box),
+    # a control box (preset / form chooser): the box spans its column's tile (see control_box),
     # and the dropdown keeps its NATURAL width (cap_w) seated at the box's left — only shrunk if a
     # tiny tile can't seat even that. The label is the standard one-line left-justified caption
     # hugging the dropdown's bottom (the .rtt-caption-left asset), overflowing right if long.
     def control_dims(self, ckey, cap_w, label):
         dropdown_w = max(40, min(self.col_w[ckey] - 2 * BOX_INNER, cap_w))
         label_h = CAPTION_LINE if label else 0  # one line (overflows right, never wraps the box wider)
-        box_h = BOX_INNER + PRESELECT_H + (label_h + CTRL_LABEL_GAP if label else BOX_INNER)
+        box_h = BOX_INNER + PRESET_H + (label_h + CTRL_LABEL_GAP if label else BOX_INNER)
         return dropdown_w, label_h, box_h
 
     def control_band_h(self, ckey, cap_w, label):  # the box plus outer padding above and below
         return 2 * BOX_OUTER + self.control_dims(ckey, cap_w, label)[2]
 
-    def preselect_cap(self, name):
-        return TARGET_PRESELECT_W if name == "target" else PRESELECT_W
+    def preset_cap(self, name):
+        return TARGET_PRESET_W if name == "target" else PRESET_W
 
-    def preselect_band_h(self, key):  # the tallest preselect control box riding this row
-        return max((self.control_band_h(ckey, self.preselect_cap(name), label)
-                    for name, rk, ckey, label in PRESELECTS + PRESELECT_COPIES
+    def preset_band_h(self, key):  # the tallest preset control box riding this row
+        return max((self.control_band_h(ckey, self.preset_cap(name), label)
+                    for name, rk, ckey, label in PRESETS + PRESET_COPIES
                     if rk == key and ckey in self.col_w), default=0)
 
     def formchooser_band_h(self, key):
-        return max((self.control_band_h(ckey, PRESELECT_W, label)
+        return max((self.control_band_h(ckey, PRESET_W, label)
                     for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in self.col_w), default=0)
 
     def row_open(self, key):
@@ -1403,8 +1403,8 @@ class _GridBuilder:
             return {SPINE_ROW_GROUP[rkey]}             # a quantities/units column cell: its row's family
         return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())}
 
-    # the plain-text box sits directly below the symbol/caption/units stack; the preselect
-    # chooser rides one plain-text band lower (so preselects appear under plain text).
+    # the plain-text box sits directly below the symbol/caption/units stack; the preset
+    # chooser rides one plain-text band lower (so presets appear under plain text).
     def ptext_band_y(self, rkey):
         return self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_sym[rkey] + self.row_cap[rkey] + self.row_units[rkey]
 
@@ -1421,7 +1421,7 @@ class _GridBuilder:
         self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
         if label:
-            self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESELECT_H, dropdown_w, label_h,
+            self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
                                  "caption", text=label, align="left"))
         return ctrl_x, dropdown_w, ctrl_y
 
@@ -1429,7 +1429,7 @@ class _GridBuilder:
         # the all-interval checkbox + its caption, seated on a control row at ctrl_y: an OPTION_BOX_PX
         # square over an "all-interval" caption in an LBOX_DIM_W slot (the box-𝐋 diminuator's shape). It
         # reflects whether the scheme targets every interval (ticking it is wired in app.py).
-        check_y = ctrl_y + (PRESELECT_H - OPTION_BOX_PX) / 2  # centre the square on the control row
+        check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2  # centre the square on the control row
         self.cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
                              "control_check", text="", checked=service.is_all_interval(self.tuning_scheme)))
         self.cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
@@ -1874,8 +1874,8 @@ class _GridBuilder:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
                                              text=service.prescale_text(value), unit=u))
         if self.lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox at the
-            # bottom of the prescaling matrix (the prescaler chooser is a preselect now, riding the
-            # preselect band above). A SQUARE (no inline label — it wraps broken in the narrow primes
+            # bottom of the prescaling matrix (the prescaler chooser is a preset now, riding the
+            # preset band above). A SQUARE (no inline label — it wraps broken in the narrow primes
             # column) at the column's left, over its "replace diminuator" caption hugging its bottom.
             py = self.tile_top["prescaling"] + self.tile_h["prescaling"] - self.lbox_extra + RANGE_GAP
             self.cells.append(CellBox("control:diminuator", self.col_x["primes"], py, LBOX_DIM_W, OPTION_BOX_PX,
@@ -1907,9 +1907,9 @@ class _GridBuilder:
             complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
             complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
                                  if self.settings["alt_complexity"] else (complexity_text,))
-            self.cells.append(CellBox("control:complexity", self.col_x["targets"], cy, drop_w, PRESELECT_H,
+            self.cells.append(CellBox("control:complexity", self.col_x["targets"], cy, drop_w, PRESET_H,
                                  "control_select", text=complexity_text, values=complexity_values))
-            self.cells.append(CellBox("caption:complexity", self.col_x["targets"], cy + PRESELECT_H, drop_w,
+            self.cells.append(CellBox("caption:complexity", self.col_x["targets"], cy + PRESET_H, drop_w,
                                  CAPTION_LINE, "caption", text="predefined complexities", align="left"))
             # the q norm-power field: an editable white box (a powerinput) styled to match the
             # optimization box's 𝑝 field; wiring (typing a new q to drive the norm) comes later.
@@ -1943,10 +1943,10 @@ class _GridBuilder:
         if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), nested at the bottom of the weight list,
             # with its "damage weight slope" caption beneath (the optimization box's caption pattern)
             py = self.tile_top["weight"] + self.tile_h["weight"] - self.slope_extra + RANGE_GAP
-            self.cells.append(CellBox("control:slope", self.col_x["targets"], py, self.col_w["targets"], PRESELECT_H,
+            self.cells.append(CellBox("control:slope", self.col_x["targets"], py, self.col_w["targets"], PRESET_H,
                                  "control_select", text=service.weight_slope_of(self.tuning_scheme),
                                  values=tuple(service.WEIGHT_SLOPES)))
-            self.cells.append(CellBox("caption:slope", self.col_x["targets"], py + PRESELECT_H,
+            self.cells.append(CellBox("caption:slope", self.col_x["targets"], py + PRESET_H,
                                  self.col_w["targets"], CAPTION_LINE, "caption",
                                  text="damage weight slope", align="left"))
         if self.row_open("damage"):  # damage is over the targets only (the tuning's own column)
@@ -2317,57 +2317,57 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"units:{rkey}:{ckey}", self.col_x[ckey], uy, self.col_w[ckey], UNIT_H,
                                      "units", text=f"units: {UNITS[(rkey, ckey)]}"))
 
-        # preselect chooser dropdowns, in the reserved band below each governing tile's
+        # preset chooser dropdowns, in the reserved band below each governing tile's
         # plain-text box. The tuning/target choosers carry the live selection; the
         # temperament chooser is a placeholder (it loads, not mirrors). These are controls,
         # so they ride the tile whether or not math expressions has emptied its values.
-        if self.show_preselects:
+        if self.show_presets:
             # the tuning chooser shows the scheme name; a scheme refined by the alt.-complexity
             # control is a resolved spec (no preset name), so it shows blank rather than a repr.
             # the prescaler chooser shows the scheme's named prescaler, blank ("-") when a custom
             # diagonal override deviates from it (the bare prescaler tile's manual edits).
-            preselect_text = {"temperament": "", "target": self.target_spec,
+            preset_text = {"temperament": "", "target": self.target_spec,
                               "tuning": self.tuning_scheme if isinstance(self.tuning_scheme, str) else "",
                               "prescaler": service.displayed_prescaler_name(
                                   self.state.mapping, self.tuning_scheme, self.custom_prescaler) or ""}
 
-            def emit_preselect(cid, name, rkey, ckey, label):
+            def emit_preset(cid, name, rkey, ckey, label):
                 if not self.tile_open(rkey, ckey):
                     return
                 top = self.ptext_band_y(rkey) + self.row_ptext[rkey]  # below the plain-text band
-                cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preselect_cap(name), label)
-                self.cells.append(CellBox(cid, cx, cy, cw, PRESELECT_H, "preselect", text=preselect_text[name]))
+                cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label)
+                self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name]))
                 # the target chooser carries the all-interval checkbox to the dropdown's right, in the
                 # empty space of its now-tile-spanning box (box 𝐓); TBOX_W floors the column wide enough.
                 if name == "target" and self.settings["all_interval"]:
                     self.emit_all_interval_check(cx + cw + OPT_COL_GAP, cy)
 
-            for name, rkey, ckey, label in PRESELECTS:
-                emit_preselect(f"preselect:{name}", name, rkey, ckey, label)
-            for name, rkey, ckey, label in PRESELECT_COPIES:  # the same control in a second tile
-                emit_preselect(f"preselect:{name}:{ckey}", name, rkey, ckey, label)
+            for name, rkey, ckey, label in PRESETS:
+                emit_preset(f"preset:{name}", name, rkey, ckey, label)
+            for name, rkey, ckey, label in PRESET_COPIES:  # the same control in a second tile
+                emit_preset(f"preset:{name}:{ckey}", name, rkey, ckey, label)
 
         # the all-interval checkbox is revealed by the show-panel "all-interval" entry ALONE (not the
-        # preselects toggle). When the target chooser is shown, emit_preselect seats the checkbox inside
+        # presets toggle). When the target chooser is shown, emit_preset seats the checkbox inside
         # the chooser's box (box 𝐓, above); when it is hidden the checkbox is the band's only target
         # control, alone at the column's left. The vectors row reserves the band either way.
-        if self.settings["all_interval"] and not self.show_preselects and self.tile_open("vectors", "targets"):
+        if self.settings["all_interval"] and not self.show_presets and self.tile_open("vectors", "targets"):
             top = self.ptext_band_y("vectors") + self.row_ptext["vectors"]
             self.emit_all_interval_check(self.col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
 
-        # the form chooser, one box below the preselect chooser: it canonicalizes the mapping /
+        # the form chooser, one box below the preset chooser: it canonicalizes the mapping /
         # comma basis it rides (an undoable edit). A control, so it ignores the value-display
-        # toggles, like the preselect choosers.
+        # toggles, like the preset choosers.
         if self.show_form_controls:
             for name, rkey, ckey, label in FORM_CHOOSERS:
                 if not self.tile_open(rkey, ckey):
                     continue
-                top = self.ptext_band_y(rkey) + self.row_ptext[rkey] + self.row_pre[rkey]  # below the preselect box
-                cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESELECT_W, label)
-                self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESELECT_H, "formchooser"))
+                top = self.ptext_band_y(rkey) + self.row_ptext[rkey] + self.row_pre[rkey]  # below the preset box
+                cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
+                self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
 
         # plain-text value band: each tile's value as its natural EBK string, directly
-        # below the symbol/caption stack (above the preselect chooser). The two editable
+        # below the symbol/caption stack (above the preset chooser). The two editable
         # duals (mapping, comma basis) render as inputs that drive the grid; every other
         # value is read-only. The app shrinks each box's font so the value fits one line.
         if self.show_ptext:

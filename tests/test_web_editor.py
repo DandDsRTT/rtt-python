@@ -87,7 +87,7 @@ def test_clear_custom_prescaler_reverts_to_the_scheme():
 
 
 def test_picking_a_preset_prescaler_clears_the_custom_override():
-    # the prescaler preselect is the user's reset path: picking "log-prime" / "prime" /
+    # the prescaler preset is the user's reset path: picking "log-prime" / "prime" /
     # "identity" CLEARS the custom override AND swaps the scheme's prescaler trait, so the
     # cells go back to the scheme's computed diagonal
     editor = Editor()
@@ -108,7 +108,7 @@ def test_picking_a_predefined_complexity_clears_the_custom_override():
 
 
 def test_displayed_prescaler_name_tracks_the_scheme_and_falls_back_on_a_manual_edit():
-    # the prescaler preselect mirrors editor.displayed_prescaler_name: the scheme's prescaler
+    # the prescaler preset mirrors editor.displayed_prescaler_name: the scheme's prescaler
     # while untouched, then "-" (None) once a manual diagonal edit deviates from it — the same
     # fallback the tuning-scheme chooser uses for a hand-edited generator tuning
     editor = Editor()

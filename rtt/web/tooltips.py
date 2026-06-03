@@ -32,7 +32,7 @@ SHOW_HELP: dict[str, str] = {
     "gridded_values": "Lay the values out in the grid as matrix and vector cells.",
     "plain_text_values": "Show each value as one plain-text string (e.g. ⟨1 0 -4]) below its tile.",
     "charts": "Draw a bar chart over each charted row's values.",
-    "preselects": "Show the preset choosers — temperament, tuning scheme, and target set.",
+    "presets": "Show the preset choosers — temperament, tuning scheme, and target set.",
     "quantities": "Show the numeric quantities inside the value cells.",
     "units": "Show each value's units (e.g. ¢, g/p) beneath its cells.",
     "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",
@@ -134,7 +134,7 @@ _ID_HELP: dict[str, str] = {
     "optimization:power": "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean.",
     "control:q": "Interval-complexity norm power 𝑞.",
     "control:dual": "Dual norm power — the dual exponent of 𝑞, used to minimax over every interval.",
-    # control_select: the complexity and weight-slope choosers (the prescaler is a preselect now)
+    # control_select: the complexity and weight-slope choosers (the prescaler is a preset now)
     "control:complexity": "Choose the interval-complexity measure used to weight damage.",
     "control:slope": "Choose the damage weight slope — how a target's weight scales with its complexity.",
     # control_check
@@ -145,9 +145,9 @@ _ID_HELP: dict[str, str] = {
     "formchooser:comma_basis": "Rewrite the comma basis into a canonical form (an undoable edit).",
 }
 
-# preselect choosers, keyed by name (the id is ``preselect:<name>`` plus, for a copy
+# preset choosers, keyed by name (the id is ``preset:<name>`` plus, for a copy
 # of the chooser in a second tile, a trailing ``:<column>`` — so the name is segment 1).
-_PRESELECT_HELP: dict[str, str] = {
+_PRESET_HELP: dict[str, str] = {
     "temperament": "Load a named temperament preset — sets the mapping and comma basis.",
     "tuning": "Choose a named tuning scheme (e.g. minimax-S).",
     "target": "Choose the target-interval set and its prime limit.",
@@ -193,8 +193,8 @@ def control_help(kind: str, cid: str) -> str | None:
         return objective_help(all_interval=False)
     if kind in READONLY_KINDS:
         return None
-    if kind == "preselect":
-        return _PRESELECT_HELP.get(cid.split(":")[1])
+    if kind == "preset":
+        return _PRESET_HELP.get(cid.split(":")[1])
     if kind == "ptextedit":
         return _PTEXT_HELP.get(cid)
     return _ID_HELP.get(cid) or _KIND_HELP.get(kind)

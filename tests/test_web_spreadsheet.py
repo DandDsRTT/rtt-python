@@ -976,72 +976,72 @@ def test_collapsing_all_folds_the_whole_grid_down_to_its_strips():
     assert {c.id for c in shut.cells} >= {"label:mapping", "header:primes", "toggle:all"}
 
 
-def test_preselects_off_shows_no_chooser_dropdowns():
-    cells = {c.id for c in _with(preselects=False).cells}
-    assert not any(c.startswith("preselect:") for c in cells)
+def test_presets_off_shows_no_chooser_dropdowns():
+    cells = {c.id for c in _with(presets=False).cells}
+    assert not any(c.startswith("preset:") for c in cells)
 
 
-def test_preselects_on_adds_the_three_chooser_dropdowns_under_their_tiles():
-    cells = {c.id: c for c in _with(preselects=True).cells}
-    assert {"preselect:temperament", "preselect:tuning", "preselect:target"} <= set(cells)
+def test_presets_on_adds_the_three_chooser_dropdowns_under_their_tiles():
+    cells = {c.id: c for c in _with(presets=True).cells}
+    assert {"preset:temperament", "preset:tuning", "preset:target"} <= set(cells)
     inset = spreadsheet.BOX_INNER  # the dropdown sits one inner-pad inside its tile-spanning box
     # the temperament chooser sits under the mapping matrix, in its column
-    temp, matrix = cells["preselect:temperament"], cells["cell:mapping:0:0"]
+    temp, matrix = cells["preset:temperament"], cells["cell:mapping:0:0"]
     assert temp.y > matrix.y and temp.x == cells["header:primes"].x + inset
     # the target chooser sits under the target interval list, in its column
-    assert cells["preselect:target"].x == cells["header:targets"].x + inset
+    assert cells["preset:target"].x == cells["header:targets"].x + inset
 
 
 def test_tuning_and_target_choosers_show_the_live_selection_temperament_is_a_placeholder():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"] = True
+    s["presets"] = True
     cells = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="destretched-octave minimax-ES", target_spec="OLD").cells}
-    assert cells["preselect:tuning"].text == "destretched-octave minimax-ES"  # reflects the active scheme
-    assert cells["preselect:target"].text == "OLD"  # reflects the active set
-    assert cells["preselect:temperament"].text == ""  # a chooser placeholder, not a live value
+    assert cells["preset:tuning"].text == "destretched-octave minimax-ES"  # reflects the active scheme
+    assert cells["preset:target"].text == "OLD"  # reflects the active set
+    assert cells["preset:temperament"].text == ""  # a chooser placeholder, not a live value
 
 
-def test_preselect_choosers_follow_their_tiles_when_temperament_is_hidden():
+def test_preset_choosers_follow_their_tiles_when_temperament_is_hidden():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"], s["temperament_boxes"] = True, False
+    s["presets"], s["temperament_boxes"] = True, False
     cells = {c.id for c in spreadsheet.build(base, s).cells}
     # every chooser rides a temperament-owned tile: the temperament + tuning choosers the
     # domain-primes column (under the mapping matrix / tuning map), the target chooser the
     # interval-vectors row (the target interval list tile) -- so hiding the temperament
     # takes each chooser away with its tile
-    assert "preselect:temperament" not in cells
-    assert "preselect:tuning" not in cells
-    assert "preselect:target" not in cells
+    assert "preset:temperament" not in cells
+    assert "preset:tuning" not in cells
+    assert "preset:target" not in cells
 
 
-def test_preselect_dropdown_clears_the_row_below_it():
-    cells = {c.id: c for c in _with(preselects=True).cells}
-    drop, next_row = cells["preselect:tuning"], cells["label:just"]
+def test_preset_dropdown_clears_the_row_below_it():
+    cells = {c.id: c for c in _with(presets=True).cells}
+    drop, next_row = cells["preset:tuning"], cells["label:just"]
     assert drop.y + drop.h <= next_row.y  # the reserved band keeps it off the next row
 
 
-def test_preselect_chooser_sits_below_the_plain_text_band():
+def test_preset_chooser_sits_below_the_plain_text_band():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"], s["plain_text_values"] = True, True
+    s["presets"], s["plain_text_values"] = True, True
     cells = {c.id: c for c in spreadsheet.build(base, s).cells}
-    chooser, ptext = cells["preselect:tuning"], cells["ptext:tuning:primes"]
+    chooser, ptext = cells["preset:tuning"], cells["ptext:tuning:primes"]
     assert chooser.y >= ptext.y + ptext.h  # the chooser rides beneath the plain-text box
 
 
 def test_target_chooser_is_wider_to_seat_its_numeric_override():
     # the target chooser carries a numeric limit field beside the TILT/OLD select,
     # so it reserves more width than the single-control tuning chooser
-    cells = {c.id: c for c in _with(preselects=True).cells}
-    assert cells["preselect:target"].w > cells["preselect:tuning"].w
+    cells = {c.id: c for c in _with(presets=True).cells}
+    assert cells["preset:target"].w > cells["preset:tuning"].w
 
 
 def test_tuning_and_temperament_dropdowns_are_copied_into_more_tiles():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"] = True
+    s["presets"] = True
     lay = spreadsheet.build(base, s, tuning_scheme="destretched-octave minimax-ES")
     cells = {c.id: c for c in lay.cells}
     boxes = {b.id: b for b in lay.blocks}
@@ -1049,23 +1049,23 @@ def test_tuning_and_temperament_dropdowns_are_copied_into_more_tiles():
     # mirroring the live scheme like the tuning map copy in the primes column. The dropdown seats
     # at the box's left inset (the box spans the tile, so the dropdown is one BOX_INNER off it)
     inset = spreadsheet.BOX_INNER
-    gt = cells["preselect:tuning:gens"]
+    gt = cells["preset:tuning:gens"]
     assert gt.x == cells["header:gens"].x + inset and gt.text == "destretched-octave minimax-ES"
     # it shares the tuning row's control band with the tuning map dropdown (primes box)
-    assert boxes["block:preselect:tuning:gens"].y == boxes["block:preselect:tuning"].y
+    assert boxes["block:preset:tuning:gens"].y == boxes["block:preset:tuning"].y
     # a copy of the temperament chooser rides the comma basis tile (commas column)
-    ct = cells["preselect:temperament:commas"]
+    ct = cells["preset:temperament:commas"]
     assert ct.x == cells["header:commas"].x + inset and ct.text == ""  # a placeholder, like the mapping copy
 
 
-def test_target_preselect_now_lives_in_the_target_interval_list_tile():
+def test_target_preset_now_lives_in_the_target_interval_list_tile():
     # the target interval set chooser belongs to the target interval list (the vectors-row
     # targets tile), not the quantities row -- so it rides below that list's value cells
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"] = True
+    s["presets"] = True
     cells = {c.id: c for c in spreadsheet.build(base, s).cells}
-    target = cells["preselect:target"]
+    target = cells["preset:target"]
     # still under the targets column, seated one BOX_INNER inside its tile-spanning box
     assert target.x == cells["header:targets"].x + spreadsheet.BOX_INNER
     # it now sits in the interval-vectors row (the target interval list), below those cells
@@ -1079,14 +1079,14 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
     # standard caption label UNDERNEATH the control (the dropdown-label asset, not a box title)
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"], s["form_controls"] = True, True
+    s["presets"], s["form_controls"] = True, True
     lay = spreadsheet.build(base, s)
     cells = {c.id: c for c in lay.cells}
     boxes = {b.id: b for b in lay.blocks}
-    for cid, label, tile in (("preselect:tuning", "established tuning scheme", "block:tuning:primes"),
-                             ("preselect:tuning:gens", "established tuning scheme", "block:tuning:gens"),
-                             ("preselect:temperament", "temperament", "block:mapping"),
-                             ("preselect:target", "target interval set scheme", "block:vec:targets"),
+    for cid, label, tile in (("preset:tuning", "established tuning scheme", "block:tuning:primes"),
+                             ("preset:tuning:gens", "established tuning scheme", "block:tuning:gens"),
+                             ("preset:temperament", "temperament", "block:mapping"),
+                             ("preset:target", "target interval set scheme", "block:vec:targets"),
                              ("formchooser:mapping", "form", "block:mapping"),
                              ("formchooser:comma_basis", "form", "block:vec:commas")):
         ctrl, box, panel = cells[cid], boxes[f"block:{cid}"], boxes[tile]
@@ -1103,13 +1103,13 @@ def test_control_dropdowns_are_boxed_within_their_tiles():
 
 def test_a_long_control_label_widens_its_narrow_tile():
     # the generator tuning map (gens) column is naturally narrow (a couple of generators), too
-    # narrow for the one-line "established tuning scheme" label -- so enabling preselects widens
+    # narrow for the one-line "established tuning scheme" label -- so enabling presets widens
     # that tile to fit the label rather than letting it spill, keeping the label on one line
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     gens_off = {b.id: b for b in spreadsheet.build(base, settings.defaults()).blocks}["block:tuning:gens"]
-    lay = spreadsheet.build(base, {**settings.defaults(), "preselects": True})
+    lay = spreadsheet.build(base, {**settings.defaults(), "presets": True})
     gens_on = {b.id: b for b in lay.blocks}["block:tuning:gens"]
-    box = {b.id: b for b in lay.blocks}["block:preselect:tuning:gens"]
+    box = {b.id: b for b in lay.blocks}["block:preset:tuning:gens"]
     assert gens_on.w > gens_off.w  # the tile widened for the label
     assert gens_on.w >= spreadsheet._min_width_for_lines("established tuning scheme", 1)  # fits it on one line
     assert box.x >= gens_on.x and box.x + box.w <= gens_on.x + gens_on.w  # the box stays inside the widened tile
@@ -1122,12 +1122,12 @@ def test_chooser_boxes_span_the_full_width_of_their_tiles():
     # wide box; the dropdown's own width is the next test's concern).
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"], s["form_controls"] = True, True
+    s["presets"], s["form_controls"] = True, True
     boxes = {b.id: b for b in spreadsheet.build(base, s).blocks}
-    for cid, tile in (("block:preselect:temperament", "block:mapping"),
-                      ("block:preselect:tuning", "block:tuning:primes"),
-                      ("block:preselect:tuning:gens", "block:tuning:gens"),
-                      ("block:preselect:target", "block:vec:targets"),
+    for cid, tile in (("block:preset:temperament", "block:mapping"),
+                      ("block:preset:tuning", "block:tuning:primes"),
+                      ("block:preset:tuning:gens", "block:tuning:gens"),
+                      ("block:preset:target", "block:vec:targets"),
                       ("block:formchooser:mapping", "block:mapping"),
                       ("block:formchooser:comma_basis", "block:vec:commas")):
         box, panel = boxes[cid], boxes[tile]
@@ -1142,10 +1142,10 @@ def test_target_chooser_box_spans_its_tile_with_a_capped_dropdown_inside():
     # its right
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"] = True
+    s["presets"] = True
     lay = spreadsheet.build(base, s)
-    box = {b.id: b for b in lay.blocks}["block:preselect:target"]
-    dropdown = {c.id: c for c in lay.cells}["preselect:target"]
+    box = {b.id: b for b in lay.blocks}["block:preset:target"]
+    dropdown = {c.id: c for c in lay.cells}["preset:target"]
     assert dropdown.w < box.w - 30  # the dropdown stays narrow inside the wide, tile-spanning box
 
 
@@ -1859,36 +1859,36 @@ def test_weighting_is_implemented_now_that_its_region_builds():
     assert "weighting" in settings.IMPLEMENTED
 
 
-def test_preselects_adds_the_prescaler_chooser_under_the_prescaling_tile():
-    # the prescaler is a preselect (like temperament / tuning / target), gated on PRESELECTS —
+def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
+    # the prescaler is a preset (like temperament / tuning / target), gated on PRESETS —
     # not the shelved alt_complexity. It rides under the prescaling matrix tile (box 𝐋), which
     # exists only while weighting is on; the temperament boxes own the primes column it sits in.
-    off = {c.id for c in _with(weighting=True, preselects=False).cells}
-    on = {c.id: c for c in _with(weighting=True, preselects=True).cells}
-    assert "preselect:prescaler" not in off  # no chooser unless preselects is on
-    sel = on["preselect:prescaler"]
-    assert sel.kind == "preselect"
+    off = {c.id for c in _with(weighting=True, presets=False).cells}
+    on = {c.id: c for c in _with(weighting=True, presets=True).cells}
+    assert "preset:prescaler" not in off  # no chooser unless presets is on
+    sel = on["preset:prescaler"]
+    assert sel.kind == "preset"
     assert sel.text == "log-prime"  # the default scheme's prescaler
     # it rides below the prescaling matrix, seated one inner pad into the primes column (like the
-    # other preselects, the dropdown sits inside a tile-spanning box at BOX_INNER off the edge)
+    # other presets, the dropdown sits inside a tile-spanning box at BOX_INNER off the edge)
     assert sel.y > on["cell:prescaling:primes:2:2"].y
     assert sel.x == on["header:primes"].x + spreadsheet.BOX_INNER
     # gone without the prescaling tile (weighting off) or its column (temperament boxes off)
-    assert "preselect:prescaler" not in {c.id for c in _with(weighting=False, preselects=True).cells}
-    assert "preselect:prescaler" not in {
-        c.id for c in _with(weighting=True, preselects=True, temperament_boxes=False).cells}
+    assert "preset:prescaler" not in {c.id for c in _with(weighting=False, presets=True).cells}
+    assert "preset:prescaler" not in {
+        c.id for c in _with(weighting=True, presets=True, temperament_boxes=False).cells}
 
 
 def test_prescaler_chooser_shows_dash_when_a_custom_diagonal_deviates():
-    # like the tuning chooser, the prescaler preselect falls back to "-" (empty text) when a
+    # like the tuning chooser, the prescaler preset falls back to "-" (empty text) when a
     # manual prescaler edit (the custom_prescaler override) deviates from the scheme's diagonal
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
-    s["preselects"], s["weighting"] = True, True
+    s["presets"], s["weighting"] = True, True
     named = {c.id: c for c in spreadsheet.build(base, s).cells}
-    assert named["preselect:prescaler"].text == "log-prime"  # the scheme's prescaler, no override
+    assert named["preset:prescaler"].text == "log-prime"  # the scheme's prescaler, no override
     devi = {c.id: c for c in spreadsheet.build(base, s, custom_prescaler=(1.0, 9.9, 2.322)).cells}
-    assert devi["preselect:prescaler"].text == ""  # off the named list -> the "-" placeholder
+    assert devi["preset:prescaler"].text == ""  # off the named list -> the "-" placeholder
 
 
 def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_complexity():
@@ -1962,7 +1962,7 @@ def test_dual_q_shows_only_when_the_scheme_is_all_interval():
 
 def test_all_interval_show_entry_adds_a_checkbox_to_the_target_controls():
     # the show-panel "all-interval" entry ALONE adds an "all-interval" checkbox to the target-
-    # interval-list controls (it does NOT need the target chooser / preselects): an OPTION_BOX_PX
+    # interval-list controls (it does NOT need the target chooser / presets): an OPTION_BOX_PX
     # square over an "all-interval" caption. It reflects whether the scheme targets every interval —
     # the default scheme is target-based, so it reads UNCHECKED; an all-interval scheme reads checked.
     off = {c.id for c in _with().cells}  # entry off (default)
@@ -2048,20 +2048,20 @@ def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
 
 
 def test_all_interval_checkbox_rides_right_of_the_target_chooser_when_shown():
-    # when the target interval set scheme chooser is shown (preselects on), the checkbox sits to
+    # when the target interval set scheme chooser is shown (presets on), the checkbox sits to
     # its RIGHT (the box-𝐋 checkbox-beside-dropdown layout); the chooser greys when it is checked
-    on = {c.id: c for c in _with(all_interval=True, preselects=True).cells}
-    assert on["control:all_interval"].x > on["preselect:target"].x
+    on = {c.id: c for c in _with(all_interval=True, presets=True).cells}
+    assert on["control:all_interval"].x > on["preset:target"].x
 
 
 def test_all_interval_checkbox_sits_inside_the_target_chooser_box():
     # box 𝐓: the checkbox + its caption share the target chooser's box (to the dropdown's right),
     # so the border encloses them rather than stranding them past its right edge — and the widened
     # box still stays within the target column's tile (it never overhangs).
-    lay = _with(all_interval=True, preselects=True)
+    lay = _with(all_interval=True, presets=True)
     cells = {c.id: c for c in lay.cells}
     blocks = {b.id: b for b in lay.blocks}
-    box, tile = blocks["block:preselect:target"], blocks["block:vec:targets"]
+    box, tile = blocks["block:preset:target"], blocks["block:vec:targets"]
     for cid in ("control:all_interval", "caption:all_interval"):
         c = cells[cid]
         assert box.x <= c.x and c.x + c.w <= box.x + box.w  # enclosed horizontally
@@ -2077,11 +2077,11 @@ def test_all_interval_show_entry_is_live_not_a_greyed_stub():
 
 def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
     # box 𝐋's only alt.-complexity control is now the "replace diminuator" checkbox — the prescaler
-    # chooser became a preselect (riding the preselect band above). The square sits at the primes
+    # chooser became a preset (riding the preset band above). The square sits at the primes
     # column's left edge, over its "replace diminuator" caption; no prescaler dropdown beside it.
     off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
     on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
-    assert "control:prescaler" not in on  # the prescaler is a preselect now, not a box-𝐋 control
+    assert "control:prescaler" not in on  # the prescaler is a preset now, not a box-𝐋 control
     assert "caption:prescaler" not in on
     assert "caption:diminuator" not in off
     cap_d = on["caption:diminuator"]
@@ -4239,7 +4239,7 @@ def test_range_mode_selector_sits_below_the_chart_and_carries_the_current_mode()
     assert "rangemode:tuning:gens" not in off  # the selector rides the chart, tuning-ranges-only
     sel, ch = on["rangemode:tuning:gens"], on["rangechart:tuning:gens"]
     assert sel.kind == "rangemode"
-    assert sel.text == "monotone"  # the live mode (default), so the renderer can preselect it
+    assert sel.text == "monotone"  # the live mode (default), so the renderer can preset it
     assert sel.x == ch.x  # in the generators column, under the chart
     assert sel.y >= ch.y + ch.h  # below the chart, clear of it
 

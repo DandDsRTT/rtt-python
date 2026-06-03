@@ -481,8 +481,8 @@ def test_general_tile_renders_its_special_samples():
     # naming what it is (cents per prime), the variable p bold like real units
     units = app._general_part_html("units")
     assert "units: " in units and "¢" in units and "<b>p</b>" in units
-    assert "(presets)" in app._general_part_html("preselects")       # the placeholder...
-    assert "arrow_drop_down" in app._general_part_html("preselects")  # ...and the dropdown caret
+    assert "(presets)" in app._general_part_html("presets")       # the placeholder...
+    assert "arrow_drop_down" in app._general_part_html("presets")  # ...and the dropdown caret
     chart = app._general_part_html("charts")
     assert "<svg" in chart                  # the sparkline...
     assert "#bbb" in chart                  # ...with at least one grey horizontal tick line

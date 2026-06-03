@@ -71,12 +71,12 @@ _DISAMBIGUATED = [
     ("control_check", "control:all_interval"),
     ("formchooser", "formchooser:mapping"),
     ("formchooser", "formchooser:comma_basis"),
-    ("preselect", "preselect:temperament"),
-    ("preselect", "preselect:tuning"),
-    ("preselect", "preselect:target"),
-    ("preselect", "preselect:prescaler"),
-    ("preselect", "preselect:tuning:gens"),         # a copied chooser in a second tile
-    ("preselect", "preselect:temperament:commas"),
+    ("preset", "preset:temperament"),
+    ("preset", "preset:tuning"),
+    ("preset", "preset:target"),
+    ("preset", "preset:prescaler"),
+    ("preset", "preset:tuning:gens"),         # a copied chooser in a second tile
+    ("preset", "preset:temperament:commas"),
     ("ptextedit", "ptext:mapping:primes"),
     ("ptextedit", "ptext:vectors:commas"),
     ("ptextedit", "ptext:tuning:gens"),
@@ -103,11 +103,11 @@ def test_overloaded_kinds_resolve_to_distinct_text_per_role():
     assert _help("control_check", "control:diminuator") != _help("control_check", "control:all_interval")
     assert _help("formchooser", "formchooser:mapping") != _help("formchooser", "formchooser:comma_basis")
     # the four preset choosers differ; a copied chooser reads like its base
-    assert len({_help("preselect", "preselect:temperament"),
-                _help("preselect", "preselect:tuning"),
-                _help("preselect", "preselect:target"),
-                _help("preselect", "preselect:prescaler")}) == 4
-    assert _help("preselect", "preselect:tuning:gens") == _help("preselect", "preselect:tuning")
+    assert len({_help("preset", "preset:temperament"),
+                _help("preset", "preset:tuning"),
+                _help("preset", "preset:target"),
+                _help("preset", "preset:prescaler")}) == 4
+    assert _help("preset", "preset:tuning:gens") == _help("preset", "preset:tuning")
 
 
 def test_objective_help_names_a_different_quantity_per_mode():

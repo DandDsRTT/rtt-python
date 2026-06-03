@@ -324,7 +324,7 @@ class Editor:
         """The named prescaler the grid's displayed 𝑋 diagonal realises, or None — for which the
         prescaler chooser shows "-". None when a custom-prescaler override deviates from the
         scheme's computed diagonal (the user hand-edited the bare prescaler tile). Mirrors
-        :attr:`displayed_tuning_scheme_name` for the prescaler preselect."""
+        :attr:`displayed_tuning_scheme_name` for the prescaler preset."""
         return service.displayed_prescaler_name(
             self.state.mapping, self.tuning_scheme, self.custom_prescaler)
 
@@ -387,7 +387,7 @@ class Editor:
         self.generator_tuning = None
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
-        """Swap the complexity prescaler (the predefined-prescalers preselect), which
+        """Swap the complexity prescaler (the predefined-prescalers preset), which
         re-weights damage and so retunes. Holds the refined scheme as a resolved spec
         (the service/layout take a spec anywhere a scheme name is taken). Also CLEARS
         any custom-prescaler override — picking a named preset is the user's reset path,

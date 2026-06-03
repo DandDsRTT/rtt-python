@@ -64,7 +64,7 @@ class CellBox:
     unit: str = ""  # the cell's per-value unit (e.g. "g₁/p₁"), shown small beneath the value
     # when the general `units` toggle is on -- the tile's unit with its variables indexed
     align: str = ""  # horizontal text alignment for a caption (default centred; "left" left-justifies
-    # it under the control it labels, like a preselect chooser's "predefined prescalers" label)
+    # it under the control it labels, like a preset chooser's "predefined prescalers" label)
 
 
 @dataclass(frozen=True)

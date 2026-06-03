@@ -102,7 +102,7 @@ def test_every_target_set_preset_resolves_to_intervals_for_the_domain():
 def test_tuning_schemes_gate_alternative_complexities_behind_the_setting():
     # every scheme whose interval complexity isn't the plain log-product (lp) is an
     # alternative-complexity scheme, gated behind the alternative-complexity feature: with it
-    # off the preselect offers only the strictly-lp scheme; with it on, the whole family.
+    # off the preset offers only the strictly-lp scheme; with it on, the whole family.
     assert presets.tuning_schemes(include_alternatives=False) == ("minimax-S",)
     assert presets.tuning_schemes(include_alternatives=True) == presets.TUNING_SCHEMES
     # the gated list is a strict subset, and everything withheld is genuinely non-lp

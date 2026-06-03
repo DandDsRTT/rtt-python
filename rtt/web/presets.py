@@ -1,4 +1,4 @@
-"""Curated preset lists for the three "preselect" dropdowns.
+"""Curated preset lists for the three preset dropdowns.
 
 Each is a small, hand-picked menu the UI offers as a quick way to set one of the
 three things you actually *choose* (the rest of the grid is derived):
@@ -42,7 +42,7 @@ TUNING_SCHEMES: tuple[str, ...] = (
 
 
 def tuning_schemes(include_alternatives: bool) -> tuple[str, ...]:
-    """The tuning-scheme names the preselect offers. Every scheme whose interval complexity
+    """The tuning-scheme names the preset chooser offers. Every scheme whose interval complexity
     isn't the plain log-product (``lp``) is an alternative-complexity scheme, gated behind
     the alternative-complexity feature: with ``include_alternatives`` false only the
     strictly-lp schemes are offered, keeping the app log-product-only until that feature
