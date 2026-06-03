@@ -1023,7 +1023,7 @@ class _GridBuilder:
             "detempering": lambda i: self.gens[i],  # the detempering interval as a ratio (service.generators = D)
         }
 
-        self.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("primes", "commas", "interest", "held")
+        self.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("gens", "primes", "commas", "interest", "held")
                        if self._plus_shows(ckey)}
 
         # The interval-vectors basis fans HORIZONTALLY (one sub-row per prime), so its + is the row
@@ -1612,6 +1612,13 @@ class _GridBuilder:
                 # point (the top bus stretches out to reach it); an empty set centres it on the trunk
                 self.cells.append(CellBox(cid, self.plus_stub_x[ckey] - BTN / 2, self.fanout_y - BTN / 2, BTN, BTN, kind))
 
+            if self.tile_open("quantities", "gens"):  # the generator ratios heading their sub-columns,
+                for g in range(self.r):                # the column-header dual of the spine list (gen:i)
+                    self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.gens[g], gen=g))
+                # the generators ± diagonally expands/contracts M (+r,+d / −r,−d): the + on the
+                # column stub, the − on the last generator's branch point, removable when r > 1
+                if self.r > 1:
+                    branch_minus("gen_minus", "gens", self.r - 1, "gen_minus")
             if self.tile_open("quantities", "primes"):
                 for p in range(self.d):
                     self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
@@ -1651,7 +1658,7 @@ class _GridBuilder:
             # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
             # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
             # the first interval can still be added). The − is the hover counterpart on a branch point.
-            for ckey, cid in (("primes", "plus"), ("commas", "comma_plus"),
+            for ckey, cid in (("gens", "gen_plus"), ("primes", "plus"), ("commas", "comma_plus"),
                               ("held", "held_plus"), ("interest", "interest_plus")):
                 if ckey in self.plus_stub_x:
                     branch_plus(cid, ckey, cid)

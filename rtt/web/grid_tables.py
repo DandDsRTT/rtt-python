@@ -276,6 +276,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # interval-vectors / quantities headers: the domain basis is P (yellow) and the comma
     # basis is C (yellow); the target list T and the held basis H are cyan; the other-intervals
     # and the generator detempering list stay colourless (chosen interval lists, no entry)
+    ("quantities", "gens"): frozenset({"B"}),          # the generator ratios = the generator basis B (yellow)
     ("quantities", "primes"): frozenset({"P"}),        # the domain prime ratios = P
     ("quantities", "commas"): frozenset({"C"}),        # the comma ratios = C
     ("vectors", "commas"): frozenset({"C"}),           # the comma basis vectors = C
@@ -561,6 +562,7 @@ PRESCALER_LETTER = {"log-prime": "𝐿", "prime": "diag(𝒑)", "identity": "�
 # intervals of interest" column adds its own dynamically (only when the user has
 # entered intervals) — both are prepended/appended in build().
 TILES = (
+    ("block:qgens", "quantities", "gens"),
     ("block:primes", "quantities", "primes"),
     ("block:commas", "quantities", "commas"),
     ("block:targets", "quantities", "targets"),

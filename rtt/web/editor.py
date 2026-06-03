@@ -199,6 +199,18 @@ class Editor:
         return self.can_expand and self.state.d > 1
 
     @property
+    def can_add_generator(self) -> bool:
+        """Whether the generators + applies: it adds a free generator over the next
+        standard prime, so (like the domain +) it is inert on a nonstandard subgroup."""
+        return service.is_standard_domain(self.state.domain_basis)
+
+    @property
+    def can_remove_generator(self) -> bool:
+        """Whether the generators − is live: a standard domain with a generator to spare
+        (never down to rank 0, the inverse guard of the sole-prime domain −)."""
+        return self.can_add_generator and self.state.r > 1
+
+    @property
     def can_remove_comma(self) -> bool:
         """Whether the comma − is live: it cancels a pending draft, or (with none)
         drops a real comma without emptying the basis."""
@@ -566,6 +578,20 @@ class Editor:
         self._snapshot()
         self.pending_comma = None
         self.state = service.shrink_domain(self.state)
+
+    def add_generator(self) -> None:
+        if not self.can_add_generator:
+            return  # the diagonal expansion adds a standard prime; inert on a subgroup
+        self._snapshot()
+        self.pending_comma = None  # the draft's length is tied to the old domain
+        self.state = service.add_generator(self.state)
+
+    def remove_generator(self) -> None:
+        if not self.can_remove_generator:
+            return
+        self._snapshot()
+        self.pending_comma = None
+        self.state = service.remove_generator(self.state)
 
     def add_comma(self) -> None:
         """Begin a pending comma: a blank draft column for the user to fill in. It is

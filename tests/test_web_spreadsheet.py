@@ -115,6 +115,19 @@ def test_build_renders_a_nonstandard_domain_in_its_elements():
     assert cells["gen:1"].text == "15/13"  # the Barbados generator, read over the basis
 
 
+def test_generator_ratios_also_head_the_generators_column_in_the_quantities_row():
+    # the generators column gets the same quantities-row header treatment as the domain
+    # primes: each generator's ratio heads its sub-column (horizontally), the dual of the
+    # spine list that labels the mapping rows (gen:i). The mockup's "~2/1 ~2/3".
+    cells = {c.id: c for c in _layout().cells}
+    assert cells["qgen:0"].text == "2/1"
+    assert cells["qgen:1"].text == "3/2"
+    # in the generators column (aligned with the genmap cells), on the quantities row
+    assert cells["qgen:0"].x == cells["tuning:gen:0"].x
+    assert cells["qgen:1"].x == cells["tuning:gen:1"].x
+    assert cells["qgen:0"].y == cells["prime:0"].y  # the quantities row
+
+
 def test_standard_domain_header_still_reads_domain_primes():
     cells = {c.id: c for c in _layout().cells}
     assert cells["header:primes"].text == "domain\nprimes"
@@ -197,6 +210,30 @@ def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point():
         assert abs((plus.x + plus.w / 2) - stub) < 0.51     # the + centres on the stub
         assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51  # ...up on the top bus
         assert abs((bus.start + bus.length) - stub) < 0.51  # and the bus reaches it
+
+
+def test_generators_plus_and_minus_ride_the_generators_fan():
+    # the generators ± rides the generators column's fan, like the domain ±: the + on the
+    # stub one COL_W past the last generator's branch point (the bus stretched to reach it),
+    # the hover − on that last branch point, up at the fan-out and clear of the cell below.
+    lay = _layout()  # meantone, r = 2
+    cells = {c.id: c for c in lay.cells}
+    by_id = {ln.id: ln for ln in lay.lines}
+    plus, bus, last_sub = cells["gen_plus"], by_id["bus:gens:top"], by_id["v:gen:1"]
+    stub = last_sub.pos + spreadsheet.COL_W
+    assert abs((plus.x + plus.w / 2) - stub) < 0.51      # the + centres on the stub
+    assert abs((plus.y + plus.h / 2) - bus.pos) < 0.51   # ...up on the top bus
+    assert abs((bus.start + bus.length) - stub) < 0.51   # and the bus reaches it
+    minus = cells["gen_minus"]
+    assert abs((minus.x + minus.w / 2) - last_sub.pos) < 0.51  # − on the last generator's branch point
+    assert minus.y == bus.pos                                  # the zone drops from the top bus
+    assert minus.y + minus.h <= cells["tuning:gen:0"].y        # ...clear of the genmap cell below
+
+
+def test_a_single_generator_temperament_has_no_gen_minus_but_keeps_gen_plus():
+    cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
+    assert "gen_minus" not in cells  # nothing to remove at rank 1
+    assert {"gen_plus", "qgen:0"} <= cells  # ...but you can still add a generator
 
 
 def test_target_intervals_column_with_mapped_list():
@@ -4305,6 +4342,7 @@ def test_colorization_follows_the_content_map():
     assert at("comma:0") == Y                  # quantities × commas (the comma ratios are C)
     assert at("cell:comma:0:0") == Y           # interval-vectors × commas (the comma basis vectors)
     assert at("prime:0") == Y                  # quantities × primes (the domain basis, now yellow)
+    assert at("qgen:0") == Y                    # quantities × generators (the generator basis B, yellow)
     assert at("target:0") == C                 # quantities × targets (T, now cyan)
     assert at("interest:0") == N               # quantities × other-intervals
     assert at("held:0") == C                   # quantities × held intervals (H, now cyan)

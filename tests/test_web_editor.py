@@ -447,6 +447,36 @@ def test_cannot_shrink_below_one_dimension():
     assert editor.can_shrink is False
 
 
+def test_add_remove_generator_change_rank_and_dimensionality():
+    editor = Editor()  # meantone, d=3 r=2 n=1
+    editor.add_generator()
+    assert (editor.state.r, editor.state.d, editor.state.n) == (3, 4, 1)  # +r, +d, n held
+    assert editor.state.domain_basis == (2, 3, 5, 7)  # the new prime joins the domain
+    editor.remove_generator()
+    assert (editor.state.r, editor.state.d, editor.state.n) == (2, 3, 1)  # back, −r −d
+    editor.undo()
+    assert editor.state.d == 4  # each is a single undoable step
+
+
+def test_generator_controls_are_inert_on_a_nonstandard_domain():
+    # adding a generator picks the next standard prime, so (like the domain ±) it must
+    # leave a nonprime subgroup untouched rather than silently reverting it to a prime limit
+    editor = Editor()
+    editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    before = editor.state
+    assert editor.can_add_generator is False and editor.can_remove_generator is False
+    editor.add_generator()
+    editor.remove_generator()
+    assert editor.state is before  # unchanged by either control
+
+
+def test_cannot_remove_the_sole_generator():
+    editor = Editor()
+    editor.edit_mapping(((1, 0, 0),))  # a rank-1 temperament
+    assert editor.can_remove_generator is False  # nothing to remove down to rank 0
+    assert editor.can_add_generator is True  # ...but you can still add one
+
+
 def test_interest_intervals_add_edit_remove():
     editor = Editor()
     assert editor.interest_vectors == []  # starts empty

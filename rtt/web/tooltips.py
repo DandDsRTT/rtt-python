@@ -105,6 +105,8 @@ _KIND_HELP: dict[str, str] = {
     # add / remove buttons
     "plus": "Add the next prime to the domain.",
     "minus": "Remove the highest prime from the domain.",
+    "gen_plus": "Add a generator — raises the rank and dimensionality, mapping a new prime just.",
+    "gen_minus": "Remove the last generator — lowers the rank and dimensionality.",
     "basis_minus": "Remove the highest prime from the domain.",
     "comma_plus": "Add a comma to the basis.",
     "comma_minus": "Remove the last comma from the basis.",

@@ -34,6 +34,8 @@ _INTERACTIVE_KINDS = [
     ("optimize", "optimization:button"),
     ("minus", "minus:2"),
     ("plus", "plus"),
+    ("gen_minus", "gen_minus"),
+    ("gen_plus", "gen_plus"),
     ("basis_minus", "basis_minus"),
     ("comma_minus", "comma_minus"),
     ("comma_plus", "comma_plus"),
