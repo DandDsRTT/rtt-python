@@ -4702,3 +4702,15 @@ def test_show_flags_box_choosers_gate_on_the_collapsed_state():
     assert not spreadsheet._resolve_show_flags(s, frozenset({"row:complexity"})).cbox
 
 
+def test_prescaler_labels_resolve_the_log_prime_glyph_and_gated_name():
+    # _resolve_prescaler_labels (build's phase 2): the default scheme's prescaler is the log-prime
+    # matrix, so products/headers carry the concrete 𝐿 (not the abstract 𝑋), and the bare tile's
+    # NAME gains "= log-prime matrix" — but only with the equivalences layer on.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    p = spreadsheet._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equiv=True)
+    assert p.symbol == "𝐿"  # the concrete log-prime glyph (not the abstract 𝑋)
+    assert p.effective_captions[("prescaling", "primes")].endswith("= log-prime matrix")
+    bare = spreadsheet._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equiv=False)
+    assert "log-prime matrix" not in bare.effective_captions[("prescaling", "primes")]  # gated on equivalences
+
+

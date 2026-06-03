@@ -427,6 +427,57 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
     )
 
 
+@dataclass(frozen=True)
+class _PrescalerLabels:
+    """The resolved complexity-prescaler glyph + labels (build's phase 2). The prescaler the
+    DISPLAYED diagonal realises decides whether the product tiles and their complexity-norm column
+    headers carry the concrete 𝐿 or the abstract 𝑋, and the bare tile's row labels / name
+    equivalence follow suit. Resolved up front so the caption-width floor can size the (maybe
+    longer, "= log-prime matrix") name before the column-width loop runs."""
+    scheme_prescaler: object   # the scheme's nominal prescaler: "log-prime" / "prime" / "identity" / None
+    symbol: str                # the glyph products + headers use: 𝐿 when 𝑋 = 𝐿, else the abstract 𝑋
+    equivalence: str           # the bare tile's symbol-line equivalence: " = 𝐿" / " = diag(𝒑)" / " = 𝐼" / ""
+    prescaling_symbols: dict   # the prescaling tile's product symbols with "L" resolved to the live glyph
+    col_labels: dict
+    row_labels: dict
+    effective_captions: dict   # CAPTIONS, the bare tile's name gaining "= log-prime matrix" when 𝑋 = 𝐿
+
+
+def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv) -> _PrescalerLabels:
+    """Resolve the prescaler glyph + labels. The prescaler 𝑋 "further appears" as 𝐿 in the product
+    tiles and their complexity-norm column headers WHEN 𝑋 = 𝐿 — i.e. when the prescaler the displayed
+    diagonal realises is the log-prime matrix. A prime/identity scheme, or a custom diagonal that
+    genuinely deviates, leaves the generic 𝑋 everywhere. The bare prescaler tile is the DEFINITION
+    locus: it keeps the abstract 𝑋 (rows 𝒙ᵢ), with the equivalence "= 𝐿" / "= diag(𝒑)" / "= 𝐼" (or
+    nothing for a real deviation), and — when 𝑋 = 𝐿 — its NAME gains "= log-prime matrix". So a tile
+    never mixes the two: the bare matrix is all 𝑋, every product and column header all 𝐿."""
+    scheme_prescaler = service.prescaler_of(tuning_scheme)  # the scheme's nominal prescaler
+    # the prescaler the DISPLAYED diagonal realises — matched at display precision, so editing a
+    # cell to its shown value and back recovers the named prescaler (and the 𝑋 = 𝐿 awareness)
+    realized = service.displayed_prescaler_name(state.mapping, tuning_scheme, custom_prescaler)
+    is_log_prime = realized == "log-prime"
+    symbol = "𝐿" if is_log_prime else "𝑋"
+    # the bare tile's SYMBOL equivalence names the realised prescaler concretely; a real deviation
+    # has no closed form, so none
+    equivalence = f" = {PRESCALER_LETTER[realized]}" if realized else ""
+    # the bare matrix keeps the literal abstract 𝑋 as its big SYMBOL; only the products' "L"
+    # placeholder resolves to the live glyph ("LC"/"LD"/… → 𝐿C/… or 𝑋C/…), matching their headers
+    prescaling_symbols = {(r, c): symbol + s[1:] for (r, c), s in SYMBOLS.items()
+                          if r == "prescaling" and s.startswith("L")}
+    # the bare matrix's per-row labels take the lowercase of the realised glyph — 𝒍ᵢ when 𝑋 = 𝐿,
+    # else the generic 𝒙ᵢ — so they don't mix with the 𝐿 the products/headers carry
+    row_labels = {**ROW_LABEL_LETTERS, ("prescaling", "primes"): "𝒍" if is_log_prime else "𝒙"}
+    effective_captions = dict(CAPTIONS)
+    if is_log_prime and show_equiv:  # the bare tile's NAME gains its equivalence with the equiv layer
+        effective_captions[("prescaling", "primes")] += " = log-prime matrix"
+    return _PrescalerLabels(
+        scheme_prescaler=scheme_prescaler, symbol=symbol, equivalence=equivalence,
+        prescaling_symbols=prescaling_symbols,
+        col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol)},
+        row_labels=row_labels, effective_captions=effective_captions,
+    )
+
+
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
@@ -468,40 +519,15 @@ def build(state, settings=None, collapsed=None,
     show_quantities = _f.quantities
     show_domain_quantities = _f.domain_quantities
     show_math = _f.math
-    # The prescaler's concrete glyph 𝐿, used everywhere the abstract 𝑋 "further appears" — the
-    # product tiles and their complexity-norm column headers — when 𝑋 = 𝐿: i.e. when the prescaler
-    # the DISPLAYED diagonal realises is the log-prime matrix. A prime/identity scheme, or a custom
-    # diagonal that genuinely deviates, leaves the generic placeholder 𝑋 everywhere instead. The
-    # bare prescaler tile itself is the DEFINITION locus: it keeps the abstract symbol 𝑋 (and rows
-    # 𝒙ᵢ), with the equivalence "= 𝐿" (or "= diag(𝒑)" / "= 𝐼"; nothing for a real deviation), and —
-    # when 𝑋 = 𝐿 — its NAME gains "= log-prime matrix" (see effective_captions). So a tile never
-    # mixes the two: the bare matrix is all 𝑋, every product and column header is all 𝐿.
-    _scheme_prescaler = service.prescaler_of(tuning_scheme)  # the scheme's nominal prescaler (math-expr form / box-𝐋 control)
-    # the prescaler the DISPLAYED diagonal realises — "log-prime"/"prime"/"identity", or None when a
-    # custom diagonal genuinely deviates. Matched at display precision, so editing a cell to its
-    # shown value and back recovers the named prescaler (and the 𝑋 = 𝐿 awareness); "custom_prescaler
-    # is None" never restored after such a round-trip, since the stored value keeps the shown rounding.
-    _realized_prescaler = service.displayed_prescaler_name(state.mapping, tuning_scheme, custom_prescaler)
-    prescaler_is_log_prime = _realized_prescaler == "log-prime"
-    prescaler_symbol = "𝐿" if prescaler_is_log_prime else "𝑋"  # the glyph products/headers use
-    # the bare tile's SYMBOL equivalence names the realised prescaler concretely; a real deviation
-    # has no closed form, so none.
-    prescaler_equivalence = f" = {PRESCALER_LETTER[_realized_prescaler]}" if _realized_prescaler else ""
-    # the bare matrix keeps the literal abstract 𝑋 as its big SYMBOL (SYMBOLS); only the products'
-    # "L" placeholder resolves to the live glyph ("LC"/"LD"/… → 𝐿C/… or 𝑋C/…), matching their headers.
-    prescaling_symbols = {(r, c): prescaler_symbol + s[1:] for (r, c), s in SYMBOLS.items()
-                          if r == "prescaling" and s.startswith("L")}
-    col_labels = {**COL_LABEL_LETTERS, **_prescaler_col_labels(prescaler_symbol)}
-    # the bare matrix's per-row labels take the lowercase of the realised glyph — 𝒍ᵢ when 𝑋 = 𝐿,
-    # else the generic 𝒙ᵢ — so they don't mix with the 𝐿 the products/headers carry.
-    row_labels = {**ROW_LABEL_LETTERS,
-                  ("prescaling", "primes"): "𝒍" if prescaler_is_log_prime else "𝒙"}
-    # the bare tile's NAME gains its equivalence when 𝑋 = 𝐿 — "complexity prescaler = log-prime
-    # matrix" — shown with the equivalences layer (like the symbol line's own "𝑋 = 𝐿"). Threaded
-    # through the caption sizing + emission below so the tile reserves space for the longer name.
-    effective_captions = dict(CAPTIONS)
-    if prescaler_is_log_prime and show_equiv:
-        effective_captions[("prescaling", "primes")] += " = log-prime matrix"
+    # Phase 2 — resolve the complexity-prescaler glyph + labels (see _resolve_prescaler_labels).
+    _p = _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv)
+    _scheme_prescaler = _p.scheme_prescaler
+    prescaler_symbol = _p.symbol
+    prescaler_equivalence = _p.equivalence
+    prescaling_symbols = _p.prescaling_symbols
+    col_labels = _p.col_labels
+    row_labels = _p.row_labels
+    effective_captions = _p.effective_captions
     # Row labels and column headers (and their gutters) are always present.
     label_w = LABEL_W
     header_h = HEADER_H
