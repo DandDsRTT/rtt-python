@@ -31,6 +31,14 @@ def test_monotone_range_is_none_when_no_monotone_tuning_exists():
     assert tradeoff[0] == pytest.approx((1200.0, 1200.0), abs=1e-6)
 
 
+def test_tradeoff_range_is_none_when_the_octave_tempers_out():
+    # [[0, 1, 4]] over {2,3,5} tempers 2/1 to a unison, so no tuning holds the octave pure --
+    # the diamond-tradeoff vertices all vanish. The range is None (no I-beams), not an IndexError.
+    # Reachable from the grid by dropping the octave generator (the mapping-row −).
+    t = Temperament(((0, 1, 4),), Variance.ROW)
+    assert get_generator_tuning_range(t, "tradeoff") is None
+
+
 def test_octave_generator_is_pinned_pure_in_both_modes():
     # The normalization holds 2/1 pure, so the period (octave) generator collapses
     # to a single point at 1200 cents in either mode -- only the fifth has a range.

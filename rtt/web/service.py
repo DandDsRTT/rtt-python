@@ -68,7 +68,7 @@ class Tuning:
     just_map: tuple[float, ...]  # cents, over the domain primes
     retuning_map: tuple[float, ...]  # tempered - just, over the primes
     monotone_generator_range: tuple[tuple[float, float], ...] | None  # per generator; None if none exists
-    tradeoff_generator_range: tuple[tuple[float, float], ...]  # (low, high) cents per generator
+    tradeoff_generator_range: tuple[tuple[float, float], ...] | None  # (low, high) cents/gen; None if octave tempers out
 
 
 @dataclass(frozen=True)
@@ -1065,3 +1065,26 @@ def remove_generator(state: TemperamentState) -> TemperamentState:
     against removing the sole generator."""
     trimmed = tuple(row[:-1] for row in state.mapping[:-1])
     return from_mapping(trimmed)
+
+
+def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:
+    """Drop mapping row ``i`` (a generator), keeping the remaining rows as-is and
+    re-dualing the comma basis: rank falls, nullity rises, dimensionality held
+    (−r, +n). The row-space dual of :func:`remove_comma` (which drops a comma to
+    raise rank). Callers guard against removing the sole row. Adding a mapping row
+    is the comma-space :func:`remove_comma` reached from the mapping (+r, −n)."""
+    kept = state.mapping[:i] + state.mapping[i + 1:]
+    return from_mapping(kept)
+
+
+def add_mapping_row(state: TemperamentState) -> TemperamentState:
+    """Add a generator by un-tempering a comma: drop a comma from the basis and re-dual to the
+    canonical higher-rank mapping — rank rises, nullity falls, dimensionality held (+r, −n).
+    Re-dualing (rather than splicing the comma in as a raw row) keeps the generators simple:
+    a raw comma row detempers to an astronomically complex ratio. Un-tempering the LAST comma
+    leaves nothing tempered — just intonation over the d primes (the identity mapping, whose
+    generators are the primes themselves). Callers guard on there being a comma (nullity > 0)."""
+    remaining = state.comma_basis[:-1]
+    if remaining:
+        return from_comma_basis(remaining)
+    return from_mapping(tuple(tuple(int(i == j) for j in range(state.d)) for i in range(state.d)))

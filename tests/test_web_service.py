@@ -113,6 +113,24 @@ def test_remove_generator_is_the_inverse_of_add():
     assert (state.d, state.r, state.n) == (3, 2, 1)
 
 
+def test_remove_mapping_row_drops_a_generator_holding_dimensionality():
+    # the mapping-row − drops a generator (any row), keeping the primes and tempering one
+    # more comma: −r, +n, dimensionality held — the dual of the generators − (which drops a prime).
+    st = service.remove_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))), 0)  # drop row 0
+    assert st.mapping == ((0, 1, 4),)  # the remaining row, kept as-is
+    assert (st.d, st.r, st.n) == (3, 1, 2)  # d held, rank down, nullity up
+
+
+def test_add_mapping_row_un_tempers_a_comma_raising_rank():
+    # the mapping + adds a generator by un-tempering a comma: +r, −n, dimensionality held — the
+    # inverse direction of remove_mapping_row, and the row-space face of the comma −. Meantone
+    # loses its sole comma (81/80) → 5-limit just intonation, re-dualed to clean prime generators.
+    st = service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # meantone, n=1
+    assert st.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))  # canonical full rank (JI), not a raw comma row
+    assert (st.d, st.r, st.n) == (3, 3, 0)  # +r, −n (now full rank), d held
+    assert service.generators(st.mapping) == ("2/1", "3/1", "5/1")  # simple generators, not vast ratios
+
+
 def test_full_rank_mapping_has_zero_comma_and_zero_nullity():
     # Just intonation: nothing tempered out. The dual is a single zero comma.
     state = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])

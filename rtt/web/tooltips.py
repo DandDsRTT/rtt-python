@@ -107,6 +107,8 @@ _KIND_HELP: dict[str, str] = {
     "minus": "Remove the highest prime from the domain.",
     "gen_plus": "Add a generator — raises the rank and dimensionality, mapping a new prime just.",
     "gen_minus": "Remove the last generator — lowers the rank and dimensionality.",
+    "map_plus": "Add a generator (a mapping row) — un-tempers a comma, raising the rank and holding the dimensionality.",
+    "map_minus": "Remove this generator (a mapping row) — lowers the rank, tempering one more comma; holds the dimensionality.",
     "basis_minus": "Remove the highest prime from the domain.",
     "comma_plus": "Add a comma to the basis.",
     "comma_minus": "Remove the last comma from the basis.",

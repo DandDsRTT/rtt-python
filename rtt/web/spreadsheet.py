@@ -1035,11 +1035,17 @@ class _GridBuilder:
         self.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("gens", "primes", "commas", "interest", "held")
                        if self._plus_shows(ckey)}
 
-        # The interval-vectors basis fans HORIZONTALLY (one sub-row per prime), so its + is the row
-        # mirror of the columns' top-bus +: it rides a stub one ROW_H below the last sub-row, on the
-        # row's left bus, with that bus's left bar stretched down to reach it. row_plus_y records it
-        # for row_axis (as plus_stub_x does for the columns); only the vectors row carries a basis +.
-        self.row_plus_y = ({"vectors": self.vec_top(self.d) + ROW_H / 2} if self.tile_open("vectors", "quantities") else {})
+        # The interval-vectors basis AND the mapping rows fan HORIZONTALLY (one sub-row per prime /
+        # generator), so their + is the row mirror of the columns' top-bus +: it rides a stub one
+        # ROW_H below the last sub-row, on the row's left bus, with that bus's left bar stretched
+        # down to reach it. row_plus_y records it for row_axis (as plus_stub_x does for the columns):
+        # the vectors row carries the basis +, the mapping row the +r,−n mapping-row + (only when
+        # there's a comma to un-temper — at full rank a generator can't be added holding d).
+        self.row_plus_y = {}
+        if self.tile_open("vectors", "quantities"):
+            self.row_plus_y["vectors"] = self.vec_top(self.d) + ROW_H / 2
+        if self.tile_open("mapping", "quantities") and self.state.n > 0:
+            self.row_plus_y["mapping"] = self.map_top(self.r) + ROW_H / 2
 
     def _caption_floor(self, key):
         # the width an open column needs so its captions stay within MAX_CAPTION_LINES,
@@ -1683,6 +1689,17 @@ class _GridBuilder:
             if self.tile_open("mapping", "quantities"):
                 for i in range(self.r):
                     self.cells.append(CellBox(f"gen:{i}", self.col_x["quantities"], self.map_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.gens[i] if i < len(self.gens) else "", gen=i))
+                # the mapping-row ± ride the row's LEFT bus (like the basis controls on the vectors
+                # row), out to the left of the generator-ratio spine: a − on EACH generator's branch
+                # point (any row removable, −r,+n), the + on the stub below the stack (un-temper a
+                # comma, +r,−n). The − zone drops rightward over its generator ratio as the hover target.
+                map_bus_x = self.node_edge + self.FAN if self.r > 1 else self.node_edge
+                gen_right = self.col_x["quantities"] + self.col_w["quantities"]
+                if self.r > 1:  # never down to rank 0
+                    for i in range(self.r):
+                        self.cells.append(CellBox(f"map_minus:{i}", map_bus_x, self.map_top(i), gen_right - map_bus_x, ROW_H, "map_minus", gen=i))
+                if "mapping" in self.row_plus_y:  # only when there's a comma to un-temper (n > 0)
+                    self.cells.append(CellBox("map_plus", map_bus_x - BTN / 2, self.row_plus_y["mapping"] - BTN / 2, BTN, BTN, "map_plus"))
             for i in range(self.r):
                 if self.tile_open("mapping", "primes"):
                     for p in range(self.d):

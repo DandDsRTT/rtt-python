@@ -36,6 +36,8 @@ _INTERACTIVE_KINDS = [
     ("plus", "plus"),
     ("gen_minus", "gen_minus"),
     ("gen_plus", "gen_plus"),
+    ("map_minus", "map_minus:0"),
+    ("map_plus", "map_plus"),
     ("basis_minus", "basis_minus"),
     ("comma_minus", "comma_minus"),
     ("comma_plus", "comma_plus"),

@@ -656,7 +656,7 @@ GRIDDED_KINDS = frozenset({
     "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell", "targetcell",
     "prescalercell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel",
-    "minus", "plus", "comma_minus", "comma_plus", "basis_minus",
+    "minus", "plus", "gen_minus", "gen_plus", "map_minus", "map_plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus", "held_minus", "held_plus", "optimize",
     "boxtitle", "powerinput",
 })

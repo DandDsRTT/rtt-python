@@ -219,6 +219,17 @@ class Editor:
         return self.can_add_generator and self.state.r > 1
 
     @property
+    def can_add_mapping_row(self) -> bool:
+        """Whether the mapping + applies: it un-tempers a comma into a new generator, so it
+        needs a comma to un-temper (nullity > 0; at full rank there is nothing tempered)."""
+        return self.state.n > 0
+
+    @property
+    def can_remove_mapping_row(self) -> bool:
+        """Whether the mapping − is live: a generator to spare (never down to rank 0)."""
+        return self.state.r > 1
+
+    @property
     def can_remove_comma(self) -> bool:
         """Whether the comma − is live: it cancels a pending draft, or (with none)
         drops a real comma without emptying the basis."""
@@ -612,6 +623,20 @@ class Editor:
         self._snapshot()
         self.pending_comma = None
         self.state = service.remove_generator(self.state)
+
+    def add_mapping_row(self) -> None:
+        if not self.can_add_mapping_row:
+            return  # nothing tempered to un-temper into a new generator
+        self._snapshot()
+        self.pending_comma = None
+        self.state = service.add_mapping_row(self.state)
+
+    def remove_mapping_row(self, i: int) -> None:
+        if not self.can_remove_mapping_row:
+            return
+        self._snapshot()
+        self.pending_comma = None
+        self.state = service.remove_mapping_row(self.state, i)
 
     def add_comma(self) -> None:
         """Begin a pending comma: a blank draft column for the user to fill in. It is

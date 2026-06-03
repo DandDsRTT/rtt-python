@@ -932,6 +932,8 @@ class _Reconciler:
         self.cell_kinds["plus"] = _KindHandlers(self._build_plus)
         self.cell_kinds["gen_minus"] = _KindHandlers(self._build_gen_minus)
         self.cell_kinds["gen_plus"] = _KindHandlers(self._build_gen_plus)
+        self.cell_kinds["map_minus"] = _KindHandlers(self._build_map_minus)
+        self.cell_kinds["map_plus"] = _KindHandlers(self._build_map_plus)
         self.cell_kinds["basis_minus"] = _KindHandlers(self._build_basis_minus)
         self.cell_kinds["comma_minus"] = _KindHandlers(self._build_comma_minus)
         self.cell_kinds["comma_plus"] = _KindHandlers(self._build_comma_plus)
@@ -1463,6 +1465,15 @@ class _Reconciler:
     def _build_gen_plus(self, cb, wrap):  # add a generator (+r, +d); the always-shown + on the bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_generator))
+
+    def _build_map_minus(self, cb, wrap):  # remove generator cb.gen (a mapping row); a hover − on the left bus
+        wrap.classes("rtt-minus-zone")  # clear of the generator-ratio spine it drops over
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
+            .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
+
+    def _build_map_plus(self, cb, wrap):  # add a generator (un-temper a comma); the + on the left-bus stub
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
 
     def _build_basis_minus(self, cb, wrap):  # the domain − on the interval-vectors row's left bus
         wrap.classes("rtt-minus-zone")

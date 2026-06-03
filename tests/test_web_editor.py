@@ -477,6 +477,25 @@ def test_cannot_remove_the_sole_generator():
     assert editor.can_add_generator is True  # ...but you can still add one
 
 
+def test_add_remove_mapping_row_change_rank_holding_dimensionality():
+    editor = Editor()  # meantone, d=3 r=2 n=1
+    editor.remove_mapping_row(0)  # drop a generator (any row)
+    assert (editor.state.r, editor.state.d, editor.state.n) == (1, 3, 2)  # −r, +n, d held
+    editor.add_mapping_row()  # un-temper a comma
+    assert (editor.state.r, editor.state.d, editor.state.n) == (2, 3, 1)  # +r, −n, d held
+    editor.undo()
+    assert editor.state.r == 1  # each is a single undoable step
+
+
+def test_mapping_row_guards():
+    editor = Editor()
+    editor.edit_mapping(((1, 0, 0),))  # rank-1, d=3, n=2
+    assert editor.can_remove_mapping_row is False  # can't drop the sole row
+    assert editor.can_add_mapping_row is True  # ...n>0, a comma to un-temper
+    editor.edit_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))  # JI, n=0
+    assert editor.can_add_mapping_row is False  # nothing tempered to un-temper
+
+
 def test_interest_intervals_add_edit_remove():
     editor = Editor()
     assert editor.interest_vectors == []  # starts empty

@@ -328,15 +328,18 @@ def test_convergence_buses_keep_solid_corners_and_the_top_bus_reaches_the_plus()
 
 
 def test_mapping_rejoin_bars_span_the_full_generator_fan():
-    # the vertical bars closing the mapping rows reach half a line-width past the outer
-    # generator rows, like the column buses, so the far (right-hand) rejoin corner stays solid
+    # the RIGHT vertical bar closing the mapping rows reaches half a line-width past the outer
+    # generator rows, like the column buses, so the far rejoin corner stays solid. The LEFT bar
+    # shares that top but stretches further DOWN to the mapping-row + stub (the row mirror of the
+    # basis +), so it only matches the fan at its top end (its reach to the + is tested separately).
     by = {ln.id: ln for ln in _layout().lines}  # rank-2 -> 2 generator rows
     half = spreadsheet.LINE_W / 2
     g0, glast = by["h:mapping:0"], by["h:mapping:1"]
-    for bar_id in ("vbar:mapping:left", "vbar:mapping:right"):
-        bar = by[bar_id]
-        assert bar.start == g0.pos - half
-        assert bar.start + bar.length == glast.pos + half
+    right = by["vbar:mapping:right"]
+    assert right.start == g0.pos - half and right.start + right.length == glast.pos + half
+    left = by["vbar:mapping:left"]
+    assert left.start == g0.pos - half  # same top edge
+    assert left.start + left.length > glast.pos + half  # ...but extends past the fan to the +
 
 
 def test_adjacent_tiles_keep_a_twelve_px_minimum_gap():
@@ -458,7 +461,8 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
                    for c in ids)
     # no EBK marks (brackets, top brackets, braces, vector rules) and no domain/comma controls
     assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
-    assert {"minus", "plus", "comma_minus", "comma_plus"}.isdisjoint(ids)
+    assert {"minus", "plus", "comma_minus", "comma_plus", "gen_minus", "gen_plus",
+            "map_minus:0", "map_plus"}.isdisjoint(ids)  # every fan ± control goes too
     # ...but the tiles stand empty save their fold toggles and name captions, and
     # the labels, headers and gridlines remain so the empty grid still reads
     assert {"label:mapping", "header:primes", "header:targets", "toggle:row:mapping",
@@ -1315,6 +1319,43 @@ def test_interval_vectors_basis_controls_ride_the_rows_left_bus():
     assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51  # + centred on the left bus
     assert plus.y >= bot.y + bot.h  # ...below the whole stack (clear of the last box)
     assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51  # bar reaches the +
+
+
+def test_mapping_row_controls_ride_the_rows_left_bus():
+    # the mapping fans like the basis (one sub-row per generator); its row ± ride the row's LEFT
+    # bus, out to the left of the generator-ratio spine: a − on EACH generator's branch point (any
+    # row removable, −r,+n), and a + on the stub below the stack (un-temper a comma, +r,−n), with
+    # the left bar stretched down to reach it.
+    lay = _layout()  # meantone, r = 2, n = 1
+    cells = {c.id: c for c in lay.cells}
+    by_id = {ln.id: ln for ln in lay.lines}
+    left_bus = by_id["vbar:mapping:left"]
+    for i in range(2):  # a − per generator (unlike the domain −, which is last-only)
+        minus = cells[f"map_minus:{i}"]
+        assert minus.x == left_bus.pos  # − drops from the left-bus branch point
+        assert abs((minus.y + minus.h / 2) - by_id[f"h:mapping:{i}"].pos) < 0.51  # on generator i's sub-row
+        assert minus.x < cells["gen:0"].x  # ...out to the LEFT of the generator-ratio spine
+    plus = cells["map_plus"]
+    assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51  # + centred on the left bus
+    assert plus.y >= cells["gen:1"].y + cells["gen:1"].h  # ...below the last generator row
+    assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51  # bar reaches the +
+
+
+def test_mapping_row_minus_gated_on_rank_and_plus_on_nullity():
+    rank1 = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
+    assert "map_plus" in rank1 and "map_minus:0" not in rank1  # n>0 so a +, but can't drop the sole row
+    ji = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))).cells}
+    assert "map_plus" not in ji  # full rank: nothing tempered to un-temper
+    assert {"map_minus:0", "map_minus:1", "map_minus:2"} <= ji  # ...but each generator is removable
+
+
+def test_grid_builds_for_an_octave_less_temperament():
+    # dropping the octave generator (the mapping-row −) can leave a temperament whose octave
+    # tempers out; its generator tuning-range chart loses its I-beams, but the grid must still
+    # build — the tuning solve used to crash computing the now-undefined diamond-tradeoff range.
+    degenerate = service.remove_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))), 0)
+    lay = spreadsheet.build(degenerate)  # no IndexError
+    assert any(c.id == "gen:0" for c in lay.cells)  # the rank-1 grid rendered
 
 
 def test_interval_vectors_basis_minus_is_absent_when_the_domain_cannot_shrink():

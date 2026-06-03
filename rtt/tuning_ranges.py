@@ -89,10 +89,14 @@ def _tradeoff_range(
     octave_coords: np.ndarray,
     octave_just: float,
     r: int,
-) -> tuple[tuple[float, float], ...]:
+) -> tuple[tuple[float, float], ...] | None:
     """The diamond-tradeoff range: the extreme tunings hold the octave plus
     ``r-1`` diamond consonances purely. Each such pure tuning is a vertex; the
-    range per generator is the span of the vertices."""
+    range per generator is the span of the vertices.
+
+    Returns ``None`` when no vertex pins a tuning — a degenerate temperament whose
+    octave tempers out (so no tuning holds it pure) has none, like the empty
+    monotone polytope. The caller draws a placeholder rather than I-beams."""
     vertices = []
     for combo in combinations(range(len(coords)), r - 1):
         a = np.vstack([octave_coords, *(coords[i] for i in combo)])  # r x r
@@ -100,5 +104,7 @@ def _tradeoff_range(
         if abs(np.linalg.det(a)) < 1e-9:
             continue  # the chosen intervals don't pin a unique tuning
         vertices.append(np.linalg.solve(a, b))
+    if not vertices:
+        return None  # no pure-octave tuning exists (the octave tempers out)
     v = np.array(vertices)  # m x r
     return tuple((float(v[:, i].min()), float(v[:, i].max())) for i in range(r))
