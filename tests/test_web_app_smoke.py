@@ -133,6 +133,14 @@ def test_cents_parts_splits_whole_and_fraction_for_decimal_alignment():
     assert app._cents_parts("5") == ("5", "")  # no fractional part
 
 
+def test_power_parts_annotates_infinity_as_max():
+    # ∞ carries a small "(max)" below it (it IS the max-norm / minimax power), stacked like a
+    # cents value's decimal; a numeric power (2, 1) shows bare, with no annotation
+    assert app._power_parts("∞") == ("∞", "(max)")
+    assert app._power_parts("2") == ("2", "")
+    assert app._power_parts("1") == ("1", "")
+
+
 def test_underline_html_wraps_only_the_marked_spans():
     # no spans -> plain text (the caption with mnemonics off)
     assert app._underline_html("tuning map", ()) == "tuning map"

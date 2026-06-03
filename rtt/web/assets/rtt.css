@@ -370,8 +370,10 @@
 .rtt-frac-den { padding:0 3px; }
 .rtt-tval { display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }
-.rtt-cents-int { font-size:10px; }
-.rtt-cents-frac { font-size:7px; color:#000; }
+/* a stacked gridded-value face: a big main glyph over a smaller sub-line. Cents stack the
+   whole part over the .fraction; a minimax power stacks ∞ over a small "(max)". */
+.rtt-stacked-main { font-size:10px; }
+.rtt-stacked-sub { font-size:7px; color:#000; }
 /* an editable cents cell (the generator tuning map 𝒈, the bare prescaler 𝐋 diagonal): a
    single-line input overflows the square with a 3-dp value, so it carries the SAME stacked
    int-over-fraction face as a read-only cents cell, overlaid on top of the input. The face

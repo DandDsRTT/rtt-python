@@ -399,6 +399,13 @@ def _cents_parts(text):
     return whole, frac
 
 
+def _power_parts(text):
+    """Split an optimization/norm power into a stacked face: ``∞`` carries a small ``"(max)"``
+    below it (it IS the max-norm / minimax power), the way a cents value carries its decimal;
+    a numeric power (``2``, ``1``) shows bare, with no annotation."""
+    return (text, "(max)") if text == "∞" else (text, "")
+
+
 # Per-glyph widths (in em — font-size multiples) for the .rtt-ptext face, used to estimate a
 # plain-text value's width without a browser. An EBK string mixes wide digits with narrow
 # punctuation and spaces, so a single average char width over-shrinks a punctuation-heavy
@@ -845,7 +852,7 @@ class _Reconciler:
         self.inputs: dict = {}  # mapping cell id -> q-input
         self.labels: dict = {}  # cell id -> the label whose text tracks state
         self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
-        self.cents: dict = {}  # cents cell id -> (whole label, fraction label), aligned on the point
+        self.stacked_faces: dict = {}  # stacked-value cell id -> (main label, sub label): cents whole/.frac, power ∞/(max)
         self.htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
         self.ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
         self.chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
@@ -870,7 +877,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.cents, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.audio_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.stacked_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.audio_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build[, update]).
         # Every kind is registered below; make_cell/update_cell index it directly (no fallback),
         # so an unregistered kind raises loudly rather than rendering a silent blank cell.
@@ -895,7 +902,7 @@ class _Reconciler:
         self.cell_kinds["heldcell"] = _KindHandlers(self._build_heldcell, self._update_input_text)
         self.cell_kinds["targetcell"] = _KindHandlers(self._build_targetcell, self._update_input_text)
         self.cell_kinds["prescalercell"] = _KindHandlers(self._build_prescalercell, self._update_prescalercell)
-        self.cell_kinds["powerinput"] = _KindHandlers(self._build_powerinput, self._update_input_text)
+        self.cell_kinds["powerinput"] = _KindHandlers(self._build_powerinput, self._update_powerinput)
         self.cell_kinds["gentuningcell"] = _KindHandlers(self._build_gentuningcell, self._update_gentuningcell)
 
         self.cell_kinds["ptextedit"] = _KindHandlers(self._build_ptextedit, self._update_ptextedit)
@@ -1009,24 +1016,36 @@ class _Reconciler:
             self.cell_unit_text.pop(cb.id, None)
             self.els[cb.id].classes(remove="rtt-cell-united")
 
+    def _put_stacked_face(self, cid, cls, main, sub):
+        """Build a stacked value face into the active cell — a big main glyph over a smaller
+        sub-line (the read-only tval look) — and register the two labels so the update can
+        re-sync them. Shared by the cents cells (whole part over .fraction) and the power cells
+        (∞ over "(max)")."""
+        with ui.element("div").classes(cls):
+            m = ui.label(main).classes("rtt-stacked-main")
+            s = ui.label(sub).classes("rtt-stacked-sub")
+        self.stacked_faces[cid] = (m, s)
+
+    def _sync_stacked_face(self, cid, main, sub):
+        """Re-sync a stacked face's two lines in place (the cell kind is unchanged across
+        renders, so its labels persist)."""
+        m, s = self.stacked_faces[cid]
+        m.set_text(main)
+        s.set_text(sub)
+
     def set_cents_face(self, cid, text):
         """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
         fraction blank when the value is an integer or the cell is blanked). Shared by the
         read-only tval cells and the editable cents cells (whose face overlays their input)."""
         whole, frac = _cents_parts(text)
-        self.cents[cid][0].set_text(whole)
-        self.cents[cid][1].set_text(f".{frac}" if frac else "")
+        self._sync_stacked_face(cid, whole, f".{frac}" if frac else "")
 
     def cents_face(self, cb, cls):
         """Build the stacked int-over-fraction cents face (the read-only tval look: the whole
-        part big over a smaller dot-led fraction) and register its labels so the update keeps
-        them synced. Shared by the read-only tval cell and the editable cents cells — the latter
-        pass the overlay class and lay it over their input. Builds into the active cell container."""
+        part big over a smaller dot-led fraction). Shared by the read-only tval cell and the
+        editable cents cells — the latter pass the overlay class and lay it over their input."""
         whole, frac = _cents_parts(cb.text)
-        with ui.element("div").classes(cls):
-            w = ui.label(whole).classes("rtt-cents-int")
-            f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
-        self.cents[cb.id] = (w, f)
+        self._put_stacked_face(cb.id, cls, whole, f".{frac}" if frac else "")
 
     def _ratio(self, cb, approx):
         """A ratio rendered as a stacked fraction (with a ~ prefix when approximate)."""
@@ -1149,8 +1168,8 @@ class _Reconciler:
             self.expr_state[cb.id] = (cb.text, cb.w)
 
     # ---- editable grid-input cells: an input registered in the inputs dict, its value mirrored
-    # in the update. interestcell / heldcell / targetcell / powerinput share the plain-value fill;
-    # prescalercell / gentuningcell also overlay a stacked cents face. ----
+    # in the update. interestcell / heldcell / targetcell share the plain-value fill; prescalercell
+    # / gentuningcell / powerinput also overlay a stacked face (cents whole/.frac, power ∞/(max)). ----
     def _build_mapping(self, cb, wrap):
         wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
         self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_mapping_change()) \
@@ -1188,7 +1207,7 @@ class _Reconciler:
         self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_target_cells_change()) \
             .props("dense borderless").classes("rtt-cellinput")
 
-    def _update_input_text(self, cb):  # interestcell / heldcell / targetcell / powerinput: mirror cb.text
+    def _update_input_text(self, cb):  # interestcell / heldcell / targetcell: mirror cb.text
         self.inputs[cb.id].value = cb.text
 
     def _build_prescalercell(self, cb, wrap):
@@ -1208,11 +1227,19 @@ class _Reconciler:
         self.set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
 
     def _build_powerinput(self, cb, wrap):
-        # the optimization power 𝑝, or the box-𝒄 norm power 𝑞. The symbol label rides as a separate
-        # cell below; the field itself shows only the value, in the bordered cell-input box
-        wrap.classes("rtt-cell-input")
+        # the optimization power 𝑝, the box-𝒄 norm power 𝑞, or its dual. The symbol label rides as
+        # a separate cell below; the value carries a stacked gridded face overlaid on the editable
+        # input (like a cents cell): ∞ shows a small "(max)" beneath it, a numeric power shows bare.
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
         self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_power_change(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
+        self._put_stacked_face(cb.id, "rtt-tval rtt-cellface", *_power_parts(cb.text))
+
+    def _update_powerinput(self, cb):
+        # mirror the raw value into the input (shown when focused) and re-sync the overlay face
+        # (shown otherwise): ∞ stacks a small "(max)" below it, a numeric power shows bare
+        self.inputs[cb.id].value = cb.text
+        self._sync_stacked_face(cb.id, *_power_parts(cb.text))
 
     def _build_gentuningcell(self, cb, wrap):
         wrap.classes("rtt-cell-input rtt-cell-stacked")

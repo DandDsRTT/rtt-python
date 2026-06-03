@@ -67,7 +67,7 @@ _FEATURE_CELLS = [
     # the per-box "units: …" line below the caption AND the domain-units row/col labels
     # (all kind "units", _math_html). The fixture catches an ERROR log in either branch.
     ("units", "units:mapping:primes"),               # the per-box "units: g/p" line
-    ("optimization", "optimization:power"),          # the Lp-norm power line (𝑝 = ∞), _math_html
+    ("optimization", "optimization:power"),          # the editable Lp-power field (∞ over "(max)"), powerinput
 ]
 
 
@@ -203,10 +203,11 @@ def _cell_text(user: User, cell_id: str) -> str:
 
 
 def _stacked_face(user: User, cell_id: str):
-    """The (int label, fraction label) of an editable cents cell's stacked face — the
-    overlay that makes the value read like a read-only tval cell (the whole part big, the
-    decimal small and below). The editable input is child[0]; the face is child[1] (a
-    .rtt-tval div holding the .rtt-cents-int / .rtt-cents-frac labels)."""
+    """The (main label, sub label) of an editable cell's stacked face — the overlay that makes
+    the value read like a read-only tval cell (the main glyph big, a small line below). A cents
+    cell stacks the whole part over the decimal; a power cell stacks ∞ over "(max)". The
+    editable input is child[0]; the face is child[1] (a .rtt-tval div holding the
+    .rtt-stacked-main / .rtt-stacked-sub labels)."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     face = wrap.default_slot.children[1]
     return face.default_slot.children[0], face.default_slot.children[1]
@@ -589,6 +590,18 @@ async def test_optimization_renders_the_optimize_button(user: User) -> None:
     for marker in ("optimization:objective", "optimization:objective:symbol",
                    "optimization:power", "optimization:power:symbol", "optimization:power:caption"):
         await user.should_see(marker=marker)
+
+
+async def test_minimax_power_stacks_a_max_annotation_below_infinity(user: User) -> None:
+    # the power cell reads ∞ for the default minimax scheme; like every gridded value it stacks
+    # a small line below the main glyph — here "(max)", naming what ∞ means (the max norm)
+    await _enable(user, "optimization")
+    main, sub = _stacked_face(user, "optimization:power")
+    assert (main.text, sub.text) == ("∞", "(max)")
+    # a finite power (miniRMS, p = 2) shows bare — no annotation, like a plain numeric value
+    _cell_child(user, "optimization:power").set_value("2")
+    main, sub = _stacked_face(user, "optimization:power")
+    assert (main.text, sub.text) == ("2", "")
 
 
 async def test_objective_tooltip_tracks_the_all_interval_mode(user: User) -> None:
