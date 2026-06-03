@@ -278,14 +278,24 @@
 .rtt-preset .q-field__marginal, .rtt-preset .q-field__append { height:30px; min-height:0 !important; }
 .rtt-preset .q-icon { font-size:16px; color:#555; }
 /* a LOCKED chooser -- set_enabled(False), so Quasar's `q-field--disabled` (the all-interval
-   weight-slope chooser, pinned to simplicity). Quasar only fades the value text to .6 and leaves
-   the field's WHITE fill, black caret and selectable text, so it still reads as a live input.
-   Make it plainly inactive: a flat grey fill (clearly off a live chooser's white, and darker than
-   the #e0e0e0 tile so it reads as a sunken, dead control), a muted caret, and -- per Douglas --
-   no text selection. (The not-allowed cursor `q-field--disabled` would add is banned above.) */
+   weight-slope chooser, pinned to simplicity; the locked target chooser likewise). Quasar only
+   fades the content to .6 and leaves the field's WHITE fill and selectable text, so it still reads
+   as a live input. Make it plainly inactive in the app's standard disabled palette: a flat grey
+   fill (off a live chooser's white, darker than the #e0e0e0 tile so it reads as a sunken, dead
+   control), the VALUE and caret both in disabled-grey #999, and -- per Douglas -- no text
+   selection. (The not-allowed cursor `q-field--disabled` would add is banned above.) */
 .rtt-preset.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
-.rtt-preset.q-field--disabled .q-icon { color:#999; }
+.rtt-preset.q-field--disabled .q-field__native, .rtt-preset.q-field--disabled .q-icon { color:#999; }
 .rtt-preset.q-field--disabled, .rtt-preset.q-field--disabled * { user-select:none !important; }
+/* lift Quasar's .6 disabled fade on the locked choosers (the weight-slope/target select AND the
+   target's numeric square) so their explicit #999 renders TRUE, not a washed-out #999*.6 -- the
+   crisp grey itself is the disabled cue, matching the app's other disabled controls. Layered:
+   Quasar's opacity:.6 is a quasar_importants !important an unlayered rule would lose to, exactly
+   like the cursor ban above. */
+@layer overrides {
+  .rtt-preset.q-field--disabled .q-field__control > div,
+  .rtt-preset-num.q-field--disabled .q-field__control > div { opacity:1 !important; }
+}
 .rtt-control-check { width:100%; height:100%; display:flex; justify-content:center;
             align-items:center; }  /* visually centres the q-checkbox inside its cell wrap */
 /* Universal checkbox look AND size — every q-checkbox in the app (settings panel, the box-𝐋
@@ -360,6 +370,9 @@
    select -- the same flat #d6d6d6 disabled fill -- so the two parts read as one dead unit, not a
    grey dropdown beside a still-white box. (Matches the .rtt-preset disabled rule above.) */
 .rtt-preset-num.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
+/* its value AND its "-" placeholder grey to the same disabled #999 as the family select's value */
+.rtt-preset-num.q-field--disabled .q-field__native,
+.rtt-preset-num.q-field--disabled .q-field__native::placeholder { color:#999; }
 .rtt-preset-num.q-field--disabled, .rtt-preset-num.q-field--disabled * { user-select:none !important; }
 .rtt-preset-num .q-field__control::before, .rtt-preset-num .q-field__control::after { display:none !important; }
 .rtt-preset-num .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
