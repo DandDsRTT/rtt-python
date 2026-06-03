@@ -531,8 +531,8 @@ _TILE_NAME = "tile name"        # the name caption; its symbol-spelling letter (
 _TILE_SYMBOL = "𝒏"              # the quantity symbol — a bold-italic n, matching the underlined letter
 _TILE_EQUIV = " = 𝑒G"          # the symbol's defining-equation tail (𝒏 = 𝑒G — mixed object styling: italic scalar, upright matrix)
 _TILE_ROWLABEL = "𝒏₁"           # the matrix's row header (a matlabel) — rides the symbol layer, like real row labels
-_TILE_MATH = "1200·log₂(3/2)"   # math_expressions: a value's closed form, shown INSIDE the boxed cell (just-row style)
-_TILE_VALUE = "= 701.96"        # quantities: the value the closed form evaluates to — the "= …" line inside the cell
+_TILE_MATH = "1200·log₂(3/2) ="  # math_expressions: a value's closed form; the "=" belongs to the EXPRESSION, not the value
+_TILE_VALUE = "701.96"          # quantities: the bare value the form evaluates to (no "=" — that rides the expression)
 _TILE_UNITS = "¢/p"             # units: the value's unit (cents per prime) — the "units: …" line AND the per-cell unit
 _TILE_PTEXT = "⟨1200 1902 2786]"  # plain_text_values: the same kind of value as a one-line EBK string
 
@@ -594,7 +594,8 @@ def _tile_fold_html() -> str:
 # CAP tall above and below.
 _TILE_CELL = spreadsheet.COL_W           # the square cell side (== ROW_H)
 _TILE_BR_W = 9                            # EBK bracket width
-_TILE_BR_GAP = 8                          # clearance between a bracket and the cell box (roomy, like the grid)
+_TILE_BR_GAP = 14                         # clearance between a bracket and the cell box — deliberately roomy
+# (the real grid hugs at _BR_INSET≈2.5px; the dummy wants the value to breathe inside its brackets)
 _TILE_CAP = 5                             # top-bracket / brace height
 _TILE_FRAME_W = _TILE_BR_W + _TILE_BR_GAP + _TILE_CELL + _TILE_BR_GAP + _TILE_BR_W
 _TILE_FRAME_H = _TILE_CAP + _TILE_CELL + _TILE_CAP

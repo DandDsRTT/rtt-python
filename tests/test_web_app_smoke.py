@@ -470,7 +470,9 @@ def test_general_tile_renders_its_special_samples():
     assert "<svg" in app._general_part_html("gridded_values")   # the EBK frame marks...
     assert "border" in app._general_part_html("gridded_values")  # ...around a bordered value box
     assert "log" in app._general_part_html("math_expressions")  # 1200·log₂(3/2)
-    assert "=" in app._general_part_html("quantities")          # the value line carries the "=" sign
+    # the "=" belongs to the math EXPRESSION, not the numeric value (so it shows only with the form)
+    assert "=" in app._general_part_html("math_expressions")
+    assert "=" not in app._general_part_html("quantities")      # the value is the bare number
     assert 'font-style:italic">n</span>' in app._general_part_html("symbols")  # the styled 𝒏
     # the units sample reads "units: ¢/p" — the "units:" prefix (as on a real tile) and a unit
     # naming what it is (cents per prime), the variable p bold like real units

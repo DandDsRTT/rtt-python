@@ -539,7 +539,7 @@
    left), and is centred horizontally in the pane (margin auto). Generous side padding keeps the
    tile closer to square than a thin column. */
 .rtt-show-tile { display:flex; flex-direction:column; align-items:center; gap:2px;
-                 width:fit-content; min-width:170px; margin:8px auto; padding:8px 40px;
+                 width:fit-content; min-width:190px; margin:8px auto; padding:8px 10px;
                  background:#e0e0e0; border:1px solid #8a8a8a; position:relative;
                  box-sizing:border-box; font-family:'Cambria',Georgia,serif; }
 /* the decorative fold toggle in the tile's top-left corner (inert — it only makes the panel read
