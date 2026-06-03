@@ -478,7 +478,9 @@ def test_general_tile_renders_its_special_samples():
     assert "units: " in units and "¢" in units and "<b>p</b>" in units
     assert "(presets)" in app._general_part_html("preselects")       # the placeholder...
     assert "arrow_drop_down" in app._general_part_html("preselects")  # ...and the dropdown caret
-    assert "<svg" in app._general_part_html("charts")           # the sparkline
+    chart = app._general_part_html("charts")
+    assert "<svg" in chart                  # the sparkline...
+    assert "#bbb" in chart                  # ...with at least one grey horizontal tick line
     assert "<svg" in app._tile_fold_html()  # the decorative top-left fold toggle (a boxed chevron)
 
 

@@ -539,18 +539,22 @@
    left), and is centred horizontally in the pane (margin auto). Generous side padding keeps the
    tile closer to square than a thin column. */
 .rtt-show-tile { display:flex; flex-direction:column; align-items:center; gap:2px;
-                 width:fit-content; margin:8px auto; padding:9px 26px; background:#e0e0e0;
-                 border:1px solid #8a8a8a; position:relative; font-family:'Cambria',Georgia,serif; }
+                 width:fit-content; min-width:170px; margin:8px auto; padding:8px 40px;
+                 background:#e0e0e0; border:1px solid #8a8a8a; position:relative;
+                 box-sizing:border-box; font-family:'Cambria',Georgia,serif; }
 /* the decorative fold toggle in the tile's top-left corner (inert — it only makes the panel read
    as a tile); a 12x12 boxed double-chevron in the fan-control grey */
 .rtt-tile-fold { position:absolute; left:4px; top:4px; width:12px; height:12px; color:#555; }
 /* one stacked layer line; the symbol and name lines seat two parts (parent + sub-control) */
 .rtt-tile-line { display:flex; justify-content:center; align-items:center;
                  min-height:14px; line-height:1.1; }
-/* a control box — a chooser in a bordered box with its caption underneath, like a real tile's
+/* a line that spans the tile's full content width (the control box rides one) */
+.rtt-tile-line-wide { align-self:stretch; }
+/* a control box — a chooser in a bordered box spanning the tile's full width, like a real tile's
    control boxes (.rtt-block-boxed: the lighter #e8e8e8 fill, a #8a8a8a border) */
-.rtt-tile-cbox { display:flex; flex-direction:column; align-items:center;
-                 border:1px solid #8a8a8a; background:#e8e8e8; padding:3px 5px; margin:2px 0; }
+.rtt-tile-cbox { width:100%; box-sizing:border-box; display:flex; flex-direction:column;
+                 align-items:stretch; border:1px solid #8a8a8a; background:#e8e8e8;
+                 padding:3px 5px; margin:2px 0; }
 /* every part is a click target. The on/off classes carry the live state — black + opaque when
    the layer is shown, grey + dimmed when hidden (the dim also fades the SVG samples, whose
    baked-in strokes a colour change alone can't grey). A part is inert (no click) while its host

@@ -479,13 +479,17 @@ _EXAMPLE_TEXT: dict[str, str] = {
 
 
 def _example_chart() -> str:
-    """The charts sample: a tiny signed bar sparkline — a 5 / −5 axis with a bar
-    dipping below the zero line, as the mockup's legend shows."""
+    """The charts sample: a tiny signed bar sparkline — a 5 / −5 axis with grey horizontal
+    gridlines (the chart's tick lines) and a bar dipping below the zero line, as the mockup's
+    legend shows."""
     return ('<div style="position:relative;width:84px;height:34px">'
             '<span style="position:absolute;left:0;top:0;font-size:9px">5</span>'
             '<span style="position:absolute;left:0;bottom:0;font-size:9px">-5</span>'
             '<svg width="66" height="34" viewBox="0 0 66 34" '
             'style="position:absolute;left:16px;top:0">'
+            # grey horizontal tick lines at the ±5 levels (the chart's gridlines)
+            '<line x1="2" y1="5" x2="64" y2="5" stroke="#bbb" stroke-width="1"/>'
+            '<line x1="2" y1="29" x2="64" y2="29" stroke="#bbb" stroke-width="1"/>'
             '<line x1="2" y1="3" x2="2" y2="31" stroke="#000" stroke-width="1.4"/>'
             '<line x1="0" y1="5" x2="6" y2="5" stroke="#000" stroke-width="1.4"/>'
             '<line x1="0" y1="29" x2="6" y2="29" stroke="#000" stroke-width="1.4"/>'
@@ -561,12 +565,13 @@ _TILE_PARENT: dict[str, str] = {
 
 # Per-layer font size in the tile (px), matched to the real tile constants so the dummy's
 # proportions read like an actual tile: the symbol/equivalence glyph, the name caption, the row
-# header (matlabel), the units line, and the tiny stacked closed-form/value inside the cell.
+# header (matlabel), the units line, and the per-cell unit (6px grey, like .rtt-cellunit). The
+# closed form and value inside the cell are font-FITTED to the COL_W square (see the builder), so
+# they aren't listed here.
 _TILE_FONT = {
     "symbols": 15, "equivalences": 15, "rowlabel": spreadsheet.MATLABEL_H - 2,
     "names": spreadsheet.CAPTION_FONT, "mnemonics": spreadsheet.CAPTION_FONT,
-    "units": 10, "cellunit": 9, "plain_text_values": 11,
-    "math_expressions": 6, "quantities": 7,
+    "units": 10, "cellunit": 6, "plain_text_values": 11,
 }
 
 
@@ -589,7 +594,7 @@ def _tile_fold_html() -> str:
 # CAP tall above and below.
 _TILE_CELL = spreadsheet.COL_W           # the square cell side (== ROW_H)
 _TILE_BR_W = 9                            # EBK bracket width
-_TILE_BR_GAP = 4                          # clearance between a bracket and the cell box
+_TILE_BR_GAP = 8                          # clearance between a bracket and the cell box (roomy, like the grid)
 _TILE_CAP = 5                             # top-bracket / brace height
 _TILE_FRAME_W = _TILE_BR_W + _TILE_BR_GAP + _TILE_CELL + _TILE_BR_GAP + _TILE_BR_W
 _TILE_FRAME_H = _TILE_CAP + _TILE_CELL + _TILE_CAP
@@ -617,8 +622,8 @@ def _tile_grid_frame_html() -> str:
 def _tile_preselect_html() -> str:
     """The presets-chooser sample, styled like the app's real q-select dropdowns: a white bordered
     field showing the "(presets)" placeholder with a dropdown caret."""
-    return ('<span style="display:inline-flex;align-items:center;justify-content:space-between;'
-            'gap:4px;width:94px;height:22px;box-sizing:border-box;background:#fff;border:1px solid #999;'
+    return ('<span style="display:flex;align-items:center;justify-content:space-between;'
+            'gap:4px;width:100%;height:22px;box-sizing:border-box;background:#fff;border:1px solid #999;'
             'border-radius:2px;padding:0 2px 0 6px;font-size:12px;color:#000">(presets)'
             '<span class="material-icons" style="font-size:16px;color:#555">arrow_drop_down</span></span>')
 
@@ -2004,25 +2009,31 @@ def index() -> None:
                                     for line in _GENERAL_TILE_LINES:
                                         if "gridded_values" in line:
                                             # the value cell, like a real gridded cell: a square box (the
-                                            # gridded_values frame) holding the stacked closed form
-                                            # (math_expressions) over the "= value" (quantities); a row-header
-                                            # matlabel to its left (rides the symbol layer) and a per-cell unit
-                                            # beneath (rides the units layer).
-                                            cx = 18 + _TILE_CELL_X  # the cell's left within the container
+                                            # gridded_values frame) holding the closed form (math_expressions)
+                                            # over "= value" (quantities) over the unit (rides the units layer)
+                                            # — all stacked INSIDE the box, as on a real tile, the form/value
+                                            # font-FITTED to the square so they don't spill. A row-header
+                                            # matlabel (rides the symbol layer) sits in a left gutter; an EQUAL
+                                            # empty gutter on the right keeps the boxed cell centred in the tile.
+                                            gut = 20  # the row-label gutter, mirrored on the right for centring
+                                            cell_x = gut + _TILE_CELL_X  # the cell's left within the container
+                                            row_y = _TILE_CAP + (_TILE_CELL - 13) // 2  # row label centred on the cell
                                             with ui.element("div").classes("rtt-tile-line"), \
                                                     ui.element("div").style(f"position:relative;"
-                                                        f"width:{18 + _TILE_FRAME_W}px;height:{_TILE_FRAME_H + 12}px"):
+                                                        f"width:{gut + _TILE_FRAME_W + gut}px;height:{_TILE_FRAME_H}px"):
                                                 add_el("symbols", _math_html(_TILE_ROWLABEL), size=_TILE_FONT["rowlabel"],
-                                                       style="position:absolute;left:0;top:13px;width:16px;"
-                                                             "height:13px;justify-content:center")
-                                                part_el("gridded_values", style="position:absolute;left:18px;top:0")
-                                                part_el("math_expressions", style=f"position:absolute;left:{cx}px;"
-                                                        f"top:{_TILE_CAP + 1}px;width:{_TILE_CELL}px;height:13px;justify-content:center")
-                                                part_el("quantities", style=f"position:absolute;left:{cx}px;"
-                                                        f"top:{_TILE_CAP + 14}px;width:{_TILE_CELL}px;height:14px;justify-content:center")
+                                                       style=f"position:absolute;left:0;top:{row_y}px;width:{gut - 3}px;"
+                                                             "height:13px;justify-content:flex-end")
+                                                part_el("gridded_values", style=f"position:absolute;left:{gut}px;top:0")
+                                                part_el("math_expressions", size=_fit_font(_TILE_MATH, _TILE_CELL),
+                                                        style=f"position:absolute;left:{cell_x}px;top:{_TILE_CAP + 1}px;"
+                                                              f"width:{_TILE_CELL}px;height:9px;justify-content:center")
+                                                part_el("quantities", size=_fit_font(_TILE_VALUE, _TILE_CELL),
+                                                        style=f"position:absolute;left:{cell_x}px;top:{_TILE_CAP + 10}px;"
+                                                              f"width:{_TILE_CELL}px;height:10px;justify-content:center")
                                                 add_el("units", _units_html(_TILE_UNITS), size=_TILE_FONT["cellunit"],
-                                                       style=f"position:absolute;left:{cx}px;top:{_TILE_FRAME_H}px;"
-                                                             f"width:{_TILE_CELL}px;height:11px;justify-content:center")
+                                                       style=f"position:absolute;left:{cell_x}px;top:{_TILE_CAP + 20}px;"
+                                                             f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:#555")
                                         elif "names" in line:
                                             # the name word, split so the mnemonic letter is its own target
                                             # while the word still reads whole: "tile " + "n" + "ame". Only
@@ -2033,13 +2044,11 @@ def index() -> None:
                                                 part_el("mnemonics")
                                                 add_el("names", _escape(after))
                                         elif "preselects" in line:
-                                            # the presets chooser sits in a control box (bordered, like a
-                                            # real tile's control boxes) with its caption underneath.
-                                            with ui.element("div").classes("rtt-tile-line"), \
+                                            # the presets chooser sits in a control box (bordered, spanning the
+                                            # full tile width like a real tile's control boxes); no label.
+                                            with ui.element("div").classes("rtt-tile-line rtt-tile-line-wide"), \
                                                     ui.element("div").classes("rtt-tile-cbox"):
                                                 part_el("preselects")
-                                                add_el("preselects", _escape("presets"),
-                                                       size=spreadsheet.CAPTION_FONT, style="margin-top:2px")
                                         else:
                                             with ui.element("div").classes("rtt-tile-line"):
                                                 for key in line:
