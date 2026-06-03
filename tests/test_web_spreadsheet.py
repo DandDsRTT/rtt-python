@@ -2220,6 +2220,7 @@ def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box():
     assert "control:slope" not in off  # no control unless weighting is on
     ctrl = on["control:slope"]
     assert ctrl.kind == "control_select"
+    assert ctrl.disabled is False  # live and interactive while target-based (locked only all-interval)
     assert ctrl.text == "unity-weight"  # the default scheme's damage-weight slope (unity)
     assert ctrl.values == ("complexity-weight", "unity-weight", "simplicity-weight")
     # it rides below the weight list (box 𝒘), spanning the targets column
@@ -2227,12 +2228,16 @@ def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box():
     assert ctrl.x == on["header:targets"].x and ctrl.w == on["header:targets"].w
 
 
-def test_all_interval_omits_the_weight_slope_chooser():
+def test_all_interval_greys_and_locks_the_weight_slope_chooser():
     # an all-interval scheme is simplicity-weighted by construction, so its weight is not a free
-    # choice — the U/S/C chooser (and its caption) are omitted, leaving the weight at simplicity
-    on = {c.id for c in _with(scheme="minimax-S", weighting=True).cells}
-    assert "control:slope" not in on
-    assert "caption:slope" not in on
+    # choice. Rather than vanish, the U/S/C chooser (and its caption) stay put — the chooser greyed
+    # (disabled) and locked to the forced simplicity-weight value — so the box keeps its shape
+    # across the toggle instead of the weight tile reflowing when all-interval flips on.
+    on = {c.id: c for c in _with(scheme="minimax-S", weighting=True).cells}
+    ctrl = on["control:slope"]
+    assert ctrl.disabled is True
+    assert ctrl.text == "simplicity-weight"
+    assert "caption:slope" in on
 
 
 def test_box_l_diminuator_needs_weighting_and_the_primes_column():

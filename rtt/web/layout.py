@@ -67,6 +67,8 @@ class CellBox:
     # when the general `units` toggle is on -- the tile's unit with its variables indexed
     align: str = ""  # horizontal text alignment for a caption (default centred; "left" left-justifies
     # it under the control it labels, like a preset chooser's "predefined prescalers" label)
+    disabled: bool = False  # a "control_select" rendered greyed and non-interactive: the box-𝒘
+    # weight-slope chooser in all-interval mode, locked to its forced simplicity-weight value
 
 
 @dataclass(frozen=True)

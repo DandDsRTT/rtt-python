@@ -892,11 +892,13 @@ class _GridBuilder:
         self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
-        # shows with WEIGHTING itself, not gated on the (shelved) alt. complexity extra. It is omitted
-        # in all-interval mode, where the weight is simplicity by construction, not a free choice.
-        self.slope_ctrl = (self.show_weighting and not service.is_all_interval(self.tuning_scheme)
+        # shows with WEIGHTING itself, not gated on the (shelved) alt. complexity extra. In all-interval
+        # mode the weight is simplicity by construction, not a free choice, so the chooser stays put
+        # but greys out (slope_locked), locked to its forced simplicity-weight value.
+        self.slope_ctrl = (self.show_weighting
                       and "row:weight" not in self.collapsed
                       and self.col_open("targets") and "tile:weight:targets" not in self.collapsed)
+        self.slope_locked = self.slope_ctrl and service.is_all_interval(self.tuning_scheme)
         self.slope_extra = (RANGE_GAP + PRESET_H + CAPTION_LINE) if self.slope_ctrl else 0
         # Each of these nested controls lives at the bottom of one tile of its row, but its reserved
         # height (keyed here by row) is added to the whole row's tile_h: the rows below drop clear of
@@ -1994,7 +1996,7 @@ class _GridBuilder:
             py = self.tile_top["weight"] + self.tile_h["weight"] - self.slope_extra + RANGE_GAP
             self.cells.append(CellBox("control:slope", self.col_x["targets"], py, self.col_w["targets"], PRESET_H,
                                  "control_select", text=service.weight_slope_of(self.tuning_scheme),
-                                 values=tuple(service.WEIGHT_SLOPES)))
+                                 values=tuple(service.WEIGHT_SLOPES), disabled=self.slope_locked))
             self.cells.append(CellBox("caption:slope", self.col_x["targets"], py + PRESET_H,
                                  self.col_w["targets"], CAPTION_LINE, "caption",
                                  text="damage weight slope", align="left"))

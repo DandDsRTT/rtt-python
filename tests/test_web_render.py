@@ -567,6 +567,24 @@ async def test_weight_slope_chooser_mirrors_a_scheme_change(user: User) -> None:
     assert _cell_child(user, "control:slope").value != before  # the slope chooser mirrored the change
 
 
+async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User) -> None:
+    # in all-interval mode the weight is simplicity by construction, so the box-𝒘 slope chooser
+    # is not a free choice: rather than vanish (reflowing the tile), it stays rendered but greys
+    # out, locked to simplicity. Target-based it is live; flipping all-interval on must disable it
+    # in place and set its value — the _update_control_select branch that re-applies enabled state.
+    await user.open("/")
+    user.find(marker="toggle:row:vectors").click()              # expand the target-list row
+    user.find(kind=ui.checkbox, content="weighting").click()    # box 𝒘 (the slope chooser) + the all-interval entry
+    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the target-controls checkbox
+    await user.should_see(marker="control:slope")
+    assert _cell_child(user, "control:slope").enabled           # live while target-based
+    _cell_child(user, "control:all_interval").set_value(True)   # flip to all-interval
+    await user.should_see(marker="control:slope")
+    chooser = _cell_child(user, "control:slope")
+    assert not chooser.enabled                                  # greyed (locked, non-interactive)
+    assert chooser.value == "simplicity-weight"                 # pinned to the forced simplicity weight
+
+
 async def test_range_mode_selector_highlights_the_live_mode(user: User) -> None:
     # the monotone/tradeoff selector (rangemode kind) renders under the ranges chart; its render
     # branch fills exactly the live mode's square (rtt-rangeopt-on) and clears the other's. No

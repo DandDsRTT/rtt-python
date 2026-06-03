@@ -1458,8 +1458,9 @@ class _Reconciler:
                 on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
             .props(_select_props(cb.w)).classes("rtt-preset")
 
-    def _update_control_select(self, cb):  # mirror the live alt.-complexity choice
+    def _update_control_select(self, cb):  # mirror the live choice; grey it when locked (box 𝒘 all-interval)
         self.selects[cb.id].value = cb.text or None
+        self.selects[cb.id].set_enabled(not cb.disabled)
 
     def _build_control_check(self, cb, wrap):  # the box-𝐋 "replace diminuator" checkbox (size factor)
         self.checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
