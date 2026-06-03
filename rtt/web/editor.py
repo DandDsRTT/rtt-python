@@ -107,6 +107,7 @@ class Editor:
         self.pending_comma: list[int | None] | None = None
         self.pending_interest: list[int | None] | None = None
         self.pending_held: list[int | None] | None = None
+        self.pending_target: list[int | None] | None = None
         self._restore(_initial_doc())
 
     # --- the document: capture / restore (the unit of undo, reset, persistence) ---
@@ -155,6 +156,7 @@ class Editor:
         self.pending_comma = None
         self.pending_interest = None
         self.pending_held = None
+        self.pending_target = None
 
     @property
     def state(self) -> TemperamentState:
@@ -207,7 +209,8 @@ class Editor:
             optimize_locked=self.optimize_locked,
             tuning_optimized=self.tuning_is_optimized,
             pending_interest=self.pending_interest,
-            pending_held=self.pending_held)
+            pending_held=self.pending_held,
+            pending_target=self.pending_target)
 
     @property
     def can_expand(self) -> bool:
@@ -620,12 +623,23 @@ class Editor:
         return list(service.target_interval_set(self.target_spec, self.state.domain_basis))
 
     def add_target(self) -> None:
-        """Append a blank (1/1) target for the user to edit — the target list's + control.
-        Materializes the spec set into a manual override (like editing a target cell does)."""
-        targets = self._current_targets()
-        targets.append("1/1")
-        self._snapshot()
-        self.target_override = tuple(targets)
+        """Begin a blank target-interval draft — the target list's + control, mirroring
+        :meth:`add_interest`. Off in all-interval (the control is hidden there)."""
+        self.pending_target = [None] * self.state.d
+
+    def set_pending_target(self, values) -> None:
+        """Hold the draft's edited components; once all are filled, commit it — materializing
+        the spec set into a manual override and appending the new interval's ratio (like
+        editing a target cell does) — and clear the draft. See :meth:`_feed_draft`."""
+        def commit(vector):
+            targets = self._current_targets()
+            targets.append(service.comma_ratios([vector], self.state.domain_basis)[0])
+            self.target_override = tuple(targets)
+        self.pending_target = self._feed_draft(values, commit)
+
+    def cancel_pending_target(self) -> None:
+        """Discard the draft without committing (the draft column's − control)."""
+        self.pending_target = None
 
     def remove_target(self, i: int) -> None:
         """Drop the i-th target (each carries its own − control), materializing the spec set

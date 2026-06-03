@@ -876,12 +876,13 @@ def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]") -> str:
     return f"{outer[0]}{cols}{outer[1]}"
 
 
-def comma_basis_pending_text(comma_basis, pending) -> tuple[str, str, str]:
-    """Split the comma-basis plain text for the two-tone draft display: the committed
-    commas and the wrapping ``[ … ]`` stay black, the in-progress draft vector reddens.
-    Returns ``(black_prefix, red_draft_ket, black_suffix)``. The draft ket shows the
-    entered components only (``None`` blanks omitted): ``[4, None, 1] -> "[4 1⟩"``."""
-    committed = _ket_list(comma_basis, "⟩")  # e.g. "[[4 -4 1⟩]" — drop its close ] to reopen
+def vector_list_pending_text(committed_vectors, pending) -> tuple[str, str, str]:
+    """Split a wrapped vector-list plain text for the two-tone draft display: the committed
+    vectors and the wrapping ``[ … ]`` stay black, the in-progress draft vector reddens.
+    Shared by the comma basis and the target interval list (both wrapped ket lists). Returns
+    ``(black_prefix, red_draft_ket, black_suffix)``. The draft ket shows the entered components
+    only (``None`` blanks omitted): ``[4, None, 1] -> "[4 1⟩"``."""
+    committed = _ket_list(committed_vectors, "⟩")  # e.g. "[[4 -4 1⟩]" — drop its close ] to reopen
     draft = "[" + " ".join(str(x) for x in pending if x is not None) + "⟩"
     return committed[:-1] + " ", draft, "]"
 

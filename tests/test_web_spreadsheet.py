@@ -3148,6 +3148,57 @@ def test_a_pending_held_draft_rides_right_of_the_committed_held_intervals():
     assert not cells["ebkangle:vec:held:0"].pending
 
 
+def _target_count():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    return len(service.target_interval_set(service.DEFAULT_TARGET_SPEC, base.domain_basis))
+
+
+def test_adding_a_target_opens_a_blank_red_draft_column():
+    # the target intervals list gets the same pending-draft behaviour as the commas
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    k = _target_count()
+    cells = {c.id: c for c in spreadsheet.build(base, pending_target=[None, None, None]).cells}
+    assert cells["target:pending"].text == "?" and cells["target:pending"].pending
+    # the draft rides at index k (right of the committed targets), blank and red
+    assert all(cells[f"cell:vec:targets:{k}:{p}"].text == "" and cells[f"cell:vec:targets:{k}:{p}"].pending
+               for p in range(3))
+    assert cells["target:pending"].x > cells[f"target:{k - 1}"].x
+    assert cells["target_plus"].x > cells["target:pending"].x
+    assert "target_minus:pending" in cells  # the draft's − cancels it
+
+
+def test_a_partly_typed_target_draft_shows_its_entered_components():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    k = _target_count()
+    cells = {c.id: c for c in spreadsheet.build(base, pending_target=[-1, 1, None]).cells}
+    assert cells[f"cell:vec:targets:{k}:0"].text == "-1"
+    assert cells[f"cell:vec:targets:{k}:1"].text == "1"
+    assert cells[f"cell:vec:targets:{k}:2"].text == ""
+    assert all(cells[f"cell:vec:targets:{k}:{p}"].pending for p in range(3))
+
+
+def test_a_pending_target_draft_is_suppressed_in_all_interval_mode():
+    # in all-interval the target list is the auto Tₚ = I set (not user-curated), and the + is
+    # hidden — so a stray draft must not render a column there
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = {c.id for c in spreadsheet.build(base, tuning_scheme="minimax-S", pending_target=[None, None, None]).cells}
+    assert "target:pending" not in cells
+    assert not any(c.startswith("target_minus:pending") for c in cells)
+
+
+def test_the_target_list_plain_text_becomes_a_two_tone_draft_box_while_pending():
+    # the target vector list is an editable plain-text dual (like the comma basis), so while a
+    # target is pending it flips to a static two-tone box (committed black, draft red); with no
+    # draft it is an editable box again
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["plain_text_values"] = True
+    drafting = {c.id: c for c in spreadsheet.build(base, s, pending_target=[None, None, None]).cells}
+    assert drafting["ptext:vectors:targets"].kind == "ptextpending"
+    resting = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert resting["ptext:vectors:targets"].kind == "ptextedit"  # no draft -> editable again
+
+
 def test_adding_intervals_of_interest_never_shrinks_the_header():
     # regression: the long title floats the interest HEADER out to its two-line strip
     # width; the few-interval value cells must not shrink that header (which would rewrap

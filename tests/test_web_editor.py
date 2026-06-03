@@ -502,11 +502,43 @@ def test_add_and_remove_target_set_a_manual_override():
     n = len(service.target_interval_set(editor.target_spec, editor.state.domain_basis))
     editor.remove_target(0)  # drop the first target → materializes the spec list as an override
     assert editor.target_override is not None and len(editor.target_override) == n - 1
-    editor.add_target()  # append a blank (1/1) target for the user to edit
-    assert len(editor.target_override) == n and editor.target_override[-1] == "1/1"
-    editor.undo()
-    editor.undo()
-    assert editor.target_override is None  # each ± is a single undoable step
+    editor.add_target()  # start a blank draft (no override change yet)
+    assert editor.pending_target == [None, None, None] and len(editor.target_override) == n - 1
+    editor.set_pending_target([-1, 1, 0])  # fill it in -> commits 3/2 to the override
+    assert len(editor.target_override) == n and editor.target_override[-1] == "3/2"
+    editor.undo()  # undo the commit...
+    assert len(editor.target_override) == n - 1
+    editor.undo()  # ...then the remove — each committed ± is a single undoable step
+    assert editor.target_override is None
+
+
+def test_adding_a_target_starts_a_blank_pending_draft():
+    editor = Editor()
+    assert editor.pending_target is None
+    editor.add_target()
+    assert editor.pending_target == [None, None, None]  # a blank d-length draft
+    assert editor.target_override is None  # not committed (the spec set is untouched)
+    assert editor.can_undo is False  # starting a draft is not an undoable edit
+
+
+def test_a_partly_filled_target_draft_is_held_until_complete():
+    editor = Editor()
+    n = len(service.target_interval_set(editor.target_spec, editor.state.domain_basis))
+    editor.add_target()
+    editor.set_pending_target([-1, None, 0])  # still being typed
+    assert editor.pending_target == [-1, None, 0] and editor.target_override is None  # held
+    editor.set_pending_target([-1, 1, 0])  # complete -> materializes the set + commits 3/2
+    assert editor.pending_target is None and editor.target_override[-1] == "3/2"
+    assert len(editor.target_override) == n + 1
+    assert editor.can_undo is True  # the commit is the undoable edit
+
+
+def test_cancelling_a_target_draft_discards_it():
+    editor = Editor()
+    editor.add_target()
+    editor.cancel_pending_target()
+    assert editor.pending_target is None and editor.target_override is None
+    assert editor.can_undo is False  # cancelling a draft is not an undoable edit
 
 
 def test_interest_intervals_add_edit_remove():

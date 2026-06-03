@@ -503,7 +503,7 @@ class _GridBuilder:
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
-                 pending_interest=None, pending_held=None):
+                 pending_interest=None, pending_held=None, pending_target=None):
         self.state = state
         self.settings = settings
         self.collapsed = collapsed
@@ -514,6 +514,7 @@ class _GridBuilder:
         self.pending_comma = pending_comma
         self.pending_interest = pending_interest
         self.pending_held = pending_held
+        self.pending_target = pending_target
         self.held_vectors = held_vectors
         self.generator_tuning = generator_tuning
         self.target_override = target_override
@@ -590,6 +591,11 @@ class _GridBuilder:
             # its prime-based "when all-interval" form (𝐿, ‖𝐿‖, 𝐿⁻¹, 𝑟, |𝑟|𝑋⁻¹) from this `targets`.
             self.targets = tuple(_ratio_str(e) for e in self.elements)
         self.k = len(self.targets)
+        # a target being added rides as a pending draft column (blank red cells + a "?" ratio)
+        # until its vector is filled in, like the comma / interest / held draft. Suppressed in
+        # all-interval, where the list is the auto Tₚ = I set (not user-curated, no + control).
+        self.pending_target = list(self.pending_target) if (self.pending_target is not None and not self.all_interval) else None
+        self.k_shown = self.k + (1 if self.pending_target is not None else 0)
         self.mapped = service.mapped_intervals(self.state.mapping, self.targets, self.elements)
         self.canon_mapping = service.canonical_mapping(self.state.mapping)  # M defactored + HNF (the form box)
         self.rc = len(self.canon_mapping)  # canonical rank (== r for a valid temperament)
@@ -812,7 +818,7 @@ class _GridBuilder:
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
-            ("targets", 2 * BRACKET_W + self.k * COL_W, show_tuning, True),
+            ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
             # padding. Its long two-line title needs more room, so the column's *footprint*
             # is floored at the title width (see the loop below) and the narrow content is
@@ -1079,7 +1085,7 @@ class _GridBuilder:
         # gridline pass can fan every group column into that many vertical sub-axes (commas
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
-        self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown, "targets": self.k,
+        self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown, "targets": self.k_shown,
                    "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r}
         self.group_ratio = {  # the just interval ratio each value group is taken over
             "primes": lambda i: _ratio_str(self.elements[i]),  # a prime "p/1", or a nonprime element "n/d"
@@ -1734,6 +1740,9 @@ class _GridBuilder:
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
                     if not self.all_interval:
                         branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
+                if self.pending_target is not None:  # the draft column: a "?" ratio, blank red cells below, − to cancel
+                    self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "target", text="?", comma=self.k, pending=True))
+                    branch_minus("target_minus:pending", "targets", self.k, "target_minus")
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
                 for i in range(self.nh):
                     # the derived ratio (read-only, from the editable vector) heads each column
@@ -1854,6 +1863,11 @@ class _GridBuilder:
                 for j in range(self.k):                # (a hybrid input, like the comma basis): typing a
                     for p in range(self.d):            # column overrides the target set with those intervals
                         self.cells.append(CellBox(f"cell:vec:targets:{j}:{p}", self.target_left(j), self.vec_top(p), COL_W, ROW_H, "targetcell", text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
+                if self.pending_target is not None:  # the draft column: blank, red-outlined cells the user fills in
+                    for p in range(self.d):
+                        v = self.pending_target[p]
+                        self.cells.append(CellBox(f"cell:vec:targets:{self.k}:{p}", self.target_left(self.k), self.vec_top(p), COL_W, ROW_H, "targetcell",
+                                             text="" if v is None else str(v), prime=p, comma=self.k, pending=True, unit=self.cell_unit("vectors", "targets", prime=p)))
             if self.tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
                 for i in range(self.nh):
                     for p in range(self.d):
@@ -2526,10 +2540,12 @@ class _GridBuilder:
             for (rkey, ckey), text in self.ptext_strings.items():
                 if not self.tile_open(rkey, ckey):
                     continue
-                # the comma basis flips to a static two-tone box while a comma is pending (the
-                # committed commas black, the draft vector red — a single-colour input can't do
-                # that); the mapping and read-only values keep their normal kinds.
-                if self.pending is not None and (rkey, ckey) == ("vectors", "commas"):
+                # an editable vector-list dual flips to a static two-tone box while its column has
+                # a pending draft (the committed vectors black, the draft vector red — a single-
+                # colour input can't do that): the comma basis when a comma is pending, the target
+                # list when a target is. The mapping and read-only values keep their normal kinds.
+                if (rkey, ckey) == ("vectors", "commas") and self.pending is not None \
+                        or (rkey, ckey) == ("vectors", "targets") and self.pending_target is not None:
                     kind = "ptextpending"
                 elif (rkey, ckey) in EDITABLE_PTEXT:
                     kind = "ptextedit"
@@ -2569,7 +2585,8 @@ class _GridBuilder:
         # interest column's intervals likewise stand alone (no separators between columns).
         self.vector_list_marks("vectors", "vec:commas", "commas", self.comma_left, self.nc_shown, foot="ebkangle", separators=False,
                          pending_col=(self.nc if self.pending is not None else -1))
-        self.vector_list_marks("vectors", "vec:targets", "targets", self.target_left, self.k, foot="ebkangle")
+        self.vector_list_marks("vectors", "vec:targets", "targets", self.target_left, self.k_shown, foot="ebkangle",
+                         pending_col=(self.k if self.pending_target is not None else -1))
         self.vector_list_marks("vectors", "vec:interest", "interest", self.interest_left, self.mi_shown, foot="ebkangle", separators=False,
                          pending_col=(self.mi if self.pending_interest is not None else -1))
         self.vector_list_marks("vectors", "vec:held", "held", self.held_left, self.nh_shown, foot="ebkangle",
@@ -2637,9 +2654,9 @@ def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
-          pending_interest=None, pending_held=None) -> Layout:
+          pending_interest=None, pending_held=None, pending_target=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
-        optimize_locked, tuning_optimized, pending_interest, pending_held,
+        optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
     ).layout()

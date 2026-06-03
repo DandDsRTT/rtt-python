@@ -1149,13 +1149,20 @@ class _Reconciler:
             self.caption_html[cb.id] = html
 
     def _build_ptextpending(self, cb, wrap):
-        # comma basis mid-draft: a static two-tone box (the draft is typed into the red grid
-        # cells, not here); content set in the update
+        # an editable vector-list dual mid-draft (comma basis / target list): a static two-tone
+        # box (the draft is typed into the red grid cells, not here); content set in the update
         self.htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
 
     def _update_ptextpending(self, cb):
-        # the committed commas black and the draft vector red (same red as its grid cells)
-        prefix, draft, suffix = service.comma_basis_pending_text(self._editor.state.comma_basis, self._editor.pending_comma)
+        # the committed vectors black and the draft vector red (same red as its grid cells)
+        ed = self._editor
+        if cb.id == "ptext:vectors:targets":
+            targets = ed.target_override or service.target_interval_set(ed.target_spec, ed.state.domain_basis)
+            committed = service.target_interval_vectors(targets, ed.state.d, ed.state.domain_basis)
+            pending = ed.pending_target
+        else:  # the comma basis
+            committed, pending = ed.state.comma_basis, ed.pending_comma
+        prefix, draft, suffix = service.vector_list_pending_text(committed, pending)
         self.htmls[cb.id].set_content(
             f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
         self.htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
@@ -1557,10 +1564,12 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_held))
 
-    def _build_target_minus(self, cb, wrap):  # one per target (each independently removable)
+    def _build_target_minus(self, cb, wrap):  # one per target (each independently removable); the draft's − cancels it
+        action = self._editor.cancel_pending_target if cb.id.endswith(":pending") \
+            else (lambda idx=cb.comma: self._editor.remove_target(idx))
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None, idx=cb.comma: self._cb.act(lambda: self._editor.remove_target(idx)))
+            .on("click", lambda _=None: self._cb.act(action))
 
     def _build_target_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
@@ -1709,6 +1718,13 @@ def index() -> None:
         targets = editor.target_override or service.target_interval_set(
             editor.target_spec, editor.state.domain_basis)
         k = len(targets)
+        if editor.pending_target is not None:
+            # the draft column rides at index k; commit it once every component is filled in
+            if any(f"cell:vec:targets:{k}:{p}" not in rec.inputs for p in range(d)):
+                return  # the draft cells aren't shown (folded away)
+            editor.set_pending_target([_parse_int(rec.inputs[f"cell:vec:targets:{k}:{p}"].value) for p in range(d)])
+            render()
+            return
         if any(f"cell:vec:targets:{j}:{p}" not in rec.inputs for j in range(k) for p in range(d)):
             return  # the target cells aren't currently shown (folded away)
         vectors = [[_parse_int(rec.inputs[f"cell:vec:targets:{j}:{p}"].value) for p in range(d)] for j in range(k)]
