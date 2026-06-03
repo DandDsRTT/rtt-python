@@ -873,6 +873,58 @@ class _Reconciler:
         for d in self._handle_dicts:
             d.pop(eid, None)
 
+    def make_cell(self, cb):
+        # build a cell's element in the active parent (the caller opens the freeze container),
+        # register it + its kind (and audio key) so render() can place and reconcile it after.
+        # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
+        # letting the User-fixture render tests locate a cell by its stable id
+        wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
+        with wrap:
+            # every cell kind is registered (audit #3); indexing rather than .get means an
+            # unregistered kind raises loudly here — drift surfaces as a crash, not a silent blank cell
+            self.cell_kinds[cb.kind].build(cb, wrap)
+        # explanatory hover text for the interactive controls (read-only value cells get none).
+        # All wording lives in rtt.web.tooltips; a NEW cell kind must be classified there
+        # (in READONLY_KINDS or with a help entry) or test_web_tooltips' completeness sweep fails.
+        # The mark/data-eid ride the wrap, so the tooltip hangs off it too — one shared anchor.
+        help_text = tooltips.control_help(cb.kind, cb.id)
+        if help_text:
+            if cb.id in tooltips.OBJECTIVE_IDS:
+                # the read-only objective's help names a different quantity per mode (damage
+                # ⟪𝐝⟫ₚ vs the all-interval retuning magnitude); keep the Tooltip handle so
+                # render() can swap its wording in place when the mode flips, like the symbol glyph
+                with wrap:
+                    self.objective_tips[cb.id] = ui.tooltip(help_text)
+            else:
+                wrap.tooltip(help_text)
+        self.els[cb.id] = wrap
+        self.kinds[cb.id] = cb.kind
+        if cb.kind in _AUDIO_KINDS:
+            self.audio_keys[cb.id] = cb.values
+
+    def update_cell(self, cb):
+        # reconcile a present cell: run its registered update (value/glyph in sync) then
+        # add/refresh/remove the per-cell unit overlay (the `units` toggle).
+        handlers = self.cell_kinds[cb.kind]  # registered for every kind (see make_cell); raises on drift
+        if handlers.update is not None:
+            handlers.update(cb)
+        # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
+        # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
+        # this adds/updates/removes the overlay as the toggle (or the domain) changes.
+        if cb.unit:
+            if cb.id not in self.cell_units:
+                with self.els[cb.id]:
+                    self.cell_units[cb.id] = ui.html("").classes("rtt-cellunit")
+                self.els[cb.id].classes(add="rtt-cell-united")
+            if self.cell_unit_text.get(cb.id) != cb.unit:
+                self.cell_units[cb.id].set_content(_bold_units(cb.unit))
+                self.cell_unit_text[cb.id] = cb.unit
+        elif cb.id in self.cell_units:
+            self.cell_units[cb.id].delete()
+            self.cell_units.pop(cb.id, None)
+            self.cell_unit_text.pop(cb.id, None)
+            self.els[cb.id].classes(remove="rtt-cell-united")
+
 
 @ui.page("/")
 def index() -> None:
@@ -1760,31 +1812,6 @@ def index() -> None:
     for _audio_ctrl in _AUDIO_CTRLS:  # audio_wave / audio_mode / audio_hold / audio_root
         cell_kinds[_audio_ctrl] = _KindHandlers(_build_audio_ctrl)
 
-    def _make_cell(cb):
-        # data-eid drives the JS reconciler; .mark(cb.id) is its Python-side parallel,
-        # letting the User-fixture render tests locate a cell by its stable id
-        wrap = ui.element("div").classes("rtt-cell").props(f'data-eid="{cb.id}"').mark(cb.id)
-
-        with wrap:
-            # every cell kind is registered (audit #3); indexing rather than .get means an
-            # unregistered kind raises loudly here — drift surfaces as a crash, not a silent blank cell
-            cell_kinds[cb.kind].build(cb, wrap)
-        # explanatory hover text for the interactive controls (read-only value cells get none).
-        # All wording lives in rtt.web.tooltips; a NEW cell kind must be classified there
-        # (in READONLY_KINDS or with a help entry) or test_web_tooltips' completeness sweep fails.
-        # The mark/data-eid ride the wrap, so the tooltip hangs off it too — one shared anchor.
-        help_text = tooltips.control_help(cb.kind, cb.id)
-        if help_text:
-            if cb.id in tooltips.OBJECTIVE_IDS:
-                # the read-only objective's help names a different quantity per mode (damage
-                # ⟪𝐝⟫ₚ vs the all-interval retuning magnitude); keep the Tooltip handle so
-                # render() can swap its wording in place when the mode flips, like the symbol glyph
-                with wrap:
-                    objective_tips[cb.id] = ui.tooltip(help_text)
-            else:
-                wrap.tooltip(help_text)
-        return wrap
-
     def render():
         building[0] = True
         st = editor.state
@@ -1845,44 +1872,22 @@ def index() -> None:
 
         for cb in lay.cells:
             seen.add(cb.id)
-            if cb.id in els and kinds[cb.id] != cb.kind:
-                drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
-            if cb.kind in _AUDIO_KINDS and cb.id in els and audio_keys.get(cb.id) != cb.values:
-                drop(cb.id)  # cents changed -> rebuild so the baked-in click handler sounds the new pitch
+            if cb.id in rec.els and rec.kinds[cb.id] != cb.kind:
+                rec.drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
+            if cb.kind in _AUDIO_KINDS and cb.id in rec.els and rec.audio_keys.get(cb.id) != cb.values:
+                rec.drop(cb.id)  # cents changed -> rebuild so the baked-in click handler sounds the new pitch
             container = _FREEZE_CONTAINER.get(cb.kind, "body")
-            if cb.id not in els:
+            if cb.id not in rec.els:
                 with cell_parents[container]:
-                    els[cb.id] = _make_cell(cb)
-                kinds[cb.id] = cb.kind
-                if cb.kind in _AUDIO_KINDS:
-                    audio_keys[cb.id] = cb.values
+                    rec.make_cell(cb)
             # body + row cells live in the scroll space (shifted up by fy); column + corner cells
             # keep native coords in their frozen strip / corner
             top = cb.y - (fy if container in ("body", "row") else 0)
-            els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
-            handlers = cell_kinds[cb.kind]  # registered for every kind (see _make_cell); raises on drift
-            if handlers.update is not None:
-                handlers.update(cb)
+            rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
+            rec.update_cell(cb)
 
-            # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
-            # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
-            # this adds/updates/removes the overlay as the toggle (or the domain) changes.
-            if cb.unit:
-                if cb.id not in cell_units:
-                    with els[cb.id]:
-                        cell_units[cb.id] = ui.html("").classes("rtt-cellunit")
-                    els[cb.id].classes(add="rtt-cell-united")
-                if cell_unit_text.get(cb.id) != cb.unit:
-                    cell_units[cb.id].set_content(_bold_units(cb.unit))
-                    cell_unit_text[cb.id] = cb.unit
-            elif cb.id in cell_units:
-                cell_units[cb.id].delete()
-                cell_units.pop(cb.id, None)
-                cell_unit_text.pop(cb.id, None)
-                els[cb.id].classes(remove="rtt-cell-united")
-
-        for eid in [e for e in els if e not in seen]:
-            drop(eid)
+        for eid in [e for e in rec.els if e not in seen]:
+            rec.drop(eid)
 
         # the optimization objective is read-only yet helped, and that help names a different
         # quantity per mode — the minimized damage ⟪𝐝⟫ₚ over the targets, or (all-interval) the
