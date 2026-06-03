@@ -937,10 +937,15 @@ class _GridBuilder:
         # all-interval retuning magnitude) and the editable power 𝑝 (each a value above its symbol
         # above its caption) plus the optimize button. Its height = a title inset + the title + a
         # title gap + the value row + the symbol row + the caption band + pad (the width is the
-        # targets column, floored to OPT_BOX_MIN_W). The objective's caption is one line ("power
-        # mean") target-based, but the wide "retuning magnitude" wraps to two when all-interval, so
-        # the caption band — and the whole box — reserves that second line then.
-        self.opt_cap_lines = 2 if (self.opt_ctrl and self.all_interval) else 1
+        # targets column, floored to OPT_BOX_MIN_W). The objective's caption names the quantity, and
+        # gains a "minimized" prefix while the tuning is optimized (matching the symbol's min() wrap).
+        # It wraps within the objective column, so reserve however many lines it takes — one ("power
+        # mean"), two ("minimized power mean" / "retuning magnitude"), or three ("minimized retuning
+        # magnitude").
+        self.obj_caption = "retuning magnitude" if self.all_interval else "power mean"
+        if self.tuning_optimized:
+            self.obj_caption = f"minimized {self.obj_caption}"
+        self.opt_cap_lines = _wrap_lines(self.obj_caption, OPT_OBJ_W) if self.opt_ctrl else 1
         self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
@@ -2183,10 +2188,10 @@ class _GridBuilder:
                                  "symbol", text=obj_symbol))
             # the caption naming the objective, the analogue of "optimization power": the Lp "power
             # mean" of the target damages, or the "retuning magnitude" when all-interval (so the label
-            # tracks the symbol's relabel). It spans the objective column, centred on it; the wide
-            # all-interval label wraps to the second line reserved in cap_band.
+            # tracks the symbol's relabel), prefixed "minimized" while the tuning is optimized. It
+            # spans the objective column, centred on it, wrapping to the lines cap_band reserves.
             self.cells.append(CellBox("optimization:objective:caption", obj_x, cap_top, OPT_OBJ_W, cap_band,
-                                 "caption", text="retuning magnitude" if self.all_interval else "power mean"))
+                                 "caption", text=self.obj_caption))
             # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — another COL_W gridded
             # cell — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it)
             self.cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,

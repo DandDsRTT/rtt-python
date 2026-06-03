@@ -2146,6 +2146,31 @@ def test_optimized_tuning_wraps_the_objective_symbol_in_min():
     assert symbol("minimax-S", False) == inner
 
 
+def test_minimized_objective_prefixes_its_label_with_minimized():
+    # when the displayed tuning is optimized (the symbol wraps in min()), the value shown IS the
+    # minimized objective, so its label is prefixed "minimized": "minimized power mean", or
+    # "minimized retuning magnitude" all-interval. A deviating tuning drops the prefix. The extra
+    # word wraps to its own line, so the caption band — and the box — reserves it.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"] = True
+
+    def cap(scheme, optimized):
+        cells = {c.id: c for c in spreadsheet.build(
+            base, s, tuning_scheme=scheme, tuning_optimized=optimized).cells}
+        return cells["optimization:objective:caption"]
+
+    assert cap("TILT minimax-S", True).text == "minimized power mean"
+    assert cap("TILT minimax-S", False).text == "power mean"
+    assert cap("minimax-S", True).text == "minimized retuning magnitude"
+    assert cap("minimax-S", False).text == "retuning magnitude"
+    # the reserved caption band grows by the wrapped "minimized" line
+    assert cap("TILT minimax-S", True).h == 2 * spreadsheet.CAPTION_LINE   # "minimized" / "power mean"
+    assert cap("TILT minimax-S", False).h == spreadsheet.CAPTION_LINE      # "power mean"
+    assert cap("minimax-S", True).h == 3 * spreadsheet.CAPTION_LINE         # + "retuning" / "magnitude"
+    assert cap("minimax-S", False).h == 2 * spreadsheet.CAPTION_LINE
+
+
 def test_all_interval_relabels_the_target_list_as_prime_proxy():
     # per the Guide, all-interval relabels the target list: symbol T → Tₚ, equivalence = 𝐼 (the
     # math-italic identity, per the Guide's conventions), and the lowercase name "prime proxy
