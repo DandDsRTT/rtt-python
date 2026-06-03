@@ -596,6 +596,9 @@ async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User)
     chooser = _cell_child(user, "control:slope")
     assert not chooser.enabled                                  # greyed (locked, non-interactive)
     assert chooser.value == "simplicity-weight"                 # pinned to the forced simplicity weight
+    # its caption greys too (rtt-caption-disabled), so the "damage weight slope" label is the same
+    # disabled grey as the locked value, not darker — the _update_caption branch that toggles it
+    assert "rtt-caption-disabled" in _cell_child(user, "caption:slope")._classes
 
 
 async def test_range_mode_selector_highlights_the_live_mode(user: User) -> None:

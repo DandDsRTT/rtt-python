@@ -1509,14 +1509,14 @@ class _GridBuilder:
     # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
     # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
     # the (x, width, y) to seat the dropdown at.
-    def control_box(self, box_id, ckey, top, cap_w, label):
+    def control_box(self, box_id, ckey, top, cap_w, label, disabled=False):
         dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label)
         box_x, box_y = self.col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
         self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
-        if label:
+        if label:  # disabled greys the label with its control (a locked chooser, e.g. all-interval target)
             self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
-                                 "caption", text=label, align="left"))
+                                 "caption", text=label, align="left", disabled=disabled))
         return ctrl_x, dropdown_w, ctrl_y
 
     def emit_all_interval_check(self, check_x, ctrl_y):
@@ -2086,7 +2086,7 @@ class _GridBuilder:
                                  values=tuple(service.WEIGHT_SLOPES), disabled=self.slope_locked))
             self.cells.append(CellBox("caption:slope", self.col_x["targets"], py + PRESET_H,
                                  self.col_w["targets"], CAPTION_LINE, "caption",
-                                 text="damage weight slope", align="left"))
+                                 text="damage weight slope", align="left", disabled=self.slope_locked))
         if self.row_open("damage"):  # damage is over the targets only (the tuning's own column)
             self.tval_row("damage", "targets", self.target_sizes.damage)
             # optimization adds the horizontal minimized-damage indicator (the objective ⟪𝐝⟫ₚ
@@ -2194,7 +2194,8 @@ class _GridBuilder:
             self.cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
                                  "symbol", text="𝑝"))
             self.cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
-                                 OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power"))
+                                 OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power",
+                                 disabled=self.all_interval))
             # the optimize button: a normal ROW_H-tall rectangle wide enough to seat the "double-click
             # to unlock" hint on one line beneath it. It single-clicks to optimize once, double-clicks
             # to lock auto-optimize; app.py owns that behaviour + the lock visual. The hint names the
@@ -2499,10 +2500,10 @@ class _GridBuilder:
                 if not self.tile_open(rkey, ckey):
                     return
                 top = self.ptext_band_y(rkey) + self.row_ptext[rkey]  # below the plain-text band
-                cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label)
                 # all-interval targets every interval, so the target set scheme chooser doesn't apply —
-                # grey it out disabled (it also falls back to "-"; see app._target_preset_values)
+                # grey it out disabled, its caption with it (it also falls back to "-"; see app._target_preset_values)
                 disabled = name == "target" and service.is_all_interval(self.tuning_scheme)
+                cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label, disabled=disabled)
                 self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
                                      disabled=disabled))
                 # the target chooser carries the all-interval checkbox to the dropdown's right, in the

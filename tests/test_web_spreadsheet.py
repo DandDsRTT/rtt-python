@@ -2302,7 +2302,22 @@ def test_all_interval_greys_and_locks_the_weight_slope_chooser():
     ctrl = on["control:slope"]
     assert ctrl.disabled is True
     assert ctrl.text == "simplicity-weight"
-    assert "caption:slope" in on
+    # its caption ("damage weight slope") greys with it — the disabled flag rides the caption too,
+    # so the label is the same disabled grey as the locked value, not darker
+    assert on["caption:slope"].disabled is True
+
+
+def test_all_interval_greys_the_other_locked_controls_captions():
+    # every all-interval-locked control greys its caption with it (the disabled flag rides the
+    # caption), so the label reads in the same disabled grey as its control, not darker: the
+    # optimization power ("optimization power") and the target chooser ("target interval set scheme").
+    on = {c.id: c for c in _with(scheme="minimax-S", optimization=True, presets=True).cells}
+    assert on["optimization:power:caption"].disabled is True
+    assert on["block:preset:target:label"].disabled is True
+    # a target-based scheme leaves both live (caption not greyed)
+    based = {c.id: c for c in _with(scheme="TILT minimax-S", optimization=True, presets=True).cells}
+    assert based["optimization:power:caption"].disabled is False
+    assert based["block:preset:target:label"].disabled is False
 
 
 def test_box_l_diminuator_needs_weighting_and_the_primes_column():

@@ -1147,6 +1147,10 @@ class _Reconciler:
         if self.caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
             self.captions[cb.id].set_content(html)
             self.caption_html[cb.id] = html
+        # a locked control's caption greys with it (the disabled flag), so the label reads in the
+        # same disabled grey as the control rather than the caption's darker default
+        self.captions[cb.id].classes(add="rtt-caption-disabled" if cb.disabled else "",
+                                     remove="" if cb.disabled else "rtt-caption-disabled")
 
     def _build_ptextpending(self, cb, wrap):
         # an editable vector-list dual mid-draft (comma basis / target list): a static two-tone
