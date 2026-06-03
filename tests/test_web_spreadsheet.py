@@ -2101,6 +2101,30 @@ def test_optimization_objective_carries_a_label_caption():
     assert box_allint.h == box_based.h + spreadsheet.CAPTION_LINE
 
 
+def test_all_interval_locks_the_optimization_power_to_infinity():
+    # all-interval tuning minimaxes over every interval (by duality it optimizes the primes at the
+    # dual norm power), so the stored 𝑝 is irrelevant: the optimization-power cell shows ∞ even for a
+    # finite-power scheme, and the cell is flagged disabled (greyed + locked, like the weight chooser).
+    # A target-based scheme shows its actual stored power, interactive.
+    finite_ai = service.scheme_with_power("minimax-S", 2.0)  # all-interval, stored power 2
+    assert service.is_all_interval(finite_ai) and service.optimization_power(finite_ai) == 2.0
+    allint = {c.id: c for c in _with(scheme=finite_ai, optimization=True).cells}
+    assert allint["optimization:power"].text == "∞" and allint["optimization:power"].disabled is True
+    finite_based = service.scheme_with_power("TILT minimax-S", 2.0)  # target-based, stored power 2
+    based = {c.id: c for c in _with(scheme=finite_based, optimization=True).cells}
+    assert based["optimization:power"].text == "2" and based["optimization:power"].disabled is False
+
+
+def test_all_interval_greys_and_locks_the_target_chooser():
+    # all-interval targets every interval, so the target interval set scheme chooser doesn't apply:
+    # its preset cell is flagged disabled (greyed + locked); the app also falls it back to "-". A
+    # target-based scheme leaves it live and interactive.
+    allint = {c.id: c for c in _with(scheme="minimax-S", presets=True).cells}
+    assert allint["preset:target"].disabled is True
+    based = {c.id: c for c in _with(scheme="TILT minimax-S", presets=True).cells}
+    assert based["preset:target"].disabled is False
+
+
 def test_all_interval_relabels_the_target_list_as_prime_proxy():
     # per the Guide, all-interval relabels the target list: symbol T → Tₚ, equivalence = 𝐼 (the
     # math-italic identity, per the Guide's conventions), and the lowercase name "prime proxy

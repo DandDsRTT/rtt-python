@@ -1240,6 +1240,11 @@ class _Reconciler:
         # (shown otherwise): ∞ stacks a small "(max)" below it, a numeric power shows bare
         self.inputs[cb.id].value = cb.text
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
+        # all-interval locks the optimization power at ∞ (cb.disabled): disable the field AND grey
+        # its overlay face (rtt-locked) so the lock reads — the opaque face would otherwise hide the
+        # disabled input. The 𝑞 / dual(𝑞) powerinputs carry disabled=False, so they stay live.
+        self.inputs[cb.id].set_enabled(not cb.disabled)
+        self.els[cb.id].classes(add="rtt-locked" if cb.disabled else "", remove="" if cb.disabled else "rtt-locked")
 
     def _build_gentuningcell(self, cb, wrap):
         wrap.classes("rtt-cell-input rtt-cell-stacked")
@@ -1355,12 +1360,13 @@ class _Reconciler:
     # ---- chooser dropdowns + the diminuator checkbox ----
     def _target_preset_values(self):
         """The numeric limit + TILT/OLD family the target chooser shows, or ``(None, None)``
-        when a typed/edited target list overrides the family — then both parts fall back to
-        "-" (the select via display-value, the number via its "-" placeholder). A ``None``
-        family is also what makes re-picking TILT/OLD a real value change the handler acts on,
-        so the chooser doubles as the reset back to a named list — not a same-value no-op
-        Quasar would swallow."""
-        if self._editor.target_override is not None:
+        when no named family applies — a typed/edited target list overriding it, or all-interval
+        mode (every interval, so no target set scheme). Then both parts fall back to "-" (the
+        select via display-value, the number via its "-" placeholder); all-interval also greys+locks
+        the chooser (the cell's ``disabled`` flag, applied in :meth:`_update_preset`). A ``None``
+        family is also what makes re-picking TILT/OLD a real value change the handler acts on, so the
+        chooser doubles as the reset back to a named list — not a same-value no-op Quasar would swallow."""
+        if self._editor.target_override is not None or service.is_all_interval(self._editor.tuning_scheme):
             return None, None
         family = self._editor.target_family
         limit = self._editor.target_limit
@@ -1437,6 +1443,8 @@ class _Reconciler:
             num.value = limit
             sel.value = family
             _set_offlist_prompt(sel, family)
+            num.set_enabled(not cb.disabled)  # all-interval greys+locks the chooser (it also shows "-")
+            sel.set_enabled(not cb.disabled)
         elif cb.id == "preset:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
             # option list widens/narrows as alt-complexities flips, so refresh it too
             options = list(presets.prescaler_options(self._editor.settings["alt_complexity"]))

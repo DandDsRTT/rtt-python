@@ -1102,6 +1102,16 @@ class _GridBuilder:
         # and overhangs by PAD). The caption stack rides this width; content centres within.
         return self.col_x[key], self.col_w[key]
 
+    def displayed_optimization_power(self) -> float:
+        # the optimization power 𝑝 as shown: ∞ in all-interval mode, the scheme's stored power
+        # otherwise. All-interval tuning minimaxes over every interval (it optimizes the primes at
+        # the dual norm power and never reads the stored 𝑝), so 𝑝 is fixed at ∞ there — the cell
+        # shows ∞ and goes disabled (app._update_powerinput). The power cell, the objective, and the
+        # damage-chart indicator all read this so the locked display stays consistent.
+        if service.is_all_interval(self.tuning_scheme):
+            return float("inf")
+        return service.optimization_power(self.tuning_scheme)
+
     def col_open(self, key):
         return key in self.col_x and f"col:{key}" not in self.collapsed
     # the value cells), so column labels (𝐜₁, 𝒕₁, …) can be emitted at a fixed row-relative y
@@ -2006,7 +2016,7 @@ class _GridBuilder:
             # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
             # (∞ / 2 / 1); off, the chart is plain bars. Recorded for the chart loop below.
             if self.show_optimization:
-                power = service.optimization_power(self.tuning_scheme)
+                power = self.displayed_optimization_power()  # ∞ when all-interval, like the power cell
                 chart_indicators[("damage", "targets")] = (
                     _lp_objective(self.target_sizes.damage, power), _format_power(power))
 
@@ -2068,8 +2078,9 @@ class _GridBuilder:
             obj_x = ox + OPT_PAD_L
             btn_x = ox + box_w - OPT_PAD_R - OPT_BTN_W
             pow_x = ((obj_x + COL_W) + btn_x) / 2 - COL_W / 2
-            objective = _lp_objective(self.target_sizes.damage, service.optimization_power(self.tuning_scheme))
-            power = _format_power(service.optimization_power(self.tuning_scheme))
+            opt_power = self.displayed_optimization_power()  # ∞ when all-interval (𝑝 is fixed there)
+            objective = _lp_objective(self.target_sizes.damage, opt_power)
+            power = _format_power(opt_power)
             self.cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
                                  text="optimization"))
             # the objective: the minimized-damage value (read-only, so unboxed — a plain centred gridded
@@ -2096,7 +2107,7 @@ class _GridBuilder:
             # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — another COL_W gridded
             # cell — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it)
             self.cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
-                                 "powerinput", text=power))
+                                 "powerinput", text=power, disabled=all_interval))
             self.cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
                                  "symbol", text="𝑝"))
             self.cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
@@ -2397,7 +2408,11 @@ class _GridBuilder:
                     return
                 top = self.ptext_band_y(rkey) + self.row_ptext[rkey]  # below the plain-text band
                 cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label)
-                self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name]))
+                # all-interval targets every interval, so the target set scheme chooser doesn't apply —
+                # grey it out disabled (it also falls back to "-"; see app._target_preset_values)
+                disabled = name == "target" and service.is_all_interval(self.tuning_scheme)
+                self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
+                                     disabled=disabled))
                 # the target chooser carries the all-interval checkbox to the dropdown's right, in the
                 # empty space of its now-tile-spanning box (box 𝐓); TBOX_W floors the column wide enough.
                 if name == "target" and self.settings["all_interval"]:

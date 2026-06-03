@@ -622,6 +622,29 @@ async def test_minimax_power_stacks_a_max_annotation_below_infinity(user: User) 
     assert (main.text, sub.text) == ("2", "")
 
 
+async def test_all_interval_locks_the_optimization_power_input(user: User) -> None:
+    # all-interval tuning is fixed at minimax over every interval, so the optimization power 𝑝 is
+    # locked: its field shows ∞, goes non-interactive (disabled), and its overlay face greys
+    # (rtt-locked) so the lock reads — the opaque face would otherwise hide the disabled input.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()   # reveal the power input
+    user.find(marker="toggle:row:vectors").click()                # expand the target-list row
+    user.find(kind=ui.checkbox, content="weighting").click()      # reveal the all-interval entry
+    user.find(kind=ui.checkbox, content="all-interval").click()   # show the target-controls checkbox
+    await user.should_see(marker="control:all_interval")
+    assert _cell_child(user, "optimization:power").enabled        # interactive while target-based
+    _cell_child(user, "control:all_interval").set_value(True)     # check it -> all-interval
+    await user.should_see(marker="optimization:power")
+    assert not _cell_child(user, "optimization:power").enabled    # non-interactive (locked)
+    main, sub = _stacked_face(user, "optimization:power")
+    assert (main.text, sub.text) == ("∞", "(max)")               # locked to ∞
+    assert "rtt-locked" in _wrap_classes(user, "optimization:power")  # face greyed
+    _cell_child(user, "control:all_interval").set_value(False)    # back to target-based
+    await user.should_see(marker="optimization:power")
+    assert _cell_child(user, "optimization:power").enabled        # re-enabled
+    assert "rtt-locked" not in _wrap_classes(user, "optimization:power")
+
+
 async def test_objective_tooltip_tracks_the_all_interval_mode(user: User) -> None:
     # the optimization objective is read-only but carries help, and that help names a different
     # quantity per mode: target-based the minimized damage ⟪𝐝⟫ₚ, all-interval the retuning
@@ -646,6 +669,28 @@ async def test_objective_tooltip_tracks_the_all_interval_mode(user: User) -> Non
 
     assert any("retuning magnitude" in t for t in objective_tips())   # the wording swapped in place
     assert not any("⟪𝐝⟫ₚ" in t for t in objective_tips())
+
+
+async def test_all_interval_disables_the_target_chooser_and_falls_back_to_dash(user: User) -> None:
+    # all-interval targets every interval, so the "target interval set scheme" chooser doesn't apply:
+    # both parts fall back to "-" (the family select's display-value, the limit's "-" placeholder) and
+    # the whole control greys out non-interactive. Unchecking restores the live family and interactivity.
+    await _enable(user, "presets")
+    user.find(marker="toggle:row:vectors").click()               # expand the target-list row
+    user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval entry
+    user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
+    await user.should_see(marker="control:all_interval")
+    num, sel = _target_preset(user)
+    assert sel.enabled and "display-value" not in sel._props      # live family, interactive
+    _cell_child(user, "control:all_interval").set_value(True)     # check it -> all-interval
+    await user.should_see(marker="preset:target")
+    num, sel = _target_preset(user)
+    assert not sel.enabled and not num.enabled                    # greyed + locked
+    assert sel._props.get("display-value") == "-" and num.value is None  # both fall back to "-"
+    _cell_child(user, "control:all_interval").set_value(False)    # back to target-based
+    await user.should_see(marker="preset:target")
+    num, sel = _target_preset(user)
+    assert sel.enabled and "display-value" not in sel._props      # restored & interactive
 
 
 async def test_optimization_renders_the_held_column_and_its_add_control(user: User) -> None:
