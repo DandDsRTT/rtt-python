@@ -98,11 +98,14 @@ class Editor:
     def __init__(self) -> None:
         self._undo_stack: list[_Doc] = []
         self._redo_stack: list[_Doc] = []
-        # A comma being added but not yet valid: a draft vector (d components, each an
-        # int or None while blank). It is NOT part of the document — the mapping is
-        # untouched, and a draft does not survive undo/redo/reset/load — until it is
-        # filled in with a comma independent of the basis, at which point it commits.
+        # An interval being added but not yet complete: a draft vector (d components, each
+        # an int or None while blank), one per addable column. It is NOT part of the
+        # document and does not survive undo/redo/reset/load; it renders as a blank,
+        # red-outlined column the user fills in. The comma's draft commits once it is a
+        # comma independent of the basis (re-ranking the mapping); the interval-list drafts
+        # (interest, held, target) commit once every component is filled.
         self.pending_comma: list[int | None] | None = None
+        self.pending_interest: list[int | None] | None = None
         self._restore(_initial_doc())
 
     # --- the document: capture / restore (the unit of undo, reset, persistence) ---
@@ -142,7 +145,14 @@ class Editor:
         self.target_override = doc.target_override
         self.settings = dict(doc.settings)
         self.collapsed = set(doc.collapsed)
-        self.pending_comma = None  # a draft never survives a document restore
+        self._clear_pending()  # a draft never survives a document restore
+
+    def _clear_pending(self) -> None:
+        """Discard every in-progress draft. Called whenever the document or domain shifts
+        out from under the drafts (restore/undo/redo, a temperament edit, a domain ±) —
+        each draft's length is tied to the current d, so a domain change invalidates it."""
+        self.pending_comma = None
+        self.pending_interest = None
 
     @property
     def state(self) -> TemperamentState:
@@ -193,7 +203,8 @@ class Editor:
             target_override=self.target_override,
             custom_prescaler=self.custom_prescaler,
             optimize_locked=self.optimize_locked,
-            tuning_optimized=self.tuning_is_optimized)
+            tuning_optimized=self.tuning_is_optimized,
+            pending_interest=self.pending_interest)
 
     @property
     def can_expand(self) -> bool:
@@ -237,9 +248,9 @@ class Editor:
         return self.pending_comma is not None or len(self.state.comma_basis) > 1
 
     def _apply(self, state: TemperamentState) -> None:
-        """Make a temperament edit: snapshot for undo, abandon any comma draft, set state."""
+        """Make a temperament edit: snapshot for undo, abandon any pending drafts, set state."""
         self._snapshot()
-        self.pending_comma = None
+        self._clear_pending()
         self.state = state
 
     def edit_mapping(self, mapping) -> None:
@@ -258,11 +269,32 @@ class Editor:
         ``<choose form>`` control) — an undoable edit, like :meth:`canonicalize_mapping`."""
         self.edit_comma_basis(service.canonical_comma_basis(self.state.comma_basis))
 
-    def add_interest(self) -> None:
-        """Append a blank interval of interest (a zero vector = 1/1) for the user to
-        edit, mirroring how add_comma seeds a blank comma."""
+    def _feed_draft(self, values, commit) -> list[int | None] | None:
+        """Drive an interval-list draft (interest / held / target): store the entered
+        components, and once every one is filled, snapshot and hand the completed vector to
+        ``commit`` (which folds it into the document). Returns the draft to keep pending
+        (the values, still blank somewhere) or ``None`` once committed. The comma draft has
+        its own commit gate (independence), so it does not route through here."""
+        draft = list(values)
+        if any(v is None for v in draft):
+            return draft  # still being typed in
         self._snapshot()
-        self.interest_vectors.append((0,) * self.state.d)
+        commit(tuple(int(v) for v in draft))
+        return None
+
+    def add_interest(self) -> None:
+        """Begin a blank interval-of-interest draft (a red, blank column the user fills in),
+        mirroring add_comma. Not part of the document and not undoable until it commits."""
+        self.pending_interest = [None] * self.state.d
+
+    def set_pending_interest(self, values) -> None:
+        """Hold the draft's edited components; once all are filled, commit it (append the
+        interval) and clear the draft — see :meth:`_feed_draft`."""
+        self.pending_interest = self._feed_draft(values, self.interest_vectors.append)
+
+    def cancel_pending_interest(self) -> None:
+        """Discard the draft without committing (the draft column's − control)."""
+        self.pending_interest = None
 
     def remove_interest(self, i: int) -> None:
         """Drop the i-th interval of interest (each one carries its own − control)."""
@@ -644,42 +676,42 @@ class Editor:
         if not self.can_expand:
             return  # the prime walk doesn't apply to a nonstandard subgroup
         self._snapshot()
-        self.pending_comma = None  # the draft's length is tied to the old domain
+        self._clear_pending()  # each draft's length is tied to the old domain
         self.state = service.expand_domain(self.state)
 
     def shrink(self) -> None:
         if not self.can_shrink:
             return
         self._snapshot()
-        self.pending_comma = None
+        self._clear_pending()
         self.state = service.shrink_domain(self.state)
 
     def add_generator(self) -> None:
         if not self.can_add_generator:
             return  # the diagonal expansion adds a standard prime; inert on a subgroup
         self._snapshot()
-        self.pending_comma = None  # the draft's length is tied to the old domain
+        self._clear_pending()  # each draft's length is tied to the old domain
         self.state = service.add_generator(self.state)
 
     def remove_generator(self) -> None:
         if not self.can_remove_generator:
             return
         self._snapshot()
-        self.pending_comma = None
+        self._clear_pending()
         self.state = service.remove_generator(self.state)
 
     def add_mapping_row(self) -> None:
         if not self.can_add_mapping_row:
             return  # nothing tempered to un-temper into a new generator
         self._snapshot()
-        self.pending_comma = None
+        self._clear_pending()
         self.state = service.add_mapping_row(self.state)
 
     def remove_mapping_row(self, i: int) -> None:
         if not self.can_remove_mapping_row:
             return
         self._snapshot()
-        self.pending_comma = None
+        self._clear_pending()
         self.state = service.remove_mapping_row(self.state, i)
 
     def add_comma(self) -> None:

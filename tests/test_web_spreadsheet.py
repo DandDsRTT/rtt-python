@@ -3063,7 +3063,7 @@ def test_interest_vector_cells_are_separated_boxes_not_a_contiguous_grid():
 
 def test_interest_has_add_and_per_interval_remove_controls():
     cells = {c.id: c for c in _with_interest(_INTEREST).cells}
-    assert "interest_plus" in cells  # one + appends a blank interval
+    assert "interest_plus" in cells  # one + opens a blank draft column
     # every interval carries its own − (unlike the domain/comma last-only −)
     assert {"interest_minus:0", "interest_minus:1", "interest_minus:2", "interest_minus:3"} <= set(cells)
 
@@ -3074,6 +3074,42 @@ def test_empty_but_open_interest_still_offers_the_add_control():
     cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), interest=()).cells}
     assert "interest_plus" in cells
     assert not any(c.startswith("interest_minus:") for c in cells)
+
+
+def test_adding_an_interval_of_interest_opens_a_blank_red_draft_column():
+    # mirrors the pending comma: + opens a blank, red-outlined draft column (a "?" ratio
+    # header over empty vector cells) the user fills in — not a pre-filled 1/1
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = {c.id: c for c in spreadsheet.build(base, interest=(), pending_interest=[None, None, None]).cells}
+    assert cells["interest:pending"].text == "?" and cells["interest:pending"].pending
+    assert all(cells[f"cell:interest:{p}:0"].text == "" and cells[f"cell:interest:{p}:0"].pending
+               for p in range(3))
+    # the draft has no size cells (undefined until valid), like the comma draft
+    assert "tuning:interest:0" not in cells
+    # the + rides one slot past the draft column; the draft can be cancelled with a −
+    assert cells["interest_plus"].x > cells["interest:pending"].x
+    assert "interest_minus:pending" in cells
+
+
+def test_a_partly_typed_interest_draft_shows_its_entered_components():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = {c.id: c for c in spreadsheet.build(base, interest=(), pending_interest=[-1, None, 0]).cells}
+    assert cells["cell:interest:0:0"].text == "-1"  # typed
+    assert cells["cell:interest:1:0"].text == ""    # still blank
+    assert cells["cell:interest:2:0"].text == "0"
+    assert all(cells[f"cell:interest:{p}:0"].pending for p in range(3))
+
+
+def test_a_pending_interest_draft_rides_right_of_the_committed_intervals():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = {c.id: c for c in spreadsheet.build(
+        base, interest=((-1, 1, 0),), pending_interest=[None, None, None]).cells}
+    assert not cells["cell:interest:0:0"].pending  # the committed interval stays black
+    assert cells["cell:interest:0:1"].pending and cells["cell:interest:0:1"].text == ""
+    assert cells["interest:pending"].x > cells["interest:0"].x
+    # the draft column's ket marks render red (like its cells); the real interval's don't
+    assert cells["ebkangle:vec:interest:1"].pending
+    assert not cells["ebkangle:vec:interest:0"].pending
 
 
 def test_adding_intervals_of_interest_never_shrinks_the_header():

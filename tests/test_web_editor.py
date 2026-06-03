@@ -513,24 +513,55 @@ def test_interest_intervals_add_edit_remove():
     editor = Editor()
     assert editor.interest_vectors == []  # starts empty
     editor.add_interest()
-    assert editor.interest_vectors == [(0, 0, 0)]  # a blank 1/1 (zero vector) at the current d
-    editor.set_interest_vectors([[-1, 1, 0], [0, 0, 0]])  # edit it to 3/2 and add a second
-    assert editor.interest_vectors == [(-1, 1, 0), (0, 0, 0)]
-    editor.remove_interest(1)
-    assert editor.interest_vectors == [(-1, 1, 0)]
+    assert editor.interest_vectors == []  # add only starts a blank draft (no committed 1/1)...
+    assert editor.pending_interest == [None, None, None]  # ...a red, blank, d-length draft
+    editor.set_pending_interest([-1, 1, 0])  # fill it in -> commits 3/2
+    assert editor.interest_vectors == [(-1, 1, 0)] and editor.pending_interest is None
+    editor.set_interest_vectors([[-1, 1, 0], [2, 0, -1]])  # editing existing cells replaces the set
+    assert editor.interest_vectors == [(-1, 1, 0), (2, 0, -1)]
+    editor.remove_interest(0)
+    assert editor.interest_vectors == [(2, 0, -1)]
+
+
+def test_adding_an_interval_of_interest_starts_a_blank_pending_draft():
+    # like add_comma: a blank, red-outlined draft column the user fills in, NOT a committed
+    # 1/1. Starting it touches neither the document nor the undo history.
+    editor = Editor()
+    assert editor.pending_interest is None
+    editor.add_interest()
+    assert editor.pending_interest == [None, None, None]  # a blank d-length draft
+    assert editor.interest_vectors == []  # not committed
+    assert editor.can_undo is False  # starting a draft is not an undoable edit
+
+
+def test_a_partly_filled_interest_draft_is_held_until_complete():
+    editor = Editor()
+    editor.add_interest()
+    editor.set_pending_interest([-1, None, 0])  # still being typed
+    assert editor.pending_interest == [-1, None, 0] and editor.interest_vectors == []  # held
+    editor.set_pending_interest([-1, 1, 0])  # complete -> commits 3/2 and clears the draft
+    assert editor.pending_interest is None and editor.interest_vectors == [(-1, 1, 0)]
+    assert editor.can_undo is True  # the commit is the undoable edit
+
+
+def test_cancelling_an_interval_of_interest_draft_discards_it():
+    editor = Editor()
+    editor.add_interest()
+    editor.cancel_pending_interest()
+    assert editor.pending_interest is None and editor.interest_vectors == []
+    assert editor.can_undo is False  # cancelling a draft is not an undoable edit
 
 
 def test_interest_intervals_changes_are_undoable():
-    # the interest set is part of the one document history: adding (or editing) an
-    # interval of interest is an undoable change
+    # the interest set is part of the one document history: committing a filled-in draft (or
+    # editing an existing interval) is an undoable change; starting the blank draft is not
     editor = Editor()
     editor.add_interest()
-    assert editor.can_undo is True  # adding an interval of interest is an undoable change
-    editor.set_interest_vectors([[-1, 1, 0]])  # edit it to 3/2
+    assert editor.can_undo is False  # starting the blank draft is not undoable...
+    editor.set_pending_interest([-1, 1, 0])  # ...committing the filled-in draft is
+    assert editor.can_undo is True
     editor.undo()
-    assert editor.interest_vectors == [(0, 0, 0)]  # undo reverts the edit (back to the blank)
-    editor.undo()
-    assert editor.interest_vectors == []  # ...then the add
+    assert editor.interest_vectors == []  # undo reverts the committed interval
 
 
 def test_try_edit_mapping_text_applies_a_valid_ebk_map():

@@ -1210,7 +1210,9 @@ class _Reconciler:
             .props("dense borderless").classes("rtt-cellinput")
 
     def _update_input_text(self, cb):  # interestcell / heldcell / targetcell: mirror cb.text
-        self.inputs[cb.id].value = cb.text
+        self.inputs[cb.id].value = cb.text  # a pending draft cell carries "" / the typed component
+        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                              remove="" if cb.pending else "rtt-pending")
 
     def _build_prescalercell(self, cb, wrap):
         # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
@@ -1532,11 +1534,13 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_comma))
 
-    def _build_interest_minus(self, cb, wrap):  # one per interval (each independently removable)
-        i = int(cb.id.split(":", 1)[1])
+    def _build_interest_minus(self, cb, wrap):  # one per interval (each independently removable); the draft's − cancels it
+        suffix = cb.id.split(":", 1)[1]
+        action = self._editor.cancel_pending_interest if suffix == "pending" \
+            else (lambda idx=int(suffix): self._editor.remove_interest(idx))
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None, idx=i: self._cb.act(lambda: self._editor.remove_interest(idx)))
+            .on("click", lambda _=None: self._cb.act(action))
 
     def _build_interest_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
@@ -1657,6 +1661,14 @@ def index() -> None:
         if building[0]:
             return
         d, mi = editor.state.d, len(editor.interest_vectors)
+        if editor.pending_interest is not None:
+            # the draft column rides at index mi; hand its cells to the editor, which commits
+            # (appends the interval) once every component is filled in
+            if any(f"cell:interest:{p}:{mi}" not in rec.inputs for p in range(d)):
+                return  # the draft cells aren't shown (folded away)
+            editor.set_pending_interest([_parse_int(rec.inputs[f"cell:interest:{p}:{mi}"].value) for p in range(d)])
+            render()
+            return
         if any(f"cell:interest:{p}:{i}" not in rec.inputs for i in range(mi) for p in range(d)):
             return  # the interest cells aren't currently shown (folded away)
         vectors = [[_parse_int(rec.inputs[f"cell:interest:{p}:{i}"].value) for p in range(d)] for i in range(mi)]

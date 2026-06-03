@@ -502,7 +502,8 @@ class _GridBuilder:
     def __init__(self, state, settings=None, collapsed=None,
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
-                 custom_prescaler=None, optimize_locked=False, tuning_optimized=False):
+                 custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
+                 pending_interest=None):
         self.state = state
         self.settings = settings
         self.collapsed = collapsed
@@ -511,6 +512,7 @@ class _GridBuilder:
         self.interest = interest
         self.range_mode = range_mode
         self.pending_comma = pending_comma
+        self.pending_interest = pending_interest
         self.held_vectors = held_vectors
         self.generator_tuning = generator_tuning
         self.target_override = target_override
@@ -639,6 +641,12 @@ class _GridBuilder:
         # panels or fold toggles — just its header and a single straight axis rule.
         self.interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(self.d)) for m in self.interest)
         self.mi = len(self.interest)
+        # an interval of interest being added rides as a pending draft column to the right of the
+        # committed ones (blank red cells + a "?" ratio), exactly like the pending comma, until its
+        # vector is filled in (then it commits). The draft is not a real interval, so it stays out
+        # of the ratios/sizes/complexity below — only the displayed column count grows.
+        self.pending_interest = list(self.pending_interest) if self.pending_interest is not None else None
+        self.mi_shown = self.mi + (1 if self.pending_interest is not None else 0)
         self.interest_ratios = service.comma_ratios(self.interest, self.elements)  # vector -> "num/den" (shared renderer)
         self.interest_mapped = service.mapped_intervals(self.state.mapping, self.interest_ratios, self.elements)
         self.interest_sizes = service.interval_sizes(self.tun, self.interest_ratios, self.elements)
@@ -665,19 +673,29 @@ class _GridBuilder:
         # the scheme's computed diagonal here, threading the user's typed values into every
         # prescaling/complexity/weight/tuning calculation downstream.
         self.prescaler = service.complexity_prescaler(self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)
-        interest_tiles = () if not self.interest else (
-            ("block:vec:interest", "vectors", "interest"),
-            ("block:interest", "quantities", "interest"),
-            ("block:imapped", "mapping", "interest"),
-            ("block:tuning:interest", "tuning", "interest"),
-            ("block:just:interest", "just", "interest"),
-            ("block:retune:interest", "retune", "interest"),
-            ("block:urow:interest", "units", "interest"),  # the units row's /1 over the interest column
-            ("block:prescaling:interest", "prescaling", "interest"),
-            ("block:complexity:interest", "complexity", "interest"),
-            ("block:just_audio:interest", "just_audio", "interest"),
-            ("block:tempered_audio:interest", "tempered_audio", "interest"),
-        )
+        # a pending draft alone (no committed intervals) declares just the two tiles that host
+        # it — the editable vector ket and its "?" ratio header; the derived rows (sizes,
+        # complexity, …) have no value until it commits, so they stay undeclared (no empty
+        # bracketed panels). With at least one committed interval the full set declares, and the
+        # draft rides as a blank slot within those tiles, exactly as the pending comma does.
+        interest_tiles = ()
+        if self.mi_shown:
+            interest_tiles += (
+                ("block:vec:interest", "vectors", "interest"),
+                ("block:interest", "quantities", "interest"),
+            )
+        if self.mi:
+            interest_tiles += (
+                ("block:imapped", "mapping", "interest"),
+                ("block:tuning:interest", "tuning", "interest"),
+                ("block:just:interest", "just", "interest"),
+                ("block:retune:interest", "retune", "interest"),
+                ("block:urow:interest", "units", "interest"),  # the units row's /1 over the interest column
+                ("block:prescaling:interest", "prescaling", "interest"),
+                ("block:complexity:interest", "complexity", "interest"),
+                ("block:just_audio:interest", "just_audio", "interest"),
+                ("block:tempered_audio:interest", "tempered_audio", "interest"),
+            )
         # the held interval column's tiles (computed above): a user-editable interval list, like
         # the intervals of interest. Empty by default, so — like an empty interest column — it
         # then declares no tiles, only its header, axis and the + control to add the first one.
@@ -788,7 +806,7 @@ class _GridBuilder:
             # is floored at the title width (see the loop below) and the narrow content is
             # centred within it: the title centres over the whole column on its gridline, and
             # the tiles centre on that same gridline. The board height is independent of mi.
-            ("interest", 2 * BRACKET_W + self.mi * COL_W, show_interest, True),
+            ("interest", 2 * BRACKET_W + self.mi_shown * COL_W, show_interest, True),
         )
         # A fold-toggle node column sits between the row-label gutter and the content
         # (when names show); content starts past it with a clear gap so the tiles
@@ -1050,7 +1068,7 @@ class _GridBuilder:
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
         self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown, "targets": self.k,
-                   "interest": self.mi, "held": self.nh, "detempering": self.r}
+                   "interest": self.mi_shown, "held": self.nh, "detempering": self.r}
         self.group_ratio = {  # the just interval ratio each value group is taken over
             "primes": lambda i: _ratio_str(self.elements[i]),  # a prime "p/1", or a nonprime element "n/d"
             "commas": lambda i: self.comma_ratios[i],
@@ -1717,6 +1735,10 @@ class _GridBuilder:
                     # every interval carries its own − on its branch point: any one is removable,
                     # unlike the domain/comma last-only −
                     branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
+                if self.pending_interest is not None:  # the draft column: a "?" ratio (no value yet),
+                    # blank red vector cells below, and a − on its branch point to cancel the draft
+                    self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "commaratio", text="?", comma=self.mi, pending=True))
+                    branch_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
             # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
             # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
             # the first interval can still be added). The − is the hover counterpart on a branch point.
@@ -1831,6 +1853,11 @@ class _GridBuilder:
                         # inset within the COL_W slot (centred) so each ket is its own box with a
                         # gap to its neighbours — the interest column is a collection, not a matrix
                         self.cells.append(CellBox(f"cell:interest:{p}:{i}", self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
+                if self.pending_interest is not None:  # the draft column: blank, red-outlined cells the user fills in
+                    for p in range(self.d):
+                        v = self.pending_interest[p]
+                        self.cells.append(CellBox(f"cell:interest:{p}:{self.mi}", self.interest_left(self.mi) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell",
+                                             text="" if v is None else str(v), prime=p, comma=self.mi, pending=True, unit=self.cell_unit("vectors", "interest", prime=p)))
 
         # tuning rows over the primes, commas and targets (cents); each can collapse on
         # its own. Commas sit on the same footing as targets — they are just the dual
@@ -2523,7 +2550,8 @@ class _GridBuilder:
         self.vector_list_marks("vectors", "vec:commas", "commas", self.comma_left, self.nc_shown, foot="ebkangle", separators=False,
                          pending_col=(self.nc if self.pending is not None else -1))
         self.vector_list_marks("vectors", "vec:targets", "targets", self.target_left, self.k, foot="ebkangle")
-        self.vector_list_marks("vectors", "vec:interest", "interest", self.interest_left, self.mi, foot="ebkangle", separators=False)
+        self.vector_list_marks("vectors", "vec:interest", "interest", self.interest_left, self.mi_shown, foot="ebkangle", separators=False,
+                         pending_col=(self.mi if self.pending_interest is not None else -1))
         self.vector_list_marks("vectors", "vec:held", "held", self.held_left, self.nh, foot="ebkangle")
         self.vector_list_marks("vectors", "vec:detempering", "detempering", self.detempering_left, self.r, foot="ebkangle")
         # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
@@ -2587,9 +2615,10 @@ class _GridBuilder:
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
-          custom_prescaler=None, optimize_locked=False, tuning_optimized=False) -> Layout:
+          custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
+          pending_interest=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
-        optimize_locked, tuning_optimized,
+        optimize_locked, tuning_optimized, pending_interest,
     ).layout()
