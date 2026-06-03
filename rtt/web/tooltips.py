@@ -116,6 +116,8 @@ _KIND_HELP: dict[str, str] = {
     "interest_minus": "Remove this interval of interest.",
     "held_plus": "Add a held interval.",
     "held_minus": "Remove this held interval.",
+    "target_plus": "Add a target interval to the list.",
+    "target_minus": "Remove this target interval from the list.",
     # fold / unfold toggles
     "rowtoggle": "Collapse or expand this row.",
     "coltoggle": "Collapse or expand this column.",

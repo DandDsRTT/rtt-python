@@ -554,6 +554,29 @@ class Editor:
         self.target_override = service.comma_ratios(
             [tuple(int(x) for x in m) for m in vectors], self.state.domain_basis)
 
+    def _current_targets(self) -> list[str]:
+        """The live target list as ratio strings — the manual override if set, else the
+        spec's resolved set. The basis the target ± controls edit from."""
+        if self.target_override is not None:
+            return list(self.target_override)
+        return list(service.target_interval_set(self.target_spec, self.state.domain_basis))
+
+    def add_target(self) -> None:
+        """Append a blank (1/1) target for the user to edit — the target list's + control.
+        Materializes the spec set into a manual override (like editing a target cell does)."""
+        targets = self._current_targets()
+        targets.append("1/1")
+        self._snapshot()
+        self.target_override = tuple(targets)
+
+    def remove_target(self, i: int) -> None:
+        """Drop the i-th target (each carries its own − control), materializing the spec set
+        into a manual override."""
+        targets = self._current_targets()
+        del targets[i]
+        self._snapshot()
+        self.target_override = tuple(targets)
+
     def set_range_mode(self, mode: str) -> None:
         self._snapshot()
         self.range_mode = mode

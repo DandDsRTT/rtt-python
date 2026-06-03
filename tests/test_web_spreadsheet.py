@@ -236,6 +236,30 @@ def test_a_single_generator_temperament_has_no_gen_minus_but_keeps_gen_plus():
     assert {"gen_plus", "qgen:0"} <= cells  # ...but you can still add a generator
 
 
+def test_target_list_carries_a_per_entry_minus_and_a_plus():
+    # the target interval list gets the same ± as the intervals of interest: a − over each
+    # target (any one removable) and a + on the column stub to add one.
+    lay = _layout()  # default TILT targets
+    cells = {c.id: c for c in lay.cells}
+    by_id = {ln.id: ln for ln in lay.lines}
+    k = len([c for c in cells if c.startswith("target:") and c.split(":")[1].isdigit()])
+    assert k >= 2
+    assert all(f"target_minus:{j}" in cells for j in range(k))  # a − per target
+    # the + rides the stub one COL_W past the last target's branch point, bus stretched to reach it
+    plus, bus, last_sub = cells["target_plus"], by_id["bus:targets:top"], by_id[f"v:target:{k - 1}"]
+    stub = last_sub.pos + spreadsheet.COL_W
+    assert abs((plus.x + plus.w / 2) - stub) < 0.51
+    assert abs((bus.start + bus.length) - stub) < 0.51
+
+
+def test_target_list_has_no_controls_in_all_interval():
+    # all-interval auto-generates the target list (Tₚ = I), so it carries no ± to curate
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), tuning_scheme="minimax-S")
+    cells = {c.id for c in lay.cells}
+    assert "target_plus" not in cells
+    assert not any(c.startswith("target_minus:") for c in cells)
+
+
 def test_target_intervals_column_with_mapped_list():
     cells = {c.id: c for c in _layout().cells}
     assert cells["header:targets"].text == "target\nintervals"
@@ -462,7 +486,7 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
     # no EBK marks (brackets, top brackets, braces, vector rules) and no domain/comma controls
     assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
     assert {"minus", "plus", "comma_minus", "comma_plus", "gen_minus", "gen_plus",
-            "map_minus:0", "map_plus"}.isdisjoint(ids)  # every fan ± control goes too
+            "map_minus:0", "map_plus", "target_minus:0", "target_plus"}.isdisjoint(ids)  # every fan ± control goes too
     # ...but the tiles stand empty save their fold toggles and name captions, and
     # the labels, headers and gridlines remain so the empty grid still reads
     assert {"label:mapping", "header:primes", "header:targets", "toggle:row:mapping",

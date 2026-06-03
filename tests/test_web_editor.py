@@ -496,6 +496,19 @@ def test_mapping_row_guards():
     assert editor.can_add_mapping_row is False  # nothing tempered to un-temper
 
 
+def test_add_and_remove_target_set_a_manual_override():
+    editor = Editor()  # default TILT targets, no manual override yet
+    assert editor.target_override is None
+    n = len(service.target_interval_set(editor.target_spec, editor.state.domain_basis))
+    editor.remove_target(0)  # drop the first target → materializes the spec list as an override
+    assert editor.target_override is not None and len(editor.target_override) == n - 1
+    editor.add_target()  # append a blank (1/1) target for the user to edit
+    assert len(editor.target_override) == n and editor.target_override[-1] == "1/1"
+    editor.undo()
+    editor.undo()
+    assert editor.target_override is None  # each ± is a single undoable step
+
+
 def test_interest_intervals_add_edit_remove():
     editor = Editor()
     assert editor.interest_vectors == []  # starts empty

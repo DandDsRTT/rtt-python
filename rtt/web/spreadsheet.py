@@ -559,7 +559,8 @@ class _GridBuilder:
         # a typed explicit target list overrides the TILT/OLD spec; every target consumer below
         # derives from this one resolved tuple, so the override flows through the whole grid
         self.targets = target_override if target_override is not None else service.target_interval_set(self.target_spec, self.elements)
-        if service.is_all_interval(self.tuning_scheme):
+        self.all_interval = service.is_all_interval(self.tuning_scheme)  # T auto-becomes Tₚ = I (no ± then)
+        if self.all_interval:
             # all-interval: the target list T becomes the identity (Tₚ = I) — every interval, by duality,
             # is represented by the domain's own basis (the primes). Every target-column row then derives
             # its prime-based "when all-interval" form (𝐿, ‖𝐿‖, 𝐿⁻¹, 𝑟, |𝑟|𝑋⁻¹) from this `targets`.
@@ -1032,7 +1033,7 @@ class _GridBuilder:
             "detempering": lambda i: self.gens[i],  # the detempering interval as a ratio (service.generators = D)
         }
 
-        self.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("gens", "primes", "commas", "interest", "held")
+        self.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("gens", "primes", "commas", "targets", "interest", "held")
                        if self._plus_shows(ckey)}
 
         # The interval-vectors basis AND the mapping rows fan HORIZONTALLY (one sub-row per prime /
@@ -1234,6 +1235,8 @@ class _GridBuilder:
     def _plus_shows(self, ckey):  # mirrors the +'s emit gate in the quantities block (col_open for the
         if ckey in ("interest", "held"):  # addable sets, so an empty-but-open column still adds one)
             return self.col_open(ckey) and self.row_open("quantities")
+        if ckey == "targets":  # the target list is user-curated only when NOT all-interval (else it's auto Tₚ = I)
+            return self.tile_open("quantities", "targets") and not self.all_interval
         return self.tile_open("quantities", ckey)
 
     def closed_form_operand(self, key, group, i):
@@ -1660,6 +1663,10 @@ class _GridBuilder:
             if self.tile_open("quantities", "targets"):
                 for j in range(self.k):
                     self.cells.append(CellBox(f"target:{j}", self.target_left(j), qy, COL_W, ROW_H, "target", text=self.targets[j]))
+                    # each user-curated target carries its own − (like the intervals of interest); the
+                    # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
+                    if not self.all_interval:
+                        branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
                 for i in range(self.nh):
                     # the derived ratio (read-only, from the editable vector) heads each column
@@ -1677,7 +1684,7 @@ class _GridBuilder:
             # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
             # the first interval can still be added). The − is the hover counterpart on a branch point.
             for ckey, cid in (("gens", "gen_plus"), ("primes", "plus"), ("commas", "comma_plus"),
-                              ("held", "held_plus"), ("interest", "interest_plus")):
+                              ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
                 if ckey in self.plus_stub_x:
                     branch_plus(cid, ckey, cid)
 

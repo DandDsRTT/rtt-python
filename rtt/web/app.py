@@ -941,6 +941,8 @@ class _Reconciler:
         self.cell_kinds["interest_plus"] = _KindHandlers(self._build_interest_plus)
         self.cell_kinds["held_minus"] = _KindHandlers(self._build_held_minus)
         self.cell_kinds["held_plus"] = _KindHandlers(self._build_held_plus)
+        self.cell_kinds["target_minus"] = _KindHandlers(self._build_target_minus)
+        self.cell_kinds["target_plus"] = _KindHandlers(self._build_target_plus)
         self.cell_kinds["speaker"] = _KindHandlers(self._build_speaker)
         for _audio_ctrl in _AUDIO_CTRLS:  # audio_wave / audio_mode / audio_hold / audio_root
             self.cell_kinds[_audio_ctrl] = _KindHandlers(self._build_audio_ctrl)
@@ -1507,6 +1509,15 @@ class _Reconciler:
     def _build_held_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_held))
+
+    def _build_target_minus(self, cb, wrap):  # one per target (each independently removable)
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None, idx=cb.comma: self._cb.act(lambda: self._editor.remove_target(idx)))
+
+    def _build_target_plus(self, cb, wrap):
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.add_target))
 
     def _build_speaker(self, cb, wrap):  # play this pitch per its tile's mode (client-side engine)
         tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
