@@ -15,6 +15,7 @@ import math
 import sys
 from html import escape as _escape
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Callable, NamedTuple
 from urllib.parse import quote
 
@@ -861,11 +862,74 @@ class _Reconciler:
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
         self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.cents, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.audio_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
-        # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build, update). Populated
-        # below as each kind family is migrated off the _make_cell / render if/elif ladders; a kind
-        # absent here still falls through to its ladder branch, so the registry and ladders coexist
-        # during the migration (and the ladders shrink to nothing once every kind is registered).
+        # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build[, update]).
+        # Every kind is registered below; make_cell/update_cell index it directly (no fallback),
+        # so an unregistered kind raises loudly rather than rendering a silent blank cell.
         self.cell_kinds: dict[str, _KindHandlers] = {}
+        for _ebk_kind in _EBK_SVG_KINDS:  # bracket / ebktop / ebkbrace / ebkangle / vbar
+            self.cell_kinds[_ebk_kind] = _KindHandlers(self._build_svgfill, self._update_ebk)
+        self.cell_kinds["chart"] = _KindHandlers(self._build_svgfill, self._update_chart)
+        self.cell_kinds["rangechart"] = _KindHandlers(self._build_svgfill, self._update_rangechart)
+
+        self.cell_kinds["count"] = _KindHandlers(self._build_count, self._update_mathcell)
+        self.cell_kinds["symbol"] = _KindHandlers(self._build_symbol, self._update_mathcell)
+        self.cell_kinds["matlabel"] = _KindHandlers(self._build_matlabel, self._update_mathcell)
+        self.cell_kinds["units"] = _KindHandlers(self._build_units, self._update_mathcell)
+        self.cell_kinds["caption"] = _KindHandlers(self._build_caption, self._update_caption)
+
+        self.cell_kinds["ptextpending"] = _KindHandlers(self._build_ptextpending, self._update_ptextpending)
+        self.cell_kinds["mathexpr"] = _KindHandlers(self._build_mathexpr, self._update_mathexpr)
+
+        self.cell_kinds["mapping"] = _KindHandlers(self._build_mapping, self._update_mapping)
+        self.cell_kinds["commacell"] = _KindHandlers(self._build_commacell, self._update_commacell)
+        self.cell_kinds["interestcell"] = _KindHandlers(self._build_interestcell, self._update_input_text)
+        self.cell_kinds["heldcell"] = _KindHandlers(self._build_heldcell, self._update_input_text)
+        self.cell_kinds["targetcell"] = _KindHandlers(self._build_targetcell, self._update_input_text)
+        self.cell_kinds["prescalercell"] = _KindHandlers(self._build_prescalercell, self._update_prescalercell)
+        self.cell_kinds["powerinput"] = _KindHandlers(self._build_powerinput, self._update_input_text)
+        self.cell_kinds["gentuningcell"] = _KindHandlers(self._build_gentuningcell, self._update_gentuningcell)
+
+        self.cell_kinds["ptextedit"] = _KindHandlers(self._build_ptextedit, self._update_ptextedit)
+
+        self.cell_kinds["genratio"] = _KindHandlers(self._build_genratio, self._update_ratio)
+        self.cell_kinds["target"] = _KindHandlers(self._build_target, self._update_ratio)
+        self.cell_kinds["commaratio"] = _KindHandlers(self._build_commaratio, self._update_ratio)
+        self.cell_kinds["tval"] = _KindHandlers(self._build_tval, self._update_tval)
+
+        self.cell_kinds["prime"] = _KindHandlers(self._build_white_label, self._update_label)
+        self.cell_kinds["formcell"] = _KindHandlers(self._build_white_label, self._update_label)
+        _val_builder = self._label_builder("rtt-val")
+        self.cell_kinds["mapped"] = _KindHandlers(_val_builder, self._update_label)
+        self.cell_kinds["vec"] = _KindHandlers(_val_builder, self._update_label)
+        self.cell_kinds["colheader"] = _KindHandlers(self._label_builder("rtt-colheader"), self._update_label)
+        self.cell_kinds["rowlabel"] = _KindHandlers(self._label_builder("rtt-rowlabel"), self._update_label)
+        self.cell_kinds["ptext"] = _KindHandlers(self._label_builder("rtt-ptext"), self._update_ptext)
+        self.cell_kinds["boxtitle"] = _KindHandlers(self._label_builder("rtt-boxtitle"), None)  # a static in-tile title
+
+        self.cell_kinds["rangemode"] = _KindHandlers(self._build_rangemode, self._update_rangemode)
+        self.cell_kinds["optimize"] = _KindHandlers(self._build_optimize, self._update_optimize)
+        self.cell_kinds["rowtoggle"] = _KindHandlers(self._build_foldtoggle, self._update_foldtoggle)
+        self.cell_kinds["coltoggle"] = _KindHandlers(self._build_foldtoggle, self._update_foldtoggle)
+        self.cell_kinds["tiletoggle"] = _KindHandlers(self._build_foldtoggle, self._update_foldtoggle)
+        self.cell_kinds["alltoggle"] = _KindHandlers(self._build_alltoggle, self._update_foldtoggle)
+
+        self.cell_kinds["preselect"] = _KindHandlers(self._build_preselect, self._update_preselect)
+        self.cell_kinds["control_select"] = _KindHandlers(self._build_control_select, self._update_control_select)
+        self.cell_kinds["control_check"] = _KindHandlers(self._build_control_check, self._update_control_check)
+        self.cell_kinds["formchooser"] = _KindHandlers(self._build_formchooser, self._update_formchooser)
+
+        self.cell_kinds["minus"] = _KindHandlers(self._build_minus)
+        self.cell_kinds["plus"] = _KindHandlers(self._build_plus)
+        self.cell_kinds["basis_minus"] = _KindHandlers(self._build_basis_minus)
+        self.cell_kinds["comma_minus"] = _KindHandlers(self._build_comma_minus)
+        self.cell_kinds["comma_plus"] = _KindHandlers(self._build_comma_plus)
+        self.cell_kinds["interest_minus"] = _KindHandlers(self._build_interest_minus)
+        self.cell_kinds["interest_plus"] = _KindHandlers(self._build_interest_plus)
+        self.cell_kinds["held_minus"] = _KindHandlers(self._build_held_minus)
+        self.cell_kinds["held_plus"] = _KindHandlers(self._build_held_plus)
+        self.cell_kinds["speaker"] = _KindHandlers(self._build_speaker)
+        for _audio_ctrl in _AUDIO_CTRLS:  # audio_wave / audio_mode / audio_hold / audio_root
+            self.cell_kinds[_audio_ctrl] = _KindHandlers(self._build_audio_ctrl)
 
     def drop(self, eid):
         """Remove an entity's element and forget every per-id handle for it (see _handle_dicts)."""
@@ -925,6 +989,494 @@ class _Reconciler:
             self.cell_unit_text.pop(cb.id, None)
             self.els[cb.id].classes(remove="rtt-cell-united")
 
+    def set_cents_face(self, cid, text):
+        """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
+        fraction blank when the value is an integer or the cell is blanked). Shared by the
+        read-only tval cells and the editable cents cells (whose face overlays their input)."""
+        whole, frac = _cents_parts(text)
+        self.cents[cid][0].set_text(whole)
+        self.cents[cid][1].set_text(f".{frac}" if frac else "")
+
+    def cents_face(self, cb, cls):
+        """Build the stacked int-over-fraction cents face (the read-only tval look: the whole
+        part big over a smaller dot-led fraction) and register its labels so the update keeps
+        them synced. Shared by the read-only tval cell and the editable cents cells — the latter
+        pass the overlay class and lay it over their input. Builds into the active cell container."""
+        whole, frac = _cents_parts(cb.text)
+        with ui.element("div").classes(cls):
+            w = ui.label(whole).classes("rtt-cents-int")
+            f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
+        self.cents[cb.id] = (w, f)
+
+    def _ratio(self, cb, approx):
+        """A ratio rendered as a stacked fraction (with a ~ prefix when approximate)."""
+        parts = _ratio_parts(cb.text)
+        with ui.element("div").classes("rtt-ratio"):
+            if approx:
+                ui.label("~").classes("rtt-approx")
+            if parts:
+                with ui.element("div").classes("rtt-frac"):
+                    num = ui.label(parts[0]).classes("rtt-frac-num")
+                    den = ui.label(parts[1]).classes("rtt-frac-den")
+                self.fracs[cb.id] = (num, den)
+            else:
+                self.labels[cb.id] = ui.label(cb.text).classes("rtt-val")
+
+    # ---- cell-kind handlers (audit #3): each kind's build + update, co-located here so a
+    # built-but-not-filled drift between the two ladders becomes structurally impossible ----
+    # The html-content families build an empty ui.html; the update fills it (re-drawing only
+    # when the cached key changes). The EBK marks, bar chart and range chart share the build.
+    def _build_svgfill(self, cb, wrap):
+        self.htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in the update from the cell's px box
+
+    def _update_ebk(self, cb):
+        # the mark is drawn 1:1 to its px box, so redraw it whenever the box changes size (e.g.
+        # the brace/top bracket as the domain grows) or its pending (red) state flips (a draft
+        # comma's marks committing to black)
+        if self.ebk_sizes.get(cb.id) != (cb.w, cb.h, cb.pending):
+            self.htmls[cb.id].set_content(_ebk_svg(cb))
+            self.ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
+
+    def _update_chart(self, cb):
+        # redraw when the box resizes OR the underlying data / indicator changes
+        key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
+        if self.chart_keys.get(cb.id) != key:
+            self.htmls[cb.id].set_content(
+                _bar_chart(cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label))
+            self.chart_keys[cb.id] = key
+
+    def _update_rangechart(self, cb):
+        # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit)
+        key = (cb.w, cb.h, cb.ranges, cb.values)
+        if self.range_keys.get(cb.id) != key:
+            self.htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges, cb.values))
+            self.range_keys[cb.id] = key
+
+    def _build_count(self, cb, wrap):
+        self.math_cells[cb.id] = ui.html("").classes("rtt-count")  # a scalar "symbol = value"; filled in update
+
+    def _build_symbol(self, cb, wrap):
+        wrap.classes("rtt-symbol-cell")
+        # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off)
+        cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
+        self.math_cells[cb.id] = ui.html("").classes(cls)
+
+    def _build_matlabel(self, cb, wrap):
+        # routed through _math_html so its bold-italic / bold-upright glyphs draw in the same
+        # styled face as the tile symbol it indexes; the complexity row's longer labels (‖L𝐜ᵢ‖q)
+        # take a smaller variant to avoid colliding
+        cls = "rtt-matlabel rtt-matlabel-norm" if "‖" in cb.text else "rtt-matlabel"
+        wrap.classes("rtt-matlabel-cell")
+        self.math_cells[cb.id] = ui.html("").classes(cls)
+
+    def _build_units(self, cb, wrap):
+        wrap.classes("rtt-units-cell")
+        self.math_cells[cb.id] = ui.html("").classes("rtt-units")
+
+    def _update_mathcell(self, cb):  # shared by symbol / count / units / matlabel
+        # symbols/equivalence tails/counts and matrix row/col labels go through _math_html (styled
+        # math glyphs); units use _units_html (a single-story-g sans value, serif label)
+        html = _units_html(cb.text) if cb.kind == "units" else _math_html(cb.text)
+        if self.math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
+            self.math_cells[cb.id].set_content(html)
+            self.math_rendered[cb.id] = html
+            if cb.id == "optimization:objective:symbol":
+                # all-interval relabels this to the wide retuning magnitude ‖𝒓𝐿⁻¹‖dual(q); shrink
+                # it (rtt-opt-wide) so it stays centred over its COL_W value
+                wide = "‖" in cb.text
+                self.math_cells[cb.id].classes(
+                    replace="rtt-symbol rtt-opt-1line rtt-opt-wide" if wide
+                    else "rtt-symbol rtt-opt-1line")
+
+    def _build_caption(self, cb, wrap):
+        wrap.classes("rtt-caption-cell")
+        # the optimization box's captions stay on one line (no wrap), unlike tile names; a caption
+        # with align="left" reads left-justified under its control (e.g. a preselect chooser's label)
+        cls = "rtt-caption rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-caption"
+        if cb.align == "left":
+            cls += " rtt-caption-left"
+        self.captions[cb.id] = ui.html("").classes(cls)
+
+    def _update_caption(self, cb):
+        html = _underline_html(cb.text, cb.underlines)
+        if self.caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
+            self.captions[cb.id].set_content(html)
+            self.caption_html[cb.id] = html
+
+    def _build_ptextpending(self, cb, wrap):
+        # comma basis mid-draft: a static two-tone box (the draft is typed into the red grid
+        # cells, not here); content set in the update
+        self.htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
+
+    def _update_ptextpending(self, cb):
+        # the committed commas black and the draft vector red (same red as its grid cells)
+        prefix, draft, suffix = service.comma_basis_pending_text(self._editor.state.comma_basis, self._editor.pending_comma)
+        self.htmls[cb.id].set_content(
+            f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
+        self.htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
+
+    def _build_mathexpr(self, cb, wrap):
+        self.exprs[cb.id] = ui.html("").classes("rtt-mathexpr")  # a just value's stacked closed form; drawn in update
+
+    def _update_mathexpr(self, cb):
+        # redraw (with refit fonts) whenever the expression text or cell width changes
+        if self.expr_state.get(cb.id) != (cb.text, cb.w):
+            self.exprs[cb.id].set_content(_mathexpr_html(cb.text, cb.w))
+            self.expr_state[cb.id] = (cb.text, cb.w)
+
+    # ---- editable grid-input cells: an input registered in the inputs dict, its value mirrored
+    # in the update. interestcell / heldcell / targetcell / powerinput share the plain-value fill;
+    # prescalercell / gentuningcell also overlay a stacked cents face. ----
+    def _build_mapping(self, cb, wrap):
+        wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
+        self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_mapping_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _update_mapping(self, cb):
+        self.inputs[cb.id].value = "" if cb.blank else str(self._editor.state.mapping[cb.gen][cb.prime])
+
+    def _build_commacell(self, cb, wrap):
+        wrap.classes("rtt-cell-input")
+        self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_comma_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _update_commacell(self, cb):
+        if cb.pending:  # the draft column: show the typed component (blank if None), red-outlined
+            v = self._editor.pending_comma[cb.prime] if self._editor.pending_comma is not None else None
+            self.inputs[cb.id].value = "" if v is None else str(v)
+        else:
+            self.inputs[cb.id].value = "" if cb.blank else str(self._editor.state.comma_basis[cb.comma][cb.prime])
+        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                              remove="" if cb.pending else "rtt-pending")
+
+    def _build_interestcell(self, cb, wrap):
+        wrap.classes("rtt-cell-input")
+        self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_interest_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _build_heldcell(self, cb, wrap):
+        wrap.classes("rtt-cell-input")
+        self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_held_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _build_targetcell(self, cb, wrap):
+        wrap.classes("rtt-cell-input")
+        self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_target_cells_change()) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _update_input_text(self, cb):  # interestcell / heldcell / targetcell / powerinput: mirror cb.text
+        self.inputs[cb.id].value = cb.text
+
+    def _build_prescalercell(self, cb, wrap):
+        # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
+        # tval "0" — 𝐿 is diagonal). Each input dispatches to set_custom_prescaler_entry; the cid
+        # carries the diagonal slot, so the lambda closes over it (a free cb would be the LAST
+        # cell's id by the time the user types)
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
+        self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_prescaler_change(cid)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        self.cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
+
+    def _update_prescalercell(self, cb):
+        # reflect the live prescaler diagonal (the override if set, else the scheme-derived value —
+        # spreadsheet.build emits the final text). Blank when quantities are off, like the other cells
+        self.inputs[cb.id].value = cb.text
+        self.set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
+
+    def _build_powerinput(self, cb, wrap):
+        # the optimization power 𝑝, or the box-𝒄 norm power 𝑞. The symbol label rides as a separate
+        # cell below; the field itself shows only the value, in the bordered cell-input box
+        wrap.classes("rtt-cell-input")
+        self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_power_change(cid)) \
+            .props("dense borderless").classes("rtt-cellinput")
+
+    def _build_gentuningcell(self, cb, wrap):
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
+        self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_gentuning_change(cid)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        self.cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
+
+    def _update_gentuningcell(self, cb):
+        text = "" if cb.blank else cb.text  # blank when quantities off
+        self.inputs[cb.id].value = text
+        self.set_cents_face(cb.id, text)  # the overlaid stacked face mirrors the input
+
+    def _build_ptextedit(self, cb, wrap):
+        # an editable dual: typing a valid EBK string drives the grid (its own ptext_inputs dict)
+        self.ptext_inputs[cb.id] = ui.input(value=cb.text,
+                on_change=lambda e, cid=cb.id: self._cb.on_ptext_edit(cid, e.value)) \
+            .props("dense borderless").classes("rtt-ptextedit")
+
+    def _update_ptextedit(self, cb):  # reflect the canonical string + its shrink-to-fit font
+        self.ptext_inputs[cb.id].value = cb.text
+        self.ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
+
+    # ---- ratio faces (a stacked fraction via _ratio) + the read-only cents (tval) face ----
+    def _build_genratio(self, cb, wrap):
+        self._ratio(cb, approx=True)  # a generator ratio, shown ~approximate
+
+    def _build_target(self, cb, wrap):
+        self._ratio(cb, approx=False)  # a target / comma ratio (exact)
+
+    def _build_commaratio(self, cb, wrap):
+        if cb.pending:  # the draft comma's "?" quantity, red
+            self.labels[cb.id] = ui.label(cb.text).classes("rtt-val rtt-pending-q")
+        else:
+            self._ratio(cb, approx=False)
+
+    def _update_ratio(self, cb):  # genratio / target / commaratio: refresh the stacked fraction face
+        # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
+        if cb.id in self.fracs:
+            num, den = _ratio_parts(cb.text) or (cb.text, "")
+            self.fracs[cb.id][0].set_text(num)
+            self.fracs[cb.id][1].set_text(den)
+
+    def _build_tval(self, cb, wrap):
+        self.cents_face(cb, "rtt-tval")  # the read-only stacked int-over-fraction cents face
+
+    def _update_tval(self, cb):
+        self.set_cents_face(cb.id, cb.text)
+
+    # ---- plain label cells: a ui.label whose text the update keeps in sync (set_text). prime /
+    # formcell sit in a white-bordered box; ptext also tracks a shrink-to-fit font; boxtitle is static ----
+    def _label_builder(self, cls):  # a build that drops a classed ui.label into the cell, registered in labels
+        def build(cb, wrap):
+            self.labels[cb.id] = ui.label(cb.text).classes(cls)
+        return build
+
+    def _build_white_label(self, cb, wrap):  # prime / formcell: a read-only bordered cell
+        with ui.element("div").classes("rtt-white"):
+            self.labels[cb.id] = ui.label(cb.text)
+
+    def _update_label(self, cb):  # prime / formcell / colheader / rowlabel / mapped / vec
+        self.labels[cb.id].set_text(cb.text)
+
+    def _update_ptext(self, cb):  # a read-only value: keep its text and shrink-to-fit font in sync
+        self.labels[cb.id].set_text(cb.text)
+        self.labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
+
+    # ---- interactive controls with an update: range-mode selector, optimize button, fold toggles ----
+    def _build_rangemode(self, cb, wrap):
+        wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
+        opts = {}
+        for mode in ("monotone", "tradeoff"):
+            opt = ui.element("div").classes("rtt-rangeopt")
+            with opt:
+                ui.element("span").classes("rtt-rangebox")  # the square (filled when selected)
+                ui.label(mode).classes("rtt-rangelabel")
+            opt.on("click", lambda _=None, m=mode: self._cb.on_range_mode(m))
+            opts[mode] = opt
+        self.rangeopts[cb.id] = opts
+
+    def _update_rangemode(self, cb):  # fill the live mode's square (the other's is hollow)
+        for mode, opt in self.rangeopts[cb.id].items():
+            (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
+             else opt.classes(remove="rtt-rangeopt-on"))
+
+    def _build_optimize(self, cb, wrap):
+        # single click optimizes once (freeze at the optimum); double click toggles the auto-
+        # optimize lock. A double-click also fires its two single clicks, but optimize() is
+        # idempotent, so a double-click's net effect is the lock toggle.
+        self.opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: self._cb.act(self._editor.optimize), color=None) \
+            .props("unelevated dense no-caps").classes("rtt-optimize")
+        self.opt_buttons[cb.id].on("dblclick", lambda: self._cb.act(self._editor.toggle_optimize_lock))
+
+    def _update_optimize(self, cb):  # mark the button when its auto-optimize lock is on
+        (self.opt_buttons[cb.id].classes(add="rtt-optimize-locked") if self._editor.optimize_locked
+         else self.opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
+
+    def _build_foldtoggle(self, cb, wrap):  # rowtoggle / coltoggle / tiletoggle: a clickable chevron over its band
+        item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
+        self.htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
+        self.fold_state[cb.id] = cb.text  # the glyph swaps on collapse/expand (see _update_foldtoggle)
+        wrap.on("click", lambda _=None, it=item: self._cb.on_toggle(it))
+
+    def _build_alltoggle(self, cb, wrap):  # the master expand/collapse-all control in the node corner
+        self.htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
+        self.fold_state[cb.id] = cb.text
+        wrap.on("click", lambda _=None: self._cb.on_toggle_all())
+
+    def _update_foldtoggle(self, cb):  # swap the chevron SVG when the band folds / unfolds
+        if self.fold_state.get(cb.id) != cb.text:
+            self.htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
+            self.fold_state[cb.id] = cb.text
+
+    # ---- chooser dropdowns + the diminuator checkbox ----
+    def _build_preselect(self, cb, wrap):
+        name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
+        if name == "target":
+            # a numeric limit override beside the TILT/OLD family select, seeded from the editor's
+            # live target family + (optional) manual limit
+            with ui.element("div").classes("rtt-preselect-target"):
+                num = ui.number(value=self._editor.target_limit, min=2,
+                        on_change=lambda e: self._cb.on_target_change()) \
+                    .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
+                sel = ui.select(list(presets.TARGET_SETS), value=self._editor.target_family,
+                        on_change=lambda e: self._cb.on_target_change()) \
+                    .props(_select_props(cb.w - 30)).classes("rtt-preselect")  # field = cell − the 30px square (touching, no gap)
+            self.selects[cb.id] = (num, sel)
+        elif name == "temperament":
+            # a normal dropdown listing only the prime-limit dividers and their presets (grouped in
+            # the open list). The chosen preset shows in the box; when none matches, a "-" prompt
+            # shows there as a display-value placeholder — never a pickable row in the list.
+            value = presets.identify(self._editor.state)
+            sel = _GroupedSelect(presets.temperament_options(), value=value,
+                    is_divider=presets.is_divider,
+                    on_change=lambda e: self._cb.on_preselect("temperament", e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preselect")
+            _set_offlist_prompt(sel, value)
+            self.selects[cb.id] = sel
+        elif name == "prescaler":
+            # the predefined-prescalers chooser: log-prime always, the rest (identity / prime) gated
+            # behind alt-complexities. "-" when a manual diagonal edit deviates from the named
+            # prescaler (editor.displayed_prescaler_name returns None then).
+            options = list(presets.prescaler_options(self._editor.settings["alt_complexity"]))
+            value = self._editor.displayed_prescaler_name
+            value = value if value in options else None
+            sel = ui.select(options, value=value,
+                    on_change=lambda e: self._cb.on_preselect("prescaler", e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preselect")
+            _set_offlist_prompt(sel, value)
+            self.selects[cb.id] = sel
+        else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-interval);
+            # a control-refined scheme has no name, shown as the "-" placeholder. Alternative-
+            # complexity schemes are gated behind the alt. complexity setting.
+            options = presets.tuning_scheme_options(
+                service.is_all_interval(self._editor.tuning_scheme), self._editor.settings["alt_complexity"])
+            # "-" when the displayed tuning is off the named list — a refined spec, or a manual
+            # override deviating from the scheme's optimum; else the offered name
+            name = self._editor.displayed_tuning_scheme_name
+            scheme = name if name in options else None
+            sel = ui.select(options, value=scheme,
+                    on_change=lambda e: self._cb.on_preselect("tuning", e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preselect")
+            _set_offlist_prompt(sel, scheme)
+            self.selects[cb.id] = sel
+
+    def _update_preselect(self, cb):
+        # mirror the live selection: the temperament chooser shows the matched preset (or its
+        # placeholder), the target chooser splits into limit + family, the tuning chooser shows its
+        # scheme. building[0] guards echoes.
+        if cb.id.startswith("preselect:temperament"):  # base + the comma-basis copy
+            value = presets.identify(self._editor.state)
+            self.selects[cb.id].value = value
+            _set_offlist_prompt(self.selects[cb.id], value)
+        elif cb.id == "preselect:target":
+            num, sel = self.selects[cb.id]
+            family = self._editor.target_family
+            # always show the number in use: the manual limit, or the domain default
+            limit = self._editor.target_limit
+            num.value = limit if limit is not None else \
+                service.default_target_limit(family, service.standard_primes(self._editor.state.d))
+            sel.value = family
+        elif cb.id == "preselect:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
+            # option list widens/narrows as alt-complexities flips, so refresh it too
+            options = list(presets.prescaler_options(self._editor.settings["alt_complexity"]))
+            value = self._editor.displayed_prescaler_name
+            value = value if value in options else None
+            self.selects[cb.id].set_options(options, value=value)
+            _set_offlist_prompt(self.selects[cb.id], value)
+        else:  # tuning — a refined spec or a deviating manual override shows "-"
+            scheme = self._editor.displayed_tuning_scheme_name
+            # the option LABELS T-prefix only while target-based, so recompute them as the all-
+            # interval checkbox flips (set once at creation, they would otherwise go stale)
+            options = presets.tuning_scheme_options(
+                service.is_all_interval(self._editor.tuning_scheme), self._editor.settings["alt_complexity"])
+            self.selects[cb.id].set_options(options, value=scheme)
+            _set_offlist_prompt(self.selects[cb.id], scheme)
+
+    def _build_control_select(self, cb, wrap):  # a weighting chooser (complexity / norm / weight slope)
+        self.selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
+                on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
+            .props(_select_props(cb.w)).classes("rtt-preselect")
+
+    def _update_control_select(self, cb):  # mirror the live alt.-complexity choice
+        self.selects[cb.id].value = cb.text or None
+
+    def _build_control_check(self, cb, wrap):  # the box-𝐋 "replace diminuator" checkbox (size factor)
+        self.checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
+                on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
+            .props("dense").classes("rtt-control-check")
+
+    def _update_control_check(self, cb):  # mirror the live "replace diminuator" state
+        self.checks[cb.id].value = cb.checked
+
+    def _build_formchooser(self, cb, wrap):  # the <choose form> control: canonicalizes its matrix on select
+        name = cb.id.split(":", 1)[1]  # mapping / comma_basis
+        self.selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
+                on_change=lambda e, n=name: self._cb.on_form_choose(n, e.value)) \
+            .props(_select_props(cb.w)).classes("rtt-preselect")
+
+    def _update_formchooser(self, cb):  # a one-shot action: snap back to the placeholder
+        self.selects[cb.id].value = ""
+
+    # ---- static controls (build only, no update): the domain/comma/interest/held ± buttons,
+    # the speaker, and the audio bank glyphs. Their click / JS handlers are baked at build time. ----
+    def _build_minus(self, cb, wrap):  # remove the highest prime; a hover − centred on the last prime's branch point
+        wrap.classes("rtt-minus-zone")  # clear of the editable cell below
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.shrink))
+
+    def _build_plus(self, cb, wrap):  # add a prime; the always-shown + on the bus stub
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.expand))
+
+    def _build_basis_minus(self, cb, wrap):  # the domain − on the interval-vectors row's left bus
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
+            .on("click", lambda _=None: self._cb.act(self._editor.shrink))
+
+    def _build_comma_minus(self, cb, wrap):  # drop the last comma, or cancel the pending draft
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.remove_comma))
+
+    def _build_comma_plus(self, cb, wrap):
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.add_comma))
+
+    def _build_interest_minus(self, cb, wrap):  # one per interval (each independently removable)
+        i = int(cb.id.split(":", 1)[1])
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None, idx=i: self._cb.act(lambda: self._editor.remove_interest(idx)))
+
+    def _build_interest_plus(self, cb, wrap):
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.add_interest))
+
+    def _build_held_minus(self, cb, wrap):  # one per held interval; its − drops just that one
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None, idx=cb.comma: self._cb.act(lambda: self._editor.remove_held(idx)))
+
+    def _build_held_plus(self, cb, wrap):
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.add_held))
+
+    def _build_speaker(self, cb, wrap):  # play this pitch per its tile's mode (client-side engine)
+        tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
+        idx = int(cb.id.rsplit(":", 1)[1])
+        pitches = ",".join(f"{float(v):.6f}" for v in cb.values)  # the whole tile (for arp/chord)
+        # color=None drops Quasar's default primary (blue): the app is greyscale, leaving colour to
+        # the yellow/cyan/magenta colorization. .rtt-spk + the data attrs let the engine highlight
+        # this speaker while it sounds.
+        ui.button(icon="volume_up", color=None) \
+            .props(f'flat dense round data-audio="{tile}" data-idx="{idx}"') \
+            .classes("rtt-audio-btn rtt-spk") \
+            .on("click", js_handler=f"() => window.rttAudio.hit('{tile}', {idx}, [{pitches}])")
+
+    def _build_audio_ctrl(self, cb, wrap):  # a bank control: cycles its state + glyph client-side
+        tile = cb.id.split(":", 1)[1]      # "<row>:<group>"
+        ctrl = cb.kind.split("_", 1)[1]     # wave | mode | hold | root
+        glyph = {"wave": _AUDIO_GLYPHS["wave"][0], "mode": _AUDIO_GLYPHS["mode"][0],
+                 "hold": _AUDIO_GLYPHS["lock"][0], "root": _AUDIO_GLYPHS["root"]}[ctrl]
+        fn = {"wave": "cycleWave", "mode": "cycleMode",
+              "hold": "toggleHold", "root": "toggleRoot"}[ctrl]
+        ui.html(glyph).classes("rtt-audio-ctrl") \
+            .props(f'data-audio="{tile}" data-actrl="{ctrl}"') \
+            .on("click", js_handler=f"() => window.rttAudio.{fn}('{tile}')")
+
 
 @ui.page("/")
 def index() -> None:
@@ -982,25 +1534,6 @@ def index() -> None:
     cell_kinds = rec.cell_kinds
 
     drop = rec.drop
-
-    def set_cents_face(cid, text):
-        """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
-        fraction blank when the value is an integer or the cell is blanked). Shared by the
-        read-only tval cells and the editable cents cells (whose face overlays their input)."""
-        whole, frac = _cents_parts(text)
-        cents[cid][0].set_text(whole)
-        cents[cid][1].set_text(f".{frac}" if frac else "")
-
-    def cents_face(cb, cls):
-        """Build the stacked int-over-fraction cents face (the read-only tval look: the whole
-        part big over a smaller dot-led fraction) and register its labels so the update keeps
-        them synced. Shared by the read-only tval cell and the editable cents cells — the latter
-        pass the overlay class and lay it over their input. Builds into the active cell container."""
-        whole, frac = _cents_parts(cb.text)
-        with ui.element("div").classes(cls):
-            w = ui.label(whole).classes("rtt-cents-int")
-            f = ui.label(f".{frac}" if frac else "").classes("rtt-cents-frac")
-        cents[cb.id] = (w, f)
 
     def on_mapping_change():
         if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
@@ -1277,540 +1810,28 @@ def index() -> None:
     def on_toggle_all():  # the master node-corner toggle: fold the whole grid, or expand it all back
         editor.set_collapsed(spreadsheet.toggle_all_collapsed(last_lay[0], editor.collapsed))
         render()
+    # wire the reconciler's callbacks now that the event handlers exist: the cell
+    # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
+    rec._cb = SimpleNamespace(
+        act=act,
+        on_comma_change=on_comma_change,
+        on_control_select=on_control_select,
+        on_form_choose=on_form_choose,
+        on_gentuning_change=on_gentuning_change,
+        on_held_change=on_held_change,
+        on_interest_change=on_interest_change,
+        on_mapping_change=on_mapping_change,
+        on_power_change=on_power_change,
+        on_prescaler_change=on_prescaler_change,
+        on_preselect=on_preselect,
+        on_ptext_edit=on_ptext_edit,
+        on_range_mode=on_range_mode,
+        on_target_cells_change=on_target_cells_change,
+        on_target_change=on_target_change,
+        on_toggle=on_toggle,
+        on_toggle_all=on_toggle_all,
+    )
 
-    def _ratio(cb, approx):
-        """A ratio rendered as a stacked fraction (with a ~ prefix when approximate)."""
-        parts = _ratio_parts(cb.text)
-        with ui.element("div").classes("rtt-ratio"):
-            if approx:
-                ui.label("~").classes("rtt-approx")
-            if parts:
-                with ui.element("div").classes("rtt-frac"):
-                    num = ui.label(parts[0]).classes("rtt-frac-num")
-                    den = ui.label(parts[1]).classes("rtt-frac-den")
-                fracs[cb.id] = (num, den)
-            else:
-                labels[cb.id] = ui.label(cb.text).classes("rtt-val")
-
-    # ---- cell-kind handlers (audit #3): each kind's build + update, co-located here so a
-    # built-but-not-filled drift between the two ladders becomes structurally impossible ----
-    # The html-content families build an empty ui.html; the update fills it (re-drawing only
-    # when the cached key changes). The EBK marks, bar chart and range chart share the build.
-    def _build_svgfill(cb, wrap):
-        htmls[cb.id] = ui.html("").classes("rtt-svgfill")  # drawn in the update from the cell's px box
-
-    def _update_ebk(cb):
-        # the mark is drawn 1:1 to its px box, so redraw it whenever the box changes size (e.g.
-        # the brace/top bracket as the domain grows) or its pending (red) state flips (a draft
-        # comma's marks committing to black)
-        if ebk_sizes.get(cb.id) != (cb.w, cb.h, cb.pending):
-            htmls[cb.id].set_content(_ebk_svg(cb))
-            ebk_sizes[cb.id] = (cb.w, cb.h, cb.pending)
-
-    def _update_chart(cb):
-        # redraw when the box resizes OR the underlying data / indicator changes
-        key = (cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label)
-        if chart_keys.get(cb.id) != key:
-            htmls[cb.id].set_content(
-                _bar_chart(cb.w, cb.h, cb.values, cb.indicator, cb.indicator_label))
-            chart_keys[cb.id] = key
-
-    def _update_rangechart(cb):
-        # redraw when the box resizes OR the ranges/live tuning change (mapping/mode edit)
-        key = (cb.w, cb.h, cb.ranges, cb.values)
-        if range_keys.get(cb.id) != key:
-            htmls[cb.id].set_content(_range_chart(cb.w, cb.h, cb.ranges, cb.values))
-            range_keys[cb.id] = key
-
-    for _ebk_kind in _EBK_SVG_KINDS:  # bracket / ebktop / ebkbrace / ebkangle / vbar
-        cell_kinds[_ebk_kind] = _KindHandlers(_build_svgfill, _update_ebk)
-    cell_kinds["chart"] = _KindHandlers(_build_svgfill, _update_chart)
-    cell_kinds["rangechart"] = _KindHandlers(_build_svgfill, _update_rangechart)
-
-    def _build_count(cb, wrap):
-        math_cells[cb.id] = ui.html("").classes("rtt-count")  # a scalar "symbol = value"; filled in update
-
-    def _build_symbol(cb, wrap):
-        wrap.classes("rtt-symbol-cell")
-        # the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) stay on one line (ₚ never wraps off)
-        cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
-        math_cells[cb.id] = ui.html("").classes(cls)
-
-    def _build_matlabel(cb, wrap):
-        # routed through _math_html so its bold-italic / bold-upright glyphs draw in the same
-        # styled face as the tile symbol it indexes; the complexity row's longer labels (‖L𝐜ᵢ‖q)
-        # take a smaller variant to avoid colliding
-        cls = "rtt-matlabel rtt-matlabel-norm" if "‖" in cb.text else "rtt-matlabel"
-        wrap.classes("rtt-matlabel-cell")
-        math_cells[cb.id] = ui.html("").classes(cls)
-
-    def _build_units(cb, wrap):
-        wrap.classes("rtt-units-cell")
-        math_cells[cb.id] = ui.html("").classes("rtt-units")
-
-    def _update_mathcell(cb):  # shared by symbol / count / units / matlabel
-        # symbols/equivalence tails/counts and matrix row/col labels go through _math_html (styled
-        # math glyphs); units use _units_html (a single-story-g sans value, serif label)
-        html = _units_html(cb.text) if cb.kind == "units" else _math_html(cb.text)
-        if math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
-            math_cells[cb.id].set_content(html)
-            math_rendered[cb.id] = html
-            if cb.id == "optimization:objective:symbol":
-                # all-interval relabels this to the wide retuning magnitude ‖𝒓𝐿⁻¹‖dual(q); shrink
-                # it (rtt-opt-wide) so it stays centred over its COL_W value
-                wide = "‖" in cb.text
-                math_cells[cb.id].classes(
-                    replace="rtt-symbol rtt-opt-1line rtt-opt-wide" if wide
-                    else "rtt-symbol rtt-opt-1line")
-
-    def _build_caption(cb, wrap):
-        wrap.classes("rtt-caption-cell")
-        # the optimization box's captions stay on one line (no wrap), unlike tile names; a caption
-        # with align="left" reads left-justified under its control (e.g. a preselect chooser's label)
-        cls = "rtt-caption rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-caption"
-        if cb.align == "left":
-            cls += " rtt-caption-left"
-        captions[cb.id] = ui.html("").classes(cls)
-
-    def _update_caption(cb):
-        html = _underline_html(cb.text, cb.underlines)
-        if caption_html.get(cb.id) != html:  # rewrite when a mnemonic toggle adds/removes underlines
-            captions[cb.id].set_content(html)
-            caption_html[cb.id] = html
-
-    cell_kinds["count"] = _KindHandlers(_build_count, _update_mathcell)
-    cell_kinds["symbol"] = _KindHandlers(_build_symbol, _update_mathcell)
-    cell_kinds["matlabel"] = _KindHandlers(_build_matlabel, _update_mathcell)
-    cell_kinds["units"] = _KindHandlers(_build_units, _update_mathcell)
-    cell_kinds["caption"] = _KindHandlers(_build_caption, _update_caption)
-
-    def _build_ptextpending(cb, wrap):
-        # comma basis mid-draft: a static two-tone box (the draft is typed into the red grid
-        # cells, not here); content set in the update
-        htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
-
-    def _update_ptextpending(cb):
-        # the committed commas black and the draft vector red (same red as its grid cells)
-        prefix, draft, suffix = service.comma_basis_pending_text(editor.state.comma_basis, editor.pending_comma)
-        htmls[cb.id].set_content(
-            f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
-        htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
-
-    def _build_mathexpr(cb, wrap):
-        exprs[cb.id] = ui.html("").classes("rtt-mathexpr")  # a just value's stacked closed form; drawn in update
-
-    def _update_mathexpr(cb):
-        # redraw (with refit fonts) whenever the expression text or cell width changes
-        if expr_state.get(cb.id) != (cb.text, cb.w):
-            exprs[cb.id].set_content(_mathexpr_html(cb.text, cb.w))
-            expr_state[cb.id] = (cb.text, cb.w)
-
-    cell_kinds["ptextpending"] = _KindHandlers(_build_ptextpending, _update_ptextpending)
-    cell_kinds["mathexpr"] = _KindHandlers(_build_mathexpr, _update_mathexpr)
-
-    # ---- editable grid-input cells: an input registered in the inputs dict, its value mirrored
-    # in the update. interestcell / heldcell / targetcell / powerinput share the plain-value fill;
-    # prescalercell / gentuningcell also overlay a stacked cents face. ----
-    def _build_mapping(cb, wrap):
-        wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
-        inputs[cb.id] = ui.input(on_change=lambda e: on_mapping_change()) \
-            .props("dense borderless").classes("rtt-cellinput")
-
-    def _update_mapping(cb):
-        inputs[cb.id].value = "" if cb.blank else str(editor.state.mapping[cb.gen][cb.prime])
-
-    def _build_commacell(cb, wrap):
-        wrap.classes("rtt-cell-input")
-        inputs[cb.id] = ui.input(on_change=lambda e: on_comma_change()) \
-            .props("dense borderless").classes("rtt-cellinput")
-
-    def _update_commacell(cb):
-        if cb.pending:  # the draft column: show the typed component (blank if None), red-outlined
-            v = editor.pending_comma[cb.prime] if editor.pending_comma is not None else None
-            inputs[cb.id].value = "" if v is None else str(v)
-        else:
-            inputs[cb.id].value = "" if cb.blank else str(editor.state.comma_basis[cb.comma][cb.prime])
-        inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                              remove="" if cb.pending else "rtt-pending")
-
-    def _build_interestcell(cb, wrap):
-        wrap.classes("rtt-cell-input")
-        inputs[cb.id] = ui.input(on_change=lambda e: on_interest_change()) \
-            .props("dense borderless").classes("rtt-cellinput")
-
-    def _build_heldcell(cb, wrap):
-        wrap.classes("rtt-cell-input")
-        inputs[cb.id] = ui.input(on_change=lambda e: on_held_change()) \
-            .props("dense borderless").classes("rtt-cellinput")
-
-    def _build_targetcell(cb, wrap):
-        wrap.classes("rtt-cell-input")
-        inputs[cb.id] = ui.input(on_change=lambda e: on_target_cells_change()) \
-            .props("dense borderless").classes("rtt-cellinput")
-
-    def _update_input_text(cb):  # interestcell / heldcell / targetcell / powerinput: mirror cb.text
-        inputs[cb.id].value = cb.text
-
-    def _build_prescalercell(cb, wrap):
-        # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
-        # tval "0" — 𝐿 is diagonal). Each input dispatches to set_custom_prescaler_entry; the cid
-        # carries the diagonal slot, so the lambda closes over it (a free cb would be the LAST
-        # cell's id by the time the user types)
-        wrap.classes("rtt-cell-input rtt-cell-stacked")
-        inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_prescaler_change(cid)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
-
-    def _update_prescalercell(cb):
-        # reflect the live prescaler diagonal (the override if set, else the scheme-derived value —
-        # spreadsheet.build emits the final text). Blank when quantities are off, like the other cells
-        inputs[cb.id].value = cb.text
-        set_cents_face(cb.id, cb.text)  # the overlaid stacked face mirrors the input
-
-    def _build_powerinput(cb, wrap):
-        # the optimization power 𝑝, or the box-𝒄 norm power 𝑞. The symbol label rides as a separate
-        # cell below; the field itself shows only the value, in the bordered cell-input box
-        wrap.classes("rtt-cell-input")
-        inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_power_change(cid)) \
-            .props("dense borderless").classes("rtt-cellinput")
-
-    def _build_gentuningcell(cb, wrap):
-        wrap.classes("rtt-cell-input rtt-cell-stacked")
-        inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: on_gentuning_change(cid)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
-
-    def _update_gentuningcell(cb):
-        text = "" if cb.blank else cb.text  # blank when quantities off
-        inputs[cb.id].value = text
-        set_cents_face(cb.id, text)  # the overlaid stacked face mirrors the input
-
-    cell_kinds["mapping"] = _KindHandlers(_build_mapping, _update_mapping)
-    cell_kinds["commacell"] = _KindHandlers(_build_commacell, _update_commacell)
-    cell_kinds["interestcell"] = _KindHandlers(_build_interestcell, _update_input_text)
-    cell_kinds["heldcell"] = _KindHandlers(_build_heldcell, _update_input_text)
-    cell_kinds["targetcell"] = _KindHandlers(_build_targetcell, _update_input_text)
-    cell_kinds["prescalercell"] = _KindHandlers(_build_prescalercell, _update_prescalercell)
-    cell_kinds["powerinput"] = _KindHandlers(_build_powerinput, _update_input_text)
-    cell_kinds["gentuningcell"] = _KindHandlers(_build_gentuningcell, _update_gentuningcell)
-
-    def _build_ptextedit(cb, wrap):
-        # an editable dual: typing a valid EBK string drives the grid (its own ptext_inputs dict)
-        ptext_inputs[cb.id] = ui.input(value=cb.text,
-                on_change=lambda e, cid=cb.id: on_ptext_edit(cid, e.value)) \
-            .props("dense borderless").classes("rtt-ptextedit")
-
-    def _update_ptextedit(cb):  # reflect the canonical string + its shrink-to-fit font
-        ptext_inputs[cb.id].value = cb.text
-        ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
-
-    cell_kinds["ptextedit"] = _KindHandlers(_build_ptextedit, _update_ptextedit)
-
-    # ---- ratio faces (a stacked fraction via _ratio) + the read-only cents (tval) face ----
-    def _build_genratio(cb, wrap):
-        _ratio(cb, approx=True)  # a generator ratio, shown ~approximate
-
-    def _build_target(cb, wrap):
-        _ratio(cb, approx=False)  # a target / comma ratio (exact)
-
-    def _build_commaratio(cb, wrap):
-        if cb.pending:  # the draft comma's "?" quantity, red
-            labels[cb.id] = ui.label(cb.text).classes("rtt-val rtt-pending-q")
-        else:
-            _ratio(cb, approx=False)
-
-    def _update_ratio(cb):  # genratio / target / commaratio: refresh the stacked fraction face
-        # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
-        if cb.id in fracs:
-            num, den = _ratio_parts(cb.text) or (cb.text, "")
-            fracs[cb.id][0].set_text(num)
-            fracs[cb.id][1].set_text(den)
-
-    def _build_tval(cb, wrap):
-        cents_face(cb, "rtt-tval")  # the read-only stacked int-over-fraction cents face
-
-    def _update_tval(cb):
-        set_cents_face(cb.id, cb.text)
-
-    cell_kinds["genratio"] = _KindHandlers(_build_genratio, _update_ratio)
-    cell_kinds["target"] = _KindHandlers(_build_target, _update_ratio)
-    cell_kinds["commaratio"] = _KindHandlers(_build_commaratio, _update_ratio)
-    cell_kinds["tval"] = _KindHandlers(_build_tval, _update_tval)
-
-    # ---- plain label cells: a ui.label whose text the update keeps in sync (set_text). prime /
-    # formcell sit in a white-bordered box; ptext also tracks a shrink-to-fit font; boxtitle is static ----
-    def _label_builder(cls):  # a build that drops a classed ui.label into the cell, registered in labels
-        def build(cb, wrap):
-            labels[cb.id] = ui.label(cb.text).classes(cls)
-        return build
-
-    def _build_white_label(cb, wrap):  # prime / formcell: a read-only bordered cell
-        with ui.element("div").classes("rtt-white"):
-            labels[cb.id] = ui.label(cb.text)
-
-    def _update_label(cb):  # prime / formcell / colheader / rowlabel / mapped / vec
-        labels[cb.id].set_text(cb.text)
-
-    def _update_ptext(cb):  # a read-only value: keep its text and shrink-to-fit font in sync
-        labels[cb.id].set_text(cb.text)
-        labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
-
-    cell_kinds["prime"] = _KindHandlers(_build_white_label, _update_label)
-    cell_kinds["formcell"] = _KindHandlers(_build_white_label, _update_label)
-    _val_builder = _label_builder("rtt-val")
-    cell_kinds["mapped"] = _KindHandlers(_val_builder, _update_label)
-    cell_kinds["vec"] = _KindHandlers(_val_builder, _update_label)
-    cell_kinds["colheader"] = _KindHandlers(_label_builder("rtt-colheader"), _update_label)
-    cell_kinds["rowlabel"] = _KindHandlers(_label_builder("rtt-rowlabel"), _update_label)
-    cell_kinds["ptext"] = _KindHandlers(_label_builder("rtt-ptext"), _update_ptext)
-    cell_kinds["boxtitle"] = _KindHandlers(_label_builder("rtt-boxtitle"), None)  # a static in-tile title
-
-    # ---- interactive controls with an update: range-mode selector, optimize button, fold toggles ----
-    def _build_rangemode(cb, wrap):
-        wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
-        opts = {}
-        for mode in ("monotone", "tradeoff"):
-            opt = ui.element("div").classes("rtt-rangeopt")
-            with opt:
-                ui.element("span").classes("rtt-rangebox")  # the square (filled when selected)
-                ui.label(mode).classes("rtt-rangelabel")
-            opt.on("click", lambda _=None, m=mode: on_range_mode(m))
-            opts[mode] = opt
-        rangeopts[cb.id] = opts
-
-    def _update_rangemode(cb):  # fill the live mode's square (the other's is hollow)
-        for mode, opt in rangeopts[cb.id].items():
-            (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
-             else opt.classes(remove="rtt-rangeopt-on"))
-
-    def _build_optimize(cb, wrap):
-        # single click optimizes once (freeze at the optimum); double click toggles the auto-
-        # optimize lock. A double-click also fires its two single clicks, but optimize() is
-        # idempotent, so a double-click's net effect is the lock toggle.
-        opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: act(editor.optimize), color=None) \
-            .props("unelevated dense no-caps").classes("rtt-optimize")
-        opt_buttons[cb.id].on("dblclick", lambda: act(editor.toggle_optimize_lock))
-
-    def _update_optimize(cb):  # mark the button when its auto-optimize lock is on
-        (opt_buttons[cb.id].classes(add="rtt-optimize-locked") if editor.optimize_locked
-         else opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
-
-    def _build_foldtoggle(cb, wrap):  # rowtoggle / coltoggle / tiletoggle: a clickable chevron over its band
-        item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
-        htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
-        fold_state[cb.id] = cb.text  # the glyph swaps on collapse/expand (see _update_foldtoggle)
-        wrap.on("click", lambda _=None, it=item: on_toggle(it))
-
-    def _build_alltoggle(cb, wrap):  # the master expand/collapse-all control in the node corner
-        htmls[cb.id] = ui.html(_control_svg(_FOLD_GLYPH[cb.text])).classes("rtt-glyph rtt-toggle")
-        fold_state[cb.id] = cb.text
-        wrap.on("click", lambda _=None: on_toggle_all())
-
-    def _update_foldtoggle(cb):  # swap the chevron SVG when the band folds / unfolds
-        if fold_state.get(cb.id) != cb.text:
-            htmls[cb.id].set_content(_control_svg(_FOLD_GLYPH[cb.text]))
-            fold_state[cb.id] = cb.text
-
-    cell_kinds["rangemode"] = _KindHandlers(_build_rangemode, _update_rangemode)
-    cell_kinds["optimize"] = _KindHandlers(_build_optimize, _update_optimize)
-    cell_kinds["rowtoggle"] = _KindHandlers(_build_foldtoggle, _update_foldtoggle)
-    cell_kinds["coltoggle"] = _KindHandlers(_build_foldtoggle, _update_foldtoggle)
-    cell_kinds["tiletoggle"] = _KindHandlers(_build_foldtoggle, _update_foldtoggle)
-    cell_kinds["alltoggle"] = _KindHandlers(_build_alltoggle, _update_foldtoggle)
-
-    # ---- chooser dropdowns + the diminuator checkbox ----
-    def _build_preselect(cb, wrap):
-        name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
-        if name == "target":
-            # a numeric limit override beside the TILT/OLD family select, seeded from the editor's
-            # live target family + (optional) manual limit
-            with ui.element("div").classes("rtt-preselect-target"):
-                num = ui.number(value=editor.target_limit, min=2,
-                        on_change=lambda e: on_target_change()) \
-                    .props("dense borderless hide-bottom-space").classes("rtt-preselect-num")
-                sel = ui.select(list(presets.TARGET_SETS), value=editor.target_family,
-                        on_change=lambda e: on_target_change()) \
-                    .props(_select_props(cb.w - 30)).classes("rtt-preselect")  # field = cell − the 30px square (touching, no gap)
-            selects[cb.id] = (num, sel)
-        elif name == "temperament":
-            # a normal dropdown listing only the prime-limit dividers and their presets (grouped in
-            # the open list). The chosen preset shows in the box; when none matches, a "-" prompt
-            # shows there as a display-value placeholder — never a pickable row in the list.
-            value = presets.identify(editor.state)
-            sel = _GroupedSelect(presets.temperament_options(), value=value,
-                    is_divider=presets.is_divider,
-                    on_change=lambda e: on_preselect("temperament", e.value)) \
-                .props(_select_props(cb.w)).classes("rtt-preselect")
-            _set_offlist_prompt(sel, value)
-            selects[cb.id] = sel
-        elif name == "prescaler":
-            # the predefined-prescalers chooser: log-prime always, the rest (identity / prime) gated
-            # behind alt-complexities. "-" when a manual diagonal edit deviates from the named
-            # prescaler (editor.displayed_prescaler_name returns None then).
-            options = list(presets.prescaler_options(editor.settings["alt_complexity"]))
-            value = editor.displayed_prescaler_name
-            value = value if value in options else None
-            sel = ui.select(options, value=value,
-                    on_change=lambda e: on_preselect("prescaler", e.value)) \
-                .props(_select_props(cb.w)).classes("rtt-preselect")
-            _set_offlist_prompt(sel, value)
-            selects[cb.id] = sel
-        else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-interval);
-            # a control-refined scheme has no name, shown as the "-" placeholder. Alternative-
-            # complexity schemes are gated behind the alt. complexity setting.
-            options = presets.tuning_scheme_options(
-                service.is_all_interval(editor.tuning_scheme), editor.settings["alt_complexity"])
-            # "-" when the displayed tuning is off the named list — a refined spec, or a manual
-            # override deviating from the scheme's optimum; else the offered name
-            name = editor.displayed_tuning_scheme_name
-            scheme = name if name in options else None
-            sel = ui.select(options, value=scheme,
-                    on_change=lambda e: on_preselect("tuning", e.value)) \
-                .props(_select_props(cb.w)).classes("rtt-preselect")
-            _set_offlist_prompt(sel, scheme)
-            selects[cb.id] = sel
-
-    def _update_preselect(cb):
-        # mirror the live selection: the temperament chooser shows the matched preset (or its
-        # placeholder), the target chooser splits into limit + family, the tuning chooser shows its
-        # scheme. building[0] guards echoes.
-        if cb.id.startswith("preselect:temperament"):  # base + the comma-basis copy
-            value = presets.identify(editor.state)
-            selects[cb.id].value = value
-            _set_offlist_prompt(selects[cb.id], value)
-        elif cb.id == "preselect:target":
-            num, sel = selects[cb.id]
-            family = editor.target_family
-            # always show the number in use: the manual limit, or the domain default
-            limit = editor.target_limit
-            num.value = limit if limit is not None else \
-                service.default_target_limit(family, service.standard_primes(editor.state.d))
-            sel.value = family
-        elif cb.id == "preselect:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
-            # option list widens/narrows as alt-complexities flips, so refresh it too
-            options = list(presets.prescaler_options(editor.settings["alt_complexity"]))
-            value = editor.displayed_prescaler_name
-            value = value if value in options else None
-            selects[cb.id].set_options(options, value=value)
-            _set_offlist_prompt(selects[cb.id], value)
-        else:  # tuning — a refined spec or a deviating manual override shows "-"
-            scheme = editor.displayed_tuning_scheme_name
-            # the option LABELS T-prefix only while target-based, so recompute them as the all-
-            # interval checkbox flips (set once at creation, they would otherwise go stale)
-            options = presets.tuning_scheme_options(
-                service.is_all_interval(editor.tuning_scheme), editor.settings["alt_complexity"])
-            selects[cb.id].set_options(options, value=scheme)
-            _set_offlist_prompt(selects[cb.id], scheme)
-
-    def _build_control_select(cb, wrap):  # a weighting chooser (complexity / norm / weight slope)
-        selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
-                on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
-            .props(_select_props(cb.w)).classes("rtt-preselect")
-
-    def _update_control_select(cb):  # mirror the live alt.-complexity choice
-        selects[cb.id].value = cb.text or None
-
-    def _build_control_check(cb, wrap):  # the box-𝐋 "replace diminuator" checkbox (size factor)
-        checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
-                on_change=lambda e, cid=cb.id: on_control_select(cid, e.value)) \
-            .props("dense").classes("rtt-control-check")
-
-    def _update_control_check(cb):  # mirror the live "replace diminuator" state
-        checks[cb.id].value = cb.checked
-
-    def _build_formchooser(cb, wrap):  # the <choose form> control: canonicalizes its matrix on select
-        name = cb.id.split(":", 1)[1]  # mapping / comma_basis
-        selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
-                on_change=lambda e, n=name: on_form_choose(n, e.value)) \
-            .props(_select_props(cb.w)).classes("rtt-preselect")
-
-    def _update_formchooser(cb):  # a one-shot action: snap back to the placeholder
-        selects[cb.id].value = ""
-
-    cell_kinds["preselect"] = _KindHandlers(_build_preselect, _update_preselect)
-    cell_kinds["control_select"] = _KindHandlers(_build_control_select, _update_control_select)
-    cell_kinds["control_check"] = _KindHandlers(_build_control_check, _update_control_check)
-    cell_kinds["formchooser"] = _KindHandlers(_build_formchooser, _update_formchooser)
-
-    # ---- static controls (build only, no update): the domain/comma/interest/held ± buttons,
-    # the speaker, and the audio bank glyphs. Their click / JS handlers are baked at build time. ----
-    def _build_minus(cb, wrap):  # remove the highest prime; a hover − centred on the last prime's branch point
-        wrap.classes("rtt-minus-zone")  # clear of the editable cell below
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None: act(editor.shrink))
-
-    def _build_plus(cb, wrap):  # add a prime; the always-shown + on the bus stub
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: act(editor.expand))
-
-    def _build_basis_minus(cb, wrap):  # the domain − on the interval-vectors row's left bus
-        wrap.classes("rtt-minus-zone")
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
-            .on("click", lambda _=None: act(editor.shrink))
-
-    def _build_comma_minus(cb, wrap):  # drop the last comma, or cancel the pending draft
-        wrap.classes("rtt-minus-zone")
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None: act(editor.remove_comma))
-
-    def _build_comma_plus(cb, wrap):
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: act(editor.add_comma))
-
-    def _build_interest_minus(cb, wrap):  # one per interval (each independently removable)
-        i = int(cb.id.split(":", 1)[1])
-        wrap.classes("rtt-minus-zone")
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None, idx=i: act(lambda: editor.remove_interest(idx)))
-
-    def _build_interest_plus(cb, wrap):
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: act(editor.add_interest))
-
-    def _build_held_minus(cb, wrap):  # one per held interval; its − drops just that one
-        wrap.classes("rtt-minus-zone")
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None, idx=cb.comma: act(lambda: editor.remove_held(idx)))
-
-    def _build_held_plus(cb, wrap):
-        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: act(editor.add_held))
-
-    def _build_speaker(cb, wrap):  # play this pitch per its tile's mode (client-side engine)
-        tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
-        idx = int(cb.id.rsplit(":", 1)[1])
-        pitches = ",".join(f"{float(v):.6f}" for v in cb.values)  # the whole tile (for arp/chord)
-        # color=None drops Quasar's default primary (blue): the app is greyscale, leaving colour to
-        # the yellow/cyan/magenta colorization. .rtt-spk + the data attrs let the engine highlight
-        # this speaker while it sounds.
-        ui.button(icon="volume_up", color=None) \
-            .props(f'flat dense round data-audio="{tile}" data-idx="{idx}"') \
-            .classes("rtt-audio-btn rtt-spk") \
-            .on("click", js_handler=f"() => window.rttAudio.hit('{tile}', {idx}, [{pitches}])")
-
-    def _build_audio_ctrl(cb, wrap):  # a bank control: cycles its state + glyph client-side
-        tile = cb.id.split(":", 1)[1]      # "<row>:<group>"
-        ctrl = cb.kind.split("_", 1)[1]     # wave | mode | hold | root
-        glyph = {"wave": _AUDIO_GLYPHS["wave"][0], "mode": _AUDIO_GLYPHS["mode"][0],
-                 "hold": _AUDIO_GLYPHS["lock"][0], "root": _AUDIO_GLYPHS["root"]}[ctrl]
-        fn = {"wave": "cycleWave", "mode": "cycleMode",
-              "hold": "toggleHold", "root": "toggleRoot"}[ctrl]
-        ui.html(glyph).classes("rtt-audio-ctrl") \
-            .props(f'data-audio="{tile}" data-actrl="{ctrl}"') \
-            .on("click", js_handler=f"() => window.rttAudio.{fn}('{tile}')")
-
-    cell_kinds["minus"] = _KindHandlers(_build_minus)
-    cell_kinds["plus"] = _KindHandlers(_build_plus)
-    cell_kinds["basis_minus"] = _KindHandlers(_build_basis_minus)
-    cell_kinds["comma_minus"] = _KindHandlers(_build_comma_minus)
-    cell_kinds["comma_plus"] = _KindHandlers(_build_comma_plus)
-    cell_kinds["interest_minus"] = _KindHandlers(_build_interest_minus)
-    cell_kinds["interest_plus"] = _KindHandlers(_build_interest_plus)
-    cell_kinds["held_minus"] = _KindHandlers(_build_held_minus)
-    cell_kinds["held_plus"] = _KindHandlers(_build_held_plus)
-    cell_kinds["speaker"] = _KindHandlers(_build_speaker)
-    for _audio_ctrl in _AUDIO_CTRLS:  # audio_wave / audio_mode / audio_hold / audio_root
-        cell_kinds[_audio_ctrl] = _KindHandlers(_build_audio_ctrl)
 
     def render():
         building[0] = True
