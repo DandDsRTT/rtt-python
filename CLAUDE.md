@@ -22,3 +22,16 @@ biggest way agents disrupt the user. So, for **every** agent-initiated launch:
 - **Pass `reload=False`.** Hot-reload watches the whole repo tree — worktrees included — so
   a `reload=True` agent instance churns on every edit (yours and other agents') and orphans
   workers that keep the port bound. Agents relaunch deliberately; they don't need reload.
+
+## Integration tests run in-process — run them, don't ask
+
+This project's only "integration" suite, `tests/test_web_integration.py`, drives the
+`Editor` (service + undo state) **entirely in-process**: no `ui.run`, no port bound, no
+network, no external API — it's a unit test in everything but its filename. **Run it freely
+as part of the normal `pytest` run. Do not ask permission first.**
+
+This overrides the global rule that gates integration tests behind a permission prompt. That
+rule guards against *disruptive* tests — a server launch on the user's port, or slow /
+external / side-effecting runs. None of that can happen here, so the prompt is pure ceremony
+that wastes a round-trip. (If a genuinely disruptive test is ever added — one that binds a
+port or calls out — the global rule applies again to that test; see the port section above.)
