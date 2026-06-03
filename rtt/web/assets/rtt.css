@@ -341,6 +341,9 @@
 .rtt-preset-num .q-field__native { font-size:var(--cell-font); color:#000; min-height:0 !important; padding:0;
             line-height:30px; text-align:center; font-family:'Cambria',Georgia,serif; }
 .rtt-preset-num .q-field__native::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+/* the "-" placeholder (shown when the limit blanks — an overridden target list) reads like a
+   real value, matching the family select's display-value "-", not a greyed prompt */
+.rtt-preset-num .q-field__native::placeholder { color:#000; opacity:1; }
 .rtt-preset-num .q-field__marginal, .rtt-preset-num .q-field__append { display:none !important; }
 /* the monotone/tradeoff range selector under the ranges chart: two square indicators
    stacked vertically (filled = selected), per the mockup, with small Cambria labels.

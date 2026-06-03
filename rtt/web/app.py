@@ -1319,18 +1319,37 @@ class _Reconciler:
             self.fold_state[cb.id] = cb.text
 
     # ---- chooser dropdowns + the diminuator checkbox ----
+    def _target_preset_values(self):
+        """The numeric limit + TILT/OLD family the target chooser shows, or ``(None, None)``
+        when a typed/edited target list overrides the family — then both parts fall back to
+        "-" (the select via display-value, the number via its "-" placeholder). A ``None``
+        family is also what makes re-picking TILT/OLD a real value change the handler acts on,
+        so the chooser doubles as the reset back to a named list — not a same-value no-op
+        Quasar would swallow."""
+        if self._editor.target_override is not None:
+            return None, None
+        family = self._editor.target_family
+        limit = self._editor.target_limit
+        if limit is None:  # no manual limit: show the family's domain default
+            limit = service.default_target_limit(
+                family, service.standard_primes(self._editor.state.d))
+        return limit, family
+
     def _build_preset(self, cb, wrap):
         name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
         if name == "target":
-            # a numeric limit override beside the TILT/OLD family select, seeded from the editor's
-            # live target family + (optional) manual limit
+            # a numeric limit override beside the TILT/OLD family select. Both fall back to "-"
+            # when a typed/edited target list overrides the family (see _target_preset_values):
+            # the select via display-value, the number via its "-" placeholder.
+            limit, family = self._target_preset_values()
             with ui.element("div").classes("rtt-preset-target"):
-                num = ui.number(value=self._editor.target_limit, min=2,
+                num = ui.number(value=limit, min=2,
                         on_change=lambda e: self._cb.on_target_change()) \
-                    .props("dense borderless hide-bottom-space").classes("rtt-preset-num")
-                sel = ui.select(list(presets.TARGET_SETS), value=self._editor.target_family,
+                    .props('dense borderless hide-bottom-space placeholder="-"').classes("rtt-preset-num")
+                sel = ui.select(list(presets.TARGET_SETS), value=family,
                         on_change=lambda e: self._cb.on_target_change()) \
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
+            _set_offlist_prompt(sel, family)
             self.selects[cb.id] = (num, sel)
         elif name == "temperament":
             # a normal dropdown listing only the rank/limit section dividers and their presets
@@ -1380,12 +1399,10 @@ class _Reconciler:
             _set_offlist_prompt(self.selects[cb.id], value)
         elif cb.id == "preset:target":
             num, sel = self.selects[cb.id]
-            family = self._editor.target_family
-            # always show the number in use: the manual limit, or the domain default
-            limit = self._editor.target_limit
-            num.value = limit if limit is not None else \
-                service.default_target_limit(family, service.standard_primes(self._editor.state.d))
+            limit, family = self._target_preset_values()  # (None, None) -> both show "-"
+            num.value = limit
             sel.value = family
+            _set_offlist_prompt(sel, family)
         elif cb.id == "preset:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
             # option list widens/narrows as alt-complexities flips, so refresh it too
             options = list(presets.prescaler_options(self._editor.settings["alt_complexity"]))

@@ -200,6 +200,14 @@ def _stacked_face(user: User, cell_id: str):
     return face.default_slot.children[0], face.default_slot.children[1]
 
 
+def _target_preset(user: User):
+    """The (numeric-limit, TILT/OLD family-select) pair of the target chooser — the one
+    preset that nests two controls in a flex div inside its cell wrap."""
+    container = _cell_child(user, "preset:target")  # the rtt-preset-target div
+    num, sel = container.default_slot.children
+    return num, sel
+
+
 async def test_tuning_preset_offers_only_lp_while_alternatives_are_shelved(user: User) -> None:
     # alternative-complexity schemes are gated behind the (shelved) alt. complexity setting, so with
     # it off the tuning chooser offers only the log-product family — but at all three weight slopes
@@ -475,6 +483,44 @@ async def test_picking_a_prescaler_clears_a_manual_diagonal_override(user: User)
     await user.should_see(marker="preset:prescaler")
     assert "display-value" not in _cell_child(user, "preset:prescaler")._props  # name shown again
     assert _cell_child(user, "cell:prescaling:primes:1:1").value == seed  # diagonal snapped back
+
+
+async def test_target_chooser_shows_the_prompt_when_an_interval_is_overridden(user: User) -> None:
+    # the target chooser names the live TILT/OLD family + its limit; hand-editing a target
+    # interval column freezes an explicit list no named family realises, so BOTH parts fall
+    # back to "-" — the family select via Quasar's display-value, the numeric limit blanked to
+    # its "-" placeholder — the same fallback the tuning and prescaler choosers use for an edit.
+    await _enable(user, "presets")
+    user.find(marker="toggle:row:vectors").click()  # the target list is folded by default
+    await user.should_see(marker="cell:vec:targets:0:0")
+    num, sel = _target_preset(user)
+    assert "display-value" not in sel._props  # names the live family
+    assert num.value is not None              # shows the family's limit
+    _cell_child(user, "cell:vec:targets:0:0").set_value("3")  # deviate from the TILT list
+    await user.should_see(marker="preset:target")
+    num, sel = _target_preset(user)
+    assert sel._props.get("display-value") == "-"
+    assert num.value is None  # the numeral blanks to its "-" placeholder
+
+
+async def test_selecting_a_target_family_clears_an_interval_override(user: User) -> None:
+    # after hand-editing a target interval (the chooser shows "-"), re-picking the family from
+    # the dropdown must re-apply it: the override clears and the list snaps back to the family's.
+    # The override blanks the select to None, so re-picking "TILT" is a real change the handler
+    # acts on — not the same-value no-op that made the pick look ignored.
+    await _enable(user, "presets")
+    user.find(marker="toggle:row:vectors").click()
+    await user.should_see(marker="cell:vec:targets:0:0")
+    original = _cell_child(user, "cell:vec:targets:0:0").value  # the TILT list's first cell
+    _cell_child(user, "cell:vec:targets:0:0").set_value("3")  # deviate -> override
+    await user.should_see(marker="preset:target")
+    _, sel = _target_preset(user)
+    assert sel._props.get("display-value") == "-"
+    sel.set_value("TILT")  # re-pick the family
+    await user.should_see(marker="cell:vec:targets:0:0")
+    _, sel = _target_preset(user)
+    assert "display-value" not in sel._props  # family named again
+    assert _cell_child(user, "cell:vec:targets:0:0").value == original  # list restored to TILT
 
 
 async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -> None:
