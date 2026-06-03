@@ -60,6 +60,8 @@ _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 _PANEL_W = 330  # px width the settings drawer opens to (the Show + example columns)
 _RAIL_W = 40  # px width of the permanent left rail (hamburger + the rotated app title)
+_TOOLTIP_DELAY_MS = 700  # hover delay before a tooltip appears — long enough that the dense grid's
+# help waits for a deliberate rest instead of popping on every passing cursor (Quasar defaults to 0)
 _STORE_KEY = "rtt_doc"  # store key holding the serialized document (survives refresh)
 _STORAGE_SECRET = "dnd-rtt-app"  # signs the per-browser session cookie that keys app.storage.user
 # Under NiceGUI's in-process User test simulation, app.storage.user is file-backed: writing
@@ -1585,6 +1587,12 @@ class _Reconciler:
 @ui.page("/")
 def index() -> None:
     ui.add_css(_CSS)
+    # Give every tooltip a show delay so the dense grid's hover help waits for a deliberate rest
+    # rather than popping the instant the cursor crosses a control. Setting it on the Tooltip
+    # element's default props covers the whole population at once — chrome, Show toggles, grid
+    # controls and any future tooltip — with no per-call wiring to keep in sync. Idempotent: it
+    # re-sets the same class default each page build.
+    ui.tooltip.default_props(f"delay={_TOOLTIP_DELAY_MS}")
     # the audio rows' Web Audio engine + its glyph variants (shared markup for click redraws)
     ui.add_body_html(f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>")
     # keep the frozen title bands pinned to the scrolling grid pane (see _FREEZE_JS)

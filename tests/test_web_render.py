@@ -132,6 +132,18 @@ async def test_settings_and_controls_carry_hover_tooltips(user: User) -> None:
     assert any("map to this prime" in t for t in tips)  # the always-present mapping cells' help
 
 
+async def test_hover_tooltips_wait_before_appearing(user: User) -> None:
+    # the tooltips defaulted to Quasar's 0 ms show delay, popping the instant the cursor crossed
+    # any control and burying the dense grid in hover help. Every tooltip now shares one show
+    # delay (set on the Tooltip element's default props) so the help waits for a deliberate hover
+    # rather than flashing on every passing cursor. The whole population carries it, chrome and
+    # grid controls alike, so no path can slip back to instant.
+    await user.open("/")
+    tips = [el for el in user.client.elements.values() if isinstance(el, Tooltip)]
+    assert tips  # the page does build tooltips
+    assert all(int(el._props.get("delay", 0)) >= 500 for el in tips)
+
+
 def _part_classes(user: User, key: str) -> list[str]:
     """The CSS classes render() has put on the general dummy tile's part for ``key``."""
     return next(iter(user.find(marker=f"showpart:{key}").elements))._classes
