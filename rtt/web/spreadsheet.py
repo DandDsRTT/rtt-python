@@ -587,6 +587,13 @@ class _GridBuilder:
         self.target_sizes = service.interval_sizes(self.tun, self.targets, self.elements)
         self.held_mapped = service.mapped_intervals(self.state.mapping, self.held_ratios, self.elements)  # M·held (gen coords)
         self.held_sizes = service.interval_sizes(self.tun, self.held_ratios, self.elements)  # tempered/just/error sizes
+        # a held interval stays "held" only while the current tuning tunes it exactly just. Once the
+        # user changes something (the mapping, a generator, the held set) so the tuning no longer
+        # does, its retuning error reads nonzero — and the whole interval renders red (CellBox.alert),
+        # clearing back to black when the tuning is re-optimized to hold it. Decided at DISPLAY
+        # precision (the shown cents), so typing the displayed optimum — which reads 0.000 though it
+        # carries sub-milli-cent float noise — counts as held, not a false red.
+        self.held_unheld = tuple(float(service.cents(e)) != 0.0 for e in self.held_sizes.errors)
         self.target_weights = service.interval_weights(self.state.mapping, self.tuning_scheme, self.targets,
                                                   prescaler_override=self.custom_prescaler,
                                                   domain_basis=self.elements)  # the damage row's 𝒘
@@ -1234,7 +1241,7 @@ class _GridBuilder:
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
         return None
 
-    def tval_row(self, key, group, vals):
+    def tval_row(self, key, group, vals, alerts=()):
         if not self.tile_open(key, group):
             return
         vals = tuple(vals)
@@ -1247,11 +1254,14 @@ class _GridBuilder:
             cid = f"{key}:{self.group_elem[group]}:{i}"
             x = self.group_left[group](i)
             u = self.cell_unit(key, group, gen=i if group == "gens" else None, prime=i if group == "primes" else None)
+            # the held column passes per-interval alert flags: an interval the tuning no longer
+            # holds reddens its size cells too (alerts is empty — no flags — for every other column)
+            alert = bool(alerts[i]) if i < len(alerts) else False
             operand = self.closed_form_operand(key, group, i) if self.show_math else None
             if operand is not None:
-                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities), unit=u))
+                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities), unit=u, alert=alert))
             else:
-                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v), unit=u))
+                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v), unit=u, alert=alert))
 
     # a charted tile draws a bar chart in the band reserved above its values. The box spans
     # the value block exactly — the left bracket gutter, the value columns, and the right
@@ -1590,7 +1600,7 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"urow:interest:{ii}", self.interest_left(ii), uy, COL_W, ROW_H, "units", text="/1"))
             if self.tile_open("units", "held"):
                 for ih in range(self.nh):
-                    self.cells.append(CellBox(f"urow:held:{ih}", self.held_left(ih), uy, COL_W, ROW_H, "units", text="/1"))
+                    self.cells.append(CellBox(f"urow:held:{ih}", self.held_left(ih), uy, COL_W, ROW_H, "units", text="/1", alert=self.held_unheld[ih]))
 
         # quantities row: domain primes (+ controls) and target ratios (below the
         # tile's toggle head, like every other row's values). The whole row -- its
@@ -1645,7 +1655,7 @@ class _GridBuilder:
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
                 for i in range(self.nh):
                     # the derived ratio (read-only, from the editable vector) heads each column
-                    self.cells.append(CellBox(f"held:{i}", self.held_left(i), qy, COL_W, ROW_H, "commaratio", text=self.held_ratios[i], comma=i))
+                    self.cells.append(CellBox(f"held:{i}", self.held_left(i), qy, COL_W, ROW_H, "commaratio", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
                     # each held interval carries its own − on its branch point (any one is removable)
                     branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
             if self.tile_open("quantities", "interest"):  # the user's other intervals of interest
@@ -1683,7 +1693,7 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"cell:imapped:{i}:{ii}", self.interest_left(ii), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.interest_mapped[i][ii]), gen=i, unit=self.cell_unit("mapping", "interest", gen=i)))
                 if self.tile_open("mapping", "held"):  # held mapped through M, like the targets / interest
                     for hi in range(self.nh):
-                        self.cells.append(CellBox(f"cell:hmapped:{i}:{hi}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i)))
+                        self.cells.append(CellBox(f"cell:hmapped:{i}:{hi}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i), alert=self.held_unheld[hi]))
                 # the comma basis mapped through M — it vanishes to 0 (parallel to the
                 # mapped target list); the raw basis lives in the interval-vectors row
                 if self.tile_open("mapping", "commas"):
@@ -1747,7 +1757,7 @@ class _GridBuilder:
             if self.tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
                 for i in range(self.nh):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:held:{p}:{i}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p)))
+                        self.cells.append(CellBox(f"cell:held:{p}:{i}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p), alert=self.held_unheld[i]))
             if self.tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
                 for i in range(self.r):
                     for p in range(self.d):
@@ -1784,7 +1794,7 @@ class _GridBuilder:
                 self.tval_row(key, "commas", comma_vals)
                 self.tval_row(key, "targets", target_vals)
                 self.tval_row(key, "interest", interest_vals)
-                self.tval_row(key, "held", held_vals)
+                self.tval_row(key, "held", held_vals, alerts=self.held_unheld)
         # the generator tuning map: the tuning row's map over the generators (the gens-column
         # counterpart of the tuning map over the primes). Its cells are EDITABLE (a hybrid input):
         # typing a cents value overrides that generator's tuning, like typing the whole map in the
@@ -1855,6 +1865,9 @@ class _GridBuilder:
                     value = self.prescaler[i] * vec[i]
                     cid = f"cell:prescaling:{group}:{i}:{c}"
                     cx, cy = left(c), self.row_y["prescaling"] + i * ROW_H
+                    # held column: a prescaled held interval the tuning no longer holds reddens too
+                    # (the editable 𝐋 diagonal below is primes-only, so it never carries this flag)
+                    alert = self.held_unheld[c] if group == "held" else False
                     # the bare prescaler 𝐿's diagonal (group == "primes" and i == c) is the
                     # user's editable surface: each diagonal cell is a prescalercell — the
                     # input box the user types overrides into — and so wins over the math-
@@ -1869,10 +1882,10 @@ class _GridBuilder:
                                              text=service.prescale_text(value), prime=i, unit=u))
                     elif self.show_math and vec[i] != 0 and i in prime_term:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
-                                             text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities), unit=u))
+                                             text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities), unit=u, alert=alert))
                     else:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
-                                             text=service.prescale_text(value), unit=u))
+                                             text=service.prescale_text(value), unit=u, alert=alert))
         if self.lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox at the
             # bottom of the prescaling matrix (the prescaler chooser is a preset now, riding the
             # preset band above). A SQUARE (no inline label — it wraps broken in the narrow primes
@@ -1937,7 +1950,8 @@ class _GridBuilder:
                                      text="dual norm power"))
         if self.row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
-                self.tval_row("complexity", group, self.complexities[group])
+                self.tval_row("complexity", group, self.complexities[group],
+                              alerts=self.held_unheld if group == "held" else ())
         if self.row_open("weight"):  # weight is over the targets only, like damage (it scales them)
             self.tval_row("weight", "targets", self.target_weights)
         if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), nested at the bottom of the weight list,

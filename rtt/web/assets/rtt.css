@@ -407,6 +407,11 @@
 /* a pending comma's "?" quantity (and the draft vector in the plain text), in the same
    red as its draft cells/brackets */
 .rtt-pending-q { color:var(--pending-color) !important; }
+/* a held interval the current tuning no longer holds just (its retuning error reads nonzero):
+   the WHOLE cell renders red — every face inside the wrap, the input text, and the fraction
+   bar — in the same red as a draft comma, clearing to black when the tuning is re-optimized */
+.rtt-alert, .rtt-alert * { color:var(--pending-color) !important; }
+.rtt-alert .rtt-frac-num { border-bottom-color:var(--pending-color) !important; }
 /* the comma basis plain text while a comma is pending: not an editable input (which is
    one colour) but a static box matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */

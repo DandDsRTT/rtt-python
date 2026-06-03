@@ -3848,6 +3848,59 @@ def test_held_column_equivalences_show_the_held_just_identities():
     assert on["symbol:retune:held"].text == "𝒓H = 𝟎"
 
 
+def _held_value_cells():
+    # every per-interval value cell of the held column (the ratio, its vector, the mapped
+    # column, the three size rows, and the weighting rows) — the cells that, together, ARE the
+    # held interval. NOT the column furniture (header, count, symbols, captions, − control).
+    return ("held:0", "cell:held:0:0", "cell:hmapped:0:0", "tuning:held:0",
+            "just:held:0", "retune:held:0", "cell:prescaling:held:0:0", "complexity:held:0")
+
+
+def _held_with_tuning(generator_tuning):
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"], s["weighting"] = True, True  # weighting opens the prescaling + complexity rows
+    return {c.id: c for c in spreadsheet.build(
+        base, s, held_vectors=[(-1, 1, 0)], generator_tuning=generator_tuning).cells}
+
+
+def test_unheld_held_interval_is_flagged_red_across_its_value_cells():
+    # a held interval the current (frozen) generator tuning does NOT tune just is flagged for
+    # red rendering across its WHOLE interval — the user has changed something so the tuning no
+    # longer holds it. Here the frozen genmap (1200¢ period, 700¢ fifth) leaves the held fifth
+    # 3/2 ~1.955¢ flat, so its retuning error reads nonzero.
+    cells = _held_with_tuning((1200.0, 700.0))
+    for cid in _held_value_cells():
+        assert cells[cid].alert, cid
+    # the column's furniture stays black — only the interval itself reddens
+    assert not cells["header:held"].alert
+    assert not cells["held_minus:0"].alert
+
+
+def test_held_interval_held_to_display_precision_is_not_flagged():
+    # typing the *displayed* optimum (701.955¢, the rounded value the app shows) leaves a sub-
+    # milli-cent residual that still reads 0.000 — the interval is held to display precision, so
+    # NOT red. The red follows the shown retuning error, never hidden float noise.
+    cells = _held_with_tuning((1200.0, 701.955))
+    assert cells["retune:held:0"].text in ("0.000", "-0.000")  # reads as zero error
+    for cid in _held_value_cells():
+        assert not cells[cid].alert, cid
+
+
+def test_held_interval_actually_held_stays_black():
+    # a generator tuning that tunes the held fifth exactly just (its optimum) — the happy state
+    # clicking optimize restores — flags nothing; nor does the default auto-optimized path, which
+    # folds the held interval into the solve so it comes out just on its own.
+    exact = _held_with_tuning((1200.0, 701.9550008653873))
+    for cid in _held_value_cells():
+        assert not exact[cid].alert, cid
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"] = True
+    auto = {c.id: c for c in spreadsheet.build(base, s, held_vectors=[(-1, 1, 0)]).cells}
+    assert not auto["retune:held:0"].alert  # no frozen tuning ⇒ re-optimized to hold it ⇒ black
+
+
 def test_held_column_shows_plain_text_values():
     on = _held(plain_text_values=True)
     # the held column's tiles get plain-text EBK boxes like every other value tile

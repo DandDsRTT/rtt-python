@@ -984,6 +984,11 @@ class _Reconciler:
         handlers = self.cell_kinds[cb.kind]  # registered for every kind (see make_cell); raises on drift
         if handlers.update is not None:
             handlers.update(cb)
+        # a flagged value (a held interval the current tuning no longer holds just) reddens its
+        # whole cell — the .rtt-alert CSS paints every face inside the wrap red, clearing back to
+        # black when the flag lifts. Toggled generically so any alerting cell kind picks it up.
+        self.els[cb.id].classes(add="rtt-alert" if cb.alert else "",
+                                remove="" if cb.alert else "rtt-alert")
         # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
         # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
         # this adds/updates/removes the overlay as the toggle (or the domain) changes.

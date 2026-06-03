@@ -16,6 +16,7 @@ import nicegui.ui as ui
 import pytest
 from nicegui.elements.tooltip import Tooltip
 from nicegui.testing import User
+from nicegui.testing.user_interaction import UserInteraction
 
 from rtt.web import settings as show_settings
 from rtt.web.editor import Editor
@@ -172,6 +173,17 @@ def _cell_child(user: User, cell_id: str):
     """The inner control of a grid cell (the marker rides its wrap)."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     return wrap.default_slot.children[0]
+
+
+def _wrap_classes(user: User, cell_id: str) -> list[str]:
+    """The CSS classes on a grid cell's wrap (e.g. rtt-alert when its value is flagged red)."""
+    return next(iter(user.find(marker=cell_id).elements))._classes
+
+
+def _click_glyph(user: User, cell_id: str) -> None:
+    """Click a grid glyph control (held_plus, …) whose click handler rides the inner element
+    rather than the marked wrap, so the marker-based click the fixture exposes can't reach it."""
+    UserInteraction(user, {_cell_child(user, cell_id)}, None).click()
 
 
 def _cell_text(user: User, cell_id: str) -> str:
@@ -554,6 +566,27 @@ async def test_optimization_renders_the_held_column_and_its_add_control(user: Us
     await _enable(user, "optimization")
     await user.should_see(marker="header:held")
     await user.should_see(marker="held_plus")
+
+
+async def test_unheld_held_interval_renders_red_until_reoptimized(user: User) -> None:
+    # a held interval the current tuning no longer holds renders red (rtt-alert on its cells);
+    # re-optimizing restores the held-just tuning and clears it. Drives the whole user flow:
+    # add a held interval, make it the fifth 3/2, then hand-tune a generator off the held optimum.
+    await user.open("/")
+    _toggle(user, "optimization")                          # show the optimization box's held column
+    user.find(marker="toggle:row:vectors").click()         # expand the interval-vectors row (folded by default)
+    _click_glyph(user, "held_plus")                        # add a (blank) held interval
+    await user.should_see(marker="cell:held:0:0")
+    _cell_child(user, "cell:held:0:0").set_value("-1")     # make it the fifth 3/2 = (-1 1 0)
+    _cell_child(user, "cell:held:1:0").set_value("1")
+    _cell_child(user, "tuning:gen:1").set_value("700.000")  # freeze a tuning ~2¢ off the held fifth
+    await user.should_see(marker="retune:held:0")
+    assert "rtt-alert" in _wrap_classes(user, "retune:held:0")  # the retuning-error cell reddens...
+    assert "rtt-alert" in _wrap_classes(user, "held:0")         # ...and so does the whole interval (its ratio)
+    user.find(kind=ui.button, content="optimize").click()       # re-optimize -> hold the fifth again
+    await user.should_see(marker="retune:held:0")
+    assert "rtt-alert" not in _wrap_classes(user, "retune:held:0")  # back to happy black
+    assert "rtt-alert" not in _wrap_classes(user, "held:0")
 
 
 async def test_enabling_audio_renders_speakers_and_control_banks(user: User) -> None:
