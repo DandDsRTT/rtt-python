@@ -478,1979 +478,2019 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     )
 
 
+class _GridBuilder:
+    def __init__(self, state, settings=None, collapsed=None,
+                 tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
+                 pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
+                 custom_prescaler=None, optimize_locked=False):
+        self.state = state
+        self.settings = settings
+        self.collapsed = collapsed
+        self.tuning_scheme = tuning_scheme
+        self.target_spec = target_spec
+        self.interest = interest
+        self.range_mode = range_mode
+        self.pending_comma = pending_comma
+        self.held_vectors = held_vectors
+        self.generator_tuning = generator_tuning
+        self.target_override = target_override
+        self.custom_prescaler = custom_prescaler
+        self.optimize_locked = optimize_locked
+
+    def layout(self) -> Layout:
+        state = self.state
+        settings = self.settings
+        collapsed = self.collapsed
+        tuning_scheme = self.tuning_scheme
+        target_spec = self.target_spec
+        interest = self.interest
+        range_mode = self.range_mode
+        pending_comma = self.pending_comma
+        held_vectors = self.held_vectors
+        generator_tuning = self.generator_tuning
+        target_override = self.target_override
+        custom_prescaler = self.custom_prescaler
+        optimize_locked = self.optimize_locked
+        if settings is None:
+            settings = _default_settings()
+        if tuning_scheme is None:
+            # the as-shipped scheme is target-based and unity-weighted, matching the editor's default
+            tuning_scheme = service.DEFAULT_DOCUMENT_SCHEME
+        if target_spec is None:
+            target_spec = service.DEFAULT_TARGET_SPEC
+        collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
+        # Phase 1 — resolve the Show-panel view flags + their gating (see _resolve_show_flags above),
+        # then unpack into the local names the rest of build() reads.
+        _f = _resolve_show_flags(settings, collapsed)
+        show_captions = _f.captions
+        show_mnemonics = _f.mnemonics
+        show_equiv = _f.equiv
+        show_preselects = _f.preselects
+        show_counts = _f.counts
+        show_ptext = _f.ptext
+        show_charts = _f.charts
+        show_ranges = _f.ranges
+        show_symbols = _f.symbols
+        show_units = _f.units
+        show_domain_units = _f.domain_units
+        show_temp = _f.temp
+        show_form_controls = _f.form_controls
+        show_tuning = _f.tuning
+        show_optimization = _f.optimization
+        show_weighting = _f.weighting
+        show_alt_complexity = _f.alt_complexity
+        _lbox_show = _f.lbox
+        _cbox_show = _f.cbox
+        show_audio = _f.audio
+        show_detempering = _f.detempering
+        show_interest = _f.interest
+        gridded = _f.gridded
+        show_quantities = _f.quantities
+        show_domain_quantities = _f.domain_quantities
+        show_math = _f.math
+        # Phase 2 — resolve the complexity-prescaler glyph + labels (see _resolve_prescaler_labels).
+        _p = _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv)
+        _scheme_prescaler = _p.scheme_prescaler
+        prescaler_symbol = _p.symbol
+        prescaler_equivalence = _p.equivalence
+        prescaling_symbols = _p.prescaling_symbols
+        col_labels = _p.col_labels
+        row_labels = _p.row_labels
+        effective_captions = _p.effective_captions
+        # Row labels and column headers (and their gutters) are always present.
+        label_w = LABEL_W
+        header_h = HEADER_H
+        d = state.d
+        r = len(state.mapping)
+        # the d domain elements: the standard primes, or a nonstandard subgroup's (possibly
+        # nonprime) basis. Every interval set is read over this basis (so 13/5 keeps its 13).
+        elements = state.domain_basis
+        # trait 7: the nonstandard-domain box, when shown, reads the temperament in its prime
+        # superspace ("prime-based"); this coincides with the neutral mode on a standard domain,
+        # so it is harmless until that box is enabled.
+        approach = "prime-based" if settings.get("nonstandard_domain") else ""
+        gens = service.generators(state.mapping, elements)
+        # a typed explicit target list overrides the TILT/OLD spec; every target consumer below
+        # derives from this one resolved tuple, so the override flows through the whole grid
+        targets = target_override if target_override is not None else service.target_interval_set(target_spec, elements)
+        if service.is_all_interval(tuning_scheme):
+            # all-interval: the target list T becomes the identity (Tₚ = I) — every interval, by duality,
+            # is represented by the domain's own basis (the primes). Every target-column row then derives
+            # its prime-based "when all-interval" form (𝐿, ‖𝐿‖, 𝐿⁻¹, 𝑟, |𝑟|𝑋⁻¹) from this `targets`.
+            targets = tuple(_ratio_str(e) for e in elements)
+        k = len(targets)
+        mapped = service.mapped_intervals(state.mapping, targets, elements)
+        canon_mapping = service.canonical_mapping(state.mapping)  # M defactored + HNF (the form box)
+        rc = len(canon_mapping)  # canonical rank (== r for a valid temperament)
+        form_M = service.form_matrix(state.mapping)  # F: the generator form matrix (r×r), F·M = canonical
+        target_vectors = service.target_interval_vectors(targets, d, elements)  # k vectors, each d-tall
+        # held intervals: the optimization box's held-just constraints — user-edited vectors in the
+        # held column (like the intervals of interest). The tuning holds each exactly just, so
+        # they are folded into service.tuning below. Present only with the optimization sub-control.
+        held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in held_vectors) if show_optimization else ()
+        nh = len(held)
+        held_ratios = service.comma_ratios(held, elements)  # vector -> "num/den" (the shared renderer)
+        # a frozen manual generator tuning (optimize lock off) drives the maps directly; otherwise
+        # the scheme's optimum (holding the held intervals just). A stale tuning whose generator
+        # count no longer matches the mapping (a rank change) falls back to the optimum.
+        if generator_tuning is not None and len(generator_tuning) == len(state.mapping):
+            tun = service.tuning_from_generators(state.mapping, generator_tuning, elements)
+        else:
+            tun = service.tuning(state.mapping, tuning_scheme, elements, approach, held=held_ratios,
+                                 prescaler_override=custom_prescaler)
+        target_sizes = service.interval_sizes(tun, targets, elements)
+        held_mapped = service.mapped_intervals(state.mapping, held_ratios, elements)  # M·held (gen coords)
+        held_sizes = service.interval_sizes(tun, held_ratios, elements)  # tempered/just/error sizes
+        target_weights = service.interval_weights(state.mapping, tuning_scheme, targets,
+                                                  prescaler_override=custom_prescaler,
+                                                  domain_basis=elements)  # the damage row's 𝒘
+        comma_ratios = service.comma_ratios(state.comma_basis, elements)
+        nc = len(comma_ratios)  # the real commas (those that define the temperament)
+        mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
+        comma_sizes = service.interval_sizes(tun, comma_ratios, elements)  # comma sizes (tempered ~0)
+        # a comma being added is shown as a pending draft column to the right of the real
+        # ones: blank red cells and a "?" quantity until it is a valid independent comma
+        # (then it commits and the mapping re-ranks). It is not a real comma, so it does
+        # not enter the nullity, the mapping, or the sizes — only the displayed column count.
+        pending = list(pending_comma) if pending_comma is not None else None
+        nc_shown = nc + (1 if pending is not None else 0)
+        # other intervals of interest: a user-built set held as vectors and edited like
+        # the comma basis (editable vector cells). Normalize each vector to the current d
+        # (pad/trim) so a domain change can't misalign them, then derive the ratios the
+        # quantities row shows and the mapping/sizes the lower rows show. It carries no
+        # damage row and contributes tiles only when populated, so an empty column adds no
+        # panels or fold toggles — just its header and a single straight axis rule.
+        interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in interest)
+        mi = len(interest)
+        interest_ratios = service.comma_ratios(interest, elements)  # vector -> "num/den" (shared renderer)
+        interest_mapped = service.mapped_intervals(state.mapping, interest_ratios, elements)
+        interest_sizes = service.interval_sizes(tun, interest_ratios, elements)
+        # the complexity row norms each interval's prescaled vector (𝒄): a covector over the
+        # domain elements (each element's complexity, log₂ of it for the default log-prime
+        # norm), a list over the comma / target / interest interval sets.
+        complexities = {
+            "primes": service.interval_complexities(state.mapping, tuning_scheme, tuple(_ratio_str(e) for e in elements),
+                                                    prescaler_override=custom_prescaler),
+            "commas": service.interval_complexities(state.mapping, tuning_scheme, comma_ratios,
+                                                    prescaler_override=custom_prescaler, domain_basis=elements),
+            "targets": service.interval_complexities(state.mapping, tuning_scheme, targets,
+                                                     prescaler_override=custom_prescaler, domain_basis=elements),
+            "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios,
+                                                      prescaler_override=custom_prescaler, domain_basis=elements),
+            "held": service.interval_complexities(state.mapping, tuning_scheme, held_ratios,
+                                                  prescaler_override=custom_prescaler, domain_basis=elements),
+            "detempering": service.interval_complexities(state.mapping, tuning_scheme, gens,
+                                                         prescaler_override=custom_prescaler, domain_basis=elements),
+        }
+        # the prescaler 𝑋: a d×d diagonal matrix over the primes (diag = each prime's pre-norm
+        # weight, the values the complexity map norms). log-prime by default: diag(log₂ prime).
+        # A custom_prescaler override (the bare prescaler tile's editable diagonal) short-circuits
+        # the scheme's computed diagonal here, threading the user's typed values into every
+        # prescaling/complexity/weight/tuning calculation downstream.
+        prescaler = service.complexity_prescaler(state.mapping, tuning_scheme, override=custom_prescaler)
+        interest_tiles = () if not interest else (
+            ("block:vec:interest", "vectors", "interest"),
+            ("block:interest", "quantities", "interest"),
+            ("block:imapped", "mapping", "interest"),
+            ("block:tuning:interest", "tuning", "interest"),
+            ("block:just:interest", "just", "interest"),
+            ("block:retune:interest", "retune", "interest"),
+            ("block:urow:interest", "units", "interest"),  # the units row's /1 over the interest column
+            ("block:prescaling:interest", "prescaling", "interest"),
+            ("block:complexity:interest", "complexity", "interest"),
+            ("block:just_audio:interest", "just_audio", "interest"),
+            ("block:tempered_audio:interest", "tempered_audio", "interest"),
+        )
+        # the held interval column's tiles (computed above): a user-editable interval list, like
+        # the intervals of interest. Empty by default, so — like an empty interest column — it
+        # then declares no tiles, only its header, axis and the + control to add the first one.
+        held_tiles = () if not held else (
+            ("block:held", "quantities", "held"),
+            ("block:vec:held", "vectors", "held"),
+            ("block:hmapped", "mapping", "held"),       # M·held in generator coords
+            ("block:tuning:held", "tuning", "held"),    # tempered sizes (= just, since held)
+            ("block:just:held", "just", "held"),        # just sizes
+            ("block:retune:held", "retune", "held"),    # errors (≈ 0, since held just)
+            ("block:urow:held", "units", "held"),       # the units row's /1 over the held column
+            ("block:prescaling:held", "prescaling", "held"),
+            ("block:complexity:held", "complexity", "held"),
+            ("block:just_audio:held", "just_audio", "held"),
+            ("block:tempered_audio:held", "tempered_audio", "held"),
+        )
+        # The optimization box's other mockup column — unchanged intervals (count u) — is
+        # deferred to the projection feature: the unchanged interval basis is U = nullspace(P − I),
+        # the projection P's eigenvalue-1 eigenvectors (en.xen.wiki/w/Projection#The_unchanged-interval_basis),
+        # so it can't be built until projection lands. Until then the box ships with the held
+        # column above plus the power line below (held intervals are a subset of the unchanged ones).
+        # the generator-detempering column holds the matrix D — one JI interval (a vector) per
+        # generator that tempers to it (the mapping's right-inverse), framed like the comma
+        # basis / target list. An independent box toggle, riding between domain primes and commas.
+        detempering_vectors = service.generator_detempering(state.mapping) if show_detempering else ()
+        mapped_detempering = service.mapped_detempering(state.mapping) if show_detempering else ()  # M·D = I
+        # the detempering intervals' sizes under the tuning: the tempered sizes ARE the generator
+        # tuning map (𝒕D = 𝒈, since each D tempers to its generator), with just and retuning sizes
+        # like any interval set. gens is the detempering as ratio strings (service.generators = D).
+        detempering_sizes = service.interval_sizes(tun, gens, elements) if show_detempering else None
+        detempering_tiles = (
+            ("block:detempering", "quantities", "detempering"),
+            ("block:vec:detempering", "vectors", "detempering"),
+            ("block:mapped_detempering", "mapping", "detempering"),
+            ("block:tuning:detempering", "tuning", "detempering"),
+            ("block:just:detempering", "just", "detempering"),
+            ("block:retune:detempering", "retune", "detempering"),
+            ("block:prescaling:detempering", "prescaling", "detempering"),
+            ("block:complexity:detempering", "complexity", "detempering"),
+            ("block:urow:detempering", "units", "detempering"),
+            ("block:just_audio:detempering", "just_audio", "detempering"),
+            ("block:tempered_audio:detempering", "tempered_audio", "detempering"),
+        ) if show_detempering else ()
+        # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
+        # tile (see opt_box below), not in a tile/row of their own
+        tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
+                 + TILES + AUDIO_TILES + UNITS_TILES
+                 + interest_tiles + held_tiles + detempering_tiles)
+        # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
+        # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
+        # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
+        # for a stray hardcoded column list to keep drawing a tile that no longer exists.
+        declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in tiles}
+        if service.is_all_interval(tuning_scheme):
+            # all-interval (Tₚ = I): every target-column list that just re-expresses an existing column
+            # collapses to a duplicate, so drop it — mapped 𝑀T → 𝑀, prescaled 𝐿T → 𝐿, and each size/error
+            # list to its prime map (tempered 𝐚 → 𝒕, just 𝐨 → 𝒋, error 𝐞 → 𝒓). The kept target tiles are
+            # the target list itself (Tₚ = I), the complexity ‖𝐿‖, and the weight/damage. Dropping a tile
+            # here clears its cells, bracket, caption, panel and fold toggle (never a blank box).
+            declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
+                               ("tuning", "targets"), ("just", "targets"), ("retune", "targets")}
+
+        # Column bands left-to-right: (key, natural width, present, collapsible).
+        # Each set-column belongs to a box toggle: generators, the domain primes and
+        # the commas are the temperament's (shown with temperament_boxes), target-
+        # intervals are the tuning's (shown with tuning_boxes), and the other-intervals-
+        # of-interest column has its own (shown with interest) -- turning a box off
+        # takes its whole column with it, including the other family's cells that ride
+        # in it (e.g. the tuning maps over primes, or the mapped target interval list
+        # over targets). A collapsed column folds to a strip sized to read its title, but never
+        # wider than it was open — so collapsing a column only ever narrows it (see col_w below).
+        # The domain/comma + controls ride just right of their blocks when open; each −
+        # is a hover affordance on the removable highest-prime / last-comma column.
+        # the domain column reads "basis elements" over a nonstandard subgroup (whose basis may
+        # be nonprime — "basis elements" is the guide's term for these columns; the mockup had
+        # "domain elements") and "domain primes" over a standard prime limit
+        domain_title = "domain\nprimes" if service.is_standard_domain(elements) else "basis\nelements"
+        col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
+                      "primes": domain_title, "detempering": "generator\ndetempering",
+                      "commas": "commas",
+                      "held": "held\nintervals", "targets": "target\nintervals",
+                      "interest": "other intervals\nof interest"}
+        # The leftmost quantities column is the spine: a header + fold toggle + a single
+        # vertical rule, the column-axis dual of the quantities spine row. The units column
+        # (the specific `domain_units` toggle) is a second spine column right after it,
+        # carrying each row's coordinate-unit labels (pᵢ/, gᵢ/, ¢/). Each spine holds a single
+        # COL_W-wide index per row (a basis square / generator ratio; a unit label) and so is
+        # one COL_W wide — its longer header overhangs it (see the col_w hug-content rule above).
+        # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
+        # the value cells are inset by BRACKET_W within the group. The primes column
+        # additionally reserves a MATLABEL_W gutter on the left when symbols is on AND
+        # the mapping row will render, so its row labels (𝒎₁, 𝒎₂, …) seat left of each
+        # row's ⟨ bracket without overflowing the panel. An equal empty gutter is mirrored
+        # on the RIGHT (see col_bands below) so the row labels don't shove the matrix
+        # off-centre in its tile — the left label gutter is balanced by the empty right one.
+        matlabel_primes_w = MATLABEL_W if (show_symbols and show_temp) else 0
+        col_bands = (
+            ("quantities", COL_W, show_domain_quantities, True),
+            ("units", COL_W, show_domain_units, True),
+            ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
+            ("primes", 2 * BRACKET_W + d * COL_W + 2 * matlabel_primes_w, show_temp, True),
+            ("detempering", 2 * BRACKET_W + r * COL_W, show_detempering, True),
+            ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
+            ("held", 2 * BRACKET_W + nh * COL_W, show_optimization, True),
+            ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
+            # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
+            # padding. Its long two-line title needs more room, so the column's *footprint*
+            # is floored at the title width (see the loop below) and the narrow content is
+            # centred within it: the title centres over the whole column on its gridline, and
+            # the tiles centre on that same gridline. The board height is independent of mi.
+            ("interest", 2 * BRACKET_W + mi * COL_W, show_interest, True),
+        )
+        # A fold-toggle node column sits between the row-label gutter and the content
+        # (when names show); content starts past it with a clear gap so the tiles
+        # never collide with the nodes. Row lines fan from the node's right edge so
+        # their gaps match the columns'.
+        node_x = label_w + GAP
+        node_edge = node_x + TOGGLE  # the node's content-facing (right) edge
+        content_x0 = node_x + TOGGLE + GAP
+
+        # Row bands top-to-bottom: (key, natural height, present, collapsible, label), laid
+        # out below by the same running-cursor rule as the columns. Defined here, ahead of
+        # that layout, so each column's width can reserve room for its present rows' captions.
+        row_bands = (
+            ("counts", ROW_H, show_counts, True, "counts"),
+            ("just_audio", ROW_H, show_audio, True, "just audio"),
+            ("tempered_audio", ROW_H, show_audio, True, "tempered audio"),
+            ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
+            ("units", ROW_H, show_domain_units, True, "units"),
+            ("vectors", d * ROW_H, show_temp, True, "interval vectors"),
+            ("canon", rc * ROW_H, show_form_controls, True, "canonical mapping"),
+            ("mapping", r * ROW_H, show_temp, True, "mapping"),
+            ("tuning", ROW_H, show_tuning, True, "tuning"),
+            ("just", ROW_H, show_tuning, True, "just tuning"),
+            ("retune", ROW_H, show_tuning, True, "retuning"),
+            ("prescaling", d * ROW_H, show_weighting, True, "complexity prescaling"),
+            ("complexity", ROW_H, show_weighting, True, "complexity"),
+            ("weight", ROW_H, show_weighting, True, "weight"),
+            ("damage", ROW_H, show_tuning, True, "damage"),
+        )
+        # the present rows that carry an in-tile caption; a column is floored wide enough to
+        # keep each of these within MAX_CAPTION_LINES (see _caption_floor in the loop)
+        present_caption_rows = frozenset(
+            key for key, _h, present, _c, _l in row_bands if present and key in CAPTIONED_ROWS)
+
+        def _caption_floor(key):
+            # the width an open column needs so its captions stay within MAX_CAPTION_LINES,
+            # widening the tile rather than scaling the font or letting a long name spill;
+            # zero when names are hidden (no caption renders) so the column keeps its content size
+            if not show_captions:
+                return 0
+            return max((_min_width_for_lines(effective_captions[(rk, key)], MAX_CAPTION_LINES)
+                        for rk in present_caption_rows
+                        if (rk, key) in effective_captions and (rk, key) in declared_tiles), default=0)
+
+        def _control_floor(key):
+            # the width an open column needs so its in-tile choosers fit without overhanging the
+            # column's right edge (e.g. the narrow targets column is widened to seat box 𝒄's wide
+            # predefined-complexities dropdown); widens the column to enclose them
+            floor = 0
+            if key == "primes" and _lbox_show:
+                floor = LBOX_DIM_W  # box 𝐋's lone control now: the diminuator checkbox + its caption
+            if key == "targets" and _cbox_show:
+                floor = max(floor, CBOX_W)
+            if key == "targets" and show_preselects and settings["all_interval"]:
+                floor = max(floor, TBOX_W)  # box 𝐓: target chooser + all-interval checkbox, one box
+            if (key == "targets" and show_optimization and "row:damage" not in collapsed
+                    and "tile:damage:targets" not in collapsed):
+                floor = max(floor, OPT_BOX_MIN_W)  # seat the box's spread-out controls (see opt_box)
+            # the preselect / form dropdowns' one-line labels (the .rtt-caption-left asset) must fit
+            # the column too, so a long label like "established tuning scheme" widens its (narrow)
+            # tile rather than spilling it — e.g. the generator tuning map's tuning-scheme copy
+            labels = ([l for _n, _r, c, l in PRESELECTS + PRESELECT_COPIES if c == key and l] if show_preselects else [])
+            labels += [l for _n, _r, c, l in FORM_CHOOSERS if c == key and l] if show_form_controls else []
+            if labels:
+                floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(l, 1) for l in labels))
+            return floor
+
+        # each column hugs its content (a long caption widens the footprint), the columns laid
+        # left to right a GAP apart. The element +/− controls no longer ride inside these tiles
+        # (they sit up on the fan's top bus, see plus_stub_x), so no column reserves overhang for one.
+        col_x, col_w, content_w, col_collapsible, open_col_w = {}, {}, {}, {}, {}
+        x = content_x0
+        for key, natural, present, collapsible in col_bands:
+            if not present:
+                continue
+            collapsed_col = f"col:{key}" in collapsed
+            hug_w = max(natural, _caption_floor(key), _control_floor(key))  # the open footprint: hugs content (+ caption / control room)
+            open_col_w[key] = hug_w  # the width it has (or would have) OPEN — collapse-independent, for caption wrapping
+            # The content (value cells + their bracket gutters) is the natural width. The column
+            # footprint (col_w) hugs that content, or widens where a long caption needs the room;
+            # it does NOT reserve room for a wider title. A title wider than its column (the
+            # "quantities"/"units" spines, the long interest header) overhangs it instead, rendered
+            # without wrapping and centred on the column gridline. The grey tile fills the footprint,
+            # with content centred within it (see content_x).
+            if collapsed_col:
+                # Folded to a title strip — sized to read the (widest line of the) title, but capped
+                # at the open footprint so collapsing never WIDENS a column: one already narrower than
+                # its title (a spine) keeps its width, the title overhanging, instead of ballooning out.
+                col_w[key] = content_w[key] = min(hug_w, _title_w(col_header[key]))
+            else:
+                content_w[key] = natural
+                col_w[key] = hug_w  # the footprint widens for a long caption
+            col_collapsible[key] = collapsible
+            col_x[key] = x
+            x += col_w[key] + GAP
+        total_w = x
+
+        # Content is centred within each footprint: the margin is (footprint − content) / 2,
+        # zero for the common case (content fills the column) and positive only where a long
+        # caption widened the footprint, reserving even margins around the narrower content.
+        content_x = {key: col_x[key] + (col_w[key] - content_w[key]) / 2 for key in col_x}
+
+        def content_box(key):
+            # the (x, width) of a column's actual content — the value cells and the brackets/
+            # axes that hug them, centred within the (possibly wider) tile and footprint
+            return content_x[key], content_w[key]
+
+        def tile_box(key):
+            # the (x, width) of a column's grey tile/panel: the full footprint (the panel fills it
+            # and overhangs by PAD). The caption stack rides this width; content centres within.
+            return col_x[key], col_w[key]
+
+        primes_x = content_x.get("primes")  # centred content-left; None when the column is hidden
+        commas_x = content_x.get("commas")  # None when the commas column is hidden
+        targets_x = content_x.get("targets")  # None when the target intervals column is hidden
+        interest_x = content_x.get("interest")  # None when the interest column is hidden
+        held_x = content_x.get("held")  # None when the held intervals column is hidden
+        detempering_x = content_x.get("detempering")  # None when the generator-detempering column is hidden
+
+        def col_open(key):
+            return key in col_x and f"col:{key}" not in collapsed
+
+        # The generator tuning-ranges box (the chart + its mode selector) nests at the bottom
+        # of the generator tuning map tile when tuning_ranges is on. Its extra height is
+        # reserved in the tuning row (below) so the rows beneath drop clear of it rather than
+        # the box spilling across them. Determinable up front: it rides the open, uncollapsed
+        # gens tile of the (present, unfolded) tuning row.
+        gtm_chart = (show_ranges and show_tuning and "row:tuning" not in collapsed
+                     and col_open("gens") and "tile:tuning:gens" not in collapsed)
+        gtm_extra = (RANGE_GAP + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
+        # the alt.-complexity controls nest at the bottom of their matrix/list tiles (like the
+        # ranges box in the gens tile): box 𝐋 (the prescaling matrix over the primes) carries the
+        # "replace diminuator" checkbox, box 𝒄 (the complexity list over the targets) stacks the
+        # predefined-complexity chooser then the norm chooser, and box 𝒘 (the weight list over the
+        # targets) carries the weight-slope chooser. (The prescaler chooser is a preselect now, riding
+        # the preselect band above — see PRESELECTS.) Each tile reserves its controls' height up front.
+        lbox_ctrl = _lbox_show and col_open("primes")
+        # box 𝐋's lone control is the diminuator checkbox at the column's left, over its "replace
+        # diminuator" caption: a small square (OPTION_BOX_PX) plus a one-line caption sets the reserve.
+        lbox_extra = (RANGE_GAP + OPTION_BOX_PX + CAPTION_LINE) if lbox_ctrl else 0
+        # box 𝒄 lays its three controls in ONE row below the complexity list: the predefined-
+        # complexity master dropdown on the left, then the q norm-power field and the dual(q)
+        # display, each captioned (q/dual using the optimization box's value-symbol-caption stack).
+        # q/dual's captions ("interval complexity norm power", "dual norm power") wrap to up to
+        # three lines in their overhanging caption slot — reserve the height up front. The
+        # targets column was widened up front (by _control_floor) to CBOX_W to enclose them.
+        cbox_ctrl = _cbox_show and col_open("targets")
+        cbox_extra = (RANGE_GAP + ROW_H + SYMBOL_H + 3 * CAPTION_LINE) if cbox_ctrl else 0
+        # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target interval
+        # damage list tile (like the ranges box in the gens tile), gated on the optimization
+        # sub-control. Reserve their height up front so the board stays clear below the tile.
+        opt_ctrl = (show_optimization and "row:damage" not in collapsed
+                    and col_open("targets") and "tile:damage:targets" not in collapsed)
+        # the optimization box: a title strip over a row of three controls distributed across the
+        # tile's full width — the objective ⟪𝐝⟫ₚ and the editable power 𝑝 (each a value above its
+        # symbol; the power also captioned "optimization power") plus the optimize button. Its height
+        # = a title inset + the title + a title gap + the value row + the symbol row + a one-line
+        # caption + pad (the width is the targets column, floored to OPT_BOX_MIN_W).
+        opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
+                      + CAPTION_LINE + OPT_PAD_B) if opt_ctrl else 0)
+        # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
+        # shows with WEIGHTING itself, not gated on the (shelved) alt. complexity extra. It is omitted
+        # in all-interval mode, where the weight is simplicity by construction, not a free choice.
+        slope_ctrl = (show_weighting and not service.is_all_interval(tuning_scheme)
+                      and "row:weight" not in collapsed
+                      and col_open("targets") and "tile:weight:targets" not in collapsed)
+        slope_extra = (RANGE_GAP + PRESELECT_H + CAPTION_LINE) if slope_ctrl else 0
+        # Each of these nested controls lives at the bottom of one tile of its row, but its reserved
+        # height (keyed here by row) is added to the whole row's tile_h: the rows below drop clear of
+        # it AND every tile in the row grows to the same height, so the row stays one uniform band.
+        tile_extra = {
+            "tuning": gtm_extra,        # the generator tuning-ranges chart (box in the genmap)
+            "prescaling": lbox_extra,   # box 𝐋: the "replace diminuator" checkbox
+            "complexity": cbox_extra,   # box 𝒄: the predefined-complexity + norm choosers
+            "weight": slope_extra,      # box 𝒘: the weight-slope chooser
+            "damage": opt_extra,        # the optimization controls under the damage list
+        }
+
+        header_y = 0
+        col_node_y = header_h + (GAP - TOGGLE) / 2  # the column toggle sits just under the header text
+        # Branching (trunk/bus/verticals) starts just below the column nodes so no
+        # line pokes up past them; with names hidden it starts at the very top.
+        branch_top_y = col_node_y + TOGGLE
+        rows_top_y = branch_top_y + GAP  # top of the first row band (counts when shown, else quantities)
+        # The grey tiles overhang their cells by PAD and sit over the gridlines, so the
+        # *visible* fan segment runs from a bus only to the tile edge. FAN places each bus
+        # midway between the node/foot edge and the tile edge (PAD inside the cell), so
+        # the inner (bus->tile) and outer (node->bus) segments are equal: (GAP-PAD)/2.
+        FAN = (GAP - PAD) / 2
+
+        # row_bands (the top-to-bottom band list) is defined above, ahead of the column
+        # widths so they can reserve room for each present row's caption. Every row folds to
+        # a strip via its toggle; "quantities" additionally hides that row and its column.
+        # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
+        # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
+        row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
+        tile_h, tile_top, row_frame, row_sym, row_cap, row_units, row_ptext, chart_top = {}, {}, {}, {}, {}, {}, {}, {}
+        row_pre = {}  # the preselect band height, so the <choose form> chooser can stack below it
+        row_nsub = {}  # each row's natural cell-row count (a matrix's height in cells), so the
+        # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
+        # drawing all of them, converged, while it's folded, so the fold animates as a merge
+        row_matlabel_top = {}  # y of the column-label band when reserved (one MATLABEL_H slot above
+        # the value cells), so column labels (𝐜₁, 𝒕₁, …) can be emitted at a fixed row-relative y
+
+        def caption_band(key, folded):
+            # the row's caption band is sized to its tallest (wrapped) caption, so the longest
+            # name fits within its tile rather than spilling off a narrow column. Only columns
+            # that actually declare a tile here count: an empty interest column declares no
+            # tile, so it reserves no caption height (its captions would otherwise wrap tall in
+            # the bare bracket-gutter stub and inflate the empty board). Each caption wraps at
+            # its column's OPEN width — collapse-independent — so collapsing a column (hiding its
+            # caption) never drops the band and shrinks the row's other tiles. A folded ROW shows
+            # no captions at all.
+            if not (show_captions and key in CAPTIONED_ROWS and not folded):
+                return 0
+            lines = [_wrap_lines(effective_captions[(key, c)], open_col_w[c]) for c in col_x
+                     if (key, c) in effective_captions and (key, c) in declared_tiles]
+            return max(lines, default=1) * CAPTION_LINE
+
+        # pass the held intervals + any frozen manual tuning so the plain text builds the SAME
+        # tuning the grid does (held-just sizes, frozen-tuning maps) — the two views can't diverge
+        ptext_strings = (service.plain_text_values(state, tuning_scheme, target_spec,
+                                                   held=held, interest=interest,
+                                                   generator_tuning=generator_tuning,
+                                                   target_override=target_override)
+                         if show_ptext else {})
+
+        def ptext_height(rkey, ckey):  # one line; the app shrinks the font to fit the box width
+            return PTEXT_EDIT_H if (rkey, ckey) in EDITABLE_PTEXT else PTEXT_H
+
+        def ptext_band(key, folded):
+            # a single-line band for every value row's plain text (taller for the rows whose
+            # band holds an editable input); the font auto-fits so nothing wraps or spills
+            if not (show_ptext and key in PTEXT_ROWS and not folded):
+                return 0
+            return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
+
+        # a control box (preselect / form chooser): the box spans its column's tile (see control_box),
+        # and the dropdown keeps its NATURAL width (cap_w) seated at the box's left — only shrunk if a
+        # tiny tile can't seat even that. The label is the standard one-line left-justified caption
+        # hugging the dropdown's bottom (the .rtt-caption-left asset), overflowing right if long.
+        def control_dims(ckey, cap_w, label):
+            dropdown_w = max(40, min(col_w[ckey] - 2 * BOX_INNER, cap_w))
+            label_h = CAPTION_LINE if label else 0  # one line (overflows right, never wraps the box wider)
+            box_h = BOX_INNER + PRESELECT_H + (label_h + CTRL_LABEL_GAP if label else BOX_INNER)
+            return dropdown_w, label_h, box_h
+
+        def control_band_h(ckey, cap_w, label):  # the box plus outer padding above and below
+            return 2 * BOX_OUTER + control_dims(ckey, cap_w, label)[2]
+
+        def preselect_cap(name):
+            return TARGET_PRESELECT_W if name == "target" else PRESELECT_W
+
+        def preselect_band_h(key):  # the tallest preselect control box riding this row
+            return max((control_band_h(ckey, preselect_cap(name), label)
+                        for name, rk, ckey, label in PRESELECTS + PRESELECT_COPIES
+                        if rk == key and ckey in col_w), default=0)
+
+        def formchooser_band_h(key):
+            return max((control_band_h(ckey, PRESELECT_W, label)
+                        for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in col_w), default=0)
+
+        y = rows_top_y
+        for key, natural, present, collapsible, label in row_bands:
+            if not present:
+                continue
+            folded = f"row:{key}" in collapsed
+            framed = key in FRAMED_ROWS and not folded
+            # column labels (𝐜ᵢ above each comma, 𝒕ᵢ above each tuned prime, …) sit INSIDE
+            # the tile, in the head area above the top bracket — roughly equidistant from
+            # the tile_top and the bracket. The head is expanded when a matlabel is present
+            # so the label has padding on both sides (the toggle stays in its corner — the
+            # two share the head's y-range but at different x).
+            has_matlabel = (show_symbols and key in COL_LABELED_ROWS and not folded)
+            head_default = TOGGLE + 2 * TOGGLE_INSET - PAD  # toggle's natural head reservation
+            # the matlabel needs MATLABEL_H + 2*PAD of head to sit centred with breathing room
+            head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
+            # framing bands stand off the cells by FRAME_GAP: a top bracket (FRAME_H)
+            # and a taller bottom curly brace (BRACE_H, with room for its spike)
+            top_frame = (FRAME_H + FRAME_GAP) if framed else 0
+            bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
+            # a charted row grows a chart band (above the values, below the top frame)
+            charted = show_charts and key in CHARTED_ROWS and not folded
+            chart_band = (CHART_H + CHART_GAP) if charted else 0
+            cap = caption_band(key, folded)
+            # the symbol line reserves a slot above the caption for every symboled row;
+            # equivalences extends that same line (the "= …" continuation) rather than
+            # adding a band, so it reserves the slot too even when symbols itself is off
+            sym = SYMBOL_H if ((show_symbols or show_equiv) and key in SYMBOLED_ROWS and not folded) else 0
+            # the units line reserves a slot below the caption (above the plain-text box)
+            # for every united row, like the symbol slot above the caption
+            uni = UNIT_H if (show_units and key in UNITED_ROWS and not folded) else 0
+            # below the caption/units a tile reserves bands for the plain-text value box and
+            # the preselect chooser (its row), stacked in that order. The all-interval checkbox rides
+            # the vectors row's band too, so the show-panel "all-interval" entry reserves it there even
+            # when preselects is off (preselect_band_h("vectors") gives the target chooser's box height).
+            pre = preselect_band_h(key) if ((show_preselects and key in PRESELECT_ROWS
+                                             or settings["all_interval"] and key == "vectors")
+                                            and not folded) else 0
+            # the form chooser rides one box below the preselect chooser, in the mapping and
+            # comma-basis boxes, when form controls are shown
+            formctrl = formchooser_band_h(key) if (show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
+            ptext = ptext_band(key, folded)
+            row_h[key] = STRIP if folded else natural
+            row_nsub[key] = round(natural / ROW_H)  # matrix height in cells (fold-independent)
+            tile_top[key] = y
+            if charted:
+                chart_top[key] = y + head + top_frame  # the chart sits below the top frame
+            if has_matlabel:
+                # col-label sits centred INSIDE the head — distance from tile_top to label
+                # top = distance from label bottom to bracket top = MATLABEL_PAD, so the
+                # label reads roughly equidistant from both edges of the matrix's head
+                row_matlabel_top[key] = y + (head - MATLABEL_H) // 2
+            row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
+            row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
+            row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
+            row_cap[key] = cap  # the units line and plain-text box sit below the caption
+            row_units[key] = uni  # the plain-text box and preselect chooser sit below the units line
+            row_ptext[key] = ptext  # the plain-text band, with the preselect chooser below it
+            row_pre[key] = pre  # the preselect band, with the <choose form> chooser below it
+            row_label[key] = label
+            row_collapsible[key] = collapsible
+            tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
+            # a row with a nested tile-control (ranges chart, alt-complexity chooser, optimization
+            # block) adds its reserved height here, so the rows below drop clear of it and every
+            # tile in the row grows to the same height (the row stays one uniform band)
+            tile_h[key] += tile_extra.get(key, 0)
+            y += tile_h[key] + GAP
+        total_h = y
+
+        # Each multi-element column runs a single trunk down to the fan-out bus, where it
+        # splits into one line per element. The bus sits centred in the whitespace of the GAP
+        # above the first row band (FAN below the branch top) -- immediately after the column
+        # toggle, mirroring how the rows fan out at node_edge + FAN just after the row toggle.
+        # The element +/− controls ride this bus (see below), and the counts row's per-column
+        # cardinality simply has the already-split sub-lines threading through it.
+        fanout_y = branch_top_y + FAN
+
+        def row_open(key):
+            return key in row_y and f"row:{key}" not in collapsed
+
+        def tile_open(rkey, ckey):  # a real tile, whose row + column are open and not folded
+            return ((rkey, ckey) in declared_tiles and row_open(rkey) and col_open(ckey)
+                    and f"tile:{rkey}:{ckey}" not in collapsed)
+
+        def cell_unit(rkey, ckey, *, gen=None, prime=None):
+            # the per-value unit shown beneath a gridded cell when units is on: the tile's
+            # unit (UNITS) with its g/p variables subscripted by this cell's generator/prime
+            # index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped list g₁.
+            if not show_units:
+                return ""
+            u = UNITS.get((rkey, ckey), "")
+            if gen is not None:
+                u = u.replace("g", f"g{_sub(gen + 1)}")
+            if prime is not None:
+                u = u.replace("p", f"p{_sub(prime + 1)}")
+            return u
+
+        def matlabel_gutter_w(group_key):
+            # The MATLABEL_W gutter reserved on EACH side of a content footprint for row
+            # labels (𝒎₁, …) — only the primes column under the mapping matrix needs it in
+            # the built layout. The LEFT gutter carries the labels; the RIGHT one is empty,
+            # mirroring it so the matrix stays centred in its tile (see content_w above).
+            # Shared by prime_left and the bracket placement so the cells, the left ⟨ and the
+            # labels stay in lockstep.
+            return matlabel_primes_w if group_key == "primes" else 0
+
+        def matrix_span(group_key):
+            # The (x, width) of a group's CELL matrix — its content_box minus the row-label
+            # gutter, which content_w carries on BOTH sides (the left holds the labels, the
+            # right balances them). This is the region the EBK encloses: the per-row ⟨ … ]
+            # brackets seat their ⟨ at its left edge and ] at its right, and the spanning
+            # ebktop/ebkbrace/ebkangle frame runs its full width. Anchored to the cells (not
+            # the wider grey footprint), so a column widened past them keeps the EBK hugging
+            # the matrix with the row labels sitting outside it.
+            x, w = content_box(group_key)
+            mx = matlabel_gutter_w(group_key)
+            return x + mx, w - 2 * mx
+
+        def prime_left(p):
+            return primes_x + matlabel_gutter_w("primes") + BRACKET_W + p * COL_W
+
+        def comma_left(c):
+            return commas_x + BRACKET_W + c * COL_W
+
+        def target_left(j):
+            return targets_x + BRACKET_W + j * COL_W
+
+        def interest_left(i):
+            return interest_x + BRACKET_W + i * COL_W
+
+        def held_left(i):
+            return held_x + BRACKET_W + i * COL_W
+
+        def detempering_left(i):  # the i-th generator detempering column
+            return detempering_x + BRACKET_W + i * COL_W
+
+        def gen_left(g):  # the g-th generator column in the generators box (its tuning-map cells)
+            return content_x["gens"] + BRACKET_W + g * COL_W
+
+        def map_top(i):
+            return row_y["mapping"] + i * ROW_H
+
+        def canon_top(i):  # the y of canonical-mapping row i (the r stacked canonical maps)
+            return row_y["canon"] + i * ROW_H
+
+        def vec_top(p):  # the y of vector component p in the d-tall interval-vectors row
+            return row_y["vectors"] + p * ROW_H
+
+        # The value groups share an element name (for cell ids), a left-edge accessor, a fanned
+        # element count, and the operand of their just log₂ (a bare prime, or a comma/target
+        # ratio). Defined here — ahead of the cells, the EBK pass and the column_axis fan — so the
+        # +/− controls, the brackets and the gridlines all read ONE geometry. primes carry a map,
+        # commas and targets interval lists.
+        group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
+                      "interest": "interest", "held": "held", "detempering": "detempering"}
+        group_left = {"gens": gen_left, "primes": prime_left, "commas": comma_left, "targets": target_left,
+                      "interest": interest_left, "held": held_left, "detempering": detempering_left}
+        # how many side-by-side cells each group column carries: its element count, so the
+        # gridline pass can fan every group column into that many vertical sub-axes (commas
+        # count the shown columns, draft included). Keyed identically to group_left/group_elem
+        # so a column with cells can never be left out of the fan (the generators-column bug).
+        group_n = {"gens": r, "primes": d, "commas": nc_shown, "targets": k,
+                   "interest": mi, "held": nh, "detempering": r}
+        group_ratio = {  # the just interval ratio each value group is taken over
+            "primes": lambda i: _ratio_str(elements[i]),  # a prime "p/1", or a nonprime element "n/d"
+            "commas": lambda i: comma_ratios[i],
+            "targets": lambda i: targets[i],
+            "interest": lambda i: interest_ratios[i],
+            "held": lambda i: held_ratios[i],
+            "detempering": lambda i: gens[i],  # the detempering interval as a ratio (service.generators = D)
+        }
+
+        # The element +/− controls ride each fanning column's TOP bus (the fan-out, just after the
+        # toggle), not the quantities row: the − sits on a branch point (a per-element split), the +
+        # on a "stub" one COL_W past the last branch point — the slot where the next element would
+        # branch — with the top bus stretched out to reach it. sub_axis_x is the split's x (column_axis
+        # fans the same centres); plus_stub_x records, per addable column that shows a +, where that +
+        # (and so the bus end) sits, keeping the cells and the gridlines in lockstep.
+        def sub_axis_x(ckey, i):  # centre of column ckey's i-th per-element sub-axis (a branch point)
+            return group_left[ckey](i) + COL_W / 2
+
+        def col_plus_x(ckey):
+            n = group_n[ckey]
+            if n == 0:  # an empty set has no branch points: the + centres on the single trunk
+                mx, mw = matrix_span(ckey)
+                return mx + mw / 2
+            return sub_axis_x(ckey, n - 1) + COL_W  # one slot past the last branch point
+
+        def _plus_shows(ckey):  # mirrors the +'s emit gate in the quantities block (col_open for the
+            if ckey in ("interest", "held"):  # addable sets, so an empty-but-open column still adds one)
+                return col_open(ckey) and row_open("quantities")
+            return tile_open("quantities", ckey)
+
+        plus_stub_x = {ckey: col_plus_x(ckey) for ckey in ("primes", "commas", "interest", "held")
+                       if _plus_shows(ckey)}
+
+        # The interval-vectors basis fans HORIZONTALLY (one sub-row per prime), so its + is the row
+        # mirror of the columns' top-bus +: it rides a stub one ROW_H below the last sub-row, on the
+        # row's left bus, with that bus's left bar stretched down to reach it. row_plus_y records it
+        # for row_axis (as plus_stub_x does for the columns); only the vectors row carries a basis +.
+        row_plus_y = ({"vectors": vec_top(d) + ROW_H / 2} if tile_open("vectors", "quantities") else {})
+
+        cells: list[CellBox] = []
+        lines: list[Line] = []
+        blocks: list[Block] = []
+
+        # column headers (always shown; a collapsed column keeps its title) plus a
+        # fold toggle in the header band for collapsible ones. A matlabel-widened column
+        # (primes when symbols is on) carries the gutter on both sides, so the header + toggle
+        # drop the gutter from each edge and stay centred over the CELLS rather than the wider
+        # column footprint — the gutters only frame the row labels, never the title.
+        for key in col_x:
+            hx = col_x[key] + matlabel_gutter_w(key)
+            hw = col_w[key] - 2 * matlabel_gutter_w(key)
+            cells.append(CellBox(f"header:{key}", hx, header_y, hw, HEADER_H, "colheader", text=col_header[key]))
+            if col_collapsible[key]:
+                glyph = _fold_glyph(f"col:{key}" in collapsed)
+                # the fold toggle sits on the column's gridline (its content centre), so it
+                # stays aligned with the trunk even when the interest header floats wider
+                tx = hx + (hw - TOGGLE) / 2
+                cells.append(CellBox(f"toggle:col:{key}", tx, col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
+
+        # row labels (always shown; a collapsed row keeps its label as the strip)
+        # plus a fold toggle in the gutter for the collapsible ones
+        for key in row_y:
+            cells.append(CellBox(f"label:{key}", 0, row_y[key], LABEL_W, row_h[key], "rowlabel", text=row_label[key]))
+            if row_collapsible[key]:
+                glyph = _fold_glyph(f"row:{key}" in collapsed)
+                ty = row_y[key] + (row_h[key] - TOGGLE) / 2
+                cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
+
+        # the master expand/collapse-all toggle, in the corner where the row-toggle column
+        # (node_x) meets the column-toggle row (col_node_y). Its glyph mirrors the whole
+        # grid: out-chevrons to expand when every foldable row and column is already
+        # collapsed, in-chevrons to collapse otherwise.
+        foldable = _foldable_ids(cells)  # the row/col toggles emitted just above
+        all_collapsed = bool(foldable) and foldable <= collapsed
+        cells.append(CellBox("toggle:all", node_x, col_node_y, TOGGLE, TOGGLE, "alltoggle",
+                             text=_fold_glyph(all_collapsed)))
+
+        # counts row: each present column's set cardinality, centred over its values. The
+        # detempering column counts the rank r (one detempering interval per generator).
+        if row_open("counts"):
+            cardinality = {"gens": r, "primes": d, "commas": state.n, "targets": k, "held": nh,
+                           "detempering": r}
+            for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS:
+                if tile_open("counts", ckey):
+                    cells.append(CellBox(f"count:{ckey}", col_x[ckey], row_y["counts"], col_w[ckey], ROW_H,
+                                         "count", text=f"{_mathit(sym)} = {cardinality[ckey]}"))
+
+        # units row + column (the specific `domain_units` toggle): coordinate-unit labels.
+        # The units COLUMN labels each row's coordinate — the interval-vectors basis in
+        # primes (pᵢ/), the mapping in generators (gᵢ/), the cents tuning rows as ¢/. The
+        # units ROW labels each column's coordinate — /gᵢ over generators, /pᵢ over the
+        # domain primes, /1 over the ratio columns. Each rides its own grey tile
+        # (UNITS_TILES), so tile_open gates emission against the live layout.
+        if tile_open("vectors", "units"):
+            for p in range(d):
+                cells.append(CellBox(f"ucol:vectors:{p}", col_x["units"], vec_top(p), col_w["units"], ROW_H,
+                                     "units", text=f"p{_sub(p + 1)}/"))
+        if tile_open("mapping", "units"):
+            for i in range(r):
+                cells.append(CellBox(f"ucol:mapping:{i}", col_x["units"], map_top(i), col_w["units"], ROW_H,
+                                     "units", text=f"g{_sub(i + 1)}/"))
+        for key in ("tuning", "just", "retune", "damage"):
+            if tile_open(key, "units"):
+                cells.append(CellBox(f"ucol:{key}", col_x["units"], row_y[key], col_w["units"], ROW_H,
+                                     "units", text="¢/"))
+        # the weighting rows' units-column labels: the prescaler is octaves (one per matrix row,
+        # like the d-tall interval vectors), complexity and weight are complexity units (C)/
+        if tile_open("prescaling", "units"):
+            for i in range(d):
+                cells.append(CellBox(f"ucol:prescaling:{i}", col_x["units"], row_y["prescaling"] + i * ROW_H,
+                                     col_w["units"], ROW_H, "units", text="oct/"))
+        for key in ("complexity", "weight"):
+            if tile_open(key, "units"):
+                cells.append(CellBox(f"ucol:{key}", col_x["units"], row_y[key], col_w["units"], ROW_H,
+                                     "units", text="(C)/"))
+        if "units" in row_y:
+            uy = row_y["units"]
+            if tile_open("units", "gens"):
+                for g in range(r):
+                    cells.append(CellBox(f"urow:gens:{g}", gen_left(g), uy, COL_W, ROW_H, "units", text=f"/g{_sub(g + 1)}"))
+            if tile_open("units", "primes"):
+                for p in range(d):
+                    cells.append(CellBox(f"urow:primes:{p}", prime_left(p), uy, COL_W, ROW_H, "units", text=f"/p{_sub(p + 1)}"))
+            if tile_open("units", "commas"):
+                for c in range(nc):
+                    cells.append(CellBox(f"urow:commas:{c}", comma_left(c), uy, COL_W, ROW_H, "units", text="/1"))
+            if tile_open("units", "detempering"):  # each detempering generator is a ratio column
+                for i in range(r):
+                    cells.append(CellBox(f"urow:detempering:{i}", detempering_left(i), uy, COL_W, ROW_H, "units", text="/1"))
+            if tile_open("units", "targets"):
+                for j in range(k):
+                    cells.append(CellBox(f"urow:targets:{j}", target_left(j), uy, COL_W, ROW_H, "units", text="/1"))
+            if tile_open("units", "interest"):
+                for ii in range(mi):
+                    cells.append(CellBox(f"urow:interest:{ii}", interest_left(ii), uy, COL_W, ROW_H, "units", text="/1"))
+            if tile_open("units", "held"):
+                for ih in range(nh):
+                    cells.append(CellBox(f"urow:held:{ih}", held_left(ih), uy, COL_W, ROW_H, "units", text="/1"))
+
+        # quantities row: domain primes (+ controls) and target ratios (below the
+        # tile's toggle head, like every other row's values). The whole row -- its
+        # headers and the domain/comma ± controls riding it -- answers to the specific
+        # "quantities" toggle, which drops it from row_y via its present flag.
+        if "quantities" in row_y:
+            qy = row_y["quantities"]
+
+            def branch_minus(cid, ckey, i, kind, **kw):
+                # a hover − centred on column ckey's i-th branch point (its top-bus split): the
+                # zone drops from the branch point (where the revealed button parks) down over the
+                # element's header as the hover target, COL_W wide on the sub-axis — clear of the
+                # editable cells below the header (which a covering zone would block).
+                cells.append(CellBox(cid, sub_axis_x(ckey, i) - COL_W / 2, fanout_y, COL_W,
+                                     (qy + ROW_H) - fanout_y, kind, **kw))
+
+            def branch_plus(cid, ckey, kind):
+                # the always-shown + centred on the column's stub, one slot past the last branch
+                # point (the top bus stretches out to reach it); an empty set centres it on the trunk
+                cells.append(CellBox(cid, plus_stub_x[ckey] - BTN / 2, fanout_y - BTN / 2, BTN, BTN, kind))
+
+            if tile_open("quantities", "primes"):
+                for p in range(d):
+                    cells.append(CellBox(f"prime:{p}", prime_left(p), qy, COL_W, ROW_H, "prime", text=str(elements[p]), prime=p))
+                # Only the highest prime is removable (shrink_domain trims the last), so its
+                # − rides that prime's branch point (the last top-bus split).
+                if d > 1:
+                    branch_minus("minus", "primes", d - 1, "minus")
+            if tile_open("quantities", "commas"):
+                for c in range(nc):
+                    cells.append(CellBox(f"comma:{c}", comma_left(c), qy, COL_W, ROW_H, "commaratio", text=comma_ratios[c], comma=c))
+                if pending is not None:  # the draft has no ratio yet — a "?" in a distinct id so
+                    # it is removed (not restructured from "?" label to fraction) when it commits
+                    cells.append(CellBox("comma:pending", comma_left(nc), qy, COL_W, ROW_H, "commaratio", text="?", comma=nc, pending=True))
+                # commas mirror the domain controls: + starts a (pending) comma; the − rides the
+                # last column's branch point — cancelling the draft, or dropping a real comma when >1
+                if pending is not None or nc > 1:
+                    branch_minus("comma_minus", "commas", nc_shown - 1, "comma_minus")
+            if tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
+                for i in range(r):                       # derived from M like the comma ratios — no ± control)
+                    cells.append(CellBox(f"detempering:{i}", detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=gens[i]))
+            if tile_open("quantities", "targets"):
+                for j in range(k):
+                    cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
+            if tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
+                for i in range(nh):
+                    # the derived ratio (read-only, from the editable vector) heads each column
+                    cells.append(CellBox(f"held:{i}", held_left(i), qy, COL_W, ROW_H, "commaratio", text=held_ratios[i], comma=i))
+                    # each held interval carries its own − on its branch point (any one is removable)
+                    branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
+            if tile_open("quantities", "interest"):  # the user's other intervals of interest
+                for i in range(mi):
+                    # the derived ratio (read-only, from the vector) heads each column, like a comma's
+                    cells.append(CellBox(f"interest:{i}", interest_left(i), qy, COL_W, ROW_H, "commaratio", text=interest_ratios[i], comma=i))
+                    # every interval carries its own − on its branch point: any one is removable,
+                    # unlike the domain/comma last-only −
+                    branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
+            # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
+            # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
+            # the first interval can still be added). The − is the hover counterpart on a branch point.
+            for ckey, cid in (("primes", "plus"), ("commas", "comma_plus"),
+                              ("held", "held_plus"), ("interest", "interest_plus")):
+                if ckey in plus_stub_x:
+                    branch_plus(cid, ckey, cid)
+
+        # generator ratios (aligned with the mapping rows they label) + the mapping
+        # matrix and its mapped target interval list
+        if row_open("mapping"):
+            # the generators list the mapping's rows: a vertical ratio list in the
+            # quantities spine column, labelling the rows as the primes label the columns
+            if tile_open("mapping", "quantities"):
+                for i in range(r):
+                    cells.append(CellBox(f"gen:{i}", col_x["quantities"], map_top(i), col_w["quantities"], ROW_H, "genratio", text=gens[i] if i < len(gens) else "", gen=i))
+            for i in range(r):
+                if tile_open("mapping", "primes"):
+                    for p in range(d):
+                        cells.append(CellBox(f"cell:mapping:{i}:{p}", prime_left(p), map_top(i), COL_W, ROW_H, "mapping", gen=i, prime=p, unit=cell_unit("mapping", "primes", gen=i, prime=p)))
+                if tile_open("mapping", "targets"):
+                    for j in range(k):
+                        cells.append(CellBox(f"cell:mapped:{i}:{j}", target_left(j), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped[i][j]), gen=i, unit=cell_unit("mapping", "targets", gen=i)))
+                if tile_open("mapping", "interest"):  # interest mapped through M, like the targets
+                    for ii in range(mi):
+                        cells.append(CellBox(f"cell:imapped:{i}:{ii}", interest_left(ii), map_top(i), COL_W, ROW_H, "mapped", text=str(interest_mapped[i][ii]), gen=i, unit=cell_unit("mapping", "interest", gen=i)))
+                if tile_open("mapping", "held"):  # held mapped through M, like the targets / interest
+                    for hi in range(nh):
+                        cells.append(CellBox(f"cell:hmapped:{i}:{hi}", held_left(hi), map_top(i), COL_W, ROW_H, "mapped", text=str(held_mapped[i][hi]), gen=i, unit=cell_unit("mapping", "held", gen=i)))
+                # the comma basis mapped through M — it vanishes to 0 (parallel to the
+                # mapped target list); the raw basis lives in the interval-vectors row
+                if tile_open("mapping", "commas"):
+                    for c in range(nc):
+                        cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", comma_left(c), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_commas[i][c]), gen=i, unit=cell_unit("mapping", "commas", gen=i)))
+                # the detempering mapped through M — it is the identity (M·D = I), the dual of
+                # the comma basis vanishing; the raw detempering D lives in the interval-vectors row
+                if tile_open("mapping", "detempering"):
+                    for j in range(r):
+                        cells.append(CellBox(f"cell:mapped_detempering:{i}:{j}", detempering_left(j), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_detempering[i][j]), gen=i, unit=cell_unit("mapping", "detempering", gen=i)))
+
+        # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
+        # read-only maps over the primes, framed like the mapping matrix one row above it; the
+        # generator form matrix F (units 𝒈/𝒈) rides its gens column as a bordered r×r grid
+        if row_open("canon"):
+            if tile_open("canon", "primes"):
+                for i in range(rc):
+                    for p in range(d):
+                        cells.append(CellBox(f"cell:canon:{i}:{p}", prime_left(p), canon_top(i), COL_W, ROW_H, "mapped", text=str(canon_mapping[i][p])))
+            if tile_open("canon", "gens"):
+                for i in range(len(form_M)):
+                    for j in range(len(form_M)):
+                        cells.append(CellBox(f"cell:form:{i}:{j}", gen_left(j), canon_top(i), COL_W, ROW_H, "formcell", text=str(form_M[i][j])))
+
+        # interval-vectors row: each column's intervals as vectors (d-tall columns over
+        # the domain primes), on the same prime/comma/target axes as the quantities row.
+        # The comma basis is the editable raw vectors (the mapping's dual); the targets
+        # become a d x k matrix of vector columns.
+        if row_open("vectors"):
+            # the domain basis lists the interval-vectors' rows: the d primes as boxed
+            # COL_W squares (the same the quantities row heads its columns with) stacked
+            # down the quantities spine — the dual index, as the generators label the
+            # mapping rows. Its domain ± controls ride the row's LEFT bus, out to the left of
+            # the primes (the row mirror of the columns' top-bus controls): a + on the stub
+            # one ROW_H below the stack, and a − on the bottom prime's branch point.
+            if tile_open("vectors", "quantities"):
+                bx = col_x["quantities"] + (col_w["quantities"] - COL_W) / 2  # square, centred in the spine
+                for p in range(d):
+                    cells.append(CellBox(f"basis:{p}", bx, vec_top(p), COL_W, ROW_H, "prime", text=str(elements[p]), prime=p))
+                # the left bus the controls ride (node_edge + FAN when the row fans, i.e. d > 1 — matching
+                # row_axis); the − zone drops from it rightward over the bottom prime as the hover target
+                basis_bus_x = node_edge + FAN if d > 1 else node_edge
+                if d > 1:  # the highest prime is the removable one (shrink trims the last)
+                    cells.append(CellBox("basis_minus", basis_bus_x, vec_top(d - 1),
+                                         (bx + COL_W) - basis_bus_x, ROW_H, "basis_minus"))
+                cells.append(CellBox("basis_plus", basis_bus_x - BTN / 2, row_plus_y["vectors"] - BTN / 2,
+                                     BTN, BTN, "plus"))
+            if tile_open("vectors", "commas"):
+                for c in range(nc):
+                    for p in range(d):
+                        cells.append(CellBox(f"cell:comma:{p}:{c}", comma_left(c), vec_top(p), COL_W, ROW_H, "commacell", text=str(state.comma_basis[c][p]), prime=p, comma=c, unit=cell_unit("vectors", "commas", prime=p)))
+                if pending is not None:  # the draft column: blank, red-outlined cells the user fills in
+                    for p in range(d):
+                        v = pending[p]
+                        cells.append(CellBox(f"cell:comma:{p}:{nc}", comma_left(nc), vec_top(p), COL_W, ROW_H, "commacell",
+                                             text="" if v is None else str(v), prime=p, comma=nc, pending=True, unit=cell_unit("vectors", "commas", prime=p)))
+            if tile_open("vectors", "targets"):  # the target interval list as EDITABLE vector columns
+                for j in range(k):                # (a hybrid input, like the comma basis): typing a
+                    for p in range(d):            # column overrides the target set with those intervals
+                        cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "targetcell", text=str(target_vectors[j][p]), prime=p, comma=j, unit=cell_unit("vectors", "targets", prime=p)))
+            if tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
+                for i in range(nh):
+                    for p in range(d):
+                        cells.append(CellBox(f"cell:held:{p}:{i}", held_left(i), vec_top(p), COL_W, ROW_H, "heldcell", text=str(held[i][p]), prime=p, comma=i, unit=cell_unit("vectors", "held", prime=p)))
+            if tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
+                for i in range(r):
+                    for p in range(d):
+                        cells.append(CellBox(f"cell:vec:detempering:{i}:{p}", detempering_left(i), vec_top(p), COL_W, ROW_H, "vec", text=str(detempering_vectors[i][p]), unit=cell_unit("vectors", "detempering", prime=p)))
+            if tile_open("vectors", "interest"):  # the user's intervals of interest: editable vectors, like the comma basis
+                for i in range(mi):
+                    for p in range(d):
+                        # inset within the COL_W slot (centred) so each ket is its own box with a
+                        # gap to its neighbours — the interest column is a collection, not a matrix
+                        cells.append(CellBox(f"cell:interest:{p}:{i}", interest_left(i) + KET_INSET, vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(interest[i][p]), prime=p, comma=i, unit=cell_unit("vectors", "interest", prime=p)))
+
+        def closed_form_operand(key, group, i):
+            """The operand ``R`` of a cell's exact closed form ``1200 · log₂R``, or None
+            when the value has no closed form. A just size IS ``1200·log₂`` of its
+            interval. A comma vanishes in the temperament, so its retuning is the negated
+            just size — the exact log of the inverted comma. The tempered sizes and the
+            prime/target errors come from optimization, so they have none."""
+            if key == "just":
+                return _log_operand(group_ratio[group](i))
+            if group == "commas" and key == "retune":
+                recip = 1 / Fraction(comma_ratios[i])
+                return _log_operand(f"{recip.numerator}/{recip.denominator}")
+            return None
+
+        # tuning rows over the primes, commas and targets (cents); each can collapse on
+        # its own. Commas sit on the same footing as targets — they are just the dual
+        # interval set. Math expressions only ADDS the exact closed form where one exists
+        # (a "mathexpr" kind prefixing the cents value); a cell with no closed form is
+        # untouched — it keeps its plain cents cell. Math expressions never removes a
+        # value, bracket, caption or tile: those are governed by quantities/gridded/names.
+        # Charts track tiles: a charted row (retuning/weight/damage) draws a bar chart over
+        # EVERY tile it shows. tval_row — the one place a charted row's value cells are emitted
+        # — records each tile it draws here, and a single loop below charts them all. So a
+        # column joining a charted row is charted automatically (no per-column chart() call to
+        # forget), and a chart can never drift from the values beneath it.
+        chart_tiles = []  # (row, col, values) per open value tile of a charted row
+        chart_indicators = {}  # (row, col) -> (indicator, label); only the damage chart carries one
+
+        def tval_row(key, group, vals):
+            if not tile_open(key, group):
+                return
+            vals = tuple(vals)
+            if key in CHARTED_ROWS:
+                chart_tiles.append((key, group, vals))
+            y = row_y[key]
+            # the tuning-family unit is cents per the column's coordinate: over the generators
+            # it's ¢/gᵢ, over the primes ¢/pᵢ, over the (dimensionless) interval columns plain ¢
+            for i, v in enumerate(vals):
+                cid = f"{key}:{group_elem[group]}:{i}"
+                x = group_left[group](i)
+                u = cell_unit(key, group, gen=i if group == "gens" else None, prime=i if group == "primes" else None)
+                operand = closed_form_operand(key, group, i) if show_math else None
+                if operand is not None:
+                    cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, show_quantities), unit=u))
+                else:
+                    cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v), unit=u))
+
+        # a charted tile draws a bar chart in the band reserved above its values. The box spans
+        # the value block exactly — the left bracket gutter, the value columns, and the right
+        # bracket gutter — anchored to group_left (the cells), NOT the column footprint. So the
+        # chart's BRACKET_W-inset axis and COL_W bar pitch overlay the cells: each bar centres on
+        # its value's gridline even when a caption widens the footprint or a matlabel gutter
+        # offsets the cells within it (the gridlines follow the cells the same way; see
+        # column_axis). chart_top[key] exists only where a chart band was reserved (charts on,
+        # row charted, not folded), so it gates emission against the layout with no drift.
+        def chart(rkey, ckey, vals, indicator=None, indicator_label=""):
+            vals = tuple(vals)
+            if vals and rkey in chart_top and tile_open(rkey, ckey):
+                x = group_left[ckey](0) - BRACKET_W  # the left bracket gutter, where the value block starts
+                cells.append(CellBox(f"chart:{rkey}:{ckey}", x, chart_top[rkey],
+                                     2 * BRACKET_W + len(vals) * COL_W, CHART_H, "chart", values=vals,
+                                     indicator=indicator, indicator_label=indicator_label))
+
+        tuning_data = {
+            "tuning": (tun.tuning_map, comma_sizes.tempered, target_sizes.tempered, interest_sizes.tempered, held_sizes.tempered),
+            "just": (tun.just_map, comma_sizes.just, target_sizes.just, interest_sizes.just, held_sizes.just),
+            "retune": (tun.retuning_map, comma_sizes.errors, target_sizes.errors, interest_sizes.errors, held_sizes.errors),
+        }
+        for key, (prime_vals, comma_vals, target_vals, interest_vals, held_vals) in tuning_data.items():
+            if row_open(key):
+                tval_row(key, "primes", prime_vals)
+                tval_row(key, "commas", comma_vals)
+                tval_row(key, "targets", target_vals)
+                tval_row(key, "interest", interest_vals)
+                tval_row(key, "held", held_vals)
+        # the generator tuning map: the tuning row's map over the generators (the gens-column
+        # counterpart of the tuning map over the primes). Its cells are EDITABLE (a hybrid input):
+        # typing a cents value overrides that generator's tuning, like typing the whole map in the
+        # plain text. The genmap has no closed form, so they are plain editable cells (never mathexpr).
+        if row_open("tuning") and tile_open("tuning", "gens"):
+            for i, v in enumerate(tun.generator_map):
+                cells.append(CellBox(f"tuning:gen:{i}", group_left["gens"](i), row_y["tuning"], COL_W, ROW_H,
+                                     "gentuningcell", text=service.cents(v), unit=cell_unit("tuning", "gens", gen=i)))
+        # the detempering column's size rows: tempering the detempering intervals recovers the
+        # generators, so its tuning row IS the generator tuning map (𝒕D = 𝒈); its just and
+        # retuning sizes are ordinary interval lists (𝒋D, 𝒓D), the latter charted like the targets.
+        if show_detempering:
+            for key, vals in (("tuning", detempering_sizes.tempered),
+                              ("just", detempering_sizes.just),
+                              ("retune", detempering_sizes.errors)):
+                if row_open(key):
+                    tval_row(key, "detempering", vals)
+
+        # the audio rows: a speaker button per pitch, sounding the just (just_audio) or
+        # tempered (tempered_audio) cents of each interval — the same data the just / tuning
+        # rows display, so the ear and the eye agree. tempered_audio also sounds the generators
+        # (their tuned size, as the tuning row's genmap does); a generator has no just size.
+        def audio_tile(key, group, vals):
+            if not tile_open(key, group):
+                return
+            vals = tuple(vals)
+            # one speaker per pitch, aligned under the value columns. Each carries the WHOLE
+            # tile's cents list (not just its own) so the play-mode can arp/chord the tile, and
+            # text = the tile key it shares with the bank controls (so the engine can pair them).
+            for i in range(len(vals)):
+                cells.append(CellBox(f"speaker:{key}:{group_elem[group]}:{i}", group_left[group](i),
+                                     row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals))
+            # the per-tile control bank in the head strip's top-right (mirroring the fold toggle
+            # top-left): waveform / play-mode / hold-loop / include-1/1, each a TOGGLE square.
+            # Anchored to the grey panel's right edge (tile_box), not the centred content — so a
+            # caption-widened tile keeps the bank on its edge rather than drifting it inward.
+            cx, cw = tile_box(group)
+            right = cx + cw + PAD - TOGGLE_INSET
+            by, step = tile_top[key] - PAD + TOGGLE_INSET, TOGGLE + TOGGLE_INSET
+            left0 = right - (4 * TOGGLE + 3 * TOGGLE_INSET)
+            for j, ctrl in enumerate(("wave", "mode", "hold", "root")):
+                cells.append(CellBox(f"{ctrl}:{key}:{group}", left0 + j * step, by, TOGGLE, TOGGLE, f"audio_{ctrl}"))
+
+        # Source the pitches from tuning_data so the audio rows stay in lockstep with the just /
+        # tuning rows they sound (one source of truth for "what those rows contain").
+        list_groups = ("primes", "commas", "targets", "interest", "held")  # tuning_data's tuple order
+        if row_open("just_audio"):
+            for group, vals in zip(list_groups, tuning_data["just"]):
+                audio_tile("just_audio", group, vals)
+            if show_detempering:  # sound the detempering intervals' JI sizes, like the commas
+                audio_tile("just_audio", "detempering", detempering_sizes.just)
+        if row_open("tempered_audio"):
+            audio_tile("tempered_audio", "gens", tun.generator_map)  # the genmap, as the tuning row carries
+            for group, vals in zip(list_groups, tuning_data["tuning"]):
+                audio_tile("tempered_audio", group, vals)
+            if show_detempering:  # their tempered sizes (= the generators' tuned sizes, 𝒕D = 𝒈)
+                audio_tile("tempered_audio", "detempering", detempering_sizes.tempered)
+        # the prescaling row applies the prescaler L to each column group's vectors: over the
+        # primes it is the d×d diagonal (L·eₚ — the prescaler matrix itself), over the comma /
+        # target / interest sets it is L·vector (each component scaled by the diagonal), a d-tall
+        # matrix per group like the interval-vectors row. Rendered as int/frac gridded cells.
+        prescale_vectors = {
+            "primes": tuple(tuple(1 if i == p else 0 for i in range(d)) for p in range(d)),
+            "commas": state.comma_basis,
+            "targets": target_vectors,
+            "interest": interest,
+            "held": held,
+            "detempering": detempering_vectors,
+        }
+        # the active prescaler's per-prime diagonal term, lifted as the math-expression
+        # operand: log-prime puts ``log₂{prime}`` on the diagonal, prime puts ``{prime}``
+        # itself, identity puts a constant ``1`` — and ``1`` IS the value, so the cell would
+        # be ``coeff · 1 = coeff`` (no information added). Following the just row's rule
+        # (math expressions only where a non-trivial closed form exists), the identity
+        # scheme is read as "no closed form" → cells stay tval.
+        if _scheme_prescaler == "log-prime":
+            prime_term = {i: f"log₂{p}" for i, p in enumerate(elements)}
+        elif _scheme_prescaler == "prime":
+            prime_term = {i: str(p) for i, p in enumerate(elements)}
+        else:  # "identity" — coeff · 1 is silly, skip mathexpr (cell stays tval)
+            prime_term = {}
+        for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
+            if not tile_open("prescaling", group):
+                continue
+            left = group_left[group]
+            for c, vec in enumerate(prescale_vectors[group]):
+                # the prescaler over the primes is a d×d matrix whose columns ARE the domain
+                # primes, so each column's unit subscripts its p by that prime (oct/pᵢ) — like
+                # the mapping's /p denominator (and tval_row's primes rows). The other groups
+                # scale a vector set to plain octaves (no p), so there is nothing to subscript.
+                u = cell_unit("prescaling", group, prime=c if group == "primes" else None)
+                for i in range(d):
+                    value = prescaler[i] * vec[i]
+                    cid = f"cell:prescaling:{group}:{i}:{c}"
+                    cx, cy = left(c), row_y["prescaling"] + i * ROW_H
+                    # the bare prescaler 𝐿's diagonal (group == "primes" and i == c) is the
+                    # user's editable surface: each diagonal cell is a prescalercell — the
+                    # input box the user types overrides into — and so wins over the math-
+                    # expression closed form (typed values, not log₂{prime}, are what reads
+                    # off here). The off-diagonal of 𝐿 is pinned at 0 (𝐿 is diagonal), so it
+                    # stays tval. Every other prescaling tile (LC/LD/LT/LH/...) is a product —
+                    # the user can't edit its individual cells — so math_expressions still
+                    # styles a non-zero coefficient with its closed form ``coeff · {prime_term}``,
+                    # and a zero coefficient (no closed form) keeps the plain tval.
+                    if group == "primes" and i == c:
+                        cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
+                                             text=service.prescale_text(value), prime=i, unit=u))
+                    elif show_math and vec[i] != 0 and i in prime_term:
+                        cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
+                                             text=_prescale_math_expr(vec[i], prime_term[i], value, show_quantities), unit=u))
+                    else:
+                        cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
+                                             text=service.prescale_text(value), unit=u))
+        if lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox at the
+            # bottom of the prescaling matrix (the prescaler chooser is a preselect now, riding the
+            # preselect band above). A SQUARE (no inline label — it wraps broken in the narrow primes
+            # column) at the column's left, over its "replace diminuator" caption hugging its bottom.
+            py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
+            cells.append(CellBox("control:diminuator", col_x["primes"], py, LBOX_DIM_W, OPTION_BOX_PX,
+                                 "control_check", text="",  # square only; label moves to a caption below
+                                 checked=service.diminuator_replaced(tuning_scheme)))
+            cells.append(CellBox("caption:diminuator", col_x["primes"], py + OPTION_BOX_PX, LBOX_DIM_W,
+                                 CAPTION_LINE, "caption", text="replace diminuator"))
+        if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
+            # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q
+            # and dual(q) use the optimization box's value-over-symbol-over-caption stack — the
+            # value cell stays at COL_W (a standard gridded number), but the symbol/caption sit in
+            # a wider overhanging SLOT so "dual(q)" doesn't overflow and multi-word captions wrap
+            # readable. dual(q) only appears in all-interval mode (the dual norm power is
+            # meaningful via the dual-norm inequality used to minimax over every interval).
+            cy = tile_top["complexity"] + tile_h["complexity"] - cbox_extra + RANGE_GAP
+            sym_y = cy + ROW_H
+            cap_y = sym_y + SYMBOL_H
+            cap_h = 3 * CAPTION_LINE
+            drop_w = CBOX_DROP_W
+            slot_w = CBOX_SLOT_W
+            # the predefined-complexities master dropdown. The dropdown stores the short internal
+            # key ("lp", "copfr", …) but presents the inverted-form display name ("lp (log-product)",
+            # …). While alt-complexities are shelved it offers ONLY the current complexity (lp for every
+            # scheme today) so the user can't pick an unimplemented one; un-shelving alt_complexity opens
+            # the full preset list + the inert "custom" (shown when the fine controls leave the shape
+            # off-preset). The caption hugs its bottom (rather than bottom-aligning with the q/dual
+            # captions further down).
+            complexity_key = service.complexity_name_of(tuning_scheme)
+            complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
+            complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
+                                 if settings["alt_complexity"] else (complexity_text,))
+            cells.append(CellBox("control:complexity", col_x["targets"], cy, drop_w, PRESELECT_H,
+                                 "control_select", text=complexity_text, values=complexity_values))
+            cells.append(CellBox("caption:complexity", col_x["targets"], cy + PRESELECT_H, drop_w,
+                                 CAPTION_LINE, "caption", text="predefined complexities", align="left"))
+            # the q norm-power field: an editable white box (a powerinput) styled to match the
+            # optimization box's 𝑝 field; wiring (typing a new q to drive the norm) comes later.
+            # The slot is wider than the value cell, with the value centred so the italic symbol
+            # 𝑞 and the multi-word caption have room to render without overflow.
+            q_slot_x = col_x["targets"] + drop_w + OPT_COL_GAP
+            q_x = q_slot_x + (slot_w - COL_W) / 2
+            q_text = "2" if service.is_euclidean(tuning_scheme) else "1"
+            cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, "powerinput", text=q_text))
+            cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
+            cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
+                                 text="interval complexity norm power"))
+            # the q field + dropdown above always show with box 𝒄; only dual(q) is gated — it is
+            # meaningful only when the scheme is all-interval (the all-interval checkbox is checked)
+            if service.is_all_interval(tuning_scheme):
+                dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
+                dual_x = dual_slot_x + (slot_w - COL_W) / 2
+                dual_text = "2" if service.is_euclidean(tuning_scheme) else "∞"
+                # dual(q) renders via the same powerinput path as q so the ∞ glyph sits at the
+                # same visual size as the q numeral (the on_power_change handler no-ops here)
+                cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "powerinput", text=dual_text))
+                cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H,
+                                     "symbol", text="dual(𝑞)"))
+                cells.append(CellBox("caption:dual", dual_slot_x, cap_y, slot_w, cap_h, "caption",
+                                     text="dual norm power"))
+        if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
+            for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
+                tval_row("complexity", group, complexities[group])
+        if row_open("weight"):  # weight is over the targets only, like damage (it scales them)
+            tval_row("weight", "targets", target_weights)
+        if slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), nested at the bottom of the weight list,
+            # with its "damage weight slope" caption beneath (the optimization box's caption pattern)
+            py = tile_top["weight"] + tile_h["weight"] - slope_extra + RANGE_GAP
+            cells.append(CellBox("control:slope", col_x["targets"], py, col_w["targets"], PRESELECT_H,
+                                 "control_select", text=service.weight_slope_of(tuning_scheme),
+                                 values=tuple(service.WEIGHT_SLOPES)))
+            cells.append(CellBox("caption:slope", col_x["targets"], py + PRESELECT_H,
+                                 col_w["targets"], CAPTION_LINE, "caption",
+                                 text="damage weight slope", align="left"))
+        if row_open("damage"):  # damage is over the targets only (the tuning's own column)
+            tval_row("damage", "targets", target_sizes.damage)
+            # optimization adds the horizontal minimized-damage indicator (the objective ⟪𝐝⟫ₚ
+            # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
+            # (∞ / 2 / 1); off, the chart is plain bars. Recorded for the chart loop below.
+            if show_optimization:
+                power = service.optimization_power(tuning_scheme)
+                chart_indicators[("damage", "targets")] = (
+                    _lp_objective(target_sizes.damage, power), _format_power(power))
+
+        # Draw a bar chart over every tile a charted row recorded (see chart_tiles above):
+        # one pass, so the set of charts always equals the set of charted-row value tiles.
+        for rkey, ckey, vals in chart_tiles:
+            indicator, label = chart_indicators.get((rkey, ckey), (None, ""))
+            chart(rkey, ckey, vals, indicator=indicator, indicator_label=label)
+
+        # The generator tuning-ranges chart nests at the BOTTOM of the generator tuning map
+        # tile (below its values and caption), a per-generator [min, max] I-beam (octave held
+        # pure, so the period generator pins to a point) under the selected mode, diamond-
+        # monotone or -tradeoff. Gated on the tuning_ranges toggle; the tile's own panel is
+        # extended to enclose it (see gtm_extra in the panel loop), so it sits inside the tile
+        # rather than floating. The monotone range can be None (no monotone tuning exists),
+        # passed as () so the chart draws a placeholder rather than I-beams. gtm_chart/gtm_extra
+        # were computed up front (so the tuning row could reserve the box's height).
+        gtm_box = None  # (x, y, w, h) of the bordered box framing the title, chart + selector
+        if gtm_chart:
+            chosen = tun.monotone_generator_range if range_mode == "monotone" else tun.tradeoff_generator_range
+            gx, gw = col_x["gens"], col_w["gens"]
+            # the box nests below the tile's values + caption (tile_h now includes gtm_extra
+            # for the box itself, so back it out to find the values' bottom); a left-aligned
+            # boxtitle tops it (like every control box), then the chart, then the mode selector
+            cy = tile_top["tuning"] + tile_h["tuning"] - gtm_extra + RANGE_GAP
+            cells.append(CellBox("rangetitle:tuning:gens", gx, cy, gw, BOX_TITLE_H, "boxtitle",
+                                 text="tuning ranges", align="left"))
+            chart_y = cy + BOX_TITLE_H + BOX_TITLE_GAP
+            cells.append(CellBox("rangechart:tuning:gens", gx, chart_y, gw, RANGE_CHART_H, "rangechart",
+                                 ranges=tuple(chosen) if chosen is not None else (),
+                                 values=tuple(tun.generator_map)))  # the live tuning, marked within each range
+            cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
+                                 "rangemode", text=range_mode))
+            gtm_box = (gx, cy, gw, BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
+
+        # the optimization box, nested at the BOTTOM of the target interval damage list tile (the
+        # tuning's own column, whose damages it minimizes): a bordered box titled "optimization",
+        # spanning the FULL width of the tile (like the tuning-ranges box) and DISTRIBUTING three
+        # controls across it — the minimized-damage objective (a read-only gridded value over ⟪𝐝⟫ₚ)
+        # hugging the left, the optimize button (over its "double-click to lock" hint) hugging the
+        # right, and the editable power (the ∞ cell over 𝑝 over "optimization power") centered in the
+        # gap between them, so its caption has clear room either side. The min-damage and ∞ are plain
+        # COL_W gridded cells (contents centred). The damage tile's panel grows by opt_extra to enclose
+        # the box's height, and the targets column is floored to OPT_BOX_MIN_W (see _control_floor) so
+        # the spread-out controls always fit.
+        opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
+        if opt_ctrl:
+            ox = col_x["targets"]
+            box_w = col_w["targets"]                 # the box spans the full width of the damage tile
+            box_top = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
+            title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
+            content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP  # a gap below the title
+            sym_top = content_top + ROW_H            # the symbol/hint row, under the values
+            cap_top = sym_top + SYMBOL_H             # the caption row (one line), under the symbols
+            body_h = ROW_H + SYMBOL_H + CAPTION_LINE + OPT_PAD_B  # value + symbol + one-line caption + pad
+            # the three controls, distributed across the box: objective at the left, optimize button at
+            # the right, power centered in the gap between them (so its caption clears both neighbors)
+            obj_x = ox + OPT_PAD_L
+            btn_x = ox + box_w - OPT_PAD_R - OPT_BTN_W
+            pow_x = ((obj_x + COL_W) + btn_x) / 2 - COL_W / 2
+            objective = _lp_objective(target_sizes.damage, service.optimization_power(tuning_scheme))
+            power = _format_power(service.optimization_power(tuning_scheme))
+            cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
+                                 text="optimization"))
+            # the objective: the minimized-damage value (read-only, so unboxed — a plain centred gridded
+            # value, the same COL_W cell as any damage value) over the symbol ⟪𝐝⟫ₚ
+            cells.append(CellBox("optimization:objective", obj_x, content_top, COL_W, ROW_H, "tval",
+                                 text=service.cents(objective)))
+            # all-interval: the minimized objective IS the retuning magnitude ‖𝒓𝑋⁻¹‖ at the dual norm
+            # power (the mockup's "becomes 'retuning magnitude'") — relabel the symbol, with dual(q) as
+            # the norm subscript; its value already computes over the primes. The prescaler inverse
+            # carries the live glyph (𝐿⁻¹ for the log-prime matrix, else generic 𝑋⁻¹).
+            obj_symbol = (f"‖𝒓{prescaler_symbol}⁻¹‖{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
+                          if service.is_all_interval(tuning_scheme) else "⟪𝐝⟫ₚ")
+            cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, COL_W, SYMBOL_H,
+                                 "symbol", text=obj_symbol))
+            # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — another COL_W gridded
+            # cell — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it)
+            cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
+                                 "powerinput", text=power))
+            cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
+                                 "symbol", text="𝑝"))
+            cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
+                                 OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power"))
+            # the optimize button: a normal ROW_H-tall rectangle wide enough to seat the "double-click
+            # to unlock" hint on one line beneath it. It single-clicks to optimize once, double-clicks
+            # to lock auto-optimize; app.py owns that behaviour + the lock visual. The hint names the
+            # double-click's NEXT effect, so it flips to "unlock" while the auto-optimize lock is on.
+            cells.append(CellBox("optimization:button", btn_x, content_top, OPT_BTN_W, ROW_H, "optimize",
+                                 text="optimize"))
+            cells.append(CellBox("optimization:button:hint", btn_x, sym_top, OPT_BTN_W, CAPTION_LINE,
+                                 "caption", text=f"double-click to {'unlock' if optimize_locked else 'lock'}"))
+            opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
+
+        # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
+        # target-side rows are lists ([ … ]). Maps stack one per generator row.
+        def bracket(bid, glyphs, group_key, y, h, *, fit=False):
+            # value brackets are short and centred in their row (so stacked rows keep a
+            # gap); the enclosing mapped-list [ ] passes fit=True to span the matrix.
+            # matrix_span hugs the cells (interest's content, not its footprint) and steps
+            # the left ⟨ right past the matlabel gutter, so the row labels sit inside the
+            # panel left of the ⟨ rather than overflowing it.
+            gx, gw = matrix_span(group_key)
+            by, bh = (y, h) if fit else (y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H)
+            cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
+            cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
+
+        if row_open("canon") and tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
+            for i in range(rc):
+                bracket(f"canon:map:{i}", MAP_BRACKETS, "primes", canon_top(i), ROW_H)
+        if row_open("canon") and tile_open("canon", "gens"):  # the generator form matrix: { … ] per row
+            for i in range(len(form_M)):
+                bracket(f"form:map:{i}", GENMAP_BRACKETS, "gens", canon_top(i), ROW_H)
+        if row_open("mapping"):
+            # the primes mapping is a stack of maps: ⟨ … ] per row
+            if tile_open("mapping", "primes"):
+                for i in range(r):
+                    bracket(f"map:{i}", MAP_BRACKETS, "primes", map_top(i), ROW_H)
+            if tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
+                bracket("mapped_comma", LIST_BRACKETS, "commas", row_y["mapping"], r * ROW_H, fit=True)
+            if tile_open("mapping", "detempering"):  # M·D = I: a [ ] over r rows, like the mapped commas
+                bracket("mapped_detempering", LIST_BRACKETS, "detempering", row_y["mapping"], r * ROW_H, fit=True)
+            if tile_open("mapping", "targets"):
+                bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H, fit=True)
+            # the interest mapped images stand alone (no outer [ … ]), mirroring the vectors row
+            if nh and tile_open("mapping", "held"):  # held mapped list, like the targets / interest
+                bracket("hmapped", LIST_BRACKETS, "held", row_y["mapping"], r * ROW_H, fit=True)
+        if row_open("vectors"):  # each group is a list of vectors: a [ ] spanning the d components
+            for group in ("commas", "targets"):
+                if tile_open("vectors", group):
+                    bracket(f"vec:{group}", LIST_BRACKETS, group, row_y["vectors"], d * ROW_H, fit=True)
+            # the interest column is a loose collection, not a matrix — its kets stand alone,
+            # so no outer [ … ] wraps them (see the de-matrixed mapped/imapped row below)
+            if nh and tile_open("vectors", "held"):
+                bracket("vec:held", LIST_BRACKETS, "held", row_y["vectors"], d * ROW_H, fit=True)
+            if tile_open("vectors", "detempering"):
+                bracket("vec:detempering", LIST_BRACKETS, "detempering", row_y["vectors"], d * ROW_H, fit=True)
+        if row_open("prescaling"):  # 𝐿·basis matrices: outer brackets over the d-tall prescaled columns.
+            # Each 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) gets symmetric ``[ … ]`` left/right brackets
+            # like the mapped lists; the interest tile (standalone columns) gets none. The bare
+            # prescaler 𝐿 is the exception — its outer wrap is the matrix_frame top+bottom span
+            # above (ebktop + ebkangle), not left/right brackets, mirroring the mapping's
+            # construction (plain text ``[ … ⟩``).
+            for group, n_cols in (("commas", nc), ("detempering", r),
+                                  ("targets", k), ("held", nh)):
+                if n_cols and tile_open("prescaling", group):
+                    bracket(f"prescaling:{group}", LIST_BRACKETS, group,
+                            row_y["prescaling"], d * ROW_H, fit=True)
+            # the bare prescaler 𝐿 is mapping-style: per-row ⟨ … ] brackets, one pair per row.
+            # Its outer top + bottom frame is the matrix_frame call above (ebktop + ebkangle).
+            if tile_open("prescaling", "primes"):
+                for i in range(d):
+                    bracket(f"prescaling:row:{i}", MAP_BRACKETS, "primes",
+                            row_y["prescaling"] + i * ROW_H, ROW_H)
+        if tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
+            bracket("tuning:genmap", GENMAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
+        # the detempering tuning row IS the generator tuning map (𝒕D = 𝒈), so it too is framed
+        # { … ]; its just/retune rows are ordinary interval lists, framed below with the rest
+        if tile_open("tuning", "detempering"):
+            bracket("tuning:detempering", GENMAP_BRACKETS, "detempering", row_y["tuning"], ROW_H)
+        for key in ("tuning", "just", "retune", "complexity"):
+            if row_open(key):
+                if tile_open(key, "primes"):
+                    bracket(f"{key}:map", MAP_BRACKETS, "primes", row_y[key], ROW_H)
+                if tile_open(key, "commas"):
+                    bracket(f"{key}:commalist", LIST_BRACKETS, "commas", row_y[key], ROW_H)
+                if tile_open(key, "targets"):
+                    bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
+                # the interest size rows carry NO bracket — the whole interest column is a bare
+                # collection of standalone values, not a [ … ] list (per the mockup)
+                if nh and tile_open(key, "held"):
+                    bracket(f"{key}:hlist", LIST_BRACKETS, "held", row_y[key], ROW_H)
+                # detempering's just/retune/complexity sizes are ordinary lists; its tuning row
+                # is the genmap, bracketed { … ] above (so it's skipped here)
+                if key != "tuning" and tile_open(key, "detempering"):
+                    bracket(f"{key}:detemperinglist", LIST_BRACKETS, "detempering", row_y[key], ROW_H)
+        if tile_open("weight", "targets"):
+            bracket("weight", LIST_BRACKETS, "targets", row_y["weight"], ROW_H)
+        if tile_open("damage", "targets"):
+            bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
+
+        # Matrix row + column labels (when symbols is on). A row-labelled tile is a
+        # covector stack — the mapping 𝑀, the prescaler 𝑋 — and labels each row 𝒎ᵢ / 𝒙ᵢ
+        # at the LEFT of the row's ⟨, inside the MATLABEL_W gutter reserved in the primes
+        # column. Every other multi-cell tile labels its COLUMNS above each cell in the
+        # MATLABEL_H band reserved at the top of the row's value band.
+        if show_symbols:
+            # the per-column group's count, so a tile's columns are iterated by its
+            # (rkey, ckey) without re-deriving the loop bounds each time
+            group_count = {"gens": r, "primes": d, "commas": nc, "targets": k,
+                           "held": nh, "detempering": r}
+            # the y of the i-th row inside a row-labelled tile: the mapping stacks under
+            # row_y["mapping"]; the prescaler stacks d rows under row_y["prescaling"]
+            row_top = {
+                ("mapping", "primes"): map_top,
+                ("prescaling", "primes"): lambda i: row_y["prescaling"] + i * ROW_H,
+            }
+            row_count = {("mapping", "primes"): r, ("prescaling", "primes"): d}
+            for (rkey, ckey), glyph in row_labels.items():
+                if not tile_open(rkey, ckey):
+                    continue
+                top = row_top[(rkey, ckey)]
+                for i in range(row_count[(rkey, ckey)]):
+                    cells.append(CellBox(
+                        f"matlabel:row:{rkey}:{ckey}:{i}",
+                        content_x[ckey], top(i), MATLABEL_W, ROW_H,
+                        "matlabel", text=f"{glyph}{_sub(i + 1)}",
+                    ))
+            # column labels — one per cell of each col-labelled tile, in the band above
+            # the top frame (so a framed matrix reads label / [bracket] / cells). A label
+            # value is either a string (the bare glyph; the i+1 subscript is appended) or
+            # a callable (i) → full label text, for tiles whose label has a richer form
+            # than glyph+subscript (the complexity row's norm expressions). The prescaling/
+            # complexity product-column labels carry the LIVE prescaler glyph (𝐿𝐜/𝐿𝐭/… or
+            # 𝑋𝐜/𝑋𝐭/…) — matching the tile-symbol slot below — via col_labels.
+            for (rkey, ckey), val in col_labels.items():
+                if ckey not in group_count or rkey not in row_matlabel_top:
+                    continue
+                if not tile_open(rkey, ckey):
+                    continue
+                left = group_left[ckey]
+                y = row_matlabel_top[rkey]
+                for i in range(group_count[ckey]):
+                    text = val(i) if callable(val) else f"{val}{_sub(i + 1)}"
+                    cells.append(CellBox(
+                        f"matlabel:col:{rkey}:{ckey}:{i}",
+                        left(i), y, COL_W, MATLABEL_H,
+                        "matlabel", text=text,
+                    ))
+
+        # Shared axes. A multi-element group is one line that fans out at the near end
+        # (from its node) into one line per element, runs through the data, then fans
+        # back in at the far end to a foot extending a touch past the data — pinched at
+        # both ends, bulging through the middle. Collapsing converges the per-element
+        # lines onto the centre and shrinks both buses to nothing, so the renderer
+        # animates the merge into a single straight gridline.
+        bot_bus_y = total_h - FAN
+
+        # the single place a gridline is recorded. ``dotted`` marks a rule whose band is
+        # collapsed: a folded row/column converges its fan onto one centre rule, drawn dotted
+        # so the band reads as a placeholder for its hidden content (see Line.dotted).
+        def gridline(lid, orientation, pos, start, length, *, dotted):
+            lines.append(Line(lid, orientation, pos, start, length, dotted=dotted))
+
+        # the columns that fan into one rule per element — recorded by column_axis as it runs, so
+        # the spine loop below can skip EXACTLY these. A single source of truth: a fanned column
+        # therefore can never ALSO be drawn a full-height centre trunk (which left a spurious
+        # gridline down a 2+-element column when a hand-kept fan list drifted from these calls).
+        fanned_columns = set()
+
+        def column_axis(key, prefix, n, center_open):
+            if key not in col_x:
+                return
+            fanned_columns.add(key)
+            dotted = f"col:{key}" in collapsed  # the whole fan dots when the column folds
+            # the trunk centres on the cell SPAN (matrix_span), not the wider column footprint:
+            # the two diverge when a matrix-label gutter offsets the cells (primes under the
+            # mapping). matrix_span is collapse-aware -- it shrinks to the title strip when the
+            # column folds -- so a collapsed column's gridline tracks its fold node and the
+            # panels converging onto it, instead of stranding at the centre of where the OPEN
+            # cells used to sit (which left it off-centre by half the width the fold shed).
+            mx, mw = matrix_span(key)
+            cx = mx + mw / 2
+            if n == 0:  # an empty interval set (interest, before any are entered) is one straight axis
+                gridline(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y, dotted=dotted)
+                gridline(f"foot:{key}", "v", cx, fanout_y, total_h - fanout_y, dotted=dotted)
+                return
+            xs = [cx] * n if dotted else [center_open(i) for i in range(n)]
+            for i in range(n):
+                gridline(f"v:{prefix}:{i}", "v", xs[i], fanout_y, bot_bus_y - fanout_y, dotted=dotted)
+            bx, bw = _bus_span(xs)
+            # an addable column stretches its TOP bus out past the last sub-axis to the + stub, so the
+            # branching bar reaches the + (which rides plus_stub_x); the bottom bus just spans the data.
+            top_end = plus_stub_x[key] if key in plus_stub_x else bx + bw
+            gridline(f"bus:{key}:top", "h", fanout_y, bx, top_end - bx, dotted=dotted)
+            gridline(f"bus:{key}:bot", "h", bot_bus_y, bx, bw, dotted=dotted)
+            gridline(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y, dotted=dotted)
+            gridline(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y, dotted=dotted)
+
+        # every group column fans into one vertical sub-axis per element, derived from
+        # group_left/group_elem/group_n (not a hand-kept call list) so a column with cells --
+        # the generators column included -- can never be missed and left a lone centre spine.
+        for key in group_left:
+            column_axis(key, group_elem[key], group_n[key],
+                        lambda i, k=key: group_left[k](i) + COL_W / 2)
+
+        # every NON-fanning present column is a spine: a single full-height trunk rule. Both ends
+        # are derived, not hand-kept — the columns come from col_x (so a column can never lack its
+        # gridline) and the fanned ones are excluded via fanned_columns (filled by the column_axis
+        # calls above), so a fanned column never doubles up a centre trunk on top of its fan. The
+        # spines are just the quantities/units columns: each carries one index per row (a basis
+        # square / generator ratio; a unit label), so there are no side-by-side cells to fan.
+        for key in col_x:
+            if key in fanned_columns:
+                continue
+            cx = col_x[key] + col_w[key] / 2
+            gridline(f"trunk:{key}", "v", cx, branch_top_y, total_h - branch_top_y,
+                     dotted=f"col:{key}" in collapsed)
+
+        # A matrix row is the horizontal mirror of a group column: it fans out at the node into
+        # one rule per cell-row, runs through the data, and rejoins on the right to a foot past it.
+        # The matrices are exactly FRAMED_ROWS, so membership there — not a hand-named special case
+        # (it used to be just "mapping") — decides what fans, and the count is the row's own cell
+        # height. So vectors/canon/prescaling fan like the mapping, automatically. Sub-rules are
+        # keyed by the row (h:mapping:i, h:vectors:i): unlike a column, whose element type picks
+        # one column, several rows share an element type (vectors and prescaling are both d primes
+        # tall), so the row key — not the element — is what keeps the ids unique.
+        right_bus_x = total_w - FAN
+        def row_axis(key):
+            n = row_nsub[key]
+            folded = f"row:{key}" in collapsed  # the whole fan dots and converges when the row folds
+            cy = row_y[key] + row_h[key] / 2
+            ys = [cy] * n if folded else [row_y[key] + i * ROW_H + ROW_H / 2 for i in range(n)]
+            left_bus_x = node_edge + FAN if (n > 1 and not folded) else node_edge
+            for i in range(n):
+                gridline(f"h:{key}:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
+            bus_y, bus_h = _bus_span(ys)
+            # a row with a basis + (only the vectors row) stretches its LEFT bar down past the last
+            # sub-row to the + stub (row_plus_y), so the branching bar reaches the +; the right bar
+            # just spans the data.
+            left_bottom = row_plus_y[key] if key in row_plus_y else bus_y + bus_h
+            gridline(f"vbar:{key}:left", "v", left_bus_x, bus_y, left_bottom - bus_y, dotted=folded)
+            gridline(f"vbar:{key}:right", "v", right_bus_x, bus_y, bus_h, dotted=folded)
+            gridline(f"trunk:{key}", "h", cy, node_edge, left_bus_x - node_edge, dotted=folded)
+            gridline(f"foot:{key}", "h", cy, right_bus_x, total_w - right_bus_x, dotted=folded)
+
+        # one pass over the present rows (top to bottom): fan the matrices, give every other row a
+        # single full-width rule across its band. Derived from row_y, so a row can never lack its
+        # gridline — present or collapsed (a folded row still leaves its rule, fanned or spine).
+        for key in row_y:
+            if key in FRAMED_ROWS:
+                row_axis(key)
+            else:
+                gridline(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge,
+                         dotted=f"row:{key}" in collapsed)
+
+        # #e0e0e0 panels behind each content group. A panel folds to zero size along
+        # any collapsed axis (collapsing toward the band centre), so the renderer
+        # animates it shrinking away to nothing — leaving only the band's gridline,
+        # never a leftover grey strip. Every tile is simply its row band's full height — a row with
+        # a nested control (chart/chooser) is one uniform band: tile_h already includes that control's
+        # reservation, so every tile in the row gets the same (extended) height here.
+        def panel_rect(ckey, rkey):
+            # a folded tile collapses both ways at once, so it shrinks to a point at its
+            # centre — like a row+column collapse confined to this one tile.
+            tile_c = f"tile:{rkey}:{ckey}" in collapsed
+            col_c = f"col:{ckey}" in collapsed or tile_c
+            row_c = f"row:{rkey}" in collapsed or tile_c
+            cx, cw = tile_box(ckey)  # the tile widens for a long caption; content centres within it
+            ch, cy = tile_h[rkey], tile_top[rkey]
+            w, px = (0, 0) if col_c else (cw, PAD)
+            h, py = (0, 0) if row_c else (ch, PAD)
+            bx = cx + cw / 2 if col_c else cx
+            by = cy + ch / 2 if row_c else cy
+            return bx - px, by - py, w + 2 * px, h + 2 * py
+
+        def panel(bid, ckey, rkey):
+            if ckey not in col_x or rkey not in row_y:
+                return
+            blocks.append(Block(bid, *panel_rect(ckey, rkey)))
+
+        for bid, rkey, ckey in tiles:
+            if (rkey, ckey) in declared_tiles:  # a dropped tile (e.g. all-interval's redundant ones) loses its panel too
+                panel(bid, ckey, rkey)
+        # the nested tuning-ranges box: a thin-bordered frame around the chart + selector,
+        # appended after the tile panels so it layers on top of the generator tuning map tile
+        if gtm_box is not None:
+            blocks.append(Block("block:tuning:rangesbox", *gtm_box, boxed=True))
+        # the optimization box's thin border, around its title + objective/power/button
+        if opt_box is not None:
+            blocks.append(Block("block:optimization:box", *opt_box, boxed=True))
+
+        # Colorization washes. Each colour-bearing tile renders one band per group — a white
+        # base plus the group's colour at mix-blend-mode:darken (see app.py). The base sits a
+        # layer BELOW the colour (z-index), so where a tile carries both groups the two colour
+        # bands darken-compose regardless of paint order: cyan over yellow gives the mockup's
+        # green. Each band hugs its (open) tile's extent and overhangs by WASH_PAD — so a run of
+        # same-coloured tiles meets across the inter-tile gaps and reads as one continuous band
+        # rather than leaving grey strips between them. A folded tile (by its own toggle, its row
+        # or its column) is not open, so its colour goes away with its content. Two sources of a
+        # tile's groups: most tiles colour by CONTENT (the colour-bearing objects multiplied into
+        # their quantity, CELL_FACTORS); the spine label cells colour by the BAND they head — the
+        # counts + units rows by their column's family, the quantities + units columns by their
+        # row's family — continuing each value band's colour through the spine (see SPINE_*).
+        def tile_groups(rkey, ckey):
+            if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
+                return {SPINE_COLUMN_GROUP[ckey]}          # a counts/units row cell: its column's family
+            if ckey in SPINE_COLUMNS and rkey in SPINE_ROW_GROUP:
+                return {SPINE_ROW_GROUP[rkey]}             # a quantities/units column cell: its row's family
+            return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())}
+
+        if col_x and row_y:
+            bands = []  # (id, x, y, w, h, group)
+            for rkey, ckey in declared_tiles:
+                if not tile_open(rkey, ckey):
+                    continue
+                groups = {g for g in tile_groups(rkey, ckey) if settings.get(f"{g}_colorization")}
+                if not groups:
+                    continue
+                x, w = col_x[ckey] - WASH_PAD, col_w[ckey] + 2 * WASH_PAD
+                y, h = tile_top[rkey] - WASH_PAD, tile_h[rkey] + 2 * WASH_PAD
+                for group in groups:
+                    bands.append((f"{group}:{rkey}:{ckey}", x, y, w, h, group))
+            for bid, x, y, w, h, _ in bands:  # white bases (a layer below the colour bands)
+                blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
+            for bid, x, y, w, h, group in bands:  # the darken colour bands over them
+                blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
+
+        # quantity symbol + name stacked inside each tile, below its values + bottom
+        # frame: the symbol line (toggled by symbols) on top, the long-form name
+        # (toggled by names) under it. Equivalences extends the symbol line with the
+        # quantity's defining equation — the "= …" continuation appended to the glyph,
+        # so it reads e.g. "𝒕 = 𝒈𝑀"; turning it on shows the glyph too (the equation's
+        # left side) even when symbols itself is off. Within a symboled row the slot is
+        # reserved for every captioned column so the names stay aligned; the glyph and
+        # equation are drawn only where defined (the comma columns have none yet). An
+        # empty interest column has no tiles. Mnemonics underlines the symbol letter.
+        # The weight row's equation resolves per build from the live scheme's damage-weight slope
+        # (𝒘 = 𝒄 / 𝟏 / 1/𝒄 — the bold 𝟏 is the all-ones weight vector). The damage row names its
+        # weight factor 𝒘 (a LIST, so 𝒘 — never diag(𝒘)) only while the weight row is on screen; with
+        # weighting hidden it drops to 𝐝 = |𝐞| rather than dangle a reference to a row the reader can't
+        # see. The bare prescaling tile is the only one whose SYMBOL equivalence names the live prescaler
+        # concretely (``𝑋 = 𝐿`` for log-prime, ``𝑋 = diag(𝒑)`` / ``𝑋 = 𝐼`` otherwise, or nothing for a
+        # typed override — see prescaler_equivalence). Its NAME additionally gains "= log-prime matrix"
+        # when 𝑋 = 𝐿 (see effective_captions). The product tiles carry the live glyph as their SYMBOL
+        # (𝐿C/…) and print no "= …".
+        ai = service.is_all_interval(tuning_scheme)  # all-interval: kept target tiles use prime-proxy labels
+        slope = service.damage_weight_slope(tuning_scheme)
+        equivalences = {**EQUIVALENCES,
+                        ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
+                        ("prescaling", "primes"): prescaler_equivalence,
+                        **(ALL_INTERVAL_EQUIVALENCES if ai else {})}
+        if not show_weighting:  # the weight row 𝒘 is hidden, so don't dangle it: 𝐝 = |𝐞|
+            equivalences[("damage", "targets")] = " = |𝐞|"
+        for (rkey, ckey), name in effective_captions.items():
+            if ckey == "interest" and not interest:
+                continue
+            if not tile_open(rkey, ckey):
+                continue
+            if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:  # the prime-proxy name (per the Guide)
+                name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
+            cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
+            if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS:
+                equiv = equivalences.get((rkey, ckey), "") if show_equiv else ""
+                base_symbol = prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
+                if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
+                    base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
+                glyph = base_symbol if (show_symbols or equiv) else ""
+                if glyph or equiv:
+                    cells.append(CellBox(f"symbol:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
+                cy += SYMBOL_H
+            if show_captions:
+                kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
+                underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
+                if show_mnemonics and ai:  # all-interval subscript letters (Tₚ → the p's in prime/proxy)
+                    underlines += tuple((name.index(w), 1)
+                                        for w in ALL_INTERVAL_MNEMONICS.get((rkey, ckey), ()) if w in name)
+                # the caption spans the row's whole caption band (row_cap — the tallest wrapped
+                # name in the row), and the CSS centres the text within it. So a one-line name
+                # sits centred (half a blank line above and below) against a two-line sibling,
+                # rather than hugging the cells with all the slack below.
+                cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], row_cap[rkey],
+                                     "caption", text=name, underlines=underlines))
+            # the "units: …" line sits below the caption band (independent of names/symbols),
+            # reading the box's entry from UNITS — bold-upright unit glyphs via _math_html
+            if show_units and (rkey, ckey) in UNITS:
+                uy = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey]
+                cells.append(CellBox(f"units:{rkey}:{ckey}", col_x[ckey], uy, col_w[ckey], UNIT_H,
+                                     "units", text=f"units: {UNITS[(rkey, ckey)]}"))
+
+        # the plain-text box sits directly below the symbol/caption/units stack; the preselect
+        # chooser rides one plain-text band lower (so preselects appear under plain text).
+        def ptext_band_y(rkey):
+            return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_units[rkey]
+
+        # a control box: a thin-bordered frame SPANNING the full width of its column's tile (like the
+        # optimization / tuning-ranges boxes), with the dropdown seated at its top-left at the dropdown's
+        # natural width and the standard dropdown-label underneath — a left-justified one-line caption
+        # (.rtt-caption-left: 6px left, 2px top) hugging the dropdown's bottom edge, the same asset every
+        # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
+        # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
+        # the (x, width, y) to seat the dropdown at.
+        def control_box(box_id, ckey, top, cap_w, label):
+            dropdown_w, label_h, box_h = control_dims(ckey, cap_w, label)
+            box_x, box_y = col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
+            blocks.append(Block(box_id, box_x, box_y, col_w[ckey], box_h, boxed=True))
+            ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
+            if label:
+                cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESELECT_H, dropdown_w, label_h,
+                                     "caption", text=label, align="left"))
+            return ctrl_x, dropdown_w, ctrl_y
+
+        def emit_all_interval_check(check_x, ctrl_y):
+            # the all-interval checkbox + its caption, seated on a control row at ctrl_y: an OPTION_BOX_PX
+            # square over an "all-interval" caption in an LBOX_DIM_W slot (the box-𝐋 diminuator's shape). It
+            # reflects whether the scheme targets every interval (ticking it is wired in app.py).
+            check_y = ctrl_y + (PRESELECT_H - OPTION_BOX_PX) / 2  # centre the square on the control row
+            cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
+                                 "control_check", text="", checked=service.is_all_interval(tuning_scheme)))
+            cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
+                                 CAPTION_LINE, "caption", text="all-interval"))
+
+        # preselect chooser dropdowns, in the reserved band below each governing tile's
+        # plain-text box. The tuning/target choosers carry the live selection; the
+        # temperament chooser is a placeholder (it loads, not mirrors). These are controls,
+        # so they ride the tile whether or not math expressions has emptied its values.
+        if show_preselects:
+            # the tuning chooser shows the scheme name; a scheme refined by the alt.-complexity
+            # control is a resolved spec (no preset name), so it shows blank rather than a repr.
+            # the prescaler chooser shows the scheme's named prescaler, blank ("-") when a custom
+            # diagonal override deviates from it (the bare prescaler tile's manual edits).
+            preselect_text = {"temperament": "", "target": target_spec,
+                              "tuning": tuning_scheme if isinstance(tuning_scheme, str) else "",
+                              "prescaler": service.displayed_prescaler_name(
+                                  state.mapping, tuning_scheme, custom_prescaler) or ""}
+
+            def emit_preselect(cid, name, rkey, ckey, label):
+                if not tile_open(rkey, ckey):
+                    return
+                top = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
+                cx, cw, cy = control_box(f"block:{cid}", ckey, top, preselect_cap(name), label)
+                cells.append(CellBox(cid, cx, cy, cw, PRESELECT_H, "preselect", text=preselect_text[name]))
+                # the target chooser carries the all-interval checkbox to the dropdown's right, in the
+                # empty space of its now-tile-spanning box (box 𝐓); TBOX_W floors the column wide enough.
+                if name == "target" and settings["all_interval"]:
+                    emit_all_interval_check(cx + cw + OPT_COL_GAP, cy)
+
+            for name, rkey, ckey, label in PRESELECTS:
+                emit_preselect(f"preselect:{name}", name, rkey, ckey, label)
+            for name, rkey, ckey, label in PRESELECT_COPIES:  # the same control in a second tile
+                emit_preselect(f"preselect:{name}:{ckey}", name, rkey, ckey, label)
+
+        # the all-interval checkbox is revealed by the show-panel "all-interval" entry ALONE (not the
+        # preselects toggle). When the target chooser is shown, emit_preselect seats the checkbox inside
+        # the chooser's box (box 𝐓, above); when it is hidden the checkbox is the band's only target
+        # control, alone at the column's left. The vectors row reserves the band either way.
+        if settings["all_interval"] and not show_preselects and tile_open("vectors", "targets"):
+            top = ptext_band_y("vectors") + row_ptext["vectors"]
+            emit_all_interval_check(col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
+
+        # the form chooser, one box below the preselect chooser: it canonicalizes the mapping /
+        # comma basis it rides (an undoable edit). A control, so it ignores the value-display
+        # toggles, like the preselect choosers.
+        if show_form_controls:
+            for name, rkey, ckey, label in FORM_CHOOSERS:
+                if not tile_open(rkey, ckey):
+                    continue
+                top = ptext_band_y(rkey) + row_ptext[rkey] + row_pre[rkey]  # below the preselect box
+                cx, cw, cy = control_box(f"block:formchooser:{name}", ckey, top, PRESELECT_W, label)
+                cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESELECT_H, "formchooser"))
+
+        # plain-text value band: each tile's value as its natural EBK string, directly
+        # below the symbol/caption stack (above the preselect chooser). The two editable
+        # duals (mapping, comma basis) render as inputs that drive the grid; every other
+        # value is read-only. The app shrinks each box's font so the value fits one line.
+        if show_ptext:
+            for (rkey, ckey), text in ptext_strings.items():
+                if not tile_open(rkey, ckey):
+                    continue
+                # the comma basis flips to a static two-tone box while a comma is pending (the
+                # committed commas black, the draft vector red — a single-colour input can't do
+                # that); the mapping and read-only values keep their normal kinds.
+                if pending is not None and (rkey, ckey) == ("vectors", "commas"):
+                    kind = "ptextpending"
+                elif (rkey, ckey) in EDITABLE_PTEXT:
+                    kind = "ptextedit"
+                else:
+                    kind = "ptext"
+                cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], ptext_band_y(rkey),
+                                     col_w[ckey], ptext_height(rkey, ckey), kind, text=text))
+            # the quantities-row ratios get their plain text per column, directly below
+            # each ratio (the mockup), one inline "n/d" per cell — not packed into a set. The held
+            # column (its ratios derived like the commas') carries its own, alongside commas/targets.
+            for ckey, left, ratios in (("commas", comma_left, comma_ratios), ("targets", target_left, targets),
+                                       ("held", held_left, held_ratios), ("detempering", detempering_left, gens)):
+                if tile_open("quantities", ckey):
+                    qy = ptext_band_y("quantities")
+                    for i, ratio in enumerate(ratios):
+                        cells.append(CellBox(f"ptext:quantities:{ckey}:{i}", left(i), qy, COL_W, PTEXT_H, "ptext", text=ratio))
+
+        # a framed matrix's top bracket + bottom brace stand off the cells by FRAME_GAP:
+        # the top bracket just above row 0 (below the toggle head), the brace a matching
+        # gap below the last row of that band.
+        def frame_top_y(rkey):
+            return row_y[rkey] - FRAME_H - FRAME_GAP
+
+        def frame_brace_y(rkey):
+            return row_y[rkey] + row_h[rkey] + FRAME_GAP
+
+        # a matrix tile (the primes mapping and its canonical forms) is enclosed by a top
+        # bracket + bottom curly brace spanning its whole column: the brace marks generator
+        # coordinates, so it's the right close for the mapping but not for raw vectors or
+        # prescaled vectors (those use per-column marks via vector_list_marks). ``bid`` keeps
+        # each frame's ids stable so two framed rows over the same column never collide.
+        def matrix_frame(rkey, ckey, bid, foot="ebkbrace"):
+            # The spanning frame hugs the CELL matrix — content_box, exactly as the per-row
+            # bracket() calls do — not the grey footprint (col_x/col_w). The matlabel gutter
+            # (row labels 𝒎ᵢ / 𝒙ᵢ) sits LEFT of that matrix, OUTSIDE the frame. Anchoring to
+            # the footprint instead would, whenever it is widened past its content (e.g. by the
+            # prescaler chooser or box-𝐋 diminuator under the prescaling matrix), drag the frame left
+            # over those labels and right past the cells. ``foot`` is the bottom-spanning close:
+            # ``ebkbrace`` for the mapping family (generator coordinates, curly close),
+            # ``ebkangle`` for the bare prescaler 𝐿 (angle close ⟩, mirroring the mapping's
+            # plain-text bracket but with ⟩ in place of }).
+            if not tile_open(rkey, ckey):
+                return
+            gx, gw = matrix_span(ckey)
+            cells.append(CellBox(f"ebktop:{bid}", gx, frame_top_y(rkey), gw, FRAME_H, "ebktop"))
+            cells.append(CellBox(f"{foot}:{bid}", gx, frame_brace_y(rkey), gw, BRACE_H, foot))
+
+        matrix_frame("mapping", "primes", "primes")
+        matrix_frame("canon", "primes", "canon")
+        matrix_frame("canon", "gens", "form")
+        # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer
+        # ``[ … ⟩`` with per-row ``⟨ … ]`` covectors — so its gridded EBK uses the SAME
+        # matrix_frame + per-row bracket pattern the mapping uses, just with an angle ⟩
+        # (ebkangle) at the bottom-span instead of the curly } (ebkbrace).
+        matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle")
+        # the 𝐿·basis product matrices (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile use a
+        # COLUMN-WISE construction instead — per-column ket ``[ … ⟩`` marks with outer ``[ … ]``
+        # left/right brackets (or no outer wrap for interest). See the vector_list_marks +
+        # bracket calls further below.
+
+        # a matrix of vector columns: vertical rules separate the columns, and each is
+        # marked top + bottom — inset so they stop short of the rules. ``top`` and ``foot``
+        # pick the per-column shapes: a tempered/mapped column (generator coords) takes the
+        # default ``[ ... }`` (ebktop + ebkbrace curly close); a raw (untempered) vector or a
+        # prescaled vector is a ket, closing with the angle ⟩ (ebkangle) instead — ``[ ... ⟩``.
+        # ``separators=False`` drops the dividing rules: for a bordered grid (the comma
+        # basis — its own cell borders already divide the columns) or for the standalone
+        # columns of the intervals-of-interest collection (which isn't a matrix at all).
+        def vector_list_marks(rkey, name, ckey, left, n_cols, top="ebktop", foot="ebkbrace", separators=True, pending_col=-1):
+            if not tile_open(rkey, ckey):
+                return
+            mark_w = COL_W - 2 * MARK_INSET
+            for c in range(n_cols):
+                mx = left(c) + MARK_INSET
+                pend = (c == pending_col)  # the draft column's ket marks render red, like its cells
+                cells.append(CellBox(f"{top}:{name}:{c}", mx, frame_top_y(rkey), mark_w, FRAME_H, top, pending=pend))
+                cells.append(CellBox(f"{foot}:{name}:{c}", mx, frame_brace_y(rkey), mark_w, BRACE_H, foot, pending=pend))
+            if not separators:
+                return
+            for c in range(1, n_cols):  # a rule on each interior column boundary
+                cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, row_y[rkey], SEP_W, row_h[rkey], "vbar"))
+
+        vector_list_marks("mapping", "mapped_comma", "commas", comma_left, nc)
+        vector_list_marks("mapping", "mapped_detempering", "detempering", detempering_left, r)
+        vector_list_marks("mapping", "mapped", "targets", target_left, k)
+        # the interest column's mapped images stand alone — no separator rules between columns
+        vector_list_marks("mapping", "imapped", "interest", interest_left, mi, separators=False)
+        vector_list_marks("mapping", "hmapped", "held", held_left, nh)
+        # the interval-vectors row holds raw (untempered) vectors, so every column is a
+        # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
+        # (commacell), so it skips the separator rules (its cell borders divide the columns);
+        # nc_shown includes the pending draft column so it gets its ket marks too. The
+        # interest column's intervals likewise stand alone (no separators between columns).
+        vector_list_marks("vectors", "vec:commas", "commas", comma_left, nc_shown, foot="ebkangle", separators=False,
+                         pending_col=(nc if pending is not None else -1))
+        vector_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
+        vector_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
+        vector_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
+        vector_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
+        # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
+        # Every 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile is a matrix of prescaled
+        # VECTORS, so each column is a ket ``[ … ⟩`` — top = ebktop (square open ⌐), foot =
+        # ebkangle (angle/ket foot ∨) — the default vector_list_marks shape (no overrides). The
+        # bare prescaler 𝐿 is the exception: it has NO per-column marks (its EBK is mapping-
+        # style — see the matrix_frame + per-row ⟨ … ] bracket calls above).
+        #
+        # Separators between columns are drawn for 𝐿T and 𝐿H per the mockup; the 𝐿C / 𝐿D tiles
+        # keep their columns spaced without dividing rules. Interest stays standalone (no outer
+        # wrap, no separators).
+        vector_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkangle", separators=False)
+        vector_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkangle", separators=False)
+        vector_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkangle", separators=True)
+        vector_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkangle", separators=True)
+        vector_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
+
+        # a per-tile fold toggle inset into each content tile's top-left corner: it
+        # sits in the head strip reserved above the content, TOGGLE_INSET in from the
+        # grey panel's top-left, so it never touches an edge or overlaps the frame.
+        # Anchored to the grey panel's left edge (col_x), not the centred content — so a
+        # caption-widened tile keeps the toggle on its edge rather than drifting it inward.
+        # Present whenever the tile's row and column bands are open — it stays put when
+        # only the tile is folded, so the tile can be re-expanded.
+        for _bid, rkey, ckey in tiles:
+            if ((rkey, ckey) in declared_tiles  # a dropped tile (e.g. all-interval's retune×targets) takes its toggle too
+                    and rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey)):
+                glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
+                cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
+                                     col_x[ckey] - PAD + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
+                                     TOGGLE, TOGGLE, "tiletoggle", text=glyph))
+
+        # Value-display filtering. The tiles (blocks) and gridlines (lines) always
+        # stand; only a tile's *contents* answer to the value-display toggles, applied
+        # here by kind rather than threaded through every emission above. "gridded
+        # values" off drops them outright -- numbers, boxes, EBK marks, controls -- so
+        # the tiles go empty. "quantities" (general) off is gentler: it keeps the boxes
+        # and marks and only blanks the body numbers, baring the gridded structure.
+        if not gridded:
+            cells = [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
+        elif not show_quantities:
+            cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
+                     for cb in cells]
+
+        # Each column title renders unwrapped and centred on its gridline (see _title_w and the
+        # .rtt-colheader rule), so one wider than its content-hugging column overhangs it. Interior
+        # overhangs spill into the gaps over neighbours, but the LAST column's title spills past the
+        # grid's right edge — the narrow (empty) interest column's long "other intervals of interest"
+        # reaches well beyond total_w. Publish that reach so the renderer widens the grey pane to show
+        # the title rather than clip it. Computed from the final cells (after any blanking), so a mode
+        # that drops or empties the titles reports no overhang.
+        title_right = max((c.x + c.w / 2 + _title_w(c.text) / 2 for c in cells if c.kind == "colheader"),
+                          default=total_w)
+        right_overhang = max(0.0, title_right - total_w)
+
+        return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells),
+                      freeze_x=node_edge, freeze_y=branch_top_y, right_overhang=right_overhang)
+
+
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
           custom_prescaler=None, optimize_locked=False) -> Layout:
-    if settings is None:
-        settings = _default_settings()
-    if tuning_scheme is None:
-        # the as-shipped scheme is target-based and unity-weighted, matching the editor's default
-        tuning_scheme = service.DEFAULT_DOCUMENT_SCHEME
-    if target_spec is None:
-        target_spec = service.DEFAULT_TARGET_SPEC
-    collapsed = collapsed or frozenset()  # ids ("row:tuning", "col:targets") shown as strips
-    # Phase 1 — resolve the Show-panel view flags + their gating (see _resolve_show_flags above),
-    # then unpack into the local names the rest of build() reads.
-    _f = _resolve_show_flags(settings, collapsed)
-    show_captions = _f.captions
-    show_mnemonics = _f.mnemonics
-    show_equiv = _f.equiv
-    show_preselects = _f.preselects
-    show_counts = _f.counts
-    show_ptext = _f.ptext
-    show_charts = _f.charts
-    show_ranges = _f.ranges
-    show_symbols = _f.symbols
-    show_units = _f.units
-    show_domain_units = _f.domain_units
-    show_temp = _f.temp
-    show_form_controls = _f.form_controls
-    show_tuning = _f.tuning
-    show_optimization = _f.optimization
-    show_weighting = _f.weighting
-    show_alt_complexity = _f.alt_complexity
-    _lbox_show = _f.lbox
-    _cbox_show = _f.cbox
-    show_audio = _f.audio
-    show_detempering = _f.detempering
-    show_interest = _f.interest
-    gridded = _f.gridded
-    show_quantities = _f.quantities
-    show_domain_quantities = _f.domain_quantities
-    show_math = _f.math
-    # Phase 2 — resolve the complexity-prescaler glyph + labels (see _resolve_prescaler_labels).
-    _p = _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv)
-    _scheme_prescaler = _p.scheme_prescaler
-    prescaler_symbol = _p.symbol
-    prescaler_equivalence = _p.equivalence
-    prescaling_symbols = _p.prescaling_symbols
-    col_labels = _p.col_labels
-    row_labels = _p.row_labels
-    effective_captions = _p.effective_captions
-    # Row labels and column headers (and their gutters) are always present.
-    label_w = LABEL_W
-    header_h = HEADER_H
-    d = state.d
-    r = len(state.mapping)
-    # the d domain elements: the standard primes, or a nonstandard subgroup's (possibly
-    # nonprime) basis. Every interval set is read over this basis (so 13/5 keeps its 13).
-    elements = state.domain_basis
-    # trait 7: the nonstandard-domain box, when shown, reads the temperament in its prime
-    # superspace ("prime-based"); this coincides with the neutral mode on a standard domain,
-    # so it is harmless until that box is enabled.
-    approach = "prime-based" if settings.get("nonstandard_domain") else ""
-    gens = service.generators(state.mapping, elements)
-    # a typed explicit target list overrides the TILT/OLD spec; every target consumer below
-    # derives from this one resolved tuple, so the override flows through the whole grid
-    targets = target_override if target_override is not None else service.target_interval_set(target_spec, elements)
-    if service.is_all_interval(tuning_scheme):
-        # all-interval: the target list T becomes the identity (Tₚ = I) — every interval, by duality,
-        # is represented by the domain's own basis (the primes). Every target-column row then derives
-        # its prime-based "when all-interval" form (𝐿, ‖𝐿‖, 𝐿⁻¹, 𝑟, |𝑟|𝑋⁻¹) from this `targets`.
-        targets = tuple(_ratio_str(e) for e in elements)
-    k = len(targets)
-    mapped = service.mapped_intervals(state.mapping, targets, elements)
-    canon_mapping = service.canonical_mapping(state.mapping)  # M defactored + HNF (the form box)
-    rc = len(canon_mapping)  # canonical rank (== r for a valid temperament)
-    form_M = service.form_matrix(state.mapping)  # F: the generator form matrix (r×r), F·M = canonical
-    target_vectors = service.target_interval_vectors(targets, d, elements)  # k vectors, each d-tall
-    # held intervals: the optimization box's held-just constraints — user-edited vectors in the
-    # held column (like the intervals of interest). The tuning holds each exactly just, so
-    # they are folded into service.tuning below. Present only with the optimization sub-control.
-    held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in held_vectors) if show_optimization else ()
-    nh = len(held)
-    held_ratios = service.comma_ratios(held, elements)  # vector -> "num/den" (the shared renderer)
-    # a frozen manual generator tuning (optimize lock off) drives the maps directly; otherwise
-    # the scheme's optimum (holding the held intervals just). A stale tuning whose generator
-    # count no longer matches the mapping (a rank change) falls back to the optimum.
-    if generator_tuning is not None and len(generator_tuning) == len(state.mapping):
-        tun = service.tuning_from_generators(state.mapping, generator_tuning, elements)
-    else:
-        tun = service.tuning(state.mapping, tuning_scheme, elements, approach, held=held_ratios,
-                             prescaler_override=custom_prescaler)
-    target_sizes = service.interval_sizes(tun, targets, elements)
-    held_mapped = service.mapped_intervals(state.mapping, held_ratios, elements)  # M·held (gen coords)
-    held_sizes = service.interval_sizes(tun, held_ratios, elements)  # tempered/just/error sizes
-    target_weights = service.interval_weights(state.mapping, tuning_scheme, targets,
-                                              prescaler_override=custom_prescaler,
-                                              domain_basis=elements)  # the damage row's 𝒘
-    comma_ratios = service.comma_ratios(state.comma_basis, elements)
-    nc = len(comma_ratios)  # the real commas (those that define the temperament)
-    mapped_commas = service.mapped_commas(state.mapping, state.comma_basis)  # M·commas = 0 (vanish)
-    comma_sizes = service.interval_sizes(tun, comma_ratios, elements)  # comma sizes (tempered ~0)
-    # a comma being added is shown as a pending draft column to the right of the real
-    # ones: blank red cells and a "?" quantity until it is a valid independent comma
-    # (then it commits and the mapping re-ranks). It is not a real comma, so it does
-    # not enter the nullity, the mapping, or the sizes — only the displayed column count.
-    pending = list(pending_comma) if pending_comma is not None else None
-    nc_shown = nc + (1 if pending is not None else 0)
-    # other intervals of interest: a user-built set held as vectors and edited like
-    # the comma basis (editable vector cells). Normalize each vector to the current d
-    # (pad/trim) so a domain change can't misalign them, then derive the ratios the
-    # quantities row shows and the mapping/sizes the lower rows show. It carries no
-    # damage row and contributes tiles only when populated, so an empty column adds no
-    # panels or fold toggles — just its header and a single straight axis rule.
-    interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(d)) for m in interest)
-    mi = len(interest)
-    interest_ratios = service.comma_ratios(interest, elements)  # vector -> "num/den" (shared renderer)
-    interest_mapped = service.mapped_intervals(state.mapping, interest_ratios, elements)
-    interest_sizes = service.interval_sizes(tun, interest_ratios, elements)
-    # the complexity row norms each interval's prescaled vector (𝒄): a covector over the
-    # domain elements (each element's complexity, log₂ of it for the default log-prime
-    # norm), a list over the comma / target / interest interval sets.
-    complexities = {
-        "primes": service.interval_complexities(state.mapping, tuning_scheme, tuple(_ratio_str(e) for e in elements),
-                                                prescaler_override=custom_prescaler),
-        "commas": service.interval_complexities(state.mapping, tuning_scheme, comma_ratios,
-                                                prescaler_override=custom_prescaler, domain_basis=elements),
-        "targets": service.interval_complexities(state.mapping, tuning_scheme, targets,
-                                                 prescaler_override=custom_prescaler, domain_basis=elements),
-        "interest": service.interval_complexities(state.mapping, tuning_scheme, interest_ratios,
-                                                  prescaler_override=custom_prescaler, domain_basis=elements),
-        "held": service.interval_complexities(state.mapping, tuning_scheme, held_ratios,
-                                              prescaler_override=custom_prescaler, domain_basis=elements),
-        "detempering": service.interval_complexities(state.mapping, tuning_scheme, gens,
-                                                     prescaler_override=custom_prescaler, domain_basis=elements),
-    }
-    # the prescaler 𝑋: a d×d diagonal matrix over the primes (diag = each prime's pre-norm
-    # weight, the values the complexity map norms). log-prime by default: diag(log₂ prime).
-    # A custom_prescaler override (the bare prescaler tile's editable diagonal) short-circuits
-    # the scheme's computed diagonal here, threading the user's typed values into every
-    # prescaling/complexity/weight/tuning calculation downstream.
-    prescaler = service.complexity_prescaler(state.mapping, tuning_scheme, override=custom_prescaler)
-    interest_tiles = () if not interest else (
-        ("block:vec:interest", "vectors", "interest"),
-        ("block:interest", "quantities", "interest"),
-        ("block:imapped", "mapping", "interest"),
-        ("block:tuning:interest", "tuning", "interest"),
-        ("block:just:interest", "just", "interest"),
-        ("block:retune:interest", "retune", "interest"),
-        ("block:urow:interest", "units", "interest"),  # the units row's /1 over the interest column
-        ("block:prescaling:interest", "prescaling", "interest"),
-        ("block:complexity:interest", "complexity", "interest"),
-        ("block:just_audio:interest", "just_audio", "interest"),
-        ("block:tempered_audio:interest", "tempered_audio", "interest"),
-    )
-    # the held interval column's tiles (computed above): a user-editable interval list, like
-    # the intervals of interest. Empty by default, so — like an empty interest column — it
-    # then declares no tiles, only its header, axis and the + control to add the first one.
-    held_tiles = () if not held else (
-        ("block:held", "quantities", "held"),
-        ("block:vec:held", "vectors", "held"),
-        ("block:hmapped", "mapping", "held"),       # M·held in generator coords
-        ("block:tuning:held", "tuning", "held"),    # tempered sizes (= just, since held)
-        ("block:just:held", "just", "held"),        # just sizes
-        ("block:retune:held", "retune", "held"),    # errors (≈ 0, since held just)
-        ("block:urow:held", "units", "held"),       # the units row's /1 over the held column
-        ("block:prescaling:held", "prescaling", "held"),
-        ("block:complexity:held", "complexity", "held"),
-        ("block:just_audio:held", "just_audio", "held"),
-        ("block:tempered_audio:held", "tempered_audio", "held"),
-    )
-    # The optimization box's other mockup column — unchanged intervals (count u) — is
-    # deferred to the projection feature: the unchanged interval basis is U = nullspace(P − I),
-    # the projection P's eigenvalue-1 eigenvectors (en.xen.wiki/w/Projection#The_unchanged-interval_basis),
-    # so it can't be built until projection lands. Until then the box ships with the held
-    # column above plus the power line below (held intervals are a subset of the unchanged ones).
-    # the generator-detempering column holds the matrix D — one JI interval (a vector) per
-    # generator that tempers to it (the mapping's right-inverse), framed like the comma
-    # basis / target list. An independent box toggle, riding between domain primes and commas.
-    detempering_vectors = service.generator_detempering(state.mapping) if show_detempering else ()
-    mapped_detempering = service.mapped_detempering(state.mapping) if show_detempering else ()  # M·D = I
-    # the detempering intervals' sizes under the tuning: the tempered sizes ARE the generator
-    # tuning map (𝒕D = 𝒈, since each D tempers to its generator), with just and retuning sizes
-    # like any interval set. gens is the detempering as ratio strings (service.generators = D).
-    detempering_sizes = service.interval_sizes(tun, gens, elements) if show_detempering else None
-    detempering_tiles = (
-        ("block:detempering", "quantities", "detempering"),
-        ("block:vec:detempering", "vectors", "detempering"),
-        ("block:mapped_detempering", "mapping", "detempering"),
-        ("block:tuning:detempering", "tuning", "detempering"),
-        ("block:just:detempering", "just", "detempering"),
-        ("block:retune:detempering", "retune", "detempering"),
-        ("block:prescaling:detempering", "prescaling", "detempering"),
-        ("block:complexity:detempering", "complexity", "detempering"),
-        ("block:urow:detempering", "units", "detempering"),
-        ("block:just_audio:detempering", "just_audio", "detempering"),
-        ("block:tempered_audio:detempering", "tempered_audio", "detempering"),
-    ) if show_detempering else ()
-    # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
-    # tile (see opt_box below), not in a tile/row of their own
-    tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
-             + TILES + AUDIO_TILES + UNITS_TILES
-             + interest_tiles + held_tiles + detempering_tiles)
-    # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
-    # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
-    # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
-    # for a stray hardcoded column list to keep drawing a tile that no longer exists.
-    declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in tiles}
-    if service.is_all_interval(tuning_scheme):
-        # all-interval (Tₚ = I): every target-column list that just re-expresses an existing column
-        # collapses to a duplicate, so drop it — mapped 𝑀T → 𝑀, prescaled 𝐿T → 𝐿, and each size/error
-        # list to its prime map (tempered 𝐚 → 𝒕, just 𝐨 → 𝒋, error 𝐞 → 𝒓). The kept target tiles are
-        # the target list itself (Tₚ = I), the complexity ‖𝐿‖, and the weight/damage. Dropping a tile
-        # here clears its cells, bracket, caption, panel and fold toggle (never a blank box).
-        declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
-                           ("tuning", "targets"), ("just", "targets"), ("retune", "targets")}
-
-    # Column bands left-to-right: (key, natural width, present, collapsible).
-    # Each set-column belongs to a box toggle: generators, the domain primes and
-    # the commas are the temperament's (shown with temperament_boxes), target-
-    # intervals are the tuning's (shown with tuning_boxes), and the other-intervals-
-    # of-interest column has its own (shown with interest) -- turning a box off
-    # takes its whole column with it, including the other family's cells that ride
-    # in it (e.g. the tuning maps over primes, or the mapped target interval list
-    # over targets). A collapsed column folds to a strip sized to read its title, but never
-    # wider than it was open — so collapsing a column only ever narrows it (see col_w below).
-    # The domain/comma + controls ride just right of their blocks when open; each −
-    # is a hover affordance on the removable highest-prime / last-comma column.
-    # the domain column reads "basis elements" over a nonstandard subgroup (whose basis may
-    # be nonprime — "basis elements" is the guide's term for these columns; the mockup had
-    # "domain elements") and "domain primes" over a standard prime limit
-    domain_title = "domain\nprimes" if service.is_standard_domain(elements) else "basis\nelements"
-    col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
-                  "primes": domain_title, "detempering": "generator\ndetempering",
-                  "commas": "commas",
-                  "held": "held\nintervals", "targets": "target\nintervals",
-                  "interest": "other intervals\nof interest"}
-    # The leftmost quantities column is the spine: a header + fold toggle + a single
-    # vertical rule, the column-axis dual of the quantities spine row. The units column
-    # (the specific `domain_units` toggle) is a second spine column right after it,
-    # carrying each row's coordinate-unit labels (pᵢ/, gᵢ/, ¢/). Each spine holds a single
-    # COL_W-wide index per row (a basis square / generator ratio; a unit label) and so is
-    # one COL_W wide — its longer header overhangs it (see the col_w hug-content rule above).
-    # primes and targets reserve a BRACKET_W gutter on each side for EBK brackets;
-    # the value cells are inset by BRACKET_W within the group. The primes column
-    # additionally reserves a MATLABEL_W gutter on the left when symbols is on AND
-    # the mapping row will render, so its row labels (𝒎₁, 𝒎₂, …) seat left of each
-    # row's ⟨ bracket without overflowing the panel. An equal empty gutter is mirrored
-    # on the RIGHT (see col_bands below) so the row labels don't shove the matrix
-    # off-centre in its tile — the left label gutter is balanced by the empty right one.
-    matlabel_primes_w = MATLABEL_W if (show_symbols and show_temp) else 0
-    col_bands = (
-        ("quantities", COL_W, show_domain_quantities, True),
-        ("units", COL_W, show_domain_units, True),
-        ("gens", 2 * BRACKET_W + r * COL_W, show_temp, True),
-        ("primes", 2 * BRACKET_W + d * COL_W + 2 * matlabel_primes_w, show_temp, True),
-        ("detempering", 2 * BRACKET_W + r * COL_W, show_detempering, True),
-        ("commas", 2 * BRACKET_W + nc_shown * COL_W, show_temp, True),
-        ("held", 2 * BRACKET_W + nh * COL_W, show_optimization, True),
-        ("targets", 2 * BRACKET_W + k * COL_W, show_tuning, True),
-        # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
-        # padding. Its long two-line title needs more room, so the column's *footprint*
-        # is floored at the title width (see the loop below) and the narrow content is
-        # centred within it: the title centres over the whole column on its gridline, and
-        # the tiles centre on that same gridline. The board height is independent of mi.
-        ("interest", 2 * BRACKET_W + mi * COL_W, show_interest, True),
-    )
-    # A fold-toggle node column sits between the row-label gutter and the content
-    # (when names show); content starts past it with a clear gap so the tiles
-    # never collide with the nodes. Row lines fan from the node's right edge so
-    # their gaps match the columns'.
-    node_x = label_w + GAP
-    node_edge = node_x + TOGGLE  # the node's content-facing (right) edge
-    content_x0 = node_x + TOGGLE + GAP
-
-    # Row bands top-to-bottom: (key, natural height, present, collapsible, label), laid
-    # out below by the same running-cursor rule as the columns. Defined here, ahead of
-    # that layout, so each column's width can reserve room for its present rows' captions.
-    row_bands = (
-        ("counts", ROW_H, show_counts, True, "counts"),
-        ("just_audio", ROW_H, show_audio, True, "just audio"),
-        ("tempered_audio", ROW_H, show_audio, True, "tempered audio"),
-        ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
-        ("units", ROW_H, show_domain_units, True, "units"),
-        ("vectors", d * ROW_H, show_temp, True, "interval vectors"),
-        ("canon", rc * ROW_H, show_form_controls, True, "canonical mapping"),
-        ("mapping", r * ROW_H, show_temp, True, "mapping"),
-        ("tuning", ROW_H, show_tuning, True, "tuning"),
-        ("just", ROW_H, show_tuning, True, "just tuning"),
-        ("retune", ROW_H, show_tuning, True, "retuning"),
-        ("prescaling", d * ROW_H, show_weighting, True, "complexity prescaling"),
-        ("complexity", ROW_H, show_weighting, True, "complexity"),
-        ("weight", ROW_H, show_weighting, True, "weight"),
-        ("damage", ROW_H, show_tuning, True, "damage"),
-    )
-    # the present rows that carry an in-tile caption; a column is floored wide enough to
-    # keep each of these within MAX_CAPTION_LINES (see _caption_floor in the loop)
-    present_caption_rows = frozenset(
-        key for key, _h, present, _c, _l in row_bands if present and key in CAPTIONED_ROWS)
-
-    def _caption_floor(key):
-        # the width an open column needs so its captions stay within MAX_CAPTION_LINES,
-        # widening the tile rather than scaling the font or letting a long name spill;
-        # zero when names are hidden (no caption renders) so the column keeps its content size
-        if not show_captions:
-            return 0
-        return max((_min_width_for_lines(effective_captions[(rk, key)], MAX_CAPTION_LINES)
-                    for rk in present_caption_rows
-                    if (rk, key) in effective_captions and (rk, key) in declared_tiles), default=0)
-
-    def _control_floor(key):
-        # the width an open column needs so its in-tile choosers fit without overhanging the
-        # column's right edge (e.g. the narrow targets column is widened to seat box 𝒄's wide
-        # predefined-complexities dropdown); widens the column to enclose them
-        floor = 0
-        if key == "primes" and _lbox_show:
-            floor = LBOX_DIM_W  # box 𝐋's lone control now: the diminuator checkbox + its caption
-        if key == "targets" and _cbox_show:
-            floor = max(floor, CBOX_W)
-        if key == "targets" and show_preselects and settings["all_interval"]:
-            floor = max(floor, TBOX_W)  # box 𝐓: target chooser + all-interval checkbox, one box
-        if (key == "targets" and show_optimization and "row:damage" not in collapsed
-                and "tile:damage:targets" not in collapsed):
-            floor = max(floor, OPT_BOX_MIN_W)  # seat the box's spread-out controls (see opt_box)
-        # the preselect / form dropdowns' one-line labels (the .rtt-caption-left asset) must fit
-        # the column too, so a long label like "established tuning scheme" widens its (narrow)
-        # tile rather than spilling it — e.g. the generator tuning map's tuning-scheme copy
-        labels = ([l for _n, _r, c, l in PRESELECTS + PRESELECT_COPIES if c == key and l] if show_preselects else [])
-        labels += [l for _n, _r, c, l in FORM_CHOOSERS if c == key and l] if show_form_controls else []
-        if labels:
-            floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(l, 1) for l in labels))
-        return floor
-
-    # each column hugs its content (a long caption widens the footprint), the columns laid
-    # left to right a GAP apart. The element +/− controls no longer ride inside these tiles
-    # (they sit up on the fan's top bus, see plus_stub_x), so no column reserves overhang for one.
-    col_x, col_w, content_w, col_collapsible, open_col_w = {}, {}, {}, {}, {}
-    x = content_x0
-    for key, natural, present, collapsible in col_bands:
-        if not present:
-            continue
-        collapsed_col = f"col:{key}" in collapsed
-        hug_w = max(natural, _caption_floor(key), _control_floor(key))  # the open footprint: hugs content (+ caption / control room)
-        open_col_w[key] = hug_w  # the width it has (or would have) OPEN — collapse-independent, for caption wrapping
-        # The content (value cells + their bracket gutters) is the natural width. The column
-        # footprint (col_w) hugs that content, or widens where a long caption needs the room;
-        # it does NOT reserve room for a wider title. A title wider than its column (the
-        # "quantities"/"units" spines, the long interest header) overhangs it instead, rendered
-        # without wrapping and centred on the column gridline. The grey tile fills the footprint,
-        # with content centred within it (see content_x).
-        if collapsed_col:
-            # Folded to a title strip — sized to read the (widest line of the) title, but capped
-            # at the open footprint so collapsing never WIDENS a column: one already narrower than
-            # its title (a spine) keeps its width, the title overhanging, instead of ballooning out.
-            col_w[key] = content_w[key] = min(hug_w, _title_w(col_header[key]))
-        else:
-            content_w[key] = natural
-            col_w[key] = hug_w  # the footprint widens for a long caption
-        col_collapsible[key] = collapsible
-        col_x[key] = x
-        x += col_w[key] + GAP
-    total_w = x
-
-    # Content is centred within each footprint: the margin is (footprint − content) / 2,
-    # zero for the common case (content fills the column) and positive only where a long
-    # caption widened the footprint, reserving even margins around the narrower content.
-    content_x = {key: col_x[key] + (col_w[key] - content_w[key]) / 2 for key in col_x}
-
-    def content_box(key):
-        # the (x, width) of a column's actual content — the value cells and the brackets/
-        # axes that hug them, centred within the (possibly wider) tile and footprint
-        return content_x[key], content_w[key]
-
-    def tile_box(key):
-        # the (x, width) of a column's grey tile/panel: the full footprint (the panel fills it
-        # and overhangs by PAD). The caption stack rides this width; content centres within.
-        return col_x[key], col_w[key]
-
-    primes_x = content_x.get("primes")  # centred content-left; None when the column is hidden
-    commas_x = content_x.get("commas")  # None when the commas column is hidden
-    targets_x = content_x.get("targets")  # None when the target intervals column is hidden
-    interest_x = content_x.get("interest")  # None when the interest column is hidden
-    held_x = content_x.get("held")  # None when the held intervals column is hidden
-    detempering_x = content_x.get("detempering")  # None when the generator-detempering column is hidden
-
-    def col_open(key):
-        return key in col_x and f"col:{key}" not in collapsed
-
-    # The generator tuning-ranges box (the chart + its mode selector) nests at the bottom
-    # of the generator tuning map tile when tuning_ranges is on. Its extra height is
-    # reserved in the tuning row (below) so the rows beneath drop clear of it rather than
-    # the box spilling across them. Determinable up front: it rides the open, uncollapsed
-    # gens tile of the (present, unfolded) tuning row.
-    gtm_chart = (show_ranges and show_tuning and "row:tuning" not in collapsed
-                 and col_open("gens") and "tile:tuning:gens" not in collapsed)
-    gtm_extra = (RANGE_GAP + BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H) if gtm_chart else 0
-    # the alt.-complexity controls nest at the bottom of their matrix/list tiles (like the
-    # ranges box in the gens tile): box 𝐋 (the prescaling matrix over the primes) carries the
-    # "replace diminuator" checkbox, box 𝒄 (the complexity list over the targets) stacks the
-    # predefined-complexity chooser then the norm chooser, and box 𝒘 (the weight list over the
-    # targets) carries the weight-slope chooser. (The prescaler chooser is a preselect now, riding
-    # the preselect band above — see PRESELECTS.) Each tile reserves its controls' height up front.
-    lbox_ctrl = _lbox_show and col_open("primes")
-    # box 𝐋's lone control is the diminuator checkbox at the column's left, over its "replace
-    # diminuator" caption: a small square (OPTION_BOX_PX) plus a one-line caption sets the reserve.
-    lbox_extra = (RANGE_GAP + OPTION_BOX_PX + CAPTION_LINE) if lbox_ctrl else 0
-    # box 𝒄 lays its three controls in ONE row below the complexity list: the predefined-
-    # complexity master dropdown on the left, then the q norm-power field and the dual(q)
-    # display, each captioned (q/dual using the optimization box's value-symbol-caption stack).
-    # q/dual's captions ("interval complexity norm power", "dual norm power") wrap to up to
-    # three lines in their overhanging caption slot — reserve the height up front. The
-    # targets column was widened up front (by _control_floor) to CBOX_W to enclose them.
-    cbox_ctrl = _cbox_show and col_open("targets")
-    cbox_extra = (RANGE_GAP + ROW_H + SYMBOL_H + 3 * CAPTION_LINE) if cbox_ctrl else 0
-    # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target interval
-    # damage list tile (like the ranges box in the gens tile), gated on the optimization
-    # sub-control. Reserve their height up front so the board stays clear below the tile.
-    opt_ctrl = (show_optimization and "row:damage" not in collapsed
-                and col_open("targets") and "tile:damage:targets" not in collapsed)
-    # the optimization box: a title strip over a row of three controls distributed across the
-    # tile's full width — the objective ⟪𝐝⟫ₚ and the editable power 𝑝 (each a value above its
-    # symbol; the power also captioned "optimization power") plus the optimize button. Its height
-    # = a title inset + the title + a title gap + the value row + the symbol row + a one-line
-    # caption + pad (the width is the targets column, floored to OPT_BOX_MIN_W).
-    opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
-                  + CAPTION_LINE + OPT_PAD_B) if opt_ctrl else 0)
-    # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
-    # shows with WEIGHTING itself, not gated on the (shelved) alt. complexity extra. It is omitted
-    # in all-interval mode, where the weight is simplicity by construction, not a free choice.
-    slope_ctrl = (show_weighting and not service.is_all_interval(tuning_scheme)
-                  and "row:weight" not in collapsed
-                  and col_open("targets") and "tile:weight:targets" not in collapsed)
-    slope_extra = (RANGE_GAP + PRESELECT_H + CAPTION_LINE) if slope_ctrl else 0
-    # Each of these nested controls lives at the bottom of one tile of its row, but its reserved
-    # height (keyed here by row) is added to the whole row's tile_h: the rows below drop clear of
-    # it AND every tile in the row grows to the same height, so the row stays one uniform band.
-    tile_extra = {
-        "tuning": gtm_extra,        # the generator tuning-ranges chart (box in the genmap)
-        "prescaling": lbox_extra,   # box 𝐋: the "replace diminuator" checkbox
-        "complexity": cbox_extra,   # box 𝒄: the predefined-complexity + norm choosers
-        "weight": slope_extra,      # box 𝒘: the weight-slope chooser
-        "damage": opt_extra,        # the optimization controls under the damage list
-    }
-
-    header_y = 0
-    col_node_y = header_h + (GAP - TOGGLE) / 2  # the column toggle sits just under the header text
-    # Branching (trunk/bus/verticals) starts just below the column nodes so no
-    # line pokes up past them; with names hidden it starts at the very top.
-    branch_top_y = col_node_y + TOGGLE
-    rows_top_y = branch_top_y + GAP  # top of the first row band (counts when shown, else quantities)
-    # The grey tiles overhang their cells by PAD and sit over the gridlines, so the
-    # *visible* fan segment runs from a bus only to the tile edge. FAN places each bus
-    # midway between the node/foot edge and the tile edge (PAD inside the cell), so
-    # the inner (bus->tile) and outer (node->bus) segments are equal: (GAP-PAD)/2.
-    FAN = (GAP - PAD) / 2
-
-    # row_bands (the top-to-bottom band list) is defined above, ahead of the column
-    # widths so they can reserve room for each present row's caption. Every row folds to
-    # a strip via its toggle; "quantities" additionally hides that row and its column.
-    # A tile stacks (top frame band) + values + (bottom frame band) + (caption).
-    # row_y is the value top (cells/gridlines); tile_top is the grey panel top.
-    row_y, row_h, row_label, row_collapsible = {}, {}, {}, {}
-    tile_h, tile_top, row_frame, row_sym, row_cap, row_units, row_ptext, chart_top = {}, {}, {}, {}, {}, {}, {}, {}
-    row_pre = {}  # the preselect band height, so the <choose form> chooser can stack below it
-    row_nsub = {}  # each row's natural cell-row count (a matrix's height in cells), so the
-    # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
-    # drawing all of them, converged, while it's folded, so the fold animates as a merge
-    row_matlabel_top = {}  # y of the column-label band when reserved (one MATLABEL_H slot above
-    # the value cells), so column labels (𝐜₁, 𝒕₁, …) can be emitted at a fixed row-relative y
-
-    def caption_band(key, folded):
-        # the row's caption band is sized to its tallest (wrapped) caption, so the longest
-        # name fits within its tile rather than spilling off a narrow column. Only columns
-        # that actually declare a tile here count: an empty interest column declares no
-        # tile, so it reserves no caption height (its captions would otherwise wrap tall in
-        # the bare bracket-gutter stub and inflate the empty board). Each caption wraps at
-        # its column's OPEN width — collapse-independent — so collapsing a column (hiding its
-        # caption) never drops the band and shrinks the row's other tiles. A folded ROW shows
-        # no captions at all.
-        if not (show_captions and key in CAPTIONED_ROWS and not folded):
-            return 0
-        lines = [_wrap_lines(effective_captions[(key, c)], open_col_w[c]) for c in col_x
-                 if (key, c) in effective_captions and (key, c) in declared_tiles]
-        return max(lines, default=1) * CAPTION_LINE
-
-    # pass the held intervals + any frozen manual tuning so the plain text builds the SAME
-    # tuning the grid does (held-just sizes, frozen-tuning maps) — the two views can't diverge
-    ptext_strings = (service.plain_text_values(state, tuning_scheme, target_spec,
-                                               held=held, interest=interest,
-                                               generator_tuning=generator_tuning,
-                                               target_override=target_override)
-                     if show_ptext else {})
-
-    def ptext_height(rkey, ckey):  # one line; the app shrinks the font to fit the box width
-        return PTEXT_EDIT_H if (rkey, ckey) in EDITABLE_PTEXT else PTEXT_H
-
-    def ptext_band(key, folded):
-        # a single-line band for every value row's plain text (taller for the rows whose
-        # band holds an editable input); the font auto-fits so nothing wraps or spills
-        if not (show_ptext and key in PTEXT_ROWS and not folded):
-            return 0
-        return PTEXT_EDIT_H if key in EDITABLE_PTEXT_ROWS else PTEXT_H
-
-    # a control box (preselect / form chooser): the box spans its column's tile (see control_box),
-    # and the dropdown keeps its NATURAL width (cap_w) seated at the box's left — only shrunk if a
-    # tiny tile can't seat even that. The label is the standard one-line left-justified caption
-    # hugging the dropdown's bottom (the .rtt-caption-left asset), overflowing right if long.
-    def control_dims(ckey, cap_w, label):
-        dropdown_w = max(40, min(col_w[ckey] - 2 * BOX_INNER, cap_w))
-        label_h = CAPTION_LINE if label else 0  # one line (overflows right, never wraps the box wider)
-        box_h = BOX_INNER + PRESELECT_H + (label_h + CTRL_LABEL_GAP if label else BOX_INNER)
-        return dropdown_w, label_h, box_h
-
-    def control_band_h(ckey, cap_w, label):  # the box plus outer padding above and below
-        return 2 * BOX_OUTER + control_dims(ckey, cap_w, label)[2]
-
-    def preselect_cap(name):
-        return TARGET_PRESELECT_W if name == "target" else PRESELECT_W
-
-    def preselect_band_h(key):  # the tallest preselect control box riding this row
-        return max((control_band_h(ckey, preselect_cap(name), label)
-                    for name, rk, ckey, label in PRESELECTS + PRESELECT_COPIES
-                    if rk == key and ckey in col_w), default=0)
-
-    def formchooser_band_h(key):
-        return max((control_band_h(ckey, PRESELECT_W, label)
-                    for name, rk, ckey, label in FORM_CHOOSERS if rk == key and ckey in col_w), default=0)
-
-    y = rows_top_y
-    for key, natural, present, collapsible, label in row_bands:
-        if not present:
-            continue
-        folded = f"row:{key}" in collapsed
-        framed = key in FRAMED_ROWS and not folded
-        # column labels (𝐜ᵢ above each comma, 𝒕ᵢ above each tuned prime, …) sit INSIDE
-        # the tile, in the head area above the top bracket — roughly equidistant from
-        # the tile_top and the bracket. The head is expanded when a matlabel is present
-        # so the label has padding on both sides (the toggle stays in its corner — the
-        # two share the head's y-range but at different x).
-        has_matlabel = (show_symbols and key in COL_LABELED_ROWS and not folded)
-        head_default = TOGGLE + 2 * TOGGLE_INSET - PAD  # toggle's natural head reservation
-        # the matlabel needs MATLABEL_H + 2*PAD of head to sit centred with breathing room
-        head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
-        # framing bands stand off the cells by FRAME_GAP: a top bracket (FRAME_H)
-        # and a taller bottom curly brace (BRACE_H, with room for its spike)
-        top_frame = (FRAME_H + FRAME_GAP) if framed else 0
-        bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
-        # a charted row grows a chart band (above the values, below the top frame)
-        charted = show_charts and key in CHARTED_ROWS and not folded
-        chart_band = (CHART_H + CHART_GAP) if charted else 0
-        cap = caption_band(key, folded)
-        # the symbol line reserves a slot above the caption for every symboled row;
-        # equivalences extends that same line (the "= …" continuation) rather than
-        # adding a band, so it reserves the slot too even when symbols itself is off
-        sym = SYMBOL_H if ((show_symbols or show_equiv) and key in SYMBOLED_ROWS and not folded) else 0
-        # the units line reserves a slot below the caption (above the plain-text box)
-        # for every united row, like the symbol slot above the caption
-        uni = UNIT_H if (show_units and key in UNITED_ROWS and not folded) else 0
-        # below the caption/units a tile reserves bands for the plain-text value box and
-        # the preselect chooser (its row), stacked in that order. The all-interval checkbox rides
-        # the vectors row's band too, so the show-panel "all-interval" entry reserves it there even
-        # when preselects is off (preselect_band_h("vectors") gives the target chooser's box height).
-        pre = preselect_band_h(key) if ((show_preselects and key in PRESELECT_ROWS
-                                         or settings["all_interval"] and key == "vectors")
-                                        and not folded) else 0
-        # the form chooser rides one box below the preselect chooser, in the mapping and
-        # comma-basis boxes, when form controls are shown
-        formctrl = formchooser_band_h(key) if (show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
-        ptext = ptext_band(key, folded)
-        row_h[key] = STRIP if folded else natural
-        row_nsub[key] = round(natural / ROW_H)  # matrix height in cells (fold-independent)
-        tile_top[key] = y
-        if charted:
-            chart_top[key] = y + head + top_frame  # the chart sits below the top frame
-        if has_matlabel:
-            # col-label sits centred INSIDE the head — distance from tile_top to label
-            # top = distance from label bottom to bracket top = MATLABEL_PAD, so the
-            # label reads roughly equidistant from both edges of the matrix's head
-            row_matlabel_top[key] = y + (head - MATLABEL_H) // 2
-        row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
-        row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
-        row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
-        row_cap[key] = cap  # the units line and plain-text box sit below the caption
-        row_units[key] = uni  # the plain-text box and preselect chooser sit below the units line
-        row_ptext[key] = ptext  # the plain-text band, with the preselect chooser below it
-        row_pre[key] = pre  # the preselect band, with the <choose form> chooser below it
-        row_label[key] = label
-        row_collapsible[key] = collapsible
-        tile_h[key] = head + top_frame + chart_band + row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
-        # a row with a nested tile-control (ranges chart, alt-complexity chooser, optimization
-        # block) adds its reserved height here, so the rows below drop clear of it and every
-        # tile in the row grows to the same height (the row stays one uniform band)
-        tile_h[key] += tile_extra.get(key, 0)
-        y += tile_h[key] + GAP
-    total_h = y
-
-    # Each multi-element column runs a single trunk down to the fan-out bus, where it
-    # splits into one line per element. The bus sits centred in the whitespace of the GAP
-    # above the first row band (FAN below the branch top) -- immediately after the column
-    # toggle, mirroring how the rows fan out at node_edge + FAN just after the row toggle.
-    # The element +/− controls ride this bus (see below), and the counts row's per-column
-    # cardinality simply has the already-split sub-lines threading through it.
-    fanout_y = branch_top_y + FAN
-
-    def row_open(key):
-        return key in row_y and f"row:{key}" not in collapsed
-
-    def tile_open(rkey, ckey):  # a real tile, whose row + column are open and not folded
-        return ((rkey, ckey) in declared_tiles and row_open(rkey) and col_open(ckey)
-                and f"tile:{rkey}:{ckey}" not in collapsed)
-
-    def cell_unit(rkey, ckey, *, gen=None, prime=None):
-        # the per-value unit shown beneath a gridded cell when units is on: the tile's
-        # unit (UNITS) with its g/p variables subscripted by this cell's generator/prime
-        # index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped list g₁.
-        if not show_units:
-            return ""
-        u = UNITS.get((rkey, ckey), "")
-        if gen is not None:
-            u = u.replace("g", f"g{_sub(gen + 1)}")
-        if prime is not None:
-            u = u.replace("p", f"p{_sub(prime + 1)}")
-        return u
-
-    def matlabel_gutter_w(group_key):
-        # The MATLABEL_W gutter reserved on EACH side of a content footprint for row
-        # labels (𝒎₁, …) — only the primes column under the mapping matrix needs it in
-        # the built layout. The LEFT gutter carries the labels; the RIGHT one is empty,
-        # mirroring it so the matrix stays centred in its tile (see content_w above).
-        # Shared by prime_left and the bracket placement so the cells, the left ⟨ and the
-        # labels stay in lockstep.
-        return matlabel_primes_w if group_key == "primes" else 0
-
-    def matrix_span(group_key):
-        # The (x, width) of a group's CELL matrix — its content_box minus the row-label
-        # gutter, which content_w carries on BOTH sides (the left holds the labels, the
-        # right balances them). This is the region the EBK encloses: the per-row ⟨ … ]
-        # brackets seat their ⟨ at its left edge and ] at its right, and the spanning
-        # ebktop/ebkbrace/ebkangle frame runs its full width. Anchored to the cells (not
-        # the wider grey footprint), so a column widened past them keeps the EBK hugging
-        # the matrix with the row labels sitting outside it.
-        x, w = content_box(group_key)
-        mx = matlabel_gutter_w(group_key)
-        return x + mx, w - 2 * mx
-
-    def prime_left(p):
-        return primes_x + matlabel_gutter_w("primes") + BRACKET_W + p * COL_W
-
-    def comma_left(c):
-        return commas_x + BRACKET_W + c * COL_W
-
-    def target_left(j):
-        return targets_x + BRACKET_W + j * COL_W
-
-    def interest_left(i):
-        return interest_x + BRACKET_W + i * COL_W
-
-    def held_left(i):
-        return held_x + BRACKET_W + i * COL_W
-
-    def detempering_left(i):  # the i-th generator detempering column
-        return detempering_x + BRACKET_W + i * COL_W
-
-    def gen_left(g):  # the g-th generator column in the generators box (its tuning-map cells)
-        return content_x["gens"] + BRACKET_W + g * COL_W
-
-    def map_top(i):
-        return row_y["mapping"] + i * ROW_H
-
-    def canon_top(i):  # the y of canonical-mapping row i (the r stacked canonical maps)
-        return row_y["canon"] + i * ROW_H
-
-    def vec_top(p):  # the y of vector component p in the d-tall interval-vectors row
-        return row_y["vectors"] + p * ROW_H
-
-    # The value groups share an element name (for cell ids), a left-edge accessor, a fanned
-    # element count, and the operand of their just log₂ (a bare prime, or a comma/target
-    # ratio). Defined here — ahead of the cells, the EBK pass and the column_axis fan — so the
-    # +/− controls, the brackets and the gridlines all read ONE geometry. primes carry a map,
-    # commas and targets interval lists.
-    group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
-                  "interest": "interest", "held": "held", "detempering": "detempering"}
-    group_left = {"gens": gen_left, "primes": prime_left, "commas": comma_left, "targets": target_left,
-                  "interest": interest_left, "held": held_left, "detempering": detempering_left}
-    # how many side-by-side cells each group column carries: its element count, so the
-    # gridline pass can fan every group column into that many vertical sub-axes (commas
-    # count the shown columns, draft included). Keyed identically to group_left/group_elem
-    # so a column with cells can never be left out of the fan (the generators-column bug).
-    group_n = {"gens": r, "primes": d, "commas": nc_shown, "targets": k,
-               "interest": mi, "held": nh, "detempering": r}
-    group_ratio = {  # the just interval ratio each value group is taken over
-        "primes": lambda i: _ratio_str(elements[i]),  # a prime "p/1", or a nonprime element "n/d"
-        "commas": lambda i: comma_ratios[i],
-        "targets": lambda i: targets[i],
-        "interest": lambda i: interest_ratios[i],
-        "held": lambda i: held_ratios[i],
-        "detempering": lambda i: gens[i],  # the detempering interval as a ratio (service.generators = D)
-    }
-
-    # The element +/− controls ride each fanning column's TOP bus (the fan-out, just after the
-    # toggle), not the quantities row: the − sits on a branch point (a per-element split), the +
-    # on a "stub" one COL_W past the last branch point — the slot where the next element would
-    # branch — with the top bus stretched out to reach it. sub_axis_x is the split's x (column_axis
-    # fans the same centres); plus_stub_x records, per addable column that shows a +, where that +
-    # (and so the bus end) sits, keeping the cells and the gridlines in lockstep.
-    def sub_axis_x(ckey, i):  # centre of column ckey's i-th per-element sub-axis (a branch point)
-        return group_left[ckey](i) + COL_W / 2
-
-    def col_plus_x(ckey):
-        n = group_n[ckey]
-        if n == 0:  # an empty set has no branch points: the + centres on the single trunk
-            mx, mw = matrix_span(ckey)
-            return mx + mw / 2
-        return sub_axis_x(ckey, n - 1) + COL_W  # one slot past the last branch point
-
-    def _plus_shows(ckey):  # mirrors the +'s emit gate in the quantities block (col_open for the
-        if ckey in ("interest", "held"):  # addable sets, so an empty-but-open column still adds one)
-            return col_open(ckey) and row_open("quantities")
-        return tile_open("quantities", ckey)
-
-    plus_stub_x = {ckey: col_plus_x(ckey) for ckey in ("primes", "commas", "interest", "held")
-                   if _plus_shows(ckey)}
-
-    # The interval-vectors basis fans HORIZONTALLY (one sub-row per prime), so its + is the row
-    # mirror of the columns' top-bus +: it rides a stub one ROW_H below the last sub-row, on the
-    # row's left bus, with that bus's left bar stretched down to reach it. row_plus_y records it
-    # for row_axis (as plus_stub_x does for the columns); only the vectors row carries a basis +.
-    row_plus_y = ({"vectors": vec_top(d) + ROW_H / 2} if tile_open("vectors", "quantities") else {})
-
-    cells: list[CellBox] = []
-    lines: list[Line] = []
-    blocks: list[Block] = []
-
-    # column headers (always shown; a collapsed column keeps its title) plus a
-    # fold toggle in the header band for collapsible ones. A matlabel-widened column
-    # (primes when symbols is on) carries the gutter on both sides, so the header + toggle
-    # drop the gutter from each edge and stay centred over the CELLS rather than the wider
-    # column footprint — the gutters only frame the row labels, never the title.
-    for key in col_x:
-        hx = col_x[key] + matlabel_gutter_w(key)
-        hw = col_w[key] - 2 * matlabel_gutter_w(key)
-        cells.append(CellBox(f"header:{key}", hx, header_y, hw, HEADER_H, "colheader", text=col_header[key]))
-        if col_collapsible[key]:
-            glyph = _fold_glyph(f"col:{key}" in collapsed)
-            # the fold toggle sits on the column's gridline (its content centre), so it
-            # stays aligned with the trunk even when the interest header floats wider
-            tx = hx + (hw - TOGGLE) / 2
-            cells.append(CellBox(f"toggle:col:{key}", tx, col_node_y, TOGGLE, TOGGLE, "coltoggle", text=glyph))
-
-    # row labels (always shown; a collapsed row keeps its label as the strip)
-    # plus a fold toggle in the gutter for the collapsible ones
-    for key in row_y:
-        cells.append(CellBox(f"label:{key}", 0, row_y[key], LABEL_W, row_h[key], "rowlabel", text=row_label[key]))
-        if row_collapsible[key]:
-            glyph = _fold_glyph(f"row:{key}" in collapsed)
-            ty = row_y[key] + (row_h[key] - TOGGLE) / 2
-            cells.append(CellBox(f"toggle:row:{key}", node_x, ty, TOGGLE, TOGGLE, "rowtoggle", text=glyph))
-
-    # the master expand/collapse-all toggle, in the corner where the row-toggle column
-    # (node_x) meets the column-toggle row (col_node_y). Its glyph mirrors the whole
-    # grid: out-chevrons to expand when every foldable row and column is already
-    # collapsed, in-chevrons to collapse otherwise.
-    foldable = _foldable_ids(cells)  # the row/col toggles emitted just above
-    all_collapsed = bool(foldable) and foldable <= collapsed
-    cells.append(CellBox("toggle:all", node_x, col_node_y, TOGGLE, TOGGLE, "alltoggle",
-                         text=_fold_glyph(all_collapsed)))
-
-    # counts row: each present column's set cardinality, centred over its values. The
-    # detempering column counts the rank r (one detempering interval per generator).
-    if row_open("counts"):
-        cardinality = {"gens": r, "primes": d, "commas": state.n, "targets": k, "held": nh,
-                       "detempering": r}
-        for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS:
-            if tile_open("counts", ckey):
-                cells.append(CellBox(f"count:{ckey}", col_x[ckey], row_y["counts"], col_w[ckey], ROW_H,
-                                     "count", text=f"{_mathit(sym)} = {cardinality[ckey]}"))
-
-    # units row + column (the specific `domain_units` toggle): coordinate-unit labels.
-    # The units COLUMN labels each row's coordinate — the interval-vectors basis in
-    # primes (pᵢ/), the mapping in generators (gᵢ/), the cents tuning rows as ¢/. The
-    # units ROW labels each column's coordinate — /gᵢ over generators, /pᵢ over the
-    # domain primes, /1 over the ratio columns. Each rides its own grey tile
-    # (UNITS_TILES), so tile_open gates emission against the live layout.
-    if tile_open("vectors", "units"):
-        for p in range(d):
-            cells.append(CellBox(f"ucol:vectors:{p}", col_x["units"], vec_top(p), col_w["units"], ROW_H,
-                                 "units", text=f"p{_sub(p + 1)}/"))
-    if tile_open("mapping", "units"):
-        for i in range(r):
-            cells.append(CellBox(f"ucol:mapping:{i}", col_x["units"], map_top(i), col_w["units"], ROW_H,
-                                 "units", text=f"g{_sub(i + 1)}/"))
-    for key in ("tuning", "just", "retune", "damage"):
-        if tile_open(key, "units"):
-            cells.append(CellBox(f"ucol:{key}", col_x["units"], row_y[key], col_w["units"], ROW_H,
-                                 "units", text="¢/"))
-    # the weighting rows' units-column labels: the prescaler is octaves (one per matrix row,
-    # like the d-tall interval vectors), complexity and weight are complexity units (C)/
-    if tile_open("prescaling", "units"):
-        for i in range(d):
-            cells.append(CellBox(f"ucol:prescaling:{i}", col_x["units"], row_y["prescaling"] + i * ROW_H,
-                                 col_w["units"], ROW_H, "units", text="oct/"))
-    for key in ("complexity", "weight"):
-        if tile_open(key, "units"):
-            cells.append(CellBox(f"ucol:{key}", col_x["units"], row_y[key], col_w["units"], ROW_H,
-                                 "units", text="(C)/"))
-    if "units" in row_y:
-        uy = row_y["units"]
-        if tile_open("units", "gens"):
-            for g in range(r):
-                cells.append(CellBox(f"urow:gens:{g}", gen_left(g), uy, COL_W, ROW_H, "units", text=f"/g{_sub(g + 1)}"))
-        if tile_open("units", "primes"):
-            for p in range(d):
-                cells.append(CellBox(f"urow:primes:{p}", prime_left(p), uy, COL_W, ROW_H, "units", text=f"/p{_sub(p + 1)}"))
-        if tile_open("units", "commas"):
-            for c in range(nc):
-                cells.append(CellBox(f"urow:commas:{c}", comma_left(c), uy, COL_W, ROW_H, "units", text="/1"))
-        if tile_open("units", "detempering"):  # each detempering generator is a ratio column
-            for i in range(r):
-                cells.append(CellBox(f"urow:detempering:{i}", detempering_left(i), uy, COL_W, ROW_H, "units", text="/1"))
-        if tile_open("units", "targets"):
-            for j in range(k):
-                cells.append(CellBox(f"urow:targets:{j}", target_left(j), uy, COL_W, ROW_H, "units", text="/1"))
-        if tile_open("units", "interest"):
-            for ii in range(mi):
-                cells.append(CellBox(f"urow:interest:{ii}", interest_left(ii), uy, COL_W, ROW_H, "units", text="/1"))
-        if tile_open("units", "held"):
-            for ih in range(nh):
-                cells.append(CellBox(f"urow:held:{ih}", held_left(ih), uy, COL_W, ROW_H, "units", text="/1"))
-
-    # quantities row: domain primes (+ controls) and target ratios (below the
-    # tile's toggle head, like every other row's values). The whole row -- its
-    # headers and the domain/comma ± controls riding it -- answers to the specific
-    # "quantities" toggle, which drops it from row_y via its present flag.
-    if "quantities" in row_y:
-        qy = row_y["quantities"]
-
-        def branch_minus(cid, ckey, i, kind, **kw):
-            # a hover − centred on column ckey's i-th branch point (its top-bus split): the
-            # zone drops from the branch point (where the revealed button parks) down over the
-            # element's header as the hover target, COL_W wide on the sub-axis — clear of the
-            # editable cells below the header (which a covering zone would block).
-            cells.append(CellBox(cid, sub_axis_x(ckey, i) - COL_W / 2, fanout_y, COL_W,
-                                 (qy + ROW_H) - fanout_y, kind, **kw))
-
-        def branch_plus(cid, ckey, kind):
-            # the always-shown + centred on the column's stub, one slot past the last branch
-            # point (the top bus stretches out to reach it); an empty set centres it on the trunk
-            cells.append(CellBox(cid, plus_stub_x[ckey] - BTN / 2, fanout_y - BTN / 2, BTN, BTN, kind))
-
-        if tile_open("quantities", "primes"):
-            for p in range(d):
-                cells.append(CellBox(f"prime:{p}", prime_left(p), qy, COL_W, ROW_H, "prime", text=str(elements[p]), prime=p))
-            # Only the highest prime is removable (shrink_domain trims the last), so its
-            # − rides that prime's branch point (the last top-bus split).
-            if d > 1:
-                branch_minus("minus", "primes", d - 1, "minus")
-        if tile_open("quantities", "commas"):
-            for c in range(nc):
-                cells.append(CellBox(f"comma:{c}", comma_left(c), qy, COL_W, ROW_H, "commaratio", text=comma_ratios[c], comma=c))
-            if pending is not None:  # the draft has no ratio yet — a "?" in a distinct id so
-                # it is removed (not restructured from "?" label to fraction) when it commits
-                cells.append(CellBox("comma:pending", comma_left(nc), qy, COL_W, ROW_H, "commaratio", text="?", comma=nc, pending=True))
-            # commas mirror the domain controls: + starts a (pending) comma; the − rides the
-            # last column's branch point — cancelling the draft, or dropping a real comma when >1
-            if pending is not None or nc > 1:
-                branch_minus("comma_minus", "commas", nc_shown - 1, "comma_minus")
-        if tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
-            for i in range(r):                       # derived from M like the comma ratios — no ± control)
-                cells.append(CellBox(f"detempering:{i}", detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=gens[i]))
-        if tile_open("quantities", "targets"):
-            for j in range(k):
-                cells.append(CellBox(f"target:{j}", target_left(j), qy, COL_W, ROW_H, "target", text=targets[j]))
-        if tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
-            for i in range(nh):
-                # the derived ratio (read-only, from the editable vector) heads each column
-                cells.append(CellBox(f"held:{i}", held_left(i), qy, COL_W, ROW_H, "commaratio", text=held_ratios[i], comma=i))
-                # each held interval carries its own − on its branch point (any one is removable)
-                branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
-        if tile_open("quantities", "interest"):  # the user's other intervals of interest
-            for i in range(mi):
-                # the derived ratio (read-only, from the vector) heads each column, like a comma's
-                cells.append(CellBox(f"interest:{i}", interest_left(i), qy, COL_W, ROW_H, "commaratio", text=interest_ratios[i], comma=i))
-                # every interval carries its own − on its branch point: any one is removable,
-                # unlike the domain/comma last-only −
-                branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
-        # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
-        # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
-        # the first interval can still be added). The − is the hover counterpart on a branch point.
-        for ckey, cid in (("primes", "plus"), ("commas", "comma_plus"),
-                          ("held", "held_plus"), ("interest", "interest_plus")):
-            if ckey in plus_stub_x:
-                branch_plus(cid, ckey, cid)
-
-    # generator ratios (aligned with the mapping rows they label) + the mapping
-    # matrix and its mapped target interval list
-    if row_open("mapping"):
-        # the generators list the mapping's rows: a vertical ratio list in the
-        # quantities spine column, labelling the rows as the primes label the columns
-        if tile_open("mapping", "quantities"):
-            for i in range(r):
-                cells.append(CellBox(f"gen:{i}", col_x["quantities"], map_top(i), col_w["quantities"], ROW_H, "genratio", text=gens[i] if i < len(gens) else "", gen=i))
-        for i in range(r):
-            if tile_open("mapping", "primes"):
-                for p in range(d):
-                    cells.append(CellBox(f"cell:mapping:{i}:{p}", prime_left(p), map_top(i), COL_W, ROW_H, "mapping", gen=i, prime=p, unit=cell_unit("mapping", "primes", gen=i, prime=p)))
-            if tile_open("mapping", "targets"):
-                for j in range(k):
-                    cells.append(CellBox(f"cell:mapped:{i}:{j}", target_left(j), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped[i][j]), gen=i, unit=cell_unit("mapping", "targets", gen=i)))
-            if tile_open("mapping", "interest"):  # interest mapped through M, like the targets
-                for ii in range(mi):
-                    cells.append(CellBox(f"cell:imapped:{i}:{ii}", interest_left(ii), map_top(i), COL_W, ROW_H, "mapped", text=str(interest_mapped[i][ii]), gen=i, unit=cell_unit("mapping", "interest", gen=i)))
-            if tile_open("mapping", "held"):  # held mapped through M, like the targets / interest
-                for hi in range(nh):
-                    cells.append(CellBox(f"cell:hmapped:{i}:{hi}", held_left(hi), map_top(i), COL_W, ROW_H, "mapped", text=str(held_mapped[i][hi]), gen=i, unit=cell_unit("mapping", "held", gen=i)))
-            # the comma basis mapped through M — it vanishes to 0 (parallel to the
-            # mapped target list); the raw basis lives in the interval-vectors row
-            if tile_open("mapping", "commas"):
-                for c in range(nc):
-                    cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", comma_left(c), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_commas[i][c]), gen=i, unit=cell_unit("mapping", "commas", gen=i)))
-            # the detempering mapped through M — it is the identity (M·D = I), the dual of
-            # the comma basis vanishing; the raw detempering D lives in the interval-vectors row
-            if tile_open("mapping", "detempering"):
-                for j in range(r):
-                    cells.append(CellBox(f"cell:mapped_detempering:{i}:{j}", detempering_left(j), map_top(i), COL_W, ROW_H, "mapped", text=str(mapped_detempering[i][j]), gen=i, unit=cell_unit("mapping", "detempering", gen=i)))
-
-    # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
-    # read-only maps over the primes, framed like the mapping matrix one row above it; the
-    # generator form matrix F (units 𝒈/𝒈) rides its gens column as a bordered r×r grid
-    if row_open("canon"):
-        if tile_open("canon", "primes"):
-            for i in range(rc):
-                for p in range(d):
-                    cells.append(CellBox(f"cell:canon:{i}:{p}", prime_left(p), canon_top(i), COL_W, ROW_H, "mapped", text=str(canon_mapping[i][p])))
-        if tile_open("canon", "gens"):
-            for i in range(len(form_M)):
-                for j in range(len(form_M)):
-                    cells.append(CellBox(f"cell:form:{i}:{j}", gen_left(j), canon_top(i), COL_W, ROW_H, "formcell", text=str(form_M[i][j])))
-
-    # interval-vectors row: each column's intervals as vectors (d-tall columns over
-    # the domain primes), on the same prime/comma/target axes as the quantities row.
-    # The comma basis is the editable raw vectors (the mapping's dual); the targets
-    # become a d x k matrix of vector columns.
-    if row_open("vectors"):
-        # the domain basis lists the interval-vectors' rows: the d primes as boxed
-        # COL_W squares (the same the quantities row heads its columns with) stacked
-        # down the quantities spine — the dual index, as the generators label the
-        # mapping rows. Its domain ± controls ride the row's LEFT bus, out to the left of
-        # the primes (the row mirror of the columns' top-bus controls): a + on the stub
-        # one ROW_H below the stack, and a − on the bottom prime's branch point.
-        if tile_open("vectors", "quantities"):
-            bx = col_x["quantities"] + (col_w["quantities"] - COL_W) / 2  # square, centred in the spine
-            for p in range(d):
-                cells.append(CellBox(f"basis:{p}", bx, vec_top(p), COL_W, ROW_H, "prime", text=str(elements[p]), prime=p))
-            # the left bus the controls ride (node_edge + FAN when the row fans, i.e. d > 1 — matching
-            # row_axis); the − zone drops from it rightward over the bottom prime as the hover target
-            basis_bus_x = node_edge + FAN if d > 1 else node_edge
-            if d > 1:  # the highest prime is the removable one (shrink trims the last)
-                cells.append(CellBox("basis_minus", basis_bus_x, vec_top(d - 1),
-                                     (bx + COL_W) - basis_bus_x, ROW_H, "basis_minus"))
-            cells.append(CellBox("basis_plus", basis_bus_x - BTN / 2, row_plus_y["vectors"] - BTN / 2,
-                                 BTN, BTN, "plus"))
-        if tile_open("vectors", "commas"):
-            for c in range(nc):
-                for p in range(d):
-                    cells.append(CellBox(f"cell:comma:{p}:{c}", comma_left(c), vec_top(p), COL_W, ROW_H, "commacell", text=str(state.comma_basis[c][p]), prime=p, comma=c, unit=cell_unit("vectors", "commas", prime=p)))
-            if pending is not None:  # the draft column: blank, red-outlined cells the user fills in
-                for p in range(d):
-                    v = pending[p]
-                    cells.append(CellBox(f"cell:comma:{p}:{nc}", comma_left(nc), vec_top(p), COL_W, ROW_H, "commacell",
-                                         text="" if v is None else str(v), prime=p, comma=nc, pending=True, unit=cell_unit("vectors", "commas", prime=p)))
-        if tile_open("vectors", "targets"):  # the target interval list as EDITABLE vector columns
-            for j in range(k):                # (a hybrid input, like the comma basis): typing a
-                for p in range(d):            # column overrides the target set with those intervals
-                    cells.append(CellBox(f"cell:vec:targets:{j}:{p}", target_left(j), vec_top(p), COL_W, ROW_H, "targetcell", text=str(target_vectors[j][p]), prime=p, comma=j, unit=cell_unit("vectors", "targets", prime=p)))
-        if tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
-            for i in range(nh):
-                for p in range(d):
-                    cells.append(CellBox(f"cell:held:{p}:{i}", held_left(i), vec_top(p), COL_W, ROW_H, "heldcell", text=str(held[i][p]), prime=p, comma=i, unit=cell_unit("vectors", "held", prime=p)))
-        if tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
-            for i in range(r):
-                for p in range(d):
-                    cells.append(CellBox(f"cell:vec:detempering:{i}:{p}", detempering_left(i), vec_top(p), COL_W, ROW_H, "vec", text=str(detempering_vectors[i][p]), unit=cell_unit("vectors", "detempering", prime=p)))
-        if tile_open("vectors", "interest"):  # the user's intervals of interest: editable vectors, like the comma basis
-            for i in range(mi):
-                for p in range(d):
-                    # inset within the COL_W slot (centred) so each ket is its own box with a
-                    # gap to its neighbours — the interest column is a collection, not a matrix
-                    cells.append(CellBox(f"cell:interest:{p}:{i}", interest_left(i) + KET_INSET, vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(interest[i][p]), prime=p, comma=i, unit=cell_unit("vectors", "interest", prime=p)))
-
-    def closed_form_operand(key, group, i):
-        """The operand ``R`` of a cell's exact closed form ``1200 · log₂R``, or None
-        when the value has no closed form. A just size IS ``1200·log₂`` of its
-        interval. A comma vanishes in the temperament, so its retuning is the negated
-        just size — the exact log of the inverted comma. The tempered sizes and the
-        prime/target errors come from optimization, so they have none."""
-        if key == "just":
-            return _log_operand(group_ratio[group](i))
-        if group == "commas" and key == "retune":
-            recip = 1 / Fraction(comma_ratios[i])
-            return _log_operand(f"{recip.numerator}/{recip.denominator}")
-        return None
-
-    # tuning rows over the primes, commas and targets (cents); each can collapse on
-    # its own. Commas sit on the same footing as targets — they are just the dual
-    # interval set. Math expressions only ADDS the exact closed form where one exists
-    # (a "mathexpr" kind prefixing the cents value); a cell with no closed form is
-    # untouched — it keeps its plain cents cell. Math expressions never removes a
-    # value, bracket, caption or tile: those are governed by quantities/gridded/names.
-    # Charts track tiles: a charted row (retuning/weight/damage) draws a bar chart over
-    # EVERY tile it shows. tval_row — the one place a charted row's value cells are emitted
-    # — records each tile it draws here, and a single loop below charts them all. So a
-    # column joining a charted row is charted automatically (no per-column chart() call to
-    # forget), and a chart can never drift from the values beneath it.
-    chart_tiles = []  # (row, col, values) per open value tile of a charted row
-    chart_indicators = {}  # (row, col) -> (indicator, label); only the damage chart carries one
-
-    def tval_row(key, group, vals):
-        if not tile_open(key, group):
-            return
-        vals = tuple(vals)
-        if key in CHARTED_ROWS:
-            chart_tiles.append((key, group, vals))
-        y = row_y[key]
-        # the tuning-family unit is cents per the column's coordinate: over the generators
-        # it's ¢/gᵢ, over the primes ¢/pᵢ, over the (dimensionless) interval columns plain ¢
-        for i, v in enumerate(vals):
-            cid = f"{key}:{group_elem[group]}:{i}"
-            x = group_left[group](i)
-            u = cell_unit(key, group, gen=i if group == "gens" else None, prime=i if group == "primes" else None)
-            operand = closed_form_operand(key, group, i) if show_math else None
-            if operand is not None:
-                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, show_quantities), unit=u))
-            else:
-                cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v), unit=u))
-
-    # a charted tile draws a bar chart in the band reserved above its values. The box spans
-    # the value block exactly — the left bracket gutter, the value columns, and the right
-    # bracket gutter — anchored to group_left (the cells), NOT the column footprint. So the
-    # chart's BRACKET_W-inset axis and COL_W bar pitch overlay the cells: each bar centres on
-    # its value's gridline even when a caption widens the footprint or a matlabel gutter
-    # offsets the cells within it (the gridlines follow the cells the same way; see
-    # column_axis). chart_top[key] exists only where a chart band was reserved (charts on,
-    # row charted, not folded), so it gates emission against the layout with no drift.
-    def chart(rkey, ckey, vals, indicator=None, indicator_label=""):
-        vals = tuple(vals)
-        if vals and rkey in chart_top and tile_open(rkey, ckey):
-            x = group_left[ckey](0) - BRACKET_W  # the left bracket gutter, where the value block starts
-            cells.append(CellBox(f"chart:{rkey}:{ckey}", x, chart_top[rkey],
-                                 2 * BRACKET_W + len(vals) * COL_W, CHART_H, "chart", values=vals,
-                                 indicator=indicator, indicator_label=indicator_label))
-
-    tuning_data = {
-        "tuning": (tun.tuning_map, comma_sizes.tempered, target_sizes.tempered, interest_sizes.tempered, held_sizes.tempered),
-        "just": (tun.just_map, comma_sizes.just, target_sizes.just, interest_sizes.just, held_sizes.just),
-        "retune": (tun.retuning_map, comma_sizes.errors, target_sizes.errors, interest_sizes.errors, held_sizes.errors),
-    }
-    for key, (prime_vals, comma_vals, target_vals, interest_vals, held_vals) in tuning_data.items():
-        if row_open(key):
-            tval_row(key, "primes", prime_vals)
-            tval_row(key, "commas", comma_vals)
-            tval_row(key, "targets", target_vals)
-            tval_row(key, "interest", interest_vals)
-            tval_row(key, "held", held_vals)
-    # the generator tuning map: the tuning row's map over the generators (the gens-column
-    # counterpart of the tuning map over the primes). Its cells are EDITABLE (a hybrid input):
-    # typing a cents value overrides that generator's tuning, like typing the whole map in the
-    # plain text. The genmap has no closed form, so they are plain editable cells (never mathexpr).
-    if row_open("tuning") and tile_open("tuning", "gens"):
-        for i, v in enumerate(tun.generator_map):
-            cells.append(CellBox(f"tuning:gen:{i}", group_left["gens"](i), row_y["tuning"], COL_W, ROW_H,
-                                 "gentuningcell", text=service.cents(v), unit=cell_unit("tuning", "gens", gen=i)))
-    # the detempering column's size rows: tempering the detempering intervals recovers the
-    # generators, so its tuning row IS the generator tuning map (𝒕D = 𝒈); its just and
-    # retuning sizes are ordinary interval lists (𝒋D, 𝒓D), the latter charted like the targets.
-    if show_detempering:
-        for key, vals in (("tuning", detempering_sizes.tempered),
-                          ("just", detempering_sizes.just),
-                          ("retune", detempering_sizes.errors)):
-            if row_open(key):
-                tval_row(key, "detempering", vals)
-
-    # the audio rows: a speaker button per pitch, sounding the just (just_audio) or
-    # tempered (tempered_audio) cents of each interval — the same data the just / tuning
-    # rows display, so the ear and the eye agree. tempered_audio also sounds the generators
-    # (their tuned size, as the tuning row's genmap does); a generator has no just size.
-    def audio_tile(key, group, vals):
-        if not tile_open(key, group):
-            return
-        vals = tuple(vals)
-        # one speaker per pitch, aligned under the value columns. Each carries the WHOLE
-        # tile's cents list (not just its own) so the play-mode can arp/chord the tile, and
-        # text = the tile key it shares with the bank controls (so the engine can pair them).
-        for i in range(len(vals)):
-            cells.append(CellBox(f"speaker:{key}:{group_elem[group]}:{i}", group_left[group](i),
-                                 row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals))
-        # the per-tile control bank in the head strip's top-right (mirroring the fold toggle
-        # top-left): waveform / play-mode / hold-loop / include-1/1, each a TOGGLE square.
-        # Anchored to the grey panel's right edge (tile_box), not the centred content — so a
-        # caption-widened tile keeps the bank on its edge rather than drifting it inward.
-        cx, cw = tile_box(group)
-        right = cx + cw + PAD - TOGGLE_INSET
-        by, step = tile_top[key] - PAD + TOGGLE_INSET, TOGGLE + TOGGLE_INSET
-        left0 = right - (4 * TOGGLE + 3 * TOGGLE_INSET)
-        for j, ctrl in enumerate(("wave", "mode", "hold", "root")):
-            cells.append(CellBox(f"{ctrl}:{key}:{group}", left0 + j * step, by, TOGGLE, TOGGLE, f"audio_{ctrl}"))
-
-    # Source the pitches from tuning_data so the audio rows stay in lockstep with the just /
-    # tuning rows they sound (one source of truth for "what those rows contain").
-    list_groups = ("primes", "commas", "targets", "interest", "held")  # tuning_data's tuple order
-    if row_open("just_audio"):
-        for group, vals in zip(list_groups, tuning_data["just"]):
-            audio_tile("just_audio", group, vals)
-        if show_detempering:  # sound the detempering intervals' JI sizes, like the commas
-            audio_tile("just_audio", "detempering", detempering_sizes.just)
-    if row_open("tempered_audio"):
-        audio_tile("tempered_audio", "gens", tun.generator_map)  # the genmap, as the tuning row carries
-        for group, vals in zip(list_groups, tuning_data["tuning"]):
-            audio_tile("tempered_audio", group, vals)
-        if show_detempering:  # their tempered sizes (= the generators' tuned sizes, 𝒕D = 𝒈)
-            audio_tile("tempered_audio", "detempering", detempering_sizes.tempered)
-    # the prescaling row applies the prescaler L to each column group's vectors: over the
-    # primes it is the d×d diagonal (L·eₚ — the prescaler matrix itself), over the comma /
-    # target / interest sets it is L·vector (each component scaled by the diagonal), a d-tall
-    # matrix per group like the interval-vectors row. Rendered as int/frac gridded cells.
-    prescale_vectors = {
-        "primes": tuple(tuple(1 if i == p else 0 for i in range(d)) for p in range(d)),
-        "commas": state.comma_basis,
-        "targets": target_vectors,
-        "interest": interest,
-        "held": held,
-        "detempering": detempering_vectors,
-    }
-    # the active prescaler's per-prime diagonal term, lifted as the math-expression
-    # operand: log-prime puts ``log₂{prime}`` on the diagonal, prime puts ``{prime}``
-    # itself, identity puts a constant ``1`` — and ``1`` IS the value, so the cell would
-    # be ``coeff · 1 = coeff`` (no information added). Following the just row's rule
-    # (math expressions only where a non-trivial closed form exists), the identity
-    # scheme is read as "no closed form" → cells stay tval.
-    if _scheme_prescaler == "log-prime":
-        prime_term = {i: f"log₂{p}" for i, p in enumerate(elements)}
-    elif _scheme_prescaler == "prime":
-        prime_term = {i: str(p) for i, p in enumerate(elements)}
-    else:  # "identity" — coeff · 1 is silly, skip mathexpr (cell stays tval)
-        prime_term = {}
-    for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
-        if not tile_open("prescaling", group):
-            continue
-        left = group_left[group]
-        for c, vec in enumerate(prescale_vectors[group]):
-            # the prescaler over the primes is a d×d matrix whose columns ARE the domain
-            # primes, so each column's unit subscripts its p by that prime (oct/pᵢ) — like
-            # the mapping's /p denominator (and tval_row's primes rows). The other groups
-            # scale a vector set to plain octaves (no p), so there is nothing to subscript.
-            u = cell_unit("prescaling", group, prime=c if group == "primes" else None)
-            for i in range(d):
-                value = prescaler[i] * vec[i]
-                cid = f"cell:prescaling:{group}:{i}:{c}"
-                cx, cy = left(c), row_y["prescaling"] + i * ROW_H
-                # the bare prescaler 𝐿's diagonal (group == "primes" and i == c) is the
-                # user's editable surface: each diagonal cell is a prescalercell — the
-                # input box the user types overrides into — and so wins over the math-
-                # expression closed form (typed values, not log₂{prime}, are what reads
-                # off here). The off-diagonal of 𝐿 is pinned at 0 (𝐿 is diagonal), so it
-                # stays tval. Every other prescaling tile (LC/LD/LT/LH/...) is a product —
-                # the user can't edit its individual cells — so math_expressions still
-                # styles a non-zero coefficient with its closed form ``coeff · {prime_term}``,
-                # and a zero coefficient (no closed form) keeps the plain tval.
-                if group == "primes" and i == c:
-                    cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
-                                         text=service.prescale_text(value), prime=i, unit=u))
-                elif show_math and vec[i] != 0 and i in prime_term:
-                    cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
-                                         text=_prescale_math_expr(vec[i], prime_term[i], value, show_quantities), unit=u))
-                else:
-                    cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
-                                         text=service.prescale_text(value), unit=u))
-    if lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox at the
-        # bottom of the prescaling matrix (the prescaler chooser is a preselect now, riding the
-        # preselect band above). A SQUARE (no inline label — it wraps broken in the narrow primes
-        # column) at the column's left, over its "replace diminuator" caption hugging its bottom.
-        py = tile_top["prescaling"] + tile_h["prescaling"] - lbox_extra + RANGE_GAP
-        cells.append(CellBox("control:diminuator", col_x["primes"], py, LBOX_DIM_W, OPTION_BOX_PX,
-                             "control_check", text="",  # square only; label moves to a caption below
-                             checked=service.diminuator_replaced(tuning_scheme)))
-        cells.append(CellBox("caption:diminuator", col_x["primes"], py + OPTION_BOX_PX, LBOX_DIM_W,
-                             CAPTION_LINE, "caption", text="replace diminuator"))
-    if cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
-        # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q
-        # and dual(q) use the optimization box's value-over-symbol-over-caption stack — the
-        # value cell stays at COL_W (a standard gridded number), but the symbol/caption sit in
-        # a wider overhanging SLOT so "dual(q)" doesn't overflow and multi-word captions wrap
-        # readable. dual(q) only appears in all-interval mode (the dual norm power is
-        # meaningful via the dual-norm inequality used to minimax over every interval).
-        cy = tile_top["complexity"] + tile_h["complexity"] - cbox_extra + RANGE_GAP
-        sym_y = cy + ROW_H
-        cap_y = sym_y + SYMBOL_H
-        cap_h = 3 * CAPTION_LINE
-        drop_w = CBOX_DROP_W
-        slot_w = CBOX_SLOT_W
-        # the predefined-complexities master dropdown. The dropdown stores the short internal
-        # key ("lp", "copfr", …) but presents the inverted-form display name ("lp (log-product)",
-        # …). While alt-complexities are shelved it offers ONLY the current complexity (lp for every
-        # scheme today) so the user can't pick an unimplemented one; un-shelving alt_complexity opens
-        # the full preset list + the inert "custom" (shown when the fine controls leave the shape
-        # off-preset). The caption hugs its bottom (rather than bottom-aligning with the q/dual
-        # captions further down).
-        complexity_key = service.complexity_name_of(tuning_scheme)
-        complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
-        complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
-                             if settings["alt_complexity"] else (complexity_text,))
-        cells.append(CellBox("control:complexity", col_x["targets"], cy, drop_w, PRESELECT_H,
-                             "control_select", text=complexity_text, values=complexity_values))
-        cells.append(CellBox("caption:complexity", col_x["targets"], cy + PRESELECT_H, drop_w,
-                             CAPTION_LINE, "caption", text="predefined complexities", align="left"))
-        # the q norm-power field: an editable white box (a powerinput) styled to match the
-        # optimization box's 𝑝 field; wiring (typing a new q to drive the norm) comes later.
-        # The slot is wider than the value cell, with the value centred so the italic symbol
-        # 𝑞 and the multi-word caption have room to render without overflow.
-        q_slot_x = col_x["targets"] + drop_w + OPT_COL_GAP
-        q_x = q_slot_x + (slot_w - COL_W) / 2
-        q_text = "2" if service.is_euclidean(tuning_scheme) else "1"
-        cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, "powerinput", text=q_text))
-        cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
-        cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
-                             text="interval complexity norm power"))
-        # the q field + dropdown above always show with box 𝒄; only dual(q) is gated — it is
-        # meaningful only when the scheme is all-interval (the all-interval checkbox is checked)
-        if service.is_all_interval(tuning_scheme):
-            dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
-            dual_x = dual_slot_x + (slot_w - COL_W) / 2
-            dual_text = "2" if service.is_euclidean(tuning_scheme) else "∞"
-            # dual(q) renders via the same powerinput path as q so the ∞ glyph sits at the
-            # same visual size as the q numeral (the on_power_change handler no-ops here)
-            cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "powerinput", text=dual_text))
-            cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H,
-                                 "symbol", text="dual(𝑞)"))
-            cells.append(CellBox("caption:dual", dual_slot_x, cap_y, slot_w, cap_h, "caption",
-                                 text="dual norm power"))
-    if row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
-        for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
-            tval_row("complexity", group, complexities[group])
-    if row_open("weight"):  # weight is over the targets only, like damage (it scales them)
-        tval_row("weight", "targets", target_weights)
-    if slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), nested at the bottom of the weight list,
-        # with its "damage weight slope" caption beneath (the optimization box's caption pattern)
-        py = tile_top["weight"] + tile_h["weight"] - slope_extra + RANGE_GAP
-        cells.append(CellBox("control:slope", col_x["targets"], py, col_w["targets"], PRESELECT_H,
-                             "control_select", text=service.weight_slope_of(tuning_scheme),
-                             values=tuple(service.WEIGHT_SLOPES)))
-        cells.append(CellBox("caption:slope", col_x["targets"], py + PRESELECT_H,
-                             col_w["targets"], CAPTION_LINE, "caption",
-                             text="damage weight slope", align="left"))
-    if row_open("damage"):  # damage is over the targets only (the tuning's own column)
-        tval_row("damage", "targets", target_sizes.damage)
-        # optimization adds the horizontal minimized-damage indicator (the objective ⟪𝐝⟫ₚ
-        # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
-        # (∞ / 2 / 1); off, the chart is plain bars. Recorded for the chart loop below.
-        if show_optimization:
-            power = service.optimization_power(tuning_scheme)
-            chart_indicators[("damage", "targets")] = (
-                _lp_objective(target_sizes.damage, power), _format_power(power))
-
-    # Draw a bar chart over every tile a charted row recorded (see chart_tiles above):
-    # one pass, so the set of charts always equals the set of charted-row value tiles.
-    for rkey, ckey, vals in chart_tiles:
-        indicator, label = chart_indicators.get((rkey, ckey), (None, ""))
-        chart(rkey, ckey, vals, indicator=indicator, indicator_label=label)
-
-    # The generator tuning-ranges chart nests at the BOTTOM of the generator tuning map
-    # tile (below its values and caption), a per-generator [min, max] I-beam (octave held
-    # pure, so the period generator pins to a point) under the selected mode, diamond-
-    # monotone or -tradeoff. Gated on the tuning_ranges toggle; the tile's own panel is
-    # extended to enclose it (see gtm_extra in the panel loop), so it sits inside the tile
-    # rather than floating. The monotone range can be None (no monotone tuning exists),
-    # passed as () so the chart draws a placeholder rather than I-beams. gtm_chart/gtm_extra
-    # were computed up front (so the tuning row could reserve the box's height).
-    gtm_box = None  # (x, y, w, h) of the bordered box framing the title, chart + selector
-    if gtm_chart:
-        chosen = tun.monotone_generator_range if range_mode == "monotone" else tun.tradeoff_generator_range
-        gx, gw = col_x["gens"], col_w["gens"]
-        # the box nests below the tile's values + caption (tile_h now includes gtm_extra
-        # for the box itself, so back it out to find the values' bottom); a left-aligned
-        # boxtitle tops it (like every control box), then the chart, then the mode selector
-        cy = tile_top["tuning"] + tile_h["tuning"] - gtm_extra + RANGE_GAP
-        cells.append(CellBox("rangetitle:tuning:gens", gx, cy, gw, BOX_TITLE_H, "boxtitle",
-                             text="tuning ranges", align="left"))
-        chart_y = cy + BOX_TITLE_H + BOX_TITLE_GAP
-        cells.append(CellBox("rangechart:tuning:gens", gx, chart_y, gw, RANGE_CHART_H, "rangechart",
-                             ranges=tuple(chosen) if chosen is not None else (),
-                             values=tuple(tun.generator_map)))  # the live tuning, marked within each range
-        cells.append(CellBox("rangemode:tuning:gens", gx, chart_y + RANGE_CHART_H + RANGE_GAP, gw, RANGE_MODE_H,
-                             "rangemode", text=range_mode))
-        gtm_box = (gx, cy, gw, BOX_TITLE_H + BOX_TITLE_GAP + RANGE_CHART_H + RANGE_GAP + RANGE_MODE_H)
-
-    # the optimization box, nested at the BOTTOM of the target interval damage list tile (the
-    # tuning's own column, whose damages it minimizes): a bordered box titled "optimization",
-    # spanning the FULL width of the tile (like the tuning-ranges box) and DISTRIBUTING three
-    # controls across it — the minimized-damage objective (a read-only gridded value over ⟪𝐝⟫ₚ)
-    # hugging the left, the optimize button (over its "double-click to lock" hint) hugging the
-    # right, and the editable power (the ∞ cell over 𝑝 over "optimization power") centered in the
-    # gap between them, so its caption has clear room either side. The min-damage and ∞ are plain
-    # COL_W gridded cells (contents centred). The damage tile's panel grows by opt_extra to enclose
-    # the box's height, and the targets column is floored to OPT_BOX_MIN_W (see _control_floor) so
-    # the spread-out controls always fit.
-    opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
-    if opt_ctrl:
-        ox = col_x["targets"]
-        box_w = col_w["targets"]                 # the box spans the full width of the damage tile
-        box_top = tile_top["damage"] + tile_h["damage"] - opt_extra + RANGE_GAP
-        title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
-        content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP  # a gap below the title
-        sym_top = content_top + ROW_H            # the symbol/hint row, under the values
-        cap_top = sym_top + SYMBOL_H             # the caption row (one line), under the symbols
-        body_h = ROW_H + SYMBOL_H + CAPTION_LINE + OPT_PAD_B  # value + symbol + one-line caption + pad
-        # the three controls, distributed across the box: objective at the left, optimize button at
-        # the right, power centered in the gap between them (so its caption clears both neighbors)
-        obj_x = ox + OPT_PAD_L
-        btn_x = ox + box_w - OPT_PAD_R - OPT_BTN_W
-        pow_x = ((obj_x + COL_W) + btn_x) / 2 - COL_W / 2
-        objective = _lp_objective(target_sizes.damage, service.optimization_power(tuning_scheme))
-        power = _format_power(service.optimization_power(tuning_scheme))
-        cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
-                             text="optimization"))
-        # the objective: the minimized-damage value (read-only, so unboxed — a plain centred gridded
-        # value, the same COL_W cell as any damage value) over the symbol ⟪𝐝⟫ₚ
-        cells.append(CellBox("optimization:objective", obj_x, content_top, COL_W, ROW_H, "tval",
-                             text=service.cents(objective)))
-        # all-interval: the minimized objective IS the retuning magnitude ‖𝒓𝑋⁻¹‖ at the dual norm
-        # power (the mockup's "becomes 'retuning magnitude'") — relabel the symbol, with dual(q) as
-        # the norm subscript; its value already computes over the primes. The prescaler inverse
-        # carries the live glyph (𝐿⁻¹ for the log-prime matrix, else generic 𝑋⁻¹).
-        obj_symbol = (f"‖𝒓{prescaler_symbol}⁻¹‖{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
-                      if service.is_all_interval(tuning_scheme) else "⟪𝐝⟫ₚ")
-        cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, COL_W, SYMBOL_H,
-                             "symbol", text=obj_symbol))
-        # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — another COL_W gridded
-        # cell — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it)
-        cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
-                             "powerinput", text=power))
-        cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
-                             "symbol", text="𝑝"))
-        cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
-                             OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power"))
-        # the optimize button: a normal ROW_H-tall rectangle wide enough to seat the "double-click
-        # to unlock" hint on one line beneath it. It single-clicks to optimize once, double-clicks
-        # to lock auto-optimize; app.py owns that behaviour + the lock visual. The hint names the
-        # double-click's NEXT effect, so it flips to "unlock" while the auto-optimize lock is on.
-        cells.append(CellBox("optimization:button", btn_x, content_top, OPT_BTN_W, ROW_H, "optimize",
-                             text="optimize"))
-        cells.append(CellBox("optimization:button:hint", btn_x, sym_top, OPT_BTN_W, CAPTION_LINE,
-                             "caption", text=f"double-click to {'unlock' if optimize_locked else 'lock'}"))
-        opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
-
-    # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
-    # target-side rows are lists ([ … ]). Maps stack one per generator row.
-    def bracket(bid, glyphs, group_key, y, h, *, fit=False):
-        # value brackets are short and centred in their row (so stacked rows keep a
-        # gap); the enclosing mapped-list [ ] passes fit=True to span the matrix.
-        # matrix_span hugs the cells (interest's content, not its footprint) and steps
-        # the left ⟨ right past the matlabel gutter, so the row labels sit inside the
-        # panel left of the ⟨ rather than overflowing it.
-        gx, gw = matrix_span(group_key)
-        by, bh = (y, h) if fit else (y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H)
-        cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
-        cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
-
-    if row_open("canon") and tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
-        for i in range(rc):
-            bracket(f"canon:map:{i}", MAP_BRACKETS, "primes", canon_top(i), ROW_H)
-    if row_open("canon") and tile_open("canon", "gens"):  # the generator form matrix: { … ] per row
-        for i in range(len(form_M)):
-            bracket(f"form:map:{i}", GENMAP_BRACKETS, "gens", canon_top(i), ROW_H)
-    if row_open("mapping"):
-        # the primes mapping is a stack of maps: ⟨ … ] per row
-        if tile_open("mapping", "primes"):
-            for i in range(r):
-                bracket(f"map:{i}", MAP_BRACKETS, "primes", map_top(i), ROW_H)
-        if tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
-            bracket("mapped_comma", LIST_BRACKETS, "commas", row_y["mapping"], r * ROW_H, fit=True)
-        if tile_open("mapping", "detempering"):  # M·D = I: a [ ] over r rows, like the mapped commas
-            bracket("mapped_detempering", LIST_BRACKETS, "detempering", row_y["mapping"], r * ROW_H, fit=True)
-        if tile_open("mapping", "targets"):
-            bracket("mapped", LIST_BRACKETS, "targets", row_y["mapping"], r * ROW_H, fit=True)
-        # the interest mapped images stand alone (no outer [ … ]), mirroring the vectors row
-        if nh and tile_open("mapping", "held"):  # held mapped list, like the targets / interest
-            bracket("hmapped", LIST_BRACKETS, "held", row_y["mapping"], r * ROW_H, fit=True)
-    if row_open("vectors"):  # each group is a list of vectors: a [ ] spanning the d components
-        for group in ("commas", "targets"):
-            if tile_open("vectors", group):
-                bracket(f"vec:{group}", LIST_BRACKETS, group, row_y["vectors"], d * ROW_H, fit=True)
-        # the interest column is a loose collection, not a matrix — its kets stand alone,
-        # so no outer [ … ] wraps them (see the de-matrixed mapped/imapped row below)
-        if nh and tile_open("vectors", "held"):
-            bracket("vec:held", LIST_BRACKETS, "held", row_y["vectors"], d * ROW_H, fit=True)
-        if tile_open("vectors", "detempering"):
-            bracket("vec:detempering", LIST_BRACKETS, "detempering", row_y["vectors"], d * ROW_H, fit=True)
-    if row_open("prescaling"):  # 𝐿·basis matrices: outer brackets over the d-tall prescaled columns.
-        # Each 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) gets symmetric ``[ … ]`` left/right brackets
-        # like the mapped lists; the interest tile (standalone columns) gets none. The bare
-        # prescaler 𝐿 is the exception — its outer wrap is the matrix_frame top+bottom span
-        # above (ebktop + ebkangle), not left/right brackets, mirroring the mapping's
-        # construction (plain text ``[ … ⟩``).
-        for group, n_cols in (("commas", nc), ("detempering", r),
-                              ("targets", k), ("held", nh)):
-            if n_cols and tile_open("prescaling", group):
-                bracket(f"prescaling:{group}", LIST_BRACKETS, group,
-                        row_y["prescaling"], d * ROW_H, fit=True)
-        # the bare prescaler 𝐿 is mapping-style: per-row ⟨ … ] brackets, one pair per row.
-        # Its outer top + bottom frame is the matrix_frame call above (ebktop + ebkangle).
-        if tile_open("prescaling", "primes"):
-            for i in range(d):
-                bracket(f"prescaling:row:{i}", MAP_BRACKETS, "primes",
-                        row_y["prescaling"] + i * ROW_H, ROW_H)
-    if tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
-        bracket("tuning:genmap", GENMAP_BRACKETS, "gens", row_y["tuning"], ROW_H)
-    # the detempering tuning row IS the generator tuning map (𝒕D = 𝒈), so it too is framed
-    # { … ]; its just/retune rows are ordinary interval lists, framed below with the rest
-    if tile_open("tuning", "detempering"):
-        bracket("tuning:detempering", GENMAP_BRACKETS, "detempering", row_y["tuning"], ROW_H)
-    for key in ("tuning", "just", "retune", "complexity"):
-        if row_open(key):
-            if tile_open(key, "primes"):
-                bracket(f"{key}:map", MAP_BRACKETS, "primes", row_y[key], ROW_H)
-            if tile_open(key, "commas"):
-                bracket(f"{key}:commalist", LIST_BRACKETS, "commas", row_y[key], ROW_H)
-            if tile_open(key, "targets"):
-                bracket(f"{key}:list", LIST_BRACKETS, "targets", row_y[key], ROW_H)
-            # the interest size rows carry NO bracket — the whole interest column is a bare
-            # collection of standalone values, not a [ … ] list (per the mockup)
-            if nh and tile_open(key, "held"):
-                bracket(f"{key}:hlist", LIST_BRACKETS, "held", row_y[key], ROW_H)
-            # detempering's just/retune/complexity sizes are ordinary lists; its tuning row
-            # is the genmap, bracketed { … ] above (so it's skipped here)
-            if key != "tuning" and tile_open(key, "detempering"):
-                bracket(f"{key}:detemperinglist", LIST_BRACKETS, "detempering", row_y[key], ROW_H)
-    if tile_open("weight", "targets"):
-        bracket("weight", LIST_BRACKETS, "targets", row_y["weight"], ROW_H)
-    if tile_open("damage", "targets"):
-        bracket("damage", LIST_BRACKETS, "targets", row_y["damage"], ROW_H)
-
-    # Matrix row + column labels (when symbols is on). A row-labelled tile is a
-    # covector stack — the mapping 𝑀, the prescaler 𝑋 — and labels each row 𝒎ᵢ / 𝒙ᵢ
-    # at the LEFT of the row's ⟨, inside the MATLABEL_W gutter reserved in the primes
-    # column. Every other multi-cell tile labels its COLUMNS above each cell in the
-    # MATLABEL_H band reserved at the top of the row's value band.
-    if show_symbols:
-        # the per-column group's count, so a tile's columns are iterated by its
-        # (rkey, ckey) without re-deriving the loop bounds each time
-        group_count = {"gens": r, "primes": d, "commas": nc, "targets": k,
-                       "held": nh, "detempering": r}
-        # the y of the i-th row inside a row-labelled tile: the mapping stacks under
-        # row_y["mapping"]; the prescaler stacks d rows under row_y["prescaling"]
-        row_top = {
-            ("mapping", "primes"): map_top,
-            ("prescaling", "primes"): lambda i: row_y["prescaling"] + i * ROW_H,
-        }
-        row_count = {("mapping", "primes"): r, ("prescaling", "primes"): d}
-        for (rkey, ckey), glyph in row_labels.items():
-            if not tile_open(rkey, ckey):
-                continue
-            top = row_top[(rkey, ckey)]
-            for i in range(row_count[(rkey, ckey)]):
-                cells.append(CellBox(
-                    f"matlabel:row:{rkey}:{ckey}:{i}",
-                    content_x[ckey], top(i), MATLABEL_W, ROW_H,
-                    "matlabel", text=f"{glyph}{_sub(i + 1)}",
-                ))
-        # column labels — one per cell of each col-labelled tile, in the band above
-        # the top frame (so a framed matrix reads label / [bracket] / cells). A label
-        # value is either a string (the bare glyph; the i+1 subscript is appended) or
-        # a callable (i) → full label text, for tiles whose label has a richer form
-        # than glyph+subscript (the complexity row's norm expressions). The prescaling/
-        # complexity product-column labels carry the LIVE prescaler glyph (𝐿𝐜/𝐿𝐭/… or
-        # 𝑋𝐜/𝑋𝐭/…) — matching the tile-symbol slot below — via col_labels.
-        for (rkey, ckey), val in col_labels.items():
-            if ckey not in group_count or rkey not in row_matlabel_top:
-                continue
-            if not tile_open(rkey, ckey):
-                continue
-            left = group_left[ckey]
-            y = row_matlabel_top[rkey]
-            for i in range(group_count[ckey]):
-                text = val(i) if callable(val) else f"{val}{_sub(i + 1)}"
-                cells.append(CellBox(
-                    f"matlabel:col:{rkey}:{ckey}:{i}",
-                    left(i), y, COL_W, MATLABEL_H,
-                    "matlabel", text=text,
-                ))
-
-    # Shared axes. A multi-element group is one line that fans out at the near end
-    # (from its node) into one line per element, runs through the data, then fans
-    # back in at the far end to a foot extending a touch past the data — pinched at
-    # both ends, bulging through the middle. Collapsing converges the per-element
-    # lines onto the centre and shrinks both buses to nothing, so the renderer
-    # animates the merge into a single straight gridline.
-    bot_bus_y = total_h - FAN
-
-    # the single place a gridline is recorded. ``dotted`` marks a rule whose band is
-    # collapsed: a folded row/column converges its fan onto one centre rule, drawn dotted
-    # so the band reads as a placeholder for its hidden content (see Line.dotted).
-    def gridline(lid, orientation, pos, start, length, *, dotted):
-        lines.append(Line(lid, orientation, pos, start, length, dotted=dotted))
-
-    # the columns that fan into one rule per element — recorded by column_axis as it runs, so
-    # the spine loop below can skip EXACTLY these. A single source of truth: a fanned column
-    # therefore can never ALSO be drawn a full-height centre trunk (which left a spurious
-    # gridline down a 2+-element column when a hand-kept fan list drifted from these calls).
-    fanned_columns = set()
-
-    def column_axis(key, prefix, n, center_open):
-        if key not in col_x:
-            return
-        fanned_columns.add(key)
-        dotted = f"col:{key}" in collapsed  # the whole fan dots when the column folds
-        # the trunk centres on the cell SPAN (matrix_span), not the wider column footprint:
-        # the two diverge when a matrix-label gutter offsets the cells (primes under the
-        # mapping). matrix_span is collapse-aware -- it shrinks to the title strip when the
-        # column folds -- so a collapsed column's gridline tracks its fold node and the
-        # panels converging onto it, instead of stranding at the centre of where the OPEN
-        # cells used to sit (which left it off-centre by half the width the fold shed).
-        mx, mw = matrix_span(key)
-        cx = mx + mw / 2
-        if n == 0:  # an empty interval set (interest, before any are entered) is one straight axis
-            gridline(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y, dotted=dotted)
-            gridline(f"foot:{key}", "v", cx, fanout_y, total_h - fanout_y, dotted=dotted)
-            return
-        xs = [cx] * n if dotted else [center_open(i) for i in range(n)]
-        for i in range(n):
-            gridline(f"v:{prefix}:{i}", "v", xs[i], fanout_y, bot_bus_y - fanout_y, dotted=dotted)
-        bx, bw = _bus_span(xs)
-        # an addable column stretches its TOP bus out past the last sub-axis to the + stub, so the
-        # branching bar reaches the + (which rides plus_stub_x); the bottom bus just spans the data.
-        top_end = plus_stub_x[key] if key in plus_stub_x else bx + bw
-        gridline(f"bus:{key}:top", "h", fanout_y, bx, top_end - bx, dotted=dotted)
-        gridline(f"bus:{key}:bot", "h", bot_bus_y, bx, bw, dotted=dotted)
-        gridline(f"trunk:{key}", "v", cx, branch_top_y, fanout_y - branch_top_y, dotted=dotted)
-        gridline(f"foot:{key}", "v", cx, bot_bus_y, total_h - bot_bus_y, dotted=dotted)
-
-    # every group column fans into one vertical sub-axis per element, derived from
-    # group_left/group_elem/group_n (not a hand-kept call list) so a column with cells --
-    # the generators column included -- can never be missed and left a lone centre spine.
-    for key in group_left:
-        column_axis(key, group_elem[key], group_n[key],
-                    lambda i, k=key: group_left[k](i) + COL_W / 2)
-
-    # every NON-fanning present column is a spine: a single full-height trunk rule. Both ends
-    # are derived, not hand-kept — the columns come from col_x (so a column can never lack its
-    # gridline) and the fanned ones are excluded via fanned_columns (filled by the column_axis
-    # calls above), so a fanned column never doubles up a centre trunk on top of its fan. The
-    # spines are just the quantities/units columns: each carries one index per row (a basis
-    # square / generator ratio; a unit label), so there are no side-by-side cells to fan.
-    for key in col_x:
-        if key in fanned_columns:
-            continue
-        cx = col_x[key] + col_w[key] / 2
-        gridline(f"trunk:{key}", "v", cx, branch_top_y, total_h - branch_top_y,
-                 dotted=f"col:{key}" in collapsed)
-
-    # A matrix row is the horizontal mirror of a group column: it fans out at the node into
-    # one rule per cell-row, runs through the data, and rejoins on the right to a foot past it.
-    # The matrices are exactly FRAMED_ROWS, so membership there — not a hand-named special case
-    # (it used to be just "mapping") — decides what fans, and the count is the row's own cell
-    # height. So vectors/canon/prescaling fan like the mapping, automatically. Sub-rules are
-    # keyed by the row (h:mapping:i, h:vectors:i): unlike a column, whose element type picks
-    # one column, several rows share an element type (vectors and prescaling are both d primes
-    # tall), so the row key — not the element — is what keeps the ids unique.
-    right_bus_x = total_w - FAN
-    def row_axis(key):
-        n = row_nsub[key]
-        folded = f"row:{key}" in collapsed  # the whole fan dots and converges when the row folds
-        cy = row_y[key] + row_h[key] / 2
-        ys = [cy] * n if folded else [row_y[key] + i * ROW_H + ROW_H / 2 for i in range(n)]
-        left_bus_x = node_edge + FAN if (n > 1 and not folded) else node_edge
-        for i in range(n):
-            gridline(f"h:{key}:{i}", "h", ys[i], left_bus_x, right_bus_x - left_bus_x, dotted=folded)
-        bus_y, bus_h = _bus_span(ys)
-        # a row with a basis + (only the vectors row) stretches its LEFT bar down past the last
-        # sub-row to the + stub (row_plus_y), so the branching bar reaches the +; the right bar
-        # just spans the data.
-        left_bottom = row_plus_y[key] if key in row_plus_y else bus_y + bus_h
-        gridline(f"vbar:{key}:left", "v", left_bus_x, bus_y, left_bottom - bus_y, dotted=folded)
-        gridline(f"vbar:{key}:right", "v", right_bus_x, bus_y, bus_h, dotted=folded)
-        gridline(f"trunk:{key}", "h", cy, node_edge, left_bus_x - node_edge, dotted=folded)
-        gridline(f"foot:{key}", "h", cy, right_bus_x, total_w - right_bus_x, dotted=folded)
-
-    # one pass over the present rows (top to bottom): fan the matrices, give every other row a
-    # single full-width rule across its band. Derived from row_y, so a row can never lack its
-    # gridline — present or collapsed (a folded row still leaves its rule, fanned or spine).
-    for key in row_y:
-        if key in FRAMED_ROWS:
-            row_axis(key)
-        else:
-            gridline(f"h:{key}", "h", row_y[key] + row_h[key] / 2, node_edge, total_w - node_edge,
-                     dotted=f"row:{key}" in collapsed)
-
-    # #e0e0e0 panels behind each content group. A panel folds to zero size along
-    # any collapsed axis (collapsing toward the band centre), so the renderer
-    # animates it shrinking away to nothing — leaving only the band's gridline,
-    # never a leftover grey strip. Every tile is simply its row band's full height — a row with
-    # a nested control (chart/chooser) is one uniform band: tile_h already includes that control's
-    # reservation, so every tile in the row gets the same (extended) height here.
-    def panel_rect(ckey, rkey):
-        # a folded tile collapses both ways at once, so it shrinks to a point at its
-        # centre — like a row+column collapse confined to this one tile.
-        tile_c = f"tile:{rkey}:{ckey}" in collapsed
-        col_c = f"col:{ckey}" in collapsed or tile_c
-        row_c = f"row:{rkey}" in collapsed or tile_c
-        cx, cw = tile_box(ckey)  # the tile widens for a long caption; content centres within it
-        ch, cy = tile_h[rkey], tile_top[rkey]
-        w, px = (0, 0) if col_c else (cw, PAD)
-        h, py = (0, 0) if row_c else (ch, PAD)
-        bx = cx + cw / 2 if col_c else cx
-        by = cy + ch / 2 if row_c else cy
-        return bx - px, by - py, w + 2 * px, h + 2 * py
-
-    def panel(bid, ckey, rkey):
-        if ckey not in col_x or rkey not in row_y:
-            return
-        blocks.append(Block(bid, *panel_rect(ckey, rkey)))
-
-    for bid, rkey, ckey in tiles:
-        if (rkey, ckey) in declared_tiles:  # a dropped tile (e.g. all-interval's redundant ones) loses its panel too
-            panel(bid, ckey, rkey)
-    # the nested tuning-ranges box: a thin-bordered frame around the chart + selector,
-    # appended after the tile panels so it layers on top of the generator tuning map tile
-    if gtm_box is not None:
-        blocks.append(Block("block:tuning:rangesbox", *gtm_box, boxed=True))
-    # the optimization box's thin border, around its title + objective/power/button
-    if opt_box is not None:
-        blocks.append(Block("block:optimization:box", *opt_box, boxed=True))
-
-    # Colorization washes. Each colour-bearing tile renders one band per group — a white
-    # base plus the group's colour at mix-blend-mode:darken (see app.py). The base sits a
-    # layer BELOW the colour (z-index), so where a tile carries both groups the two colour
-    # bands darken-compose regardless of paint order: cyan over yellow gives the mockup's
-    # green. Each band hugs its (open) tile's extent and overhangs by WASH_PAD — so a run of
-    # same-coloured tiles meets across the inter-tile gaps and reads as one continuous band
-    # rather than leaving grey strips between them. A folded tile (by its own toggle, its row
-    # or its column) is not open, so its colour goes away with its content. Two sources of a
-    # tile's groups: most tiles colour by CONTENT (the colour-bearing objects multiplied into
-    # their quantity, CELL_FACTORS); the spine label cells colour by the BAND they head — the
-    # counts + units rows by their column's family, the quantities + units columns by their
-    # row's family — continuing each value band's colour through the spine (see SPINE_*).
-    def tile_groups(rkey, ckey):
-        if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
-            return {SPINE_COLUMN_GROUP[ckey]}          # a counts/units row cell: its column's family
-        if ckey in SPINE_COLUMNS and rkey in SPINE_ROW_GROUP:
-            return {SPINE_ROW_GROUP[rkey]}             # a quantities/units column cell: its row's family
-        return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())}
-
-    if col_x and row_y:
-        bands = []  # (id, x, y, w, h, group)
-        for rkey, ckey in declared_tiles:
-            if not tile_open(rkey, ckey):
-                continue
-            groups = {g for g in tile_groups(rkey, ckey) if settings.get(f"{g}_colorization")}
-            if not groups:
-                continue
-            x, w = col_x[ckey] - WASH_PAD, col_w[ckey] + 2 * WASH_PAD
-            y, h = tile_top[rkey] - WASH_PAD, tile_h[rkey] + 2 * WASH_PAD
-            for group in groups:
-                bands.append((f"{group}:{rkey}:{ckey}", x, y, w, h, group))
-        for bid, x, y, w, h, _ in bands:  # white bases (a layer below the colour bands)
-            blocks.append(Block(f"washbase:{bid}", x, y, w, h, tint="base"))
-        for bid, x, y, w, h, group in bands:  # the darken colour bands over them
-            blocks.append(Block(f"wash:{bid}", x, y, w, h, tint=group))
-
-    # quantity symbol + name stacked inside each tile, below its values + bottom
-    # frame: the symbol line (toggled by symbols) on top, the long-form name
-    # (toggled by names) under it. Equivalences extends the symbol line with the
-    # quantity's defining equation — the "= …" continuation appended to the glyph,
-    # so it reads e.g. "𝒕 = 𝒈𝑀"; turning it on shows the glyph too (the equation's
-    # left side) even when symbols itself is off. Within a symboled row the slot is
-    # reserved for every captioned column so the names stay aligned; the glyph and
-    # equation are drawn only where defined (the comma columns have none yet). An
-    # empty interest column has no tiles. Mnemonics underlines the symbol letter.
-    # The weight row's equation resolves per build from the live scheme's damage-weight slope
-    # (𝒘 = 𝒄 / 𝟏 / 1/𝒄 — the bold 𝟏 is the all-ones weight vector). The damage row names its
-    # weight factor 𝒘 (a LIST, so 𝒘 — never diag(𝒘)) only while the weight row is on screen; with
-    # weighting hidden it drops to 𝐝 = |𝐞| rather than dangle a reference to a row the reader can't
-    # see. The bare prescaling tile is the only one whose SYMBOL equivalence names the live prescaler
-    # concretely (``𝑋 = 𝐿`` for log-prime, ``𝑋 = diag(𝒑)`` / ``𝑋 = 𝐼`` otherwise, or nothing for a
-    # typed override — see prescaler_equivalence). Its NAME additionally gains "= log-prime matrix"
-    # when 𝑋 = 𝐿 (see effective_captions). The product tiles carry the live glyph as their SYMBOL
-    # (𝐿C/…) and print no "= …".
-    ai = service.is_all_interval(tuning_scheme)  # all-interval: kept target tiles use prime-proxy labels
-    slope = service.damage_weight_slope(tuning_scheme)
-    equivalences = {**EQUIVALENCES,
-                    ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
-                    ("prescaling", "primes"): prescaler_equivalence,
-                    **(ALL_INTERVAL_EQUIVALENCES if ai else {})}
-    if not show_weighting:  # the weight row 𝒘 is hidden, so don't dangle it: 𝐝 = |𝐞|
-        equivalences[("damage", "targets")] = " = |𝐞|"
-    for (rkey, ckey), name in effective_captions.items():
-        if ckey == "interest" and not interest:
-            continue
-        if not tile_open(rkey, ckey):
-            continue
-        if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:  # the prime-proxy name (per the Guide)
-            name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
-        cy = row_y[rkey] + row_h[rkey] + row_frame[rkey]
-        if (show_symbols or show_equiv) and rkey in SYMBOLED_ROWS:
-            equiv = equivalences.get((rkey, ckey), "") if show_equiv else ""
-            base_symbol = prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
-            if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
-                base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
-            glyph = base_symbol if (show_symbols or equiv) else ""
-            if glyph or equiv:
-                cells.append(CellBox(f"symbol:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
-            cy += SYMBOL_H
-        if show_captions:
-            kw = MNEMONICS.get((rkey, ckey)) if show_mnemonics else None
-            underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()
-            if show_mnemonics and ai:  # all-interval subscript letters (Tₚ → the p's in prime/proxy)
-                underlines += tuple((name.index(w), 1)
-                                    for w in ALL_INTERVAL_MNEMONICS.get((rkey, ckey), ()) if w in name)
-            # the caption spans the row's whole caption band (row_cap — the tallest wrapped
-            # name in the row), and the CSS centres the text within it. So a one-line name
-            # sits centred (half a blank line above and below) against a two-line sibling,
-            # rather than hugging the cells with all the slack below.
-            cells.append(CellBox(f"caption:{rkey}:{ckey}", col_x[ckey], cy, col_w[ckey], row_cap[rkey],
-                                 "caption", text=name, underlines=underlines))
-        # the "units: …" line sits below the caption band (independent of names/symbols),
-        # reading the box's entry from UNITS — bold-upright unit glyphs via _math_html
-        if show_units and (rkey, ckey) in UNITS:
-            uy = row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey]
-            cells.append(CellBox(f"units:{rkey}:{ckey}", col_x[ckey], uy, col_w[ckey], UNIT_H,
-                                 "units", text=f"units: {UNITS[(rkey, ckey)]}"))
-
-    # the plain-text box sits directly below the symbol/caption/units stack; the preselect
-    # chooser rides one plain-text band lower (so preselects appear under plain text).
-    def ptext_band_y(rkey):
-        return row_y[rkey] + row_h[rkey] + row_frame[rkey] + row_sym[rkey] + row_cap[rkey] + row_units[rkey]
-
-    # a control box: a thin-bordered frame SPANNING the full width of its column's tile (like the
-    # optimization / tuning-ranges boxes), with the dropdown seated at its top-left at the dropdown's
-    # natural width and the standard dropdown-label underneath — a left-justified one-line caption
-    # (.rtt-caption-left: 6px left, 2px top) hugging the dropdown's bottom edge, the same asset every
-    # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
-    # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
-    # the (x, width, y) to seat the dropdown at.
-    def control_box(box_id, ckey, top, cap_w, label):
-        dropdown_w, label_h, box_h = control_dims(ckey, cap_w, label)
-        box_x, box_y = col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
-        blocks.append(Block(box_id, box_x, box_y, col_w[ckey], box_h, boxed=True))
-        ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
-        if label:
-            cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESELECT_H, dropdown_w, label_h,
-                                 "caption", text=label, align="left"))
-        return ctrl_x, dropdown_w, ctrl_y
-
-    def emit_all_interval_check(check_x, ctrl_y):
-        # the all-interval checkbox + its caption, seated on a control row at ctrl_y: an OPTION_BOX_PX
-        # square over an "all-interval" caption in an LBOX_DIM_W slot (the box-𝐋 diminuator's shape). It
-        # reflects whether the scheme targets every interval (ticking it is wired in app.py).
-        check_y = ctrl_y + (PRESELECT_H - OPTION_BOX_PX) / 2  # centre the square on the control row
-        cells.append(CellBox("control:all_interval", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
-                             "control_check", text="", checked=service.is_all_interval(tuning_scheme)))
-        cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
-                             CAPTION_LINE, "caption", text="all-interval"))
-
-    # preselect chooser dropdowns, in the reserved band below each governing tile's
-    # plain-text box. The tuning/target choosers carry the live selection; the
-    # temperament chooser is a placeholder (it loads, not mirrors). These are controls,
-    # so they ride the tile whether or not math expressions has emptied its values.
-    if show_preselects:
-        # the tuning chooser shows the scheme name; a scheme refined by the alt.-complexity
-        # control is a resolved spec (no preset name), so it shows blank rather than a repr.
-        # the prescaler chooser shows the scheme's named prescaler, blank ("-") when a custom
-        # diagonal override deviates from it (the bare prescaler tile's manual edits).
-        preselect_text = {"temperament": "", "target": target_spec,
-                          "tuning": tuning_scheme if isinstance(tuning_scheme, str) else "",
-                          "prescaler": service.displayed_prescaler_name(
-                              state.mapping, tuning_scheme, custom_prescaler) or ""}
-
-        def emit_preselect(cid, name, rkey, ckey, label):
-            if not tile_open(rkey, ckey):
-                return
-            top = ptext_band_y(rkey) + row_ptext[rkey]  # below the plain-text band
-            cx, cw, cy = control_box(f"block:{cid}", ckey, top, preselect_cap(name), label)
-            cells.append(CellBox(cid, cx, cy, cw, PRESELECT_H, "preselect", text=preselect_text[name]))
-            # the target chooser carries the all-interval checkbox to the dropdown's right, in the
-            # empty space of its now-tile-spanning box (box 𝐓); TBOX_W floors the column wide enough.
-            if name == "target" and settings["all_interval"]:
-                emit_all_interval_check(cx + cw + OPT_COL_GAP, cy)
-
-        for name, rkey, ckey, label in PRESELECTS:
-            emit_preselect(f"preselect:{name}", name, rkey, ckey, label)
-        for name, rkey, ckey, label in PRESELECT_COPIES:  # the same control in a second tile
-            emit_preselect(f"preselect:{name}:{ckey}", name, rkey, ckey, label)
-
-    # the all-interval checkbox is revealed by the show-panel "all-interval" entry ALONE (not the
-    # preselects toggle). When the target chooser is shown, emit_preselect seats the checkbox inside
-    # the chooser's box (box 𝐓, above); when it is hidden the checkbox is the band's only target
-    # control, alone at the column's left. The vectors row reserves the band either way.
-    if settings["all_interval"] and not show_preselects and tile_open("vectors", "targets"):
-        top = ptext_band_y("vectors") + row_ptext["vectors"]
-        emit_all_interval_check(col_x["targets"] + BOX_OUTER, top + BOX_OUTER + BOX_INNER)
-
-    # the form chooser, one box below the preselect chooser: it canonicalizes the mapping /
-    # comma basis it rides (an undoable edit). A control, so it ignores the value-display
-    # toggles, like the preselect choosers.
-    if show_form_controls:
-        for name, rkey, ckey, label in FORM_CHOOSERS:
-            if not tile_open(rkey, ckey):
-                continue
-            top = ptext_band_y(rkey) + row_ptext[rkey] + row_pre[rkey]  # below the preselect box
-            cx, cw, cy = control_box(f"block:formchooser:{name}", ckey, top, PRESELECT_W, label)
-            cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESELECT_H, "formchooser"))
-
-    # plain-text value band: each tile's value as its natural EBK string, directly
-    # below the symbol/caption stack (above the preselect chooser). The two editable
-    # duals (mapping, comma basis) render as inputs that drive the grid; every other
-    # value is read-only. The app shrinks each box's font so the value fits one line.
-    if show_ptext:
-        for (rkey, ckey), text in ptext_strings.items():
-            if not tile_open(rkey, ckey):
-                continue
-            # the comma basis flips to a static two-tone box while a comma is pending (the
-            # committed commas black, the draft vector red — a single-colour input can't do
-            # that); the mapping and read-only values keep their normal kinds.
-            if pending is not None and (rkey, ckey) == ("vectors", "commas"):
-                kind = "ptextpending"
-            elif (rkey, ckey) in EDITABLE_PTEXT:
-                kind = "ptextedit"
-            else:
-                kind = "ptext"
-            cells.append(CellBox(f"ptext:{rkey}:{ckey}", col_x[ckey], ptext_band_y(rkey),
-                                 col_w[ckey], ptext_height(rkey, ckey), kind, text=text))
-        # the quantities-row ratios get their plain text per column, directly below
-        # each ratio (the mockup), one inline "n/d" per cell — not packed into a set. The held
-        # column (its ratios derived like the commas') carries its own, alongside commas/targets.
-        for ckey, left, ratios in (("commas", comma_left, comma_ratios), ("targets", target_left, targets),
-                                   ("held", held_left, held_ratios), ("detempering", detempering_left, gens)):
-            if tile_open("quantities", ckey):
-                qy = ptext_band_y("quantities")
-                for i, ratio in enumerate(ratios):
-                    cells.append(CellBox(f"ptext:quantities:{ckey}:{i}", left(i), qy, COL_W, PTEXT_H, "ptext", text=ratio))
-
-    # a framed matrix's top bracket + bottom brace stand off the cells by FRAME_GAP:
-    # the top bracket just above row 0 (below the toggle head), the brace a matching
-    # gap below the last row of that band.
-    def frame_top_y(rkey):
-        return row_y[rkey] - FRAME_H - FRAME_GAP
-
-    def frame_brace_y(rkey):
-        return row_y[rkey] + row_h[rkey] + FRAME_GAP
-
-    # a matrix tile (the primes mapping and its canonical forms) is enclosed by a top
-    # bracket + bottom curly brace spanning its whole column: the brace marks generator
-    # coordinates, so it's the right close for the mapping but not for raw vectors or
-    # prescaled vectors (those use per-column marks via vector_list_marks). ``bid`` keeps
-    # each frame's ids stable so two framed rows over the same column never collide.
-    def matrix_frame(rkey, ckey, bid, foot="ebkbrace"):
-        # The spanning frame hugs the CELL matrix — content_box, exactly as the per-row
-        # bracket() calls do — not the grey footprint (col_x/col_w). The matlabel gutter
-        # (row labels 𝒎ᵢ / 𝒙ᵢ) sits LEFT of that matrix, OUTSIDE the frame. Anchoring to
-        # the footprint instead would, whenever it is widened past its content (e.g. by the
-        # prescaler chooser or box-𝐋 diminuator under the prescaling matrix), drag the frame left
-        # over those labels and right past the cells. ``foot`` is the bottom-spanning close:
-        # ``ebkbrace`` for the mapping family (generator coordinates, curly close),
-        # ``ebkangle`` for the bare prescaler 𝐿 (angle close ⟩, mirroring the mapping's
-        # plain-text bracket but with ⟩ in place of }).
-        if not tile_open(rkey, ckey):
-            return
-        gx, gw = matrix_span(ckey)
-        cells.append(CellBox(f"ebktop:{bid}", gx, frame_top_y(rkey), gw, FRAME_H, "ebktop"))
-        cells.append(CellBox(f"{foot}:{bid}", gx, frame_brace_y(rkey), gw, BRACE_H, foot))
-
-    matrix_frame("mapping", "primes", "primes")
-    matrix_frame("canon", "primes", "canon")
-    matrix_frame("canon", "gens", "form")
-    # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer
-    # ``[ … ⟩`` with per-row ``⟨ … ]`` covectors — so its gridded EBK uses the SAME
-    # matrix_frame + per-row bracket pattern the mapping uses, just with an angle ⟩
-    # (ebkangle) at the bottom-span instead of the curly } (ebkbrace).
-    matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle")
-    # the 𝐿·basis product matrices (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile use a
-    # COLUMN-WISE construction instead — per-column ket ``[ … ⟩`` marks with outer ``[ … ]``
-    # left/right brackets (or no outer wrap for interest). See the vector_list_marks +
-    # bracket calls further below.
-
-    # a matrix of vector columns: vertical rules separate the columns, and each is
-    # marked top + bottom — inset so they stop short of the rules. ``top`` and ``foot``
-    # pick the per-column shapes: a tempered/mapped column (generator coords) takes the
-    # default ``[ ... }`` (ebktop + ebkbrace curly close); a raw (untempered) vector or a
-    # prescaled vector is a ket, closing with the angle ⟩ (ebkangle) instead — ``[ ... ⟩``.
-    # ``separators=False`` drops the dividing rules: for a bordered grid (the comma
-    # basis — its own cell borders already divide the columns) or for the standalone
-    # columns of the intervals-of-interest collection (which isn't a matrix at all).
-    def vector_list_marks(rkey, name, ckey, left, n_cols, top="ebktop", foot="ebkbrace", separators=True, pending_col=-1):
-        if not tile_open(rkey, ckey):
-            return
-        mark_w = COL_W - 2 * MARK_INSET
-        for c in range(n_cols):
-            mx = left(c) + MARK_INSET
-            pend = (c == pending_col)  # the draft column's ket marks render red, like its cells
-            cells.append(CellBox(f"{top}:{name}:{c}", mx, frame_top_y(rkey), mark_w, FRAME_H, top, pending=pend))
-            cells.append(CellBox(f"{foot}:{name}:{c}", mx, frame_brace_y(rkey), mark_w, BRACE_H, foot, pending=pend))
-        if not separators:
-            return
-        for c in range(1, n_cols):  # a rule on each interior column boundary
-            cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, row_y[rkey], SEP_W, row_h[rkey], "vbar"))
-
-    vector_list_marks("mapping", "mapped_comma", "commas", comma_left, nc)
-    vector_list_marks("mapping", "mapped_detempering", "detempering", detempering_left, r)
-    vector_list_marks("mapping", "mapped", "targets", target_left, k)
-    # the interest column's mapped images stand alone — no separator rules between columns
-    vector_list_marks("mapping", "imapped", "interest", interest_left, mi, separators=False)
-    vector_list_marks("mapping", "hmapped", "held", held_left, nh)
-    # the interval-vectors row holds raw (untempered) vectors, so every column is a
-    # ket — angle ⟩ feet, not braces. The comma basis is the editable bordered grid
-    # (commacell), so it skips the separator rules (its cell borders divide the columns);
-    # nc_shown includes the pending draft column so it gets its ket marks too. The
-    # interest column's intervals likewise stand alone (no separators between columns).
-    vector_list_marks("vectors", "vec:commas", "commas", comma_left, nc_shown, foot="ebkangle", separators=False,
-                     pending_col=(nc if pending is not None else -1))
-    vector_list_marks("vectors", "vec:targets", "targets", target_left, k, foot="ebkangle")
-    vector_list_marks("vectors", "vec:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
-    vector_list_marks("vectors", "vec:held", "held", held_left, nh, foot="ebkangle")
-    vector_list_marks("vectors", "vec:detempering", "detempering", detempering_left, r, foot="ebkangle")
-    # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
-    # Every 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile is a matrix of prescaled
-    # VECTORS, so each column is a ket ``[ … ⟩`` — top = ebktop (square open ⌐), foot =
-    # ebkangle (angle/ket foot ∨) — the default vector_list_marks shape (no overrides). The
-    # bare prescaler 𝐿 is the exception: it has NO per-column marks (its EBK is mapping-
-    # style — see the matrix_frame + per-row ⟨ … ] bracket calls above).
-    #
-    # Separators between columns are drawn for 𝐿T and 𝐿H per the mockup; the 𝐿C / 𝐿D tiles
-    # keep their columns spaced without dividing rules. Interest stays standalone (no outer
-    # wrap, no separators).
-    vector_list_marks("prescaling", "prescaling:commas", "commas", comma_left, nc, foot="ebkangle", separators=False)
-    vector_list_marks("prescaling", "prescaling:detempering", "detempering", detempering_left, r, foot="ebkangle", separators=False)
-    vector_list_marks("prescaling", "prescaling:targets", "targets", target_left, k, foot="ebkangle", separators=True)
-    vector_list_marks("prescaling", "prescaling:held", "held", held_left, nh, foot="ebkangle", separators=True)
-    vector_list_marks("prescaling", "prescaling:interest", "interest", interest_left, mi, foot="ebkangle", separators=False)
-
-    # a per-tile fold toggle inset into each content tile's top-left corner: it
-    # sits in the head strip reserved above the content, TOGGLE_INSET in from the
-    # grey panel's top-left, so it never touches an edge or overlaps the frame.
-    # Anchored to the grey panel's left edge (col_x), not the centred content — so a
-    # caption-widened tile keeps the toggle on its edge rather than drifting it inward.
-    # Present whenever the tile's row and column bands are open — it stays put when
-    # only the tile is folded, so the tile can be re-expanded.
-    for _bid, rkey, ckey in tiles:
-        if ((rkey, ckey) in declared_tiles  # a dropped tile (e.g. all-interval's retune×targets) takes its toggle too
-                and rkey in row_y and ckey in col_x and row_open(rkey) and col_open(ckey)):
-            glyph = _fold_glyph(f"tile:{rkey}:{ckey}" in collapsed)
-            cells.append(CellBox(f"toggle:tile:{rkey}:{ckey}",
-                                 col_x[ckey] - PAD + TOGGLE_INSET, tile_top[rkey] - PAD + TOGGLE_INSET,
-                                 TOGGLE, TOGGLE, "tiletoggle", text=glyph))
-
-    # Value-display filtering. The tiles (blocks) and gridlines (lines) always
-    # stand; only a tile's *contents* answer to the value-display toggles, applied
-    # here by kind rather than threaded through every emission above. "gridded
-    # values" off drops them outright -- numbers, boxes, EBK marks, controls -- so
-    # the tiles go empty. "quantities" (general) off is gentler: it keeps the boxes
-    # and marks and only blanks the body numbers, baring the gridded structure.
-    if not gridded:
-        cells = [cb for cb in cells if cb.kind not in GRIDDED_KINDS]
-    elif not show_quantities:
-        cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
-                 for cb in cells]
-
-    # Each column title renders unwrapped and centred on its gridline (see _title_w and the
-    # .rtt-colheader rule), so one wider than its content-hugging column overhangs it. Interior
-    # overhangs spill into the gaps over neighbours, but the LAST column's title spills past the
-    # grid's right edge — the narrow (empty) interest column's long "other intervals of interest"
-    # reaches well beyond total_w. Publish that reach so the renderer widens the grey pane to show
-    # the title rather than clip it. Computed from the final cells (after any blanking), so a mode
-    # that drops or empties the titles reports no overhang.
-    title_right = max((c.x + c.w / 2 + _title_w(c.text) / 2 for c in cells if c.kind == "colheader"),
-                      default=total_w)
-    right_overhang = max(0.0, title_right - total_w)
-
-    return Layout(total_w, total_h, tuple(lines), tuple(blocks), tuple(cells),
-                  freeze_x=node_edge, freeze_y=branch_top_y, right_overhang=right_overhang)
+    return _GridBuilder(
+        state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
+        pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
+        optimize_locked,
+    ).layout()
