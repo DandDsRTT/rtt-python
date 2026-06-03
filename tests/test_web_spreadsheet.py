@@ -3904,16 +3904,21 @@ def test_optimization_box_lays_out_objective_power_and_button_in_columns():
     # centred like any other value cell (not stretched/left-justified within the control)
     assert on["optimization:objective"].w == spreadsheet.COL_W
     assert on["optimization:power"].w == spreadsheet.COL_W
-    # the controls DISTRIBUTE across the full-width box (no longer packed left): the objective
-    # hugs the left edge, the optimize button hugs the right edge, and the power sits centered
-    # in the gap between them, so its "optimization power" caption has clear room either side
-    assert on["optimization:objective"].x == box.x + spreadsheet.OPT_PAD_L
+    # the controls DISTRIBUTE across the full-width box (no longer packed left): the objective is a
+    # COLUMN hugging the left edge — its symbol and caption span the column width and its COL_W value
+    # cell is centred within it, so a wide min()-wrapped symbol overflows evenly and stays inside the
+    # box. The optimize button hugs the right edge; the power sits centered in the gap between them.
+    obj_col_x = box.x + spreadsheet.OPT_PAD_L
+    assert on["optimization:objective:symbol"].x == obj_col_x
+    assert on["optimization:objective:symbol"].w == spreadsheet.OPT_OBJ_W
+    assert on["optimization:objective:caption"].x == obj_col_x
+    assert on["optimization:objective"].x == obj_col_x + (spreadsheet.OPT_OBJ_W - spreadsheet.COL_W) / 2
     assert (on["optimization:button"].x + on["optimization:button"].w
             == box.x + box.w - spreadsheet.OPT_PAD_R)
-    obj_r = on["optimization:objective"].x + on["optimization:objective"].w
+    obj_r = obj_col_x + spreadsheet.OPT_OBJ_W  # the objective column's right edge
     btn_l = on["optimization:button"].x
     pow_c = on["optimization:power"].x + on["optimization:power"].w / 2
-    assert abs(pow_c - (obj_r + btn_l) / 2) < 1  # power centered in the gap between the two
+    assert abs(pow_c - (obj_r + btn_l) / 2) < 1  # power centered in the gap between column and button
     cap = on["optimization:power:caption"]
     assert cap.x > obj_r and cap.x + cap.w < btn_l  # ...and its caption clears both neighbors
     # the optimize button is a normal rectangle the same height as the value boxes (the p input),
