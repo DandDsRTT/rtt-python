@@ -18,6 +18,7 @@ from nicegui.elements.tooltip import Tooltip
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 
+from rtt.web import service
 from rtt.web import settings as show_settings
 from rtt.web.editor import Editor
 
@@ -754,6 +755,38 @@ async def test_adding_a_held_interval_drops_the_scheme_chooser_to_dash(user: Use
     sel = _cell_child(user, "preset:tuning")
     assert sel.value is None                          # the displayed tuning is off the named list...
     assert sel.props.get("display-value") == "-"      # ...so the chooser shows the "-" prompt
+
+
+async def test_adding_an_interval_of_interest_commits_when_filled(user: User) -> None:
+    # the whole user flow: + opens a blank red draft, and filling every vector component commits
+    # it (an interval of interest is no longer a pre-filled 1/1 — it stays a draft until complete)
+    await user.open("/")
+    user.find(marker="toggle:col:interest").click()  # expand the interest column (folded by default)
+    user.find(marker="toggle:row:vectors").click()   # expand the interval-vectors row
+    _click_glyph(user, "interest_plus")               # start a blank red draft
+    await user.should_see(marker="cell:interest:0:0")
+    assert "rtt-pending" in _cell_child(user, "cell:interest:0:0")._classes  # the draft cell is red
+    _cell_child(user, "cell:interest:0:0").set_value("-1")  # make it 3/2 = (-1 1 0)
+    _cell_child(user, "cell:interest:1:0").set_value("1")
+    _cell_child(user, "cell:interest:2:0").set_value("0")   # every component filled -> commits
+    await user.should_see(marker="interest:0")              # the committed ratio now heads the column
+    assert _cell_child(user, "cell:interest:0:0").value == "-1"  # the vector committed
+
+
+async def test_adding_a_target_commits_when_filled(user: User) -> None:
+    # the same flow for the target list; its draft rides at index k (past the TILT defaults), and
+    # filling it materializes the spec set into an override with the new interval appended
+    k = len(service.target_interval_set(service.DEFAULT_TARGET_SPEC, Editor().state.domain_basis))
+    await user.open("/")
+    user.find(marker="toggle:row:vectors").click()  # expand the vectors row (the targets column is open by default)
+    _click_glyph(user, "target_plus")               # start a blank red target draft
+    await user.should_see(marker=f"cell:vec:targets:{k}:0")
+    assert "rtt-pending" in _cell_child(user, f"cell:vec:targets:{k}:0")._classes
+    _cell_child(user, f"cell:vec:targets:{k}:0").set_value("-1")  # make it 3/2 = (-1 1 0)
+    _cell_child(user, f"cell:vec:targets:{k}:1").set_value("1")
+    _cell_child(user, f"cell:vec:targets:{k}:2").set_value("0")   # every component filled -> commits
+    await user.should_see(marker=f"target:{k}")  # the new target now heads its own column
+    assert _cell_child(user, f"cell:vec:targets:{k}:0").value == "-1"
 
 
 async def test_enabling_audio_renders_speakers_and_control_banks(user: User) -> None:

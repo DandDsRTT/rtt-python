@@ -1283,10 +1283,15 @@ class _Reconciler:
         self._ratio(cb, approx=True)  # a generator ratio, shown ~approximate
 
     def _build_target(self, cb, wrap):
-        self._ratio(cb, approx=False)  # a target / comma ratio (exact)
+        self._build_ratio_or_pending(cb)
 
     def _build_commaratio(self, cb, wrap):
-        if cb.pending:  # the draft comma's "?" quantity, red
+        self._build_ratio_or_pending(cb)
+
+    def _build_ratio_or_pending(self, cb):
+        # an exact target / comma / interest / held ratio heading its column — or, for a pending
+        # draft column, the red "?" placeholder (no value until the vector is filled in)
+        if cb.pending:
             self.labels[cb.id] = ui.label(cb.text).classes("rtt-val rtt-pending-q")
         else:
             self._ratio(cb, approx=False)
@@ -1541,35 +1546,30 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_comma))
 
-    def _build_interest_minus(self, cb, wrap):  # one per interval (each independently removable); the draft's − cancels it
-        suffix = cb.id.split(":", 1)[1]
-        action = self._editor.cancel_pending_interest if suffix == "pending" \
-            else (lambda idx=int(suffix): self._editor.remove_interest(idx))
+    def _build_list_minus(self, cb, wrap, cancel, remove):
+        # an interval-list column's − (interest / held / target): the draft column's cancels the
+        # draft, every other drops just its interval (cb.comma) — each is independently removable
+        action = cancel if cb.id.endswith(":pending") else (lambda idx=cb.comma: remove(idx))
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(action))
+
+    def _build_interest_minus(self, cb, wrap):
+        self._build_list_minus(cb, wrap, self._editor.cancel_pending_interest, self._editor.remove_interest)
 
     def _build_interest_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_interest))
 
-    def _build_held_minus(self, cb, wrap):  # one per held interval; its − drops just that one (the draft's − cancels it)
-        action = self._editor.cancel_pending_held if cb.id.endswith(":pending") \
-            else (lambda idx=cb.comma: self._editor.remove_held(idx))
-        wrap.classes("rtt-minus-zone")
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None: self._cb.act(action))
+    def _build_held_minus(self, cb, wrap):
+        self._build_list_minus(cb, wrap, self._editor.cancel_pending_held, self._editor.remove_held)
 
     def _build_held_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_held))
 
-    def _build_target_minus(self, cb, wrap):  # one per target (each independently removable); the draft's − cancels it
-        action = self._editor.cancel_pending_target if cb.id.endswith(":pending") \
-            else (lambda idx=cb.comma: self._editor.remove_target(idx))
-        wrap.classes("rtt-minus-zone")
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None: self._cb.act(action))
+    def _build_target_minus(self, cb, wrap):
+        self._build_list_minus(cb, wrap, self._editor.cancel_pending_target, self._editor.remove_target)
 
     def _build_target_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
