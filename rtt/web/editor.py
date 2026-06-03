@@ -30,6 +30,14 @@ INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))  # meantone, matching the original app
 INITIAL_COLLAPSED: frozenset[str] = frozenset({"col:commas", "col:interest", "row:vectors"})
 
 
+def _same_cents_map(a, b) -> bool:
+    """Whether two generator tunings are equal at DISPLAY precision — the cents the grid actually
+    shows (:func:`service.cents`). Comparing what's shown (not bit-exact floats) means a tuning
+    frozen or typed back at its displayed value reads as 'no deviation', mirroring how
+    :func:`service.displayed_prescaler_name` compares prescaler diagonals."""
+    return len(a) == len(b) and all(service.cents(x) == service.cents(y) for x, y in zip(a, b))
+
+
 @dataclass(frozen=True)
 class _Doc:
     """An immutable snapshot of the whole document — the unit of undo/redo, reset
@@ -306,17 +314,26 @@ class Editor:
     @property
     def displayed_tuning_scheme_name(self) -> str | None:
         """The named scheme the grid's *displayed* tuning realises, or None — for which the
-        tuning chooser shows "-". None when the scheme is a control-refined spec (no name), or
-        when a manual generator-tuning override is in effect and deviates from the scheme's
-        optimum (the user hand-edited the generator tuning map), so the shown tuning no longer
-        matches the selected scheme. A frozen tuning still equal to the optimum, or a stale
-        override the grid ignores (its generator count no longer fits the mapping), keeps the
-        scheme's name — those still show the scheme's own tuning."""
+        tuning chooser shows "-". None when the scheme is a control-refined spec (no base name),
+        or when the displayed generator tuning deviates from the BARE scheme's optimum — the
+        established schemes the chooser lists carry no held constraints. The displayed tuning is a
+        valid frozen manual override, else the scheme's optimum WITH any held intervals folded in;
+        so a hand-edited generator OR a held interval that pulls the tuning off the bare optimum
+        both drop the name to "-". A stale override the grid ignores (its generator count no longer
+        fits the mapping) falls back to that optimum, keeping the name when nothing else deviates.
+        Compared at DISPLAY precision (the shown cents), mirroring :attr:`displayed_prescaler_name`,
+        so a tuning frozen or typed at the displayed optimum reads as no deviation."""
         if not isinstance(self.tuning_scheme, str):
             return None
         override = self.effective_generator_tuning()
-        if (override is not None and len(override) == len(self.state.mapping)
-                and override != self._optimum_generator_tuning()):
+        displayed = (override if override is not None and len(override) == len(self.state.mapping)
+                     else self._optimum_generator_tuning())
+        # the bare scheme's optimum over the SAME target set the grid shows (a typed target list is a
+        # separate control, not a scheme deviation) but WITHOUT held constraints — so the comparison
+        # isolates exactly the held-interval / manual-override deviations.
+        bare = service.tuning(self.state.mapping, self.tuning_scheme,
+                              targets=self.target_override).generator_map
+        if not _same_cents_map(displayed, bare):
             return None
         # the chooser lists base names (its label T-prefixes a target-based scheme), so drop any
         # target prefix here — a target-based "TILT minimax-S" shows as the "minimax-S" entry

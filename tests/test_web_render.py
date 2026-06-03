@@ -635,6 +635,25 @@ async def test_unheld_held_interval_renders_red_until_reoptimized(user: User) ->
     assert "rtt-alert" not in _wrap_classes(user, "held:0")
 
 
+async def test_adding_a_held_interval_drops_the_scheme_chooser_to_dash(user: User) -> None:
+    # the live bug: adding a held interval re-optimizes the tuning off the bare scheme, so the
+    # established-tuning-scheme chooser must drop to "-" — it kept showing the scheme name because
+    # the deviation check only watched manual generator overrides. Drives the exact user path.
+    await user.open("/")
+    _toggle(user, "presets")             # show the chooser dropdowns
+    _toggle(user, "optimization")        # ...and the held-interval column
+    assert _cell_child(user, "preset:tuning").value == "minimax-U"  # the default scheme, named
+    user.find(marker="toggle:row:vectors").click()  # expand the interval-vectors row
+    _click_glyph(user, "held_plus")                  # add a held interval
+    await user.should_see(marker="cell:held:0:0")
+    _cell_child(user, "cell:held:0:0").set_value("-1")  # make it the fifth 3/2 -> deviates the tuning
+    _cell_child(user, "cell:held:1:0").set_value("1")
+    await user.should_see(marker="preset:tuning")
+    sel = _cell_child(user, "preset:tuning")
+    assert sel.value is None                          # the displayed tuning is off the named list...
+    assert sel.props.get("display-value") == "-"      # ...so the chooser shows the "-" prompt
+
+
 async def test_enabling_audio_renders_speakers_and_control_banks(user: User) -> None:
     # one click adds the two audio rows. Each pitch is a real speaker button, and each tile
     # carries its four-control bank (waveform / play-mode / hold / 1-1) as glyph elements —

@@ -619,6 +619,37 @@ def test_displayed_tuning_scheme_name_keeps_the_name_when_the_tuning_still_match
     assert editor.displayed_tuning_scheme_name == "minimax-U"
 
 
+def test_displayed_tuning_scheme_name_drops_to_none_when_a_held_interval_deviates_the_tuning():
+    # adding a held interval re-optimizes the tuning to hold it just; when that pulls the tuning
+    # off the BARE scheme's optimum, the displayed tuning no longer realises the established scheme,
+    # so the chooser must show "-". Regression: the deviation check only watched a manual generator
+    # override against the held-AWARE optimum, so a held-interval-induced deviation slipped through
+    # and the name wrongly stuck.
+    editor = Editor()
+    assert editor.displayed_tuning_scheme_name == "minimax-U"
+    editor.add_held()
+    editor.set_held_vectors([(-1, 1, 0)])  # hold 3/2 -> pulls the tuning off bare minimax-U
+    assert editor.displayed_tuning_scheme_name is None
+    # a held interval the bare scheme ALREADY satisfies (the octave, tuned pure by minimax-U) is
+    # not a deviation — the optimum is unchanged — so the name stays
+    octave = Editor()
+    octave.add_held()
+    octave.set_held_vectors([(1, 0, 0)])
+    assert octave.displayed_tuning_scheme_name == "minimax-U"
+
+
+def test_displayed_tuning_scheme_name_keeps_the_name_with_a_typed_target_list():
+    # a typed explicit target list changes WHICH intervals the scheme optimises over, but it is
+    # still the same named scheme (the target set is a separate control from the tuning scheme),
+    # so the chooser keeps the name — not "-". The bare-scheme comparison must therefore optimise
+    # over the SAME typed target list as the displayed tuning, else a typed list reads as a false
+    # deviation.
+    editor = Editor()
+    editor.set_target_override_vectors([(-1, 1, 0), (-2, 0, 1)])  # type 3/2, 5/4 as the target list
+    assert editor.target_override == ("3/2", "5/4")
+    assert editor.displayed_tuning_scheme_name == "minimax-U"
+
+
 def test_set_tuning_scheme_clears_a_manual_generator_tuning_override():
     # picking a scheme from the chooser means "tune to this scheme": any manual generator-tuning
     # override (a hand-edited generator tuning map) is dropped, snapping back to the scheme's
