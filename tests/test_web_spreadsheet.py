@@ -3112,6 +3112,42 @@ def test_a_pending_interest_draft_rides_right_of_the_committed_intervals():
     assert not cells["ebkangle:vec:interest:0"].pending
 
 
+def _with_held(held_vectors, pending_held=None):
+    s = settings.defaults()
+    s["optimization"], s["counts"] = True, True
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                             held_vectors=held_vectors, pending_held=pending_held)
+
+
+def test_adding_a_held_interval_opens_a_blank_red_draft_column():
+    # the held intervals column gets the same pending-draft behaviour as the commas/interest
+    cells = {c.id: c for c in _with_held((), pending_held=[None, None, None]).cells}
+    assert cells["held:pending"].text == "?" and cells["held:pending"].pending
+    assert all(cells[f"cell:held:{p}:0"].text == "" and cells[f"cell:held:{p}:0"].pending
+               for p in range(3))
+    assert "tuning:held:0" not in cells  # no size cells until valid
+    assert cells["held_plus"].x > cells["held:pending"].x
+    assert "held_minus:pending" in cells  # the draft's − cancels it
+    assert cells["count:held"].text == "ℎ = 0"  # the draft is not a committed held interval
+
+
+def test_a_partly_typed_held_draft_shows_its_entered_components():
+    cells = {c.id: c for c in _with_held((), pending_held=[1, None, 0]).cells}
+    assert cells["cell:held:0:0"].text == "1"
+    assert cells["cell:held:1:0"].text == ""
+    assert cells["cell:held:2:0"].text == "0"
+    assert all(cells[f"cell:held:{p}:0"].pending for p in range(3))
+
+
+def test_a_pending_held_draft_rides_right_of_the_committed_held_intervals():
+    cells = {c.id: c for c in _with_held(((1, 0, 0),), pending_held=[None, None, None]).cells}
+    assert not cells["cell:held:0:0"].pending  # the committed held interval stays black
+    assert cells["cell:held:0:1"].pending and cells["cell:held:0:1"].text == ""
+    assert cells["held:pending"].x > cells["held:0"].x
+    assert cells["ebkangle:vec:held:1"].pending
+    assert not cells["ebkangle:vec:held:0"].pending
+
+
 def test_adding_intervals_of_interest_never_shrinks_the_header():
     # regression: the long title floats the interest HEADER out to its two-line strip
     # width; the few-interval value cells must not shrink that header (which would rewrap

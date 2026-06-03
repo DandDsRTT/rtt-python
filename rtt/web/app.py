@@ -1546,10 +1546,12 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_interest))
 
-    def _build_held_minus(self, cb, wrap):  # one per held interval; its − drops just that one
+    def _build_held_minus(self, cb, wrap):  # one per held interval; its − drops just that one (the draft's − cancels it)
+        action = self._editor.cancel_pending_held if cb.id.endswith(":pending") \
+            else (lambda idx=cb.comma: self._editor.remove_held(idx))
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None, idx=cb.comma: self._cb.act(lambda: self._editor.remove_held(idx)))
+            .on("click", lambda _=None: self._cb.act(action))
 
     def _build_held_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
@@ -1683,6 +1685,13 @@ def index() -> None:
         if building[0]:
             return
         d, nh = editor.state.d, len(editor.held_vectors)
+        if editor.pending_held is not None:
+            # the draft column rides at index nh; commit it once every component is filled in
+            if any(f"cell:held:{p}:{nh}" not in rec.inputs for p in range(d)):
+                return  # the draft cells aren't shown (folded away)
+            editor.set_pending_held([_parse_int(rec.inputs[f"cell:held:{p}:{nh}"].value) for p in range(d)])
+            render()
+            return
         if any(f"cell:held:{p}:{i}" not in rec.inputs for i in range(nh) for p in range(d)):
             return  # the held cells aren't currently shown (folded away / optimization off)
         vectors = [[_parse_int(rec.inputs[f"cell:held:{p}:{i}"].value) for p in range(d)] for i in range(nh)]

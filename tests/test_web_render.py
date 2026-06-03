@@ -721,10 +721,11 @@ async def test_unheld_held_interval_renders_red_until_reoptimized(user: User) ->
     await user.open("/")
     _toggle(user, "optimization")                          # show the optimization box's held column
     user.find(marker="toggle:row:vectors").click()         # expand the interval-vectors row (folded by default)
-    _click_glyph(user, "held_plus")                        # add a (blank) held interval
+    _click_glyph(user, "held_plus")                        # start a blank, red held-interval draft
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")     # make it the fifth 3/2 = (-1 1 0)
     _cell_child(user, "cell:held:1:0").set_value("1")
+    _cell_child(user, "cell:held:2:0").set_value("0")      # every component filled -> the draft commits
     _cell_child(user, "tuning:gen:1").set_value("700.000")  # freeze a tuning ~2¢ off the held fifth
     await user.should_see(marker="retune:held:0")
     assert "rtt-alert" in _wrap_classes(user, "retune:held:0")  # the retuning-error cell reddens...
@@ -744,10 +745,11 @@ async def test_adding_a_held_interval_drops_the_scheme_chooser_to_dash(user: Use
     _toggle(user, "optimization")        # ...and the held-interval column
     assert _cell_child(user, "preset:tuning").value == "minimax-U"  # the default scheme, named
     user.find(marker="toggle:row:vectors").click()  # expand the interval-vectors row
-    _click_glyph(user, "held_plus")                  # add a held interval
+    _click_glyph(user, "held_plus")                  # start a blank held-interval draft
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")  # make it the fifth 3/2 -> deviates the tuning
     _cell_child(user, "cell:held:1:0").set_value("1")
+    _cell_child(user, "cell:held:2:0").set_value("0")   # every component filled -> the draft commits
     await user.should_see(marker="preset:tuning")
     sel = _cell_child(user, "preset:tuning")
     assert sel.value is None                          # the displayed tuning is off the named list...

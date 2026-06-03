@@ -564,6 +564,47 @@ def test_interest_intervals_changes_are_undoable():
     assert editor.interest_vectors == []  # undo reverts the committed interval
 
 
+def test_held_intervals_add_edit_remove():
+    editor = Editor()
+    assert editor.held_vectors == []  # starts empty
+    editor.add_held()
+    assert editor.held_vectors == []  # add only starts a blank draft (no committed 1/1)...
+    assert editor.pending_held == [None, None, None]  # ...a red, blank, d-length draft
+    editor.set_pending_held([1, 0, 0])  # fill it in -> holds the octave
+    assert editor.held_vectors == [(1, 0, 0)] and editor.pending_held is None
+    editor.set_held_vectors([[1, 0, 0], [-1, 1, 0]])  # editing existing cells replaces the set
+    assert editor.held_vectors == [(1, 0, 0), (-1, 1, 0)]
+    editor.remove_held(0)
+    assert editor.held_vectors == [(-1, 1, 0)]
+
+
+def test_adding_a_held_interval_starts_a_blank_pending_draft():
+    editor = Editor()
+    assert editor.pending_held is None
+    editor.add_held()
+    assert editor.pending_held == [None, None, None]  # a blank d-length draft
+    assert editor.held_vectors == []  # not committed
+    assert editor.can_undo is False  # starting a draft is not an undoable edit
+
+
+def test_a_partly_filled_held_draft_is_held_until_complete():
+    editor = Editor()
+    editor.add_held()
+    editor.set_pending_held([1, None, 0])  # still being typed
+    assert editor.pending_held == [1, None, 0] and editor.held_vectors == []  # held
+    editor.set_pending_held([1, 0, 0])  # complete -> holds the octave and clears the draft
+    assert editor.pending_held is None and editor.held_vectors == [(1, 0, 0)]
+    assert editor.can_undo is True  # the commit is the undoable edit
+
+
+def test_cancelling_a_held_interval_draft_discards_it():
+    editor = Editor()
+    editor.add_held()
+    editor.cancel_pending_held()
+    assert editor.pending_held is None and editor.held_vectors == []
+    assert editor.can_undo is False  # cancelling a draft is not an undoable edit
+
+
 def test_try_edit_mapping_text_applies_a_valid_ebk_map():
     editor = Editor()
     assert editor.try_edit_mapping_text("[⟨1 0 0] ⟨0 1 0] ⟨0 0 1]}") is True
@@ -690,13 +731,11 @@ def test_displayed_tuning_scheme_name_drops_to_none_when_a_held_interval_deviate
     # and the name wrongly stuck.
     editor = Editor()
     assert editor.displayed_tuning_scheme_name == "minimax-U"
-    editor.add_held()
     editor.set_held_vectors([(-1, 1, 0)])  # hold 3/2 -> pulls the tuning off bare minimax-U
     assert editor.displayed_tuning_scheme_name is None
     # a held interval the bare scheme ALREADY satisfies (the octave, tuned pure by minimax-U) is
     # not a deviation — the optimum is unchanged — so the name stays
     octave = Editor()
-    octave.add_held()
     octave.set_held_vectors([(1, 0, 0)])
     assert octave.displayed_tuning_scheme_name == "minimax-U"
 
@@ -951,7 +990,7 @@ def test_serialize_load_round_trips_the_whole_document():
     editor.set_tuning_scheme("destretched-octave minimax-ES")
     editor.set_target_spec("9-OLD")
     editor.set_interest_vectors([[-1, 1, 0]])
-    editor.add_held()
+    editor.set_held_vectors([[1, 0, 0]])
     editor.set_range_mode("tradeoff")
     editor.set_show("charts", True)
     editor.toggle_collapsed("col:commas")
@@ -964,7 +1003,7 @@ def test_serialize_load_round_trips_the_whole_document():
     assert restored.tuning_scheme == "9-OLD destretched-octave minimax-ES"
     assert restored.target_spec == "9-OLD"
     assert restored.interest_vectors == [(-1, 1, 0)]
-    assert restored.held_vectors == [(0, 0, 0)]
+    assert restored.held_vectors == [(1, 0, 0)]
     assert restored.range_mode == "tradeoff"
     assert restored.settings["charts"] is True
     assert "col:commas" not in restored.collapsed

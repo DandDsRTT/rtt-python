@@ -106,6 +106,7 @@ class Editor:
         # (interest, held, target) commit once every component is filled.
         self.pending_comma: list[int | None] | None = None
         self.pending_interest: list[int | None] | None = None
+        self.pending_held: list[int | None] | None = None
         self._restore(_initial_doc())
 
     # --- the document: capture / restore (the unit of undo, reset, persistence) ---
@@ -153,6 +154,7 @@ class Editor:
         each draft's length is tied to the current d, so a domain change invalidates it."""
         self.pending_comma = None
         self.pending_interest = None
+        self.pending_held = None
 
     @property
     def state(self) -> TemperamentState:
@@ -204,7 +206,8 @@ class Editor:
             custom_prescaler=self.custom_prescaler,
             optimize_locked=self.optimize_locked,
             tuning_optimized=self.tuning_is_optimized,
-            pending_interest=self.pending_interest)
+            pending_interest=self.pending_interest,
+            pending_held=self.pending_held)
 
     @property
     def can_expand(self) -> bool:
@@ -307,10 +310,18 @@ class Editor:
         self.interest_vectors = [tuple(int(x) for x in m) for m in vectors]
 
     def add_held(self) -> None:
-        """Append a blank held interval (a zero vector = 1/1) for the user to fill in —
-        the held intervals column's + control, mirroring add_interest."""
-        self._snapshot()
-        self.held_vectors.append((0,) * self.state.d)
+        """Begin a blank held-interval draft — the held intervals column's + control,
+        mirroring :meth:`add_interest`."""
+        self.pending_held = [None] * self.state.d
+
+    def set_pending_held(self, values) -> None:
+        """Hold the draft's edited components; once all are filled, commit it (append the
+        held interval) and clear the draft — see :meth:`_feed_draft`."""
+        self.pending_held = self._feed_draft(values, self.held_vectors.append)
+
+    def cancel_pending_held(self) -> None:
+        """Discard the draft without committing (the draft column's − control)."""
+        self.pending_held = None
 
     def remove_held(self, i: int) -> None:
         """Drop the i-th held interval (each one carries its own − control)."""

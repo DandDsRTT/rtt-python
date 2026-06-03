@@ -503,7 +503,7 @@ class _GridBuilder:
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
-                 pending_interest=None):
+                 pending_interest=None, pending_held=None):
         self.state = state
         self.settings = settings
         self.collapsed = collapsed
@@ -513,6 +513,7 @@ class _GridBuilder:
         self.range_mode = range_mode
         self.pending_comma = pending_comma
         self.pending_interest = pending_interest
+        self.pending_held = pending_held
         self.held_vectors = held_vectors
         self.generator_tuning = generator_tuning
         self.target_override = target_override
@@ -599,6 +600,11 @@ class _GridBuilder:
         # they are folded into service.tuning below. Present only with the optimization sub-control.
         self.held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(self.d)) for m in held_vectors) if self.show_optimization else ()
         self.nh = len(self.held)
+        # a held interval being added rides as a pending draft column (blank red cells + a "?"
+        # ratio) until its vector is filled in, like the comma / interest draft. Gated on the
+        # optimization sub-control, since the held column only exists there.
+        self.pending_held = list(self.pending_held) if (self.pending_held is not None and self.show_optimization) else None
+        self.nh_shown = self.nh + (1 if self.pending_held is not None else 0)
         self.held_ratios = service.comma_ratios(self.held, self.elements)  # vector -> "num/den" (the shared renderer)
         # a frozen manual generator tuning (optimize lock off) drives the maps directly; otherwise
         # the scheme's optimum (holding the held intervals just). A stale tuning whose generator
@@ -696,22 +702,28 @@ class _GridBuilder:
                 ("block:just_audio:interest", "just_audio", "interest"),
                 ("block:tempered_audio:interest", "tempered_audio", "interest"),
             )
-        # the held interval column's tiles (computed above): a user-editable interval list, like
-        # the intervals of interest. Empty by default, so — like an empty interest column — it
-        # then declares no tiles, only its header, axis and the + control to add the first one.
-        held_tiles = () if not self.held else (
-            ("block:held", "quantities", "held"),
-            ("block:vec:held", "vectors", "held"),
-            ("block:hmapped", "mapping", "held"),       # M·held in generator coords
-            ("block:tuning:held", "tuning", "held"),    # tempered sizes (= just, since held)
-            ("block:just:held", "just", "held"),        # just sizes
-            ("block:retune:held", "retune", "held"),    # errors (≈ 0, since held just)
-            ("block:urow:held", "units", "held"),       # the units row's /1 over the held column
-            ("block:prescaling:held", "prescaling", "held"),
-            ("block:complexity:held", "complexity", "held"),
-            ("block:just_audio:held", "just_audio", "held"),
-            ("block:tempered_audio:held", "tempered_audio", "held"),
-        )
+        # the held interval column's tiles: a user-editable interval list, like the intervals of
+        # interest. Empty by default. A pending draft alone declares just the two tiles that host
+        # it (the ket + its "?" ratio); the derived rows declare once an interval commits — the
+        # same split the interest column uses, so a draft never leaves empty bracketed panels.
+        held_tiles = ()
+        if self.nh_shown:
+            held_tiles += (
+                ("block:held", "quantities", "held"),
+                ("block:vec:held", "vectors", "held"),
+            )
+        if self.nh:
+            held_tiles += (
+                ("block:hmapped", "mapping", "held"),       # M·held in generator coords
+                ("block:tuning:held", "tuning", "held"),    # tempered sizes (= just, since held)
+                ("block:just:held", "just", "held"),        # just sizes
+                ("block:retune:held", "retune", "held"),    # errors (≈ 0, since held just)
+                ("block:urow:held", "units", "held"),       # the units row's /1 over the held column
+                ("block:prescaling:held", "prescaling", "held"),
+                ("block:complexity:held", "complexity", "held"),
+                ("block:just_audio:held", "just_audio", "held"),
+                ("block:tempered_audio:held", "tempered_audio", "held"),
+            )
         # The optimization box's other mockup column — unchanged intervals (count u) — is
         # deferred to the projection feature: the unchanged interval basis is U = nullspace(P − I),
         # the projection P's eigenvalue-1 eigenvectors (en.xen.wiki/w/Projection#The_unchanged-interval_basis),
@@ -799,7 +811,7 @@ class _GridBuilder:
             ("primes", 2 * BRACKET_W + self.d * COL_W + 2 * self.matlabel_primes_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
-            ("held", 2 * BRACKET_W + self.nh * COL_W, self.show_optimization, True),
+            ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
             ("targets", 2 * BRACKET_W + self.k * COL_W, show_tuning, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
             # padding. Its long two-line title needs more room, so the column's *footprint*
@@ -1068,7 +1080,7 @@ class _GridBuilder:
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
         self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown, "targets": self.k,
-                   "interest": self.mi_shown, "held": self.nh, "detempering": self.r}
+                   "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r}
         self.group_ratio = {  # the just interval ratio each value group is taken over
             "primes": lambda i: _ratio_str(self.elements[i]),  # a prime "p/1", or a nonprime element "n/d"
             "commas": lambda i: self.comma_ratios[i],
@@ -1728,6 +1740,9 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"held:{i}", self.held_left(i), qy, COL_W, ROW_H, "commaratio", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
                     # each held interval carries its own − on its branch point (any one is removable)
                     branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
+                if self.pending_held is not None:  # the draft column: a "?" ratio, blank red cells below, − to cancel
+                    self.cells.append(CellBox("held:pending", self.held_left(self.nh), qy, COL_W, ROW_H, "commaratio", text="?", comma=self.nh, pending=True))
+                    branch_minus("held_minus:pending", "held", self.nh, "held_minus")
             if self.tile_open("quantities", "interest"):  # the user's other intervals of interest
                 for i in range(self.mi):
                     # the derived ratio (read-only, from the vector) heads each column, like a comma's
@@ -1843,6 +1858,11 @@ class _GridBuilder:
                 for i in range(self.nh):
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:held:{p}:{i}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p), alert=self.held_unheld[i]))
+                if self.pending_held is not None:  # the draft column: blank, red-outlined cells the user fills in
+                    for p in range(self.d):
+                        v = self.pending_held[p]
+                        self.cells.append(CellBox(f"cell:held:{p}:{self.nh}", self.held_left(self.nh), self.vec_top(p), COL_W, ROW_H, "heldcell",
+                                             text="" if v is None else str(v), prime=p, comma=self.nh, pending=True, unit=self.cell_unit("vectors", "held", prime=p)))
             if self.tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
                 for i in range(self.r):
                     for p in range(self.d):
@@ -2552,7 +2572,8 @@ class _GridBuilder:
         self.vector_list_marks("vectors", "vec:targets", "targets", self.target_left, self.k, foot="ebkangle")
         self.vector_list_marks("vectors", "vec:interest", "interest", self.interest_left, self.mi_shown, foot="ebkangle", separators=False,
                          pending_col=(self.mi if self.pending_interest is not None else -1))
-        self.vector_list_marks("vectors", "vec:held", "held", self.held_left, self.nh, foot="ebkangle")
+        self.vector_list_marks("vectors", "vec:held", "held", self.held_left, self.nh_shown, foot="ebkangle",
+                         pending_col=(self.nh if self.pending_held is not None else -1))
         self.vector_list_marks("vectors", "vec:detempering", "detempering", self.detempering_left, self.r, foot="ebkangle")
         # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
         # Every 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile is a matrix of prescaled
@@ -2616,9 +2637,9 @@ def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
-          pending_interest=None) -> Layout:
+          pending_interest=None, pending_held=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
-        optimize_locked, tuning_optimized, pending_interest,
+        optimize_locked, tuning_optimized, pending_interest, pending_held,
     ).layout()
