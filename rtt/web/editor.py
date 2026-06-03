@@ -192,7 +192,8 @@ class Editor:
             generator_tuning=self.effective_generator_tuning(),
             target_override=self.target_override,
             custom_prescaler=self.custom_prescaler,
-            optimize_locked=self.optimize_locked)
+            optimize_locked=self.optimize_locked,
+            tuning_optimized=self.tuning_is_optimized)
 
     @property
     def can_expand(self) -> bool:
@@ -349,6 +350,20 @@ class Editor:
         # the chooser lists base names (its label T-prefixes a target-based scheme), so drop any
         # target prefix here — a target-based "TILT minimax-S" shows as the "minimax-S" entry
         return service.base_scheme_name(self.tuning_scheme)
+
+    @property
+    def tuning_is_optimized(self) -> bool:
+        """Whether the grid's displayed generator tuning sits at the scheme's optimum — so the
+        objective shown IS the minimized value and its symbol wraps in min(). True with auto-optimize
+        on, with nothing frozen, or once optimized (the frozen tuning equals the current optimum);
+        False as soon as a manual generator edit pulls it off. Compared at DISPLAY precision like
+        :attr:`displayed_tuning_scheme_name`, but against the optimum that HOLDS any held intervals
+        (holding then optimizing is still optimized) — so only a hand-edit drops the min(), whereas a
+        held interval, which leaves the BARE scheme, drops the scheme NAME but not the min()."""
+        override = self.effective_generator_tuning()
+        if override is None or len(override) != len(self.state.mapping):
+            return True  # auto-optimize on / nothing frozen / stale override → the grid shows the optimum
+        return _same_cents_map(override, self._optimum_generator_tuning())
 
     @property
     def displayed_prescaler_name(self) -> str | None:

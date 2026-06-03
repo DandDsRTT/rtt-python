@@ -694,6 +694,46 @@ def test_set_tuning_scheme_clears_a_manual_generator_tuning_override():
     assert editor.displayed_tuning_scheme_name == "minimax-S"
 
 
+def test_tuning_is_optimized_tracks_whether_the_grid_shows_the_optimum():
+    # the objective wraps in min() only while the displayed tuning sits at the scheme's optimum.
+    editor = Editor()
+    assert editor.tuning_is_optimized is True  # default: the grid shows the freshly-computed optimum
+    editor.set_generator_tuning_component(1, 700.0)  # hand-edit a generator off the optimum
+    assert editor.tuning_is_optimized is False
+    editor.optimize()  # the optimize button snaps back to the optimum
+    assert editor.tuning_is_optimized is True
+
+
+def test_tuning_is_optimized_holds_under_the_auto_lock_and_held_intervals():
+    # auto-optimize (the lock) recomputes the optimum on every change, so it is always optimized
+    locked = Editor()
+    locked.toggle_optimize_lock()
+    assert locked.optimize_locked and locked.tuning_is_optimized is True
+    # a held interval re-optimizes to a held-CONSTRAINED optimum — still optimized (unlike the
+    # scheme NAME, which drops to "-" because the held tuning leaves the bare scheme), so min() stays
+    held = Editor()
+    held.add_held()
+    held.set_held_vectors([(-1, 1, 0)])  # hold 3/2
+    assert held.displayed_tuning_scheme_name is None  # the name leaves the bare scheme...
+    assert held.tuning_is_optimized is True            # ...but the displayed tuning is its optimum
+    held.set_generator_tuning_component(1, 700.0)      # hand-edit off the held optimum
+    assert held.tuning_is_optimized is False
+
+
+def test_layout_wraps_the_objective_symbol_in_min_while_optimized():
+    # end to end: the editor feeds tuning_is_optimized into the layout, so the rendered objective
+    # symbol carries the min() wrap while optimized and drops it after a manual generator deviation.
+    editor = Editor()
+    editor.set_show("optimization", True)
+
+    def objective_symbol() -> str:
+        return {c.id: c for c in editor.layout().cells}["optimization:objective:symbol"].text
+
+    assert objective_symbol() == "min(⟪𝐝⟫ₚ)"  # default: the displayed tuning is the scheme's optimum
+    editor.set_generator_tuning_component(1, 700.0)  # hand-edit a generator off the optimum
+    assert objective_symbol() == "⟪𝐝⟫ₚ"
+
+
 def test_set_target_override_text_and_vectors():
     editor = Editor()
     # typing a vector list overrides the target set with those intervals, stored as ratios

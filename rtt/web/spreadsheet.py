@@ -487,7 +487,7 @@ class _GridBuilder:
     def __init__(self, state, settings=None, collapsed=None,
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
-                 custom_prescaler=None, optimize_locked=False):
+                 custom_prescaler=None, optimize_locked=False, tuning_optimized=False):
         self.state = state
         self.settings = settings
         self.collapsed = collapsed
@@ -501,6 +501,7 @@ class _GridBuilder:
         self.target_override = target_override
         self.custom_prescaler = custom_prescaler
         self.optimize_locked = optimize_locked
+        self.tuning_optimized = tuning_optimized
 
         if self.settings is None:
             self.settings = _default_settings()
@@ -888,7 +889,7 @@ class _GridBuilder:
         # targets column, floored to OPT_BOX_MIN_W). The objective's caption is one line ("power
         # mean") target-based, but the wide "retuning magnitude" wraps to two when all-interval, so
         # the caption band — and the whole box — reserves that second line then.
-        self.opt_cap_lines = 2 if (self.opt_ctrl and service.is_all_interval(self.tuning_scheme)) else 1
+        self.opt_cap_lines = 2 if (self.opt_ctrl and self.all_interval) else 1
         self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
@@ -2092,9 +2093,13 @@ class _GridBuilder:
             # power (the mockup's "becomes 'retuning magnitude'") — relabel the symbol, with dual(q) as
             # the norm subscript; its value already computes over the primes. The prescaler inverse
             # carries the live glyph (𝐿⁻¹ for the log-prime matrix, else generic 𝑋⁻¹).
-            all_interval = service.is_all_interval(self.tuning_scheme)
             obj_symbol = (f"‖𝒓{self.prescaler_symbol}⁻¹‖{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
-                          if all_interval else "⟪𝐝⟫ₚ")
+                          if self.all_interval else "⟪𝐝⟫ₚ")
+            # once the displayed tuning is the scheme's optimum, the value shown IS the minimized
+            # objective, so wrap the symbol in min(…) (the mockup's "make ⟪𝐝⟫ₚ into min(⟪𝐝⟫ₚ)"); a
+            # hand-edited tuning that deviates shows the bare symbol — its value is no longer the min.
+            if self.tuning_optimized:
+                obj_symbol = f"min({obj_symbol})"
             self.cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, COL_W, SYMBOL_H,
                                  "symbol", text=obj_symbol))
             # the caption naming the objective, the analogue of "optimization power": the Lp "power
@@ -2103,11 +2108,11 @@ class _GridBuilder:
             # the wide all-interval label wraps to the second line reserved in cap_band.
             self.cells.append(CellBox("optimization:objective:caption", obj_x + (COL_W - OPT_OBJ_CAP_W) / 2,
                                  cap_top, OPT_OBJ_CAP_W, cap_band, "caption",
-                                 text="retuning magnitude" if all_interval else "power mean"))
+                                 text="retuning magnitude" if self.all_interval else "power mean"))
             # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — another COL_W gridded
             # cell — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it)
             self.cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
-                                 "powerinput", text=power, disabled=all_interval))
+                                 "powerinput", text=power, disabled=self.all_interval))
             self.cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
                                  "symbol", text="𝑝"))
             self.cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
@@ -2558,9 +2563,9 @@ class _GridBuilder:
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
-          custom_prescaler=None, optimize_locked=False) -> Layout:
+          custom_prescaler=None, optimize_locked=False, tuning_optimized=False) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
-        optimize_locked,
+        optimize_locked, tuning_optimized,
     ).layout()

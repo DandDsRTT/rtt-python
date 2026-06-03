@@ -2125,6 +2125,27 @@ def test_all_interval_greys_and_locks_the_target_chooser():
     assert based["preset:target"].disabled is False
 
 
+def test_optimized_tuning_wraps_the_objective_symbol_in_min():
+    # mockup: "make ⟪𝐝⟫ₚ into min(⟪𝐝⟫ₚ)". When the displayed tuning sits at the scheme's optimum,
+    # the objective value IS the minimized one, so its symbol wraps in min(...); a deviating (hand-
+    # edited) tuning shows the bare symbol — the displayed value is no longer the minimum.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["optimization"] = True
+
+    def symbol(scheme, optimized):
+        cells = {c.id: c for c in spreadsheet.build(
+            base, s, tuning_scheme=scheme, tuning_optimized=optimized).cells}
+        return cells["optimization:objective:symbol"].text
+
+    assert symbol("TILT minimax-S", True) == "min(⟪𝐝⟫ₚ)"
+    assert symbol("TILT minimax-S", False) == "⟪𝐝⟫ₚ"
+    # all-interval: the retuning-magnitude relabel wraps in min() the same way
+    inner = "‖𝒓𝐿⁻¹‖" + spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE
+    assert symbol("minimax-S", True) == "min(" + inner + ")"
+    assert symbol("minimax-S", False) == inner
+
+
 def test_all_interval_relabels_the_target_list_as_prime_proxy():
     # per the Guide, all-interval relabels the target list: symbol T → Tₚ, equivalence = 𝐼 (the
     # math-italic identity, per the Guide's conventions), and the lowercase name "prime proxy
