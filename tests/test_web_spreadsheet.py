@@ -2158,7 +2158,7 @@ def test_weight_equivalence_reflects_the_schemes_damage_slope():
 
     assert equiv("minimax-C") == "𝒘 = 𝒄"      # complexity weight
     assert equiv("minimax-U") == "𝒘 = 𝟏"      # unity weight (document default): bold-1 all-ones vector
-    assert equiv("minimax-S") == "𝒘 = 1/𝒄"    # simplicity weight (the all-interval weight)
+    assert equiv("minimax-S") == "𝒘 = 𝒄⁻¹"    # simplicity weight (the all-interval weight)
 
 
 def test_damage_equivalence_names_the_weight_only_when_the_weight_row_is_shown():

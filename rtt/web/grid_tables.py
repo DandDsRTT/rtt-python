@@ -543,7 +543,7 @@ UNITED_ROWS = frozenset(row for row, _ in UNITS)  # rows that reserve a units-li
 WEIGHT_EQUIVALENCE_BY_SLOPE = {
     "complexityWeight": " = 𝒄",
     "unityWeight": " = 𝟏",  # bold one — the all-ones weight vector (not a scalar)
-    "simplicityWeight": " = 1/𝒄",
+    "simplicityWeight": " = 𝒄⁻¹",  # the complexity inverted (a list, so 𝒄⁻¹, not 1/𝒄)
 }
 
 # The concrete form the prescaler takes, by scheme — named in the bare tile's SYMBOL

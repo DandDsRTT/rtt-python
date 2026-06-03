@@ -2258,7 +2258,7 @@ class _GridBuilder:
         # equation are drawn only where defined (the comma columns have none yet). An
         # empty interest column has no tiles. Mnemonics underlines the symbol letter.
         # The weight row's equation resolves per build from the live scheme's damage-weight slope
-        # (𝒘 = 𝒄 / 𝟏 / 1/𝒄 — the bold 𝟏 is the all-ones weight vector). The damage row names its
+        # (𝒘 = 𝒄 / 𝟏 / 𝒄⁻¹ — the bold 𝟏 is the all-ones weight vector). The damage row names its
         # weight factor 𝒘 (a LIST, so 𝒘 — never diag(𝒘)) only while the weight row is on screen; with
         # weighting hidden it drops to 𝐝 = |𝐞| rather than dangle a reference to a row the reader can't
         # see. The bare prescaling tile is the only one whose SYMBOL equivalence names the live prescaler
