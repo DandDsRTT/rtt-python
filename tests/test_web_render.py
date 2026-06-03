@@ -139,32 +139,44 @@ def _part_classes(user: User, key: str) -> list[str]:
 
 async def test_dummy_tile_parts_reflect_and_drive_the_live_show_state(user: User) -> None:
     # the general tile is the checkbox column's alternative: render() must paint each part by the
-    # live setting (black-on / grey-off), keep a sub-control inert until its parent is shown, and
-    # — for mnemonics specifically — track the NAME's colour while only the underline tracks the
-    # mnemonics toggle (so a shown name with mnemonics off isn't greyed mid-word). And a click on
-    # a part must flip that layer, which the rest of the suite leans on.
+    # live setting (black-on / grey-off), keep a value-cell part inert until its host cell shows,
+    # and — for mnemonics specifically — track the NAME's colour while only the underline tracks
+    # the mnemonics toggle (so a shown name with mnemonics off isn't greyed mid-word). A click on
+    # a part flips that layer; a refinement (equivalences/mnemonics) also pulls its base layer on.
     await user.open("/")
     # default view: names + gridded values shown, symbols hidden
     assert "rtt-part-on" in _part_classes(user, "names")
     assert "rtt-part-on" in _part_classes(user, "gridded_values")
     assert "rtt-part-off" in _part_classes(user, "symbols")
-    # equivalences rides the (hidden) symbol, so it is inert — no click target until symbols show
-    assert "rtt-part-inert" in _part_classes(user, "equivalences")
+    # a refinement is never inert: equivalences is a live click target even with symbols hidden
+    assert "rtt-part-inert" not in _part_classes(user, "equivalences")
     # mnemonics' colour follows the shown name (on), but its underline is off until toggled
     assert "rtt-part-on" in _part_classes(user, "mnemonics")
     assert "rtt-mnem-underline" not in _part_classes(user, "mnemonics")
-    # click the symbol -> symbols shown, and equivalences becomes live (no longer inert)
-    user.find(marker="showpart:symbols").click()
+    # click the equivalence -> it pulls its base symbol layer on too (both now shown)
+    user.find(marker="showpart:equivalences").click()
+    assert "rtt-part-on" in _part_classes(user, "equivalences")
     assert "rtt-part-on" in _part_classes(user, "symbols")
-    assert "rtt-part-inert" not in _part_classes(user, "equivalences")
-    # click the mnemonic letter -> the name's underline turns on
+    # the surviving inert relationship is containment: the value/closed-form parts live INSIDE the
+    # gridded cell, so hiding it leaves them nowhere to draw -> inert until the cell is shown again
+    user.find(marker="showpart:gridded_values").click()
+    assert "rtt-part-off" in _part_classes(user, "gridded_values")
+    assert "rtt-part-inert" in _part_classes(user, "math_expressions")
+    assert "rtt-part-inert" in _part_classes(user, "quantities")
+    user.find(marker="showpart:gridded_values").click()  # restore the cell
+    # click the mnemonic letter (name already shown) -> the name's underline turns on
     user.find(marker="showpart:mnemonics").click()
     assert "rtt-mnem-underline" in _part_classes(user, "mnemonics")
-    # turning the name off cascades mnemonics off (set_show) and re-greys + re-inerts its letter
+    # turning the name off cascades mnemonics off (set_show) and re-greys its letter with the name,
+    # but the letter stays a live target (a refinement is never inert)
     user.find(marker="showpart:names").click()
     assert "rtt-part-off" in _part_classes(user, "names")
     assert "rtt-mnem-underline" not in _part_classes(user, "mnemonics")
-    assert "rtt-part-inert" in _part_classes(user, "mnemonics")
+    assert "rtt-part-inert" not in _part_classes(user, "mnemonics")
+    # clicking it again pulls the name back on and underlines it
+    user.find(marker="showpart:mnemonics").click()
+    assert "rtt-part-on" in _part_classes(user, "names")
+    assert "rtt-mnem-underline" in _part_classes(user, "mnemonics")
 
 
 # --- tier 3: the edit -> render -> undo pipeline (input -> handler -> render) ---

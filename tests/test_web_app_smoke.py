@@ -554,8 +554,8 @@ def test_general_tile_name_exposes_its_mnemonic_letter_as_a_separate_target():
 def test_general_tile_part_reads_black_when_on_grey_when_off_and_inert_under_an_off_parent():
     # each clickable part of the dummy tile shows its toggle's state directly: black + full
     # opacity when on, grey + dimmed when off (the dim also fades the SVG samples, whose strokes
-    # a color alone can't grey). Parts carry a pointer cursor; a sub-control whose parent is off
-    # is inert (no click) until the parent is on. Mnemonics is an underline on the name letter.
+    # a color alone can't grey). Parts carry a pointer cursor; a value-cell part whose host cell
+    # is off is inert (no click) until the cell is on. Mnemonics is an underline on the name letter.
     assert "cursor:pointer" in _css_rule(".rtt-tile-part")
     on = _css_rule(".rtt-part-on")
     assert "color:#000" in on and "opacity:1" in on

@@ -553,12 +553,11 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("charts",),
 )
 
-# A tile part is inert (greyed, unclickable) until its visual host is shown — the dummy mirrors
-# the grid, where a sub-layer can't appear without its host: the value and its closed form need
-# the boxed cell to sit in, an underline a name, an equation a symbol.
-_TILE_PARENT: dict[str, str] = {
-    "mnemonics": "names",
-    "equivalences": "symbols",
+# A tile part that renders INSIDE another's cell is inert (greyed, unclickable) until that host
+# cell is shown — the dummy mirrors the grid, where the value and its closed form have nowhere to
+# sit without the boxed cell. (The refinement layers — equivalences, mnemonics — are NOT here:
+# they stay live and instead pull their base layer on when selected; see SUBCONTROLS / set_show.)
+_TILE_HOST: dict[str, str] = {
     "quantities": "gridded_values",
     "math_expressions": "gridded_values",
 }
@@ -1750,14 +1749,15 @@ def index() -> None:
 
     def on_part_click(key):
         # a click on one part of the general dummy tile flips that layer's toggle (the tile is the
-        # checkbox column's alternative). A part is inert until its visual parent is shown — the
-        # value and its closed form need the boxed cell, an underline a name, an equation a symbol —
-        # so a click while the parent is off does nothing (the CSS also makes it unclickable; this
-        # guards the state too). render() then re-styles the tile and animates the grid.
+        # checkbox column's alternative). A value-cell part (the value, its closed form) is inert
+        # until its host cell is shown — there's nowhere to draw it otherwise — so a click while
+        # gridded values is off does nothing (the CSS also makes it unclickable; this guards the
+        # state too). A refinement (equivalences, mnemonics) stays live and, via set_show, pulls
+        # its base layer on when selected. render() then re-styles the tile and animates the grid.
         if building[0]:
             return
-        parent = _TILE_PARENT.get(key)
-        if parent is not None and not editor.settings[parent]:
+        host = _TILE_HOST.get(key)
+        if host is not None and not editor.settings[host]:
             return
         editor.set_show(key, not editor.settings[key])
         render()
@@ -1970,15 +1970,15 @@ def index() -> None:
                 box.value = editor.settings[key]
         # the general dummy tile: style each layer's part(s) by its live setting — black + opaque
         # when shown, grey + dimmed when hidden — so the tile both mirrors and drives the grid. A
-        # part is inert (no click) until its visual parent is shown (_TILE_PARENT), mirroring the
-        # grid where the value/closed-form need the boxed cell, the underline a name, the equation a
-        # symbol. Mnemonics is special: it is an underline ON the name, so its COLOUR tracks the
-        # name (its parent) while only the underline tracks mnemonics itself — else a name-shown/
-        # mnemonic-hidden state would grey just the one letter mid-word.
+        # value-cell part is inert (no click) until its host cell is shown (_TILE_HOST), mirroring
+        # the grid where the value/closed-form need the boxed cell to sit in. Mnemonics is special:
+        # it is an underline ON the name, so its COLOUR tracks the name (the layer it refines) while
+        # only the underline tracks mnemonics itself — else a name-shown/mnemonic-hidden state would
+        # grey just the one letter mid-word.
         for key, parts in tile_parts.items():
             shown = editor.settings["names"] if key == "mnemonics" else editor.settings[key]
-            parent = _TILE_PARENT.get(key)
-            inert = parent is not None and not editor.settings[parent]
+            host = _TILE_HOST.get(key)
+            inert = host is not None and not editor.settings[host]
             for part in parts:
                 part.classes(add="rtt-part-on" if shown else "rtt-part-off",
                              remove="rtt-part-off" if shown else "rtt-part-on")

@@ -3265,10 +3265,8 @@ def test_every_implemented_toggle_actually_changes_the_layout():
         # a sub-control only takes effect while its parent chain is on (e.g. alt. complexity
         # needs weighting, which needs tuning boxes), so enable that chain before flipping it
         s = settings.defaults()
-        parent = settings.SUBCONTROLS.get(key)
-        while parent:
+        for parent in settings.ancestors_of(key):
             s[parent] = True
-            parent = settings.SUBCONTROLS.get(parent)
         return s
 
     for key in settings.IMPLEMENTED:

@@ -12,12 +12,14 @@ isn't built yet, but a built feature can also be *shelved* there (held out of
 every greyed toggle to its default on load, so a stale saved value can't re-expose
 a shelved feature.
 
-A few toggles are *sub-controls* of another (see :data:`SUBCONTROLS`): the panel
-indents them under their parent and only shows them while the parent is on.
-``mnemonics`` refines ``names`` — it underlines each name caption's symbol letter
-— so it only makes sense when names are shown. ``equivalences`` refines
-``symbols`` — it shows each symbol's defining equation (𝒕 = 𝒈M) rather than the
-bare glyph — so it only makes sense when symbols are shown.
+A few toggles are *sub-controls* of another (see :data:`SUBCONTROLS`), which keeps the
+two in step (applied by ``Editor.set_show``): selecting a sub-control selects the layer it
+refines (:func:`ancestors_of`), and deselecting a parent deselects its sub-controls
+(:func:`subcontrols_of`). In the specific-controls panel the child rows also indent under
+their parent and hide while it is off. ``mnemonics`` refines ``names`` — it underlines each
+name caption's symbol letter — so it only makes sense when names are shown. ``equivalences``
+refines ``symbols`` — it shows each symbol's defining equation (𝒕 = 𝒈M) rather than the bare
+glyph — so it only makes sense when symbols are shown.
 """
 
 from __future__ import annotations
@@ -130,6 +132,19 @@ def subcontrols_of(key: str) -> set[str]:
                 nested.add(child)
                 queue.append(child)
     return nested
+
+
+def ancestors_of(key: str) -> set[str]:
+    """Every toggle ``key`` is nested under — its parent and theirs, transitively (see
+    :data:`SUBCONTROLS`); the mirror of :func:`subcontrols_of`. Selecting a sub-control
+    selects all of these, so a shown refinement is never stranded without the layer it
+    refines (equivalences needs symbols, mnemonics needs names)."""
+    chain: set[str] = set()
+    parent = SUBCONTROLS.get(key)
+    while parent is not None and parent not in chain:
+        chain.add(parent)
+        parent = SUBCONTROLS.get(parent)
+    return chain
 
 
 def from_persisted(stored: dict) -> dict[str, bool]:

@@ -582,12 +582,18 @@ class Editor:
         self.range_mode = mode
 
     def set_show(self, key: str, value: bool) -> None:
-        """Set one Show toggle (which parts of the grid are visible) — an undoable change.
-        Deselecting a toggle also deselects every sub-control nested under it, so a hidden
-        parent never strands its sub-controls' content (or panel rows) on screen."""
+        """Set one Show toggle (which parts of the grid are visible) — an undoable change. The
+        sub-control hierarchy (:data:`show_settings.SUBCONTROLS`) is kept consistent both ways:
+        selecting a sub-control also selects every layer it refines (a refinement can't show
+        without its base — equivalences needs symbols, mnemonics needs names), and deselecting a
+        toggle deselects every sub-control nested under it (so a hidden parent never strands its
+        sub-controls' content or panel rows on screen)."""
         self._snapshot()
         self.settings[key] = value
-        if not value:
+        if value:
+            for parent in show_settings.ancestors_of(key):
+                self.settings[parent] = True
+        else:
             for child in show_settings.subcontrols_of(key):
                 self.settings[child] = False
 

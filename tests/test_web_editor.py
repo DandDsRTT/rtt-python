@@ -810,6 +810,32 @@ def test_selecting_a_parent_does_not_force_its_subcontrols_on():
     assert editor.settings["temperament_colorization"] is False
 
 
+def test_selecting_a_subcontrol_pulls_its_parent_on():
+    # the mirror of the off-cascade: a refinement can't show without the layer it refines, so
+    # selecting it pulls the parent on too (equivalences shows symbols as equations, mnemonics
+    # underlines a name). Enabling equivalences/mnemonics therefore enables symbols/names.
+    editor = Editor()
+    assert editor.settings["symbols"] is False
+    editor.set_show("equivalences", True)
+    assert editor.settings["equivalences"] is True
+    assert editor.settings["symbols"] is True  # pulled on with its refinement
+    editor.set_show("names", False)  # cascades mnemonics off
+    editor.set_show("mnemonics", True)
+    assert editor.settings["names"] is True  # pulled back on with its refinement
+
+
+def test_selecting_a_nested_subcontrol_pulls_its_whole_parent_chain_on():
+    # the pull-on is transitive, mirroring the off-cascade: "all-interval" -> "weighting" ->
+    # "tuning boxes", so selecting the grandchild pulls both ancestors on (else it would show
+    # while the box it lives in stays hidden)
+    editor = Editor()
+    editor.set_show("tuning_boxes", False)  # cascades the whole tuning column off
+    assert editor.settings["weighting"] is False
+    editor.set_show("all_interval", True)
+    for key in ("all_interval", "weighting", "tuning_boxes"):
+        assert editor.settings[key] is True
+
+
 def test_expand_collapse_state_is_owned_and_undoable():
     editor = Editor()
     # the commas/interest columns and the vectors row start folded (the mockup default)
