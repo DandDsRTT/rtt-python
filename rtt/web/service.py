@@ -307,6 +307,27 @@ def target_interval_vectors(ratios, d: int, domain_basis=None) -> Matrix:
     return tuple(tuple(int(x) for x in vector) for vector in _interval_vectors(ratios, domain_basis, d))
 
 
+def interval_vector(ratio: str, d: int, domain_basis=None) -> tuple[int, ...] | None:
+    """Parse one ratio string (e.g. ``"80/81"``) into its interval vector over the d domain
+    elements — the inverse of :func:`comma_ratios`, for the editable quantities-row ratio cells.
+    ``None`` when the text is not a single positive quotient expressible within the domain (a
+    malformed entry, a non-positive value, or a prime beyond the d elements), so the caller can
+    leave the interval set unchanged rather than store a ragged or truncated vector."""
+    try:
+        target = Fraction(ratio)
+    except (ValueError, ZeroDivisionError):
+        return None
+    if target <= 0:
+        return None
+    vectors = _interval_vectors((ratio,), domain_basis, d)
+    if len(vectors) != 1 or len(vectors[0]) != d:
+        return None  # a prime past the d-element domain leaves an over-long vector
+    vector = tuple(int(x) for x in vectors[0])
+    if Fraction(_vectors_to_ratios((vector,), domain_basis)[0]) != target:
+        return None  # the vector doesn't reproduce the ratio: an interval outside the subgroup
+    return vector
+
+
 def tuning(
     mapping,
     scheme: str = DEFAULT_TUNING_SCHEME,

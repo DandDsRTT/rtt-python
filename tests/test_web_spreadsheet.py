@@ -268,6 +268,28 @@ def test_target_list_has_no_controls_in_all_interval():
     assert not any(c.startswith("target_minus:") for c in cells)
 
 
+def test_editable_vector_tiles_get_editable_quantities_ratios():
+    # every tile whose interval-vectors cells are editable (commas / targets / held / interest)
+    # carries an editable quantities-row ratio — a "ratiocell" input, the scalar twin of its
+    # vector column. Read-only vector tiles (the domain primes, the generator-detempering D)
+    # keep their read-only ratio, so editability tracks the vectors row tile-for-tile.
+    ed = Editor()
+    ed.set_interest_vectors([(1, 1, -1)])  # commit 6/5 (add_* now starts a pending draft instead)
+    ed.set_held_vectors([(-1, 1, 0)])      # commit 3/2
+    s = settings.defaults()
+    for key in settings.IMPLEMENTED:
+        s[key] = True
+    cells = {c.id: c for c in spreadsheet.build(
+        ed.state, s, interest=ed.interest_vectors, held_vectors=ed.held_vectors).cells}
+    assert cells["comma:0"].kind == "ratiocell"
+    assert cells["target:0"].kind == "ratiocell"
+    assert cells["held:0"].kind == "ratiocell"
+    assert cells["interest:0"].kind == "ratiocell"
+    # the read-only twins stay non-editable (the vectors row shows these read-only too)
+    assert cells["prime:0"].kind == "prime"
+    assert cells["detempering:0"].kind == "commaratio"
+
+
 def test_target_intervals_column_with_mapped_list():
     cells = {c.id: c for c in _layout().cells}
     assert cells["header:targets"].text == "target\nintervals"

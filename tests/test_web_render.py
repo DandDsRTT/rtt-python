@@ -226,6 +226,16 @@ def _stacked_face(user: User, cell_id: str):
     return face.default_slot.children[0], face.default_slot.children[1]
 
 
+def _ratio_face(user: User, cell_id: str):
+    """The (numerator, denominator) labels of an editable ratio cell's overlaid fraction face —
+    the stacked num-over-den that makes the editable input read like a read-only ratio until
+    focused. The input is child[0]; the face (an rtt-ratio.rtt-cellface) is child[1], holding the
+    rtt-frac div whose two labels are the numerator and denominator."""
+    wrap = next(iter(user.find(marker=cell_id).elements))
+    frac = wrap.default_slot.children[1].default_slot.children[0]
+    return frac.default_slot.children[0], frac.default_slot.children[1]
+
+
 def _target_preset(user: User):
     """The (numeric-limit, TILT/OLD family-select) pair of the target chooser — the one
     preset that nests two controls in a flex div inside its cell wrap."""
@@ -302,6 +312,85 @@ async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
     _cell_child(user, "cell:vec:targets:0:0").set_value("2")
     await user.should_see(marker="cell:vec:targets:0:0")
     assert _cell_child(user, "cell:vec:targets:0:0").value == "2"
+
+
+async def test_editing_a_comma_ratio_updates_the_basis(user: User) -> None:
+    # the quantities-row comma ratio is editable — the scalar twin of the comma vector below it.
+    # Typing a new fraction re-parses to that comma's vector, so the interval-vectors cells follow.
+    await user.open("/")
+    user.find(marker="toggle:col:commas").click()   # the commas column is folded to a strip by default
+    user.find(marker="toggle:row:vectors").click()  # expand the interval-vectors row to see the vector
+    assert _cell_child(user, "comma:0").value == "80/81"  # 5-limit meantone's syntonic comma
+    _cell_child(user, "comma:0").set_value("25/24")        # the chromatic semitone = (-3 -1 2)
+    await user.should_see(marker="cell:comma:0:0")
+    assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["-3", "-1", "2"]
+    assert _cell_child(user, "comma:0").value == "25/24"   # and the ratio cell reflects the edit
+
+
+async def test_editing_a_comma_ratio_rejects_an_out_of_domain_fraction(user: User) -> None:
+    # a fraction carrying a prime outside the 2.3.5 domain (7) can't be a comma vector there, so
+    # the edit is ignored and the comma stays put — the parse guard, not a ragged/truncated vector.
+    # Like every other cell handler, an unparseable entry just doesn't drive a render (the typed
+    # text lingers in the box until the next one); the contract is that the comma is unchanged.
+    await user.open("/")
+    user.find(marker="toggle:col:commas").click()    # unfold the commas column
+    user.find(marker="toggle:row:vectors").click()   # ...and the interval-vectors row
+    _cell_child(user, "comma:0").set_value("7/4")
+    await user.should_see(marker="cell:comma:0:0")
+    # the basis stays at the syntonic comma (4 -4 1) — a valid edit would have re-rendered these
+    assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["4", "-4", "1"]
+
+
+async def test_editing_a_target_ratio_overrides_the_set(user: User) -> None:
+    # the quantities-row target ratio is editable: typing a fraction overrides the target set, like
+    # editing the target vector. The typed value survives the render only if the override applied.
+    await user.open("/")
+    assert _cell_child(user, "target:0").value == "2/1"
+    _cell_child(user, "target:0").set_value("5/4")
+    await user.should_see(marker="target:0")
+    assert _cell_child(user, "target:0").value == "5/4"
+
+
+async def test_editing_a_held_ratio_updates_the_interval(user: User) -> None:
+    # the held interval's ratio is editable too: typing a fraction re-parses to its held vector.
+    # First commit a held interval via the draft flow (fill its vector cells), then edit the ratio.
+    await user.open("/")
+    _toggle(user, "optimization")                    # show the optimization box's held column
+    user.find(marker="toggle:row:vectors").click()   # expand the interval-vectors row
+    _click_glyph(user, "held_plus")                  # start a blank red held-interval draft
+    _cell_child(user, "cell:held:0:0").set_value("-1")  # fill it to 3/2 = (-1 1 0) -> commits
+    _cell_child(user, "cell:held:1:0").set_value("1")
+    _cell_child(user, "cell:held:2:0").set_value("0")
+    await user.should_see(marker="held:0")
+    _cell_child(user, "held:0").set_value("5/4")      # edit the committed ratio to 5/4 = (-2 0 1)
+    await user.should_see(marker="cell:held:0:0")
+    assert [_cell_child(user, f"cell:held:{p}:0").value for p in range(3)] == ["-2", "0", "1"]
+
+
+async def test_editing_an_interest_ratio_updates_the_interval(user: User) -> None:
+    # the interval-of-interest ratio is editable, like the comma/held ratios; commit one via the
+    # draft flow first (the column is shown by default but folded to a strip, so unfold it)
+    await user.open("/")
+    user.find(marker="toggle:col:interest").click()  # unfold the intervals-of-interest column
+    user.find(marker="toggle:row:vectors").click()   # expand the interval-vectors row
+    _click_glyph(user, "interest_plus")              # start a blank red draft
+    _cell_child(user, "cell:interest:0:0").set_value("1")  # fill it to 6/5 = (1 1 -1) -> commits
+    _cell_child(user, "cell:interest:1:0").set_value("1")
+    _cell_child(user, "cell:interest:2:0").set_value("-1")
+    await user.should_see(marker="interest:0")
+    _cell_child(user, "interest:0").set_value("5/4")  # edit the committed ratio to 5/4 = (-2 0 1)
+    await user.should_see(marker="cell:interest:0:0")
+    assert [_cell_child(user, f"cell:interest:{p}:0").value for p in range(3)] == ["-2", "0", "1"]
+
+
+async def test_editable_ratio_cell_renders_a_stacked_fraction_face(user: User) -> None:
+    # the editable comma ratio is an input (the white box + black outline) carrying the SAME
+    # stacked num-over-den fraction face as the read-only ratios, shown until the cell is focused
+    await user.open("/")
+    user.find(marker="toggle:col:commas").click()              # unfold the commas column
+    assert isinstance(_cell_child(user, "comma:0"), ui.input)  # the editable box, not a static label
+    num, den = _ratio_face(user, "comma:0")
+    assert (num.text, den.text) == ("80", "81")                # the overlaid syntonic-comma fraction
 
 
 async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) -> None:

@@ -262,6 +262,32 @@ def test_target_interval_vectors_over_a_nonstandard_domain():
     assert vectors == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
 
 
+def test_interval_vector_parses_a_ratio_into_its_vector():
+    # the inverse of comma_ratios, for the editable quantities-row ratio cells: one ratio
+    # string back to its interval vector over the d domain primes (a round trip)
+    assert service.interval_vector("80/81", 3) == (4, -4, 1)  # the syntonic comma, as comma_ratios shows it
+    assert service.interval_vector("5/4", 3) == (-2, 0, 1)
+    assert service.interval_vector("2", 3) == (1, 0, 0)  # a bare integer is the prime-2 octave
+    basis = ((4, -4, 1), (0, 0, 0))
+    assert tuple(service.interval_vector(r, 3) for r in service.comma_ratios(basis)) == basis
+
+
+def test_interval_vector_rejects_input_outside_the_domain():
+    # a malformed entry, a non-positive value, or a prime beyond the d-element limit returns
+    # None so the caller leaves the interval set unchanged (never a ragged or truncated vector)
+    assert service.interval_vector("nonsense", 3) is None
+    assert service.interval_vector("", 3) is None
+    assert service.interval_vector("0", 3) is None
+    assert service.interval_vector("7/4", 3) is None  # prime 7 is outside the 2.3.5 domain
+
+
+def test_interval_vector_over_a_nonstandard_domain_expresses_in_the_basis():
+    # the ratio is read over the (nonprime) basis elements, like target_interval_vectors
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert service.interval_vector("13/5", state.d, domain_basis=state.domain_basis) == (0, 0, 1)
+    assert service.interval_vector("676/675", state.d, domain_basis=state.domain_basis) == (2, -3, 2)
+
+
 def test_tilt_target_interval_set_is_the_domains_tilt():
     # the 5-limit default is the 6-TILT (the integer just below the next prime past 5)
     assert service.target_interval_set("TILT", (2, 3, 5)) == (

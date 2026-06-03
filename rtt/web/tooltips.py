@@ -75,7 +75,7 @@ CHROME_HELP: dict[str, str] = {
 # every kind a full build renders is either listed here or carries help.
 READONLY_KINDS: frozenset[str] = frozenset({
     "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tval",
-    "genratio", "target", "commaratio", "mathexpr", "ptext", "ptextpending",
+    "genratio", "commaratio", "mathexpr", "ptext", "ptextpending",
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",
 })
@@ -159,6 +159,16 @@ _PRESET_HELP: dict[str, str] = {
     "prescaler": "Choose a predefined prescaler — the per-prime weighting applied before optimizing.",
 }
 
+# the editable quantities-row ratios (kind ``ratiocell``), keyed by the cell-id prefix (the
+# column group: ``comma:0`` → "comma"). The scalar twin of the interval-vectors row cells, so
+# each reads like its vector-cell tooltip but edits the whole interval as one fraction.
+_RATIO_HELP: dict[str, str] = {
+    "comma": "Comma ratio — an interval this temperament tempers out. Type a fraction (e.g. 81/80) to edit the comma.",
+    "target": "Target ratio — an interval the tuning optimizes over. Type a fraction to override the chosen target set.",
+    "held": "Held-interval ratio — an interval held unchanged (pure) by the tuning. Type a fraction to edit it.",
+    "interest": "Interval-of-interest ratio — an interval you're tracking. Type a fraction to edit it.",
+}
+
 # the editable plain-text duals (kind ``ptextedit``), each naming its own value. These
 # ids are exactly spreadsheet.EDITABLE_PTEXT, so every ptextedit cell is covered here.
 _PTEXT_HELP: dict[str, str] = {
@@ -202,4 +212,6 @@ def control_help(kind: str, cid: str) -> str | None:
         return _PRESET_HELP.get(cid.split(":")[1])
     if kind == "ptextedit":
         return _PTEXT_HELP.get(cid)
+    if kind == "ratiocell":  # comma / target / held / interest, told apart by the id prefix
+        return _RATIO_HELP.get(cid.split(":")[0])
     return _ID_HELP.get(cid) or _KIND_HELP.get(kind)

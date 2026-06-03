@@ -910,7 +910,9 @@ class _Reconciler:
         self.cell_kinds["ptextedit"] = _KindHandlers(self._build_ptextedit, self._update_ptextedit)
 
         self.cell_kinds["genratio"] = _KindHandlers(self._build_genratio, self._update_ratio)
-        self.cell_kinds["target"] = _KindHandlers(self._build_target, self._update_ratio)
+        # the editable quantities-row ratios (comma / target / held / interest): a fraction face
+        # overlaid on an input, the scalar twin of the interval-vectors row's editable column cells
+        self.cell_kinds["ratiocell"] = _KindHandlers(self._build_ratiocell, self._update_ratiocell)
         self.cell_kinds["commaratio"] = _KindHandlers(self._build_commaratio, self._update_ratio)
         self.cell_kinds["tval"] = _KindHandlers(self._build_tval, self._update_tval)
 
@@ -1049,10 +1051,12 @@ class _Reconciler:
         whole, frac = _cents_parts(cb.text)
         self._put_stacked_face(cb.id, cls, whole, f".{frac}" if frac else "")
 
-    def _ratio(self, cb, approx):
-        """A ratio rendered as a stacked fraction (with a ~ prefix when approximate)."""
+    def _ratio(self, cb, approx, overlay=False):
+        """A ratio rendered as a stacked fraction (with a ~ prefix when approximate). With
+        ``overlay`` the fraction is an ``rtt-cellface`` laid over an editable input (the
+        ratiocell) instead of a read-only cell — it shows when the cell isn't focused."""
         parts = _ratio_parts(cb.text)
-        with ui.element("div").classes("rtt-ratio"):
+        with ui.element("div").classes("rtt-ratio rtt-cellface" if overlay else "rtt-ratio"):
             if approx:
                 ui.label("~").classes("rtt-approx")
             if parts:
@@ -1286,21 +1290,32 @@ class _Reconciler:
     def _build_genratio(self, cb, wrap):
         self._ratio(cb, approx=True)  # a generator ratio, shown ~approximate
 
-    def _build_target(self, cb, wrap):
-        self._build_ratio_or_pending(cb)
-
     def _build_commaratio(self, cb, wrap):
         self._build_ratio_or_pending(cb)
 
     def _build_ratio_or_pending(self, cb):
-        # an exact target / comma / interest / held ratio heading its column — or, for a pending
-        # draft column, the red "?" placeholder (no value until the vector is filled in)
+        # a read-only comma ratio heading its column — the generator-detempering D ratio, or a
+        # pending comma draft's red "?" placeholder (no value until the vector is filled in). The
+        # editable comma/target/held/interest ratios are ratiocells (see _build_ratiocell).
         if cb.pending:
             self.labels[cb.id] = ui.label(cb.text).classes("rtt-val rtt-pending-q")
         else:
             self._ratio(cb, approx=False)
 
-    def _update_ratio(self, cb):  # genratio / target / commaratio: refresh the stacked fraction face
+    def _build_ratiocell(self, cb, wrap):
+        # an editable comma / target / held / interest ratio: an input (the white box + black
+        # outline) carrying the same stacked fraction face as the read-only ratios, overlaid so
+        # the cell reads as a fraction until clicked, then swaps to the raw "num/den" for editing
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
+        self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_ratio_change(cid)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        self._ratio(cb, approx=False, overlay=True)
+
+    def _update_ratiocell(self, cb):
+        self.inputs[cb.id].value = cb.text  # the raw fraction shown when focused
+        self._update_ratio(cb)              # the overlaid stacked face mirrors it
+
+    def _update_ratio(self, cb):  # genratio / commaratio / ratiocell: refresh the stacked fraction face
         # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
         if cb.id in self.fracs:
             num, den = _ratio_parts(cb.text) or (cb.text, "")
@@ -1737,6 +1752,38 @@ def index() -> None:
         editor.set_target_override_vectors(vectors)
         render()
 
+    def on_ratio_change(cid):
+        # the quantities-row ratio cells (comma / target / held / interest) are editable — the
+        # scalar twin of the interval-vectors row's column edit. Typing a fraction parses to that
+        # column's vector and routes through the SAME setter the vector edit uses, so editing the
+        # ratio and editing the vector are interchangeable. Unparseable input leaves the set as is.
+        if building[0] or cid not in rec.inputs:
+            return
+        group, idx = cid.split(":")
+        idx = int(idx)
+        vector = service.interval_vector(
+            rec.inputs[cid].value, editor.state.d, editor.state.domain_basis)
+        if vector is None:
+            return
+
+        def replace(current, setter):  # swap the edited column into the current set, then store it
+            vectors = [list(v) for v in current]
+            vectors[idx] = vector
+            setter(vectors)
+
+        if group == "comma":
+            replace(editor.state.comma_basis, editor.edit_comma_basis)
+        elif group == "interest":
+            replace(editor.interest_vectors, editor.set_interest_vectors)
+        elif group == "held":
+            replace(editor.held_vectors, editor.set_held_vectors)
+        else:  # target
+            targets = editor.target_override or service.target_interval_set(
+                editor.target_spec, editor.state.domain_basis)
+            replace(service.target_interval_vectors(targets, editor.state.d, editor.state.domain_basis),
+                    editor.set_target_override_vectors)
+        render()
+
     def on_power_change(cid):
         # editable power inputs share this kind. optimization:power drives the Lp optimization
         # power; control:q (the complexity norm power in box 𝒄) is styling-only for now, so we
@@ -1950,6 +1997,7 @@ def index() -> None:
         on_prescaler_change=on_prescaler_change,
         on_preset=on_preset,
         on_ptext_edit=on_ptext_edit,
+        on_ratio_change=on_ratio_change,
         on_range_mode=on_range_mode,
         on_target_cells_change=on_target_cells_change,
         on_target_change=on_target_change,

@@ -652,7 +652,7 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
 # the EBK marks framing them, and the domain/comma ± controls. (Gridded off with
 # plain text on leaves just the inline string — the two value views are independent.)
 GRIDDED_KINDS = frozenset({
-    "prime", "target", "commaratio", "genratio", "mapping", "mapped", "commacell",
+    "prime", "ratiocell", "commaratio", "genratio", "mapping", "mapped", "commacell",
     "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell", "targetcell",
     "prescalercell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel",

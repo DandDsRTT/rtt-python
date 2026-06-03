@@ -1731,7 +1731,9 @@ class _GridBuilder:
                     branch_minus("minus", "primes", self.d - 1, "minus")
             if self.tile_open("quantities", "commas"):
                 for c in range(self.nc):
-                    self.cells.append(CellBox(f"comma:{c}", self.comma_left(c), qy, COL_W, ROW_H, "commaratio", text=self.comma_ratios[c], comma=c))
+                    # the comma ratio is editable — a ratiocell, the scalar twin of the editable
+                    # comma vector below it: typing a fraction re-parses to that comma's vector
+                    self.cells.append(CellBox(f"comma:{c}", self.comma_left(c), qy, COL_W, ROW_H, "ratiocell", text=self.comma_ratios[c], comma=c))
                 if self.pending is not None:  # the draft has no ratio yet — a "?" in a distinct id so
                     # it is removed (not restructured from "?" label to fraction) when it commits
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "commaratio", text="?", comma=self.nc, pending=True))
@@ -1744,18 +1746,19 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.gens[i]))
             if self.tile_open("quantities", "targets"):
                 for j in range(self.k):
-                    self.cells.append(CellBox(f"target:{j}", self.target_left(j), qy, COL_W, ROW_H, "target", text=self.targets[j]))
+                    # editable like the comma ratio: typing a fraction overrides the target set
+                    self.cells.append(CellBox(f"target:{j}", self.target_left(j), qy, COL_W, ROW_H, "ratiocell", text=self.targets[j], comma=j))
                     # each user-curated target carries its own − (like the intervals of interest); the
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
                     if not self.all_interval:
                         branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
                 if self.pending_target is not None:  # the draft column: a "?" ratio, blank red cells below, − to cancel
-                    self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "target", text="?", comma=self.k, pending=True))
+                    self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "commaratio", text="?", comma=self.k, pending=True))
                     branch_minus("target_minus:pending", "targets", self.k, "target_minus")
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
                 for i in range(self.nh):
-                    # the derived ratio (read-only, from the editable vector) heads each column
-                    self.cells.append(CellBox(f"held:{i}", self.held_left(i), qy, COL_W, ROW_H, "commaratio", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
+                    # the ratio heads each column and is editable too (a ratiocell, like the comma)
+                    self.cells.append(CellBox(f"held:{i}", self.held_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
                     # each held interval carries its own − on its branch point (any one is removable)
                     branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
                 if self.pending_held is not None:  # the draft column: a "?" ratio, blank red cells below, − to cancel
@@ -1763,8 +1766,8 @@ class _GridBuilder:
                     branch_minus("held_minus:pending", "held", self.nh, "held_minus")
             if self.tile_open("quantities", "interest"):  # the user's other intervals of interest
                 for i in range(self.mi):
-                    # the derived ratio (read-only, from the vector) heads each column, like a comma's
-                    self.cells.append(CellBox(f"interest:{i}", self.interest_left(i), qy, COL_W, ROW_H, "commaratio", text=self.interest_ratios[i], comma=i))
+                    # the ratio heads each column and is editable too (a ratiocell, like the comma)
+                    self.cells.append(CellBox(f"interest:{i}", self.interest_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.interest_ratios[i], comma=i))
                     # every interval carries its own − on its branch point: any one is removable,
                     # unlike the domain/comma last-only −
                     branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
