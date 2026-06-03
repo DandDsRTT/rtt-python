@@ -44,6 +44,31 @@ def test_temperament_presets_span_prime_limits_5_through_13():
             assert all(len(c) == width[limit] for c in commas), (limit, name)
 
 
+# The named rank-2 temperaments of Erlich's "A Middle Path" Tables 1 & 2 (modern
+# names), which the 5- and 7-limit groups are curated from. Pinned so that no
+# Middle Path temperament silently goes missing from the chooser.
+MIDDLE_PATH_5_LIMIT = {
+    "Dicot", "Meantone", "Augmented", "Mavila", "Porcupine", "Blackwood",
+    "Diminished", "Srutal", "Magic", "Ripple", "Hanson", "Negri", "Tetracot",
+    "Superpyth", "Helmholtz", "Sensi", "Passion", "Würschmidt", "Compton",
+    "Amity", "Orson", "Father", "Bug", "Vishnu", "Luna",
+}
+MIDDLE_PATH_7_LIMIT = {
+    "Blacksmith", "Diminished", "Dominant", "August", "Pajara", "Semaphore",
+    "Septimal Meantone", "Injera", "Negri", "Augene", "Keemun", "Catler",
+    "Hedgehog", "Superpyth", "Sensi", "Lemba", "Porcupine", "Flattone", "Magic",
+    "Doublewide", "Nautilus", "Beatles", "Liese", "Mothra", "Orwell",
+    "Garibaldi", "Myna", "Miracle", "Ennealimmal",
+}
+
+
+def test_chooser_covers_the_full_middle_path_tables():
+    by_limit = {limit: {name for name, _ in group}
+                for limit, group in presets.TEMPERAMENTS_BY_LIMIT}
+    assert MIDDLE_PATH_5_LIMIT <= by_limit[5]
+    assert MIDDLE_PATH_7_LIMIT <= by_limit[7]
+
+
 def test_identify_round_trips_every_preset_and_rejects_non_presets():
     for value, comma_basis in presets.TEMPERAMENT_COMMAS.items():
         assert presets.identify(service.from_comma_basis(comma_basis)) == value

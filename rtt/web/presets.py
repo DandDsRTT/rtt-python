@@ -15,8 +15,9 @@ three things you actually *choose* (the rest of the grid is derived):
   against the current domain (see :func:`rtt.web.service.target_interval_set`); an
   optional numeric limit (the N in ``N-TILT`` / ``N-OLD``) overrides the default.
 
-These are deliberately short starter menus; the design intends a fuller curated
-list later.
+The temperament menu is the full rank-2 Middle Path catalogue (see
+:data:`TEMPERAMENTS_BY_LIMIT` for provenance); the tuning-scheme and target menus
+remain short curated starter lists.
 """
 
 from __future__ import annotations
@@ -64,36 +65,99 @@ def prescaler_options(include_alternatives: bool) -> tuple[str, ...]:
 TARGET_SETS: tuple[str, ...] = ("TILT", "OLD")
 
 # prime limit -> ((name, comma basis), ...). A comma basis of nc vectors over the
-# limit's d primes makes a rank-(d - nc) temperament. Commas given as the standard
-# defining ones for each name (verified to temper out in test_web_presets).
+# limit's d primes makes a rank-(d - nc) temperament. Every basis is verified to
+# temper out its commas in test_web_presets.
+#
+# Provenance / selection criteria (this was previously an undocumented hand-picked
+# starter menu — "popular temperaments"):
+#   * The 5- and 7-limit groups are the complete rank-2 tables of Paul Erlich's "A
+#     Middle Path Between Just Intonation and the Equal Temperaments" (Xenharmonikon 18,
+#     2006): Table 1 (5-limit) and Table 2 (7-limit). Erlich's "main sequence" is every
+#     rank-2 temperament under a combined badness bound (complexity/12 + damage/10 < 1
+#     at 5-limit, complexity/24 + damage/10 < 1 at 7-limit), plus the few he calls out
+#     as "exotemperaments" (high damage, want custom timbres) and "bonus temperaments"
+#     (near-JI microtemperaments). Names are modernized to the current canonical ones
+#     (Erlich's Dimipent / Negripent / Sensipent / Cynder / ... -> Diminished / Negri /
+#     Sensi / Mothra / ...).
+#   * "A Middle Path" Part 2 (11-limit and beyond) was never published, so the 11- and
+#     13-limit groups are not from it: they hold notable higher-rank temperaments
+#     (Miracle, Marvel) carried over from the original list. Marvel and Starling at
+#     7-limit are likewise notable rank-3 temperaments, outside Erlich's rank-2 tables.
 TEMPERAMENTS_BY_LIMIT: tuple[tuple[int, tuple[tuple[str, tuple[tuple[int, ...], ...]], ...]], ...] = (
     (5, (
-        ("Meantone", ((-4, 4, -1),)),                            # 81/80
-        ("Porcupine", ((1, -5, 3),)),                            # 250/243
-        ("Augmented", ((7, 0, -3),)),                            # 128/125
-        ("Diminished", ((3, 4, -4),)),                           # 648/625
-        ("Blackwood", ((8, -5, 0),)),                            # 256/243
-        ("Mavila", ((-7, 3, 1),)),                               # 135/128
-        ("Magic", ((-10, -1, 5),)),                              # 3125/3072
-        ("Hanson", ((-6, -5, 6),)),                              # 15625/15552
-        ("Tetracot", ((5, -9, 4),)),                             # 20000/19683
-        ("Helmholtz", ((-15, 8, 1),)),                           # 32805/32768
-        ("Würschmidt", ((17, 1, -8),)),                          # 393216/390625
+        # --- main sequence ---
+        ("Dicot", ((-3, -1, 2),)),                          # 25/24
+        ("Meantone", ((-4, 4, -1),)),                       # 81/80
+        ("Augmented", ((7, 0, -3),)),                       # 128/125
+        ("Mavila", ((-7, 3, 1),)),                          # 135/128
+        ("Porcupine", ((1, -5, 3),)),                       # 250/243
+        ("Blackwood", ((8, -5, 0),)),                       # 256/243
+        ("Diminished", ((3, 4, -4),)),                      # 648/625
+        ("Srutal", ((11, -4, -2),)),                        # 2048/2025
+        ("Magic", ((-10, -1, 5),)),                         # 3125/3072
+        ("Ripple", ((-1, 8, -5),)),                         # 6561/6250
+        ("Hanson", ((-6, -5, 6),)),                         # 15625/15552
+        ("Negri", ((-14, 3, 4),)),                          # 16875/16384
+        ("Tetracot", ((5, -9, 4),)),                        # 20000/19683
+        ("Superpyth", ((12, -9, 1),)),                      # 20480/19683
+        ("Helmholtz", ((-15, 8, 1),)),                      # 32805/32768
+        ("Sensi", ((2, 9, -7),)),                           # 78732/78125
+        ("Passion", ((18, -4, -5),)),                       # 262144/253125
+        ("Würschmidt", ((17, 1, -8),)),                     # 393216/390625
+        ("Compton", ((-19, 12, 0),)),                       # 531441/524288
+        ("Amity", ((9, -13, 5),)),                          # 1600000/1594323
+        ("Orson", ((-21, 3, 7),)),                          # 2109375/2097152
+        # --- exotemperaments (high damage; want custom timbres) ---
+        ("Father", ((4, -1, -1),)),                         # 16/15
+        ("Bug", ((0, 3, -2),)),                             # 27/25
+        # --- bonus temperaments (very accurate, near-JI) ---
+        ("Vishnu", ((23, 6, -14),)),                        # 6115295232/6103515625
+        ("Luna", ((38, -2, -15),)),                         # 274877906944/274658203125
     )),
     (7, (
+        # --- main sequence ---
+        ("Blacksmith", ((2, -3, 0, 1), (-4, -1, 0, 2))),    # 28/27, 49/48
+        ("Diminished", ((2, 2, -1, -1), (1, 0, 2, -2))),    # 36/35, 50/49
+        ("Dominant", ((2, 2, -1, -1), (6, -2, 0, -1))),     # 36/35, 64/63
+        ("August", ((2, 2, -1, -1), (7, 0, -3, 0))),        # 36/35, 128/125
+        ("Pajara", ((1, 0, 2, -2), (6, -2, 0, -1))),        # 50/49, 64/63
+        ("Semaphore", ((-4, -1, 0, 2), (-4, 4, -1, 0))),    # 49/48, 81/80
         ("Septimal Meantone", ((-4, 4, -1, 0), (1, 2, -3, 1))),  # 81/80, 126/125
-        ("Miracle", ((-5, 2, 2, -1), (-10, 1, 0, 3))),           # 225/224, 1029/1024
-        ("Pajara", ((1, 0, 2, -2), (6, -2, 0, -1))),             # 50/49, 64/63
-        ("Augene", ((7, 0, -3, 0), (6, -2, 0, -1))),             # 128/125, 64/63
-        ("Marvel", ((-5, 2, 2, -1),)),                           # 225/224 (rank 3)
-        ("Starling", ((1, 2, -3, 1),)),                          # 126/125 (rank 3)
+        ("Injera", ((1, 0, 2, -2), (-4, 4, -1, 0))),        # 50/49, 81/80
+        ("Negri", ((-4, -1, 0, 2), (-5, 2, 2, -1))),        # 49/48, 225/224
+        ("Augene", ((6, -2, 0, -1), (1, 2, -3, 1))),        # 64/63, 126/125
+        ("Keemun", ((-4, -1, 0, 2), (1, 2, -3, 1))),        # 49/48, 126/125
+        ("Catler", ((-4, 4, -1, 0), (7, 0, -3, 0))),        # 81/80, 128/125
+        ("Hedgehog", ((1, 0, 2, -2), (0, -5, 1, 2))),       # 50/49, 245/243
+        ("Superpyth", ((6, -2, 0, -1), (0, -5, 1, 2))),     # 64/63, 245/243
+        ("Sensi", ((1, 2, -3, 1), (0, -5, 1, 2))),          # 126/125, 245/243
+        ("Lemba", ((1, 0, 2, -2), (-9, 1, 2, 1))),          # 50/49, 525/512
+        ("Porcupine", ((6, -2, 0, -1), (1, -5, 3, 0))),     # 64/63, 250/243
+        ("Flattone", ((-4, 4, -1, 0), (-9, 1, 2, 1))),      # 81/80, 525/512
+        ("Magic", ((-5, 2, 2, -1), (0, -5, 1, 2))),         # 225/224, 245/243
+        ("Doublewide", ((1, 0, 2, -2), (-5, -3, 3, 1))),    # 50/49, 875/864
+        ("Nautilus", ((-4, -1, 0, 2), (1, -5, 3, 0))),      # 49/48, 250/243
+        ("Beatles", ((6, -2, 0, -1), (1, -3, -2, 3))),      # 64/63, 686/675
+        ("Liese", ((-4, 4, -1, 0), (1, -3, -2, 3))),        # 81/80, 686/675
+        ("Mothra", ((-4, 4, -1, 0), (-10, 1, 0, 3))),       # 81/80, 1029/1024
+        ("Orwell", ((-5, 2, 2, -1), (6, 3, -1, -3))),       # 225/224, 1728/1715
+        ("Garibaldi", ((-5, 2, 2, -1), (0, -2, 5, -3))),    # 225/224, 3125/3087
+        ("Myna", ((1, 2, -3, 1), (6, 3, -1, -3))),          # 126/125, 1728/1715
+        ("Miracle", ((-5, 2, 2, -1), (-10, 1, 0, 3))),      # 225/224, 1029/1024
+        # --- bonus temperaments (very accurate, near-JI) ---
+        ("Ennealimmal", ((-5, -1, -2, 4), (-1, -7, 4, 1))),  # 2401/2400, 4375/4374
+        # --- notable rank-3 (the Middle Path tables are rank-2 only) ---
+        ("Marvel", ((-5, 2, 2, -1),)),                      # 225/224 (rank 3)
+        ("Starling", ((1, 2, -3, 1),)),                     # 126/125 (rank 3)
     )),
     (11, (
-        ("Miracle", ((-5, 2, 2, -1, 0), (-10, 1, 0, 3, 0), (-7, -1, 1, 1, 1))),  # +385/384
-        ("Marvel", ((-5, 2, 2, -1, 0), (-7, -1, 1, 1, 1))),      # 225/224, 385/384 (rank 3)
+        ("Miracle", ((-5, 2, 2, -1, 0), (-10, 1, 0, 3, 0), (-7, -1, 1, 1, 1))),  # 225/224, 1029/1024, 385/384
+        # --- notable rank-3 (the Middle Path tables are rank-2 only) ---
+        ("Marvel", ((-5, 2, 2, -1, 0), (-7, -1, 1, 1, 1))),  # 225/224, 385/384 (rank 3)
     )),
     (13, (
-        ("Marvel", ((-5, 2, 2, -1, 0, 0), (-7, -1, 1, 1, 1, 0), (-2, -4, 2, 0, 0, 1))),  # +325/324
+        # --- notable rank-3 (the Middle Path tables are rank-2 only) ---
+        ("Marvel", ((-5, 2, 2, -1, 0, 0), (-7, -1, 1, 1, 1, 0), (-2, -4, 2, 0, 0, 1))),  # 225/224, 385/384, 325/324 (rank 3)
     )),
 )
 
