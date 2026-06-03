@@ -1112,8 +1112,12 @@ class _Reconciler:
     def _build_caption(self, cb, wrap):
         wrap.classes("rtt-caption-cell")
         # the optimization box's captions stay on one line (no wrap), unlike tile names; a caption
-        # with align="left" reads left-justified under its control (e.g. a preset chooser's label)
-        cls = "rtt-caption rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-caption"
+        # with align="left" reads left-justified under its control (e.g. a preset chooser's label).
+        # The lone exception is the objective's own label, whose wide all-interval "retuning
+        # magnitude" must wrap to two lines (its slot is too narrow to spread it on one) — it wraps
+        # at the space like a tile name, while the short "power mean" still fits on a single line.
+        one_line = cb.id.startswith("optimization:") and cb.id != "optimization:objective:caption"
+        cls = "rtt-caption rtt-opt-1line" if one_line else "rtt-caption"
         if cb.align == "left":
             cls += " rtt-caption-left"
         self.captions[cb.id] = ui.html("").classes(cls)

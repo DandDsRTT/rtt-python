@@ -2074,6 +2074,33 @@ def test_all_interval_relabels_the_optimization_objective():
     assert allint["optimization:objective:symbol"].text == expected
 
 
+def test_optimization_objective_carries_a_label_caption():
+    # the objective gains a caption under its symbol, mirroring the power's "optimization power":
+    # target-based it is the Lp "power mean" of the target damages; all-interval that quantity is
+    # the "retuning magnitude" (the ‖𝒓𝐿⁻¹‖ relabel). The wide all-interval label does not fit on
+    # one line in the min-width box, so it wraps to two lines (centred under the value cell, like
+    # the q/dual captions) and the box reserves the extra caption line.
+    based = _with(scheme="TILT minimax-S", optimization=True)
+    allint = _with(scheme="minimax-S", optimization=True)
+    on_based = {c.id: c for c in based.cells}
+    on_allint = {c.id: c for c in allint.cells}
+    assert on_based["optimization:objective:caption"].text == "power mean"
+    assert on_allint["optimization:objective:caption"].text == "retuning magnitude"
+    # it sits below the symbol and stays centred on the objective value cell (the power's stack)
+    cap = on_based["optimization:objective:caption"]
+    obj = on_based["optimization:objective"]
+    sym = on_based["optimization:objective:symbol"]
+    assert cap.y > sym.y
+    assert abs((cap.x + cap.w / 2) - (obj.x + obj.w / 2)) < 0.5
+    # target-based the short label is one line; all-interval the wide label reserves two, so the
+    # box (and thus the damage tile) grows by exactly that extra line
+    assert on_based["optimization:objective:caption"].h == spreadsheet.CAPTION_LINE
+    assert on_allint["optimization:objective:caption"].h == 2 * spreadsheet.CAPTION_LINE
+    box_based = {b.id: b for b in based.blocks}["block:optimization:box"]
+    box_allint = {b.id: b for b in allint.blocks}["block:optimization:box"]
+    assert box_allint.h == box_based.h + spreadsheet.CAPTION_LINE
+
+
 def test_all_interval_relabels_the_target_list_as_prime_proxy():
     # per the Guide, all-interval relabels the target list: symbol T → Tₚ, equivalence = 𝐼 (the
     # math-italic identity, per the Guide's conventions), and the lowercase name "prime proxy

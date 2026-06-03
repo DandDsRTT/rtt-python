@@ -81,11 +81,12 @@ READONLY_KINDS: frozenset[str] = frozenset({
 })
 
 # The lone read-only OUTPUT values that nonetheless carry help: the optimization objective's
-# value cell (a ``tval``) and its symbol cell (a ``symbol``). Unlike the power 𝑝, the objective
-# has no caption, so its hover text is the only place its meaning lives — and that meaning flips
-# with all-interval mode (the damage ⟪𝐝⟫ₚ vs the retuning magnitude). Both ids hang the tooltip
-# so the whole displayed value is hoverable; :func:`control_help` returns help for them ahead of
-# the READONLY_KINDS check, and the completeness sweep exempts them from the no-tooltip rule.
+# value cell (a ``tval``) and its symbol cell (a ``symbol``). Like the power 𝑝, the objective now
+# carries a label caption ("power mean" / "retuning magnitude"), but that two-word label only names
+# the quantity — the hover text explains it, and flips with all-interval mode (the damage ⟪𝐝⟫ₚ vs
+# the retuning magnitude). Both ids hang the tooltip so the whole displayed value is hoverable;
+# :func:`control_help` returns help for them ahead of the READONLY_KINDS check, and the
+# completeness sweep exempts them from the no-tooltip rule.
 OBJECTIVE_IDS: frozenset[str] = frozenset({"optimization:objective", "optimization:objective:symbol"})
 
 # Hover text per interactive cell kind whose meaning is fixed by the kind alone.

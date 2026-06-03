@@ -105,6 +105,11 @@ OPT_COL_GAP = 8  # the standard gap between adjacent in-tile controls — sizes 
 # symbols/captions centre under them. The captions stay on ONE line each.
 OPT_BTN_W = 94   # optimize button — wide enough to seat "double-click to unlock" on one line beneath it
 OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred under the ∞ cell)
+OPT_OBJ_CAP_W = 60  # the objective's caption slot ("power mean" / "retuning magnitude"), centred over
+# its COL_W value cell. Wider than the cell so the longest word renders on one line, yet narrower
+# than the full "retuning magnitude" so that wide all-interval label breaks at the space into two
+# lines rather than overflowing into the "optimization power" caption (the box is at OPT_BOX_MIN_W
+# in all-interval, so there is no room to spread it further) — the q/dual caption-slot pattern.
 # the narrowest the box can be and still seat its spread-out controls with the power's caption
 # clear of both neighbors — left pad | objective | gap | caption | gap | button | right pad. A
 # damage tile narrower than this floors its column up to fit (see _control_floor).
@@ -876,12 +881,16 @@ class _GridBuilder:
         self.opt_ctrl = (self.show_optimization and "row:damage" not in self.collapsed
                     and self.col_open("targets") and "tile:damage:targets" not in self.collapsed)
         # the optimization box: a title strip over a row of three controls distributed across the
-        # tile's full width — the objective ⟪𝐝⟫ₚ and the editable power 𝑝 (each a value above its
-        # symbol; the power also captioned "optimization power") plus the optimize button. Its height
-        # = a title inset + the title + a title gap + the value row + the symbol row + a one-line
-        # caption + pad (the width is the targets column, floored to OPT_BOX_MIN_W).
+        # tile's full width — the objective (the minimized damage ⟪𝐝⟫ₚ, "power mean", or the
+        # all-interval retuning magnitude) and the editable power 𝑝 (each a value above its symbol
+        # above its caption) plus the optimize button. Its height = a title inset + the title + a
+        # title gap + the value row + the symbol row + the caption band + pad (the width is the
+        # targets column, floored to OPT_BOX_MIN_W). The objective's caption is one line ("power
+        # mean") target-based, but the wide "retuning magnitude" wraps to two when all-interval, so
+        # the caption band — and the whole box — reserves that second line then.
+        self.opt_cap_lines = 2 if (self.opt_ctrl and service.is_all_interval(self.tuning_scheme)) else 1
         self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
-                      + CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
+                      + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
         # shows with WEIGHTING itself, not gated on the (shelved) alt. complexity extra. It is omitted
         # in all-interval mode, where the weight is simplicity by construction, not a free choice.
@@ -2049,8 +2058,9 @@ class _GridBuilder:
             title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
             content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP  # a gap below the title
             sym_top = content_top + ROW_H            # the symbol/hint row, under the values
-            cap_top = sym_top + SYMBOL_H             # the caption row (one line), under the symbols
-            body_h = ROW_H + SYMBOL_H + CAPTION_LINE + OPT_PAD_B  # value + symbol + one-line caption + pad
+            cap_top = sym_top + SYMBOL_H             # the caption row, under the symbols
+            cap_band = self.opt_cap_lines * CAPTION_LINE  # one line, or two when the wide objective wraps
+            body_h = ROW_H + SYMBOL_H + cap_band + OPT_PAD_B  # value + symbol + caption band + pad
             # the three controls, distributed across the box: objective at the left, optimize button at
             # the right, power centered in the gap between them (so its caption clears both neighbors)
             obj_x = ox + OPT_PAD_L
@@ -2061,17 +2071,26 @@ class _GridBuilder:
             self.cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
                                  text="optimization"))
             # the objective: the minimized-damage value (read-only, so unboxed — a plain centred gridded
-            # value, the same COL_W cell as any damage value) over the symbol ⟪𝐝⟫ₚ
+            # value, the same COL_W cell as any damage value) over its symbol and a label caption, the
+            # same value/symbol/caption stack as the power beside it.
             self.cells.append(CellBox("optimization:objective", obj_x, content_top, COL_W, ROW_H, "tval",
                                  text=service.cents(objective)))
             # all-interval: the minimized objective IS the retuning magnitude ‖𝒓𝑋⁻¹‖ at the dual norm
             # power (the mockup's "becomes 'retuning magnitude'") — relabel the symbol, with dual(q) as
             # the norm subscript; its value already computes over the primes. The prescaler inverse
             # carries the live glyph (𝐿⁻¹ for the log-prime matrix, else generic 𝑋⁻¹).
+            all_interval = service.is_all_interval(self.tuning_scheme)
             obj_symbol = (f"‖𝒓{self.prescaler_symbol}⁻¹‖{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
-                          if service.is_all_interval(self.tuning_scheme) else "⟪𝐝⟫ₚ")
+                          if all_interval else "⟪𝐝⟫ₚ")
             self.cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, COL_W, SYMBOL_H,
                                  "symbol", text=obj_symbol))
+            # the caption naming the objective, the analogue of "optimization power": the Lp "power
+            # mean" of the target damages, or the "retuning magnitude" when all-interval (so the label
+            # tracks the symbol's relabel). Its slot is wider than the value cell and centred over it;
+            # the wide all-interval label wraps to the second line reserved in cap_band.
+            self.cells.append(CellBox("optimization:objective:caption", obj_x + (COL_W - OPT_OBJ_CAP_W) / 2,
+                                 cap_top, OPT_OBJ_CAP_W, cap_band, "caption",
+                                 text="retuning magnitude" if all_interval else "power mean"))
             # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — another COL_W gridded
             # cell — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it)
             self.cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
