@@ -1502,44 +1502,15 @@ def index() -> None:
         except Exception:
             pass
     rec = _Reconciler(editor)
-    els = rec.els
-    inputs = rec.inputs
-    labels = rec.labels
-    fracs = rec.fracs
-    cents = rec.cents
-    htmls = rec.htmls
-    ebk_sizes = rec.ebk_sizes
-    chart_keys = rec.chart_keys
-    range_keys = rec.range_keys
-    audio_keys = rec.audio_keys
-    exprs = rec.exprs
-    expr_state = rec.expr_state
-    kinds = rec.kinds
-    selects = rec.selects
-    checks = rec.checks
-    ptext_inputs = rec.ptext_inputs
-    rangeopts = rec.rangeopts
-    opt_buttons = rec.opt_buttons
-    objective_tips = rec.objective_tips
-    captions = rec.captions
-    caption_html = rec.caption_html
-    math_cells = rec.math_cells
-    math_rendered = rec.math_rendered
-    fold_state = rec.fold_state
-    cell_units = rec.cell_units
-    cell_unit_text = rec.cell_unit_text
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
-    cell_kinds = rec.cell_kinds
-
-    drop = rec.drop
 
     def on_mapping_change():
         if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
             return
         d, r = editor.state.d, len(editor.state.mapping)
-        matrix = [[_parse_int(inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
+        matrix = [[_parse_int(rec.inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
         if any(v is None for row in matrix for v in row):
             return
         editor.edit_mapping(matrix)
@@ -1554,15 +1525,15 @@ def index() -> None:
         if editor.pending_comma is not None:
             # the draft column rides at index nc; hand its cells to the editor, which
             # commits (and re-ranks) once they form a valid independent comma
-            if any(f"cell:comma:{p}:{nc}" not in inputs for p in range(d)):
+            if any(f"cell:comma:{p}:{nc}" not in rec.inputs for p in range(d)):
                 return  # the draft cells aren't shown (folded away)
-            editor.set_pending_comma([_parse_int(inputs[f"cell:comma:{p}:{nc}"].value) for p in range(d)])
+            editor.set_pending_comma([_parse_int(rec.inputs[f"cell:comma:{p}:{nc}"].value) for p in range(d)])
             render()
             return
-        if any(f"cell:comma:{p}:{c}" not in inputs for c in range(nc) for p in range(d)):
+        if any(f"cell:comma:{p}:{c}" not in rec.inputs for c in range(nc) for p in range(d)):
             return  # the comma cells aren't currently shown (folded away)
         # the comma cells are the basis transposed (prime down the rows, comma across)
-        basis = [[_parse_int(inputs[f"cell:comma:{p}:{c}"].value) for p in range(d)] for c in range(nc)]
+        basis = [[_parse_int(rec.inputs[f"cell:comma:{p}:{c}"].value) for p in range(d)] for c in range(nc)]
         if any(v is None for comma in basis for v in comma):
             return
         editor.edit_comma_basis(basis)
@@ -1574,9 +1545,9 @@ def index() -> None:
         if building[0]:
             return
         d, mi = editor.state.d, len(editor.interest_vectors)
-        if any(f"cell:interest:{p}:{i}" not in inputs for i in range(mi) for p in range(d)):
+        if any(f"cell:interest:{p}:{i}" not in rec.inputs for i in range(mi) for p in range(d)):
             return  # the interest cells aren't currently shown (folded away)
-        vectors = [[_parse_int(inputs[f"cell:interest:{p}:{i}"].value) for p in range(d)] for i in range(mi)]
+        vectors = [[_parse_int(rec.inputs[f"cell:interest:{p}:{i}"].value) for p in range(d)] for i in range(mi)]
         if any(v is None for m in vectors for v in m):
             return
         editor.set_interest_vectors(vectors)
@@ -1588,9 +1559,9 @@ def index() -> None:
         if building[0]:
             return
         d, nh = editor.state.d, len(editor.held_vectors)
-        if any(f"cell:held:{p}:{i}" not in inputs for i in range(nh) for p in range(d)):
+        if any(f"cell:held:{p}:{i}" not in rec.inputs for i in range(nh) for p in range(d)):
             return  # the held cells aren't currently shown (folded away / optimization off)
-        vectors = [[_parse_int(inputs[f"cell:held:{p}:{i}"].value) for p in range(d)] for i in range(nh)]
+        vectors = [[_parse_int(rec.inputs[f"cell:held:{p}:{i}"].value) for p in range(d)] for i in range(nh)]
         if any(v is None for m in vectors for v in m):
             return
         editor.set_held_vectors(vectors)
@@ -1605,9 +1576,9 @@ def index() -> None:
         targets = editor.target_override or service.target_interval_set(
             editor.target_spec, editor.state.domain_basis)
         k = len(targets)
-        if any(f"cell:vec:targets:{j}:{p}" not in inputs for j in range(k) for p in range(d)):
+        if any(f"cell:vec:targets:{j}:{p}" not in rec.inputs for j in range(k) for p in range(d)):
             return  # the target cells aren't currently shown (folded away)
-        vectors = [[_parse_int(inputs[f"cell:vec:targets:{j}:{p}"].value) for p in range(d)] for j in range(k)]
+        vectors = [[_parse_int(rec.inputs[f"cell:vec:targets:{j}:{p}"].value) for p in range(d)] for j in range(k)]
         if any(v is None for m in vectors for v in m):
             return
         editor.set_target_override_vectors(vectors)
@@ -1617,11 +1588,11 @@ def index() -> None:
         # editable power inputs share this kind. optimization:power drives the Lp optimization
         # power; control:q (the complexity norm power in box 𝒄) is styling-only for now, so we
         # accept the keystroke but don't yet wire it through to the scheme.
-        if building[0] or cid not in inputs:
+        if building[0] or cid not in rec.inputs:
             return
         if cid != "optimization:power":
             return  # control:q: white-box look, no behaviour yet (wiring later)
-        raw = str(inputs[cid].value).strip().lower()
+        raw = str(rec.inputs[cid].value).strip().lower()
         if raw in ("∞", "inf", "max", "minimax"):
             power = float("inf")
         else:
@@ -1637,10 +1608,10 @@ def index() -> None:
     def on_gentuning_change(cid):
         # an editable generator-tuning-map cell: a valid cents number overrides that one
         # generator's tuning (a per-number manual override); an unparseable entry is ignored
-        if building[0] or cid not in inputs:
+        if building[0] or cid not in rec.inputs:
             return
         try:
-            cents = float(str(inputs[cid].value).strip())
+            cents = float(str(rec.inputs[cid].value).strip())
         except ValueError:
             return
         editor.set_generator_tuning_component(int(cid.rsplit(":", 1)[1]), cents)
@@ -1654,10 +1625,10 @@ def index() -> None:
         # their displayed values (set_custom_prescaler_entry handles that). The bare prescaler
         # is a float diagonal (log_prime / prime / identity / typed), so parse as float — an
         # unparseable entry leaves the scheme unchanged, like the other editable cells.
-        if building[0] or cid not in inputs:
+        if building[0] or cid not in rec.inputs:
             return
         try:
-            value = float(str(inputs[cid].value).strip())
+            value = float(str(rec.inputs[cid].value).strip())
         except ValueError:
             return
         editor.set_custom_prescaler_entry(int(cid.split(":")[3]), value)
@@ -1684,10 +1655,10 @@ def index() -> None:
         else:
             return
         if ok:
-            ptext_inputs[cid].classes(remove="rtt-ptext-error")
+            rec.ptext_inputs[cid].classes(remove="rtt-ptext-error")
             render()
         else:
-            ptext_inputs[cid].classes(add="rtt-ptext-error")
+            rec.ptext_inputs[cid].classes(add="rtt-ptext-error")
 
     def act(action):
         action()
@@ -1760,7 +1731,7 @@ def index() -> None:
         # disturbing the grid, mirroring how a half-typed mapping cell is ignored.
         if building[0]:
             return
-        num, sel = selects["preselect:target"]
+        num, sel = rec.selects["preselect:target"]
         family = sel.value or "TILT"
         spec = f"{int(num.value)}-{family}" if num.value else family
         try:
@@ -1868,15 +1839,15 @@ def index() -> None:
 
         for ln in lay.lines:
             seen.add(ln.id)
-            if ln.id not in els:
+            if ln.id not in rec.els:
                 with board:
                     cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
-                    els[ln.id] = ui.element("div").classes(cls).props(f'data-eid="{ln.id}"')
-            els[ln.id].style(_line_style(ln, fy))
+                    rec.els[ln.id] = ui.element("div").classes(cls).props(f'data-eid="{ln.id}"')
+            rec.els[ln.id].style(_line_style(ln, fy))
 
         for bl in lay.blocks:
             seen.add(bl.id)
-            if bl.id not in els:
+            if bl.id not in rec.els:
                 # a block is a thin-bordered box (boxed, the nested tuning-ranges frame), a
                 # plain grey tile (tint ""), a colorization wash's white base (tint "base"),
                 # or its coloured layer (tint = group name). Fixed for the block's lifetime,
@@ -1885,11 +1856,11 @@ def index() -> None:
                     cls = ("rtt-block-boxed" if bl.boxed
                            else "rtt-washbase" if bl.tint == "base"
                            else "rtt-wash" if bl.tint else "rtt-block")
-                    els[bl.id] = ui.element("div").classes(cls).props(f'data-eid="{bl.id}"')
+                    rec.els[bl.id] = ui.element("div").classes(cls).props(f'data-eid="{bl.id}"')
             style = f"left:{bl.x}px; top:{bl.y - fy}px; width:{bl.w}px; height:{bl.h}px"
             if bl.tint in _TINTS:  # the coloured layer (the base draws white from CSS)
                 style += f"; background:{_TINTS[bl.tint]}"
-            els[bl.id].style(style)
+            rec.els[bl.id].style(style)
 
         for cb in lay.cells:
             seen.add(cb.id)
@@ -1914,9 +1885,9 @@ def index() -> None:
         # quantity per mode — the minimized damage ⟪𝐝⟫ₚ over the targets, or (all-interval) the
         # retuning magnitude. Swap its tooltip(s) to match the live scheme, the same in-place
         # relabel the symbol glyph makes; set_text only pushes when the wording actually changes.
-        if objective_tips:
+        if rec.objective_tips:
             obj_help = tooltips.objective_help(service.is_all_interval(editor.tuning_scheme))
-            for tip in objective_tips.values():
+            for tip in rec.objective_tips.values():
                 tip.set_text(obj_help)
 
         refs["undo"].set_enabled(editor.can_undo)
