@@ -3692,6 +3692,18 @@ def test_a_target_override_drives_the_target_columns():
         assert f"{row}:target:1" in cells and f"{row}:target:2" not in cells
 
 
+def test_a_target_override_retunes_the_generator_map():
+    # the grid's auto-optimized tuning minimizes over the target intervals, so a typed override
+    # retunes the generator map itself — not just the displayed target columns. Same fix as the
+    # optimize button: targeting only 2/1 + 3/2 under minimax-U pulls the fifth toward just.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    plain = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-U", target_spec="TILT").cells}
+    overridden = {c.id: c for c in spreadsheet.build(
+        base, s, tuning_scheme="TILT minimax-U", target_spec="TILT", target_override=("2/1", "3/2")).cells}
+    assert overridden["tuning:gen:1"].text != plain["tuning:gen:1"].text
+
+
 def test_target_interval_list_cells_and_plain_text_are_editable():
     cells = {c.id: c for c in _with(plain_text_values=True).cells}
     assert cells["ptext:vectors:targets"].kind == "ptextedit"

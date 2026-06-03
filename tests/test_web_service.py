@@ -665,6 +665,29 @@ def test_tuning_uses_the_prescaler_override():
     assert overridden.generator_map == pytest.approx(sopfr.generator_map, abs=1e-6)
 
 
+def test_tuning_optimizes_over_an_explicit_target_override():
+    import pytest
+
+    # a typed explicit target interval list (the target-list override) replaces the scheme's
+    # named TILT/OLD set, so the optimum minimizes damage over THOSE intervals — targeting only
+    # 2/1 + 3/2 under minimax-U makes the fifth pure (701.955 c), unlike the full TILT optimum
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    base = service.tuning(mapping, "TILT minimax-U")
+    targeted = service.tuning(mapping, "TILT minimax-U", targets=("2/1", "3/2"))
+    assert targeted.generator_map != base.generator_map
+    assert targeted.generator_map == pytest.approx((1200.0, 701.955), abs=1e-2)
+
+
+def test_plain_text_tuning_follows_a_target_override():
+    # plain_text_values must show the same tuning the grid builds, so a typed target-list override
+    # retunes its tuning rows too (not just the target-column values) — else the EBK dual would
+    # disagree with the grid once the list is overridden
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    base = service.plain_text_values(state, "TILT minimax-U", "TILT")
+    overridden = service.plain_text_values(state, "TILT minimax-U", "TILT", target_override=("2/1", "3/2"))
+    assert overridden[("tuning", "gens")] != base[("tuning", "gens")]
+
+
 def test_plain_text_mapping_is_the_ebk_string():
     # the mapping tile's plain-text value is the temperament's EBK string: a list
     # of per-generator maps, ⟨ … ] inside, enclosed by the rank-count [ … }

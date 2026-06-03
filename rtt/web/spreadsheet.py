@@ -582,8 +582,10 @@ class _GridBuilder:
         if generator_tuning is not None and len(generator_tuning) == len(self.state.mapping):
             self.tun = service.tuning_from_generators(self.state.mapping, generator_tuning, self.elements)
         else:
+            # a typed target-list override retunes the optimum (minimize over THOSE intervals), so
+            # the grid's auto-optimized tuning tracks the displayed targets, not just the named set
             self.tun = service.tuning(self.state.mapping, self.tuning_scheme, self.elements, approach, held=self.held_ratios,
-                                 prescaler_override=self.custom_prescaler)
+                                 prescaler_override=self.custom_prescaler, targets=target_override)
         self.target_sizes = service.interval_sizes(self.tun, self.targets, self.elements)
         self.held_mapped = service.mapped_intervals(self.state.mapping, self.held_ratios, self.elements)  # M·held (gen coords)
         self.held_sizes = service.interval_sizes(self.tun, self.held_ratios, self.elements)  # tempered/just/error sizes

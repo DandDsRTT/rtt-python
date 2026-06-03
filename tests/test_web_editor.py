@@ -670,6 +670,18 @@ def test_target_override_round_trips_serialize_and_older_docs_lack_it():
     assert older.target_override is None
 
 
+def test_optimize_follows_a_changed_target_interval_list():
+    # the optimize button minimizes damage over the target intervals, so changing the list must
+    # retune. Before, the optimum ignored a typed override (it read the scheme's named TILT set),
+    # so re-optimizing after editing the list was a no-op — the bug Douglas hit.
+    editor = Editor()
+    editor.optimize()  # freeze the TILT-family optimum
+    tilt_optimum = editor.generator_tuning
+    editor.set_target_override_text("[1 0 0⟩ [-1 1 0⟩")  # change the list to just 2/1 + 3/2
+    editor.optimize()  # re-optimize over the new list
+    assert editor.generator_tuning != tilt_optimum  # the tuning followed the new targets
+
+
 def test_show_settings_start_at_defaults_and_changes_are_undoable():
     editor = Editor()
     assert editor.settings == settings.defaults()  # the Editor owns the Show settings

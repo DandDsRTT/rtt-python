@@ -314,6 +314,7 @@ def tuning(
     nonprime_approach: str = "",
     held=(),
     prescaler_override=None,
+    targets=None,
 ) -> Tuning:
     """The temperament's maps and generator ranges (cents) under ``scheme`` — no
     interval set. Over a nonstandard ``domain_basis`` the maps run over its (possibly
@@ -324,9 +325,16 @@ def tuning(
 
     ``prescaler_override`` (a d-tuple) drives the complexity-prescaler diagonal directly,
     overriding the scheme's log-prime / prime / identity diagonal — the bare prescaler
-    tile's hand-edited values flow through here into the damage-weighted optimum."""
+    tile's hand-edited values flow through here into the damage-weighted optimum.
+
+    ``targets`` (ratio strings) is a typed explicit target interval list overriding the
+    scheme's named TILT/OLD set, so the optimum minimizes damage over THOSE intervals —
+    changing the target list retunes. An all-interval scheme keeps its empty set (every
+    interval, by duality) and ignores the list."""
     t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
     spec = resolve_tuning_scheme(scheme)
+    if targets and (spec.target_intervals or "").strip() not in ("{}", ""):
+        spec = replace(spec, target_intervals="{" + ", ".join(targets) + "}")
     if nonprime_approach:
         spec = replace(spec, nonprime_basis_approach=nonprime_approach)
     if held:  # fold the user's held intervals into the scheme's own (its bare tokens, brace-free)
@@ -742,8 +750,8 @@ def plain_text_values(
     # drives the maps directly; otherwise the scheme's optimum holding the held intervals just
     if generator_tuning is not None and len(generator_tuning) == len(state.mapping):
         tun = tuning_from_generators(state.mapping, generator_tuning, db)
-    else:
-        tun = tuning(state.mapping, scheme, db, held=held_ratios)  # maps over the domain elements
+    else:  # a typed target-list override retunes the optimum, matching the grid's own tuning
+        tun = tuning(state.mapping, scheme, db, held=held_ratios, targets=target_override)
     target_sizes = interval_sizes(tun, targets, db)
     comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
     detemper_ratios = generators(state.mapping, db)  # the detempering as ratios (= service.generators)

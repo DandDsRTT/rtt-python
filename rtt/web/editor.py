@@ -271,9 +271,12 @@ class Editor:
         self.held_vectors = [tuple(int(x) for x in m) for m in vectors]
 
     def _optimum_generator_tuning(self) -> tuple[float, ...]:
-        """The scheme's current optimal generator tuning, respecting any held intervals."""
+        """The scheme's current optimal generator tuning, respecting any held intervals and a
+        typed target-list override (so re-optimizing tracks the displayed target intervals, not
+        just the named TILT/OLD set)."""
         held = service.comma_ratios(self.held_vectors) if self.held_vectors else ()
-        return service.tuning(self.state.mapping, self.tuning_scheme, held=held).generator_map
+        return service.tuning(self.state.mapping, self.tuning_scheme, held=held,
+                              targets=self.target_override).generator_map
 
     def optimize(self) -> None:
         """The optimize button's single click: freeze the generator tuning at the scheme's
