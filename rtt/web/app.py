@@ -589,34 +589,38 @@ def _tile_fold_html() -> str:
     return _control_svg(_FOLD_GLYPH["unfold_less"])
 
 
-# The value cell's geometry (px): one COL_W×ROW_H square box, like a real gridded cell, framed by
-# the EBK marks with GAP clearance so the brackets don't crowd the value; a top bracket / brace
-# CAP tall above and below.
+# The value cell's geometry (px), built to read like the real mapping tile's NESTED EBK: an INNER
+# per-row covector ⟨ … ] HUGGING the COL_W×ROW_H square cell (the angle/square marks sit right
+# against the box, ~_BR_INSET≈2.5px off, exactly as the grid's per-row brackets do), enclosed by an
+# OUTER frame — a top bracket + brace that SPAN the inner brackets and sit _TILE_ENCLOSE px above /
+# below the cell. (Earlier rounds wrongly pushed the brackets far horizontally; the real app hugs.)
 _TILE_CELL = spreadsheet.COL_W           # the square cell side (== ROW_H)
-_TILE_BR_W = 9                            # EBK bracket width
-_TILE_BR_GAP = 14                         # clearance between a bracket and the cell box — deliberately roomy
-# (the real grid hugs at _BR_INSET≈2.5px; the dummy wants the value to breathe inside its brackets)
-_TILE_CAP = 5                             # top-bracket / brace height
-_TILE_FRAME_W = _TILE_BR_W + _TILE_BR_GAP + _TILE_CELL + _TILE_BR_GAP + _TILE_BR_W
-_TILE_FRAME_H = _TILE_CAP + _TILE_CELL + _TILE_CAP
-_TILE_CELL_X = _TILE_BR_W + _TILE_BR_GAP  # the cell's left edge within the frame
+_TILE_BR_W = 9                            # inner ⟨ / ] bracket width — hugs the cell (no gap)
+_TILE_ENCLOSE = 5                         # gap between the OUTER top/brace and the cell (the enclosing space)
+_TILE_CAP = 5                             # outer top-bracket / brace height
+_TILE_FRAME_W = _TILE_BR_W + _TILE_CELL + _TILE_BR_W            # the outer top/brace span ⟨ … ]
+_TILE_FRAME_H = _TILE_CAP + _TILE_ENCLOSE + _TILE_CELL + _TILE_ENCLOSE + _TILE_CAP
+_TILE_CELL_X = _TILE_BR_W                 # the cell's left edge within the frame (right after the inner ⟨)
+_TILE_CELL_Y = _TILE_CAP + _TILE_ENCLOSE  # the cell's top edge within the frame (below the outer top)
 
 
 def _tile_grid_frame_html() -> str:
-    """The boxed-cell FRAME: the EBK angle/closing brackets, top bracket and brace around one
-    COL_W×ROW_H white value box (the same square a real gridded cell is), with GAP clearance
-    between the brackets and the box. The builder lays the closed form and value inside the box."""
+    """The value cell's NESTED EBK, like the mapping tile: an inner covector ⟨ … ] hugging the
+    COL_W×ROW_H white box, enclosed by an outer top bracket + brace that span the inner brackets and
+    sit _TILE_ENCLOSE above / below the cell. The builder lays the closed form and value in the box."""
     def mark(x, y, w, h, inner):
         return f'<div style="position:absolute;left:{x}px;top:{y}px;width:{w}px;height:{h}px">{inner}</div>'
-    cell, cap, bw = _TILE_CELL, _TILE_CAP, _TILE_BR_W
-    cx = _TILE_CELL_X
+    cell, cap, bw, cx, cy = _TILE_CELL, _TILE_CAP, _TILE_BR_W, _TILE_CELL_X, _TILE_CELL_Y
+    span = _TILE_FRAME_W  # the outer top/brace run the full ⟨ … ] width
     return (f'<div style="position:relative;width:{_TILE_FRAME_W}px;height:{_TILE_FRAME_H}px">'
-            + mark(cx, 0, cell, cap, _top_bracket(cell, cap))
-            + mark(0, cap, bw, cell, _angle_bracket(bw, cell))
-            + mark(cx, cap, cell, cell, '<div style="width:100%;height:100%;box-sizing:border-box;'
-                                        'border:1px solid #555;background:#fff"></div>')
-            + mark(cx + cell + _TILE_BR_GAP, cap, bw, cell, _square_bracket(bw, cell, "right"))
-            + mark(cx, cap + cell, cell, cap, _brace(cell, cap))
+            # OUTER frame: top bracket + brace spanning the inner brackets, enclosing from above/below
+            + mark(0, 0, span, cap, _top_bracket(span, cap))
+            + mark(0, _TILE_FRAME_H - cap, span, cap, _brace(span, cap))
+            # INNER covector ⟨ … ] hugging the value box
+            + mark(0, cy, bw, cell, _angle_bracket(bw, cell))
+            + mark(cx, cy, cell, cell, '<div style="width:100%;height:100%;box-sizing:border-box;'
+                                       'border:1px solid #555;background:#fff"></div>')
+            + mark(cx + cell, cy, bw, cell, _square_bracket(bw, cell, "right"))
             + '</div>')
 
 
@@ -2018,7 +2022,8 @@ def index() -> None:
                                             # empty gutter on the right keeps the boxed cell centred in the tile.
                                             gut = 20  # the row-label gutter, mirrored on the right for centring
                                             cell_x = gut + _TILE_CELL_X  # the cell's left within the container
-                                            row_y = _TILE_CAP + (_TILE_CELL - 13) // 2  # row label centred on the cell
+                                            cell_y = _TILE_CELL_Y        # the cell's top within the frame (below the outer top)
+                                            row_y = cell_y + (_TILE_CELL - 13) // 2  # row label centred on the cell
                                             with ui.element("div").classes("rtt-tile-line"), \
                                                     ui.element("div").style(f"position:relative;"
                                                         f"width:{gut + _TILE_FRAME_W + gut}px;height:{_TILE_FRAME_H}px"):
@@ -2027,13 +2032,13 @@ def index() -> None:
                                                              "height:13px;justify-content:flex-end")
                                                 part_el("gridded_values", style=f"position:absolute;left:{gut}px;top:0")
                                                 part_el("math_expressions", size=_fit_font(_TILE_MATH, _TILE_CELL),
-                                                        style=f"position:absolute;left:{cell_x}px;top:{_TILE_CAP + 1}px;"
+                                                        style=f"position:absolute;left:{cell_x}px;top:{cell_y + 1}px;"
                                                               f"width:{_TILE_CELL}px;height:9px;justify-content:center")
                                                 part_el("quantities", size=_fit_font(_TILE_VALUE, _TILE_CELL),
-                                                        style=f"position:absolute;left:{cell_x}px;top:{_TILE_CAP + 10}px;"
+                                                        style=f"position:absolute;left:{cell_x}px;top:{cell_y + 10}px;"
                                                               f"width:{_TILE_CELL}px;height:10px;justify-content:center")
                                                 add_el("units", _units_html(_TILE_UNITS), size=_TILE_FONT["cellunit"],
-                                                       style=f"position:absolute;left:{cell_x}px;top:{_TILE_CAP + 20}px;"
+                                                       style=f"position:absolute;left:{cell_x}px;top:{cell_y + 20}px;"
                                                              f"width:{_TILE_CELL}px;height:8px;justify-content:center;color:#555")
                                         elif "names" in line:
                                             # the name word, split so the mnemonic letter is its own target

@@ -77,8 +77,11 @@
    content; the window-height cap lives on the body (.rtt-show-scroll's max-height) so the frozen
    header + a body capped to (window − inset − header) never exceeds the window. overflow:hidden lets
    the drawer's grid-rows open/close animation clip and grow it. */
+/* padding-top:var(--pad) insets the settings content by the same _PAD the grid pane insets its
+   column-header band, so the settings frozen header lines up with the main app's header (the
+   undo/redo band) instead of floating ~12px above it. */
 .rtt-drawer-inner { width:var(--panel-w); box-sizing:border-box; background:#e0e0e0; overflow:hidden;
-                    min-height:0; display:flex; flex-direction:column;
+                    min-height:0; display:flex; flex-direction:column; padding-top:var(--pad);
                     font-family:'Cambria',Georgia,serif; color:#000; }
 /* the grid pane sits right of the sidebar. It HUGS the grid (render() sizes it to the grid's full
    footprint + a _PAD margin on every side, plus the last column title's right overhang) so its grey

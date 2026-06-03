@@ -358,6 +358,9 @@ def test_settings_pane_stacks_a_frozen_header_over_a_scrolling_body():
     # drawer-inner is a flex column that hugs its content (no max-height of its own).
     inner = _css_rule(".rtt-drawer-inner")
     assert "display:flex" in inner and "flex-direction:column" in inner
+    # the settings content is inset from the top by the SAME _PAD the grid pane insets its column-
+    # header band, so the settings frozen header lines up with the main app's header (not 12px above)
+    assert "padding-top:var(--pad)" in inner
     # the header (select-all/none + the show/example titles) never shrinks or scrolls...
     assert "flex:none" in _css_rule(".rtt-show-frozen")
     # ...and the groups sit in a body that sizes to its OWN content (flex:none, NOT flex:1) and scrolls
