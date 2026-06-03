@@ -174,26 +174,40 @@ def _sub(n: int) -> str:
     return str(n).translate(_SUBSCRIPTS)
 
 
-def _prescaler_col_labels(letter: str) -> dict:
+def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool) -> dict:
     """Per-column header labels for the prescaling- and complexity-row product tiles, using
     ``letter`` for the prescaler glyph — 𝐿 when the prescaler IS the log-prime matrix, else
     the generic 𝑋. build() rebuilds these each render so a tile's column headers stay in step
     with its big symbol (𝐿𝐝ᵢ under the 𝐿D tile, 𝑋𝐝ᵢ under the 𝑋D tile — never mixed). The
     complexity headers are the q-norm of the prescaled basis vectors, ‖prescaler·basisᵢ‖q, with
-    the trailing q wrapped in NORM_SUB sentinels so the matlabel renderer italic-subscripts it."""
+    the trailing q wrapped in NORM_SUB sentinels so the matlabel renderer italic-subscripts it.
+
+    The TARGETS complexity column is the named complexity list 𝒄, so its header is the named
+    symbol cₙ, gaining that norm as its EQUIVALENCE tail (cₙ = ‖𝐿𝐭ₙ‖q) when the equivalences
+    layer is on — like the tile big-symbols. All-interval (Tₚ = I) drops the per-target 𝐭ₙ,
+    leaving the generic ‖𝐿‖q (every target proxies a prime, so the norm is just the prescaler's)."""
     def norm(inner):
         return lambda i: f"‖{inner(i)}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}"
+
+    def complexity_target(i):
+        symbol = f"c{_sub(i + 1)}"
+        if not show_equiv:
+            return symbol
+        inner = letter if all_interval else f"{letter}𝐭{_sub(i + 1)}"
+        return f"{symbol} = ‖{inner}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}"
+
     return {
         # prescaling row — the prescaled vector lists prescaler·basis (the bare matrix is row-labeled)
         ("prescaling", "commas"): letter + "𝐜",
         ("prescaling", "targets"): letter + "𝐭",
         ("prescaling", "held"): letter + "𝐡",
         ("prescaling", "detempering"): letter + "𝐝",
-        # complexity row — ‖prescaler·basisᵢ‖q per the mockup (targets is the named list 𝒄, plain "c")
+        # complexity row — ‖prescaler·basisᵢ‖q per the mockup (targets carries the named cₙ symbol too)
         ("complexity", "primes"): norm(lambda i: f"{letter}[{i + 1}]"),
         ("complexity", "commas"): norm(lambda i: f"{letter}𝐜{_sub(i + 1)}"),
         ("complexity", "held"): norm(lambda i: f"{letter}𝐡{_sub(i + 1)}"),
         ("complexity", "detempering"): norm(lambda i: f"{letter}𝐝{_sub(i + 1)}"),
+        ("complexity", "targets"): complexity_target,
     }
 
 
@@ -456,6 +470,7 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     locus: it keeps the abstract 𝑋 (rows 𝒙ᵢ), with the equivalence "= 𝐿" / "= diag(𝒑)" / "= 𝐼" (or
     nothing for a real deviation), and — when 𝑋 = 𝐿 — its NAME gains "= log-prime matrix". So a tile
     never mixes the two: the bare matrix is all 𝑋, every product and column header all 𝐿."""
+    all_interval = service.is_all_interval(tuning_scheme)  # Tₚ = I drops the per-target 𝐭ₙ from the headers
     scheme_prescaler = service.prescaler_of(tuning_scheme)  # the scheme's nominal prescaler
     # the prescaler the DISPLAYED diagonal realises — matched at display precision, so editing a
     # cell to its shown value and back recovers the named prescaler (and the 𝑋 = 𝐿 awareness)
@@ -478,7 +493,7 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     return _PrescalerLabels(
         scheme_prescaler=scheme_prescaler, symbol=symbol, equivalence=equivalence,
         prescaling_symbols=prescaling_symbols,
-        col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol)},
+        col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equiv, all_interval)},
         row_labels=row_labels, effective_captions=effective_captions,
     )
 
@@ -2356,8 +2371,17 @@ class _GridBuilder:
                         ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                         ("prescaling", "primes"): self.prescaler_equivalence,
                         **(ALL_INTERVAL_EQUIVALENCES if ai else {})}
-        if not self.show_weighting:  # the weight row 𝒘 is hidden, so don't dangle it: 𝐝 = |𝐞|
-            equivalences[("damage", "targets")] = " = |𝐞|"
+        if ai:
+            # all-interval (Tₚ = I): the kept target tiles take prime-proxy closed forms in the live
+            # prescaler glyph (X→L). The complexity list IS the prescaler diagonal; the (simplicity)
+            # weight its reciprocal — diag(𝐿)⁻¹, more concrete than the slope's 𝒄⁻¹; the damage the
+            # retuning-MAP magnitude times that weight — |𝒓|𝐿⁻¹ (there is no target error list 𝐞 here,
+            # the retune row's 𝐞→𝒓). These need the live glyph, so they can't be static.
+            equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
+            equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
+            equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
+        if not self.show_weighting:  # the weight factor's row is hidden, so don't dangle it (𝒘 / 𝐿⁻¹)
+            equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
         for (rkey, ckey), name in self.effective_captions.items():
             if ckey == "interest" and not self.interest:
                 continue

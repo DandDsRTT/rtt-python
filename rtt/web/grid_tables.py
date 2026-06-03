@@ -219,12 +219,12 @@ COL_LABEL_LETTERS = {
     # damage + weight — scalar lists over the targets only
     ("damage", "targets"): "d",       # damage scalars — plain
     ("weight", "targets"): "w",       # weight scalars — plain
-    # complexity over the targets is the named complexity LIST 𝒄 — each cell a scalar entry,
-    # so the label is plain "c" (like the other size lists). The prescaler-bearing complexity
-    # headers (‖prescaler·basisᵢ‖q) and the prescaling product headers (prescaler·basisᵢ) both
-    # track the live prescaler glyph, so build() fills them in per-render via
-    # _prescaler_col_labels (NOT here) — keeping them in step with the tiles' big symbols.
-    ("complexity", "targets"): "c",   # complexity scalars — plain
+    # the complexity row's headers (EVERY column, targets included) track the live prescaler
+    # glyph and the equivalences layer, so build() fills them in per-render via
+    # _prescaler_col_labels (NOT here): the auxiliary columns spell the bare norm
+    # ‖prescaler·basisᵢ‖q, the named targets column the symbol cₙ with that norm as its
+    # equivalence tail. So the complexity row carries no static entry — it is registered in
+    # COL_LABELED_ROWS explicitly (like the prescaling row, also built per-render).
 }
 # multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping,
 # the canonical mapping and the complexity-prescaling matrix for their spanning
@@ -235,10 +235,10 @@ CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar
 # is on — every row with multi-cell tiles in the built layout. The counts/quantities/
 # units/canon spine rows hold a single index per column already (a cardinality, a
 # ratio, a unit) so they label their cells in-place, not over a separate band.
-# the prescaling row's per-column labels are built per-render (see _prescaler_col_labels),
-# so it isn't in the static COL_LABEL_LETTERS — add it explicitly; complexity is already in
-# via its plain "c" targets entry.
-COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS) | {"prescaling"}
+# the prescaling and complexity rows' per-column labels are built per-render (see
+# _prescaler_col_labels), so they carry no static COL_LABEL_LETTERS entry — register both
+# explicitly so the layout still reserves their column-label band.
+COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS) | {"prescaling", "complexity"}
 
 # Content-derived colorization (the mockup's coloured washes behind the grey tiles): a
 # group's "{group}_colorization" setting, when on, paints colour behind the tiles whose

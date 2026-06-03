@@ -2176,6 +2176,26 @@ def test_all_interval_mnemonics_underline_the_prime_proxy_p_subscript():
     assert sorted(cap.text[s:s + n] for s, n in cap.underlines) == ["p", "p", "t"]
 
 
+def test_all_interval_relabels_the_complexity_weight_and_damage_equivalences():
+    # all-interval (Tₚ = I) gives the kept target tiles closed forms in the prescaler diagonal:
+    # the complexity list IS diag(𝐿) (each target proxies a prime, so its complexity is that
+    # prime's diagonal entry), the simplicity weight its reciprocal diag(𝐿)⁻¹, and the damage
+    # |𝒓|𝐿⁻¹ — the retuning MAP magnitude (there is no target error list 𝐞 in all-interval; the
+    # retune row's 𝐞→𝒓) times the prescaler inverse. All carry the live prescaler glyph (X→L).
+    allint = {c.id: c for c in _with(scheme="minimax-S", symbols=True,
+                                     equivalences=True, weighting=True).cells}
+    assert allint["symbol:complexity:targets"].text == "𝒄 = diag(𝐿)"
+    assert allint["symbol:weight:targets"].text == "𝒘 = diag(𝐿)⁻¹"
+    assert allint["symbol:damage:targets"].text == "𝐝 = |𝒓|𝐿⁻¹"
+    # target-based keeps the bare 𝒄 (its equivalence lives on the per-target column headers),
+    # the slope-based weight, and the error-list damage 𝐝 = |𝐞|𝒘
+    based = {c.id: c for c in _with(scheme="TILT minimax-S", symbols=True,
+                                    equivalences=True, weighting=True).cells}
+    assert based["symbol:complexity:targets"].text == "𝒄"
+    assert based["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"
+    assert based["symbol:damage:targets"].text == "𝐝 = |𝐞|𝒘"
+
+
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
     # the all-interval (and diminuator) checkbox CELL is sized to the rendered square so its
     # caption hugs it; that square is the SINGLE shared option-box size (OPTION_BOX_PX = 16),
@@ -2335,9 +2355,12 @@ def test_weight_equivalence_reflects_the_schemes_damage_slope():
         )
         return {c.id: c for c in lay.cells}["symbol:weight:targets"].text
 
-    assert equiv("minimax-C") == "𝒘 = 𝒄"      # complexity weight
-    assert equiv("minimax-U") == "𝒘 = 𝟏"      # unity weight (document default): bold-1 all-ones vector
-    assert equiv("minimax-S") == "𝒘 = 𝒄⁻¹"    # simplicity weight (the all-interval weight)
+    assert equiv("minimax-C") == "𝒘 = 𝒄"          # complexity weight
+    assert equiv("minimax-U") == "𝒘 = 𝟏"          # unity weight (document default): bold-1 all-ones vector
+    # simplicity weight, target-based: the SLOPE shows as 𝒄⁻¹. (The bare minimax-S is all-interval,
+    # where the weight relabels to the concrete diag(𝐿)⁻¹ — see
+    # test_all_interval_relabels_the_complexity_weight_and_damage_equivalences.)
+    assert equiv("TILT minimax-S") == "𝒘 = 𝒄⁻¹"
 
 
 def test_damage_equivalence_names_the_weight_only_when_the_weight_row_is_shown():
@@ -2345,7 +2368,8 @@ def test_damage_equivalence_names_the_weight_only_when_the_weight_row_is_shown()
     # names that 𝒘 factor only while the weight row is on screen; with weighting hidden it
     # drops to 𝐝 = |𝐞| rather than dangle a reference to a row the reader can't see. The
     # factor is the same whatever the slope — even the unity all-ones weight shows as 𝒘 once
-    # visible (its 𝒘 = 𝟏 value lives on the weight row).
+    # visible (its 𝒘 = 𝟏 value lives on the weight row). Both schemes here are target-based
+    # (the all-interval damage form |𝒓|𝐿⁻¹ is covered by the all-interval relabel test).
     def equiv(scheme, weighting):
         lay = spreadsheet.build(
             service.from_mapping(((1, 1, 0), (0, 1, 4))),
@@ -2354,12 +2378,12 @@ def test_damage_equivalence_names_the_weight_only_when_the_weight_row_is_shown()
         )
         return {c.id: c for c in lay.cells}["symbol:damage:targets"].text
 
-    # weighting hidden → bare |𝐞|, regardless of the scheme's weight slope
+    # weighting hidden → bare |𝐞|, regardless of the scheme's weight slope (unity vs simplicity)
     assert equiv("minimax-U", False) == "𝐝 = |𝐞|"
-    assert equiv("minimax-S", False) == "𝐝 = |𝐞|"
+    assert equiv("TILT minimax-S", False) == "𝐝 = |𝐞|"
     # weighting shown → the 𝒘 factor appears, even under unity weight
     assert equiv("minimax-U", True) == "𝐝 = |𝐞|𝒘"
-    assert equiv("minimax-S", True) == "𝐝 = |𝐞|𝒘"
+    assert equiv("TILT minimax-S", True) == "𝐝 = |𝐞|𝒘"
 
 
 def test_commas_have_a_shared_vertical_axis_per_comma():
@@ -3559,9 +3583,32 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
     assert on["matlabel:col:complexity:commas:0"].text == f"‖𝐿𝐜₁‖{q}"
     assert on["matlabel:col:complexity:held:0"].text == f"‖𝐿𝐡₁‖{q}"
     assert on["matlabel:col:complexity:detempering:0"].text == f"‖𝐿𝐝₁‖{q}"
-    # complexity over targets is the named complexity LIST 𝒄 — each cell a scalar
-    # entry, so the label is plain "c" (no styling, like the other size lists)
+    # complexity over targets is the named complexity LIST 𝒄 — without the equivalences
+    # layer its column cells show the bare named symbol cₙ (the norm equation is the cₙ = …
+    # equivalence tail; see test_complexity_target_col_headers_gain_the_norm_equivalence)
     assert on["matlabel:col:complexity:targets:0"].text == "c₁"
+
+
+def test_complexity_target_col_headers_gain_the_norm_equivalence():
+    # the target-interval complexity list 𝒄 names its column cells cₙ; with the equivalences
+    # layer each header gains its defining equation cₙ = ‖𝐿𝐭ₙ‖q (the q-norm of the prescaled
+    # target vector), mirroring the tile big-symbols' "= …" tails. The prescaler glyph follows
+    # the X→L rule (𝐿 for the log-prime matrix). All-interval (Tₚ = I) drops the per-target 𝐭ₙ,
+    # leaving the generic ‖𝐿‖q. Without equivalences only the bare cₙ shows.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
+    s = {**settings.defaults(), "symbols": True, "weighting": True, "equivalences": True}
+    on = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert on["matlabel:col:complexity:targets:0"].text == f"c₁ = ‖𝐿𝐭₁‖{q}"
+    assert on["matlabel:col:complexity:targets:7"].text == f"c₈ = ‖𝐿𝐭₈‖{q}"
+    # all-interval: the per-target 𝐭ₙ drops, leaving ‖𝐿‖q in every column
+    allint = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S").cells}
+    assert allint["matlabel:col:complexity:targets:0"].text == f"c₁ = ‖𝐿‖{q}"
+    assert allint["matlabel:col:complexity:targets:2"].text == f"c₃ = ‖𝐿‖{q}"
+    # equivalences off → just the bare named symbol cₙ
+    off = {c.id: c for c in spreadsheet.build(
+        base, {**settings.defaults(), "symbols": True, "weighting": True}).cells}
+    assert off["matlabel:col:complexity:targets:0"].text == "c₁"
 
 
 def test_prescaling_matrix_row_and_col_labels():
