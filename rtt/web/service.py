@@ -1049,25 +1049,6 @@ def remove_comma(state: TemperamentState) -> TemperamentState:
     return from_comma_basis(state.comma_basis[:-1])
 
 
-def add_generator(state: TemperamentState) -> TemperamentState:
-    """Diagonally expand the mapping: add a free generator over a new prime (+r, +d;
-    nullity held). Each existing row gains a 0 (the new prime, unmapped by the old
-    generators), and a new ``[0…0 1]`` row maps the new prime to its own generator — so
-    the new prime is left just/untempered ("dummy info"). The mapping is kept as the
-    source of truth (no re-dual through the comma basis), preserving the displayed
-    generators. Standard domain only (the new prime is the next prime); callers guard."""
-    expanded = tuple(row + (0,) for row in state.mapping) + ((0,) * state.d + (1,),)
-    return from_mapping(expanded)
-
-
-def remove_generator(state: TemperamentState) -> TemperamentState:
-    """Diagonally contract the mapping: drop the last generator and the last prime
-    (−r, −d; nullity held) — the inverse of :func:`add_generator`. Callers guard
-    against removing the sole generator."""
-    trimmed = tuple(row[:-1] for row in state.mapping[:-1])
-    return from_mapping(trimmed)
-
-
 def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:
     """Drop mapping row ``i`` (a generator), keeping the remaining rows as-is and
     re-dualing the comma basis: rank falls, nullity rises, dimensionality held

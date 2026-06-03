@@ -635,7 +635,8 @@ class _GridBuilder:
         self.target_weights = service.interval_weights(self.state.mapping, self.tuning_scheme, self.targets,
                                                   prescaler_override=self.custom_prescaler,
                                                   domain_basis=self.elements)  # the damage row's 𝒘
-        self.comma_ratios = service.comma_ratios(self.state.comma_basis, self.elements)
+        # a full-rank temperament (n=0) carries only the trivial zero comma; show nothing, not a "1/1"
+        self.comma_ratios = service.comma_ratios(self.state.comma_basis, self.elements) if self.state.n else ()
         self.nc = len(self.comma_ratios)  # the real commas (those that define the temperament)
         self.mapped_commas = service.mapped_commas(self.state.mapping, self.state.comma_basis)  # M·commas = 0 (vanish)
         self.comma_sizes = service.interval_sizes(self.tun, self.comma_ratios, self.elements)  # comma sizes (tempered ~0)
@@ -1315,6 +1316,8 @@ class _GridBuilder:
             return self.col_open(ckey) and self.row_open("quantities")
         if ckey == "targets":  # the target list is user-curated only when NOT all-interval (else it's auto Tₚ = I)
             return self.tile_open("quantities", "targets") and not self.all_interval
+        if ckey == "gens":  # the generators + un-temps a comma (−n, +r), so it needs one to un-temper
+            return self.tile_open("quantities", "gens") and self.state.n > 0
         return self.tile_open("quantities", ckey)
 
     def closed_form_operand(self, key, group, i):
@@ -1714,10 +1717,11 @@ class _GridBuilder:
             if self.tile_open("quantities", "gens"):  # the generator ratios heading their sub-columns,
                 for g in range(self.r):                # the column-header dual of the spine list (gen:i)
                     self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.gens[g], gen=g))
-                # the generators ± diagonally expands/contracts M (+r,+d / −r,−d): the + on the
-                # column stub, the − on the last generator's branch point, removable when r > 1
+                # the generators ± mirrors the mapping-row ± (same quantity, the generators): the + on
+                # the column stub un-temps a comma (−n, +r, hold d), the − on the LAST generator's
+                # branch point drops that row (+n, −r, hold d), removable when r > 1
                 if self.r > 1:
-                    branch_minus("gen_minus", "gens", self.r - 1, "gen_minus")
+                    branch_minus("gen_minus", "gens", self.r - 1, "gen_minus", gen=self.r - 1)
             if self.tile_open("quantities", "primes"):
                 for p in range(self.d):
                     self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))

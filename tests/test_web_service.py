@@ -95,24 +95,6 @@ def test_remove_comma_drops_the_last_comma_and_reranks():
     assert (removed.d, removed.r, removed.n) == (3, 2, 1)  # rank rises as nullity falls
 
 
-def test_add_generator_diagonally_expands_the_mapping():
-    # the generators + adds a free generator over a new prime (+r, +d; nullity held): the
-    # mapping gains a 0 column (the new prime, unmapped by the old generators) and a
-    # [0…0 1] row (the new generator mapping the new prime 1:1) — "diagonally expand M".
-    state = service.add_generator(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # meantone, d=3 r=2 n=1
-    assert state.mapping == ((1, 1, 0, 0), (0, 1, 4, 0), (0, 0, 0, 1))
-    assert (state.d, state.r, state.n) == (4, 3, 1)  # rank AND dimensionality up, nullity held
-
-
-def test_remove_generator_is_the_inverse_of_add():
-    # the generators − drops the last generator and the last prime (−r, −d; nullity held),
-    # undoing add_generator: a +/− round-trip returns the original temperament.
-    meantone = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    state = service.remove_generator(service.add_generator(meantone))
-    assert state.mapping == ((1, 1, 0), (0, 1, 4))
-    assert (state.d, state.r, state.n) == (3, 2, 1)
-
-
 def test_remove_mapping_row_drops_a_generator_holding_dimensionality():
     # the mapping-row − drops a generator (any row), keeping the primes and tempering one
     # more comma: −r, +n, dimensionality held — the dual of the generators − (which drops a prime).

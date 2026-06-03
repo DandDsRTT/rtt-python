@@ -225,18 +225,6 @@ class Editor:
         return self.can_expand and self.state.d > 1
 
     @property
-    def can_add_generator(self) -> bool:
-        """Whether the generators + applies: it adds a free generator over the next
-        standard prime, so (like the domain +) it is inert on a nonstandard subgroup."""
-        return service.is_standard_domain(self.state.domain_basis)
-
-    @property
-    def can_remove_generator(self) -> bool:
-        """Whether the generators − is live: a standard domain with a generator to spare
-        (never down to rank 0, the inverse guard of the sole-prime domain −)."""
-        return self.can_add_generator and self.state.r > 1
-
-    @property
     def can_add_mapping_row(self) -> bool:
         """Whether the mapping + applies: it un-tempers a comma into a new generator, so it
         needs a comma to un-temper (nullity > 0; at full rank there is nothing tempered)."""
@@ -710,20 +698,6 @@ class Editor:
         self._snapshot()
         self._clear_pending()
         self.state = service.shrink_domain(self.state)
-
-    def add_generator(self) -> None:
-        if not self.can_add_generator:
-            return  # the diagonal expansion adds a standard prime; inert on a subgroup
-        self._snapshot()
-        self._clear_pending()  # each draft's length is tied to the old domain
-        self.state = service.add_generator(self.state)
-
-    def remove_generator(self) -> None:
-        if not self.can_remove_generator:
-            return
-        self._snapshot()
-        self._clear_pending()
-        self.state = service.remove_generator(self.state)
 
     def add_mapping_row(self) -> None:
         if not self.can_add_mapping_row:

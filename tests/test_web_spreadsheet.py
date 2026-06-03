@@ -231,9 +231,17 @@ def test_generators_plus_and_minus_ride_the_generators_fan():
 
 
 def test_a_single_generator_temperament_has_no_gen_minus_but_keeps_gen_plus():
-    cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
+    cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}  # r=1, n=2
     assert "gen_minus" not in cells  # nothing to remove at rank 1
-    assert {"gen_plus", "qgen:0"} <= cells  # ...but you can still add a generator
+    assert {"gen_plus", "qgen:0"} <= cells  # ...but n>0, so a generator can still be added (un-tempering a comma)
+
+
+def test_generators_plus_is_gated_on_a_comma_to_un_temper():
+    # the generators + un-tempers a comma (−n, +r, hold d), like the mapping +, so it needs a comma:
+    # present at n>0, gone at full rank where there is nothing left to un-temper.
+    assert "gen_plus" in {c.id for c in _layout().cells}  # meantone, n=1
+    ji = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))  # 5-limit JI, n=0
+    assert "gen_plus" not in {c.id for c in spreadsheet.build(ji).cells}
 
 
 def test_target_list_carries_a_per_entry_minus_and_a_plus():
@@ -1371,6 +1379,15 @@ def test_mapping_row_minus_gated_on_rank_and_plus_on_nullity():
     ji = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))).cells}
     assert "map_plus" not in ji  # full rank: nothing tempered to un-temper
     assert {"map_minus:0", "map_minus:1", "map_minus:2"} <= ji  # ...but each generator is removable
+
+
+def test_full_rank_temperament_shows_an_empty_commas_column():
+    # a full-rank (n=0) temperament tempers nothing out — the commas column shows no comma at
+    # all (not the trivial zero comma's "1/1"); the + remains so a comma can be added back.
+    ji = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))  # 5-limit JI, n=0
+    cells = {c.id for c in spreadsheet.build(ji).cells}
+    assert not any(c.startswith(("comma:", "cell:comma:")) for c in cells)  # no comma cells
+    assert "comma_plus" in cells  # ...but the + stays, to start one
 
 
 def test_grid_builds_for_an_octave_less_temperament():

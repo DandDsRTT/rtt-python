@@ -1518,14 +1518,14 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.expand))
 
-    def _build_gen_minus(self, cb, wrap):  # remove the last generator (−r, −d); a hover − on its branch point
+    def _build_gen_minus(self, cb, wrap):  # drop the last generator (+n, −r); the mapping-row − reached from the column
         wrap.classes("rtt-minus-zone")  # clear of the genmap cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.remove_generator))
+            .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
 
-    def _build_gen_plus(self, cb, wrap):  # add a generator (+r, +d); the always-shown + on the bus stub
+    def _build_gen_plus(self, cb, wrap):  # add a generator by un-tempering a comma (−n, +r); the + on the bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_generator))
+            .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
 
     def _build_map_minus(self, cb, wrap):  # remove generator cb.gen (a mapping row); a hover − on the left bus
         wrap.classes("rtt-minus-zone")  # clear of the generator-ratio spine it drops over
