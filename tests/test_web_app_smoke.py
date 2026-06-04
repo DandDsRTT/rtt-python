@@ -27,11 +27,26 @@ def test_app_module_exposes_entry_points():
     assert callable(app.main)
 
 
-def test_main_runs_server_with_reload_enabled(monkeypatch):
+def _capture_main_run(monkeypatch, argv=("app.py",), env=None):
+    """Run main() with ui.run stubbed; return the kwargs it was called with.
+
+    PORT/STORAGE_SECRET are cleared first so a stray hosting var in the ambient
+    environment can't flip the launch mode under us; `env` then sets the vars the
+    test is exercising.
+    """
     captured = {}
-    monkeypatch.setattr(sys, "argv", ["app.py"])
+    for var in ("PORT", "STORAGE_SECRET"):
+        monkeypatch.delenv(var, raising=False)
+    for key, value in (env or {}).items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr(sys, "argv", list(argv))
     monkeypatch.setattr(app.ui, "run", lambda **kwargs: captured.update(kwargs))
     app.main()
+    return captured
+
+
+def test_main_runs_server_with_reload_enabled(monkeypatch):
+    captured = _capture_main_run(monkeypatch)
     # the 8137 default port + hot-reload on + no auto-open-browser contract, in one shot
     assert (captured["reload"], captured["port"], captured["show"]) == (True, 8137, False)
 
@@ -40,12 +55,30 @@ def test_main_sets_browser_tab_title_and_org_favicon(monkeypatch):
     # the browser tab reads "D&D's RTT App" and shows the DandDsRTT GitHub org avatar;
     # NiceGUI takes a remote URL for favicon verbatim, and github.com/<org>.png is the
     # canonical redirect to the org's current icon, so the tab always matches the org.
-    captured = {}
-    monkeypatch.setattr(sys, "argv", ["app.py"])
-    monkeypatch.setattr(app.ui, "run", lambda **kwargs: captured.update(kwargs))
-    app.main()
+    captured = _capture_main_run(monkeypatch)
     assert captured["title"] == "D&D's RTT App"
     assert captured["favicon"] == "https://github.com/DandDsRTT.png"
+
+
+def test_main_production_launch_when_platform_sets_port(monkeypatch):
+    # A hosting platform (Render et al.) assigns the port via $PORT. main() then launches
+    # for production: bind every interface (0.0.0.0) on that port, with the file-watching
+    # reloader OFF — a deployed server has no editing session to watch, and the reloader's
+    # multiprocessing worker would only fight the platform's process management — so no
+    # uvicorn_reload_excludes are wired at all.
+    captured = _capture_main_run(monkeypatch, env={"PORT": "10000"})
+    assert (captured["reload"], captured["port"], captured["show"], captured["host"]) \
+        == (False, 10000, False, "0.0.0.0")
+    assert "uvicorn_reload_excludes" not in captured  # no reloader to exclude paths from
+
+
+def test_main_takes_session_secret_from_env_with_a_local_fallback(monkeypatch):
+    # the cookie-signing secret is overridable from the environment, so the deployed app
+    # signs sessions with a strong platform-generated secret rather than the value baked
+    # into this public repo; unset (local dev), it falls back to the module default.
+    assert _capture_main_run(monkeypatch, env={"STORAGE_SECRET": "from-the-platform"})[
+        "storage_secret"] == "from-the-platform"
+    assert _capture_main_run(monkeypatch)["storage_secret"] == app._STORAGE_SECRET
 
 
 def test_main_passes_crash_safe_reload_excludes(monkeypatch):
@@ -58,10 +91,7 @@ def test_main_passes_crash_safe_reload_excludes(monkeypatch):
     # NotImplementedError for an absolute glob pattern, so an absolute path to a missing
     # dir would crash the server at startup. The worktrees subtree is therefore added
     # exactly when it exists (an existing dir uvicorn turns into an exclude_dir).
-    captured = {}
-    monkeypatch.setattr(sys, "argv", ["app.py"])
-    monkeypatch.setattr(app.ui, "run", lambda **kwargs: captured.update(kwargs))
-    app.main()
+    captured = _capture_main_run(monkeypatch)
     excludes = [e.strip() for e in captured["uvicorn_reload_excludes"].split(",")]
     for default in (".*", ".py[cod]", ".sw.*", "~*"):
         assert default in excludes

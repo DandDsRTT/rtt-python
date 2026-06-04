@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import sys
 from html import escape as _escape
 from pathlib import Path
@@ -2375,11 +2376,31 @@ def _reload_excludes(worktrees: Path) -> str:
 
 
 def main() -> None:
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8137
-    worktrees = Path(__file__).resolve().parents[2] / ".claude" / "worktrees"
-    ui.run(title="D&D's RTT App", favicon="https://github.com/DandDsRTT.png",
-           reload=True, show=False, port=port, storage_secret=_STORAGE_SECRET,
-           uvicorn_reload_excludes=_reload_excludes(worktrees))
+    """Launch the NiceGUI server.
+
+    Bare ``python app.py`` is local dev: port 8137 with hot-reload (the user keeps an
+    instance running there to use the app). A hosting platform — Render — sets ``PORT``,
+    which switches to a production launch: bind every interface on that port, no
+    file-watching reloader, and sign sessions with the secret from the environment.
+    """
+    hosted_port = os.environ.get("PORT")
+    if len(sys.argv) > 1:
+        port = int(sys.argv[1])
+    elif hosted_port:
+        port = int(hosted_port)
+    else:
+        port = 8137
+    run_kwargs = dict(
+        title="D&D's RTT App", favicon="https://github.com/DandDsRTT.png",
+        show=False, port=port,
+        storage_secret=os.environ.get("STORAGE_SECRET", _STORAGE_SECRET),
+    )
+    if hosted_port:
+        run_kwargs.update(host="0.0.0.0", reload=False)
+    else:
+        worktrees = Path(__file__).resolve().parents[2] / ".claude" / "worktrees"
+        run_kwargs.update(reload=True, uvicorn_reload_excludes=_reload_excludes(worktrees))
+    ui.run(**run_kwargs)
 
 
 if __name__ in {"__main__", "__mp_main__"}:
