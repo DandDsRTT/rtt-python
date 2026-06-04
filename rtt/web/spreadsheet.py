@@ -211,13 +211,6 @@ def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool) -> 
     }
 
 
-def _ratio_str(element) -> str:
-    """A domain element as a ``"num/den"`` ratio: a prime ``p`` -> ``"p/1"``, a nonprime
-    element (a Fraction like ``13/5``) -> ``"13/5"`` — the operand its just log₂ is taken over."""
-    fraction = Fraction(element)
-    return f"{fraction.numerator}/{fraction.denominator}"
-
-
 def _log_operand(ratio: str) -> str:
     """The operand of a just interval's log₂, e.g. ``3/1`` -> ``3`` (a bare prime,
     matching the mockup's ``log₂3``) and ``3/2`` -> ``(3/2)`` (parenthesised)."""
@@ -581,15 +574,13 @@ class _GridBuilder:
         # so it is harmless until that box is enabled.
         approach = "prime-based" if self.settings.get("nonstandard_domain") else ""
         self.gens = service.generators(self.state.mapping, self.elements)
-        # a typed explicit target list overrides the TILT/OLD spec; every target consumer below
-        # derives from this one resolved tuple, so the override flows through the whole grid
-        self.targets = target_override if target_override is not None else service.target_interval_set(self.target_spec, self.elements)
+        # the displayed target list: a typed explicit target list overrides the TILT/OLD spec, but
+        # all-interval auto-replaces it with Tₚ = I (the domain basis, every interval's prime-based
+        # proxy). Resolved in the service so the grid and the plain text can't diverge; every target
+        # consumer below derives from this one tuple — including the prime-based "when all-interval"
+        # forms (𝐿, ‖𝐿‖, 𝐿⁻¹, 𝑟, |𝑟|𝑋⁻¹) every target-column row then takes.
+        self.targets = service.displayed_targets(self.state, self.tuning_scheme, self.target_spec, target_override)
         self.all_interval = service.is_all_interval(self.tuning_scheme)  # T auto-becomes Tₚ = I (no ± then)
-        if self.all_interval:
-            # all-interval: the target list T becomes the identity (Tₚ = I) — every interval, by duality,
-            # is represented by the domain's own basis (the primes). Every target-column row then derives
-            # its prime-based "when all-interval" form (𝐿, ‖𝐿‖, 𝐿⁻¹, 𝑟, |𝑟|𝑋⁻¹) from this `targets`.
-            self.targets = tuple(_ratio_str(e) for e in self.elements)
         self.k = len(self.targets)
         # a target being added rides as a pending draft column (blank red cells + a "?" ratio)
         # until its vector is filled in, like the comma / interest / held draft. Suppressed in
@@ -667,7 +658,7 @@ class _GridBuilder:
         # domain elements (each element's complexity, log₂ of it for the default log-prime
         # norm), a list over the comma / target / interest interval sets.
         self.complexities = {
-            "primes": service.interval_complexities(self.state.mapping, self.tuning_scheme, tuple(_ratio_str(e) for e in self.elements),
+            "primes": service.interval_complexities(self.state.mapping, self.tuning_scheme, tuple(service.element_ratio(e) for e in self.elements),
                                                     prescaler_override=self.custom_prescaler),
             "commas": service.interval_complexities(self.state.mapping, self.tuning_scheme, self.comma_ratios,
                                                     prescaler_override=self.custom_prescaler, domain_basis=self.elements),
@@ -1094,7 +1085,7 @@ class _GridBuilder:
         self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown, "targets": self.k_shown,
                    "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r}
         self.group_ratio = {  # the just interval ratio each value group is taken over
-            "primes": lambda i: _ratio_str(self.elements[i]),  # a prime "p/1", or a nonprime element "n/d"
+            "primes": lambda i: service.element_ratio(self.elements[i]),  # a prime "p/1", or a nonprime element "n/d"
             "commas": lambda i: self.comma_ratios[i],
             "targets": lambda i: self.targets[i],
             "interest": lambda i: self.interest_ratios[i],

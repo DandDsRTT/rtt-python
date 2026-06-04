@@ -171,6 +171,13 @@ def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
     return tuple(f"{q.numerator}/{q.denominator}" for q in quotients)
 
 
+def element_ratio(element) -> str:
+    """A domain element as a ``"num/den"`` ratio: a prime ``p`` → ``"p/1"``, a nonprime
+    element (a Fraction like ``13/5``) → ``"13/5"`` — the operand its just log₂ is taken over."""
+    fraction = Fraction(element)
+    return f"{fraction.numerator}/{fraction.denominator}"
+
+
 def default_target_limit(family: str, domain_basis) -> int:
     """The limit a bare TILT/OLD family resolves to for this domain — the number the
     target chooser shows when no manual limit is set (so it never reads as 'auto')."""
@@ -579,6 +586,18 @@ def is_all_interval(scheme) -> bool:
     return targets is not None and targets.strip() in ("{}", "")
 
 
+def displayed_targets(state, scheme=DEFAULT_TUNING_SCHEME, target_spec=DEFAULT_TARGET_SPEC,
+                      target_override=None) -> tuple[str, ...]:
+    """The target interval list as actually displayed, resolved in one place so the grid and the
+    plain text can't diverge: a typed ``target_override``, else the named/``TILT`` set — but an
+    all-interval scheme auto-replaces it with Tₚ = 𝐈, the domain basis itself (every interval, by
+    duality, is its own prime-based proxy), overriding even a typed override."""
+    db = state.domain_basis
+    if is_all_interval(scheme):
+        return tuple(element_ratio(e) for e in db)
+    return target_override if target_override is not None else target_interval_set(target_spec, db)
+
+
 def base_scheme_name(scheme) -> str | None:
     """The bare systematic scheme name — any leading target-set prefix (``"TILT "``, ``"OLD "``,
     ``"9-TILT "``, …) stripped — i.e. the all-interval form the chooser lists. The prefix marks a
@@ -768,7 +787,7 @@ def plain_text_values(
     target list) are threaded into the same tuning/targets the grid builds, so the two views
     can't diverge."""
     db = state.domain_basis
-    targets = target_override if target_override is not None else target_interval_set(target_spec, db)
+    targets = displayed_targets(state, scheme, target_spec, target_override)  # all-interval-aware, like the grid
     commas = comma_ratios(state.comma_basis, db)
     mapped = mapped_intervals(state.mapping, targets, db)
     mapped_comma = mapped_commas(state.mapping, state.comma_basis)

@@ -336,6 +336,18 @@ def test_old_target_interval_set_is_the_odd_limit_diamond():
     assert old != service.target_interval_set("TILT", (2, 3, 5))
 
 
+def test_displayed_targets_resolve_the_one_list_the_grid_and_plain_text_share():
+    # the single seam both views read so they can't diverge: a target-based scheme resolves the
+    # named/TILT set (an override curates it), but an all-interval scheme auto-replaces the list
+    # with Tₚ = 𝐈 — the domain basis itself — overriding even a typed override.
+    st = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # domain 2.3.5
+    assert service.displayed_targets(st, "TILT minimax-S") == service.target_interval_set("TILT", (2, 3, 5))
+    assert service.displayed_targets(st, "TILT minimax-S", target_override=("2/1", "3/2")) == ("2/1", "3/2")
+    # all-interval: the identity (every prime its own proxy), even with a stale override present
+    assert service.displayed_targets(st, "minimax-S") == ("2/1", "3/1", "5/1")
+    assert service.displayed_targets(st, "minimax-S", target_override=("2/1", "3/2")) == ("2/1", "3/1", "5/1")
+
+
 def test_default_target_limit_is_the_number_a_bare_family_resolves_to():
     # 2.3.5: TILT defaults to the 6-TILT, OLD to the 5-OLD (so the chooser shows a
     # real number, not "auto"); both grow with the domain
@@ -746,27 +758,31 @@ def test_plain_text_basis_and_ratio_quantities():
 
 
 def test_plain_text_interval_vectors_are_vector_lists():
-    # the interval-vectors row shows each basis as a list of vectors (close ⟩),
-    # wrapped in an outer [ … ]
-    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
+    # the interval-vectors row shows each basis as a list of vectors (close ⟩), wrapped in an
+    # outer [ … ]. A target-based scheme so the targets are the curated TILT set, not Tₚ = 𝐈
+    # (the bare default scheme is all-interval, which auto-replaces the list with the identity).
+    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]), "TILT minimax-S")
     assert pt[("vectors", "targets")].startswith("[[1 0 0⟩ [0 1 0⟩ [-1 1 0⟩")  # target vectors
     assert ("vectors", "primes") not in pt  # the domain-basis identity is deferred to identity_objects
 
 
 def test_plain_text_mapped_list_is_a_list_of_generator_coord_vectors():
-    # each target mapped into generator coords becomes one [ … } vector (the } marks
-    # generator coordinates), the whole set wrapped in an outer [ … ]
-    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]))
+    # each target mapped into generator coords becomes one [ … } vector (the } marks generator
+    # coordinates), the whole set wrapped in an outer [ … ]. A target-based scheme so the targets
+    # are the TILT set (the bare default is all-interval, which collapses the list to Tₚ = 𝐈).
+    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]), "TILT minimax-S")
     assert pt[("mapping", "targets")] == (
         "[[1 0} [1 1} [0 1} [1 -1} [-1 4} [-1 3} [-2 4} [2 -3}]"
     )
 
 
 def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision():
+    # a target-based scheme throughout (the bare default is all-interval, whose target list is
+    # Tₚ = 𝐈, not the TILT set): the plain text and the comparison tuning/sizes use the same scheme.
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])
-    pt = service.plain_text_values(state)
+    pt = service.plain_text_values(state, "TILT minimax-S")
     targets = service.target_interval_set("TILT", service.standard_primes(state.d))
-    tun = service.tuning(state.mapping)
+    tun = service.tuning(state.mapping, "TILT minimax-S")
     sizes = service.interval_sizes(tun, targets)
 
     def cents(vals):  # the same 3-dp the grid shows, so the two views agree
@@ -996,7 +1012,9 @@ def test_parse_prescaler_diagonal_rejects_unparseable_or_non_diagonal_or_wrong_s
 
 def test_plain_text_targets_honor_an_override():
     st = service.from_mapping([[1, 1, 0], [0, 1, 4]])
-    pt = service.plain_text_values(st, target_override=("2/1", "3/2"))
+    # a target-based scheme: an override curates the target list, which only applies when the
+    # scheme is target-based (all-interval auto-replaces the list with Tₚ = 𝐈, overriding the override).
+    pt = service.plain_text_values(st, "TILT minimax-S", target_override=("2/1", "3/2"))
     # the target columns reflect exactly the two overridden intervals across the value rows
     assert pt[("vectors", "targets")] == "[[1 0 0⟩ [-1 1 0⟩]"
     assert pt[("tuning", "targets")].count(".") == 2  # two cents values, one per overridden target

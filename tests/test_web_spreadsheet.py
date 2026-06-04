@@ -2274,6 +2274,17 @@ def test_all_interval_mnemonics_underline_the_prime_proxy_p_subscript():
     assert sorted(cap.text[s:s + n] for s, n in cap.underlines) == ["p", "p", "t"]
 
 
+def test_all_interval_target_list_plain_text_tracks_the_grid_identity():
+    # REGRESSION: all-interval replaces the target list with Tₚ = 𝐈, and the grid shows the
+    # identity — but the plain text re-resolved the named target set on its own and stayed stale
+    # (byte-identical to the target-based list). Both views resolve the displayed targets through
+    # one seam now, so the ptext is the identity ket-list: one unit vector per domain prime.
+    allint = {c.id: c for c in _with(scheme="minimax-S", plain_text_values=True).cells}
+    based = {c.id: c for c in _with(scheme="TILT minimax-S", plain_text_values=True).cells}
+    assert allint["ptext:vectors:targets"].text == "[[1 0 0⟩ [0 1 0⟩ [0 0 1⟩]"
+    assert allint["ptext:vectors:targets"].text != based["ptext:vectors:targets"].text
+
+
 def test_all_interval_relabels_the_complexity_weight_and_damage_equivalences():
     # all-interval (Tₚ = I) gives the kept target tiles closed forms in the prescaler diagonal:
     # the complexity list IS diag(𝐿) (each target proxies a prime, so its complexity is that
