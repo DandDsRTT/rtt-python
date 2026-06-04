@@ -613,20 +613,19 @@ async def test_tuning_chooser_shows_the_prompt_when_the_generator_tuning_is_over
     assert all(_cell_child(user, cid)._props.get("display-value") == "-" for cid in both)
 
 
-async def test_selecting_a_scheme_clears_a_manual_tuning_override(user: User) -> None:
-    # after hand-editing the generator tuning map (the dropdown shows "-"), re-picking the scheme
-    # from the dropdown must re-apply it: the override clears, the tuning snaps back to the
-    # scheme's optimum, and the box shows the scheme name again.
+async def test_picking_a_scheme_leaves_the_frozen_tuning_until_optimize(user: User) -> None:
+    # auto-optimize off: re-picking a scheme from the dropdown does NOT retune — the hand-edited
+    # tuning stays put and the dropdown stays "-" (the displayed tuning still deviates from the
+    # scheme). The user clicks Optimize to apply it (the apply step is covered at the editor level).
     await user.open("/")
     _toggle(user, "presets")
-    optimum = _cell_child(user, "tuning:gen:1").value  # the default (minimax-U) optimum fifth
-    _cell_child(user, "tuning:gen:1").set_value("700.000")  # deviate
+    _cell_child(user, "tuning:gen:1").set_value("700.000")  # deviate -> dropdown shows "-"
     await user.should_see(marker="preset:tuning")
     assert _cell_child(user, "preset:tuning")._props.get("display-value") == "-"
-    _cell_child(user, "preset:tuning").set_value("minimax-U")  # re-select the scheme
+    _cell_child(user, "preset:tuning").set_value("minimax-U")  # re-pick the scheme
     await user.should_see(marker="preset:tuning")
-    assert "display-value" not in _cell_child(user, "preset:tuning")._props  # name shown again
-    assert _cell_child(user, "tuning:gen:1").value == optimum  # tuning snapped back to the optimum
+    assert _cell_child(user, "preset:tuning")._props.get("display-value") == "-"  # still "-": not snapped
+    assert _cell_child(user, "tuning:gen:1").value == "700.000"  # the tuning stayed frozen
 
 
 async def test_prescaler_chooser_shows_the_prompt_when_a_diagonal_is_overridden(user: User) -> None:
@@ -885,23 +884,23 @@ async def test_unheld_held_interval_renders_red_until_reoptimized(user: User) ->
     assert "rtt-alert" not in _wrap_classes(user, "held:0")
 
 
-async def test_adding_a_held_interval_drops_the_scheme_chooser_to_dash(user: User) -> None:
-    # the live bug: adding a held interval re-optimizes the tuning off the bare scheme, so the
-    # established-tuning-scheme chooser must drop to "-" — it kept showing the scheme name because
-    # the deviation check only watched manual generator overrides. Drives the exact user path.
+async def test_a_held_interval_does_not_retune_the_grid_until_optimize(user: User) -> None:
+    # auto-optimize off: adding a held interval does NOT retune — the frozen tuning still realises
+    # the scheme, so the established-tuning-scheme chooser keeps the scheme name (it drops to "-"
+    # only after Optimize re-optimises to hold it, the apply step covered by the editor tests).
     await user.open("/")
     _toggle(user, "presets")             # show the chooser dropdowns
     _toggle(user, "optimization")        # ...and the held-interval column
     assert _cell_child(user, "preset:tuning").value == "minimax-U"  # the default scheme, named
     _click_glyph(user, "held_plus")                  # start a blank held-interval draft
     await user.should_see(marker="cell:held:0:0")
-    _cell_child(user, "cell:held:0:0").set_value("-1")  # make it the fifth 3/2 -> deviates the tuning
+    _cell_child(user, "cell:held:0:0").set_value("-1")  # make it the fifth 3/2
     _cell_child(user, "cell:held:1:0").set_value("1")
     _cell_child(user, "cell:held:2:0").set_value("0")   # every component filled -> the draft commits
     await user.should_see(marker="preset:tuning")
-    sel = _cell_child(user, "preset:tuning")
-    assert sel.value is None                          # the displayed tuning is off the named list...
-    assert sel.props.get("display-value") == "-"      # ...so the chooser shows the "-" prompt
+    assert _cell_child(user, "cell:held:0:0").value == "-1"          # the held interval is committed...
+    assert _cell_child(user, "preset:tuning").value == "minimax-U"   # ...but the tuning didn't retune
+    assert "display-value" not in _cell_child(user, "preset:tuning")._props  # so the chooser is NOT "-"
 
 
 async def test_adding_an_interval_of_interest_commits_when_filled(user: User) -> None:

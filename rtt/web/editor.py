@@ -72,8 +72,9 @@ class _Doc:
 def _initial_doc() -> _Doc:
     """The default document — the state a fresh Editor and :meth:`Editor.reset` start
     from. Cached (and immutable) so the as-shipped baseline is computed once."""
+    state = service.from_mapping(INITIAL_MAPPING)
     return _Doc(
-        state=service.from_mapping(INITIAL_MAPPING),
+        state=state,
         # all-interval is OFF by default: the as-shipped scheme targets the displayed interval
         # list (the default TILT family) at unity weight, so the target-controls "all-interval"
         # checkbox starts unchecked. It stays a named string ("TILT minimax-U") so the chooser
@@ -85,7 +86,12 @@ def _initial_doc() -> _Doc:
         held_vectors=(),
         range_mode="monotone",
         optimize_locked=False,
-        generator_tuning=None,
+        # auto-optimize is OFF by default: the generator tuning starts FROZEN at the as-shipped
+        # scheme's optimum, so the tuning shows correctly at startup but does NOT silently re-
+        # optimize as the temperament/targets change (that auto-recompute is the optimize lock,
+        # off here). A frozen value — not None, which means "auto" — keeps the button unlocked
+        # and the state consistent; the user clicks optimize to retune.
+        generator_tuning=service.tuning(state.mapping, service.DEFAULT_DOCUMENT_SCHEME).generator_map,
         custom_prescaler=None,
         target_override=None,
         settings=tuple(sorted(show_settings.defaults().items())),
@@ -352,8 +358,10 @@ class Editor:
         self.generator_tuning = None if self.optimize_locked else self._optimum_generator_tuning()
 
     def effective_generator_tuning(self) -> tuple[float, ...] | None:
-        """The generator tuning the grid should display: None (recompute the optimum) while
-        the lock is on or nothing has been frozen yet; else the frozen manual tuning."""
+        """The generator tuning the grid should display: None (recompute the optimum every
+        render) while the auto-optimize lock is on; else the frozen tuning — the scheme's optimum
+        by default (auto-optimize is off, so it does not auto-recompute as the temperament/targets
+        change), a hand-edited map, or whatever the last Optimize froze."""
         return None if self.optimize_locked else self.generator_tuning
 
     @property
@@ -466,13 +474,13 @@ class Editor:
     def set_tuning_scheme(self, name: str) -> None:
         """Apply a systematic scheme name from the established-tuning-scheme chooser, preserving
         the current target mode: all-interval when the scheme currently targets every interval,
-        else over the displayed target list (the chooser's T-prefixed entries). Drops any manual
-        generator-tuning override so the grid snaps to the chosen scheme's optimum — re-selecting
-        a scheme after hand-editing the tuning re-applies it. Undoable."""
+        else over the displayed target list (the chooser's T-prefixed entries). With auto-optimize
+        off the generator tuning stays frozen — picking a scheme does NOT retune; the chooser shows
+        "-" until the user clicks Optimize. (With the auto lock on, the grid recomputes anyway.)
+        Undoable."""
         self._snapshot()
         self.tuning_scheme = name if service.is_all_interval(self.tuning_scheme) \
             else f"{self.target_spec} {name}"  # keep it a named string so the chooser can name it
-        self.generator_tuning = None
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
         """Swap the complexity prescaler (the predefined-prescalers preset), which

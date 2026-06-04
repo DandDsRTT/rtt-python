@@ -206,17 +206,20 @@ def test_set_diminuator_replaced_toggles_the_size_factor():
 def test_set_all_interval_toggles_the_scheme_target_set():
     editor = Editor()
     assert service.is_all_interval(editor.tuning_scheme) is False  # all-interval OFF by default
-    assert editor.displayed_tuning_scheme_name == "minimax-U"  # target-based default is unity-weighted
+    # check the scheme's identity by name (base_scheme_name), not displayed_tuning_scheme_name:
+    # with auto-optimize off the frozen tuning goes stale across these toggles, so the chooser's
+    # displayed name drops to "-" — a separate, tuning-coupled concern from the scheme itself
+    assert service.base_scheme_name(editor.tuning_scheme) == "minimax-U"  # target-based default, unity-weighted
     # the unchecked state targets the displayed interval-list family (the editor's live target spec)
     assert service.resolve_tuning_scheme(editor.tuning_scheme).target_intervals == editor.target_spec
     editor.set_all_interval(True)  # the target-controls checkbox: switch to all-interval
     assert service.is_all_interval(editor.tuning_scheme) is True
     # an all-interval scheme is simplicity-weighted by construction, so the toggle forces it
-    assert editor.displayed_tuning_scheme_name == "minimax-S"
+    assert service.base_scheme_name(editor.tuning_scheme) == "minimax-S"
     assert service.weight_slope_of(editor.tuning_scheme) == "simplicity-weight"
     editor.set_all_interval(False)  # back to target-based -> the unity-weighted default
     assert service.is_all_interval(editor.tuning_scheme) is False
-    assert editor.displayed_tuning_scheme_name == "minimax-U"
+    assert service.base_scheme_name(editor.tuning_scheme) == "minimax-U"
     assert service.weight_slope_of(editor.tuning_scheme) == "unity-weight"
     editor.undo()  # the toggle is an undoable edit
     assert service.is_all_interval(editor.tuning_scheme) is True
@@ -228,12 +231,12 @@ def test_set_tuning_scheme_preserves_the_target_mode():
     editor = Editor()
     editor.set_tuning_scheme("minimax-ES")  # target-based by default => over the target list
     assert not service.is_all_interval(editor.tuning_scheme)
-    assert editor.displayed_tuning_scheme_name == "minimax-ES"  # named (chooser shows "T minimax-ES")
+    assert service.base_scheme_name(editor.tuning_scheme) == "minimax-ES"  # chooser shows "T minimax-ES"
     assert service.resolve_tuning_scheme(editor.tuning_scheme).target_intervals == editor.target_spec
     editor.set_all_interval(True)  # switch to all-interval
     editor.set_tuning_scheme("minimax-S")  # now applies all-interval (bare name)
     assert service.is_all_interval(editor.tuning_scheme)
-    assert editor.displayed_tuning_scheme_name == "minimax-S"
+    assert service.base_scheme_name(editor.tuning_scheme) == "minimax-S"
 
 
 def test_set_weight_slope_swaps_the_damage_weight_slope():
@@ -649,14 +652,16 @@ def test_try_edit_comma_basis_text_rejects_bad_input_without_changing_state():
 
 def test_optimize_button_freezes_the_tuning_and_lock_toggles_auto():
     editor = Editor()
-    # default: lock off, nothing frozen yet -> the grid shows the auto optimum (None)
+    # default: auto-optimize OFF -> the tuning is FROZEN at the scheme's optimum (not the auto None)
     assert editor.optimize_locked is False
-    assert editor.effective_generator_tuning() is None
-    # single click optimizes once: the generator tuning freezes at the current optimum
+    optimum = editor.effective_generator_tuning()
+    assert optimum is not None and len(optimum) == editor.state.r
+    # a single click re-freezes at the current optimum: deviate, then optimize snaps back
+    editor.set_generator_tuning_component(1, 700.0)
+    assert editor.effective_generator_tuning() != optimum
     editor.optimize()
-    frozen = editor.effective_generator_tuning()
-    assert frozen is not None and len(frozen) == editor.state.r
-    # double click locks auto-optimize on -> back to the auto optimum (None)
+    assert editor.effective_generator_tuning() == optimum
+    # double click locks auto-optimize on -> the auto optimum (None, recomputed every change)
     editor.toggle_optimize_lock()
     assert editor.optimize_locked is True
     assert editor.effective_generator_tuning() is None
@@ -664,6 +669,19 @@ def test_optimize_button_freezes_the_tuning_and_lock_toggles_auto():
     editor.toggle_optimize_lock()
     assert editor.optimize_locked is False
     assert editor.effective_generator_tuning() is not None
+
+
+def test_auto_optimize_is_off_by_default_so_a_change_does_not_silently_retune():
+    # auto-optimize is OFF by default: the tuning starts FROZEN at the scheme's optimum (shown
+    # correctly) but does NOT silently re-optimize as the temperament/targets change — that is the
+    # auto-optimize lock, which is off. The unlocked optimize button matches this frozen state.
+    editor = Editor()
+    assert editor.optimize_locked is False
+    frozen = editor.effective_generator_tuning()
+    assert frozen is not None                            # frozen, not the auto-recompute None
+    assert frozen == editor._optimum_generator_tuning()  # and it IS the scheme's optimum at the start
+    editor.set_target_override_text("[1 0 0⟩ [-1 1 0⟩")  # change the target list
+    assert editor.effective_generator_tuning() == frozen  # unchanged: no auto-retune (lock off)
 
 
 def test_set_generator_tuning_text_freezes_a_typed_genmap():
@@ -740,43 +758,51 @@ def test_displayed_tuning_scheme_name_keeps_the_name_when_the_tuning_still_match
 
 
 def test_displayed_tuning_scheme_name_drops_to_none_when_a_held_interval_deviates_the_tuning():
-    # adding a held interval re-optimizes the tuning to hold it just; when that pulls the tuning
-    # off the BARE scheme's optimum, the displayed tuning no longer realises the established scheme,
-    # so the chooser must show "-". Regression: the deviation check only watched a manual generator
-    # override against the held-AWARE optimum, so a held-interval-induced deviation slipped through
-    # and the name wrongly stuck.
+    # holding an interval re-optimizes (on Optimize — auto-optimize is off) to hold it just; when
+    # that pulls the tuning off the BARE scheme's optimum, the displayed tuning no longer realises
+    # the established scheme, so the chooser must show "-". Regression: the deviation check only
+    # watched a manual generator override against the held-AWARE optimum, so a held-interval-induced
+    # deviation slipped through and the name wrongly stuck.
     editor = Editor()
     assert editor.displayed_tuning_scheme_name == "minimax-U"
-    editor.set_held_vectors([(-1, 1, 0)])  # hold 3/2 -> pulls the tuning off bare minimax-U
+    editor.set_held_vectors([(-1, 1, 0)])  # hold 3/2
+    editor.optimize()  # apply it (auto-optimize off) -> pulls the tuning off bare minimax-U
     assert editor.displayed_tuning_scheme_name is None
     # a held interval the bare scheme ALREADY satisfies (the octave, tuned pure by minimax-U) is
     # not a deviation — the optimum is unchanged — so the name stays
     octave = Editor()
     octave.set_held_vectors([(1, 0, 0)])
+    octave.optimize()
     assert octave.displayed_tuning_scheme_name == "minimax-U"
 
 
-def test_displayed_tuning_scheme_name_keeps_the_name_with_a_typed_target_list():
+def test_displayed_tuning_scheme_name_tracks_a_typed_target_list_after_optimize():
     # a typed explicit target list changes WHICH intervals the scheme optimises over, but it is
-    # still the same named scheme (the target set is a separate control from the tuning scheme),
-    # so the chooser keeps the name — not "-". The bare-scheme comparison must therefore optimise
-    # over the SAME typed target list as the displayed tuning, else a typed list reads as a false
-    # deviation.
+    # still the same named scheme (the target set is a separate control from the tuning scheme).
+    # With auto-optimize off the frozen tuning first deviates (chooser shows "-"); after Optimize the
+    # tuning IS the optimum over the typed list, so the name returns — which requires the bare-scheme
+    # comparison to optimise over the SAME typed list, else the typed list reads as a false deviation.
     editor = Editor()
     editor.set_target_override_vectors([(-1, 1, 0), (-2, 0, 1)])  # type 3/2, 5/4 as the target list
     assert editor.target_override == ("3/2", "5/4")
-    assert editor.displayed_tuning_scheme_name == "minimax-U"
+    assert editor.displayed_tuning_scheme_name is None  # the frozen tuning deviates -> "-"
+    editor.optimize()  # re-optimise over the typed list
+    assert editor.displayed_tuning_scheme_name == "minimax-U"  # name returns (compared over the typed list)
 
 
-def test_set_tuning_scheme_clears_a_manual_generator_tuning_override():
-    # picking a scheme from the chooser means "tune to this scheme": any manual generator-tuning
-    # override (a hand-edited generator tuning map) is dropped, snapping back to the scheme's
-    # optimum — so re-selecting the scheme after deviating actually re-applies it.
+def test_picking_a_scheme_leaves_the_tuning_frozen_until_optimize():
+    # auto-optimize off: picking a scheme from the chooser does NOT retune. A hand-edited (or any
+    # frozen) tuning stays put, so the chooser shows "-" until the user clicks Optimize, which then
+    # applies the chosen scheme's optimum. (Re-selecting a scheme no longer snaps back on its own.)
     editor = Editor()
     editor.set_generator_tuning_component(1, 700.0)  # deviate from the optimum
-    assert editor.displayed_tuning_scheme_name is None
-    editor.set_tuning_scheme("minimax-S")  # re-apply the scheme from the chooser
-    assert editor.effective_generator_tuning() is None  # override cleared -> the scheme's optimum
+    deviated = editor.effective_generator_tuning()
+    assert editor.displayed_tuning_scheme_name is None  # the chooser shows "-"
+    editor.set_tuning_scheme("minimax-S")  # pick a scheme -> does NOT snap the tuning
+    assert editor.effective_generator_tuning() == deviated  # the tuning stays frozen
+    assert editor.displayed_tuning_scheme_name is None      # still "-" (deviates from the scheme)
+    editor.optimize()  # the explicit step that applies the chosen scheme
+    assert editor.effective_generator_tuning() == editor._optimum_generator_tuning()
     assert editor.displayed_tuning_scheme_name == "minimax-S"
 
 
@@ -800,8 +826,9 @@ def test_tuning_is_optimized_holds_under_the_auto_lock_and_held_intervals():
     held = Editor()
     held.add_held()
     held.set_held_vectors([(-1, 1, 0)])  # hold 3/2
+    held.optimize()  # apply it (auto-optimize off) -> the held-constrained optimum
     assert held.displayed_tuning_scheme_name is None  # the name leaves the bare scheme...
-    assert held.tuning_is_optimized is True            # ...but the displayed tuning is its optimum
+    assert held.tuning_is_optimized is True            # ...but the displayed tuning is its (held) optimum
     held.set_generator_tuning_component(1, 700.0)      # hand-edit off the held optimum
     assert held.tuning_is_optimized is False
 
