@@ -1267,14 +1267,11 @@ class _Reconciler:
 
     def _update_powerinput(self, cb):
         # mirror the raw value into the input (shown when focused) and re-sync the overlay face
-        # (shown otherwise): ∞ stacks a small "(max)" below it, a numeric power shows bare
+        # (shown otherwise): ∞ stacks a small "(max)" below it, a numeric power shows bare. (All-
+        # interval locks 𝑝 to ∞ as a read-only tval — a different kind — so this only ever runs for
+        # the live editable power and the box-𝒄 norm-power 𝑞 / dual(𝑞) fields.)
         self.inputs[cb.id].value = cb.text
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
-        # all-interval locks the optimization power at ∞ (cb.disabled): disable the field AND grey
-        # its overlay face (rtt-locked) so the lock reads — the opaque face would otherwise hide the
-        # disabled input. The 𝑞 / dual(𝑞) powerinputs carry disabled=False, so they stay live.
-        self.inputs[cb.id].set_enabled(not cb.disabled)
-        self.els[cb.id].classes(add="rtt-locked" if cb.disabled else "", remove="" if cb.disabled else "rtt-locked")
 
     def _build_gentuningcell(self, cb, wrap):
         wrap.classes("rtt-cell-input rtt-cell-stacked")

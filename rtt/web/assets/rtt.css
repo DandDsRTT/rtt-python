@@ -295,6 +295,13 @@
 .rtt-preset.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
 .rtt-preset.q-field--disabled .q-field__native, .rtt-preset.q-field--disabled .q-icon { color:#999; }
 .rtt-preset.q-field--disabled, .rtt-preset.q-field--disabled * { user-select:none !important; }
+/* the target chooser's numeric-limit square (.rtt-preset-num) is a SECOND field beside the select,
+   so it needs the same locked palette — without these it kept its live white fill + #000 value/"-"
+   placeholder (its enabled rules below force #000) while the select greyed, reading as half-locked. */
+.rtt-preset-num.q-field--disabled .q-field__control { background:#d6d6d6; border-color:#bbb; }
+.rtt-preset-num.q-field--disabled .q-field__native,
+.rtt-preset-num.q-field--disabled .q-field__native::placeholder { color:#999; }
+.rtt-preset-num.q-field--disabled, .rtt-preset-num.q-field--disabled * { user-select:none !important; }
 /* lift Quasar's .6 disabled fade on the locked choosers (the weight-slope/target select AND the
    target's numeric square) so their explicit #999 renders TRUE, not a washed-out #999*.6 -- the
    crisp grey itself is the disabled cue, matching the app's other disabled controls. Layered:
@@ -419,10 +426,6 @@
    whole part over the .fraction; a minimax power stacks ∞ over a small "(max)". */
 .rtt-stacked-main { font-size:10px; }
 .rtt-stacked-sub { font-size:7px; color:#000; }
-/* a locked stacked cell (the all-interval optimization power, fixed at ∞): grey its overlay face
-   to #999 — the disabled-control grey — so the lock reads, since the opaque face sits over the
-   disabled input that would otherwise show the dim. */
-.rtt-locked .rtt-stacked-main, .rtt-locked .rtt-stacked-sub { color:#999; }
 /* an editable cents cell (the generator tuning map 𝒈, the bare prescaler 𝐋 diagonal): a
    single-line input overflows the square with a 3-dp value, so it carries the SAME stacked
    int-over-fraction face as a read-only cents cell, overlaid on top of the input. The face

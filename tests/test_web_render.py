@@ -755,27 +755,25 @@ async def test_minimax_power_stacks_a_max_annotation_below_infinity(user: User) 
     assert (main.text, sub.text) == ("2", "")
 
 
-async def test_all_interval_locks_the_optimization_power_input(user: User) -> None:
-    # all-interval tuning is fixed at minimax over every interval, so the optimization power 𝑝 is
-    # locked: its field shows ∞, goes non-interactive (disabled), and its overlay face greys
-    # (rtt-locked) so the lock reads — the opaque face would otherwise hide the disabled input.
+async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: User) -> None:
+    # all-interval locks the optimization power at ∞ (the solver minimaxes over every interval), so it
+    # renders as a read-only value — a plain tval like the objective beside it, NOT an editable input.
+    # The wrap's rtt-cell-input class marks the editable powerinput; the read-only tval lacks it.
     await user.open("/")
-    user.find(kind=ui.checkbox, content="optimization").click()   # reveal the power input
+    user.find(kind=ui.checkbox, content="optimization").click()   # reveal the power cell
     user.find(marker="toggle:row:vectors").click()                # expand the target-list row
     user.find(kind=ui.checkbox, content="weighting").click()      # reveal the all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()   # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
-    assert _cell_child(user, "optimization:power").enabled        # interactive while target-based
+    assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input while target-based
     _cell_child(user, "control:all_interval").set_value(True)     # check it -> all-interval
     await user.should_see(marker="optimization:power")
-    assert not _cell_child(user, "optimization:power").enabled    # non-interactive (locked)
-    main, sub = _stacked_face(user, "optimization:power")
-    assert (main.text, sub.text) == ("∞", "(max)")               # locked to ∞
-    assert "rtt-locked" in _wrap_classes(user, "optimization:power")  # face greyed
+    assert "rtt-cell-input" not in _wrap_classes(user, "optimization:power")  # read-only value, no input
+    face = _cell_child(user, "optimization:power")                # the .rtt-tval stacked face div
+    assert face.default_slot.children[0].text == "∞"             # locked to ∞
     _cell_child(user, "control:all_interval").set_value(False)    # back to target-based
     await user.should_see(marker="optimization:power")
-    assert _cell_child(user, "optimization:power").enabled        # re-enabled
-    assert "rtt-locked" not in _wrap_classes(user, "optimization:power")
+    assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input again
 
 
 async def test_objective_tooltip_tracks_the_all_interval_mode(user: User) -> None:

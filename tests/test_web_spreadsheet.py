@@ -2176,15 +2176,16 @@ def test_optimization_objective_carries_a_label_caption():
 def test_all_interval_locks_the_optimization_power_to_infinity():
     # all-interval tuning minimaxes over every interval (by duality it optimizes the primes at the
     # dual norm power), so the stored 𝑝 is irrelevant: the optimization-power cell shows ∞ even for a
-    # finite-power scheme, and the cell is flagged disabled (greyed + locked, like the weight chooser).
-    # A target-based scheme shows its actual stored power, interactive.
+    # finite-power scheme AND renders as a read-only value (kind "tval" — the standard non-interactive
+    # gridded-value style, like the objective beside it), not an editable input. A target-based scheme
+    # shows its actual stored power as an editable powerinput.
     finite_ai = service.scheme_with_power("minimax-S", 2.0)  # all-interval, stored power 2
     assert service.is_all_interval(finite_ai) and service.optimization_power(finite_ai) == 2.0
     allint = {c.id: c for c in _with(scheme=finite_ai, optimization=True).cells}
-    assert allint["optimization:power"].text == "∞" and allint["optimization:power"].disabled is True
+    assert allint["optimization:power"].text == "∞" and allint["optimization:power"].kind == "tval"
     finite_based = service.scheme_with_power("TILT minimax-S", 2.0)  # target-based, stored power 2
     based = {c.id: c for c in _with(scheme=finite_based, optimization=True).cells}
-    assert based["optimization:power"].text == "2" and based["optimization:power"].disabled is False
+    assert based["optimization:power"].text == "2" and based["optimization:power"].kind == "powerinput"
 
 
 def test_all_interval_greys_and_locks_the_target_chooser():
@@ -2404,17 +2405,18 @@ def test_all_interval_greys_and_locks_the_weight_slope_chooser():
     assert on["caption:slope"].disabled is True
 
 
-def test_all_interval_greys_the_other_locked_controls_captions():
-    # every all-interval-locked control greys its caption with it (the disabled flag rides the
-    # caption), so the label reads in the same disabled grey as its control, not darker: the
-    # optimization power ("optimization power") and the target chooser ("target interval set scheme").
+def test_all_interval_greys_the_locked_target_chooser_caption_but_not_the_power_value():
+    # the all-interval-locked TARGET chooser (a control) greys its caption with it, so the label reads
+    # in the same disabled grey as the locked value. The optimization power, by contrast, is now a
+    # read-only VALUE (a tval like the objective) — not a greyed control — so its "optimization power"
+    # caption stays the normal value colour in both modes, matching the objective's caption beside it.
     on = {c.id: c for c in _with(scheme="minimax-S", optimization=True, presets=True).cells}
-    assert on["optimization:power:caption"].disabled is True
-    assert on["block:preset:target:label"].disabled is True
-    # a target-based scheme leaves both live (caption not greyed)
+    assert on["block:preset:target:label"].disabled is True   # the locked target chooser's caption greys
+    assert on["optimization:power:caption"].disabled is False  # the power is a value: caption not greyed
+    # a target-based scheme leaves the target chooser live (caption not greyed)
     based = {c.id: c for c in _with(scheme="TILT minimax-S", optimization=True, presets=True).cells}
-    assert based["optimization:power:caption"].disabled is False
     assert based["block:preset:target:label"].disabled is False
+    assert based["optimization:power:caption"].disabled is False
 
 
 def test_box_l_diminuator_needs_weighting_and_the_primes_column():
