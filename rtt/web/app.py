@@ -1304,6 +1304,13 @@ class _Reconciler:
         self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_gentuning_change(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
         self._gentuning_face(cb)  # the clickable signed cents face overlaid on the input
+        # hover-and-scroll fine-adjust: each wheel notch nudges this generator by 1/1000 cent (the
+        # last digit the cents face shows). The listener rides the wrap, not the input, so a scroll
+        # over the overlaid signed face (a sibling of the input) still reaches it by bubbling;
+        # .prevent stops the grid scrolling out from under the cursor.
+        wrap.on("wheel.prevent",
+                lambda e, cid=cb.id: self._cb.on_gentuning_wheel(cid, e.args.get("deltaY")),
+                args=["deltaY"])
 
     def _update_gentuningcell(self, cb):
         text = "" if cb.blank else cb.text  # blank when quantities off
@@ -1896,6 +1903,15 @@ def index() -> None:
         editor.set_generator_tuning_component(int(cid.rsplit(":", 1)[1]), cents)
         render()
 
+    def on_gentuning_wheel(cid, delta_y):
+        # the genmap cell's hover-and-scroll fine-adjust: each wheel notch nudges this generator's
+        # tuning by a thousandth of a cent — scroll up (deltaY < 0) raises it, down lowers it. The
+        # cents face shows 3 dp, so one notch moves the last shown digit by one.
+        if building[0] or not delta_y:
+            return
+        editor.nudge_generator_tuning_component(int(cid.rsplit(":", 1)[1]), 1 if delta_y < 0 else -1)
+        render()
+
     def on_prescaler_change(cid):
         # a bare prescaler 𝐿 diagonal cell (cid "cell:prescaling:primes:i:i"): a valid float
         # overrides that one diagonal entry (which then drives EVERY downstream consumer — the
@@ -2069,6 +2085,7 @@ def index() -> None:
         on_control_select=on_control_select,
         on_form_choose=on_form_choose,
         on_gentuning_change=on_gentuning_change,
+        on_gentuning_wheel=on_gentuning_wheel,
         on_held_change=on_held_change,
         on_interest_change=on_interest_change,
         on_mapping_change=on_mapping_change,

@@ -307,6 +307,20 @@ async def test_editing_a_generator_tuning_cell_applies_an_override(user: User) -
     assert _cell_child(user, "tuning:gen:1").value == "700.000"
 
 
+async def test_scrolling_a_generator_tuning_cell_nudges_it_by_a_thousandth_cent(user: User) -> None:
+    await user.open("/")
+    # hover-and-scroll fine-adjust: a wheel notch over the cell nudges that generator by 1/1000 of
+    # a cent (on_gentuning_wheel -> editor.nudge -> render). The wheel listener rides the cell wrap
+    # (so it also catches scrolls over the overlaid cents face), so trigger it on the marked wrap.
+    before = float(_cell_child(user, "tuning:gen:1").value)
+    user.find(marker="tuning:gen:1").trigger("wheel.prevent", {"deltaY": -100})  # scroll up = raise
+    await user.should_see(marker="tuning:gen:1")
+    assert round(float(_cell_child(user, "tuning:gen:1").value) - before, 3) == 0.001
+    user.find(marker="tuning:gen:1").trigger("wheel.prevent", {"deltaY": 100})  # scroll down = lower
+    await user.should_see(marker="tuning:gen:1")
+    assert round(float(_cell_child(user, "tuning:gen:1").value) - before, 3) == 0.0
+
+
 async def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(user: User) -> None:
     # the generator tuning map shows each generator's sign as an explicit glyph — the "+" of a
     # positive generator (ordinarily assumed) made visible, so it can be clicked to flip. The

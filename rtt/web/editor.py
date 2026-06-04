@@ -27,6 +27,9 @@ INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))  # meantone, matching the original app
 # The rows/columns/tiles folded to strips on a fresh start and after Reset. Empty:
 # nothing starts folded — the default view opens every row and column.
 INITIAL_COLLAPSED: frozenset[str] = frozenset()
+# One mouse-wheel notch over a generator-tuning-map cell nudges that generator by this many
+# cents — a thousandth, the last digit the cell's 3-dp cents face shows (see service.cents).
+_GENERATOR_NUDGE_CENTS = 0.001
 
 
 def _same_cents_map(a, b) -> bool:
@@ -113,6 +116,10 @@ class Editor:
         self.pending_interest: list[int | None] | None = None
         self.pending_held: list[int | None] | None = None
         self.pending_target: list[int | None] | None = None
+        # The generator a wheel nudge is currently fine-tuning, so consecutive notches on it
+        # coalesce into one undo step (see nudge_generator_tuning_component). Transient, like the
+        # drafts: any snapshot or document restore clears it, ending the gesture.
+        self._nudging_generator: int | None = None
         self._restore(_initial_doc())
 
     # --- the document: capture / restore (the unit of undo, reset, persistence) ---
@@ -153,6 +160,7 @@ class Editor:
         self.settings = dict(doc.settings)
         self.collapsed = set(doc.collapsed)
         self._clear_pending()  # a draft never survives a document restore
+        self._nudging_generator = None  # nor does an in-progress wheel gesture (undo/redo/reset/load)
 
     def _clear_pending(self) -> None:
         """Discard every in-progress draft. Called whenever the document or domain shifts
@@ -428,14 +436,17 @@ class Editor:
         self.generator_tuning = gens
         return True
 
-    def _override_generator(self, i: int, transform) -> None:
+    def _override_generator(self, i: int, transform, *, snapshot: bool = True) -> None:
         """Freeze a manual generator tuning with component ``i`` replaced by
         ``transform(current[i])``, seeding the rest from the frozen tuning or, when none is
-        frozen, the current optimum. Turns auto-optimize off, like a typed tuning. Backs both
-        the editable cell (set to a typed value) and the +/− sign flip (negate the value)."""
+        frozen, the current optimum. Turns auto-optimize off, like a typed tuning. Backs the
+        editable cell (set to a typed value), the +/− sign flip (negate the value), and the wheel
+        nudge (step it). ``snapshot=False`` extends the current undo step instead of opening a new
+        one — how a continuous wheel gesture coalesces its notches."""
         base = list(self.effective_generator_tuning() or self._optimum_generator_tuning())
         base[i] = float(transform(base[i]))
-        self._snapshot()
+        if snapshot:
+            self._snapshot()
         self.optimize_locked = False
         self.generator_tuning = tuple(base)
 
@@ -447,6 +458,19 @@ class Editor:
         """Flip one generator's tuning sign (clicking the +/− sign on its generator-tuning-map
         cell): negate just that component, leaving the rest at the frozen tuning / optimum."""
         self._override_generator(i, lambda current: -current)
+
+    def nudge_generator_tuning_component(self, i: int, steps: int) -> None:
+        """Fine-adjust one generator's tuning by ``steps`` thousandths of a cent — the hover-
+        and-scroll-wheel nudge on a generator-tuning-map cell (one notch up = +0.001¢, down =
+        −0.001¢). Rounds to the 3 dp the cell shows (:func:`service.cents`) so each notch moves the
+        displayed thousandths digit by exactly ``steps``. Consecutive notches on the SAME generator
+        share one undo step (one continuous scroll gesture = one undo, so a fine-tune doesn't bury
+        the history); any other action resets the marker via _snapshot, and a notch on a different
+        generator mismatches it — either way the next notch opens a fresh step."""
+        self._override_generator(
+            i, lambda current: round(round(current, 3) + steps * _GENERATOR_NUDGE_CENTS, 3),
+            snapshot=self._nudging_generator != i)
+        self._nudging_generator = i
 
     def try_edit_mapping_text(self, text: str) -> bool:
         """Parse an EBK map string (honouring a domain-basis prefix, so a nonstandard
@@ -769,6 +793,7 @@ class Editor:
     def _snapshot(self) -> None:
         self._undo_stack.append(self._capture())
         self._redo_stack.clear()  # a fresh action invalidates the redo history
+        self._nudging_generator = None  # a new undoable action ends any in-progress wheel gesture
 
     def serialize(self) -> dict:
         """The whole document as a JSON-safe dict, for persisting across a page refresh.

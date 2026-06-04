@@ -728,6 +728,61 @@ def test_flip_generator_tuning_sign_negates_one_generator():
     assert editor.effective_generator_tuning()[1] == optimum[1]
 
 
+def test_nudge_generator_tuning_component_steps_by_a_thousandth_of_a_cent():
+    editor = Editor()
+    optimum = editor._optimum_generator_tuning()
+    shown = round(optimum[1], 3)  # the cell shows this generator's tuning at 3 dp
+    # one scroll-up notch raises this generator by 1/1000 of a cent (and, like a typed edit,
+    # freezes the tuning with auto-optimize off and the rest seeded from the optimum)
+    editor.nudge_generator_tuning_component(1, 1)
+    eff = editor.effective_generator_tuning()
+    assert eff[1] == round(shown + 0.001, 3)
+    assert eff[0] == optimum[0]
+    assert editor.optimize_locked is False
+    assert editor.can_undo is True
+    # one scroll-down notch moves it the other way, back to where it started
+    editor.nudge_generator_tuning_component(1, -1)
+    assert editor.effective_generator_tuning()[1] == shown
+
+
+def test_consecutive_generator_nudges_coalesce_into_one_undo_step():
+    editor = Editor()
+    start = editor.effective_generator_tuning()  # the frozen optimum (auto-optimize off by default)
+    shown = round(start[1], 3)
+    # three notches in one scroll gesture on the same generator is ONE undo step — so a single
+    # undo reverts the whole fine-tune, not three undos for one continuous scroll
+    editor.nudge_generator_tuning_component(1, 1)
+    editor.nudge_generator_tuning_component(1, 1)
+    editor.nudge_generator_tuning_component(1, 1)
+    assert editor.effective_generator_tuning()[1] == round(shown + 0.003, 3)
+    editor.undo()
+    assert editor.effective_generator_tuning() == start  # the whole fine-tune reverted in one undo
+    assert editor.can_undo is False
+
+
+def test_nudging_a_different_generator_starts_a_new_undo_step():
+    editor = Editor()
+    optimum = editor._optimum_generator_tuning()
+    editor.nudge_generator_tuning_component(0, 1)  # gesture A: generator 0
+    editor.nudge_generator_tuning_component(1, 1)  # gesture B: a DIFFERENT generator -> its own step
+    editor.undo()  # reverts only gesture B, leaving gesture A applied
+    eff = editor.effective_generator_tuning()
+    assert eff[0] == round(round(optimum[0], 3) + 0.001, 3)  # A survives
+    assert eff[1] == optimum[1]                               # B undone, back to the seeded optimum
+
+
+def test_an_edit_between_nudges_breaks_the_coalescing():
+    editor = Editor()
+    editor.nudge_generator_tuning_component(1, 1)    # gesture A on generator 1
+    editor.set_generator_tuning_component(0, 700.0)  # a separate typed edit on generator 0
+    a_then_typed = editor.effective_generator_tuning()
+    editor.nudge_generator_tuning_component(1, 1)    # gesture B on generator 1 -> its own undo step
+    # one undo reverts ONLY gesture B — not the typed edit too — proving the edit ended the gesture
+    # (were B still coalescing with A, the undo would jump back past the typed edit instead)
+    editor.undo()
+    assert editor.effective_generator_tuning() == a_then_typed
+
+
 def test_displayed_tuning_scheme_name_drops_to_none_when_the_tuning_deviates():
     # the tuning chooser shows the scheme name only while the displayed tuning realises that
     # scheme; once it deviates the name drops to None (the chooser then shows "-").
