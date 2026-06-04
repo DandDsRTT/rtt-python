@@ -1316,15 +1316,23 @@ class _Reconciler:
     def _build_ratiocell(self, cb, wrap):
         # an editable comma / target / held / interest ratio: an input (the white box + black
         # outline) carrying the same stacked fraction face as the read-only ratios, overlaid so
-        # the cell reads as a fraction until clicked, then swaps to the raw "num/den" for editing
+        # the cell reads as a fraction until clicked, then swaps to the raw "num/den" for editing.
+        # It commits the WHOLE typed fraction on blur / Enter, not per keystroke — parsing "2" of a
+        # "25/24" mid-edit would momentarily retune to 2/1 and fight the typing. A pending draft's
+        # red "?/?" face stays put until a valid fraction fills it (or its vector cells do).
         wrap.classes("rtt-cell-input rtt-cell-stacked")
-        self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_ratio_change(cid)) \
-            .props("dense borderless").classes("rtt-cellinput")
+        commit = lambda _=None, cid=cb.id: self._cb.on_ratio_change(cid)
+        inp = ui.input().props("dense borderless").classes("rtt-cellinput")
+        inp.on("blur", commit)
+        inp.on("keydown.enter", commit)
+        self.inputs[cb.id] = inp
         self._ratio(cb, approx=False, overlay=True)
 
     def _update_ratiocell(self, cb):
-        self.inputs[cb.id].value = cb.text  # the raw fraction shown when focused
-        self._update_ratio(cb)              # the overlaid stacked face mirrors it
+        self.inputs[cb.id].value = "" if cb.pending else cb.text  # a draft starts empty; its face shows "?/?"
+        self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                remove="" if cb.pending else "rtt-pending")  # red draft styling
+        self._update_ratio(cb)              # the overlaid stacked face mirrors the fraction
 
     def _update_ratio(self, cb):  # genratio / commaratio / ratiocell: refresh the stacked fraction face
         # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
@@ -1764,35 +1772,38 @@ def index() -> None:
         render()
 
     def on_ratio_change(cid):
-        # the quantities-row ratio cells (comma / target / held / interest) are editable — the
-        # scalar twin of the interval-vectors row's column edit. Typing a fraction parses to that
-        # column's vector and routes through the SAME setter the vector edit uses, so editing the
-        # ratio and editing the vector are interchangeable. Unparseable input leaves the set as is.
+        # a quantities-row ratio cell committing on blur (comma / target / held / interest) — the
+        # scalar twin of the interval-vectors row's column edit. The typed fraction parses to a
+        # vector and routes through the SAME setter the vector edit uses; a ":pending" draft fills
+        # that column's draft instead (like typing its vector cells). render() always runs: a valid
+        # edit shows the new value, an unparseable / out-of-domain one snaps the field back.
         if building[0] or cid not in rec.inputs:
             return
         group, idx = cid.split(":")
-        idx = int(idx)
         vector = service.interval_vector(
             rec.inputs[cid].value, editor.state.d, editor.state.domain_basis)
-        if vector is None:
-            return
 
-        def replace(current, setter):  # swap the edited column into the current set, then store it
+        def replace(current, setter):  # swap the edited column in, skipping a no-op blur (no undo step)
             vectors = [list(v) for v in current]
-            vectors[idx] = vector
-            setter(vectors)
+            if vectors[int(idx)] != list(vector):
+                vectors[int(idx)] = vector
+                setter(vectors)
 
-        if group == "comma":
-            replace(editor.state.comma_basis, editor.edit_comma_basis)
-        elif group == "interest":
-            replace(editor.interest_vectors, editor.set_interest_vectors)
-        elif group == "held":
-            replace(editor.held_vectors, editor.set_held_vectors)
-        else:  # target
-            targets = editor.target_override or service.target_interval_set(
-                editor.target_spec, editor.state.domain_basis)
-            replace(service.target_interval_vectors(targets, editor.state.d, editor.state.domain_basis),
-                    editor.set_target_override_vectors)
+        if vector is not None:
+            if idx == "pending":  # fill the draft column, committing it like its vector cells do
+                {"comma": editor.set_pending_comma, "interest": editor.set_pending_interest,
+                 "held": editor.set_pending_held, "target": editor.set_pending_target}[group](vector)
+            elif group == "comma":
+                replace(editor.state.comma_basis, editor.edit_comma_basis)
+            elif group == "interest":
+                replace(editor.interest_vectors, editor.set_interest_vectors)
+            elif group == "held":
+                replace(editor.held_vectors, editor.set_held_vectors)
+            else:  # target
+                targets = editor.target_override or service.target_interval_set(
+                    editor.target_spec, editor.state.domain_basis)
+                replace(service.target_interval_vectors(targets, editor.state.d, editor.state.domain_basis),
+                        editor.set_target_override_vectors)
         render()
 
     def on_power_change(cid):

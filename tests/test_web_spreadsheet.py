@@ -265,6 +265,18 @@ def test_generators_plus_is_gated_on_a_comma_to_un_temper():
     assert "gen_plus" not in {c.id for c in spreadsheet.build(ji).cells}
 
 
+def test_minus_hover_zone_clears_the_editable_quantities_cell():
+    # the − hover zone used to drop over the whole quantities header as a fat hover target. Now
+    # that the header is an editable ratiocell, the zone must stop ABOVE it (at the cell's top
+    # edge) so clicks reach the input rather than the invisible z-index-4 zone swallowing them.
+    cells = {c.id: c for c in _layout().cells}
+    k = len([c for c in cells if c.startswith("target:") and c.split(":")[1].isdigit()])
+    assert k >= 2
+    for j in range(k):
+        zone, cell = cells[f"target_minus:{j}"], cells[f"target:{j}"]
+        assert zone.y + zone.h <= cell.y + 0.51  # the zone ends at (not past) the cell's top edge
+
+
 def test_target_list_carries_a_per_entry_minus_and_a_plus():
     # the target interval list gets the same ± as the intervals of interest: a − over each
     # target (any one removable) and a + on the column stub to add one.
@@ -2679,8 +2691,8 @@ def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 1 real comma, mapping r=2
     cells = {c.id: c for c in spreadsheet.build(base, pending_comma=[None, None, None]).cells}
     assert cells["comma:0"].text == "80/81"  # the real comma stays
-    # a draft column rides to its right: a "?" quantity and blank, red-flagged vector cells
-    assert cells["comma:pending"].text == "?" and cells["comma:pending"].pending
+    # a draft column rides to its right: an editable "?/?" ratio and blank, red-flagged vector cells
+    assert cells["comma:pending"].text == "?/?" and cells["comma:pending"].pending
     assert cells["comma:pending"].x > cells["comma:0"].x
     assert cells["cell:comma:0:1"].text == "" and cells["cell:comma:0:1"].pending
     # the mapping is untouched (the draft is not yet a real comma): still 2 rows, no 3rd
@@ -3177,11 +3189,11 @@ def test_empty_but_open_interest_still_offers_the_add_control():
 
 
 def test_adding_an_interval_of_interest_opens_a_blank_red_draft_column():
-    # mirrors the pending comma: + opens a blank, red-outlined draft column (a "?" ratio
-    # header over empty vector cells) the user fills in — not a pre-filled 1/1
+    # mirrors the pending comma: + opens a blank, red-outlined draft column (an editable "?/?"
+    # ratio header over empty vector cells) the user fills in — not a pre-filled 1/1
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     cells = {c.id: c for c in spreadsheet.build(base, interest=(), pending_interest=[None, None, None]).cells}
-    assert cells["interest:pending"].text == "?" and cells["interest:pending"].pending
+    assert cells["interest:pending"].text == "?/?" and cells["interest:pending"].pending
     assert all(cells[f"cell:interest:{p}:0"].text == "" and cells[f"cell:interest:{p}:0"].pending
                for p in range(3))
     # the draft has no size cells (undefined until valid), like the comma draft
@@ -3222,7 +3234,7 @@ def _with_held(held_vectors, pending_held=None):
 def test_adding_a_held_interval_opens_a_blank_red_draft_column():
     # the held intervals column gets the same pending-draft behaviour as the commas/interest
     cells = {c.id: c for c in _with_held((), pending_held=[None, None, None]).cells}
-    assert cells["held:pending"].text == "?" and cells["held:pending"].pending
+    assert cells["held:pending"].text == "?/?" and cells["held:pending"].pending
     assert all(cells[f"cell:held:{p}:0"].text == "" and cells[f"cell:held:{p}:0"].pending
                for p in range(3))
     assert "tuning:held:0" not in cells  # no size cells until valid
@@ -3258,7 +3270,7 @@ def test_adding_a_target_opens_a_blank_red_draft_column():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     k = _target_count()
     cells = {c.id: c for c in spreadsheet.build(base, pending_target=[None, None, None]).cells}
-    assert cells["target:pending"].text == "?" and cells["target:pending"].pending
+    assert cells["target:pending"].text == "?/?" and cells["target:pending"].pending
     # the draft rides at index k (right of the committed targets), blank and red
     assert all(cells[f"cell:vec:targets:{k}:{p}"].text == "" and cells[f"cell:vec:targets:{k}:{p}"].pending
                for p in range(3))

@@ -211,6 +211,13 @@ def _click_glyph(user: User, cell_id: str) -> None:
     UserInteraction(user, {_cell_child(user, cell_id)}, None).click()
 
 
+def _commit(user: User, cell_id: str) -> None:
+    """Fire a ratiocell input's blur handler. The editable quantities-row ratios commit the whole
+    typed fraction on blur / Enter (not per keystroke — parsing "2" of "25/24" would momentarily
+    retune to 2/1), so a test sets the value then commits it here."""
+    UserInteraction(user, {_cell_child(user, cell_id)}, None).trigger("blur")
+
+
 def _cell_text(user: User, cell_id: str) -> str:
     return getattr(_cell_child(user, cell_id), "text", "")
 
@@ -316,43 +323,45 @@ async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
 
 async def test_editing_a_comma_ratio_updates_the_basis(user: User) -> None:
     # the quantities-row comma ratio is editable — the scalar twin of the comma vector below it.
-    # Typing a new fraction re-parses to that comma's vector, so the interval-vectors cells follow.
+    # Committing a new fraction (on blur) re-parses to that comma's vector, so the cells follow.
     await user.open("/")
     user.find(marker="toggle:col:commas").click()   # the commas column is folded to a strip by default
     user.find(marker="toggle:row:vectors").click()  # expand the interval-vectors row to see the vector
     assert _cell_child(user, "comma:0").value == "80/81"  # 5-limit meantone's syntonic comma
     _cell_child(user, "comma:0").set_value("25/24")        # the chromatic semitone = (-3 -1 2)
+    _commit(user, "comma:0")                               # blur commits the whole fraction
     await user.should_see(marker="cell:comma:0:0")
     assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["-3", "-1", "2"]
     assert _cell_child(user, "comma:0").value == "25/24"   # and the ratio cell reflects the edit
 
 
-async def test_editing_a_comma_ratio_rejects_an_out_of_domain_fraction(user: User) -> None:
-    # a fraction carrying a prime outside the 2.3.5 domain (7) can't be a comma vector there, so
-    # the edit is ignored and the comma stays put — the parse guard, not a ragged/truncated vector.
-    # Like every other cell handler, an unparseable entry just doesn't drive a render (the typed
-    # text lingers in the box until the next one); the contract is that the comma is unchanged.
+async def test_an_invalid_comma_ratio_reverts_the_field(user: User) -> None:
+    # a fraction carrying a prime outside the 2.3.5 domain (7) can't be a comma vector there, so the
+    # edit is rejected. The field snaps BACK to the current ratio on blur (the feedback a silent
+    # no-op lacked), and the basis stays at the syntonic comma (4 -4 1).
     await user.open("/")
     user.find(marker="toggle:col:commas").click()    # unfold the commas column
     user.find(marker="toggle:row:vectors").click()   # ...and the interval-vectors row
-    _cell_child(user, "comma:0").set_value("7/4")
+    _cell_child(user, "comma:0").set_value("82/81")  # 82 = 2·41, and 41 is outside the domain
+    _commit(user, "comma:0")
     await user.should_see(marker="cell:comma:0:0")
-    # the basis stays at the syntonic comma (4 -4 1) — a valid edit would have re-rendered these
+    assert _cell_child(user, "comma:0").value == "80/81"  # reverted, not left showing the bad 82/81
     assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["4", "-4", "1"]
 
 
 async def test_editing_a_target_ratio_overrides_the_set(user: User) -> None:
-    # the quantities-row target ratio is editable: typing a fraction overrides the target set, like
-    # editing the target vector. The typed value survives the render only if the override applied.
+    # the quantities-row target ratio is editable: committing a fraction overrides the target set,
+    # like editing the target vector. The typed value survives the render only if the override held.
     await user.open("/")
     assert _cell_child(user, "target:0").value == "2/1"
     _cell_child(user, "target:0").set_value("5/4")
+    _commit(user, "target:0")
     await user.should_see(marker="target:0")
     assert _cell_child(user, "target:0").value == "5/4"
 
 
 async def test_editing_a_held_ratio_updates_the_interval(user: User) -> None:
-    # the held interval's ratio is editable too: typing a fraction re-parses to its held vector.
+    # the held interval's ratio is editable too: committing a fraction re-parses to its held vector.
     # First commit a held interval via the draft flow (fill its vector cells), then edit the ratio.
     await user.open("/")
     _toggle(user, "optimization")                    # show the optimization box's held column
@@ -363,6 +372,7 @@ async def test_editing_a_held_ratio_updates_the_interval(user: User) -> None:
     _cell_child(user, "cell:held:2:0").set_value("0")
     await user.should_see(marker="held:0")
     _cell_child(user, "held:0").set_value("5/4")      # edit the committed ratio to 5/4 = (-2 0 1)
+    _commit(user, "held:0")
     await user.should_see(marker="cell:held:0:0")
     assert [_cell_child(user, f"cell:held:{p}:0").value for p in range(3)] == ["-2", "0", "1"]
 
@@ -379,8 +389,26 @@ async def test_editing_an_interest_ratio_updates_the_interval(user: User) -> Non
     _cell_child(user, "cell:interest:2:0").set_value("-1")
     await user.should_see(marker="interest:0")
     _cell_child(user, "interest:0").set_value("5/4")  # edit the committed ratio to 5/4 = (-2 0 1)
+    _commit(user, "interest:0")
     await user.should_see(marker="cell:interest:0:0")
     assert [_cell_child(user, f"cell:interest:{p}:0").value for p in range(3)] == ["-2", "0", "1"]
+
+
+async def test_typing_a_ratio_into_a_pending_draft_fills_it(user: User) -> None:
+    # Bug 3: a new interval's pending "?/?" cell is itself an editable ratiocell — typing a fraction
+    # into it fills (and commits) the draft, just like filling its vector cells does. Drive the
+    # held column: add a draft, then commit a fraction into its "?/?" head.
+    await user.open("/")
+    _toggle(user, "optimization")                    # show the held column
+    user.find(marker="toggle:row:vectors").click()   # expand the interval-vectors row
+    _click_glyph(user, "held_plus")                  # start a blank draft -> the "?/?" head appears
+    await user.should_see(marker="held:pending")
+    assert "rtt-pending" in _wrap_classes(user, "held:pending")  # the draft head reads red
+    _cell_child(user, "held:pending").set_value("3/2")  # type the fraction into the draft head
+    _commit(user, "held:pending")                       # blur commits it = (-1 1 0)
+    await user.should_see(marker="held:0")
+    assert _cell_child(user, "held:0").value == "3/2"   # the draft committed to a real held interval
+    assert [_cell_child(user, f"cell:held:{p}:0").value for p in range(3)] == ["-1", "1", "0"]
 
 
 async def test_editable_ratio_cell_renders_a_stacked_fraction_face(user: User) -> None:

@@ -1703,11 +1703,11 @@ class _GridBuilder:
 
             def branch_minus(cid, ckey, i, kind, **kw):
                 # a hover − centred on column ckey's i-th branch point (its top-bus split): the
-                # zone drops from the branch point (where the revealed button parks) down over the
-                # element's header as the hover target, COL_W wide on the sub-axis — clear of the
-                # editable cells below the header (which a covering zone would block).
+                # zone occupies the fan-out gap ABOVE the header (where the revealed button parks),
+                # COL_W wide on the sub-axis. It stops AT the header's top edge — the header ratio
+                # is an editable input, and a covering z-index-4 zone would swallow clicks into it.
                 self.cells.append(CellBox(cid, self.sub_axis_x(ckey, i) - COL_W / 2, self.fanout_y, COL_W,
-                                     (qy + ROW_H) - self.fanout_y, kind, **kw))
+                                     qy - self.fanout_y, kind, **kw))
 
             def branch_plus(cid, ckey, kind):
                 # the always-shown + centred on the column's stub, one slot past the last branch
@@ -1734,9 +1734,9 @@ class _GridBuilder:
                     # the comma ratio is editable — a ratiocell, the scalar twin of the editable
                     # comma vector below it: typing a fraction re-parses to that comma's vector
                     self.cells.append(CellBox(f"comma:{c}", self.comma_left(c), qy, COL_W, ROW_H, "ratiocell", text=self.comma_ratios[c], comma=c))
-                if self.pending is not None:  # the draft has no ratio yet — a "?" in a distinct id so
-                    # it is removed (not restructured from "?" label to fraction) when it commits
-                    self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "commaratio", text="?", comma=self.nc, pending=True))
+                if self.pending is not None:  # the draft's editable "?/?" ratio: type a fraction to fill it
+                    # (or its vector cells). A distinct id so it's removed, not restructured, on commit.
+                    self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
                 # commas mirror the domain controls: + starts a (pending) comma; the − rides the
                 # last column's branch point — cancelling the draft, or dropping a real comma when >1
                 if self.pending is not None or self.nc > 1:
@@ -1752,8 +1752,8 @@ class _GridBuilder:
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
                     if not self.all_interval:
                         branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
-                if self.pending_target is not None:  # the draft column: a "?" ratio, blank red cells below, − to cancel
-                    self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "commaratio", text="?", comma=self.k, pending=True))
+                if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
+                    self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
                     branch_minus("target_minus:pending", "targets", self.k, "target_minus")
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
                 for i in range(self.nh):
@@ -1761,8 +1761,8 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"held:{i}", self.held_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
                     # each held interval carries its own − on its branch point (any one is removable)
                     branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
-                if self.pending_held is not None:  # the draft column: a "?" ratio, blank red cells below, − to cancel
-                    self.cells.append(CellBox("held:pending", self.held_left(self.nh), qy, COL_W, ROW_H, "commaratio", text="?", comma=self.nh, pending=True))
+                if self.pending_held is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
+                    self.cells.append(CellBox("held:pending", self.held_left(self.nh), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nh, pending=True))
                     branch_minus("held_minus:pending", "held", self.nh, "held_minus")
             if self.tile_open("quantities", "interest"):  # the user's other intervals of interest
                 for i in range(self.mi):
@@ -1771,9 +1771,9 @@ class _GridBuilder:
                     # every interval carries its own − on its branch point: any one is removable,
                     # unlike the domain/comma last-only −
                     branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
-                if self.pending_interest is not None:  # the draft column: a "?" ratio (no value yet),
+                if self.pending_interest is not None:  # the draft column: an editable "?/?" ratio,
                     # blank red vector cells below, and a − on its branch point to cancel the draft
-                    self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "commaratio", text="?", comma=self.mi, pending=True))
+                    self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.mi, pending=True))
                     branch_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
             # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
             # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
