@@ -30,19 +30,36 @@ def test_rows_columns_and_cells_are_present():
     assert {"minus", "plus"} <= ids  # domain controls
 
 
-def test_freeze_boundaries_sit_at_the_title_band_edges():
-    # the layout publishes where the frozen title bands end: freeze_y is the bottom
-    # of the column-title + column-toggle band, freeze_x the right of the row-title +
-    # row-toggle band. The renderer pins everything within those bands and scrolls the
-    # rest under them, so these must land exactly on the band edges.
+def test_freeze_seam_sits_at_the_first_value_tile():
+    # the frozen bands now reach PAST the column/row branching — the trunks, the fan-out
+    # buses and their ± controls ride the frozen header with the titles. The seam lands on
+    # the topmost / leftmost grey value tile's panel edge (the tile overhangs its cells by
+    # PAD), so everything above/left of it is frozen and the value tiles scroll beneath.
     lay = _layout()
-    # land on the ACTUAL band edges (the extent of the title/toggle cells), not a re-derived
+    # land on the ACTUAL tile edge (the extent of the grey panels), not a re-derived
     # production formula that would mirror any bug in it
-    assert lay.freeze_y == max(c.y + c.h for c in lay.cells if c.kind in {"colheader", "coltoggle"})
-    assert lay.freeze_x == max(c.x + c.w for c in lay.cells if c.kind in {"rowlabel", "rowtoggle"})
-    # and every content cell clears both bands, so the bands precede the scrolling content
-    titles = {"colheader", "coltoggle", "rowlabel", "rowtoggle", "alltoggle"}
-    assert all(c.y >= lay.freeze_y and c.x >= lay.freeze_x for c in lay.cells if c.kind not in titles)
+    tiles = [bl for bl in lay.blocks if bl.tint == "" and not bl.boxed]  # the grey value tiles
+    assert lay.freeze_y == min(bl.y for bl in tiles)   # the first row's panel top
+    assert lay.freeze_x == min(bl.x for bl in tiles)   # the first column's panel left
+    # the branching rises into the bands: a column trunk starts above the seam, a matrix
+    # row's trunk starts left of it
+    by_id = {ln.id: ln for ln in lay.lines}
+    assert by_id["trunk:primes"].start < lay.freeze_y   # the primes column trunk, above the seam
+    assert by_id["trunk:mapping"].start < lay.freeze_x  # the mapping row trunk, left of the seam
+
+
+def test_branch_controls_ride_the_frozen_bands():
+    # the always-shown + sits wholly inside the frozen band, cleared from the seam by the
+    # button's own height — pinning the band-to-tile gap so a future constant change can't
+    # nudge the control under the seam where its bottom/right edge would clip. The hover −
+    # anchors there too. Column controls ride the column strip (above freeze_y); the basis
+    # controls ride the row band (left of freeze_x).
+    lay = _layout()
+    cells = {c.id: c for c in lay.cells}
+    assert cells["plus"].y + cells["plus"].h <= lay.freeze_y           # column + wholly in the strip
+    assert cells["minus"].y < lay.freeze_y                             # column − reveal anchors there
+    assert cells["basis_plus"].x + cells["basis_plus"].w <= lay.freeze_x  # row + wholly in the band
+    assert cells["basis_minus"].x < lay.freeze_x                       # row − reveal anchors there
 
 
 def test_layout_reports_the_rightmost_title_overhang():
@@ -74,22 +91,26 @@ def test_no_title_overhang_reports_zero():
 
 
 def _assert_freeze_partition(lay):
-    # the frozen bands partition the board: column titles + their toggles lie wholly
-    # above freeze_y, row titles + their toggles wholly left of freeze_x, the master
-    # toggle in the corner of both. Every other cell — and every grey tile / wash —
-    # clears both bands, so the renderer's occlusion curtains never mask live content.
-    top, left = {"colheader", "coltoggle"}, {"rowlabel", "rowtoggle"}
+    # the frozen bands hold the titles + toggles AND the branching ± controls; every value
+    # cell and grey value tile clears both bands, so the renderer's frozen panes never mask
+    # live content. A ± control (every such cell's kind ends in "plus"/"minus") rides a frozen
+    # band — its anchor, the top-left where its button sits, is left of freeze_x (row band) or
+    # above freeze_y (column strip); a − hover zone may then EXTEND past the seam over the header.
+    fx, fy = lay.freeze_x, lay.freeze_y
     for cb in lay.cells:
-        if cb.kind in top:
-            assert cb.y + cb.h <= lay.freeze_y
-        elif cb.kind in left:
-            assert cb.x + cb.w <= lay.freeze_x
+        if cb.kind in {"colheader", "coltoggle"}:
+            assert cb.y + cb.h <= fy                          # column titles + toggles: above the seam
+        elif cb.kind in {"rowlabel", "rowtoggle"}:
+            assert cb.x + cb.w <= fx                          # row titles + toggles: left of the seam
         elif cb.kind == "alltoggle":
-            assert cb.y + cb.h <= lay.freeze_y and cb.x + cb.w <= lay.freeze_x
+            assert cb.y + cb.h <= fy and cb.x + cb.w <= fx    # the master toggle: the corner of both
+        elif cb.kind.endswith(("plus", "minus")):
+            assert cb.x < fx or cb.y < fy                     # a branch ± rides a frozen band, not the body
         else:
-            assert cb.x >= lay.freeze_x and cb.y >= lay.freeze_y
+            assert cb.x >= fx and cb.y >= fy                  # all value content clears both bands
     for bl in lay.blocks:
-        assert bl.x >= lay.freeze_x and bl.y >= lay.freeze_y
+        if bl.tint == "" and not bl.boxed:                    # the grey value tiles (washes overhang by design)
+            assert bl.x >= fx and bl.y >= fy
 
 
 def test_freeze_bands_hold_exactly_the_titles_and_toggles():

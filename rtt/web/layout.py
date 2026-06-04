@@ -78,8 +78,10 @@ class Layout:
     lines: tuple[Line, ...]
     blocks: tuple[Block, ...]
     cells: tuple[CellBox, ...]
-    freeze_x: float  # right edge of the row-title + row-toggle band (frozen against horizontal scroll)
-    freeze_y: float  # bottom edge of the column-title + column-toggle band (frozen against vertical scroll)
+    freeze_x: float  # left edge of the first value tile: the row titles/toggles AND the row
+    # branching (trunks, left buses, the ± controls) freeze left of here against horizontal scroll
+    freeze_y: float  # top edge of the first value tile: the column titles/toggles AND the column
+    # branching (trunks, fan-out buses, the ± controls) freeze above here against vertical scroll
     right_overhang: float = 0.0  # how far the widest column title spills past `width` (titles render
     # unwrapped and centred on their gridline, so the narrow last column's long title reaches beyond
     # the grid's right edge); the renderer widens the grey pane by this so the title isn't clipped

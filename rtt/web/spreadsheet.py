@@ -2661,8 +2661,14 @@ class _GridBuilder:
                           default=self.total_w)
         right_overhang = max(0.0, title_right - self.total_w)
 
+        # The frozen bands reach past the branching (each column's trunk + fan-out bus, each
+        # matrix row's trunk + left bus, and the ± controls riding those buses) to the first
+        # value tile's panel edge: one GAP past the toggle band, less the PAD the grey tile
+        # overhangs its cells by. So the branching + ± ride the frozen header/row-band and only
+        # the value tiles scroll beneath them.
         return Layout(self.total_w, self.total_h, tuple(self.lines), tuple(self.blocks), tuple(self.cells),
-                      freeze_x=self.node_edge, freeze_y=self.branch_top_y, right_overhang=right_overhang)
+                      freeze_x=self.node_edge + GAP - PAD, freeze_y=self.branch_top_y + GAP - PAD,
+                      right_overhang=right_overhang)
 
 
 def build(state, settings=None, collapsed=None,

@@ -951,6 +951,25 @@ async def test_each_title_renders_into_its_frozen_region(user: User, cell: str, 
     assert _renders_inside(user, cell, region)
 
 
+@pytest.mark.parametrize("cell, region", [
+    ("plus", "colheadinner"),         # the domain + rides the column strip with its fan-out bus
+    ("minus", "colheadinner"),        # ...and the hover − reveal on that same strip
+    ("gen_plus", "colheadinner"),     # the generators + too
+    ("target_plus", "colheadinner"),  # ...and the target-list +
+    ("map_plus", "rowband"),          # a mapping-row + rides the sticky-left row band
+    ("map_minus:0", "rowband"),       # ...and the per-row − reveal on that same band
+])
+async def test_branch_controls_render_into_their_frozen_region(user: User, cell: str, region: str) -> None:
+    # the always-shown + and the hover − now ride the frozen branch bands with their gridlines
+    # (column controls in the column strip, mapping/basis controls in the row band), so they
+    # stay put while the value tiles scroll under them. The renderer routes each cell to its
+    # pane by its POSITION — which band its top-left falls in — not a hand-kept kind list (which
+    # couldn't anyway: the column + and the basis + share the kind "plus" but freeze in different
+    # bands).
+    await user.open("/")
+    assert _renders_inside(user, cell, region)
+
+
 async def test_body_cells_render_on_the_board_under_no_frozen_region(user: User) -> None:
     # a value cell sits on the board (.rtt-gridcontent, the body scroll content), beneath none of
     # the frozen regions that sit outside / sticky-within the scroller

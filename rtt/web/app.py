@@ -226,13 +226,24 @@ _CSS_VARS = f""":root {{
 _CSS = _CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
 
 
-# Which sticky band each title/toggle kind renders into; every other cell goes to the body
-# board. The column titles + their fold toggles ride the column band (sticky to the window top);
-# the row titles + toggles the row band (sticky to the left); the master toggle (and the undo/
-# redo title tile) the corner band (sticky to both). Per-tile toggles aren't frozen.
-_FREEZE_CONTAINER = {"colheader": "col", "coltoggle": "col",
-                     "rowlabel": "row", "rowtoggle": "row",
-                     "alltoggle": "corner"}
+# Which sticky band a cell renders into — decided by WHERE its top-left corner falls, not by
+# its kind. The column titles + fold toggles AND the column branching (each column's trunk +
+# fan-out bus and the ± controls riding it) sit above freeze_y, so they ride the column strip
+# (sticky to the window top); the row titles/toggles AND the row branching (each matrix row's
+# trunk + left bus and its ± controls) sit left of freeze_x, so they ride the row band (sticky
+# to the left); the master toggle, in the corner of both, rides the corner. Everything past both
+# seams — the value cells and their grey tiles — scrolls on the body board. Routing by position
+# (rather than a hand-kept kind→band map) lets the column + and the basis + — which share the
+# kind "plus" but freeze in DIFFERENT bands — each land correctly, and a new control freezes for
+# free.
+def _freeze_container(cb, fx: float, fy: float) -> str:
+    if cb.x < fx and cb.y < fy:
+        return "corner"
+    if cb.y < fy:
+        return "col"
+    if cb.x < fx:
+        return "row"
+    return "body"
 
 # A math-expression cell stacks 1–2 lines ("1200 · log₂(3/2)" over "= 701.96") in a
 # narrow value square, so each line's font is scaled down to fit the cell width.
@@ -2039,13 +2050,32 @@ def index() -> None:
         show_scroll.style(f"max-height:calc(100vh - {12 + fy}px)")
         seen = set()
 
-        for ln in lay.lines:
-            seen.add(ln.id)
-            if ln.id not in rec.els:
-                with board:
+        # Each gridline renders into every pane its extent reaches, so the branching stays put in
+        # the frozen header / row band while the body scrolls beneath. The scrolling body holds
+        # the copy shifted up by fy; a line rising above freeze_y also draws into the column strip
+        # (at native y), and one reaching left of freeze_x into the sticky row band (body space) —
+        # each clipped to its band by the pane's overflow:hidden, meeting the body copy
+        # continuously at the seam. No gridline falls in the corner (column lines sit right of
+        # freeze_x, row lines below freeze_y), so it's skipped. Copies are keyed #col / #row, each
+        # added to `seen`, so the orphan sweep below drops one whose line later stops reaching it.
+        def place_line(ln, suffix, parent, shift):
+            eid = ln.id + suffix
+            seen.add(eid)
+            if eid not in rec.els:
+                with parent:
                     cls = "rtt-line " + ("rtt-line-v" if ln.orientation == "v" else "rtt-line-h")
-                    rec.els[ln.id] = ui.element("div").classes(cls).props(f'data-eid="{ln.id}"')
-            rec.els[ln.id].style(_line_style(ln, fy))
+                    rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"')
+            rec.els[eid].style(_line_style(ln, shift))
+
+        for ln in lay.lines:
+            x0, x1 = (ln.pos, ln.pos) if ln.orientation == "v" else (ln.start, ln.start + ln.length)
+            y0, y1 = (ln.start, ln.start + ln.length) if ln.orientation == "v" else (ln.pos, ln.pos)
+            if x1 >= fx and y1 >= fy:
+                place_line(ln, "", board, fy)              # the scrolling body
+            if x1 >= fx and y0 < fy:
+                place_line(ln, "#col", colhead_inner, 0)   # the frozen column strip (native y)
+            if x0 < fx and y1 >= fy:
+                place_line(ln, "#row", rowband, fy)        # the frozen row band (body scroll space)
 
         for bl in lay.blocks:
             seen.add(bl.id)
@@ -2070,7 +2100,7 @@ def index() -> None:
                 rec.drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
             if cb.kind in _AUDIO_KINDS and cb.id in rec.els and rec.audio_keys.get(cb.id) != cb.values:
                 rec.drop(cb.id)  # cents changed -> rebuild so the baked-in click handler sounds the new pitch
-            container = _FREEZE_CONTAINER.get(cb.kind, "body")
+            container = _freeze_container(cb, fx, fy)
             if cb.id not in rec.els:
                 with cell_parents[container]:
                     rec.make_cell(cb)

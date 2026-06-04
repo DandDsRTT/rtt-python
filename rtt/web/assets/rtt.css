@@ -124,8 +124,12 @@
    (the white wash bases), not the grey pane behind it */
 .rtt-gridcontent { position:relative; isolation:isolate; transition:width var(--t), height var(--t); }
 .rtt-band { position:absolute; inset:0; pointer-events:none; }
+/* overflow:hidden clips the row branching it now holds — the trunks/left-buses + the ± controls,
+   and a − hover zone that drops rightward over the spine — to the band's [0, freeze_x] width, so
+   none of it spills over the scrolling body to its right (the column strip clips the same way via
+   .rtt-colhead). The body copy of each row gridline picks up past the seam, continuous. */
 .rtt-rowband { position:sticky; left:0; z-index:5; background:#c0c0c0; box-sizing:border-box;
-               pointer-events:auto; border-right:1px solid transparent; }
+               pointer-events:auto; overflow:hidden; border-right:1px solid transparent; }
 /* the seam on each frozen region's body-facing edge stays transparent until the body is scrolled
    on that axis (classes toggled on .rtt-app in _FREEZE_JS); the border is always 1px so revealing
    it shifts nothing */
