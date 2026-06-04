@@ -335,18 +335,29 @@ async def test_editing_a_comma_ratio_updates_the_basis(user: User) -> None:
     assert _cell_child(user, "comma:0").value == "25/24"   # and the ratio cell reflects the edit
 
 
-async def test_an_invalid_comma_ratio_reverts_the_field(user: User) -> None:
-    # a fraction carrying a prime outside the 2.3.5 domain (7) can't be a comma vector there, so the
-    # edit is rejected. The field snaps BACK to the current ratio on blur (the feedback a silent
-    # no-op lacked), and the basis stays at the syntonic comma (4 -4 1).
+async def test_an_out_of_limit_comma_ratio_toasts_and_reverts(user: User) -> None:
+    # a fraction carrying a prime outside the 2.3.5 domain (82 = 2·41) can't be a comma vector
+    # there: a red toast NAMES the reason (outside the prime limit), the field snaps BACK to the
+    # current ratio on blur, and the basis stays at the syntonic comma (4 -4 1).
     await user.open("/")
     user.find(marker="toggle:col:commas").click()    # unfold the commas column
     user.find(marker="toggle:row:vectors").click()   # ...and the interval-vectors row
-    _cell_child(user, "comma:0").set_value("82/81")  # 82 = 2·41, and 41 is outside the domain
+    _cell_child(user, "comma:0").set_value("82/81")
     _commit(user, "comma:0")
-    await user.should_see(marker="cell:comma:0:0")
+    await user.should_see("outside the 2.3.5 domain")     # the toast explains the prime-limit failure
     assert _cell_child(user, "comma:0").value == "80/81"  # reverted, not left showing the bad 82/81
     assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["4", "-4", "1"]
+
+
+async def test_an_unparseable_comma_ratio_toasts_that_its_invalid(user: User) -> None:
+    # the other failure mode reads differently: garbage that isn't a fraction at all toasts
+    # "not a valid ratio" (vs the out-of-limit wording), and likewise reverts the field
+    await user.open("/")
+    user.find(marker="toggle:col:commas").click()
+    _cell_child(user, "comma:0").set_value("12three")
+    _commit(user, "comma:0")
+    await user.should_see("not a valid ratio")
+    assert _cell_child(user, "comma:0").value == "80/81"
 
 
 async def test_editing_a_target_ratio_overrides_the_set(user: User) -> None:
@@ -404,6 +415,7 @@ async def test_typing_a_ratio_into_a_pending_draft_fills_it(user: User) -> None:
     _click_glyph(user, "held_plus")                  # start a blank draft -> the "?/?" head appears
     await user.should_see(marker="held:pending")
     assert "rtt-pending" in _wrap_classes(user, "held:pending")  # the draft head reads red
+    assert _cell_child(user, "held:pending").value == "?/?"  # pre-filled, so you edit "?/?" not a blank box
     _cell_child(user, "held:pending").set_value("3/2")  # type the fraction into the draft head
     _commit(user, "held:pending")                       # blur commits it = (-1 1 0)
     await user.should_see(marker="held:0")

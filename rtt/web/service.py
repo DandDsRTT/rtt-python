@@ -307,24 +307,31 @@ def target_interval_vectors(ratios, d: int, domain_basis=None) -> Matrix:
     return tuple(tuple(int(x) for x in vector) for vector in _interval_vectors(ratios, domain_basis, d))
 
 
-def interval_vector(ratio: str, d: int, domain_basis=None) -> tuple[int, ...] | None:
+def _domain_label(d: int, domain_basis=None) -> str:
+    """The domain as a dotted basis string (``"2.3.5"`` / ``"2.3.13/5"``) for error messages."""
+    standard = domain_basis is None or is_standard_prime_limit_domain_basis(domain_basis)
+    return ".".join(str(e) for e in (standard_primes(d) if standard else domain_basis))
+
+
+def interval_vector(ratio: str, d: int, domain_basis=None) -> tuple[int, ...]:
     """Parse one ratio string (e.g. ``"80/81"``) into its interval vector over the d domain
     elements — the inverse of :func:`comma_ratios`, for the editable quantities-row ratio cells.
-    ``None`` when the text is not a single positive quotient expressible within the domain (a
-    malformed entry, a non-positive value, or a prime beyond the d elements), so the caller can
-    leave the interval set unchanged rather than store a ragged or truncated vector."""
+    Raises :class:`ValueError` with a user-facing message (the cell shows it as a toast) when the
+    text isn't a single positive quotient (unparseable or non-positive) or carries a prime beyond
+    the d-element domain (out of limit) — the two failure modes read differently."""
+    text = str(ratio).strip()
     try:
-        target = Fraction(ratio)
+        target = Fraction(text)
     except (ValueError, ZeroDivisionError):
-        return None
+        raise ValueError(f'"{text}" is not a valid ratio.')
     if target <= 0:
-        return None
-    vectors = _interval_vectors((ratio,), domain_basis, d)
-    if len(vectors) != 1 or len(vectors[0]) != d:
-        return None  # a prime past the d-element domain leaves an over-long vector
-    vector = tuple(int(x) for x in vectors[0])
-    if Fraction(_vectors_to_ratios((vector,), domain_basis)[0]) != target:
-        return None  # the vector doesn't reproduce the ratio: an interval outside the subgroup
+        raise ValueError(f'"{text}" is not a positive ratio.')
+    vectors = _interval_vectors((text,), domain_basis, d)
+    vector = tuple(int(x) for x in vectors[0]) if len(vectors) == 1 and len(vectors[0]) == d else ()
+    # a prime past the domain leaves an over-long vector; a within-limit interval outside a
+    # nonstandard subgroup parses to one that no longer reproduces the ratio — both are out of limit
+    if not vector or Fraction(_vectors_to_ratios((vector,), domain_basis)[0]) != target:
+        raise ValueError(f'"{text}" is outside the {_domain_label(d, domain_basis)} domain.')
     return vector
 
 

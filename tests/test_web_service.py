@@ -1,6 +1,8 @@
 import math
 from fractions import Fraction
 
+import pytest
+
 from rtt.web import service
 
 
@@ -272,13 +274,24 @@ def test_interval_vector_parses_a_ratio_into_its_vector():
     assert tuple(service.interval_vector(r, 3) for r in service.comma_ratios(basis)) == basis
 
 
-def test_interval_vector_rejects_input_outside_the_domain():
-    # a malformed entry, a non-positive value, or a prime beyond the d-element limit returns
-    # None so the caller leaves the interval set unchanged (never a ragged or truncated vector)
-    assert service.interval_vector("nonsense", 3) is None
-    assert service.interval_vector("", 3) is None
-    assert service.interval_vector("0", 3) is None
-    assert service.interval_vector("7/4", 3) is None  # prime 7 is outside the 2.3.5 domain
+def test_interval_vector_raises_a_classified_error_for_bad_input():
+    # bad input raises ValueError with a user-facing message the cell surfaces as a toast — and
+    # the two failure modes read differently: unparseable / non-positive vs outside the prime limit
+    with pytest.raises(ValueError, match="not a valid ratio"):
+        service.interval_vector("nonsense", 3)
+    with pytest.raises(ValueError, match="not a valid ratio"):
+        service.interval_vector("", 3)
+    with pytest.raises(ValueError, match="not a positive ratio"):
+        service.interval_vector("0", 3)
+    with pytest.raises(ValueError, match="outside the 2.3.5 domain"):
+        service.interval_vector("7/4", 3)  # prime 7 is beyond the 2.3.5 domain
+
+
+def test_interval_vector_names_a_nonstandard_domain_in_its_out_of_limit_error():
+    # the out-of-limit message names the actual domain basis, not just the standard primes
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    with pytest.raises(ValueError, match=r"outside the 2.3.13/5 domain"):
+        service.interval_vector("5/4", state.d, domain_basis=state.domain_basis)  # 5/4 isn't in the subgroup
 
 
 def test_interval_vector_over_a_nonstandard_domain_expresses_in_the_basis():

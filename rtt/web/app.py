@@ -1339,7 +1339,7 @@ class _Reconciler:
         self._ratio(cb, approx=False, overlay=True)
 
     def _update_ratiocell(self, cb):
-        self.inputs[cb.id].value = "" if cb.pending else cb.text  # a draft starts empty; its face shows "?/?"
+        self.inputs[cb.id].value = cb.text  # committed: the ratio; a draft pre-fills "?/?" so you edit it
         self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
                                 remove="" if cb.pending else "rtt-pending")  # red draft styling
         self._update_ratio(cb)              # the overlaid stacked face mirrors the fraction
@@ -1786,12 +1786,22 @@ def index() -> None:
         # scalar twin of the interval-vectors row's column edit. The typed fraction parses to a
         # vector and routes through the SAME setter the vector edit uses; a ":pending" draft fills
         # that column's draft instead (like typing its vector cells). render() always runs: a valid
-        # edit shows the new value, an unparseable / out-of-domain one snaps the field back.
+        # edit shows the new value, an invalid one snaps the field back — and a bad fraction also
+        # toasts WHY (unparseable vs outside the prime limit). An untouched "?/?" draft or a cleared
+        # cell is a silent no-op (no toast), not an error.
         if building[0] or cid not in rec.inputs:
             return
         group, idx = cid.split(":")
-        vector = service.interval_vector(
-            rec.inputs[cid].value, editor.state.d, editor.state.domain_basis)
+        raw = str(rec.inputs[cid].value).strip()
+        if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
+            render()
+            return
+        try:
+            vector = service.interval_vector(raw, editor.state.d, editor.state.domain_basis)
+        except ValueError as exc:
+            ui.notify(str(exc), type="negative", position="top")
+            render()  # revert the field to its current value
+            return
 
         def replace(current, setter):  # swap the edited column in, skipping a no-op blur (no undo step)
             vectors = [list(v) for v in current]
@@ -1799,21 +1809,20 @@ def index() -> None:
                 vectors[int(idx)] = vector
                 setter(vectors)
 
-        if vector is not None:
-            if idx == "pending":  # fill the draft column, committing it like its vector cells do
-                {"comma": editor.set_pending_comma, "interest": editor.set_pending_interest,
-                 "held": editor.set_pending_held, "target": editor.set_pending_target}[group](vector)
-            elif group == "comma":
-                replace(editor.state.comma_basis, editor.edit_comma_basis)
-            elif group == "interest":
-                replace(editor.interest_vectors, editor.set_interest_vectors)
-            elif group == "held":
-                replace(editor.held_vectors, editor.set_held_vectors)
-            else:  # target
-                targets = editor.target_override or service.target_interval_set(
-                    editor.target_spec, editor.state.domain_basis)
-                replace(service.target_interval_vectors(targets, editor.state.d, editor.state.domain_basis),
-                        editor.set_target_override_vectors)
+        if idx == "pending":  # fill the draft column, committing it like its vector cells do
+            {"comma": editor.set_pending_comma, "interest": editor.set_pending_interest,
+             "held": editor.set_pending_held, "target": editor.set_pending_target}[group](vector)
+        elif group == "comma":
+            replace(editor.state.comma_basis, editor.edit_comma_basis)
+        elif group == "interest":
+            replace(editor.interest_vectors, editor.set_interest_vectors)
+        elif group == "held":
+            replace(editor.held_vectors, editor.set_held_vectors)
+        else:  # target
+            targets = editor.target_override or service.target_interval_set(
+                editor.target_spec, editor.state.domain_basis)
+            replace(service.target_interval_vectors(targets, editor.state.d, editor.state.domain_basis),
+                    editor.set_target_override_vectors)
         render()
 
     def on_power_change(cid):
