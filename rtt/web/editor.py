@@ -420,16 +420,25 @@ class Editor:
         self.generator_tuning = gens
         return True
 
-    def set_generator_tuning_component(self, i: int, cents: float) -> None:
-        """Override one generator's tuning (one editable generator-tuning-map cell), seeding
-        the rest from the frozen tuning or, when none is frozen, the current optimum. Turns
-        auto-optimize off, like a typed tuning."""
-        base = self.effective_generator_tuning() or self._optimum_generator_tuning()
-        new = list(base)
-        new[i] = float(cents)
+    def _override_generator(self, i: int, transform) -> None:
+        """Freeze a manual generator tuning with component ``i`` replaced by
+        ``transform(current[i])``, seeding the rest from the frozen tuning or, when none is
+        frozen, the current optimum. Turns auto-optimize off, like a typed tuning. Backs both
+        the editable cell (set to a typed value) and the +/− sign flip (negate the value)."""
+        base = list(self.effective_generator_tuning() or self._optimum_generator_tuning())
+        base[i] = float(transform(base[i]))
         self._snapshot()
         self.optimize_locked = False
-        self.generator_tuning = tuple(new)
+        self.generator_tuning = tuple(base)
+
+    def set_generator_tuning_component(self, i: int, cents: float) -> None:
+        """Override one generator's tuning (one editable generator-tuning-map cell)."""
+        self._override_generator(i, lambda _current: cents)
+
+    def flip_generator_tuning_sign(self, i: int) -> None:
+        """Flip one generator's tuning sign (clicking the +/− sign on its generator-tuning-map
+        cell): negate just that component, leaving the rest at the frozen tuning / optimum."""
+        self._override_generator(i, lambda current: -current)
 
     def try_edit_mapping_text(self, text: str) -> bool:
         """Parse an EBK map string (honouring a domain-basis prefix, so a nonstandard

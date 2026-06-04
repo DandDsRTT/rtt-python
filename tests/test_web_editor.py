@@ -696,6 +696,20 @@ def test_set_generator_tuning_component_overrides_one_generator():
     assert editor.optimize_locked is False and editor.can_undo is True
 
 
+def test_flip_generator_tuning_sign_negates_one_generator():
+    editor = Editor()
+    optimum = editor._optimum_generator_tuning()
+    # clicking a generator-tuning cell's +/− sign flips just that generator's sign, seeding the
+    # rest from the current optimum (like a component edit), and freezes the override
+    editor.flip_generator_tuning_sign(1)
+    eff = editor.effective_generator_tuning()
+    assert eff[1] == -optimum[1] and eff[0] == optimum[0]
+    assert editor.optimize_locked is False and editor.can_undo is True
+    # flipping the same generator again restores its original sign (an involution)
+    editor.flip_generator_tuning_sign(1)
+    assert editor.effective_generator_tuning()[1] == optimum[1]
+
+
 def test_displayed_tuning_scheme_name_drops_to_none_when_the_tuning_deviates():
     # the tuning chooser shows the scheme name only while the displayed tuning realises that
     # scheme; once it deviates the name drops to None (the chooser then shows "-").

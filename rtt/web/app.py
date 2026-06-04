@@ -413,6 +413,18 @@ def _cents_parts(text):
     return whole, frac
 
 
+def _gentuning_parts(text):
+    """Split a generator-tuning cents value into ``(sign, whole, frac)`` for the genmap's
+    clickable signed face: a non-negative value carries an explicit ``"+"`` (ordinarily
+    assumed), a negative one a ``"−"`` with the bare magnitude; blank text (quantities off)
+    carries no sign. The sign glyph is the part the user clicks to flip the generator."""
+    if not text:
+        return "", "", ""
+    sign, body = ("−", text[1:]) if text.startswith("-") else ("+", text)
+    whole, frac = _cents_parts(body)
+    return sign, whole, frac
+
+
 def _power_parts(text):
     """Split an optimization/norm power into a stacked face: ``∞`` carries a small ``"(max)"``
     below it (it IS the max-norm / minimax power), the way a cents value carries its decimal;
@@ -867,6 +879,7 @@ class _Reconciler:
         self.labels: dict = {}  # cell id -> the label whose text tracks state
         self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
         self.stacked_faces: dict = {}  # stacked-value cell id -> (main label, sub label): cents whole/.frac, power ∞/(max)
+        self.gensign_faces: dict = {}  # generator-tuning cell id -> (sign, whole, .frac) labels: the clickable signed cents face
         self.htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
         self.ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
         self.chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
@@ -891,7 +904,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.stacked_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.audio_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.audio_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build[, update]).
         # Every kind is registered below; make_cell/update_cell index it directly (no fallback),
         # so an unregistered kind raises loudly rather than rendering a silent blank cell.
@@ -1290,12 +1303,37 @@ class _Reconciler:
         wrap.classes("rtt-cell-input rtt-cell-stacked")
         self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_gentuning_change(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
-        self.cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
+        self._gentuning_face(cb)  # the clickable signed cents face overlaid on the input
 
     def _update_gentuningcell(self, cb):
         text = "" if cb.blank else cb.text  # blank when quantities off
         self.inputs[cb.id].value = text
-        self.set_cents_face(cb.id, text)  # the overlaid stacked face mirrors the input
+        self._set_gentuning_face(cb.id, text)  # the overlaid signed face mirrors the input
+
+    def _gentuning_face(self, cb):
+        """The generator-tuning cell's signed, clickable cents face overlaid on its input: a sign
+        glyph (the otherwise-assumed "+" of a positive generator, made visible — or "−") the user
+        clicks to flip the generator's sign, then the whole part big over a small dot-led fraction
+        (the shared cents look). Only the sign takes pointer events; a click elsewhere falls
+        through to focus the input for typing."""
+        sign, whole, frac = _gentuning_parts(cb.text)
+        i = int(cb.id.rsplit(":", 1)[1])
+        with ui.element("div").classes("rtt-tval rtt-cellface"):
+            with ui.element("div").classes("rtt-gentuning-main"):
+                s = ui.label(sign).classes("rtt-gensign") \
+                    .on("click", lambda _=None, i=i: self._cb.act(lambda: self._editor.flip_generator_tuning_sign(i)))
+                m = ui.label(whole).classes("rtt-stacked-main")
+            sub = ui.label(f".{frac}" if frac else "").classes("rtt-stacked-sub")
+        self.gensign_faces[cb.id] = (s, m, sub)
+
+    def _set_gentuning_face(self, cid, text):
+        """Re-sync a generator-tuning cell's signed face in place (the cell kind is unchanged
+        across renders, so its sign/whole/fraction labels persist)."""
+        sign, whole, frac = _gentuning_parts(text)
+        s, m, sub = self.gensign_faces[cid]
+        s.set_text(sign)
+        m.set_text(whole)
+        sub.set_text(f".{frac}" if frac else "")
 
     def _build_ptextedit(self, cb, wrap):
         # an editable dual: typing a valid EBK string drives the grid (its own ptext_inputs dict)

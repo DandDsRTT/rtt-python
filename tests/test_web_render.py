@@ -232,6 +232,18 @@ def _stacked_face(user: User, cell_id: str):
     return face.default_slot.children[0], face.default_slot.children[1]
 
 
+def _gentuning_face(user: User, cell_id: str):
+    """The (sign, whole, fraction) labels of a generator-tuning cell's signed cents face. Unlike
+    the other cents cells, the genmap shows an explicit, clickable sign glyph (+ ordinarily
+    assumed, − when negative) on a row with the big whole part, the small dot-led fraction
+    stacked below. The input is child[0]; the face (rtt-tval.rtt-cellface) is child[1], holding
+    the sign+whole row (children[0]) over the fraction label (children[1])."""
+    wrap = next(iter(user.find(marker=cell_id).elements))
+    face = wrap.default_slot.children[1]
+    row = face.default_slot.children[0]
+    return row.default_slot.children[0], row.default_slot.children[1], face.default_slot.children[1]
+
+
 def _ratio_face(user: User, cell_id: str):
     """The (numerator, denominator) labels of an editable ratio cell's overlaid fraction face —
     the stacked num-over-den that makes the editable input read like a read-only ratio until
@@ -295,6 +307,29 @@ async def test_editing_a_generator_tuning_cell_applies_an_override(user: User) -
     assert _cell_child(user, "tuning:gen:1").value == "700.000"
 
 
+async def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(user: User) -> None:
+    # the generator tuning map shows each generator's sign as an explicit glyph — the "+" of a
+    # positive generator (ordinarily assumed) made visible, so it can be clicked to flip. The
+    # default scheme's period and fifth are both positive.
+    await user.open("/")
+    sign_lbl, _, _ = _gentuning_face(user, "tuning:gen:1")
+    assert sign_lbl.text == "+"
+
+
+async def test_clicking_the_sign_flips_a_generator_tuning_cells_positivity(user: User) -> None:
+    # clicking a generator-tuning cell's sign glyph flips that generator's sign: the cents value
+    # negates (overriding the optimum, which survives the render) and the glyph swaps + for −.
+    await user.open("/")
+    before = float(_cell_child(user, "tuning:gen:1").value)
+    assert before > 0  # the default fifth is positive
+    sign_lbl, _, _ = _gentuning_face(user, "tuning:gen:1")
+    UserInteraction(user, {sign_lbl}, None).click()
+    await user.should_see(marker="tuning:gen:1")
+    assert float(_cell_child(user, "tuning:gen:1").value) == -before  # the value's sign flipped
+    sign_lbl, _, _ = _gentuning_face(user, "tuning:gen:1")
+    assert sign_lbl.text == "−"  # and the glyph now shows the minus
+
+
 async def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(user: User) -> None:
     # the generator tuning map cells are editable inputs, but a 3-dp cents value (e.g. 697.564)
     # overflows the 30px square as a single line. They must show the same stacked int-over-
@@ -302,10 +337,10 @@ async def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(user: User)
     # fraction — so the value fits. Assert the live value splits across the two face labels.
     await user.open("/")
     value = _cell_child(user, "tuning:gen:1").value  # the single-line cents value, e.g. "697.564"
-    int_lbl, frac_lbl = _stacked_face(user, "tuning:gen:1")
+    _sign_lbl, int_lbl, frac_lbl = _gentuning_face(user, "tuning:gen:1")
     assert "." not in int_lbl.text                  # the whole part stands alone (no decimal)
     assert frac_lbl.text.startswith(".")            # the fraction stacks under, dot-led
-    assert int_lbl.text + frac_lbl.text == value    # and the two reconstruct the cell's value
+    assert int_lbl.text + frac_lbl.text == value    # and the two reconstruct the cell's value (sign aside)
 
 
 async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
