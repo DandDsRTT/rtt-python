@@ -1,0 +1,15 @@
+# Render Blueprint — deploys the NiceGUI app as a single web service.
+# Create it from the Render dashboard ("New +" → "Blueprint", point at this repo).
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: rtt-python               # → https://rtt-python.onrender.com (Render appends a suffix if the name is taken)
+    runtime: python
+    plan: free                     # ~1 min cold start after 15 min idle; switch to "starter" ($7/mo) for always-on
+    region: oregon                 # change to a region nearer you if preferred
+    branch: main                   # Render redeploys on each push to this branch
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py    # NiceGUI runs its own uvicorn; main() binds 0.0.0.0:$PORT in production
+    envVars:
+      - key: STORAGE_SECRET        # strong random secret to sign session cookies (overrides the in-repo default)
+        generateValue: true
