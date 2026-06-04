@@ -74,7 +74,7 @@ CHROME_HELP: dict[str, str] = {
 # the test) so the whole tooltip taxonomy lives in one place; the completeness test asserts
 # every kind a full build renders is either listed here or carries help.
 READONLY_KINDS: frozenset[str] = frozenset({
-    "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tval",
+    "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tval", "powerdisplay",
     "genratio", "commaratio", "mathexpr", "ptext", "ptextpending",
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",

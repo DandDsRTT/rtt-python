@@ -2176,13 +2176,13 @@ def test_optimization_objective_carries_a_label_caption():
 def test_all_interval_locks_the_optimization_power_to_infinity():
     # all-interval tuning minimaxes over every interval (by duality it optimizes the primes at the
     # dual norm power), so the stored 𝑝 is irrelevant: the optimization-power cell shows ∞ even for a
-    # finite-power scheme AND renders as a read-only value (kind "tval" — the standard non-interactive
-    # gridded-value style, like the objective beside it), not an editable input. A target-based scheme
+    # finite-power scheme AND renders as a read-only value (kind "powerdisplay" — the SAME ∞-over-"(max)"
+    # face as the editable input, just no white box), not an editable input. A target-based scheme
     # shows its actual stored power as an editable powerinput.
     finite_ai = service.scheme_with_power("minimax-S", 2.0)  # all-interval, stored power 2
     assert service.is_all_interval(finite_ai) and service.optimization_power(finite_ai) == 2.0
     allint = {c.id: c for c in _with(scheme=finite_ai, optimization=True).cells}
-    assert allint["optimization:power"].text == "∞" and allint["optimization:power"].kind == "tval"
+    assert allint["optimization:power"].text == "∞" and allint["optimization:power"].kind == "powerdisplay"
     finite_based = service.scheme_with_power("TILT minimax-S", 2.0)  # target-based, stored power 2
     based = {c.id: c for c in _with(scheme=finite_based, optimization=True).cells}
     assert based["optimization:power"].text == "2" and based["optimization:power"].kind == "powerinput"

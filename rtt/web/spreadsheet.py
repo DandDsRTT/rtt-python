@@ -2202,11 +2202,11 @@ class _GridBuilder:
             # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — a COL_W gridded cell
             # — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it).
             # All-interval locks 𝑝 at ∞ (the solver minimaxes over every interval, ignoring the stored
-            # 𝑝), so it renders as a read-only value (tval) — the standard non-interactive gridded-value
-            # style, like the objective beside it — not an editable input, and its symbol/caption stay
-            # the normal value black (a read-only value, not a greyed-out control).
+            # 𝑝), so it renders as a read-only value (a powerdisplay — the SAME ∞-over-"(max)" stacked
+            # face as the editable input, just with no white box) and its symbol/caption stay the normal
+            # value black (a read-only value, not a greyed-out control).
             self.cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
-                                 "tval" if self.all_interval else "powerinput", text=power))
+                                 "powerdisplay" if self.all_interval else "powerinput", text=power))
             self.cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
                                  "symbol", text="𝑝"))
             self.cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,

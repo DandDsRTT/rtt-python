@@ -757,8 +757,9 @@ async def test_minimax_power_stacks_a_max_annotation_below_infinity(user: User) 
 
 async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: User) -> None:
     # all-interval locks the optimization power at ∞ (the solver minimaxes over every interval), so it
-    # renders as a read-only value — a plain tval like the objective beside it, NOT an editable input.
-    # The wrap's rtt-cell-input class marks the editable powerinput; the read-only tval lacks it.
+    # renders as a read-only value with the SAME ∞-over-"(max)" stacked face as the editable input —
+    # just no white box (no input). rtt-cell-input on the wrap marks the editable powerinput; the
+    # read-only powerdisplay lacks it but keeps the identical face (both ∞ AND the "(max)" sub-line).
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()   # reveal the power cell
     user.find(marker="toggle:row:vectors").click()                # expand the target-list row
@@ -766,11 +767,14 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     user.find(kind=ui.checkbox, content="all-interval").click()   # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input while target-based
+    edit_main, edit_sub = _stacked_face(user, "optimization:power")       # editable face: ∞ over (max)
+    assert (edit_main.text, edit_sub.text) == ("∞", "(max)")
     _cell_child(user, "control:all_interval").set_value(True)     # check it -> all-interval
     await user.should_see(marker="optimization:power")
     assert "rtt-cell-input" not in _wrap_classes(user, "optimization:power")  # read-only value, no input
     face = _cell_child(user, "optimization:power")                # the .rtt-tval stacked face div
-    assert face.default_slot.children[0].text == "∞"             # locked to ∞
+    main, sub = face.default_slot.children[0], face.default_slot.children[1]
+    assert (main.text, sub.text) == ("∞", "(max)")               # identical face: ∞ over (max), kept
     _cell_child(user, "control:all_interval").set_value(False)    # back to target-based
     await user.should_see(marker="optimization:power")
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input again

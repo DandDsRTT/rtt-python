@@ -917,6 +917,7 @@ class _Reconciler:
         self.cell_kinds["targetcell"] = _KindHandlers(self._build_targetcell, self._update_input_text)
         self.cell_kinds["prescalercell"] = _KindHandlers(self._build_prescalercell, self._update_prescalercell)
         self.cell_kinds["powerinput"] = _KindHandlers(self._build_powerinput, self._update_powerinput)
+        self.cell_kinds["powerdisplay"] = _KindHandlers(self._build_powerdisplay, self._update_powerdisplay)
         self.cell_kinds["gentuningcell"] = _KindHandlers(self._build_gentuningcell, self._update_gentuningcell)
 
         self.cell_kinds["ptextedit"] = _KindHandlers(self._build_ptextedit, self._update_ptextedit)
@@ -1269,9 +1270,20 @@ class _Reconciler:
     def _update_powerinput(self, cb):
         # mirror the raw value into the input (shown when focused) and re-sync the overlay face
         # (shown otherwise): ∞ stacks a small "(max)" below it, a numeric power shows bare. (All-
-        # interval locks 𝑝 to ∞ as a read-only tval — a different kind — so this only ever runs for
-        # the live editable power and the box-𝒄 norm-power 𝑞 / dual(𝑞) fields.)
+        # interval locks 𝑝 to ∞ as a read-only powerdisplay — a different kind — so this only ever
+        # runs for the live editable power and the box-𝒄 norm-power 𝑞 / dual(𝑞) fields.)
         self.inputs[cb.id].value = cb.text
+        self._sync_stacked_face(cb.id, *_power_parts(cb.text))
+
+    def _build_powerdisplay(self, cb, wrap):
+        # the all-interval-locked optimization power as a READ-ONLY value: the SAME stacked
+        # ∞-over-"(max)" face as the editable powerinput (_power_parts, same fonts, full-cell centred
+        # via rtt-cellface), but with no input — so it looks identical to the live power minus the
+        # white input box. (rtt-cell-stacked is omitted: with no input there's no face to hide on
+        # focus, and it keeps the per-cell-unit padding rule off a value that carries no unit.)
+        self._put_stacked_face(cb.id, "rtt-tval rtt-cellface", *_power_parts(cb.text))
+
+    def _update_powerdisplay(self, cb):
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
 
     def _build_gentuningcell(self, cb, wrap):
