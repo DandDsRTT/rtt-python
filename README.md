@@ -129,3 +129,7 @@ including the "integration" suite — drive the editor and renderer **entirely i
 By **Dave Keenan & Douglas Blumeyer**. The theory, notation, and conventions come from their
 [guide to RTT](https://en.xen.wiki/w/Dave_Keenan_%26_Douglas_Blumeyer%27s_guide_to_RTT) on
 the Xenharmonic Wiki; this repository is the Python port of their reference implementation.
+
+## License
+
+[MIT](LICENSE) © Dave Keenan and Douglas Blumeyer.
