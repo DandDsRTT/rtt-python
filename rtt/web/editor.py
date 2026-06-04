@@ -24,10 +24,9 @@ from rtt.web.layout import Layout
 from rtt.web.service import TemperamentState
 
 INITIAL_MAPPING = ((1, 1, 0), (0, 1, 4))  # meantone, matching the original app
-# The rows/columns/tiles folded to strips in the as-shipped view (the mockup's
-# default): the commas and "other intervals of interest" columns and the
-# interval-vectors row. Reset returns to exactly this fold state.
-INITIAL_COLLAPSED: frozenset[str] = frozenset({"col:commas", "col:interest", "row:vectors"})
+# The rows/columns/tiles folded to strips on a fresh start and after Reset. Empty:
+# nothing starts folded — the default view opens every row and column.
+INITIAL_COLLAPSED: frozenset[str] = frozenset()
 
 
 def _same_cents_map(a, b) -> bool:

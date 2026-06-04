@@ -105,10 +105,9 @@ async def test_optimization_with_charts_renders_the_damage_indicator(user: User)
 async def test_enabling_all_interval_renders_the_target_controls_checkbox(user: User) -> None:
     # the show-panel "all-interval" entry (now interactive, nested under weighting) reveals the
     # target-controls "all-interval" checkbox — a control_check in the target list controls. Those
-    # ride the vectors row (folded by default), so expand it, enable weighting (the entry's parent
-    # in the panel), then the entry itself, and drive the checkbox's render branch.
+    # ride the vectors row (open by default), so enable weighting (the entry's parent in the
+    # panel), then the entry itself, and drive the checkbox's render branch.
     await user.open("/")
-    user.find(marker="toggle:row:vectors").click()  # expand the target-list row (folded by default)
     user.find(kind=ui.checkbox, content="weighting").click()  # reveal the nested all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()
     await user.should_see(marker="control:all_interval")
@@ -267,7 +266,6 @@ async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(
     # must flip them to the bare names. The options are recomputed on the toggle (not just the
     # value), so the label updates — regression for them going stale on re-render.
     await user.open("/")
-    user.find(marker="toggle:row:vectors").click()             # expand the target-list row
     _toggle(user, "presets")  # show the chooser dropdowns
     user.find(kind=ui.checkbox, content="weighting").click()   # reveal the nested all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
@@ -312,7 +310,6 @@ async def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(user: User)
 
 async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
     await user.open("/")
-    user.find(marker="toggle:row:vectors").click()  # expand the target interval list row
     # the target interval list cells are editable: overriding a component freezes the set as an
     # explicit override. The default first target is 2/1 = (1 0 0); typing 2 there survives the
     # render only if the override applied (else the cell reverts to the default's component)
@@ -325,8 +322,6 @@ async def test_editing_a_comma_ratio_updates_the_basis(user: User) -> None:
     # the quantities-row comma ratio is editable — the scalar twin of the comma vector below it.
     # Committing a new fraction (on blur) re-parses to that comma's vector, so the cells follow.
     await user.open("/")
-    user.find(marker="toggle:col:commas").click()   # the commas column is folded to a strip by default
-    user.find(marker="toggle:row:vectors").click()  # expand the interval-vectors row to see the vector
     assert _cell_child(user, "comma:0").value == "80/81"  # 5-limit meantone's syntonic comma
     _cell_child(user, "comma:0").set_value("25/24")        # the chromatic semitone = (-3 -1 2)
     _commit(user, "comma:0")                               # blur commits the whole fraction
@@ -340,8 +335,6 @@ async def test_an_out_of_limit_comma_ratio_toasts_and_reverts(user: User) -> Non
     # there: a red toast NAMES the reason (outside the prime limit), the field snaps BACK to the
     # current ratio on blur, and the basis stays at the syntonic comma (4 -4 1).
     await user.open("/")
-    user.find(marker="toggle:col:commas").click()    # unfold the commas column
-    user.find(marker="toggle:row:vectors").click()   # ...and the interval-vectors row
     _cell_child(user, "comma:0").set_value("82/81")
     _commit(user, "comma:0")
     await user.should_see("outside the 2.3.5 domain")     # the toast explains the prime-limit failure
@@ -353,7 +346,6 @@ async def test_an_unparseable_comma_ratio_toasts_that_its_invalid(user: User) ->
     # the other failure mode reads differently: garbage that isn't a fraction at all toasts
     # "not a valid ratio" (vs the out-of-limit wording), and likewise reverts the field
     await user.open("/")
-    user.find(marker="toggle:col:commas").click()
     _cell_child(user, "comma:0").set_value("12three")
     _commit(user, "comma:0")
     await user.should_see("not a valid ratio")
@@ -376,7 +368,6 @@ async def test_editing_a_held_ratio_updates_the_interval(user: User) -> None:
     # First commit a held interval via the draft flow (fill its vector cells), then edit the ratio.
     await user.open("/")
     _toggle(user, "optimization")                    # show the optimization box's held column
-    user.find(marker="toggle:row:vectors").click()   # expand the interval-vectors row
     _click_glyph(user, "held_plus")                  # start a blank red held-interval draft
     _cell_child(user, "cell:held:0:0").set_value("-1")  # fill it to 3/2 = (-1 1 0) -> commits
     _cell_child(user, "cell:held:1:0").set_value("1")
@@ -390,10 +381,8 @@ async def test_editing_a_held_ratio_updates_the_interval(user: User) -> None:
 
 async def test_editing_an_interest_ratio_updates_the_interval(user: User) -> None:
     # the interval-of-interest ratio is editable, like the comma/held ratios; commit one via the
-    # draft flow first (the column is shown by default but folded to a strip, so unfold it)
+    # draft flow first (its column and the interval-vectors row are open by default)
     await user.open("/")
-    user.find(marker="toggle:col:interest").click()  # unfold the intervals-of-interest column
-    user.find(marker="toggle:row:vectors").click()   # expand the interval-vectors row
     _click_glyph(user, "interest_plus")              # start a blank red draft
     _cell_child(user, "cell:interest:0:0").set_value("1")  # fill it to 6/5 = (1 1 -1) -> commits
     _cell_child(user, "cell:interest:1:0").set_value("1")
@@ -411,7 +400,6 @@ async def test_typing_a_ratio_into_a_pending_draft_fills_it(user: User) -> None:
     # held column: add a draft, then commit a fraction into its "?/?" head.
     await user.open("/")
     _toggle(user, "optimization")                    # show the held column
-    user.find(marker="toggle:row:vectors").click()   # expand the interval-vectors row
     _click_glyph(user, "held_plus")                  # start a blank draft -> the "?/?" head appears
     await user.should_see(marker="held:pending")
     assert "rtt-pending" in _wrap_classes(user, "held:pending")  # the draft head reads red
@@ -427,7 +415,6 @@ async def test_editable_ratio_cell_renders_a_stacked_fraction_face(user: User) -
     # the editable comma ratio is an input (the white box + black outline) carrying the SAME
     # stacked num-over-den fraction face as the read-only ratios, shown until the cell is focused
     await user.open("/")
-    user.find(marker="toggle:col:commas").click()              # unfold the commas column
     assert isinstance(_cell_child(user, "comma:0"), ui.input)  # the editable box, not a static label
     num, den = _ratio_face(user, "comma:0")
     assert (num.text, den.text) == ("80", "81")                # the overlaid syntonic-comma fraction
@@ -512,10 +499,9 @@ async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
 
 async def test_target_chooser_renders_in_the_expanded_target_interval_list(user: User) -> None:
     # the target chooser moved into the target interval list (the interval-vectors row,
-    # folded by default); expanding that row renders its numeric-limit + TILT/OLD select
+    # open by default); that row renders its numeric-limit + TILT/OLD select
     # (the one preset branch the default view never reaches now)
     await _enable(user, "presets")
-    user.find(marker="toggle:row:vectors").click()
     await user.should_see(marker="preset:target")
 
 
@@ -646,7 +632,6 @@ async def test_target_chooser_shows_the_prompt_when_an_interval_is_overridden(us
     # back to "-" — the family select via Quasar's display-value, the numeric limit blanked to
     # its "-" placeholder — the same fallback the tuning and prescaler choosers use for an edit.
     await _enable(user, "presets")
-    user.find(marker="toggle:row:vectors").click()  # the target list is folded by default
     await user.should_see(marker="cell:vec:targets:0:0")
     num, sel = _target_preset(user)
     assert "display-value" not in sel._props  # names the live family
@@ -664,7 +649,6 @@ async def test_selecting_a_target_family_clears_an_interval_override(user: User)
     # The override blanks the select to None, so re-picking "TILT" is a real change the handler
     # acts on — not the same-value no-op that made the pick look ignored.
     await _enable(user, "presets")
-    user.find(marker="toggle:row:vectors").click()
     await user.should_see(marker="cell:vec:targets:0:0")
     original = _cell_child(user, "cell:vec:targets:0:0").value  # the TILT list's first cell
     _cell_child(user, "cell:vec:targets:0:0").set_value("3")  # deviate -> override
@@ -715,7 +699,6 @@ async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User)
     # out, locked to simplicity. Target-based it is live; flipping all-interval on must disable it
     # in place and set its value — the _update_control_select branch that re-applies enabled state.
     await user.open("/")
-    user.find(marker="toggle:row:vectors").click()              # expand the target-list row
     user.find(kind=ui.checkbox, content="weighting").click()    # box 𝒘 (the slope chooser) + the all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the target-controls checkbox
     await user.should_see(marker="control:slope")
@@ -774,7 +757,6 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     # read-only powerdisplay lacks it but keeps the identical face (both ∞ AND the "(max)" sub-line).
     await user.open("/")
     user.find(kind=ui.checkbox, content="optimization").click()   # reveal the power cell
-    user.find(marker="toggle:row:vectors").click()                # expand the target-list row
     user.find(kind=ui.checkbox, content="weighting").click()      # reveal the all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()   # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
@@ -808,7 +790,6 @@ async def test_objective_tooltip_tracks_the_all_interval_mode(user: User) -> Non
     assert any("⟪𝐝⟫ₚ" in t for t in objective_tips())                 # the target-based wording
     assert not any("retuning magnitude" in t for t in objective_tips())
 
-    user.find(marker="toggle:row:vectors").click()                    # expand the target-list row
     user.find(kind=ui.checkbox, content="weighting").click()          # reveal the all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()       # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
@@ -823,7 +804,6 @@ async def test_all_interval_disables_the_target_chooser_and_falls_back_to_dash(u
     # both parts fall back to "-" (the family select's display-value, the limit's "-" placeholder) and
     # the whole control greys out non-interactive. Unchecking restores the live family and interactivity.
     await _enable(user, "presets")
-    user.find(marker="toggle:row:vectors").click()               # expand the target-list row
     user.find(kind=ui.checkbox, content="weighting").click()     # reveal the all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
@@ -855,7 +835,6 @@ async def test_unheld_held_interval_renders_red_until_reoptimized(user: User) ->
     # add a held interval, make it the fifth 3/2, then hand-tune a generator off the held optimum.
     await user.open("/")
     _toggle(user, "optimization")                          # show the optimization box's held column
-    user.find(marker="toggle:row:vectors").click()         # expand the interval-vectors row (folded by default)
     _click_glyph(user, "held_plus")                        # start a blank, red held-interval draft
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")     # make it the fifth 3/2 = (-1 1 0)
@@ -879,7 +858,6 @@ async def test_adding_a_held_interval_drops_the_scheme_chooser_to_dash(user: Use
     _toggle(user, "presets")             # show the chooser dropdowns
     _toggle(user, "optimization")        # ...and the held-interval column
     assert _cell_child(user, "preset:tuning").value == "minimax-U"  # the default scheme, named
-    user.find(marker="toggle:row:vectors").click()  # expand the interval-vectors row
     _click_glyph(user, "held_plus")                  # start a blank held-interval draft
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")  # make it the fifth 3/2 -> deviates the tuning
@@ -895,8 +873,6 @@ async def test_adding_an_interval_of_interest_commits_when_filled(user: User) ->
     # the whole user flow: + opens a blank red draft, and filling every vector component commits
     # it (an interval of interest is no longer a pre-filled 1/1 — it stays a draft until complete)
     await user.open("/")
-    user.find(marker="toggle:col:interest").click()  # expand the interest column (folded by default)
-    user.find(marker="toggle:row:vectors").click()   # expand the interval-vectors row
     _click_glyph(user, "interest_plus")               # start a blank red draft
     await user.should_see(marker="cell:interest:0:0")
     assert "rtt-pending" in _cell_child(user, "cell:interest:0:0")._classes  # the draft cell is red
@@ -912,7 +888,6 @@ async def test_adding_a_target_commits_when_filled(user: User) -> None:
     # filling it materializes the spec set into an override with the new interval appended
     k = len(service.target_interval_set(service.DEFAULT_TARGET_SPEC, Editor().state.domain_basis))
     await user.open("/")
-    user.find(marker="toggle:row:vectors").click()  # expand the vectors row (the targets column is open by default)
     _click_glyph(user, "target_plus")               # start a blank red target draft
     await user.should_see(marker=f"cell:vec:targets:{k}:0")
     assert "rtt-pending" in _cell_child(user, f"cell:vec:targets:{k}:0")._classes
@@ -1120,10 +1095,9 @@ async def test_default_view_html_cell_renders_non_blank_content(user: User, cell
 async def test_a_maximal_render_dispatches_every_emitted_cell_kind(user: User) -> None:
     # the cell-kind registry (audit #3) indexes cell_kinds[cb.kind] with no fallback, so any kind the
     # layout emits without a registered build/update handler raises rather than rendering a silent
-    # blank cell. Drive a broad render — every implemented Show layer on, the folded vector rows
-    # expanded so the comma / target / interest / held vector cells and their ± controls also emit.
+    # blank cell. Drive a broad render — every implemented Show layer on, and the vector rows
+    # open by default so the comma / target / interest / held vector cells and their ± controls emit.
     # A missing handler crashes the render, which the user fixture surfaces (any raised error fails it).
     await user.open("/")
     user.find(kind=ui.checkbox, content="select all / none").click()  # every implemented feature on
-    user.find(marker="toggle:row:vectors").click()                    # expand the comma / target / interest / held vectors
     await user.should_see(marker="cell:mapping:0:0")                  # the board re-rendered, no dispatch error

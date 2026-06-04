@@ -8,7 +8,7 @@ the initial state, undo availability, and the shrink guard.
 from fractions import Fraction
 
 from rtt.web import service, settings, spreadsheet
-from rtt.web.editor import INITIAL_COLLAPSED, INITIAL_MAPPING, Editor
+from rtt.web.editor import INITIAL_MAPPING, Editor
 
 
 def test_editor_starts_at_meantone_with_no_undo():
@@ -950,17 +950,17 @@ def test_selecting_a_nested_subcontrol_pulls_its_whole_parent_chain_on():
 
 def test_expand_collapse_state_is_owned_and_undoable():
     editor = Editor()
-    # the commas/interest columns and the vectors row start folded (the mockup default)
-    assert editor.collapsed == set(INITIAL_COLLAPSED)
-    editor.toggle_collapsed("col:commas")  # unfold the commas column
-    assert "col:commas" not in editor.collapsed
+    # nothing starts folded — the default view opens every row and column
+    assert editor.collapsed == set()
+    editor.toggle_collapsed("col:commas")  # fold the commas column
+    assert "col:commas" in editor.collapsed
     assert editor.can_undo is True  # folding/unfolding is an undoable change
     editor.undo()
-    assert "col:commas" in editor.collapsed
+    assert "col:commas" not in editor.collapsed
     editor.set_collapsed({"row:tuning"})  # the master expand/collapse-all replaces the set
     assert editor.collapsed == {"row:tuning"}
     editor.undo()
-    assert "col:commas" in editor.collapsed  # back to the prior fold state
+    assert editor.collapsed == set()  # back to the prior fold state (nothing folded)
 
 
 def test_reset_restores_every_default_as_one_undoable_action():
@@ -977,13 +977,13 @@ def test_reset_restores_every_default_as_one_undoable_action():
         == service.base_scheme_name(service.DEFAULT_DOCUMENT_SCHEME)
     assert service.is_all_interval(editor.tuning_scheme) is False  # reset restores all-interval OFF
     assert editor.settings == settings.defaults()
-    assert "col:commas" in editor.collapsed
+    assert editor.collapsed == set()  # reset folds nothing — the default board is fully expanded
     assert editor.can_reset is False
     editor.undo()  # a single undo brings the whole prior document back
     assert editor.state.mapping == ((1, 0, -4), (0, 1, 4))
     assert service.base_scheme_name(editor.tuning_scheme) == "held-octave minimax-ES"
     assert editor.settings["charts"] is True
-    assert "col:commas" not in editor.collapsed
+    assert "col:commas" in editor.collapsed
 
 
 def test_serialize_load_round_trips_the_whole_document():
@@ -1008,7 +1008,7 @@ def test_serialize_load_round_trips_the_whole_document():
     assert restored.held_vectors == [(1, 0, 0)]
     assert restored.range_mode == "tradeoff"
     assert restored.settings["charts"] is True
-    assert "col:commas" not in restored.collapsed
+    assert "col:commas" in restored.collapsed
     assert restored.can_undo is False  # a load is a fresh start, not an undoable step
 
 
