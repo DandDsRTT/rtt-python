@@ -693,6 +693,41 @@ async def test_editable_prescaler_cell_renders_a_stacked_cents_face(user: User) 
     assert int_lbl.text + frac_lbl.text == value    # and the two reconstruct the cell's value
 
 
+async def test_a_bare_integer_value_fills_the_cell_not_the_reduced_whole_part_size(user: User) -> None:
+    # A cents value stacks a small whole part over a smaller .fraction so the pair fits the square.
+    # But a value with NO fractional part is a plain integer: it must fill the cell at the full
+    # value-cell font (like the mapping / mapped integers), NOT sit at the reduced whole-part size
+    # with empty space below — which made integers read as shrunken, "as if they had a decimal part".
+    # The prescaler matrix is mostly integers: its off-diagonal 0s are read-only tval cells.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # reveal the prescaling row
+    await user.should_see(marker="cell:prescaling:primes:0:1")
+    zero_face = _cell_child(user, "cell:prescaling:primes:0:1")        # read-only tval: child[0] IS the face
+    zero_main = zero_face.default_slot.children[0]
+    assert zero_main.text == "0"
+    assert "rtt-stacked-solo" in zero_main._classes    # the bare integer takes the full-size (solo) face
+    # the diagonal log₂3 = 1.585 keeps the stacked whole-over-.fraction face, so it is NOT solo
+    diag_main, _ = _stacked_face(user, "cell:prescaling:primes:1:1")
+    assert "rtt-stacked-solo" not in diag_main._classes
+
+
+async def test_a_finite_power_fills_the_cell_when_re_synced_from_infinity(user: User) -> None:
+    # the optimization power is the same stacked face, but reached through the UPDATE path: the cell
+    # is re-synced (not rebuilt) when the power changes, so the full-size toggle must fire on sync
+    # too. ∞ keeps its small "(max)" sub (NOT solo); editing it to a finite power makes a bare
+    # integer that must flip to the full-size (solo) face on that re-sync.
+    await _enable(user, "optimization")
+    main, sub = _stacked_face(user, "optimization:power")
+    assert (main.text, sub.text) == ("∞", "(max)")
+    assert "rtt-stacked-solo" not in main._classes        # ∞ keeps its stacked "(max)" annotation
+    _cell_child(user, "optimization:power").set_value("2")
+    await user.should_see(marker="optimization:power")
+    main, sub = _stacked_face(user, "optimization:power")
+    assert (main.text, sub.text) == ("2", "")
+    assert "rtt-stacked-solo" in main._classes             # the finite power fills the cell on re-sync
+
+
 async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")

@@ -443,6 +443,10 @@
    whole part over the .fraction; a minimax power stacks ∞ over a small "(max)". */
 .rtt-stacked-main { font-size:10px; }
 .rtt-stacked-sub { font-size:7px; color:#000; }
+/* a stacked value with no sub-line is a plain integer (a prescaler 0/1, a finite power), not a
+   whole-part-over-.fraction: it fills the square at the full value-cell font, like the mapping/
+   mapped integers, rather than the reduced whole-part size that reserves room for a fraction. */
+.rtt-stacked-main.rtt-stacked-solo { font-size:var(--cell-font); }
 /* the generator tuning map's signed face: the clickable sign glyph and the whole part share
    one row (the small ".fraction" stacks beneath, like every cents cell). The face ignores
    pointer events, but the sign takes them back — the otherwise-assumed "+" of a positive

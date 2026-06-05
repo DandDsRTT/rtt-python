@@ -1178,6 +1178,18 @@ class _Reconciler:
             m = ui.label(main).classes("rtt-stacked-main")
             s = ui.label(sub).classes("rtt-stacked-sub")
         self.stacked_faces[cid] = (m, s)
+        self._size_stacked_main(m, sub)
+
+    def _size_stacked_main(self, main_label, sub):
+        """Size a stacked face's main glyph to its sub-line. With NO sub (a bare integer — a
+        prescaler 0/1, a finite optimization/norm power) the value isn't a whole-part-over-
+        .fraction at all: it renders at the full value-cell font (the `rtt-stacked-solo` class),
+        like the plain mapping/mapped integers, instead of the reduced whole-part size that
+        leaves room for a fraction. With a sub present (a cents decimal, or ∞ over "(max)") it
+        stays the smaller stacked size so the pair fits the square."""
+        solo = not sub
+        main_label.classes(add="rtt-stacked-solo" if solo else "",
+                           remove="" if solo else "rtt-stacked-solo")
 
     def _sync_stacked_face(self, cid, main, sub):
         """Re-sync a stacked face's two lines in place (the cell kind is unchanged across
@@ -1185,6 +1197,7 @@ class _Reconciler:
         m, s = self.stacked_faces[cid]
         m.set_text(main)
         s.set_text(sub)
+        self._size_stacked_main(m, sub)  # a value that gained/lost its fraction flips solo too
 
     def set_cents_face(self, cid, text):
         """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
