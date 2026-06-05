@@ -1739,6 +1739,21 @@ class _Reconciler:
                     on_change=lambda e: self._cb.on_preset("temperament", e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
+            # hovering an option in the OPEN dropdown previews loading that temperament — ring the
+            # cells its comma basis would change (no reflow). Quasar exposes no per-option hover, so
+            # re-render each option via its `option` slot as the same q-item (v-bind itemProps keeps it
+            # clickable/selectable and carries the divider's disabled state) plus @mouseenter/@mouseleave
+            # that emit an `opthover` event back to Python: the option's value, or null for a divider
+            # header / on leave. The popup closing clears too.
+            sel.add_slot("option", """
+                <q-item v-bind="props.itemProps"
+                        @mouseenter="$parent.$emit('opthover', props.opt.disable ? null : props.opt.value)"
+                        @mouseleave="$parent.$emit('opthover', null)">
+                    <q-item-section><q-item-label>{{ props.opt.label }}</q-item-label></q-item-section>
+                </q-item>
+            """)
+            sel.on("opthover", lambda e: self._cb.on_temperament_hover(e.args))
+            sel.on("popup-hide", lambda _=None: self._cb.on_temperament_hover(None))
             self.selects[cb.id] = sel
         elif name == "prescaler":
             # the predefined-prescalers chooser: log-prime always, the rest (identity / prime) gated
@@ -2654,6 +2669,22 @@ def index() -> None:
             rec._control_hovering = False
             rec.clear_preview()
 
+    def on_temperament_hover(value):
+        # hovering a temperament option in the open dropdown previews loading it: ring the cells its
+        # comma basis would change. It's the same ring-only, no-reflow preview a +/- hover gives —
+        # loading the temperament is just another hypothetical edit (edit_comma_basis) — so it reuses
+        # control_hover. A divider header, the mouse leaving an option, or the popup closing clears.
+        # The option slot emits the bare temperament value on enter and null on leave, but NiceGUI
+        # marshals an event arg as a payload (dict/list), so normalize down to the bare key first.
+        if isinstance(value, dict):
+            value = next(iter(value.values()), None)
+        if isinstance(value, (list, tuple)):
+            value = value[0] if value else None
+        if value in presets.TEMPERAMENT_COMMAS:  # a real temperament — not a divider header or null
+            control_hover(lambda: editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value]))
+        else:
+            control_unhover()
+
     # generator-tuning wheel preview: hovering the cell snapshots a baseline so each wheel notch (a
     # real, committed nudge — handled by on_gentuning_wheel, which re-renders) rings the OTHER cells
     # it moves against that baseline. Leaving the cell drops the rings; the nudge itself stays. The
@@ -2756,6 +2787,7 @@ def index() -> None:
         on_form_choose=on_form_choose,
         on_gentuning_change=on_gentuning_change,
         on_gentuning_wheel=on_gentuning_wheel,
+        on_temperament_hover=on_temperament_hover,
         on_held_change=on_held_change,
         on_interest_change=on_interest_change,
         on_mapping_change=on_mapping_change,

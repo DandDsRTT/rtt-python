@@ -1610,3 +1610,17 @@ async def test_hovering_a_generator_minus_previews_what_it_changes_without_reflo
     await user.should_see(marker="tuning:gen:1")                           # ...but the generator stays (no reflow)
     UserInteraction(user, btn, None).trigger("mouseleave")
     assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:0")  # cleared on mouse-out
+
+
+async def test_hovering_a_temperament_option_previews_loading_it(user: User) -> None:
+    # hovering a temperament in the OPEN dropdown previews loading it: the cells its comma basis would
+    # change ring, no reflow. A divider header / leaving the option (value None) clears. The DOM-hover
+    # -> opthover wiring is the Quasar option slot (verified live); here we drive the resulting handler.
+    await user.open("/")
+    _toggle(user, "presets")                                  # the temperament chooser is presets-gated
+    await user.should_see(marker="preset:temperament")
+    sel = _cell_child(user, "preset:temperament")             # the grouped <select>
+    UserInteraction(user, {sel}, None).trigger("opthover", "5:Porcupine")  # hover porcupine (default is meantone)
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2")  # the mapping it'd load rings
+    UserInteraction(user, {sel}, None).trigger("opthover", None)           # leave the option
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
