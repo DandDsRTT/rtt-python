@@ -795,6 +795,21 @@ def test_interval_complexities_use_the_prescaler_override():
     assert overridden == pytest.approx(sopfr, abs=1e-6)
 
 
+def test_interval_complexities_accept_a_full_matrix_pretransformer():
+    import numpy as np
+    import pytest
+
+    # the editable pretransformer can be a full (non-diagonal) matrix 𝑋, not just a diagonal: the
+    # complexity is then ‖𝑋·v‖ (a matrix-vector product) — the general pretransformer form. The 0.5
+    # off the diagonal couples prime 3 into prime 2's row.
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    X = ((1.0, 0.5, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0))
+    comps = service.interval_complexities(mapping, "minimax-S", ("3/2", "5/4"), prescaler_override=X)
+    # minimax-S is taxicab (q=1), no size factor: complexity = ‖𝑋·v‖₁
+    for got, vec in zip(comps, ([-1, 1, 0], [-2, 0, 1])):
+        assert got == pytest.approx(float(np.linalg.norm(np.array(X) @ np.array(vec), 1)))
+
+
 def test_interval_weights_use_the_prescaler_override():
     import pytest
 
@@ -819,6 +834,32 @@ def test_tuning_uses_the_prescaler_override():
     sopfr = service.tuning(mapping, "minimax-sopfr-S")
     assert overridden.tuning_map == pytest.approx(sopfr.tuning_map, abs=1e-6)
     assert overridden.generator_map == pytest.approx(sopfr.generator_map, abs=1e-6)
+
+
+def test_all_interval_solver_handles_a_non_diagonal_pretransformer():
+    import numpy as np
+    import pytest
+
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    # a 2-D DIAGONAL override gives the SAME all-interval tuning as the equivalent 1-D diagonal —
+    # the new X⁻¹-columns objective reduces to the old per-prime path for a diagonal matrix
+    diag = (1.0, 1.585, 2.322)
+    diag_2d = tuple(tuple(diag[i] if i == k else 0.0 for k in range(3)) for i in range(3))
+    t1 = service.tuning(mapping, "minimax-S", prescaler_override=diag)
+    t2 = service.tuning(mapping, "minimax-S", prescaler_override=diag_2d)
+    assert t2.tuning_map == pytest.approx(t1.tuning_map, abs=1e-4)
+    # a NON-diagonal pretransformer: the all-interval solve minimizes the TRUE objective ‖𝒓𝑋⁻¹‖∞
+    # (minimax-S's dual norm power is ∞), not the per-prime diagonal approximation
+    nondiag = ((1.0, 0.5, 0.0), (0.0, 1.585, 0.0), (0.0, 0.0, 2.322))
+    t3 = service.tuning(mapping, "minimax-S", prescaler_override=nondiag)
+    M, j = np.array(mapping, float), np.array(t3.just_map)
+    Xinv = np.linalg.inv(np.array(nondiag))
+    obj = lambda g: float(np.max(np.abs((np.array(g) @ M - j) @ Xinv)))
+    g0 = np.array(t3.generator_map)
+    base = obj(g0)
+    # g0 is the minimax of ‖𝒓𝑋⁻¹‖∞: no small generator perturbation reduces the objective
+    for dg in ([0.5, 0], [0, 0.5], [-0.5, 0], [0, -0.5], [0.3, 0.3], [-0.3, 0.3]):
+        assert obj(g0 + np.array(dg)) >= base - 1e-6
 
 
 def test_tuning_optimizes_over_an_explicit_target_override():

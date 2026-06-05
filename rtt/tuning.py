@@ -200,10 +200,21 @@ def _optimization_setup(
 
     An all-interval scheme (empty target set) instead optimizes over the primes with
     simplicity weighting, at the dual of the interval-complexity norm power — minimax
-    over every interval is, by duality, this optimization over the primes."""
+    over every interval is, by duality, this optimization over the primes.
+
+    A non-diagonal pretransformer 𝑋 (a hand-edited matrix override) generalizes that duality:
+    minimax over every interval of ``|𝒓v| / ‖𝑋v‖`` equals ``‖𝒓𝑋⁻¹‖`` at the dual norm power, which
+    is the unit-weighted minimax over the COLUMNS of 𝑋⁻¹ (each ``𝒓·colⱼ`` is a component of
+    ``𝒓𝑋⁻¹``). For a diagonal 𝑋 those columns are ``(1/𝐿ᵢ)·eᵢ``, reproducing the per-prime path —
+    so this is taken only when the override is an actual matrix, keeping the integer-prime targets
+    (and their quotient labels) for every diagonal scheme."""
     if spec.target_intervals is None:
         return (), np.array([]), spec.optimization_power  # held intervals alone pin the tuning
     if spec.target_intervals.strip() in ("{}", ""):
+        if prescaler_override is not None and np.ndim(prescaler_override) == 2:
+            inverse_columns = np.linalg.inv(np.asarray(prescaler_override, dtype=float)).T
+            return (tuple(map(tuple, inverse_columns)), np.ones(d),
+                    get_dual_power(spec.complexity_norm_power))
         primes = tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
         weights = damage_weights(
             primes, t, replace(spec, damage_weight_slope="simplicityWeight"),
@@ -367,11 +378,13 @@ def get_complexity_prescaler(
     complexity is a norm of L applied to its vector, so this is the matrix that defines it.
 
     ``override`` is a per-call escape hatch: when set, the four trait arguments are
-    ignored and the override is returned verbatim. Threaded through the optimization and
-    complexity / weight paths so the web app's bare prescaler tile can hand-edit the
-    diagonal without having to invent a synthetic spec or monkey-patch every consumer."""
+    ignored and the override is returned verbatim. It is either a d-tuple diagonal OR a full
+    d×d matrix (the editable pretransformer tile, once alt-complexity makes the whole square
+    editable) — :func:`get_complexity` applies a 2-D override as a matrix-vector product. Threaded
+    through the optimization and complexity / weight paths so the web app's bare pretransformer
+    tile can hand-edit it without inventing a synthetic spec or monkey-patching every consumer."""
     if override is not None:
-        return [float(x) for x in override]
+        return override
     diagonal = []
     for q in get_domain_basis(t):
         fraction = Fraction(q)
@@ -405,12 +418,17 @@ def get_complexity(
     (the size-weighted sum, ``size_factor`` times the interval's log size), then divides
     the norm by ``1 + size_factor`` — the Weil/lils family of complexities.
 
-    ``prescaler_override`` (a d-tuple) bypasses the trait-driven prescaler diagonal —
-    the seam the web app's custom prescaler tile rides into the optimization."""
-    diagonal = get_complexity_prescaler(
+    ``prescaler_override`` bypasses the trait-driven prescaler — a d-tuple diagonal, or a full
+    d×d matrix (a non-diagonal pretransformer) the web app's editable tile rides in. A diagonal
+    pre-transforms element-wise (𝐿ᵢvᵢ); a matrix as a matrix-vector product (𝑋·v)."""
+    prescaler = get_complexity_prescaler(
         t, log_prime_power, prime_power, nonprime_basis_approach, override=prescaler_override,
     )
-    transformed = [w * x for w, x in zip(diagonal, pcv)]
+    if np.ndim(prescaler) == 2:  # a full (non-diagonal) pretransformer matrix: 𝑋·v
+        transformed = list(np.asarray(prescaler, dtype=float) @ np.asarray(pcv, dtype=float))
+    else:  # a diagonal: element-wise 𝐿ᵢvᵢ. zip truncates to the shorter — a nonstandard domain's
+        # prescaler can be shorter than the over-primes vector, and only the basis elements count
+        transformed = [w * x for w, x in zip(prescaler, pcv)]
     if size_factor != 0:
         transformed.append(size_factor * sum(transformed))
     ord_ = np.inf if norm_power == float("inf") else norm_power
