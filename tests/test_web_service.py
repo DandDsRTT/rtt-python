@@ -1235,6 +1235,8 @@ def test_domain_has_nonprimes_flags_any_nonprime_element():
     # prime limits). BARBADOS over 2.3.13/5 has the nonprime 13/5; 2.9.5 has the composite 9.
     assert service.domain_has_nonprimes((2, 3, 5)) is False  # standard primes
     assert service.domain_has_nonprimes((3, 2, 5)) is False  # reordered primes, still all prime
+    assert service.domain_has_nonprimes((2, 5, 7)) is False  # pure-prime nonstandard subgroup (skips 3)
+    assert service.domain_has_nonprimes((2, 3, Fraction(7, 1))) is False  # Fraction that IS a prime int
     assert service.domain_has_nonprimes((2, 3, Fraction(13, 5))) is True  # 13/5 has a denominator
     assert service.domain_has_nonprimes((2, 9, 5)) is True  # 9 = 3² is composite
 
