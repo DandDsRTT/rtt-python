@@ -653,26 +653,37 @@ def test_is_euclidean_reports_the_complexity_norm_power():
     assert service.is_euclidean(service.scheme_with_complexity_norm_power("minimax-S", 2)) is True
 
 
-def test_weight_annotation_codes_the_slope_and_euclideanization():
+def test_weight_annotation_codes_the_complexity_slope_and_euclideanization():
     # the damage/weight annotated-unit code (guide ch.10 "Annotated units"): the weight-slope
-    # letter — U (unity), C (complexity), S (simplicity) — gaining an E prefix when the
-    # complexity norm is Euclideanized (q=2). Damage renders ¢(<code>), the weight (<code>).
+    # letter — U (unity), C (complexity), S (simplicity) — gaining an E prefix at a Euclidean
+    # (q=2) norm and the alternative-complexity family name when it isn't the log-product default.
+    # Damage renders ¢(<code>), the weight (<code>).
     assert service.weight_annotation("minimax-U") == "U"
     assert service.weight_annotation("minimax-C") == "C"
     assert service.weight_annotation("minimax-S") == "S"
     assert service.weight_annotation("minimax-EC") == "EC"
     assert service.weight_annotation("minimax-ES") == "ES"
-    # unity weight applies no complexity, so it never Euclideanizes — stays U even at q=2
-    assert service.weight_annotation(service.scheme_with_complexity_norm_power("minimax-U", 2.0)) == "U"
+    # a named alternative complexity slots its family in — E prefixes the family, not the slope
+    assert service.weight_annotation("minimax-sopfr-S") == "sopfr-S"
+    assert service.weight_annotation("minimax-E-sopfr-S") == "E-sopfr-S"
+    assert service.weight_annotation("minimax-copfr-C") == "copfr-C"
+    assert service.weight_annotation("minimax-lils-S") == "lils-S"
+    assert service.weight_annotation("minimax-lols-S") == "lols-S"
+    # unity weight applies no complexity — always just "U", even with sopfr traits at q=2
+    assert service.weight_annotation(service.scheme_with_weight_slope("minimax-E-sopfr-S", "unity-weight")) == "U"
 
 
-def test_complexity_annotation_codes_only_euclideanization():
-    # the complexity quantity carries no weight slope (it is always "complexity"); only the
-    # Euclidean norm varies it — C (taxicab) vs EC (q=2) — independent of the weight slope.
-    assert service.complexity_annotation("minimax-S") == "C"     # simplicity slope, taxicab
-    assert service.complexity_annotation("minimax-C") == "C"     # complexity slope, taxicab
-    assert service.complexity_annotation("minimax-ES") == "EC"   # simplicity slope, Euclidean
-    assert service.complexity_annotation("minimax-EC") == "EC"   # complexity slope, Euclidean
+def test_complexity_annotation_codes_the_family_and_euclideanization():
+    # the complexity quantity carries no weight slope (always "complexity", letter C); only the
+    # family and Euclideanization vary it — C / EC for the log-product default, sopfr-C / E-sopfr-C
+    # for a named family. Independent of the weight slope (sopfr-S still has an sopfr-C complexity).
+    assert service.complexity_annotation("minimax-S") == "C"     # log-product, taxicab
+    assert service.complexity_annotation("minimax-ES") == "EC"   # log-product, Euclidean
+    assert service.complexity_annotation("minimax-sopfr-S") == "sopfr-C"
+    assert service.complexity_annotation("minimax-E-sopfr-S") == "E-sopfr-C"
+    assert service.complexity_annotation("minimax-copfr-C") == "copfr-C"
+    assert service.complexity_annotation("minimax-lils-S") == "lils-C"
+    assert service.complexity_annotation("minimax-lols-S") == "lols-C"
 
 
 def test_prescaler_of_reports_the_schemes_current_prescaler():

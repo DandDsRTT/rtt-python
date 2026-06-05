@@ -11,6 +11,7 @@ and out. Reuses the entity types in :mod:`rtt.web.layout`.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
@@ -181,6 +182,14 @@ def _sub(n: int) -> str:
     """``n`` as Unicode subscript digits (e.g. ``1`` -> ``₁``), for the domain-units
     coordinate labels (p₁/, /g₂) that index each prime/generator."""
     return str(n).translate(_SUBSCRIPTS)
+
+
+def _subscript_coord(text: str, letter: str, replacement: str) -> str:
+    """Replace each STANDALONE coordinate ``letter`` (``g`` / ``p`` / ``b``) in a unit string
+    with ``replacement`` — its index-subscripted form. A letter flanked by other ASCII letters
+    (inside an annotation family name like ``sopfr`` or ``copfr``) is left alone, so a unit such
+    as ``(sopfr-C)/p`` subscripts only its trailing prime coordinate, not the ``p`` in ``sopfr``."""
+    return re.sub(rf"(?<![A-Za-z]){letter}(?![A-Za-z])", replacement, text)
 
 
 def _count_sym(sym: str) -> str:
@@ -1577,22 +1586,24 @@ class _GridBuilder:
         return base
 
     def cell_unit(self, rkey, ckey, *, gen=None, prime=None):
-        # the per-value unit shown beneath a gridded cell when units is on: the tile's
-        # unit (UNITS) with its g/p/b variables subscripted by this cell's generator/prime
-        # index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped list g₁.
-        # A nonstandard subgroup swaps the on-domain p for b (basis element); see
-        # domain_label. The chapter-9 superspace tiles use literal b in UNITS (¢/b for
-        # the cyan tuning row, g/b for M_L, b/b for M_jL) — so a prime arg subscripts b
-        # directly too. The literal-b substitution runs FIRST so the b's the p-swap
-        # itself produces (p → b₁) don't get re-subscripted to b₁₁ when domain_label is b.
+        # the per-value unit shown beneath a gridded cell when units is on: the tile's unit
+        # (tile_unit) with its STANDALONE g/p/b coordinate variables subscripted by this cell's
+        # generator/prime index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped
+        # list g₁. Only standalone letters subscript (see _subscript_coord), so the p inside an
+        # annotation family like (sopfr-C)/p stays put while the trailing prime coordinate becomes
+        # p₁. A nonstandard subgroup swaps the on-domain p for b (basis element); see domain_label.
+        # The chapter-9 superspace tiles use literal b in UNITS (¢/b for the cyan tuning row, g/b
+        # for M_L, b/b for M_jL) — so a prime arg subscripts b directly too. The literal-b
+        # substitution runs FIRST so the b's the p-swap itself produces (p → b₁) don't get
+        # re-subscripted to b₁₁ when domain_label is b.
         if not self.show_units:
             return ""
         u = self.tile_unit(rkey, ckey)
         if gen is not None:
-            u = u.replace("g", f"g{_sub(gen + 1)}")
+            u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
         if prime is not None:
-            u = u.replace("b", f"b{_sub(prime + 1)}")
-            u = u.replace("p", f"{self.domain_label}{_sub(prime + 1)}")
+            u = _subscript_coord(u, "b", f"b{_sub(prime + 1)}")
+            u = _subscript_coord(u, "p", f"{self.domain_label}{_sub(prime + 1)}")
         return u
 
     def matlabel_gutter_w(self, group_key):

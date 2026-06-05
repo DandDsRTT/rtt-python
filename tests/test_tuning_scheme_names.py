@@ -11,6 +11,7 @@ import pytest
 
 from rtt.tuning_scheme_names import (
     TuningSchemeSpec,
+    annotation_code,
     systematic_name,
     tuning_scheme_from_systematic_name as parse,
 )
@@ -37,6 +38,36 @@ CANONICAL = [
 @pytest.mark.parametrize("name", CANONICAL)
 def test_canonical_name_renders_back_to_itself(name):
     assert systematic_name(parse(name)) == name
+
+
+# annotation_code(spec, letter) is the complexity+slope token the guide parenthesizes as an
+# annotated unit (ch.10) — the systematic name's core after the mini-power word, with the slope
+# position set to `letter`. The log-product default glues E to the slope (ES); a named family
+# dash-delimits it (E-sopfr-S). The complexity quantity reuses the same family with letter "C".
+ANNOTATION_CASES = [
+    ("minimax-S", "S", "S"), ("minimax-ES", "S", "ES"),
+    ("minimax-C", "C", "C"), ("minimax-EC", "C", "EC"),
+    ("minimax-sopfr-S", "S", "sopfr-S"), ("minimax-E-sopfr-S", "S", "E-sopfr-S"),
+    ("minimax-sopfr-S", "C", "sopfr-C"), ("minimax-E-sopfr-S", "C", "E-sopfr-C"),
+    ("minimax-copfr-C", "C", "copfr-C"), ("minimax-E-copfr-S", "S", "E-copfr-S"),
+    ("minimax-lils-S", "S", "lils-S"), ("minimax-lils-S", "C", "lils-C"),
+    ("minimax-lols-S", "S", "lols-S"), ("minimax-E-lils-S", "C", "E-lils-C"),
+]
+
+
+@pytest.mark.parametrize("name, letter, expected", ANNOTATION_CASES)
+def test_annotation_code_is_the_systematic_core_for_a_slope_position(name, letter, expected):
+    assert annotation_code(parse(name), letter) == expected
+
+
+@pytest.mark.parametrize("name", [n for n in CANONICAL if n.startswith("minimax-")])
+def test_annotation_code_matches_the_systematic_names_own_core(name):
+    # for a scheme's OWN slope, the token is exactly the systematic name minus the "minimax-"
+    # prefix — so the annotation and the scheme name stay in lockstep.
+    from rtt.tuning_scheme_names import _LETTER_BY_SLOPE
+    spec = parse(name)
+    own = annotation_code(spec, _LETTER_BY_SLOPE[spec.damage_weight_slope])
+    assert name == f"minimax-{own}"
 
 
 # Non-canonical / synonym / historical forms: the rendered name need not equal the input

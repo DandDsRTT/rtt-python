@@ -215,6 +215,17 @@ def _optimization_power_from_name(name: str) -> float:
     return 1
 
 
+def _annotation_token(family: str, euclidean: bool, letter: str) -> str:
+    """The complexity+slope token a systematic name carries after its ``mini…`` power word —
+    also the unit the guide parenthesizes as an annotated unit (ch.10 "Annotated units"; see
+    :func:`annotation_code`). For the log-product default (no ``family``) the Euclidean ``E``
+    glues straight to the slope ``letter`` (``"ES"``); a named family dash-delimits it
+    (``"E-sopfr-S"``). ``letter`` is the slope position — ``"S"`` / ``"C"`` / ``"U"``."""
+    if family:
+        return "-".join((["E"] if euclidean else []) + [family, letter])
+    return ("E" if euclidean else "") + letter
+
+
 def systematic_name(spec: TuningSchemeSpec) -> str | None:
     """The canonical systematic name of a tuning scheme — the inverse of
     :func:`tuning_scheme_from_systematic_name`. ``None`` when the spec corresponds to no
@@ -231,11 +242,7 @@ def systematic_name(spec: TuningSchemeSpec) -> str | None:
         return None
     family, consumes_octave = complexity
     letter = _LETTER_BY_SLOPE[spec.damage_weight_slope]
-    if family:  # a named complexity is dash-delimited from the mini-prefix and the slope
-        tokens = (["E"] if spec.complexity_norm_power == 2 else []) + [family]
-        core = f"{power}-" + "-".join(tokens) + f"-{letter}"
-    else:  # log-product (the default): the Euclidean E (if any) glues straight to the slope
-        core = f"{power}-" + ("E" if spec.complexity_norm_power == 2 else "") + letter
+    core = f"{power}-" + _annotation_token(family, spec.complexity_norm_power == 2, letter)
     return _scheme_prefix(spec, consumes_octave) + core
 
 
@@ -268,6 +275,18 @@ def _complexity_part(spec: TuningSchemeSpec) -> tuple[str, bool] | None:
     if family in _OCTAVE_HOLDING_FAMILY and spec.held_intervals == "octave":
         return _OCTAVE_HOLDING_FAMILY[family], True  # lils->lols / ils->ols, octave folded in
     return family, False
+
+
+def annotation_code(spec: TuningSchemeSpec, letter: str) -> str:
+    """The annotated-unit token the guide parenthesizes for a damage / weight / complexity
+    quantity (ch.10 "Annotated units") — the systematic name's complexity+slope core sans the
+    ``mini…`` power word: ``"S"`` / ``"ES"`` for the log-product default, ``"sopfr-S"`` /
+    ``"E-sopfr-S"`` for a named family. ``letter`` selects the slope position (``"S"`` / ``"C"`` /
+    ``"U"``); the complexity quantity itself always passes ``"C"``. A complexity outside the named
+    families falls back to the bare log-product form (just the slope, E-prefixed when Euclidean)."""
+    complexity = _complexity_part(spec)
+    family = complexity[0] if complexity else ""
+    return _annotation_token(family, spec.complexity_norm_power == 2, letter)
 
 
 def _scheme_prefix(spec: TuningSchemeSpec, octave_held_by_complexity: bool) -> str:

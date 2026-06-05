@@ -48,6 +48,7 @@ from rtt.tuning import (
 from rtt.tuning_ranges import get_generator_tuning_range
 from rtt.tuning_scheme_names import (
     TuningSchemeSpec,
+    annotation_code,
     complexity_name_traits,
     resolve_tuning_scheme,
     systematic_name,
@@ -802,22 +803,24 @@ def is_euclidean(scheme) -> bool:
 
 def weight_annotation(scheme=DEFAULT_TUNING_SCHEME) -> str:
     """The damage/weight unit's annotation code — the parenthetical the guide's dB(A)-style
-    annotated units use (ch.10 "Annotated units"): ``"U"`` (unity), ``"C"`` (complexity) or
-    ``"S"`` (simplicity), each gaining an ``"E"`` prefix (``"EC"`` / ``"ES"``) when the
-    complexity norm is Euclideanized (q=2). Damage renders ``¢(<code>)``, the weight
-    ``(<code>)``. Unity weight applies no complexity, so it never Euclideanizes."""
-    slope = damage_weight_slope(scheme)
-    if slope == "unityWeight":
+    annotated units use (ch.10 "Annotated units"): the weight-slope letter ``"U"`` (unity),
+    ``"C"`` (complexity) or ``"S"`` (simplicity), gaining an ``"E"`` prefix at a Euclidean (q=2)
+    norm and the alternative-complexity family when it isn't the log-product default — e.g.
+    ``"S"``, ``"ES"``, ``"sopfr-S"``, ``"E-sopfr-S"``. Damage renders ``¢(<code>)``, the weight
+    ``(<code>)``. Unity weight applies no complexity, so it is always just ``"U"``."""
+    spec = resolve_tuning_scheme(scheme)
+    if spec.damage_weight_slope == "unityWeight":
         return "U"
-    base = "C" if slope == "complexityWeight" else "S"
-    return f"E{base}" if is_euclidean(scheme) else base
+    letter = "C" if spec.damage_weight_slope == "complexityWeight" else "S"
+    return annotation_code(spec, letter)
 
 
 def complexity_annotation(scheme=DEFAULT_TUNING_SCHEME) -> str:
-    """The complexity quantity's annotation code — ``"C"``, or ``"EC"`` when its norm is
-    Euclideanized (q=2). Unlike the weight, complexity carries no slope (it is always
-    "complexity"); only Euclideanization varies it (guide ch.10)."""
-    return "EC" if is_euclidean(scheme) else "C"
+    """The complexity quantity's annotation code — its slope-free family+norm token, always in
+    the ``"C"`` (complexity) position: ``"C"`` / ``"EC"`` for the log-product default,
+    ``"sopfr-C"`` / ``"E-sopfr-C"`` for a named family (guide ch.10). Unlike the weight,
+    complexity carries no slope — only the family and Euclideanization vary it."""
+    return annotation_code(resolve_tuning_scheme(scheme), "C")
 
 
 def is_all_interval(scheme) -> bool:

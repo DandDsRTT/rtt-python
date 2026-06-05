@@ -2536,10 +2536,11 @@ def test_weighting_rows_have_units_column_tiles_when_domain_units_on():
 
 def test_damage_weight_and_complexity_units_track_the_tuning_scheme():
     # the annotated units follow the live scheme (guide ch.10 "Annotated units"): the weight
-    # slope picks the letter — U (unity) / C (complexity) / S (simplicity) — and an Euclidean
-    # (q=2) complexity norm prefixes E. Damage is the ¢-prefixed weighted-cents form, the weight
-    # the bare parenthetical, the complexity its own slope-free code (always C / EC). All three
-    # renderings agree: the per-box "units:" line, the per-cell unit, and the units-column spine.
+    # slope picks the letter — U (unity) / C (complexity) / S (simplicity) — an Euclidean (q=2)
+    # complexity norm prefixes E, and a named alternative complexity slots its family in. Damage
+    # is the ¢-prefixed weighted-cents form, the weight the bare parenthetical, the complexity its
+    # own slope-free code (the "C" position). All three renderings agree: the per-box "units:"
+    # line, the per-cell unit, and the units-column spine.
     # (scheme, damage, weight, complexity); complexity is None when its row is hidden (unity weight).
     cases = [
         ("TILT minimax-U", "¢(U)", "(U)", None),       # unity-weight: no complexity, the row is hidden
@@ -2547,6 +2548,11 @@ def test_damage_weight_and_complexity_units_track_the_tuning_scheme():
         ("TILT minimax-S", "¢(S)", "(S)", "(C)"),      # simplicity-weight, taxicab
         ("TILT minimax-EC", "¢(EC)", "(EC)", "(EC)"),  # complexity-weight, Euclidean
         ("TILT minimax-ES", "¢(ES)", "(ES)", "(EC)"),  # simplicity-weight, Euclidean: weight (ES), complexity (EC)
+        # alternative complexities slot the family in (E prefixes the family, not the slope):
+        ("TILT minimax-sopfr-S", "¢(sopfr-S)", "(sopfr-S)", "(sopfr-C)"),            # sopfr, taxicab
+        ("TILT minimax-E-sopfr-S", "¢(E-sopfr-S)", "(E-sopfr-S)", "(E-sopfr-C)"),    # sopfr, Euclidean
+        ("TILT minimax-copfr-C", "¢(copfr-C)", "(copfr-C)", "(copfr-C)"),            # copfr, complexity-weight
+        ("TILT minimax-lils-S", "¢(lils-S)", "(lils-S)", "(lils-C)"),                # lils (Weil-style size factor)
     ]
     for scheme, damage, weight, complexity in cases:
         cells = {c.id: c for c in _with(scheme, weighting=True, units=True, domain_units=True).cells}
