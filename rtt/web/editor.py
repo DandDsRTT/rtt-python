@@ -163,6 +163,21 @@ class Editor:
         self._clear_pending()  # a draft never survives a document restore
         self._nudging_generator = None  # nor does an in-progress wheel gesture (undo/redo/reset/load)
 
+    def capture_for_preview(self) -> tuple:
+        """Snapshot the WHOLE editor — document plus undo/redo history — so a hypothetical edit can
+        be applied (through the normal edit methods, which would otherwise push an undo step) for a
+        live preview, then fully reverted via :meth:`restore_for_preview`, leaving no trace. The
+        drag-to-combine drop preview uses this to show the would-be result while hovering, without
+        committing it or polluting the undo history."""
+        return (self._capture(), list(self._undo_stack), list(self._redo_stack))
+
+    def restore_for_preview(self, token: tuple) -> None:
+        """Revert to a :meth:`capture_for_preview` snapshot — document and history both."""
+        doc, undo, redo = token
+        self._restore(doc)
+        self._undo_stack[:] = undo
+        self._redo_stack[:] = redo
+
     def _clear_pending(self) -> None:
         """Discard every in-progress draft. Called whenever the document or domain shifts
         out from under the drafts (restore/undo/redo, a temperament edit, a domain ±) —

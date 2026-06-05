@@ -615,14 +615,15 @@ _TILE_MNEMONIC_AT = _TILE_NAME.index("n")  # where the mnemonic underline falls 
 # quantities INSIDE its box rather than on rows of their own. The symbol line seats the symbol +
 # its equivalence tail; the name line the mnemonic letter + the rest of the name.
 _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
-    ("gridded_values", "math_expressions", "quantities"),
+    # the drag-to-combine grip rides the value line, in a slot to the LEFT of the row label —
+    # mirroring where the real handle sits in the grid (left of the 𝒎ᵢ label).
+    ("drag_to_combine", "gridded_values", "math_expressions", "quantities"),
     ("symbols", "equivalences"),
     ("mnemonics", "names"),
     ("units",),
     ("plain_text_values",),
     ("presets",),
     ("charts",),
-    ("drag_to_combine",),
 )
 
 # A tile part that renders INSIDE another's cell is inert (greyed, unclickable) until that host
@@ -917,6 +918,7 @@ class _Reconciler:
         self._cb = None  # callbacks (act, render, on_*) wired by index() after they are defined
         self._row_drag: int | None = None  # the mapping row a drag-to-add started on (dragstart → drop)
         self._col_drag: tuple[str, int] | None = None  # the (interval group, index) a drag-to-add started on
+        self._drag_token = None  # editor snapshot taken at drag pick-up, so the hover preview can revert
         self.els: dict = {}  # entity id -> outer element (persists across renders)
         self.inputs: dict = {}  # mapping cell id -> q-input
         self.labels: dict = {}  # cell id -> the label whose text tracks state
@@ -1702,32 +1704,47 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
 
     def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another to ADD it into that row
-        # HTML5 drag-and-drop: the source row is held server-side from dragstart through drop (the
-        # index can't ride in the drop event's dataTransfer through NiceGUI's arg paths). dragover
-        # must cancel its default (client-side, so it doesn't round-trip per move) to mark this a
-        # valid drop target; the drop adds the dragged row into this one and re-renders.
+        # HTML5 drag-to-combine. The source row is held server-side (dragstart → drop). A custom
+        # dataTransfer type ("application/x-rtt-row") marks valid same-kind targets, so dragover shows
+        # the + (copy) cursor only over another row handle. dragenter previews the would-be result
+        # (rings the cells it moves + shows their new values, reverted on the next enter / drag end);
+        # the drop commits it as one undo step.
         wrap.classes("rtt-drag-handle rtt-row-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, idx=cb.gen: self._begin_row_drag(idx))
+        wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
+                                        "e.dataTransfer.setData('application/x-rtt-row','');}")
+        wrap.on("dragover", js_handler="(e)=>{if(e.dataTransfer.types.includes('application/x-rtt-row'))"
+                                       "{e.preventDefault();e.dataTransfer.dropEffect='copy';}}")
+        wrap.on("dragenter.prevent", lambda _=None, idx=cb.gen: self._preview_row_drop(idx))
         wrap.on("dragend", lambda _=None: self._end_row_drag())
-        wrap.on("dragover", js_handler="(e) => e.preventDefault()")
         wrap.on("drop.prevent", lambda _=None, idx=cb.gen: self._drop_on_row(idx))
         ui.icon("drag_indicator").classes("rtt-grip")
 
     def _begin_row_drag(self, idx):
         self._row_drag = idx
+        self._cb.combine_begin()
 
     def _end_row_drag(self):
         self._row_drag = None
+        self._cb.combine_end()
+
+    def _preview_row_drop(self, idx):  # hovering target row idx: preview the would-be combine (else revert)
+        src = self._row_drag
+        apply = (lambda: self._editor.add_mapping_row_to(src, idx)) if (src is not None and src != idx) else None
+        self._cb.combine_preview(apply)
 
     def _drop_on_row(self, idx):  # add the dragged generator row into the one it was dropped on
         src = self._row_drag
+        self._row_drag = None
         if src is not None and src != idx:
-            self._cb.act(lambda: self._editor.add_mapping_row_to(src, idx))
+            self._cb.combine_commit(lambda: self._editor.add_mapping_row_to(src, idx))
+        else:
+            self._cb.combine_end()  # dropped on itself / nothing: just revert the preview
 
     # the interval-column drag handles (comma / target / held / interest): the column twin of the
     # mapping-row handle. Drag one interval onto another in the SAME column to ADD it in (their
-    # product) — the source's (group, index) is held server-side from dragstart through drop, so
-    # the drop only combines within its own column. See spreadsheet's int_drag.
+    # product). The source's (group, index) is held server-side; a per-group dataTransfer type keeps
+    # the + cursor and the preview to that one column. See spreadsheet's int_drag.
     _INTERVAL_COMBINE = {
         "comma": "add_comma_to", "target": "add_target_to",
         "held": "add_held_to", "interest": "add_interest_to",
@@ -1735,27 +1752,45 @@ class _Reconciler:
 
     def _build_int_drag(self, cb, wrap):
         group = cb.id.split(":")[1]  # int_drag:<group>:<index>
+        typ = f"application/x-rtt-int-{group}"  # a per-group type so only same-column targets accept the drop
         wrap.classes("rtt-drag-handle rtt-col-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, g=group, idx=cb.comma: self._begin_col_drag(g, idx))
+        wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
+                                        f"e.dataTransfer.setData('{typ}','');}}")
+        wrap.on("dragover", js_handler=f"(e)=>{{if(e.dataTransfer.types.includes('{typ}'))"
+                                       "{e.preventDefault();e.dataTransfer.dropEffect='copy';}}")
+        wrap.on("dragenter.prevent", lambda _=None, g=group, idx=cb.comma: self._preview_int_drop(g, idx))
         wrap.on("dragend", lambda _=None: self._end_col_drag())
-        wrap.on("dragover", js_handler="(e) => e.preventDefault()")
         wrap.on("drop.prevent", lambda _=None, g=group, idx=cb.comma: self._drop_on_interval(g, idx))
         ui.icon("drag_indicator").classes("rtt-grip")
 
+    def _int_combine(self, group, idx):  # the combine callable for dropping the dragged interval here, or None
+        if self._col_drag is None:
+            return None
+        src_group, src = self._col_drag
+        if src_group != group or src == idx:  # only combine within the same interval column
+            return None
+        combine = getattr(self._editor, self._INTERVAL_COMBINE[group])
+        return lambda: combine(src, idx)
+
     def _begin_col_drag(self, group, idx):
         self._col_drag = (group, idx)
+        self._cb.combine_begin()
 
     def _end_col_drag(self):
         self._col_drag = None
+        self._cb.combine_end()
+
+    def _preview_int_drop(self, group, idx):  # hovering target (group, idx): preview the combine (else revert)
+        self._cb.combine_preview(self._int_combine(group, idx))
 
     def _drop_on_interval(self, group, idx):  # add the dragged interval into the one it was dropped on
-        if self._col_drag is None:
-            return
-        src_group, src = self._col_drag
-        if src_group != group or src == idx:  # only combine within the same interval column
-            return
-        combine = getattr(self._editor, self._INTERVAL_COMBINE[group])
-        self._cb.act(lambda: combine(src, idx))
+        apply = self._int_combine(group, idx)
+        self._col_drag = None
+        if apply is not None:
+            self._cb.combine_commit(apply)
+        else:
+            self._cb.combine_end()
 
     def _build_basis_minus(self, cb, wrap):  # the domain − on the interval-vectors row's left bus
         wrap.classes("rtt-minus-zone")
@@ -2285,6 +2320,46 @@ def index() -> None:
         rec.preview_source = None
         rec.clear_preview()
 
+    # drag-to-combine preview: while a row/interval is dragged onto another, show what the drop would
+    # do — ring the cells it moves and show their would-be values — by applying the combine to a
+    # snapshot and reverting it when the hover moves on or the drag ends. Reuses the edit-preview
+    # machinery (preview_baseline + the render diff); the actual drop commits it as one undo step.
+    def combine_begin():
+        rec._drag_token = editor.capture_for_preview()  # so the hover preview can be reverted
+        rec.preview_baseline = last_lay[0]  # the diff baseline: the grid as it was at pick-up
+        rec.preview_source = None  # a drop has no single "source cell" to exclude from the ring
+
+    def combine_preview(apply):
+        # hovering a target: revert to the picked-up state, apply the hypothetical combine (when valid;
+        # apply is None for an invalid/self target), and render — the moved cells ring + show their new
+        # values. Re-entrant: each enter resets first, so it never stacks previews.
+        if rec._drag_token is None:
+            return
+        editor.restore_for_preview(rec._drag_token)
+        if apply is not None:
+            apply()
+        render()
+
+    def combine_commit(apply):
+        # the drop: revert the preview, then apply the combine for real (one undo step) and render.
+        if rec._drag_token is None:
+            return
+        editor.restore_for_preview(rec._drag_token)
+        rec._drag_token = None
+        rec.preview_baseline = None
+        rec.preview_source = None
+        act(apply)
+
+    def combine_end():
+        # the drag ended off a target (no drop): revert any live preview and clear the drag state.
+        if rec._drag_token is None:
+            return
+        editor.restore_for_preview(rec._drag_token)
+        rec._drag_token = None
+        rec.preview_baseline = None
+        rec.preview_source = None
+        render()
+
     # drag-and-drop: a grip's dragstart records the column it picked up; a drop slot's drop reads it
     # and moves the interval into that gap (between/within the interval lists). The whole gesture is
     # one editor edit (one undo step). The dragging-state class + hover highlight are client-side
@@ -2306,6 +2381,10 @@ def index() -> None:
     # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
     rec._cb = SimpleNamespace(
         act=act,
+        combine_begin=combine_begin,
+        combine_preview=combine_preview,
+        combine_commit=combine_commit,
+        combine_end=combine_end,
         on_cell_blur=on_cell_blur,
         on_cell_focus=on_cell_focus,
         on_comma_change=on_comma_change,
@@ -2576,16 +2655,21 @@ def index() -> None:
                                             # matlabel (rides the symbol layer) sits in a left gutter; an EQUAL
                                             # empty gutter on the right keeps the boxed cell centred in the tile.
                                             gut = 20  # the row-label gutter, mirrored on the right for centring
-                                            cell_x = gut + _TILE_CELL_X  # the cell's left within the container
+                                            hgut = 18  # the drag-handle grip slot, left of the row label (mirrors the grid)
+                                            cell_x = hgut + gut + _TILE_CELL_X  # the cell's left within the container
                                             cell_y = _TILE_CELL_Y        # the cell's top within the frame (below the outer top)
                                             row_y = cell_y + (_TILE_CELL - 13) // 2  # row label centred on the cell
                                             with ui.element("div").classes("rtt-tile-line"), \
                                                     ui.element("div").style(f"position:relative;"
-                                                        f"width:{gut + _TILE_FRAME_W + gut}px;height:{_TILE_FRAME_H}px"):
+                                                        f"width:{hgut + gut + _TILE_FRAME_W + gut + hgut}px;height:{_TILE_FRAME_H}px"):
+                                                # the drag-to-combine grip, in its own slot LEFT of the row label
+                                                part_el("drag_to_combine", size=15,
+                                                        style=f"position:absolute;left:0;top:{cell_y}px;width:{hgut}px;"
+                                                              f"height:{_TILE_CELL}px;justify-content:center")
                                                 add_el("symbols", _math_html(_TILE_ROWLABEL), size=_TILE_FONT["rowlabel"],
-                                                       style=f"position:absolute;left:0;top:{row_y}px;width:{gut - 3}px;"
+                                                       style=f"position:absolute;left:{hgut}px;top:{row_y}px;width:{gut - 3}px;"
                                                              "height:13px;justify-content:flex-end")
-                                                part_el("gridded_values", style=f"position:absolute;left:{gut}px;top:0")
+                                                part_el("gridded_values", style=f"position:absolute;left:{hgut + gut}px;top:0")
                                                 part_el("math_expressions", size=_fit_font(_TILE_MATH, _TILE_CELL),
                                                         style=f"position:absolute;left:{cell_x}px;top:{cell_y + 1}px;"
                                                               f"width:{_TILE_CELL}px;height:9px;justify-content:center")

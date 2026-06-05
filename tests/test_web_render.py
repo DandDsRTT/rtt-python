@@ -1148,6 +1148,24 @@ async def test_dragging_an_interval_onto_another_combines_them(user: User) -> No
     assert tval(0) == before0  # the dragged target is unchanged
 
 
+async def test_dragging_over_a_row_previews_the_change_then_reverts(user: User) -> None:
+    # hovering (dragenter) a target row previews the would-be combine — the moved cells show their new
+    # values and the changed derived cells ring — WITHOUT committing; releasing off a target (dragend)
+    # reverts it. (Editable matrix cells show the new value but don't ring, like the edit preview —
+    # their value lives in the live state, not the CellBox; the derived gen-ratio rings.)
+    await _enable(user, "drag to combine")
+    row1 = lambda: [_cell_child(user, f"cell:mapping:1:{p}").value for p in range(3)]
+    assert row1() == ["0", "1", "4"]
+    h = lambda i: set(user.find(marker=f"map_drag:{i}").elements)
+    UserInteraction(user, h(0), None).trigger("dragstart")          # pick up row 0 (the octave)
+    UserInteraction(user, h(1), None).trigger("dragenter.prevent")  # hover row 1 → preview
+    assert row1() == ["1", "2", "4"]  # the matrix cells preview their new values...
+    assert "rtt-preview-change" in _wrap_classes(user, "gen:0")  # ...and the changed gen ratio (2/1→4/3) rings
+    UserInteraction(user, h(0), None).trigger("dragend")            # released off a target → revert
+    assert row1() == ["0", "1", "4"]  # reverted, nothing committed
+    assert "rtt-preview-change" not in _wrap_classes(user, "gen:0")  # ...and the ring cleared
+
+
 # --- tier 3: the #3 drift guard. _make_cell builds each cell-kind, render() fills each kind,
 # in two parallel cb.kind ladders. For the kinds whose visible content is a single ui.html the
 # renderer must populate (built empty in _make_cell), a dropped render branch leaves the cell

@@ -569,9 +569,10 @@ def test_general_tile_rides_each_subcontrol_on_its_parents_line():
 
 def test_general_tile_seats_the_value_layers_inside_the_gridded_cell():
     # the value, its closed form and the gridded box are NOT separate tile rows: on a real tile
-    # the value and math expression live inside the boxed cell, so the three ride one line.
+    # the value and math expression live inside the boxed cell, so the three ride one line. The
+    # drag-to-combine grip also rides this line (in a slot left of the row label, like the grid).
     value_line = next(line for line in app._GENERAL_TILE_LINES if "gridded_values" in line)
-    assert set(value_line) == {"gridded_values", "math_expressions", "quantities"}
+    assert set(value_line) == {"gridded_values", "math_expressions", "quantities", "drag_to_combine"}
 
 
 def test_general_tile_symbol_and_equivalence_read_as_one_equation():
