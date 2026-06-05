@@ -6237,6 +6237,33 @@ def test_removed_cell_ids_ignores_survivors_added_cells_and_removed_scaffolding(
     assert spreadsheet.removed_cell_ids(old, new) == frozenset({"val"})
 
 
+def test_a_domain_change_keeps_target_columns_shared_by_ratio():
+    # Douglas's report: hovering the domain − showed the WHOLE target list being deleted, when the
+    # smaller domain's TILT is contained in the larger one's. A domain change re-dimensions every
+    # interval vector (a 5-limit target's (-1,1,0) becomes the 3-limit (-1,1)), so matching columns by
+    # RAW VECTOR made every shared target read as removed-and-re-added. Identity is by the interval's
+    # RATIO now (domain-invariant), so a target both TILTs share keeps its column token — only the
+    # targets that genuinely drop (the prime-5 ones) are removed.
+    ed = Editor()
+    base = ed.layout()
+    base = ed.layout(prev_ids=base.identities)
+    token = ed.capture_for_preview()
+    try:
+        ed.shrink()  # 2.3.5 -> 2.3: the 3-limit TILT keeps 2/1, 3/2, 4/3 … and drops the prime-5 targets
+        shrunk = ed.layout(prev_ids=base.identities)
+    finally:
+        ed.restore_for_preview(token)
+    base_ratios = {r for _, r in base.identities["targets"]}
+    shrunk_ratios = {r for _, r in shrunk.identities["targets"]}
+    shared, dropped = base_ratios & shrunk_ratios, base_ratios - shrunk_ratios
+    assert shared and dropped  # the two TILTs genuinely overlap AND differ (so the test bites both ways)
+    shared_tok = next(tok for tok, r in base.identities["targets"] if r in shared)
+    dropped_tok = next(tok for tok, r in base.identities["targets"] if r in dropped)
+    removed = spreadsheet.removed_cell_ids(base, shrunk)
+    assert f"target:{shared_tok}" not in removed   # a shared target's ratio cell SURVIVES (not red)
+    assert f"target:{dropped_tok}" in removed       # a prime-5 target's ratio cell is removed (red)
+
+
 # ---------------------------------------------------------------------------
 # Chapter 9 nonstandard-domain — the superspace columns and rows the toggle
 # adds. The toggle is live in IMPLEMENTED now that the green/cyan superspace

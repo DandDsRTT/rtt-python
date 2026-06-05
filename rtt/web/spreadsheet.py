@@ -381,27 +381,30 @@ def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
                      if c.kind in RINGABLE_KINDS and c.id not in after)
 
 
-def assign_column_tokens(prev, vectors):
+def assign_column_tokens(prev, keys):
     """Assign a stable id-token to each interval column, so a column keeps its cell ids across a
     render and the reconciler glides it to its new x (rather than re-filling a fixed-index cell).
 
-    ``prev`` is the previous render's ``[(token, vector), …]`` (``None`` on the first build); the
-    return is the new ``[(token, vector), …]`` aligned to ``vectors``. A REORDER, ADD, or REMOVE
-    matches columns to the previous render by CONTENT — each surviving column finds its old token and
-    carries it to its new slot — so a removal never slides the next interval into a freed slot's id
-    (which would falsely read every later column as "changed" in the edit preview). Only an in-place
-    EDIT — same column count, one value changed — matches by POSITION, so the focused cell keeps its
-    id (reused, not rebuilt mid-keystroke) and a value already present elsewhere isn't mistaken for a
-    move into it. Anything still unmatched gets a token greater than every token in play, so live
-    columns never collide. With no previous render the columns number 0,1,2,… in order."""
-    vectors = [tuple(v) for v in vectors]
+    ``keys`` is a hashable identity per column — the interval's RATIO ("3/2"), which is the same
+    interval across domains, NOT its vector (a domain ± re-dimensions the vector, so matching by
+    vector would read every column as new). ``prev`` is the previous render's ``[(token, key), …]``
+    (``None`` on the first build); the return is the new ``[(token, key), …]`` aligned to ``keys``. A
+    REORDER, ADD, or REMOVE matches columns to the previous render by CONTENT — each surviving column
+    finds its old token and carries it to its new slot — so a removal never slides the next interval
+    into a freed slot's id (which would falsely read every later column as "changed" in the edit
+    preview). Only an in-place EDIT — same column count, one value changed — matches by POSITION, so
+    the focused cell keeps its id (reused, not rebuilt mid-keystroke) and a value already present
+    elsewhere isn't mistaken for a move into it. Anything still unmatched gets a token greater than
+    every token in play, so live columns never collide. With no previous render the columns number
+    0,1,2,… in order."""
+    keys = list(keys)
     prev = list(prev or [])
-    tokens = [None] * len(vectors)
-    if len(vectors) == len(prev) and sorted(vectors) != sorted(v for _, v in prev):
+    tokens = [None] * len(keys)
+    if len(keys) == len(prev) and sorted(keys) != sorted(k for _, k in prev):
         # an in-place EDIT (same column count, one value changed): match by POSITION, so each column
         # keeps the token of the slot it sits in — the focused cell is reused, not rebuilt
         # mid-keystroke, and typing a value that already appears elsewhere isn't taken for a move.
-        for j in range(len(vectors)):
+        for j in range(len(keys)):
             tokens[j] = prev[j][0]
     else:
         # a REORDER, ADD, or REMOVE (or first build): match by CONTENT, so each surviving column
@@ -410,16 +413,16 @@ def assign_column_tokens(prev, vectors):
         # columns in order, keeping every id unique; genuinely new columns fall through to a fresh
         # token below.
         claimed = [False] * len(prev)
-        for j, vec in enumerate(vectors):
-            for pi, (tok, pvec) in enumerate(prev):
-                if not claimed[pi] and pvec == vec:
+        for j, key in enumerate(keys):
+            for pi, (tok, pkey) in enumerate(prev):
+                if not claimed[pi] and pkey == key:
                     tokens[j], claimed[pi] = tok, True
                     break
     nxt = max([t for t in tokens if t is not None] + [tok for tok, _ in prev] + [-1]) + 1
-    for j in range(len(vectors)):  # fresh token, greater than any in play (no reuse → no collision)
+    for j in range(len(keys)):  # fresh token, greater than any in play (no reuse → no collision)
         if tokens[j] is None:
             tokens[j], nxt = nxt, nxt + 1
-    return list(zip(tokens, vectors))
+    return list(zip(tokens, keys))
 
 
 def pending_token(tokens):
@@ -874,11 +877,15 @@ class _GridBuilder:
         # previous render (prev_ids): a within-list reorder keeps a column's token, so all its cells
         # keep their ids and the reconciler slides them to the new x. Fresh (no prev) numbers each
         # list by index, so every cell id is unchanged until the first reorder. Commas are excluded
-        # (their column order is canonicalized by the dual — a reorder is unobservable).
+        # (their column order is canonicalized by the dual — a reorder is unobservable). The identity
+        # key is the interval's RATIO, not its vector: a domain ± re-dimensions the vector (a 5-limit
+        # target's 3-tall vector becomes 2-tall), so matching by vector read every shared target as a
+        # whole-list delete; the ratio is the same interval across domains, so a shared column keeps
+        # its token and only the genuinely-dropped intervals (the lost prime's) read as removed.
         self._col_ids = {
-            name: assign_column_tokens(self.prev_ids.get(name), vectors)
-            for name, vectors in (("targets", self.target_vectors),
-                                  ("held", self.held), ("interest", self.interest))
+            name: assign_column_tokens(self.prev_ids.get(name), ratios)
+            for name, ratios in (("targets", self.targets),
+                                 ("held", self.held_ratios), ("interest", self.interest_ratios))
         }
         # the complexity row norms each interval's prescaled vector (𝒄): a covector over the
         # domain elements (each element's complexity, log₂ of it for the default log-prime
