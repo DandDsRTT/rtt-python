@@ -6955,3 +6955,64 @@ def test_phase4_additive_only_against_baseline_with_all_show_toggles():
     for frag in ("ss_just_mapping", "cell:ss_vectors:primes:", "cell:ss_mapping:ssprimes:",
                  "ss_just_map", "ssgenmap", ":ssprimes:l", ":ssprimes:r"):
         assert not any(frag in i for i in ids), f"leaked id matching {frag!r}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 4I — EBK bracket convention for the new superspace tiles. The
+# maximized mockup's CSV row 7 records Douglas's note that he never decided
+# on new brackets for the superspace and is "just using { for generators/rank
+# and ( for primes/dimensionality" — but the rendered mockup itself shows
+# the existing brackets unchanged (⟨ … ] for covectors over ss_primes,
+# { … ] for the 𝒈ₗ genmap, [ … ⟩ for vector kets). Per the
+# feedback_mockup_is_the_spec note the rendered mockup is the spec, so the
+# new tiles reuse the existing bracket constants. These tests lock that
+# choice so a later refactor can't drift the convention by accident, and so
+# a future swap (the conservative "( … )" / "{ … }" variant the prompt
+# suggested) shows up here as one explicit place to update.
+# ---------------------------------------------------------------------------
+
+
+def test_superspace_M_L_per_row_brackets_reuse_MAP_BRACKETS():
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for i in range(3):  # rL=3 rows
+        assert cells[f"bracket:ss_map:{i}:l"].text == "⟨"
+        assert cells[f"bracket:ss_map:{i}:r"].text == "]"
+
+
+def test_superspace_M_jL_per_row_brackets_reuse_MAP_BRACKETS():
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for i in range(4):  # dL=4 rows
+        assert cells[f"bracket:ss_just_map:{i}:l"].text == "⟨"
+        assert cells[f"bracket:ss_just_map:{i}:r"].text == "]"
+
+
+def test_superspace_t_L_j_L_r_L_brackets_reuse_MAP_BRACKETS():
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for key in ("tuning", "just", "retune"):
+        assert cells[f"bracket:{key}:ssprimes:l"].text == "⟨"
+        assert cells[f"bracket:{key}:ssprimes:r"].text == "]"
+
+
+def test_superspace_g_L_brackets_reuse_GENMAP_BRACKETS():
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert cells["bracket:tuning:ssgenmap:l"].text == "{"
+    assert cells["bracket:tuning:ssgenmap:r"].text == "]"
+
+
+def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_ebkbrace():
+    # the spanning top + bottom frame is the existing ebktop / ebkbrace pair — same
+    # convention the on-domain mapping uses. The asymmetric "[ … ⟩" plain-text shape
+    # (square-open + ket-close) lives only on the bare prescaler 𝐿, not here.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert cells["ebktop:ss_mapping"].kind == "ebktop"
+    assert cells["ebkbrace:ss_mapping"].kind == "ebkbrace"
+    assert cells["ebktop:ss_just_mapping"].kind == "ebktop"
+    assert cells["ebkbrace:ss_just_mapping"].kind == "ebkbrace"
+
+
+def test_existing_bracket_constants_are_unchanged_by_superspace():
+    # the new superspace tiles reuse the existing constants — no new bracket-pair
+    # constant was introduced, and the existing constants stay as they are
+    assert spreadsheet.MAP_BRACKETS == ("⟨", "]")
+    assert spreadsheet.LIST_BRACKETS == ("[", "]")
+    assert spreadsheet.GENMAP_BRACKETS == ("{", "]")
