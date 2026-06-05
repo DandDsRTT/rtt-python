@@ -2691,14 +2691,19 @@ def index() -> None:
         # comma basis would change. It's the same ring-only, no-reflow preview a +/- hover gives —
         # loading the temperament is just another hypothetical edit (edit_comma_basis) — so it reuses
         # control_hover. A divider header, the mouse leaving an option, or the popup closing clears.
-        # The option slot emits the bare temperament value on enter and null on leave, but NiceGUI
-        # marshals an event arg as a payload (dict/list), so normalize down to the bare key first.
+        # The option slot emits the hovered option's INDEX (NiceGUI sets each Quasar option's `value`
+        # to its position in the list — see ChoiceElement._update_options — NOT the temperament key),
+        # or null otherwise; and marshals the arg as a payload. So normalize to a bare index, then map
+        # it back through the chooser's ordered options to the temperament key.
         if isinstance(value, dict):
             value = next(iter(value.values()), None)
         if isinstance(value, (list, tuple)):
             value = value[0] if value else None
-        if value in presets.TEMPERAMENT_COMMAS:  # a real temperament — not a divider header or null
-            control_hover(lambda: editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value]))
+        keys = list(presets.temperament_options())
+        key = keys[int(value)] if isinstance(value, (int, float)) and not isinstance(value, bool) \
+            and 0 <= int(value) < len(keys) else None
+        if key in presets.TEMPERAMENT_COMMAS:  # a real temperament — not a divider header or null
+            control_hover(lambda: editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key]))
         else:
             control_unhover()
 
