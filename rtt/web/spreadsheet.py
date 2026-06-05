@@ -1533,8 +1533,8 @@ class _GridBuilder:
         # tile's cents list (not just its own) so the play-mode can arp/chord the tile, and
         # text = the tile key it shares with the bank controls (so the engine can pair them).
         for i in range(len(vals)):
-            self.cells.append(CellBox(f"speaker:{key}:{self.group_elem[group]}:{self.col_token(group, i)}", self.group_left[group](i),
-                                 self.row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals, comma=i))
+            self.cells.append(CellBox(f"speaker:{key}:{self.group_elem[group]}:{i}", self.group_left[group](i),
+                                 self.row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals))
         # the per-tile control bank in the head strip's top-right (mirroring the fold toggle
         # top-left): waveform / play-mode / hold-loop / include-1/1, each a TOGGLE square.
         # Anchored to the grey panel's right edge (tile_box), not the centred content — so a
@@ -1905,7 +1905,7 @@ class _GridBuilder:
                     # each user-curated target carries its own − (like the intervals of interest); the
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
                     if self.targets_editable:
-                        branch_minus(f"target_minus:{self.col_token('targets', j)}", "targets", j, "target_minus", comma=j)
+                        branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
                 if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
                     branch_minus("target_minus:pending", "targets", self.k, "target_minus")
@@ -1914,7 +1914,7 @@ class _GridBuilder:
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
                     self.cells.append(CellBox(f"held:{self.col_token('held', i)}", self.held_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
                     # each held interval carries its own − on its branch point (any one is removable)
-                    branch_minus(f"held_minus:{self.col_token('held', i)}", "held", i, "held_minus", comma=i)
+                    branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
                 if self.pending_held is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("held:pending", self.held_left(self.nh), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nh, pending=True))
                     branch_minus("held_minus:pending", "held", self.nh, "held_minus")
@@ -1924,7 +1924,7 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"interest:{self.col_token('interest', i)}", self.interest_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.interest_ratios[i], comma=i))
                     # every interval carries its own − on its branch point: any one is removable,
                     # unlike the domain/comma last-only −
-                    branch_minus(f"interest_minus:{self.col_token('interest', i)}", "interest", i, "interest_minus", comma=i)
+                    branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
                 if self.pending_interest is not None:  # the draft column: an editable "?/?" ratio,
                     # blank red vector cells below, and a − on its branch point to cancel the draft
                     self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.mi, pending=True))
@@ -1952,7 +1952,7 @@ class _GridBuilder:
 
             def drag_controls(ckey, n):
                 for i in range(n):  # a full-width ⠿ grip centred on the column's gridline, in the band
-                    self.cells.append(CellBox(f"grip:{ckey}:{self.col_token(ckey, i)}", self.sub_axis_x(ckey, i) - COL_W / 2,
+                    self.cells.append(CellBox(f"grip:{ckey}:{i}", self.sub_axis_x(ckey, i) - COL_W / 2,
                                          grip_top, COL_W, GRIP_BAND, "colgrip", comma=i))
                 # the append / into-empty-list drop target, on the SAME band at the list's stub gridline
                 # (the trunk when empty) — so an empty list still has a gridline target, like the grips.
@@ -2105,7 +2105,7 @@ class _GridBuilder:
                                                      ("interest", self.mi, self.interest_left, "interest")):
                     if count >= 2 and self.tile_open("vectors", ckey) and (ckey != "targets" or self.targets_editable):
                         for i in range(count):
-                            self.cells.append(CellBox(f"int_drag:{group}:{self.col_token(group, i)}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
+                            self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
 
         # tuning rows over the primes, commas and targets (cents); each can collapse on
         # its own. Commas sit on the same footing as targets — they are just the dual

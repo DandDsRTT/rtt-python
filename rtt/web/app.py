@@ -1872,24 +1872,28 @@ class _Reconciler:
         # drag.js / dragging-class: a grip is BOTH source AND drop target, with a per-element dragover
         # preventDefault (client-side, so it doesn't round-trip per move) marking it a valid target.
         # The dragged column's (list, idx) is held server-side from dragstart through drop.
-        _, lst, tail = cb.id.split(":")  # "grip:{list}:{token}" — token is "add" for the append/empty zone
+        _, lst, tail = cb.id.split(":")  # "grip:{list}:{idx}" — idx is "add" for the append/empty zone
         wrap.on("dragover", js_handler="(e) => e.preventDefault()")  # mark a valid drop target
         if tail == "add":  # drop-only: an empty list still gets a gridline target (nothing to drag here)
             wrap.classes("rtt-colgrip rtt-coldrop")
+            # hovering the gridline previews appending the dragged column here; dropping commits it
+            wrap.on("dragenter.prevent", lambda _=None, l=lst: self._cb.on_drag_enter(l, None))
             wrap.on("drop.prevent", lambda _=None, l=lst: self._cb.on_drop(l, None))
             return
-        idx = cb.comma  # the column's current list index — the id token is a stable identity (so the
-        # cell glides on reorder), so the move's source/target index rides cb.comma, not the id
+        idx = cb.comma  # the grip is index-keyed (slot-bound): it stays at its slot while a reorder
+        # glides the value columns, so its slot index never goes stale and it doesn't move under the cursor
         wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
         wrap.on("dragstart", lambda _=None, l=lst, i=idx: self._cb.on_drag_start(l, i))
+        # hovering a column previews the would-be move (the columns slide to open the drop slot) before
+        # the drop commits it — so you see where the column will land while still dragging
+        wrap.on("dragenter.prevent", lambda _=None, l=lst, i=idx: self._cb.on_drag_enter(l, i))
         wrap.on("dragend", lambda _=None: self._cb.on_drag_end())
         wrap.on("drop.prevent", lambda _=None, l=lst, i=idx: self._cb.on_drop(l, i))
         ui.icon("drag_indicator").classes("rtt-grip")
 
     def _build_speaker(self, cb, wrap):  # play this pitch per its tile's mode (client-side engine)
         tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
-        idx = cb.comma  # the pitch's position in the tile's cents list (the id token is a stable
-        # identity, not the position, once a column has been reordered)
+        idx = int(cb.id.rsplit(":", 1)[1])
         pitches = ",".join(f"{float(v):.6f}" for v in cb.values)  # the whole tile (for arp/chord)
         # color=None drops Quasar's default primary (blue): the app is greyscale, leaving colour to
         # the yellow/cyan/magenta colorization. .rtt-spk + the data attrs let the engine highlight
@@ -2097,7 +2101,7 @@ def index() -> None:
         # cell is a silent no-op (no toast), not an error.
         if building[0] or cid not in rec.inputs:
             return
-        group, idx = cid.split(":")
+        group, tok = cid.split(":")  # the column's id-TOKEN, not its index — a reorder decouples them
         raw = str(rec.inputs[cid].value).strip()
         if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
             render()
@@ -2110,12 +2114,17 @@ def index() -> None:
             return
 
         def replace(current, setter):  # swap the edited column in, skipping a no-op blur (no undo step)
+            # the token's CURRENT list index: identity-keyed columns may have been reordered, so map
+            # the token through the live identities (commas aren't reorderable, so token IS the index)
+            list_name = {"target": "targets", "held": "held", "interest": "interest"}.get(group)
+            toks = col_tokens(list_name) if list_name else []
+            pos = toks.index(int(tok)) if int(tok) in toks else int(tok)
             vectors = [list(v) for v in current]
-            if vectors[int(idx)] != list(vector):
-                vectors[int(idx)] = vector
+            if vectors[pos] != list(vector):
+                vectors[pos] = vector
                 setter(vectors)
 
-        if idx == "pending":  # fill the draft column, committing it like its vector cells do
+        if tok == "pending":  # fill the draft column, committing it like its vector cells do
             {"comma": editor.set_pending_comma, "interest": editor.set_pending_interest,
              "held": editor.set_pending_held, "target": editor.set_pending_target}[group](vector)
         elif group == "comma":
@@ -2411,23 +2420,53 @@ def index() -> None:
     # another column's grip (drop reads the recorded source) moves it to that column's slot, or onto a
     # list's gridline "add" zone appends it (into an empty list or at the end). One editor edit = one
     # undo step. Same proven per-element pattern as drag-to-combine — no global script, no dragging-class.
-    drag_src = [None]  # (list, idx) of the column being dragged, or None
+    drag_src = [None]     # (list, idx) of the column being dragged, or None
+    reorder_dst = [None]  # the (list, idx|None) currently previewed, so a repeat dragenter is a no-op
 
     def on_drag_start(lst, idx):
         drag_src[0] = (lst, idx)
+        reorder_dst[0] = (lst, idx)  # pick-up == dropping on itself: no move previewed yet
+        rec._drag_token = editor.capture_for_preview()  # so each hover preview reverts cleanly
+
+    def on_drag_enter(dst_list, dst_idx):
+        # hovering a target column (or a list's gridline "add" zone, dst_idx=None) while dragging:
+        # preview the move from the picked-up state so the columns slide open to show where the drop
+        # will land — before releasing. The grips are index-keyed (slot-bound), so they stay put under
+        # the cursor while the value columns glide, keeping the previewed target stable. The hover
+        # preview is reverted on dragend / re-applied on each new target, and committed on drop.
+        if rec._drag_token is None or drag_src[0] is None or (dst_list, dst_idx) == reorder_dst[0]:
+            return
+        reorder_dst[0] = (dst_list, dst_idx)
+        editor.restore_for_preview(rec._drag_token)  # back to the picked-up state...
+        idx = dst_idx if dst_idx is not None else (1 << 30)
+        editor.move_interval(drag_src[0][0], drag_src[0][1], dst_list, idx)  # ...then the hypothetical move
+        render()
 
     def on_drag_end():
-        drag_src[0] = None  # a cancelled / completed drag leaves no stale source
+        # released off a target (no drop): revert any live preview to the picked-up state
+        if rec._drag_token is not None:
+            editor.restore_for_preview(rec._drag_token)
+            rec._drag_token = None
+            render()
+        drag_src[0] = None
+        reorder_dst[0] = None
 
     def on_drop(dst_list, dst_idx):
-        # dst_idx is the dropped-on column's index (insert there), or None from a list's "add" zone (append)
+        # dst_idx is the dropped-on column's index (insert there), or None from a list's "add" zone
+        # (append). Revert the live preview first so the move is snapshotted from the picked-up state —
+        # one undo step — then commit it (the screen is already in the previewed shape, so it doesn't move).
         src = drag_src[0]
         drag_src[0] = None
+        reorder_dst[0] = None
+        token = rec._drag_token
+        rec._drag_token = None
+        if token is not None:
+            editor.restore_for_preview(token)
         if not src:
             return
         idx = dst_idx if dst_idx is not None else (1 << 30)  # None = append (insert clamps to the end)
-        if editor.move_interval(src[0], src[1], dst_list, idx):
-            render()  # the reconciler reflows the affected lists into their new shape
+        if editor.move_interval(src[0], src[1], dst_list, idx) or token is not None:
+            render()  # reflow into the committed shape, or (a no-op drop) clear the reverted preview
     # wire the reconciler's callbacks now that the event handlers exist: the cell
     # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
     rec._cb = SimpleNamespace(
@@ -2440,6 +2479,7 @@ def index() -> None:
         on_cell_focus=on_cell_focus,
         on_comma_change=on_comma_change,
         on_drag_start=on_drag_start,
+        on_drag_enter=on_drag_enter,
         on_drag_end=on_drag_end,
         on_drop=on_drop,
         on_control_select=on_control_select,

@@ -138,6 +138,55 @@ async def test_dragging_a_target_onto_the_held_columns_gridline_moves_it_in(user
     await user.should_see(marker="grip:held:0")            # the dropped target is now held's first column
 
 
+def _cell_left(user: User, cell_id: str) -> float:
+    """A grid cell's current x (the inline left the reconciler placed it at), in px."""
+    return float(next(iter(user.find(marker=cell_id).elements))._style["left"].rstrip("px"))
+
+
+async def test_hovering_a_reorder_target_previews_the_move_then_reverts(user: User) -> None:
+    # the drag previews on HOVER: entering a target column slides the columns open to show where the
+    # drop will land, before releasing. Releasing off a target (dragend) reverts it, nothing committed.
+    await user.open("/")
+    x0, x2 = _cell_left(user, "target:0"), _cell_left(user, "target:2")
+    assert x0 < x2  # token 0 starts left of token 2
+    UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger("dragstart")
+    UserInteraction(user, set(user.find(marker="grip:targets:2").elements), None).trigger("dragenter.prevent")
+    assert _cell_left(user, "target:0") > _cell_left(user, "target:2")  # previewed: token 0 moved past token 2
+    UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger("dragend")
+    assert _cell_left(user, "target:0") == x0  # reverted to its original slot — nothing committed
+
+
+async def test_dropping_after_a_preview_commits_the_move(user: User) -> None:
+    # hovering previews, dropping commits: the previewed arrangement persists (and as one undo step).
+    await user.open("/")
+    x0 = _cell_left(user, "target:0")
+    UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger("dragstart")
+    UserInteraction(user, set(user.find(marker="grip:targets:2").elements), None).trigger("dragenter.prevent")
+    UserInteraction(user, set(user.find(marker="grip:targets:2").elements), None).trigger("drop.prevent")
+    assert _cell_left(user, "target:0") > _cell_left(user, "target:2")  # committed: token 0 sits past token 2
+    assert _cell_left(user, "target:0") != x0
+
+
+async def test_editing_a_ratio_after_a_reorder_edits_the_column_it_heads(user: User) -> None:
+    # regression: the quantities ratio cells are keyed by interval identity, so after a reorder the
+    # cell heading a slot carries the MOVED column's token, not the slot index. Committing a fraction
+    # must edit the column the cell now heads — the bug this guards read the token straight back as a
+    # list index and edited whatever interval sat at that index (a different column).
+    await user.open("/")
+    assert _cell_child(user, "target:0").value == "2/1"
+    assert _cell_child(user, "target:1").value == "3/1"
+    # swap the first two targets: drag target 0's grip onto target 1's, so token 1 (the 3/1) now
+    # heads the FIRST slot while token 0 (the 2/1) heads the second
+    UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger("dragstart")
+    UserInteraction(user, set(user.find(marker="grip:targets:1").elements), None).trigger("drop.prevent")
+    await user.should_see(marker="target:1")
+    _cell_child(user, "target:1").set_value("9/8")   # edit the cell now heading the first slot
+    _commit(user, "target:1")
+    await user.should_see(marker="target:1")
+    assert _cell_child(user, "target:1").value == "9/8"   # the edit stuck to the column it heads...
+    assert _cell_child(user, "target:0").value == "2/1"   # ...not the one at token-as-index 1
+
+
 async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> None:
     # both colorization sub-toggles share the label "colorization", so one click matches
     # and flips both on. They paint wash blocks behind the tiles — drive that branch and

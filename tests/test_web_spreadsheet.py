@@ -487,18 +487,22 @@ def test_reordering_held_rekeys_every_column_cell_not_just_the_vectors():
     assert moved == set(), f"these cells re-filled in place instead of gliding: {sorted(moved)}"
 
 
-def test_reordered_column_controls_glide_with_it():
-    # the grip, the −, and the audio speaker carry no column-distinct content, so the content diff
-    # can't see them — but they ride the column's gridline and must move with it. Each keeps its
-    # token id and lands at the moved column's new x, so the reconciler slides them too.
+def test_reorder_keeps_controls_position_bound_while_values_glide():
+    # the VALUE cells re-key by interval identity (they glide), but the per-column CONTROLS — the
+    # grip, the −, the audio speaker — stay INDEX-keyed: each is bound to a SLOT, not a column. So a
+    # control's build-time index never goes stale (it always addresses the column now in its slot —
+    # the bug a token-keyed control hit on a SECOND reorder), and it does not drift out from under
+    # the cursor mid-drag (which is what keeps a hover preview stable).
     held = [(-1, 1, 0), (2, 0, -1), (1, 1, -1)]
-    lay1 = {c.id: c for c in spreadsheet.build(_held_state(), _all_on(), held_vectors=held).cells}
-    ids = spreadsheet.build(_held_state(), _all_on(), held_vectors=held).identities
-    lay2 = {c.id: c for c in spreadsheet.build(
-        _held_state(), _all_on(), held_vectors=[held[2], held[0], held[1]], prev_ids=ids).cells}
-    for ctrl in ("grip:held:2", "held_minus:2", "speaker:just_audio:held:2"):
-        assert ctrl in lay2, f"{ctrl} lost its token id on reorder (it would snap, not glide)"
-        assert lay2[ctrl].x == lay1[ctrl.replace(":2", ":0")].x  # moved to the front slot's x
+    lay1 = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
+    c1 = {c.id: c for c in lay1.cells}
+    slot_x = [c1[f"grip:held:{i}"].x for i in range(3)]
+    c2 = {c.id: c for c in spreadsheet.build(
+        _held_state(), _all_on(), held_vectors=[held[2], held[0], held[1]], prev_ids=lay1.identities).cells}
+    assert [c2[f"grip:held:{i}"].x for i in range(3)] == slot_x  # grips stayed at their slots...
+    assert all(f"held_minus:{i}" in c2 for i in range(3))        # ...and the −'s are slot-keyed too
+    assert "speaker:just_audio:held:0" in c2                     # ...and the speakers
+    assert c2["cell:held:0:2"].x == slot_x[0]                    # but the value column DID glide to the front
 
 
 def test_reordering_interest_rekeys_its_column_cells():
