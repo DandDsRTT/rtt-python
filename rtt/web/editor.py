@@ -295,8 +295,8 @@ class Editor:
     def edit_mapping(self, mapping) -> None:
         self._apply(service.from_mapping(mapping))
 
-    def edit_comma_basis(self, comma_basis) -> None:
-        self._apply(service.from_comma_basis(comma_basis))
+    def edit_comma_basis(self, comma_basis, domain_basis=None) -> None:
+        self._apply(service.from_comma_basis(comma_basis, domain_basis))
 
     def canonicalize_mapping(self) -> None:
         """Re-store the mapping in canonical form (the mapping box's ``<choose form>``
@@ -535,14 +535,17 @@ class Editor:
     def try_edit_comma_basis_text(self, text: str) -> bool:
         """Parse an EBK vector string and apply it as a comma-basis edit; False
         (state untouched) when it is not a valid integer vector list, or its dual mapping is a
-        degenerate temperament (e.g. tempering out a prime)."""
+        degenerate temperament (e.g. tempering out a prime). A nonstandard domain on the
+        current state is preserved when the parsed vectors' dimensionality matches d, so a
+        comma-box edit doesn't silently revert the temperament to standard primes."""
         basis = service.parse_comma_basis(text)
         if basis is None:
             return False
+        domain_basis = self.state.domain_basis if len(basis[0]) == self.state.d else None
         try:
-            if not service.is_proper_temperament(service.from_comma_basis(basis).mapping):
+            if not service.is_proper_temperament(service.from_comma_basis(basis, domain_basis).mapping):
                 return False
-            self.edit_comma_basis(basis)
+            self.edit_comma_basis(basis, domain_basis)
         except Exception:
             return False
         return True

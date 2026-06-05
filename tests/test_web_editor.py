@@ -921,6 +921,15 @@ def test_try_edit_comma_basis_text_rejects_bad_input_without_changing_state():
     assert editor.state.comma_basis == before
 
 
+def test_try_edit_comma_basis_text_preserves_a_nonstandard_domain():
+    # editing the comma box on a nonstandard temperament keeps the basis — the new comma
+    # is read over 2.3.13/5, not the default 2.3.5 the standard primes would otherwise impose
+    editor = Editor()
+    assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+    assert editor.try_edit_comma_basis_text("[2 -3 2⟩") is True
+    assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
+
+
 def test_optimize_button_freezes_the_tuning_and_lock_toggles_auto():
     editor = Editor()
     # default: auto-optimize OFF -> the tuning is FROZEN at the scheme's optimum (not the auto None)
