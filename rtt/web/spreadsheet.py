@@ -640,6 +640,7 @@ class _GridBuilder:
         self.show_optimization = _f.optimization
         self.show_weighting = _f.weighting
         show_alt_complexity = _f.alt_complexity
+        self.show_alt_complexity = show_alt_complexity  # gates the WHOLE pretransformer square's editability
         # The prescaling + complexity machinery only matters when the damage weight derives from
         # complexity (complexity-/simplicity-weight). Under the default unity-weight the weight is 1
         # regardless, so those rows and their box-𝐋/𝒄 controls don't render — a visibility condition
@@ -2238,29 +2239,28 @@ class _GridBuilder:
                 # the mapping's /p denominator (and tval_row's primes rows). The other groups
                 # scale a vector set to plain octaves (no p), so there is nothing to subscript.
                 u = self.cell_unit("prescaling", group, prime=c if group == "primes" else None)
+                # the prescaled vector 𝑋·v: a diagonal pretransformer multiplies element-wise (𝐿ᵢvᵢ);
+                # a non-diagonal one (the editable square's matrix override) is a matrix-vector product
+                prescaled = ([sum(self.prescaler[i][k] * vec[k] for k in range(self.d)) for i in range(self.d)]
+                             if isinstance(self.prescaler[0], (tuple, list))
+                             else [self.prescaler[i] * vec[i] for i in range(self.d)])
                 for i in range(self.d + self.size_rows):
-                    # the d diagonal / prescaled rows are 𝐿ᵢ·vᵢ; the extra size row (i == d, present
-                    # only with the size factor) is the guide's size-sensitizing row, sf·Σ(𝐿ⱼ·vⱼ) =
-                    # sf · the prescaled column's signed sum (= sf · log₂ of the interval's own size)
-                    if i < self.d:
-                        value = self.prescaler[i] * vec[i]
-                    else:
-                        value = self.size_factor * sum(self.prescaler[j] * vec[j] for j in range(self.d))
+                    # the d prescaled rows are (𝑋·v)ᵢ; the extra size row (i == d, present only with the
+                    # size factor) is the guide's size-sensitizing row, sf·Σ(𝑋·v) (= sf · log₂ the size)
+                    value = prescaled[i] if i < self.d else self.size_factor * sum(prescaled)
                     cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
                     cx, cy = left(c), self.row_y["prescaling"] + i * ROW_H
                     # held column: a prescaled held interval the tuning no longer holds reddens too
                     # (the editable 𝐋 diagonal below is primes-only, so it never carries this flag)
                     alert = self.held_unheld[c] if group == "held" else False
-                    # the bare prescaler 𝐿's diagonal (group == "primes" and i == c) is the
-                    # user's editable surface: each diagonal cell is a prescalercell — the
-                    # input box the user types overrides into — and so wins over the math-
-                    # expression closed form (typed values, not log₂{prime}, are what reads
-                    # off here). The off-diagonal of 𝐿 is pinned at 0 (𝐿 is diagonal), so it
-                    # stays tval. Every other prescaling tile (LC/LD/LT/LH/...) is a product —
-                    # the user can't edit its individual cells — so math_expressions still
-                    # styles a non-zero coefficient with its closed form ``coeff · {prime_term}``,
-                    # and a zero coefficient (no closed form) keeps the plain tval.
-                    if i < self.d and group == "primes" and i == c:
+                    # the bare pretransformer's EDITABLE cells are prescalercells — the input boxes the
+                    # user types overrides into — and win over the math-expression closed form. The
+                    # diagonal is always editable; with alt complexity the WHOLE top square is, so a
+                    # non-diagonal pretransformer can be hand-entered (off the diagonal it reads 0 until
+                    # touched). Without alt complexity the off-diagonal stays a pinned-0 tval. Every
+                    # 𝑋·basis product (𝑋C/𝑋D/…) is computed, not editable — math_expressions still
+                    # styles a non-zero coefficient with its closed form, a zero one staying tval.
+                    if i < self.d and group == "primes" and (i == c or self.show_alt_complexity):
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
                                              text=service.prescale_text(value), prime=i, unit=u))
                     elif i < self.d and self.show_math and vec[i] != 0 and i in prime_term:

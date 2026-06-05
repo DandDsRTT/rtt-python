@@ -74,16 +74,33 @@ def test_set_custom_prescaler_entry_seeds_then_edits_one_diagonal_cell():
     # unedited cells keep their displayed values (no silent reset to zeros); the seed is the
     # d-tuple complexity_prescaler returns for the live scheme
     editor = Editor()
-    editor.set_custom_prescaler_entry(1, 7.5)
+    editor.set_custom_prescaler_entry(1, 1, 7.5)
     seed = service.complexity_prescaler(editor.state.mapping, service.DEFAULT_TUNING_SCHEME)
     assert editor.custom_prescaler == (seed[0], 7.5, seed[2])
-    editor.set_custom_prescaler_entry(2, 11.0)  # a second edit keeps the first
+    editor.set_custom_prescaler_entry(2, 2, 11.0)  # a second edit keeps the first
     assert editor.custom_prescaler == (seed[0], 7.5, 11.0)
+
+
+def test_set_custom_prescaler_entry_promotes_to_a_matrix_on_an_off_diagonal_edit():
+    # editing an OFF-diagonal cell makes the pretransformer a full d×d matrix (a non-diagonal
+    # pretransformer): it seeds the square from the scheme's diagonal (zeros off it) and sets the
+    # one entry. A diagonal-only override stays a flat tuple; this is the promotion to a matrix.
+    editor = Editor()
+    seed = service.complexity_prescaler(editor.state.mapping, service.DEFAULT_TUNING_SCHEME)
+    editor.set_custom_prescaler_entry(0, 1, 0.5)  # off the diagonal
+    M = editor.custom_prescaler
+    assert isinstance(M[0], tuple)  # promoted: the rows are tuples (a 2-D matrix)
+    assert M[0][1] == 0.5
+    assert (M[0][0], M[1][1], M[2][2]) == (seed[0], seed[1], seed[2])  # diagonal seeded from the scheme
+    assert M[2][0] == 0.0  # an untouched off-diagonal entry is zero
+    # once a matrix, a diagonal edit updates the matrix entry in place (it stays a matrix)
+    editor.set_custom_prescaler_entry(2, 2, 9.0)
+    assert isinstance(editor.custom_prescaler[0], tuple) and editor.custom_prescaler[2][2] == 9.0
 
 
 def test_clear_custom_prescaler_reverts_to_the_scheme():
     editor = Editor()
-    editor.set_custom_prescaler_entry(0, 4.0)
+    editor.set_custom_prescaler_entry(0, 0, 4.0)
     assert editor.custom_prescaler is not None
     editor.clear_custom_prescaler()
     assert editor.custom_prescaler is None  # the cells revert to the scheme's diagonal
@@ -94,7 +111,7 @@ def test_picking_a_preset_prescaler_clears_the_custom_override():
     # "identity" CLEARS the custom override AND swaps the scheme's prescaler trait, so the
     # cells go back to the scheme's computed diagonal
     editor = Editor()
-    editor.set_custom_prescaler_entry(1, 9.9)
+    editor.set_custom_prescaler_entry(1, 1, 9.9)
     editor.set_complexity_prescaler("prime")
     assert editor.custom_prescaler is None  # picking a preset wipes the override
     assert service.prescaler_of(editor.tuning_scheme) == "prime"
@@ -104,7 +121,7 @@ def test_picking_a_predefined_complexity_clears_the_custom_override():
     # the predefined-complexity master chooser (box 𝒄) likewise reaches into the prescaler
     # (each named complexity carries its own prescaler), so it too clears any custom diagonal
     editor = Editor()
-    editor.set_custom_prescaler_entry(0, 3.3)
+    editor.set_custom_prescaler_entry(0, 0, 3.3)
     editor.set_complexity_name("sopfr")  # sopfr brings the prime-diagonal prescaler in
     assert editor.custom_prescaler is None
     assert service.prescaler_of(editor.tuning_scheme) == "prime"
@@ -116,7 +133,7 @@ def test_displayed_prescaler_name_tracks_the_scheme_and_falls_back_on_a_manual_e
     # fallback the tuning-scheme chooser uses for a hand-edited generator tuning
     editor = Editor()
     assert editor.displayed_prescaler_name == "log-prime"  # the default scheme's prescaler
-    editor.set_custom_prescaler_entry(1, 9.9)  # a deviating hand-edit
+    editor.set_custom_prescaler_entry(1, 1, 9.9)  # a deviating hand-edit
     assert editor.displayed_prescaler_name is None
     editor.clear_custom_prescaler()
     assert editor.displayed_prescaler_name == "log-prime"  # reverts with the override gone
@@ -129,9 +146,9 @@ def test_round_trip_prescaler_edit_returns_to_the_scheme_name():
     editor = Editor()
     shown = float(service.prescale_text(
         service.complexity_prescaler(editor.state.mapping, editor.tuning_scheme)[1]))
-    editor.set_custom_prescaler_entry(1, 9.9)     # deviate
+    editor.set_custom_prescaler_entry(1, 1, 9.9)     # deviate
     assert editor.displayed_prescaler_name is None
-    editor.set_custom_prescaler_entry(1, shown)   # return it to the shown log-prime value
+    editor.set_custom_prescaler_entry(1, 1, shown)   # return it to the shown log-prime value
     assert editor.displayed_prescaler_name == "log-prime"
 
 
@@ -154,7 +171,7 @@ def test_set_custom_prescaler_text_rejects_unparseable_or_malformed_input():
     # an unparseable / wrong-shape / non-diagonal string leaves the override (and the
     # undo stack) untouched, so the caller can redden the input box rather than mangle 𝐿.
     editor = Editor()
-    editor.set_custom_prescaler_entry(1, 7.5)  # establish a non-None starting state
+    editor.set_custom_prescaler_entry(1, 1, 7.5)  # establish a non-None starting state
     before = editor.custom_prescaler
     undo_steps_before = editor.can_undo
     assert editor.set_custom_prescaler_text("garbage") is False
@@ -170,7 +187,7 @@ def test_set_custom_prescaler_text_rejects_unparseable_or_malformed_input():
 
 def test_custom_prescaler_edits_are_undoable():
     editor = Editor()
-    editor.set_custom_prescaler_entry(1, 7.5)
+    editor.set_custom_prescaler_entry(1, 1, 7.5)  # a diagonal edit (row == col)
     assert editor.can_undo is True  # writing to a cell is a document change
     editor.undo()
     assert editor.custom_prescaler is None  # undo reverts the edit
@@ -1041,7 +1058,7 @@ def test_a_domain_change_forgets_stale_held_interest_and_prescaler():
             editor.try_edit_mapping_text("[⟨1 0 -4 -13] ⟨0 1 4 10]}")  # 7-limit (d=4), room to shrink
         editor.set_held_vectors([tuple([-1, 1, 0] + [0] * (editor.state.d - 3))])
         editor.set_interest_vectors([tuple([-2, 0, 1] + [0] * (editor.state.d - 3))])
-        editor.set_custom_prescaler_entry(0, 2.0)
+        editor.set_custom_prescaler_entry(0, 0, 2.0)
         getattr(editor, walk)()
         assert editor.held_vectors == [] and editor.interest_vectors == []
         assert editor.custom_prescaler is None

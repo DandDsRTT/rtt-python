@@ -2173,6 +2173,30 @@ def test_size_factor_renames_prescaler_to_pretransformer_in_the_labels():
     assert lils["block:preset:prescaler:label"].text == "predefined pretransformers"
 
 
+def test_alt_complexity_makes_the_whole_pretransformer_square_editable():
+    # once alt complexity is on, the WHOLE top d×d square of the pretransformer becomes editable
+    # (prescalercell), not just the diagonal — so a non-diagonal matrix can be entered. The cells
+    # read the prescaled unit vectors, so the bare matrix shows the override entries 𝑋[i][c].
+    X = ((1.0, 0.5, 0.0), (0.0, 1.585, 0.0), (0.0, 0.0, 2.322))  # 0.5 off the diagonal
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    on = {c.id: c for c in spreadsheet.build(
+        base, {**settings.defaults(), "weighting": True, "alt_complexity": True},
+        tuning_scheme="TILT minimax-S", custom_prescaler=X).cells}
+    # the off-diagonal (0,1) cell is now an editable prescalercell showing the matrix entry 0.5
+    assert on["cell:prescaling:primes:0:1"].kind == "prescalercell"
+    assert on["cell:prescaling:primes:0:1"].text == service.prescale_text(0.5)
+    # the diagonal stays editable, and an untouched off-diagonal of a diagonal prescaler reads 0
+    assert on["cell:prescaling:primes:1:1"].kind == "prescalercell"
+    assert on["cell:prescaling:primes:2:1"].kind == "prescalercell"
+    assert on["cell:prescaling:primes:2:1"].text == "0"
+    # WITHOUT alt complexity, only the diagonal is editable; the off-diagonal stays a 0 tval
+    off = {c.id: c for c in spreadsheet.build(
+        base, {**settings.defaults(), "weighting": True, "alt_complexity": False},
+        tuning_scheme="TILT minimax-S").cells}
+    assert off["cell:prescaling:primes:1:1"].kind == "prescalercell"
+    assert off["cell:prescaling:primes:0:1"].kind == "tval"
+
+
 def test_custom_prescaler_diagonal_keeps_the_generic_symbol():
     # typing a custom prescaler diagonal makes it no longer THE log-prime matrix, so the symbol
     # stays the generic 𝑋 everywhere (no 𝐿 promotion, no "= log-prime matrix") — the typed

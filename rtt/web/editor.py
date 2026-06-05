@@ -601,18 +601,27 @@ class Editor:
         self.tuning_scheme = service.scheme_with_complexity(self.tuning_scheme, name)
         self.custom_prescaler = None
 
-    def set_custom_prescaler_entry(self, i: int, value: float) -> None:
-        """Edit one diagonal entry of the prescaler 𝐿 — the bare prescaler tile's editable
-        cells call this on every change. The first edit *seeds* the override from the current
-        scheme's diagonal (so the d-1 other cells keep their displayed values rather than
-        snapping to silent zeros); subsequent edits mutate the seeded tuple."""
+    def set_custom_prescaler_entry(self, i: int, j: int, value: float) -> None:
+        """Edit one entry (row ``i``, column ``j``) of the complexity pretransformer — the editable
+        square's cells call this on every change. The first edit *seeds* the override from the
+        scheme's diagonal (so untouched cells keep their displayed values rather than snapping to
+        zeros). A diagonal edit on a still-diagonal override keeps it a flat d-tuple; an OFF-diagonal
+        edit promotes it to a full d×d matrix (a non-diagonal pretransformer), filling the rest of
+        the square from the seeded diagonal (zeros off it)."""
         self._snapshot()
         if self.custom_prescaler is None:
-            seed = service.complexity_prescaler(self.state.mapping, self.tuning_scheme)
-            self.custom_prescaler = tuple(seed)
-        diag = list(self.custom_prescaler)
-        diag[i] = float(value)
-        self.custom_prescaler = tuple(diag)
+            self.custom_prescaler = tuple(service.complexity_prescaler(self.state.mapping, self.tuning_scheme))
+        is_matrix = isinstance(self.custom_prescaler[0], (tuple, list))
+        if i == j and not is_matrix:
+            diag = list(self.custom_prescaler)
+            diag[i] = float(value)
+            self.custom_prescaler = tuple(diag)
+        else:
+            d = self.state.d
+            rows = ([list(r) for r in self.custom_prescaler] if is_matrix
+                    else [[self.custom_prescaler[r] if r == c else 0.0 for c in range(d)] for r in range(d)])
+            rows[i][j] = float(value)
+            self.custom_prescaler = tuple(tuple(r) for r in rows)
 
     def set_custom_prescaler_text(self, text: str) -> bool:
         """Freeze a typed manual prescaler diagonal — the bare prescaler 𝐿 tile's editable

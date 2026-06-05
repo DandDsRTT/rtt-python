@@ -2259,7 +2259,8 @@ def index() -> None:
             value = float(str(rec.inputs[cid].value).strip())
         except ValueError:
             return
-        editor.set_custom_prescaler_entry(int(cid.split(":")[3]), value)
+        parts = cid.split(":")  # "cell:prescaling:primes:i:j" — row i, column j (the whole square edits)
+        editor.set_custom_prescaler_entry(int(parts[3]), int(parts[4]), value)
         render()
 
     def on_ptext_edit(cid, value):

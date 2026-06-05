@@ -100,6 +100,13 @@ def _to_matrix(rows) -> Matrix:
     return tuple(tuple(int(x) for x in row) for row in rows)
 
 
+def _is_matrix(x) -> bool:
+    """Whether a complexity-pretransformer override is a full d×d matrix (a sequence of rows) rather
+    than a flat diagonal d-tuple — the editable square's non-diagonal form. Plain-Python (no numpy,
+    keeping this module's tuple-only surface): a matrix's first entry is itself a sequence."""
+    return bool(x) and isinstance(x[0], (tuple, list))
+
+
 def _state(mapping: Matrix, comma_basis: Matrix, domain_basis=None) -> TemperamentState:
     m = Temperament(mapping, Variance.ROW, domain_basis)
     return TemperamentState(
@@ -807,8 +814,12 @@ def complexity_prescaler(
     ``override`` lets the bare prescaler tile's editable cells short-circuit the scheme's
     computed diagonal: a d-tuple typed in there REPLACES the log-prime/prime/identity
     diagonal everywhere it flows — the matrix display, the 𝐿·basis products, complexity,
-    weights, and the tuning solve. ``None`` (the default) keeps today's behavior."""
+    weights, and the tuning solve. ``None`` (the default) keeps today's behavior. The override
+    is a d-tuple diagonal, or — once alt-complexity makes the whole square editable — a full d×d
+    matrix (a non-diagonal pretransformer); a matrix is returned as rows of floats, a diagonal flat."""
     if override is not None:
+        if _is_matrix(override):
+            return tuple(tuple(float(x) for x in row) for row in override)
         return tuple(float(x) for x in override)
     t = Temperament(_to_matrix(mapping), Variance.ROW)
     spec = resolve_tuning_scheme(scheme)
@@ -832,6 +843,8 @@ def displayed_prescaler_name(mapping, scheme=DEFAULT_TUNING_SCHEME, custom_presc
     Comparing what's shown lets that read as "no deviation" (the chooser and the grid's 𝑋 = 𝐿
     awareness recover), where a bit-exact compare would wrongly keep showing "-"."""
     if custom_prescaler is not None:
+        if _is_matrix(custom_prescaler):
+            return None  # a non-diagonal pretransformer has no named (diagonal) prescaler form
         computed = complexity_prescaler(mapping, scheme)
         shown = tuple(float(x) for x in custom_prescaler)
         if len(shown) != len(computed) or any(
