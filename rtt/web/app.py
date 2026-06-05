@@ -1874,44 +1874,41 @@ class _Reconciler:
 
     # ---- static controls (build only, no update): the domain/comma/interest/held ± buttons,
     # the speaker, and the audio bank glyphs. Their click / JS handlers are baked at build time. ----
-    def _preview_control(self, wrap, apply):
-        """Arm a +/- control's hover preview: entering it rings the on-screen cells its click would
-        change (control_hover), leaving clears them. The click still commits via its own handler."""
-        wrap.on("mouseenter", lambda _=None: self._cb.control_hover(apply))
-        wrap.on("mouseleave", lambda _=None: self._cb.control_unhover())
+    def _preview_control(self, el, apply):
+        """Arm a control's hover preview: entering it rings the on-screen cells its click would change
+        (control_hover), leaving clears them. The click still commits via its own handler. Used by the
+        generator-tuning sign (hovering it previews reversing that generator). NOT used by the
+        add/remove-row/column +/- buttons — a structural add/remove rings misleading cells, so those
+        have no hover preview."""
+        el.on("mouseenter", lambda _=None: self._cb.control_hover(apply))
+        el.on("mouseleave", lambda _=None: self._cb.control_unhover())
 
     def _build_minus(self, cb, wrap):  # remove the highest prime; a hover − centred on the last prime's branch point
         wrap.classes("rtt-minus-zone")  # clear of the editable cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
-        self._preview_control(wrap, self._editor.shrink)
 
     def _build_plus(self, cb, wrap):  # add a prime; the always-shown + on the bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.expand))
-        self._preview_control(wrap, self._editor.expand)
 
     def _build_gen_minus(self, cb, wrap):  # drop the last generator (+n, −r); the mapping-row − reached from the column
         wrap.classes("rtt-minus-zone")  # clear of the genmap cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
-        self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
 
     def _build_gen_plus(self, cb, wrap):  # add a generator by un-tempering a comma (−n, +r); the + on the bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
-        self._preview_control(wrap, self._editor.add_mapping_row)
 
     def _build_map_minus(self, cb, wrap):  # remove generator cb.gen (a mapping row); a hover − on the left bus
         wrap.classes("rtt-minus-zone")  # clear of the generator-ratio spine it drops over
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
-        self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
 
     def _build_map_plus(self, cb, wrap):  # add a generator (un-temper a comma); the + on the left-bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
-        self._preview_control(wrap, self._editor.add_mapping_row)
 
     def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another row's grip to merge
         # HTML5 drag-to-combine, built EXACTLY like the working column-reorder grip (_build_colgrip):
