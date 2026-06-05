@@ -1763,7 +1763,7 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
 
     def _build_comma_minus(self, cb, wrap):  # drop the last comma, or cancel the pending draft
-        wrap.classes("rtt-minus-zone")
+        wrap.classes("rtt-minus-zone rtt-minus-side")  # reveal left of the column's branch-point grip
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.remove_comma))
 
@@ -1775,7 +1775,7 @@ class _Reconciler:
         # an interval-list column's − (interest / held / target): the draft column's cancels the
         # draft, every other drops just its interval (cb.comma) — each is independently removable
         action = cancel if cb.id.endswith(":pending") else (lambda idx=cb.comma: remove(idx))
-        wrap.classes("rtt-minus-zone")
+        wrap.classes("rtt-minus-zone rtt-minus-side")  # reveal left of the column's branch-point grip
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(action))
 

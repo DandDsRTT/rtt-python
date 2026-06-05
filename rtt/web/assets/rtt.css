@@ -586,16 +586,18 @@
            opacity:0; pointer-events:none; transition:opacity var(--t); }
 .rtt-minus-zone:hover .rtt-minus-btn-v { opacity:1; pointer-events:auto; }
 
-/* drag-and-drop interval columns. A grip (.rtt-colgrip) is the draggable REORDER handle — the
-   shared .rtt-drag-handle ⠿ — sitting in the body strip just below the freeze seam and ABOVE each
-   column's ratio (NOT in the frozen fan, whose ~8px overflow:hidden colhead would clip it and the
-   drop target). z-index:5 keeps it above the cells; a touch smaller for the short strip. A drop
-   slot (.rtt-dropslot) covers that strip plus the ratio for an easy target, but is INERT until a
-   drag is in progress (body.rtt-dragging, set by drag.js) — so idle it never masks the cells.
-   While dragging the slots arm and the grip / fan controls go inert so only slots catch; the
-   hovered slot shows a red insertion bar at the gap it would drop into. */
+/* drag-and-drop interval columns. The GRIP (.rtt-colgrip) is the draggable REORDER handle — the
+   shared .rtt-drag-handle ⠿ — riding each column's BRANCH POINT on the fan (the sub-axis gridline,
+   beside the ±), high in the visible fan strip so the frozen colhead doesn't clip it. z-index:5
+   keeps it above the − zone; its icon shrinks to fit the BTN-sized cell. Its column's − reveals
+   just to its LEFT (.rtt-minus-side) so the always-shown grip and the hover − don't fight. The DROP
+   SLOTS (.rtt-dropslot) live in the BODY (below the seam, over each column from the ratio down) so
+   they're un-clipped and easy to hit; INERT until a drag is in progress (body.rtt-dragging, set by
+   drag.js) so idle they never mask the cells. While dragging the slots arm and the grip / fan
+   controls go inert; the hovered slot shows a red insertion bar at the gap it would drop into. */
 .rtt-colgrip { z-index:5; }
-.rtt-colgrip .rtt-grip { font-size:16px; }  /* a touch smaller for the short body strip */
+.rtt-colgrip .rtt-grip { font-size:14px; }  /* shrink the ⠿ to the BTN-sized branch-point cell */
+.rtt-minus-side .rtt-minus-btn { left:0; transform:translate(0,-50%); }  /* left of the centred grip */
 .rtt-dropslot { z-index:6; pointer-events:none; }
 body.rtt-dragging .rtt-dropslot { pointer-events:auto; }
 body.rtt-dragging .rtt-colgrip,
