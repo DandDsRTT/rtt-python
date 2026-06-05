@@ -1747,6 +1747,23 @@ def test_mapping_row_minus_gated_on_rank_and_plus_on_nullity():
     assert {"map_minus:0", "map_minus:1", "map_minus:2"} <= ji  # ...but each generator is removable
 
 
+def test_a_rank_one_mapping_still_fans_to_connect_its_plus():
+    # an ET's mapping is a SINGLE generator row (r=1), but it still carries a + (un-temper a
+    # comma, n>0). Like a multi-row mapping — and the interval-vectors basis + — that lone-row
+    # band must still fan its left bus OUT past the row label and drop a connecting bar to reach
+    # the +; it must NOT fall through to a flat full-width spine that strands the + off the side
+    # with no line, a FAN further from the spine than the basis + sits.
+    lay = spreadsheet.build(service.from_mapping(((12, 19, 28),)))  # 12-ET 5-limit: r=1, n=2
+    cells = {c.id: c for c in lay.cells}
+    by_id = {ln.id: ln for ln in lay.lines}
+    assert "h:mapping:0" in by_id and "h:mapping" not in by_id  # the fanned sub-rule, not the flat spine
+    left_bus, plus = by_id["vbar:mapping:left"], cells["map_plus"]
+    assert abs((plus.x + plus.w / 2) - left_bus.pos) < 0.51  # + centred on the left bus
+    assert abs((left_bus.start + left_bus.length) - (plus.y + plus.h / 2)) < 0.51  # the bar reaches the +
+    # ...and the + sits as close to the spine as the always-fanned basis +, not a FAN further out
+    assert abs((plus.x + plus.w / 2) - (cells["basis_plus"].x + cells["basis_plus"].w / 2)) < 0.51
+
+
 def test_drag_handles_are_gated_on_the_drag_to_combine_toggle():
     # the whole feature is OFF by default — no row or interval drag handles render until the
     # "drag to combine" toggle (the top of the settings pane) turns it on.

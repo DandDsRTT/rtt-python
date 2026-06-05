@@ -1770,18 +1770,26 @@ class _GridBuilder:
         self.gridline(f"bus:{key}:bot", "h", self.bot_bus_y, bx, bw, dotted=dotted)
         self.gridline(f"trunk:{key}", "v", cx, self.branch_top_y, self.fanout_y - self.branch_top_y, dotted=dotted)
         self.gridline(f"foot:{key}", "v", cx, self.bot_bus_y, self.total_h - self.bot_bus_y, dotted=dotted)
+    def _row_fans(self, key):
+        # A row fans its left bus OUT to node_edge + FAN (branching into per-sub-row rules) when it
+        # has more than one cell-row OR carries a row + stub. The + must ride a fanned bus to sit
+        # beside the content and stay reached by the connecting bar — so even a SINGLE-row band that
+        # adds elements fans (a rank-1 ET mapping, whose lone generator row still shows the
+        # comma-un-tempering +): the row mirror of an addable column always fanning to seat its +.
+        return self.row_nsub[key] > 1 or key in self.row_plus_y
+
     def row_axis(self, key):
         n = self.row_nsub[key]
         folded = f"row:{key}" in self.collapsed  # the whole fan dots and converges when the row folds
         cy = self.row_y[key] + self.row_h[key] / 2
         ys = [cy] * n if folded else [self.row_y[key] + i * ROW_H + ROW_H / 2 for i in range(n)]
-        left_bus_x = self.node_edge + self.FAN if (n > 1 and not folded) else self.node_edge
+        left_bus_x = self.node_edge + self.FAN if (self._row_fans(key) and not folded) else self.node_edge
         for i in range(n):
             self.gridline(f"h:{key}:{i}", "h", ys[i], left_bus_x, self.right_bus_x - left_bus_x, dotted=folded)
         bus_y, bus_h = _bus_span(ys)
-        # a row with a basis + (only the vectors row) stretches its LEFT bar down past the last
-        # sub-row to the + stub (row_plus_y), so the branching bar reaches the +; the right bar
-        # just spans the data.
+        # a row with a + stub (the vectors basis +, the mapping-row +) stretches its LEFT bar down
+        # past the last sub-row to that stub (row_plus_y), so the branching bar reaches the +; the
+        # right bar just spans the data.
         left_bottom = self.row_plus_y[key] if key in self.row_plus_y else bus_y + bus_h
         self.gridline(f"vbar:{key}:left", "v", left_bus_x, bus_y, left_bottom - bus_y, dotted=folded)
         self.gridline(f"vbar:{key}:right", "v", self.right_bus_x, bus_y, bus_h, dotted=folded)
@@ -2225,7 +2233,9 @@ class _GridBuilder:
                 # row), out to the left of the generator-ratio spine: a − on EACH generator's branch
                 # point (any row removable, −r,+n), the + on the stub below the stack (un-temper a
                 # comma, +r,−n). The − zone drops rightward over its generator ratio as the hover target.
-                map_bus_x = self.node_edge + self.FAN if self.r > 1 else self.node_edge
+                # The bus tracks row_axis's fanned left bus — node_edge + FAN even at rank 1 (the ET
+                # case, where the lone-row band still fans to seat its + against the connecting bar).
+                map_bus_x = self.node_edge + self.FAN if self._row_fans("mapping") else self.node_edge
                 gen_right = self.col_x["quantities"] + self.col_w["quantities"]
                 if self.r > 1:  # never down to rank 0
                     for i in range(self.r):
@@ -2291,9 +2301,9 @@ class _GridBuilder:
                 bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
                 for p in range(self.d):
                     self.cells.append(CellBox(f"basis:{p}", bx, self.vec_top(p), COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
-                # the left bus the controls ride (node_edge + FAN when the row fans, i.e. d > 1 — matching
+                # the left bus the controls ride (node_edge + FAN when the row fans — matching
                 # row_axis); the − zone drops from it rightward over the bottom prime as the hover target
-                basis_bus_x = self.node_edge + self.FAN if self.d > 1 else self.node_edge
+                basis_bus_x = self.node_edge + self.FAN if self._row_fans("vectors") else self.node_edge
                 if self.d > 1:  # the highest prime is the removable one (shrink trims the last)
                     self.cells.append(CellBox("basis_minus", basis_bus_x, self.vec_top(self.d - 1),
                                          (bx + COL_W) - basis_bus_x, ROW_H, "basis_minus"))
@@ -3034,20 +3044,22 @@ class _GridBuilder:
 
         # A matrix row is the horizontal mirror of a group column: it fans out at the node into
         # one rule per cell-row, runs through the data, and rejoins on the right to a foot past it.
-        # Whether a row fans is DERIVED from its own cell-row count (row_nsub > 1), exactly as a
-        # column fans on its element count — NOT a hand-kept membership list. So ANY multi-row tile
-        # (the mapping, vectors, prescaling, the d×(d+1) weight matrix, …) fans automatically and a
-        # new one can never be left with a lone centre spine (the row-side of the generators-column
-        # bug). Sub-rules are keyed by the row (h:mapping:i, h:weight:i): unlike a column, whose
+        # Whether a row fans is DERIVED (_row_fans) from its own cell-row count or a row + stub,
+        # exactly as a column fans on its element count — NOT a hand-kept membership list. So ANY
+        # multi-row tile (the mapping, vectors, prescaling, the d×(d+1) weight matrix, …) fans
+        # automatically and a new one can never be left with a lone centre spine (the row-side of
+        # the generators-column bug); so too does a SINGLE-row band that adds elements (a rank-1 ET
+        # mapping), so its + rides a fanned bus with a connecting bar instead of floating off the
+        # side. Sub-rules are keyed by the row (h:mapping:i, h:weight:i): unlike a column, whose
         # element type picks one column, several rows share an element type (vectors and prescaling
         # are both d primes tall), so the row key — not the element — is what keeps the ids unique.
         self.right_bus_x = self.total_w - self.FAN
 
-        # one pass over the present rows (top to bottom): fan the multi-row tiles, give every single-
-        # row band one full-width rule. Derived from row_y + row_nsub, so a row can never lack its
-        # gridline — present or collapsed (a folded row still leaves its rule, fanned or spine).
+        # one pass over the present rows (top to bottom): fan the rows that branch, give every other
+        # single-row band one full-width rule. Derived from row_y + _row_fans, so a row can never lack
+        # its gridline — present or collapsed (a folded row still leaves its rule, fanned or spine).
         for key in self.row_y:
-            if self.row_nsub[key] > 1:
+            if self._row_fans(key):
                 self.row_axis(key)
             else:
                 self.gridline(f"h:{key}", "h", self.row_y[key] + self.row_h[key] / 2, self.node_edge, self.total_w - self.node_edge,
