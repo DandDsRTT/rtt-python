@@ -6217,3 +6217,50 @@ def test_superspace_rows_get_horizontal_axes():
     assert {"h:ss_mapping:0", "h:ss_mapping:1", "h:ss_mapping:2"} <= lines
     # dL = 4 ss_vectors sub-rows
     assert {"h:ss_vectors:0", "h:ss_vectors:1", "h:ss_vectors:2", "h:ss_vectors:3"} <= lines
+
+
+def test_M_L_tile_has_a_caption_and_symbol():
+    # the central M_L tile (the temperament's mapping over its superspace primes) gets a
+    # caption + a math-italic M with subscript L glyph, matching the mockup convention
+    # (math-italic M for the temperament mapping; subscript ₗ for "L")
+    cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
+    assert cells["caption:ss_mapping:ssprimes"].text == "superspace mapping"
+    assert cells["symbol:ss_mapping:ssprimes"].text == "\U0001D440ₗ"  # 𝑀ₗ
+
+
+def test_B_L_tile_has_a_caption_and_symbol():
+    # the basis-embedding tile (each domain element as a superspace monzo) gets a caption
+    # + an upright bold B with subscript L (parallel to C for the comma basis, T for the
+    # target list — upright capitals naming an interval basis)
+    cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
+    assert cells["caption:ss_vectors:primes"].text == "basis embedding matrix"
+    assert cells["symbol:ss_vectors:primes"].text == "Bₗ"
+
+
+def test_nonstandard_domain_off_leaves_no_superspace_trace():
+    # the additive-only contract: with the toggle off, NONE of the scaffolding leaves a
+    # trace — no panels, no toggles, no axes, no captions, no symbols (an existing build
+    # over a nonstandard state is identical to its toggle-off shape).
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults() | {"names": True, "symbols": True, "counts": True}
+    lay = spreadsheet.build(state, s)
+    ids = {c.id for c in lay.cells} | {b.id for b in lay.blocks} | {ln.id for ln in lay.lines}
+    # nothing keyed by the new column / row / element prefixes
+    assert not any(s in i for i in ids for s in ("ssgens", "ssprimes", "ss_vectors", "ss_mapping", "ss_basis", "ssgen", "ssprime"))
+
+
+def test_standard_domain_with_toggle_on_renders_a_trivial_identity_superspace():
+    # a standard prime-limit domain has dL == d and rL == r (its superspace IS its domain),
+    # so the new columns/rows just look like trivial copies. The build doesn't crash, and
+    # the trivial sizes flow through to the counts row's rL / dL = the existing r / d.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5 meantone — standard prime limit
+    s = settings.defaults() | {"nonstandard_domain": True, "counts": True}
+    cells = {c.id: c for c in spreadsheet.build(state, s).cells}
+    # the superspace columns / rows render — but with the same dimensions as the domain
+    assert "header:ssgens" in cells and "header:ssprimes" in cells
+    assert "label:ss_vectors" in cells and "label:ss_mapping" in cells
+    # the counts show rL == r and dL == d (the trivial-superspace passthrough)
+    assert cells["count:ssgens"].text == "\U0001D45Fₗ = 2"   # rL = r = 2
+    assert cells["count:ssprimes"].text == "\U0001D451ₗ = 3"  # dL = d = 3
+    # the spine basis index lists the standard primes themselves (no extra primes)
+    assert [cells[f"ss_basis:{p}"].text for p in range(3)] == ["2", "3", "5"]

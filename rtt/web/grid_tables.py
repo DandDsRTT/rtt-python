@@ -63,6 +63,13 @@ SUPERSPACE_COUNTS_TILES = tuple(
 # (𝑀C), tempered (𝒕C) and retuned (𝒓C) — append "(made to vanish!)"; the just row
 # shows the comma's genuine untempered size, so it omits the note.
 CAPTIONS = {
+    # the chapter-9 superspace tiles — the basis-embedding matrix B_L lives in
+    # (ss_vectors, primes), and the temperament's superspace mapping M_L lives in
+    # (ss_mapping, ssprimes). Phase 3 captions only those two anchors; Phase 4 adds the
+    # captions for the dependent superspace tiles (𝒈ₗ / 𝒕ₗ / 𝒋ₗ / 𝒓ₗ, Cₗ, Tₗ) as their
+    # content cells are emitted.
+    ("ss_vectors", "primes"): "basis embedding matrix",
+    ("ss_mapping", "ssprimes"): "superspace mapping",
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
     ("canon", "gens"): "generator form matrix",
@@ -131,6 +138,11 @@ CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # a target-only row, so the comma column ends there). The "other intervals of
 # interest" carry none.
 SYMBOLS = {
+    # the chapter-9 superspace anchors: B_L the basis-embedding matrix (upright capital,
+    # parallel to C/T/D — an interval basis) and 𝑀ₗ the temperament's superspace mapping
+    # (math-italic M, parallel to 𝑀). Phase 4 adds the dependent superspace symbols.
+    ("ss_vectors", "primes"): "Bₗ",      # B (upright) + Unicode subscript L
+    ("ss_mapping", "ssprimes"): "𝑀ₗ",   # math-italic M (\\U0001D440) + subscript L
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -435,6 +447,9 @@ FORM_CHOOSER_ROWS = frozenset(row for _, row, _, _ in FORM_CHOOSERS)
 # letter in their caption carry no entry — the abstract size-list letters of the
 # mapped list (Y), the tempered (𝐚) and just (𝐨) lists.
 MNEMONICS = {
+    # superspace anchors — underline the symbol-letter where it sits in the caption
+    ("ss_vectors", "primes"): "basis",        # Bₗ → underline the "b" in "basis embedding…"
+    ("ss_mapping", "ssprimes"): "mapping",    # 𝑀ₗ → underline the "m" in "superspace mapping"
     ("vectors", "commas"): "comma",     # C
     ("vectors", "targets"): "target",   # T
     ("vectors", "held"): "held",        # H
