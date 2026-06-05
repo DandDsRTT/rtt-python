@@ -22,6 +22,16 @@ def test_base_scheme_name_strips_the_target_prefix():
     assert service.base_scheme_name(service.scheme_with_power("minimax-S", 1.5)) is None
 
 
+def test_is_proper_temperament_rejects_degenerate_mappings():
+    # a proper temperament has independent rows (full row rank) and reaches every prime (no all-zero
+    # column — a prime mapped to nothing is tempered to a unison). Degenerate ones break M·Dᵀ=I and
+    # don't round-trip, so the editor rejects them.
+    assert service.is_proper_temperament(((1, 1, 0), (0, 1, 4))) is True   # 5-limit meantone
+    assert service.is_proper_temperament(((2, 0, 0), (0, 1, 1))) is True   # enfactored but full-rank, every prime reached
+    assert service.is_proper_temperament(((1, 2), (0, 0))) is False        # a dependent / zero row (rank < rows)
+    assert service.is_proper_temperament(((1, 0),)) is False               # prime 3 tempered to a unison (zero column)
+
+
 def test_optimization_power_is_the_schemes_lp_norm_order():
     # the optimization power p is trait 2 of the tuning scheme: the order of the
     # Lp norm minimized over the damages. minimax-S (the canonical scheme) is a minimax

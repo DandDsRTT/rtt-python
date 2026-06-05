@@ -239,9 +239,15 @@ class Editor:
 
     @property
     def can_shrink(self) -> bool:
-        """Whether the domain − applies: a standard prime limit with a prime to spare
-        (a nonstandard subgroup isn't walked by the prime ± controls)."""
-        return self.can_expand and self.state.d > 1
+        """Whether the domain − applies: a standard prime limit with a prime to spare, and only
+        when the smaller temperament is still proper (dropping the top prime can leave a lower
+        prime tempered to a unison — a degenerate result the control then withholds)."""
+        if not (self.can_expand and self.state.d > 1):
+            return False
+        try:
+            return service.is_proper_temperament(service.shrink_domain(self.state).mapping)
+        except Exception:
+            return False
 
     @property
     def can_add_mapping_row(self) -> bool:
@@ -501,18 +507,21 @@ class Editor:
         untouched) when the text is not a valid integer map, so the caller can flag the
         input rather than mangling the temperament."""
         state = service.parse_mapping_state(text)
-        if state is None:
-            return False
+        if state is None or not service.is_proper_temperament(state.mapping):
+            return False  # unparseable, or a degenerate temperament (the caller toasts and reverts)
         self._apply(state)
         return True
 
     def try_edit_comma_basis_text(self, text: str) -> bool:
         """Parse an EBK vector string and apply it as a comma-basis edit; False
-        (state untouched) when it is not a valid integer vector list."""
+        (state untouched) when it is not a valid integer vector list, or its dual mapping is a
+        degenerate temperament (e.g. tempering out a prime)."""
         basis = service.parse_comma_basis(text)
         if basis is None:
             return False
         try:
+            if not service.is_proper_temperament(service.from_comma_basis(basis).mapping):
+                return False
             self.edit_comma_basis(basis)
         except Exception:
             return False

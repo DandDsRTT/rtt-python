@@ -494,11 +494,14 @@ def test_standard_domain_can_still_expand():
 
 def test_cannot_shrink_below_one_dimension():
     editor = Editor()
-    assert editor.can_shrink is True  # starts at d=3
+    assert editor.can_shrink is True  # starts at d=3 (5-limit)
     editor.shrink()
-    editor.shrink()
-    assert editor.state.d == 1
+    assert editor.state.d == 2  # -> 2.3
+    # shrinking to a single prime would temper out the remaining structure (a degenerate, improper
+    # result), so the control is withheld rather than producing it
     assert editor.can_shrink is False
+    editor.shrink()  # guarded — a no-op
+    assert editor.state.d == 2
 
 
 def test_add_remove_mapping_row_change_rank_holding_dimensionality():
@@ -994,6 +997,27 @@ def test_a_domain_change_forgets_stale_held_interest_and_prescaler():
         assert editor.held_vectors == [] and editor.interest_vectors == []
         assert editor.custom_prescaler is None
         editor.layout()  # renders cleanly with the stale state gone
+
+
+def test_editing_to_a_degenerate_temperament_is_rejected():
+    # a typed mapping/comma that isn't a proper temperament (dependent rows, or a prime tempered
+    # to a unison) is rejected — the state is left untouched so the caller can toast and revert.
+    editor = Editor()
+    before = editor.state.mapping
+    assert editor.try_edit_mapping_text("[⟨1 2] ⟨0 0]}") is False  # a dependent / zero row
+    assert editor.state.mapping == before
+    assert editor.try_edit_comma_basis_text("[1 0 0⟩") is False  # tempering out 2/1 sends prime 2 to a unison
+    assert editor.state.mapping == before
+
+
+def test_can_shrink_is_false_when_the_shrink_would_degenerate():
+    # the domain − is offered only when the smaller temperament is still proper; shrinking
+    # [2 0 0],[0 1 1] drops prime 5 and leaves prime 3 tempered to a unison, so the control is off.
+    editor = Editor()
+    editor.edit_mapping([[2, 0, 0], [0, 1, 1]])
+    assert editor.can_shrink is False
+    editor.edit_mapping([[1, 1, 0], [0, 1, 4]])  # ordinary meantone shrinks fine
+    assert editor.can_shrink is True
 
 
 def test_remove_comma_is_a_noop_at_the_last_comma():

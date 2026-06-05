@@ -79,6 +79,10 @@ def _doc_store() -> dict:
     production, an in-process dict under the test simulation (see :data:`_MEMORY_STORE`)."""
     return _MEMORY_STORE if helpers.is_user_simulation() else app.storage.user
 
+# the toast shown when an edit would make a degenerate (improper) temperament — dependent
+# generators, or a prime tempered to a unison (see service.is_proper_temperament)
+_INVALID_TEMPERAMENT = "Not a valid temperament: the generators must be independent and every prime reached."
+
 _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
 _PREVIEW_COLOR = "#f5a623"  # amber ring on a cell the in-progress edit moves (the edit-preview
 # highlight) — a warm "this changed" hue, kept distinct from the red _PENDING_COLOR error/alert
@@ -1898,6 +1902,10 @@ def index() -> None:
         matrix = [[_parse_int(rec.inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
         if any(v is None for row in matrix for v in row):
             return
+        if not service.is_proper_temperament(matrix):
+            ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
+            render()  # revert the cells to the current temperament
+            return
         editor.edit_mapping(matrix)
         render()
 
@@ -1920,6 +1928,10 @@ def index() -> None:
         # the comma cells are the basis transposed (prime down the rows, comma across)
         basis = [[_parse_int(rec.inputs[f"cell:comma:{p}:{c}"].value) for p in range(d)] for c in range(nc)]
         if any(v is None for comma in basis for v in comma):
+            return
+        if not service.is_proper_temperament(service.from_comma_basis(basis).mapping):
+            ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
+            render()
             return
         editor.edit_comma_basis(basis)
         render()
@@ -2119,6 +2131,18 @@ def index() -> None:
             render()
         else:
             rec.ptext_inputs[cid].classes(add="rtt-ptext-error")
+            # a parseable but degenerate temperament (rejected by the editor) toasts WHY, like the
+            # ratio cells; an unparseable string just reddens (its shape is the feedback)
+            if cid == "ptext:mapping:primes":
+                st = service.parse_mapping_state(value)
+                degenerate = st is not None and not service.is_proper_temperament(st.mapping)
+            elif cid == "ptext:vectors:commas":
+                b = service.parse_comma_basis(value)
+                degenerate = b is not None and not service.is_proper_temperament(service.from_comma_basis(b).mapping)
+            else:
+                degenerate = False
+            if degenerate:
+                ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
 
     def act(action):
         action()

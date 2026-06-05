@@ -155,6 +155,20 @@ def is_standard_domain(domain_basis) -> bool:
     return is_standard_prime_limit_domain_basis(tuple(domain_basis))
 
 
+def is_proper_temperament(mapping) -> bool:
+    """Whether ``mapping`` is a proper temperament: its rows are independent (full row rank — not a
+    dependent or zero row), and every domain element is reached by some generator (no all-zero
+    column — an element mapped to nothing is tempered to a unison, a degenerate temperament).
+    Improper mappings break the detempering identity (M·Dᵀ = I) and don't round-trip, so the editor
+    rejects an edit that would produce one."""
+    rows = _to_matrix(mapping)
+    if not rows or not rows[0]:
+        return False
+    if get_r(Temperament(rows, Variance.ROW)) < len(rows):  # a dependent / zero row
+        return False
+    return all(any(row[p] for row in rows) for p in range(len(rows[0])))  # every element reached
+
+
 def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
     """Resolve a target interval set spec against a domain basis, as ratio strings.
 
