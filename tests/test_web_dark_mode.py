@@ -9,6 +9,8 @@ not its exact hue (the palette is tuned by eye, so pinning hexes would be brittl
 import re
 
 import rtt.web.app as app
+from rtt.web import settings as show_settings
+from rtt.web import tooltips
 
 
 def _dark_sets(selector, prop):
@@ -68,6 +70,20 @@ def test_dark_theme_overrides_the_themed_variables():
     allvars = _dark_var_blocks()
     for var in ("--c-gridline", "--cell-border", "--seam"):
         assert var + ":" in allvars, var
+
+
+def test_dark_mode_is_a_standalone_preference_not_a_show_setting():
+    # dark mode is a global VIEWING preference, deliberately kept OUT of the Show settings: it
+    # persists under its own store key (separate from the serialized document), so it is untouched
+    # by "select all / none" and Reset — both of which act only on editor.settings.
+    assert isinstance(app._DARK_KEY, str) and app._DARK_KEY != app._STORE_KEY
+    assert "dark_mode" not in show_settings.DEFAULTS
+
+
+def test_dark_mode_toggle_carries_hover_text():
+    # the toggle is app chrome (like select-all), so its help lives in CHROME_HELP, not SHOW_HELP
+    assert tooltips.CHROME_HELP["dark_mode"].strip()
+    assert "dark_mode" not in tooltips.SHOW_HELP
 
 
 def test_dark_mode_has_its_own_option_box_svgs():

@@ -92,6 +92,7 @@ body.rtt-dark .rtt-hamburger { background:#1b1f24 !important; border-color:#4e55
 body.rtt-dark .rtt-hamburger .q-icon { color:#cfd4da !important; }
 
 /* ── settings panel ──────────────────────────────────────────────────────────────────────────── */
+body.rtt-dark .rtt-darkrow { border-bottom-color:#3c424a; }   /* the dark-mode toggle's divider */
 body.rtt-dark .rtt-show-item .q-checkbox__label,
 body.rtt-dark .rtt-ex-cell { color:#e3e6ea; }
 body.rtt-dark .rtt-show-item.disabled .q-checkbox__label,

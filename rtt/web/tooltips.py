@@ -65,6 +65,7 @@ SHOW_HELP: dict[str, str] = {
 CHROME_HELP: dict[str, str] = {
     "settings": "Show or hide the Show settings panel.",
     "select_all": "Turn every available Show toggle on, or all off.",
+    "dark_mode": "Switch the whole app between the light and dark colour themes.",
     "undo": "Undo the last change.",
     "redo": "Redo the change you undid.",
     "reset": "Reset everything — settings, layout, and values — to the defaults.",

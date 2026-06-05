@@ -64,6 +64,8 @@ _RAIL_W = 40  # px width of the permanent left rail (hamburger + the rotated app
 _TOOLTIP_DELAY_MS = 700  # hover delay before a tooltip appears — long enough that the dense grid's
 # help waits for a deliberate rest instead of popping on every passing cursor (Quasar defaults to 0)
 _STORE_KEY = "rtt_doc"  # store key holding the serialized document (survives refresh)
+_DARK_KEY = "rtt_dark"  # store key for the dark-mode preference — a global viewing choice kept
+# OUT of the serialized document, so it survives Reset and is independent of "select all / none"
 _STORAGE_SECRET = "dnd-rtt-app"  # signs the per-browser session cookie that keys app.storage.user
 # Under NiceGUI's in-process User test simulation, app.storage.user is file-backed: writing
 # it on every render both litters the tree and races the harness's teardown file-cleanup on
@@ -1849,9 +1851,27 @@ def index() -> None:
     ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
     # the interval-column drag-and-drop glue (see _DRAG_JS)
     ui.add_body_html(f"<script>{_DRAG_JS}</script>")
-    ui.query("body").style("background:#fff")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
+
+    # Dark mode is a global VIEWING preference, kept out of the document's Show settings: it
+    # persists under its own store key, so "select all / none" and Reset — which act only on
+    # editor.settings — never touch it. apply_theme drives the CSS overlay (assets/rtt-dark.css)
+    # by toggling the `rtt-dark` class on <body>, and paints the margin frame inline (its colour
+    # beats Quasar's body background the same way the static "#fff" did before).
+    dark_mode = [bool(_doc_store().get(_DARK_KEY, False))]
+
+    def apply_theme():
+        body = ui.query("body")
+        body.classes(add="rtt-dark") if dark_mode[0] else body.classes(remove="rtt-dark")
+        body.style(f"background:{_DARK_FRAME if dark_mode[0] else '#fff'}")
+
+    def on_dark_toggle(value):
+        dark_mode[0] = bool(value)
+        _doc_store()[_DARK_KEY] = dark_mode[0]
+        apply_theme()
+
+    apply_theme()  # paint the persisted theme up front, before the grid builds (no flash)
 
     # The Editor owns the whole document — temperament, view selections, the Show
     # settings (editor.settings) and the folded rows/columns/tiles (editor.collapsed) —
@@ -2478,6 +2498,15 @@ def index() -> None:
                 tile_parts: dict = {}  # general-group layer key -> its clickable dummy-tile part (render() styles these)
                 show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
                 with show_scroll:
+                    # dark mode rides the very top of the panel, set apart from the Show-content
+                    # groups below by a divider: it themes the whole app rather than showing/hiding
+                    # a layer, so it is a standalone preference (apply_theme), not a Show toggle —
+                    # hence it sits outside the SHOW_GROUPS loop and the select-all sweep.
+                    with ui.element("div").classes("rtt-darkrow"):
+                        ui.checkbox("dark mode", value=dark_mode[0],
+                                    on_change=lambda e: on_dark_toggle(e.value)) \
+                            .props("dense size=xs color=grey-8").classes("rtt-show-item") \
+                            .mark("darkmode").tooltip(tooltips.CHROME_HELP["dark_mode"])
                     for group_name, items in show_settings.SHOW_GROUPS:
                         with ui.element("div").classes("rtt-show-group"):
                             if group_name == "general":
