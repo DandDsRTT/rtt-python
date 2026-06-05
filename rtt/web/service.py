@@ -707,6 +707,16 @@ def diminuator_replaced(scheme) -> bool:
     return resolve_tuning_scheme(scheme).complexity_size_factor != 0
 
 
+def complexity_size_factor(scheme) -> float:
+    """The complexity size factor (trait 5c) ``scheme`` carries — 0 for lp / copfr / sopfr, 1 for
+    the integer/odd-limit (lils / lols) family. A nonzero factor is what makes the complexity
+    pretransformer 𝑋 rectangular: the guide composes the diagonal log-prime matrix 𝐿 with a
+    '''size-sensitizing matrix''' 𝑍 (𝑋 = 𝑍𝐿), appending one extra row, the size-weighted
+    ``size_factor·𝐿`` (the log-prime row). The grid reads this to size the prescaling matrix's
+    extra row; the value form (:func:`diminuator_replaced`) reads the same trait as a yes/no."""
+    return resolve_tuning_scheme(scheme).complexity_size_factor
+
+
 def prescaler_of(scheme) -> str:
     """Which of :data:`PRESCALERS` ``scheme`` currently uses (by its complexity traits) —
     so the control can show the live selection. Defaults to ``"log-prime"``."""
@@ -821,10 +831,24 @@ def plain_text_values(
     # ket lists). Complexity over the primes is the complexity of each domain basis element.
     prime_ratios = tuple(f"{p}/1" for p in standard_primes(state.d))
     prescaler = complexity_prescaler(state.mapping, scheme)
+    size_factor = complexity_size_factor(scheme)  # nonzero ⇒ the rectangular 𝑋 = 𝑍𝐿 (size row)
     prime_units = tuple(tuple(1 if i == p else 0 for i in range(state.d)) for p in range(state.d))
 
     def _prescaled(vectors):
         return tuple(tuple(prescaler[i] * v[i] for i in range(state.d)) for v in vectors)
+
+    def _sized(cols):
+        """Append the size component sf·Σ(𝐿ⱼ·vⱼ) (= sf·sum of the prescaled column) to each
+        prescaled COLUMN, growing a 𝐿·basis product into the rectangular 𝑍𝐿 form when the size
+        factor is on — the guide's size-sensitizing row. A no-op for the square (lp) case."""
+        if not size_factor:
+            return cols
+        return tuple(col + (size_factor * sum(col),) for col in cols)
+
+    # the bare prescaler is a covector STACK, so the size factor appends one extra ROW — the
+    # size-sensitizing covector sf·𝐋 (each entry sf·𝐿ᵢ), keeping the row length d — rather than
+    # extending each column the way the products do.
+    bare_size_row = ((tuple(size_factor * w for w in prescaler),) if size_factor else ())
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
     # vector lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
@@ -861,10 +885,10 @@ def plain_text_values(
         # is instead a matrix of prescaled VECTORS — per-column ket [ … ⟩ inside symmetric
         # outer [ … ] — so the bare prescaler reads as the matrix itself rather than a
         # product with another basis.
-        ("prescaling", "primes"): _prescale_vector_list(_prescaled(prime_units), col="⟨]", outer="[⟩"),
-        ("prescaling", "commas"): _prescale_vector_list(_prescaled(state.comma_basis)),
-        ("prescaling", "detempering"): _prescale_vector_list(_prescaled(detemper_vectors)),
-        ("prescaling", "targets"): _prescale_vector_list(_prescaled(target_vectors)),
+        ("prescaling", "primes"): _prescale_vector_list(_prescaled(prime_units) + bare_size_row, col="⟨]", outer="[⟩"),
+        ("prescaling", "commas"): _prescale_vector_list(_sized(_prescaled(state.comma_basis))),
+        ("prescaling", "detempering"): _prescale_vector_list(_sized(_prescaled(detemper_vectors))),
+        ("prescaling", "targets"): _prescale_vector_list(_sized(_prescaled(target_vectors))),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
         ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas, domain_basis=db)),
         ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios, domain_basis=db)),
@@ -883,7 +907,7 @@ def plain_text_values(
             ("tuning", "held"): _cents_list(held_sizes.tempered),
             ("just", "held"): _cents_list(held_sizes.just),
             ("retune", "held"): _cents_list(held_sizes.errors),
-            ("prescaling", "held"): _prescale_vector_list(_prescaled(held)),
+            ("prescaling", "held"): _prescale_vector_list(_sized(_prescaled(held))),
             ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios, domain_basis=db)),
         })
     # the other-intervals-of-interest column is a loose collection, not a basis, so every
@@ -900,7 +924,7 @@ def plain_text_values(
             ("tuning", "interest"): _cents_list(interest_sizes.tempered, wrap=False),
             ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
             ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
-            ("prescaling", "interest"): _prescale_vector_list(_prescaled(interest), outer=""),
+            ("prescaling", "interest"): _prescale_vector_list(_sized(_prescaled(interest)), outer=""),
             ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios, domain_basis=db), wrap=False),
         })
     return values
@@ -1047,9 +1071,13 @@ def parse_prescaler_diagonal(text: str, d: int) -> tuple[float, ...] | None:
         t = parse_temperament_data(text)
     except Exception:
         return None
-    if t.variance is not Variance.ROW or len(t.matrix) != d:
+    # the matrix is d×d, or (d+1)×d when the size factor adds the size-sensitizing row (the
+    # rectangular 𝑋 = 𝑍𝐿); only the d diagonal rows are validated and read — the size row is
+    # derived from the diagonal + the scheme's size factor, so any typed value there is ignored.
+    if t.variance is not Variance.ROW or len(t.matrix) not in (d, d + 1):
         return None
-    for i, row in enumerate(t.matrix):
+    for i in range(d):
+        row = t.matrix[i]
         if len(row) != d:
             return None
         for j, val in enumerate(row):

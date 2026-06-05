@@ -1974,6 +1974,43 @@ def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
     assert on["cell:prescaling:primes:1:0"].y == on["cell:prescaling:primes:0:0"].y + spreadsheet.ROW_H
 
 
+def test_size_factor_grows_the_prescaler_into_the_rectangular_ZL_matrix():
+    # checking "replace diminuator" (lp -> lils) turns on the size factor, which per the guide
+    # composes the log-prime matrix 𝐿 with the size-sensitizing matrix 𝑍: 𝑋 = 𝑍𝐿, a rectangular
+    # (d+1)×d matrix. The extra bottom row is the size-weighted log-prime row (sf·𝐿), matching the
+    # engine's get_complexity augmentation. lp stays square d×d.
+    lp = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}         # lp: square
+    lils = {c.id: c for c in _with("TILT minimax-lils-S", weighting=True).cells}  # lils: 𝑍𝐿
+    pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)), "TILT minimax-S")
+    assert "cell:prescaling:primes:3:0" not in lp     # lp has no size row (d=3 rows: 0..2)
+    # lils grows row d (= 3): every entry is sf·𝐿_c = the log-prime, a derived (non-editable) tval
+    for c in range(3):
+        assert lils[f"cell:prescaling:primes:3:{c}"].text == service.prescale_text(pre[c])
+        assert lils[f"cell:prescaling:primes:3:{c}"].kind == "tval"
+    # the diagonal rows are unchanged (still the editable prescalercell)
+    assert lils["cell:prescaling:primes:0:0"].kind == "prescalercell"
+    # the size row sits one ROW_H below the last diagonal row, with its own per-row ⟨ … ] bracket
+    assert lils["cell:prescaling:primes:3:0"].y == lils["cell:prescaling:primes:2:0"].y + spreadsheet.ROW_H
+    assert lils["bracket:prescaling:row:3:l"].text == "⟨" and lils["bracket:prescaling:row:3:r"].text == "]"
+
+
+def test_size_factor_grows_the_prescaler_product_tiles_and_labels_the_size_row():
+    # the size row appears in every prescaling matrix, not just the bare 𝑋: each 𝑋·basis product
+    # (𝑋C, 𝑋T, …) gains the size component sf·Σ(𝐿ⱼ·vⱼ) of its column. And the bare matrix's size
+    # row gets its own row label (the (d+1)-th covector of 𝑋), like the diagonal rows above it.
+    mapping = ((1, 1, 0), (0, 1, 4))
+    lils = {c.id: c for c in _with("TILT minimax-lils-S", weighting=True).cells}
+    lils_sym = {c.id: c for c in _with("TILT minimax-lils-S", weighting=True, symbols=True).cells}
+    pre = service.complexity_prescaler(mapping, "TILT minimax-S")
+    comma = service.from_mapping(mapping).comma_basis[0]      # the syntonic comma vector
+    # the comma product tile 𝑋C grows the size row: sf·Σ(𝐿ⱼ·commaⱼ) = sf · the comma's log size
+    expected = service.prescale_text(sum(pre[j] * comma[j] for j in range(3)))
+    assert lils["cell:prescaling:commas:3:0"].text == expected
+    assert lils["cell:prescaling:commas:3:0"].kind == "tval"
+    # the bare matrix's size row carries a row label (the (d+1)-th = 4th covector of 𝑋)
+    assert lils_sym["matlabel:row:prescaling:primes:3"].text.endswith("₄")
+
+
 def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
     # the bare prescaler tile keeps the abstract symbol 𝑋 with its concrete equivalence — the
     # active prescaler IS the log-prime matrix, so "𝑋 = 𝐿". Everywhere 𝑋 further appears (the

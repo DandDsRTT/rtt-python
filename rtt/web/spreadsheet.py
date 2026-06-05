@@ -925,6 +925,14 @@ class _GridBuilder:
         self.node_edge = self.node_x + TOGGLE  # the node's content-facing (right) edge
         content_x0 = self.node_x + TOGGLE + GAP
 
+        # The complexity size factor (the box-𝐋 "replace diminuator" trait, lp→lils): a nonzero
+        # factor makes the complexity pretransformer 𝑋 rectangular — the guide's 𝑋 = 𝑍𝐿, the
+        # diagonal log-prime matrix 𝐿 composed with a size-sensitizing matrix 𝑍 that appends one
+        # extra row, the size-weighted sf·𝐿. The prescaling matrices (the bare 𝑋 and its 𝑋·basis
+        # products) grow that one row; every other row is unchanged.
+        self.size_factor = service.complexity_size_factor(self.tuning_scheme)
+        self.size_rows = 1 if self.size_factor else 0
+
         # Row bands top-to-bottom: (key, natural height, present, collapsible, label), laid
         # out below by the same running-cursor rule as the columns. Defined here, ahead of
         # that layout, so each column's width can reserve room for its present rows' captions.
@@ -940,7 +948,7 @@ class _GridBuilder:
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
             ("retune", ROW_H, show_tuning, True, "retuning"),
-            ("prescaling", self.d * ROW_H, self._complexity_shown, True, "complexity prescaling"),
+            ("prescaling", (self.d + self.size_rows) * ROW_H, self._complexity_shown, True, "complexity prescaling"),
             ("complexity", ROW_H, self._complexity_shown, True, "complexity"),
             ("weight", ROW_H, self.show_weighting, True, "weight"),
             ("damage", ROW_H, show_tuning, True, "damage"),
@@ -2177,8 +2185,14 @@ class _GridBuilder:
                 # the mapping's /p denominator (and tval_row's primes rows). The other groups
                 # scale a vector set to plain octaves (no p), so there is nothing to subscript.
                 u = self.cell_unit("prescaling", group, prime=c if group == "primes" else None)
-                for i in range(self.d):
-                    value = self.prescaler[i] * vec[i]
+                for i in range(self.d + self.size_rows):
+                    # the d diagonal / prescaled rows are 𝐿ᵢ·vᵢ; the extra size row (i == d, present
+                    # only with the size factor) is the guide's size-sensitizing row, sf·Σ(𝐿ⱼ·vⱼ) =
+                    # sf · the prescaled column's signed sum (= sf · log₂ of the interval's own size)
+                    if i < self.d:
+                        value = self.prescaler[i] * vec[i]
+                    else:
+                        value = self.size_factor * sum(self.prescaler[j] * vec[j] for j in range(self.d))
                     cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
                     cx, cy = left(c), self.row_y["prescaling"] + i * ROW_H
                     # held column: a prescaled held interval the tuning no longer holds reddens too
@@ -2193,10 +2207,10 @@ class _GridBuilder:
                     # the user can't edit its individual cells — so math_expressions still
                     # styles a non-zero coefficient with its closed form ``coeff · {prime_term}``,
                     # and a zero coefficient (no closed form) keeps the plain tval.
-                    if group == "primes" and i == c:
+                    if i < self.d and group == "primes" and i == c:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
                                              text=service.prescale_text(value), prime=i, unit=u))
-                    elif self.show_math and vec[i] != 0 and i in prime_term:
+                    elif i < self.d and self.show_math and vec[i] != 0 and i in prime_term:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
                                              text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities), unit=u, alert=alert))
                     else:
@@ -2439,11 +2453,12 @@ class _GridBuilder:
                                   ("targets", self.k), ("held", self.nh)):
                 if n_cols and self.tile_open("prescaling", group):
                     self.bracket(f"prescaling:{group}", LIST_BRACKETS, group,
-                            self.row_y["prescaling"], self.d * ROW_H, fit=True)
-            # the bare prescaler 𝐿 is mapping-style: per-row ⟨ … ] brackets, one pair per row.
-            # Its outer top + bottom frame is the matrix_frame call above (ebktop + ebkangle).
+                            self.row_y["prescaling"], (self.d + self.size_rows) * ROW_H, fit=True)
+            # the bare prescaler 𝐿 is mapping-style: per-row ⟨ … ] brackets, one pair per row
+            # (the size factor adds one more, for the size row). Its outer top + bottom frame is
+            # the matrix_frame call above (ebktop + ebkangle), which spans the grown matrix height.
             if self.tile_open("prescaling", "primes"):
-                for i in range(self.d):
+                for i in range(self.d + self.size_rows):
                     self.bracket(f"prescaling:row:{i}", MAP_BRACKETS, "primes",
                             self.row_y["prescaling"] + i * ROW_H, ROW_H)
         if self.tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
@@ -2489,7 +2504,7 @@ class _GridBuilder:
                 ("mapping", "primes"): self.map_top,
                 ("prescaling", "primes"): lambda i: self.row_y["prescaling"] + i * ROW_H,
             }
-            row_count = {("mapping", "primes"): self.r, ("prescaling", "primes"): self.d}
+            row_count = {("mapping", "primes"): self.r, ("prescaling", "primes"): self.d + self.size_rows}
             for (rkey, ckey), glyph in self.row_labels.items():
                 if not self.tile_open(rkey, ckey):
                     continue

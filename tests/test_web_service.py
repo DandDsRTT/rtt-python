@@ -703,6 +703,15 @@ def test_scheme_with_diminuator_toggles_the_size_factor_between_lp_and_lils():
     assert service.prescaler_of(on_sopfr) == "prime" and service.is_euclidean(on_sopfr) is True
 
 
+def test_complexity_size_factor_reports_the_schemes_size_factor():
+    # the size factor (trait 5c) the "replace diminuator" checkbox toggles: 0 for lp (the
+    # square pretransformer), 1 for lils (the rectangular ZL, with the guide's size row). The
+    # renderer sizes the prescaling matrix's extra row off this.
+    assert service.complexity_size_factor("minimax-S") == 0
+    assert service.complexity_size_factor("minimax-lils-S") == 1
+    assert service.complexity_size_factor("TILT minimax-lils-S") == 1
+
+
 def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
     import pytest
 
@@ -962,6 +971,27 @@ def test_plain_text_weighting_rows_mirror_the_grid():
     assert pt[("prescaling", "commas")] == "[[4 -6.340 2.322⟩]"
 
 
+def test_plain_text_lils_prescaler_grows_the_size_row_matching_the_grid():
+    # with the size factor on (lils), the complexity pretransformer is the rectangular 𝑋 = 𝑍𝐿.
+    # The plain text grows to match the grid: the bare prescaler gains one covector ROW (the
+    # size-sensitizing sf·𝐋), and each 𝑋·basis product COLUMN gains the size component sf·Σ(𝐿ⱼ·vⱼ).
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    _t = service.prescale_text
+    pre = service.complexity_prescaler(mapping, "TILT minimax-S")  # the square (lp) diagonal
+    pt = service.plain_text_values(service.from_mapping(mapping), scheme="TILT minimax-lils-S")
+    # bare 𝑋: three diagonal covector rows, then the size row ⟨sf·𝐿₀ sf·𝐿₁ sf·𝐿₂] (sf = 1)
+    rows = [["0", "0", "0"] for _ in range(3)]
+    for i in range(3):
+        rows[i][i] = _t(pre[i])
+    rows.append([_t(pre[c]) for c in range(3)])
+    assert pt[("prescaling", "primes")] == "[" + " ".join("⟨" + " ".join(r) + "]" for r in rows) + "⟩"
+    # the 𝑋C product column grows the size component sf·Σ(𝐿ⱼ·commaⱼ) as its 4th ket entry
+    comma = service.from_mapping(mapping).comma_basis[0]
+    col = [pre[i] * comma[i] for i in range(3)]
+    col.append(sum(col))  # sf = 1
+    assert pt[("prescaling", "commas")] == "[[" + " ".join(_t(x) for x in col) + "⟩]"
+
+
 def test_plain_text_over_a_nonstandard_domain_uses_the_basis():
     # the plain-text view of a 2.3.13/5 temperament names the domain basis in dot
     # notation and tunes over its elements (not the standard primes)
@@ -1057,6 +1087,20 @@ def test_parse_prescaler_diagonal_rejects_unparseable_or_non_diagonal_or_wrong_s
     # a covector list rather than a covector matrix (one ⟨…] only) — wrong shape for the
     # bare prescaler tile, even if the d numbers parse as floats
     assert service.parse_prescaler_diagonal("⟨1 1.585 2.322]", 3) is None
+
+
+def test_parse_prescaler_diagonal_accepts_the_optional_size_row():
+    # with the size factor on, the bare prescaler is the rectangular 𝑋 = 𝑍𝐿 — (d+1)×d: the d
+    # diagonal rows plus the derived size-sensitizing row sf·𝐋. The parser reads the diagonal
+    # from the first d rows and ignores the size row (it is recomputed, never user-set).
+    assert service.parse_prescaler_diagonal(
+        "[⟨1 0 0] ⟨0 1.585 0] ⟨0 0 2.322] ⟨1 1.585 2.322]⟩", 3) == (1.0, 1.585, 2.322)
+    # round-trips the live lils plain text the bare prescaler tile renders
+    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]), scheme="TILT minimax-lils-S")
+    assert service.parse_prescaler_diagonal(pt[("prescaling", "primes")], 3) == (1.0, 1.585, 2.322)
+    # a hand-edited diagonal still parses with the size row present (whatever it holds is ignored)
+    assert service.parse_prescaler_diagonal(
+        "[⟨1 0 0] ⟨0 4 0] ⟨0 0 2.322] ⟨9 9 9]⟩", 3) == (1.0, 4.0, 2.322)
 
 
 def test_plain_text_targets_honor_an_override():
