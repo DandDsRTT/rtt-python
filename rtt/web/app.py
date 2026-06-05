@@ -942,6 +942,32 @@ def _select_props(min_width: float) -> str:
             f"popup-content-style=min-width:{min_width}px;width:max-content")
 
 
+# The temperament-chooser hover preview's client side. The dropdown popup is TELEPORTED to <body>,
+# so the slot can reach the server neither via `$parent.$emit` (its $parent is the menu, not the
+# q-select that `.on()` listens on) nor via a `document` call in the slot expression (Vue templates
+# block non-whitelisted globals). So the option slot only STAMPS each option's index onto its q-item
+# (`:data-optidx`), and this one-time, document-level delegation (real JS — globals available, and it
+# survives virtual scroll since it's not per-item) reads that index off the hovered option and fires
+# a native `opthover` CustomEvent at the chooser's cell wrap, which listens for it. detail -1 clears.
+_TEMP_HOVER_DELEGATION = """
+(() => {
+  if (window.__rttTempHover) return;
+  window.__rttTempHover = true;
+  const fire = (d) => document.querySelectorAll('[data-eid^="preset:temperament"]')
+      .forEach(w => w.dispatchEvent(new CustomEvent('opthover', {detail: d})));
+  document.addEventListener('mouseover', (e) => {
+    const it = e.target.closest && e.target.closest('.q-item[data-optidx]');
+    if (it) fire(parseInt(it.getAttribute('data-optidx'), 10));
+  });
+  document.addEventListener('mouseout', (e) => {
+    const from = e.target.closest && e.target.closest('.q-item[data-optidx]');
+    const to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.q-item[data-optidx]');
+    if (from && !to) fire(-1);
+  });
+})()
+"""
+
+
 class _GroupedSelect(ui.select):
     """A chooser whose group-divider rows are non-selectable. Each option whose value
     satisfies ``is_divider`` is handed to Quasar with ``disable=True``, so its q-item
@@ -1742,20 +1768,19 @@ class _Reconciler:
                     on_change=lambda e: self._cb.on_preset("temperament", e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
-            # hovering an option in the OPEN dropdown previews loading that temperament — ring the
-            # cells its comma basis would change (no reflow). Quasar exposes no per-option hover, so
-            # re-render each option via its `option` slot as the same q-item (v-bind itemProps keeps it
-            # clickable/selectable and carries the divider's disabled state) plus @mouseenter/@mouseleave
-            # that emit an `opthover` event back to Python: the option's value, or null for a divider
-            # header / on leave. The popup closing clears too.
+            # hovering an option in the OPEN dropdown previews loading that temperament — ring the cells
+            # its comma basis would change (no reflow). The option slot stamps each option's index onto
+            # its q-item (:data-optidx — a plain Vue binding, since the teleported popup blocks both a
+            # slot $emit and any `document` use inside the slot expression); the document-level
+            # delegation (_TEMP_HOVER_DELEGATION) reads that index on hover and fires `opthover` at this
+            # cell wrap, which listens for it. v-bind itemProps keeps each option clickable/selectable
+            # and carries the divider's disabled state.
             sel.add_slot("option", """
-                <q-item v-bind="props.itemProps"
-                        @mouseenter="$parent.$emit('opthover', props.opt.disable ? null : props.opt.value)"
-                        @mouseleave="$parent.$emit('opthover', null)">
+                <q-item v-bind="props.itemProps" :data-optidx="props.opt.value">
                     <q-item-section><q-item-label>{{ props.opt.label }}</q-item-label></q-item-section>
                 </q-item>
             """)
-            sel.on("opthover", lambda e: self._cb.on_temperament_hover(e.args))
+            wrap.on("opthover", lambda e: self._cb.on_temperament_hover(e.args), args=["detail"])
             sel.on("popup-hide", lambda _=None: self._cb.on_temperament_hover(None))
             self.selects[cb.id] = sel
         elif name == "prescaler":
@@ -2179,6 +2204,8 @@ def index() -> None:
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
+    # install the temperament-chooser hover delegation once per page (inert until the dropdown opens)
+    ui.run_javascript(_TEMP_HOVER_DELEGATION)
 
     def col_tokens(name):
         # the previous render's id-tokens for a reorderable interval list, in column order — so an

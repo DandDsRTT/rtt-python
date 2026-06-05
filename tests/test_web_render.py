@@ -1703,16 +1703,17 @@ async def test_hovering_a_generator_tuning_sign_previews_reversing_it(user: User
 
 async def test_hovering_a_temperament_option_previews_loading_it(user: User) -> None:
     # hovering a temperament in the OPEN dropdown previews loading it: the cells its comma basis would
-    # change ring, no reflow. A divider header / leaving the option clears. The option slot emits the
-    # hovered option's INDEX (NiceGUI's per-option value), which the handler maps back to the
-    # temperament key; the DOM-hover -> opthover wiring is the Quasar slot, exercised live.
+    # change ring, no reflow. A divider header / leaving the option (detail -1) clears. The option slot
+    # dispatches a native `opthover` CustomEvent at the cell WRAP carrying the option's INDEX in
+    # `detail` (the popup is teleported, so a slot $emit can't reach the select); the wrap's handler
+    # maps the index back to the temperament key. Here we drive that wrap event directly.
     from rtt.web import presets
     await user.open("/")
     _toggle(user, "presets")                                  # the temperament chooser is presets-gated
     await user.should_see(marker="preset:temperament")
-    sel = _cell_child(user, "preset:temperament")             # the grouped <select>
-    idx = list(presets.temperament_options()).index("5:Porcupine")  # the slot emits the option index
-    UserInteraction(user, {sel}, None).trigger("opthover", idx)            # hover porcupine (default is meantone)
+    wrap = set(user.find(marker="preset:temperament").elements)    # the cell wrap holds the opthover listener
+    idx = list(presets.temperament_options()).index("5:Porcupine")  # the slot dispatches the option index
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})  # hover porcupine (default is meantone)
     assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2")  # the mapping it'd load rings
-    UserInteraction(user, {sel}, None).trigger("opthover", None)           # leave the option
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})   # leave the option
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
