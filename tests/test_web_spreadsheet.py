@@ -372,6 +372,156 @@ def test_targets_have_no_drag_grips_in_all_interval():
     assert not any(c.startswith("grip:targets") for c in cells)
 
 
+# --- interval-column identity tokens: a stable id-token per column so a within-list reorder
+# keeps each column's cell ids and the reconciler glides them (see assign_column_tokens) ---
+
+def _tokens(pairs):
+    return [tok for tok, _ in pairs]
+
+
+def test_fresh_column_tokens_number_the_columns_by_index():
+    # with no previous render, each column is numbered 0,1,2,… in order — so every cell id keeps
+    # its index until the first reorder (the whole existing test surface is index-keyed)
+    pairs = spreadsheet.assign_column_tokens(None, [(-1, 1, 0), (2, 0, -1), (1, 1, -1)])
+    assert _tokens(pairs) == [0, 1, 2]
+
+
+def test_reordered_column_keeps_its_token():
+    # a reorder is matched by CONTENT: each moved column carries its token to its new slot, so its
+    # cell ids persist and only their x changes — the reconciler then slides them across
+    a, b, c = (-1, 1, 0), (2, 0, -1), (1, 1, -1)
+    prev = spreadsheet.assign_column_tokens(None, [a, b, c])   # tokens 0,1,2
+    moved = spreadsheet.assign_column_tokens(prev, [c, a, b])  # drag c to the front
+    assert _tokens(moved) == [2, 0, 1]
+
+
+def test_edited_column_keeps_its_token_by_position():
+    # an edit changes a column's content but not its slot: it has no content match, so it inherits
+    # the token at its index — its cell ids persist, so the focused input is reused (not rebuilt,
+    # which would drop focus mid-keystroke) and its unchanged siblings keep their ids too
+    a, b = (-1, 1, 0), (2, 0, -1)
+    prev = spreadsheet.assign_column_tokens(None, [a, b])     # tokens 0,1
+    edited = spreadsheet.assign_column_tokens(prev, [(-1, 2, 0), b])  # edit column 0's content
+    assert _tokens(edited) == [0, 1]
+
+
+def test_editing_a_column_to_a_value_already_in_the_list_keeps_its_position_token():
+    # the subtle case: editing column 0 to a vector that ALREADY appears later in the list must NOT
+    # be read as a move into that duplicate (which would steal its token and orphan column 0's id) —
+    # a membership change is matched by position, so column 0 keeps token 0 and its cell id survives
+    a, b, c = (-1, 1, 0), (2, 0, -1), (1, 1, -1)
+    prev = spreadsheet.assign_column_tokens(None, [a, b, c])   # tokens 0,1,2
+    edited = spreadsheet.assign_column_tokens(prev, [c, b, c])  # edit column 0 from a to c (== column 2)
+    assert _tokens(edited) == [0, 1, 2]                         # every column keeps its slot's token
+
+
+def test_duplicate_columns_get_distinct_tokens():
+    # two equal vectors in one list must not collide on one id: each claims a distinct previous
+    # column in order, so a reorder of the pair still keeps every id unique
+    a, b = (-1, 1, 0), (2, 0, -1)
+    prev = spreadsheet.assign_column_tokens(None, [a, a, b])   # tokens 0,1,2 (the dup is 0 and 1)
+    moved = spreadsheet.assign_column_tokens(prev, [a, b, a])  # move b between the two equal a's
+    assert _tokens(moved) == [0, 2, 1]
+    assert len(set(_tokens(moved))) == 3                       # still three distinct ids
+
+
+def test_pending_token_never_collides_with_a_live_column():
+    # the draft column's token is one past every committed column's, so it can't clash with a
+    # surviving column even after a removal leaves a gap in the token sequence; an empty list's
+    # draft is 0 (so a first pending vector cell is …:0, as the index-keyed tests expect)
+    assert spreadsheet.pending_token([]) == 0
+    assert spreadsheet.pending_token([0, 1, 2]) == 3          # a fresh list: == the column count
+    assert spreadsheet.pending_token([2]) == 3               # after removals: clears the survivor
+
+
+def _held_state():
+    return service.from_mapping(((1, 1, 0), (0, 1, 4)))
+
+
+def test_build_returns_column_identities_numbered_by_index_when_fresh():
+    # a fresh build numbers every reorderable list by index, so its cell ids are unchanged — the
+    # whole index-keyed test surface stays valid (divergence happens only after a reorder)
+    held = [(-1, 1, 0), (2, 0, -1)]
+    lay = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
+    assert _tokens(lay.identities["held"]) == [0, 1]
+
+
+def test_reordered_held_column_keeps_its_vector_cell_id_and_glides():
+    # build the held list, then rebuild with the third column dragged to the front, threading the
+    # first build's identities as the previous render. The moved column keeps its cell id and lands
+    # at the new slot's x — so the reconciler (a CSS left transition on a kept id) slides it.
+    held = [(-1, 1, 0), (2, 0, -1), (1, 1, -1)]
+    lay1 = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
+    c1 = {c.id: c for c in lay1.cells}
+    slot0_x, slot2_x = c1["cell:held:0:0"].x, c1["cell:held:0:2"].x
+    assert slot0_x != slot2_x                                  # the slots are at different x
+    lay2 = spreadsheet.build(_held_state(), _all_on(),
+                             held_vectors=[held[2], held[0], held[1]], prev_ids=lay1.identities)
+    c2 = {c.id: c for c in lay2.cells}
+    assert "cell:held:0:2" in c2                               # the moved column kept its id (token 2)...
+    assert c2["cell:held:0:2"].x == slot0_x                    # ...and now sits at the front slot → glides
+    assert c2["cell:held:0:2"].text == c1["cell:held:0:2"].text  # carrying its own content, not slot 0's
+
+
+# Cells whose content can legitimately differ across a reorder for reasons OTHER than a bad key, so
+# they're not evidence of an in-place re-fill: (a) a wide chart / the plain-text list re-list the
+# columns in order; (b) anything derived from the OPTIMIZED tuning (tempered sizes, retuning errors,
+# tempered audio, the generator tuning-range chart) shifts by sub-cent solver noise when the held
+# SET is re-presented in a new order. The deterministic per-column cells left over — the vectors,
+# ratios, just sizes, and mapped products — are the oracle for whether a column's cells re-keyed.
+def _reorder_volatile(cid):
+    # speaker cells carry the WHOLE tile's cents list (for arp/chord), so their values reorder too
+    return cid.startswith(("chart:", "ptext:", "tuning:", "retune:", "speaker:", "rangechart:"))
+
+
+def test_reordering_held_rekeys_every_column_cell_not_just_the_vectors():
+    # after a within-list reorder, every per-column cell (ratio, grip, −, just-size row, mapped
+    # products, just audio, prescaling) kept its id and content and merely moved x. A cell still
+    # keyed by index would instead keep its id while its content changed (the next interval slid into
+    # it) — so it would show up in this diff. (Tuning-derived cells are filtered: see _reorder_volatile.)
+    held = [(-1, 1, 0), (2, 0, -1), (1, 1, -1)]
+    lay1 = spreadsheet.build(_held_state(), _all_on(), held_vectors=held)
+    lay2 = spreadsheet.build(_held_state(), _all_on(),
+                             held_vectors=[held[2], held[0], held[1]], prev_ids=lay1.identities)
+    moved = {cid for cid in spreadsheet.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cid)}
+    assert moved == set(), f"these cells re-filled in place instead of gliding: {sorted(moved)}"
+
+
+def test_reordered_column_controls_glide_with_it():
+    # the grip, the −, and the audio speaker carry no column-distinct content, so the content diff
+    # can't see them — but they ride the column's gridline and must move with it. Each keeps its
+    # token id and lands at the moved column's new x, so the reconciler slides them too.
+    held = [(-1, 1, 0), (2, 0, -1), (1, 1, -1)]
+    lay1 = {c.id: c for c in spreadsheet.build(_held_state(), _all_on(), held_vectors=held).cells}
+    ids = spreadsheet.build(_held_state(), _all_on(), held_vectors=held).identities
+    lay2 = {c.id: c for c in spreadsheet.build(
+        _held_state(), _all_on(), held_vectors=[held[2], held[0], held[1]], prev_ids=ids).cells}
+    for ctrl in ("grip:held:2", "held_minus:2", "speaker:just_audio:held:2"):
+        assert ctrl in lay2, f"{ctrl} lost its token id on reorder (it would snap, not glide)"
+        assert lay2[ctrl].x == lay1[ctrl.replace(":2", ":0")].x  # moved to the front slot's x
+
+
+def test_reordering_interest_rekeys_its_column_cells():
+    interest = [(1, 1, -1), (-1, 1, 0), (2, 0, -1)]  # 6/5, 3/2, 9/8-ish
+    lay1 = spreadsheet.build(_held_state(), _all_on(), interest=interest)
+    lay2 = spreadsheet.build(_held_state(), _all_on(),
+                             interest=[interest[2], interest[0], interest[1]], prev_ids=lay1.identities)
+    moved = {cid for cid in spreadsheet.changed_cell_ids(lay1, lay2) if not _reorder_volatile(cid)}
+    assert moved == set(), f"interest cells re-filled in place instead of gliding: {sorted(moved)}"
+
+
+def test_reordering_targets_rekeys_its_column_cells():
+    # targets carry the optimization objective, so the damage row shifts by solver noise on reorder
+    # (filtered); the per-column cells (vectors, ratios, weights, complexity, prescaling, mapped) glide
+    targets = ("2/1", "3/2", "5/4")
+    lay1 = spreadsheet.build(_held_state(), _all_on(), target_override=targets)
+    lay2 = spreadsheet.build(_held_state(), _all_on(),
+                             target_override=(targets[2], targets[0], targets[1]), prev_ids=lay1.identities)
+    moved = {cid for cid in spreadsheet.changed_cell_ids(lay1, lay2)
+             if not _reorder_volatile(cid) and not cid.startswith("damage:")}
+    assert moved == set(), f"target cells re-filled in place instead of gliding: {sorted(moved)}"
+
+
 def test_editable_vector_tiles_get_editable_quantities_ratios():
     # every tile whose interval-vectors cells are editable (commas / targets / held / interest)
     # carries an editable quantities-row ratio — a "ratiocell" input, the scalar twin of its

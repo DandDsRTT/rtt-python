@@ -331,6 +331,50 @@ def changed_cell_ids(old: Layout, new: Layout) -> frozenset:
                      if c.id not in before or before[c.id] != _cell_content(c))
 
 
+def assign_column_tokens(prev, vectors):
+    """Assign a stable id-token to each interval column, so a within-list reorder keeps a column's
+    cell ids and the reconciler glides it to its new x (rather than re-filling a fixed-index cell).
+
+    ``prev`` is the previous render's ``[(token, vector), …]`` (``None`` on the first build); the
+    return is the new ``[(token, vector), …]`` aligned to ``vectors``. Each column is matched to the
+    previous render by CONTENT — a moved column finds its old token and carries it to the new slot —
+    and anything unmatched gets a token greater than every token in play, so live columns never
+    collide. With no previous render the columns number 0,1,2,… in order, so every token equals its
+    index until the first reorder (the whole index-keyed cell-id surface is unchanged until then)."""
+    vectors = [tuple(v) for v in vectors]
+    prev = list(prev or [])
+    tokens = [None] * len(vectors)
+    if len(vectors) == len(prev) and sorted(vectors) == sorted(v for _, v in prev):
+        # a pure REORDER (same multiset of vectors): match by content, so each moved column carries
+        # its token to its new slot and glides. Equal duplicates claim distinct previous columns in
+        # order, so a reorder of a duplicated pair still keeps every id unique.
+        claimed = [False] * len(prev)
+        for j, vec in enumerate(vectors):
+            for pi, (tok, pvec) in enumerate(prev):
+                if not claimed[pi] and pvec == vec:
+                    tokens[j], claimed[pi] = tok, True
+                    break
+    else:
+        # an EDIT / ADD / REMOVE changed the membership: match by POSITION, so a column keeps the
+        # token of the slot it sits in. This is what makes an edit safe — typing a value that already
+        # appears elsewhere in the list isn't mistaken for a move into it, and the focused cell keeps
+        # its id (so it is reused, not rebuilt mid-keystroke). New slots fall through to a fresh token.
+        for j in range(min(len(vectors), len(prev))):
+            tokens[j] = prev[j][0]
+    nxt = max([t for t in tokens if t is not None] + [tok for tok, _ in prev] + [-1]) + 1
+    for j in range(len(vectors)):  # fresh token, greater than any in play (no reuse → no collision)
+        if tokens[j] is None:
+            tokens[j], nxt = nxt, nxt + 1
+    return list(zip(tokens, vectors))
+
+
+def pending_token(tokens):
+    """The id-token for a list's draft (pending) column: one past every committed column's token, so
+    it can't collide with a live column even after a removal leaves a gap. On a fresh list (tokens =
+    indices) this is the column count, so a first draft cell keeps its historical ``…:count`` id."""
+    return max(tokens, default=-1) + 1
+
+
 def _wrap_chars(words: list[str], max_chars: int) -> int:
     """Greedy line count packing ``words`` into lines of at most ``max_chars`` chars
     (an over-long word breaks across lines itself). The character-budget core shared
@@ -526,7 +570,8 @@ class _GridBuilder:
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
-                 pending_interest=None, pending_held=None, pending_target=None):
+                 pending_interest=None, pending_held=None, pending_target=None, prev_ids=None):
+        self.prev_ids = prev_ids or {}
         self.state = state
         self.settings = settings
         self.collapsed = collapsed
@@ -694,6 +739,16 @@ class _GridBuilder:
         self.interest_ratios = service.comma_ratios(self.interest, self.elements)  # vector -> "num/den" (shared renderer)
         self.interest_mapped = service.mapped_intervals(self.state.mapping, self.interest_ratios, self.elements)
         self.interest_sizes = service.interval_sizes(self.tun, self.interest_ratios, self.elements)
+        # a stable id-token per column of each reorderable interval list, matched against the
+        # previous render (prev_ids): a within-list reorder keeps a column's token, so all its cells
+        # keep their ids and the reconciler slides them to the new x. Fresh (no prev) numbers each
+        # list by index, so every cell id is unchanged until the first reorder. Commas are excluded
+        # (their column order is canonicalized by the dual — a reorder is unobservable).
+        self._col_ids = {
+            name: assign_column_tokens(self.prev_ids.get(name), vectors)
+            for name, vectors in (("targets", self.target_vectors),
+                                  ("held", self.held), ("interest", self.interest))
+        }
         # the complexity row norms each interval's prescaled vector (𝒄): a covector over the
         # domain elements (each element's complexity, log₂ of it for the default log-prime
         # norm), a list over the comma / target / interest interval sets.
@@ -1392,6 +1447,20 @@ class _GridBuilder:
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
         return None
 
+    def col_token(self, group, i):
+        """The stable id-token for column ``i`` of a reorderable interval list (targets/held/
+        interest), so all of a column's cells share one token and re-key together when it moves
+        (the reconciler then glides them). Any other group (gens/primes/commas, which don't reorder)
+        keeps its bare index, so those cell ids are unchanged."""
+        pairs = self._col_ids.get(group)
+        return i if pairs is None else pairs[i][0]
+
+    def pending_col_token(self, group):
+        """The id-token for a list's draft (pending) column — one past every committed column's, so
+        it never collides with a live column. On a fresh list this is the column count, matching the
+        historical ``…:count`` draft-cell ids."""
+        return pending_token([tok for tok, _ in self._col_ids[group]])
+
     def tval_row(self, key, group, vals, alerts=()):
         if not self.tile_open(key, group):
             return
@@ -1402,7 +1471,7 @@ class _GridBuilder:
         # the tuning-family unit is cents per the column's coordinate: over the generators
         # it's ¢/gᵢ, over the primes ¢/pᵢ, over the (dimensionless) interval columns plain ¢
         for i, v in enumerate(vals):
-            cid = f"{key}:{self.group_elem[group]}:{i}"
+            cid = f"{key}:{self.group_elem[group]}:{self.col_token(group, i)}"
             x = self.group_left[group](i)
             u = self.cell_unit(key, group, gen=i if group == "gens" else None, prime=i if group == "primes" else None)
             # the held column passes per-interval alert flags: an interval the tuning no longer
@@ -1442,8 +1511,8 @@ class _GridBuilder:
         # tile's cents list (not just its own) so the play-mode can arp/chord the tile, and
         # text = the tile key it shares with the bank controls (so the engine can pair them).
         for i in range(len(vals)):
-            self.cells.append(CellBox(f"speaker:{key}:{self.group_elem[group]}:{i}", self.group_left[group](i),
-                                 self.row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals))
+            self.cells.append(CellBox(f"speaker:{key}:{self.group_elem[group]}:{self.col_token(group, i)}", self.group_left[group](i),
+                                 self.row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals, comma=i))
         # the per-tile control bank in the head strip's top-right (mirroring the fold toggle
         # top-left): waveform / play-mode / hold-loop / include-1/1, each a TOGGLE square.
         # Anchored to the grey panel's right edge (tile_box), not the centred content — so a
@@ -1810,30 +1879,30 @@ class _GridBuilder:
                 # auto Tₚ = I list is the read-only computed twin of its vectors column (commaratio, as D)
                 target_ratio_kind = "ratiocell" if self.targets_editable else "commaratio"
                 for j in range(self.k):
-                    self.cells.append(CellBox(f"target:{j}", self.target_left(j), qy, COL_W, ROW_H, target_ratio_kind, text=self.targets[j], comma=j))
+                    self.cells.append(CellBox(f"target:{self.col_token('targets', j)}", self.target_left(j), qy, COL_W, ROW_H, target_ratio_kind, text=self.targets[j], comma=j))
                     # each user-curated target carries its own − (like the intervals of interest); the
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
                     if self.targets_editable:
-                        branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
+                        branch_minus(f"target_minus:{self.col_token('targets', j)}", "targets", j, "target_minus", comma=j)
                 if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
                     branch_minus("target_minus:pending", "targets", self.k, "target_minus")
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
                 for i in range(self.nh):
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
-                    self.cells.append(CellBox(f"held:{i}", self.held_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
+                    self.cells.append(CellBox(f"held:{self.col_token('held', i)}", self.held_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
                     # each held interval carries its own − on its branch point (any one is removable)
-                    branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
+                    branch_minus(f"held_minus:{self.col_token('held', i)}", "held", i, "held_minus", comma=i)
                 if self.pending_held is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("held:pending", self.held_left(self.nh), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nh, pending=True))
                     branch_minus("held_minus:pending", "held", self.nh, "held_minus")
             if self.tile_open("quantities", "interest"):  # the user's other intervals of interest
                 for i in range(self.mi):
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
-                    self.cells.append(CellBox(f"interest:{i}", self.interest_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.interest_ratios[i], comma=i))
+                    self.cells.append(CellBox(f"interest:{self.col_token('interest', i)}", self.interest_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.interest_ratios[i], comma=i))
                     # every interval carries its own − on its branch point: any one is removable,
                     # unlike the domain/comma last-only −
-                    branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
+                    branch_minus(f"interest_minus:{self.col_token('interest', i)}", "interest", i, "interest_minus", comma=i)
                 if self.pending_interest is not None:  # the draft column: an editable "?/?" ratio,
                     # blank red vector cells below, and a − on its branch point to cancel the draft
                     self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.mi, pending=True))
@@ -1861,7 +1930,7 @@ class _GridBuilder:
 
             def drag_controls(ckey, n):
                 for i in range(n):  # a full-width ⠿ grip centred on the column's gridline, in the band
-                    self.cells.append(CellBox(f"grip:{ckey}:{i}", self.sub_axis_x(ckey, i) - COL_W / 2,
+                    self.cells.append(CellBox(f"grip:{ckey}:{self.col_token(ckey, i)}", self.sub_axis_x(ckey, i) - COL_W / 2,
                                          grip_top, COL_W, GRIP_BAND, "colgrip", comma=i))
                 # the append / into-empty-list drop target, on the SAME band at the list's stub gridline
                 # (the trunk when empty) — so an empty list still has a gridline target, like the grips.
@@ -1908,13 +1977,13 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"cell:mapping:{i}:{p}", self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
                 if self.tile_open("mapping", "targets"):
                     for j in range(self.k):
-                        self.cells.append(CellBox(f"cell:mapped:{i}:{j}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))
+                        self.cells.append(CellBox(f"cell:mapped:{i}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))
                 if self.tile_open("mapping", "interest"):  # interest mapped through M, like the targets
                     for ii in range(self.mi):
-                        self.cells.append(CellBox(f"cell:imapped:{i}:{ii}", self.interest_left(ii), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.interest_mapped[i][ii]), gen=i, unit=self.cell_unit("mapping", "interest", gen=i)))
+                        self.cells.append(CellBox(f"cell:imapped:{i}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.interest_mapped[i][ii]), gen=i, unit=self.cell_unit("mapping", "interest", gen=i)))
                 if self.tile_open("mapping", "held"):  # held mapped through M, like the targets / interest
                     for hi in range(self.nh):
-                        self.cells.append(CellBox(f"cell:hmapped:{i}:{hi}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i), alert=self.held_unheld[hi]))
+                        self.cells.append(CellBox(f"cell:hmapped:{i}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i), alert=self.held_unheld[hi]))
                 # the comma basis mapped through M — it vanishes to 0 (parallel to the
                 # mapped target list); the raw basis lives in the interval-vectors row
                 if self.tile_open("mapping", "commas"):
@@ -1973,20 +2042,20 @@ class _GridBuilder:
                 target_kind = "targetcell" if self.targets_editable else "vec"
                 for j in range(self.k):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:vec:targets:{j}:{p}", self.target_left(j), self.vec_top(p), COL_W, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
+                        self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{p}", self.target_left(j), self.vec_top(p), COL_W, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
                 if self.pending_target is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_target[p]
-                        self.cells.append(CellBox(f"cell:vec:targets:{self.k}:{p}", self.target_left(self.k), self.vec_top(p), COL_W, ROW_H, "targetcell",
+                        self.cells.append(CellBox(f"cell:vec:targets:{self.pending_col_token('targets')}:{p}", self.target_left(self.k), self.vec_top(p), COL_W, ROW_H, "targetcell",
                                              text="" if v is None else str(v), prime=p, comma=self.k, pending=True, unit=self.cell_unit("vectors", "targets", prime=p)))
             if self.tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
                 for i in range(self.nh):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:held:{p}:{i}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p), alert=self.held_unheld[i]))
+                        self.cells.append(CellBox(f"cell:held:{p}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p), alert=self.held_unheld[i]))
                 if self.pending_held is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_held[p]
-                        self.cells.append(CellBox(f"cell:held:{p}:{self.nh}", self.held_left(self.nh), self.vec_top(p), COL_W, ROW_H, "heldcell",
+                        self.cells.append(CellBox(f"cell:held:{p}:{self.pending_col_token('held')}", self.held_left(self.nh), self.vec_top(p), COL_W, ROW_H, "heldcell",
                                              text="" if v is None else str(v), prime=p, comma=self.nh, pending=True, unit=self.cell_unit("vectors", "held", prime=p)))
             if self.tile_open("vectors", "detempering"):  # the matrix D, one vector column per generator
                 for i in range(self.r):
@@ -1997,11 +2066,11 @@ class _GridBuilder:
                     for p in range(self.d):
                         # inset within the COL_W slot (centred) so each ket is its own box with a
                         # gap to its neighbours — the interest column is a collection, not a matrix
-                        self.cells.append(CellBox(f"cell:interest:{p}:{i}", self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
+                        self.cells.append(CellBox(f"cell:interest:{p}:{self.col_token('interest', i)}", self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
                 if self.pending_interest is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_interest[p]
-                        self.cells.append(CellBox(f"cell:interest:{p}:{self.mi}", self.interest_left(self.mi) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell",
+                        self.cells.append(CellBox(f"cell:interest:{p}:{self.pending_col_token('interest')}", self.interest_left(self.mi) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell",
                                              text="" if v is None else str(v), prime=p, comma=self.mi, pending=True, unit=self.cell_unit("vectors", "interest", prime=p)))
             # the drag-to-combine handles ride the band above the column labels (one per interval
             # entry): drag one interval onto another in the same column to ADD it in (their product).
@@ -2014,7 +2083,7 @@ class _GridBuilder:
                                                      ("interest", self.mi, self.interest_left, "interest")):
                     if count >= 2 and self.tile_open("vectors", ckey) and (ckey != "targets" or self.targets_editable):
                         for i in range(count):
-                            self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
+                            self.cells.append(CellBox(f"int_drag:{group}:{self.col_token(group, i)}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
 
         # tuning rows over the primes, commas and targets (cents); each can collapse on
         # its own. Commas sit on the same footing as targets — they are just the dual
@@ -2110,7 +2179,7 @@ class _GridBuilder:
                 u = self.cell_unit("prescaling", group, prime=c if group == "primes" else None)
                 for i in range(self.d):
                     value = self.prescaler[i] * vec[i]
-                    cid = f"cell:prescaling:{group}:{i}:{c}"
+                    cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
                     cx, cy = left(c), self.row_y["prescaling"] + i * ROW_H
                     # held column: a prescaled held interval the tuning no longer holds reddens too
                     # (the editable 𝐋 diagonal below is primes-only, so it never carries this flag)
@@ -2776,16 +2845,17 @@ class _GridBuilder:
         # the value tiles scroll beneath them.
         return Layout(self.total_w, self.total_h, tuple(self.lines), tuple(self.blocks), tuple(self.cells),
                       freeze_x=self.node_edge + GAP - PAD, freeze_y=self.branch_top_y + GAP + GRIP_BAND - PAD,
-                      right_overhang=right_overhang)
+                      right_overhang=right_overhang, identities=self._col_ids)
 
 
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
-          pending_interest=None, pending_held=None, pending_target=None) -> Layout:
+          pending_interest=None, pending_held=None, pending_target=None, prev_ids=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
         optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
+        prev_ids,
     ).layout()

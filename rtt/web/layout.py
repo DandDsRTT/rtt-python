@@ -85,3 +85,6 @@ class Layout:
     right_overhang: float = 0.0  # how far the widest column title spills past `width` (titles render
     # unwrapped and centred on their gridline, so the narrow last column's long title reaches beyond
     # the grid's right edge); the renderer widens the grey pane by this so the title isn't clipped
+    identities: dict | None = None  # per reorderable interval list, the [(token, vector), …] this
+    # build assigned its columns — fed back as the next build's prev_ids so a reorder keeps a
+    # column's id-token (its cells glide) and the change handlers can map a column index to its token

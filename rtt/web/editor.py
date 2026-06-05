@@ -229,10 +229,14 @@ class Editor:
             return f"{self.target_limit}-{self.target_family}"
         return self.target_family
 
-    def layout(self) -> Layout:
+    def layout(self, prev_ids=None) -> Layout:
         """Build the rendered spreadsheet model for the current document — the single
         source of how the editor's state maps to the grid. The page render and the render
-        tests both go through here rather than re-spelling spreadsheet.build's arguments."""
+        tests both go through here rather than re-spelling spreadsheet.build's arguments.
+
+        ``prev_ids`` is the previous render's interval-column identities (``Layout.identities``):
+        threading it through lets a within-list reorder keep each column's id-token so the
+        reconciler glides it. Omitted (the default) numbers the columns by index — a fresh build."""
         return spreadsheet.build(
             self.state, self.settings, self.collapsed, self.tuning_scheme, self.target_spec,
             interest=self.interest_vectors, range_mode=self.range_mode,
@@ -244,7 +248,8 @@ class Editor:
             tuning_optimized=self.tuning_is_optimized,
             pending_interest=self.pending_interest,
             pending_held=self.pending_held,
-            pending_target=self.pending_target)
+            pending_target=self.pending_target,
+            prev_ids=prev_ids)
 
     @property
     def can_expand(self) -> bool:

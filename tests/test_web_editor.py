@@ -767,6 +767,23 @@ def test_move_interval_reorders_within_a_list_with_a_single_undo():
     assert editor.held_vectors == [(1, 0, 0), (-1, 1, 0), (2, 0, -1)]  # one undoable step
 
 
+def test_within_list_reorder_keeps_the_moved_columns_cell_id_for_the_glide():
+    # the render() path: layout(), reorder, then layout(prev_ids=...) threading the prior render's
+    # identities. The moved column keeps its cell id (so the CSS left transition slides it) and lands
+    # at the dropped-on slot's x — rather than the old fixed-index cell re-filling with new numbers.
+    editor = Editor()
+    editor.settings["optimization"] = True  # show the held column
+    editor.set_held_vectors([[1, 0, 0], [-1, 1, 0], [2, 0, -1]])  # octave, fifth, third
+    lay1 = editor.layout()
+    cells1 = {c.id: c for c in lay1.cells}
+    front_x = cells1["cell:held:0:0"].x
+    editor.move_interval("held", 2, "held", 0)  # drag the third to the front
+    cells2 = {c.id: c for c in editor.layout(prev_ids=lay1.identities).cells}
+    assert "cell:held:0:2" in cells2                  # the moved column (token 2) kept its id...
+    assert cells2["cell:held:0:2"].x == front_x       # ...and glided to the front slot's x
+    assert cells2["cell:held:0:2"].text == cells1["cell:held:0:2"].text  # carrying its own value
+
+
 def test_dropping_a_column_on_its_neighbour_swaps_them():
     # the key fix: dropping A onto the adjacent B moves A to B's index (a swap) — no off-by-one,
     # no need to overshoot onto the next-but-one column

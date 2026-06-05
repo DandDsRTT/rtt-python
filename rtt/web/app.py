@@ -1875,21 +1875,24 @@ class _Reconciler:
         # drag.js / dragging-class: a grip is BOTH source AND drop target, with a per-element dragover
         # preventDefault (client-side, so it doesn't round-trip per move) marking it a valid target.
         # The dragged column's (list, idx) is held server-side from dragstart through drop.
-        _, lst, idx = cb.id.split(":")  # "grip:{list}:{idx}" — idx is "add" for the append/empty zone
+        _, lst, tail = cb.id.split(":")  # "grip:{list}:{token}" — token is "add" for the append/empty zone
         wrap.on("dragover", js_handler="(e) => e.preventDefault()")  # mark a valid drop target
-        if idx == "add":  # drop-only: an empty list still gets a gridline target (nothing to drag here)
+        if tail == "add":  # drop-only: an empty list still gets a gridline target (nothing to drag here)
             wrap.classes("rtt-colgrip rtt-coldrop")
             wrap.on("drop.prevent", lambda _=None, l=lst: self._cb.on_drop(l, None))
             return
+        idx = cb.comma  # the column's current list index — the id token is a stable identity (so the
+        # cell glides on reorder), so the move's source/target index rides cb.comma, not the id
         wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
-        wrap.on("dragstart", lambda _=None, l=lst, i=int(idx): self._cb.on_drag_start(l, i))
+        wrap.on("dragstart", lambda _=None, l=lst, i=idx: self._cb.on_drag_start(l, i))
         wrap.on("dragend", lambda _=None: self._cb.on_drag_end())
-        wrap.on("drop.prevent", lambda _=None, l=lst, i=int(idx): self._cb.on_drop(l, i))
+        wrap.on("drop.prevent", lambda _=None, l=lst, i=idx: self._cb.on_drop(l, i))
         ui.icon("drag_indicator").classes("rtt-grip")
 
     def _build_speaker(self, cb, wrap):  # play this pitch per its tile's mode (client-side engine)
         tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
-        idx = int(cb.id.rsplit(":", 1)[1])
+        idx = cb.comma  # the pitch's position in the tile's cents list (the id token is a stable
+        # identity, not the position, once a column has been reordered)
         pitches = ",".join(f"{float(v):.6f}" for v in cb.values)  # the whole tile (for arp/chord)
         # color=None drops Quasar's default primary (blue): the app is greyscale, leaving colour to
         # the yellow/cyan/magenta colorization. .rtt-spk + the data attrs let the engine highlight
@@ -1967,6 +1970,13 @@ def index() -> None:
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
 
+    def col_tokens(name):
+        # the previous render's id-tokens for a reorderable interval list, in column order — so an
+        # edit handler reads each column's cells by the token its id actually carries (== the index
+        # until the list is reordered), not the bare index
+        ids = last_lay[0].identities if last_lay[0] is not None else None
+        return [tok for tok, _ in (ids or {}).get(name, [])]
+
     def on_mapping_change():
         if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
             return
@@ -2014,17 +2024,18 @@ def index() -> None:
         if building[0]:
             return
         d, mi = editor.state.d, len(editor.interest_vectors)
+        toks = col_tokens("interest")  # each column's id-token (== its index until reordered)
         if editor.pending_interest is not None:
-            # the draft column rides at index mi; hand its cells to the editor, which commits
-            # (appends the interval) once every component is filled in
-            if any(f"cell:interest:{p}:{mi}" not in rec.inputs for p in range(d)):
+            # the draft column rides one token past the committed ones; commit it once filled
+            pt = spreadsheet.pending_token(toks)
+            if any(f"cell:interest:{p}:{pt}" not in rec.inputs for p in range(d)):
                 return  # the draft cells aren't shown (folded away)
-            editor.set_pending_interest([_parse_int(rec.inputs[f"cell:interest:{p}:{mi}"].value) for p in range(d)])
+            editor.set_pending_interest([_parse_int(rec.inputs[f"cell:interest:{p}:{pt}"].value) for p in range(d)])
             render()
             return
-        if any(f"cell:interest:{p}:{i}" not in rec.inputs for i in range(mi) for p in range(d)):
+        if len(toks) != mi or any(f"cell:interest:{p}:{toks[i]}" not in rec.inputs for i in range(mi) for p in range(d)):
             return  # the interest cells aren't currently shown (folded away)
-        vectors = [[_parse_int(rec.inputs[f"cell:interest:{p}:{i}"].value) for p in range(d)] for i in range(mi)]
+        vectors = [[_parse_int(rec.inputs[f"cell:interest:{p}:{toks[i]}"].value) for p in range(d)] for i in range(mi)]
         if any(v is None for m in vectors for v in m):
             return
         editor.set_interest_vectors(vectors)
@@ -2036,16 +2047,18 @@ def index() -> None:
         if building[0]:
             return
         d, nh = editor.state.d, len(editor.held_vectors)
+        toks = col_tokens("held")  # each column's id-token (== its index until reordered)
         if editor.pending_held is not None:
-            # the draft column rides at index nh; commit it once every component is filled in
-            if any(f"cell:held:{p}:{nh}" not in rec.inputs for p in range(d)):
+            # the draft column rides one token past the committed ones; commit it once filled
+            pt = spreadsheet.pending_token(toks)
+            if any(f"cell:held:{p}:{pt}" not in rec.inputs for p in range(d)):
                 return  # the draft cells aren't shown (folded away)
-            editor.set_pending_held([_parse_int(rec.inputs[f"cell:held:{p}:{nh}"].value) for p in range(d)])
+            editor.set_pending_held([_parse_int(rec.inputs[f"cell:held:{p}:{pt}"].value) for p in range(d)])
             render()
             return
-        if any(f"cell:held:{p}:{i}" not in rec.inputs for i in range(nh) for p in range(d)):
+        if len(toks) != nh or any(f"cell:held:{p}:{toks[i]}" not in rec.inputs for i in range(nh) for p in range(d)):
             return  # the held cells aren't currently shown (folded away / optimization off)
-        vectors = [[_parse_int(rec.inputs[f"cell:held:{p}:{i}"].value) for p in range(d)] for i in range(nh)]
+        vectors = [[_parse_int(rec.inputs[f"cell:held:{p}:{toks[i]}"].value) for p in range(d)] for i in range(nh)]
         if any(v is None for m in vectors for v in m):
             return
         editor.set_held_vectors(vectors)
@@ -2060,16 +2073,18 @@ def index() -> None:
         targets = editor.target_override or service.target_interval_set(
             editor.target_spec, editor.state.domain_basis)
         k = len(targets)
+        toks = col_tokens("targets")  # each column's id-token (== its index until reordered)
         if editor.pending_target is not None:
-            # the draft column rides at index k; commit it once every component is filled in
-            if any(f"cell:vec:targets:{k}:{p}" not in rec.inputs for p in range(d)):
+            # the draft column rides one token past the committed ones; commit it once filled
+            pt = spreadsheet.pending_token(toks)
+            if any(f"cell:vec:targets:{pt}:{p}" not in rec.inputs for p in range(d)):
                 return  # the draft cells aren't shown (folded away)
-            editor.set_pending_target([_parse_int(rec.inputs[f"cell:vec:targets:{k}:{p}"].value) for p in range(d)])
+            editor.set_pending_target([_parse_int(rec.inputs[f"cell:vec:targets:{pt}:{p}"].value) for p in range(d)])
             render()
             return
-        if any(f"cell:vec:targets:{j}:{p}" not in rec.inputs for j in range(k) for p in range(d)):
+        if len(toks) != k or any(f"cell:vec:targets:{toks[j]}:{p}" not in rec.inputs for j in range(k) for p in range(d)):
             return  # the target cells aren't currently shown (folded away)
-        vectors = [[_parse_int(rec.inputs[f"cell:vec:targets:{j}:{p}"].value) for p in range(d)] for j in range(k)]
+        vectors = [[_parse_int(rec.inputs[f"cell:vec:targets:{toks[j]}:{p}"].value) for p in range(d)] for j in range(k)]
         if any(v is None for m in vectors for v in m):
             return
         editor.set_target_override_vectors(vectors)
@@ -2453,7 +2468,11 @@ def index() -> None:
     def render():
         building[0] = True
         st = editor.state
-        lay = editor.layout()
+        # thread the previous render's interval-column identities so a within-list reorder keeps
+        # each column's id-token: its cells then persist across the render and the CSS left/top
+        # transition slides them to the new slot (rather than the old cells re-filling in place)
+        prev = last_lay[0].identities if last_lay[0] is not None else None
+        lay = editor.layout(prev_ids=prev)
         last_lay[0] = lay
         # The body scroller holds the grid shifted up by the column strip's height (freeze_y): the
         # board content is (total_h - fy) tall, its cells/lines/blocks placed at native coords minus
