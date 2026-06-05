@@ -1609,11 +1609,14 @@ class _Reconciler:
             self.selects[cb.id].set_options(options, value=value)
             _set_offlist_prompt(self.selects[cb.id], value)
         else:  # tuning — a refined spec or a deviating manual override shows "-"
-            scheme = self._editor.displayed_tuning_scheme_name
+            name = self._editor.displayed_tuning_scheme_name
             # the option LABELS T-prefix only while target-based, so recompute them as the all-
             # interval checkbox flips (set once at creation, they would otherwise go stale)
             options = presets.tuning_scheme_options(
                 service.is_all_interval(self._editor.tuning_scheme), self._editor.settings["alt_complexity"])
+            # a name off the offered list (e.g. a finite-power miniRMS scheme — nameable, but not in
+            # the lp-only list) falls back to the "-" placeholder, matching the build path
+            scheme = name if name in options else None
             self.selects[cb.id].set_options(options, value=scheme)
             _set_offlist_prompt(self.selects[cb.id], scheme)
 

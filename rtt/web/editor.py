@@ -376,17 +376,17 @@ class Editor:
     @property
     def displayed_tuning_scheme_name(self) -> str | None:
         """The named scheme the grid's *displayed* tuning realises, or None — for which the
-        tuning chooser shows "-". None when the scheme is a control-refined spec (no base name),
-        or when the displayed generator tuning deviates from the BARE scheme's optimum — the
-        established schemes the chooser lists carry no held constraints. The displayed tuning is a
-        valid frozen manual override, else the scheme's optimum WITH any held intervals folded in;
-        so a hand-edited generator OR a held interval that pulls the tuning off the bare optimum
-        both drop the name to "-". A stale override the grid ignores (its generator count no longer
-        fits the mapping) falls back to that optimum, keeping the name when nothing else deviates.
-        Compared at DISPLAY precision (the shown cents), mirroring :attr:`displayed_prescaler_name`,
-        so a tuning frozen or typed at the displayed optimum reads as no deviation."""
-        if not isinstance(self.tuning_scheme, str):
-            return None
+        tuning chooser shows "-". None when the displayed generator tuning deviates from the BARE
+        scheme's optimum (the established schemes the chooser lists carry no held constraints), or
+        when the scheme has no systematic name (an unnameable optimization power or complexity).
+        The displayed tuning is a valid frozen manual override, else the scheme's optimum WITH any
+        held intervals folded in; so a hand-edited generator OR a held interval that pulls the
+        tuning off the bare optimum both drop the name to "-". A stale override the grid ignores
+        (its generator count no longer fits the mapping) falls back to that optimum, keeping the
+        name when nothing else deviates. Compared at DISPLAY precision (the shown cents), mirroring
+        :attr:`displayed_prescaler_name`, so a tuning frozen or typed at the displayed optimum reads
+        as no deviation. A control-refined spec (e.g. a Euclidean-norm scheme) is named like any
+        other now that the spec can be rendered, rather than dropping to "-" for lacking a string."""
         override = self.effective_generator_tuning()
         displayed = (override if override is not None and len(override) == len(self.state.mapping)
                      else self._optimum_generator_tuning())
@@ -516,8 +516,10 @@ class Editor:
         "-" until the user clicks Optimize. (With the auto lock on, the grid recomputes anyway.)
         Undoable."""
         self._snapshot()
-        self.tuning_scheme = name if service.is_all_interval(self.tuning_scheme) \
-            else f"{self.target_spec} {name}"  # keep it a named string so the chooser can name it
+        target = "{}" if service.is_all_interval(self.tuning_scheme) else self.target_spec
+        # set the target set as a structured trait (not by gluing a prefix onto the name) so a
+        # held-/destretched- modifier in the name survives — string concatenation would hide it
+        self.tuning_scheme = service.scheme_with_targets(name, target)
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
         """Swap the complexity prescaler (the predefined-prescalers preset), which
@@ -607,18 +609,14 @@ class Editor:
         live target spec). Switches the scheme's target set accordingly (an undoable edit). The
         weight slope flips with the mode: an all-interval scheme is simplicity-weighted by
         construction, while the target-based default is unity weight — so checking forces
-        simplicity, unchecking forces unity. A named scheme keeps its name (the target prefix is
-        added/dropped); a control-refined spec stays a spec."""
+        simplicity, unchecking forces unity."""
         self._snapshot()
         slope = "simplicity-weight" if all_interval else "unity-weight"
-        base = service.base_scheme_name(self.tuning_scheme)
-        if base is None:  # a refined spec has no name — keep the spec form
-            spec = service.scheme_with_weight_slope(self.tuning_scheme, slope)
-            self.tuning_scheme = service.scheme_with_targets(
-                spec, "{}" if all_interval else self.target_spec)
-        else:
-            base = service.scheme_with_weight_slope(base, slope)  # name in, name out
-            self.tuning_scheme = base if all_interval else f"{self.target_spec} {base}"
+        # swap the slope and the target set as structured traits — no name surgery, so a
+        # held-/destretched- modifier survives the toggle (a glued prefix would drop it)
+        scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
+        self.tuning_scheme = service.scheme_with_targets(
+            scheme, "{}" if all_interval else self.target_spec)
 
     def set_target_spec(self, spec: str) -> None:
         """Set the target family and (optional) manual limit from a spec like ``"9-TILT"``
@@ -631,11 +629,12 @@ class Editor:
         self.target_family = family
         self.target_limit = int(n) if n else None
         self.target_override = None
-        # a target-based scheme tracks the displayed interval list: re-prefix it to the new
-        # family/limit (an all-interval scheme ignores the list, so leave it untouched)
-        base = service.base_scheme_name(self.tuning_scheme)
-        if base is not None and not service.is_all_interval(self.tuning_scheme):
-            self.tuning_scheme = f"{self.target_spec} {base}"
+        # a target-based scheme tracks the displayed interval list: retarget it to the new
+        # family/limit as a structured trait (an all-interval scheme ignores the list, so leave
+        # it untouched). Setting the trait — not re-gluing a prefix — keeps any held-/destretched-
+        # modifier intact.
+        if not service.is_all_interval(self.tuning_scheme):
+            self.tuning_scheme = service.scheme_with_targets(self.tuning_scheme, self.target_spec)
 
     def set_target_override_text(self, text: str) -> bool:
         """Set an explicit target interval list from a typed EBK vector string (the editable

@@ -7,13 +7,19 @@ from rtt.web import service
 
 
 def test_base_scheme_name_strips_the_target_prefix():
-    # the bare systematic name (the chooser's all-interval form); a leading target-set prefix
+    # the bare systematic name (the chooser's all-interval form); a target-set prefix
     # ("TILT ", "OLD ", with an optional manual limit) marks a target-based scheme and is stripped
     assert service.base_scheme_name("minimax-S") == "minimax-S"  # all-interval: no prefix
     assert service.base_scheme_name("TILT minimax-S") == "minimax-S"  # target prefix stripped
     assert service.base_scheme_name("9-TILT minimax-ES") == "minimax-ES"  # with a manual limit
-    assert service.base_scheme_name("OLD held-octave minimax-ES") == "held-octave minimax-ES"
-    assert service.base_scheme_name(service.resolve_tuning_scheme("minimax-S")) is None  # a spec: no name
+    # the prefix is dropped structurally (forcing all-interval and rendering), so a target embedded
+    # after a held- prefix is stripped too, not just a leading one
+    assert service.base_scheme_name("held-octave OLD minimax-ES") == "held-octave minimax-ES"
+    # a control-refined spec is named like any other now that the spec can be rendered
+    assert service.base_scheme_name(service.resolve_tuning_scheme("minimax-S")) == "minimax-S"
+    assert service.base_scheme_name(service.scheme_with_norm("minimax-S", True)) == "minimax-ES"
+    # ...but a genuinely unnameable spec (a non-integer optimization power) is None
+    assert service.base_scheme_name(service.scheme_with_power("minimax-S", 1.5)) is None
 
 
 def test_optimization_power_is_the_schemes_lp_norm_order():

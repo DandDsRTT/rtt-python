@@ -225,6 +225,25 @@ def test_set_all_interval_toggles_the_scheme_target_set():
     assert service.is_all_interval(editor.tuning_scheme) is True
 
 
+def test_displayed_scheme_name_names_a_control_refined_spec():
+    # Reaching minimax-ES by ticking the Euclidean complexity control (which stores the scheme as
+    # a refined spec, not a name string) must still display its systematic name: the renderer names
+    # the spec rather than giving up with "-". This is the same scheme as picking minimax-ES from
+    # the chooser, so it must read the same.
+    editor = Editor()
+    editor.set_all_interval(True)  # minimax-S (a name string)
+    assert editor.displayed_tuning_scheme_name == "minimax-S"
+    editor.set_complexity_euclidean(True)  # -> a refined spec equal to minimax-ES
+    assert editor.displayed_tuning_scheme_name == "minimax-ES"
+
+
+def test_displayed_scheme_name_is_none_for_an_unnameable_power():
+    # a non-integer optimization power has no systematic name, so the chooser shows "-"
+    editor = Editor()
+    editor.set_optimization_power(1.5)
+    assert editor.displayed_tuning_scheme_name is None
+
+
 def test_set_tuning_scheme_preserves_the_target_mode():
     # picking a scheme from the chooser keeps the current target mode (the all-interval checkbox):
     # target-based by default (the chooser's T-prefixed entries), all-interval once the box is on
@@ -237,6 +256,35 @@ def test_set_tuning_scheme_preserves_the_target_mode():
     editor.set_tuning_scheme("minimax-S")  # now applies all-interval (bare name)
     assert service.is_all_interval(editor.tuning_scheme)
     assert service.base_scheme_name(editor.tuning_scheme) == "minimax-S"
+
+
+def test_a_held_octave_scheme_holds_the_octave_in_target_mode():
+    # selecting held-octave minimax-ES while target-based must actually hold the octave just. The
+    # scheme is built by setting the target trait, not by gluing "TILT " in front of the name —
+    # which mis-parsed ("TILT held-octave ...") and silently dropped the held-octave modifier.
+    editor = Editor()  # target-based by default
+    editor.set_tuning_scheme("held-octave minimax-ES")
+    spec = service.resolve_tuning_scheme(editor.tuning_scheme)
+    assert spec.held_intervals == "octave"  # the hold survived the target-prefixing
+    assert spec.target_intervals == editor.target_spec  # ...and it is target-based, not all-interval
+    tun = service.tuning(editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis)
+    assert abs(tun.tuning_map[0] - 1200.0) < 1e-6  # prime 2 pinned exactly just
+
+
+def test_all_interval_toggle_off_keeps_a_destretched_modifier():
+    # toggling all-interval off from destretched-octave minimax-ES must not drop the destretch:
+    # the toggle swaps the target/slope traits structurally, so the modifier survives (it once
+    # vanished when the toggle rebuilt the name by concatenation).
+    editor = Editor()
+    editor.set_all_interval(True)
+    editor.set_tuning_scheme("destretched-octave minimax-ES")
+    editor.set_all_interval(False)
+    spec = service.resolve_tuning_scheme(editor.tuning_scheme)
+    assert spec.destretched_interval == "octave"  # the destretch survived the toggle
+    assert not service.is_all_interval(editor.tuning_scheme)  # ...now target-based
+    assert service.weight_slope_of(editor.tuning_scheme) == "unity-weight"  # toggle-off forces unity
+    # the destretch is still named (now with the unity slope the toggle forced)
+    assert service.base_scheme_name(editor.tuning_scheme) == "destretched-octave minimax-EU"
 
 
 def test_set_weight_slope_swaps_the_damage_weight_slope():
@@ -989,10 +1037,11 @@ def test_displayed_tuning_scheme_name_drops_to_none_when_the_tuning_deviates():
     # hand-editing the generator tuning map off the optimum is a deviation
     editor.set_generator_tuning_component(1, 700.0)
     assert editor.displayed_tuning_scheme_name is None
-    # a control-refined scheme (a finite optimization power) has no name either
+    # a control-refined scheme (a finite optimization power) is still named: miniRMS over the target
+    # list reads as its systematic name now that a spec can be rendered, rather than dropping to "-"
     fresh = Editor()
     fresh.set_optimization_power(2.0)
-    assert fresh.displayed_tuning_scheme_name is None
+    assert fresh.displayed_tuning_scheme_name == "miniRMS-U"
 
 
 def test_displayed_tuning_scheme_name_keeps_the_name_when_the_tuning_still_matches():
@@ -1295,8 +1344,13 @@ def test_serialize_load_round_trips_the_whole_document():
     restored = Editor()
     restored.load(data)
     assert restored.state.mapping == ((1, 0, -4), (0, 1, 4))
-    # the full target-based scheme round-trips (the chosen 9-OLD family is baked into its prefix)
-    assert restored.tuning_scheme == "9-OLD destretched-octave minimax-ES"
+    # the full target-based scheme round-trips: destretched-octave minimax-ES over the chosen
+    # 9-OLD family. Compared as the resolved spec (robust to the name/spec representation); the
+    # destretched-octave modifier in particular must survive (it once silently vanished).
+    restored_spec = service.resolve_tuning_scheme(restored.tuning_scheme)
+    assert restored_spec == service.resolve_tuning_scheme(editor.tuning_scheme)
+    assert service.base_scheme_name(restored.tuning_scheme) == "destretched-octave minimax-ES"
+    assert restored_spec.target_intervals == "9-OLD"
     assert restored.target_spec == "9-OLD"
     assert restored.interest_vectors == [(-1, 1, 0)]
     assert restored.held_vectors == [(1, 0, 0)]

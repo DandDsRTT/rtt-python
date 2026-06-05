@@ -7,7 +7,6 @@ a temperament's mapping and its dual comma basis (kept in sync) plus dimensions.
 
 from __future__ import annotations
 
-import re
 from dataclasses import asdict, dataclass, replace
 from fractions import Fraction
 
@@ -46,6 +45,7 @@ from rtt.tuning_scheme_names import (
     TuningSchemeSpec,
     complexity_name_traits,
     resolve_tuning_scheme,
+    systematic_name,
 )
 
 DEFAULT_TUNING_SCHEME = "minimax-S"  # the canonical all-interval scheme — the compute/helper
@@ -599,13 +599,14 @@ def displayed_targets(state, scheme=DEFAULT_TUNING_SCHEME, target_spec=DEFAULT_T
 
 
 def base_scheme_name(scheme) -> str | None:
-    """The bare systematic scheme name — any leading target-set prefix (``"TILT "``, ``"OLD "``,
-    ``"9-TILT "``, …) stripped — i.e. the all-interval form the chooser lists. The prefix marks a
-    target-based scheme; stripping it gives the base the chooser shows (its label is T-prefixed
-    when target-based). ``None`` for a control-refined spec, which has no name."""
-    if not isinstance(scheme, str):
-        return None
-    return re.sub(r"^\d*-?(?:TILT|OLD)\s+", "", scheme)
+    """The bare systematic scheme name — the all-interval form the chooser lists, with any
+    target-set prefix dropped (the prefix marks a target-based scheme; stripping it gives the base
+    the chooser shows, T-prefixed in its label). Works on a name string or a control-refined spec
+    alike, via the renderer. ``None`` when the scheme has no systematic name (an unnameable
+    optimization power or complexity). Forcing the target set to all-interval and rendering drops
+    the prefix structurally, so an embedded target (``held-octave TILT minimax-ES``) is stripped
+    too — where a leading-only text strip would miss it."""
+    return systematic_name(replace(resolve_tuning_scheme(scheme), target_intervals="{}"))
 
 
 def scheme_with_targets(scheme, target_intervals: str):
