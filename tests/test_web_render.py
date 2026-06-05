@@ -1316,22 +1316,24 @@ async def test_dragging_over_an_interval_previews_the_product_then_reverts(user:
 
 
 async def test_dragging_over_a_row_previews_the_change_then_reverts(user: User) -> None:
-    # hovering (dragenter) a target ROW's cells previews the would-be combine — the moved cells show
-    # their new values and the changed derived cells ring — WITHOUT committing; releasing off a target
-    # (dragend) reverts it. (Editable matrix cells show the new value but don't ring, like the edit
-    # preview — their value lives in the live state, not the CellBox; the derived gen-ratio rings.)
+    # hovering (dragenter) a target ROW previews the would-be combine — the moved cells show their new
+    # values AND the dropped-on row is highlighted (its editable cells ring, even though they're input
+    # cells the value-diff wouldn't catch) — WITHOUT committing; releasing off a target (dragend)
+    # reverts it. The changed derived gen-ratio rings too.
     await _enable(user, "drag to combine")
     row1 = lambda: [_cell_child(user, f"cell:mapping:1:{p}").value for p in range(3)]
     assert row1() == ["0", "1", "4"]
     grip = lambda i: set(user.find(marker=f"map_drag:{i}").elements)
     cell = lambda i, p: set(user.find(marker=f"cell:mapping:{i}:{p}").elements)
     UserInteraction(user, grip(0), None).trigger("dragstart")             # pick up row 0 (the octave)
-    UserInteraction(user, cell(1, 0), None).trigger("dragenter.prevent")  # hover row 1's cells → preview
+    UserInteraction(user, cell(1, 0), None).trigger("dragenter.prevent")  # hover row 1 → preview
     assert row1() == ["1", "2", "4"]  # the matrix cells preview their new values...
-    assert "rtt-preview-change" in _wrap_classes(user, "gen:0")  # ...and the changed gen ratio (2/1→4/3) rings
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:0")  # ...the dropped-on ROW is highlighted...
+    assert "rtt-preview-change" in _wrap_classes(user, "gen:0")            # ...and the changed gen ratio rings
     UserInteraction(user, grip(0), None).trigger("dragend")              # released off a target → revert
     assert row1() == ["0", "1", "4"]  # reverted, nothing committed
-    assert "rtt-preview-change" not in _wrap_classes(user, "gen:0")  # ...and the ring cleared
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:0")  # the highlight cleared
+    assert "rtt-preview-change" not in _wrap_classes(user, "gen:0")
 
 
 async def test_dropping_a_row_on_its_own_cells_does_nothing(user: User) -> None:

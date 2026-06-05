@@ -976,6 +976,11 @@ class _Reconciler:
         self.preview_baseline = None
         self.preview_source = None
         self.preview_shown: set = set()
+        # While a drag-to-combine hover previews a drop, the target row/column's editable cells
+        # change VALUE but aren't caught by changed_cell_ids (an input cell's value isn't in the
+        # layout content signature), so they'd update silently with no ring. This predicate, set on
+        # the previewing hover, marks those target cells so render() rings them too. None otherwise.
+        self.combine_target_pred = None
         # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build[, update]).
         # Every kind is registered below; make_cell/update_cell index it directly (no fallback),
         # so an unregistered kind raises loudly rather than rendering a silent blank cell.
@@ -1793,8 +1798,12 @@ class _Reconciler:
 
     def _preview_row_drop(self, idx):  # hovering target row idx: preview the would-be combine (else revert)
         src = self._row_drag
-        apply = (lambda: self._editor.add_mapping_row_to(src, idx)) if (src is not None and src != idx) else None
-        self._cb.combine_preview(apply)  # src == idx (the dragged row's own cells) previews nothing
+        valid = src is not None and src != idx  # src == idx (the dragged row's own cells) previews nothing
+        apply = (lambda: self._editor.add_mapping_row_to(src, idx)) if valid else None
+        # highlight the whole target ROW (its editable mapping cells, which change value but don't ring
+        # on their own — they're input cells), so the row being dropped onto is clearly marked.
+        target = (lambda cb: cb.kind == "mapping" and getattr(cb, "gen", None) == idx) if valid else None
+        self._cb.combine_preview(apply, target)
 
     def _drop_on_row(self, idx):  # add the dragged generator row into the DIFFERENT row dropped on
         src = self._row_drag
@@ -1851,8 +1860,14 @@ class _Reconciler:
         self._col_drag = None
         self._cb.combine_end()
 
+    _GROUP_CELL_KIND = {"comma": "commacell", "target": "targetcell",
+                        "held": "heldcell", "interest": "interestcell"}
+
     def _preview_int_drop(self, group, idx):  # hovering target (group, idx): preview the combine (else revert)
-        self._cb.combine_preview(self._int_combine(group, idx))
+        apply = self._int_combine(group, idx)
+        kind = self._GROUP_CELL_KIND[group]  # highlight the whole target COLUMN (its editable cells)
+        target = (lambda cb: cb.kind == kind and getattr(cb, "comma", None) == idx) if apply is not None else None
+        self._cb.combine_preview(apply, target)
 
     def _drop_on_interval(self, group, idx):  # add the dragged interval into the one it was dropped on
         apply = self._int_combine(group, idx)
@@ -2437,13 +2452,15 @@ def index() -> None:
         rec.preview_baseline = last_lay[0]  # the diff baseline: the grid as it was at pick-up
         rec.preview_source = None  # a drop has no single "source cell" to exclude from the ring
 
-    def combine_preview(apply):
+    def combine_preview(apply, target_pred=None):
         # hovering a target: revert to the picked-up state, apply the hypothetical combine (when valid;
         # apply is None for an invalid/self target), and render — the moved cells ring + show their new
-        # values. Re-entrant: each enter resets first, so it never stacks previews.
+        # values. target_pred marks the dropped-on row/column's editable cells so they ring too (they
+        # change value but aren't caught by changed_cell_ids). Re-entrant: each enter resets first.
         if rec._drag_token is None:
             return
         editor.restore_for_preview(rec._drag_token)
+        rec.combine_target_pred = target_pred if apply is not None else None
         if apply is not None:
             apply()
         render()
@@ -2456,6 +2473,7 @@ def index() -> None:
         rec._drag_token = None
         rec.preview_baseline = None
         rec.preview_source = None
+        rec.combine_target_pred = None
         act(apply)
 
     def combine_end():
@@ -2466,6 +2484,7 @@ def index() -> None:
         rec._drag_token = None
         rec.preview_baseline = None
         rec.preview_source = None
+        rec.combine_target_pred = None
         render()
 
     # drag-and-drop reorder: a grip's dragstart records the column it picked up; dropping it onto
@@ -2662,6 +2681,8 @@ def index() -> None:
         # being edited (no baseline) the set is empty, so the loop below clears any lingering rings.
         preview = (spreadsheet.changed_cell_ids(rec.preview_baseline, lay) - {rec.preview_source}
                    if rec.preview_baseline is not None else frozenset())
+        if rec.combine_target_pred is not None:  # also ring the dropped-on row/column's editable cells
+            preview = preview | {cb.id for cb in lay.cells if rec.combine_target_pred(cb)}
 
         for cb in lay.cells:
             seen.add(cb.id)
