@@ -977,7 +977,7 @@ class _GridBuilder:
         self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
-        # shows with WEIGHTING itself, not gated on the (shelved) alt. complexity extra. In all-interval
+        # shows with WEIGHTING itself, not gated on the alt. complexity extra. In all-interval
         # mode the weight is simplicity by construction, not a free choice, so the chooser stays put
         # but greys out (slope_locked), locked to its forced simplicity-weight value.
         self.slope_ctrl = (self.show_weighting
@@ -2149,8 +2149,8 @@ class _GridBuilder:
             slot_w = CBOX_SLOT_W
             # the predefined-complexities master dropdown. The dropdown stores the short internal
             # key ("lp", "copfr", …) but presents the inverted-form display name ("lp (log-product)",
-            # …). While alt-complexities are shelved it offers ONLY the current complexity (lp for every
-            # scheme today) so the user can't pick an unimplemented one; un-shelving alt_complexity opens
+            # …). While alt. complexity is OFF (the default) it offers ONLY the current complexity (lp for
+            # every scheme today); turning alt. complexity ON opens
             # the full preset list + the inert "custom" (shown when the fine controls leave the shape
             # off-preset). The caption hugs its bottom (rather than bottom-aligning with the q/dual
             # captions further down).

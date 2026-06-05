@@ -275,8 +275,8 @@ def _target_preset(user: User):
     return num, sel
 
 
-async def test_tuning_preset_offers_only_lp_while_alternatives_are_shelved(user: User) -> None:
-    # alternative-complexity schemes are gated behind the (shelved) alt. complexity setting, so with
+async def test_tuning_preset_offers_only_lp_while_alt_complexity_is_off(user: User) -> None:
+    # alternative-complexity schemes are gated behind the alt. complexity setting (off by default), so with
     # it off the tuning chooser offers only the log-product family — but at all three weight slopes
     # (its simplicity / unity / complexity variants), since the target-based default is unity. (The
     # chooser's options are {value: label}, the labels T-prefixed; check the offered values.)
@@ -731,7 +731,7 @@ async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -
     # dropdowns, with no other direct render coverage. Enabling weighting must build it carrying
     # its live complexity value (not blank) and a populated option list. A dropped control_select
     # build branch would leave an empty wrap; the value/option assertions catch that desync.
-    # (With alt. complexity shelved the list is just log-product, so this checks build, not a swap;
+    # (With alt. complexity off (the default) the list is just log-product, so this checks build, not a swap;
     # the slope chooser below exercises the update branch.)
     await user.open("/")
     user.find(kind=ui.checkbox, content="weighting").click()  # opens box 𝒄 (the complexity chooser)

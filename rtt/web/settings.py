@@ -102,7 +102,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
      "quantities", "domain_quantities", "units", "domain_units", "counts", "presets",
      "temperament_boxes", "tuning_boxes", "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting", "audio",
-     "generator_detempering", "optimization", "interest", "all_interval"}
+     "generator_detempering", "optimization", "interest", "all_interval", "alt_complexity"}
 )
 
 

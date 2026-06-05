@@ -1498,13 +1498,16 @@ def test_load_pins_a_shelved_toggle_to_its_default():
     # IMPLEMENTED because the feature isn't ready to expose). Loading it must not
     # resurrect that feature: greyed toggles are pinned to their defaults whatever the
     # blob says, so IMPLEMENTED stays the single source of truth for what the grid shows.
-    assert "alt_complexity" not in settings.IMPLEMENTED  # precondition: it's shelved
+    # Use whichever toggle is currently shelved, so this survives features going live.
+    shelved = sorted(set(settings.DEFAULTS) - settings.IMPLEMENTED)
+    assert shelved, "this test needs at least one not-yet-implemented toggle"
+    key = shelved[0]
     editor = Editor()
     data = editor.serialize()
-    data["settings"]["alt_complexity"] = True  # a value the panel can no longer set
+    data["settings"][key] = not settings.DEFAULTS[key]  # a value the panel can no longer set
     restored = Editor()
     restored.load(data)
-    assert restored.settings["alt_complexity"] is False  # pinned back to its default
+    assert restored.settings[key] is settings.DEFAULTS[key]  # pinned back to its default
 
 
 def test_load_falls_back_when_the_core_fields_are_missing():

@@ -2133,7 +2133,7 @@ def test_weighting_is_implemented_now_that_its_region_builds():
 
 def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     # the prescaler is a preset (like temperament / tuning / target), gated on PRESETS —
-    # not the shelved alt_complexity. It rides under the prescaling matrix tile (box 𝐋), which
+    # not on alt_complexity. It rides under the prescaling matrix tile (box 𝐋), which
     # exists only while weighting is on; the temperament boxes own the primes column it sits in.
     off = {c.id for c in _with(weighting=True, presets=False).cells}
     on = {c.id: c for c in _with(weighting=True, presets=True).cells}
@@ -2165,20 +2165,20 @@ def test_prescaler_chooser_shows_dash_when_a_custom_diagonal_deviates():
 
 def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_complexity():
     # box 𝒄's predefined-complexities dropdown shows with WEIGHTING alone — it no longer waits on
-    # the shelved alt_complexity. Until alt-complexities are un-shelved it offers ONLY the current
+    # alt_complexity. Until alt. complexity is turned on it offers ONLY the current
     # complexity (lp for every scheme today), so the user can't pick an unimplemented complexity;
     # turning alt_complexity on restores the full preset list (+ the inert "custom").
-    on = {c.id: c for c in _with(weighting=True).cells}  # weighting on, alt_complexity OFF (shelved)
+    on = {c.id: c for c in _with(weighting=True).cells}  # weighting on, alt_complexity OFF (default)
     ctrl = on["control:complexity"]
     assert ctrl.kind == "control_select"
     # the dropdown shows the friendly display name (abbreviation first, expansion in parens) —
     # for the default scheme (log-prime taxicab) that's "lp (log-product)"
     assert ctrl.text == "lp (log-product)"
-    assert ctrl.values == ("lp (log-product)",)  # lp-only while alt-complexities are shelved
+    assert ctrl.values == ("lp (log-product)",)  # lp-only while alt. complexity is off
     # the master chooser sits below the complexity list (box 𝒄), at the targets-column left edge
     assert ctrl.y > on["complexity:target:0"].y
     assert ctrl.x == on["header:targets"].x
-    # un-shelving alt_complexity restores the full preset list + custom
+    # turning alt. complexity on restores the full preset list + custom
     full = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
     assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
 
@@ -2523,7 +2523,7 @@ def test_weighting_captions_the_weight_slope_chooser():
 
 def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box():
     # the U/S/C chooser is core to box 𝒘, so it shows with weighting itself — not gated on the
-    # (shelved) alt. complexity feature the way box 𝐋's prescaler controls are
+    # alt. complexity feature the way box 𝐋's prescaler controls are
     off = {c.id for c in _with(weighting=False).cells}
     on = {c.id: c for c in _with(weighting=True).cells}
     assert "control:slope" not in off  # no control unless weighting is on
@@ -2574,12 +2574,11 @@ def test_box_l_diminuator_needs_weighting_and_the_primes_column():
     }
 
 
-def test_alt_complexity_is_deferred_so_its_toggle_stays_greyed():
-    # alt. complexity is built, but shelved as not-ready: it is held OUT of IMPLEMENTED so the
-    # Show panel greys/disables its checkbox (like projection, identity objects, …) and the
-    # load path pins it to its default. Its build code and layout tests below stay intact —
-    # only the live, toggleable exposure is withdrawn, ready to restore when the feature is.
-    assert "alt_complexity" not in settings.IMPLEMENTED
+def test_alt_complexity_is_implemented_now_that_its_controls_are_built():
+    # alt. complexity is un-shelved: its built controls (the box-𝐋 diminuator checkbox, box-𝒄's
+    # predefined-complexity options, the alternative-complexity prescalers + tuning schemes) are
+    # ready, so it rides in IMPLEMENTED as a live, interactive Show toggle rather than a greyed stub.
+    assert "alt_complexity" in settings.IMPLEMENTED
 
 
 def test_weighting_subcontrols_are_registered_under_weighting():
@@ -3704,8 +3703,8 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     # a toggle is "implemented" (live, not greyed, in the Show panel) only if it has built
     # content — with its parent chain on, flipping the toggle must visibly change the grid
     # (cells/blocks added/removed/moved or their text/kind changed). The converse needn't
-    # hold: a built feature may be shelved out of IMPLEMENTED (e.g. alt. complexity), so it
-    # changes the layout yet stays greyed — hence we only sweep the IMPLEMENTED toggles here.
+    # hold: a feature could be built yet held out of IMPLEMENTED (greyed), so it would
+    # change the layout yet stay greyed — hence we only sweep the IMPLEMENTED toggles here.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
     def snapshot(s):
