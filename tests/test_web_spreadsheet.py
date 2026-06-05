@@ -2930,14 +2930,15 @@ def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
 
 
 def test_weighting_controls_each_sit_in_a_bordered_box():
-    # box 𝐋 (replace diminuator), box 𝒄 (predefined complexity + norm), and box 𝒘 (weight slope)
-    # each sit in a bordered control box — a boxed Block, like the preset / optimization boxes —
-    # with their controls inset within the border, not floating bare on the tile. (presets on so box
-    # 𝒄's predefined-complexities dropdown — the control probed here — is present.)
+    # box 𝒄 (predefined complexity + norm) and box 𝒘 (weight slope) each sit in their own bordered
+    # control box — a boxed Block, like the preset / optimization boxes — and box 𝐋's "replace
+    # diminuator" check rides inside the predefined-pretransformers preset box (block:preset:prescaler),
+    # not floating bare. Each control is inset within its box's border. (presets on so box 𝒄's
+    # predefined-complexities dropdown — and the preset box hosting the diminuator — are present.)
     lay = _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True)  # non-unity slope reveals the boxes
     blocks = {b.id: b for b in lay.blocks}
     cells = {c.id: c for c in lay.cells}
-    for box_id, ctrl_id in (("block:diminuator", "control:diminuator"),
+    for box_id, ctrl_id in (("block:preset:prescaler", "control:diminuator"),
                             ("block:complexity", "control:complexity"),
                             ("block:slope", "control:slope")):
         box = blocks[box_id]
