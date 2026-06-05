@@ -668,3 +668,14 @@ BLANKED_NUMBER_KINDS = frozenset({
     "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell", "formcell", "heldcell",
     "gentuningcell", "targetcell", "prescalercell",
 })
+
+# The cell kinds the edit-preview ring may flag — the value-bearing cells the user reads a computed
+# or edited NUMBER / RATIO off. The preview highlights what an action MOVES, so it skips the
+# scaffolding around those values: the EBK marks (brackets/braces) and the column separators (which
+# read as subgridline branches), the per-column controls (drag grips, +/- buttons), and the labels
+# / charts. None of those carries a value, so a reshape that adds or alters them would only ring as
+# noise. (powerdisplay is the locked optimization power's read-only value; charts are excluded — the
+# inset ring is built for discrete value cells, not a plot.)
+RINGABLE_KINDS = BLANKED_NUMBER_KINDS | frozenset({
+    "prime", "ratiocell", "commaratio", "mathexpr", "powerdisplay",
+})

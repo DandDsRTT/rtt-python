@@ -541,6 +541,18 @@ def test_reordering_targets_rekeys_its_column_cells():
     assert moved == set(), f"target cells re-filled in place instead of gliding: {sorted(moved)}"
 
 
+def test_removing_a_column_keeps_the_survivors_identity_so_they_do_not_ring():
+    # dropping a column must not make every column past it read as "changed". Interest carries no
+    # optimization, so removing one re-solves nothing — the only thing that could ring the survivors
+    # is an id-token shift. With the tokens content-matched across the removal, each survivor keeps
+    # its id AND content, so the diff rings nothing. (Index-keyed tokens would slide the next
+    # interval into each freed slot, falsely flagging the whole column.)
+    interest = [(1, 1, -1), (-1, 1, 0), (2, 0, -1)]  # 6/5, 3/2, 9/8
+    lay1 = spreadsheet.build(_held_state(), _all_on(), interest=interest)
+    lay2 = spreadsheet.build(_held_state(), _all_on(), interest=interest[1:], prev_ids=lay1.identities)
+    assert spreadsheet.changed_cell_ids(lay1, lay2) == frozenset()
+
+
 def test_editable_vector_tiles_get_editable_quantities_ratios():
     # every tile whose interval-vectors cells are editable (commas / targets / held / interest)
     # carries an editable quantities-row ratio — a "ratiocell" input, the scalar twin of its
@@ -5937,3 +5949,21 @@ def test_changed_cell_ids_tracks_a_mapping_edit_through_a_real_layout():
     changed = spreadsheet.changed_cell_ids(before, ed.layout())
     assert "cell:mapped:1:6" in changed   # the mapped list recomputed
     assert "prime:2" not in changed       # a domain prime label is structural — untouched
+
+
+def test_changed_cell_ids_rings_only_value_cells_not_marks_or_controls():
+    # the ring previews VALUES, so the structural marks (EBK brackets/braces, and the column
+    # separators the user sees as subgridline branches) and the per-column controls (drag grips, +/-
+    # buttons) must never ring — a reshape that adds or alters them is scaffolding, not a value to
+    # read. Only the value cell is flagged, however many marks/controls change around it.
+    old = _diff_layout(_diff_cell("v", "1"))
+    new = _diff_layout(
+        _diff_cell("v", "2"),                                    # a real value change -> rings
+        CellBox("ebktop:targets:0", 0, 0, 10, 10, "ebktop"),    # new EBK marks -> must NOT ring
+        CellBox("ebkbrace:targets:0", 0, 0, 10, 10, "ebkbrace"),
+        CellBox("ebkangle:vec:commas:1", 0, 0, 10, 10, "ebkangle"),
+        CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),         # a column separator ("subgridline")
+        CellBox("grip:targets:0", 0, 0, 10, 10, "colgrip"),     # a drag grip
+        CellBox("comma_minus", 0, 0, 10, 10, "comma_minus"),    # a - control
+    )
+    assert spreadsheet.changed_cell_ids(old, new) == frozenset({"v"})

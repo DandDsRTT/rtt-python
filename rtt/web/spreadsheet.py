@@ -335,47 +335,56 @@ def _cell_content(cell: CellBox) -> tuple:
 
 
 def changed_cell_ids(old: Layout, new: Layout) -> frozenset:
-    """The ids of cells whose displayed value differs between two layouts — the set the editor
+    """The ids of VALUE cells whose displayed value differs between two layouts — the set the editor
     highlights while a cell is being edited, so the user previews which OTHER cells the edit will
     move before committing it. A cell counts as changed when it is new in ``new``, or its content
     signature (:func:`_cell_content`, geometry excluded) differs from ``old`` — a cell that only
     shifted position because a neighbour grew has not changed value, so it is left out. Cells
-    dropped in ``new`` are omitted too: there is nothing on screen left to highlight."""
+    dropped in ``new`` are omitted too: there is nothing on screen left to highlight.
+
+    Only the value-bearing kinds (:data:`RINGABLE_KINDS`) ring: the scaffolding around the values —
+    the EBK marks, the column separators, the per-column grips and +/- controls — is skipped, so a
+    reshape that adds or reflows them doesn't flood the preview with cells that carry no value."""
     before = {c.id: _cell_content(c) for c in old.cells}
     return frozenset(c.id for c in new.cells
-                     if c.id not in before or before[c.id] != _cell_content(c))
+                     if c.kind in RINGABLE_KINDS
+                     and (c.id not in before or before[c.id] != _cell_content(c)))
 
 
 def assign_column_tokens(prev, vectors):
-    """Assign a stable id-token to each interval column, so a within-list reorder keeps a column's
-    cell ids and the reconciler glides it to its new x (rather than re-filling a fixed-index cell).
+    """Assign a stable id-token to each interval column, so a column keeps its cell ids across a
+    render and the reconciler glides it to its new x (rather than re-filling a fixed-index cell).
 
     ``prev`` is the previous render's ``[(token, vector), …]`` (``None`` on the first build); the
-    return is the new ``[(token, vector), …]`` aligned to ``vectors``. Each column is matched to the
-    previous render by CONTENT — a moved column finds its old token and carries it to the new slot —
-    and anything unmatched gets a token greater than every token in play, so live columns never
-    collide. With no previous render the columns number 0,1,2,… in order, so every token equals its
-    index until the first reorder (the whole index-keyed cell-id surface is unchanged until then)."""
+    return is the new ``[(token, vector), …]`` aligned to ``vectors``. A REORDER, ADD, or REMOVE
+    matches columns to the previous render by CONTENT — each surviving column finds its old token and
+    carries it to its new slot — so a removal never slides the next interval into a freed slot's id
+    (which would falsely read every later column as "changed" in the edit preview). Only an in-place
+    EDIT — same column count, one value changed — matches by POSITION, so the focused cell keeps its
+    id (reused, not rebuilt mid-keystroke) and a value already present elsewhere isn't mistaken for a
+    move into it. Anything still unmatched gets a token greater than every token in play, so live
+    columns never collide. With no previous render the columns number 0,1,2,… in order."""
     vectors = [tuple(v) for v in vectors]
     prev = list(prev or [])
     tokens = [None] * len(vectors)
-    if len(vectors) == len(prev) and sorted(vectors) == sorted(v for _, v in prev):
-        # a pure REORDER (same multiset of vectors): match by content, so each moved column carries
-        # its token to its new slot and glides. Equal duplicates claim distinct previous columns in
-        # order, so a reorder of a duplicated pair still keeps every id unique.
+    if len(vectors) == len(prev) and sorted(vectors) != sorted(v for _, v in prev):
+        # an in-place EDIT (same column count, one value changed): match by POSITION, so each column
+        # keeps the token of the slot it sits in — the focused cell is reused, not rebuilt
+        # mid-keystroke, and typing a value that already appears elsewhere isn't taken for a move.
+        for j in range(len(vectors)):
+            tokens[j] = prev[j][0]
+    else:
+        # a REORDER, ADD, or REMOVE (or first build): match by CONTENT, so each surviving column
+        # carries its token to its new slot and glides, and a removed column's id simply vanishes
+        # rather than shifting every later column's id down. Equal duplicates claim distinct previous
+        # columns in order, keeping every id unique; genuinely new columns fall through to a fresh
+        # token below.
         claimed = [False] * len(prev)
         for j, vec in enumerate(vectors):
             for pi, (tok, pvec) in enumerate(prev):
                 if not claimed[pi] and pvec == vec:
                     tokens[j], claimed[pi] = tok, True
                     break
-    else:
-        # an EDIT / ADD / REMOVE changed the membership: match by POSITION, so a column keeps the
-        # token of the slot it sits in. This is what makes an edit safe — typing a value that already
-        # appears elsewhere in the list isn't mistaken for a move into it, and the focused cell keeps
-        # its id (so it is reused, not rebuilt mid-keystroke). New slots fall through to a fresh token.
-        for j in range(min(len(vectors), len(prev))):
-            tokens[j] = prev[j][0]
     nxt = max([t for t in tokens if t is not None] + [tok for tok, _ in prev] + [-1]) + 1
     for j in range(len(vectors)):  # fresh token, greater than any in play (no reuse → no collision)
         if tokens[j] is None:
