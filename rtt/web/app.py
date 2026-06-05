@@ -606,7 +606,7 @@ _EXAMPLE_TEXT: dict[str, str] = {
     "projection": "𝑃",
     "interest": "𝐢",
     "generator_detempering": "D",
-    "nonstandard_domain": "prime-based",
+    "nonstandard_domain": "Bₗ",
     "identity_objects": "𝑀ⱼ",
 }
 

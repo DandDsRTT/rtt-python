@@ -57,7 +57,7 @@ SHOW_HELP: dict[str, str] = {
     "tuning_colorization": "Tint each cell by what derives it — the generator tuning map 𝒈. Refines “tuning boxes”.",
     "interest": "Show the “other intervals of interest” column.",
     "generator_detempering": "Show the generator-detempering D column — the generator map written as vectors.",
-    "nonstandard_domain": "Use a nonstandard domain basis instead of the standard primes.",
+    "nonstandard_domain": "Show the superspace block — the basis-embedding matrix Bₗ, the lifted mapping 𝑀ₗ, and (over a domain with nonprime basis elements) the prime/nonprime-based mode chooser.",
     "identity_objects": "Show the identity-object tiles — trivial self-maps built from the other boxes.",
 }
 
