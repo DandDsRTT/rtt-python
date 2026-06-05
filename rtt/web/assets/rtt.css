@@ -485,6 +485,14 @@
    bar — in the same red as a draft comma, clearing to black when the tuning is re-optimized */
 .rtt-alert, .rtt-alert * { color:var(--pending-color) !important; }
 .rtt-alert .rtt-frac-num { border-bottom-color:var(--pending-color) !important; }
+/* the edit-preview highlight: while one cell is being edited, every OTHER cell whose value that
+   edit moves wears an amber ring + faint wash, so the user previews the ripple before leaving the
+   cell. INSET so it never bleeds onto the densely-packed neighbours; amber to stay clear of the red
+   alert/pending error states. The wash uses color-mix (var single-sourced from --preview-color) and
+   simply falls back to transparent — leaving the ring — where unsupported. No transition: it tracks
+   the live value, appearing the instant the value does. */
+.rtt-cell.rtt-preview-change { box-shadow:inset 0 0 0 2px var(--preview-color);
+            background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
 /* the comma basis plain text while a comma is pending: not an editable input (which is
    one colour) but a static box matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */

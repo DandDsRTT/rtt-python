@@ -78,6 +78,8 @@ def _doc_store() -> dict:
     return _MEMORY_STORE if helpers.is_user_simulation() else app.storage.user
 
 _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
+_PREVIEW_COLOR = "#f5a623"  # amber ring on a cell the in-progress edit moves (the edit-preview
+# highlight) — a warm "this changed" hue, kept distinct from the red _PENDING_COLOR error/alert
 # the value cells tile into a shared-border grid (a ruled spreadsheet, per the
 # mockup): each cell draws a rule and overlaps its neighbour by exactly the rule
 # width, so two abutting borders coincide as ONE line — no doubled inner rules.
@@ -212,7 +214,7 @@ def _control_svg(glyph: str) -> str:
 
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --rail-w:{_RAIL_W}px; --panel-w:{_PANEL_W}px;
-  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR};
+  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --preview-color:{_PREVIEW_COLOR};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
   --label-w:{spreadsheet.LABEL_W}px; --header-h:{spreadsheet.HEADER_H}px; --line-w:{spreadsheet.LINE_W}px;
   --ptext-edit-h:{spreadsheet.PTEXT_EDIT_H}px; --option-box:{spreadsheet.OPTION_BOX_PX}px; --btn:{spreadsheet.BTN}px;
@@ -905,6 +907,15 @@ class _Reconciler:
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
         self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.audio_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        # The edit-preview highlight: while one editable cell is focused, every render rings the
+        # OTHER cells whose value the in-progress edit has moved, so the user previews the ripple
+        # before leaving the cell. preview_baseline is the layout captured when the cell took focus
+        # (None when nothing is being edited); preview_source is that focused cell's id (never rung —
+        # the user is already looking at it); preview_shown is the set currently carrying the ring,
+        # so clear_preview can strip them without a re-render when focus leaves.
+        self.preview_baseline = None
+        self.preview_source = None
+        self.preview_shown: set = set()
         # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build[, update]).
         # Every kind is registered below; make_cell/update_cell index it directly (no fallback),
         # so an unregistered kind raises loudly rather than rendering a silent blank cell.
@@ -989,6 +1000,15 @@ class _Reconciler:
         for d in self._handle_dicts:
             d.pop(eid, None)
 
+    def clear_preview(self):
+        """Strip every edit-preview ring (the focused cell was left). Removes the class straight from
+        the rung cells rather than via a render, so the highlight clears even when leaving the cell
+        triggers no re-render (most editable cells have already committed live)."""
+        for eid in self.preview_shown:
+            if eid in self.els:
+                self.els[eid].classes(remove="rtt-preview-change")
+        self.preview_shown = set()
+
     def make_cell(self, cb):
         # build a cell's element in the active parent (the caller opens the freeze container),
         # register it + its kind (and audio key) so render() can place and reconcile it after.
@@ -1015,6 +1035,14 @@ class _Reconciler:
                 wrap.tooltip(help_text)
         self.els[cb.id] = wrap
         self.kinds[cb.id] = cb.kind
+        # an editable text cell drives the edit-preview highlight: focusing it snapshots the grid as
+        # the baseline, leaving it clears the rings. Every such cell registers its q-input in `inputs`
+        # or `ptext_inputs`, so wiring here covers all of them at once (and no others — a dropdown /
+        # checkbox commits instantly, with no "while editing" window to preview).
+        edit_input = self.inputs.get(cb.id) or self.ptext_inputs.get(cb.id)
+        if edit_input is not None:
+            edit_input.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid))
+            edit_input.on("blur", lambda _=None: self._cb.on_cell_blur())
         if cb.kind in _AUDIO_KINDS:
             self.audio_keys[cb.id] = cb.values
 
@@ -2077,10 +2105,25 @@ def index() -> None:
     def on_toggle_all():  # the master node-corner toggle: fold the whole grid, or expand it all back
         editor.set_collapsed(spreadsheet.toggle_all_collapsed(last_lay[0], editor.collapsed))
         render()
+
+    def on_cell_focus(cid):
+        # an editable cell took focus: snapshot the on-screen grid as the preview baseline so every
+        # subsequent live edit can ring exactly the cells it moves (computed against this snapshot in
+        # render), until the cell is left. No render needed — nothing has changed against itself yet.
+        rec.preview_baseline = last_lay[0]
+        rec.preview_source = cid
+
+    def on_cell_blur():
+        # leaving the cell ends the preview: forget the baseline and strip every highlight ring
+        rec.preview_baseline = None
+        rec.preview_source = None
+        rec.clear_preview()
     # wire the reconciler's callbacks now that the event handlers exist: the cell
     # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
     rec._cb = SimpleNamespace(
         act=act,
+        on_cell_blur=on_cell_blur,
+        on_cell_focus=on_cell_focus,
         on_comma_change=on_comma_change,
         on_control_select=on_control_select,
         on_form_choose=on_form_choose,
@@ -2179,6 +2222,12 @@ def index() -> None:
                 style += f"; background:{_TINTS[bl.tint]}"
             rec.els[bl.id].style(style)
 
+        # the edit-preview highlight: while a cell is focused, ring every OTHER cell whose value this
+        # render has moved against the baseline snapshotted when the cell took focus. With nothing
+        # being edited (no baseline) the set is empty, so the loop below clears any lingering rings.
+        preview = (spreadsheet.changed_cell_ids(rec.preview_baseline, lay) - {rec.preview_source}
+                   if rec.preview_baseline is not None else frozenset())
+
         for cb in lay.cells:
             seen.add(cb.id)
             if cb.id in rec.els and rec.kinds[cb.id] != cb.kind:
@@ -2194,6 +2243,10 @@ def index() -> None:
             top = cb.y - (fy if container in ("body", "row") else 0)
             rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
             rec.update_cell(cb)
+            ringed = cb.id in preview
+            rec.els[cb.id].classes(add="rtt-preview-change" if ringed else "",
+                                   remove="" if ringed else "rtt-preview-change")
+        rec.preview_shown = set(preview)  # every rung id is a live cell (changed_cell_ids ⊆ lay.cells)
 
         for eid in [e for e in rec.els if e not in seen]:
             rec.drop(eid)

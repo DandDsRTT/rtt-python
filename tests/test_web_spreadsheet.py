@@ -1,5 +1,6 @@
 from rtt.web import service, settings, spreadsheet
 from rtt.web.editor import Editor
+from rtt.web.layout import CellBox, Layout
 
 
 def _layout(mapping=((1, 1, 0), (0, 1, 4))):
@@ -5257,3 +5258,67 @@ def test_prescaler_labels_resolve_the_log_prime_glyph_and_gated_name():
     assert "log-prime matrix" not in bare.effective_captions[("prescaling", "primes")]  # gated on equivalences
 
 
+
+
+# --- changed_cell_ids: the per-edit preview-highlight diff ----------------------------------
+# When the user edits a cell, the app highlights the OTHER cells whose displayed value the edit
+# changes. That set is the difference between the layout before the edit and the layout after,
+# compared by each cell's visible CONTENT (text, chart data, value flags) and NOT its geometry —
+# a cell that only shifts position because a neighbour grew has not "changed value".
+
+def _diff_layout(*cells):
+    return Layout(width=0, height=0, lines=(), blocks=(), cells=tuple(cells), freeze_x=0, freeze_y=0)
+
+
+def _diff_cell(cid, text, **kw):
+    return CellBox(id=cid, x=0, y=0, w=10, h=10, kind="tval", text=text, **kw)
+
+
+def test_changed_cell_ids_is_empty_for_an_unchanged_layout():
+    lay = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
+    assert spreadsheet.changed_cell_ids(lay, lay) == frozenset()
+
+
+def test_changed_cell_ids_flags_a_cell_whose_text_changed():
+    old = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
+    new = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "9"))
+    assert spreadsheet.changed_cell_ids(old, new) == frozenset({"b"})
+
+
+def test_changed_cell_ids_ignores_a_cell_that_only_moved():
+    # a cell shifted because a neighbour widened — same text, new box — has not changed value
+    old = _diff_layout(CellBox("a", 0, 0, 10, 10, "tval", text="1"))
+    new = _diff_layout(CellBox("a", 99, 50, 20, 20, "tval", text="1"))
+    assert spreadsheet.changed_cell_ids(old, new) == frozenset()
+
+
+def test_changed_cell_ids_flags_a_newly_added_cell():
+    old = _diff_layout(_diff_cell("a", "1"))
+    new = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
+    assert spreadsheet.changed_cell_ids(old, new) == frozenset({"b"})
+
+
+def test_changed_cell_ids_omits_a_removed_cell():
+    # a cell dropped in the new layout has nothing on screen left to highlight
+    old = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
+    new = _diff_layout(_diff_cell("a", "1"))
+    assert spreadsheet.changed_cell_ids(old, new) == frozenset()
+
+
+def test_changed_cell_ids_flags_a_value_flag_change_not_just_text():
+    # a held interval the new tuning no longer holds reddens via CellBox.alert while its text can be
+    # unchanged; the signature must compare content flags, not text alone, so the highlight catches it
+    old = _diff_layout(_diff_cell("a", "701.955"))
+    new = _diff_layout(_diff_cell("a", "701.955", alert=True))
+    assert spreadsheet.changed_cell_ids(old, new) == frozenset({"a"})
+
+
+def test_changed_cell_ids_tracks_a_mapping_edit_through_a_real_layout():
+    # the end-to-end shape: a mapping edit cascades into the derived rows (the mapped list), while a
+    # structural cell (a domain prime label) is left untouched
+    ed = Editor()
+    before = ed.layout()
+    ed.edit_mapping([[1, 1, 0], [0, 1, 7]])  # the fifth's prime-5 entry: 4 -> 7
+    changed = spreadsheet.changed_cell_ids(before, ed.layout())
+    assert "cell:mapped:1:6" in changed   # the mapped list recomputed
+    assert "prime:2" not in changed       # a domain prime label is structural — untouched

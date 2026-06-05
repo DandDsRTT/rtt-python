@@ -301,6 +301,32 @@ def toggle_all_collapsed(layout, collapsed) -> set:
     return set(collapsed) | foldable
 
 
+# The CellBox fields that carry VISIBLE CONTENT — what the user reads off the cell — as opposed to
+# its geometry (x/y/w/h, which shift whenever a neighbour grows) or its structural identity
+# (gen/prime/comma, fixed for a given id). Two cells with the same id and the same content signature
+# display the same thing; a difference between them is a value change worth flagging.
+_CONTENT_FIELDS = ("kind", "text", "values", "ranges", "indicator", "indicator_label",
+                   "pending", "alert", "checked", "blank", "unit", "underlines")
+
+
+def _cell_content(cell: CellBox) -> tuple:
+    """A cell's visible content as a comparable tuple — every content-bearing field, none of its
+    geometry. The diff key for :func:`changed_cell_ids`."""
+    return tuple(getattr(cell, field) for field in _CONTENT_FIELDS)
+
+
+def changed_cell_ids(old: Layout, new: Layout) -> frozenset:
+    """The ids of cells whose displayed value differs between two layouts — the set the editor
+    highlights while a cell is being edited, so the user previews which OTHER cells the edit will
+    move before committing it. A cell counts as changed when it is new in ``new``, or its content
+    signature (:func:`_cell_content`, geometry excluded) differs from ``old`` — a cell that only
+    shifted position because a neighbour grew has not changed value, so it is left out. Cells
+    dropped in ``new`` are omitted too: there is nothing on screen left to highlight."""
+    before = {c.id: _cell_content(c) for c in old.cells}
+    return frozenset(c.id for c in new.cells
+                     if c.id not in before or before[c.id] != _cell_content(c))
+
+
 def _wrap_chars(words: list[str], max_chars: int) -> int:
     """Greedy line count packing ``words`` into lines of at most ``max_chars`` chars
     (an over-long word breaks across lines itself). The character-budget core shared

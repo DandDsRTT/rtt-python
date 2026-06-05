@@ -1149,3 +1149,29 @@ async def test_a_maximal_render_dispatches_every_emitted_cell_kind(user: User) -
     await user.open("/")
     user.find(kind=ui.checkbox, content="select all / none").click()  # every implemented feature on
     await user.should_see(marker="cell:mapping:0:0")                  # the board re-rendered, no dispatch error
+
+
+# --- the edit-preview highlight: while a cell is focused, ring the cells its edit changes ---
+
+async def test_editing_a_cell_highlights_the_cells_its_edit_changes(user: User) -> None:
+    # focusing a cell captures a baseline; each live edit then rings every OTHER cell whose value the
+    # edit moved (rtt-preview-change), so the user previews the ripple before leaving the cell. The
+    # focused cell itself is never ringed, and blurring clears the whole preview.
+    await user.open("/")
+    src = _cell_child(user, "cell:mapping:1:2")          # the fifth's prime-5 entry (meantone: 4)
+    UserInteraction(user, {src}, None).trigger("focus")  # capture the pre-edit baseline
+    src.set_value("7")                                   # 4 -> 7 commits live and re-renders
+    await user.should_see(marker="cell:mapped:1:6")
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6")        # the moved cell is ringed
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")   # ...the source is not
+    UserInteraction(user, {src}, None).trigger("blur")   # leaving the cell clears the preview
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")
+
+
+async def test_an_unfocused_grid_rings_no_cells(user: User) -> None:
+    # with no cell being edited there is no baseline, so a plain edit (here via the mapped list's
+    # source cell, then read back) leaves nothing ringed — the highlight is strictly an editing aid
+    await user.open("/")
+    _cell_child(user, "cell:mapping:1:2").set_value("7")  # edit without focusing first
+    await user.should_see(marker="cell:mapped:1:6")
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")
