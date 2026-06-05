@@ -761,7 +761,12 @@ class _GridBuilder:
         # a nonprime basis element isn't a prime. Switches every domain-side unit at once: the
         # interval-vectors row's 𝒃ᵢ/, the basis-elements column's /𝒃ᵢ, and each gridded cell's
         # per-coordinate denominator (𝑔/𝒃ᵢ, ¢/𝒃ᵢ, oct/𝒃ᵢ, (C)/𝒃ᵢ).
-        self.domain_label = "p" if service.is_standard_domain(self.elements) else "b"
+        # whether the domain is a standard prime limit (a prime prefix) rather than a nonstandard
+        # subgroup whose basis isn't a prime sequence. Switches the domain coordinate label (𝑝 vs 𝒃)
+        # and the column title, AND gates the domain + (expand walks to the next standard prime, so
+        # it doesn't apply to a subgroup — the + is withheld, never shown inert).
+        self.standard_domain = service.is_standard_domain(self.elements)
+        self.domain_label = "p" if self.standard_domain else "b"
         # whether the domain − applies — the shared predicate the editor's shrink guard uses, so the
         # button only shows when a click would actually drop the top prime (not on a nonstandard
         # subgroup, nor when the smaller temperament would be improper). Gates both the quantities-row
@@ -993,7 +998,7 @@ class _GridBuilder:
         # the domain column reads "basis elements" over a nonstandard subgroup (whose basis may
         # be nonprime — "basis elements" is the guide's term for these columns; the mockup had
         # "domain elements") and "domain primes" over a standard prime limit
-        domain_title = "domain\nprimes" if service.is_standard_domain(self.elements) else "basis\nelements"
+        domain_title = "domain\nprimes" if self.standard_domain else "basis\nelements"
         self.col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
                       "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
                       "primes": domain_title, "detempering": "generator\ndetempering",
@@ -1389,7 +1394,7 @@ class _GridBuilder:
         # the vectors row carries the basis +, the mapping row the +r,−n mapping-row + (only when
         # there's a comma to un-temper — at full rank a generator can't be added holding d).
         self.row_plus_y = {}
-        if self.tile_open("vectors", "quantities"):
+        if self.tile_open("vectors", "quantities") and self.standard_domain:  # basis + walks primes
             self.row_plus_y["vectors"] = self.vec_top(self.d) + ROW_H / 2
         if self.tile_open("mapping", "quantities") and self.state.n > 0:
             self.row_plus_y["mapping"] = self.map_top(self.r) + ROW_H / 2
@@ -1633,6 +1638,8 @@ class _GridBuilder:
             return self.tile_open("quantities", "targets") and not self.all_interval
         if ckey == "gens":  # the generators + un-temps a comma (−n, +r), so it needs one to un-temper
             return self.tile_open("quantities", "gens") and self.state.n > 0
+        if ckey == "primes":  # the + walks to the next standard prime — inapplicable to a subgroup
+            return self.tile_open("quantities", "primes") and self.standard_domain
         return self.tile_open("quantities", ckey)
 
     def closed_form_operand(self, key, group, i):
@@ -2313,8 +2320,9 @@ class _GridBuilder:
                 if self.domain_can_shrink:  # the highest prime is removable only when the shrink applies
                     self.cells.append(CellBox("basis_minus", basis_bus_x, self.vec_top(self.d - 1),
                                          (bx + COL_W) - basis_bus_x, ROW_H, "basis_minus"))
-                self.cells.append(CellBox("basis_plus", basis_bus_x - BTN / 2, self.row_plus_y["vectors"] - BTN / 2,
-                                     BTN, BTN, "plus"))
+                if self.standard_domain:  # the basis + walks the next standard prime (row_plus_y set to match)
+                    self.cells.append(CellBox("basis_plus", basis_bus_x - BTN / 2, self.row_plus_y["vectors"] - BTN / 2,
+                                         BTN, BTN, "plus"))
             if self.tile_open("vectors", "commas"):
                 for c in range(self.nc):
                     for p in range(self.d):

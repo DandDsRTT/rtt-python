@@ -261,6 +261,16 @@ def test_domain_minus_is_absent_when_the_shrink_would_degenerate():
     assert "minus" not in cells and "basis_minus" not in cells
 
 
+def test_domain_plus_is_absent_on_a_nonstandard_subgroup():
+    # the domain + walks to the next standard prime, which doesn't apply to a nonprime subgroup —
+    # so the + is withheld, not shown inert (editor.expand guards on the same is_standard_domain).
+    # (The shrink would-degenerate / d == 1 cases still keep the +: a standard limit can always grow.)
+    arch = service.from_comma_basis(((6, -2, -1),), domain_basis=(2, 3, 7))  # 2.3.7
+    cells = {c.id for c in spreadsheet.build(arch).cells}
+    assert {"prime:0", "prime:2"} <= cells  # the basis still heads its columns
+    assert "plus" not in cells and "basis_plus" not in cells  # but no inert + on either axis
+
+
 def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point():
     # the domain/comma/interest + rides its column's fan stub — one COL_W past the last branch
     # point (the slot where the next element would branch), centred on the top bus — and the bus
