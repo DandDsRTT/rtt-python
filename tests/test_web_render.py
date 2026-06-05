@@ -918,6 +918,7 @@ async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -
     # (With alt. complexity off (the default) the list is just log-product, so this checks build, not a swap;
     # the slope chooser below exercises the update branch.)
     await user.open("/")
+    _toggle(user, "presets")  # the dropdown is a preset, so it needs the presets layer on
     user.find(kind=ui.checkbox, content="weighting").click()  # box 𝒘's slope chooser shows under weighting
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄
     await user.should_see(marker="control:complexity")
@@ -934,6 +935,7 @@ async def test_alt_complexity_widens_the_predefined_complexities_chooser_in_plac
     # update) it stays stuck on the lone log-product entry until the row is rebuilt from hidden
     # (e.g. by toggling the weight slope), the reported bug this guards.
     await user.open("/")
+    _toggle(user, "presets")  # the dropdown is a preset, so it needs the presets layer on
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄
     await user.should_see(marker="control:complexity")

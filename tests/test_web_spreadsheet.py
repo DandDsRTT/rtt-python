@@ -2486,18 +2486,20 @@ def test_complexity_machinery_hides_under_unity_weight():
     assert not any(c.startswith("complexity:") for c in unity)
     assert "control:complexity" not in unity and "control:q" not in unity
     assert "control:slope" in unity and any(c.startswith("weight:target") for c in unity)
-    # complexity-/simplicity-weight: the prescaling + complexity rows + the subsection appear
+    # complexity-/simplicity-weight: the prescaling + complexity rows + the subsection appear (probed
+    # via box 𝒄's 𝑞 field, which rides weighting alone — the dropdown is further gated on presets)
     assert any(c.startswith("cell:prescaling") for c in simpl)
     assert any(c.startswith("complexity:") for c in simpl)
-    assert "control:complexity" in simpl
+    assert "control:q" in simpl
 
 
-def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_complexity():
-    # box 𝒄's predefined-complexities dropdown shows with WEIGHTING alone — it no longer waits on
-    # alt_complexity. Until alt. complexity is turned on it offers ONLY the current
-    # complexity (lp for every scheme today), so the user can't pick an unimplemented complexity;
-    # turning alt_complexity on restores the full preset list (+ the inert "custom").
-    on = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals box 𝒄 (alt_complexity OFF (default))
+def test_box_c_complexity_dropdown_offers_lp_only_until_alt_complexity():
+    # the predefined-complexities dropdown is a PRESET (gated on presets — see
+    # test_predefined_complexities_dropdown_is_gated_on_presets), and until alt. complexity is turned
+    # on it offers ONLY the current complexity (lp for every scheme today), so the user can't pick an
+    # unimplemented complexity; turning alt_complexity on restores the full preset list (+ the inert
+    # "custom"). (presets on + a non-unity slope reveal it; alt_complexity OFF (default).)
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True, presets=True).cells}
     ctrl = on["control:complexity"]
     assert ctrl.kind == "control_select"
     # the dropdown shows the friendly display name (abbreviation first, expansion in parens) —
@@ -2508,17 +2510,38 @@ def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_comple
     assert ctrl.y > on["complexity:target:0"].y
     assert ctrl.x == on["header:targets"].x + spreadsheet.BOX_INNER
     # turning alt. complexity on restores the full preset list + custom
-    full = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
+    full = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True).cells}
     assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
+
+
+def test_predefined_complexities_dropdown_is_gated_on_presets():
+    # the box-𝒄 "predefined complexities" dropdown is a preset chooser, so — like the
+    # predefined-prescalers preset — it shows only when the presets layer is on, ON TOP of box 𝒄's
+    # weighting / non-unity-slope gate. The 𝑞 (norm power) field beside it is NOT a preset, so it
+    # stays put regardless: turning presets off drops the dropdown but keeps 𝑞, which then LEADS the
+    # control row (slides into the dropdown's leftmost slot) rather than floating past an empty gap.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "weighting": True}  # the TILT minimax-S scheme's non-unity slope reveals box 𝒄
+    off = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}  # presets OFF (default)
+    assert "control:complexity" not in off and "caption:complexity" not in off  # the preset dropdown is gone
+    assert "control:q" in off  # ...but the norm-power field stays (it isn't a preset)
+    on = {c.id: c for c in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").cells}
+    assert "control:complexity" in on and "caption:complexity" in on  # presets on restores the dropdown
+    assert off["control:q"].x < on["control:q"].x  # 𝑞 leads (shifts left) once the dropdown is gone
+    # and the box stops reserving the absent dropdown's width — the targets column hugs back in
+    off_box = {b.id: b for b in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
+    on_box = {b.id: b for b in spreadsheet.build(base, {**s, "presets": True}, tuning_scheme="TILT minimax-S").blocks}["block:complexity"]
+    assert off_box.w < on_box.w
 
 
 def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields():
     # box 𝒄 lays its three controls left-to-right: [predefined complexities ▼] | q | dual(q),
-    # each with a caption beneath. The box shows with WEIGHTING alone; alt. complexity (on here) puts
-    # 𝑞 in its editable powerinput form. The q (norm power) and dual(q) fields follow the optimization
-    # box's value-over-symbol-over-caption pattern (the 𝑝 / "optimization power" style); the dropdown
-    # has just a caption (no symbol slot). dual(q) needs an all-interval scheme.
-    on = {c.id: c for c in _with(scheme="minimax-S", weighting=True,
+    # each with a caption beneath. The box shows with WEIGHTING alone; the dropdown additionally needs
+    # presets (it's a preset), and alt. complexity (on here) puts 𝑞 in its editable powerinput form.
+    # The q (norm power) and dual(q) fields follow the optimization box's value-over-symbol-over-caption
+    # pattern (the 𝑝 / "optimization power" style); the dropdown has just a caption (no symbol slot).
+    # dual(q) needs an all-interval scheme.
+    on = {c.id: c for c in _with(scheme="minimax-S", weighting=True, presets=True,
                                  all_interval=True, alt_complexity=True).cells}
     # the predefined-complexities dropdown carries its caption HUGGING its bottom (rather than
     # bottom-aligned with the q/dual captions further down the row)
@@ -2579,11 +2602,11 @@ def test_power_value_cells_hide_when_gridded_values_are_off():
 def test_dual_q_shows_only_when_the_scheme_is_all_interval():
     # dual(q) is gated on the all-interval CHECKBOX (is_all_interval), NOT the show-panel entry:
     # an all-interval scheme renders dual(q); a target-based scheme hides it. The q field and the
-    # predefined-complexities dropdown show with WEIGHTING regardless of all-interval — only the
-    # dual power is gated.
-    on_all = {c.id for c in _with(scheme="minimax-S", weighting=True).cells}
+    # predefined-complexities dropdown show regardless of all-interval — only the dual power is gated.
+    # (presets on so the dropdown is in play; it rides the presets layer independently of all-interval.)
+    on_all = {c.id for c in _with(scheme="minimax-S", weighting=True, presets=True).cells}
     assert {"control:dual", "symbol:dual", "caption:dual"} <= on_all
-    on_tilt = {c.id for c in _with(scheme="TILT minimax-S", weighting=True).cells}
+    on_tilt = {c.id for c in _with(scheme="TILT minimax-S", weighting=True, presets=True).cells}
     assert not ({"control:dual", "symbol:dual", "caption:dual"} & on_tilt)
     assert {"control:q", "control:complexity"} <= on_tilt  # q + dropdown show regardless of all-interval
 
@@ -2872,8 +2895,9 @@ def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
 def test_weighting_controls_each_sit_in_a_bordered_box():
     # box 𝐋 (replace diminuator), box 𝒄 (predefined complexity + norm), and box 𝒘 (weight slope)
     # each sit in a bordered control box — a boxed Block, like the preset / optimization boxes —
-    # with their controls inset within the border, not floating bare on the tile.
-    lay = _with("TILT minimax-S", weighting=True, alt_complexity=True)  # non-unity slope reveals the boxes
+    # with their controls inset within the border, not floating bare on the tile. (presets on so box
+    # 𝒄's predefined-complexities dropdown — the control probed here — is present.)
+    lay = _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True)  # non-unity slope reveals the boxes
     blocks = {b.id: b for b in lay.blocks}
     cells = {c.id: c for c in lay.cells}
     for box_id, ctrl_id in (("block:diminuator", "control:diminuator"),

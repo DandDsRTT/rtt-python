@@ -53,7 +53,8 @@ PRESET_H = 30  # height of a preset chooser dropdown — aligned with the gridde
 LBOX_DIM_W = 80     # the diminuator slot (checkbox square + "replace diminuator" caption)
 CBOX_DROP_W = 170   # the predefined-complexities dropdown (inverted display names "lp (log-product)" …)
 CBOX_SLOT_W = 60    # the q / dual(q) symbol/caption slots (the value cell is COL_W centred within)
-CBOX_W = CBOX_DROP_W + 8 + CBOX_SLOT_W + 8 + CBOX_SLOT_W  # the box-𝒄 controls' total footprint
+CBOX_NODROP_W = CBOX_SLOT_W + 8 + CBOX_SLOT_W  # box 𝒄 sans the predefined-complexities preset: just q | dual(q)
+CBOX_W = CBOX_DROP_W + 8 + CBOX_NODROP_W  # the box-𝒄 controls' total footprint (+ the dropdown leading the row)
 OPTION_BOX_PX = 16   # the one shared size for every small option square: every q-checkbox box (the
 #                      settings panel, the box-𝐋 diminuator, the target-controls all-interval check)
 #                      and the tuning-ranges monotone/tradeoff radio boxes. app.py pins the q-checkbox
@@ -1056,12 +1057,13 @@ class _GridBuilder:
         # box 𝐋's lone control is the diminuator checkbox at the column's left, over its "replace
         # diminuator" caption: a small square (OPTION_BOX_PX) plus a one-line caption sets the reserve.
         self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
-        # box 𝒄 lays its three controls in ONE row below the complexity list: the predefined-
-        # complexity master dropdown on the left, then the q norm-power field and the dual(q)
-        # display, each captioned (q/dual using the optimization box's value-symbol-caption stack).
-        # q/dual's captions ("interval complexity norm power", "dual norm power") wrap to up to
-        # three lines in their overhanging caption slot — reserve the height up front. The
-        # targets column was widened up front (by _control_floor) to CBOX_W to enclose them.
+        # box 𝒄 lays its controls in ONE row below the complexity list: the predefined-complexity
+        # master dropdown on the left (a preset — only with the presets layer on), then the q norm-power
+        # field and the dual(q) display, each captioned (q/dual using the optimization box's
+        # value-symbol-caption stack). q/dual's captions ("interval complexity norm power", "dual norm
+        # power") wrap to up to three lines in their overhanging caption slot — reserve the height up
+        # front. The targets column was widened up front (by _control_floor) to enclose them — to CBOX_W
+        # with the dropdown, the narrower CBOX_NODROP_W (just q | dual) without it.
         self.cbox_ctrl = self._cbox_show and self.col_open("targets")
         self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + SYMBOL_H + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
         # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target interval
@@ -1287,7 +1289,10 @@ class _GridBuilder:
         if key == "primes" and self._lbox_show:
             floor = LBOX_DIM_W + 2 * BOX_INNER  # box 𝐋: the diminuator checkbox + caption, boxed
         if key == "targets" and self._cbox_show:
-            floor = max(floor, CBOX_W + 2 * BOX_INNER)  # box 𝒄: the complexity + norm choosers, boxed
+            # box 𝒄: the complexity + norm choosers, boxed. The predefined-complexities dropdown is a
+            # preset, so it (and the width it needs) drops out when the presets layer is off.
+            cbox_w = CBOX_W if self.show_presets else CBOX_NODROP_W
+            floor = max(floor, cbox_w + 2 * BOX_INNER)
         if key == "targets" and self.show_presets and self.settings["all_interval"]:
             floor = max(floor, TBOX_W)  # box 𝐓: target chooser + all-interval checkbox, one box
         if (key == "targets" and self.show_optimization and "row:damage" not in self.collapsed
@@ -2301,30 +2306,33 @@ class _GridBuilder:
             sym_y = cy + ROW_H
             cap_y = sym_y + SYMBOL_H
             cap_h = 3 * CAPTION_LINE
-            drop_w = CBOX_DROP_W
             slot_w = CBOX_SLOT_W
-            # the predefined-complexities master dropdown. The dropdown stores the short internal
-            # key ("lp", "copfr", …) but presents the inverted-form display name ("lp (log-product)",
-            # …). While alt. complexity is OFF (the default) it offers ONLY the current complexity (lp for
-            # every scheme today); turning alt. complexity ON opens
-            # the full preset list + the inert "custom" (shown when the fine controls leave the shape
-            # off-preset). The caption hugs its bottom (rather than bottom-aligning with the q/dual
-            # captions further down).
-            complexity_key = service.complexity_name_of(self.tuning_scheme)
-            complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
-            complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
-                                 if self.show_alt_complexity else (complexity_text,))
-            self.cells.append(CellBox("control:complexity", tx, cy, drop_w, PRESET_H,
-                                 "control_select", text=complexity_text, values=complexity_values))
-            self.cells.append(CellBox("caption:complexity", tx, cy + PRESET_H, drop_w,
-                                 CAPTION_LINE, "caption", text="predefined complexities", align="left"))
+            q_slot_x = tx  # 𝑞 leads the row when the predefined-complexities preset is hidden (presets off)
+            # the predefined-complexities master dropdown — a PRESET, so it rides the presets layer (like
+            # the predefined-prescalers preset) on top of box 𝒄's weighting gate. The dropdown stores the
+            # short internal key ("lp", "copfr", …) but presents the inverted-form display name
+            # ("lp (log-product)", …). While alt. complexity is OFF (the default) it offers ONLY the
+            # current complexity (lp for every scheme today); turning alt. complexity ON opens the full
+            # preset list + the inert "custom" (shown when the fine controls leave the shape off-preset).
+            # The caption hugs its bottom (rather than bottom-aligning with the q/dual captions further
+            # down). With the dropdown hidden, 𝑞 takes its leftmost slot so the box hugs the q/dual pair.
+            if self.show_presets:
+                drop_w = CBOX_DROP_W
+                complexity_key = service.complexity_name_of(self.tuning_scheme)
+                complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
+                complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
+                                     if self.show_alt_complexity else (complexity_text,))
+                self.cells.append(CellBox("control:complexity", tx, cy, drop_w, PRESET_H,
+                                     "control_select", text=complexity_text, values=complexity_values))
+                self.cells.append(CellBox("caption:complexity", tx, cy + PRESET_H, drop_w,
+                                     CAPTION_LINE, "caption", text="predefined complexities", align="left"))
+                q_slot_x = tx + drop_w + OPT_COL_GAP
             # the interval-complexity norm power 𝑞, styled to match the optimization box's 𝑝 field (a
             # slot wider than the value cell, value centred, so the italic 𝑞 and the multi-word caption
             # render without overflow). 𝑞 is an ALTERNATE-complexity control — typing a new value
             # switches the scheme's Lq complexity — so it is an editable powerinput only when alt.
             # complexity is on; otherwise the complexity (hence 𝑞) is fixed and it renders as a read-only
             # powerdisplay (the same face, no white box), exactly like the all-interval-locked power 𝑝.
-            q_slot_x = tx + drop_w + OPT_COL_GAP
             q_x = q_slot_x + (slot_w - COL_W) / 2
             q_text = _format_power(service.complexity_norm_power(self.tuning_scheme))
             q_kind = "powerinput" if self.show_alt_complexity else "powerdisplay"
@@ -2332,8 +2340,8 @@ class _GridBuilder:
             self.cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
             self.cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
                                  text="interval complexity norm power"))
-            # the q field + dropdown above always show with box 𝒄; only dual(q) is gated — it is
-            # meaningful only when the scheme is all-interval (the all-interval checkbox is checked)
+            # the q field always shows with box 𝒄 (the dropdown above rides the presets layer); dual(q)
+            # is gated separately — meaningful only when the scheme is all-interval (its checkbox is on)
             if service.is_all_interval(self.tuning_scheme):
                 dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
                 dual_x = dual_slot_x + (slot_w - COL_W) / 2
