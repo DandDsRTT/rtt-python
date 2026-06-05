@@ -2636,7 +2636,7 @@ def index() -> None:
                             .tooltip(tooltips.CHROME_HELP["select_all"])
                         # the dark-mode toggle rides beside select-all (both are app chrome, not Show
                         # layers): a sun/moon icon button showing the theme a click would switch to.
-                        dark_btn = ui.button(on_click=on_dark_toggle) \
+                        dark_btn = ui.button(on_click=on_dark_toggle, color=None) \
                             .props(f"flat dense round icon={_dark_icon()}") \
                             .classes("rtt-darktoggle").mark("darkmode") \
                             .tooltip(tooltips.CHROME_HELP["dark_mode"])
