@@ -2654,15 +2654,11 @@ class _GridBuilder:
                     kind = "ptext"
                 self.cells.append(CellBox(f"ptext:{rkey}:{ckey}", self.col_x[ckey], self.ptext_band_y(rkey),
                                      self.col_w[ckey], self.ptext_height(rkey, ckey), kind, text=text))
-            # the quantities-row ratios get their plain text per column, directly below
-            # each ratio (the mockup), one inline "n/d" per cell — not packed into a set. The held
-            # column (its ratios derived like the commas') carries its own, alongside commas/targets.
-            for ckey, left, ratios in (("commas", self.comma_left, self.comma_ratios), ("targets", self.target_left, self.targets),
-                                       ("held", self.held_left, self.held_ratios), ("detempering", self.detempering_left, self.gens)):
-                if self.tile_open("quantities", ckey):
-                    qy = self.ptext_band_y("quantities")
-                    for i, ratio in enumerate(ratios):
-                        self.cells.append(CellBox(f"ptext:quantities:{ckey}:{i}", left(i), qy, COL_W, PTEXT_H, "ptext", text=ratio))
+            # the quantities row's interval-ratio columns (commas, targets, held, detempering, …)
+            # emit no per-column plain text: their gridded cell already shows the formatted ratio,
+            # so a line repeating it would be a pure duplicate. Only the domain-primes column carries
+            # a quantities-row plain text — "2.3.5", the compact prime-limit notation (from the
+            # service seam above), which the gridded "2 3 5" cells don't show that way.
 
         self.matrix_frame("mapping", "primes", "primes")
         self.matrix_frame("canon", "primes", "canon")

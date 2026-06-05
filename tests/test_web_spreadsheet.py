@@ -1332,15 +1332,15 @@ def test_plain_text_values_adds_a_string_band_under_each_tile():
     assert on["ptext:tuning:primes"].text.startswith("⟨")  # a tuning map
 
 
-def test_quantities_ratios_get_per_column_plain_text_below_each_ratio():
-    cells = {c.id: c for c in _with(plain_text_values=True).cells}
-    # the target ratios get one inline "n/d" per column, directly below each ratio cell
-    assert cells["ptext:quantities:targets:0"].text == "2/1"
-    assert cells["ptext:quantities:targets:2"].text == "3/2"
-    assert cells["ptext:quantities:commas:0"].text == "80/81"
-    # each sits in its own column, aligned under the ratio above it
-    assert cells["ptext:quantities:targets:0"].x == cells["target:0"].x
-    assert cells["ptext:quantities:targets:0"].y > cells["target:0"].y
+def test_quantities_interval_ratios_emit_no_redundant_plain_text():
+    ids = {c.id for c in _with(plain_text_values=True).cells}
+    # the quantities row's interval-ratio columns (commas, targets, held, …) already show the
+    # formatted "n/d" in the gridded cell, so they emit NO duplicate plain-text line below it.
+    assert not any(i.startswith("ptext:quantities:commas") for i in ids)
+    assert not any(i.startswith("ptext:quantities:targets") for i in ids)
+    # the domain-primes column keeps its plain text — "2.3.5" is the compact prime-limit
+    # notation, not a copy of the gridded "2 3 5" cells.
+    assert "ptext:quantities:primes" in ids
 
 
 def test_plain_text_band_sits_below_the_caption_spanning_its_column():
@@ -4486,9 +4486,9 @@ def test_held_column_shows_plain_text_values():
     assert "ptext:tuning:held" in on and "ptext:just:held" in on
     # held just ⇒ the retuning error vanishes
     assert abs(float(on["ptext:retune:held"].text.strip("[]"))) < 1e-3
-    # the quantities tile (the ratio heading the column) gets per-column plain text too,
-    # like the commas / targets columns
-    assert on["ptext:quantities:held:0"].text == "3/2"
+    # the quantities tile (the ratio heading the column) emits NO plain text — the gridded
+    # ratio already is the formatted value, so a duplicate line would be redundant
+    assert "ptext:quantities:held:0" not in on
 
 
 def test_held_column_has_the_full_interval_column_tile_set():
@@ -4606,9 +4606,11 @@ def test_generator_detempering_quantities_row_shows_the_generator_ratios():
     assert cells["detempering:0"].kind == "commaratio"
 
 
-def test_generator_detempering_quantities_plain_text():
-    cells = {c.id: c for c in _with(generator_detempering=True, plain_text_values=True).cells}
-    assert [cells[f"ptext:quantities:detempering:{i}"].text for i in range(2)] == ["2/1", "3/2"]
+def test_generator_detempering_quantities_emits_no_redundant_plain_text():
+    # the detempering ratio heads the column in the gridded quantities row; a plain-text line
+    # below it would just duplicate it, so none is emitted (like commas / targets / held)
+    ids = {c.id for c in _with(generator_detempering=True, plain_text_values=True).cells}
+    assert not any(i.startswith("ptext:quantities:detempering") for i in ids)
 
 
 def test_generator_detempering_prescaling_row_scales_each_vector():

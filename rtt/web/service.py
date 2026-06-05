@@ -807,8 +807,9 @@ def plain_text_values(
     # vector lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
     # are the mapping (mapping/primes) and the comma basis (vectors/commas). The
-    # quantities-row ratios get a per-column plain text in the layout, not here; the
-    # generators (mapping/quantities) carry no plain-text form.
+    # quantities row's only plain text is the domain-primes basis ("2.3.5"), keyed here; its
+    # interval-ratio columns (commas/targets/held/detempering) carry none — their gridded
+    # ratio is already the formatted value. The generators (mapping/quantities) carry none either.
     values = {
         ("quantities", "primes"): ".".join(str(e) for e in db),
         ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
