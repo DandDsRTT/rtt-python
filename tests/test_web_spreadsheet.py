@@ -237,8 +237,7 @@ def test_minus_is_revealed_at_the_last_primes_branch_point_clear_of_its_input():
 def test_minus_tracks_the_new_last_prime_after_a_shrink():
     # the − rides the highest prime's branch point, so it MOVES to the new last column when the
     # domain shrinks (never stranded at the old one). 2.3.5.7 meantone carries it on prime 3;
-    # dropping to 2.3.5 moves it to prime 2. Both shrinks stay proper, so the − shows at each
-    # (contrast test_domain_minus_is_absent_when_the_shrink_would_degenerate, where it does not).
+    # dropping to 2.3.5 moves it to prime 2 — the − shows at each (a standard limit with d > 1).
     wide = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # 2.3.5.7 meantone, d=4
     wlay = spreadsheet.build(wide)
     wcells, wlines = {c.id: c for c in wlay.cells}, {ln.id: ln for ln in wlay.lines}
@@ -265,13 +264,14 @@ def test_domain_minus_is_absent_on_a_nonstandard_subgroup():
     assert "minus" not in cells and "basis_minus" not in cells  # but no inert − on either axis
 
 
-def test_domain_minus_is_absent_when_the_shrink_would_degenerate():
-    # augmented tempers out 128/125; dropping prime 5 would leave prime 2 tempered to a unison (an
-    # improper, degenerate temperament the engine rejects), so the − is withheld though d > 1.
+def test_domain_minus_shows_even_when_the_shrink_would_degenerate():
+    # augmented tempers out 128/125; dropping prime 5 leaves prime 2 tempered to a unison (a
+    # degenerate result) — but that is allowed, just as tempering one out via the comma + is, so the
+    # − shows. Only a nonstandard subgroup or d == 1 withholds it (not a would-be degenerate result).
     augmented = service.from_comma_basis(((7, 0, -3),))  # 2.3.5, mapping shrinks to ((0, 1),)
     cells = {c.id for c in spreadsheet.build(augmented).cells}
     assert {"prime:0", "prime:2"} <= cells
-    assert "minus" not in cells and "basis_minus" not in cells
+    assert "minus" in cells and "basis_minus" in cells  # the − is offered on both axes
 
 
 def test_domain_plus_is_absent_on_a_nonstandard_subgroup():

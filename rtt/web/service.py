@@ -1412,17 +1412,13 @@ def shrink_domain(state: TemperamentState) -> TemperamentState:
 
 
 def can_shrink_domain(state: TemperamentState) -> bool:
-    """Whether the domain − applies to ``state``: a standard prime limit with a prime to
-    spare, and only when the smaller temperament is still proper — dropping the top prime
-    can leave a lower prime tempered to a unison (an improper, degenerate result), which the
-    control then withholds. The single source of truth for both the editor's shrink guard and
-    the renderer's decision to show the − at all (so the button never appears inert)."""
-    if not (is_standard_domain(state.domain_basis) and state.d > 1):
-        return False
-    try:
-        return is_proper_temperament(shrink_domain(state).mapping)
-    except Exception:
-        return False
+    """Whether the domain − applies to ``state``: a standard prime limit (the prime-walk control
+    doesn't fit a nonstandard subgroup) with a prime to spare (a domain keeps at least one prime).
+    Dropping the top prime may leave a lower prime tempered to a unison — a degenerate result — but
+    that is allowed, just as tempering one out via the comma + is; such states render and tune. The
+    single source of truth for both the editor's shrink guard and the renderer's decision to show
+    the − (so the button appears exactly when a click would shrink)."""
+    return is_standard_domain(state.domain_basis) and state.d > 1
 
 
 def just_intonation(domain_basis) -> TemperamentState:

@@ -610,16 +610,19 @@ def test_standard_domain_can_still_expand():
     assert editor.state.d == 4 and editor.state.domain_basis == (2, 3, 5, 7)
 
 
-def test_cannot_shrink_below_one_dimension():
-    editor = Editor()
-    assert editor.can_shrink is True  # starts at d=3 (5-limit)
+def test_shrinking_runs_down_to_one_prime_through_degenerate_states():
+    # the − shrinks any standard prime limit down to a single prime — even through degenerate steps
+    # (the remaining structure tempering a prime to a unison), parity with the comma + which reaches
+    # such states freely. A domain must keep one prime, so d == 1 is the hard floor.
+    editor = Editor()  # meantone, d=3
+    assert editor.can_shrink is True
     editor.shrink()
-    assert editor.state.d == 2  # -> 2.3
-    # shrinking to a single prime would temper out the remaining structure (a degenerate, improper
-    # result), so the control is withheld rather than producing it
-    assert editor.can_shrink is False
+    assert editor.state.d == 2 and editor.can_shrink is True  # 2.3 — still shrinkable now
+    editor.shrink()
+    assert editor.state.d == 1  # down to just 2/1 (the degenerate result stands)
+    assert editor.can_shrink is False  # zero primes is not a domain — the floor
     editor.shrink()  # guarded — a no-op
-    assert editor.state.d == 2
+    assert editor.state.d == 1
 
 
 def test_add_remove_mapping_row_change_rank_holding_dimensionality():
@@ -1183,16 +1186,6 @@ def test_editing_to_a_degenerate_temperament_is_rejected():
     assert editor.state.mapping == before
     assert editor.try_edit_comma_basis_text("[1 0 0⟩") is False  # tempering out 2/1 sends prime 2 to a unison
     assert editor.state.mapping == before
-
-
-def test_can_shrink_is_false_when_the_shrink_would_degenerate():
-    # the domain − is offered only when the smaller temperament is still proper; shrinking
-    # [2 0 0],[0 1 1] drops prime 5 and leaves prime 3 tempered to a unison, so the control is off.
-    editor = Editor()
-    editor.edit_mapping([[2, 0, 0], [0, 1, 1]])
-    assert editor.can_shrink is False
-    editor.edit_mapping([[1, 1, 0], [0, 1, 4]])  # ordinary meantone shrinks fine
-    assert editor.can_shrink is True
 
 
 def test_remove_comma_un_tempers_the_last_comma_to_just_intonation():
