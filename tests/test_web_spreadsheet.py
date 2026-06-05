@@ -317,9 +317,9 @@ def _all_on():
     return s
 
 
-def test_interval_columns_carry_drag_grips_and_drop_slots():
-    # each interval column gets a drag grip (the drag-and-drop handle) and an insert-before
-    # drop slot per gap — the slot one past the last column appends. They ride the fan band.
+def test_interval_columns_carry_a_drag_grip_per_column():
+    # each existing interval column gets a drag grip (the drag-and-drop handle, also the drop
+    # target). Appending / dropping into an empty list rides the list's + (not a grid cell).
     ed = Editor()
     ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])  # two held intervals
     ed.set_interest_vectors([(1, 1, -1)])          # one interval of interest
@@ -328,49 +328,44 @@ def test_interval_columns_carry_drag_grips_and_drop_slots():
     assert cells["grip:held:0"].kind == "colgrip" and cells["grip:held:1"].kind == "colgrip"
     assert "grip:held:2" not in cells  # no grip past the last column
     assert cells["grip:interest:0"].kind == "colgrip"
-    assert all(cells[f"drop:held:{g}"].kind == "dropslot" for g in range(3))  # gaps 0, 1, append
-    assert "drop:held:3" not in cells
-    assert all(f"drop:interest:{g}" in cells for g in range(2))  # one column → gaps 0, append
 
 
-def test_a_drag_grip_rides_its_columns_branch_point_on_the_fan():
-    # the grip is a ⠿ handle on each column's branch-point gridline (the fan sub-axis), beside the
-    # ± where the column branches — high in the visible fan strip ABOVE the freeze seam, so the
-    # frozen colhead doesn't clip it. The drop slot, by contrast, lives in the body below the seam.
+def test_a_drag_grip_rides_the_fan_band_below_the_minus():
+    # the grip is a ⠿ on each column's sub-axis gridline, in the reserved fan band BETWEEN the −
+    # above (at the branch point) and the first tile below — above the freeze seam, so the frozen
+    # colhead doesn't clip it.
     ed = Editor()
     ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
     lay = spreadsheet.build(ed.state, _all_on(), held_vectors=ed.held_vectors)
     cells = {c.id: c for c in lay.cells}
-    sub = {ln.id: ln for ln in lay.lines}["v:held:1"].pos  # column 1's branch-point gridline
-    grip, slot = cells["grip:held:1"], cells["drop:held:1"]
-    assert abs((grip.x + grip.w / 2) - sub) < 0.51   # centred on the branch-point gridline
-    assert grip.y + grip.h <= lay.freeze_y + 0.51     # rides the fan ABOVE the seam (not clipped)
-    assert slot.y >= lay.freeze_y                      # the drop slot sits in the body (un-clipped)
+    sub = {ln.id: ln for ln in lay.lines}["v:held:1"].pos  # column 1's gridline
+    grip, minus = cells["grip:held:1"], cells["held_minus:1"]
+    assert abs((grip.x + grip.w / 2) - sub) < 0.51   # centred on the column's gridline
+    assert grip.y > minus.y + 0.5                     # sits BELOW the − (which rides the branch point above)
+    assert grip.y + grip.h <= lay.freeze_y + 0.51     # ...and above the seam (in the frozen fan, not clipped)
 
 
-def test_an_empty_interval_list_still_offers_an_append_drop_slot():
-    # with no intervals yet you can still drag one IN: the lone append slot (gap 0) is present,
-    # and there is nothing to drag out (no grip)
+def test_an_empty_interval_list_has_no_grip_but_its_plus_can_receive_a_drop():
+    # with no intervals yet there's nothing to drag out (no grip); a column can still be dragged
+    # IN by dropping on the list's + (interest_plus), which doubles as the append target
     cells = {c.id for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
-    assert "drop:interest:0" in cells and "grip:interest:0" not in cells
+    assert "grip:interest:0" not in cells and "interest_plus" in cells
 
 
-def test_comma_grips_need_a_spare_comma_but_drops_are_always_offered():
-    # one comma: dragging it out would empty the basis (parity with the −), so no grip — but
-    # another interval can still be tempered IN, so the drop slots stay
+def test_comma_grips_need_a_spare_comma():
+    # one comma: dragging it out would empty the basis (parity with the −), so no grip
     one = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
     assert "grip:commas:0" not in one
-    assert "drop:commas:0" in one and "drop:commas:1" in one  # the gap before + the append
     # two commas: each is now draggable out
     two = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),)), _all_on()).cells}  # r=1, n=2
     assert "grip:commas:0" in two and "grip:commas:1" in two
 
 
-def test_targets_have_no_drag_controls_in_all_interval():
+def test_targets_have_no_drag_grips_in_all_interval():
     cells = {c.id for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), tuning_scheme="minimax-S").cells}
-    assert not any(c.startswith("grip:targets") or c.startswith("drop:targets") for c in cells)
+    assert not any(c.startswith("grip:targets") for c in cells)
 
 
 def test_editable_vector_tiles_get_editable_quantities_ratios():

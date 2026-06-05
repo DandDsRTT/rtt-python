@@ -35,6 +35,8 @@ HEADER_H = 36  # column-header height — two text lines tall, so a multi-word t
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 BTN = TOGGLE  # a domain +/− control matches the fold toggle it now sits beside on the fan
+GRIP_BAND = 16  # extra fan-out room reserved below the ± for the column reorder-grips (the ⠿ ride
+# this band along the gridlines, between the − above and the first tile below)
 TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (off the edges and content)
 CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mockup —
 # ~0.2 of the cell height; the CSS .rtt-caption must use the same size)
@@ -1001,7 +1003,10 @@ class _GridBuilder:
         # Branching (trunk/bus/verticals) starts just below the column nodes so no
         # line pokes up past them; with names hidden it starts at the very top.
         self.branch_top_y = self.col_node_y + TOGGLE
-        rows_top_y = self.branch_top_y + GAP  # top of the first row band (counts when shown, else quantities)
+        # the first row band sits a GRIP_BAND lower than the bare fan gap, reserving room on the
+        # fan for the column reorder-grips (the ⠿ ride this band along the gridlines, between the −
+        # above and the first tile below). freeze_y (the seam) drops by the same amount.
+        rows_top_y = self.branch_top_y + GAP + GRIP_BAND  # top of the first row band (counts/quantities)
         # The grey tiles overhang their cells by PAD and sit over the gridlines, so the
         # *visible* fan segment runs from a bus only to the tile edge. FAN places each bus
         # midway between the node/foot edge and the tile edge (PAD inside the cell), so
@@ -1835,36 +1840,27 @@ class _GridBuilder:
                 if ckey in self.plus_stub_x:
                     branch_plus(cid, ckey, cid)
 
-            # drag-and-drop controls. The GRIP (drag source) rides each column's branch point on the
-            # fan — a BTN-sized ⠿ on the sub-axis gridline, beside the ± where the column branches
-            # (its natural home; a body grip overlapped the audio row). It sits high in the visible
-            # fan strip (above the freeze seam), like the + stub, so the frozen colhead doesn't clip
-            # it. Its column's − reveals just LEFT of it (CSS .rtt-minus-side) so the two don't fight.
-            # The DROP SLOTS, by contrast, live in the body (below the seam, over each column from the
-            # ratio down) so they're un-clipped and easy to hit; insert-before, the slot one past the
-            # last appends. They only catch mid-drag (CSS gates pointer-events on the dragging state),
-            # so idle they never mask the cells. Commas can be dragged OUT only with one to spare (the
-            # basis must never empty, like the comma −); the target list is inert in all-interval.
-            seam = self.branch_top_y + GAP - PAD  # == Layout.freeze_y (the frozen colhead's bottom)
-            slot_h = qy + ROW_H - seam  # the body drop zone: the strip above the ratio + the ratio cell
+            # drag-and-drop reorder grips: a ⠿ on each interval column, riding the GRIP_BAND room on
+            # the fan — along the column's sub-axis gridline, in the band BETWEEN the − above (at the
+            # branch point) and the first tile below. It is BOTH the drag source AND the drop target
+            # (drop one column's grip on another to move it there); its column's + doubles as the
+            # append / empty-list target (see _make_append_target). The grips sit above the freeze
+            # seam (the band is reserved within the frozen fan), so the colhead doesn't clip them.
+            # Commas can be dragged OUT only with one to spare (the basis must never empty, like the
+            # comma −); the target list is inert in all-interval (the auto Tₚ = I set isn't curated).
+            grip_top = self.branch_top_y + GAP - PAD  # top of the reserved grip band (the old seam)
 
-            def drag_controls(ckey, n, *, draggable=True):
-                if draggable:
-                    for i in range(n):  # a ⠿ grip on the column's branch point (the fan sub-axis)
-                        self.cells.append(CellBox(f"grip:{ckey}:{i}", self.sub_axis_x(ckey, i) - BTN / 2,
-                                             self.fanout_y - BTN / 2, BTN, BTN, "colgrip", comma=i))
-                for g in range(n + 1):  # a body drop slot per gap, plus one past the last (append)
-                    gx = self.col_plus_x(ckey) if g == n else self.sub_axis_x(ckey, g)
-                    self.cells.append(CellBox(f"drop:{ckey}:{g}", gx - COL_W / 2, seam,
-                                         COL_W, slot_h, "dropslot", comma=g))
+            def drag_controls(ckey, n):
+                for i in range(n):  # a full-width ⠿ grip centred on the column's gridline, in the band
+                    self.cells.append(CellBox(f"grip:{ckey}:{i}", self.sub_axis_x(ckey, i) - COL_W / 2,
+                                         grip_top, COL_W, GRIP_BAND, "colgrip", comma=i))
 
-            # gate on _plus_shows — the same "this list's fan (with its +) is visible" test the +
-            # uses, so an empty-but-open held/interest still gets its append slot and the target
-            # list is skipped in all-interval, both for free.
+            # gate on _plus_shows — the same "this list's fan (with its +) is visible" test the + uses.
+            # Commas need a spare (nc > 1) to drag one out; the others grip every existing column.
             counts = {"commas": self.nc, "targets": self.k, "held": self.nh, "interest": self.mi}
             for ckey in ("commas", "targets", "held", "interest"):
                 if self._plus_shows(ckey):
-                    drag_controls(ckey, counts[ckey], draggable=ckey != "commas" or self.nc > 1)
+                    drag_controls(ckey, counts[ckey] if (ckey != "commas" or self.nc > 1) else 0)
 
         # generator ratios (aligned with the mapping rows they label) + the mapping
         # matrix and its mapped target interval list
@@ -2766,7 +2762,7 @@ class _GridBuilder:
         # overhangs its cells by. So the branching + ± ride the frozen header/row-band and only
         # the value tiles scroll beneath them.
         return Layout(self.total_w, self.total_h, tuple(self.lines), tuple(self.blocks), tuple(self.cells),
-                      freeze_x=self.node_edge + GAP - PAD, freeze_y=self.branch_top_y + GAP - PAD,
+                      freeze_x=self.node_edge + GAP - PAD, freeze_y=self.branch_top_y + GAP + GRIP_BAND - PAD,
                       right_overhang=right_overhang)
 
 

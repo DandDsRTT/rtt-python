@@ -81,7 +81,6 @@ READONLY_KINDS: frozenset[str] = frozenset({
     "genratio", "commaratio", "mathexpr", "ptext", "ptextpending",
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",
-    "dropslot",  # a transient drop target — no hover text (its highlight is the only feedback)
 })
 
 # The lone read-only OUTPUT values that nonetheless carry help: the optimization objective's

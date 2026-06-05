@@ -185,10 +185,6 @@ _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
 # .rtt-gridbody has scrolled off zero on that axis, toggled as rtt-scrolled-x/y on .rtt-app. scroll
 # doesn't bubble → capture phase, so the body's scroll events are still caught here.
 _FREEZE_JS = (_ASSETS / "freeze.js").read_text(encoding="utf-8")
-# delegated drag-and-drop glue for the interval-column grips / drop slots (see drag.js): arms the
-# drop slots while a grip is dragging, prevents dragover default so a drop fires, and highlights
-# the hovered slot — all client-side; the pick-up and drop themselves cross to Python.
-_DRAG_JS = (_ASSETS / "drag.js").read_text(encoding="utf-8")
 
 
 def _option_box_svg(fill: str | None, *, box: str = "#fff", border: str = "#555") -> str:
@@ -1055,7 +1051,6 @@ class _Reconciler:
         self.cell_kinds["target_minus"] = _KindHandlers(self._build_target_minus)
         self.cell_kinds["target_plus"] = _KindHandlers(self._build_target_plus)
         self.cell_kinds["colgrip"] = _KindHandlers(self._build_colgrip)
-        self.cell_kinds["dropslot"] = _KindHandlers(self._build_dropslot)
         self.cell_kinds["speaker"] = _KindHandlers(self._build_speaker)
         for _audio_ctrl in _AUDIO_CTRLS:  # audio_wave / audio_mode / audio_hold / audio_root
             self.cell_kinds[_audio_ctrl] = _KindHandlers(self._build_audio_ctrl)
@@ -1817,19 +1812,20 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
 
     def _build_comma_minus(self, cb, wrap):  # drop the last comma, or cancel the pending draft
-        wrap.classes("rtt-minus-zone rtt-minus-side")  # reveal left of the column's branch-point grip
+        wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.remove_comma))
 
     def _build_comma_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_comma))
+        self._make_append_target(wrap, "commas")
 
     def _build_list_minus(self, cb, wrap, cancel, remove):
         # an interval-list column's − (interest / held / target): the draft column's cancels the
         # draft, every other drops just its interval (cb.comma) — each is independently removable
         action = cancel if cb.id.endswith(":pending") else (lambda idx=cb.comma: remove(idx))
-        wrap.classes("rtt-minus-zone rtt-minus-side")  # reveal left of the column's branch-point grip
+        wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(action))
 
@@ -1839,6 +1835,7 @@ class _Reconciler:
     def _build_interest_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_interest))
+        self._make_append_target(wrap, "interest")
 
     def _build_held_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_held, self._editor.remove_held)
@@ -1846,6 +1843,7 @@ class _Reconciler:
     def _build_held_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_held))
+        self._make_append_target(wrap, "held")
 
     def _build_target_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_target, self._editor.remove_target)
@@ -1853,24 +1851,27 @@ class _Reconciler:
     def _build_target_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_target))
+        self._make_append_target(wrap, "targets")
 
-    def _build_colgrip(self, cb, wrap):  # a per-column drag handle on the fan (the drag source)
-        # the same prominent ⠿ grip the row / drag-to-combine handles use (the shared .rtt-drag-handle
-        # + .rtt-grip, pointer-events:none so the drag starts from the draggable wrap, not the icon);
-        # .rtt-colgrip lifts it above the − zone and centres it above its column
+    def _build_colgrip(self, cb, wrap):  # a per-column drag handle: drag one column's grip onto
+        # another to MOVE/reorder it. Mirrors the proven drag-to-combine handle EXACTLY (which the
+        # user confirmed works), so it relies on no global drag.js / dragging-class: the grip is BOTH
+        # source AND drop target, with a per-element dragover preventDefault (client-side, so it
+        # doesn't round-trip per move) marking it a valid target. The dragged column's (list, idx) is
+        # held server-side from dragstart through drop. Dropping grip A on grip B moves A to B's slot.
         _, lst, idx = cb.id.split(":")  # "grip:{list}:{idx}"
         wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
         wrap.on("dragstart", lambda _=None, l=lst, i=int(idx): self._cb.on_drag_start(l, i))
         wrap.on("dragend", lambda _=None: self._cb.on_drag_end())
+        wrap.on("dragover", js_handler="(e) => e.preventDefault()")
+        wrap.on("drop.prevent", lambda _=None, l=lst, i=int(idx): self._cb.on_drop(l, i))
         ui.icon("drag_indicator").classes("rtt-grip")
 
-    def _build_dropslot(self, cb, wrap):  # a per-gap drop target (insert-before this gap)
-        # drop.prevent fires the move (the .prevent stops the browser's default drop); the
-        # dragover.preventDefault that marks this a valid target, the dragging-state class and the
-        # hover highlight are handled client-side by _DRAG_JS (no per-frame server round-trips)
-        _, lst, gap = cb.id.split(":")  # "drop:{list}:{gap}"
-        wrap.classes("rtt-dropslot")
-        wrap.on("drop.prevent", lambda _=None, l=lst, g=int(gap): self._cb.on_drop(l, g))
+    def _make_append_target(self, wrap, lst):  # a column list's + doubles as the "drop here to append"
+        # target, so an interval can be dragged to the END of a list or INTO an empty one (which has
+        # no column grips). Same per-element pattern as the grips; on_drop(None) means append.
+        wrap.on("dragover", js_handler="(e) => e.preventDefault()")
+        wrap.on("drop.prevent", lambda _=None, l=lst: self._cb.on_drop(l, None))
 
     def _build_speaker(self, cb, wrap):  # play this pitch per its tile's mode (client-side engine)
         tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
@@ -1909,8 +1910,6 @@ def index() -> None:
     ui.add_body_html(f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>")
     # keep the frozen title bands pinned to the scrolling grid pane (see _FREEZE_JS)
     ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
-    # the interval-column drag-and-drop glue (see _DRAG_JS)
-    ui.add_body_html(f"<script>{_DRAG_JS}</script>")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
 
@@ -2379,10 +2378,10 @@ def index() -> None:
         rec.preview_source = None
         render()
 
-    # drag-and-drop: a grip's dragstart records the column it picked up; a drop slot's drop reads it
-    # and moves the interval into that gap (between/within the interval lists). The whole gesture is
-    # one editor edit (one undo step). The dragging-state class + hover highlight are client-side
-    # (_DRAG_JS); only the pick-up and the drop cross to Python.
+    # drag-and-drop reorder: a grip's dragstart records the column it picked up; dropping it onto
+    # another column's grip (drop reads the recorded source) moves it to that column's slot, or onto a
+    # list's + appends it (into an empty list or at the end). One editor edit = one undo step. Same
+    # proven per-element pattern as drag-to-combine — no global script, no dragging-class.
     drag_src = [None]  # (list, idx) of the column being dragged, or None
 
     def on_drag_start(lst, idx):
@@ -2391,10 +2390,14 @@ def index() -> None:
     def on_drag_end():
         drag_src[0] = None  # a cancelled / completed drag leaves no stale source
 
-    def on_drop(dst_list, gap):
+    def on_drop(dst_list, dst_idx):
+        # dst_idx is the dropped-on column's index (insert there), or None from a list's + (append)
         src = drag_src[0]
         drag_src[0] = None
-        if src and editor.move_interval(src[0], src[1], dst_list, gap):
+        if not src:
+            return
+        idx = dst_idx if dst_idx is not None else (1 << 30)  # None = append (insert clamps to the end)
+        if editor.move_interval(src[0], src[1], dst_list, idx):
             render()  # the reconciler reflows the affected lists into their new shape
     # wire the reconciler's callbacks now that the event handlers exist: the cell
     # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
