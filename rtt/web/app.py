@@ -1751,6 +1751,9 @@ class _Reconciler:
     def _begin_row_drag(self, idx):
         self._row_drag = idx
         self._cb.combine_begin()
+        self._preview_row_drop(idx)  # at pick-up the row is ON ITSELF — preview the self-double now,
+        # because the browser fires no dragenter on the element a drag STARTED from (so a drop-on-self
+        # would otherwise never preview); a dragenter onto any other row replaces it.
 
     def _end_row_drag(self):
         self._row_drag = None
@@ -1803,6 +1806,8 @@ class _Reconciler:
     def _begin_col_drag(self, group, idx):
         self._col_drag = (group, idx)
         self._cb.combine_begin()
+        self._preview_int_drop(group, idx)  # preview the self-square at pick-up (no dragenter fires on
+        # the drag's own source element); a dragenter onto another interval in the column replaces it.
 
     def _end_col_drag(self):
         self._col_drag = None

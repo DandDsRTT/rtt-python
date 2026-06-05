@@ -1203,19 +1203,20 @@ async def test_dragging_over_a_row_previews_the_change_then_reverts(user: User) 
     assert "rtt-preview-change" not in _wrap_classes(user, "gen:0")  # ...and the ring cleared
 
 
-async def test_dragging_a_row_onto_itself_previews_doubling_it_then_reverts(user: User) -> None:
-    # the "absolutely critical" self-drop preview: hovering a row's OWN handle previews doubling it
-    # (row += itself, a contorted mapping) — exactly the preview a cross-row drop gets. Earlier this
-    # was a no-op; now meantone row 0 (1,1,0) previews (2,2,0) and reverts when released.
+async def test_picking_up_a_row_previews_dropping_it_on_itself(user: User) -> None:
+    # the "absolutely critical" self-drop preview. The browser fires NO dragenter on the element a
+    # drag starts from, so a drop-on-self would never preview via hover — the self-double must show at
+    # PICK-UP (dragstart alone, no dragenter). Meantone row 0 (1,1,0) previews (2,2,0) on pick-up.
     await _enable(user, "drag to combine")
     row0 = lambda: [_cell_child(user, f"cell:mapping:0:{p}").value for p in range(3)]
     assert row0() == ["1", "1", "0"]
     h = lambda i: set(user.find(marker=f"map_drag:{i}").elements)
-    UserInteraction(user, h(0), None).trigger("dragstart")          # pick up row 0...
-    UserInteraction(user, h(0), None).trigger("dragenter.prevent")  # ...and hover its OWN handle
-    assert row0() == ["2", "2", "0"]  # previews doubling itself
-    UserInteraction(user, h(0), None).trigger("dragend")            # release → revert
+    UserInteraction(user, h(0), None).trigger("dragstart")  # pick up row 0 — no hover needed
+    assert row0() == ["2", "2", "0"]  # previews doubling itself immediately
+    assert "rtt-preview-change" in _wrap_classes(user, "gen:0")  # the changed gen ratio rings too
+    UserInteraction(user, h(0), None).trigger("dragend")    # release → revert
     assert row0() == ["1", "1", "0"]  # reverted, nothing committed
+    assert "rtt-preview-change" not in _wrap_classes(user, "gen:0")
 
 
 async def test_dropping_a_row_onto_itself_doubles_it(user: User) -> None:
@@ -1241,6 +1242,19 @@ async def test_dragging_an_interval_onto_itself_squares_it(user: User) -> None:
     UserInteraction(user, handle(0), None).trigger("drop.prevent")  # ...and drop it onto ITSELF
     await user.should_see(marker="target:0")
     assert Fraction(tval(0)) == Fraction(before0) * Fraction(before0)  # target 0 is its own square
+
+
+async def test_picking_up_an_interval_previews_squaring_it(user: User) -> None:
+    # the column twin of the pick-up preview: grabbing an interval previews its own square at once
+    # (no dragenter fires on the drag's source), and releasing reverts it.
+    await _enable(user, "drag to combine")
+    tval = lambda i: _cell_child(user, f"target:{i}").value
+    before0 = tval(0)
+    handle = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)
+    UserInteraction(user, handle(0), None).trigger("dragstart")  # pick up target 0 — no hover
+    assert Fraction(tval(0)) == Fraction(before0) * Fraction(before0)  # previews its own square
+    UserInteraction(user, handle(0), None).trigger("dragend")    # release → revert
+    assert tval(0) == before0
 
 
 # --- tier 3: the #3 drift guard. _make_cell builds each cell-kind, render() fills each kind,
