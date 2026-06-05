@@ -167,7 +167,7 @@ _ID_HELP: dict[str, str] = {
 _PRESET_HELP: dict[str, str] = {
     "temperament": "Load a named temperament preset — sets the mapping and comma basis.",
     "tuning": "Choose a named tuning scheme (e.g. minimax-S).",
-    "target": "Choose the target-interval set and its prime limit.",
+    "target": "Choose the target-interval set and its limit — an integer limit for the triangle (TILT), an odd limit for the diamond (OLD).",
     "prescaler": "Choose a predefined prescaler — the per-prime weighting applied before optimizing.",
 }
 

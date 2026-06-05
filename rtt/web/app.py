@@ -1715,6 +1715,12 @@ class _Reconciler:
                 num = ui.input(value=_limit_text(limit),
                         on_change=lambda e: self._cb.on_target_change(limit_changed=True)) \
                     .props('dense borderless hide-bottom-space placeholder="-" inputmode=numeric debounce=300').classes("rtt-preset-num")
+                # make the limit input CONTROLLED (ui.input defaults loopback off, leaving the box
+                # uncontrolled during typing). Off, the server can't overwrite what was typed, so a
+                # rejected non-number couldn't be reverted nor a value reddened-in-place. On, the
+                # server's value always wins — debounce keeps the echo to once-per-settled-entry.
+                num.LOOPBACK = True
+                num._props['loopback'] = True
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
                         on_change=lambda e: self._cb.on_target_change(limit_changed=False)) \
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
@@ -1775,7 +1781,7 @@ class _Reconciler:
             _set_offlist_prompt(sel, family)
             num.set_enabled(not cb.disabled)  # all-interval greys+locks the chooser (it also shows "-")
             sel.set_enabled(not cb.disabled)
-            self._clear_target_limit_error(num)  # a committed limit is always valid -> drop any red flag
+            self._sync_target_limit_error(num, family, limit)  # red iff the shown limit is invalid (even OLD)
         elif cb.id == "preset:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
             # option list widens/narrows as alt-complexities flips, so refresh it too
             options = list(presets.prescaler_options(self._editor.settings["alt_complexity"]))
@@ -1796,19 +1802,19 @@ class _Reconciler:
             self.selects[cb.id].set_options(options, value=scheme)
             _set_offlist_prompt(self.selects[cb.id], scheme)
 
-    def flag_target_limit_error(self, num, message):
-        """Red-flag the target chooser's limit field and point its tooltip at the reason (an even
-        OLD limit, or a non-whole number). The handler returns without re-rendering, so the flag
-        persists until a later render restores the committed (always-valid) limit."""
-        num.classes(add="rtt-limit-error")
+    def _sync_target_limit_error(self, num, family, limit):
+        """Render-driven flag for the target chooser's limit field: when the DISPLAYED
+        ``(family, limit)`` is invalid (an even limit for the odd-limit diamond), redden the field
+        and point its tooltip at the reason; otherwise clear it and restore the normal help. Driven
+        from the render (not set imperatively in the handler) so it survives every re-render — an
+        imperative flag was wiped the moment anything re-rendered (e.g. ui.select's own validation)."""
+        problem = service.target_limit_problem(family, limit)
+        num.classes(add="rtt-limit-error" if problem else "",
+                    remove="" if problem else "rtt-limit-error")
         if self.target_limit_tip is not None:
-            self.target_limit_tip.set_text(message)
-
-    def _clear_target_limit_error(self, num):
-        """Drop the limit field's red flag and restore the chooser's normal hover help."""
-        num.classes(remove="rtt-limit-error")
-        if self.target_limit_tip is not None:
-            self.target_limit_tip.set_text(tooltips.control_help("preset", "preset:target"))
+            self.target_limit_tip.set_text(
+                tooltips.target_limit_help(problem) if problem
+                else tooltips.control_help("preset", "preset:target"))
 
     def _build_control_select(self, cb, wrap):  # a weighting chooser (complexity / norm / weight slope)
         self.selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
@@ -2488,26 +2494,27 @@ def index() -> None:
         render()
 
     def on_target_change(limit_changed=False):
-        # the target chooser is a numeric limit + a TILT/OLD family; compose them into
-        # a spec ("9-TILT", or just "TILT" when the limit is blank). An incomplete or
-        # out-of-range limit (one that resolves to no intervals) is held without
-        # disturbing the grid, mirroring how a half-typed mapping cell is ignored.
+        # the target chooser is a numeric limit + a TILT/OLD family; compose them into a spec
+        # ("9-TILT", or just "TILT" when the limit is blank). Two kinds of bad entry, handled
+        # differently:
+        #   - a NON-NUMBER ("whole") is never accepted: toast and re-render, which reverts the field
+        #     to the last committed value (you can't end up with garbage in the box).
+        #   - an EVEN limit for the odd-limit diamond ("odd") IS committed (so the family pick sticks
+        #     and the number stays put), but the field is reddened by the render (see
+        #     _sync_target_limit_error) with a tooltip saying it must be odd. A directly TYPED even
+        #     limit also toasts; merely switching the family to OLD over an even limit only reddens.
         if building[0]:
             return
         num, sel = rec.selects["preset:target"]
         family = sel.value or "TILT"
-        # the odd-limit diamond (OLD) needs an odd limit; any limit must be a whole number. A bad
-        # entry reddens the field with an explaining tooltip and is NOT applied (the grid keeps the
-        # last valid set, like a half-typed cell). Switching the family to OLD over an even limit
-        # reddens it too; only a directly TYPED bad limit also toasts.
         problem = service.target_limit_problem(family, num.value)
-        if problem:
-            message = tooltips.target_limit_help(problem)
-            rec.flag_target_limit_error(num, message)
-            if limit_changed:
-                ui.notify(message, type="negative", position="top")
+        if problem == "whole":
+            # a non-number is never accepted: toast and re-render, which restores the committed
+            # value (the input is loopback-controlled, so the server's value overwrites the garbage)
+            ui.notify(tooltips.target_limit_help("whole"), type="negative", position="top")
+            render()
             return
-        # past the validator the text is blank or a whole number (possibly "6.0"): float→int is safe
+        # blank or a whole number (possibly "6.0"): float→int is safe past the validator
         text = (num.value or "").strip()
         spec = f"{int(float(text))}-{family}" if text else family
         try:
@@ -2516,7 +2523,9 @@ def index() -> None:
             valid = False
         if not valid:
             return
-        editor.set_target_spec(spec)  # valid -> render() clears the red flag via _update_preset
+        if problem == "odd" and limit_changed:  # a typed even OLD limit toasts; a family switch only reddens
+            ui.notify(tooltips.target_limit_help("odd"), type="negative", position="top")
+        editor.set_target_spec(spec)  # commit (even an even OLD limit) so the pick sticks; render reddens it
         render()
 
     def on_control_select(cid, value):

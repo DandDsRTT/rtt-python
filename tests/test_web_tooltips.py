@@ -114,6 +114,14 @@ def test_overloaded_kinds_resolve_to_distinct_text_per_role():
     assert _help("preset", "preset:tuning:gens") == _help("preset", "preset:tuning")
 
 
+def test_target_preset_help_describes_an_integer_or_odd_limit_not_a_prime_limit():
+    # the target chooser's limit is an integer limit (the TILT triangle) or an odd limit (the OLD
+    # diamond), never a prime limit — an earlier wording wrongly called it a prime limit.
+    help_text = tooltips.control_help("preset", "preset:target")
+    assert "prime limit" not in help_text
+    assert "integer limit" in help_text and "odd limit" in help_text
+
+
 def test_objective_help_names_a_different_quantity_per_mode():
     # the optimization objective is a read-only value but still carries help, and that help must
     # track the scheme: target-based it is the minimized damage ⟪𝐝⟫ₚ over the target list;
