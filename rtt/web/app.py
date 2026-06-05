@@ -1013,6 +1013,29 @@ _TEMP_HOVER_DELEGATION = """
 """
 
 
+# A Quasar tooltip (ui.tooltip / .tooltip()) shows on its anchor element's `mouseenter` and hides on
+# the matching `mouseleave` (QTooltip.configureAnchorEl binds exactly those two on desktop). That
+# leaves it stranded whenever a click REMOVES or REFLOWS the anchor before the pointer leaves it: the
+# +/- buttons rebuild the grid and slide the pressed control out from under a stationary cursor, so no
+# `mouseleave` ever fires and the hover help hangs on screen with nothing to dismiss it. Pressing a
+# control should drop its tooltip regardless, so this one capture-phase `pointerdown` listener
+# synthesizes the `mouseleave` Quasar listens for, up the ancestor chain from the pressed node —
+# whichever ancestor is the anchor then hides its tooltip through Quasar's own delayHide, BEFORE the
+# click round-trips and the grid reflows. It fires `mouseleave` only (never `blur`): the editable
+# cells' blur-commit handlers must stay untouched, and QTooltip is hover-shown, so leave is enough.
+_TOOLTIP_DISMISS_JS = """
+(() => {
+  if (window.__rttTipDismiss) return;
+  window.__rttTipDismiss = true;
+  document.addEventListener('pointerdown', (e) => {
+    for (let el = e.target; el instanceof Element; el = el.parentElement) {
+      el.dispatchEvent(new MouseEvent('mouseleave', {bubbles: false}));
+    }
+  }, true);
+})()
+"""
+
+
 class _GroupedSelect(ui.select):
     """A chooser whose group-divider rows are non-selectable. Each option whose value
     satisfies ``is_divider`` is handed to Quasar with ``disable=True``, so its q-item
@@ -2271,6 +2294,9 @@ def index() -> None:
     refs: dict = {}
     # install the temperament-chooser hover delegation once per page (inert until the dropdown opens)
     ui.run_javascript(_TEMP_HOVER_DELEGATION)
+    # dismiss any hover tooltip on pointerdown so it can't strand when the click removes/reflows its
+    # anchor (the +/- buttons rebuild the grid out from under the cursor — see _TOOLTIP_DISMISS_JS)
+    ui.run_javascript(_TOOLTIP_DISMISS_JS)
 
     def col_tokens(name):
         # the previous render's id-tokens for a reorderable interval list, in column order — so an

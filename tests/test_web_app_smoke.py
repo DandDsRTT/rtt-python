@@ -520,6 +520,20 @@ def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scrol
     assert "ResizeObserver" not in js and "scroll-timeline" not in js  # no fixed-box machinery
 
 
+def test_tooltip_dismiss_script_drops_hover_help_on_pointerdown():
+    # A Quasar tooltip shows on its anchor's mouseenter and hides on the matching mouseleave; when a
+    # click removes or reflows the anchor (every +/- button rebuilds or slides the grid) no mouseleave
+    # ever fires, so the tooltip is stranded. The dismiss script is a single capture-phase pointerdown
+    # listener that synthesizes that mouseleave up the ancestor chain from the pressed node, so
+    # whichever ancestor is the anchor hides its tooltip via Quasar's own handler before the reflow.
+    js = app._TOOLTIP_DISMISS_JS
+    assert "__rttTipDismiss" in js                                  # guarded so it installs only once
+    assert "addEventListener('pointerdown'" in js and ", true)" in js  # capture phase, before the click
+    assert "mouseleave" in js and "dispatchEvent" in js            # synthesizes the event Quasar hides on
+    assert "parentElement" in js                                   # walks up to reach the tooltip's anchor
+    assert "blur" not in js  # never blur — that would trip the editable cells' blur-commit handlers
+
+
 def test_every_show_toggle_has_a_non_empty_example():
     # every Show layer must have a sample render: the "specific boxes & controls" toggles in the
     # example column (_example_html), the "general" layers as parts of the dummy tile
