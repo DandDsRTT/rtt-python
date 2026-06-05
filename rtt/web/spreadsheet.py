@@ -832,11 +832,17 @@ class _GridBuilder:
         # on the RIGHT (see col_bands below) so the row labels don't shove the matrix
         # off-centre in its tile — the left label gutter is balanced by the empty right one.
         self.matlabel_primes_w = MATLABEL_W if (self.show_symbols and show_temp) else 0
+        # the drag-to-combine row handles ride a gutter to the LEFT of the row labels (the 𝒎ᵢ
+        # matlabels), so the primes column reserves room for them — present when the feature is on
+        # and there are ≥ 2 generator rows to combine. Balanced by an equal empty right gutter (like
+        # the matlabel gutter) so the matrix stays centred in its tile.
+        self.row_handle_w = (ROW_HANDLE_W + ROW_HANDLE_GAP) if (
+            self.settings.get("drag_to_combine") and show_temp and self.r > 1) else 0
         col_bands = (
             ("quantities", COL_W, show_domain_quantities, True),
             ("units", COL_W, show_domain_units, True),
             ("gens", 2 * BRACKET_W + self.r * COL_W, show_temp, True),
-            ("primes", 2 * BRACKET_W + self.d * COL_W + 2 * self.matlabel_primes_w, show_temp, True),
+            ("primes", 2 * BRACKET_W + self.d * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
@@ -1014,6 +1020,7 @@ class _GridBuilder:
         # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
         # drawing all of them, converged, while it's folded, so the fold animates as a merge
         self.row_matlabel_top = {}  # y of the column-label band when reserved (one MATLABEL_H slot above
+        self.row_int_handle_top = {}  # y of the interval drag-handle band (above the column labels, when drag-to-combine is on)
 
         # pass the held intervals + any frozen manual tuning so the plain text builds the SAME
         # tuning the grid does (held-just sizes, frozen-tuning maps) — the two views can't diverge
@@ -1036,8 +1043,17 @@ class _GridBuilder:
             # two share the head's y-range but at different x).
             has_matlabel = (self.show_symbols and key in COL_LABELED_ROWS and not folded)
             head_default = TOGGLE + 2 * TOGGLE_INSET - PAD  # toggle's natural head reservation
+            # the drag-to-combine handles ride a band at the TOP of the interval-vectors head, ABOVE
+            # the column labels (so the grip sits OUTSIDE the c₁/𝒕ᵢ labels, mirroring the row handle
+            # to the left of the 𝒎ᵢ labels). Present only when the feature is on and some interval
+            # column has ≥ 2 entries to combine — the head grows by the band so the tile is taller.
+            int_handle = (key == "vectors" and not folded and self.settings.get("drag_to_combine")
+                          and (self.nc >= 2 or (self.k >= 2 and not self.all_interval)
+                               or self.nh >= 2 or self.mi >= 2))
+            handle_band = (ROW_HANDLE_W + ROW_HANDLE_GAP) if int_handle else 0
             # the matlabel needs MATLABEL_H + 2*PAD of head to sit centred with breathing room
-            head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
+            base_head = 0 if folded else max(head_default, MATLABEL_H + 2 * MATLABEL_PAD if has_matlabel else head_default)
+            head = base_head + handle_band  # the handle band rides above the toggle/label head
             # framing bands stand off the cells by FRAME_GAP: a top bracket (FRAME_H)
             # and a taller bottom curly brace (BRACE_H, with room for its spike)
             top_frame = (FRAME_H + FRAME_GAP) if framed else 0
@@ -1069,11 +1085,12 @@ class _GridBuilder:
             self.tile_top[key] = y
             if charted:
                 self.chart_top[key] = y + head + top_frame  # the chart sits below the top frame
+            if int_handle:  # the grip band rides the very top of the head, above the column labels
+                self.row_int_handle_top[key] = y + (handle_band - ROW_HANDLE_W) // 2
             if has_matlabel:
-                # col-label sits centred INSIDE the head — distance from tile_top to label
-                # top = distance from label bottom to bracket top = MATLABEL_PAD, so the
-                # label reads roughly equidistant from both edges of the matrix's head
-                self.row_matlabel_top[key] = y + (head - MATLABEL_H) // 2
+                # col-label sits below the handle band (when present), centred in the remaining head —
+                # roughly equidistant from the band/tile-top above and the bracket below
+                self.row_matlabel_top[key] = y + handle_band + (base_head - MATLABEL_H) // 2
             self.row_y[key] = y + head + top_frame + chart_band  # values sit below toggle head, top frame, chart
             self.row_frame[key] = bot_frame  # the symbol/caption stack sits below the bottom brace band
             self.row_sym[key] = sym  # the caption (and bands below it) sit below the symbol slot
@@ -1274,20 +1291,30 @@ class _GridBuilder:
         # labels stay in lockstep.
         return self.matlabel_primes_w if group_key == "primes" else 0
 
+    def handle_gutter_w(self, group_key):
+        # The drag-handle gutter reserved OUTSIDE the row-label gutter (further from the matrix),
+        # on each side for balance — only the primes column, only when drag-to-combine is on. The
+        # left one carries the per-row handles; the right one balances them, like the matlabel gutter.
+        return self.row_handle_w if group_key == "primes" else 0
+
+    def outer_gutter_w(self, group_key):
+        # the full left/right reservation outside the cells: the handle gutter then the row-label
+        # gutter. Used wherever the cells' true left edge matters (prime_left, the EBK span, the header).
+        return self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
+
     def matrix_span(self, group_key):
-        # The (x, width) of a group's CELL matrix — its content_box minus the row-label
-        # gutter, which content_w carries on BOTH sides (the left holds the labels, the
-        # right balances them). This is the region the EBK encloses: the per-row ⟨ … ]
-        # brackets seat their ⟨ at its left edge and ] at its right, and the spanning
-        # ebktop/ebkbrace/ebkangle frame runs its full width. Anchored to the cells (not
-        # the wider grey footprint), so a column widened past them keeps the EBK hugging
-        # the matrix with the row labels sitting outside it.
+        # The (x, width) of a group's CELL matrix — its content_box minus the outer gutters, which
+        # content_w carries on BOTH sides (the left holds the handles + row labels, the right
+        # balances them). This is the region the EBK encloses: the per-row ⟨ … ] brackets seat
+        # their ⟨ at its left edge and ] at its right, and the spanning ebktop/ebkbrace/ebkangle
+        # frame runs its full width. Anchored to the cells (not the wider grey footprint), so a
+        # column widened past them keeps the EBK hugging the matrix with the labels/handles outside.
         x, w = self.content_box(group_key)
-        mx = self.matlabel_gutter_w(group_key)
+        mx = self.outer_gutter_w(group_key)
         return x + mx, w - 2 * mx
 
     def prime_left(self, p):
-        return self.primes_x + self.matlabel_gutter_w("primes") + BRACKET_W + p * COL_W
+        return self.primes_x + self.outer_gutter_w("primes") + BRACKET_W + p * COL_W
 
     def comma_left(self, c):
         return self.commas_x + BRACKET_W + c * COL_W
@@ -1625,8 +1652,8 @@ class _GridBuilder:
         # drop the gutter from each edge and stay centred over the CELLS rather than the wider
         # column footprint — the gutters only frame the row labels, never the title.
         for key in self.col_x:
-            hx = self.col_x[key] + self.matlabel_gutter_w(key)
-            hw = self.col_w[key] - 2 * self.matlabel_gutter_w(key)
+            hx = self.col_x[key] + self.outer_gutter_w(key)
+            hw = self.col_w[key] - 2 * self.outer_gutter_w(key)
             self.cells.append(CellBox(f"header:{key}", hx, self.header_y, hw, HEADER_H, "colheader", text=self.col_header[key]))
             if self.col_collapsible[key]:
                 glyph = _fold_glyph(f"col:{key}" in self.collapsed)
@@ -1737,17 +1764,6 @@ class _GridBuilder:
                 # point (the top bus stretches out to reach it); an empty set centres it on the trunk
                 self.cells.append(CellBox(cid, self.plus_stub_x[ckey] - BTN / 2, self.fanout_y - BTN / 2, BTN, BTN, kind))
 
-            def int_drag(group, count, col_left):
-                # a drag handle hugging the bottom of each interval ratio (commas / targets / held /
-                # interest): drag one interval onto another to ADD it in (their product). Gated on the
-                # "drag to combine" toggle (off by default); needs ≥ 2 entries to have something to
-                # combine; rides the clear gap just below the ratio, so it stays clear of the branch-
-                # point ± / reorder handles up top — the column twin of the mapping-row handles.
-                if not self.settings.get("drag_to_combine") or count < 2:
-                    return
-                for i in range(count):
-                    self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), qy + ROW_H, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
-
             if self.tile_open("quantities", "gens"):  # the generator ratios heading their sub-columns,
                 for g in range(self.r):                # the column-header dual of the spine list (gen:i)
                     self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.gens[g], gen=g))
@@ -1775,7 +1791,6 @@ class _GridBuilder:
                 # last column's branch point — cancelling the draft, or dropping a real comma when >1
                 if self.pending is not None or self.nc > 1:
                     branch_minus("comma_minus", "commas", self.nc_shown - 1, "comma_minus")
-                int_drag("comma", self.nc, self.comma_left)  # drag a comma onto another to recombine the basis
             if self.tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
                 for i in range(self.r):                       # derived from M like the comma ratios — no ± control)
                     self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.gens[i]))
@@ -1792,8 +1807,6 @@ class _GridBuilder:
                 if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
                     branch_minus("target_minus:pending", "targets", self.k, "target_minus")
-                if not self.all_interval:  # the all-interval list (Tₚ = I) is auto, not editable, so no drag-combine
-                    int_drag("target", self.k, self.target_left)
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
                 for i in range(self.nh):
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
@@ -1803,7 +1816,6 @@ class _GridBuilder:
                 if self.pending_held is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("held:pending", self.held_left(self.nh), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nh, pending=True))
                     branch_minus("held_minus:pending", "held", self.nh, "held_minus")
-                int_drag("held", self.nh, self.held_left)  # drag a held interval onto another to combine them
             if self.tile_open("quantities", "interest"):  # the user's other intervals of interest
                 for i in range(self.mi):
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
@@ -1815,7 +1827,6 @@ class _GridBuilder:
                     # blank red vector cells below, and a − on its branch point to cancel the draft
                     self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.mi, pending=True))
                     branch_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
-                int_drag("interest", self.mi, self.interest_left)  # drag an interval of interest onto another to combine them
             # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
             # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
             # the first interval can still be added). The − is the hover counterpart on a branch point.
@@ -1875,13 +1886,12 @@ class _GridBuilder:
                     self.cells.append(CellBox("map_plus", map_bus_x - BTN / 2, self.row_plus_y["mapping"] - BTN / 2, BTN, BTN, "map_plus"))
             # a drag handle hugging the left of each mapping row: drag one generator row onto another
             # to ADD it into that row (a generator-basis change holding the temperament and tuning).
-            # Needs ≥ 2 rows to combine; rides the gap just before the matrix's opening bracket, clear
-            # of the left-bus ± controls. (The column-reorder handles a sibling concern adds ride the
-            # branch points up top — these stay deliberately separate, hugging the rows they drag.)
+            # Needs ≥ 2 rows to combine; rides the reserved handle gutter to the LEFT of the row
+            # labels (𝒎ᵢ), the leftmost slot of the widened primes column. (The column-reorder
+            # handles a sibling concern adds ride the branch points up top — deliberately separate.)
             if self.settings.get("drag_to_combine") and self.r > 1 and self.tile_open("mapping", "primes"):
-                handle_x = self.prime_left(0) - BRACKET_W - ROW_HANDLE_GAP - ROW_HANDLE_W
                 for i in range(self.r):
-                    self.cells.append(CellBox(f"map_drag:{i}", handle_x, self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
+                    self.cells.append(CellBox(f"map_drag:{i}", self.primes_x, self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
             for i in range(self.r):
                 if self.tile_open("mapping", "primes"):
                     for p in range(self.d):
@@ -1983,6 +1993,18 @@ class _GridBuilder:
                         v = self.pending_interest[p]
                         self.cells.append(CellBox(f"cell:interest:{p}:{self.mi}", self.interest_left(self.mi) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell",
                                              text="" if v is None else str(v), prime=p, comma=self.mi, pending=True, unit=self.cell_unit("vectors", "interest", prime=p)))
+            # the drag-to-combine handles ride the band above the column labels (one per interval
+            # entry): drag one interval onto another in the same column to ADD it in (their product).
+            # Gated on the feature + ≥ 2 entries; targets only when the list is editable (not Tₚ = I).
+            if "vectors" in self.row_int_handle_top:
+                hy = self.row_int_handle_top["vectors"]
+                for group, count, col_left, ckey in (("comma", self.nc, self.comma_left, "commas"),
+                                                     ("target", self.k, self.target_left, "targets"),
+                                                     ("held", self.nh, self.held_left, "held"),
+                                                     ("interest", self.mi, self.interest_left, "interest")):
+                    if count >= 2 and self.tile_open("vectors", ckey) and (ckey != "targets" or self.targets_editable):
+                        for i in range(count):
+                            self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
 
         # tuning rows over the primes, commas and targets (cents); each can collapse on
         # its own. Commas sit on the same footing as targets — they are just the dual
@@ -2396,7 +2418,8 @@ class _GridBuilder:
                 for i in range(row_count[(rkey, ckey)]):
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
-                        self.content_x[ckey], top(i), MATLABEL_W, ROW_H,
+                        # past the drag-handle gutter (when present), so the handle sits to its left
+                        self.content_x[ckey] + self.handle_gutter_w(ckey), top(i), MATLABEL_W, ROW_H,
                         "matlabel", text=f"{glyph}{_sub(i + 1)}",
                     ))
             # column labels — one per cell of each col-labelled tile, in the band above

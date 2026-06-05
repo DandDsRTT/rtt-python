@@ -29,15 +29,6 @@ from __future__ import annotations
 # match (``SHOW_HELP`` == ``DEFAULTS``), so adding a toggle without its help text fails the suite.
 SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
-        # interaction toggles ride the top of the pane, above the general dummy tile. They are not
-        # value-display layers (so they don't belong among the dummy tile's parts) — they switch
-        # whole grid affordances on and off. Rendered as plain checkboxes like the specific group.
-        "interaction",
-        (
-            ("drag_to_combine", "drag to combine", False),
-        ),
-    ),
-    (
         "general",
         (
             ("names", "names", True),
@@ -51,6 +42,9 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
             ("quantities", "quantities", True),
             ("units", "units", False),
             ("math_expressions", "math expressions", False),
+            # a grid affordance rather than a value-display layer, but it rides the general tile as
+            # one more clickable part (its sample is a drag-handle grip); off by default.
+            ("drag_to_combine", "drag to combine", False),
         ),
     ),
     (

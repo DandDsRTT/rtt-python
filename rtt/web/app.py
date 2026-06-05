@@ -575,8 +575,6 @@ def _example_html(key: str) -> str:
         letter = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}[group]
         return (f'<span style="display:inline-flex;align-items:center;justify-content:center;'
                 f'width:36px;height:14px;background:{_TINTS[group]}">{_math_html(letter)}</span>')
-    if key == "drag_to_combine":  # a grip glyph — the drag handle this layer adds to rows and intervals
-        return '<span class="material-icons" style="font-size:18px;color:#444">drag_indicator</span>'
     if key == "audio":  # a speaker glyph — the per-pitch play button the audio rows carry
         return '<span class="material-icons" style="font-size:18px;color:#444">volume_up</span>'
     if key == "tuning_ranges":  # the tuning-range I-beam (min/max generator bars)
@@ -619,6 +617,7 @@ _GENERAL_TILE_LINES: tuple[tuple[str, ...], ...] = (
     ("plain_text_values",),
     ("presets",),
     ("charts",),
+    ("drag_to_combine",),
 )
 
 # A tile part that renders INSIDE another's cell is inert (greyed, unclickable) until that host
@@ -638,7 +637,7 @@ _TILE_HOST: dict[str, str] = {
 _TILE_FONT = {
     "symbols": 15, "equivalences": 15, "rowlabel": spreadsheet.MATLABEL_H - 2,
     "names": spreadsheet.CAPTION_FONT, "mnemonics": spreadsheet.CAPTION_FONT,
-    "units": 10, "cellunit": 6, "plain_text_values": 11,
+    "units": 10, "cellunit": 6, "plain_text_values": 11, "drag_to_combine": 18,
 }
 
 
@@ -728,6 +727,8 @@ def _general_part_html(key: str) -> str:
         return _tile_preset_html()
     if key == "charts":
         return _example_chart()
+    if key == "drag_to_combine":  # a grip glyph — the drag handle this layer adds to rows and intervals
+        return '<span class="material-icons" style="color:#444">drag_indicator</span>'
     raise KeyError(key)  # every general layer must have a sample
 
 

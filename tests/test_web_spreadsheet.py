@@ -1519,18 +1519,20 @@ def test_drag_handles_are_gated_on_the_drag_to_combine_toggle():
     assert any(c.startswith("int_drag:target:") for c in on)  # ...and the interval handles
 
 
-def test_mapping_row_drag_handles_hug_the_left_of_each_row():
-    # each generator row carries a drag handle just left of the matrix's opening bracket: drag one
-    # row onto another to ADD it in (a generator-basis change). One per row, aligned with it, sitting
-    # to the RIGHT of the left-bus ± controls so the two affordances stay deliberately separate.
-    lay = _drag_layout()  # meantone, r = 2, drag handles on
+def test_mapping_row_drag_handles_sit_left_of_the_row_labels():
+    # each generator row's drag handle rides a reserved gutter to the LEFT of the row labels (the 𝒎ᵢ
+    # matlabels), in the widened mapping tile — drag one row onto another to ADD it in. Verified with
+    # symbols on (where the row labels render): the handle clears the labels and the left-bus − too.
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
+                            {**settings.defaults(), "symbols": True, "drag_to_combine": True})
     cells = {c.id: c for c in lay.cells}
-    bracket_left = cells["cell:mapping:0:0"].x - spreadsheet.BRACKET_W  # the ⟨ at the matrix's left edge
     for i in range(2):
         handle = cells[f"map_drag:{i}"]
+        label = cells[f"matlabel:row:mapping:primes:{i}"]
         assert handle.gen == i
-        assert handle.y == cells[f"cell:mapping:{i}:0"].y and handle.h == spreadsheet.ROW_H  # aligned with row i
-        assert handle.x + handle.w <= bracket_left  # hugs the matrix's left, clear of the cells
+        assert handle.y == cells[f"cell:mapping:{i}:0"].y  # aligned with row i
+        assert handle.x + handle.w <= label.x  # LEFT of the row label (no overlap)
+        assert label.x + label.w <= cells[f"cell:mapping:{i}:0"].x  # label still sits between handle and matrix
         assert handle.x > cells[f"map_minus:{i}"].x  # ...and right of the left-bus − control (separate)
 
 
@@ -1540,19 +1542,24 @@ def test_mapping_row_drag_handles_need_two_rows():
     assert {"map_drag:0", "map_drag:1"} <= {c.id for c in _drag_layout().cells}  # a handle per generator row
 
 
-def test_interval_drag_handles_hug_below_each_ratio():
-    # each interval column (commas / targets / held / interest) with ≥2 entries gets a drag handle
-    # just below each ratio cell — drag one interval onto another to combine them. They sit clear of
-    # the branch-point ± / reorder handles, which ride the fan-out gap ABOVE the ratio.
-    lay = _drag_layout(((12, 19, 28),), interest=((-1, 1, 0), (0, 0, 1)),  # 12-ET 5-limit: two commas
-                       held_vectors=((1, 0, 0), (-1, 1, 0)))
+def test_interval_drag_handles_sit_above_the_column_labels_in_the_vectors_row():
+    # each interval column (commas / targets / held / interest) with ≥2 entries gets a drag handle in
+    # a band ABOVE its column label (c₁/𝒕ᵢ) in the (taller) interval-vectors tile — drag one onto
+    # another to combine them. Verified with symbols on, where the column labels render: the order
+    # down each column is handle / label / vector cells.
+    lay = spreadsheet.build(service.from_mapping(((12, 19, 28),)),  # 12-ET 5-limit: two commas
+                            {**settings.defaults(), "symbols": True, "drag_to_combine": True},
+                            interest=((-1, 1, 0), (0, 0, 1)))
     cells = {c.id: c for c in lay.cells}
-    # held shows with optimization on; _drag_layout's settings have it off, so check the always-on columns
-    for group in ("comma", "interest"):
-        for i in range(2):
-            handle, ratio = cells[f"int_drag:{group}:{i}"], cells[f"{group}:{i}"]
-            assert handle.comma == i and handle.x == ratio.x  # aligned under its own ratio column
-            assert handle.y >= ratio.y + ratio.h  # ...BELOW the ratio (clear of the ± zone above it)
+    for i in range(2):
+        handle = cells[f"int_drag:comma:{i}"]
+        label = cells[f"matlabel:col:vectors:commas:{i}"]
+        vec0 = cells[f"cell:comma:0:{i}"]  # the column's first vector component
+        assert handle.comma == i and handle.x == label.x  # aligned over its own column
+        assert handle.y + handle.h <= label.y  # ABOVE the column label...
+        assert label.y < vec0.y  # ...which is above the vector cells (handle / label / vector)
+    # the interest column carries no column label, but still gets handles above its vectors
+    assert cells["int_drag:interest:0"].y + spreadsheet.ROW_HANDLE_W <= cells["cell:interest:0:0"].y
     assert "int_drag:target:0" in cells  # the default target list (many) gets them too
 
 
