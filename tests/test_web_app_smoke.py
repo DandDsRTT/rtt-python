@@ -647,7 +647,7 @@ def test_option_box_renders_as_one_svg_for_zoom_stable_appearance():
     # unchecked box only the outline; the tuning-ranges radio box reuses the same art.
     # the box art is one SVG per state, defined once as a :root custom property and referenced
     # everywhere (so the same vector backs the checkbox, the mixed master, and the range box)
-    assert app._CSS.count("data:image/svg") == 3  # unchecked / checked / disabled, defined once each
+    assert app._CSS.count("data:image/svg") == 6  # unchecked / checked / disabled, each a light + dark variant
     bg = _css_rule(".q-checkbox__bg")
     assert "var(--option-box-unchecked)" in bg and "border:none" in bg
     assert "var(--option-box-checked)" in _css_rule('.q-checkbox[aria-checked="true"] .q-checkbox__bg')

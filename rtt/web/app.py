@@ -115,6 +115,17 @@ _RANGE_FONT = 7  # cents-label / placeholder font size
 # wash is deferred; the palette entry feeds the greyed Show-panel swatch for now).
 _TINTS = {"tuning": "#9acdcd", "temperament": "#cdcd9a", "form": "#cd9acd"}
 
+# Dark-theme palette anchors that have to exist Python-side: the option-box indicator is a baked
+# SVG data-URI (which can't read a CSS variable, so its dark variant is generated here), and
+# apply_theme paints the body's margin frame inline. The full dark palette lives in
+# assets/rtt-dark.css; these few values mirror it (kept in step by eye — they only set the
+# checkbox art and the frame, both visible right beside the css-driven surfaces).
+_DARK_FRAME = "#15171a"   # the body margin framing the whole app
+_DARK_CELL = "#1b1f24"    # value-cell / input fill — and the option-box's own box
+_DARK_MARK = "#8d949d"    # the cell rule, the EBK brackets, and the option-box outline
+_DARK_TEXT = "#e3e6ea"    # primary text — and the checked option-box's inner fill
+_DARK_MUTED = "#71777f"   # disabled text — and the indeterminate option-box's inner fill
+
 _AUDIO_KINDS = {"speaker"}  # cells whose baked cents rebuild when the tuning changes
 _AUDIO_CTRLS = {"audio_wave", "audio_mode", "audio_hold", "audio_root"}  # the per-tile bank controls
 
@@ -174,17 +185,18 @@ _FREEZE_JS = (_ASSETS / "freeze.js").read_text(encoding="utf-8")
 _DRAG_JS = (_ASSETS / "drag.js").read_text(encoding="utf-8")
 
 
-def _option_box_svg(fill: str | None) -> str:
-    """A data-URI SVG of the option-box indicator: an n×n white square with a 1px #555 border
-    and, when ``fill`` is given, a centred inner square (inset by the 1px border + a 2px gap) of
-    that colour. Used as the BACKGROUND of every q-checkbox box and the tuning-ranges radio box,
-    so the whole mark scales as ONE vector — staying square with an even border at any zoom —
-    instead of separate CSS box edges (border + inset fill), which the browser snaps independently
-    to the device-pixel grid, distorting the square and the gap at fractional zooms / positions."""
+def _option_box_svg(fill: str | None, *, box: str = "#fff", border: str = "#555") -> str:
+    """A data-URI SVG of the option-box indicator: an n×n ``box``-filled square with a 1px
+    ``border`` and, when ``fill`` is given, a centred inner square (inset by the 1px border + a
+    2px gap) of that colour. Used as the BACKGROUND of every q-checkbox box and the tuning-ranges
+    radio box, so the whole mark scales as ONE vector — staying square with an even border at any
+    zoom — instead of separate CSS box edges (border + inset fill), which the browser snaps
+    independently to the device-pixel grid, distorting the square and the gap at fractional zooms.
+    ``box``/``border`` default to the light theme; dark mode rebakes them (see _CSS_DARK_VARS)."""
     n = spreadsheet.OPTION_BOX_PX
     inner = f"<rect x='3' y='3' width='{n - 6}' height='{n - 6}' fill='{fill}'/>" if fill else ""
     svg = (f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 {n} {n}'>"
-           f"<rect x='.5' y='.5' width='{n - 1}' height='{n - 1}' fill='#fff' stroke='#555' stroke-width='1'/>"
+           f"<rect x='.5' y='.5' width='{n - 1}' height='{n - 1}' fill='{box}' stroke='{border}' stroke-width='1'/>"
            f"{inner}</svg>")
     return "data:image/svg+xml," + quote(svg)
 
@@ -231,7 +243,19 @@ _CSS_VARS = f""":root {{
 
 # The bulk stylesheet lives in assets/rtt.css; it references the CSS custom properties above,
 # which _CSS_VARS feeds the Python-side constants (sizes, colours, the option-box SVG data URIs).
-_CSS = _CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
+#
+# Dark theme: a palette overlay in assets/rtt-dark.css, gated on the `rtt-dark` body class (the
+# settings drawer's toggle — see apply_theme), so it stays inert in the default light render. Its
+# checkbox art can't ride a CSS variable (a data-URI is opaque to the cascade), so the dark
+# option-box SVGs are rebaked here onto the --option-box-* properties under body.rtt-dark.
+_CSS_DARK_VARS = f"""body.rtt-dark {{
+  --option-box-unchecked:url("{_option_box_svg(None, box=_DARK_CELL, border=_DARK_MARK)}");
+  --option-box-checked:url("{_option_box_svg(_DARK_TEXT, box=_DARK_CELL, border=_DARK_MARK)}");
+  --option-box-disabled:url("{_option_box_svg(_DARK_MUTED, box=_DARK_CELL, border=_DARK_MARK)}");
+}}
+"""
+_CSS = (_CSS_VARS + (_ASSETS / "rtt.css").read_text(encoding="utf-8")
+        + _CSS_DARK_VARS + (_ASSETS / "rtt-dark.css").read_text(encoding="utf-8"))
 
 
 # Which sticky band a cell renders into — decided by WHERE its top-left corner falls, not by
