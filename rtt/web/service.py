@@ -575,15 +575,16 @@ COMPLEXITY_DISPLAYS = {
 
 
 def scheme_with_prescaler(scheme, prescaler: str):
-    """``scheme`` with its complexity prescaler swapped to ``prescaler`` (one of
-    :data:`PRESCALERS`), keeping its optimization power, target and damage slope. Returns a
-    resolved spec (which the service/layout accept anywhere a scheme name is taken)."""
+    """``scheme`` with its complexity prescaler DIAGONAL swapped to ``prescaler`` (one of
+    :data:`PRESCALERS`) — the top d×d of the pretransformer 𝑋. Keeps everything else, INCLUDING
+    the size factor (the size-sensitizing 𝑍 row): the diagonal 𝐷 and 𝑍 are independent axes, so
+    choosing a prescaler must not clear "replace diminuator". Returns a resolved spec (which the
+    service/layout accept anywhere a scheme name is taken)."""
     log_prime_power, prime_power = PRESCALERS[prescaler]
     return replace(
         resolve_tuning_scheme(scheme),
         complexity_log_prime_power=log_prime_power,
         complexity_prime_power=prime_power,
-        complexity_size_factor=0,
     )
 
 

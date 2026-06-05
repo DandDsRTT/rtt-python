@@ -572,6 +572,19 @@ def test_scheme_with_prescaler_swaps_the_prescaler_preserving_the_rest():
     assert service.tuning(m, same).tuning_map == pytest.approx(service.tuning(m, "minimax-S").tuning_map, abs=1e-6)
 
 
+def test_scheme_with_prescaler_preserves_the_size_factor():
+    # the prescaler chooser swaps only the DIAGONAL (the top d×d of 𝑋); it must NOT clear the size
+    # factor ("replace diminuator"). The diagonal 𝐷 and the size-sensitizing 𝑍 are independent axes,
+    # so picking a prescaler while the diminuator is on keeps it on (lp -> prime stays size-factored).
+    lils = service.scheme_with_diminuator("minimax-S", True)  # diminuator ON (lils)
+    assert service.diminuator_replaced(lils) is True
+    swapped = service.scheme_with_prescaler(lils, "prime")
+    assert service.diminuator_replaced(swapped) is True   # still on after swapping the diagonal
+    assert service.prescaler_of(swapped) == "prime"       # the diagonal did change
+    # and toggling back to log-prime keeps it on too
+    assert service.diminuator_replaced(service.scheme_with_prescaler(lils, "log-prime")) is True
+
+
 def test_scheme_with_complexity_norm_power_sets_the_norm_and_its_dual():
     import pytest
 
