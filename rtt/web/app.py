@@ -949,20 +949,26 @@ def _select_props(min_width: float) -> str:
 # (`:data-optidx`), and this one-time, document-level delegation (real JS — globals available, and it
 # survives virtual scroll since it's not per-item) reads that index off the hovered option and fires
 # a native `opthover` CustomEvent at the chooser's cell wrap, which listens for it. detail -1 clears.
+#
+# It DEBOUNCES + dedupes: each preview is a full temperament re-solve on the server, and `mouseover`
+# bubbles many times per second, so firing on every micro-move floods the socket and the client misses
+# its heartbeat (-> "implicit handshake failed" -> reload, which also eats clicks). So a hover only
+# fires after the pointer SETTLES on an option (~90 ms), and never re-fires the same option.
 _TEMP_HOVER_DELEGATION = """
 (() => {
   if (window.__rttTempHover) return;
   window.__rttTempHover = true;
-  const fire = (d) => document.querySelectorAll('[data-eid^="preset:temperament"]')
-      .forEach(w => w.dispatchEvent(new CustomEvent('opthover', {detail: d})));
+  let last = null, timer = null;
+  const fire = (d) => { if (d === last) return; last = d;
+    document.querySelectorAll('[data-eid^="preset:temperament"]')
+      .forEach(w => w.dispatchEvent(new CustomEvent('opthover', {detail: d}))); };
+  const optOf = (n) => n && n.closest && n.closest('.q-item[data-optidx]');
   document.addEventListener('mouseover', (e) => {
-    const it = e.target.closest && e.target.closest('.q-item[data-optidx]');
-    if (it) fire(parseInt(it.getAttribute('data-optidx'), 10));
+    const it = optOf(e.target);
+    if (it) { clearTimeout(timer); timer = setTimeout(() => fire(parseInt(it.getAttribute('data-optidx'), 10)), 90); }
   });
   document.addEventListener('mouseout', (e) => {
-    const from = e.target.closest && e.target.closest('.q-item[data-optidx]');
-    const to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('.q-item[data-optidx]');
-    if (from && !to) fire(-1);
+    if (optOf(e.target) && !optOf(e.relatedTarget)) { clearTimeout(timer); fire(-1); }
   });
 })()
 """
