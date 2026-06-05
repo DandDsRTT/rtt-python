@@ -534,6 +534,14 @@
    the ring). Repeat the highlight on the control so it shows on input cells too. */
 .rtt-cell.rtt-preview-change .q-field__control { box-shadow:inset 0 0 0 2px var(--preview-color);
             background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
+/* the structural remove-preview: hovering a +/- that DELETES a column or row rings the cells it
+   removes in RED (they are still on screen, so the user sees exactly what goes away), while the
+   cells whose value the re-solve only MOVES keep the amber rtt-preview-change above. Same inset ring
+   + faint wash, in the alert/draft red — paired colours so the two effects read apart at a glance. */
+.rtt-cell.rtt-preview-remove { box-shadow:inset 0 0 0 2px var(--preview-remove-color);
+            background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
+.rtt-cell.rtt-preview-remove .q-field__control { box-shadow:inset 0 0 0 2px var(--preview-remove-color);
+            background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
 /* the comma basis plain text while a comma is pending: not an editable input (which is
    one colour) but a static box matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */

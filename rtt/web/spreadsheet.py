@@ -368,6 +368,19 @@ def changed_cell_ids(old: Layout, new: Layout) -> frozenset:
                      and (c.id not in before or before[c.id] != _cell_content(c)))
 
 
+def removed_cell_ids(old: Layout, new: Layout) -> frozenset:
+    """The ids of VALUE cells present in ``old`` but GONE from ``new`` — the column or row a
+    structural − (or a re-solving +) deletes. The counterpart to :func:`changed_cell_ids`, which
+    rings the cells whose value MOVES and so omits anything not in ``new``; this rings what
+    DISAPPEARS. A removed cell is still on screen while the +/- is merely hovered (the click hasn't
+    committed), so the preview can light it up to show exactly what the click takes away. Restricted
+    to the value-bearing :data:`RINGABLE_KINDS`, so the scaffolding around a removed value — its
+    brackets, separators, drag grips and ± controls — is not flagged."""
+    after = {c.id for c in new.cells}
+    return frozenset(c.id for c in old.cells
+                     if c.kind in RINGABLE_KINDS and c.id not in after)
+
+
 def assign_column_tokens(prev, vectors):
     """Assign a stable id-token to each interval column, so a column keeps its cell ids across a
     render and the reconciler glides it to its new x (rather than re-filling a fixed-index cell).

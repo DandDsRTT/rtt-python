@@ -1717,3 +1717,47 @@ async def test_hovering_a_temperament_option_previews_loading_it(user: User) -> 
     assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2")  # the mapping it'd load rings
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})   # leave the option
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
+
+
+async def test_hovering_a_structural_minus_rings_removed_cells_red_and_moved_cells_amber(user: User) -> None:
+    # hovering a structural − previews the click WITHOUT reflowing the grid (the generator is not
+    # actually dropped, so the button stays under the cursor): the cells it REMOVES ring RED — they
+    # are still on screen until the click commits, so the user sees exactly what goes away — while the
+    # cells whose value the re-solve MOVES ring amber. Leaving clears both.
+    await user.open("/")
+    btn = set(user.find(marker="gen_minus").elements)               # drop the last generator
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-remove" in _wrap_classes(user, "tuning:gen:1")     # the dropped generator → red
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:0")  # the re-solved tuning → amber
+    await user.should_see(marker="tuning:gen:1")                          # ...still on screen (no reflow)
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1")     # both cleared on mouse-out
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:0")
+
+
+async def test_hovering_a_column_minus_reddens_the_removed_column(user: User) -> None:
+    # the user's case: hovering a column − (here the domain − that drops the top prime) reddens the
+    # column it removes — the prime label and its cells go away on the click — while the cells whose
+    # value the re-solve recomputes ring amber. Confirms the preview reaches the column controls, not
+    # just the generator rows, and that what DISAPPEARS lights up (a plain changed-cell diff couldn't).
+    await user.open("/")
+    btn = set(user.find(marker="minus").elements)                  # drop the highest prime (5)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-remove" in _wrap_classes(user, "prime:2")          # the dropped prime → red
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:1")   # a surviving prime's tuning → amber
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "prime:2")
+
+
+async def test_hovering_a_resolving_plus_reddens_what_it_consumes(user: User) -> None:
+    # an ADD that re-solves (here the generator + that un-tempers a comma into a new generator) still
+    # previews honestly: the comma it consumes goes red (it's removed from the grid), the cells whose
+    # value the re-solve moves go amber. The new generator column it adds lives off-screen until the
+    # click commits, so it isn't ringed — only the on-screen consequences show.
+    await user.open("/")
+    btn = set(user.find(marker="gen_plus").elements)               # un-temper the comma into a generator
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-remove" in _wrap_classes(user, "comma:0")          # the un-tempered comma → red
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:1")   # the re-solved tuning → amber
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "comma:0")

@@ -6219,6 +6219,34 @@ def test_changed_cell_ids_rings_only_value_cells_not_marks_or_controls():
     assert spreadsheet.changed_cell_ids(old, new) == frozenset({"v"})
 
 
+# --- removed_cell_ids: the structural remove-preview (red) diff ------------------------------
+# Hovering a +/- that DELETES a column or row previews what goes away by ringing the removed cells
+# RED. Unlike changed_cell_ids (which rings the cells whose value MOVES and so omits anything not in
+# the NEW layout), a removed cell is still on screen at hover time — the click hasn't committed — so
+# the preview can light it up to show exactly what the click removes.
+
+def test_removed_cell_ids_flags_a_value_cell_gone_from_the_new_layout():
+    old = _diff_layout(_diff_cell("a", "1"), _diff_cell("b", "2"))
+    new = _diff_layout(_diff_cell("a", "1"))
+    assert spreadsheet.removed_cell_ids(old, new) == frozenset({"b"})
+
+
+def test_removed_cell_ids_ignores_survivors_added_cells_and_removed_scaffolding():
+    # only the value cell that VANISHES is flagged: a survivor (in both) isn't removed, a brand-new
+    # cell (in new only) is changed_cell_ids' job, and the scaffolding deleted alongside a value —
+    # its bracket, separator, grip and − control — carries no value, so a removal mustn't ring it red.
+    old = _diff_layout(
+        _diff_cell("survivor", "1"),
+        _diff_cell("val", "2"),                                   # a value cell -> rings red when gone
+        CellBox("ebkangle:vec:commas:1", 0, 0, 10, 10, "ebkangle"),  # marks / controls deleted with it
+        CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),
+        CellBox("grip:commas:1", 0, 0, 10, 10, "colgrip"),
+        CellBox("comma_minus", 0, 0, 10, 10, "comma_minus"),
+    )
+    new = _diff_layout(_diff_cell("survivor", "1"), _diff_cell("added", "9"))
+    assert spreadsheet.removed_cell_ids(old, new) == frozenset({"val"})
+
+
 # ---------------------------------------------------------------------------
 # Chapter 9 nonstandard-domain — the superspace columns and rows the toggle
 # adds. The toggle is live in IMPLEMENTED now that the green/cyan superspace

@@ -86,6 +86,9 @@ _INVALID_TEMPERAMENT = "Not a valid temperament: the generators must be independ
 _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
 _PREVIEW_COLOR = "#f5a623"  # amber ring on a cell the in-progress edit moves (the edit-preview
 # highlight) — a warm "this changed" hue, kept distinct from the red _PENDING_COLOR error/alert
+_PREVIEW_REMOVE_COLOR = "#e53935"  # red ring on a cell a hovered +/- will REMOVE (the structural
+# remove-preview) — "this is going away", paired with the amber "this value moved"; its own var so
+# it stays tweakable apart from the matching _PENDING_COLOR draft/alert red
 # the value cells tile into a shared-border grid (a ruled spreadsheet, per the
 # mockup): each cell draws a rule and overlaps its neighbour by exactly the rule
 # width, so two abutting borders coincide as ONE line — no doubled inner rules.
@@ -244,7 +247,7 @@ def _control_svg(glyph: str) -> str:
 
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --rail-w:{_RAIL_W}px; --panel-w:{_PANEL_W}px;
-  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --preview-color:{_PREVIEW_COLOR};
+  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
@@ -1155,23 +1158,30 @@ class _Reconciler:
             d.pop(eid, None)
 
     def clear_preview(self):
-        """Strip every edit-preview ring (the focused cell was left). Removes the class straight from
-        the rung cells rather than via a render, so the highlight clears even when leaving the cell
-        triggers no re-render (most editable cells have already committed live)."""
+        """Strip every preview ring — the amber "value moved" and the red "will be removed" both
+        (the focused cell was left, or the +/- hover ended). Removes the classes straight from the
+        rung cells rather than via a render, so the highlight clears even when leaving triggers no
+        re-render (most editable cells have already committed live)."""
         for eid in self.preview_shown:
             if eid in self.els:
-                self.els[eid].classes(remove="rtt-preview-change")
+                self.els[eid].classes(remove="rtt-preview-change rtt-preview-remove")
         self.preview_shown = set()
 
-    def show_preview(self, ids):
-        """Ring the on-screen cells in ``ids`` straight away, WITHOUT a re-render — the hover preview
-        of a +/- control whose click would change them. Skipping the render keeps the control from
-        sliding out from under the cursor (an add/remove reflows the grid), so the highlight reads as
-        a steady "these will change" rather than a flicker. clear_preview strips them on mouse-out."""
+    def show_preview(self, modified, removed):
+        """Ring the on-screen cells a hovered +/- control would change, straight away and WITHOUT a
+        re-render: the cells whose value the click MOVES (``modified``) in amber, the cells it
+        REMOVES (``removed``) in red. Skipping the render keeps the control from sliding out from
+        under the cursor (an add/remove reflows the grid), so the highlight reads as a steady "this
+        is what changes" rather than a flicker. Cells absent from the DOM (a brand-new column the
+        click would add lives off-screen until committed) are skipped — only what's on screen can
+        ring. clear_preview strips both colours on mouse-out."""
         self.clear_preview()
-        shown = {eid for eid in ids if eid in self.els}
-        for eid in shown:
-            self.els[eid].classes(add="rtt-preview-change")
+        shown = set()
+        for ids, cls in ((modified, "rtt-preview-change"), (removed, "rtt-preview-remove")):
+            for eid in ids:
+                if eid in self.els:
+                    self.els[eid].classes(add=cls)
+                    shown.add(eid)
         self.preview_shown = shown
 
     def make_cell(self, cb):
@@ -1907,10 +1917,10 @@ class _Reconciler:
     # the speaker, and the audio bank glyphs. Their click / JS handlers are baked at build time. ----
     def _preview_control(self, el, apply):
         """Arm a control's hover preview: entering it rings the on-screen cells its click would change
-        (control_hover), leaving clears them. The click still commits via its own handler. Used by the
-        generator-tuning sign (hovering it previews reversing that generator). NOT used by the
-        add/remove-row/column +/- buttons — a structural add/remove rings misleading cells, so those
-        have no hover preview."""
+        (control_hover) — red for what it removes, amber for what its re-solve moves — and leaving
+        clears them. The click still commits via its own handler. Used by the add/remove +/- buttons
+        (each passes the editor op its click runs) and by the generator-tuning sign (previewing
+        reversing that generator)."""
         el.on("mouseenter", lambda _=None: self._cb.control_hover(apply))
         el.on("mouseleave", lambda _=None: self._cb.control_unhover())
 
@@ -1918,28 +1928,34 @@ class _Reconciler:
         wrap.classes("rtt-minus-zone")  # clear of the editable cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
+        self._preview_control(wrap, self._editor.shrink)
 
     def _build_plus(self, cb, wrap):  # add a prime; the always-shown + on the bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.expand))
+        self._preview_control(wrap, self._editor.expand)
 
     def _build_gen_minus(self, cb, wrap):  # drop the last generator (+n, −r); the mapping-row − reached from the column
         wrap.classes("rtt-minus-zone")  # clear of the genmap cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
+        self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
 
     def _build_gen_plus(self, cb, wrap):  # add a generator by un-tempering a comma (−n, +r); the + on the bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
+        self._preview_control(wrap, self._editor.add_mapping_row)
 
     def _build_map_minus(self, cb, wrap):  # remove generator cb.gen (a mapping row); a hover − on the left bus
         wrap.classes("rtt-minus-zone")  # clear of the generator-ratio spine it drops over
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
+        self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
 
     def _build_map_plus(self, cb, wrap):  # add a generator (un-temper a comma); the + on the left-bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
+        self._preview_control(wrap, self._editor.add_mapping_row)
 
     def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another row's grip to merge
         # HTML5 drag-to-combine, built EXACTLY like the working column-reorder grip (_build_colgrip):
@@ -2065,12 +2081,17 @@ class _Reconciler:
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
+        self._preview_control(wrap, self._editor.shrink)
 
     def _build_comma_minus(self, cb, wrap):  # drop the last comma, or cancel the pending draft
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.remove_comma))
+        self._preview_control(wrap, self._editor.remove_comma)
 
+    # the + that opens a blank, off-screen draft column (comma / interest / held / target) gets NO
+    # hover preview: the new column is empty and not yet placed, so nothing on screen would change —
+    # only removes and the re-solving adds (a prime, un-tempering a comma) have on-screen cells to ring.
     def _build_comma_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_comma))
@@ -2082,6 +2103,7 @@ class _Reconciler:
         wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(action))
+        self._preview_control(wrap, action)
 
     def _build_interest_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_interest, self._editor.remove_interest)
@@ -2694,23 +2716,29 @@ def index() -> None:
         rec.combine_target_pred = None
         render()
 
-    # +/- control hover preview: hovering a structural +/- (add/remove a prime or a generator) rings
-    # the on-screen cells its click would change, so the ripple is visible before committing. Unlike
-    # the drag preview it does NOT reflow the grid — an add/remove would slide the very button being
-    # hovered out from under the cursor (and flicker enter/leave) — so it applies the hypothetical to
-    # a SNAPSHOT, diffs it, rings the changed cells in place, and reverts immediately. The click then
-    # commits for real via the control's own handler. A keyboard edit or a drag owns the preview
-    # while active, so the control hover stands down for them.
+    # +/- control hover preview: hovering a structural +/- (add/remove a prime, generator, comma or
+    # interval) previews its click before committing — the cells it REMOVES ring red, the cells whose
+    # value the re-solve MOVES ring amber. Unlike the drag preview it does NOT reflow the grid: an
+    # add/remove would slide the very button being hovered out from under the cursor (and flicker
+    # enter/leave), so it applies the hypothetical to a SNAPSHOT, diffs it, rings the on-screen cells
+    # in place, and reverts immediately. The removed cells are still on screen at hover time (the
+    # click hasn't landed), so red shows what goes away — which a plain changed-cell diff can't, since
+    # it omits anything absent from the new layout. A brand-new column the click would ADD lives
+    # off-screen until committed, so it isn't ringed (show_preview skips ids not in the DOM). The
+    # click then commits for real via the control's own handler. A keyboard edit or a drag owns the
+    # preview while active, so the control hover stands down for them.
     def control_hover(apply):
         if rec._editing is not None or rec._drag_token is not None or last_lay[0] is None:
             return
         token = editor.capture_for_preview()
         try:
             apply()
-            changed = spreadsheet.changed_cell_ids(last_lay[0], editor.layout(prev_ids=last_lay[0].identities))
+            new = editor.layout(prev_ids=last_lay[0].identities)
+            modified = spreadsheet.changed_cell_ids(last_lay[0], new)  # value moved → amber
+            removed = spreadsheet.removed_cell_ids(last_lay[0], new)   # gone from the grid → red
         finally:
             editor.restore_for_preview(token)  # leave no trace: the grid never actually moved
-        rec.show_preview(changed)
+        rec.show_preview(modified, removed)
         rec._control_hovering = True
 
     def control_unhover():
