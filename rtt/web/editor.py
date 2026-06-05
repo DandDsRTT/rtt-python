@@ -565,11 +565,11 @@ class Editor:
         self.tuning_scheme = service.scheme_with_prescaler(self.tuning_scheme, prescaler)
         self.custom_prescaler = None
 
-    def set_complexity_euclidean(self, euclidean: bool) -> None:
-        """Switch the complexity norm between Euclidean (q=2) and taxicab (q=1) — the
-        alt.-complexity control in box 𝒄 — which likewise re-weights and retunes."""
+    def set_complexity_norm_power(self, power: float) -> None:
+        """Set the interval-complexity norm power q (the editable q field in box 𝒄) — which Lq
+        norm of each prescaled vector the complexity takes. Re-weights and retunes."""
         self._snapshot()
-        self.tuning_scheme = service.scheme_with_norm(self.tuning_scheme, euclidean)
+        self.tuning_scheme = service.scheme_with_complexity_norm_power(self.tuning_scheme, power)
 
     def set_optimization_power(self, power: float) -> None:
         """Set the optimization power 𝑝 (the editable field in the optimization box): ∞ for

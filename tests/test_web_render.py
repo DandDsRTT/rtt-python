@@ -759,6 +759,25 @@ async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -
     assert list(chooser.options)  # ...with its option list populated
 
 
+async def test_typing_the_q_field_drives_the_complexity_norm(user: User) -> None:
+    # the q field (box 𝒄) is an editable powerinput; typing a new norm power routes through
+    # on_power_change -> set_complexity_norm_power -> re-render (it was a display-only stub before).
+    # dual(q) is DERIVED from q (dual(1)=∞, dual(2)=2) and shows in all-interval mode, so switching
+    # q from taxicab to Euclidean must flip dual(q) ∞ -> 2 — proving the typed q drove the norm.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()     # reveal the nested all-interval entry
+    user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
+    await user.should_see(marker="control:all_interval")
+    _cell_child(user, "control:all_interval").set_value(True)    # all-interval -> simplicity + dual(q) shown
+    await user.should_see(marker="control:dual")
+    assert _cell_child(user, "control:q").value == "1"      # taxicab default
+    assert _cell_child(user, "control:dual").value == "∞"   # dual of taxicab (q=1)
+    _cell_child(user, "control:q").set_value("2")           # taxicab (q=1) -> Euclidean (q=2)
+    await user.should_see(marker="control:dual")
+    assert _cell_child(user, "control:q").value == "2"      # the field reflects the new q
+    assert _cell_child(user, "control:dual").value == "2"   # dual(2)=2 -> the typed q drove the norm
+
+
 async def test_weight_slope_chooser_mirrors_a_scheme_change(user: User) -> None:
     # the box-𝒘 weight-slope chooser is the other control_select. Its value tracks the scheme's
     # weight slope, so picking a different slope variant of the scheme through the tuning preset

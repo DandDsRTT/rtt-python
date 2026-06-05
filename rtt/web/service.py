@@ -35,6 +35,7 @@ from rtt.tuning import (
     damage_weights,
     get_complexity,
     get_complexity_prescaler,
+    get_dual_power,
     get_just_tuning_map,
     optimize_generator_tuning_map,
     optimize_tuning_map,
@@ -565,10 +566,22 @@ def scheme_with_prescaler(scheme, prescaler: str):
     )
 
 
-def scheme_with_norm(scheme, euclidean: bool):
-    """``scheme`` with its complexity norm power set to 2 (Euclidean) or 1 (taxicab) — the
-    alt.-complexity control in box 𝒄 — keeping everything else. Returns a resolved spec."""
-    return replace(resolve_tuning_scheme(scheme), complexity_norm_power=2.0 if euclidean else 1.0)
+def scheme_with_complexity_norm_power(scheme, power: float):
+    """``scheme`` with its interval-complexity norm power q set to ``power`` — the editable q field
+    in box 𝒄, deciding which Lq norm of each prescaled vector 𝑋·v the complexity takes (1 = taxicab,
+    2 = Euclidean, ∞ = Chebyshev). Keeps everything else. Returns a resolved spec."""
+    return replace(resolve_tuning_scheme(scheme), complexity_norm_power=float(power))
+
+
+def complexity_norm_power(scheme) -> float:
+    """The interval-complexity norm power q (trait 4) the scheme currently uses."""
+    return resolve_tuning_scheme(scheme).complexity_norm_power
+
+
+def dual_norm_power(scheme) -> float:
+    """The dual of the complexity norm power, dual(q) = q/(q−1) (∞ for q=1, 1 for q=∞) — shown
+    beside q in box 𝒄; the norm the all-interval dual-norm inequality minimaxes under."""
+    return get_dual_power(complexity_norm_power(scheme))
 
 
 def scheme_with_power(scheme, power: float):

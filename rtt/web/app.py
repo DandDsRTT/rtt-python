@@ -2119,13 +2119,13 @@ def index() -> None:
         render()
 
     def on_power_change(cid):
-        # editable power inputs share this kind. optimization:power drives the Lp optimization
-        # power; control:q (the complexity norm power in box 𝒄) is styling-only for now, so we
-        # accept the keystroke but don't yet wire it through to the scheme.
+        # editable power inputs share this kind: optimization:power drives the Lp optimization
+        # power; control:q drives the interval-complexity norm power (box 𝒄). Same parse (∞ or a
+        # positive number); an unparseable / out-of-range entry leaves the scheme unchanged.
         if building[0] or cid not in rec.inputs:
             return
-        if cid != "optimization:power":
-            return  # control:q: white-box look, no behaviour yet (wiring later)
+        if cid not in ("optimization:power", "control:q"):
+            return
         raw = str(rec.inputs[cid].value).strip().lower()
         if raw in ("∞", "inf", "max", "minimax"):
             power = float("inf")
@@ -2136,7 +2136,12 @@ def index() -> None:
                 return  # leave the scheme unchanged on unparseable input
             if power <= 0:
                 return
-        editor.set_optimization_power(power)
+        if cid == "control:q":
+            if power < 1:
+                return  # an Lq norm power must be ≥ 1
+            editor.set_complexity_norm_power(power)
+        else:
+            editor.set_optimization_power(power)
         render()
 
     def on_gentuning_change(cid):
@@ -2300,14 +2305,12 @@ def index() -> None:
         render()
 
     def on_control_select(cid, value):
-        # the weighting choosers (box 𝒄 complexity + norm, box 𝒘 weight slope): each swaps a
+        # the weighting choosers (box 𝒄 complexity, box 𝒘 weight slope): each swaps a
         # scheme trait, re-weighting and retuning. The re-render echo is ignored via the guards.
         # (The prescaler chooser is a preset now — see on_preset.)
         if building[0] or value is None:
             return
-        if cid == "control:norm":
-            editor.set_complexity_euclidean(value == "Euclidean")
-        elif cid == "control:slope":
+        if cid == "control:slope":
             editor.set_weight_slope(value)
         elif cid == "control:complexity":
             if value == "custom":  # a display-only state (a shape off the preset list): no-op

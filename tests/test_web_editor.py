@@ -178,13 +178,13 @@ def test_custom_prescaler_edits_are_undoable():
     assert editor.custom_prescaler is not None and editor.custom_prescaler[1] == 7.5
 
 
-def test_set_complexity_euclidean_switches_the_complexity_norm():
+def test_set_complexity_norm_power_sets_the_complexity_norm():
     editor = Editor()
-    assert service.is_euclidean(editor.tuning_scheme) is False  # taxicab default
-    editor.set_complexity_euclidean(True)  # the alt.-complexity control (box 𝒄)
-    assert service.is_euclidean(editor.tuning_scheme) is True
-    editor.set_complexity_euclidean(False)
-    assert service.is_euclidean(editor.tuning_scheme) is False
+    assert service.complexity_norm_power(editor.tuning_scheme) == 1  # taxicab default (q=1)
+    editor.set_complexity_norm_power(2)  # the editable q field (box 𝒄): taxicab -> Euclidean
+    assert service.complexity_norm_power(editor.tuning_scheme) == 2
+    editor.set_complexity_norm_power(3)  # an arbitrary norm power, not just 1/2
+    assert service.complexity_norm_power(editor.tuning_scheme) == 3
 
 
 def test_set_complexity_name_sets_the_whole_complexity_shape():
@@ -235,7 +235,7 @@ def test_displayed_scheme_name_names_a_control_refined_spec():
     # tuning is optimized to it (auto-optimize is off), the chooser's displayed name reads the same.
     editor = Editor()
     editor.set_all_interval(True)  # minimax-S
-    editor.set_complexity_euclidean(True)  # -> a refined spec equal to minimax-ES
+    editor.set_complexity_norm_power(2)  # q=2 (Euclidean) -> a refined spec equal to minimax-ES
     assert service.base_scheme_name(editor.tuning_scheme) == "minimax-ES"  # the spec is named
     editor.optimize()  # apply the scheme so the displayed tuning realises it
     assert editor.displayed_tuning_scheme_name == "minimax-ES"

@@ -2170,7 +2170,7 @@ class _GridBuilder:
             # 𝑞 and the multi-word caption have room to render without overflow.
             q_slot_x = self.col_x["targets"] + drop_w + OPT_COL_GAP
             q_x = q_slot_x + (slot_w - COL_W) / 2
-            q_text = "2" if service.is_euclidean(self.tuning_scheme) else "1"
+            q_text = _format_power(service.complexity_norm_power(self.tuning_scheme))
             self.cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, "powerinput", text=q_text))
             self.cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
             self.cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
@@ -2180,7 +2180,7 @@ class _GridBuilder:
             if service.is_all_interval(self.tuning_scheme):
                 dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
                 dual_x = dual_slot_x + (slot_w - COL_W) / 2
-                dual_text = "2" if service.is_euclidean(self.tuning_scheme) else "∞"
+                dual_text = _format_power(service.dual_norm_power(self.tuning_scheme))
                 # dual(q) renders via the same powerinput path as q so the ∞ glyph sits at the
                 # same visual size as the q numeral (the on_power_change handler no-ops here)
                 self.cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "powerinput", text=dual_text))
