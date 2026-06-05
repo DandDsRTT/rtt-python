@@ -1016,7 +1016,7 @@ class _Reconciler:
         _val_builder = self._label_builder("rtt-val")
         self.cell_kinds["mapped"] = _KindHandlers(_val_builder, self._update_label)
         self.cell_kinds["vec"] = _KindHandlers(_val_builder, self._update_label)
-        self.cell_kinds["colheader"] = _KindHandlers(self._label_builder("rtt-colheader"), self._update_label)
+        self.cell_kinds["colheader"] = _KindHandlers(self._build_colheader, self._update_label)
         self.cell_kinds["rowlabel"] = _KindHandlers(self._label_builder("rtt-rowlabel"), self._update_label)
         self.cell_kinds["ptext"] = _KindHandlers(self._label_builder("rtt-ptext"), self._update_ptext)
         self.cell_kinds["boxtitle"] = _KindHandlers(self._label_builder("rtt-boxtitle"), None)  # a static in-tile title
@@ -1497,6 +1497,20 @@ class _Reconciler:
         def build(cb, wrap):
             self.labels[cb.id] = ui.label(cb.text).classes(cls)
         return build
+
+    # the four interval lists whose column header is a "drop here to add to this list" target
+    _LIST_HEADERS = {"commas", "targets", "held", "interest"}
+
+    def _build_colheader(self, cb, wrap):  # a column title; an interval list's title also receives drops
+        self.labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
+        # the header is a big "drop into this list" target (append), so an interval can be dragged
+        # onto the column by aiming at its title — vital for an EMPTY list (no column grips to drop
+        # on) and far easier than the small +. Same self-contained per-element pattern as the grips.
+        if cb.id.split(":")[0] == "header" and cb.id.split(":", 1)[1] in self._LIST_HEADERS:
+            lst = cb.id.split(":", 1)[1]
+            wrap.classes("rtt-coldrop")
+            wrap.on("dragover", js_handler="(e) => e.preventDefault()")
+            wrap.on("drop.prevent", lambda _=None, l=lst: self._cb.on_drop(l, None))
 
     def _build_white_label(self, cb, wrap):  # prime / formcell: a read-only bordered cell
         with ui.element("div").classes("rtt-white"):

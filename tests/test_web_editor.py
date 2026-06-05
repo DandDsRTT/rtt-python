@@ -774,10 +774,20 @@ def test_cancelling_a_held_interval_draft_discards_it():
 def test_move_interval_reorders_within_a_list_with_a_single_undo():
     editor = Editor()
     editor.set_held_vectors([[1, 0, 0], [-1, 1, 0], [2, 0, -1]])  # octave, fifth, major third
-    assert editor.move_interval("held", 0, "held", 2) is True  # drag octave to the gap between fifth & third
-    assert editor.held_vectors == [(-1, 1, 0), (1, 0, 0), (2, 0, -1)]
+    # drop the octave ONTO the major third (index 2) -> the octave lands at index 2 (its place)
+    assert editor.move_interval("held", 0, "held", 2) is True
+    assert editor.held_vectors == [(-1, 1, 0), (2, 0, -1), (1, 0, 0)]  # fifth, third, octave
     editor.undo()
     assert editor.held_vectors == [(1, 0, 0), (-1, 1, 0), (2, 0, -1)]  # one undoable step
+
+
+def test_dropping_a_column_on_its_neighbour_swaps_them():
+    # the key fix: dropping A onto the adjacent B moves A to B's index (a swap) — no off-by-one,
+    # no need to overshoot onto the next-but-one column
+    editor = Editor()
+    editor.set_held_vectors([[1, 0, 0], [-1, 1, 0], [2, 0, -1]])  # A=octave, B=fifth, C=third
+    assert editor.move_interval("held", 0, "held", 1) is True  # drop A onto B
+    assert editor.held_vectors == [(-1, 1, 0), (1, 0, 0), (2, 0, -1)]  # B, A, C — A & B swapped
 
 
 def test_move_interval_carries_a_vector_between_two_lists():
@@ -850,12 +860,12 @@ def test_targets_are_inert_in_all_interval_mode():
     assert editor.held_vectors == [(1, 0, 0)]
 
 
-def test_a_no_op_move_changes_nothing_and_adds_no_undo_step():
+def test_dropping_a_column_on_itself_is_a_no_op():
     editor = Editor()
     editor.set_held_vectors([[1, 0, 0], [-1, 1, 0]])
-    assert editor.move_interval("held", 1, "held", 1) is False  # onto its own slot
-    assert editor.move_interval("held", 0, "held", 1) is False  # onto its own adjacent gap
-    editor.undo()  # only set_held_vectors is undoable → the moves added no steps
+    assert editor.move_interval("held", 1, "held", 1) is False  # a column dropped on itself
+    assert editor.move_interval("held", 0, "held", 0) is False
+    editor.undo()  # only set_held_vectors is undoable → the no-op moves added no steps
     assert editor.held_vectors == []
 
 

@@ -785,25 +785,27 @@ class Editor:
             self.state = service.from_comma_basis(self.state.comma_basis + (tuple(vector),))
 
     def move_interval(self, src_list: str, src_idx: int, dst_list: str, dst_idx: int) -> bool:
-        """Move interval ``src_idx`` of ``src_list`` to gap ``dst_idx`` of ``dst_list`` — the
-        drag-and-drop of an interval column. targets ↔ held ↔ interest are plain interval
-        moves; a move into commas tempers the interval out (re-ranking the temperament), out of
-        commas un-tempers it. ``dst_idx`` is an insert-before gap (== length appends). Returns
-        False (no change, no undo step) for an infeasible or no-op move; one undoable step
-        otherwise."""
+        """Move interval ``src_idx`` of ``src_list`` so it LANDS AT index ``dst_idx`` of ``dst_list``
+        — the drag-and-drop of an interval column: dropping it onto the column at ``dst_idx`` puts it
+        in that column's place. (``dst_idx`` past the end appends — a drop on the list's +.) targets
+        ↔ held ↔ interest are plain interval moves; a move into commas tempers the interval out
+        (re-ranking the temperament), out of commas un-tempers it. Returns False (no change, no undo
+        step) for an infeasible or no-op move; one undoable step otherwise.
+
+        The dragged column lands exactly where it was dropped: remove it, then insert at ``dst_idx``
+        in the now-shorter list. So dropping A onto its neighbour B swaps them (A takes B's index) —
+        no off-by-one. Dropping a column on ITSELF is the only same-list no-op."""
         vector = self._peek_vector(src_list, src_idx)
         if vector is None or not self._move_feasible(src_list, dst_list, vector):
             return False
-        if src_list == dst_list and (src_list == "commas" or dst_idx in (src_idx, src_idx + 1)):
-            return False  # dropping onto a column's own slot/adjacent gap is a no-op; a commas
-            # reorder is unobservable (the dual canonicalizes the column order)
+        if src_list == dst_list and (src_list == "commas" or src_idx == dst_idx):
+            return False  # dropping a column on itself is a no-op; a commas reorder is unobservable
+            # (the dual canonicalizes the column order)
         self._snapshot()
         if "commas" in (src_list, dst_list):
             self._clear_pending()  # a rank change invalidates the per-list drafts
         self._take_from(src_list, src_idx)
-        if src_list == dst_list and dst_idx > src_idx:
-            dst_idx -= 1  # the gap shifts down once the source column is removed
-        self._put_into(dst_list, dst_idx, vector)
+        self._put_into(dst_list, dst_idx, vector)  # land at the dropped-on column's index (insert clamps)
         return True
 
     def set_range_mode(self, mode: str) -> None:
