@@ -219,6 +219,7 @@ def _control_svg(glyph: str) -> str:
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --rail-w:{_RAIL_W}px; --panel-w:{_PANEL_W}px;
   --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --preview-color:{_PREVIEW_COLOR};
+  --c-gridline:#e0e0e0;
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
   --label-w:{spreadsheet.LABEL_W}px; --header-h:{spreadsheet.HEADER_H}px; --line-w:{spreadsheet.LINE_W}px;
   --ptext-edit-h:{spreadsheet.PTEXT_EDIT_H}px; --option-box:{spreadsheet.OPTION_BOX_PX}px; --btn:{spreadsheet.BTN}px;
@@ -830,10 +831,10 @@ def _line_style(ln, y_shift: float = 0) -> str:
         # paint the dots over the border box (the box has no width of its own — just the
         # border), so the gradient fills the LINE_W-wide border strip rather than the
         # zero-width content box; the transparent border lets it show.
-        dots = (f"repeating-linear-gradient({sweep},#e0e0e0 0 {spreadsheet.LINE_W}px,"
+        dots = (f"repeating-linear-gradient({sweep},var(--c-gridline) 0 {spreadsheet.LINE_W}px,"
                 f"transparent {spreadsheet.LINE_W}px {_DOT_PITCH}px) border-box")
         return f"{pos}; border-{edge}-color:transparent; background:{dots}"
-    return f"{pos}; border-{edge}-color:#e0e0e0; background:none"
+    return f"{pos}; border-{edge}-color:var(--c-gridline); background:none"
 
 
 def _select_props(min_width: float) -> str:

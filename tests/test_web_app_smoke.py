@@ -291,11 +291,11 @@ def test_line_style_dots_a_collapsed_bands_rule_and_restores_it_when_open():
     # without this the gradient fills the zero-width content box and the dots never show
     assert "border-box" in v_dotted
     v_solid = app._line_style(Line("trunk:x", "v", 100, 0, 50))
-    assert "border-left-color:#e0e0e0" in v_solid and "background:none" in v_solid
+    assert "border-left-color:var(--c-gridline)" in v_solid and "background:none" in v_solid
     h_dotted = app._line_style(Line("h:x", "h", 60, 0, 50, dotted=True))
     assert "border-top-color:transparent" in h_dotted and "repeating-linear-gradient(to right," in h_dotted
     h_solid = app._line_style(Line("h:x", "h", 60, 0, 50))
-    assert "border-top-color:#e0e0e0" in h_solid and "background:none" in h_solid
+    assert "border-top-color:var(--c-gridline)" in h_solid and "background:none" in h_solid
     # the dots are sparse: the transparent gap runs well past the dot's far edge (a LINE_W
     # dot then a gap several times wider), unlike CSS `dotted`'s ~one-width packing
     assert f"transparent {spreadsheet.LINE_W}px {app._DOT_PITCH}px" in v_dotted
@@ -308,8 +308,9 @@ def test_shared_axis_gridlines_render_two_pixels_thick():
     # clearly. Both orientations carry the same #e0e0e0 weight.
     assert spreadsheet.LINE_W == 2
     assert f"--line-w:{spreadsheet.LINE_W}px" in app._CSS  # the gridline weight, set in :root
-    assert "border-left:var(--line-w) solid #e0e0e0" in app._CSS  # the vertical gridlines
-    assert "border-top:var(--line-w) solid #e0e0e0" in app._CSS   # the horizontal gridlines
+    assert "--c-gridline:#e0e0e0" in app._CSS  # the gridline colour, set in :root so dark mode can retint it
+    assert "border-left:var(--line-w) solid var(--c-gridline)" in app._CSS  # the vertical gridlines
+    assert "border-top:var(--line-w) solid var(--c-gridline)" in app._CSS   # the horizontal gridlines
 
 
 def _css_rule(selector):

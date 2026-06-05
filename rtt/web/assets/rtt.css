@@ -140,8 +140,8 @@
 
 .rtt-line { position:absolute; z-index:1; opacity:1; transition:left var(--t), top var(--t),
             width var(--t), height var(--t), opacity var(--t); }
-.rtt-line-v { border-left:var(--line-w) solid #e0e0e0; width:0; }
-.rtt-line-h { border-top:var(--line-w) solid #e0e0e0; height:0; }
+.rtt-line-v { border-left:var(--line-w) solid var(--c-gridline); width:0; }
+.rtt-line-h { border-top:var(--line-w) solid var(--c-gridline); height:0; }
 /* a colorization wash: a colour band behind the grey tiles (below the gridlines too)
    filling a colorized group's row/column background. Each group's band has a white
    base on a LOWER layer (z-index:-1) than its darken colour layer (z-index:0), so the
