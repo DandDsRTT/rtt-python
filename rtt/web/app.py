@@ -284,6 +284,25 @@ def _freeze_container(cb, fx: float, fy: float) -> str:
         return "row"
     return "body"
 
+# Which panes a BLOCK renders into. Unlike a cell — small enough that its top-left corner picks one
+# band — a colorization wash overhangs its tile by WASH_PAD-PAD (so adjacent washes meet across the
+# gap), so the top-row / left-column washes spill PAST the freeze seam. A wash rendered only into the
+# body is then shaved at those edges: the column strip clips the spill above freeze_y (the body
+# scroller stops at the seam) and the row band paints over the spill left of freeze_x. So a wash, like
+# a gridline crossing the seam, renders into the body PLUS every frozen pane its rect reaches — each
+# copy clipped to its pane, meeting the body copy continuously so the colour fills the inter-title gap
+# at the top/left edges too. Grey tiles and bordered boxes sit inside both seams, so they get "body"
+# alone and stay single-pane. The frozen copies hide once the body scrolls on that axis (see rtt.css).
+def _block_panes(bl, fx: float, fy: float) -> tuple[str, ...]:
+    panes = ["body"]
+    if bl.y < fy:
+        panes.append("col")
+    if bl.x < fx:
+        panes.append("row")
+    if bl.x < fx and bl.y < fy:
+        panes.append("corner")
+    return tuple(panes)
+
 # A math-expression cell stacks 1–2 lines ("1200 · log₂(3/2)" over "= 701.96") in a
 # narrow value square, so each line's font is scaled down to fit the cell width.
 _EXPR_MAX_FONT = 9.0  # px — short lines (a bare prime map) sit at the comfortable size
@@ -2471,24 +2490,36 @@ def index() -> None:
             if x0 < fx and y1 >= fy:
                 place_line(ln, "#row", rowband, fy)        # the frozen row band (body scroll space)
 
-        for bl in lay.blocks:
-            seen.add(bl.id)
-            if bl.id not in rec.els:
-                # a block is a thin-bordered box (boxed, the nested tuning-ranges frame), a
-                # plain grey tile (tint ""), a colorization wash's white base (tint "base"),
-                # or its coloured layer (tint = group name). Fixed for the block's lifetime,
-                # so the class is chosen once.
-                with board:
+        # A block renders into each pane _block_panes routes it to. A grey tile (tint "") or a
+        # thin-bordered box (boxed, the nested tuning-ranges / optimization frame) clears both seams,
+        # so it gets the body alone; a colorization wash's white base (tint "base") or coloured layer
+        # (tint = group name) overhangs the seam, so a top-row / left-column one also rides the frozen
+        # strip / band / corner it spills into (suffix #col/#row/#corner), each copy clipped to its
+        # pane so the colour fills the inter-title gap rather than being shaved off there. Native y in
+        # the column strip + corner, body scroll space (shifted up by freeze_y) in the body + row band,
+        # mirroring place_line; the orphan sweep drops a copy a wash later stops needing. The class is
+        # chosen once per copy (fixed for its lifetime).
+        def place_block(bl, pane):
+            suffix = "" if pane == "body" else "#" + pane
+            shift = 0 if pane in ("col", "corner") else fy
+            eid = bl.id + suffix
+            seen.add(eid)
+            if eid not in rec.els:
+                with cell_parents[pane]:
                     cls = ("rtt-block-boxed" if bl.boxed
                            else "rtt-washbase" if bl.tint == "base"
                            else "rtt-wash" if bl.tint else "rtt-block")
-                    rec.els[bl.id] = ui.element("div").classes(cls).props(f'data-eid="{bl.id}"')
-            style = f"left:{bl.x}px; top:{bl.y - fy}px; width:{bl.w}px; height:{bl.h}px"
+                    rec.els[eid] = ui.element("div").classes(cls).props(f'data-eid="{eid}"').mark(eid)
+            style = f"left:{bl.x}px; top:{bl.y - shift}px; width:{bl.w}px; height:{bl.h}px"
             if bl.tint in _TINTS:  # the coloured layer (the base draws --wash-base from CSS). The
                 # tint rides a --wash-<group> variable so dark mode can retint the whole palette;
                 # :root defines each to its _TINTS value, so light renders unchanged.
                 style += f"; background:var(--wash-{bl.tint})"
-            rec.els[bl.id].style(style)
+            rec.els[eid].style(style)
+
+        for bl in lay.blocks:
+            for pane in _block_panes(bl, fx, fy):
+                place_block(bl, pane)
 
         # the edit-preview highlight: while a cell is focused, ring every OTHER cell whose value this
         # render has moved against the baseline snapshotted when the cell took focus. With nothing

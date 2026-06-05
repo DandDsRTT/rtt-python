@@ -464,6 +464,40 @@ def test_seam_appears_only_when_the_body_is_scrolled():
     assert f"--seam:{app._SEAM}" in css  # the seam colour, set in :root
 
 
+def test_block_panes_routes_a_wash_into_every_frozen_pane_its_rect_crosses():
+    # A grey tile sits inside both seams, so it renders into the body alone. A colour wash, though,
+    # overhangs its tile by WASH_PAD-PAD, so a top-row / left-column wash spills PAST the seam — and
+    # must render into the frozen strip/band it spills into as well, or the column strip clips that
+    # spill (the body scroller stops at the seam) and the row band paints over it. Like a gridline
+    # crossing the seam, the wash routes into the body plus every frozen pane it reaches.
+    from rtt.web.layout import Block
+    fx, fy = 144.0, 68.0
+    inside = Block("b", 200, 200, 50, 50)            # clears both seams
+    over_top = Block("b", 200, 62, 50, 64)           # spills above freeze_y
+    over_left = Block("b", 138, 200, 50, 50)         # spills left of freeze_x
+    over_corner = Block("b", 138, 62, 50, 64)        # spills past both, into the corner
+    assert app._block_panes(inside, fx, fy) == ("body",)
+    assert app._block_panes(over_top, fx, fy) == ("body", "col")
+    assert app._block_panes(over_left, fx, fy) == ("body", "row")
+    assert app._block_panes(over_corner, fx, fy) == ("body", "col", "row", "corner")
+
+
+def test_frozen_wash_copies_show_only_at_rest_dropping_once_the_body_scrolls():
+    # The top/left-edge washes also render into the frozen column strip / row band so their colour
+    # fills the inter-title gap at rest. That copy only belongs unscrolled: once the body scrolls on
+    # an axis the first row/column has left the seam, so the strip would stain the gap with a stale
+    # colour over the wrong tiles. So it drops when .rtt-app gains rtt-scrolled-x/y — paired with the
+    # seam toggle on the same axis (column strip on y, row band on x; the base hides with its colour).
+    css = app._CSS
+    for sel in (".rtt-app.rtt-scrolled-y .rtt-colhead .rtt-wash",
+                ".rtt-app.rtt-scrolled-y .rtt-colhead .rtt-washbase",
+                ".rtt-app.rtt-scrolled-x .rtt-rowband .rtt-wash",
+                ".rtt-app.rtt-scrolled-x .rtt-rowband .rtt-washbase"):
+        assert sel in css
+    m = re.search(r"rtt-scrolled-y \.rtt-colhead \.rtt-wash[\s\S]*?\{([^}]*)\}", css)
+    assert m and "display:none" in m.group(1)  # the copies are dropped, not merely restyled
+
+
 def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scroll():
     # the only JS is a capture-phase scroll listener over .rtt-gridbody (the body scroller). It
     # translateX-syncs the column-title strip to the body's horizontal scroll (the one thing CSS

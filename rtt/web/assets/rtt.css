@@ -135,6 +135,16 @@
    it shifts nothing */
 .rtt-app.rtt-scrolled-y .rtt-colhead, .rtt-app.rtt-scrolled-y .rtt-corner { border-bottom-color:var(--seam); }
 .rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner { border-right-color:var(--seam); }
+/* A top-row / left-column wash overhangs the seam, so besides the body copy it renders one into the
+   frozen column strip / row band / corner (see _block_panes in app.py), filling the inter-title gap
+   the body scroller would otherwise clip. That copy only completes the RESTING picture: once the body
+   scrolls on an axis the first row/column has left the seam, so the frozen strip would stain the gap
+   with a stale colour over the wrong tiles. Drop it then — the seam rule above takes that edge —
+   paired on the same axis as the seam (column strip + corner on y, row band + corner on x). */
+.rtt-app.rtt-scrolled-y .rtt-colhead .rtt-wash, .rtt-app.rtt-scrolled-y .rtt-colhead .rtt-washbase,
+.rtt-app.rtt-scrolled-y .rtt-corner .rtt-wash, .rtt-app.rtt-scrolled-y .rtt-corner .rtt-washbase,
+.rtt-app.rtt-scrolled-x .rtt-rowband .rtt-wash, .rtt-app.rtt-scrolled-x .rtt-rowband .rtt-washbase,
+.rtt-app.rtt-scrolled-x .rtt-corner .rtt-wash, .rtt-app.rtt-scrolled-x .rtt-corner .rtt-washbase { display:none; }
 @keyframes rtt-in { from { opacity:0; } to { opacity:1; } }
 .rtt-line, .rtt-block, .rtt-block-boxed, .rtt-cell, .rtt-wash, .rtt-washbase { animation:rtt-in var(--t) ease; }
 

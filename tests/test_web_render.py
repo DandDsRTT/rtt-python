@@ -135,6 +135,19 @@ async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> No
     await user.should_see(marker="cell:mapping:0:0")
 
 
+async def test_edge_washes_also_render_into_the_frozen_panes(user: User) -> None:
+    # A wash overhangs the freeze seam, so the top-row and left-column washes spill past it. Rendered
+    # only into the body they are shaved at those edges — the column strip clips the top spill, the
+    # row band paints over the left spill. So each also renders a copy into the frozen pane it spills
+    # into (id suffixed #col / #row), the way a gridline crossing the seam does. Drive the colorization
+    # branch and confirm both frozen copies exist (the body copy keeps the bare id).
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="colorization").click()
+    await user.should_see(marker="wash:temperament:quantities:gens")        # the body copy
+    await user.should_see(marker="wash:temperament:quantities:gens#col")    # the column-strip copy (top spill)
+    await user.should_see(marker="wash:temperament:mapping:quantities#row")  # the row-band copy (left spill)
+
+
 async def test_settings_and_controls_carry_hover_tooltips(user: User) -> None:
     # the Show toggles and the interactive grid controls all get explanatory hover text
     # (rtt.web.tooltips). A tooltip renders hidden until hover, so the User sim's visible-only
