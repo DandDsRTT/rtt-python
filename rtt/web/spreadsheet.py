@@ -2309,14 +2309,17 @@ class _GridBuilder:
                                  "control_select", text=complexity_text, values=complexity_values))
             self.cells.append(CellBox("caption:complexity", tx, cy + PRESET_H, drop_w,
                                  CAPTION_LINE, "caption", text="predefined complexities", align="left"))
-            # the q norm-power field: an editable white box (a powerinput) styled to match the
-            # optimization box's 𝑝 field; wiring (typing a new q to drive the norm) comes later.
-            # The slot is wider than the value cell, with the value centred so the italic symbol
-            # 𝑞 and the multi-word caption have room to render without overflow.
+            # the interval-complexity norm power 𝑞, styled to match the optimization box's 𝑝 field (a
+            # slot wider than the value cell, value centred, so the italic 𝑞 and the multi-word caption
+            # render without overflow). 𝑞 is an ALTERNATE-complexity control — typing a new value
+            # switches the scheme's Lq complexity — so it is an editable powerinput only when alt.
+            # complexity is on; otherwise the complexity (hence 𝑞) is fixed and it renders as a read-only
+            # powerdisplay (the same face, no white box), exactly like the all-interval-locked power 𝑝.
             q_slot_x = tx + drop_w + OPT_COL_GAP
             q_x = q_slot_x + (slot_w - COL_W) / 2
             q_text = _format_power(service.complexity_norm_power(self.tuning_scheme))
-            self.cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, "powerinput", text=q_text))
+            q_kind = "powerinput" if self.settings["alt_complexity"] else "powerdisplay"
+            self.cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, q_kind, text=q_text))
             self.cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
             self.cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
                                  text="interval complexity norm power"))
@@ -2326,9 +2329,10 @@ class _GridBuilder:
                 dual_slot_x = q_slot_x + slot_w + OPT_COL_GAP
                 dual_x = dual_slot_x + (slot_w - COL_W) / 2
                 dual_text = _format_power(service.dual_norm_power(self.tuning_scheme))
-                # dual(q) renders via the same powerinput path as q so the ∞ glyph sits at the
-                # same visual size as the q numeral (the on_power_change handler no-ops here)
-                self.cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "powerinput", text=dual_text))
+                # dual(q) is DERIVED from q (never edited), so it always renders as a read-only
+                # powerdisplay: the same face as q — ∞ at the same visual size as the q numeral — minus
+                # the white box (an editable-looking box for a value you can't edit was the old wart).
+                self.cells.append(CellBox("control:dual", dual_x, cy, COL_W, ROW_H, "powerdisplay", text=dual_text))
                 self.cells.append(CellBox("symbol:dual", dual_slot_x, sym_y, slot_w, SYMBOL_H,
                                      "symbol", text="dual(𝑞)"))
                 self.cells.append(CellBox("caption:dual", dual_slot_x, cap_y, slot_w, cap_h, "caption",

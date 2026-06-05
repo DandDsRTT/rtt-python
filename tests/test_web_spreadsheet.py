@@ -2474,18 +2474,19 @@ def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_comple
 
 def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields():
     # box 𝒄 lays its three controls left-to-right: [predefined complexities ▼] | q | dual(q),
-    # each with a caption beneath. It shows with WEIGHTING alone (no alt_complexity); the q (norm
-    # power) and dual(q) fields follow the optimization box's value-over-symbol-over-caption pattern
-    # (the 𝑝 / "optimization power" style); the dropdown has just a caption (no symbol slot).
-    # dual(q) needs an all-interval scheme.
-    on = {c.id: c for c in _with(scheme="minimax-S", weighting=True, all_interval=True).cells}
+    # each with a caption beneath. The box shows with WEIGHTING alone; alt. complexity (on here) puts
+    # 𝑞 in its editable powerinput form. The q (norm power) and dual(q) fields follow the optimization
+    # box's value-over-symbol-over-caption pattern (the 𝑝 / "optimization power" style); the dropdown
+    # has just a caption (no symbol slot). dual(q) needs an all-interval scheme.
+    on = {c.id: c for c in _with(scheme="minimax-S", weighting=True,
+                                 all_interval=True, alt_complexity=True).cells}
     # the predefined-complexities dropdown carries its caption HUGGING its bottom (rather than
     # bottom-aligned with the q/dual captions further down the row)
     assert on["caption:complexity"].kind == "caption"
     assert on["caption:complexity"].text == "predefined complexities"
     assert on["caption:complexity"].y == on["control:complexity"].y + on["control:complexity"].h
-    # the q norm-power field: an editable powerinput (white box) styled like the optimization
-    # power 𝑝 — the wiring (typing a new q to drive the norm) comes later. Default taxicab => 1.
+    # the q norm-power field: with alt. complexity on it is an editable powerinput (white box) styled
+    # like the optimization power 𝑝; typing a new q drives the norm. Default taxicab => 1.
     assert on["control:q"].kind == "powerinput"
     assert on["control:q"].text == "1"
     assert on["control:q"].x > on["control:complexity"].x  # to the RIGHT of the dropdown
@@ -2494,9 +2495,9 @@ def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields():
     assert on["symbol:q"].y > on["control:q"].y  # symbol BELOW the value (optimization-box style)
     assert on["caption:q"].text == "interval complexity norm power"
     assert on["caption:q"].y > on["symbol:q"].y  # caption BELOW the symbol
-    # the dual(q) display: the dual norm power, rendered through the SAME powerinput path as q
-    # so ∞ sits at the same visual size as the q numeral (the on_power_change handler no-ops here)
-    assert on["control:dual"].kind == "powerinput"
+    # the dual(q) display: the dual norm power, DERIVED from q (never edited), so it renders as a
+    # read-only powerdisplay — the same face as q (∞ at the q numeral's size), minus the white box
+    assert on["control:dual"].kind == "powerdisplay"
     assert on["control:dual"].text == "∞"  # the dual of taxicab (q=1) is ∞
     assert on["control:dual"].x > on["control:q"].x
     assert on["symbol:dual"].text == "dual(𝑞)"  # the math italic q sits inside the dual-of-q label
@@ -2507,6 +2508,32 @@ def test_box_c_lays_out_with_q_and_dual_q_norm_power_fields():
     assert on["caption:complexity"].y < on["caption:q"].y
     # the old taxicab/Euclidean dropdown is gone — its look is replaced by the q field (mockup)
     assert "control:norm" not in on
+
+
+def test_q_norm_power_is_editable_only_with_alt_complexity():
+    # the interval-complexity norm power 𝑞 (box 𝒄) is an ALTERNATE-complexity control: typing a new
+    # 𝑞 switches the scheme to a different Lq complexity, so it is editable (a powerinput) only when
+    # alt. complexity is on. With alt. complexity off the complexity is fixed (the dropdown offers only
+    # the current one), so 𝑞 is fixed too and renders read-only — a powerdisplay (the SAME ∞-over-"(max)"
+    # face as the input, just no white box), exactly like the all-interval-locked optimization power 𝑝.
+    off = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # alt. complexity OFF (default)
+    assert off["control:q"].kind == "powerdisplay"
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
+    assert on["control:q"].kind == "powerinput"
+    assert off["control:q"].text == on["control:q"].text == "1"  # same displayed value either way (taxicab)
+
+
+def test_power_value_cells_hide_when_gridded_values_are_off():
+    # the power VALUE cells — the optimization power 𝑝, the norm power 𝑞, and the derived dual(𝑞) — are
+    # gridded values, so turning gridded values off filters them all out whether they render as the
+    # editable powerinput or the read-only powerdisplay (both kinds are in GRIDDED_KINDS). Without that
+    # a locked 𝑞 / 𝑝 or the dual would survive as a lone value floating in an otherwise plain-text box.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "weighting": True, "optimization": True}  # minimax-S => box 𝒄 + locked 𝑝 + dual
+    off = {c.id for c in spreadsheet.build(base, {**s, "gridded_values": False}, tuning_scheme="minimax-S").cells}
+    assert not ({"control:q", "control:dual", "optimization:power"} & off)  # all three (powerdisplays) filtered
+    on = {c.id for c in spreadsheet.build(base, {**s, "gridded_values": True}, tuning_scheme="minimax-S").cells}
+    assert {"control:q", "control:dual", "optimization:power"} <= on  # sanity: the scenario really builds them
 
 
 def test_dual_q_shows_only_when_the_scheme_is_all_interval():

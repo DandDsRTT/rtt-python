@@ -83,14 +83,19 @@ READONLY_KINDS: frozenset[str] = frozenset({
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",
 })
 
-# The lone read-only OUTPUT values that nonetheless carry help: the optimization objective's
-# value cell (a ``tval``) and its symbol cell (a ``symbol``). Like the power 𝑝, the objective now
-# carries a label caption ("power mean" / "retuning magnitude"), but that two-word label only names
-# the quantity — the hover text explains it, and flips with all-interval mode (the damage ⟪𝐝⟫ₚ vs
-# the retuning magnitude). Both ids hang the tooltip so the whole displayed value is hoverable;
-# :func:`control_help` returns help for them ahead of the READONLY_KINDS check, and the
-# completeness sweep exempts them from the no-tooltip rule.
+# Read-only OUTPUT values that nonetheless carry hover help — exempt from the no-tooltip rule.
+# Two kinds qualify:
+#   - the optimization objective's value cell (a ``tval``) and symbol cell (a ``symbol``). Like the
+#     power 𝑝, the objective carries a label caption ("power mean" / "retuning magnitude"), but that
+#     two-word label only names the quantity — the hover text explains it, and flips with all-interval
+#     mode (the damage ⟪𝐝⟫ₚ vs the retuning magnitude). Both ids hang the tooltip so the whole
+#     displayed value is hoverable; the renderer swaps the wording live (see :func:`objective_help`).
+#   - the dual norm power dual(𝑞), a value DERIVED from 𝑞 (never editable, so a read-only
+#     ``powerdisplay``) but advanced enough to warrant a word; its help lives in :data:`_ID_HELP`.
+# :func:`control_help` returns help for all of these ahead of / through the READONLY_KINDS check,
+# and the completeness sweep exempts them from the no-tooltip rule.
 OBJECTIVE_IDS: frozenset[str] = frozenset({"optimization:objective", "optimization:objective:symbol"})
+HELPED_READONLY_IDS: frozenset[str] = OBJECTIVE_IDS | frozenset({"control:dual"})
 
 # Hover text per interactive cell kind whose meaning is fixed by the kind alone.
 # (Kinds backing several controls are disambiguated by id in _ID_HELP below.)
@@ -224,7 +229,9 @@ def control_help(kind: str, cid: str) -> str | None:
     if cid in OBJECTIVE_IDS:  # a read-only value that still carries help (text swapped live by the renderer)
         return objective_help(all_interval=False)
     if kind in READONLY_KINDS:
-        return None
+        # most read-only kinds carry no tooltip; a few derived values (e.g. the dual norm power
+        # dual(𝑞), a powerdisplay) still do — their ids are listed in HELPED_READONLY_IDS
+        return _ID_HELP.get(cid) if cid in HELPED_READONLY_IDS else None
     if kind == "preset":
         return _PRESET_HELP.get(cid.split(":")[1])
     if kind == "ptextedit":

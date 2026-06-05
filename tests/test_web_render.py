@@ -848,22 +848,42 @@ async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -
 
 
 async def test_typing_the_q_field_drives_the_complexity_norm(user: User) -> None:
-    # the q field (box 𝒄) is an editable powerinput; typing a new norm power routes through
-    # on_power_change -> set_complexity_norm_power -> re-render (it was a display-only stub before).
-    # dual(q) is DERIVED from q (dual(1)=∞, dual(2)=2) and shows in all-interval mode, so switching
-    # q from taxicab to Euclidean must flip dual(q) ∞ -> 2 — proving the typed q drove the norm.
+    # the q field (box 𝒄) is an editable powerinput ONLY with alt. complexity on (it switches the
+    # scheme's Lq complexity); typing then routes through on_power_change -> set_complexity_norm_power
+    # -> re-render. dual(q) is DERIVED from q (dual(1)=∞, dual(2)=2) and shows as a read-only
+    # powerdisplay in all-interval mode, so switching q taxicab -> Euclidean must flip dual(q) ∞ -> 2,
+    # proving the typed q drove the norm.
     await user.open("/")
-    user.find(kind=ui.checkbox, content="weighting").click()     # reveal the nested all-interval entry
-    user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
+    user.find(kind=ui.checkbox, content="weighting").click()        # reveal the nested all-interval + alt entries
+    user.find(kind=ui.checkbox, content="all-interval").click()     # show the target-controls checkbox
+    user.find(kind=ui.checkbox, content="alt. complexity").click()  # make q an editable powerinput
     await user.should_see(marker="control:all_interval")
-    _cell_child(user, "control:all_interval").set_value(True)    # all-interval -> simplicity + dual(q) shown
+    _cell_child(user, "control:all_interval").set_value(True)       # all-interval -> simplicity + dual(q) shown
     await user.should_see(marker="control:dual")
-    assert _cell_child(user, "control:q").value == "1"      # taxicab default
-    assert _cell_child(user, "control:dual").value == "∞"   # dual of taxicab (q=1)
-    _cell_child(user, "control:q").set_value("2")           # taxicab (q=1) -> Euclidean (q=2)
+    assert _cell_child(user, "control:q").value == "1"              # taxicab default
+    assert _cell_child(user, "control:dual").default_slot.children[0].text == "∞"  # dual of taxicab (q=1), read-only face
+    _cell_child(user, "control:q").set_value("2")                  # taxicab (q=1) -> Euclidean (q=2)
     await user.should_see(marker="control:dual")
-    assert _cell_child(user, "control:q").value == "2"      # the field reflects the new q
-    assert _cell_child(user, "control:dual").value == "2"   # dual(2)=2 -> the typed q drove the norm
+    assert _cell_child(user, "control:q").value == "2"             # the field reflects the new q
+    assert _cell_child(user, "control:dual").default_slot.children[0].text == "2"  # dual(2)=2 -> the typed q drove the norm
+
+
+async def test_q_norm_power_is_read_only_until_alt_complexity(user: User) -> None:
+    # the user-facing contract: with alt. complexity OFF you cannot type a new norm power 𝑞 (editing it
+    # would switch the scheme's complexity, which alt. complexity gates). So 𝑞 renders as a read-only
+    # value — the SAME ∞-over-(max) stacked face as the editable input, just no white box (no rtt-cell-
+    # input, no input element) — exactly like the all-interval-locked optimization power. Turning alt.
+    # complexity on swaps it to the editable powerinput.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()           # box 𝒘's slope chooser shows
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄 + 𝑞
+    await user.should_see(marker="control:q")
+    assert "rtt-cell-input" not in _wrap_classes(user, "control:q")  # alt. complexity OFF -> read-only, no input
+    assert _cell_child(user, "control:q").default_slot.children[0].text == "1"  # the read-only face shows q=1
+    user.find(kind=ui.checkbox, content="alt. complexity").click()  # turn it on -> q becomes editable
+    await user.should_see(marker="control:q")
+    assert "rtt-cell-input" in _wrap_classes(user, "control:q")      # now an editable powerinput
+    assert _cell_child(user, "control:q").value == "1"              # the input mirrors the same value
 
 
 async def test_weight_slope_chooser_mirrors_a_scheme_change(user: User) -> None:

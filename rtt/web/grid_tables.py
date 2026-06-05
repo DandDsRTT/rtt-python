@@ -655,7 +655,7 @@ GRIDDED_KINDS = frozenset({
     "minus", "plus", "gen_minus", "gen_plus", "map_minus", "map_plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus", "held_minus", "held_plus", "target_minus", "target_plus", "optimize",
     "colgrip",  # the drag-and-drop reorder grip on each interval column's fan branch
-    "boxtitle", "powerinput",
+    "boxtitle", "powerinput", "powerdisplay",  # both power-value faces (editable input / locked value)
 })
 # "quantities" (general) is gentler than gridded values: it keeps every cell box
 # AND the EBK marks framing them, and only *blanks the numbers* of the body

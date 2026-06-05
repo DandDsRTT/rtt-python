@@ -68,7 +68,7 @@ def test_control_help_is_present_for_interactive_kinds(kind, cid):
 _DISAMBIGUATED = [
     ("powerinput", "optimization:power"),
     ("powerinput", "control:q"),
-    ("powerinput", "control:dual"),
+    ("powerdisplay", "control:dual"),  # dual(q) is derived → a read-only powerdisplay that still carries help
     ("control_select", "control:complexity"),
     ("control_select", "control:slope"),
     ("control_check", "control:diminuator"),
@@ -169,7 +169,7 @@ def test_every_rendered_cell_is_classified_for_tooltips():
     # control here, not like a bare output.
     for cb in _rendered_cells():
         text = tooltips.control_help(cb.kind, cb.id)
-        if cb.kind in tooltips.READONLY_KINDS and cb.id not in tooltips.OBJECTIVE_IDS:
+        if cb.kind in tooltips.READONLY_KINDS and cb.id not in tooltips.HELPED_READONLY_IDS:
             assert text is None, f"read-only {cb.kind!r} ({cb.id}) should carry no tooltip"
         else:
             assert (text or "").strip(), (

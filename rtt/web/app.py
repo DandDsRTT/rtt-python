@@ -1389,16 +1389,18 @@ class _Reconciler:
 
     def _update_powerinput(self, cb):
         # mirror the raw value into the input (shown when focused) and re-sync the overlay face
-        # (shown otherwise): ∞ stacks a small "(max)" below it, a numeric power shows bare. (All-
-        # interval locks 𝑝 to ∞ as a read-only powerdisplay — a different kind — so this only ever
-        # runs for the live editable power and the box-𝒄 norm-power 𝑞 / dual(𝑞) fields.)
+        # (shown otherwise): ∞ stacks a small "(max)" below it, a numeric power shows bare. (Only the
+        # editable powers run through here: the live optimization power 𝑝 and the box-𝒄 norm power 𝑞
+        # with alt. complexity on. A locked 𝑝 (all-interval) or 𝑞 (alt. complexity off) and the
+        # derived dual(𝑞) are read-only powerdisplays — a different kind — so they never reach here.)
         self.inputs[cb.id].value = cb.text
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
 
     def _build_powerdisplay(self, cb, wrap):
-        # the all-interval-locked optimization power as a READ-ONLY value: the SAME stacked
+        # a READ-ONLY power value: the all-interval-locked optimization power 𝑝, the box-𝒄 norm power 𝑞
+        # when alt. complexity is off, or the derived dual norm power dual(𝑞). The SAME stacked
         # ∞-over-"(max)" face as the editable powerinput (_power_parts, same fonts, full-cell centred
-        # via rtt-cellface), but with no input — so it looks identical to the live power minus the
+        # via rtt-cellface), but with no input — so it looks identical to its editable twin minus the
         # white input box. (rtt-cell-stacked is omitted: with no input there's no face to hide on
         # focus, and it keeps the per-cell-unit padding rule off a value that carries no unit.)
         self._put_stacked_face(cb.id, "rtt-tval rtt-cellface", *_power_parts(cb.text))
