@@ -226,14 +226,15 @@ def test_set_all_interval_toggles_the_scheme_target_set():
 
 
 def test_displayed_scheme_name_names_a_control_refined_spec():
-    # Reaching minimax-ES by ticking the Euclidean complexity control (which stores the scheme as
-    # a refined spec, not a name string) must still display its systematic name: the renderer names
-    # the spec rather than giving up with "-". This is the same scheme as picking minimax-ES from
-    # the chooser, so it must read the same.
+    # A scheme reached by ticking the Euclidean complexity control is stored as a refined spec, not
+    # a name string — but it must still be NAMEABLE (the renderer names the spec) rather than
+    # dropping to "-" for lacking a string. base_scheme_name reads its identity directly; once the
+    # tuning is optimized to it (auto-optimize is off), the chooser's displayed name reads the same.
     editor = Editor()
-    editor.set_all_interval(True)  # minimax-S (a name string)
-    assert editor.displayed_tuning_scheme_name == "minimax-S"
+    editor.set_all_interval(True)  # minimax-S
     editor.set_complexity_euclidean(True)  # -> a refined spec equal to minimax-ES
+    assert service.base_scheme_name(editor.tuning_scheme) == "minimax-ES"  # the spec is named
+    editor.optimize()  # apply the scheme so the displayed tuning realises it
     assert editor.displayed_tuning_scheme_name == "minimax-ES"
 
 
@@ -1042,7 +1043,8 @@ def test_displayed_tuning_scheme_name_drops_to_none_when_the_tuning_deviates():
     # a control-refined scheme (a finite optimization power) is still named: miniRMS over the target
     # list reads as its systematic name now that a spec can be rendered, rather than dropping to "-"
     fresh = Editor()
-    fresh.set_optimization_power(2.0)
+    fresh.set_optimization_power(2.0)  # a finite-power (miniRMS) refined spec
+    fresh.optimize()  # auto-optimize off: apply it so the displayed tuning realises the scheme
     assert fresh.displayed_tuning_scheme_name == "miniRMS-U"
 
 
