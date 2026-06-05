@@ -1011,6 +1011,8 @@ def plain_text_values(
     interest=(),
     generator_tuning=None,
     target_override=None,
+    nonprime_approach: str = "",
+    superspace: bool = False,
 ) -> dict[tuple[str, str], str]:
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
@@ -1144,6 +1146,36 @@ def plain_text_values(
             ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
             ("prescaling", "interest"): _prescale_vector_list(_sized(_prescaled(interest)), outer=""),
             ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios, domain_basis=db), wrap=False),
+        })
+    # the chapter-9 nonstandard-domain superspace region: B_L (the basis-embedding matrix
+    # as a list of dL-tall kets, one per domain element), M_L (the temperament's mapping
+    # over the superspace primes — a covector stack like M), M_jL (the dL × dL identity),
+    # and the cyan tuning maps 𝒈ₗ / 𝒕ₗ / 𝒋ₗ / 𝒓ₗ (covectors over the superspace primes,
+    # respectively the generators for 𝒈ₗ). Same bracket conventions as the existing tiles
+    # they parallel — _ket_list for B_L's vector columns, _cents_map for the covector maps,
+    # _cents_genmap for the genmap 𝒈ₗ — so each new EBK string reads consistently with its
+    # non-superspace cousin (per the rendered mockup, which kept the existing brackets).
+    if superspace:
+        ml = superspace_mapping(state)
+        ss_primes = superspace_primes(state.domain_basis)
+        mjl = superspace_just_mapping(ss_primes)
+        # B_L: each domain element is one column in its dL-tall monzo representation. The
+        # stored shape is rows-as-elements, so the basis tuple is consumed as one vector
+        # per outer element — the same convention _ket_list expects.
+        bl = basis_in_superspace(state.domain_basis)
+        ss_tun = superspace_tuning(state, scheme, nonprime_approach)
+        values.update({
+            ("ss_vectors", "primes"): _ket_list(bl, "⟩"),
+            # the M_L / M_jL stacks render mapping-style: each row a covector ⟨ … ], the
+            # outer wrap a [ … } (the same mapping shape M uses minus the angle close).
+            ("ss_mapping", "ssprimes"): "[" + "".join(
+                "⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}",
+            ("ss_just_mapping", "ssprimes"): "[" + "".join(
+                "⟨" + " ".join(str(x) for x in row) + "]" for row in mjl) + "}",
+            ("tuning", "ssgens"): _cents_genmap(ss_tun.generator_map),
+            ("tuning", "ssprimes"): _cents_map(ss_tun.tuning_map),
+            ("just", "ssprimes"): _cents_map(ss_tun.just_map),
+            ("retune", "ssprimes"): _cents_map(ss_tun.retuning_map),
         })
     return values
 

@@ -6883,3 +6883,75 @@ def test_superspace_tuning_standard_domain_trivially_passes_through():
         assert f"tuning:ssprime:{i}" in cells
         assert f"just:ssprime:{i}" in cells
         assert f"retune:ssprime:{i}" in cells
+
+
+# ---------------------------------------------------------------------------
+# Plain-text values for the new superspace tiles. The EBK strings under each
+# new tile (when the plain_text_values toggle is on) read the same numbers
+# the grid renders — service.plain_text_values is the single seam.
+# ---------------------------------------------------------------------------
+
+
+def test_B_L_tile_has_a_plain_text_string():
+    cells = {c.id: c for c in _barbados_ss(plain_text_values=True).cells}
+    # B_L for BARBADOS over 2.3.13/5 → ((1,0,0,0), (0,1,0,0), (0,0,-1,1))
+    # rendered as a wrapped vector-list (the same _ket_list format the existing comma
+    # basis uses — kets space-separated inside the outer [ … ])
+    assert cells["ptext:ss_vectors:primes"].text == "[[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
+
+
+def test_M_L_tile_has_a_plain_text_string():
+    cells = {c.id: c for c in _barbados_ss(plain_text_values=True).cells}
+    # the mapping-style stack "[⟨…]⟨…]⟨…]}" — same shape the existing M's plain-text uses
+    ml = service.superspace_mapping(_barbados_state())
+    expected = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}"
+    assert cells["ptext:ss_mapping:ssprimes"].text == expected
+
+
+def test_M_jL_tile_has_a_plain_text_string():
+    cells = {c.id: c for c in _barbados_ss(plain_text_values=True).cells}
+    # the dL × dL identity rendered the same way as M_L
+    assert cells["ptext:ss_just_mapping:ssprimes"].text == (
+        "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]}")
+
+
+def test_cyan_superspace_tuning_tiles_have_plain_text_strings():
+    cells = {c.id: c for c in _barbados_ss(plain_text_values=True).cells}
+    tun = _barbados_superspace_tuning()
+    # 𝒈ₗ — genmap shape "{ … ]"
+    expected_g = "{" + " ".join(service.cents(v) for v in tun.generator_map) + "]"
+    assert cells["ptext:tuning:ssgens"].text == expected_g
+    # 𝒕ₗ / 𝒋ₗ / 𝒓ₗ — map shape "⟨ … ]"
+    for row_key, vals in (("tuning", tun.tuning_map), ("just", tun.just_map),
+                          ("retune", tun.retuning_map)):
+        expected = "⟨" + " ".join(service.cents(v) for v in vals) + "]"
+        assert cells[f"ptext:{row_key}:ssprimes"].text == expected
+
+
+def test_superspace_plain_text_off_when_nonstandard_domain_off():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults() | {"plain_text_values": True}  # nonstandard_domain off
+    cids = {c.id for c in spreadsheet.build(state, s).cells}
+    for new in ("ptext:ss_vectors:primes", "ptext:ss_mapping:ssprimes",
+                "ptext:ss_just_mapping:ssprimes", "ptext:tuning:ssgens",
+                "ptext:tuning:ssprimes", "ptext:just:ssprimes", "ptext:retune:ssprimes"):
+        assert new not in cids
+
+
+def test_phase4_additive_only_against_baseline_with_all_show_toggles():
+    # the additive-only contract for the whole Phase 4 contribution: a build over a
+    # nonstandard-domain temperament with nonstandard_domain OFF must be identical to its
+    # OFF-shape pre-Phase-4, regardless of which other Show toggles are on. Any of the new
+    # cell/block/line ids appearing would mean Phase 4 leaked into the on-domain build.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults() | {
+        "names": True, "symbols": True, "counts": True, "plain_text_values": True,
+        "equivalences": True, "units": True, "presets": True,
+    }
+    lay = spreadsheet.build(state, s)
+    ids = ({c.id for c in lay.cells} | {b.id for b in lay.blocks}
+           | {ln.id for ln in lay.lines})
+    # the new id prefixes / fragments Phase 4 introduces
+    for frag in ("ss_just_mapping", "cell:ss_vectors:primes:", "cell:ss_mapping:ssprimes:",
+                 "ss_just_map", "ssgenmap", ":ssprimes:l", ":ssprimes:r"):
+        assert not any(frag in i for i in ids), f"leaked id matching {frag!r}"

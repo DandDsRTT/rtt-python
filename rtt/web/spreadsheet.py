@@ -1245,11 +1245,15 @@ class _GridBuilder:
         self.row_int_handle_top = {}  # y of the interval drag-handle band (above the column labels, when drag-to-combine is on)
 
         # pass the held intervals + any frozen manual tuning so the plain text builds the SAME
-        # tuning the grid does (held-just sizes, frozen-tuning maps) — the two views can't diverge
+        # tuning the grid does (held-just sizes, frozen-tuning maps) — the two views can't diverge.
+        # The superspace flag adds the chapter-9 superspace tile strings (B_L, M_L, M_jL, 𝒈ₗ / 𝒕ₗ
+        # / 𝒋ₗ / 𝒓ₗ) when the nonstandard-domain toggle is on, matching what the grid emits.
         self.ptext_strings = (service.plain_text_values(self.state, self.tuning_scheme, self.target_spec,
                                                    held=self.held, interest=self.interest,
                                                    generator_tuning=generator_tuning,
-                                                   target_override=target_override)
+                                                   target_override=target_override,
+                                                   nonprime_approach=self.nonprime_approach,
+                                                   superspace=self.show_nonstandard_domain)
                          if self.show_ptext else {})
 
         y = rows_top_y

@@ -1406,3 +1406,36 @@ def test_complexity_prescaler_in_superspace_passes_through_when_already_prime_on
     state = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # 5-limit meantone
     assert service.complexity_prescaler_in_superspace(state, "TILT minimax-S") == \
         service.complexity_prescaler(state.mapping, "TILT minimax-S")
+
+
+def test_plain_text_values_includes_superspace_entries_when_superspace_on():
+    # Phase 4: the nonstandard-domain superspace region (B_L, M_L, M_jL, 𝒈ₗ / 𝒕ₗ / 𝒋ₗ /
+    # 𝒓ₗ) gets its own plain-text strings when the superspace flag is on — the EBK string
+    # under each new tile, matching the gridded cells the spreadsheet emits.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pt = service.plain_text_values(state, superspace=True)
+    # B_L: each domain element as a ket over the superspace primes (rows-as-elements)
+    assert pt[("ss_vectors", "primes")] == "[[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
+    # M_L: the temperament's mapping over the superspace primes (covector stack — same
+    # mapping-style ⟨ … ] inside [ … } shape the existing M uses)
+    ml = service.superspace_mapping(state)
+    expected_ml = "[" + "".join("⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}"
+    assert pt[("ss_mapping", "ssprimes")] == expected_ml
+    # M_jL = I (dL × dL identity), same shape
+    assert pt[("ss_just_mapping", "ssprimes")] == (
+        "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]}"
+    )
+    # the cyan tuning rows have entries
+    assert ("tuning", "ssgens") in pt
+    assert ("tuning", "ssprimes") in pt
+    assert ("just", "ssprimes") in pt
+    assert ("retune", "ssprimes") in pt
+
+
+def test_plain_text_values_omits_superspace_entries_when_superspace_off():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pt = service.plain_text_values(state)  # superspace=False (default)
+    for key in (("ss_vectors", "primes"), ("ss_mapping", "ssprimes"),
+                ("ss_just_mapping", "ssprimes"), ("tuning", "ssgens"),
+                ("tuning", "ssprimes"), ("just", "ssprimes"), ("retune", "ssprimes")):
+        assert key not in pt
