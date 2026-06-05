@@ -110,6 +110,7 @@ _KIND_HELP: dict[str, str] = {
     "gen_minus": "Remove the last generator — lowers the rank and dimensionality.",
     "map_plus": "Add a generator (a mapping row) — un-tempers a comma, raising the rank and holding the dimensionality.",
     "map_minus": "Remove this generator (a mapping row) — lowers the rank, tempering one more comma; holds the dimensionality.",
+    "map_drag": "Drag this generator (a mapping row) onto another to add it into that row — a change of generator basis that holds the temperament and its tuning.",
     "basis_minus": "Remove the highest prime from the domain.",
     "comma_plus": "Add a comma to the basis.",
     "comma_minus": "Remove the last comma from the basis.",

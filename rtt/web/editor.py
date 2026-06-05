@@ -753,6 +753,23 @@ class Editor:
         self._clear_pending()
         self.state = service.remove_mapping_row(self.state, i)
 
+    def add_mapping_row_to(self, source: int, target: int) -> None:
+        """Drag generator row ``source`` onto row ``target``: add the dragged row into the
+        dropped-on one (``row[target] += row[source]``). A generator-basis change that holds the
+        temperament and the sounding tuning — see :func:`service.add_mapping_row_to`. A frozen
+        generator tuning is transformed so the pitches are preserved (the dragged generator's
+        size loses the target's); auto-optimize (None) just re-solves the same optimum."""
+        r = len(self.state.mapping)
+        if source == target or not (0 <= source < r and 0 <= target < r):
+            return
+        self._snapshot()
+        self._clear_pending()
+        if self.generator_tuning is not None and len(self.generator_tuning) == r:
+            tuning = list(self.generator_tuning)
+            tuning[source] -= tuning[target]
+            self.generator_tuning = tuple(tuning)
+        self.state = service.add_mapping_row_to(self.state, source, target)
+
     def add_comma(self) -> None:
         """Begin a pending comma: a blank draft column for the user to fill in. It is
         not part of the temperament (the mapping is unchanged) and not an undoable

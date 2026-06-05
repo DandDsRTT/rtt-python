@@ -469,6 +469,34 @@ def test_mapping_row_guards():
     assert editor.can_add_mapping_row is False  # nothing tempered to un-temper
 
 
+def test_add_mapping_row_to_combines_rows_as_one_undoable_step():
+    editor = Editor()  # meantone ((1,1,0),(0,1,4))
+    commas = editor.state.comma_basis
+    editor.add_mapping_row_to(0, 1)  # drag the octave row onto the fifth row: row 1 += row 0
+    assert editor.state.mapping == ((1, 1, 0), (1, 2, 4))
+    assert editor.state.comma_basis == commas  # same temperament, new generator basis
+    editor.undo()
+    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))  # a single undoable step
+
+
+def test_add_mapping_row_to_preserves_a_frozen_tuning():
+    editor = Editor()
+    editor.set_generator_tuning_text("{1200.000 700.000]")  # freeze octave + a flat 700¢ fifth
+    before = service.tuning_from_generators(editor.state.mapping, editor.effective_generator_tuning())
+    editor.add_mapping_row_to(0, 1)  # drag the octave row onto the fifth row
+    # the dragged generator's size loses the target's (1200 − 700 = 500); the target's stays put
+    assert editor.effective_generator_tuning() == (500.0, 700.0)
+    after = service.tuning_from_generators(editor.state.mapping, editor.effective_generator_tuning())
+    assert tuple(round(x, 6) for x in after.tuning_map) == tuple(round(x, 6) for x in before.tuning_map)
+
+
+def test_add_mapping_row_to_ignores_a_row_dropped_on_itself():
+    editor = Editor()
+    editor.add_mapping_row_to(1, 1)  # a row added to itself would double it (enfactor) — refused
+    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))  # untouched
+    assert editor.can_undo is False  # and not an undoable step
+
+
 def test_add_and_remove_target_set_a_manual_override():
     editor = Editor()  # default TILT targets, no manual override yet
     assert editor.target_override is None

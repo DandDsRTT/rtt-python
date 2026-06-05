@@ -1101,6 +1101,21 @@ async def test_state_persists_across_a_refresh(user: User) -> None:
     assert _cell_text(user, "cell:mapped:1:6") == "7"  # the edit survived
 
 
+async def test_dragging_a_generator_row_onto_another_adds_it_in(user: User) -> None:
+    # the per-row drag handle drives the whole pipeline: dragstart records the dragged row, drop on
+    # another row's handle adds it into that row (a generator-basis change) and the page re-renders.
+    # Meantone: drop row 0 (the octave) onto row 1 (the fifth) → row 1's mapping becomes (1, 2, 4).
+    await user.open("/")
+    row1 = lambda: [_cell_child(user, f"cell:mapping:1:{p}").value for p in range(3)]
+    assert row1() == ["0", "1", "4"]
+    handle = lambda i: set(user.find(marker=f"map_drag:{i}").elements)
+    assert next(iter(handle(0)))._props.get("draggable")  # the browser will start a drag from it
+    UserInteraction(user, handle(0), None).trigger("dragstart")     # grab the octave row
+    UserInteraction(user, handle(1), None).trigger("drop.prevent")  # drop it onto the fifth row
+    await user.should_see(marker="cell:mapping:1:0")
+    assert row1() == ["1", "2", "4"]  # row 1 absorbed row 0
+
+
 # --- tier 3: the #3 drift guard. _make_cell builds each cell-kind, render() fills each kind,
 # in two parallel cb.kind ladders. For the kinds whose visible content is a single ui.html the
 # renderer must populate (built empty in _make_cell), a dropped render branch leaves the cell

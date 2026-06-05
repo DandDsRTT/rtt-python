@@ -876,6 +876,7 @@ class _Reconciler:
     def __init__(self, editor):
         self._editor = editor
         self._cb = None  # callbacks (act, render, on_*) wired by index() after they are defined
+        self._row_drag: int | None = None  # the mapping row a drag-to-add started on (dragstart → drop)
         self.els: dict = {}  # entity id -> outer element (persists across renders)
         self.inputs: dict = {}  # mapping cell id -> q-input
         self.labels: dict = {}  # cell id -> the label whose text tracks state
@@ -981,6 +982,7 @@ class _Reconciler:
         self.cell_kinds["gen_plus"] = _KindHandlers(self._build_gen_plus)
         self.cell_kinds["map_minus"] = _KindHandlers(self._build_map_minus)
         self.cell_kinds["map_plus"] = _KindHandlers(self._build_map_plus)
+        self.cell_kinds["map_drag"] = _KindHandlers(self._build_map_drag)
         self.cell_kinds["basis_minus"] = _KindHandlers(self._build_basis_minus)
         self.cell_kinds["comma_minus"] = _KindHandlers(self._build_comma_minus)
         self.cell_kinds["comma_plus"] = _KindHandlers(self._build_comma_plus)
@@ -1652,6 +1654,29 @@ class _Reconciler:
     def _build_map_plus(self, cb, wrap):  # add a generator (un-temper a comma); the + on the left-bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
+
+    def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another to ADD it into that row
+        # HTML5 drag-and-drop: the source row is held server-side from dragstart through drop (the
+        # index can't ride in the drop event's dataTransfer through NiceGUI's arg paths). dragover
+        # must cancel its default (client-side, so it doesn't round-trip per move) to mark this a
+        # valid drop target; the drop adds the dragged row into this one and re-renders.
+        wrap.classes("rtt-row-handle").props("draggable=true")
+        wrap.on("dragstart", lambda _=None, idx=cb.gen: self._begin_row_drag(idx))
+        wrap.on("dragend", lambda _=None: self._end_row_drag())
+        wrap.on("dragover", js_handler="(e) => e.preventDefault()")
+        wrap.on("drop.prevent", lambda _=None, idx=cb.gen: self._drop_on_row(idx))
+        ui.icon("drag_indicator").classes("rtt-grip")
+
+    def _begin_row_drag(self, idx):
+        self._row_drag = idx
+
+    def _end_row_drag(self):
+        self._row_drag = None
+
+    def _drop_on_row(self, idx):  # add the dragged generator row into the one it was dropped on
+        src = self._row_drag
+        if src is not None and src != idx:
+            self._cb.act(lambda: self._editor.add_mapping_row_to(src, idx))
 
     def _build_basis_minus(self, cb, wrap):  # the domain − on the interval-vectors row's left bus
         wrap.classes("rtt-minus-zone")

@@ -135,6 +135,8 @@ BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
 FRAME_GAP = 5  # gap between a framing band and the matrix cells, so they don't merge
 BRACKET_W = 16  # gutter inside a value group for an EBK bracket (one side)
+ROW_HANDLE_W = 14  # the per-mapping-row drag handle (drag a generator row onto another to add it)
+ROW_HANDLE_GAP = 4  # the gap it keeps from the matrix's opening bracket
 VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
 # ROW_H row so neighbouring rows' brackets keep a clear gap (the enclosing
 # mapped-list [ ] is the tall exception and spans the whole matrix)
@@ -1819,6 +1821,15 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"map_minus:{i}", map_bus_x, self.map_top(i), gen_right - map_bus_x, ROW_H, "map_minus", gen=i))
                 if "mapping" in self.row_plus_y:  # only when there's a comma to un-temper (n > 0)
                     self.cells.append(CellBox("map_plus", map_bus_x - BTN / 2, self.row_plus_y["mapping"] - BTN / 2, BTN, BTN, "map_plus"))
+            # a drag handle hugging the left of each mapping row: drag one generator row onto another
+            # to ADD it into that row (a generator-basis change holding the temperament and tuning).
+            # Needs ≥ 2 rows to combine; rides the gap just before the matrix's opening bracket, clear
+            # of the left-bus ± controls. (The column-reorder handles a sibling concern adds ride the
+            # branch points up top — these stay deliberately separate, hugging the rows they drag.)
+            if self.r > 1 and self.tile_open("mapping", "primes"):
+                handle_x = self.prime_left(0) - BRACKET_W - ROW_HANDLE_GAP - ROW_HANDLE_W
+                for i in range(self.r):
+                    self.cells.append(CellBox(f"map_drag:{i}", handle_x, self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))
             for i in range(self.r):
                 if self.tile_open("mapping", "primes"):
                     for p in range(self.d):

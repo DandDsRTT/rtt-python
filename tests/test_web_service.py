@@ -115,6 +115,19 @@ def test_add_mapping_row_un_tempers_a_comma_raising_rank():
     assert service.generators(st.mapping) == ("2/1", "3/1", "5/1")  # simple generators, not vast ratios
 
 
+def test_add_mapping_row_to_combines_generators_holding_the_temperament():
+    # dragging generator row A onto row B adds A into B: row B becomes A + B. A unimodular row
+    # operation, so the temperament is untouched (comma basis, rank and nullity all held) — only
+    # the generator basis changes. Meantone: dropping the octave (row 0) onto the fifth (row 1).
+    meantone = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    combined = service.add_mapping_row_to(meantone, 0, 1)  # row 1 += row 0
+    assert combined.mapping == ((1, 1, 0), (1, 2, 4))  # row 1 is the sum; row 0 kept as-is
+    assert combined.comma_basis == meantone.comma_basis  # same temperament tempered out
+    assert (combined.d, combined.r, combined.n) == (meantone.d, meantone.r, meantone.n)
+    # the dragged generator's ratio shifts (octave → fourth); the target's stays the fifth
+    assert service.generators(combined.mapping) == ("4/3", "3/2")
+
+
 def test_full_rank_mapping_has_zero_comma_and_zero_nullity():
     # Just intonation: nothing tempered out. The dual is a single zero comma.
     state = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])

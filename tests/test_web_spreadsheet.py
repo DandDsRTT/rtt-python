@@ -1437,6 +1437,27 @@ def test_mapping_row_minus_gated_on_rank_and_plus_on_nullity():
     assert {"map_minus:0", "map_minus:1", "map_minus:2"} <= ji  # ...but each generator is removable
 
 
+def test_mapping_row_drag_handles_hug_the_left_of_each_row():
+    # each generator row carries a drag handle just left of the matrix's opening bracket: drag one
+    # row onto another to ADD it in (a generator-basis change). One per row, aligned with it, sitting
+    # to the RIGHT of the left-bus ± controls so the two affordances stay deliberately separate.
+    lay = _layout()  # meantone, r = 2
+    cells = {c.id: c for c in lay.cells}
+    bracket_left = cells["cell:mapping:0:0"].x - spreadsheet.BRACKET_W  # the ⟨ at the matrix's left edge
+    for i in range(2):
+        handle = cells[f"map_drag:{i}"]
+        assert handle.gen == i
+        assert handle.y == cells[f"cell:mapping:{i}:0"].y and handle.h == spreadsheet.ROW_H  # aligned with row i
+        assert handle.x + handle.w <= bracket_left  # hugs the matrix's left, clear of the cells
+        assert handle.x > cells[f"map_minus:{i}"].x  # ...and right of the left-bus − control (separate)
+
+
+def test_mapping_row_drag_handles_need_two_rows():
+    rank1 = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
+    assert not any(c.startswith("map_drag:") for c in rank1)  # a lone generator has nothing to combine with
+    assert {"map_drag:0", "map_drag:1"} <= {c.id for c in _layout().cells}  # a handle per generator row
+
+
 def test_full_rank_temperament_shows_an_empty_commas_column():
     # a full-rank (n=0) temperament tempers nothing out — the commas column shows no comma at
     # all (not the trivial zero comma's "1/1"); the + remains so a comma can be added back.

@@ -1117,3 +1117,16 @@ def add_mapping_row(state: TemperamentState) -> TemperamentState:
     if remaining:
         return from_comma_basis(remaining)
     return from_mapping(tuple(tuple(int(i == j) for j in range(state.d)) for i in range(state.d)))
+
+
+def add_mapping_row_to(state: TemperamentState, source: int, target: int) -> TemperamentState:
+    """Add generator row ``source`` into row ``target`` (the row dropped onto): ``target``'s
+    mapping row becomes ``row[target] + row[source]``. A unimodular row operation, so the
+    temperament (its comma basis, rank and nullity) is untouched — only the generator basis
+    changes, re-expressing the same tuning over a different generating set. The dragged
+    generator's ratio shifts (e.g. the octave dropped onto the fifth becomes a fourth) while the
+    target's stays put; callers transform any frozen generator tuning to hold the sound. Callers
+    guard ``source != target`` (adding a row to itself would double it, enfactoring the mapping)."""
+    rows = [list(row) for row in state.mapping]
+    rows[target] = [t + s for t, s in zip(rows[target], rows[source])]
+    return from_mapping(rows, state.domain_basis)
