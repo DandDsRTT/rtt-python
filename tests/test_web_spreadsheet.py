@@ -4234,6 +4234,22 @@ def test_target_interval_list_cells_and_plain_text_are_editable():
     assert cells["cell:vec:targets:0:0"].kind == "targetcell"
 
 
+def test_all_interval_target_list_is_read_only():
+    # in all-interval the target list is the auto Tₚ = 𝐈 identity (not user-curated), so it
+    # carries NO editing affordance: the vector cells, the quantities-row ratio twin, and the
+    # plain-text band all render as the read-only computed kinds the sibling detempering
+    # vectors/ratios use — never the editable targetcell / ratiocell / ptextedit. A target-based
+    # scheme keeps every one of them editable.
+    allint = {c.id: c for c in _with(scheme="minimax-S", plain_text_values=True).cells}
+    based = {c.id: c for c in _with(scheme="TILT minimax-S", plain_text_values=True).cells}
+    assert allint["cell:vec:targets:0:0"].kind == "vec"
+    assert allint["target:0"].kind == "commaratio"
+    assert allint["ptext:vectors:targets"].kind == "ptext"
+    assert based["cell:vec:targets:0:0"].kind == "targetcell"
+    assert based["target:0"].kind == "ratiocell"
+    assert based["ptext:vectors:targets"].kind == "ptextedit"
+
+
 def test_typing_the_target_interval_list_drives_the_grid_through_the_editor():
     # the editable target interval list end to end: a typed vector list, applied via the editor,
     # drives the built target columns (the hybrid override)

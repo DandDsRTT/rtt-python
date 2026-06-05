@@ -610,11 +610,15 @@ class _GridBuilder:
         # forms (𝐿, ‖𝐿‖, 𝐿⁻¹, 𝑟, |𝑟|𝑋⁻¹) every target-column row then takes.
         self.targets = service.displayed_targets(self.state, self.tuning_scheme, self.target_spec, target_override)
         self.all_interval = service.is_all_interval(self.tuning_scheme)  # T auto-becomes Tₚ = I (no ± then)
+        # the auto Tₚ = I list isn't user-curated, so all-interval drops every target editing
+        # affordance at once — the vector cells, the quantities-row ratio twin, the plain text,
+        # and the ± — rendering the list as a read-only computed value (like the detempering D)
+        self.targets_editable = not self.all_interval
         self.k = len(self.targets)
         # a target being added rides as a pending draft column (blank red cells + a "?" ratio)
-        # until its vector is filled in, like the comma / interest / held draft. Suppressed in
-        # all-interval, where the list is the auto Tₚ = I set (not user-curated, no + control).
-        self.pending_target = list(self.pending_target) if (self.pending_target is not None and not self.all_interval) else None
+        # until its vector is filled in, like the comma / interest / held draft. Suppressed when
+        # the list isn't editable (all-interval's auto Tₚ = I set is not user-curated, no + draft).
+        self.pending_target = list(self.pending_target) if (self.pending_target is not None and self.targets_editable) else None
         self.k_shown = self.k + (1 if self.pending_target is not None else 0)
         self.mapped = service.mapped_intervals(self.state.mapping, self.targets, self.elements)
         self.canon_mapping = service.canonical_mapping(self.state.mapping)  # M defactored + HNF (the form box)
@@ -1765,12 +1769,14 @@ class _GridBuilder:
                 for i in range(self.r):                       # derived from M like the comma ratios — no ± control)
                     self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.gens[i]))
             if self.tile_open("quantities", "targets"):
+                # editable like the comma ratio (typing a fraction overrides the target set), but the
+                # auto Tₚ = I list is the read-only computed twin of its vectors column (commaratio, as D)
+                target_ratio_kind = "ratiocell" if self.targets_editable else "commaratio"
                 for j in range(self.k):
-                    # editable like the comma ratio: typing a fraction overrides the target set
-                    self.cells.append(CellBox(f"target:{j}", self.target_left(j), qy, COL_W, ROW_H, "ratiocell", text=self.targets[j], comma=j))
+                    self.cells.append(CellBox(f"target:{j}", self.target_left(j), qy, COL_W, ROW_H, target_ratio_kind, text=self.targets[j], comma=j))
                     # each user-curated target carries its own − (like the intervals of interest); the
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
-                    if not self.all_interval:
+                    if self.targets_editable:
                         branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
                 if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
@@ -1928,10 +1934,14 @@ class _GridBuilder:
                         v = self.pending[p]
                         self.cells.append(CellBox(f"cell:comma:{p}:{self.nc}", self.comma_left(self.nc), self.vec_top(p), COL_W, ROW_H, "commacell",
                                              text="" if v is None else str(v), prime=p, comma=self.nc, pending=True, unit=self.cell_unit("vectors", "commas", prime=p)))
-            if self.tile_open("vectors", "targets"):  # the target interval list as EDITABLE vector columns
-                for j in range(self.k):                # (a hybrid input, like the comma basis): typing a
-                    for p in range(self.d):            # column overrides the target set with those intervals
-                        self.cells.append(CellBox(f"cell:vec:targets:{j}:{p}", self.target_left(j), self.vec_top(p), COL_W, ROW_H, "targetcell", text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
+            if self.tile_open("vectors", "targets"):
+                # the target interval list as vector columns — an EDITABLE hybrid input like the comma
+                # basis (typing a column overrides the target set) — except the auto Tₚ = I list, which
+                # is read-only, the computed twin of its quantities ratio (a plain "vec", like D)
+                target_kind = "targetcell" if self.targets_editable else "vec"
+                for j in range(self.k):
+                    for p in range(self.d):
+                        self.cells.append(CellBox(f"cell:vec:targets:{j}:{p}", self.target_left(j), self.vec_top(p), COL_W, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
                 if self.pending_target is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_target[p]
@@ -2622,8 +2632,8 @@ class _GridBuilder:
                 if (rkey, ckey) == ("vectors", "commas") and self.pending is not None \
                         or (rkey, ckey) == ("vectors", "targets") and self.pending_target is not None:
                     kind = "ptextpending"
-                elif (rkey, ckey) in EDITABLE_PTEXT:
-                    kind = "ptextedit"
+                elif (rkey, ckey) in EDITABLE_PTEXT and (ckey != "targets" or self.targets_editable):
+                    kind = "ptextedit"  # the auto Tₚ = I list reads as static plain text, not an input
                 else:
                     kind = "ptext"
                 self.cells.append(CellBox(f"ptext:{rkey}:{ckey}", self.col_x[ckey], self.ptext_band_y(rkey),
