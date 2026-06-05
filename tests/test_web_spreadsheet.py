@@ -222,19 +222,43 @@ def test_minus_is_revealed_at_the_last_primes_branch_point_clear_of_its_input():
 
 
 def test_minus_tracks_the_new_last_prime_after_a_shrink():
-    shrunk = service.shrink_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # d=2
-    lay = spreadsheet.build(shrunk)
-    cells = {c.id: c for c in lay.cells}
-    by_id = {ln.id: ln for ln in lay.lines}
-    assert "prime:2" not in cells  # only primes 0 and 1 remain
-    # the minus follows to the new last column's branch point
-    assert abs((cells["minus"].x + cells["minus"].w / 2) - by_id["v:prime:1"].pos) < 0.51
+    # the − rides the highest prime's branch point, so it MOVES to the new last column when the
+    # domain shrinks (never stranded at the old one). 2.3.5.7 meantone carries it on prime 3;
+    # dropping to 2.3.5 moves it to prime 2. Both shrinks stay proper, so the − shows at each
+    # (contrast test_domain_minus_is_absent_when_the_shrink_would_degenerate, where it does not).
+    wide = service.expand_domain(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # 2.3.5.7 meantone, d=4
+    wlay = spreadsheet.build(wide)
+    wcells, wlines = {c.id: c for c in wlay.cells}, {ln.id: ln for ln in wlay.lines}
+    assert abs((wcells["minus"].x + wcells["minus"].w / 2) - wlines["v:prime:3"].pos) < 0.51  # on prime 3
+    slay = spreadsheet.build(service.shrink_domain(wide))  # back to 2.3.5, d=3
+    scells, slines = {c.id: c for c in slay.cells}, {ln.id: ln for ln in slay.lines}
+    assert "prime:3" not in scells  # the 7 is gone again
+    assert abs((scells["minus"].x + scells["minus"].w / 2) - slines["v:prime:2"].pos) < 0.51  # moved to prime 2
 
 
 def test_a_single_prime_domain_has_no_minus_but_keeps_plus():
     cells = {c.id for c in spreadsheet.build(service.from_mapping(((1,),))).cells}
     assert "minus" not in cells  # nothing is removable when d == 1
     assert {"plus", "prime:0"} <= cells  # ...but you can still expand
+
+
+def test_domain_minus_is_absent_on_a_nonstandard_subgroup():
+    # the domain − walks the standard primes (shrink_domain trims the last), which doesn't apply to
+    # a nonprime subgroup — so the − is withheld, not shown inert (clicking it would silently no-op,
+    # since editor.shrink guards on the same can_shrink_domain predicate). The basis still renders.
+    arch = service.from_comma_basis(((6, -2, -1),), domain_basis=(2, 3, 7))  # 2.3.7 (archytas)
+    cells = {c.id for c in spreadsheet.build(arch).cells}
+    assert {"prime:0", "prime:2"} <= cells  # the 2.3.7 basis still heads its columns
+    assert "minus" not in cells and "basis_minus" not in cells  # but no inert − on either axis
+
+
+def test_domain_minus_is_absent_when_the_shrink_would_degenerate():
+    # augmented tempers out 128/125; dropping prime 5 would leave prime 2 tempered to a unison (an
+    # improper, degenerate temperament the engine rejects), so the − is withheld though d > 1.
+    augmented = service.from_comma_basis(((7, 0, -3),))  # 2.3.5, mapping shrinks to ((0, 1),)
+    cells = {c.id for c in spreadsheet.build(augmented).cells}
+    assert {"prime:0", "prime:2"} <= cells
+    assert "minus" not in cells and "basis_minus" not in cells
 
 
 def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point():

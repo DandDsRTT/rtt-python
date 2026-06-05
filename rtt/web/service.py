@@ -1390,6 +1390,20 @@ def shrink_domain(state: TemperamentState) -> TemperamentState:
     return from_comma_basis(shrunk)
 
 
+def can_shrink_domain(state: TemperamentState) -> bool:
+    """Whether the domain − applies to ``state``: a standard prime limit with a prime to
+    spare, and only when the smaller temperament is still proper — dropping the top prime
+    can leave a lower prime tempered to a unison (an improper, degenerate result), which the
+    control then withholds. The single source of truth for both the editor's shrink guard and
+    the renderer's decision to show the − at all (so the button never appears inert)."""
+    if not (is_standard_domain(state.domain_basis) and state.d > 1):
+        return False
+    try:
+        return is_proper_temperament(shrink_domain(state).mapping)
+    except Exception:
+        return False
+
+
 def remove_comma(state: TemperamentState, index: int = -1) -> TemperamentState:
     """Drop comma ``index`` (the last by default) from the basis, then re-dual — raising
     rank as nullity falls (the temperament tempers out one fewer comma). An arbitrary index

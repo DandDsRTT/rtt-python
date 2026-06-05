@@ -762,6 +762,11 @@ class _GridBuilder:
         # interval-vectors row's 𝒃ᵢ/, the basis-elements column's /𝒃ᵢ, and each gridded cell's
         # per-coordinate denominator (𝑔/𝒃ᵢ, ¢/𝒃ᵢ, oct/𝒃ᵢ, (C)/𝒃ᵢ).
         self.domain_label = "p" if service.is_standard_domain(self.elements) else "b"
+        # whether the domain − applies — the shared predicate the editor's shrink guard uses, so the
+        # button only shows when a click would actually drop the top prime (not on a nonstandard
+        # subgroup, nor when the smaller temperament would be improper). Gates both the quantities-row
+        # − and its interval-vectors-row twin, so neither ever appears inert.
+        self.domain_can_shrink = service.can_shrink_domain(self.state)
         self.gens = service.generators(self.state.mapping, self.elements)
         # the displayed target list: a typed explicit target list overrides the TILT/OLD spec, but
         # all-interval auto-replaces it with Tₚ = I (the domain basis, every interval's prime-based
@@ -2133,8 +2138,9 @@ class _GridBuilder:
                 for p in range(self.d):
                     self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
                 # Only the highest prime is removable (shrink_domain trims the last), so its
-                # − rides that prime's branch point (the last top-bus split).
-                if self.d > 1:
+                # − rides that prime's branch point (the last top-bus split) — and only when the
+                # shrink actually applies (gated like editor.shrink, never shown inert).
+                if self.domain_can_shrink:
                     branch_minus("minus", "primes", self.d - 1, "minus")
             if self.tile_open("quantities", "commas"):
                 for c in range(self.nc):
@@ -2304,7 +2310,7 @@ class _GridBuilder:
                 # the left bus the controls ride (node_edge + FAN when the row fans — matching
                 # row_axis); the − zone drops from it rightward over the bottom prime as the hover target
                 basis_bus_x = self.node_edge + self.FAN if self._row_fans("vectors") else self.node_edge
-                if self.d > 1:  # the highest prime is the removable one (shrink trims the last)
+                if self.domain_can_shrink:  # the highest prime is removable only when the shrink applies
                     self.cells.append(CellBox("basis_minus", basis_bus_x, self.vec_top(self.d - 1),
                                          (bx + COL_W) - basis_bus_x, ROW_H, "basis_minus"))
                 self.cells.append(CellBox("basis_plus", basis_bus_x - BTN / 2, self.row_plus_y["vectors"] - BTN / 2,

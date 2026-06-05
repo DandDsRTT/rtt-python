@@ -305,15 +305,9 @@ class Editor:
 
     @property
     def can_shrink(self) -> bool:
-        """Whether the domain − applies: a standard prime limit with a prime to spare, and only
-        when the smaller temperament is still proper (dropping the top prime can leave a lower
-        prime tempered to a unison — a degenerate result the control then withholds)."""
-        if not (self.can_expand and self.state.d > 1):
-            return False
-        try:
-            return service.is_proper_temperament(service.shrink_domain(self.state).mapping)
-        except Exception:
-            return False
+        """Whether the domain − applies — see :func:`service.can_shrink_domain`, the shared
+        predicate the renderer gates the − button on too (so it never shows while inert)."""
+        return service.can_shrink_domain(self.state)
 
     @property
     def can_add_mapping_row(self) -> bool:
