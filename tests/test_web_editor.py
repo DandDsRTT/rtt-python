@@ -547,22 +547,11 @@ def test_add_mapping_row_to_preserves_a_frozen_tuning():
     assert tuple(round(x, 6) for x in after.tuning_map) == tuple(round(x, 6) for x in before.tuning_map)
 
 
-def test_add_mapping_row_to_onto_itself_doubles_the_row():
-    # dropping a generator row onto ITSELF doubles it (row += row): a contorted/enfactored mapping
-    # that still holds the same temperament (comma basis unchanged). A frozen tuning halves that
-    # generator (the doubled row needs half the size), so the sounding tuning is preserved.
-    editor = Editor()  # meantone ((1,1,0),(0,1,4))
-    editor.set_generator_tuning_text("{1200.000 700.000]")
-    commas = editor.state.comma_basis
-    before = service.tuning_from_generators(editor.state.mapping, editor.effective_generator_tuning())
-    editor.add_mapping_row_to(0, 0)  # drop row 0 onto itself
-    assert editor.state.mapping == ((2, 2, 0), (0, 1, 4))  # row 0 doubled
-    assert editor.state.comma_basis == commas  # same temperament, just contorted
-    assert editor.effective_generator_tuning() == (600.0, 700.0)  # generator 0 halved...
-    after = service.tuning_from_generators(editor.state.mapping, editor.effective_generator_tuning())
-    assert tuple(round(x, 6) for x in after.tuning_map) == tuple(round(x, 6) for x in before.tuning_map)  # ...sound held
-    editor.undo()
-    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))  # a single undoable step
+def test_add_mapping_row_to_ignores_a_row_dropped_on_itself():
+    editor = Editor()
+    editor.add_mapping_row_to(1, 1)  # a row added to itself would double it (enfactor) — refused
+    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))  # untouched
+    assert editor.can_undo is False  # and not an undoable step
 
 
 def test_add_comma_to_recombines_the_comma_basis_undoably():
@@ -576,16 +565,14 @@ def test_add_comma_to_recombines_the_comma_basis_undoably():
     assert editor.state.comma_basis == before  # a single undoable step
 
 
-def test_add_comma_to_onto_itself_doubles_the_comma():
+def test_add_comma_to_ignores_a_comma_dropped_on_itself():
     editor = Editor()
     editor.edit_mapping(((12, 19, 28),))  # 12-ET 5-limit: two commas
     before = editor.state.comma_basis
-    editor.add_comma_to(0, 0)  # drop comma 0 onto ITSELF → it doubles (an enfactored basis)
-    assert editor.state.comma_basis[0] == tuple(2 * x for x in before[0])
-    assert editor.state.comma_basis[1] == before[1]  # the other comma is untouched
-    assert editor.state.mapping == ((12, 19, 28),)  # ...and the temperament still holds
-    editor.undo()
-    assert editor.state.comma_basis == before  # a single undoable step
+    steps = len(editor._undo_stack)
+    editor.add_comma_to(0, 0)  # a comma added to itself would double it — refused
+    assert editor.state.comma_basis == before  # untouched
+    assert len(editor._undo_stack) == steps  # and no new undoable step
 
 
 def test_add_interest_to_combines_two_intervals_of_interest_undoably():
@@ -615,14 +602,13 @@ def test_add_target_to_multiplies_two_targets_materializing_the_override():
     assert editor.target_override == ("3/2", "5/4")  # a single undoable step
 
 
-def test_interval_drag_add_onto_itself_squares_it():
-    # dropping an interval onto ITSELF squares it (vector doubled = ratio squared)
+def test_interval_drag_add_ignores_a_drop_on_itself():
     editor = Editor()
-    editor.set_interest_vectors([(1, 0, 0), (-1, 1, 0)])  # 2/1 and 3/2
-    editor.add_interest_to(1, 1)  # square interest 1: (-1,1,0)·2 = (-2,2,0) = 9/4
-    assert editor.interest_vectors == [(1, 0, 0), (-2, 2, 0)]
-    editor.undo()
-    assert editor.interest_vectors == [(1, 0, 0), (-1, 1, 0)]
+    editor.set_interest_vectors([(1, 0, 0), (0, 1, 0)])
+    steps = len(editor._undo_stack)  # the set was one undoable step
+    editor.add_interest_to(1, 1)  # dropping an interval on itself would double it — refused
+    assert editor.interest_vectors == [(1, 0, 0), (0, 1, 0)]  # unchanged
+    assert len(editor._undo_stack) == steps  # ...and no new undoable step pushed
 
 
 def test_add_and_remove_target_set_a_manual_override():

@@ -1306,6 +1306,7 @@ class _Reconciler:
         wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
         self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_mapping_change()) \
             .props("dense borderless").classes("rtt-cellinput")
+        self._arm_row_target(wrap, cb.gen)  # drop a dragged generator row onto this row to combine
 
     def _update_mapping(self, cb):
         self.inputs[cb.id].value = "" if cb.blank else str(self._editor.state.mapping[cb.gen][cb.prime])
@@ -1314,6 +1315,7 @@ class _Reconciler:
         wrap.classes("rtt-cell-input")
         self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_comma_change()) \
             .props("dense borderless").classes("rtt-cellinput")
+        self._arm_col_target(wrap, "comma", cb.comma)  # drop a dragged comma onto this one to combine
 
     def _update_commacell(self, cb):
         if cb.pending:  # the draft column: show the typed component (blank if None), red-outlined
@@ -1328,16 +1330,19 @@ class _Reconciler:
         wrap.classes("rtt-cell-input")
         self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_interest_change()) \
             .props("dense borderless").classes("rtt-cellinput")
+        self._arm_col_target(wrap, "interest", cb.comma)
 
     def _build_heldcell(self, cb, wrap):
         wrap.classes("rtt-cell-input")
         self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_held_change()) \
             .props("dense borderless").classes("rtt-cellinput")
+        self._arm_col_target(wrap, "held", cb.comma)
 
     def _build_targetcell(self, cb, wrap):
         wrap.classes("rtt-cell-input")
         self.inputs[cb.id] = ui.input(on_change=lambda e: self._cb.on_target_cells_change()) \
             .props("dense borderless").classes("rtt-cellinput")
+        self._arm_col_target(wrap, "target", cb.comma)
 
     def _update_input_text(self, cb):  # interestcell / heldcell / targetcell: mirror cb.text
         self.inputs[cb.id].value = cb.text  # a pending draft cell carries "" / the typed component
@@ -1717,74 +1722,85 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
 
-    def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another to ADD it into that row
-        # HTML5 drag-to-combine. The source row is held server-side (dragstart → drop). dragover
-        # preventDefaults and sets dropEffect='copy' so the cursor shows the + (copy) glyph over a
-        # handle; effectAllowed='copy' on dragstart keeps the drag a copy (and setData lets the drag
-        # start in Firefox). dragenter previews the would-be result (rings the cells it moves + shows
-        # their new values, reverted on the next enter / drag end); the drop commits it as one undo
-        # step. Validity (same-kind, in-bounds) is enforced server-side and shown by the preview.
+    def _build_map_drag(self, cb, wrap):  # the drag SOURCE grip for generator row cb.gen
+        # HTML5 drag-to-combine. The grip is only the drag SOURCE — the DROP TARGETS are the mapping
+        # ROWS themselves (every mapping cell is armed by _arm_row_target), so you drop onto a whole
+        # row you can actually hover, not a 14px grip. dragstart records the source row server-side
+        # and marks the body 'rtt-combining-mapping' so the row cells light up as copy targets (that
+        # body mark is what gives the + cursor over a row); it also sets effectAllowed='copy' and
+        # setData (the latter lets the drag start in Firefox). dragend clears the source + the mark.
         wrap.classes("rtt-drag-handle rtt-row-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, idx=cb.gen: self._begin_row_drag(idx))
         wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
-                                        "e.dataTransfer.setData('application/x-rtt-row','');}")
-        wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
-        wrap.on("dragenter.prevent", lambda _=None, idx=cb.gen: self._preview_row_drop(idx))
+                                        "e.dataTransfer.setData('application/x-rtt-row','');"
+                                        "document.body.classList.add('rtt-combining-mapping');}")
         wrap.on("dragend", lambda _=None: self._end_row_drag())
-        wrap.on("drop.prevent", lambda _=None, idx=cb.gen: self._drop_on_row(idx))
+        wrap.on("dragend", js_handler="(e)=>{document.body.classList.remove('rtt-combining-mapping');}")
         ui.icon("drag_indicator").classes("rtt-grip")
+
+    def _arm_row_target(self, wrap, gen):  # make a mapping cell a drop target for its row (gen)
+        # while a row-combine drag is in flight (body.rtt-combining-mapping) every mapping cell is a
+        # copy target: dragover gives the + cursor, dragenter previews dropping the dragged row INTO
+        # this row, drop commits it. Inert otherwise (no body mark, _row_drag is None), so ordinary
+        # cell editing is untouched. Dropping a row on its own cells is a no-op (see _drop_on_row).
+        wrap.on("dragover", js_handler="(e)=>{if(document.body.classList.contains('rtt-combining-mapping'))"
+                                       "{e.preventDefault();e.dataTransfer.dropEffect='copy';}}")
+        wrap.on("dragenter.prevent", lambda _=None, idx=gen: self._preview_row_drop(idx))
+        wrap.on("drop.prevent", lambda _=None, idx=gen: self._drop_on_row(idx))
 
     def _begin_row_drag(self, idx):
         self._row_drag = idx
         self._cb.combine_begin()
-        self._preview_row_drop(idx)  # at pick-up the row is ON ITSELF — preview the self-double now,
-        # because the browser fires no dragenter on the element a drag STARTED from (so a drop-on-self
-        # would otherwise never preview); a dragenter onto any other row replaces it.
 
     def _end_row_drag(self):
         self._row_drag = None
         self._cb.combine_end()
 
-    def _preview_row_drop(self, idx):  # hovering target row idx: preview the would-be combine
+    def _preview_row_drop(self, idx):  # hovering target row idx: preview the would-be combine (else revert)
         src = self._row_drag
-        apply = (lambda: self._editor.add_mapping_row_to(src, idx)) if src is not None else None
-        self._cb.combine_preview(apply)  # src == idx is allowed: dropping a row on itself doubles it
+        apply = (lambda: self._editor.add_mapping_row_to(src, idx)) if (src is not None and src != idx) else None
+        self._cb.combine_preview(apply)  # src == idx (the dragged row's own cells) previews nothing
 
-    def _drop_on_row(self, idx):  # add the dragged generator row into the one it was dropped on
+    def _drop_on_row(self, idx):  # add the dragged generator row into the DIFFERENT row dropped on
         src = self._row_drag
         self._row_drag = None
-        if src is not None:  # including src == idx (drop a row onto itself → double it)
+        if src is not None and src != idx:
             self._cb.combine_commit(lambda: self._editor.add_mapping_row_to(src, idx))
         else:
-            self._cb.combine_end()
+            self._cb.combine_end()  # dropped on its own row / nothing: just revert the preview
 
-    # the interval-column drag handles (comma / target / held / interest): the column twin of the
-    # mapping-row handle. Drag one interval onto another in the SAME column to ADD it in (their
-    # product), or onto itself to double it. The source's (group, index) is held server-side;
-    # _int_combine enforces the same-column rule and the dragenter preview shows what a drop will do.
-    # See spreadsheet's int_drag.
+    # the interval-column twin of the mapping-row drag. The grip is the SOURCE; the DROP TARGETS are
+    # the interval cells in the SAME column (each armed by _arm_col_target). Drag one interval onto a
+    # DIFFERENT interval in its column to ADD it in (their product). The source's (group, index) is
+    # held server-side; _int_combine enforces the same-column, distinct-interval rule and the
+    # dragenter preview shows what a drop will do.
     _INTERVAL_COMBINE = {
         "comma": "add_comma_to", "target": "add_target_to",
         "held": "add_held_to", "interest": "add_interest_to",
     }
 
-    def _build_int_drag(self, cb, wrap):  # the column twin of _build_map_drag; see it for the DnD wiring
+    def _build_int_drag(self, cb, wrap):  # the drag SOURCE grip for an interval; see _build_map_drag
         group = cb.id.split(":")[1]  # int_drag:<group>:<index>
         wrap.classes("rtt-drag-handle rtt-col-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, g=group, idx=cb.comma: self._begin_col_drag(g, idx))
         wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
-                                        "e.dataTransfer.setData('application/x-rtt-int','');}")  # for Firefox
-        wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
-        wrap.on("dragenter.prevent", lambda _=None, g=group, idx=cb.comma: self._preview_int_drop(g, idx))
+                                        "e.dataTransfer.setData('application/x-rtt-int','');"
+                                        f"document.body.classList.add('rtt-combining-{group}');}}")
         wrap.on("dragend", lambda _=None: self._end_col_drag())
-        wrap.on("drop.prevent", lambda _=None, g=group, idx=cb.comma: self._drop_on_interval(g, idx))
+        wrap.on("dragend", js_handler=f"(e)=>{{document.body.classList.remove('rtt-combining-{group}');}}")
         ui.icon("drag_indicator").classes("rtt-grip")
+
+    def _arm_col_target(self, wrap, group, idx):  # make an interval cell a drop target for its column
+        wrap.on("dragover", js_handler=f"(e)=>{{if(document.body.classList.contains('rtt-combining-{group}'))"
+                                       "{e.preventDefault();e.dataTransfer.dropEffect='copy';}}")
+        wrap.on("dragenter.prevent", lambda _=None, g=group, i=idx: self._preview_int_drop(g, i))
+        wrap.on("drop.prevent", lambda _=None, g=group, i=idx: self._drop_on_interval(g, i))
 
     def _int_combine(self, group, idx):  # the combine callable for dropping the dragged interval here, or None
         if self._col_drag is None:
             return None
         src_group, src = self._col_drag
-        if src_group != group:  # only combine within the same interval column (src == idx is allowed: squares it)
+        if src_group != group or src == idx:  # same column only, and onto a DIFFERENT interval
             return None
         combine = getattr(self._editor, self._INTERVAL_COMBINE[group])
         return lambda: combine(src, idx)
@@ -1792,8 +1808,6 @@ class _Reconciler:
     def _begin_col_drag(self, group, idx):
         self._col_drag = (group, idx)
         self._cb.combine_begin()
-        self._preview_int_drop(group, idx)  # preview the self-square at pick-up (no dragenter fires on
-        # the drag's own source element); a dragenter onto another interval in the column replaces it.
 
     def _end_col_drag(self):
         self._col_drag = None

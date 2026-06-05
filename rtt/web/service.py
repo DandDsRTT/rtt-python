@@ -1137,13 +1137,12 @@ def add_mapping_row(state: TemperamentState) -> TemperamentState:
 
 def add_mapping_row_to(state: TemperamentState, source: int, target: int) -> TemperamentState:
     """Add generator row ``source`` into row ``target`` (the row dropped onto): ``target``'s
-    mapping row becomes ``row[target] + row[source]``. A row operation that holds the temperament
-    (its comma basis, rank and nullity) — only the generator basis changes, re-expressing the same
-    tuning over a different generating set. The dragged generator's ratio shifts (e.g. the octave
-    dropped onto the fifth becomes a fourth) while the target's stays put; callers transform any
-    frozen generator tuning to hold the sound. Dropping a row onto itself (``source == target``)
-    doubles it — the one non-unimodular case, deliberately enfactoring the mapping into a contorted
-    temperament that still holds the same tuning (callers halve that frozen generator)."""
+    mapping row becomes ``row[target] + row[source]``. A unimodular row operation, so the
+    temperament (its comma basis, rank and nullity) is untouched — only the generator basis
+    changes, re-expressing the same tuning over a different generating set. The dragged
+    generator's ratio shifts (e.g. the octave dropped onto the fifth becomes a fourth) while the
+    target's stays put; callers transform any frozen generator tuning to hold the sound. Callers
+    guard ``source != target`` (adding a row to itself would double it, enfactoring the mapping)."""
     rows = [list(row) for row in state.mapping]
     rows[target] = [t + s for t, s in zip(rows[target], rows[source])]
     return from_mapping(rows, state.domain_basis)
@@ -1152,11 +1151,10 @@ def add_mapping_row_to(state: TemperamentState, source: int, target: int) -> Tem
 def add_comma_to(state: TemperamentState, source: int, target: int) -> TemperamentState:
     """Add comma ``source`` into comma ``target`` (the comma dropped onto): ``target``'s vector
     becomes ``comma[target] + comma[source]``. The dual of :func:`add_mapping_row_to` — a
-    column operation on the comma basis that holds the temperament (its mapping, rank and nullity);
-    only which intervals name the nullspace changes. The mapping is the comma basis's dual and is
-    unaffected, so unlike the row op no tuning transform is needed. Dropping a comma onto itself
-    (``source == target``) doubles its vector — an enfactored basis that still spans the same
-    nullspace, so the mapping is unchanged."""
+    unimodular column operation on the comma basis, so the temperament (its mapping, rank and
+    nullity) is untouched; only which intervals name the nullspace changes. The mapping is the
+    comma basis's dual and is unaffected, so unlike the row op no tuning transform is needed.
+    Callers guard ``source != target`` (adding a comma to itself would double it)."""
     commas = [list(comma) for comma in state.comma_basis]
     commas[target] = [t + s for t, s in zip(commas[target], commas[source])]
     return from_comma_basis(commas, state.domain_basis)
