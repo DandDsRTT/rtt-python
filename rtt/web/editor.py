@@ -444,7 +444,12 @@ class Editor:
         editable cell (set to a typed value) and the wheel nudge (step it). ``snapshot=False``
         extends the current undo step instead of opening a new one — how a continuous wheel
         gesture coalesces its notches."""
-        base = list(self.effective_generator_tuning() or self._optimum_generator_tuning())
+        # a frozen tuning whose length no longer matches the rank (a domain ± or comma/mapping edit
+        # since it was frozen) is stale — seed from the optimum instead, as the grid does, so editing
+        # the new generator's cell can't index past the stale shorter tuning
+        frozen = self.effective_generator_tuning()
+        base = list(frozen if frozen is not None and len(frozen) == len(self.state.mapping)
+                    else self._optimum_generator_tuning())
         base[i] = float(transform(base[i]))
         if snapshot:
             self._snapshot()

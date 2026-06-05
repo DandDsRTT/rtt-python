@@ -942,6 +942,20 @@ def test_set_generator_tuning_component_overrides_one_generator():
     assert editor.optimize_locked is False and editor.can_undo is True
 
 
+def test_editing_a_generator_cell_after_a_rank_change_seeds_from_the_optimum():
+    # A rank change (domain expand, comma/mapping edit) leaves the frozen generator tuning stale —
+    # the OLD rank's length. Editing or nudging a generator-tuning cell must seed from the current
+    # optimum, not index the stale shorter tuning (which crashed with IndexError). Reachable from
+    # the as-shipped state: auto-optimize is off, so a frozen tuning is always present.
+    editor = Editor()
+    editor.expand()  # 5-limit -> 7-limit, rank 2 -> 3; the frozen default tuning is still length 2
+    assert editor.state.r == 3 and len(editor.generator_tuning) == 2  # the tuning is stale
+    editor.set_generator_tuning_component(2, 700.0)  # edit the NEW 3rd generator's cell
+    assert len(editor.generator_tuning) == 3 and editor.generator_tuning[2] == 700.0
+    editor.nudge_generator_tuning_component(2, 5)  # wheel-nudge the new cell — also must not crash
+    assert len(editor.generator_tuning) == 3
+
+
 def _cents_map(values):
     return tuple(service.cents(v) for v in values)  # compare tuning maps at the shown 3-dp
 
