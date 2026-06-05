@@ -1016,7 +1016,7 @@ class _Reconciler:
         _val_builder = self._label_builder("rtt-val")
         self.cell_kinds["mapped"] = _KindHandlers(_val_builder, self._update_label)
         self.cell_kinds["vec"] = _KindHandlers(_val_builder, self._update_label)
-        self.cell_kinds["colheader"] = _KindHandlers(self._build_colheader, self._update_label)
+        self.cell_kinds["colheader"] = _KindHandlers(self._label_builder("rtt-colheader"), self._update_label)
         self.cell_kinds["rowlabel"] = _KindHandlers(self._label_builder("rtt-rowlabel"), self._update_label)
         self.cell_kinds["ptext"] = _KindHandlers(self._label_builder("rtt-ptext"), self._update_ptext)
         self.cell_kinds["boxtitle"] = _KindHandlers(self._label_builder("rtt-boxtitle"), None)  # a static in-tile title
@@ -1498,20 +1498,6 @@ class _Reconciler:
             self.labels[cb.id] = ui.label(cb.text).classes(cls)
         return build
 
-    # the four interval lists whose column header is a "drop here to add to this list" target
-    _LIST_HEADERS = {"commas", "targets", "held", "interest"}
-
-    def _build_colheader(self, cb, wrap):  # a column title; an interval list's title also receives drops
-        self.labels[cb.id] = ui.label(cb.text).classes("rtt-colheader")
-        # the header is a big "drop into this list" target (append), so an interval can be dragged
-        # onto the column by aiming at its title — vital for an EMPTY list (no column grips to drop
-        # on) and far easier than the small +. Same self-contained per-element pattern as the grips.
-        if cb.id.split(":")[0] == "header" and cb.id.split(":", 1)[1] in self._LIST_HEADERS:
-            lst = cb.id.split(":", 1)[1]
-            wrap.classes("rtt-coldrop")
-            wrap.on("dragover", js_handler="(e) => e.preventDefault()")
-            wrap.on("drop.prevent", lambda _=None, l=lst: self._cb.on_drop(l, None))
-
     def _build_white_label(self, cb, wrap):  # prime / formcell: a read-only bordered cell
         with ui.element("div").classes("rtt-white"):
             self.labels[cb.id] = ui.label(cb.text)
@@ -1837,7 +1823,6 @@ class _Reconciler:
     def _build_comma_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_comma))
-        self._make_append_target(wrap, "commas")
 
     def _build_list_minus(self, cb, wrap, cancel, remove):
         # an interval-list column's − (interest / held / target): the draft column's cancels the
@@ -1853,7 +1838,6 @@ class _Reconciler:
     def _build_interest_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_interest))
-        self._make_append_target(wrap, "interest")
 
     def _build_held_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_held, self._editor.remove_held)
@@ -1861,7 +1845,6 @@ class _Reconciler:
     def _build_held_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_held))
-        self._make_append_target(wrap, "held")
 
     def _build_target_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_target, self._editor.remove_target)
@@ -1869,27 +1852,26 @@ class _Reconciler:
     def _build_target_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_target))
-        self._make_append_target(wrap, "targets")
 
-    def _build_colgrip(self, cb, wrap):  # a per-column drag handle: drag one column's grip onto
-        # another to MOVE/reorder it. Mirrors the proven drag-to-combine handle EXACTLY (which the
-        # user confirmed works), so it relies on no global drag.js / dragging-class: the grip is BOTH
-        # source AND drop target, with a per-element dragover preventDefault (client-side, so it
-        # doesn't round-trip per move) marking it a valid target. The dragged column's (list, idx) is
-        # held server-side from dragstart through drop. Dropping grip A on grip B moves A to B's slot.
-        _, lst, idx = cb.id.split(":")  # "grip:{list}:{idx}"
+    def _build_colgrip(self, cb, wrap):  # a per-column drag handle / drop target on the fan gridline:
+        # drag one column's grip onto another to MOVE/reorder it; the per-list "grip:{list}:add" zone
+        # is drop-only — the append / into-empty-list target on the stub gridline, so dropping into a
+        # list is always "drop on the gridline" (no separate header/+ target). Mirrors the proven
+        # drag-to-combine handle EXACTLY (which the user confirmed works), so it relies on no global
+        # drag.js / dragging-class: a grip is BOTH source AND drop target, with a per-element dragover
+        # preventDefault (client-side, so it doesn't round-trip per move) marking it a valid target.
+        # The dragged column's (list, idx) is held server-side from dragstart through drop.
+        _, lst, idx = cb.id.split(":")  # "grip:{list}:{idx}" — idx is "add" for the append/empty zone
+        wrap.on("dragover", js_handler="(e) => e.preventDefault()")  # mark a valid drop target
+        if idx == "add":  # drop-only: an empty list still gets a gridline target (nothing to drag here)
+            wrap.classes("rtt-colgrip rtt-coldrop")
+            wrap.on("drop.prevent", lambda _=None, l=lst: self._cb.on_drop(l, None))
+            return
         wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
         wrap.on("dragstart", lambda _=None, l=lst, i=int(idx): self._cb.on_drag_start(l, i))
         wrap.on("dragend", lambda _=None: self._cb.on_drag_end())
-        wrap.on("dragover", js_handler="(e) => e.preventDefault()")
         wrap.on("drop.prevent", lambda _=None, l=lst, i=int(idx): self._cb.on_drop(l, i))
         ui.icon("drag_indicator").classes("rtt-grip")
-
-    def _make_append_target(self, wrap, lst):  # a column list's + doubles as the "drop here to append"
-        # target, so an interval can be dragged to the END of a list or INTO an empty one (which has
-        # no column grips). Same per-element pattern as the grips; on_drop(None) means append.
-        wrap.on("dragover", js_handler="(e) => e.preventDefault()")
-        wrap.on("drop.prevent", lambda _=None, l=lst: self._cb.on_drop(l, None))
 
     def _build_speaker(self, cb, wrap):  # play this pitch per its tile's mode (client-side engine)
         tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
@@ -2401,8 +2383,8 @@ def index() -> None:
 
     # drag-and-drop reorder: a grip's dragstart records the column it picked up; dropping it onto
     # another column's grip (drop reads the recorded source) moves it to that column's slot, or onto a
-    # list's + appends it (into an empty list or at the end). One editor edit = one undo step. Same
-    # proven per-element pattern as drag-to-combine — no global script, no dragging-class.
+    # list's gridline "add" zone appends it (into an empty list or at the end). One editor edit = one
+    # undo step. Same proven per-element pattern as drag-to-combine — no global script, no dragging-class.
     drag_src = [None]  # (list, idx) of the column being dragged, or None
 
     def on_drag_start(lst, idx):
@@ -2412,7 +2394,7 @@ def index() -> None:
         drag_src[0] = None  # a cancelled / completed drag leaves no stale source
 
     def on_drop(dst_list, dst_idx):
-        # dst_idx is the dropped-on column's index (insert there), or None from a list's + (append)
+        # dst_idx is the dropped-on column's index (insert there), or None from a list's "add" zone (append)
         src = drag_src[0]
         drag_src[0] = None
         if not src:

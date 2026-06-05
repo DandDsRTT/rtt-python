@@ -124,6 +124,20 @@ async def test_interval_columns_render_draggable_reorder_grips(user: User) -> No
     assert grip._props.get("draggable")  # the wrap is the HTML5 drag source
 
 
+async def test_dragging_a_target_onto_the_held_columns_gridline_moves_it_in(user: User) -> None:
+    # the user's flow: drag a target interval INTO the held column — even when held is empty — by
+    # dropping on its gridline "add" zone (grip:held:add), the SAME "drop on the gridline" gesture as
+    # reordering. An empty list has no per-column grip, so the gridline zone is the consistent target
+    # (no special header / + drop). Drop target 0 onto the empty held list → it becomes held's column.
+    await user.open("/")
+    _toggle(user, "optimization")                          # reveal the (empty) held column
+    await user.should_see(marker="grip:held:add")          # ...whose gridline drop zone is present
+    await user.should_not_see(marker="grip:held:0")        # held starts empty: no per-column grip yet
+    UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger("dragstart")
+    UserInteraction(user, set(user.find(marker="grip:held:add").elements), None).trigger("drop.prevent")
+    await user.should_see(marker="grip:held:0")            # the dropped target is now held's first column
+
+
 async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> None:
     # both colorization sub-toggles share the label "colorization", so one click matches
     # and flips both on. They paint wash blocks behind the tiles — drive that branch and

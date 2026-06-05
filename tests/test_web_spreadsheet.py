@@ -100,11 +100,10 @@ def test_no_title_overhang_reports_zero():
 def _assert_freeze_partition(lay):
     # the frozen bands hold the titles + toggles AND the branching ± / drag-grip controls; every
     # value cell and grey value tile clears both bands, so the renderer's frozen panes never mask
-    # live content. A fan control (a ± whose kind ends in "plus"/"minus", or a drag grip on a branch
-    # point) rides a frozen band — its anchor, the top-left where it sits, is left of freeze_x (row
-    # band) or above freeze_y (column strip); a hover zone may then EXTEND past the seam over the
-    # header. The drop slots, by contrast, are ordinary BODY content (they sit below the seam, where
-    # the frozen colhead can't clip them), so they clear both bands like the value cells.
+    # live content. A fan control (a ± whose kind ends in "plus"/"minus", or a drag grip / drop zone
+    # on the fan) rides a frozen band — its anchor, the top-left where it sits, is left of freeze_x
+    # (row band) or above freeze_y (column strip); a hover zone may then EXTEND past the seam over
+    # the header.
     fx, fy = lay.freeze_x, lay.freeze_y
     for cb in lay.cells:
         if cb.kind in {"colheader", "coltoggle"}:
@@ -116,7 +115,7 @@ def _assert_freeze_partition(lay):
         elif cb.kind.endswith(("plus", "minus")) or cb.kind == "colgrip":
             assert cb.x < fx or cb.y < fy                     # a fan control rides a frozen band, not the body
         else:
-            assert cb.x >= fx and cb.y >= fy                  # all value content (incl. drop slots) clears both bands
+            assert cb.x >= fx and cb.y >= fy                  # all value content clears both bands
     for bl in lay.blocks:
         if bl.tint == "" and not bl.boxed:                    # the grey value tiles (washes overhang by design)
             assert bl.x >= fx and bl.y >= fy
@@ -318,15 +317,17 @@ def _all_on():
 
 
 def test_interval_columns_carry_a_drag_grip_per_column():
-    # each existing interval column gets a drag grip (the drag-and-drop handle, also the drop
-    # target). Appending / dropping into an empty list rides the list's + (not a grid cell).
+    # each existing interval column gets a drag grip (the drag-and-drop handle, also a drop target);
+    # plus every list emits a drop-only "add" zone on its stub gridline (the append / into-empty
+    # target), so dropping into a list is the same gridline gesture whether it is full or empty.
     ed = Editor()
     ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])  # two held intervals
     ed.set_interest_vectors([(1, 1, -1)])          # one interval of interest
     cells = {c.id: c for c in spreadsheet.build(
         ed.state, _all_on(), interest=ed.interest_vectors, held_vectors=ed.held_vectors).cells}
     assert cells["grip:held:0"].kind == "colgrip" and cells["grip:held:1"].kind == "colgrip"
-    assert "grip:held:2" not in cells  # no grip past the last column
+    assert "grip:held:2" not in cells                 # no per-column grip past the last column
+    assert cells["grip:held:add"].kind == "colgrip"   # ...but the gridline append zone is always there
     assert cells["grip:interest:0"].kind == "colgrip"
 
 
@@ -345,18 +346,21 @@ def test_a_drag_grip_rides_the_fan_band_below_the_minus():
     assert grip.y + grip.h <= lay.freeze_y + 0.51     # ...and above the seam (in the frozen fan, not clipped)
 
 
-def test_an_empty_interval_list_has_no_grip_but_its_plus_can_receive_a_drop():
-    # with no intervals yet there's nothing to drag out (no grip); a column can still be dragged
-    # IN by dropping on the list's + (interest_plus), which doubles as the append target
+def test_an_empty_interval_list_still_offers_a_gridline_drop_zone():
+    # with no intervals yet there's nothing to drag OUT (no per-column grip), but the list still
+    # emits its "add" drop zone on the trunk gridline — so dropping an interval IN is the same
+    # "drop on the gridline" gesture as for a full list, never a separate + / header target.
     cells = {c.id for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
-    assert "grip:interest:0" not in cells and "interest_plus" in cells
+    assert "grip:interest:0" not in cells  # nothing to drag out of an empty list
+    assert "grip:interest:add" in cells    # ...but its gridline drop zone is there to receive one
 
 
-def test_comma_grips_need_a_spare_comma():
-    # one comma: dragging it out would empty the basis (parity with the −), so no grip
+def test_comma_grips_need_a_spare_comma_but_the_list_always_accepts_a_drop():
+    # one comma: dragging it out would empty the basis (parity with the −), so no drag-out grip —
+    # but the list still offers its gridline "add" zone (dropping an interval in tempers it out).
     one = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
-    assert "grip:commas:0" not in one
+    assert "grip:commas:0" not in one and "grip:commas:add" in one
     # two commas: each is now draggable out
     two = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),)), _all_on()).cells}  # r=1, n=2
     assert "grip:commas:0" in two and "grip:commas:1" in two

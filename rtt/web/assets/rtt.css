@@ -604,9 +604,12 @@
    reserved GRIP_BAND room on the fan — along each column's sub-axis gridline, between the − above
    (at the branch point) and the first tile below. It's BOTH drag source and drop target (the same
    self-contained per-element pattern as drag-to-combine): drop one column's grip on another to move
-   it, or onto the list's + to append. z-index:5 keeps it above the cells/gridlines beneath. */
+   it, or onto the list's "add" zone (.rtt-coldrop) to append. z-index:5 keeps it above the
+   cells/gridlines beneath. The "add" zone is drop-only — a gridline target (the trunk when the list
+   is empty) with no ⠿ and no grab cursor, so dropping into a list is always "drop on the gridline". */
 .rtt-colgrip { z-index:5; }
 .rtt-colgrip .rtt-grip { font-size:15px; }
+.rtt-coldrop { z-index:5; }
 
 /* the fold toggle fills its cell wrap; its boxed glyph is an inline SVG (see .rtt-glyph) */
 .rtt-toggle { width:100%; height:100%; }

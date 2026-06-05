@@ -1848,18 +1848,25 @@ class _GridBuilder:
 
             # drag-and-drop reorder grips: a ⠿ on each interval column, riding the GRIP_BAND room on
             # the fan — along the column's sub-axis gridline, in the band BETWEEN the − above (at the
-            # branch point) and the first tile below. It is BOTH the drag source AND the drop target
-            # (drop one column's grip on another to move it there); its column's + doubles as the
-            # append / empty-list target (see _make_append_target). The grips sit above the freeze
-            # seam (the band is reserved within the frozen fan), so the colhead doesn't clip them.
-            # Commas can be dragged OUT only with one to spare (the basis must never empty, like the
-            # comma −); the target list is inert in all-interval (the auto Tₚ = I set isn't curated).
+            # branch point) and the first tile below. Each grip is BOTH the drag source AND a drop
+            # target (drop one column's grip on another to move it there). EVERY list also emits a
+            # drop-only zone at its stub gridline (its trunk when empty) — "grip:{list}:add" — so
+            # dropping INTO a list is ALWAYS "drop on the gridline", identical whether the list is
+            # full (drop on a column grip) or empty (drop on the lone trunk zone): no separate header
+            # or + target. The grips sit above the freeze seam (the band is reserved within the frozen
+            # fan), so the colhead doesn't clip them. Commas can be dragged OUT only with one to spare
+            # (the basis must never empty, like the comma −) but always accept a drop (temper out); the
+            # target list is inert in all-interval (the auto Tₚ = I set isn't curated).
             grip_top = self.branch_top_y + GAP - PAD  # top of the reserved grip band (the old seam)
 
             def drag_controls(ckey, n):
                 for i in range(n):  # a full-width ⠿ grip centred on the column's gridline, in the band
                     self.cells.append(CellBox(f"grip:{ckey}:{i}", self.sub_axis_x(ckey, i) - COL_W / 2,
                                          grip_top, COL_W, GRIP_BAND, "colgrip", comma=i))
+                # the append / into-empty-list drop target, on the SAME band at the list's stub gridline
+                # (the trunk when empty) — so an empty list still has a gridline target, like the grips.
+                self.cells.append(CellBox(f"grip:{ckey}:add", self.plus_stub_x[ckey] - COL_W / 2,
+                                     grip_top, COL_W, GRIP_BAND, "colgrip"))
 
             # gate on _plus_shows — the same "this list's fan (with its +) is visible" test the + uses.
             # Commas need a spare (nc > 1) to drag one out; the others grip every existing column.
