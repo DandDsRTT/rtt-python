@@ -876,6 +876,17 @@ def test_plain_text_font_is_glyph_aware_not_uniform_width():
     assert app._ptext_font(sparse, 40) > app._ptext_font(dense, 40)
 
 
+def test_target_chooser_default_limit_uses_the_nonstandard_basis():
+    # the chooser's default limit derives from the loaded temperament's domain basis: on
+    # Barbados (2.3.13/5) the next prime past 13 is 17, so TILT defaults to 16 — not the 6
+    # a standard-prime reading (2.3.5: next prime past 5 is 7) would give
+    from rtt.web.editor import Editor
+    editor = Editor()
+    assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+    rec = app._Reconciler(editor)
+    assert rec._target_preset_values() == (16, "TILT")
+
+
 def test_dense_prescaling_plain_text_fits_its_cell():
     # the reported overflow: the complexity-prescaler and prescaled-target-list tiles hold
     # the densest plain text (a d×k ket-matrix linearised onto one line). Each must fit its

@@ -1576,7 +1576,7 @@ class _Reconciler:
         limit = self._editor.target_limit
         if limit is None:  # no manual limit: show the family's domain default
             limit = service.default_target_limit(
-                family, service.standard_primes(self._editor.state.d))
+                family, self._editor.state.domain_basis)
         return limit, family
 
     def _build_preset(self, cb, wrap):
@@ -2332,7 +2332,7 @@ def index() -> None:
         family = sel.value or "TILT"
         spec = f"{int(num.value)}-{family}" if num.value else family
         try:
-            valid = bool(service.target_interval_set(spec, service.standard_primes(editor.state.d)))
+            valid = bool(service.target_interval_set(spec, editor.state.domain_basis))
         except Exception:
             valid = False
         if not valid:
