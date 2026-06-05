@@ -1336,45 +1336,46 @@ def test_presets_on_adds_the_three_chooser_dropdowns_under_their_tiles():
     assert cells["preset:target"].x == cells["header:targets"].x + inset
 
 
-def test_single_option_tuning_chooser_is_a_hardcoded_value():
+def test_single_option_tuning_chooser_is_a_disabled_dropdown():
     # the established-tuning-scheme chooser has a single option in the default view (weighting +
-    # alt. complexity both off → only T minimax-U). A one-option chooser is not a choice, so when its
-    # value is that option (on the list) it renders as a hardcoded value (choicevalue), not a dropdown
-    # — and its bordered control box is dropped so it reads like a bare gridded value. displayed_tuning_name
-    # is the on-list value the editor threads in (here the default scheme's "minimax-U").
+    # alt. complexity both off → only T minimax-U). A one-option chooser has no real choice, so when its
+    # value is that option (on the list) it renders as a DISABLED dropdown (greyed, kept in its box),
+    # like the all-interval-locked target / slope choosers. displayed_tuning_name is the on-list value
+    # the editor threads in (here the default scheme's "minimax-U").
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["presets"] = True
     lay = spreadsheet.build(base, s, displayed_tuning_name="minimax-U")
     cells = {c.id: c for c in lay.cells}
-    assert cells["preset:tuning"].kind == "choicevalue"
-    assert cells["preset:tuning"].text == "T minimax-U"  # the lone scheme's label, shown as a value
-    # the bordered control box is gone (a value reads bare, like the gridded values)
-    assert "block:preset:tuning" not in {b.id for b in lay.blocks}
-    # the field-label caption stays, naming the value
-    assert cells["block:preset:tuning:label"].text == "established tuning scheme"
+    assert cells["preset:tuning"].kind == "preset"      # still a dropdown...
+    assert cells["preset:tuning"].disabled is True       # ...just disabled (greyed, non-interactive)
+    assert "block:preset:tuning" in {b.id for b in lay.blocks}  # its box stays
+    # the field-label caption greys with the locked chooser
+    assert cells["block:preset:tuning:label"].disabled is True
 
 
 def test_off_list_tuning_chooser_stays_an_interactive_dropdown():
     # even with a single option, a chooser whose value is OFF the list (a deviating manual edit, shown
-    # as "-") stays an interactive dropdown — the lone option is the reset back to the named scheme, so
+    # as "-") stays interactive (not greyed) — the lone option is the reset back to the named scheme, so
     # it must remain pickable. displayed_tuning_name=None marks the off-list state.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["presets"] = True
     lay = spreadsheet.build(base, s, displayed_tuning_name=None)
-    assert {c.id: c for c in lay.cells}["preset:tuning"].kind == "preset"  # off the list -> still a dropdown
-    assert "block:preset:tuning" in {b.id for b in lay.blocks}  # ...inside its bordered box
+    cell = {c.id: c for c in lay.cells}["preset:tuning"]
+    assert cell.kind == "preset" and cell.disabled is False  # off the list -> a live dropdown
+    assert "block:preset:tuning" in {b.id for b in lay.blocks}
 
 
-def test_weighting_keeps_the_tuning_chooser_a_dropdown_with_real_options():
+def test_weighting_keeps_the_tuning_chooser_an_enabled_dropdown():
     # with weighting on (alt. complexity still off) the chooser offers the three weight-slope variants
-    # (T minimax-U / -S / -C) — a real choice — so it stays an interactive dropdown even on-list.
+    # (T minimax-U / -S / -C) — a real choice — so it stays an enabled, interactive dropdown even on-list.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["presets"], s["weighting"] = True, True
     lay = spreadsheet.build(base, s, displayed_tuning_name="minimax-U")
-    assert {c.id: c for c in lay.cells}["preset:tuning"].kind == "preset"
+    cell = {c.id: c for c in lay.cells}["preset:tuning"]
+    assert cell.kind == "preset" and cell.disabled is False
     assert "block:preset:tuning" in {b.id for b in lay.blocks}
 
 
@@ -2525,12 +2526,13 @@ def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     on = {c.id: c for c in _with("TILT minimax-S", weighting=True, presets=True).cells}
     assert "preset:prescaler" not in off  # no chooser unless presets is on
     sel = on["preset:prescaler"]
-    # with alt. complexity off there is only one prescaler (log-prime), so the chooser is not a
-    # choice: it renders as a hardcoded value (choicevalue), not a one-entry dropdown
-    assert sel.kind == "choicevalue"
+    # with alt. complexity off there is only one prescaler (log-prime), so the chooser has no real
+    # choice: it renders as a DISABLED dropdown (greyed), not an interactive one
+    assert sel.kind == "preset"
+    assert sel.disabled is True
     assert sel.text == "log-prime"  # the default scheme's prescaler
     # it rides below the prescaling matrix, seated one inner pad into the primes column (like the
-    # other presets, the value sits where the dropdown would, one BOX_INNER off the edge)
+    # other presets, the dropdown sits inside a tile-spanning box at BOX_INNER off the edge)
     assert sel.y > on["cell:prescaling:primes:2:2"].y
     assert sel.x == on["header:primes"].x + spreadsheet.BOX_INNER
     # gone without the prescaling tile (weighting off) or its column (temperament boxes off)
@@ -2574,25 +2576,28 @@ def test_complexity_machinery_hides_under_unity_weight():
     assert "control:q" in simpl
 
 
-def test_box_c_complexity_chooser_is_hardcoded_until_alt_complexity():
+def test_box_c_complexity_chooser_is_disabled_until_alt_complexity():
     # box 𝒄's predefined-complexities chooser is a PRESET (gated on presets — see
     # test_predefined_complexities_dropdown_is_gated_on_presets). Until alt. complexity is turned on
-    # there is only ONE complexity (lp for every scheme today), so it is not a choice: it renders as a
-    # hardcoded value (choicevalue), not a one-entry dropdown. Turning alt_complexity on opens the full
-    # preset list (+ the inert "custom") as a real control_select dropdown.
+    # there is only ONE complexity (lp for every scheme today), so it has no real choice: it renders as
+    # a DISABLED dropdown (greyed, caption greyed with it), like the all-interval-locked slope chooser.
+    # Turning alt_complexity on enables it and opens the full preset list (+ the inert "custom").
     # (presets on + a non-unity slope reveal it; alt_complexity OFF (default).)
     on = {c.id: c for c in _with("TILT minimax-S", weighting=True, presets=True).cells}
     ctrl = on["control:complexity"]
-    assert ctrl.kind == "choicevalue"  # one option -> hardcoded value, no dropdown
-    # the value shows the friendly display name (abbreviation first, expansion in parens) —
-    # for the default scheme (log-prime taxicab) that's "lp (log-product)"
+    assert ctrl.kind == "control_select"
+    assert ctrl.disabled is True  # one option -> disabled dropdown, greyed
+    assert on["caption:complexity"].disabled is True  # its caption greys with it
+    # the dropdown shows the friendly display name (abbreviation first, expansion in parens) —
+    # for the default scheme (log-prime taxicab) that's "lp (log-product)" — held as its sole option
     assert ctrl.text == "lp (log-product)"
-    # the value sits below the complexity list, inset within box 𝒄's border (BOX_INNER)
+    assert ctrl.values == ("lp (log-product)",)
+    # it sits below the complexity list, inset within box 𝒄's border (BOX_INNER)
     assert ctrl.y > on["complexity:target:0"].y
     assert ctrl.x == on["header:targets"].x + spreadsheet.BOX_INNER
-    # turning alt. complexity on opens the real dropdown with the full preset list + custom
+    # turning alt. complexity on enables the dropdown with the full preset list + custom
     full = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, presets=True).cells}
-    assert full["control:complexity"].kind == "control_select"
+    assert full["control:complexity"].disabled is False
     assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
 
 

@@ -289,12 +289,6 @@
 .rtt-svgfill { width:100%; height:100%; line-height:0; }
 /* the symbol + caption (and the units line) hold off their fade-in until the tile has expanded */
 .rtt-caption-cell, .rtt-symbol-cell, .rtt-units-cell, .rtt-matlabel-cell { animation-delay:var(--t); animation-fill-mode:backwards; }
-/* a single-option chooser collapsed to a hardcoded value: no dropdown box, no caret — just the lone
-   option's text, centred in the cell (the .rtt-cell wrap centres it) so it reads like a read-only
-   gridded value. Keeps the dropdown's own 12px Cambria #000 so the one-entry select and the value it
-   collapses to render the text identically. */
-.rtt-choicevalue { font-size:12px; color:#000; font-family:'Cambria',Georgia,serif;
-            line-height:1.1; white-space:nowrap; text-align:center; }
 /* the preset chooser dropdowns: a compact bordered q-select that fills its
    PRESET_H cell, with a thin grey rule and a small caret — like the mockup */
 .rtt-preset { width:100%; }

@@ -1790,46 +1790,33 @@ class _GridBuilder:
         return self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_sym[rkey] + self.row_cap[rkey] + self.row_units[rkey]
 
     # A chooser dropdown that offers only ONE option, with that option already selected, is not a
-    # choice — it renders as a hardcoded read-only value (kind "choicevalue") that reads like a
-    # gridded value, not an interactive control (Douglas's request). These helpers decide that,
-    # shared by the preset choosers (tuning / prescaler) and the in-tile control selects (the box-𝒄
-    # complexity chooser).
+    # choice — it renders as a DISABLED dropdown (greyed, non-interactive, but still left-justified
+    # like any dropdown), exactly like the all-interval-locked target / weight-slope choosers
+    # (Douglas's request). These predicates decide that, shared by the preset choosers (tuning /
+    # prescaler) and the box-𝒄 complexity control select.
     @staticmethod
-    def _sole_option_label(options, value):
-        """The lone option's display label when ``options`` offers exactly one AND ``value`` is it,
-        else None. ``options`` is a ``{value: label}`` mapping (a list/tuple is taken as value==label).
-        None for a real choice (≥2 options) or an off-list value — a deviating edit shows "-", which
-        stays an interactive dropdown so its one option can reset it."""
-        if not isinstance(options, dict):
-            options = {opt: opt for opt in options}
-        return options[value] if len(options) == 1 and value in options else None
+    def _is_sole_option(options, value):
+        """True when ``options`` offers exactly one choice AND ``value`` is it — so the chooser has
+        no real choice and renders disabled. ``options`` is a ``{value: label}`` mapping (a list/tuple
+        is taken as value==label). False for a real choice (≥2 options) or an off-list value — a
+        deviating edit shows "-", which stays interactive so its one option can reset it."""
+        opts = options if isinstance(options, dict) else {o: o for o in options}
+        return len(opts) == 1 and value in opts
 
-    def _preset_sole_label(self, name):
-        """The hardcoded-value label for a tuning / prescaler preset locked to its single option,
-        else None (so emit_preset renders it as a "choicevalue", boxless, instead of a dropdown).
-        Temperament and target always offer a real choice. The on-list value mirrors
+    def _preset_locked(self, name):
+        """Whether a tuning / prescaler preset is locked to its single on-list option (→ a disabled
+        dropdown). Temperament and target always offer a real choice. The on-list value mirrors
         app._build_preset: the tuning chooser's via the threaded displayed_tuning_name, the
         prescaler's via the realised diagonal name resolved in phase 2."""
         if name == "tuning":
             options = presets.tuning_scheme_options(
                 service.is_all_interval(self.tuning_scheme),
                 self.settings["alt_complexity"], self.settings["weighting"])
-            return self._sole_option_label(options, self.displayed_tuning_name)
+            return self._is_sole_option(options, self.displayed_tuning_name)
         if name == "prescaler":
-            options = presets.prescaler_options(self.settings["alt_complexity"])
-            return self._sole_option_label(options, self._realized_prescaler)
-        return None
-
-    def _choice_cell(self, cid, x, y, w, h, text, values, disabled=False):
-        """Append a chooser cell: a hardcoded "choicevalue" when it offers a single on-list option,
-        else the interactive "control_select" dropdown over ``values``. Shared by the box-𝒄
-        complexity and box-𝒘 weight-slope choosers."""
-        sole = self._sole_option_label(values, text)
-        if sole is not None:
-            self.cells.append(CellBox(cid, x, y, w, h, "choicevalue", text=sole))
-        else:
-            self.cells.append(CellBox(cid, x, y, w, h, "control_select",
-                                 text=text, values=values, disabled=disabled))
+            return self._is_sole_option(presets.prescaler_options(self.settings["alt_complexity"]),
+                                        self._realized_prescaler)
+        return False
 
     # a control box: a thin-bordered frame SPANNING the full width of its column's tile (like the
     # optimization / tuning-ranges boxes), with the dropdown seated at its top-left at the dropdown's
@@ -1838,13 +1825,10 @@ class _GridBuilder:
     # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
     # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
     # the (x, width, y) to seat the dropdown at.
-    def control_box(self, box_id, ckey, top, cap_w, label, disabled=False, boxed=True):
+    def control_box(self, box_id, ckey, top, cap_w, label, disabled=False):
         dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label)
         box_x, box_y = self.col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
-        # ``boxed`` draws the bordered frame; a single-option chooser collapsed to a hardcoded value
-        # (see _preset_sole_label) drops it so the value reads like a bare gridded value, not a control.
-        if boxed:
-            self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
+        self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
         if label:  # disabled greys the label with its control (a locked chooser, e.g. all-interval target)
             self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
@@ -2491,11 +2475,16 @@ class _GridBuilder:
                 complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
                 complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
                                      if self.show_alt_complexity else (complexity_text,))
-                # with alt. complexity off the list is just the live measure (one option) → it renders
-                # as a hardcoded value, not a one-entry dropdown (the same single-option rule as the presets)
-                self._choice_cell("control:complexity", tx, cy, drop_w, PRESET_H, complexity_text, complexity_values)
+                # with alt. complexity off the list is just the live measure (one option) → no real
+                # choice, so the dropdown + caption render disabled/greyed (the single-option rule the
+                # presets use, and the look the all-interval-locked slope chooser already uses)
+                complexity_locked = self._is_sole_option(complexity_values, complexity_text)
+                self.cells.append(CellBox("control:complexity", tx, cy, drop_w, PRESET_H,
+                                     "control_select", text=complexity_text, values=complexity_values,
+                                     disabled=complexity_locked))
                 self.cells.append(CellBox("caption:complexity", tx, cy + PRESET_H, drop_w,
-                                     CAPTION_LINE, "caption", text="predefined complexities", align="left"))
+                                     CAPTION_LINE, "caption", text="predefined complexities",
+                                     align="left", disabled=complexity_locked))
                 q_slot_x = tx + drop_w + OPT_COL_GAP
             # the interval-complexity norm power 𝑞, styled to match the optimization box's 𝑝 field (a
             # slot wider than the value cell, value centred, so the italic 𝑞 and the multi-word caption
@@ -2548,9 +2537,9 @@ class _GridBuilder:
             box_top = self.tile_top["weight"] + self.tile_h["weight"] - self.slope_extra + RANGE_GAP
             bx, by = self.control_region("block:slope", "targets", box_top, PRESET_H + CAPTION_LINE)
             slope_w = self.col_w["targets"] - 2 * BOX_INNER  # the chooser fills the box, inset off its border
-            self._choice_cell("control:slope", bx, by, slope_w, PRESET_H,
-                              service.weight_slope_of(self.tuning_scheme),
-                              tuple(service.WEIGHT_SLOPES), disabled=self.slope_locked)
+            self.cells.append(CellBox("control:slope", bx, by, slope_w, PRESET_H,
+                                 "control_select", text=service.weight_slope_of(self.tuning_scheme),
+                                 values=tuple(service.WEIGHT_SLOPES), disabled=self.slope_locked))
             self.cells.append(CellBox("caption:slope", bx, by + PRESET_H,
                                  slope_w, CAPTION_LINE, "caption",
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
@@ -2994,19 +2983,17 @@ class _GridBuilder:
                 if self.size_factor:  # "predefined prescalers" → "…pretransformers" (guide terminology)
                     label = _pretransform_label(label)
                 top = self.ptext_band_y(rkey) + self.row_ptext[rkey]  # below the plain-text band
-                # all-interval targets every interval, so the target set scheme chooser doesn't apply —
-                # grey it out disabled, its caption with it (it also falls back to "-"; see app._target_preset_values)
-                disabled = name == "target" and service.is_all_interval(self.tuning_scheme)
-                # a tuning / prescaler chooser locked to its single option renders as a hardcoded value
-                # (no dropdown, no box) rather than a one-entry select — see _preset_sole_label.
-                sole = self._preset_sole_label(name)
+                # a chooser with no real choice renders as a DISABLED dropdown (greyed, non-interactive,
+                # caption greyed with it), like the all-interval-locked target / weight-slope choosers:
+                #  - the target set scheme doesn't apply in all-interval (it targets every interval), and
+                #  - a tuning / prescaler chooser locked to its single on-list option (e.g. the default
+                #    T minimax-U / log-prime) — see _preset_locked.
+                disabled = (name == "target" and service.is_all_interval(self.tuning_scheme)) \
+                    or self._preset_locked(name)
                 cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label,
-                                              disabled=disabled, boxed=sole is None)
-                if sole is not None:
-                    self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "choicevalue", text=sole))
-                else:
-                    self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
-                                         disabled=disabled))
+                                              disabled=disabled)
+                self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
+                                     disabled=disabled))
                 # the target chooser carries the all-interval checkbox to the dropdown's right, in the
                 # empty space of its now-tile-spanning box (box 𝐓); TBOX_W floors the column wide enough.
                 if name == "target" and self.settings["all_interval"]:

@@ -78,7 +78,6 @@ CHROME_HELP: dict[str, str] = {
 # every kind a full build renders is either listed here or carries help.
 READONLY_KINDS: frozenset[str] = frozenset({
     "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tval", "powerdisplay",
-    "choicevalue",  # a single-option chooser shown as a hardcoded value (no dropdown, no tooltip)
     "genratio", "commaratio", "mathexpr", "ptext", "ptextpending",
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",

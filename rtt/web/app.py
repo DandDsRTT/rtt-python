@@ -1087,9 +1087,6 @@ class _Reconciler:
         self.cell_kinds["alltoggle"] = _KindHandlers(self._build_alltoggle, self._update_foldtoggle)
 
         self.cell_kinds["preset"] = _KindHandlers(self._build_preset, self._update_preset)
-        # a chooser locked to its single option: a hardcoded read-only value, not a dropdown (the
-        # spreadsheet picks this kind over "preset"/"control_select" — see _sole_option_label)
-        self.cell_kinds["choicevalue"] = _KindHandlers(self._label_builder("rtt-choicevalue"), self._update_label)
         self.cell_kinds["control_select"] = _KindHandlers(self._build_control_select, self._update_control_select)
         self.cell_kinds["control_check"] = _KindHandlers(self._build_control_check, self._update_control_check)
         self.cell_kinds["formchooser"] = _KindHandlers(self._build_formchooser, self._update_formchooser)
@@ -1807,6 +1804,7 @@ class _Reconciler:
             value = value if value in options else None
             self.selects[cb.id].set_options(options, value=value)
             _set_offlist_prompt(self.selects[cb.id], value)
+            self.selects[cb.id].set_enabled(not cb.disabled)  # greyed+locked when it's the lone prescaler
         else:  # tuning — a refined spec or a deviating manual override shows "-"
             name = self._editor.displayed_tuning_scheme_name
             # the option LABELS T-prefix only while target-based, so recompute them as the all-
@@ -1819,6 +1817,7 @@ class _Reconciler:
             scheme = name if name in options else None
             self.selects[cb.id].set_options(options, value=scheme)
             _set_offlist_prompt(self.selects[cb.id], scheme)
+            self.selects[cb.id].set_enabled(not cb.disabled)  # greyed+locked when it's the lone scheme
 
     def _sync_target_limit_error(self, num, family, limit):
         """Render-driven flag for the target chooser's limit field: when the DISPLAYED
