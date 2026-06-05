@@ -35,6 +35,7 @@ HEADER_H = 36  # column-header height — two text lines tall, so a multi-word t
 STRIP = 16  # thickness a collapsed row/column shrinks to (label/toggle only)
 TOGGLE = 12  # side of a fold [x]/[+] control; fits the gutter-to-content gap
 BTN = TOGGLE  # a domain +/− control matches the fold toggle it now sits beside on the fan
+GRIP_W = (COL_W - BTN) // 2  # a column drag grip's width: the slot space LEFT of its centred −
 TOGGLE_INSET = 3  # small grey margin hugging a tile's top-left corner toggle (off the edges and content)
 CAPTION_FONT = 9  # px font size of the quantity-name caption (matches the mockup —
 # ~0.2 of the cell height; the CSS .rtt-caption must use the same size)
@@ -1801,6 +1802,34 @@ class _GridBuilder:
                               ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
                 if ckey in self.plus_stub_x:
                     branch_plus(cid, ckey, cid)
+
+            # drag-and-drop fan controls: a grip over each interval column (the drag source) and a
+            # drop slot over each gap (insert-before; the slot one past the last appends, riding the
+            # + stub). Both ride the fan band (frozen with the ± above the seam). The grip tucks
+            # against its column's LEFT edge, clear of the centred − that reveals on the same sub-
+            # axis; a drop slot spans the whole column slot but only catches mid-drag (CSS gates its
+            # pointer-events on the dragging state, so idle it never masks the −/+ or the cells).
+            # Commas can be dragged OUT only with one to spare (the basis must never empty, like the
+            # comma −); the target list is inert in all-interval (the auto Tₚ = I set isn't curated).
+            band_h = qy - self.fanout_y
+
+            def drag_controls(ckey, n, *, draggable=True):
+                if draggable:
+                    for i in range(n):  # a thin handle at the column's left edge, ending at the −'s reach
+                        self.cells.append(CellBox(f"grip:{ckey}:{i}", self.sub_axis_x(ckey, i) - COL_W / 2,
+                                             self.fanout_y, GRIP_W, band_h, "colgrip", comma=i))
+                for g in range(n + 1):  # a gap before each column, plus one past the last (append)
+                    gx = self.col_plus_x(ckey) if g == n else self.sub_axis_x(ckey, g)
+                    self.cells.append(CellBox(f"drop:{ckey}:{g}", gx - COL_W / 2, self.fanout_y,
+                                         COL_W, band_h, "dropslot", comma=g))
+
+            # gate on _plus_shows — the same "this list's fan (with its +) is visible" test the +
+            # uses, so an empty-but-open held/interest still gets its append slot and the target
+            # list is skipped in all-interval, both for free.
+            counts = {"commas": self.nc, "targets": self.k, "held": self.nh, "interest": self.mi}
+            for ckey in ("commas", "targets", "held", "interest"):
+                if self._plus_shows(ckey):
+                    drag_controls(ckey, counts[ckey], draggable=ckey != "commas" or self.nc > 1)
 
         # generator ratios (aligned with the mapping rows they label) + the mapping
         # matrix and its mapped target interval list

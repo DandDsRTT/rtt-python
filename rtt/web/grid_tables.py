@@ -658,6 +658,7 @@ GRIDDED_KINDS = frozenset({
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel",
     "minus", "plus", "gen_minus", "gen_plus", "map_minus", "map_plus", "comma_minus", "comma_plus", "basis_minus",
     "interest_minus", "interest_plus", "held_minus", "held_plus", "target_minus", "target_plus", "optimize",
+    "colgrip", "dropslot",  # the drag-and-drop fan controls (a column grip + per-gap drop slot)
     "boxtitle", "powerinput",
 })
 # "quantities" (general) is gentler than gridded values: it keeps every cell box

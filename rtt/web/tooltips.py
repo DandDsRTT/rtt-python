@@ -78,6 +78,7 @@ READONLY_KINDS: frozenset[str] = frozenset({
     "genratio", "commaratio", "mathexpr", "ptext", "ptextpending",
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",
+    "dropslot",  # a transient drop target — no hover text (its highlight is the only feedback)
 })
 
 # The lone read-only OUTPUT values that nonetheless carry help: the optimization objective's
@@ -120,6 +121,8 @@ _KIND_HELP: dict[str, str] = {
     "held_minus": "Remove this held interval.",
     "target_plus": "Add a target interval to the list.",
     "target_minus": "Remove this target interval from the list.",
+    # drag-and-drop
+    "colgrip": "Drag this interval to another list, or reorder it — drop onto the commas to temper it out.",
     # fold / unfold toggles
     "rowtoggle": "Collapse or expand this row.",
     "coltoggle": "Collapse or expand this column.",

@@ -168,6 +168,10 @@ _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
 # .rtt-gridbody has scrolled off zero on that axis, toggled as rtt-scrolled-x/y on .rtt-app. scroll
 # doesn't bubble → capture phase, so the body's scroll events are still caught here.
 _FREEZE_JS = (_ASSETS / "freeze.js").read_text(encoding="utf-8")
+# delegated drag-and-drop glue for the interval-column grips / drop slots (see drag.js): arms the
+# drop slots while a grip is dragging, prevents dragover default so a drop fires, and highlights
+# the hovered slot — all client-side; the pick-up and drop themselves cross to Python.
+_DRAG_JS = (_ASSETS / "drag.js").read_text(encoding="utf-8")
 
 
 def _option_box_svg(fill: str | None) -> str:
@@ -210,6 +214,15 @@ def _control_svg(glyph: str) -> str:
             f"<rect x='.5' y='.5' width='11' height='11' fill='#fff' stroke='#bbb' stroke-width='1'/>"
             f"<path d='{_CONTROL_GLYPHS[glyph]}' fill='none' stroke='currentColor' stroke-width='1.2'"
             f" stroke-linecap='round' stroke-linejoin='round'/></svg>")
+
+
+def _grip_svg() -> str:
+    """A column drag-handle glyph: two columns of three dots (a ⠿ grip) in currentColor, so the
+    cell's CSS colour and :hover tint it. No bordered box (unlike the ± buttons) — a dotted grip
+    reads as 'grab me' rather than 'click me', and it's a thin vertical handle for the narrow slot."""
+    dots = "".join(f"<circle cx='{cx}' cy='{cy}' r='0.9' fill='currentColor'/>"
+                   for cx in (2, 5) for cy in (3, 8, 13))
+    return f"<svg viewBox='0 0 7 16' xmlns='http://www.w3.org/2000/svg'>{dots}</svg>"
 
 
 _CSS_VARS = f""":root {{
@@ -992,6 +1005,8 @@ class _Reconciler:
         self.cell_kinds["held_plus"] = _KindHandlers(self._build_held_plus)
         self.cell_kinds["target_minus"] = _KindHandlers(self._build_target_minus)
         self.cell_kinds["target_plus"] = _KindHandlers(self._build_target_plus)
+        self.cell_kinds["colgrip"] = _KindHandlers(self._build_colgrip)
+        self.cell_kinds["dropslot"] = _KindHandlers(self._build_dropslot)
         self.cell_kinds["speaker"] = _KindHandlers(self._build_speaker)
         for _audio_ctrl in _AUDIO_CTRLS:  # audio_wave / audio_mode / audio_hold / audio_root
             self.cell_kinds[_audio_ctrl] = _KindHandlers(self._build_audio_ctrl)
@@ -1721,6 +1736,20 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_target))
 
+    def _build_colgrip(self, cb, wrap):  # a per-column drag handle on the fan (the drag source)
+        _, lst, idx = cb.id.split(":")  # "grip:{list}:{idx}"
+        wrap.classes("rtt-colgrip").props("draggable=true")
+        wrap.on("dragstart", lambda _=None, l=lst, i=int(idx): self._cb.on_drag_start(l, i))
+        wrap.on("dragend", lambda _=None: self._cb.on_drag_end())
+        ui.html(_grip_svg()).classes("rtt-glyph")
+
+    def _build_dropslot(self, cb, wrap):  # a per-gap drop target on the fan (insert-before this gap)
+        # the drop fires the move; dragover.preventDefault + the dragging-state class + the hover
+        # highlight are handled client-side by _DRAG_JS (no per-frame server round-trips)
+        _, lst, gap = cb.id.split(":")  # "drop:{list}:{gap}"
+        wrap.classes("rtt-dropslot")
+        wrap.on("drop", lambda _=None, l=lst, g=int(gap): self._cb.on_drop(l, g))
+
     def _build_speaker(self, cb, wrap):  # play this pitch per its tile's mode (client-side engine)
         tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
         idx = int(cb.id.rsplit(":", 1)[1])
@@ -1758,6 +1787,8 @@ def index() -> None:
     ui.add_body_html(f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>")
     # keep the frozen title bands pinned to the scrolling grid pane (see _FREEZE_JS)
     ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
+    # the interval-column drag-and-drop glue (see _DRAG_JS)
+    ui.add_body_html(f"<script>{_DRAG_JS}</script>")
     ui.query("body").style("background:#fff")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
@@ -2143,6 +2174,24 @@ def index() -> None:
         rec.preview_baseline = None
         rec.preview_source = None
         rec.clear_preview()
+
+    # drag-and-drop: a grip's dragstart records the column it picked up; a drop slot's drop reads it
+    # and moves the interval into that gap (between/within the interval lists). The whole gesture is
+    # one editor edit (one undo step). The dragging-state class + hover highlight are client-side
+    # (_DRAG_JS); only the pick-up and the drop cross to Python.
+    drag_src = [None]  # (list, idx) of the column being dragged, or None
+
+    def on_drag_start(lst, idx):
+        drag_src[0] = (lst, idx)
+
+    def on_drag_end():
+        drag_src[0] = None  # a cancelled / completed drag leaves no stale source
+
+    def on_drop(dst_list, gap):
+        src = drag_src[0]
+        drag_src[0] = None
+        if src and editor.move_interval(src[0], src[1], dst_list, gap):
+            render()  # the reconciler reflows the affected lists into their new shape
     # wire the reconciler's callbacks now that the event handlers exist: the cell
     # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
     rec._cb = SimpleNamespace(
@@ -2150,6 +2199,9 @@ def index() -> None:
         on_cell_blur=on_cell_blur,
         on_cell_focus=on_cell_focus,
         on_comma_change=on_comma_change,
+        on_drag_start=on_drag_start,
+        on_drag_end=on_drag_end,
+        on_drop=on_drop,
         on_control_select=on_control_select,
         on_form_choose=on_form_choose,
         on_gentuning_change=on_gentuning_change,

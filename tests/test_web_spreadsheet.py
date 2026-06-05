@@ -92,11 +92,12 @@ def test_no_title_overhang_reports_zero():
 
 
 def _assert_freeze_partition(lay):
-    # the frozen bands hold the titles + toggles AND the branching ± controls; every value
-    # cell and grey value tile clears both bands, so the renderer's frozen panes never mask
-    # live content. A ± control (every such cell's kind ends in "plus"/"minus") rides a frozen
-    # band — its anchor, the top-left where its button sits, is left of freeze_x (row band) or
-    # above freeze_y (column strip); a − hover zone may then EXTEND past the seam over the header.
+    # the frozen bands hold the titles + toggles AND the branching ± / drag-and-drop controls;
+    # every value cell and grey value tile clears both bands, so the renderer's frozen panes never
+    # mask live content. A fan control (a ± whose kind ends in "plus"/"minus", or a drag grip /
+    # drop slot) rides a frozen band — its anchor, the top-left where it sits, is left of freeze_x
+    # (row band) or above freeze_y (column strip); its hover/catch zone may then EXTEND past the
+    # seam over the header.
     fx, fy = lay.freeze_x, lay.freeze_y
     for cb in lay.cells:
         if cb.kind in {"colheader", "coltoggle"}:
@@ -105,8 +106,8 @@ def _assert_freeze_partition(lay):
             assert cb.x + cb.w <= fx                          # row titles + toggles: left of the seam
         elif cb.kind == "alltoggle":
             assert cb.y + cb.h <= fy and cb.x + cb.w <= fx    # the master toggle: the corner of both
-        elif cb.kind.endswith(("plus", "minus")):
-            assert cb.x < fx or cb.y < fy                     # a branch ± rides a frozen band, not the body
+        elif cb.kind.endswith(("plus", "minus")) or cb.kind in {"colgrip", "dropslot"}:
+            assert cb.x < fx or cb.y < fy                     # a fan control rides a frozen band, not the body
         else:
             assert cb.x >= fx and cb.y >= fy                  # all value content clears both bands
     for bl in lay.blocks:
@@ -300,6 +301,67 @@ def test_target_list_has_no_controls_in_all_interval():
     cells = {c.id for c in lay.cells}
     assert "target_plus" not in cells
     assert not any(c.startswith("target_minus:") for c in cells)
+
+
+def _all_on():
+    s = settings.defaults()
+    for key in settings.IMPLEMENTED:
+        s[key] = True
+    return s
+
+
+def test_interval_columns_carry_drag_grips_and_drop_slots():
+    # each interval column gets a drag grip (the drag-and-drop handle) and an insert-before
+    # drop slot per gap — the slot one past the last column appends. They ride the fan band.
+    ed = Editor()
+    ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])  # two held intervals
+    ed.set_interest_vectors([(1, 1, -1)])          # one interval of interest
+    cells = {c.id: c for c in spreadsheet.build(
+        ed.state, _all_on(), interest=ed.interest_vectors, held_vectors=ed.held_vectors).cells}
+    assert cells["grip:held:0"].kind == "colgrip" and cells["grip:held:1"].kind == "colgrip"
+    assert "grip:held:2" not in cells  # no grip past the last column
+    assert cells["grip:interest:0"].kind == "colgrip"
+    assert all(cells[f"drop:held:{g}"].kind == "dropslot" for g in range(3))  # gaps 0, 1, append
+    assert "drop:held:3" not in cells
+    assert all(f"drop:interest:{g}" in cells for g in range(2))  # one column → gaps 0, append
+
+
+def test_a_drag_grip_rides_the_frozen_fan_left_of_its_columns_minus():
+    # the grip tucks against its column's left edge, ending at the centred −'s reach so the two
+    # never fight, and rides the frozen strip with the rest of the fan (anchored above the seam)
+    ed = Editor()
+    ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
+    lay = spreadsheet.build(ed.state, _all_on(), held_vectors=ed.held_vectors)
+    cells = {c.id: c for c in lay.cells}
+    sub = {ln.id: ln for ln in lay.lines}["v:held:1"].pos  # column 1's fanned sub-axis (the − axis)
+    grip = cells["grip:held:1"]
+    assert grip.x + grip.w <= sub - spreadsheet.BTN / 2 + 0.01  # ends at (not past) the −'s left edge
+    assert grip.y < lay.freeze_y  # rides the frozen column strip, like the ± above the seam
+
+
+def test_an_empty_interval_list_still_offers_an_append_drop_slot():
+    # with no intervals yet you can still drag one IN: the lone append slot (gap 0) is present,
+    # and there is nothing to drag out (no grip)
+    cells = {c.id for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
+    assert "drop:interest:0" in cells and "grip:interest:0" not in cells
+
+
+def test_comma_grips_need_a_spare_comma_but_drops_are_always_offered():
+    # one comma: dragging it out would empty the basis (parity with the −), so no grip — but
+    # another interval can still be tempered IN, so the drop slots stay
+    one = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
+    assert "grip:commas:0" not in one
+    assert "drop:commas:0" in one and "drop:commas:1" in one  # the gap before + the append
+    # two commas: each is now draggable out
+    two = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),)), _all_on()).cells}  # r=1, n=2
+    assert "grip:commas:0" in two and "grip:commas:1" in two
+
+
+def test_targets_have_no_drag_controls_in_all_interval():
+    cells = {c.id for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), tuning_scheme="minimax-S").cells}
+    assert not any(c.startswith("grip:targets") or c.startswith("drop:targets") for c in cells)
 
 
 def test_editable_vector_tiles_get_editable_quantities_ratios():

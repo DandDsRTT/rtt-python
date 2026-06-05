@@ -113,6 +113,17 @@ async def test_enabling_all_interval_renders_the_target_controls_checkbox(user: 
     await user.should_see(marker="control:all_interval")
 
 
+async def test_interval_columns_render_draggable_grips_and_drop_slots(user: User) -> None:
+    # the target list shows by default, so its drag-and-drop fan controls render with no setup:
+    # a draggable grip (the drag source) over each column and a drop slot over each gap. Drive
+    # both builders and confirm the grip is a real HTML5 drag source.
+    await user.open("/")
+    await user.should_see(marker="grip:targets:0")
+    await user.should_see(marker="drop:targets:0")
+    grip = next(iter(user.find(marker="grip:targets:0").elements))
+    assert grip._props.get("draggable")  # the wrap is the HTML5 drag source
+
+
 async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> None:
     # both colorization sub-toggles share the label "colorization", so one click matches
     # and flips both on. They paint wash blocks behind the tiles — drive that branch and

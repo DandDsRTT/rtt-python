@@ -580,6 +580,23 @@
            opacity:0; pointer-events:none; transition:opacity var(--t); }
 .rtt-minus-zone:hover .rtt-minus-btn-v { opacity:1; pointer-events:auto; }
 
+/* drag-and-drop interval columns. A grip (.rtt-colgrip) is the draggable handle tucked at each
+   column's left edge on the fan, above the − zone (z) so it stays grabbable; it dims to a faint
+   dotted handle until hovered. A drop slot (.rtt-dropslot) covers each gap but is INERT until a
+   drag is in progress (body.rtt-dragging, set by drag.js) — so idle it never masks the −/+ or the
+   editable cells. While dragging, the slots arm and the other fan controls go inert so only slots
+   catch; the hovered slot shows a red insertion bar at the gap it would drop into. */
+.rtt-colgrip { z-index:5; cursor:grab; }
+.rtt-colgrip:active { cursor:grabbing; }
+.rtt-colgrip .rtt-glyph { color:#bdbdbd; cursor:grab; }
+.rtt-colgrip:hover .rtt-glyph { color:#666; }
+.rtt-dropslot { z-index:6; pointer-events:none; }
+body.rtt-dragging .rtt-dropslot { pointer-events:auto; }
+body.rtt-dragging .rtt-colgrip,
+body.rtt-dragging .rtt-minus-zone,
+body.rtt-dragging .rtt-fanbtn { pointer-events:none; }
+.rtt-dropslot--over { box-shadow:inset 2px 0 0 0 var(--pending-color); background:rgba(229,57,53,0.10); }
+
 /* the fold toggle fills its cell wrap; its boxed glyph is an inline SVG (see .rtt-glyph) */
 .rtt-toggle { width:100%; height:100%; }
 /* the pane's frozen header: the select-all/none master + the show/example titles, pinned above
