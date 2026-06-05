@@ -1151,6 +1151,22 @@ async def test_unheld_held_interval_renders_red_until_reoptimized(user: User) ->
     assert "rtt-alert" not in _wrap_classes(user, "held:0")
 
 
+async def test_optimize_button_greys_while_the_tuning_is_already_optimal(user: User) -> None:
+    # the optimize button greys ("nothing to optimize") whenever the displayed tuning already sits at
+    # the optimum, and goes live once a hand-edited generator pulls it off — the cue that a click
+    # would now actually move it. Drives the real input -> handler -> render pipeline.
+    await user.open("/")
+    _toggle(user, "optimization")                              # the button only renders with the box
+    await user.should_see(marker="optimization:button")
+    assert "rtt-optimize-idle" in _cell_child(user, "optimization:button")._classes   # frozen at the optimum
+    _cell_child(user, "tuning:gen:1").set_value("700.000")     # hand-tune a generator off the optimum
+    await user.should_see(marker="optimization:button")
+    assert "rtt-optimize-idle" not in _cell_child(user, "optimization:button")._classes  # a click would move it
+    user.find(kind=ui.button, content="optimize").click()      # re-optimize -> back at the optimum
+    await user.should_see(marker="optimization:button")
+    assert "rtt-optimize-idle" in _cell_child(user, "optimization:button")._classes   # greyed again
+
+
 async def test_a_held_interval_does_not_retune_the_grid_until_optimize(user: User) -> None:
     # auto-optimize off: adding a held interval does NOT retune — the frozen tuning still realises
     # the scheme, so the established-tuning-scheme chooser keeps the scheme name (it drops to "-"

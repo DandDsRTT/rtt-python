@@ -1360,6 +1360,22 @@ def test_tuning_is_optimized_holds_under_the_auto_lock_and_held_intervals():
     assert held.tuning_is_optimized is False
 
 
+def test_optimize_redundant_greys_the_button_only_when_frozen_at_the_optimum():
+    # the optimize button greys (a single click would do nothing) once the displayed tuning
+    # already sits at the optimum — but NOT while the auto-lock is on, where the button wears its
+    # dark locked face and is the double-click *unlock* control, an engaged state, not a redundant
+    # one. So it greys in exactly the frozen-at-optimum, unlocked state.
+    editor = Editor()
+    assert editor.optimize_redundant is True            # default: frozen at the optimum, unlocked
+    editor.set_generator_tuning_component(1, 700.0)     # hand-edit off the optimum
+    assert editor.optimize_redundant is False           # ...now optimize would actually move it
+    editor.optimize()                                   # snap back to the optimum
+    assert editor.optimize_redundant is True
+    editor.toggle_optimize_lock()                       # auto-lock on: optimized, but the unlock control
+    assert editor.optimize_locked and editor.tuning_is_optimized is True
+    assert editor.optimize_redundant is False           # ...so it does NOT grey — it stays the live toggle
+
+
 def test_layout_wraps_the_objective_symbol_in_min_while_optimized():
     # end to end: the editor feeds tuning_is_optimized into the layout, so the rendered objective
     # symbol carries the min() wrap while optimized and drops it after a manual generator deviation.

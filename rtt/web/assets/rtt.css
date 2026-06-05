@@ -575,6 +575,19 @@
 .rtt-optimize-locked { background:linear-gradient(#1f1f1f,#3c3c3c) !important;
             box-shadow:inset 1px 1px 3px rgba(0,0,0,0.75), inset -1px -1px 0 rgba(255,255,255,0.18) !important; }
 .rtt-optimize-locked .q-btn__content { color:#fff !important; transform:translate(1px,1px); }
+/* greyed "nothing to optimize": once the displayed tuning already sits at the optimum a single
+   click is a no-op, so the button reads as disabled — a flat, muted face in the app's #d6d6d6/#999
+   disabled palette with no hover/active lift. It stays clickable (the double-click auto-lock toggle
+   still fires); only the look changes. Scoped :not(-locked) so the dark locked latch always wins,
+   and it keeps the default cursor (never not-allowed). */
+.rtt-optimize-idle:not(.rtt-optimize-locked) { cursor:default !important;
+            background:linear-gradient(#e6e6e6,#d6d6d6) !important;
+            box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
+.rtt-optimize-idle:not(.rtt-optimize-locked) .q-btn__content { color:#999 !important; }
+.rtt-optimize-idle:hover:not(.rtt-optimize-locked),
+.rtt-optimize-idle:active:not(.rtt-optimize-locked) { background:linear-gradient(#e6e6e6,#d6d6d6) !important;
+            box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
+.rtt-optimize-idle:active:not(.rtt-optimize-locked) .q-btn__content { transform:none !important; }
 /* an in-tile box title (the optimization box's "optimization" header, and every titled
    control box): left-aligned at the top-left of the box (its cell otherwise centres it),
    padded off the left border. One line that overhangs to the right rather than wrapping —

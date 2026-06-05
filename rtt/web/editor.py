@@ -481,6 +481,16 @@ class Editor:
         return _same_cents_map(override, self._optimum_generator_tuning())
 
     @property
+    def optimize_redundant(self) -> bool:
+        """Whether a single click of the optimize button would do nothing — the displayed tuning
+        already sits at the scheme's optimum — so the button greys to read as "nothing to optimize".
+        False while the auto-optimize lock is on: there the button wears its dark locked face and is
+        the double-click *unlock* control, an engaged state rather than a redundant one. (The button
+        stays interactive either way — only its look changes — so the double-click auto-lock toggle
+        keeps working even while greyed.)"""
+        return self.tuning_is_optimized and not self.optimize_locked
+
+    @property
     def displayed_prescaler_name(self) -> str | None:
         """The named prescaler the grid's displayed 𝑋 diagonal realises, or None — for which the
         prescaler chooser shows "-". None when a custom-prescaler override deviates from the

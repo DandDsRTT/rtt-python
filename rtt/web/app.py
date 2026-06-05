@@ -1613,9 +1613,15 @@ class _Reconciler:
             .props("unelevated dense no-caps").classes("rtt-optimize")
         self.opt_buttons[cb.id].on("dblclick", lambda: self._cb.act(self._editor.toggle_optimize_lock))
 
-    def _update_optimize(self, cb):  # mark the button when its auto-optimize lock is on
-        (self.opt_buttons[cb.id].classes(add="rtt-optimize-locked") if self._editor.optimize_locked
-         else self.opt_buttons[cb.id].classes(remove="rtt-optimize-locked"))
+    def _update_optimize(self, cb):  # reflect the auto-optimize lock + grey it when already optimal
+        btn = self.opt_buttons[cb.id]
+        (btn.classes(add="rtt-optimize-locked") if self._editor.optimize_locked
+         else btn.classes(remove="rtt-optimize-locked"))
+        # grey the button when a single click would do nothing (the tuning already sits at the
+        # optimum) so it reads as "nothing to optimize"; it stays clickable, so the double-click
+        # auto-lock toggle still works. The locked face wins over this (CSS scopes idle :not-locked).
+        (btn.classes(add="rtt-optimize-idle") if self._editor.optimize_redundant
+         else btn.classes(remove="rtt-optimize-idle"))
 
     def _build_foldtoggle(self, cb, wrap):  # rowtoggle / coltoggle / tiletoggle: a clickable chevron over its band
         item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"
