@@ -6282,6 +6282,79 @@ def test_M_L_tile_has_a_caption_and_symbol():
     assert cells["symbol:ss_mapping:ssprimes"].text == "\U0001D440ₗ"  # 𝑀ₗ
 
 
+# ---------------------------------------------------------------------------
+# Chapter 9 Phase 4 — the superspace CONVERSION rows: ss_targets (B_L·T) and
+# ss_prescaler (X_L), the two rows that lift T and X into the superspace primes.
+# Mode-gated: only present under prime-based or neutral, not nonprime-based.
+# ---------------------------------------------------------------------------
+
+
+def test_superspace_target_row_seats_between_ss_mapping_and_tuning():
+    # the conversion rows ride below the central ss_vectors / ss_mapping pair: ss_targets
+    # (dL tall, B_L·T) then ss_prescaler (dL tall, X_L) — so the full row order around
+    # the superspace block is mapping < ss_vectors < ss_mapping < ss_targets < ss_prescaler
+    # < tuning, with each new band gated on the same nonstandard_domain toggle as the rest.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert cells["label:ss_targets"].text == "superspace\ntarget intervals"
+    assert cells["label:ss_prescaler"].text == "superspace\ncomplexity prescaling"
+    assert (cells["label:ss_mapping"].y
+            < cells["label:ss_targets"].y
+            < cells["label:ss_prescaler"].y
+            < cells["label:tuning"].y)
+
+
+def test_superspace_conversion_rows_size_to_dL():
+    # both rows reserve dL bands of ROW_H — ss_targets stacks dL-tall target monzos over
+    # the superspace primes (one row per superspace prime), and ss_prescaler is a square
+    # dL × dL matrix laid out like the on-domain prescaling row's d × d
+    cells = {c.id: c for c in _barbados_ss().cells}
+    dL = 4  # BARBADOS over 2.3.13/5 has superspace dimension 4 (extra prime 13)
+    assert cells["label:ss_targets"].h == dL * spreadsheet.ROW_H
+    assert cells["label:ss_prescaler"].h == dL * spreadsheet.ROW_H
+
+
+def test_nonstandard_domain_off_omits_the_conversion_rows():
+    # the additive-only contract: toggle off, the conversion rows leave no trace
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()  # nonstandard_domain off
+    cells = {c.id for c in spreadsheet.build(state, s).cells}
+    assert "label:ss_targets" not in cells
+    assert "label:ss_prescaler" not in cells
+
+
+def test_nonprime_based_approach_drops_the_conversion_rows():
+    # the rows are conversion artifacts — they only matter when we re-express T and X over
+    # the superspace primes so the prime-based optimization can read them. In the nonprime-
+    # based approach the basis IS honored as-is (no conversion), so they collapse to
+    # nothing. The two anchor rows (ss_vectors carrying B_L, ss_mapping carrying M_L) stay
+    # — they describe the embedding, not the conversion.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s["nonstandard_domain"] = True
+    lay = spreadsheet.build(state, s, nonprime_approach="nonprime-based")
+    cells = {c.id for c in lay.cells}
+    assert "label:ss_targets" not in cells
+    assert "label:ss_prescaler" not in cells
+    # the anchor rows survive (their content describes the embedding itself, which the
+    # nonprime-based mode still wants to display)
+    assert "label:ss_vectors" in cells
+    assert "label:ss_mapping" in cells
+
+
+def test_prime_based_and_neutral_approaches_keep_the_conversion_rows():
+    # The mockup transcription: "These two rows appear when using either the prime-based
+    # or the neutral approaches." Test both modes explicitly so a future regression that
+    # collapses the gate to one mode (or to all three) is caught.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s["nonstandard_domain"] = True
+    for approach in ("", "prime-based"):
+        lay = spreadsheet.build(state, s, nonprime_approach=approach)
+        cells = {c.id for c in lay.cells}
+        assert "label:ss_targets" in cells, f"conversion row missing under approach={approach!r}"
+        assert "label:ss_prescaler" in cells, f"conversion row missing under approach={approach!r}"
+
+
 def test_B_L_tile_has_a_caption_and_symbol():
     # the basis-embedding tile (each domain element as a superspace monzo) gets a caption
     # + an upright bold B with subscript L (parallel to C for the comma basis, T for the

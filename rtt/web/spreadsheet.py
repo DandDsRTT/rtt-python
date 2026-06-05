@@ -733,6 +733,16 @@ class _GridBuilder:
         # the domain is actually nonstandard: a standard prime limit has dL == d / rL == r, so
         # the superspace columns just look like clones of the domain, which is harmless.
         self.show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
+        # the chapter-9 CONVERSION rows (ss_targets B_L·T, ss_prescaler X_L) are present only
+        # when both the superspace block is shown AND the analysis mode actually performs the
+        # conversion: prime-based or neutral (per the mockup transcription, "These two rows
+        # appear when using either the prime-based or the neutral approaches"). The nonprime-
+        # based mode honors the original basis as-is, so the lifted T and X aren't computed
+        # and the rows drop. The anchor rows (ss_vectors carrying B_L, ss_mapping carrying
+        # M_L) stay regardless — they describe the embedding itself.
+        self.show_ss_conversion = (
+            self.show_nonstandard_domain and self.nonprime_approach != "nonprime-based"
+        )
         # the domain coordinate label that indexes each element in unit strings — 𝑝 (prime)
         # over a standard prime limit, 𝒃 (basis element) over a nonstandard subgroup, since
         # a nonprime basis element isn't a prime. Switches every domain-side unit at once: the
@@ -1055,6 +1065,14 @@ class _GridBuilder:
             # columns, so the band collapses to nothing whenever the toggle is off.
             ("ss_vectors", self.dL * ROW_H, self.show_nonstandard_domain, True, "superspace\ninterval vectors"),
             ("ss_mapping", self.rL * ROW_H, self.show_nonstandard_domain, True, "superspace\nmapping"),
+            # the chapter-9 CONVERSION rows: ss_targets (B_L·T, the target list re-expressed
+            # over the superspace primes) and ss_prescaler (X_L, the complexity prescaler
+            # lifted into the superspace). Mode-gated — present only with the nonstandard-
+            # domain toggle on AND the nonprime-basis-approach in prime-based or neutral, so
+            # the standard prime-based optimization can read T / X out of them. The nonprime-
+            # based approach honors the original basis as-is (no conversion), so they collapse.
+            ("ss_targets", self.dL * ROW_H, self.show_ss_conversion, True, "superspace\ntarget intervals"),
+            ("ss_prescaler", self.dL * ROW_H, self.show_ss_conversion, True, "superspace\ncomplexity prescaling"),
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
             ("retune", ROW_H, show_tuning, True, "retuning"),
