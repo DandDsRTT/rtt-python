@@ -70,6 +70,11 @@ CAPTIONS = {
     # content cells are emitted.
     ("ss_vectors", "primes"): "basis embedding matrix",
     ("ss_mapping", "ssprimes"): "superspace mapping",
+    # the chapter-9 CONVERSION tiles — the target list and complexity prescaler lifted
+    # into the superspace. Captions parallel the on-domain ones (target interval list /
+    # complexity prescaler) with a "superspace" prefix so the eye traces the conversion.
+    ("ss_targets", "targets"): "superspace target interval list",
+    ("ss_prescaler", "ssprimes"): "superspace complexity prescaler",
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
     ("canon", "gens"): "generator form matrix",
@@ -143,6 +148,10 @@ SYMBOLS = {
     # (math-italic M, parallel to 𝑀). Phase 4 adds the dependent superspace symbols.
     ("ss_vectors", "primes"): "Bₗ",      # B (upright) + Unicode subscript L
     ("ss_mapping", "ssprimes"): "𝑀ₗ",   # math-italic M (\\U0001D440) + subscript L
+    # the chapter-9 CONVERSION symbols: Tₗ (upright T like the on-domain target list T,
+    # subscript L for the lift) and 𝑋ₗ (math italic, parallel to the bare prescaler 𝑋)
+    ("ss_targets", "targets"): "Tₗ",
+    ("ss_prescaler", "ssprimes"): "𝑋ₗ",   # math-italic X (\\U0001D44B) + subscript L
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -451,6 +460,9 @@ MNEMONICS = {
     # superspace anchors — underline the symbol-letter where it sits in the caption
     ("ss_vectors", "primes"): "basis",        # Bₗ → underline the "b" in "basis embedding…"
     ("ss_mapping", "ssprimes"): "mapping",    # 𝑀ₗ → underline the "m" in "superspace mapping"
+    # the chapter-9 CONVERSION tiles — underline the symbol letters in their captions
+    ("ss_targets", "targets"): "target",  # Tₗ → underline the "t" of "target"
+    ("ss_prescaler", "ssprimes"): "x",    # 𝑋ₗ → underline the mid-word "x" of "compleXity" (matches 𝑋)
     ("vectors", "commas"): "comma",     # C
     ("vectors", "targets"): "target",   # T
     ("vectors", "held"): "held",        # H
@@ -479,6 +491,11 @@ MNEMONICS = {
 EQUIVALENCES = {
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",
+    # the chapter-9 CONVERSION tile: Tₗ = BₗT (the on-domain target list lifted through
+    # the basis-embedding matrix). The prescaler's analogous form is scheme-dependent
+    # (𝑋ₗ = log-prime over the superspace primes for the default scheme), so a follow-up
+    # phase can add it dynamically alongside the existing prescaler_equivalence machinery.
+    ("ss_targets", "targets"): " = BₗT",
     ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",

@@ -6477,6 +6477,38 @@ def test_ss_conversion_rows_trivialize_over_a_standard_prime_domain():
             assert cells[f"cell:ss_targets:{j}:{p}"].text == str(on_domain[j][p])
 
 
+def test_ss_conversion_tiles_carry_captions_and_symbols():
+    # the two conversion tiles get the standard caption + symbol pair: the lifted target
+    # list takes "Tₗ" (upright T like the on-domain T, plus subscript L for the lift), the
+    # lifted prescaler takes "𝑋ₗ" (math italic, like the on-domain 𝑋). Captions parallel the
+    # on-domain ones with a "superspace" prefix so the eye traces the conversion.
+    cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
+    assert cells["caption:ss_targets:targets"].text == "superspace target interval list"
+    assert cells["caption:ss_prescaler:ssprimes"].text == "superspace complexity prescaler"
+    assert cells["symbol:ss_targets:targets"].text == "Tₗ"   # upright T + subscript L
+    assert cells["symbol:ss_prescaler:ssprimes"].text == "𝑋ₗ"  # math italic X + subscript L
+
+
+def test_ss_conversion_tiles_underline_their_mnemonic_letters():
+    # the mnemonic underlines the caption letter that spells the tile's symbol — "t" of
+    # "target" for Tₗ, "x" of "compleXity" for 𝑋ₗ (mid-word, matching the on-domain 𝑋)
+    cells = {c.id: c for c in _barbados_ss(names=True, symbols=True, mnemonics=True).cells}
+    cap_t = cells["caption:ss_targets:targets"]
+    assert cap_t.underlines == ((cap_t.text.index("target"), 1),)
+    cap_x = cells["caption:ss_prescaler:ssprimes"]
+    # the "x" in "compleXity" — the same mid-word mnemonic the on-domain prescaler uses
+    assert cap_x.underlines == ((cap_x.text.index("x"), 1),)
+
+
+def test_ss_targets_carries_an_equivalence_to_the_on_domain_target_list():
+    # the equivalences layer continues the symbol line with the conversion: Tₗ = BₗT
+    # (the target list lifted through the basis-embedding matrix). The prescaler's own
+    # conversion form is scheme-dependent (𝑋ₗ = log-prime over the superspace, etc.), so
+    # it's left for a polish pass — the bare symbol stands on its own.
+    cells = {c.id: c for c in _barbados_ss(equivalences=True, symbols=True).cells}
+    assert cells["symbol:ss_targets:targets"].text == "Tₗ = BₗT"
+
+
 def test_B_L_tile_has_a_caption_and_symbol():
     # the basis-embedding tile (each domain element as a superspace monzo) gets a caption
     # + an upright bold B with subscript L (parallel to C for the comma basis, T for the
