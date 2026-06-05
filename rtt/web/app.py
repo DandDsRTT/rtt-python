@@ -934,6 +934,7 @@ class _Reconciler:
         self._row_drag: int | None = None  # the mapping row a drag-to-add started on (dragstart → drop)
         self._col_drag: tuple[str, int] | None = None  # the (interval group, index) a drag-to-add started on
         self._drag_token = None  # editor snapshot taken at drag pick-up, so the hover preview can revert
+        self._reorder_baseline = None  # the grid at reorder pick-up: a cross-list move's ring-diff baseline
         self.els: dict = {}  # entity id -> outer element (persists across renders)
         self.inputs: dict = {}  # mapping cell id -> q-input
         self.labels: dict = {}  # cell id -> the label whose text tracks state
@@ -2429,6 +2430,8 @@ def index() -> None:
         drag_src[0] = (lst, idx)
         reorder_dst[0] = (lst, idx)  # pick-up == dropping on itself: no move previewed yet
         rec._drag_token = editor.capture_for_preview()  # so each hover preview reverts cleanly
+        rec._reorder_baseline = last_lay[0]  # the grid at pick-up — a cross-list move's ring baseline
+        rec.preview_source = None  # a drag has no single source cell to exclude from the rings
 
     def on_drag_enter(dst_list, dst_idx):
         # hovering a target column (or a list's gridline "add" zone, dst_idx=None) while dragging:
@@ -2442,6 +2445,10 @@ def index() -> None:
         editor.restore_for_preview(rec._drag_token)  # back to the picked-up state...
         idx = dst_idx if dst_idx is not None else (1 << 30)
         editor.move_interval(drag_src[0][0], drag_src[0][1], dst_list, idx)  # ...then the hypothetical move
+        # a move that CHANGES THE SET — across lists, or into/out of the commas (temper out / un-temper)
+        # — re-optimizes the temperament, so ring the cells whose value it moves, like the edit & combine
+        # previews. A pure within-list reorder changes no values (only positions): it just glides, no rings.
+        rec.preview_baseline = rec._reorder_baseline if dst_list != drag_src[0][0] else None
         render()
 
     def on_drag_end():
@@ -2449,6 +2456,7 @@ def index() -> None:
         if rec._drag_token is not None:
             editor.restore_for_preview(rec._drag_token)
             rec._drag_token = None
+            rec.preview_baseline = None  # clear any cross-list change rings
             render()
         drag_src[0] = None
         reorder_dst[0] = None
@@ -2462,6 +2470,7 @@ def index() -> None:
         reorder_dst[0] = None
         token = rec._drag_token
         rec._drag_token = None
+        rec.preview_baseline = None  # the rings were the hover preview; the committed grid stands on its own
         if token is not None:
             editor.restore_for_preview(token)
         if not src:

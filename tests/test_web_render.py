@@ -167,6 +167,30 @@ async def test_dropping_after_a_preview_commits_the_move(user: User) -> None:
     assert _cell_left(user, "target:0") != x0
 
 
+async def test_a_within_list_reorder_preview_rings_nothing(user: User) -> None:
+    # a within-list reorder is value-neutral (same set, only positions change), so its hover preview
+    # glides the columns but rings NO cell — no misleading "this changed" flags from re-solve noise.
+    await user.open("/")
+    UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger("dragstart")
+    UserInteraction(user, set(user.find(marker="grip:targets:2").elements), None).trigger("dragenter.prevent")
+    assert _cell_left(user, "target:0") > _cell_left(user, "target:2")     # the columns glided...
+    assert "rtt-preview-change" not in _wrap_classes(user, "target:0")     # ...but nothing rings
+    assert "rtt-preview-change" not in _wrap_classes(user, "target:1")
+
+
+async def test_dragging_across_lists_rings_the_changes_it_will_make(user: User) -> None:
+    # a SET-changing move (across lists, or into/out of commas) re-optimizes the temperament, so
+    # hovering it rings the cells whose value the drop will change — like the edit & combine previews.
+    await user.open("/")
+    _toggle(user, "optimization")                          # reveal the (empty) held list as a drop target
+    await user.should_see(marker="grip:held:add")
+    UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger("dragstart")
+    UserInteraction(user, set(user.find(marker="grip:held:add").elements), None).trigger("dragenter.prevent")
+    assert "rtt-preview-change" in _wrap_classes(user, "held:0")  # the moved interval previews (new) in held → rings
+    UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger("dragend")
+    await user.should_not_see(marker="held:0")            # reverted: the hover preview didn't commit
+
+
 async def test_editing_a_ratio_after_a_reorder_edits_the_column_it_heads(user: User) -> None:
     # regression: the quantities ratio cells are keyed by interval identity, so after a reorder the
     # cell heading a slot carries the MOVED column's token, not the slot index. Committing a fraction
