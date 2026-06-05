@@ -1087,6 +1087,9 @@ class _Reconciler:
         self.cell_kinds["alltoggle"] = _KindHandlers(self._build_alltoggle, self._update_foldtoggle)
 
         self.cell_kinds["preset"] = _KindHandlers(self._build_preset, self._update_preset)
+        # a chooser locked to its single option: a hardcoded read-only value, not a dropdown (the
+        # spreadsheet picks this kind over "preset"/"control_select" — see _sole_option_label)
+        self.cell_kinds["choicevalue"] = _KindHandlers(self._label_builder("rtt-choicevalue"), self._update_label)
         self.cell_kinds["control_select"] = _KindHandlers(self._build_control_select, self._update_control_select)
         self.cell_kinds["control_check"] = _KindHandlers(self._build_control_check, self._update_control_check)
         self.cell_kinds["formchooser"] = _KindHandlers(self._build_formchooser, self._update_formchooser)

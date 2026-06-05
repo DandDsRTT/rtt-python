@@ -384,16 +384,19 @@ def _target_preset(user: User):
     return num, sel
 
 
-async def test_tuning_preset_offers_only_unity_lp_in_the_default_view(user: User) -> None:
+async def test_single_option_tuning_chooser_renders_as_a_hardcoded_value(user: User) -> None:
     # the default view has both gates off: alternative-complexity schemes are gated behind the alt.
-    # complexity setting, so only the log-product family is offered (no minimax-EU etc.); and the
-    # simplicity/complexity weight slopes are gated behind the weighting feature, so only the unity
-    # variant shows. Together that leaves a single option — T minimax-U. (The chooser's options are
-    # {value: label}, the labels T-prefixed; check the offered values.)
+    # complexity setting (no minimax-EU etc.), and the simplicity/complexity weight slopes behind the
+    # weighting feature (only the unity variant) — leaving a single option, T minimax-U. A chooser
+    # with one option is not a choice, so it renders as a hardcoded read-only value (a choicevalue,
+    # styled like a gridded value) rather than a one-entry dropdown the user could "open".
     await user.open("/")
     _toggle(user, "presets")
     await user.should_see(marker="preset:tuning")
-    assert list(_cell_child(user, "preset:tuning").options) == ["minimax-U"]
+    tuning = _cell_child(user, "preset:tuning")
+    assert "rtt-choicevalue" in tuning._classes  # hardcoded value, not a dropdown
+    assert tuning.text == "T minimax-U"           # the lone scheme, shown as a value
+    assert not hasattr(tuning, "options")          # truly not a select
 
 
 async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(user: User) -> None:
@@ -765,8 +768,10 @@ async def test_chooser_popups_open_wide_enough_for_one_line_entries(user: User) 
     # (popup-content-style width:max-content), never capped at the trigger cell's width —
     # long names (e.g. the "established tuning scheme" list) were truncating. The popup
     # still stays at least as wide as the trigger (a min-width floor), so the open list is
-    # never narrower than the box it drops from.
+    # never narrower than the box it drops from. (Weighting on so the tuning chooser has its three
+    # weight-slope variants — a real dropdown, not the single-option hardcoded value.)
     await _enable(user, "presets")
+    _toggle(user, "weighting")
     for cell_id in ("preset:temperament", "preset:tuning"):
         style = _cell_child(user, cell_id)._props["popup-content-style"]
         assert "width:max-content" in style, f"{cell_id}: {style}"
@@ -920,41 +925,40 @@ async def test_selecting_a_target_family_clears_an_interval_override(user: User)
     assert _cell_child(user, "cell:vec:targets:0:0").value == original  # list restored to TILT
 
 
-async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -> None:
-    # the box-𝒄 complexity chooser is a control_select — a distinct kind from the preset
-    # dropdowns, with no other direct render coverage. Enabling weighting must build it carrying
-    # its live complexity value (not blank) and a populated option list. A dropped control_select
-    # build branch would leave an empty wrap; the value/option assertions catch that desync.
-    # (With alt. complexity off (the default) the list is just log-product, so this checks build, not a swap;
-    # the slope chooser below exercises the update branch.)
+async def test_weighting_complexity_chooser_is_hardcoded_when_lp_only(user: User) -> None:
+    # the box-𝒄 complexity chooser offers a single option (log-product) until alt. complexity opens
+    # the full measure list — so with alt. complexity off (the default) it is not a choice and renders
+    # as a hardcoded value (choicevalue) showing the live complexity, not a one-entry dropdown. (The
+    # control_select build + its option swap are covered by the next test, with alt. complexity on,
+    # and by the slope chooser, which is always a multi-option dropdown.)
     await user.open("/")
     _toggle(user, "presets")  # the dropdown is a preset, so it needs the presets layer on
     user.find(kind=ui.checkbox, content="weighting").click()  # box 𝒘's slope chooser shows under weighting
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄
     await user.should_see(marker="control:complexity")
-    chooser = _cell_child(user, "control:complexity")
-    assert chooser.value          # built reflecting the live complexity (not blank)
-    assert list(chooser.options)  # ...with its option list populated
+    value = _cell_child(user, "control:complexity")
+    assert "rtt-choicevalue" in value._classes  # a hardcoded value, not a dropdown
+    assert value.text == "lp (log-product)"     # the live complexity, shown as a value
 
 
-async def test_alt_complexity_widens_the_predefined_complexities_chooser_in_place(user: User) -> None:
+async def test_alt_complexity_swaps_the_complexity_chooser_from_value_to_dropdown(user: User) -> None:
     # the box-𝒄 "predefined complexities" chooser offers only the live complexity until alt.
-    # complexity opens the whole measure list. Turning that toggle on while the chooser is already
-    # shown must widen its OPTIONS in place — the control_select update branch has to refresh the
-    # option list, not just the value. Without that (build-time options frozen, no set_options on
-    # update) it stays stuck on the lone log-product entry until the row is rebuilt from hidden
-    # (e.g. by toggling the weight slope), the reported bug this guards.
+    # complexity opens the whole measure list. With one option it is a hardcoded value (choicevalue);
+    # turning alt. complexity on while it is already shown must swap it to a real dropdown carrying
+    # the FULL option list (a kind change the reconciler rebuilds), preserving the live value. Without
+    # that the chooser would stay stuck on the lone log-product entry — the reported bug this guards.
     await user.open("/")
     _toggle(user, "presets")  # the dropdown is a preset, so it needs the presets layer on
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄
     await user.should_see(marker="control:complexity")
-    assert list(_cell_child(user, "control:complexity").options) == ["lp (log-product)"]  # only the live measure
+    assert "rtt-choicevalue" in _cell_child(user, "control:complexity")._classes  # one option -> hardcoded value
+    assert _cell_child(user, "control:complexity").text == "lp (log-product)"     # the live measure
     user.find(kind=ui.checkbox, content="alt. complexity").click()      # open the full measure list
     await user.should_see(marker="control:complexity")
     widened = _cell_child(user, "control:complexity")
     assert set(widened.options) == set(service.COMPLEXITY_DISPLAYS.values()) | {"custom"}  # full list + off-preset sentinel
-    assert widened.value == "lp (log-product)"  # the live value is preserved across the widening
+    assert widened.value == "lp (log-product)"  # the live value is preserved across the swap
 
 
 async def test_typing_the_q_field_drives_the_complexity_norm(user: User) -> None:
@@ -1193,11 +1197,13 @@ async def test_optimize_button_greys_while_the_tuning_is_already_optimal(user: U
 async def test_a_held_interval_does_not_retune_the_grid_until_optimize(user: User) -> None:
     # auto-optimize off: adding a held interval does NOT retune — the frozen tuning still realises
     # the scheme, so the established-tuning-scheme chooser keeps the scheme name (it drops to "-"
-    # only after Optimize re-optimises to hold it, the apply step covered by the editor tests).
+    # only after Optimize re-optimises to hold it, the apply step covered by the editor tests). In
+    # the default view that chooser has a single option, so the kept name shows as a hardcoded value
+    # ("T minimax-U") — keeping the name means it stays that value rather than flipping to a "-" dropdown.
     await user.open("/")
-    _toggle(user, "presets")             # show the chooser dropdowns
+    _toggle(user, "presets")             # show the chooser
     _toggle(user, "optimization")        # ...and the held-interval column
-    assert _cell_child(user, "preset:tuning").value == "minimax-U"  # the default scheme, named
+    assert _cell_child(user, "preset:tuning").text == "T minimax-U"  # the default scheme, named (hardcoded)
     _click_glyph(user, "held_plus")                  # start a blank held-interval draft
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")  # make it the fifth 3/2
@@ -1205,8 +1211,7 @@ async def test_a_held_interval_does_not_retune_the_grid_until_optimize(user: Use
     _cell_child(user, "cell:held:2:0").set_value("0")   # every component filled -> the draft commits
     await user.should_see(marker="preset:tuning")
     assert _cell_child(user, "cell:held:0:0").value == "-1"          # the held interval is committed...
-    assert _cell_child(user, "preset:tuning").value == "minimax-U"   # ...but the tuning didn't retune
-    assert "display-value" not in _cell_child(user, "preset:tuning")._props  # so the chooser is NOT "-"
+    assert _cell_child(user, "preset:tuning").text == "T minimax-U"  # ...but the tuning didn't retune (still named)
 
 
 async def test_adding_an_interval_of_interest_commits_when_filled(user: User) -> None:

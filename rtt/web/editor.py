@@ -283,6 +283,7 @@ class Editor:
             pending_held=self.pending_held,
             pending_target=self.pending_target,
             nonprime_approach=self.nonprime_basis_approach,
+            displayed_tuning_name=self.displayed_tuning_scheme_name,
             prev_ids=prev_ids)
 
     @property

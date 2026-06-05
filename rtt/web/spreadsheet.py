@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from fractions import Fraction
 
+from rtt.web import presets
 from rtt.web import service
 from rtt.web.layout import Block, CellBox, Layout, Line
 from rtt.web.grid_tables import *  # noqa: F403  (semantic content tables, re-exported)
@@ -561,6 +562,7 @@ class _PrescalerLabels:
     equivalence follow suit. Resolved up front so the caption-width floor can size the (maybe
     longer, "= log-prime matrix") name before the column-width loop runs."""
     scheme_prescaler: object   # the scheme's nominal prescaler: "log-prime" / "prime" / "identity" / None
+    realized: object           # the prescaler the DISPLAYED diagonal realises (None when a custom edit deviates)
     symbol: str                # the glyph products + headers use: 𝐿 when 𝑋 = 𝐿, else the abstract 𝑋
     equivalence: str           # the bare tile's symbol-line equivalence: " = 𝐿" / " = diag(𝒑)" / " = 𝐼" / ""
     prescaling_symbols: dict   # the prescaling tile's product symbols with "L" resolved to the live glyph
@@ -609,7 +611,7 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     if size_factor:  # the rectangular 𝑋 is a "pretransformer", not a "prescaler" (guide terminology)
         effective_captions = {k: _pretransform_label(v) for k, v in effective_captions.items()}
     return _PrescalerLabels(
-        scheme_prescaler=scheme_prescaler, symbol=symbol, equivalence=equivalence,
+        scheme_prescaler=scheme_prescaler, realized=realized, symbol=symbol, equivalence=equivalence,
         prescaling_symbols=prescaling_symbols,
         col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equiv, all_interval)},
         row_labels=row_labels, effective_captions=effective_captions,
@@ -622,7 +624,7 @@ class _GridBuilder:
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
-                 nonprime_approach=""):
+                 nonprime_approach="", displayed_tuning_name=None):
         self.prev_ids = prev_ids or {}
         self.state = state
         self.settings = settings
@@ -642,6 +644,11 @@ class _GridBuilder:
         self.optimize_locked = optimize_locked
         self.tuning_optimized = tuning_optimized
         self.nonprime_approach = nonprime_approach
+        # the named scheme the DISPLAYED tuning realises (editor.displayed_tuning_scheme_name), or
+        # None off the named list — threaded in so the tuning chooser's single-option lock matches
+        # app._build_preset's on-list check. None (a bare spreadsheet.build) keeps the chooser a
+        # dropdown; the live page always passes it (see Editor.layout).
+        self.displayed_tuning_name = displayed_tuning_name
 
         if self.settings is None:
             self.settings = _default_settings()
@@ -693,6 +700,7 @@ class _GridBuilder:
         # Phase 2 — resolve the complexity-prescaler glyph + labels (see _resolve_prescaler_labels).
         _p = _resolve_prescaler_labels(self.state, self.tuning_scheme, self.custom_prescaler, self.show_equiv)
         self._scheme_prescaler = _p.scheme_prescaler
+        self._realized_prescaler = _p.realized  # the displayed prescaler's name, or None off the named list
         self.prescaler_symbol = _p.symbol
         self.prescaler_equivalence = _p.equivalence
         self.prescaling_symbols = _p.prescaling_symbols
@@ -1781,6 +1789,48 @@ class _GridBuilder:
     def ptext_band_y(self, rkey):
         return self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_sym[rkey] + self.row_cap[rkey] + self.row_units[rkey]
 
+    # A chooser dropdown that offers only ONE option, with that option already selected, is not a
+    # choice — it renders as a hardcoded read-only value (kind "choicevalue") that reads like a
+    # gridded value, not an interactive control (Douglas's request). These helpers decide that,
+    # shared by the preset choosers (tuning / prescaler) and the in-tile control selects (the box-𝒄
+    # complexity chooser).
+    @staticmethod
+    def _sole_option_label(options, value):
+        """The lone option's display label when ``options`` offers exactly one AND ``value`` is it,
+        else None. ``options`` is a ``{value: label}`` mapping (a list/tuple is taken as value==label).
+        None for a real choice (≥2 options) or an off-list value — a deviating edit shows "-", which
+        stays an interactive dropdown so its one option can reset it."""
+        if not isinstance(options, dict):
+            options = {opt: opt for opt in options}
+        return options[value] if len(options) == 1 and value in options else None
+
+    def _preset_sole_label(self, name):
+        """The hardcoded-value label for a tuning / prescaler preset locked to its single option,
+        else None (so emit_preset renders it as a "choicevalue", boxless, instead of a dropdown).
+        Temperament and target always offer a real choice. The on-list value mirrors
+        app._build_preset: the tuning chooser's via the threaded displayed_tuning_name, the
+        prescaler's via the realised diagonal name resolved in phase 2."""
+        if name == "tuning":
+            options = presets.tuning_scheme_options(
+                service.is_all_interval(self.tuning_scheme),
+                self.settings["alt_complexity"], self.settings["weighting"])
+            return self._sole_option_label(options, self.displayed_tuning_name)
+        if name == "prescaler":
+            options = presets.prescaler_options(self.settings["alt_complexity"])
+            return self._sole_option_label(options, self._realized_prescaler)
+        return None
+
+    def _choice_cell(self, cid, x, y, w, h, text, values, disabled=False):
+        """Append a chooser cell: a hardcoded "choicevalue" when it offers a single on-list option,
+        else the interactive "control_select" dropdown over ``values``. Shared by the box-𝒄
+        complexity and box-𝒘 weight-slope choosers."""
+        sole = self._sole_option_label(values, text)
+        if sole is not None:
+            self.cells.append(CellBox(cid, x, y, w, h, "choicevalue", text=sole))
+        else:
+            self.cells.append(CellBox(cid, x, y, w, h, "control_select",
+                                 text=text, values=values, disabled=disabled))
+
     # a control box: a thin-bordered frame SPANNING the full width of its column's tile (like the
     # optimization / tuning-ranges boxes), with the dropdown seated at its top-left at the dropdown's
     # natural width and the standard dropdown-label underneath — a left-justified one-line caption
@@ -1788,10 +1838,13 @@ class _GridBuilder:
     # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
     # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
     # the (x, width, y) to seat the dropdown at.
-    def control_box(self, box_id, ckey, top, cap_w, label, disabled=False):
+    def control_box(self, box_id, ckey, top, cap_w, label, disabled=False, boxed=True):
         dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label)
         box_x, box_y = self.col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
-        self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
+        # ``boxed`` draws the bordered frame; a single-option chooser collapsed to a hardcoded value
+        # (see _preset_sole_label) drops it so the value reads like a bare gridded value, not a control.
+        if boxed:
+            self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
         if label:  # disabled greys the label with its control (a locked chooser, e.g. all-interval target)
             self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
@@ -2434,8 +2487,9 @@ class _GridBuilder:
                 complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
                 complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
                                      if self.show_alt_complexity else (complexity_text,))
-                self.cells.append(CellBox("control:complexity", tx, cy, drop_w, PRESET_H,
-                                     "control_select", text=complexity_text, values=complexity_values))
+                # with alt. complexity off the list is just the live measure (one option) → it renders
+                # as a hardcoded value, not a one-entry dropdown (the same single-option rule as the presets)
+                self._choice_cell("control:complexity", tx, cy, drop_w, PRESET_H, complexity_text, complexity_values)
                 self.cells.append(CellBox("caption:complexity", tx, cy + PRESET_H, drop_w,
                                      CAPTION_LINE, "caption", text="predefined complexities", align="left"))
                 q_slot_x = tx + drop_w + OPT_COL_GAP
@@ -2490,9 +2544,9 @@ class _GridBuilder:
             box_top = self.tile_top["weight"] + self.tile_h["weight"] - self.slope_extra + RANGE_GAP
             bx, by = self.control_region("block:slope", "targets", box_top, PRESET_H + CAPTION_LINE)
             slope_w = self.col_w["targets"] - 2 * BOX_INNER  # the chooser fills the box, inset off its border
-            self.cells.append(CellBox("control:slope", bx, by, slope_w, PRESET_H,
-                                 "control_select", text=service.weight_slope_of(self.tuning_scheme),
-                                 values=tuple(service.WEIGHT_SLOPES), disabled=self.slope_locked))
+            self._choice_cell("control:slope", bx, by, slope_w, PRESET_H,
+                              service.weight_slope_of(self.tuning_scheme),
+                              tuple(service.WEIGHT_SLOPES), disabled=self.slope_locked)
             self.cells.append(CellBox("caption:slope", bx, by + PRESET_H,
                                  slope_w, CAPTION_LINE, "caption",
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
@@ -2928,8 +2982,7 @@ class _GridBuilder:
             # bare prescaler tile's manual edits).
             preset_text = {"temperament": "", "target": self.target_spec,
                               "tuning": service.base_scheme_name(self.tuning_scheme) or "",
-                              "prescaler": service.displayed_prescaler_name(
-                                  self.state.mapping, self.tuning_scheme, self.custom_prescaler) or ""}
+                              "prescaler": self._realized_prescaler or ""}
 
             def emit_preset(cid, name, rkey, ckey, label):
                 if not self.tile_open(rkey, ckey):
@@ -2940,9 +2993,16 @@ class _GridBuilder:
                 # all-interval targets every interval, so the target set scheme chooser doesn't apply —
                 # grey it out disabled, its caption with it (it also falls back to "-"; see app._target_preset_values)
                 disabled = name == "target" and service.is_all_interval(self.tuning_scheme)
-                cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label, disabled=disabled)
-                self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
-                                     disabled=disabled))
+                # a tuning / prescaler chooser locked to its single option renders as a hardcoded value
+                # (no dropdown, no box) rather than a one-entry select — see _preset_sole_label.
+                sole = self._preset_sole_label(name)
+                cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label,
+                                              disabled=disabled, boxed=sole is None)
+                if sole is not None:
+                    self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "choicevalue", text=sole))
+                else:
+                    self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
+                                         disabled=disabled))
                 # the target chooser carries the all-interval checkbox to the dropdown's right, in the
                 # empty space of its now-tile-spanning box (box 𝐓); TBOX_W floors the column wide enough.
                 if name == "target" and self.settings["all_interval"]:
@@ -3101,10 +3161,10 @@ def build(state, settings=None, collapsed=None,
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
           pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
-          nonprime_approach="") -> Layout:
+          nonprime_approach="", displayed_tuning_name=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
         optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
-        prev_ids, nonprime_approach,
+        prev_ids, nonprime_approach, displayed_tuning_name,
     ).layout()
