@@ -21,7 +21,7 @@ from rtt.domain_basis import (
 from rtt.dual import dual
 from rtt.formatting import to_ebk
 from rtt.generator_detempering import get_generator_detempering
-from rtt.math_utils import get_primes, pcv_to_quotient
+from rtt.math_utils import get_primes, pcv_to_quotient, quotient_to_pcv
 from rtt.matrix_utils import Matrix
 from rtt.parsing import parse_quotient_list, parse_temperament_data
 from rtt.target_intervals import (
@@ -164,7 +164,11 @@ def target_interval_set(spec: str, domain_basis) -> tuple[str, ...]:
     """
     domain = tuple(domain_basis)
     quotients = process_old(spec, domain) if "OLD" in spec else process_tilt(spec, domain)
-    if not is_standard_prime_limit_domain_basis(domain):
+    if is_standard_prime_limit_domain_basis(domain):
+        # a limit raised past the domain's prime limit reaches intervals needing a prime the domain
+        # lacks (e.g. 7/4 over a 5-limit) — drop them, matching the optimizer (resolve_target_intervals)
+        quotients = tuple(q for q in quotients if len(quotient_to_pcv(q)) <= len(domain))
+    else:
         # a nonstandard subgroup can't voice every interval the prime-limit triangle spans
         # (e.g. 5/4 over 2.3.13/5, where 5 isn't reachable) — keep only those it contains
         quotients = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain)

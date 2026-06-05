@@ -277,8 +277,10 @@ def resolve_target_intervals(
     """Resolve a target interval spec to vectors: an explicit ``{...}`` quotient list, a
     TILT/OLD named scheme, or ``"primes"`` (the identity).
 
-    Over a nonstandard domain basis the resolved quotients are filtered to those that lie
-    in the subgroup and expressed as vectors in that (possibly nonprime) basis."""
+    Intervals outside the domain are dropped — over a standard prime limit, a quotient needing a
+    prime beyond the d-th (a target limit raised past the domain); over a nonstandard basis, a
+    quotient outside the subgroup. Unisons are dropped too: a unison has no mistuning to optimize,
+    and its zero complexity would make a simplicity weight infinite."""
     domain_basis = get_domain_basis(t)
     if target_spec == "primes":
         return tuple(tuple(int(i == j) for j in range(d)) for i in range(d))
@@ -289,11 +291,12 @@ def resolve_target_intervals(
     else:
         quotients = parse_quotients(target_spec)
     if is_standard_prime_limit_domain_basis(domain_basis):
-        return pad_vectors_with_zeros_up_to_d(
-            tuple(quotient_to_pcv(q) for q in quotients), d
-        )
-    in_basis = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain_basis)
-    return express_quotients_in_domain_basis(in_basis, domain_basis)
+        pcvs = [v for v in (quotient_to_pcv(q) for q in quotients) if len(v) <= d]
+        vectors = pad_vectors_with_zeros_up_to_d(tuple(pcvs), d)
+    else:
+        in_basis = filter_target_intervals_for_nonstandard_domain_basis(quotients, domain_basis)
+        vectors = express_quotients_in_domain_basis(in_basis, domain_basis)
+    return tuple(v for v in vectors if any(v))  # drop the unison (an all-zero vector)
 
 
 def _parse_interval_spec(text: str, d: int) -> tuple[tuple[int, ...], ...]:

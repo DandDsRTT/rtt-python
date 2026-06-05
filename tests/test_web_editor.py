@@ -956,6 +956,55 @@ def test_editing_a_generator_cell_after_a_rank_change_seeds_from_the_optimum():
     assert len(editor.generator_tuning) == 3
 
 
+def test_target_limit_beyond_the_domain_filters_out_of_domain_intervals():
+    # raising the OLD/TILT limit past the domain's prime limit must not crash: the out-of-domain
+    # intervals (needing a prime the domain doesn't have) are dropped, not fed to the optimizer as
+    # ragged vectors. Display and optimization stay in step (both exclude them).
+    editor = Editor()  # 5-limit meantone
+    editor.set_target_spec("11-OLD")  # an 11-odd-limit diamond reaches 7/4, 11/8, ... (primes 7, 11)
+    shown = service.target_interval_set("11-OLD", editor.state.domain_basis)
+    assert "7/4" not in shown and "11/8" not in shown  # out-of-domain intervals dropped
+    assert "5/4" in shown  # in-domain ones kept
+    editor.layout()  # the grid (which optimizes over the set) renders rather than crashing
+
+
+def test_a_unison_target_does_not_break_simplicity_weighting():
+    # a unison (1/1) has complexity 0, so a simplicity weight would be 1/0 = inf and crash the
+    # solver. Unisons are dropped from the target set (no mistuning to optimize).
+    editor = Editor()
+    editor.set_weight_slope("simplicity-weight")
+    editor.set_target_override_vectors([[0, 0, 0], [-1, 1, 0]])  # 1/1 and 3/2
+    tun = service.tuning(editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis,
+                         targets=editor.target_override)
+    assert len(tun.tuning_map) == 3 and all(v == v and abs(v) < 1e6 for v in tun.tuning_map)
+
+
+def test_a_domain_change_forgets_stale_held_interest_and_prescaler():
+    # held intervals, intervals of interest, and a hand-edited prescaler are dimension-specific
+    # (d-length vectors / diagonal). A domain ± changes d, so they are forgotten — like the typed
+    # target list already is — rather than lingering at the old dimension and desyncing/crashing.
+    for walk in ("expand", "shrink"):
+        editor = Editor()
+        if walk == "shrink":
+            editor.try_edit_mapping_text("[⟨1 0 -4 -13] ⟨0 1 4 10]}")  # 7-limit (d=4), room to shrink
+        editor.set_held_vectors([tuple([-1, 1, 0] + [0] * (editor.state.d - 3))])
+        editor.set_interest_vectors([tuple([-2, 0, 1] + [0] * (editor.state.d - 3))])
+        editor.set_custom_prescaler_entry(0, 2.0)
+        getattr(editor, walk)()
+        assert editor.held_vectors == [] and editor.interest_vectors == []
+        assert editor.custom_prescaler is None
+        editor.layout()  # renders cleanly with the stale state gone
+
+
+def test_remove_comma_is_a_noop_at_the_last_comma():
+    # the comma − is disabled in the UI at one comma; the method self-guards too (like its
+    # siblings shrink / remove_mapping_row) rather than emptying the basis and crashing.
+    editor = Editor()
+    assert editor.can_remove_comma is False
+    editor.remove_comma()  # no-op, no crash
+    assert editor.state.comma_basis == ((4, -4, 1),) and editor.can_undo is False
+
+
 def _cents_map(values):
     return tuple(service.cents(v) for v in values)  # compare tuning maps at the shown 3-dp
 

@@ -178,12 +178,17 @@ class Editor:
 
     @state.setter
     def state(self, new_state: TemperamentState) -> None:
-        # a domain (d) change forgets the weakly-held manual target limit and any typed
-        # target list, so the set reverts to the new domain's default — and does not
-        # resurrect if d comes back
+        # a domain (d) change forgets every dimension-specific selection — the weakly-held manual
+        # target limit and typed target list, plus the held intervals, intervals of interest, and
+        # any hand-edited prescaler diagonal (all d-length vectors / a d-diagonal). They revert to
+        # the new domain's defaults rather than lingering at the old dimension, where they would
+        # desync or crash the grid; they do not resurrect if d comes back.
         if new_state.d != self._state.d:
             self.target_limit = None
             self.target_override = None
+            self.held_vectors = []
+            self.interest_vectors = []
+            self.custom_prescaler = None
         self._state = new_state
 
     @property
@@ -935,6 +940,8 @@ class Editor:
         if self.pending_comma is not None:
             self.pending_comma = None  # cancel the draft (not an undoable edit)
             return
+        if len(self.state.comma_basis) <= 1:
+            return  # never empty the basis — self-guard like shrink / remove_mapping_row do
         self._snapshot()
         self.state = service.remove_comma(self.state)
 
