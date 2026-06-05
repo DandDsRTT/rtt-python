@@ -440,9 +440,9 @@ class Editor:
         """Freeze a manual generator tuning with component ``i`` replaced by
         ``transform(current[i])``, seeding the rest from the frozen tuning or, when none is
         frozen, the current optimum. Turns auto-optimize off, like a typed tuning. Backs the
-        editable cell (set to a typed value), the +/− sign flip (negate the value), and the wheel
-        nudge (step it). ``snapshot=False`` extends the current undo step instead of opening a new
-        one — how a continuous wheel gesture coalesces its notches."""
+        editable cell (set to a typed value) and the wheel nudge (step it). ``snapshot=False``
+        extends the current undo step instead of opening a new one — how a continuous wheel
+        gesture coalesces its notches."""
         base = list(self.effective_generator_tuning() or self._optimum_generator_tuning())
         base[i] = float(transform(base[i]))
         if snapshot:
@@ -454,10 +454,22 @@ class Editor:
         """Override one generator's tuning (one editable generator-tuning-map cell)."""
         self._override_generator(i, lambda _current: cents)
 
-    def flip_generator_tuning_sign(self, i: int) -> None:
-        """Flip one generator's tuning sign (clicking the +/− sign on its generator-tuning-map
-        cell): negate just that component, leaving the rest at the frozen tuning / optimum."""
-        self._override_generator(i, lambda current: -current)
+    def flip_generator(self, i: int) -> None:
+        """Reverse generator ``i``'s direction — the +/− sign on its generator-tuning-map cell.
+        A generator and its mapping row are the same quantity, so negating the generator negates
+        mapping row ``i`` too; with the row and the generator's tuned size both flipped, the prime
+        tuning map 𝒕 = 𝒈𝑀 is unchanged — the generator just points the other way (e.g. a fifth
+        becomes a descending fourth's worth). With auto-optimize on, the re-optimized tuning
+        flips the generator's size on its own; a frozen manual tuning has its component negated
+        here so 𝒕 holds. One undoable edit (the mapping edit's snapshot covers both halves)."""
+        override = self.effective_generator_tuning()
+        mapping = [list(row) for row in self.state.mapping]
+        mapping[i] = [-x for x in mapping[i]]
+        self.edit_mapping(mapping)  # snapshots; negating a row is the same temperament
+        if override is not None and len(override) == len(mapping):
+            flipped = list(override)
+            flipped[i] = -flipped[i]
+            self.generator_tuning = tuple(flipped)
 
     def nudge_generator_tuning_component(self, i: int, steps: int) -> None:
         """Fine-adjust one generator's tuning by ``steps`` thousandths of a cent — the hover-

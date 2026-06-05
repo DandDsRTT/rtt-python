@@ -100,7 +100,7 @@ _KIND_HELP: dict[str, str] = {
     "heldcell": "Held-interval entry — this prime's exponent in an interval held unchanged (pure) by the tuning. Type to edit.",
     "targetcell": "Target-interval entry — this prime's exponent in a target the tuning optimizes over. Type to override the chosen target set.",
     "prescalercell": "Prescaler entry — the weight on this prime applied before optimizing. Type to override the scheme's value.",
-    "gentuningcell": "Generator tuning — this generator's tuned size in cents. Type to override the optimum, click its sign to flip it, or scroll the wheel to fine-tune by a thousandth of a cent.",
+    "gentuningcell": "Generator tuning — this generator's tuned size in cents. Type to override the optimum, click its sign to reverse the generator (its mapping row flips too, so the tuning is unchanged), or scroll the wheel to fine-tune by a thousandth of a cent.",
     # other grid controls
     "rangemode": "Choose how the generator's tuning range is measured — monotone or tradeoff.",
     "optimize": "Optimize the tuning to minimize damage now. Double-click to lock auto-optimize on.",

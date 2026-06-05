@@ -844,18 +844,39 @@ def test_set_generator_tuning_component_overrides_one_generator():
     assert editor.optimize_locked is False and editor.can_undo is True
 
 
-def test_flip_generator_tuning_sign_negates_one_generator():
+def _cents_map(values):
+    return tuple(service.cents(v) for v in values)  # compare tuning maps at the shown 3-dp
+
+
+def test_flip_generator_reverses_the_mapping_row_and_keeps_the_tuning_map():
     editor = Editor()
-    optimum = editor._optimum_generator_tuning()
-    # clicking a generator-tuning cell's +/− sign flips just that generator's sign, seeding the
-    # rest from the current optimum (like a component edit), and freezes the override
-    editor.flip_generator_tuning_sign(1)
-    eff = editor.effective_generator_tuning()
-    assert eff[1] == -optimum[1] and eff[0] == optimum[0]
-    assert editor.optimize_locked is False and editor.can_undo is True
-    # flipping the same generator again restores its original sign (an involution)
-    editor.flip_generator_tuning_sign(1)
-    assert editor.effective_generator_tuning()[1] == optimum[1]
+    # a generator and its mapping row are the same quantity: flipping the generator's sign
+    # reverses its direction, so its mapping row negates too and the prime tuning map 𝒕 = 𝒈𝑀 is
+    # unchanged — the temperament sounds identical, the generator just points the other way.
+    tuning_map_before = service.tuning(editor.state.mapping, editor.tuning_scheme).tuning_map
+    row1_before, row0 = editor.state.mapping[1], editor.state.mapping[0]
+    gen1_before = editor._optimum_generator_tuning()[1]
+    editor.flip_generator(1)
+    assert editor.state.mapping[1] == tuple(-x for x in row1_before)  # row negated
+    assert editor.state.mapping[0] == row0                            # the other row untouched
+    assert _cents_map([editor._optimum_generator_tuning()[1]]) == _cents_map([-gen1_before])
+    tuning_map_after = service.tuning(editor.state.mapping, editor.tuning_scheme).tuning_map
+    assert _cents_map(tuning_map_after) == _cents_map(tuning_map_before)  # 𝒕 unchanged
+    assert editor.can_undo is True
+    editor.undo()
+    assert editor.state.mapping[1] == row1_before  # one undoable edit restores the row
+
+
+def test_flip_generator_with_a_frozen_tuning_negates_its_size_and_holds_the_tuning_map():
+    editor = Editor()
+    editor.set_generator_tuning_component(1, 700.0)  # freeze a manual tuning off the optimum
+    eff_before = editor.effective_generator_tuning()
+    t_before = service.tuning_from_generators(editor.state.mapping, eff_before).tuning_map
+    editor.flip_generator(1)
+    eff_after = editor.effective_generator_tuning()
+    assert eff_after[1] == -700.0 and eff_after[0] == eff_before[0]  # only generator 1 negated
+    t_after = service.tuning_from_generators(editor.state.mapping, eff_after).tuning_map
+    assert _cents_map(t_after) == _cents_map(t_before)  # the frozen tuning's 𝒕 is held
 
 
 def test_nudge_generator_tuning_component_steps_by_a_thousandth_of_a_cent():

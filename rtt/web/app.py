@@ -1365,15 +1365,15 @@ class _Reconciler:
     def _gentuning_face(self, cb):
         """The generator-tuning cell's signed, clickable cents face overlaid on its input: a sign
         glyph (the otherwise-assumed "+" of a positive generator, made visible — or "−") the user
-        clicks to flip the generator's sign, then the whole part big over a small dot-led fraction
-        (the shared cents look). Only the sign takes pointer events; a click elsewhere falls
-        through to focus the input for typing."""
+        clicks to reverse the generator (negating its mapping row in lockstep, so the tuning map
+        holds), then the whole part big over a small dot-led fraction (the shared cents look). Only
+        the sign takes pointer events; a click elsewhere falls through to focus the input for typing."""
         sign, whole, frac = _gentuning_parts(cb.text)
         i = int(cb.id.rsplit(":", 1)[1])
         with ui.element("div").classes("rtt-tval rtt-cellface"):
             with ui.element("div").classes("rtt-gentuning-main"):
                 s = ui.label(sign).classes("rtt-gensign") \
-                    .on("click", lambda _=None, i=i: self._cb.act(lambda: self._editor.flip_generator_tuning_sign(i)))
+                    .on("click", lambda _=None, i=i: self._cb.act(lambda: self._editor.flip_generator(i)))
                 m = ui.label(whole).classes("rtt-stacked-main")
             sub = ui.label(f".{frac}" if frac else "").classes("rtt-stacked-sub")
         self.gensign_faces[cb.id] = (s, m, sub)

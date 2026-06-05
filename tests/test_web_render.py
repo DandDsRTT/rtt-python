@@ -341,18 +341,21 @@ async def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(user: User) 
     assert sign_lbl.text == "+"
 
 
-async def test_clicking_the_sign_flips_a_generator_tuning_cells_positivity(user: User) -> None:
-    # clicking a generator-tuning cell's sign glyph flips that generator's sign: the cents value
-    # negates (overriding the optimum, which survives the render) and the glyph swaps + for −.
+async def test_clicking_the_sign_flips_the_generator_and_its_mapping_row(user: User) -> None:
+    # clicking a generator-tuning cell's sign glyph reverses that generator's direction: its
+    # cents value negates and the glyph swaps + for −, AND its mapping row negates in lockstep
+    # (the same quantity) — so the prime tuning map stays put. Meantone row 1 is the fifth (0 1 4).
     await user.open("/")
     before = float(_cell_child(user, "tuning:gen:1").value)
     assert before > 0  # the default fifth is positive
+    assert _cell_child(user, "cell:mapping:1:2").value == "4"  # the fifth's prime-5 mapping entry
     sign_lbl, _, _ = _gentuning_face(user, "tuning:gen:1")
     UserInteraction(user, {sign_lbl}, None).click()
     await user.should_see(marker="tuning:gen:1")
-    assert float(_cell_child(user, "tuning:gen:1").value) == -before  # the value's sign flipped
+    assert float(_cell_child(user, "tuning:gen:1").value) == -before  # the generator's size flipped
     sign_lbl, _, _ = _gentuning_face(user, "tuning:gen:1")
-    assert sign_lbl.text == "−"  # and the glyph now shows the minus
+    assert sign_lbl.text == "−"  # the glyph now shows the minus
+    assert _cell_child(user, "cell:mapping:1:2").value == "-4"  # its mapping row flipped too
 
 
 async def test_editable_gen_tuning_cell_renders_a_stacked_cents_face(user: User) -> None:

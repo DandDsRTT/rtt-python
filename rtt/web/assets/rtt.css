@@ -429,8 +429,8 @@
 /* the generator tuning map's signed face: the clickable sign glyph and the whole part share
    one row (the small ".fraction" stacks beneath, like every cents cell). The face ignores
    pointer events, but the sign takes them back — the otherwise-assumed "+" of a positive
-   generator (or a "−") is shown so it can be clicked to flip that generator's sign. It reads
-   as part of the value (black), with a faint hover box to mark it as the clickable target. */
+   generator (or a "−") is shown so it can be clicked to reverse that generator (its mapping row
+   flips too). It reads as part of the value (black), with a faint hover box marking it clickable. */
 .rtt-gentuning-main { display:flex; align-items:baseline; justify-content:center; line-height:1; }
 .rtt-gensign { font-size:10px; pointer-events:auto; cursor:pointer; padding:0 1px; border-radius:2px; }
 .rtt-gensign:hover { background:#e0e0e0; }
