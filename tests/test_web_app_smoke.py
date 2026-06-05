@@ -883,7 +883,10 @@ def test_dense_prescaling_plain_text_fits_its_cell():
     # width (glyph-aware, calibrated >= the real render) fitting guarantees the render fits.
     s = show_settings.defaults()
     s.update(plain_text_values=True, weighting=True)
-    cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s).cells}
+    # the prescaling row is slope-gated (hidden under the unity default); a non-unity slope
+    # reveals it without changing the prescaler values (the prescaler is slope-independent)
+    cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                                                tuning_scheme="TILT minimax-S").cells}
     for cid in ("ptext:prescaling:primes", "ptext:prescaling:targets"):
         c = cells[cid]
         assert app._ptext_units(c.text) * app._ptext_font(c.text, c.w) <= c.w, cid

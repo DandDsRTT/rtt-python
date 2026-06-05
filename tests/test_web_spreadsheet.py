@@ -809,7 +809,8 @@ def test_a_rows_nested_control_grows_every_tile_in_that_row_uniformly():
     assert gens > off["block:tuning:primes"].h  # the chart reserves real height (not zeroed away)
 
     alt = settings.defaults(); alt["weighting"] = True; alt["alt_complexity"] = True
-    aon = {b.id: b for b in spreadsheet.build(base, alt).blocks}
+    # a non-unity slope reveals the slope-gated prescaling + complexity rows (and box 𝐋/𝒄)
+    aon = {b.id: b for b in spreadsheet.build(base, alt, tuning_scheme="TILT minimax-S").blocks}
     presc = aon["block:prescaling:primes"].h  # box 𝐋 extends the prescaling row's primes tile
     for sib in ("block:prescaling:commas", "block:prescaling:targets"):
         assert aon[sib].h == presc, sib
@@ -1372,8 +1373,8 @@ def test_collapsing_hides_the_plain_text_band_with_the_tile():
 
 
 def test_editable_plain_text_tiles_render_as_inputs():
-    # weighting opens the prescaling row so the bare prescaler 𝐿 tile's ptext is present too
-    cells = {c.id: c for c in _with(plain_text_values=True, weighting=True).cells}
+    # weighting + a non-unity slope opens the prescaling row so the bare prescaler 𝐿 tile's ptext is present too
+    cells = {c.id: c for c in _with("TILT minimax-S", plain_text_values=True, weighting=True).cells}
     # the editable tiles render as inputs: the mapping + comma-basis duals, the generator
     # tuning map (typing a cents tuning freezes it), the target interval list (typing a
     # vector list overrides the target set), and the bare prescaler 𝐿 (typing a d×d
@@ -1724,7 +1725,7 @@ def test_weight_caption_mnemonic_underlines_its_symbol_letter():
 
 def test_weighting_on_adds_a_complexity_row_over_every_interval_column():
     off = {c.id for c in _with(weighting=False).cells}
-    on = {c.id: c for c in _with(weighting=True).cells}
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals the complexity row
     assert "complexity:target:0" not in off  # no complexity row unless weighting is on
     mapping = ((1, 1, 0), (0, 1, 4))
     scheme = service.DEFAULT_TUNING_SCHEME
@@ -1742,7 +1743,7 @@ def test_weighting_on_adds_a_complexity_row_over_every_interval_column():
 
 
 def test_complexity_row_sits_between_retuning_and_weight():
-    on = {c.id: c for c in _with(weighting=True).cells}
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals the complexity row
     assert on["retune:target:0"].y < on["complexity:target:0"].y < on["weight:target:0"].y
 
 
@@ -1750,6 +1751,7 @@ def test_complexity_over_primes_is_a_map_the_rest_are_lists():
     cells = {c.id: c for c in spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "weighting": True}, interest=((-3, 2, 0),),
+        tuning_scheme="TILT minimax-S",  # non-unity slope reveals the prescaling/complexity rows
     ).cells}
     # the domain-prime complexity is a covector ⟨ … ] (a map), like the tuning map
     assert cells["bracket:complexity:map:l"].text == "⟨" and cells["bracket:complexity:map:r"].text == "]"
@@ -1780,6 +1782,7 @@ def test_complexity_row_carries_its_symbol_and_captions():
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "weighting": True, "symbols": True, "names": True},
         interest=((-3, 2, 0),),
+        tuning_scheme="TILT minimax-S",  # non-unity slope reveals the prescaling/complexity rows
     ).cells}
     assert cells["symbol:complexity:targets"].text == "𝒄"  # only the target list carries the symbol
     assert cells["caption:complexity:primes"].text == "domain prime complexity map"
@@ -1791,14 +1794,14 @@ def test_complexity_row_carries_its_symbol_and_captions():
 
 
 def test_complexity_caption_mnemonic_underlines_its_symbol_letter():
-    cells = {c.id: c for c in _with(weighting=True, names=True, mnemonics=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, names=True, mnemonics=True).cells}  # non-unity slope reveals the complexity row
     cap = cells["caption:complexity:targets"]
     # the 'c' of "complexity" is underlined (its symbol 𝒄)
     assert cap.underlines == ((cap.text.index("complexity"), 1),)
 
 
 def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
-    on = {c.id: c for c in _with(weighting=True).cells}
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals the prescaling matrix
     off = {c.id for c in _with(weighting=False).cells}
     assert "cell:prescaling:primes:0:0" not in off  # no prescaling matrix unless weighting is on
     pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)), service.DEFAULT_TUNING_SCHEME)
@@ -1829,6 +1832,7 @@ def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
         {**settings.defaults(), "weighting": True, "optimization": True,
          "symbols": True, "equivalences": True},
         held_vectors=((-1, 1, 0),),  # 3/2 held, so the held column appears
+        tuning_scheme="TILT minimax-S",  # non-unity slope reveals the prescaling rows (the prescaler is the log-prime matrix)
     )
     on = {c.id: c for c in lay.cells}
     # bare prescaler tile: the abstract 𝑋 with its concrete equivalence (the symbol line is unchanged)
@@ -1883,11 +1887,13 @@ def test_log_prime_prescaler_name_gains_the_equivalence():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = {**settings.defaults(), "weighting": True, "symbols": True, "names": True,
          "equivalences": True}
-    on = {c.id: c for c in spreadsheet.build(base, s).cells}
+    # non-unity slope reveals the prescaling rows (the prescaler is the log-prime matrix)
+    on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
     assert on["symbol:prescaling:primes"].text == "𝑋 = 𝐿"  # the symbol line is unchanged
     assert on["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
     # without the equivalences layer the name is just the plain caption
-    on2 = {c.id: c for c in spreadsheet.build(base, {**s, "equivalences": False}).cells}
+    on2 = {c.id: c for c in spreadsheet.build(base, {**s, "equivalences": False},
+                                              tuning_scheme="TILT minimax-S").cells}
     assert on2["caption:prescaling:primes"].text == "complexity prescaler"
 
 
@@ -1898,7 +1904,8 @@ def test_prescaler_symbol_never_mixes_L_and_X_within_a_tile():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = {**settings.defaults(), "symbols": True, "weighting": True,
          "generator_detempering": True}
-    on = {c.id: c for c in spreadsheet.build(base, s).cells}
+    # non-unity slope reveals the prescaling rows (the prescaler is the log-prime matrix)
+    on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
     assert on["symbol:prescaling:detempering"].text == "𝐿D"          # the tile's big symbol
     assert on["matlabel:col:prescaling:detempering:0"].text == "𝐿𝐝₁"  # its column headers — same 𝐿
 
@@ -1911,7 +1918,8 @@ def test_custom_prescaler_diagonal_keeps_the_generic_symbol():
     s = {**settings.defaults(), "symbols": True, "equivalences": True,
          "weighting": True, "generator_detempering": True}
     on = {c.id: c for c in spreadsheet.build(
-        base, s, custom_prescaler=(1.0, 1.5, 2.0)).cells}
+        base, s, custom_prescaler=(1.0, 1.5, 2.0),
+        tuning_scheme="TILT minimax-S").cells}  # non-unity slope reveals the prescaling rows
     assert on["symbol:prescaling:primes"].text == "𝑋"               # generic, no "= …"
     assert on["symbol:prescaling:commas"].text == "𝑋C"              # generic product
     assert on["matlabel:col:prescaling:detempering:0"].text == "𝑋𝐝₁"
@@ -1939,6 +1947,7 @@ def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
         service.from_mapping(((1, 1, 0), (0, 1, 4))),
         {**settings.defaults(), "weighting": True, "symbols": True, "names": True, "mnemonics": True},
         interest=((-3, 2, 0),),
+        tuning_scheme="TILT minimax-S",  # non-unity slope reveals the complexity row
     )
     on = {c.id: c for c in lay.cells}
     # only the target interval complexity list carries the 𝒄 symbol and its mnemonic underline
@@ -1951,7 +1960,7 @@ def test_complexity_symbol_and_mnemonic_only_on_the_target_list():
 
 
 def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors():
-    lay = _with(weighting=True)
+    lay = _with("TILT minimax-S", weighting=True)  # non-unity slope reveals the prescaling row
     on = {c.id: c for c in lay.cells}
     blocks = {b.id for b in lay.blocks}
     pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)))  # (1, 1.585, 2.322)
@@ -1981,7 +1990,7 @@ def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
     # }). Every 𝐿·basis product (𝐿C / 𝐿T / 𝐿H) is a matrix of prescaled VECTORS — per-column
     # ket ``[ … ⟩`` inside the symmetric outer ``[ … ]``.
     import re
-    cells = {c.id: c for c in _with(plain_text_values=True, weighting=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", plain_text_values=True, weighting=True).cells}  # non-unity slope reveals the prescaling row
     vecbr = {"primes": "⟨]", "commas": "[⟩", "targets": "[⟩"}  # per-vector bracket pair
     outer = {"primes": "[⟩", "commas": "[]", "targets": "[]"}
     for group in ("primes", "commas", "targets"):
@@ -1999,7 +2008,7 @@ def test_prescaling_plain_text_shows_the_same_numbers_as_the_grid():
 
 
 def test_weighting_rows_show_their_units_line_when_units_on():
-    cells = {c.id: c for c in _with(weighting=True, units=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, units=True).cells}  # non-unity slope reveals the prescaling/complexity rows
     # the per-box "units:" line below each caption, per the mockup
     assert cells["units:prescaling:primes"].text == "units: oct/p"   # the prescaler matrix L
     assert cells["units:prescaling:targets"].text == "units: oct"     # L applied to a vector set
@@ -2009,7 +2018,7 @@ def test_weighting_rows_show_their_units_line_when_units_on():
 
 
 def test_weighting_rows_have_units_column_tiles_when_domain_units_on():
-    cells = {c.id: c for c in _with(weighting=True, domain_units=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, domain_units=True).cells}  # non-unity slope reveals the prescaling/complexity rows
     # the units-column (spine) marginal label per weighting row, like the tuning rows' ¢/
     assert cells["ucol:prescaling:0"].text == "oct/"   # one per matrix row (d-tall)
     assert cells["ucol:complexity"].text == "(C)/"
@@ -2017,13 +2026,13 @@ def test_weighting_rows_have_units_column_tiles_when_domain_units_on():
 
 
 def test_weighting_rows_render_a_plain_text_box_when_plain_text_on():
-    cells = {c.id for c in _with(weighting=True, plain_text_values=True).cells}
+    cells = {c.id for c in _with("TILT minimax-S", weighting=True, plain_text_values=True).cells}  # non-unity slope reveals the prescaling/complexity rows
     assert {"ptext:weight:targets", "ptext:complexity:primes", "ptext:complexity:targets",
             "ptext:prescaling:primes"} <= cells
 
 
 def test_prescaling_row_sits_between_retuning_and_complexity():
-    on = {c.id: c for c in _with(weighting=True).cells}
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals the prescaling/complexity rows
     assert on["retune:prime:0"].y < on["cell:prescaling:primes:0:0"].y < on["complexity:prime:0"].y
 
 
@@ -2057,7 +2066,7 @@ def test_prescaling_matrices_have_outer_brackets_and_per_column_marks():
     # The 𝐿·basis product matrices (𝐿C / 𝐿D / 𝐿T / 𝐿H) are column-wise: per-column ket
     # ``[ … ⟩`` marks (top = ebktop ⌐ square open, foot = ebkangle ∨ angle close on the
     # bottom of the column) inside outer ``[ … ]`` left/right brackets.
-    on = {c.id: c for c in _with(weighting=True).cells}
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals the prescaling row
     # bare 𝐿: mapping-style — ebktop + ebkangle spanning the matrix top/bottom, MAP_BRACKETS
     # ⟨ … ] per row, and NO outer left/right brackets (the spans replace them)
     assert on["ebktop:prescaling"].kind == "ebktop"
@@ -2086,7 +2095,7 @@ def test_outer_matrix_frame_hugs_the_cells_leaving_subrow_labels_outside():
     # content_box). Otherwise the frame drifts left over the subrow labels (𝒎ᵢ / 𝒙ᵢ),
     # swallowing them, and overhangs the cells on the right. Per the mockup the labels
     # sit OUTSIDE the frame, to its left.
-    cells = {c.id: c for c in _with(weighting=True, alt_complexity=True, symbols=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True, symbols=True).cells}  # non-unity slope reveals the prescaling row
     for top_id, foot_id, label_id, left_id, right_id in (
         ("ebktop:primes", "ebkbrace:primes", "matlabel:row:mapping:primes:0",
          "bracket:map:0:l", "bracket:map:0:r"),
@@ -2104,7 +2113,7 @@ def test_outer_matrix_frame_hugs_the_cells_leaving_subrow_labels_outside():
 
 
 def test_prescaling_matrix_carries_its_symbol_and_caption():
-    cells = {c.id: c for c in _with(weighting=True, symbols=True, names=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, symbols=True, names=True).cells}  # non-unity slope reveals the prescaling row
     # the bare prescaler matrix is the abstract symbol 𝑋 (math italic, like 𝑀); with no
     # equivalences layer the name is just the plain caption
     assert cells["symbol:prescaling:primes"].text == "𝑋"
@@ -2112,7 +2121,7 @@ def test_prescaling_matrix_carries_its_symbol_and_caption():
 
 
 def test_complexity_prescaler_caption_mnemonic_marks_the_x_in_complexity():
-    cells = {c.id: c for c in _with(weighting=True, names=True, mnemonics=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, names=True, mnemonics=True).cells}  # non-unity slope reveals the prescaling row
     cap = cells["caption:prescaling:primes"]
     # the prescaler's symbol 𝑋 has no word-initial X in "complexity prescaler"; unlike the
     # word-initial mnemonics, it marks the x mid-word in "compleXity"
@@ -2130,8 +2139,8 @@ def test_presets_adds_the_prescaler_chooser_under_the_prescaling_tile():
     # the prescaler is a preset (like temperament / tuning / target), gated on PRESETS —
     # not on alt_complexity. It rides under the prescaling matrix tile (box 𝐋), which
     # exists only while weighting is on; the temperament boxes own the primes column it sits in.
-    off = {c.id for c in _with(weighting=True, presets=False).cells}
-    on = {c.id: c for c in _with(weighting=True, presets=True).cells}
+    off = {c.id for c in _with("TILT minimax-S", weighting=True, presets=False).cells}  # non-unity slope reveals the prescaling tile
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True, presets=True).cells}
     assert "preset:prescaler" not in off  # no chooser unless presets is on
     sel = on["preset:prescaler"]
     assert sel.kind == "preset"
@@ -2152,10 +2161,32 @@ def test_prescaler_chooser_shows_dash_when_a_custom_diagonal_deviates():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["presets"], s["weighting"] = True, True
-    named = {c.id: c for c in spreadsheet.build(base, s).cells}
+    scheme = "TILT minimax-S"  # non-unity slope reveals the prescaling tile (its chooser)
+    named = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme=scheme).cells}
     assert named["preset:prescaler"].text == "log-prime"  # the scheme's prescaler, no override
-    devi = {c.id: c for c in spreadsheet.build(base, s, custom_prescaler=(1.0, 9.9, 2.322)).cells}
+    devi = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme=scheme,
+                                               custom_prescaler=(1.0, 9.9, 2.322)).cells}
     assert devi["preset:prescaler"].text == ""  # off the named list -> the "-" placeholder
+
+
+def test_complexity_machinery_hides_under_unity_weight():
+    # the prescaling + complexity rows (and box 𝒄's complexity subsection) only matter when the
+    # damage weight derives from complexity; under the default unity-weight the weight is 1
+    # regardless, so they don't render. They appear under complexity-/simplicity-weight. This is a
+    # visibility condition keyed on the slope — NOT a fold default (INITIAL_COLLAPSED stays empty).
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "weighting": True}
+    unity = {c.id for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-U").cells}
+    simpl = {c.id for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
+    # unity (the default): no prescaling/complexity rows or subsection; weight row + slope chooser stay
+    assert not any(c.startswith("cell:prescaling") for c in unity)
+    assert not any(c.startswith("complexity:") for c in unity)
+    assert "control:complexity" not in unity and "control:q" not in unity
+    assert "control:slope" in unity and any(c.startswith("weight:target") for c in unity)
+    # complexity-/simplicity-weight: the prescaling + complexity rows + the subsection appear
+    assert any(c.startswith("cell:prescaling") for c in simpl)
+    assert any(c.startswith("complexity:") for c in simpl)
+    assert "control:complexity" in simpl
 
 
 def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_complexity():
@@ -2163,7 +2194,7 @@ def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_comple
     # alt_complexity. Until alt. complexity is turned on it offers ONLY the current
     # complexity (lp for every scheme today), so the user can't pick an unimplemented complexity;
     # turning alt_complexity on restores the full preset list (+ the inert "custom").
-    on = {c.id: c for c in _with(weighting=True).cells}  # weighting on, alt_complexity OFF (default)
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals box 𝒄 (alt_complexity OFF (default))
     ctrl = on["control:complexity"]
     assert ctrl.kind == "control_select"
     # the dropdown shows the friendly display name (abbreviation first, expansion in parens) —
@@ -2174,7 +2205,7 @@ def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_comple
     assert ctrl.y > on["complexity:target:0"].y
     assert ctrl.x == on["header:targets"].x
     # turning alt. complexity on restores the full preset list + custom
-    full = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    full = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
     assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
 
 
@@ -2475,8 +2506,8 @@ def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
     # box 𝐋's only alt.-complexity control is now the "replace diminuator" checkbox — the prescaler
     # chooser became a preset (riding the preset band above). The square sits at the primes
     # column's left edge, over its "replace diminuator" caption; no prescaler dropdown beside it.
-    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
-    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    off = {c.id for c in _with("TILT minimax-S", weighting=True, alt_complexity=False).cells}  # non-unity slope reveals box 𝐋
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
     assert "control:prescaler" not in on  # the prescaler is a preset now, not a box-𝐋 control
     assert "caption:prescaler" not in on
     assert "caption:diminuator" not in off
@@ -2493,8 +2524,8 @@ def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
 
 
 def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
-    off = {c.id for c in _with(weighting=True, alt_complexity=False).cells}
-    on = {c.id: c for c in _with(weighting=True, alt_complexity=True).cells}
+    off = {c.id for c in _with("TILT minimax-S", weighting=True, alt_complexity=False).cells}  # non-unity slope reveals box 𝐋
+    on = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
     assert "control:diminuator" not in off  # no control unless alt. complexity is on
     ctrl = on["control:diminuator"]
     assert ctrl.kind == "control_check"
@@ -2950,7 +2981,7 @@ def test_math_expressions_render_the_prescaler_diagonal_as_logs():
     # toggle on: each diagonal cell shows its plain prescaled value (the active diagonal),
     # not a closed-form expression. Math expressions still styles the off-diagonal product
     # tiles (LC, LD, LT, LH), and the diagonal's value still matches the live scheme.
-    cells = {c.id: c for c in _with(weighting=True, math_expressions=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, math_expressions=True).cells}  # non-unity slope reveals the prescaling row
     assert cells["cell:prescaling:primes:0:0"].kind == "prescalercell"
     assert cells["cell:prescaling:primes:0:0"].text == "1"  # log₂2 == 1, shown bare
     assert cells["cell:prescaling:primes:1:1"].text == "1.585"
@@ -2963,7 +2994,7 @@ def test_math_expressions_render_the_prescaled_comma_basis_as_logs():
     # 𝑋C = LC: each cell is the prime's log scaled by the comma's coefficient for that
     # prime — so the syntonic comma 80/81 (basis sign — see the just-comma test) over
     # 2.3.5 gives 4·log₂2, -4·log₂3, log₂5. A unit coefficient drops the ``1 ·`` prefix.
-    cells = {c.id: c for c in _with(weighting=True, math_expressions=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, math_expressions=True).cells}  # non-unity slope reveals the prescaling row
     assert cells["cell:prescaling:commas:0:0"].text == "4 · log₂2\n= 4"
     assert cells["cell:prescaling:commas:1:0"].text == "-4 · log₂3\n= -6.340"
     assert cells["cell:prescaling:commas:2:0"].text == "log₂5\n= 2.322"
@@ -2975,7 +3006,7 @@ def test_math_expressions_without_quantities_show_only_the_prescaler_expression(
     # like the just row's math expression in the same configuration. The bare prescaler 𝐿's
     # diagonal is an editable prescalercell (a value-bearing input box), so quantities=False
     # blanks its text alongside the other editable matrix cells (commacell/heldcell/...).
-    cells = {c.id: c for c in _with(weighting=True, math_expressions=True, quantities=False).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, math_expressions=True, quantities=False).cells}  # non-unity slope reveals the prescaling row
     assert cells["cell:prescaling:primes:1:1"].kind == "prescalercell"
     assert cells["cell:prescaling:primes:1:1"].text == ""  # blanked alongside other editable cells
     assert cells["cell:prescaling:primes:1:1"].blank is True
@@ -3027,7 +3058,7 @@ def test_bare_prescaler_diagonal_is_editable_prescalercell_kind():
     # for the prescaler's diagonal — so each diagonal cell (i == c) is a prescalercell
     # kind (mirroring commacell/interestcell/heldcell, the other editable matrix cells).
     # The OFF-diagonal cells stay tval "0" — they're pinned at zero because 𝐿 is diagonal.
-    cells = {c.id: c for c in _with(weighting=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals the prescaling row
     # diagonal cells are prescalercell
     for i in range(3):
         assert cells[f"cell:prescaling:primes:{i}:{i}"].kind == "prescalercell"
@@ -3045,7 +3076,7 @@ def test_bare_prescaler_diagonal_carries_its_prime_index():
     # which diagonal slot (= which domain prime) it edits, so the app layer can dispatch
     # set_custom_prescaler_entry(i, value) on change. The off-diagonal cells stay pinned 0
     # and carry no prime index (nothing to dispatch).
-    cells = {c.id: c for c in _with(weighting=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals the prescaling row
     for i in range(3):
         assert cells[f"cell:prescaling:primes:{i}:{i}"].prime == i
 
@@ -3056,6 +3087,7 @@ def test_custom_prescaler_override_drives_the_bare_prescaler_diagonal_text():
     # scheme's computed log/prime/identity diagonal.
     s = settings.defaults() | {"weighting": True}
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            tuning_scheme="TILT minimax-S",  # non-unity slope reveals the prescaling row
                             custom_prescaler=(2.5, 7.5, 11.0))
     cells = {c.id: c for c in lay.cells}
     assert cells["cell:prescaling:primes:0:0"].text == "2.500"
@@ -3069,6 +3101,7 @@ def test_custom_prescaler_override_flows_into_the_product_tiles():
     # comma 80/81 over 2.3.5 with diag (1, 1, 2) gives 4·1, -4·1, 1·2 = 4, -4, 2.
     s = settings.defaults() | {"weighting": True}
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            tuning_scheme="TILT minimax-S",  # non-unity slope reveals the prescaling row
                             custom_prescaler=(1.0, 1.0, 2.0))
     cells = {c.id: c for c in lay.cells}
     assert cells["cell:prescaling:commas:0:0"].text == "4"
@@ -3082,6 +3115,7 @@ def test_custom_prescaler_override_drives_the_complexity_row():
     # over 2.3.5), the comma 80/81's complexity equals its taxicab norm = 4+4+1 = 9.
     s = settings.defaults() | {"weighting": True}
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            tuning_scheme="TILT minimax-S",  # non-unity slope reveals the complexity row
                             custom_prescaler=(1.0, 1.0, 1.0))
     cells = {c.id: c for c in lay.cells}
     assert cells["complexity:comma:0"].text == "9.000"
@@ -3705,8 +3739,10 @@ def test_every_implemented_toggle_actually_changes_the_layout():
     def snapshot(s):
         # capture both cells and blocks: most toggles add/move cells, but colorization
         # is expressed purely through blocks (the colour washes), so a cells-only
-        # snapshot would call it a no-op
-        lay = spreadsheet.build(base, s)
+        # snapshot would call it a no-op. Build under a non-unity slope so the slope-gated
+        # weighting machinery (prescaling/complexity rows + box 𝐋's controls) is visible —
+        # otherwise flipping alt_complexity changes nothing under the unity default.
+        lay = spreadsheet.build(base, s, tuning_scheme="TILT minimax-S")
         return (
             frozenset((c.id, c.x, c.y, c.w, c.h, c.kind, c.text, c.underlines) for c in lay.cells),
             frozenset((b.id, b.x, b.y, b.w, b.h, b.tint) for b in lay.blocks),
@@ -3950,7 +3986,8 @@ def test_complexity_col_labels_spell_out_the_norm_definition():
     s["optimization"] = True           # opens the held column
     s["generator_detempering"] = True  # opens the detempering column
     on = {c.id: c for c in spreadsheet.build(
-        base, s, held_vectors=((-1, 1, 0),)
+        base, s, held_vectors=((-1, 1, 0),),
+        tuning_scheme="TILT minimax-S",  # non-unity slope reveals the prescaling/complexity rows
     ).cells}
     # The trailing q is italic-subscripted (per the mockup) — emitted with sentinel
     # markers around it that the matlabel renderer converts to <sub><i>q</i></sub>.
@@ -3975,7 +4012,8 @@ def test_complexity_target_col_headers_gain_the_norm_equivalence():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
     s = {**settings.defaults(), "symbols": True, "weighting": True, "equivalences": True}
-    on = {c.id: c for c in spreadsheet.build(base, s).cells}
+    # non-unity slope reveals the complexity row (the prescaler is the log-prime matrix)
+    on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
     assert on["matlabel:col:complexity:targets:0"].text == f"c₁ = ‖𝐿𝐭₁‖{q}"
     assert on["matlabel:col:complexity:targets:7"].text == f"c₈ = ‖𝐿𝐭₈‖{q}"
     # all-interval: the per-target 𝐭ₙ drops, leaving ‖𝐿‖q in every column
@@ -3984,7 +4022,8 @@ def test_complexity_target_col_headers_gain_the_norm_equivalence():
     assert allint["matlabel:col:complexity:targets:2"].text == f"c₃ = ‖𝐿‖{q}"
     # equivalences off → just the bare named symbol cₙ
     off = {c.id: c for c in spreadsheet.build(
-        base, {**settings.defaults(), "symbols": True, "weighting": True}).cells}
+        base, {**settings.defaults(), "symbols": True, "weighting": True},
+        tuning_scheme="TILT minimax-S").cells}  # non-unity slope reveals the complexity row
     assert off["matlabel:col:complexity:targets:0"].text == "c₁"
 
 
@@ -4001,7 +4040,8 @@ def test_prescaling_matrix_row_and_col_labels():
     s["optimization"] = True
     s["generator_detempering"] = True
     on = {c.id: c for c in spreadsheet.build(
-        base, s, held_vectors=((-1, 1, 0),)
+        base, s, held_vectors=((-1, 1, 0),),
+        tuning_scheme="TILT minimax-S",  # non-unity slope reveals the prescaling rows
     ).cells}
     # row labels: d=3 rows, one 𝒍ᵢ per dimension (the lowercase of the realised 𝐿)
     assert on["matlabel:row:prescaling:primes:0"].text == "𝒍₁"
@@ -4033,7 +4073,7 @@ def test_units_annotate_each_box_with_its_unit_string():
 
 
 def test_units_carry_a_per_value_unit_on_each_gridded_cell():
-    on = {c.id: c for c in _with(units=True, weighting=True).cells}
+    on = {c.id: c for c in _with("TILT minimax-S", units=True, weighting=True).cells}  # non-unity slope reveals the prescaling/complexity rows
     off = {c.id: c for c in _with(units=False, weighting=True).cells}
     # each gridded value cell carries its coordinate-specialized unit: the tile's unit
     # with its variables subscripted by the cell's generator/prime index (the mockup's
@@ -4395,12 +4435,13 @@ def test_held_intervals_show_across_the_rows_like_the_other_intervals():
     assert abs(float(cells["retune:held:0"].text)) < 1e-3
 
 
-def _held(**overrides):
+def _held(scheme=None, **overrides):
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["optimization"] = True
     s.update(overrides)
-    return {c.id: c for c in spreadsheet.build(base, s, held_vectors=[(-1, 1, 0)]).cells}
+    return {c.id: c for c in spreadsheet.build(
+        base, s, tuning_scheme=scheme, held_vectors=[(-1, 1, 0)]).cells}
 
 
 def test_held_column_symbols_are_map_times_basis_products():
@@ -4415,7 +4456,7 @@ def test_held_column_symbols_are_map_times_basis_products():
 
 
 def test_held_column_captions_are_full_held_interval_names():
-    on = _held(names=True, weighting=True)  # weighting opens the prescaling + complexity rows
+    on = _held("TILT minimax-S", names=True, weighting=True)  # non-unity slope opens the prescaling + complexity rows
     # full descriptive names mirroring the comma column ("held interval basis" in place of
     # "comma basis"), without the comma column's "(made to vanish!)" — held intervals are held
     # just, not vanished
@@ -4457,8 +4498,11 @@ def _held_with_tuning(generator_tuning):
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s["optimization"], s["weighting"] = True, True  # weighting opens the prescaling + complexity rows
+    # a non-unity slope reveals those slope-gated rows so the held column's prescaling/complexity
+    # value cells exist to flag (the alert tracks the retuning error, which is slope-independent)
     return {c.id: c for c in spreadsheet.build(
-        base, s, held_vectors=[(-1, 1, 0)], generator_tuning=generator_tuning).cells}
+        base, s, tuning_scheme="TILT minimax-S",
+        held_vectors=[(-1, 1, 0)], generator_tuning=generator_tuning).cells}
 
 
 def test_unheld_held_interval_is_flagged_red_across_its_value_cells():
@@ -4515,7 +4559,7 @@ def test_held_column_has_the_full_interval_column_tile_set():
     # the held column mirrors the intervals-of-interest column's FULL tile set: besides the
     # vectors / mapping / sizes / complexity tiles, it gets the units-row label, the complexity-
     # prescaling matrix, and the just / tempered audio rows (each gated on its own toggle)
-    on = _held(weighting=True, audio=True, domain_units=True)
+    on = _held("TILT minimax-S", weighting=True, audio=True, domain_units=True)  # non-unity slope opens the prescaling row
     assert "cell:prescaling:held:0:0" in on     # the complexity-prescaling matrix over the held interval
     assert "speaker:just_audio:held:0" in on    # the just audio row sounds the held interval
     assert "speaker:tempered_audio:held:0" in on  # the tempered audio row
@@ -4630,7 +4674,7 @@ def test_generator_detempering_quantities_emits_no_redundant_plain_text():
 def test_generator_detempering_prescaling_row_scales_each_vector():
     # box 𝐋 applies the complexity prescaler to each detempering vector (L·D): the octave
     # [1 0 0⟩ and the fifth [-1 1 0⟩ scaled by diag(log₂2, log₂3, log₂5) = (1, 1.585, …)
-    cells = {c.id: c for c in _with(generator_detempering=True, weighting=True, units=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", generator_detempering=True, weighting=True, units=True).cells}  # non-unity slope reveals the prescaling row
     assert [cells[f"cell:prescaling:detempering:{i}:0"].text for i in range(3)] == ["1", "0", "0"]
     assert [cells[f"cell:prescaling:detempering:{i}:1"].text for i in range(3)] == ["-1", "1.585", "0"]
     # framed per-column ket [ … ⟩ (ebktop/ebkangle) inside outer ``[ ]`` like every other
@@ -4644,7 +4688,7 @@ def test_generator_detempering_prescaling_row_scales_each_vector():
 def test_generator_detempering_complexity_row_lists_each_complexity():
     # the complexity of each detempering interval: the octave (1.000) and the fifth (2.585,
     # = log₂2 + log₂3 under the default log-product norm), framed as an interval-size list
-    cells = {c.id: c for c in _with(generator_detempering=True, weighting=True, units=True).cells}
+    cells = {c.id: c for c in _with("TILT minimax-S", generator_detempering=True, weighting=True, units=True).cells}  # non-unity slope reveals the complexity row
     assert [cells[f"complexity:detempering:{i}"].text for i in range(2)] == ["1.000", "2.585"]
     assert cells["bracket:complexity:detemperinglist:l"].text == "["
     assert cells["caption:complexity:detempering"].text == "generator detempering complexity list"
@@ -5037,6 +5081,7 @@ def test_off_by_default_rows_colorize_by_content_too():
     s["weighting"] = True       # reveal the prescaling + complexity rows (a tuning-boxes sub-control)
     s["optimization"] = True    # reveal the held column
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            tuning_scheme="TILT minimax-S",  # non-unity slope reveals the slope-gated prescaling/complexity rows
                             interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
@@ -5073,7 +5118,9 @@ def test_generator_detempering_column_colorizes_by_content():
     s["generator_detempering"] = True  # reveal the detempering column
     s["weighting"] = True              # reveal the prescaling + complexity rows
     s["audio"] = True                  # reveal the just/tempered audio speaker tiles
-    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s)
+    # non-unity slope reveals the slope-gated prescaling/complexity rows
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            tuning_scheme="TILT minimax-S")
     cells = {c.id: c for c in lay.cells}
     Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
     at = lambda cid: _color_at(lay, *_mid(cells, cid))
@@ -5099,6 +5146,7 @@ def _spine_colormap():
     s["counts"] = s["domain_units"] = s["domain_quantities"] = True
     s["weighting"] = s["optimization"] = s["generator_detempering"] = True
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                             tuning_scheme="TILT minimax-S",  # non-unity slope reveals the slope-gated prescaling/complexity rows
                              interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
 
 

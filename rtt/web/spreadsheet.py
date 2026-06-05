@@ -573,8 +573,14 @@ class _GridBuilder:
         self.show_optimization = _f.optimization
         self.show_weighting = _f.weighting
         show_alt_complexity = _f.alt_complexity
-        self._lbox_show = _f.lbox
-        self._cbox_show = _f.cbox
+        # The prescaling + complexity machinery only matters when the damage weight derives from
+        # complexity (complexity-/simplicity-weight). Under the default unity-weight the weight is 1
+        # regardless, so those rows and their box-𝐋/𝒄 controls don't render — a visibility condition
+        # on the slope, NOT a fold default (INITIAL_COLLAPSED stays empty; see no-collapsed-defaults).
+        self._complexity_shown = (self.show_weighting
+                                  and service.damage_weight_slope(self.tuning_scheme) != "unityWeight")
+        self._lbox_show = _f.lbox and self._complexity_shown
+        self._cbox_show = _f.cbox and self._complexity_shown
         show_audio = _f.audio
         self.show_detempering = _f.detempering
         show_interest = _f.interest
@@ -879,8 +885,8 @@ class _GridBuilder:
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
             ("retune", ROW_H, show_tuning, True, "retuning"),
-            ("prescaling", self.d * ROW_H, self.show_weighting, True, "complexity prescaling"),
-            ("complexity", ROW_H, self.show_weighting, True, "complexity"),
+            ("prescaling", self.d * ROW_H, self._complexity_shown, True, "complexity prescaling"),
+            ("complexity", ROW_H, self._complexity_shown, True, "complexity"),
             ("weight", ROW_H, self.show_weighting, True, "weight"),
             ("damage", ROW_H, show_tuning, True, "damage"),
         )
