@@ -1725,17 +1725,25 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
 
-    def _build_map_drag(self, cb, wrap):  # the drag SOURCE grip for generator row cb.gen
-        # HTML5 drag-to-combine. The grip is only the drag SOURCE — the DROP TARGETS are the mapping
-        # ROWS themselves (every mapping cell is armed by _arm_row_target), so you drop onto a whole
-        # row you can actually hover, not a 14px grip. dragstart records the source row server-side;
-        # the js dragstart sets effectAllowed='copy' (the drag reads as a copy → + cursor) and setData
-        # (lets the drag start in Firefox). dragend clears the source.
+    def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another row's grip to merge
+        # HTML5 drag-to-combine, built EXACTLY like the working column-reorder grip (_build_colgrip):
+        # the grip is BOTH the drag SOURCE and a drop TARGET, with a per-element dragover preventDefault
+        # marking it a valid drop target. This is the proven path — drop one row's GRIP onto another's
+        # to add it in. (A Quasar INPUT cell is not a reliable native drop target; reorder hit the same
+        # wall and drops grip-to-grip too. The mapping cells are ALSO armed via _arm_row_target so
+        # hovering the row itself previews/accepts where the browser allows it, but the grip always
+        # works.) dragstart records the source row + effectAllowed='copy'/setData (copy cursor; Firefox
+        # drag-start); dragenter previews; drop commits; dragend clears. src==idx (own row) is a no-op.
+        # NOTE: no js dragstart — exactly like reorder. We do NOT set effectAllowed (leaving it the
+        # default 'uninitialized', which permits ALL drops incl. copy). Setting effectAllowed='copy'
+        # here previously LEFT IT 'none' and blocked every drop — the merge regression. dropEffect on
+        # dragover still requests the + (copy) cursor, allowed under 'uninitialized'.
         wrap.classes("rtt-drag-handle rtt-row-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, idx=cb.gen: self._begin_row_drag(idx))
-        wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
-                                        "e.dataTransfer.setData('application/x-rtt-row','');}")
+        wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
+        wrap.on("dragenter.prevent", lambda _=None, idx=cb.gen: self._preview_row_drop(idx))
         wrap.on("dragend", lambda _=None: self._end_row_drag())
+        wrap.on("drop.prevent", lambda _=None, idx=cb.gen: self._drop_on_row(idx))
         ui.icon("drag_indicator").classes("rtt-grip")
 
     def _arm_row_target(self, wrap, gen):  # make a mapping cell a drop target for its row (gen)
@@ -1779,13 +1787,16 @@ class _Reconciler:
         "held": "add_held_to", "interest": "add_interest_to",
     }
 
-    def _build_int_drag(self, cb, wrap):  # the drag SOURCE grip for an interval; see _build_map_drag
+    def _build_int_drag(self, cb, wrap):  # drag an interval's grip onto another's grip (same column) to merge
         group = cb.id.split(":")[1]  # int_drag:<group>:<index>
+        # the column twin of _build_map_drag: the grip is BOTH source and drop target (drop grip-to-grip,
+        # the proven path), and the interval cells are also armed (_arm_col_target) for hovering the column.
         wrap.classes("rtt-drag-handle rtt-col-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, g=group, idx=cb.comma: self._begin_col_drag(g, idx))
-        wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
-                                        "e.dataTransfer.setData('application/x-rtt-int','');}")
+        wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
+        wrap.on("dragenter.prevent", lambda _=None, g=group, idx=cb.comma: self._preview_int_drop(g, idx))
         wrap.on("dragend", lambda _=None: self._end_col_drag())
+        wrap.on("drop.prevent", lambda _=None, g=group, idx=cb.comma: self._drop_on_interval(g, idx))
         ui.icon("drag_indicator").classes("rtt-grip")
 
     def _arm_col_target(self, wrap, group, idx):  # make an interval cell a drop target for its column

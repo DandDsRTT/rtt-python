@@ -1258,6 +1258,32 @@ async def test_dragging_a_generator_row_onto_another_adds_it_in(user: User) -> N
     assert row1() == ["1", "2", "4"]  # row 1 absorbed row 0
 
 
+async def test_dropping_a_row_grip_directly_onto_another_grip_merges(user: User) -> None:
+    # the PROVEN drop path, mirroring the working column-reorder grips: the grip is BOTH the drag
+    # source AND a drop target, so dropping one row's grip directly onto another row's grip merges
+    # them — independent of whether the input cells accept a native drop. Row 0 onto row 1 → (1,2,4).
+    await _enable(user, "drag to combine")
+    row1 = lambda: [_cell_child(user, f"cell:mapping:1:{p}").value for p in range(3)]
+    assert row1() == ["0", "1", "4"]
+    grip = lambda i: set(user.find(marker=f"map_drag:{i}").elements)
+    UserInteraction(user, grip(0), None).trigger("dragstart")     # grab row 0's grip
+    UserInteraction(user, grip(1), None).trigger("drop.prevent")  # drop onto row 1's grip
+    await user.should_see(marker="cell:mapping:1:0")
+    assert row1() == ["1", "2", "4"]  # row 1 absorbed row 0
+
+
+async def test_dropping_an_interval_grip_directly_onto_another_grip_merges(user: User) -> None:
+    # the column twin of the proven grip-to-grip path: drop one interval's grip onto another's grip.
+    await _enable(user, "drag to combine")
+    tval = lambda i: _cell_child(user, f"target:{i}").value
+    before0, before1 = tval(0), tval(1)
+    grip = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)
+    UserInteraction(user, grip(0), None).trigger("dragstart")     # grab target 0's grip
+    UserInteraction(user, grip(1), None).trigger("drop.prevent")  # drop onto target 1's grip
+    await user.should_see(marker="target:1")
+    assert Fraction(tval(1)) == Fraction(before0) * Fraction(before1)  # target 1 is the product
+
+
 async def test_dragging_an_interval_onto_another_combines_them(user: User) -> None:
     # the column twin: dragstart on interval A's grip, drop onto another interval's COLUMN cells
     # combines them into their product. Drag target 0 onto target 1 → target 1 is the product.
