@@ -29,7 +29,7 @@ PAD = 4  # px a block extends around its cells
 WASH_PAD = GAP / 2  # px a colorization wash extends around its cells — wide enough that
 # adjacent washed tiles' rects meet across the gap, so the colour reads as one
 # continuous band behind the grey tiles (which overhang only by the smaller PAD)
-LABEL_W = 96  # row-label gutter width
+LABEL_W = 106  # row-label gutter width (wide enough for the "complexity pre-" pretransforming title)
 HEADER_H = 36  # column-header height — two text lines tall, so a multi-word title
 # stacks centered onto a second line (via explicit "\n" breaks in col_header, e.g.
 # "domain" / "primes"); single-word titles centre as one line
@@ -2007,11 +2007,11 @@ class _GridBuilder:
             label = self.row_label[key]
             if self.size_factor:
                 label = _pretransform_label(label)
-                # "complexity pretransforming" is too long for the narrow gutter; hyphenate the word at
-                # "pre-" and hard-break before "transforming" (full font, no shrink). The pre-line
-                # rtt-rowlabel honours the newline and still soft-wraps the over-wide "complexity pre-"
-                # at its space, so it renders as "complexity" / "pre-" / "transforming" — no clipping.
-                label = label.replace("pretransforming", "pre-" + chr(10) + "transforming")
+                # "complexity pretransforming" is too long for the gutter; hyphenate the word at "pre-"
+                # and hard-break before "transforming" (full font, no shrink). The nbsp keeps "complexity
+                # pre-" together (LABEL_W is now wide enough for it) and the newline (the pre-line
+                # rtt-rowlabel honours it) drops "transforming": two lines, "complexity pre-" / "transforming".
+                label = label.replace(" pretransforming", chr(160) + "pre-" + chr(10) + "transforming")
             self.cells.append(CellBox(f"label:{key}", 0, self.row_y[key], LABEL_W, self.row_h[key], "rowlabel", text=label))
             if self.row_collapsible[key]:
                 glyph = _fold_glyph(f"row:{key}" in self.collapsed)

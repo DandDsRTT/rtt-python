@@ -2279,7 +2279,7 @@ def test_size_factor_renames_prescaler_to_pretransformer_in_the_labels():
     # the gutter, the size-factor form hard-wraps the long word ("... pre-" / "transforming") at full
     # font (a \n the pre-line rtt-rowlabel honours) rather than shrinking it
     assert lp["label:prescaling"].text == "complexity prescaling"
-    assert lils["label:prescaling"].text == "complexity pre-" + chr(10) + "transforming"
+    assert lils["label:prescaling"].text == "complexity" + chr(160) + "pre-" + chr(10) + "transforming"
     # the predefined-prescalers preset's field label
     assert lp["block:preset:prescaler:label"].text == "predefined prescalers"
     assert lils["block:preset:prescaler:label"].text == "predefined pretransformers"
