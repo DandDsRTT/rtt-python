@@ -2344,13 +2344,29 @@ class _GridBuilder:
         # the chapter-9 superspace interval-vectors row's spine basis index: the dL
         # superspace primes stacked down the quantities spine column, one per row — the
         # row counterpart of the d domain primes that head the existing vectors row's spine
-        # (basis:p cells). Phase 3 reserves the band; Phase 4 will populate the matrix
-        # tiles (B_L over the domain primes, commas/targets as superspace monzos).
+        # (basis:p cells). Phase 3 reserves the band; Phase 4 populates the matrix tiles
+        # (B_L over the domain primes, commas/targets as superspace monzos).
         if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "quantities"):
             bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
             for p in range(self.dL):
                 self.cells.append(CellBox(f"ss_basis:{p}", bx, self.ss_vec_top(p), COL_W, ROW_H,
                                           "prime", text=str(self.superspace_primes[p]), prime=p))
+        # B_L (basis-embedding matrix): each domain element as a dL-tall vector of integer
+        # monzo coefficients over the superspace primes. The cells form a dL × d grid sharing
+        # the prime-column gridlines with the existing vectors row above (the same prime_left
+        # x-axis, the ss_vec_top y-axis) — a read-only "vec" cell per (ss_prime_row, element_col).
+        # service.basis_in_superspace stores ROWS-as-elements (matching the comma-basis storage
+        # convention), so the (ss_prime_row, element_col) entry is basis[element_col][ss_prime_row].
+        if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "primes"):
+            basis = service.basis_in_superspace(self.elements)
+            for ss_prime_idx in range(self.dL):
+                for elem_idx in range(self.d):
+                    val = basis[elem_idx][ss_prime_idx]
+                    self.cells.append(CellBox(
+                        f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}",
+                        self.prime_left(elem_idx), self.ss_vec_top(ss_prime_idx), COL_W, ROW_H,
+                        "vec", text=str(val), prime=ss_prime_idx, comma=elem_idx,
+                    ))
 
         # the chapter-9 CONVERSION rows. Each carries the same dL-tall spine basis index
         # (the superspace primes, one per row) so its right-hand matrix's rows align with
