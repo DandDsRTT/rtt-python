@@ -1853,9 +1853,10 @@ class _Reconciler:
                     on_change=lambda e: self._cb.on_preset("temperament", e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
-            # hovering an option in the OPEN dropdown previews loading that temperament — ring the cells
-            # its comma basis would change (no reflow). The option slot stamps each option's index onto
-            # its q-item (:data-optidx — a plain Vue binding, since the teleported popup blocks both a
+            # hovering an option in the OPEN dropdown previews loading that temperament (reflow the
+            # would-be grid, or redden what it would drop — see on_temperament_hover). The option slot
+            # stamps each option's index onto its q-item (:data-optidx — a plain Vue binding, since the
+            # teleported popup blocks both a
             # slot $emit and any `document` use inside the slot expression); the document-level
             # delegation (_TEMP_HOVER_DELEGATION) reads that index on hover and fires `opthover` at this
             # cell wrap, which listens for it. v-bind itemProps keeps each option clickable/selectable
@@ -2832,18 +2833,27 @@ def index() -> None:
         # revert a live temperament hover preview (pointer left an option / popup closed)
         if rec._temp_token is not None:
             editor.restore_for_preview(rec._temp_token)
+            was_reflow = rec._previewing_temperament  # a REFLOW changed the DOM shape; a redden didn't
             rec._temp_token = None
             rec._temp_baseline = None
             rec._previewing_temperament = False
             rec.preview_baseline = None
-            render()
+            rec.clear_preview()      # strip a redden preview's red/amber rings (render won't touch red)
+            if was_reflow:
+                render()             # only a reflow needs rebuilding back to the real grid
 
     def on_temperament_hover(value):
-        # hovering a temperament option in the open dropdown previews loading it — and unlike the
-        # ring-only +/- hover it REFLOWS: it applies the temperament to a snapshot and re-renders the
-        # whole would-be grid, so a different rank/dimensionality shows its new columns/rows (not just
-        # rings on cells that already exist), with the changed cells ringed against the pre-hover grid.
-        # It reverts on leave / popup-close (_end_temperament_preview) and commits for real on select
+        # hovering a temperament option in the open dropdown previews loading it. How it previews
+        # depends on whether the temperament GROWS/keeps the grid or SHRINKS it:
+        #   • grow / value-only — REFLOW: apply to a snapshot and re-render the whole would-be grid, so
+        #     a new prime / comma / generator actually APPEARS (a bare ring can't show a cell that isn't
+        #     there yet), the changed cells ringed amber against the pre-hover grid.
+        #   • shrink (fewer primes / commas / generators) — REDDEN, don't reflow: a reflow would just
+        #     delete the doomed column/row mid-preview. Instead hold the current grid so it stays on
+        #     screen and ring it RED (the +/- remove preview's behaviour — the user asked to see what a
+        #     hover would delete), the surviving changed cells amber. In a mixed change the deletion
+        #     wins (additions aren't shown); seeing what goes away is what was asked for.
+        # Reverts on leave / popup-close (_end_temperament_preview), commits for real on select
         # (on_preset). The hover delegation marshals the hovered option's INDEX in `detail` (NiceGUI
         # sets each option's value to its POSITION, not the key — see ChoiceElement._update_options),
         # so normalize the payload and map the index back through the ordered options.
@@ -2861,11 +2871,25 @@ def index() -> None:
             rec._temp_token = editor.capture_for_preview()
             rec._temp_baseline = last_lay[0]
         editor.restore_for_preview(rec._temp_token)              # re-apply from the same base each option
+        base = editor.state                                      # its dimensions, before the temperament
         editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key])
-        rec._previewing_temperament = True                       # keep the chooser's own value + popup steady
-        rec.preview_baseline = rec._temp_baseline                # ring every cell this temperament moves
-        rec.preview_source = None
-        render()
+        hyp = editor.state                                       # ...and after, to spot a shrink
+        new = editor.layout(prev_ids=rec._temp_baseline.identities)
+        if hyp.d < base.d or hyp.r < base.r or hyp.n < base.n:   # drops a prime / comma / generator
+            modified = spreadsheet.changed_cell_ids(rec._temp_baseline, new)  # value moved → amber
+            removed = spreadsheet.removed_cell_ids(rec._temp_baseline, new)   # gone from the grid → red
+            editor.restore_for_preview(rec._temp_token)          # back to the real doc; the grid keeps its shape
+            if rec._previewing_temperament:                      # a prior option reflowed the DOM — rebuild it
+                rec._previewing_temperament = False
+                rec.preview_baseline = None
+                render()
+            rec.show_preview(modified, removed)                  # redden the doomed cells in place, no reflow
+        else:
+            rec.clear_preview()                                  # drop any red a prior shrink option left
+            rec._previewing_temperament = True                   # keep the chooser's own value + popup steady
+            rec.preview_baseline = rec._temp_baseline            # ring every cell this temperament moves
+            rec.preview_source = None
+            render()
 
     # generator-tuning wheel preview: hovering the cell snapshots a baseline so each wheel notch (a
     # real, committed nudge — handled by on_gentuning_wheel, which re-renders) rings the OTHER cells

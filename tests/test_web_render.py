@@ -1802,3 +1802,30 @@ async def test_hovering_a_temperament_of_a_different_dimensionality_reflows_the_
     await user.should_see(marker="prime:3")                  # reflowed: the would-be grid's new prime-7 column
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})   # leave
     await user.should_not_see(marker="prime:3")              # reverted to the 5-limit grid
+
+
+async def test_hovering_a_lower_limit_temperament_keeps_the_dropped_column_red(user: User) -> None:
+    # the counterpart to the reflow test: a hover that DROPS a prime/comma/generator must NOT reflow the
+    # doomed cells away (that would just delete them mid-preview). Instead the grid holds its current
+    # shape so the column/row the hover would remove stays on screen and turns RED — exactly what the
+    # +/- remove preview does, and what the user asked for: see what a hover deletes — while the
+    # surviving cells whose value changes ring amber. From a committed 7-limit rank-2 temperament,
+    # hovering a 5-limit one reddens the dropped prime-7 column and leaves it on screen; leaving clears it.
+    from rtt.web import presets
+    await user.open("/")
+    _toggle(user, "presets")
+    await user.should_see(marker="preset:temperament")
+    seven = next(k for k in presets.temperament_options()
+                 if k.startswith("7:") and k in presets.TEMPERAMENT_COMMAS
+                 and len(presets.TEMPERAMENT_COMMAS[k]) == 2)   # rank 2 over d=4 (n=2): a clean limit drop
+    _cell_child(user, "preset:temperament").set_value(seven)    # commit it — the prime-7 column appears
+    await user.should_see(marker="prime:3")
+    wrap = set(user.find(marker="preset:temperament").elements)
+    five = next(k for k in presets.temperament_options()
+                if k.startswith("5:") and k in presets.TEMPERAMENT_COMMAS)
+    idx = list(presets.temperament_options()).index(five)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # hover a 5-limit temperament
+    assert "rtt-preview-remove" in _wrap_classes(user, "prime:3")   # the dropped prime-7 column → red
+    await user.should_see(marker="prime:3")                          # ...still on screen (NOT reflowed away)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})    # leave the option
+    assert "rtt-preview-remove" not in _wrap_classes(user, "prime:3")  # cleared on mouse-out
