@@ -2065,6 +2065,21 @@ def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
     assert on["symbol:prescaling:held"].text == "𝐿H"
 
 
+def test_size_factor_names_the_bare_prescaler_ZL_not_just_L():
+    # with equivalences on, the rectangular pretransformer's bare tile names 𝑋 = 𝑍𝐿 (the guide's
+    # size-sensitized form), not 𝑋 = 𝐿 (the square diagonal); and the NAME drops "= log-prime matrix"
+    # (the rectangular 𝑍𝐿 is not "the log-prime matrix").
+    lils = {c.id: c for c in _with(scheme="TILT minimax-lils-S", weighting=True,
+                                   symbols=True, names=True, equivalences=True).cells}
+    assert lils["symbol:prescaling:primes"].text == "𝑋 = 𝑍𝐿"
+    assert lils["caption:prescaling:primes"].text == "complexity prescaler"
+    # lp keeps 𝑋 = 𝐿 and the log-prime-matrix name
+    lp = {c.id: c for c in _with(scheme="TILT minimax-S", weighting=True,
+                                 symbols=True, names=True, equivalences=True).cells}
+    assert lp["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
+    assert lp["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
+
+
 def test_non_log_prime_prescaler_stays_generic_X_named_in_the_equivalence():
     # when the prescaler is NOT the log-prime matrix it keeps the generic placeholder 𝑋
     # everywhere — the products read 𝑋C / 𝑋T / 𝑋H, not the concrete matrix. The concrete

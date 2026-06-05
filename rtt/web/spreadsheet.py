@@ -542,11 +542,18 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     # the prescaler the DISPLAYED diagonal realises — matched at display precision, so editing a
     # cell to its shown value and back recovers the named prescaler (and the 𝑋 = 𝐿 awareness)
     realized = service.displayed_prescaler_name(state.mapping, tuning_scheme, custom_prescaler)
+    size_factor = service.complexity_size_factor(tuning_scheme)
     is_log_prime = realized == "log-prime"
     symbol = "𝐿" if is_log_prime else "𝑋"
     # the bare tile's SYMBOL equivalence names the realised prescaler concretely; a real deviation
-    # has no closed form, so none
-    equivalence = f" = {PRESCALER_LETTER[realized]}" if realized else ""
+    # has no closed form, so none. The size factor sizes the diagonal 𝐿 into the rectangular 𝑍𝐿
+    # (the guide's 𝑋 = 𝑍𝐿), so the bare tile names THAT rather than the bare 𝐿.
+    if realized == "log-prime" and size_factor:
+        equivalence = " = 𝑍𝐿"
+    elif realized:
+        equivalence = f" = {PRESCALER_LETTER[realized]}"
+    else:
+        equivalence = ""
     # the bare matrix keeps the literal abstract 𝑋 as its big SYMBOL; only the products' "L"
     # placeholder resolves to the live glyph ("LC"/"LD"/… → 𝐿C/… or 𝑋C/…), matching their headers
     prescaling_symbols = {(r, c): symbol + s[1:] for (r, c), s in SYMBOLS.items()
@@ -555,7 +562,9 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     # else the generic 𝒙ᵢ — so they don't mix with the 𝐿 the products/headers carry
     row_labels = {**ROW_LABEL_LETTERS, ("prescaling", "primes"): "𝒍" if is_log_prime else "𝒙"}
     effective_captions = dict(CAPTIONS)
-    if is_log_prime and show_equiv:  # the bare tile's NAME gains its equivalence with the equiv layer
+    # the NAME gains "= log-prime matrix" only for the plain diagonal 𝐿; the rectangular 𝑍𝐿 (size
+    # factor) is not "the log-prime matrix", so it keeps the bare caption.
+    if is_log_prime and not size_factor and show_equiv:
         effective_captions[("prescaling", "primes")] += " = log-prime matrix"
     return _PrescalerLabels(
         scheme_prescaler=scheme_prescaler, symbol=symbol, equivalence=equivalence,
