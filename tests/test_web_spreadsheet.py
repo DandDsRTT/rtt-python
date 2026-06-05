@@ -1520,6 +1520,31 @@ def test_mapping_row_drag_handles_need_two_rows():
     assert {"map_drag:0", "map_drag:1"} <= {c.id for c in _layout().cells}  # a handle per generator row
 
 
+def test_interval_drag_handles_hug_below_each_ratio():
+    # each interval column (commas / targets / held / interest) with ≥2 entries gets a drag handle
+    # just below each ratio cell — drag one interval onto another to combine them. They sit clear of
+    # the branch-point ± / reorder handles, which ride the fan-out gap ABOVE the ratio.
+    st = service.from_mapping(((12, 19, 28),))  # 12-ET 5-limit: two commas
+    opts = {**settings.defaults(), "optimization": True}  # show the held column
+    lay = spreadsheet.build(st, opts, interest=((-1, 1, 0), (0, 0, 1)), held_vectors=((1, 0, 0), (-1, 1, 0)))
+    cells = {c.id: c for c in lay.cells}
+    for group in ("comma", "held", "interest"):
+        for i in range(2):
+            handle, ratio = cells[f"int_drag:{group}:{i}"], cells[f"{group}:{i}"]
+            assert handle.comma == i and handle.x == ratio.x  # aligned under its own ratio column
+            assert handle.y >= ratio.y + ratio.h  # ...BELOW the ratio (clear of the ± zone above it)
+    assert "int_drag:target:0" in cells  # the default target list (many) gets them too
+
+
+def test_interval_drag_handles_need_two_entries_and_skip_all_interval_targets():
+    one_comma = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone: a single comma
+    cells = {c.id for c in spreadsheet.build(one_comma).cells}
+    assert not any(c.startswith("int_drag:comma") for c in cells)  # one comma — nothing to combine
+    # an all-interval target list is auto (Tₚ = I, not editable), so it carries no combine handles
+    ai = {c.id for c in spreadsheet.build(one_comma, settings.defaults(), tuning_scheme="minimax-S").cells}
+    assert not any(c.startswith("int_drag:target") for c in ai)
+
+
 def test_full_rank_temperament_shows_an_empty_commas_column():
     # a full-rank (n=0) temperament tempers nothing out — the commas column shows no comma at
     # all (not the trivial zero comma's "1/1"); the + remains so a comma can be added back.

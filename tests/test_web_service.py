@@ -137,6 +137,19 @@ def test_add_mapping_row_to_combines_generators_holding_the_temperament():
     assert service.generators(combined.mapping) == ("4/3", "3/2")
 
 
+def test_add_comma_to_recombines_the_basis_holding_the_temperament():
+    # dragging comma A onto comma B adds A into B: B's vector becomes A + B. The dual of
+    # add_mapping_row_to — a unimodular column operation on the comma basis, so the temperament
+    # (its mapping, rank and nullity) is untouched; only which intervals name the nullspace
+    # changes. 12-ET in the 5-limit has two commas to combine.
+    twelve = service.from_mapping(((12, 19, 28),))
+    combined = service.add_comma_to(twelve, 0, 1)  # comma 1 += comma 0
+    assert combined.comma_basis[1] == tuple(a + b for a, b in zip(twelve.comma_basis[1], twelve.comma_basis[0]))
+    assert combined.comma_basis[0] == twelve.comma_basis[0]  # the dragged comma kept as-is
+    assert combined.mapping == twelve.mapping  # the temperament (the mapping dual) is unchanged
+    assert (combined.d, combined.r, combined.n) == (twelve.d, twelve.r, twelve.n)
+
+
 def test_full_rank_mapping_has_zero_comma_and_zero_nullity():
     # Just intonation: nothing tempered out. The dual is a single zero comma.
     state = service.from_mapping([[1, 0, 0], [0, 1, 0], [0, 0, 1]])

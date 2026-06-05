@@ -16,6 +16,7 @@ from __future__ import annotations
 import functools
 import re
 from dataclasses import dataclass
+from fractions import Fraction
 
 from rtt.web import service
 from rtt.web import settings as show_settings
@@ -864,6 +865,47 @@ class Editor:
             tuning[source] -= tuning[target]
             self.generator_tuning = tuple(tuning)
         self.state = service.add_mapping_row_to(self.state, source, target)
+
+    def add_comma_to(self, source: int, target: int) -> None:
+        """Drag comma ``source`` onto comma ``target``: add the dragged comma into the dropped-on
+        one (``comma[target] += comma[source]``). The interval-column twin of
+        :meth:`add_mapping_row_to` — a comma-basis change that holds the temperament (see
+        :func:`service.add_comma_to`); the mapping is unaffected, so no tuning transform."""
+        n = len(self.state.comma_basis)
+        if source == target or not (0 <= source < n and 0 <= target < n):
+            return
+        self._snapshot()
+        self._clear_pending()
+        self.state = service.add_comma_to(self.state, source, target)
+
+    def _combine_interval_vectors(self, vectors: list, source: int, target: int) -> None:
+        """Add interval ``source`` into interval ``target`` in a vector list (intervals of
+        interest / held intervals): the dropped-on vector becomes the two intervals' sum (their
+        product). Snapshots only when it actually applies (a valid, distinct pair)."""
+        if source == target or not (0 <= source < len(vectors) and 0 <= target < len(vectors)):
+            return
+        self._snapshot()
+        vectors[target] = tuple(a + b for a, b in zip(vectors[target], vectors[source]))
+
+    def add_interest_to(self, source: int, target: int) -> None:
+        """Drag one interval of interest onto another to combine them into their product."""
+        self._combine_interval_vectors(self.interest_vectors, source, target)
+
+    def add_held_to(self, source: int, target: int) -> None:
+        """Drag one held interval onto another to combine them into their product."""
+        self._combine_interval_vectors(self.held_vectors, source, target)
+
+    def add_target_to(self, source: int, target: int) -> None:
+        """Drag one target interval onto another to combine them into their product, materializing
+        the spec set into a manual override (like :meth:`remove_target`). Targets are ratio
+        strings, so the product is taken directly (a ratio product is the intervals' vector sum)."""
+        targets = self._current_targets()
+        if source == target or not (0 <= source < len(targets) and 0 <= target < len(targets)):
+            return
+        product = Fraction(targets[source]) * Fraction(targets[target])
+        self._snapshot()
+        targets[target] = f"{product.numerator}/{product.denominator}"
+        self.target_override = tuple(targets)
 
     def add_comma(self) -> None:
         """Begin a pending comma: a blank draft column for the user to fill in. It is

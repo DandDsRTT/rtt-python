@@ -12,6 +12,8 @@ Cells are located by the marker each carries (``.mark(cb.id)`` in _make_cell, th
 Python-side parallel of the data-eid the JS reconciler uses).
 """
 
+from fractions import Fraction
+
 import nicegui.ui as ui
 import pytest
 from nicegui.elements.tooltip import Tooltip
@@ -1128,6 +1130,22 @@ async def test_dragging_a_generator_row_onto_another_adds_it_in(user: User) -> N
     UserInteraction(user, handle(1), None).trigger("drop.prevent")  # drop it onto the fifth row
     await user.should_see(marker="cell:mapping:1:0")
     assert row1() == ["1", "2", "4"]  # row 1 absorbed row 0
+
+
+async def test_dragging_an_interval_onto_another_combines_them(user: User) -> None:
+    # the interval drag handle drives the same pipeline for a column: dragstart records the dragged
+    # interval, drop on another interval's handle combines them into their product and re-renders.
+    # The default target list is on screen — drag target 0 onto target 1 → target 1 is the product.
+    await user.open("/")
+    tval = lambda i: _cell_child(user, f"target:{i}").value
+    before0, before1 = tval(0), tval(1)
+    handle = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)
+    assert next(iter(handle(0)))._props.get("draggable")  # the browser will start a drag from it
+    UserInteraction(user, handle(0), None).trigger("dragstart")     # grab target 0
+    UserInteraction(user, handle(1), None).trigger("drop.prevent")  # drop it onto target 1
+    await user.should_see(marker="target:1")
+    assert Fraction(tval(1)) == Fraction(before0) * Fraction(before1)  # target 1 is the product
+    assert tval(0) == before0  # the dragged target is unchanged
 
 
 # --- tier 3: the #3 drift guard. _make_cell builds each cell-kind, render() fills each kind,

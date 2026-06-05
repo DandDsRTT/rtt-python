@@ -890,6 +890,7 @@ class _Reconciler:
         self._editor = editor
         self._cb = None  # callbacks (act, render, on_*) wired by index() after they are defined
         self._row_drag: int | None = None  # the mapping row a drag-to-add started on (dragstart → drop)
+        self._col_drag: tuple[str, int] | None = None  # the (interval group, index) a drag-to-add started on
         self.els: dict = {}  # entity id -> outer element (persists across renders)
         self.inputs: dict = {}  # mapping cell id -> q-input
         self.labels: dict = {}  # cell id -> the label whose text tracks state
@@ -996,6 +997,7 @@ class _Reconciler:
         self.cell_kinds["map_minus"] = _KindHandlers(self._build_map_minus)
         self.cell_kinds["map_plus"] = _KindHandlers(self._build_map_plus)
         self.cell_kinds["map_drag"] = _KindHandlers(self._build_map_drag)
+        self.cell_kinds["int_drag"] = _KindHandlers(self._build_int_drag)
         self.cell_kinds["basis_minus"] = _KindHandlers(self._build_basis_minus)
         self.cell_kinds["comma_minus"] = _KindHandlers(self._build_comma_minus)
         self.cell_kinds["comma_plus"] = _KindHandlers(self._build_comma_plus)
@@ -1675,7 +1677,7 @@ class _Reconciler:
         # index can't ride in the drop event's dataTransfer through NiceGUI's arg paths). dragover
         # must cancel its default (client-side, so it doesn't round-trip per move) to mark this a
         # valid drop target; the drop adds the dragged row into this one and re-renders.
-        wrap.classes("rtt-row-handle").props("draggable=true")
+        wrap.classes("rtt-drag-handle rtt-row-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, idx=cb.gen: self._begin_row_drag(idx))
         wrap.on("dragend", lambda _=None: self._end_row_drag())
         wrap.on("dragover", js_handler="(e) => e.preventDefault()")
@@ -1692,6 +1694,39 @@ class _Reconciler:
         src = self._row_drag
         if src is not None and src != idx:
             self._cb.act(lambda: self._editor.add_mapping_row_to(src, idx))
+
+    # the interval-column drag handles (comma / target / held / interest): the column twin of the
+    # mapping-row handle. Drag one interval onto another in the SAME column to ADD it in (their
+    # product) — the source's (group, index) is held server-side from dragstart through drop, so
+    # the drop only combines within its own column. See spreadsheet's int_drag.
+    _INTERVAL_COMBINE = {
+        "comma": "add_comma_to", "target": "add_target_to",
+        "held": "add_held_to", "interest": "add_interest_to",
+    }
+
+    def _build_int_drag(self, cb, wrap):
+        group = cb.id.split(":")[1]  # int_drag:<group>:<index>
+        wrap.classes("rtt-drag-handle rtt-col-handle").props("draggable=true")
+        wrap.on("dragstart", lambda _=None, g=group, idx=cb.comma: self._begin_col_drag(g, idx))
+        wrap.on("dragend", lambda _=None: self._end_col_drag())
+        wrap.on("dragover", js_handler="(e) => e.preventDefault()")
+        wrap.on("drop.prevent", lambda _=None, g=group, idx=cb.comma: self._drop_on_interval(g, idx))
+        ui.icon("drag_indicator").classes("rtt-grip")
+
+    def _begin_col_drag(self, group, idx):
+        self._col_drag = (group, idx)
+
+    def _end_col_drag(self):
+        self._col_drag = None
+
+    def _drop_on_interval(self, group, idx):  # add the dragged interval into the one it was dropped on
+        if self._col_drag is None:
+            return
+        src_group, src = self._col_drag
+        if src_group != group or src == idx:  # only combine within the same interval column
+            return
+        combine = getattr(self._editor, self._INTERVAL_COMBINE[group])
+        self._cb.act(lambda: combine(src, idx))
 
     def _build_basis_minus(self, cb, wrap):  # the domain − on the interval-vectors row's left bus
         wrap.classes("rtt-minus-zone")

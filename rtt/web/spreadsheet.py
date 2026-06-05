@@ -1738,6 +1738,17 @@ class _GridBuilder:
                 # point (the top bus stretches out to reach it); an empty set centres it on the trunk
                 self.cells.append(CellBox(cid, self.plus_stub_x[ckey] - BTN / 2, self.fanout_y - BTN / 2, BTN, BTN, kind))
 
+            def int_drag(group, count, col_left):
+                # a drag handle hugging the bottom of each interval ratio (commas / targets / held /
+                # interest): drag one interval onto another to ADD it in (their product). Needs ≥ 2
+                # entries to have something to combine; rides the clear gap just below the ratio, so it
+                # stays clear of the branch-point ± / reorder handles up top — deliberately separate
+                # from those, the column twin of the mapping-row handles.
+                if count < 2:
+                    return
+                for i in range(count):
+                    self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), qy + ROW_H, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
+
             if self.tile_open("quantities", "gens"):  # the generator ratios heading their sub-columns,
                 for g in range(self.r):                # the column-header dual of the spine list (gen:i)
                     self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.gens[g], gen=g))
@@ -1765,6 +1776,7 @@ class _GridBuilder:
                 # last column's branch point — cancelling the draft, or dropping a real comma when >1
                 if self.pending is not None or self.nc > 1:
                     branch_minus("comma_minus", "commas", self.nc_shown - 1, "comma_minus")
+                int_drag("comma", self.nc, self.comma_left)  # drag a comma onto another to recombine the basis
             if self.tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
                 for i in range(self.r):                       # derived from M like the comma ratios — no ± control)
                     self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.gens[i]))
@@ -1781,6 +1793,8 @@ class _GridBuilder:
                 if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
                     branch_minus("target_minus:pending", "targets", self.k, "target_minus")
+                if not self.all_interval:  # the all-interval list (Tₚ = I) is auto, not editable, so no drag-combine
+                    int_drag("target", self.k, self.target_left)
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
                 for i in range(self.nh):
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
@@ -1790,6 +1804,7 @@ class _GridBuilder:
                 if self.pending_held is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("held:pending", self.held_left(self.nh), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nh, pending=True))
                     branch_minus("held_minus:pending", "held", self.nh, "held_minus")
+                int_drag("held", self.nh, self.held_left)  # drag a held interval onto another to combine them
             if self.tile_open("quantities", "interest"):  # the user's other intervals of interest
                 for i in range(self.mi):
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
@@ -1801,6 +1816,7 @@ class _GridBuilder:
                     # blank red vector cells below, and a − on its branch point to cancel the draft
                     self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.mi, pending=True))
                     branch_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
+                int_drag("interest", self.mi, self.interest_left)  # drag an interval of interest onto another to combine them
             # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
             # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
             # the first interval can still be added). The − is the hover counterpart on a branch point.

@@ -512,12 +512,15 @@
 .rtt-glyph:hover { color:#333; }
 .rtt-glyph > svg { display:block; width:100%; height:100%; }
 .rtt-fanbtn { width:100%; height:100%; }   /* the always-shown + fills its BTN-sized cell wrap */
-/* the per-mapping-row drag handle: a greyscale grip just left of each row, dragged onto another
-   row to add this generator into it. Subtle by default, darkening on hover (like the fan glyphs). */
-.rtt-row-handle { z-index:4; cursor:grab; color:#bbb; }
-.rtt-row-handle:hover { color:#555; }
-.rtt-row-handle:active { cursor:grabbing; }
-.rtt-row-handle .rtt-grip { font-size:18px; pointer-events:none; }
+/* drag-to-add handles: a greyscale grip dragged onto a sibling to add this element into it — a
+   mapping-row handle just LEFT of each row (generators), an interval-column handle just BELOW each
+   ratio (commas / targets / held / interest). Subtle by default, darkening on hover (like the fan
+   glyphs). Deliberately separate from the branch-point ± / reorder handles up top. */
+.rtt-drag-handle { z-index:4; cursor:grab; color:#bbb; }
+.rtt-drag-handle:hover { color:#555; }
+.rtt-drag-handle:active { cursor:grabbing; }
+.rtt-drag-handle .rtt-grip { font-size:18px; pointer-events:none; }
+.rtt-col-handle .rtt-grip { font-size:16px; }  /* the column grip rides a shorter band */
 /* the optimize button fills its cell (a normal rectangle hugging the word); its text is the
    same size as the optimization power number (the ∞ box, _CELL_FONT). It's a 3D button: a
    light-top/dark-bottom face with a crisp inset bevel (white highlight top-left, soft shadow

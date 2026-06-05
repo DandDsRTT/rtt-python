@@ -497,6 +497,53 @@ def test_add_mapping_row_to_ignores_a_row_dropped_on_itself():
     assert editor.can_undo is False  # and not an undoable step
 
 
+def test_add_comma_to_recombines_the_comma_basis_undoably():
+    editor = Editor()
+    editor.edit_mapping(((12, 19, 28),))  # 12-ET 5-limit: d=3 r=1 n=2 — two commas to combine
+    before = editor.state.comma_basis
+    editor.add_comma_to(0, 1)  # drag comma 0 onto comma 1: comma 1 += comma 0
+    assert editor.state.comma_basis[1] == tuple(a + b for a, b in zip(before[1], before[0]))
+    assert editor.state.mapping == ((12, 19, 28),)  # the temperament is unchanged
+    editor.undo()
+    assert editor.state.comma_basis == before  # a single undoable step
+
+
+def test_add_interest_to_combines_two_intervals_of_interest_undoably():
+    editor = Editor()
+    editor.set_interest_vectors([(-1, 1, 0), (0, 0, 1)])  # 3/2 and 5/1
+    editor.add_interest_to(0, 1)  # interest 1 += interest 0 → (-1, 1, 1) = 15/2
+    assert editor.interest_vectors == [(-1, 1, 0), (-1, 1, 1)]  # the dragged one kept, the target summed
+    editor.undo()
+    assert editor.interest_vectors == [(-1, 1, 0), (0, 0, 1)]
+
+
+def test_add_held_to_combines_two_held_intervals_undoably():
+    editor = Editor()
+    editor.set_held_vectors([(1, 0, 0), (-1, 1, 0)])  # 2/1 and 3/2
+    editor.add_held_to(0, 1)  # held 1 += held 0 → (0, 1, 0) = 3/1
+    assert editor.held_vectors == [(1, 0, 0), (0, 1, 0)]
+    editor.undo()
+    assert editor.held_vectors == [(1, 0, 0), (-1, 1, 0)]
+
+
+def test_add_target_to_multiplies_two_targets_materializing_the_override():
+    editor = Editor()
+    editor.set_target_override_vectors([(-1, 1, 0), (-2, 0, 1)])  # 3/2 and 5/4
+    editor.add_target_to(0, 1)  # target 1 = 3/2 · 5/4 = 15/8 (the intervals' product)
+    assert editor.target_override == ("3/2", "15/8")
+    editor.undo()
+    assert editor.target_override == ("3/2", "5/4")  # a single undoable step
+
+
+def test_interval_drag_add_ignores_a_drop_on_itself():
+    editor = Editor()
+    editor.set_interest_vectors([(1, 0, 0), (0, 1, 0)])
+    steps = len(editor._undo_stack)  # the set was one undoable step
+    editor.add_interest_to(1, 1)  # dropping an interval on itself would double it — refused
+    assert editor.interest_vectors == [(1, 0, 0), (0, 1, 0)]  # unchanged
+    assert len(editor._undo_stack) == steps  # ...and no new undoable step pushed
+
+
 def test_add_and_remove_target_set_a_manual_override():
     editor = Editor()  # default TILT targets, no manual override yet
     assert editor.target_override is None
