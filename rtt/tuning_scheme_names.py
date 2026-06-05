@@ -35,6 +35,21 @@ _SLOPE_BY_LETTER = {
     "S": "simplicityWeight",
     "C": "complexityWeight",
 }
+_LETTER_BY_SLOPE = {slope: letter for letter, slope in _SLOPE_BY_LETTER.items()}
+
+# The complexity family token each (log-prime power, prime power, size factor) triple names —
+# the inverse of the prescaler/size assignments in :func:`_complexity_traits_from_name`. The
+# log-product (lp) default contributes no token (it is the bare ``minimax-S``). The size-factor
+# families (lils/ils) become their octave-holding forms (lols/ols) when the octave is held — see
+# :func:`systematic_name`. A triple absent here is no named complexity (rendered as unnamed).
+_COMPLEXITY_FAMILY = {
+    (0, 0, 0): "copfr",
+    (1, 0, 0): "",  # log-product (lp): the default, no token
+    (0, 1, 0): "sopfr",
+    (1, 0, 1): "lils",
+    (0, 1, 1): "ils",
+}
+_OCTAVE_HOLDING_FAMILY = {"lils": "lols", "ils": "ols"}
 
 
 def _complexity_traits_from_name(name: str) -> dict:
@@ -198,3 +213,75 @@ def _optimization_power_from_name(name: str) -> float:
     if mean_match:
         return float(int(mean_match.group(1)))
     return 1
+
+
+def systematic_name(spec: TuningSchemeSpec) -> str | None:
+    """The canonical systematic name of a tuning scheme — the inverse of
+    :func:`tuning_scheme_from_systematic_name`. ``None`` when the spec corresponds to no
+    systematic name (a non-integer optimization power, or a complexity outside the named
+    families), for which a chooser shows "-".
+
+    The grammar mirrors the parser's reading order: ``[held-X ][destretched-X ][TARGET ]
+    [nonprime ]mini{max,RMS,average,-N-mean}[complexity][SLOPE]``."""
+    power = _power_word(spec.optimization_power)
+    if power is None:
+        return None
+    complexity = _complexity_part(spec)
+    if complexity is None:
+        return None
+    family, consumes_octave = complexity
+    letter = _LETTER_BY_SLOPE[spec.damage_weight_slope]
+    if family:  # a named complexity is dash-delimited from the mini-prefix and the slope
+        tokens = (["E"] if spec.complexity_norm_power == 2 else []) + [family]
+        core = f"{power}-" + "-".join(tokens) + f"-{letter}"
+    else:  # log-product (the default): the Euclidean E (if any) glues straight to the slope
+        core = f"{power}-" + ("E" if spec.complexity_norm_power == 2 else "") + letter
+    return _scheme_prefix(spec, consumes_octave) + core
+
+
+def _power_word(power: float) -> str | None:
+    """The ``mini…`` token an optimization power renders to, or ``None`` if the power has no
+    systematic name (a non-integer power other than ∞)."""
+    if power == inf:
+        return "minimax"
+    if power == 2:
+        return "miniRMS"
+    if power == 1:
+        return "miniaverage"
+    if float(power).is_integer() and power > 0:
+        return f"mini-{int(power)}-mean"
+    return None
+
+
+def _complexity_part(spec: TuningSchemeSpec) -> tuple[str, bool] | None:
+    """The complexity family token and whether it consumes the held octave (the lols/ols
+    log-/integer-odd-limit forms), or ``None`` if the complexity is outside the named families.
+    The empty token is the log-product default. Only norm powers 1 (taxicab) and 2 (Euclidean)
+    are named."""
+    if spec.complexity_norm_power not in (1, 2):
+        return None
+    family = _COMPLEXITY_FAMILY.get(
+        (spec.complexity_log_prime_power, spec.complexity_prime_power, spec.complexity_size_factor)
+    )
+    if family is None:
+        return None
+    if family in _OCTAVE_HOLDING_FAMILY and spec.held_intervals == "octave":
+        return _OCTAVE_HOLDING_FAMILY[family], True  # lils->lols / ils->ols, octave folded in
+    return family, False
+
+
+def _scheme_prefix(spec: TuningSchemeSpec, octave_held_by_complexity: bool) -> str:
+    """The ``held-X destretched-X TARGET nonprime `` prefix in front of the ``mini…`` core, in
+    the parser's reading order. A held octave the complexity already encodes (lols/ols) is not
+    re-emitted as a ``held-`` token."""
+    prefix = ""
+    if spec.held_intervals and not octave_held_by_complexity:
+        prefix += f"held-{spec.held_intervals} "
+    if spec.destretched_interval:
+        prefix += f"destretched-{spec.destretched_interval} "
+    target = (spec.target_intervals or "").strip()
+    if target and target != "{}":  # an all-interval ({}/empty) scheme carries no target prefix
+        prefix += f"{target} "
+    if spec.nonprime_basis_approach:
+        prefix += f"{spec.nonprime_basis_approach} "
+    return prefix
