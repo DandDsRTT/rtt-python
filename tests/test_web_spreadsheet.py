@@ -1862,6 +1862,37 @@ def test_charts_on_adds_a_weight_bar_chart_over_the_targets():
     assert ch.y + ch.h <= on["weight:target:0"].y  # the chart sits above its values
 
 
+def test_size_factor_makes_the_all_interval_weight_a_matrix_dropping_the_chart():
+    # all-interval + size factor (lils): the per-prime weight list is blind to the size factor,
+    # so the weight tile renders the d×(d+1) matrix 𝑊 = (𝑍𝐿)⁻ instead — and a bar chart can't
+    # draw a matrix, so it's dropped. lp (the square pretransformer) keeps the list + chart.
+    lp = {c.id: c for c in _with(scheme="minimax-S", weighting=True, charts=True).cells}
+    lils = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True, charts=True).cells}
+    W = service.damage_weight_matrix(((1, 1, 0), (0, 1, 4)), "minimax-lils-S")
+    # lp: the per-prime weight list, with its bar chart
+    assert "weight:target:0" in lp and "chart:weight:targets" in lp
+    # lils: a 3×4 matrix of value cells; the scalar list and the chart are both gone
+    assert "weight:target:0" not in lils
+    assert "chart:weight:targets" not in lils
+    for i in range(3):
+        for j in range(4):
+            assert lils[f"cell:weight:targets:{i}:{j}"].text == service.cents(W[i][j])
+    # the matrix is d (= 3) rows tall, stepping ROW_H; the size column overflows one COL_W right
+    assert lils["cell:weight:targets:1:0"].y == lils["cell:weight:targets:0:0"].y + spreadsheet.ROW_H
+    assert lils["cell:weight:targets:0:3"].x == lils["cell:weight:targets:0:2"].x + spreadsheet.COL_W
+
+
+def test_all_interval_weight_matrix_carries_the_W_symbol_and_a_spanning_bracket():
+    on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True,
+                                 symbols=True, equivalences=True).cells}
+    # capital 𝑊 with its (𝑍𝐿)⁻ equivalence — NOT the per-prime diag(𝐿)⁻¹ the lp all-interval shows
+    assert on["symbol:weight:targets"].text == "𝑊 = (𝑍𝐿)⁻"
+    # one tall [ … ] spanning all d = 3 matrix rows, the right bracket past the overflowing size column
+    assert on["bracket:weight:l"].text == "[" and on["bracket:weight:r"].text == "]"
+    assert on["bracket:weight:l"].h == 3 * spreadsheet.ROW_H
+    assert on["bracket:weight:r"].x > on["cell:weight:targets:0:3"].x
+
+
 def test_weight_row_carries_its_symbol_and_caption():
     on = {c.id: c for c in _with(weighting=True, symbols=True, names=True).cells}
     # 𝒘 (bold italic, the same glyph the damage equivalence's 𝒘 factor uses)

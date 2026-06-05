@@ -499,6 +499,27 @@ def damage_weight_slope(scheme: str = DEFAULT_TUNING_SCHEME) -> str:
     return resolve_tuning_scheme(scheme).damage_weight_slope
 
 
+def damage_weight_matrix(mapping, scheme: str = DEFAULT_TUNING_SCHEME, override=None) -> tuple:
+    """The all-interval damage weight MATRIX 𝑊 — the inverse complexity pretransformer the
+    retuning map is measured against in the objective ‖𝒓𝑊‖. When the size factor makes the
+    pretransformer 𝑋 = 𝑍𝐿 rectangular (the lils family), 𝑊 has no per-prime-list form: it is the
+    d×(d+1) left inverse (𝑍𝐿)⁻ = 𝐷⁻¹𝑍⁻ — the diagonal prescaler 𝐷 inverted, composed with the
+    size-sensitizing matrix's left inverse 𝑍⁻ = [𝐼 − ½𝐽 | ½𝟏] (so each row i is 𝐷ᵢ⁻¹ times
+    ``[…, δᵢⱼ − ½, …, ½]``).
+
+    This is the guide's REPRESENTATIVE inverse (the one it prints, sans a typo: its displayed
+    grid scales row i by 𝐷ᵢ rather than 𝐷ᵢ⁻¹). It is illustrative, not the literal solve: 𝑍𝐿 is
+    rectangular, so its left inverse is not unique, and the true minimax uses the max−min dual
+    norm rather than a fixed matrix. ``override`` rides the custom prescaler diagonal through, like
+    the other weight/complexity helpers."""
+    diag = complexity_prescaler(mapping, scheme, override=override)
+    d = len(diag)
+    return tuple(
+        tuple((1.0 - 0.5) / diag[i] if i == j else -0.5 / diag[i] for j in range(d)) + (0.5 / diag[i],)
+        for i in range(d)
+    )
+
+
 # The three predefined complexity prescalers the alt.-complexity control offers, as the
 # (log-prime power, prime power) traits each sets — identity (count), log-prime, prime (sopfr).
 PRESCALERS = {"identity": (0, 0), "log-prime": (1, 0), "prime": (0, 1)}
@@ -849,6 +870,13 @@ def plain_text_values(
     # size-sensitizing covector sf·𝐋 (each entry sf·𝐿ᵢ), keeping the row length d — rather than
     # extending each column the way the products do.
     bare_size_row = ((tuple(size_factor * w for w in prescaler),) if size_factor else ())
+    # the weight row is the per-target simplicity-weight list — or, when the size factor makes the
+    # pretransformer rectangular (all-interval lils), the d×(d+1) weight MATRIX 𝑊 = (𝑍𝐿)⁻ as a
+    # covector-row stack ([⟨…] ⟨…] …]), matching the grid; the per-prime list can't carry it.
+    if size_factor and is_all_interval(scheme):
+        weight_text = "[" + " ".join(_cents_map(row) for row in damage_weight_matrix(state.mapping, scheme)) + "]"
+    else:
+        weight_text = _cents_list(interval_weights(state.mapping, scheme, targets, domain_basis=db))
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
     # vector lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
@@ -893,7 +921,7 @@ def plain_text_values(
         ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas, domain_basis=db)),
         ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios, domain_basis=db)),
         ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets, domain_basis=db)),
-        ("weight", "targets"): _cents_list(interval_weights(state.mapping, scheme, targets, domain_basis=db)),
+        ("weight", "targets"): weight_text,
     }
     # the held interval column mirrors the comma column: the basis as a vector list, mapped
     # into generator coords, then the held-just sizes/errors and complexity. Added only when

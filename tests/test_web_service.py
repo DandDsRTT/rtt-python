@@ -712,6 +712,23 @@ def test_complexity_size_factor_reports_the_schemes_size_factor():
     assert service.complexity_size_factor("TILT minimax-lils-S") == 1
 
 
+def test_damage_weight_matrix_left_inverts_the_rectangular_pretransformer():
+    import numpy as np
+    import pytest
+
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    # with the size factor on (lils), the weight has no per-prime-list form: it is the d×(d+1)
+    # left inverse 𝑊 = (𝑍𝐿)⁻ = 𝐿⁻¹𝑍⁻ (the guide's representative; 𝑍⁻ = [𝐼 − ½𝐽 | ½𝟏])
+    W = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S"))
+    assert W.shape == (3, 4)
+    L = np.diag(service.complexity_prescaler(mapping, "minimax-S"))
+    ZL = np.vstack([np.eye(3), np.ones(3)]) @ L
+    assert np.allclose(W @ ZL, np.eye(3))   # it left-inverts the rectangular pretransformer 𝑋 = 𝑍𝐿
+    # row 0 is the guide's representative ½[1,-1,-1,1] (𝐿₀ = log₂2 = 1); row 1 divides by log₂3
+    assert W[0] == pytest.approx([0.5, -0.5, -0.5, 0.5])
+    assert W[1] == pytest.approx([-0.31546, 0.31546, -0.31546, 0.31546], abs=1e-4)
+
+
 def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
     import pytest
 
@@ -990,6 +1007,19 @@ def test_plain_text_lils_prescaler_grows_the_size_row_matching_the_grid():
     col = [pre[i] * comma[i] for i in range(3)]
     col.append(sum(col))  # sf = 1
     assert pt[("prescaling", "commas")] == "[[" + " ".join(_t(x) for x in col) + "⟩]"
+
+
+def test_plain_text_all_interval_lils_weight_is_the_matrix_not_the_list():
+    # all-interval lils: the weight plain text matches the grid — a covector-row matrix 𝑊 = (𝑍𝐿)⁻,
+    # not the per-prime list (which is blind to the size factor).
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    W = service.damage_weight_matrix(mapping, "minimax-lils-S")
+    pt = service.plain_text_values(service.from_mapping(mapping), scheme="minimax-lils-S")
+    expected = "[" + " ".join("⟨" + " ".join(service.cents(x) for x in row) + "]" for row in W) + "]"
+    assert pt[("weight", "targets")] == expected
+    # the square (lp) all-interval weight stays a flat per-prime list — no covector rows
+    pt_lp = service.plain_text_values(service.from_mapping(mapping), scheme="minimax-S")
+    assert "⟨" not in pt_lp[("weight", "targets")]
 
 
 def test_plain_text_over_a_nonstandard_domain_uses_the_basis():

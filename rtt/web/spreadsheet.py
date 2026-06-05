@@ -932,6 +932,11 @@ class _GridBuilder:
         # products) grow that one row; every other row is unchanged.
         self.size_factor = service.complexity_size_factor(self.tuning_scheme)
         self.size_rows = 1 if self.size_factor else 0
+        # All-interval + size factor: the per-prime simplicity-weight list is blind to the size
+        # factor (a prime's complexity is unchanged), so it can't represent the weighting — the
+        # weight becomes the d×(d+1) matrix 𝑊 = (𝑍𝐿)⁻ (and a bar chart can't draw a matrix). In
+        # target-based mode the per-target weights still differ, so the list + chart stay.
+        self.weight_is_matrix = self.all_interval and bool(self.size_factor)
 
         # Row bands top-to-bottom: (key, natural height, present, collapsible, label), laid
         # out below by the same running-cursor rule as the columns. Defined here, ahead of
@@ -950,7 +955,7 @@ class _GridBuilder:
             ("retune", ROW_H, show_tuning, True, "retuning"),
             ("prescaling", (self.d + self.size_rows) * ROW_H, self._complexity_shown, True, "complexity prescaling"),
             ("complexity", ROW_H, self._complexity_shown, True, "complexity"),
-            ("weight", ROW_H, self.show_weighting, True, "weight"),
+            ("weight", (self.d if self.weight_is_matrix else 1) * ROW_H, self.show_weighting, True, "weight"),
             ("damage", ROW_H, show_tuning, True, "damage"),
         )
         # the present rows that carry an in-tile caption; a column is floored wide enough to
@@ -2282,8 +2287,20 @@ class _GridBuilder:
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
                 self.tval_row("complexity", group, self.complexities[group],
                               alerts=self.held_unheld if group == "held" else ())
-        if self.row_open("weight"):  # weight is over the targets only, like damage (it scales them)
-            self.tval_row("weight", "targets", self.target_weights)
+        if self.row_open("weight") and self.tile_open("weight", "targets"):
+            if self.weight_is_matrix:
+                # the d×(d+1) weight matrix 𝑊 = (𝑍𝐿)⁻: its d columns ride the target gridlines,
+                # the extra (size) column overflows one COL_W to the right. No chart (it's a matrix).
+                left = self.group_left["targets"]
+                for i, row in enumerate(service.damage_weight_matrix(
+                        self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)):
+                    for j, val in enumerate(row):
+                        x = left(j) if j < self.k else left(self.k - 1) + COL_W
+                        self.cells.append(CellBox(f"cell:weight:targets:{i}:{j}", x,
+                                             self.row_y["weight"] + i * ROW_H, COL_W, ROW_H,
+                                             "tval", text=service.cents(val)))
+            else:  # weight is over the targets only, like damage (it scales them)
+                self.tval_row("weight", "targets", self.target_weights)
         if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), nested at the bottom of the weight list,
             # with its "damage weight slope" caption beneath (the optimization box's caption pattern)
             py = self.tile_top["weight"] + self.tile_h["weight"] - self.slope_extra + RANGE_GAP
@@ -2484,7 +2501,15 @@ class _GridBuilder:
                 if key != "tuning" and self.tile_open(key, "detempering"):
                     self.bracket(f"{key}:detemperinglist", LIST_BRACKETS, "detempering", self.row_y[key], ROW_H)
         if self.tile_open("weight", "targets"):
-            self.bracket("weight", LIST_BRACKETS, "targets", self.row_y["weight"], ROW_H)
+            if self.weight_is_matrix:
+                # one tall [ … ] spanning the whole d×(d+1) matrix (per the guide's display), wide
+                # enough to enclose the size column that overflows one COL_W past the target gridlines
+                left = self.group_left["targets"]
+                top, h = self.row_y["weight"], self.d * ROW_H
+                self.cells.append(CellBox("bracket:weight:l", left(0) - BRACKET_W, top, BRACKET_W, h, "bracket", text="["))
+                self.cells.append(CellBox("bracket:weight:r", left(self.k - 1) + 2 * COL_W, top, BRACKET_W, h, "bracket", text="]"))
+            else:
+                self.bracket("weight", LIST_BRACKETS, "targets", self.row_y["weight"], ROW_H)
         if self.tile_open("damage", "targets"):
             self.bracket("damage", LIST_BRACKETS, "targets", self.row_y["damage"], ROW_H)
 
@@ -2653,6 +2678,9 @@ class _GridBuilder:
             equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
             equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
             equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
+        if self.weight_is_matrix:  # the size factor makes the weight the d×(d+1) left inverse (𝑍𝐿)⁻,
+            # not the per-prime diagonal diag(𝐿)⁻¹ (which is blind to the size factor)
+            equivalences[("weight", "targets")] = f" = (𝑍{self.prescaler_symbol})⁻"
         if not self.show_weighting:  # the weight factor's row is hidden, so don't dangle it (𝒘 / 𝐿⁻¹)
             equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
         for (rkey, ckey), name in self.effective_captions.items():
@@ -2662,12 +2690,16 @@ class _GridBuilder:
                 continue
             if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:  # the prime-proxy name (per the Guide)
                 name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
+            if self.weight_is_matrix and (rkey, ckey) == ("weight", "targets"):
+                name = "target interval weight matrix"  # it's a matrix 𝑊 now, not the list 𝒘
             cy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey]
             if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
                 equiv = equivalences.get((rkey, ckey), "") if self.show_equiv else ""
                 base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
                 if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
                     base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
+                if self.weight_is_matrix and (rkey, ckey) == ("weight", "targets"):
+                    base_symbol = "𝑊"  # the weight is now a MATRIX, not the list 𝒘
                 glyph = base_symbol if (self.show_symbols or equiv) else ""
                 if glyph or equiv:
                     self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
