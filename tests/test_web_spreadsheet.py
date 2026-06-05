@@ -6009,3 +6009,59 @@ def test_changed_cell_ids_rings_only_value_cells_not_marks_or_controls():
         CellBox("comma_minus", 0, 0, 10, 10, "comma_minus"),    # a - control
     )
     assert spreadsheet.changed_cell_ids(old, new) == frozenset({"v"})
+
+
+# ---------------------------------------------------------------------------
+# Chapter 9 nonstandard-domain scaffolding — the superspace columns and rows
+# the toggle adds. The Show toggle stays out of settings.IMPLEMENTED for now
+# (scaffolding only; no content yet), so the tests pass the setting directly.
+# ---------------------------------------------------------------------------
+
+
+def _barbados_ss(**overrides):
+    # BARBADOS over 2.3.13/5 with the nonstandard-domain scaffolding turned on. dL = 4
+    # (the simplest prime-only basis 2.3.5.13 — one prime past the d = 3 domain) and
+    # rL = 3 (each extra prime adds an extra generator), so the two new columns and rows
+    # have the BARBADOS dimensions.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s["nonstandard_domain"] = True
+    s.update(overrides)
+    return spreadsheet.build(state, s)
+
+
+def test_nonstandard_domain_adds_superspace_columns_between_gens_and_primes():
+    # the toggle adds two new columns to the temperament region: the superspace generators
+    # (rL columns) and superspace primes (dL columns), seated between the generators and
+    # the domain-elements columns
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert cells["header:ssgens"].text == "superspace\ngenerators"
+    assert cells["header:ssprimes"].text == "superspace\nprimes"
+    # ordered: gens < ssgens < ssprimes < primes
+    assert cells["header:gens"].x < cells["header:ssgens"].x < cells["header:ssprimes"].x < cells["header:primes"].x
+
+
+def test_nonstandard_domain_superspace_columns_size_to_rL_dL():
+    # the superspace generators column is rL × COL_W + 2*BRACKET_W wide (one cell per
+    # superspace generator, plus the EBK gutter); the superspace primes column is dL ×
+    # COL_W + 2*BRACKET_W
+    lay = _barbados_ss()
+    cells = {c.id: c for c in lay.cells}
+    # BARBADOS: r = 2 + (dL − d) = 3, dL = 4
+    rL, dL = 3, 4
+    expected_ssgens_w = 2 * spreadsheet.BRACKET_W + rL * spreadsheet.COL_W
+    expected_ssprimes_w = 2 * spreadsheet.BRACKET_W + dL * spreadsheet.COL_W
+    # the header spans the column; the column's content footprint matches
+    # (no caption widening here — Phase 3 declares no captioned tiles in the new columns
+    # so the natural width drives the footprint)
+    assert cells["header:ssgens"].w == expected_ssgens_w
+    assert cells["header:ssprimes"].w == expected_ssprimes_w
+
+
+def test_nonstandard_domain_off_omits_the_superspace_columns():
+    # the additive-only contract: the toggle off, the new columns leave no trace
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()  # nonstandard_domain off
+    cells = {c.id for c in spreadsheet.build(state, s).cells}
+    assert "header:ssgens" not in cells
+    assert "header:ssprimes" not in cells

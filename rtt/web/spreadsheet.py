@@ -693,6 +693,21 @@ class _GridBuilder:
         # the d domain elements: the standard primes, or a nonstandard subgroup's (possibly
         # nonprime) basis. Every interval set is read over this basis (so 13/5 keeps its 13).
         self.elements = self.state.domain_basis
+        # Chapter 9 superspace dimensions. dL = the simplest prime-only basis containing the
+        # domain — the number of superspace primes — so dL ≥ d, with equality for a standard
+        # (or reordered) prime limit. rL = r + (dL − d) since nullity is preserved by the
+        # embedding (each extra prime adds an extra generator). Used to size the new
+        # superspace columns (rL wide / dL wide) and rows (rL / dL tall) and to count the
+        # spine basis index — kept on self even when the toggle is off so a future feature
+        # can reach them without re-resolving the service call.
+        self.dL = service.superspace_dimension(self.elements)
+        self.rL = service.superspace_rank(self.state)
+        # the chapter-9 "nonstandard domain" Show toggle. Scaffolding only this phase, so it
+        # stays out of settings.IMPLEMENTED — the panel can't flip it; tests pass it through
+        # build's settings directly. Renders the superspace columns/rows independent of whether
+        # the domain is actually nonstandard: a standard prime limit has dL == d / rL == r, so
+        # the superspace columns just look like clones of the domain, which is harmless.
+        self.show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
         # the domain coordinate label that indexes each element in unit strings — 𝑝 (prime)
         # over a standard prime limit, 𝒃 (basis element) over a nonstandard subgroup, since
         # a nonprime basis element isn't a prime. Switches every domain-side unit at once: the
@@ -926,6 +941,7 @@ class _GridBuilder:
         # "domain elements") and "domain primes" over a standard prime limit
         domain_title = "domain\nprimes" if service.is_standard_domain(self.elements) else "basis\nelements"
         self.col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
+                      "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
                       "primes": domain_title, "detempering": "generator\ndetempering",
                       "commas": "commas",
                       "held": "held\nintervals", "targets": "target\nintervals",
@@ -954,6 +970,11 @@ class _GridBuilder:
             ("quantities", COL_W, show_domain_quantities, True),
             ("units", COL_W, show_domain_units, True),
             ("gens", 2 * BRACKET_W + self.r * COL_W, show_temp, True),
+            # the chapter-9 superspace columns ride between gens and the domain primes — rL
+            # cells (superspace generators) and dL cells (superspace primes), each in the
+            # standard EBK-gutter footprint like the gens/primes columns they parallel
+            ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_nonstandard_domain, True),
+            ("ssprimes", 2 * BRACKET_W + self.dL * COL_W, self.show_nonstandard_domain, True),
             ("primes", 2 * BRACKET_W + self.d * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
