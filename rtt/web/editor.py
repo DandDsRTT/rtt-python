@@ -140,6 +140,14 @@ class Editor:
         # coalesce into one undo step (see nudge_generator_tuning_component). Transient, like the
         # drafts: any snapshot or document restore clears it, ending the gesture.
         self._nudging_generator: int | None = None
+        # The chapter-9 nonstandard-domain-approach selection: "" (neutral — read a nonprime
+        # element as a formal prime, the library default), "prime-based" (read the temperament
+        # in its prime superspace), or "nonprime-based" (honor the basis as given). It's an
+        # analysis selection parallel to the tuning scheme, but OUTSIDE undo — like the Show
+        # toggles and the range mode, this is a view choice, not a document edit. The radio is
+        # hidden when the domain has no nonprime elements, so the field resets to "" on a domain
+        # change that flips :func:`service.domain_has_nonprimes` False (see the state setter).
+        self.nonprime_basis_approach: str = ""
         self._restore(_initial_doc())
 
     # --- the document: capture / restore (the unit of undo, reset, persistence) ---
@@ -223,6 +231,12 @@ class Editor:
             self.held_vectors = []
             self.interest_vectors = []
             self.custom_prescaler = None
+        # the chapter-9 approach radio is hidden when the domain carries no nonprime element, so
+        # a domain change that flips has-nonprimes False clears the selection back to neutral —
+        # an invisible control would otherwise keep an off-screen non-default state. A move
+        # between two nonprime domains keeps the chosen mode.
+        if not service.domain_has_nonprimes(new_state.domain_basis):
+            self.nonprime_basis_approach = ""
         self._state = new_state
 
     @property
@@ -268,6 +282,7 @@ class Editor:
             pending_interest=self.pending_interest,
             pending_held=self.pending_held,
             pending_target=self.pending_target,
+            nonprime_approach=self.nonprime_basis_approach,
             prev_ids=prev_ids)
 
     @property
@@ -609,6 +624,16 @@ class Editor:
         target's weight is its complexity, 1, or 1/complexity — which retunes accordingly."""
         self._snapshot()
         self.tuning_scheme = service.scheme_with_weight_slope(self.tuning_scheme, slope)
+
+    def set_nonprime_basis_approach(self, approach: str) -> None:
+        """Set the chapter-9 nonstandard-domain-approach radio: ``""`` (neutral),
+        ``"prime-based"`` (read the temperament in its prime superspace) or ``"nonprime-based"``
+        (honor the basis as given). An analysis selection, not a document edit, so it does not
+        snapshot — like the Show toggles and range mode. Rejects any other value (the radio
+        only offers these three) so the field can't drift off contract."""
+        if approach not in ("", "prime-based", "nonprime-based"):
+            raise ValueError(f"unknown nonprime basis approach: {approach!r}")
+        self.nonprime_basis_approach = approach
 
     def set_complexity_name(self, name: str) -> None:
         """Set the whole complexity shape from the predefined-complexities master chooser (box

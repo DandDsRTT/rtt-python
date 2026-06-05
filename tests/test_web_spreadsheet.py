@@ -144,6 +144,21 @@ def test_build_renders_a_nonstandard_domain_in_its_elements():
     assert cells["gen:1"].text == "15/13"  # the Barbados generator, read over the basis
 
 
+def test_build_threads_nonprime_approach_through_to_the_tuning():
+    # the chapter-9 approach radio rides through build() as a nonprime_approach param (the
+    # binary nonstandard_domain Show toggle no longer drives the mode). Picking "nonprime-based"
+    # over a nonprime-bearing domain reshapes the optimal tuning visibly in the grid — the
+    # same divergence service.tuning shows in test_tuning_mode_changes_the_nonstandard_optimum.
+    state = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]")
+    neutral = spreadsheet.build(state, tuning_scheme="TILT minimax-C")
+    nonprime = spreadsheet.build(state, tuning_scheme="TILT minimax-C", nonprime_approach="nonprime-based")
+    # the generator-tuning cells visibly differ between the two approaches
+    n = {c.id: c.text for c in neutral.cells}
+    np_ = {c.id: c.text for c in nonprime.cells}
+    assert n["tuning:gen:0"] != np_["tuning:gen:0"]
+    assert n["tuning:gen:1"] != np_["tuning:gen:1"]
+
+
 def test_generator_ratios_also_head_the_generators_column_in_the_quantities_row():
     # the generators column gets the same quantities-row header treatment as the domain
     # primes: each generator's ratio heads its sub-column (horizontally), the dual of the

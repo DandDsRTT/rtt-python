@@ -595,7 +595,8 @@ class _GridBuilder:
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
-                 pending_interest=None, pending_held=None, pending_target=None, prev_ids=None):
+                 pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
+                 nonprime_approach=""):
         self.prev_ids = prev_ids or {}
         self.state = state
         self.settings = settings
@@ -614,6 +615,7 @@ class _GridBuilder:
         self.custom_prescaler = custom_prescaler
         self.optimize_locked = optimize_locked
         self.tuning_optimized = tuning_optimized
+        self.nonprime_approach = nonprime_approach
 
         if self.settings is None:
             self.settings = _default_settings()
@@ -682,10 +684,6 @@ class _GridBuilder:
         # interval-vectors row's 𝒃ᵢ/, the basis-elements column's /𝒃ᵢ, and each gridded cell's
         # per-coordinate denominator (𝑔/𝒃ᵢ, ¢/𝒃ᵢ, oct/𝒃ᵢ, (C)/𝒃ᵢ).
         self.domain_label = "p" if service.is_standard_domain(self.elements) else "b"
-        # trait 7: the nonstandard-domain box, when shown, reads the temperament in its prime
-        # superspace ("prime-based"); this coincides with the neutral mode on a standard domain,
-        # so it is harmless until that box is enabled.
-        approach = "prime-based" if self.settings.get("nonstandard_domain") else ""
         self.gens = service.generators(self.state.mapping, self.elements)
         # the displayed target list: a typed explicit target list overrides the TILT/OLD spec, but
         # all-interval auto-replaces it with Tₚ = I (the domain basis, every interval's prime-based
@@ -728,7 +726,7 @@ class _GridBuilder:
         else:
             # a typed target-list override retunes the optimum (minimize over THOSE intervals), so
             # the grid's auto-optimized tuning tracks the displayed targets, not just the named set
-            self.tun = service.tuning(self.state.mapping, self.tuning_scheme, self.elements, approach, held=self.held_ratios,
+            self.tun = service.tuning(self.state.mapping, self.tuning_scheme, self.elements, self.nonprime_approach, held=self.held_ratios,
                                  prescaler_override=self.custom_prescaler, targets=target_override)
         self.target_sizes = service.interval_sizes(self.tun, self.targets, self.elements)
         self.held_mapped = service.mapped_intervals(self.state.mapping, self.held_ratios, self.elements)  # M·held (gen coords)
@@ -2967,10 +2965,11 @@ def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
-          pending_interest=None, pending_held=None, pending_target=None, prev_ids=None) -> Layout:
+          pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
+          nonprime_approach="") -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
         optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
-        prev_ids,
+        prev_ids, nonprime_approach,
     ).layout()

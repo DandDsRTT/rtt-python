@@ -230,6 +230,58 @@ def test_set_complexity_name_sets_the_whole_complexity_shape():
     assert service.held_intervals(editor.tuning_scheme) == ("2/1",)
 
 
+def test_nonprime_basis_approach_starts_neutral_and_holds_a_chosen_mode():
+    # the chapter-9 nonstandard-domain-approach radio (prime-based / nonprime-based / neutral)
+    # rides on an Editor field — it's an analysis selection, parallel to tuning_scheme, not a
+    # Show toggle. Defaults to "" (the library's neutral default, which reads a nonprime element
+    # as a formal prime); the setter validates the value so the field can't drift off the
+    # three-mode contract.
+    import pytest
+
+    editor = Editor()
+    assert editor.nonprime_basis_approach == ""  # neutral by default
+    editor.set_nonprime_basis_approach("nonprime-based")
+    assert editor.nonprime_basis_approach == "nonprime-based"
+    editor.set_nonprime_basis_approach("prime-based")
+    assert editor.nonprime_basis_approach == "prime-based"
+    editor.set_nonprime_basis_approach("")  # back to neutral
+    assert editor.nonprime_basis_approach == ""
+    with pytest.raises(ValueError):
+        editor.set_nonprime_basis_approach("bogus")
+
+
+def test_nonprime_basis_approach_threads_into_the_layouts_tuning():
+    # the field rides into spreadsheet.build via editor.layout() — switching the editor's
+    # approach must visibly change the tuning shown in the grid for a nonprime-bearing domain
+    # (same divergence as test_build_threads_nonprime_approach_through_to_the_tuning).
+    editor = Editor()
+    editor.state = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]")
+    editor.set_tuning_scheme("minimax-C")
+    editor.toggle_optimize_lock()  # turn auto-optimize ON so a scheme change retunes the grid
+    neutral = {c.id: c.text for c in editor.layout().cells}
+    editor.set_nonprime_basis_approach("nonprime-based")
+    nonprime = {c.id: c.text for c in editor.layout().cells}
+    assert neutral["tuning:gen:0"] != nonprime["tuning:gen:0"]
+    assert neutral["tuning:gen:1"] != nonprime["tuning:gen:1"]
+
+
+def test_nonprime_basis_approach_resets_when_the_domain_loses_its_nonprimes():
+    # the radio is hidden on a domain without nonprime elements (the box appears only when at
+    # least one element isn't a prime, per the maximized mockup's blue text). To keep the
+    # hidden control from carrying a stale state, a domain change that flips has-nonprimes
+    # False clears the field back to neutral; a change that LEAVES nonprimes in place keeps it.
+    editor = Editor()  # 2.3.5 (a standard prime limit, no nonprimes)
+    # BARBADOS over 2.3.13/5 — the 13/5 makes the domain carry a nonprime element
+    editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    editor.set_nonprime_basis_approach("nonprime-based")
+    # switching to ANOTHER nonprime domain (a 13/7 basis) keeps the chosen approach
+    editor.state = service.from_temperament_data("2.3.13/7 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert editor.nonprime_basis_approach == "nonprime-based"
+    # switching to a domain WITHOUT any nonprime element clears the approach back to neutral
+    editor.state = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # 2.3.5 standard primes
+    assert editor.nonprime_basis_approach == ""
+
+
 def test_set_diminuator_replaced_toggles_the_size_factor():
     editor = Editor()
     assert service.diminuator_replaced(editor.tuning_scheme) is False  # lp default uses it
