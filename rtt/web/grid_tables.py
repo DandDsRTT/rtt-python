@@ -44,6 +44,20 @@ DETEMPERING_COUNTS_TILES = tuple(
     (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in DETEMPERING_COUNTS
 )
 
+# The chapter-9 superspace columns carry counts too: rL (the count of superspace
+# generators) and dL (the count of superspace primes). The symbol is two characters —
+# a letter and a literal "L" — which build()'s _count_sym renders math-italic-letter +
+# Unicode subscript-ₗ (so the cell shows "𝑟ₗ = 3", "𝑑ₗ = 4"). Like OPTIMIZATION_COUNTS
+# / DETEMPERING_COUNTS, these are conditional (only when the nonstandard_domain Show
+# toggle adds the superspace columns), so they live in their own tuple.
+SUPERSPACE_COUNTS = (
+    ("ssgens", "rL", "superspace rank"),
+    ("ssprimes", "dL", "superspace dimensionality"),
+)
+SUPERSPACE_COUNTS_TILES = tuple(
+    (f"block:counts:{ckey}", "counts", ckey) for ckey, *_ in SUPERSPACE_COUNTS
+)
+
 # Quantity-name captions shown inside each (row, column) tile when names are on.
 # In the comma column, the rows whose quantity the temperament zeroes out — mapped
 # (𝑀C), tempered (𝒕C) and retuned (𝒓C) — append "(made to vanish!)"; the just row
@@ -81,7 +95,8 @@ CAPTIONS = {
     ("complexity", "targets"): "target interval complexity list",
     ("weight", "targets"): "target interval weight list",
     ("damage", "targets"): "target interval damage list",
-    **{("counts", ckey): name for ckey, _sym, name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS},
+    **{("counts", ckey): name for ckey, _sym, name in
+       COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS},
     # Other intervals of interest carry the mockup's own descriptive names — distinct from
     # the targets column's "...target interval... list" phrasing. This column is narrow (a
     # few user-curated intervals), so a wrapped caption would grow/shrink the caption band —
@@ -225,8 +240,11 @@ COL_LABEL_LETTERS = {
 }
 # multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping,
 # the canonical mapping and the complexity-prescaling matrix for their spanning
-# bracket+brace, the interval vectors for the per-column ket marks
-FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling"})
+# bracket+brace, the interval vectors for the per-column ket marks. The chapter-9
+# superspace rows (B_L's monzo columns, M_L's covector stack) likewise frame their
+# tiles when Phase 4 populates them — Phase 3 reserves the frame bands so the
+# row_axis fan splits into one rule per cell-row (dL / rL sub-rules).
+FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling", "ss_vectors", "ss_mapping"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 # Value rows whose tiles carry per-column matrix labels (𝐜ᵢ, 𝒕ᵢ, 𝐲ᵢ, …) when symbols
 # is on — every row with multi-cell tiles in the built layout. The counts/quantities/
@@ -587,6 +605,27 @@ TILES = (
     ("block:complexity:targets", "complexity", "targets"),
     ("block:weight:targets", "weight", "targets"),
     ("block:damage:targets", "damage", "targets"),
+)
+
+# The chapter-9 superspace block's content tiles (the mockup's green region). Like
+# OPTIMIZATION_COUNTS_TILES / DETEMPERING_COUNTS_TILES these are gated on their rows /
+# columns being present (i.e. on the nonstandard_domain Show toggle), so they sit
+# unconditionally in the registry; tile_open / panel() early-return whenever the toggle
+# is off and the bands are missing. Phase 3 reserves these positions; Phase 4 populates
+# the actual cells (B_L over the domain primes, M_L over ssprimes, 𝒈L / 𝒕L / 𝒋L / 𝒓L
+# over the superspace columns), so only the spine basis index in
+# ("ss_vectors", "quantities") renders today.
+SUPERSPACE_TILES = (
+    ("block:ss_vectors:quantities", "ss_vectors", "quantities"),  # the spine basis index column (the dL superspace primes)
+    ("block:ss_vectors:primes", "ss_vectors", "primes"),           # B_L: each domain element as a dL-tall superspace monzo
+    ("block:ss_vectors:commas", "ss_vectors", "commas"),           # the commas as superspace monzos
+    ("block:ss_vectors:targets", "ss_vectors", "targets"),         # the target list as superspace monzos
+    ("block:ss_mapping:gens", "ss_mapping", "gens"),               # M_L over its own generators (trivially identity)
+    ("block:ss_mapping:ssprimes", "ss_mapping", "ssprimes"),       # M_L itself, the rL × dL mapping
+    ("block:tuning:ssgens", "tuning", "ssgens"),                   # 𝒈L (Phase 4F)
+    ("block:tuning:ssprimes", "tuning", "ssprimes"),               # 𝒕L (Phase 4F)
+    ("block:just:ssprimes", "just", "ssprimes"),                   # 𝒋L (Phase 4F)
+    ("block:retune:ssprimes", "retune", "ssprimes"),               # 𝒓L (Phase 4F)
 )
 
 # The audio rows' tiles mirror the just / tuning rows they sound: just_audio (the JI

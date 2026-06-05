@@ -182,6 +182,20 @@ def _sub(n: int) -> str:
     return str(n).translate(_SUBSCRIPTS)
 
 
+def _count_sym(sym: str) -> str:
+    """A counts-row symbol's rendered math glyph: a bare ASCII letter via :func:`_mathit`
+    (𝑟, 𝑑, 𝑛, 𝑘, ℎ), or a two-character ``"<letter>L"`` token that math-italicizes the
+    letter and appends the Unicode subscript ₗ (U+2097) — for the superspace rank 𝑟ₗ and
+    dimensionality 𝑑ₗ. The COUNTS / SUPERSPACE_COUNTS tables store the source token so
+    the rendering lives in one place."""
+    head = _mathit(sym[0])
+    if len(sym) == 1:
+        return head
+    if sym[1:] == "L":
+        return head + "ₗ"  # U+2097 LATIN SUBSCRIPT SMALL LETTER L
+    raise ValueError(f"unknown counts symbol: {sym!r}")
+
+
 def _pretransform_label(text: str) -> str:
     """A rendered label with "prescal…" swapped to the "pretransform…" stem — the guide's term for
     the rectangular (size-factored) 𝑋, which shears rather than scales, so "prescaler" is a misnomer.
@@ -702,6 +716,9 @@ class _GridBuilder:
         # can reach them without re-resolving the service call.
         self.dL = service.superspace_dimension(self.elements)
         self.rL = service.superspace_rank(self.state)
+        # the dL superspace primes (e.g. (2, 3, 5, 13) for BARBADOS) — the basis the
+        # ss_vectors row's spine column labels its rows with, and the columns of M_L
+        self.superspace_primes = service.superspace_primes(self.elements)
         # the chapter-9 "nonstandard domain" Show toggle. Scaffolding only this phase, so it
         # stays out of settings.IMPLEMENTED — the panel can't flip it; tests pass it through
         # build's settings directly. Renders the superspace columns/rows independent of whether
@@ -909,7 +926,8 @@ class _GridBuilder:
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
-                 + TILES + AUDIO_TILES + UNITS_TILES
+                 + SUPERSPACE_COUNTS_TILES
+                 + TILES + AUDIO_TILES + UNITS_TILES + SUPERSPACE_TILES
                  + interest_tiles + held_tiles + detempering_tiles)
         # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
         # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
@@ -1021,6 +1039,14 @@ class _GridBuilder:
             ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
             ("canon", self.rc * ROW_H, self.show_form_controls, True, "canonical mapping"),
             ("mapping", self.r * ROW_H, show_temp, True, "mapping"),
+            # the chapter-9 superspace rows sit between mapping and tuning, the row
+            # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
+            # monzo columns (B_L, target/comma monzos in the superspace), ss_mapping the
+            # rL × dL matrix M_L. Phase 3 only reserves their band heights — Phase 4
+            # populates the cells. Gated on the same nonstandard_domain toggle as the
+            # columns, so the band collapses to nothing whenever the toggle is off.
+            ("ss_vectors", self.dL * ROW_H, self.show_nonstandard_domain, True, "superspace\ninterval vectors"),
+            ("ss_mapping", self.rL * ROW_H, self.show_nonstandard_domain, True, "superspace\nmapping"),
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
             ("retune", ROW_H, show_tuning, True, "retuning"),
@@ -1075,6 +1101,8 @@ class _GridBuilder:
         self.interest_x = self.content_x.get("interest")  # None when the interest column is hidden
         self.held_x = self.content_x.get("held")  # None when the held intervals column is hidden
         self.detempering_x = self.content_x.get("detempering")  # None when the generator-detempering column is hidden
+        self.ssgens_x = self.content_x.get("ssgens")  # None when the superspace generators column is hidden
+        self.ssprimes_x = self.content_x.get("ssprimes")  # None when the superspace primes column is hidden
 
         # The generator tuning-ranges box (the chart + its mode selector) nests at the bottom
         # of the generator tuning map tile when tuning_ranges is on. Its extra height is
@@ -1275,15 +1303,18 @@ class _GridBuilder:
         # +/− controls, the brackets and the gridlines all read ONE geometry. primes carry a map,
         # commas and targets interval lists.
         self.group_elem = {"gens": "gen", "primes": "prime", "commas": "comma", "targets": "target",
-                      "interest": "interest", "held": "held", "detempering": "detempering"}
+                      "interest": "interest", "held": "held", "detempering": "detempering",
+                      "ssgens": "ssgen", "ssprimes": "ssprime"}
         self.group_left = {"gens": self.gen_left, "primes": self.prime_left, "commas": self.comma_left, "targets": self.target_left,
-                      "interest": self.interest_left, "held": self.held_left, "detempering": self.detempering_left}
+                      "interest": self.interest_left, "held": self.held_left, "detempering": self.detempering_left,
+                      "ssgens": self.ss_gen_left, "ssprimes": self.ss_prime_left}
         # how many side-by-side cells each group column carries: its element count, so the
         # gridline pass can fan every group column into that many vertical sub-axes (commas
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
         self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown, "targets": self.k_shown,
-                   "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r}
+                   "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r,
+                   "ssgens": self.rL, "ssprimes": self.dL}
         self.group_ratio = {  # the just interval ratio each value group is taken over
             "primes": lambda i: service.element_ratio(self.elements[i]),  # a prime "p/1", or a nonprime element "n/d"
             "commas": lambda i: self.comma_ratios[i],
@@ -1291,6 +1322,11 @@ class _GridBuilder:
             "interest": lambda i: self.interest_ratios[i],
             "held": lambda i: self.held_ratios[i],
             "detempering": lambda i: self.gens[i],  # the detempering interval as a ratio (service.generators = D)
+            # the superspace primes — straight prime ratios since the superspace is prime-only
+            # by construction (each prime is its own basis element). The ssgens row's just
+            # operand is the superspace generator ratio; Phase 4 adds it (this phase emits no
+            # just-row content over the superspace generators, so the lookup isn't reached).
+            "ssprimes": lambda i: service.element_ratio(self.superspace_primes[i]),
         }
 
         self.plus_stub_x = {ckey: self.col_plus_x(ckey) for ckey in ("gens", "primes", "commas", "targets", "interest", "held")
@@ -1495,6 +1531,12 @@ class _GridBuilder:
     def gen_left(self, g):  # the g-th generator column in the generators box (its tuning-map cells)
         return self.content_x["gens"] + BRACKET_W + g * COL_W
 
+    def ss_gen_left(self, g):  # the g-th superspace generator column (chapter-9)
+        return self.ssgens_x + BRACKET_W + g * COL_W
+
+    def ss_prime_left(self, p):  # the p-th superspace prime column (chapter-9)
+        return self.ssprimes_x + BRACKET_W + p * COL_W
+
     def map_top(self, i):
         return self.row_y["mapping"] + i * ROW_H
 
@@ -1503,6 +1545,12 @@ class _GridBuilder:
 
     def vec_top(self, p):  # the y of vector component p in the d-tall interval-vectors row
         return self.row_y["vectors"] + p * ROW_H
+
+    def ss_vec_top(self, p):  # the y of superspace-vector component p in the dL-tall ss_vectors row
+        return self.row_y["ss_vectors"] + p * ROW_H
+
+    def ss_map_top(self, i):  # the y of ss_mapping row i (the rL stacked superspace maps)
+        return self.row_y["ss_mapping"] + i * ROW_H
 
     # The element +/− controls ride each fanning column's TOP bus (the fan-out, just after the
     # toggle), not the quantities row: the − sits on a branch point (a per-element split), the +
@@ -1888,14 +1936,16 @@ class _GridBuilder:
                              text=_fold_glyph(all_collapsed)))
 
         # counts row: each present column's set cardinality, centred over its values. The
-        # detempering column counts the rank r (one detempering interval per generator).
+        # detempering column counts the rank r (one detempering interval per generator); the
+        # superspace columns count their own rank rL and dimensionality dL.
         if self.row_open("counts"):
             cardinality = {"gens": self.r, "primes": self.d, "commas": self.state.n, "targets": self.k, "held": self.nh,
-                           "detempering": self.r}
-            for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS:
+                           "detempering": self.r,
+                           "ssgens": self.rL, "ssprimes": self.dL}
+            for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
                 if self.tile_open("counts", ckey):
                     self.cells.append(CellBox(f"count:{ckey}", self.col_x[ckey], self.row_y["counts"], self.col_w[ckey], ROW_H,
-                                         "count", text=f"{_mathit(sym)} = {cardinality[ckey]}"))
+                                         "count", text=f"{_count_sym(sym)} = {cardinality[ckey]}"))
 
         # units row + column (the specific `domain_units` toggle): coordinate-unit labels.
         # The units COLUMN labels each row's coordinate — the interval-vectors basis in
@@ -2211,6 +2261,17 @@ class _GridBuilder:
                     if count >= 2 and self.tile_open("vectors", ckey) and (ckey != "targets" or self.targets_editable):
                         for i in range(count):
                             self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), hy, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
+
+        # the chapter-9 superspace interval-vectors row's spine basis index: the dL
+        # superspace primes stacked down the quantities spine column, one per row — the
+        # row counterpart of the d domain primes that head the existing vectors row's spine
+        # (basis:p cells). Phase 3 reserves the band; Phase 4 will populate the matrix
+        # tiles (B_L over the domain primes, commas/targets as superspace monzos).
+        if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "quantities"):
+            bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
+            for p in range(self.dL):
+                self.cells.append(CellBox(f"ss_basis:{p}", bx, self.ss_vec_top(p), COL_W, ROW_H,
+                                          "prime", text=str(self.superspace_primes[p]), prime=p))
 
         # tuning rows over the primes, commas and targets (cents); each can collapse on
         # its own. Commas sit on the same footing as targets — they are just the dual

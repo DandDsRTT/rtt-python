@@ -6065,3 +6065,155 @@ def test_nonstandard_domain_off_omits_the_superspace_columns():
     cells = {c.id for c in spreadsheet.build(state, s).cells}
     assert "header:ssgens" not in cells
     assert "header:ssprimes" not in cells
+
+
+def test_nonstandard_domain_adds_superspace_rows_between_mapping_and_tuning():
+    # the toggle also adds two new row bands: superspace interval vectors (dL tall, mirroring
+    # the existing vectors row over the d domain primes) and superspace mapping (rL tall,
+    # M_L lives there). They seat between the mapping and tuning rows, completing the
+    # superspace block alongside the new ssgens / ssprimes columns.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert cells["label:ss_vectors"].text == "superspace\ninterval vectors"
+    assert cells["label:ss_mapping"].text == "superspace\nmapping"
+    # ordered: mapping < ss_vectors < ss_mapping < tuning
+    assert cells["label:mapping"].y < cells["label:ss_vectors"].y < cells["label:ss_mapping"].y < cells["label:tuning"].y
+
+
+def test_nonstandard_domain_superspace_rows_size_to_dL_rL():
+    # the ss_vectors band reserves dL rows (one per superspace prime), the ss_mapping band
+    # reserves rL rows (one per superspace generator) — exactly like the existing vectors and
+    # mapping rows over the d / r domain dimensions
+    cells = {c.id: c for c in _barbados_ss().cells}
+    # BARBADOS: dL = 4, rL = 3
+    dL, rL = 4, 3
+    assert cells["label:ss_vectors"].h == dL * spreadsheet.ROW_H
+    assert cells["label:ss_mapping"].h == rL * spreadsheet.ROW_H
+
+
+def test_nonstandard_domain_off_omits_the_superspace_rows():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()  # nonstandard_domain off
+    cells = {c.id for c in spreadsheet.build(state, s).cells}
+    assert "label:ss_vectors" not in cells
+    assert "label:ss_mapping" not in cells
+
+
+def test_nonstandard_domain_adds_rL_dL_counts_when_counts_is_on():
+    # the new columns get counts row entries too — rL (superspace rank, the count of
+    # superspace generators) and dL (superspace dimensionality, the count of superspace
+    # primes). Math-italic letter + subscript-L (ₗ, U+2097), matching the rest of the
+    # counts row's letter formatting. For BARBADOS over 2.3.13/5: rL = 3 (the r=2 mapping
+    # gains one generator since dL=4 is one prime past d=3), dL = 4.
+    cells = {c.id: c for c in _barbados_ss(counts=True).cells}
+    assert cells["count:ssgens"].text == "\U0001D45Fₗ = 3"   # 𝑟ₗ
+    assert cells["count:ssprimes"].text == "\U0001D451ₗ = 4"  # 𝑑ₗ
+
+
+def test_count_panels_back_every_superspace_count_too():
+    # the counts row's panels derive from the same tables as its cells (COUNTS_TILES and
+    # friends), so a count tile can't render without its backing grey panel. The new
+    # superspace counts get tiles via SUPERSPACE_COUNTS_TILES.
+    lay = _barbados_ss(counts=True)
+    blocks = {b.id for b in lay.blocks}
+    assert "block:counts:ssgens" in blocks
+    assert "block:counts:ssprimes" in blocks
+
+
+def test_superspace_counts_carry_captions_when_names_is_on():
+    cells = {c.id: c for c in _barbados_ss(counts=True, names=True).cells}
+    assert cells["caption:counts:ssgens"].text == "superspace rank"
+    assert cells["caption:counts:ssprimes"].text == "superspace dimensionality"
+
+
+def test_ss_vectors_quantities_spine_lists_the_superspace_primes():
+    # the ss_vectors row's quantities spine column lists the superspace primes (one per
+    # row, mirroring how the domain primes head the existing vectors row's spine — basis:p
+    # cells). For BARBADOS over 2.3.13/5 the superspace is 2.3.5.13, so the spine reads
+    # 2, 3, 5, 13 stacked down the dL = 4 rows.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert [cells[f"ss_basis:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
+    # one row per superspace prime, top-to-bottom
+    for p in range(3):
+        assert cells[f"ss_basis:{p}"].y < cells[f"ss_basis:{p+1}"].y
+
+
+def test_ss_vectors_spine_is_centred_in_the_quantities_column():
+    # like the existing basis:p cells in the vectors row, each ss_basis cell is a COL_W
+    # square centred in the (one-COL_W-wide) quantities spine; it shares the spine's x with
+    # the domain basis directly above
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert cells["ss_basis:0"].x == cells["basis:0"].x      # both spine-centred
+    assert cells["ss_basis:0"].w == cells["basis:0"].w == spreadsheet.COL_W
+
+
+def test_nonstandard_domain_off_omits_the_spine_basis_index():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()  # nonstandard_domain off
+    cells = {c.id for c in spreadsheet.build(state, s).cells}
+    assert not any(cid.startswith("ss_basis:") for cid in cells)
+
+
+def test_superspace_block_tiles_get_their_grey_panels():
+    # every tile in the green superspace block (ss_vectors × {quantities, primes, commas,
+    # targets}, ss_mapping × {gens, ssprimes}, the four ssgens/ssprimes tuning-family
+    # tiles) has a backing grey panel — the same machinery the rest of the grid uses
+    lay = _barbados_ss()
+    blocks = {b.id for b in lay.blocks}
+    expected = {
+        "block:ss_vectors:quantities", "block:ss_vectors:primes",
+        "block:ss_vectors:commas", "block:ss_vectors:targets",
+        "block:ss_mapping:gens", "block:ss_mapping:ssprimes",
+        "block:tuning:ssgens", "block:tuning:ssprimes",
+        "block:just:ssprimes", "block:retune:ssprimes",
+    }
+    assert expected <= blocks
+
+
+def test_superspace_block_tiles_get_per_tile_fold_toggles():
+    # the per-tile fold toggle auto-emits for every (row, column) in self.tiles whose row
+    # and column bands are both open — so the superspace tiles get one too, like every
+    # other tile. The toggle:tile:* surface lets the user collapse an individual cell of
+    # the superspace block without taking the whole row/column with it.
+    cells = {c.id for c in _barbados_ss().cells}
+    expected = {
+        "toggle:tile:ss_vectors:quantities", "toggle:tile:ss_vectors:primes",
+        "toggle:tile:ss_vectors:commas", "toggle:tile:ss_vectors:targets",
+        "toggle:tile:ss_mapping:gens", "toggle:tile:ss_mapping:ssprimes",
+        "toggle:tile:tuning:ssgens", "toggle:tile:tuning:ssprimes",
+        "toggle:tile:just:ssprimes", "toggle:tile:retune:ssprimes",
+    }
+    assert expected <= cells
+
+
+def test_superspace_columns_get_their_fold_toggles_in_the_header_band():
+    # the ssgens / ssprimes columns are collapsible like every other content column
+    cells = {c.id for c in _barbados_ss().cells}
+    assert {"toggle:col:ssgens", "toggle:col:ssprimes"} <= cells
+
+
+def test_superspace_rows_get_their_fold_toggles_in_the_label_gutter():
+    # the ss_vectors / ss_mapping rows are collapsible like every other content row
+    cells = {c.id for c in _barbados_ss().cells}
+    assert {"toggle:row:ss_vectors", "toggle:row:ss_mapping"} <= cells
+
+
+def test_superspace_columns_get_column_axes_fanned_into_per_cell_sub_axes():
+    # the new column_axis hook for ssgens / ssprimes fans the column into rL / dL vertical
+    # sub-axes (the gridlines the cells centre on), the same machinery the existing
+    # gens / primes columns use
+    lines = {ln.id for ln in _barbados_ss().lines}
+    # rL = 3 ssgens sub-axes
+    assert {"v:ssgen:0", "v:ssgen:1", "v:ssgen:2"} <= lines
+    # dL = 4 ssprimes sub-axes
+    assert {"v:ssprime:0", "v:ssprime:1", "v:ssprime:2", "v:ssprime:3"} <= lines
+
+
+def test_superspace_rows_get_horizontal_axes():
+    # the ss_mapping row has its own row trunk / bus / sub-rules — it's an FRAMED_ROWS
+    # member like the mapping (covector stack), so it fans into rL sub-rules. The
+    # ss_vectors row likewise fans into dL sub-rules (it's a vectors row, framed).
+    lines = {ln.id for ln in _barbados_ss().lines}
+    # rL = 3 ss_mapping sub-rows
+    assert {"h:ss_mapping:0", "h:ss_mapping:1", "h:ss_mapping:2"} <= lines
+    # dL = 4 ss_vectors sub-rows
+    assert {"h:ss_vectors:0", "h:ss_vectors:1", "h:ss_vectors:2", "h:ss_vectors:3"} <= lines
