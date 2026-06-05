@@ -1835,27 +1835,28 @@ class _GridBuilder:
                 if ckey in self.plus_stub_x:
                     branch_plus(cid, ckey, cid)
 
-            # drag-and-drop fan controls: a grip over each interval column (the drag source) and a
-            # drop slot over each gap (insert-before; the slot one past the last appends, riding the
-            # + stub). Both ride the fan band (frozen with the ± above the seam). The grip is a
-            # prominent full-width handle (the ⠿ the generator rows use) centred on the column, in
-            # the upper fan; the column's − tucks into the bottom BTN-tall strip below it (branch_minus
-            # low=True), so always-shown grip and hover − never fight. A drop slot spans the whole
-            # column slot but only catches mid-drag (CSS gates its pointer-events on the dragging
-            # state, so idle it never masks the −/+ or the cells). Commas can be dragged OUT only with
-            # one to spare (the basis must never empty, like the comma −); the target list is inert in
-            # all-interval (the auto Tₚ = I set isn't curated).
-            band_h = qy - self.fanout_y
+            # drag-and-drop controls: a prominent grip over each interval column (the drag source,
+            # the ⠿ the row handles use) and a drop slot over each gap (insert-before; the slot one
+            # past the last appends, riding the + stub). These sit in the empty body strip just BELOW
+            # the freeze seam and ABOVE the ratio cell — NOT in the fan above the seam, which is the
+            # frozen colhead (overflow:hidden, ~8px tall) that would clip a real handle and shrink the
+            # drop target to an undroppable sliver. The − / + stay up on the fan. A drop slot spans
+            # that strip plus the ratio cell for an easy target, but only catches mid-drag (CSS gates
+            # its pointer-events on the dragging state, so idle it never masks the cells). Commas can
+            # be dragged OUT only with one to spare (the basis must never empty, like the comma −); the
+            # target list is inert in all-interval (the auto Tₚ = I set isn't curated).
+            seam = self.branch_top_y + GAP - PAD  # == Layout.freeze_y (the frozen colhead's bottom)
+            gap = qy - seam  # the empty body strip between the seam and the ratio cell
 
             def drag_controls(ckey, n, *, draggable=True):
                 if draggable:
-                    for i in range(n):  # a full-width handle centred on the column, above its lowered −
+                    for i in range(n):  # a full-width handle in the body strip just above the ratio
                         self.cells.append(CellBox(f"grip:{ckey}:{i}", self.sub_axis_x(ckey, i) - COL_W / 2,
-                                             self.fanout_y, COL_W, band_h - BTN, "colgrip", comma=i))
+                                             seam, COL_W, gap, "colgrip", comma=i))
                 for g in range(n + 1):  # a gap before each column, plus one past the last (append)
                     gx = self.col_plus_x(ckey) if g == n else self.sub_axis_x(ckey, g)
-                    self.cells.append(CellBox(f"drop:{ckey}:{g}", gx - COL_W / 2, self.fanout_y,
-                                         COL_W, band_h, "dropslot", comma=g))
+                    self.cells.append(CellBox(f"drop:{ckey}:{g}", gx - COL_W / 2, seam,
+                                         COL_W, gap + ROW_H, "dropslot", comma=g))
 
             # gate on _plus_shows — the same "this list's fan (with its +) is visible" test the +
             # uses, so an empty-but-open held/interest still gets its append slot and the target

@@ -98,12 +98,12 @@ def test_no_title_overhang_reports_zero():
 
 
 def _assert_freeze_partition(lay):
-    # the frozen bands hold the titles + toggles AND the branching ± / drag-and-drop controls;
-    # every value cell and grey value tile clears both bands, so the renderer's frozen panes never
-    # mask live content. A fan control (a ± whose kind ends in "plus"/"minus", or a drag grip /
-    # drop slot) rides a frozen band — its anchor, the top-left where it sits, is left of freeze_x
-    # (row band) or above freeze_y (column strip); its hover/catch zone may then EXTEND past the
-    # seam over the header.
+    # the frozen bands hold the titles + toggles AND the branching ± controls; every value cell and
+    # grey value tile clears both bands, so the renderer's frozen panes never mask live content. A ±
+    # control (kind ends in "plus"/"minus") rides a frozen band — its anchor, the top-left where it
+    # sits, is left of freeze_x (row band) or above freeze_y (column strip); its hover zone may then
+    # EXTEND past the seam over the header. The drag grips / drop slots are ordinary BODY content
+    # (they sit below the seam, where the frozen colhead can't clip them), so they clear both bands.
     fx, fy = lay.freeze_x, lay.freeze_y
     for cb in lay.cells:
         if cb.kind in {"colheader", "coltoggle"}:
@@ -112,8 +112,8 @@ def _assert_freeze_partition(lay):
             assert cb.x + cb.w <= fx                          # row titles + toggles: left of the seam
         elif cb.kind == "alltoggle":
             assert cb.y + cb.h <= fy and cb.x + cb.w <= fx    # the master toggle: the corner of both
-        elif cb.kind.endswith(("plus", "minus")) or cb.kind in {"colgrip", "dropslot"}:
-            assert cb.x < fx or cb.y < fy                     # a fan control rides a frozen band, not the body
+        elif cb.kind.endswith(("plus", "minus")):
+            assert cb.x < fx or cb.y < fy                     # a ± control rides a frozen band, not the body
         else:
             assert cb.x >= fx and cb.y >= fy                  # all value content clears both bands
     for bl in lay.blocks:
@@ -332,21 +332,20 @@ def test_interval_columns_carry_drag_grips_and_drop_slots():
     assert all(f"drop:interest:{g}" in cells for g in range(2))  # one column → gaps 0, append
 
 
-def test_a_drag_grip_is_a_prominent_handle_above_its_column_clear_of_the_minus():
-    # the grip is a full-width handle centred on its column at the top of the fan (the prominent
-    # ⠿ the generator rows use), riding the frozen strip; it stops a button's height short of the
-    # cell, leaving the bottom of the fan band for the −'s lowered reveal so the two never fight
+def test_a_drag_grip_is_a_prominent_handle_in_the_body_above_its_column():
+    # the grip is a full-width handle centred on its column, sitting in the body strip just BELOW
+    # the freeze seam and ABOVE the ratio cell — NOT up in the frozen fan, whose short overflow-
+    # hidden colhead would clip it (and the drop target). So it must clear the seam, not ride it.
     ed = Editor()
     ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
     lay = spreadsheet.build(ed.state, _all_on(), held_vectors=ed.held_vectors)
     cells = {c.id: c for c in lay.cells}
     sub = {ln.id: ln for ln in lay.lines}["v:held:1"].pos  # column 1's fanned sub-axis
-    grip, minus = cells["grip:held:1"], cells["held_minus:1"]
+    grip, ratio = cells["grip:held:1"], cells["held:1"]
     assert abs((grip.x + grip.w / 2) - sub) < 0.51  # centred on the column...
     assert grip.w >= spreadsheet.COL_W - 0.51        # ...spanning its full width (a big grab target)
-    assert grip.y < lay.freeze_y                     # rides the frozen column strip with the fan
-    # the grip leaves a button-tall strip at the fan's bottom for the −'s lowered reveal (CSS)
-    assert (minus.y + minus.h) - (grip.y + grip.h) >= spreadsheet.BTN - 0.51
+    assert grip.y >= lay.freeze_y                     # BELOW the seam (in the body) so it isn't clipped
+    assert grip.y + grip.h <= ratio.y + 0.51          # ...and sits just above the ratio cell
 
 
 def test_an_empty_interval_list_still_offers_an_append_drop_slot():

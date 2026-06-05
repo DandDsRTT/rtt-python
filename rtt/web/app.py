@@ -1758,7 +1758,7 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
 
     def _build_comma_minus(self, cb, wrap):  # drop the last comma, or cancel the pending draft
-        wrap.classes("rtt-minus-zone rtt-minus-low")  # reveals below the column's drag grip
+        wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.remove_comma))
 
@@ -1768,10 +1768,9 @@ class _Reconciler:
 
     def _build_list_minus(self, cb, wrap, cancel, remove):
         # an interval-list column's − (interest / held / target): the draft column's cancels the
-        # draft, every other drops just its interval (cb.comma) — each is independently removable.
-        # rtt-minus-low: a drag grip owns the upper fan, so this − reveals in the bottom strip.
+        # draft, every other drops just its interval (cb.comma) — each is independently removable
         action = cancel if cb.id.endswith(":pending") else (lambda idx=cb.comma: remove(idx))
-        wrap.classes("rtt-minus-zone rtt-minus-low")
+        wrap.classes("rtt-minus-zone")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(action))
 
@@ -1806,12 +1805,13 @@ class _Reconciler:
         wrap.on("dragend", lambda _=None: self._cb.on_drag_end())
         ui.icon("drag_indicator").classes("rtt-grip")
 
-    def _build_dropslot(self, cb, wrap):  # a per-gap drop target on the fan (insert-before this gap)
-        # the drop fires the move; dragover.preventDefault + the dragging-state class + the hover
-        # highlight are handled client-side by _DRAG_JS (no per-frame server round-trips)
+    def _build_dropslot(self, cb, wrap):  # a per-gap drop target (insert-before this gap)
+        # drop.prevent fires the move (the .prevent stops the browser's default drop); the
+        # dragover.preventDefault that marks this a valid target, the dragging-state class and the
+        # hover highlight are handled client-side by _DRAG_JS (no per-frame server round-trips)
         _, lst, gap = cb.id.split(":")  # "drop:{list}:{gap}"
         wrap.classes("rtt-dropslot")
-        wrap.on("drop", lambda _=None, l=lst, g=int(gap): self._cb.on_drop(l, g))
+        wrap.on("drop.prevent", lambda _=None, l=lst, g=int(gap): self._cb.on_drop(l, g))
 
     def _build_speaker(self, cb, wrap):  # play this pitch per its tile's mode (client-side engine)
         tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
