@@ -472,6 +472,14 @@ def _cents_parts(text):
     return whole, frac
 
 
+def _approach_visible(editor) -> bool:
+    """Whether the chapter-9 nonstandard-domain-approach radio (prime-based / nonprime-based /
+    neutral) should render — True iff the loaded domain basis carries any element that isn't a
+    prime int (e.g. 13/5 in 2.3.13/5). On a pure-prime basis the trait is meaningless, so the
+    radio stays hidden, mirroring the maximized mockup's blue-text gating."""
+    return service.domain_has_nonprimes(editor.state.domain_basis)
+
+
 def _gentuning_parts(text):
     """Split a generator-tuning cents value into ``(sign, whole, frac)`` for the genmap's
     clickable signed face: a non-negative value carries an explicit ``"+"`` (ordinarily
@@ -2781,6 +2789,12 @@ def index() -> None:
         refs["undo"].set_enabled(editor.can_undo)
         refs["redo"].set_enabled(editor.can_redo)
         refs["reset"].set_enabled(editor.can_reset)
+        # the nonstandard-domain-approach radio shows iff the loaded domain has a nonprime
+        # element; its value mirrors editor.nonprime_basis_approach (building[0] is True, so
+        # the programmatic write is swallowed by the on_change guard rather than re-firing).
+        refs["approach"].set_visibility(_approach_visible(editor))
+        if refs["approach"].value != editor.nonprime_basis_approach:
+            refs["approach"].value = editor.nonprime_basis_approach
         # reflect the document's Show settings into the panel (after undo/redo/reset/
         # select-all/load). building[0] is still True, so these programmatic value writes
         # are swallowed by on_show_toggle/on_select_all rather than re-firing as edits.
@@ -2997,6 +3011,25 @@ def index() -> None:
                         # as-shipped defaults — itself an undoable action
                         refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: act(editor.reset), color=None) \
                             .props("flat dense").classes("rtt-iconbtn").mark("reset").tooltip(tooltips.CHROME_HELP["reset"])
+                # the chapter-9 nonstandard-domain-approach radio: prime-based, nonprime-based, or
+                # the library's neutral default (which reads a nonprime element as a formal prime).
+                # Hidden when the domain has no nonprime element — the trait is meaningless there
+                # — and revealed when a basis like 2.3.13/5 carries one. The visibility is updated
+                # by render() through refs["approach"] each pass.
+                def on_approach_change(value):
+                    # building[0] is True while render() programmatically syncs the radio's
+                    # value to editor.nonprime_basis_approach (after an undo, a domain change
+                    # that reset the field to "", etc.); the echo must not loop back as a user edit.
+                    if building[0] or value is None:
+                        return
+                    editor.set_nonprime_basis_approach(value)
+                    render()
+
+                refs["approach"] = ui.radio(
+                    {"": "neutral", "prime-based": "prime-based", "nonprime-based": "nonprime-based"},
+                    value=editor.nonprime_basis_approach,
+                    on_change=lambda e: on_approach_change(e.value),
+                ).props("dense").classes("rtt-approach").mark("approach")
             gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
             with gridbody:
                 board = ui.element("div").classes("rtt-gridcontent").mark("board")

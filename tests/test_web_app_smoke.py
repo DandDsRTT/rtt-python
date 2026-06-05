@@ -876,6 +876,20 @@ def test_plain_text_font_is_glyph_aware_not_uniform_width():
     assert app._ptext_font(sparse, 40) > app._ptext_font(dense, 40)
 
 
+def test_approach_radio_is_visible_iff_the_domain_has_nonprime_elements():
+    # the chapter-9 nonstandard-domain-approach radio (prime-based / nonprime-based / neutral)
+    # is hidden when the loaded basis is all primes (the approach trait is meaningless there),
+    # visible when the basis carries any non-prime element. The visibility predicate the radio
+    # binds to is exposed for test coverage so the gating is checkable without driving NiceGUI.
+    from rtt.web.editor import Editor
+
+    editor = Editor()  # 2.3.5 standard prime limit — no nonprimes
+    assert app._approach_visible(editor) is False
+    # BARBADOS over 2.3.13/5: 13/5 is a nonprime element, so the radio appears
+    assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+    assert app._approach_visible(editor) is True
+
+
 def test_target_chooser_default_limit_uses_the_nonstandard_basis():
     # the chooser's default limit derives from the loaded temperament's domain basis: on
     # Barbados (2.3.13/5) the next prime past 13 is 17, so TILT defaults to 16 — not the 6
