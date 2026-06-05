@@ -1702,6 +1702,18 @@ async def test_hovering_a_generator_minus_previews_what_it_changes_without_reflo
     assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:0")  # cleared on mouse-out
 
 
+async def test_hovering_a_generator_tuning_sign_previews_reversing_it(user: User) -> None:
+    # the +/- the user means "in the generator tuning map" is the clickable SIGN on each tuned
+    # generator size (the + of +1197). Hovering it previews reversing that generator — ringing the
+    # cells the flip would change: its mapping row and the derived rows — without committing.
+    await user.open("/")
+    sign = set(user.find(marker="gensign:1").elements)            # the sign on generator 1's tuning
+    UserInteraction(user, sign, None).trigger("mouseenter")
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2")  # the mapping row it'd flip rings
+    UserInteraction(user, sign, None).trigger("mouseleave")
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")  # cleared on mouse-out
+
+
 async def test_hovering_a_temperament_option_previews_loading_it(user: User) -> None:
     # hovering a temperament in the OPEN dropdown previews loading it: the cells its comma basis would
     # change ring, no reflow. A divider header / leaving the option (value None) clears. The DOM-hover

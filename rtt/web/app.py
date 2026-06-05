@@ -1533,8 +1533,12 @@ class _Reconciler:
         i = int(cb.id.rsplit(":", 1)[1])
         with ui.element("div").classes("rtt-tval rtt-cellface"):
             with ui.element("div").classes("rtt-gentuning-main"):
-                s = ui.label(sign).classes("rtt-gensign") \
+                s = ui.label(sign).classes("rtt-gensign").mark(f"gensign:{i}") \
                     .on("click", lambda _=None, i=i: self._cb.act(lambda: self._editor.flip_generator(i)))
+                # hovering the sign previews REVERSING this generator (ring the cells the flip would
+                # change — its tuning sign and its mapping row), the same ring-only hover the other
+                # controls give. This is the "+/- in the generator tuning map" hover.
+                self._preview_control(s, lambda gi=i: self._editor.flip_generator(gi))
                 m = ui.label(whole).classes("rtt-stacked-main")
             sub = ui.label(f".{frac}" if frac else "").classes("rtt-stacked-sub")
         self.gensign_faces[cb.id] = (s, m, sub)
