@@ -1738,26 +1738,19 @@ class _GridBuilder:
     # tempered (tempered_audio) cents of each interval — the same data the just / tuning
     # rows display, so the ear and the eye agree. tempered_audio also sounds the generators
     # (their tuned size, as the tuning row's genmap does); a generator has no just size.
+    # The waveform / play-mode / hold / 1-1 controls are NOT per-tile: a single bank lives on
+    # the settings panel's dummy tile and drives every speaker from one global config (the JS
+    # engine keys playing-state by the speaker's tile only for highlighting; see app._audio_bank).
     def audio_tile(self, key, group, vals):
         if not self.tile_open(key, group):
             return
         vals = tuple(vals)
         # one speaker per pitch, aligned under the value columns. Each carries the WHOLE
         # tile's cents list (not just its own) so the play-mode can arp/chord the tile, and
-        # text = the tile key it shares with the bank controls (so the engine can pair them).
+        # text = the tile key the engine highlights while it sounds (and the global bank drives).
         for i in range(len(vals)):
             self.cells.append(CellBox(f"speaker:{key}:{self.group_elem[group]}:{i}", self.group_left[group](i),
                                  self.row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals))
-        # the per-tile control bank in the head strip's top-right (mirroring the fold toggle
-        # top-left): waveform / play-mode / hold-loop / include-1/1, each a TOGGLE square.
-        # Anchored to the grey panel's right edge (tile_box), not the centred content — so a
-        # caption-widened tile keeps the bank on its edge rather than drifting it inward.
-        cx, cw = self.tile_box(group)
-        right = cx + cw + PAD - TOGGLE_INSET
-        by, step = self.tile_top[key] - PAD + TOGGLE_INSET, TOGGLE + TOGGLE_INSET
-        left0 = right - (4 * TOGGLE + 3 * TOGGLE_INSET)
-        for j, ctrl in enumerate(("wave", "mode", "hold", "root")):
-            self.cells.append(CellBox(f"{ctrl}:{key}:{group}", left0 + j * step, by, TOGGLE, TOGGLE, f"audio_{ctrl}"))
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.

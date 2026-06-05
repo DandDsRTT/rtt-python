@@ -136,7 +136,6 @@ _DARK_TEXT = "#e3e6ea"    # primary text — and the checked option-box's inner 
 _DARK_MUTED = "#71777f"   # disabled text — and the indeterminate option-box's inner fill
 
 _AUDIO_KINDS = {"speaker"}  # cells whose baked cents rebuild when the tuning changes
-_AUDIO_CTRLS = {"audio_wave", "audio_mode", "audio_hold", "audio_root"}  # the per-tile bank controls
 
 # Editable cells whose value is a single integer (a matrix or vector component). Scrolling the
 # wheel over one of these while it is focused steps it by ±1 — the coarse-integer analogue of the
@@ -185,12 +184,13 @@ _AUDIO_GLYPHS = {
     "root": '<span class="rtt-audio-rootglyph">1/1</span>',
 }
 
-# The Web Audio engine. Each audio tile owns independent state (waveform, play-mode, hold/loop,
-# include-1/1), keyed by tile id; the bank controls cycle it and redraw their glyph client-side,
-# and a speaker calls rttAudio.hit(tile, idx, [cents…]) to sound per that state — all CLIENT-side
-# (no server round-trip). 1/1 (root) sounds UNDERNEATH as a drone; playing notes' speakers
-# highlight. freq = 261.626·2^(¢/1200) (1/1 = middle C). Modes (0..3): one-off, arpeggiate from
-# the clicked note, chord, rolled chord; hold sustains (mode 0 stacks notes) or loops (2 & 4).
+# The Web Audio engine. ONE global config (waveform, play-mode, hold/loop, include-1/1) drives
+# every speaker — the single bank on the dummy tile (see _audio_bank) cycles it and redraws its
+# glyphs client-side, and a speaker calls rttAudio.hit(tile, idx, [cents…]) to sound per that
+# config; `tile` only picks which speakers to highlight while they ring. All CLIENT-side (no server
+# round-trip). 1/1 (root) sounds UNDERNEATH as a drone. freq = 261.626·2^(¢/1200) (1/1 = middle C).
+# Modes (0..3): one-off, arpeggiate from the clicked note, chord, rolled chord; hold sustains
+# (mode 0 stacks notes, keyed by tile:idx) or loops (2 & 4).
 _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
 
 # Frozen-pane support. The row band freezes by position:sticky (zero JS on its scroll path), but the
@@ -726,6 +726,33 @@ def _tile_fold_html() -> str:
     return _control_svg(_FOLD_GLYPH["unfold_less"])
 
 
+# The audio control bank — the single, global home for what used to ride each audio tile's
+# top-right corner. It sits in the dummy tile's head strip opposite the fold toggle (mirroring a
+# real audio tile) and drives every speaker through the engine's ONE shared config (window.rttAudio).
+# (ctrl, initial glyph, engine fn) left-to-right: waveform, play-mode, hold/loop, include-1/1.
+_AUDIO_BANK = (
+    ("wave", _AUDIO_GLYPHS["wave"][0], "cycleWave"),
+    ("mode", _AUDIO_GLYPHS["mode"][0], "cycleMode"),
+    ("hold", _AUDIO_GLYPHS["lock"][0], "toggleHold"),
+    ("root", _AUDIO_GLYPHS["root"], "toggleRoot"),
+)
+
+
+def _audio_bank() -> "ui.element":
+    """Build the dummy tile's audio control bank — the four glyph controls, each wired to the global
+    Web Audio engine (it cycles its state + redraws its glyph with no server round-trip). Returns the
+    bank container so render() can grey + inert it while audio is off (the speakers it drives are
+    hidden then), exactly as a value-cell part greys without its host cell."""
+    bank = ui.element("div").classes("rtt-tile-bank").mark("audiobank")
+    with bank:
+        for ctrl, glyph, fn in _AUDIO_BANK:
+            ui.html(glyph).classes("rtt-audio-ctrl").mark(f"audioctrl:{ctrl}") \
+                .props(f'data-actrl="{ctrl}"') \
+                .on("click", js_handler=f"() => window.rttAudio.{fn}()") \
+                .tooltip(tooltips.AUDIO_HELP[ctrl])
+    return bank
+
+
 # The value cell's geometry (px), built to read like the real mapping tile's NESTED EBK: an INNER
 # per-row covector ⟨ … ] HUGGING the COL_W×ROW_H square cell (the angle/square marks sit right
 # against the box, ~_BR_INSET≈2.5px off, exactly as the grid's per-row brackets do), enclosed by an
@@ -1155,8 +1182,6 @@ class _Reconciler:
         self.cell_kinds["target_plus"] = _KindHandlers(self._build_target_plus)
         self.cell_kinds["colgrip"] = _KindHandlers(self._build_colgrip)
         self.cell_kinds["speaker"] = _KindHandlers(self._build_speaker)
-        for _audio_ctrl in _AUDIO_CTRLS:  # audio_wave / audio_mode / audio_hold / audio_root
-            self.cell_kinds[_audio_ctrl] = _KindHandlers(self._build_audio_ctrl)
 
     def drop(self, eid):
         """Remove an entity's element and forget every per-id handle for it (see _handle_dicts)."""
@@ -2162,8 +2187,8 @@ class _Reconciler:
         wrap.on("drop.prevent", lambda _=None, l=lst, i=idx: self._cb.on_drop(l, i))
         ui.icon("drag_indicator").classes("rtt-grip")
 
-    def _build_speaker(self, cb, wrap):  # play this pitch per its tile's mode (client-side engine)
-        tile = cb.text  # the tile key "<row>:<group>", shared with the tile's control bank
+    def _build_speaker(self, cb, wrap):  # play this pitch per the global bank's mode (client-side engine)
+        tile = cb.text  # the tile key "<row>:<group>" — the engine highlights this tile's speakers
         idx = int(cb.id.rsplit(":", 1)[1])
         pitches = ",".join(f"{float(v):.6f}" for v in cb.values)  # the whole tile (for arp/chord)
         # color=None drops Quasar's default primary (blue): the app is greyscale, leaving colour to
@@ -2173,17 +2198,6 @@ class _Reconciler:
             .props(f'flat dense round data-audio="{tile}" data-idx="{idx}"') \
             .classes("rtt-audio-btn rtt-spk") \
             .on("click", js_handler=f"() => window.rttAudio.hit('{tile}', {idx}, [{pitches}])")
-
-    def _build_audio_ctrl(self, cb, wrap):  # a bank control: cycles its state + glyph client-side
-        tile = cb.id.split(":", 1)[1]      # "<row>:<group>"
-        ctrl = cb.kind.split("_", 1)[1]     # wave | mode | hold | root
-        glyph = {"wave": _AUDIO_GLYPHS["wave"][0], "mode": _AUDIO_GLYPHS["mode"][0],
-                 "hold": _AUDIO_GLYPHS["lock"][0], "root": _AUDIO_GLYPHS["root"]}[ctrl]
-        fn = {"wave": "cycleWave", "mode": "cycleMode",
-              "hold": "toggleHold", "root": "toggleRoot"}[ctrl]
-        ui.html(glyph).classes("rtt-audio-ctrl") \
-            .props(f'data-audio="{tile}" data-actrl="{ctrl}"') \
-            .on("click", js_handler=f"() => window.rttAudio.{fn}('{tile}')")
 
 
 @ui.page("/")
@@ -3089,6 +3103,10 @@ def index() -> None:
                 if key == "mnemonics":
                     part.classes(add="rtt-mnem-underline") if editor.settings["mnemonics"] \
                         else part.classes(remove="rtt-mnem-underline")
+        # the single audio bank rides the dummy tile but drives the grid's speakers: grey + inert it
+        # while audio is off (the speakers it would sound aren't shown then), live once audio is on.
+        refs["audio_bank"].classes(add="rtt-bank-off") if not editor.settings["audio"] \
+            else refs["audio_bank"].classes(remove="rtt-bank-off")
         # the master checkbox: checked (true / black fill) when all on, unchecked (false /
         # empty) when all off, MIXED (grey fill) when some-but-not-all are on
         states = [editor.settings[k] for k in show_settings.IMPLEMENTED]
@@ -3178,7 +3196,12 @@ def index() -> None:
                                     return add_el(key, _general_part_html(key), marked=True, size=size, style=style)
 
                                 with ui.element("div").classes("rtt-show-tile"):
-                                    ui.html(_tile_fold_html()).classes("rtt-tile-fold")  # decorative fold toggle, top-left
+                                    # the head strip, like a real tile's: the decorative fold toggle on
+                                    # the left, the single global audio bank on the right (the relocation
+                                    # of the per-tile banks). render() greys the bank while audio is off.
+                                    with ui.element("div").classes("rtt-tile-head"):
+                                        ui.html(_tile_fold_html()).classes("rtt-tile-fold")
+                                        refs["audio_bank"] = _audio_bank()
                                     for line in _GENERAL_TILE_LINES:
                                         if "gridded_values" in line:
                                             # the value cell, like a real gridded cell: a square box (the

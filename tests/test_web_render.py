@@ -1333,14 +1333,18 @@ async def test_adding_a_target_commits_when_filled(user: User) -> None:
     assert _cell_child(user, f"cell:vec:targets:{k}:0").value == "-1"
 
 
-async def test_enabling_audio_renders_speakers_and_control_banks(user: User) -> None:
-    # one click adds the two audio rows. Each pitch is a real speaker button, and each tile
-    # carries its four-control bank (waveform / play-mode / hold / 1-1) as glyph elements —
-    # a missing _make_cell branch would leave an empty wrap (and IndexError in _cell_child).
+async def test_enabling_audio_renders_speakers_and_lives_off_the_single_dummy_tile_bank(user: User) -> None:
+    # the waveform / play-mode / hold / 1-1 bank is no longer per-tile: a single bank rides the
+    # settings panel's dummy tile, greyed while audio is off and live once it is on — it drives
+    # every speaker from one global config. Enabling audio adds the two speaker rows (a real
+    # button per pitch; a missing _make_cell branch would leave an empty wrap → IndexError).
+    await user.open("/")
+    assert "rtt-bank-off" in next(iter(user.find(marker="audiobank").elements))._classes  # greyed: audio off
+    for ctrl in ("wave", "mode", "hold", "root"):
+        assert user.find(marker=f"audioctrl:{ctrl}").elements  # the four controls sit on the dummy tile
     await _enable(user, "audio")
     assert isinstance(_cell_child(user, "speaker:tempered_audio:target:0"), ui.button)
-    for ctrl in ("wave", "mode", "hold", "root"):
-        assert isinstance(_cell_child(user, f"{ctrl}:tempered_audio:targets"), ui.html)
+    assert "rtt-bank-off" not in next(iter(user.find(marker="audiobank").elements))._classes  # live: audio on
 
 
 # --- tier 4: the settings select-all/none, the reset control, and refresh persistence ---

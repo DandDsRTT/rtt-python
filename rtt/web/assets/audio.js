@@ -1,16 +1,16 @@
 window.rttAudio = (function () {
   let ctx = null;
   const WAVES = ['sine', 'square', 'triangle', 'sawtooth'], BASE = 261.6255653005986, STEP = 0.34;
-  const tiles = {};
+  // ONE global config + playing-state drives every speaker (the single bank on the dummy tile cycles
+  // it); a speaker's `tile` is used ONLY to pick which speakers to highlight while they ring. The
+  // hold-stack (mode 0) keys its held notes by tile:idx so each speaker toggles on/off independently
+  // even though the waveform / mode / hold / root config is shared.
+  const S = { wave: 0, mode: 0, hold: false, root: false, stop: null, held: {} };
   const api = { glyphs: null };
   function actx() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
-  }
-  function st(tile) {
-    if (!tiles[tile]) tiles[tile] = { wave: 0, mode: 0, hold: false, root: false, stop: null, held: {} };
-    return tiles[tile];
   }
   function spk(tile, idx) {
     return document.querySelector('.rtt-spk[data-audio="' + tile + '"][data-idx="' + idx + '"]');
@@ -24,7 +24,7 @@ window.rttAudio = (function () {
   // start one oscillator; returns a release() that fades it out (and clears its highlight)
   function voice(tile, idx, cents, gain) {
     const ac = actx(), o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
-    o.type = WAVES[st(tile).wave];
+    o.type = WAVES[S.wave];
     o.frequency.value = BASE * Math.pow(2, cents / 1200);
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
@@ -83,41 +83,41 @@ window.rttAudio = (function () {
       clearHl(tile);
     };
   }
-  function ctrlEl(tile, ctrl) {
-    return document.querySelector('[data-actrl="' + ctrl + '"][data-audio="' + tile + '"]');
+  function ctrlEl(ctrl) {  // the single dummy-tile bank control (data-actrl only — no per-tile copies)
+    return document.querySelector('[data-actrl="' + ctrl + '"]');
   }
   api.hit = function (tile, idx, cents) {
-    const s = st(tile);
-    if (s.mode === 0) {                                   // one-off / hold-stack
-      if (!s.hold) { const stop = together(tile, [{ idx: idx, cents: cents[idx] }], s.root); setTimeout(stop, 650); return; }
-      if (s.held[idx]) { s.held[idx](); delete s.held[idx]; }   // click a held note off
-      else { s.held[idx] = together(tile, [{ idx: idx, cents: cents[idx] }], s.root); }
+    if (S.mode === 0) {                                   // one-off / hold-stack
+      if (!S.hold) { const stop = together(tile, [{ idx: idx, cents: cents[idx] }], S.root); setTimeout(stop, 650); return; }
+      const key = tile + ':' + idx;                       // hold-stack: key per speaker so each toggles alone
+      if (S.held[key]) { S.held[key](); delete S.held[key]; }   // click a held note off
+      else { S.held[key] = together(tile, [{ idx: idx, cents: cents[idx] }], S.root); }
       return;
     }
-    if (s.stop) { s.stop(); s.stop = null; if (s.hold) return; }  // hold/loop: a second click stops it
-    if (s.mode === 1) {                                   // arpeggiate, from the clicked note, wrapping
+    if (S.stop) { S.stop(); S.stop = null; if (S.hold) return; }  // hold/loop: a second click stops it
+    if (S.mode === 1) {                                   // arpeggiate, from the clicked note, wrapping
       const order = []; for (let k = 0; k < cents.length; k++) order.push((idx + k) % cents.length);
-      s.stop = sequence(tile, order, cents, s.root, false, s.hold);
-      if (!s.hold) s.stop = null;
-    } else if (s.mode === 2) {                            // chord: all together
+      S.stop = sequence(tile, order, cents, S.root, false, S.hold);
+      if (!S.hold) S.stop = null;
+    } else if (S.mode === 2) {                            // chord: all together
       const items = []; for (let i = 0; i < cents.length; i++) items.push({ idx: i, cents: cents[i] });
-      const stop = together(tile, items, s.root);
-      if (s.hold) s.stop = stop; else setTimeout(stop, 1000);
+      const stop = together(tile, items, S.root);
+      if (S.hold) S.stop = stop; else setTimeout(stop, 1000);
     } else {                                              // rolled chord
       const order = []; for (let i = 0; i < cents.length; i++) order.push(i);
-      s.stop = sequence(tile, order, cents, s.root, true, s.hold);
-      if (!s.hold) s.stop = null;
+      S.stop = sequence(tile, order, cents, S.root, true, S.hold);
+      if (!S.hold) S.stop = null;
     }
   };
-  function stopAll(tile) { const s = st(tile); if (s.stop) { s.stop(); s.stop = null; }
-    for (const k in s.held) s.held[k](); s.held = {}; clearHl(tile); }
-  api.cycleWave = function (tile) { const s = st(tile); s.wave = (s.wave + 1) % 4;
-    const e = ctrlEl(tile, 'wave'); if (e) e.innerHTML = api.glyphs.wave[s.wave]; };
-  api.cycleMode = function (tile) { const s = st(tile); stopAll(tile); s.mode = (s.mode + 1) % 4;
-    const e = ctrlEl(tile, 'mode'); if (e) e.innerHTML = api.glyphs.mode[s.mode]; };
-  api.toggleHold = function (tile) { const s = st(tile); stopAll(tile); s.hold = !s.hold;
-    const e = ctrlEl(tile, 'hold'); if (e) { e.innerHTML = api.glyphs.lock[s.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', s.hold); } };
-  api.toggleRoot = function (tile) { const s = st(tile); s.root = !s.root;
-    const e = ctrlEl(tile, 'root'); if (e) e.classList.toggle('rtt-audio-on', s.root); };
+  function stopAll() { if (S.stop) { S.stop(); S.stop = null; }
+    for (const k in S.held) S.held[k](); S.held = {}; }   // each release clears its own speaker's highlight
+  api.cycleWave = function () { S.wave = (S.wave + 1) % 4;
+    const e = ctrlEl('wave'); if (e) e.innerHTML = api.glyphs.wave[S.wave]; };
+  api.cycleMode = function () { stopAll(); S.mode = (S.mode + 1) % 4;
+    const e = ctrlEl('mode'); if (e) e.innerHTML = api.glyphs.mode[S.mode]; };
+  api.toggleHold = function () { stopAll(); S.hold = !S.hold;
+    const e = ctrlEl('hold'); if (e) { e.innerHTML = api.glyphs.lock[S.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', S.hold); } };
+  api.toggleRoot = function () { S.root = !S.root;
+    const e = ctrlEl('root'); if (e) e.classList.toggle('rtt-audio-on', S.root); };
   return api;
 })();

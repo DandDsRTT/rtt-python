@@ -713,16 +713,27 @@
 .rtt-ex { white-space:nowrap; }
 /* the "general" group's dummy tile: a value-tile-styled panel matching a real tile — the grey
    #e0e0e0 fill, a thin #8a8a8a border and SQUARE corners (no radius, like the grid's tiles).
-   It hugs its stacked layers, sits position:relative (the decorative fold toggle pins to its top
-   left), and is centred horizontally in the pane (margin auto). Generous side padding keeps the
-   tile closer to square than a thin column. */
+   It hugs its stacked layers (a head strip on top, then the layer lines) and is centred
+   horizontally in the pane (margin auto). Generous side padding keeps the tile closer to square
+   than a thin column. */
 .rtt-show-tile { display:flex; flex-direction:column; align-items:center; gap:2px;
                  width:fit-content; min-width:190px; margin:8px auto; padding:8px 10px;
-                 background:#e0e0e0; border:1px solid #8a8a8a; position:relative;
+                 background:#e0e0e0; border:1px solid #8a8a8a;
                  box-sizing:border-box; font-family:'Cambria',Georgia,serif; }
-/* the decorative fold toggle in the tile's top-left corner (inert — it only makes the panel read
-   as a tile); a 12x12 boxed double-chevron in the fan-control grey */
-.rtt-tile-fold { position:absolute; left:4px; top:4px; width:12px; height:12px; color:#555; }
+/* the tile's head strip, like a real audio tile's: the decorative fold toggle on the left, the
+   single global audio bank on the right, riding above the stacked content lines */
+.rtt-tile-head { align-self:stretch; display:flex; align-items:center; justify-content:space-between;
+                 height:12px; margin-bottom:2px; }
+/* the decorative fold toggle at the head strip's left (inert — it only makes the panel read as a
+   tile); a 12x12 boxed double-chevron in the fan-control grey */
+.rtt-tile-fold { width:12px; height:12px; color:#555; }
+/* the audio control bank at the head strip's right: the four 12px glyph controls (waveform /
+   play-mode / hold / 1-1) relocated here from the per-tile banks. They reuse the grid bank's
+   .rtt-audio-ctrl styling; render() adds rtt-bank-off to grey + disable the bank while audio is
+   off (the speakers it drives are hidden then), like a value-cell part inert without its host cell. */
+.rtt-tile-bank { display:flex; gap:3px; }
+.rtt-tile-bank .rtt-audio-ctrl { width:12px; height:12px; flex:none; }
+.rtt-tile-bank.rtt-bank-off { opacity:0.4; pointer-events:none; }
 /* one stacked layer line; the symbol and name lines seat two parts (parent + sub-control) */
 .rtt-tile-line { display:flex; justify-content:center; align-items:center;
                  min-height:14px; line-height:1.1; }

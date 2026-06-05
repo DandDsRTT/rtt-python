@@ -52,10 +52,6 @@ _INTERACTIVE_KINDS = [
     ("tiletoggle", "tiletoggle:tile:mapping:primes"),
     ("alltoggle", "alltoggle"),
     ("speaker", "speaker:mapping:primes:0"),
-    ("audio_wave", "audio_wave:mapping:primes"),
-    ("audio_mode", "audio_mode:mapping:primes"),
-    ("audio_hold", "audio_hold:mapping:primes"),
-    ("audio_root", "audio_root:mapping:primes"),
 ]
 
 
@@ -188,3 +184,12 @@ def test_chrome_help_covers_the_app_chrome_buttons():
     # the always-present chrome: settings drawer, select-all, the dark-mode toggle, undo, redo, reset
     assert set(tooltips.CHROME_HELP) == {"settings", "select_all", "dark_mode", "undo", "redo", "reset"}
     assert all(text.strip() for text in tooltips.CHROME_HELP.values())
+
+
+def test_audio_help_covers_the_four_bank_controls_with_global_wording():
+    # the single dummy-tile audio bank's four controls each carry distinct, non-empty help; the
+    # wording is global ("every pitch", never "this tile") now that one bank drives every speaker.
+    assert set(tooltips.AUDIO_HELP) == {"wave", "mode", "hold", "root"}
+    assert len(set(tooltips.AUDIO_HELP.values())) == 4
+    for text in tooltips.AUDIO_HELP.values():
+        assert text.strip() and "this tile" not in text

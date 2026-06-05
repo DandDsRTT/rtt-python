@@ -7,6 +7,7 @@ text of their own.
 
   - :data:`SHOW_HELP`   — one entry per Show-toggle key (see :mod:`rtt.web.settings`).
   - :data:`CHROME_HELP` — the app-chrome buttons (undo / redo / reset / settings / select-all).
+  - :data:`AUDIO_HELP`  — the dummy tile's audio bank controls (waveform / play-mode / hold / 1-1).
   - :func:`control_help` — a grid cell's ``(kind, id)`` → its hover text, or ``None`` for
     the read-only output kinds listed in :data:`READONLY_KINDS`.
   - :func:`objective_help` — the optimization objective's hover text, which names a different
@@ -69,6 +70,16 @@ CHROME_HELP: dict[str, str] = {
     "undo": "Undo the last change.",
     "redo": "Redo the change you undid.",
     "reset": "Reset everything — settings, layout, and values — to the defaults.",
+}
+
+# Hover text for the audio control bank (see :func:`rtt.web.app._audio_bank`). The bank is no
+# longer per-tile: one bank on the settings panel's dummy tile drives every speaker from a single
+# global config, so the wording speaks of "every pitch", not "this tile". Keyed by the control name.
+AUDIO_HELP: dict[str, str] = {
+    "wave": "Cycle the waveform every pitch sounds — sine, square, triangle, sawtooth.",
+    "mode": "Cycle the play mode — note, arpeggio, chord, rolled chord.",
+    "hold": "Toggle sustain — hold or loop the notes.",
+    "root": "Toggle the 1/1 root drone sounding underneath.",
 }
 
 
@@ -138,12 +149,9 @@ _KIND_HELP: dict[str, str] = {
     "coltoggle": "Collapse or expand this column.",
     "tiletoggle": "Collapse or expand this tile.",
     "alltoggle": "Collapse or expand the entire grid.",
-    # audio
+    # audio (the per-pitch play buttons; the bank's controls live in AUDIO_HELP — they are no
+    # longer grid cells but a single panel bank, so they aren't keyed by a grid kind)
     "speaker": "Play this pitch.",
-    "audio_wave": "Cycle this tile's waveform — sine, square, triangle, sawtooth.",
-    "audio_mode": "Cycle this tile's play mode — note, arpeggio, chord, rolled chord.",
-    "audio_hold": "Toggle sustain — hold or loop this tile's notes.",
-    "audio_root": "Toggle the 1/1 root drone sounding underneath this tile.",
 }
 
 

@@ -6024,39 +6024,32 @@ def test_tempered_audio_sounds_generators_but_just_audio_has_no_generator_pitch(
     assert "speaker:just_audio:gen:0" not in cells
 
 
-def test_audio_tiles_carry_a_control_bank_in_the_top_right():
-    # each tile gets a bank of four TOGGLE-sized controls in the head strip, mirroring the
-    # fold toggle (top-left): waveform, play-mode, hold/loop, include-1/1 — left to right
+def test_audio_tiles_have_no_per_tile_control_bank():
+    # the waveform / play-mode / hold / 1-1 bank is no longer per-tile: it lives once, on the
+    # settings panel's dummy tile, driving every speaker from one global config. An audio tile now
+    # carries only its speakers and the shared fold toggle — no bank cells, no audio_* control kind.
     cells = {c.id: c for c in _audio().cells}
-    fold = cells["toggle:tile:tempered_audio:targets"]
-    bank = [cells[f"{c}:tempered_audio:targets"] for c in ("wave", "mode", "hold", "root")]
-    assert [b.kind for b in bank] == ["audio_wave", "audio_mode", "audio_hold", "audio_root"]
-    for b in bank:
-        assert (b.y, b.w, b.h) == (fold.y, fold.w, fold.h)  # TOGGLE-sized, in the head strip
-        assert b.x > fold.x                                  # right of the fold toggle
-    assert [b.x for b in bank] == sorted(b.x for b in bank)  # ordered left to right
-    assert bank[0].y < cells["speaker:tempered_audio:target:0"].y  # above the speaker band
+    assert "speaker:tempered_audio:target:0" in cells        # the speakers stay
+    assert "toggle:tile:tempered_audio:targets" in cells      # so does the fold toggle
+    for ctrl in ("wave", "mode", "hold", "root"):
+        assert f"{ctrl}:tempered_audio:targets" not in cells  # ...but the four bank controls are gone
+    assert not any(c.kind.startswith("audio_") for c in cells.values())  # no audio_* control kind anywhere
 
 
-def test_caption_widened_commas_tile_keeps_its_controls_on_the_panel_edges():
-    # Regression: the commas column's long captions ("...comma basis...(made to vanish!)")
-    # widen its grey tile well past its narrow one-comma content, so the content centres
-    # within the wider tile. The per-tile fold toggle (top-left) and the audio control bank
-    # (top-right) must anchor to the PANEL's corners, not to that centred content — anchoring
-    # to content drifts both inward by half the widening, reading as centred rather than
-    # left/right-justified. The bug showed only here because commas is the one column whose
-    # caption outruns its content; wide-content columns (targets) hid it (tile == content).
-    cells = {c.id: c for c in _with(names=True, audio=True).cells}
-    blocks = {b.id: b for b in _with(names=True, audio=True).blocks}
-    narrow = {b.id: b for b in _with(names=False, audio=True).blocks}
-    inset = spreadsheet.TOGGLE_INSET
-    for row in ("just_audio", "tempered_audio"):
-        panel = blocks[f"block:{row}:commas"]
-        assert panel.w > narrow[f"block:{row}:commas"].w  # the caption really did widen it
-        fold = cells[f"toggle:tile:{row}:commas"]
-        root = cells[f"root:{row}:commas"]  # the rightmost control in the four-wide bank
-        assert fold.x == panel.x + inset                     # fold hugs the panel's left edge
-        assert root.x + root.w == panel.x + panel.w - inset  # bank hugs the panel's right edge
+def test_caption_widened_commas_tile_keeps_its_fold_toggle_on_the_panel_edge():
+    # Regression: the commas column's long captions ("mapped comma basis (made to vanish!)")
+    # widen its grey tile well past its narrow one-comma content, so the content centres within
+    # the wider tile. The per-tile fold toggle (top-left) must anchor to the PANEL's left edge,
+    # not to that centred content — anchoring to content drifts it inward by half the widening,
+    # reading as centred rather than left-justified. commas is the column whose caption most
+    # outruns its content, so the bug showed there; wide-content columns hid it (tile == content).
+    blocks = {b.id: b for b in _with(names=True).blocks}
+    narrow = {b.id: b for b in _with(names=False).blocks}
+    cells = {c.id: c for c in _with(names=True).cells}
+    panel = blocks["block:vec:commas"]
+    assert panel.w > narrow["block:vec:commas"].w           # the caption really did widen it
+    fold = cells["toggle:tile:vectors:commas"]
+    assert fold.x == panel.x + spreadsheet.TOGGLE_INSET     # the fold hugs the panel's left edge
 
 
 def _audio_colormap():
@@ -6084,14 +6077,6 @@ def test_audio_rows_colorize_by_content_like_the_rows_they_sound():
     assert at("speaker:tempered_audio:gen:0") == G           # 𝒈 over the yellow generator basis B (green)
     for g in ("prime", "comma", "target", "interest", "held"):
         assert at(f"speaker:tempered_audio:{g}:0") == G       # 𝒕 / 𝒕H = 𝒈𝑀
-
-
-def test_every_audio_tile_gets_its_own_bank():
-    # the bank is per-tile (independent waveform/mode/hold/root), on every audio tile
-    cells = {c.id for c in _audio_colormap().cells}  # has primes/commas/targets/interest + gens
-    for tile in ("just_audio:primes", "just_audio:commas", "just_audio:targets", "just_audio:interest",
-                 "tempered_audio:gens", "tempered_audio:primes", "tempered_audio:targets"):
-        assert {f"wave:{tile}", f"mode:{tile}", f"hold:{tile}", f"root:{tile}"} <= cells
 
 
 def test_show_flags_gate_sub_controls_under_their_parent():
