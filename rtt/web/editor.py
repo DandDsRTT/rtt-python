@@ -886,16 +886,20 @@ class Editor:
         """Drag generator row ``source`` onto row ``target``: add the dragged row into the
         dropped-on one (``row[target] += row[source]``). A generator-basis change that holds the
         temperament and the sounding tuning — see :func:`service.add_mapping_row_to`. A frozen
-        generator tuning is transformed so the pitches are preserved (the dragged generator's
-        size loses the target's); auto-optimize (None) just re-solves the same optimum."""
+        generator tuning is transformed so the pitches are preserved: when ``source != target`` the
+        dragged generator's size loses the target's; dropping a row ONTO ITSELF doubles it (a
+        contorted mapping), which halves that generator's size. Auto-optimize (None) re-solves."""
         r = len(self.state.mapping)
-        if source == target or not (0 <= source < r and 0 <= target < r):
+        if not (0 <= source < r and 0 <= target < r):
             return
         self._snapshot()
         self._clear_pending()
         if self.generator_tuning is not None and len(self.generator_tuning) == r:
             tuning = list(self.generator_tuning)
-            tuning[source] -= tuning[target]
+            if source == target:
+                tuning[target] = tuning[target] / 2  # row doubled → its generator halves
+            else:
+                tuning[source] -= tuning[target]
             self.generator_tuning = tuple(tuning)
         self.state = service.add_mapping_row_to(self.state, source, target)
 
@@ -903,9 +907,10 @@ class Editor:
         """Drag comma ``source`` onto comma ``target``: add the dragged comma into the dropped-on
         one (``comma[target] += comma[source]``). The interval-column twin of
         :meth:`add_mapping_row_to` — a comma-basis change that holds the temperament (see
-        :func:`service.add_comma_to`); the mapping is unaffected, so no tuning transform."""
+        :func:`service.add_comma_to`); the mapping is unaffected, so no tuning transform. Dropping a
+        comma onto itself doubles it (a torsion/enfactored basis), again holding the mapping."""
         n = len(self.state.comma_basis)
-        if source == target or not (0 <= source < n and 0 <= target < n):
+        if not (0 <= source < n and 0 <= target < n):
             return
         self._snapshot()
         self._clear_pending()
@@ -914,8 +919,8 @@ class Editor:
     def _combine_interval_vectors(self, vectors: list, source: int, target: int) -> None:
         """Add interval ``source`` into interval ``target`` in a vector list (intervals of
         interest / held intervals): the dropped-on vector becomes the two intervals' sum (their
-        product). Snapshots only when it actually applies (a valid, distinct pair)."""
-        if source == target or not (0 <= source < len(vectors) and 0 <= target < len(vectors)):
+        product) — dropping one onto itself squares it. Snapshots only when it applies (valid)."""
+        if not (0 <= source < len(vectors) and 0 <= target < len(vectors)):
             return
         self._snapshot()
         vectors[target] = tuple(a + b for a, b in zip(vectors[target], vectors[source]))
@@ -933,9 +938,9 @@ class Editor:
         the spec set into a manual override (like :meth:`remove_target`). Targets are ratio
         strings, so the product is taken directly (a ratio product is the intervals' vector sum)."""
         targets = self._current_targets()
-        if source == target or not (0 <= source < len(targets) and 0 <= target < len(targets)):
+        if not (0 <= source < len(targets) and 0 <= target < len(targets)):
             return
-        product = Fraction(targets[source]) * Fraction(targets[target])
+        product = Fraction(targets[source]) * Fraction(targets[target])  # onto itself → squared
         self._snapshot()
         targets[target] = f"{product.numerator}/{product.denominator}"
         self.target_override = tuple(targets)

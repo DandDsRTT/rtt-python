@@ -1718,17 +1718,17 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
 
     def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another to ADD it into that row
-        # HTML5 drag-to-combine. The source row is held server-side (dragstart → drop). A custom
-        # dataTransfer type ("application/x-rtt-row") marks valid same-kind targets, so dragover shows
-        # the + (copy) cursor only over another row handle. dragenter previews the would-be result
-        # (rings the cells it moves + shows their new values, reverted on the next enter / drag end);
-        # the drop commits it as one undo step.
+        # HTML5 drag-to-combine. The source row is held server-side (dragstart → drop). dragover
+        # preventDefaults and sets dropEffect='copy' so the cursor shows the + (copy) glyph over a
+        # handle; effectAllowed='copy' on dragstart keeps the drag a copy (and setData lets the drag
+        # start in Firefox). dragenter previews the would-be result (rings the cells it moves + shows
+        # their new values, reverted on the next enter / drag end); the drop commits it as one undo
+        # step. Validity (same-kind, in-bounds) is enforced server-side and shown by the preview.
         wrap.classes("rtt-drag-handle rtt-row-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, idx=cb.gen: self._begin_row_drag(idx))
         wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
                                         "e.dataTransfer.setData('application/x-rtt-row','');}")
-        wrap.on("dragover", js_handler="(e)=>{if(e.dataTransfer.types.includes('application/x-rtt-row'))"
-                                       "{e.preventDefault();e.dataTransfer.dropEffect='copy';}}")
+        wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
         wrap.on("dragenter.prevent", lambda _=None, idx=cb.gen: self._preview_row_drop(idx))
         wrap.on("dragend", lambda _=None: self._end_row_drag())
         wrap.on("drop.prevent", lambda _=None, idx=cb.gen: self._drop_on_row(idx))
@@ -1742,37 +1742,36 @@ class _Reconciler:
         self._row_drag = None
         self._cb.combine_end()
 
-    def _preview_row_drop(self, idx):  # hovering target row idx: preview the would-be combine (else revert)
+    def _preview_row_drop(self, idx):  # hovering target row idx: preview the would-be combine
         src = self._row_drag
-        apply = (lambda: self._editor.add_mapping_row_to(src, idx)) if (src is not None and src != idx) else None
-        self._cb.combine_preview(apply)
+        apply = (lambda: self._editor.add_mapping_row_to(src, idx)) if src is not None else None
+        self._cb.combine_preview(apply)  # src == idx is allowed: dropping a row on itself doubles it
 
     def _drop_on_row(self, idx):  # add the dragged generator row into the one it was dropped on
         src = self._row_drag
         self._row_drag = None
-        if src is not None and src != idx:
+        if src is not None:  # including src == idx (drop a row onto itself → double it)
             self._cb.combine_commit(lambda: self._editor.add_mapping_row_to(src, idx))
         else:
-            self._cb.combine_end()  # dropped on itself / nothing: just revert the preview
+            self._cb.combine_end()
 
     # the interval-column drag handles (comma / target / held / interest): the column twin of the
     # mapping-row handle. Drag one interval onto another in the SAME column to ADD it in (their
-    # product). The source's (group, index) is held server-side; a per-group dataTransfer type keeps
-    # the + cursor and the preview to that one column. See spreadsheet's int_drag.
+    # product), or onto itself to double it. The source's (group, index) is held server-side;
+    # _int_combine enforces the same-column rule and the dragenter preview shows what a drop will do.
+    # See spreadsheet's int_drag.
     _INTERVAL_COMBINE = {
         "comma": "add_comma_to", "target": "add_target_to",
         "held": "add_held_to", "interest": "add_interest_to",
     }
 
-    def _build_int_drag(self, cb, wrap):
+    def _build_int_drag(self, cb, wrap):  # the column twin of _build_map_drag; see it for the DnD wiring
         group = cb.id.split(":")[1]  # int_drag:<group>:<index>
-        typ = f"application/x-rtt-int-{group}"  # a per-group type so only same-column targets accept the drop
         wrap.classes("rtt-drag-handle rtt-col-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, g=group, idx=cb.comma: self._begin_col_drag(g, idx))
         wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
-                                        f"e.dataTransfer.setData('{typ}','');}}")
-        wrap.on("dragover", js_handler=f"(e)=>{{if(e.dataTransfer.types.includes('{typ}'))"
-                                       "{e.preventDefault();e.dataTransfer.dropEffect='copy';}}")
+                                        "e.dataTransfer.setData('application/x-rtt-int','');}")  # for Firefox
+        wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
         wrap.on("dragenter.prevent", lambda _=None, g=group, idx=cb.comma: self._preview_int_drop(g, idx))
         wrap.on("dragend", lambda _=None: self._end_col_drag())
         wrap.on("drop.prevent", lambda _=None, g=group, idx=cb.comma: self._drop_on_interval(g, idx))
@@ -1782,7 +1781,7 @@ class _Reconciler:
         if self._col_drag is None:
             return None
         src_group, src = self._col_drag
-        if src_group != group or src == idx:  # only combine within the same interval column
+        if src_group != group:  # only combine within the same interval column (src == idx is allowed: squares it)
             return None
         combine = getattr(self._editor, self._INTERVAL_COMBINE[group])
         return lambda: combine(src, idx)

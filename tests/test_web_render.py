@@ -1184,6 +1184,46 @@ async def test_dragging_over_a_row_previews_the_change_then_reverts(user: User) 
     assert "rtt-preview-change" not in _wrap_classes(user, "gen:0")  # ...and the ring cleared
 
 
+async def test_dragging_a_row_onto_itself_previews_doubling_it_then_reverts(user: User) -> None:
+    # the "absolutely critical" self-drop preview: hovering a row's OWN handle previews doubling it
+    # (row += itself, a contorted mapping) — exactly the preview a cross-row drop gets. Earlier this
+    # was a no-op; now meantone row 0 (1,1,0) previews (2,2,0) and reverts when released.
+    await _enable(user, "drag to combine")
+    row0 = lambda: [_cell_child(user, f"cell:mapping:0:{p}").value for p in range(3)]
+    assert row0() == ["1", "1", "0"]
+    h = lambda i: set(user.find(marker=f"map_drag:{i}").elements)
+    UserInteraction(user, h(0), None).trigger("dragstart")          # pick up row 0...
+    UserInteraction(user, h(0), None).trigger("dragenter.prevent")  # ...and hover its OWN handle
+    assert row0() == ["2", "2", "0"]  # previews doubling itself
+    UserInteraction(user, h(0), None).trigger("dragend")            # release → revert
+    assert row0() == ["1", "1", "0"]  # reverted, nothing committed
+
+
+async def test_dropping_a_row_onto_itself_doubles_it(user: User) -> None:
+    # and the self-drop commits: dropping a row onto its own handle adds it into itself.
+    await _enable(user, "drag to combine")
+    row0 = lambda: [_cell_child(user, f"cell:mapping:0:{p}").value for p in range(3)]
+    assert row0() == ["1", "1", "0"]
+    h = lambda i: set(user.find(marker=f"map_drag:{i}").elements)
+    UserInteraction(user, h(0), None).trigger("dragstart")     # pick up row 0...
+    UserInteraction(user, h(0), None).trigger("drop.prevent")  # ...and drop it onto ITSELF
+    await user.should_see(marker="cell:mapping:0:0")
+    assert row0() == ["2", "2", "0"]  # the row absorbed itself
+
+
+async def test_dragging_an_interval_onto_itself_squares_it(user: User) -> None:
+    # the column twin of the self-drop: an interval dropped onto its OWN handle squares it (the
+    # vector doubles, so the ratio squares). Drop target 0 onto itself → target 0 is its own square.
+    await _enable(user, "drag to combine")
+    tval = lambda i: _cell_child(user, f"target:{i}").value
+    before0 = tval(0)
+    handle = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)
+    UserInteraction(user, handle(0), None).trigger("dragstart")     # grab target 0...
+    UserInteraction(user, handle(0), None).trigger("drop.prevent")  # ...and drop it onto ITSELF
+    await user.should_see(marker="target:0")
+    assert Fraction(tval(0)) == Fraction(before0) * Fraction(before0)  # target 0 is its own square
+
+
 # --- tier 3: the #3 drift guard. _make_cell builds each cell-kind, render() fills each kind,
 # in two parallel cb.kind ladders. For the kinds whose visible content is a single ui.html the
 # renderer must populate (built empty in _make_cell), a dropped render branch leaves the cell
