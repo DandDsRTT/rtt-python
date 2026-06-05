@@ -238,6 +238,7 @@ _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --rail-w:{_RAIL_W}px; --panel-w:{_PANEL_W}px;
   --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --preview-color:{_PREVIEW_COLOR};
   --c-gridline:#e0e0e0;
+  --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
   --label-w:{spreadsheet.LABEL_W}px; --header-h:{spreadsheet.HEADER_H}px; --line-w:{spreadsheet.LINE_W}px;
   --ptext-edit-h:{spreadsheet.PTEXT_EDIT_H}px; --option-box:{spreadsheet.OPTION_BOX_PX}px; --btn:{spreadsheet.BTN}px;
@@ -578,7 +579,7 @@ def _example_html(key: str) -> str:
         group = key.split("_")[0]
         letter = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}[group]
         return (f'<span style="display:inline-flex;align-items:center;justify-content:center;'
-                f'width:36px;height:14px;background:{_TINTS[group]}">{_math_html(letter)}</span>')
+                f'width:36px;height:14px;background:var(--wash-{group})">{_math_html(letter)}</span>')
     if key == "audio":  # a speaker glyph — the per-pitch play button the audio rows carry
         return '<span class="material-icons" style="font-size:18px;color:#444">volume_up</span>'
     if key == "tuning_ranges":  # the tuning-range I-beam (min/max generator bars)
@@ -1866,15 +1867,19 @@ def index() -> None:
     # beats Quasar's body background the same way the static "#fff" did before).
     dark_mode = [bool(_doc_store().get(_DARK_KEY, False))]
 
+    def _dark_icon():  # the sun/moon glyph shows the theme a click will switch TO
+        return "light_mode" if dark_mode[0] else "dark_mode"  # a sun to go light, a moon to go dark
+
     def apply_theme():
         body = ui.query("body")
         body.classes(add="rtt-dark") if dark_mode[0] else body.classes(remove="rtt-dark")
         body.style(f"background:{_DARK_FRAME if dark_mode[0] else '#fff'}")
 
-    def on_dark_toggle(value):
-        dark_mode[0] = bool(value)
+    def on_dark_toggle():
+        dark_mode[0] = not dark_mode[0]
         _doc_store()[_DARK_KEY] = dark_mode[0]
         apply_theme()
+        dark_btn.props(f"icon={_dark_icon()}")  # swap the glyph to the new target theme
 
     apply_theme()  # paint the persisted theme up front, before the grid builds (no flash)
 
@@ -2400,8 +2405,10 @@ def index() -> None:
                            else "rtt-wash" if bl.tint else "rtt-block")
                     rec.els[bl.id] = ui.element("div").classes(cls).props(f'data-eid="{bl.id}"')
             style = f"left:{bl.x}px; top:{bl.y - fy}px; width:{bl.w}px; height:{bl.h}px"
-            if bl.tint in _TINTS:  # the coloured layer (the base draws white from CSS)
-                style += f"; background:{_TINTS[bl.tint]}"
+            if bl.tint in _TINTS:  # the coloured layer (the base draws --wash-base from CSS). The
+                # tint rides a --wash-<group> variable so dark mode can retint the whole palette;
+                # :root defines each to its _TINTS value, so light renders unchanged.
+                style += f"; background:var(--wash-{bl.tint})"
             rec.els[bl.id].style(style)
 
         # the edit-preview highlight: while a cell is focused, ring every OTHER cell whose value this
@@ -2517,21 +2524,18 @@ def index() -> None:
                             on_change=lambda e: on_select_all(e.value)) \
                             .props("dense size=xs color=grey-8").classes("rtt-show-item") \
                             .tooltip(tooltips.CHROME_HELP["select_all"])
+                        # the dark-mode toggle rides beside select-all (both are app chrome, not Show
+                        # layers): a sun/moon icon button showing the theme a click would switch to.
+                        dark_btn = ui.button(on_click=on_dark_toggle) \
+                            .props(f"flat dense round icon={_dark_icon()}") \
+                            .classes("rtt-darktoggle").mark("darkmode") \
+                            .tooltip(tooltips.CHROME_HELP["dark_mode"])
                 # the scrolling body: the toggle groups, which scroll under the frozen header when
                 # the panel outgrows the window (rather than spilling off the bottom of the screen)
                 boxes: dict = {}  # specific-group toggle key -> checkbox, so a sub-control row can bind to its parent
                 tile_parts: dict = {}  # general-group layer key -> its clickable dummy-tile part (render() styles these)
                 show_scroll = ui.element("div").classes("rtt-show-scroll").mark("showscroll")
                 with show_scroll:
-                    # dark mode rides the very top of the panel, set apart from the Show-content
-                    # groups below by a divider: it themes the whole app rather than showing/hiding
-                    # a layer, so it is a standalone preference (apply_theme), not a Show toggle —
-                    # hence it sits outside the SHOW_GROUPS loop and the select-all sweep.
-                    with ui.element("div").classes("rtt-darkrow"):
-                        ui.checkbox("dark mode", value=dark_mode[0],
-                                    on_change=lambda e: on_dark_toggle(e.value)) \
-                            .props("dense size=xs color=grey-8").classes("rtt-show-item") \
-                            .mark("darkmode").tooltip(tooltips.CHROME_HELP["dark_mode"])
                     for group_name, items in show_settings.SHOW_GROUPS:
                         with ui.element("div").classes("rtt-show-group"):
                             if group_name == "general":

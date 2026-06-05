@@ -24,6 +24,11 @@ body.rtt-dark {
   --c-gridline:#363c44;            /* the shared-axis gridlines, visible on the dark pane */
   --cell-border:1px solid #8d949d; /* the value cells' shared rule — matched by the marks below */
   --seam:#3c424a;                  /* the frozen-pane / scrolling seam */
+  /* the colorization washes, dark-toned. The darken blend (kept from light) mins the tints over
+     this base, so the subtractive overlaps survive: a base with three equal channels and tints
+     that each drop ONE to #1e give clean dark secondaries — tuning ⊓ temperament = #1e451e (green),
+     mirroring the light cyan ⊓ yellow = green. */
+  --wash-base:#454545; --wash-tuning:#1e4545; --wash-temperament:#45451e; --wash-form:#451e45;
 }
 /* the EBK bracket & brace marks bake _BR_COLOR (#1a1a1a) into their SVG fill; a CSS rule beats
    the presentation attribute, and matching the exact value leaves a pending comma's red marks
@@ -54,7 +59,15 @@ body.rtt-dark .rtt-show-frozen { border-bottom-color:#3c424a; }
    the fill and re-light the text, or edited cells stay blinding. Their 1px rule rides --cell-border. */
 body.rtt-dark .rtt-white { background:#1b1f24; color:#e3e6ea; }
 body.rtt-dark .rtt-cellinput .q-field__control { background:#1b1f24; }
+/* an editable cell's raw input text. Plain integer cells (mapping, comma, the vector lists)
+   show it directly, so re-light it. But the STACKED cells (cents, ratios, the generator tuning
+   map, powers) overlay a formatted face on a transparent input and reveal the raw text only on
+   focus — so mirror the light cascade exactly: keep the input transparent while unfocused (or the
+   face doubles over it) and re-light it (NOT the light rule's #000) once focused, so the editing
+   text stays legible on the dark cell. */
 body.rtt-dark .rtt-cellinput .q-field__native { color:#e3e6ea; }
+body.rtt-dark .rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent; }
+body.rtt-dark .rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:#e3e6ea; }
 body.rtt-dark .rtt-ptextedit .q-field__control,
 body.rtt-dark .rtt-ptextpending { background:#1b1f24; border-color:#4e555d; }
 body.rtt-dark .rtt-ptextedit .q-field__native,
@@ -92,7 +105,7 @@ body.rtt-dark .rtt-hamburger { background:#1b1f24 !important; border-color:#4e55
 body.rtt-dark .rtt-hamburger .q-icon { color:#cfd4da !important; }
 
 /* ── settings panel ──────────────────────────────────────────────────────────────────────────── */
-body.rtt-dark .rtt-darkrow { border-bottom-color:#3c424a; }   /* the dark-mode toggle's divider */
+body.rtt-dark .rtt-darktoggle { color:#cfd4da !important; }   /* the dark-mode sun/moon glyph */
 body.rtt-dark .rtt-show-item .q-checkbox__label,
 body.rtt-dark .rtt-ex-cell { color:#e3e6ea; }
 body.rtt-dark .rtt-show-item.disabled .q-checkbox__label,

@@ -150,7 +150,7 @@
    green), independent of which group was toggled on first. */
 .rtt-washbase, .rtt-wash { position:absolute; opacity:1;
             transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
-.rtt-washbase { z-index:-1; background:#fff; }
+.rtt-washbase { z-index:-1; background:var(--wash-base); }
 .rtt-wash { z-index:0; mix-blend-mode:darken; }
 .rtt-block { position:absolute; z-index:2; background:#e0e0e0; opacity:1;
              transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
@@ -621,16 +621,17 @@ body.rtt-dragging .rtt-fanbtn { pointer-events:none; }
    scrollbar; sizing to its own content makes any rounding a 1px gap instead. It scrolls (overflow-y:
    auto) only once its content genuinely exceeds the max-height. */
 .rtt-show-scroll { flex:none; overflow-y:auto; padding:0 14px 16px; }
-/* the dark-mode toggle's own row at the very top of the scrolling panel — a standalone app
-   preference (it themes the whole app rather than showing/hiding a layer), set apart from the
-   Show groups below by a divider rule and a little breathing room. Its 9px inset lines its
-   checkbox up with the select-all / group headers above and below it. */
-.rtt-darkrow { display:flex; align-items:center; min-height:26px; padding:2px 9px 8px;
-               border-bottom:1px solid #c4c4c4; }
 /* the select-all/none master toggle — the header's first line (above the show/example titles);
-   one click flips every implemented Show toggle. The rule that set it apart now sits below the
-   whole header (.rtt-show-frozen's border), so it keeps only its horizontal inset. */
-.rtt-show-all { padding:0 9px; }
+   one click flips every implemented Show toggle. It shares its row with the dark-mode toggle
+   (pushed to the far end), so the row lays them out left-and-right; the rule that set it apart
+   now sits below the whole header (.rtt-show-frozen's border), so it keeps only its inset. */
+.rtt-show-all { display:flex; align-items:center; justify-content:space-between; padding:0 9px; }
+/* the dark-mode toggle: a compact sun/moon icon button beside select-all. Flat and borderless so
+   it reads as a chrome glyph (like the rail's hamburger), not a raised button. */
+.rtt-darktoggle { width:24px !important; min-width:24px !important; height:24px !important;
+                  min-height:24px !important; padding:0 !important; color:#555 !important;
+                  background:transparent !important; box-shadow:none !important; }
+.rtt-darktoggle .q-icon { font-size:18px; }
 /* the panel's two column headers: "show" (the toggles) and "example" (their sample
    renders), aligned over the grid columns the rows below use. Both share one font and
    sit on a common baseline so the two words line up. */
