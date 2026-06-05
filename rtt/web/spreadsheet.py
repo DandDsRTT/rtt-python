@@ -3108,8 +3108,10 @@ class _GridBuilder:
             # weight its reciprocal — diag(𝐿)⁻¹, more concrete than the slope's 𝒄⁻¹; the damage the
             # retuning-MAP magnitude times that weight — |𝒓|𝐿⁻¹ (there is no target error list 𝐞 here,
             # the retune row's 𝐞→𝒓). These need the live glyph, so they can't be static.
-            equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
-            equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
+            if not self.prescaler_is_matrix:  # a NON-diagonal 𝑋 has no diagonal — diag(𝑋) is meaningless,
+                # so 𝒄 (and its diag-reciprocal 𝒘) get NO closed-form equivalence (𝒘's is set below anyway)
+                equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
+                equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
             equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
         if self.weight_is_matrix:  # a non-diagonal pretransformer has no per-prime diagonal diag(𝑋)⁻¹:
             # the size factor makes the weight the d×(d+1) left inverse (𝑍𝑋)⁻; an editable square 𝑋,

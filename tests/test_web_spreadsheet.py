@@ -2954,6 +2954,20 @@ def test_all_interval_relabels_the_complexity_weight_and_damage_equivalences():
     assert based["symbol:damage:targets"].text == "𝐝 = |𝐞|𝒘"
 
 
+def test_a_non_diagonal_pretransformer_drops_the_complexity_diag_equivalence():
+    # diag(𝑋) is meaningless once 𝑋 has off-diagonal entries (each prime's complexity is then the norm
+    # of a whole column, not one diagonal entry), so the complexity carries NO closed-form equivalence
+    # then — just the bare 𝒄. The weight still becomes the matrix 𝑊 = 𝑋⁻¹ (via weight_is_matrix).
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s.update(weighting=True, alt_complexity=True, symbols=True, equivalences=True)
+    square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))  # an off-diagonal pretransformer
+    on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S",
+                                             custom_prescaler=square).cells}
+    assert on["symbol:complexity:targets"].text == "𝒄"       # NOT "𝒄 = diag(𝑋)"
+    assert on["symbol:weight:targets"].text == "𝑊 = 𝑋⁻¹"    # the square inverse, not the diag reciprocal
+
+
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
     # the all-interval (and diminuator) checkbox CELL is sized to the rendered square so its
     # caption hugs it; that square is the SINGLE shared option-box size (OPTION_BOX_PX = 16),
