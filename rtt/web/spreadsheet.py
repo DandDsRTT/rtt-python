@@ -1512,15 +1512,20 @@ class _GridBuilder:
 
     def cell_unit(self, rkey, ckey, *, gen=None, prime=None):
         # the per-value unit shown beneath a gridded cell when units is on: the tile's
-        # unit (UNITS) with its g/p variables subscripted by this cell's generator/prime
+        # unit (UNITS) with its g/p/b variables subscripted by this cell's generator/prime
         # index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped list g₁.
-        # A nonstandard subgroup swaps the domain p for b (basis element); see domain_label.
+        # A nonstandard subgroup swaps the on-domain p for b (basis element); see
+        # domain_label. The chapter-9 superspace tiles use literal b in UNITS (¢/b for
+        # the cyan tuning row, g/b for M_L, b/b for M_jL) — so a prime arg subscripts b
+        # directly too. The literal-b substitution runs FIRST so the b's the p-swap
+        # itself produces (p → b₁) don't get re-subscripted to b₁₁ when domain_label is b.
         if not self.show_units:
             return ""
         u = UNITS.get((rkey, ckey), "")
         if gen is not None:
             u = u.replace("g", f"g{_sub(gen + 1)}")
         if prime is not None:
+            u = u.replace("b", f"b{_sub(prime + 1)}")
             u = u.replace("p", f"{self.domain_label}{_sub(prime + 1)}")
         return u
 
@@ -1660,11 +1665,14 @@ class _GridBuilder:
             self.chart_tiles.append((key, group, vals))
         y = self.row_y[key]
         # the tuning-family unit is cents per the column's coordinate: over the generators
-        # it's ¢/gᵢ, over the primes ¢/pᵢ, over the (dimensionless) interval columns plain ¢
+        # it's ¢/gᵢ (gens AND the chapter-9 superspace ssgens), over the primes ¢/pᵢ /
+        # ¢/bᵢ (primes AND ssprimes), and over the (dimensionless) interval columns plain ¢
+        is_gen_group = group in ("gens", "ssgens")
+        is_prime_group = group in ("primes", "ssprimes")
         for i, v in enumerate(vals):
             cid = f"{key}:{self.group_elem[group]}:{self.col_token(group, i)}"
             x = self.group_left[group](i)
-            u = self.cell_unit(key, group, gen=i if group == "gens" else None, prime=i if group == "primes" else None)
+            u = self.cell_unit(key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
             # the held column passes per-interval alert flags: an interval the tuning no longer
             # holds reddens its size cells too (alerts is empty — no flags — for every other column)
             alert = bool(alerts[i]) if i < len(alerts) else False
@@ -2375,6 +2383,7 @@ class _GridBuilder:
                         f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}",
                         self.prime_left(elem_idx), self.ss_vec_top(ss_prime_idx), COL_W, ROW_H,
                         "vec", text=str(val), prime=ss_prime_idx, comma=elem_idx,
+                        unit=self.cell_unit("ss_vectors", "primes", prime=ss_prime_idx),
                     ))
         # M_L (superspace mapping): the rL × dL covector stack the temperament lifts to over its
         # superspace primes. Sits in (ss_mapping, ssprimes), each row a covector over the dL
@@ -2389,10 +2398,15 @@ class _GridBuilder:
                         self.ss_prime_left(ss_prime_idx), self.ss_map_top(gen_idx), COL_W, ROW_H,
                         "mapping", text=str(ml[gen_idx][ss_prime_idx]),
                         gen=gen_idx, prime=ss_prime_idx,
+                        unit=self.cell_unit("ss_mapping", "ssprimes", gen=gen_idx, prime=ss_prime_idx),
                     ))
         # M_jL (superspace JI mapping): the dL × dL identity. Each superspace prime is its
         # own basis element, so the just mapping is trivially I. Same "mapping" cell kind
         # and bracket convention as M_L; lives in its own row band ss_just_mapping below it.
+        # Units b/b — each cell's row dimension is the i-th basis element, its column the
+        # j-th, both subscripted via cell_unit. (Two prime subscripts on one unit don't
+        # collide because cell_unit subscripts ALL b's; the row index would only differ on
+        # an off-diagonal entry, and M_jL is the identity.)
         if self.row_open("ss_just_mapping") and self.tile_open("ss_just_mapping", "ssprimes"):
             mjl = service.superspace_just_mapping(self.superspace_primes)
             for i in range(self.dL):
@@ -2402,6 +2416,7 @@ class _GridBuilder:
                         self.ss_prime_left(j), self.ss_just_map_top(i), COL_W, ROW_H,
                         "mapping", text=str(mjl[i][j]),
                         gen=i, prime=j,
+                        unit=self.cell_unit("ss_just_mapping", "ssprimes", prime=j),
                     ))
 
         # the chapter-9 CONVERSION rows. Each carries the same dL-tall spine basis index

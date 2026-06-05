@@ -7016,3 +7016,78 @@ def test_existing_bracket_constants_are_unchanged_by_superspace():
     assert spreadsheet.MAP_BRACKETS == ("⟨", "]")
     assert spreadsheet.LIST_BRACKETS == ("[", "]")
     assert spreadsheet.GENMAP_BRACKETS == ("{", "]")
+
+
+# ---------------------------------------------------------------------------
+# Polish — the existing math-expressions / charts / units / mnemonics
+# infrastructure should automatically extend to the new superspace tuning
+# cells via the group_ratio / CHARTED_ROWS / UNITS / MNEMONICS hooks the
+# green and cyan commits set up. These tests lock that flow-through.
+# ---------------------------------------------------------------------------
+
+
+def test_math_expressions_render_j_L_cells_as_log_of_superspace_primes():
+    # 𝒋ₗ over BARBADOS's superspace (2, 3, 5, 13) is 1200·log₂p for each prime; with
+    # math_expressions on each cell should prefix the cents value with that closed form
+    # (the same shape the on-domain (just, primes) cells take — closed_form_operand reads
+    # group_ratio["ssprimes"], which the cyan commit wired up to the superspace primes).
+    cells = {c.id: c for c in _barbados_ss(math_expressions=True).cells}
+    assert cells["just:ssprime:0"].kind == "mathexpr"
+    assert cells["just:ssprime:0"].text == "1200 · log₂2\n= 1200.000"
+    assert cells["just:ssprime:1"].text == "1200 · log₂3\n= 1901.955"
+    assert cells["just:ssprime:2"].text == "1200 · log₂5\n= 2786.314"
+    assert cells["just:ssprime:3"].text.startswith("1200 · log₂13\n= ")  # 13 — value depends on rounding
+
+
+def test_math_expressions_off_keeps_j_L_cells_as_plain_tval():
+    # math expressions OFF: the just/ssprimes cells stay as plain "tval" cents cells, no
+    # closed-form prefix. (The math toggle is independent of the other display flags.)
+    cells = {c.id: c for c in _barbados_ss(math_expressions=False).cells}
+    assert cells["just:ssprime:0"].kind == "tval"
+
+
+def test_chart_band_renders_over_the_retune_r_L_tile_when_charts_is_on():
+    # retune ∈ CHARTED_ROWS, so its tval_row records (retune, ssprimes) in chart_tiles,
+    # and the build()'s chart pass emits a "chart" CellBox at that tile. The chart spans
+    # the dL value columns, riding the group_left["ssprimes"] gridlines.
+    cells = {c.id: c for c in _barbados_ss(charts=True).cells}
+    chart = cells["chart:retune:ssprimes"]
+    assert chart.kind == "chart"
+    # the chart's value array is the dL retuning errors (same numbers the 𝒓ₗ cells carry)
+    expected_vals = tuple(_barbados_superspace_tuning().retuning_map)
+    assert chart.values == expected_vals
+
+
+def test_chart_band_omitted_from_r_L_when_charts_is_off():
+    cells = {c.id for c in _barbados_ss(charts=False).cells}
+    assert "chart:retune:ssprimes" not in cells
+
+
+def test_per_cell_units_subscript_b_on_the_superspace_tuning_cells():
+    # the cyan tuning row's ssprimes cells carry "¢/b" units (the basis-element axis the
+    # nonstandard-domain feature swaps p → b for). With units on, each cell's unit
+    # subscripts the prime index — ¢/b₁, ¢/b₂, … — like the on-domain (tuning, primes)
+    # cells subscript ¢/p₁, ¢/p₂. The same subscripting rides cell_unit through UNITS.
+    cells = {c.id: c for c in _barbados_ss(units=True).cells}
+    assert cells["tuning:ssprime:0"].unit == "¢/b₁"
+    assert cells["tuning:ssprime:1"].unit == "¢/b₂"
+    assert cells["just:ssprime:0"].unit == "¢/b₁"
+    assert cells["retune:ssprime:0"].unit == "¢/b₁"
+
+
+def test_per_cell_units_subscript_g_on_the_g_L_cells():
+    # 𝒈ₗ over the ssgens column carries "¢/g" units (one cents-per-generator entry per
+    # superspace generator), subscripted by the generator index — ¢/g₁, ¢/g₂, …
+    cells = {c.id: c for c in _barbados_ss(units=True).cells}
+    assert cells["tuning:ssgen:0"].unit == "¢/g₁"
+    assert cells["tuning:ssgen:1"].unit == "¢/g₂"
+
+
+def test_per_cell_units_on_the_M_L_cells_carry_g_over_b():
+    # M_L (superspace mapping) is generators-per-basis-element (g/b), one entry per
+    # (generator, superspace-prime). The subscript follows the column index — g₁/b₁,
+    # g₁/b₂, … like the on-domain mapping cells take g₁/p₁ etc.
+    cells = {c.id: c for c in _barbados_ss(units=True).cells}
+    assert cells["cell:ss_mapping:ssprimes:0:0"].unit == "g₁/b₁"
+    assert cells["cell:ss_mapping:ssprimes:0:1"].unit == "g₁/b₂"
+    assert cells["cell:ss_mapping:ssprimes:1:0"].unit == "g₂/b₁"
