@@ -647,6 +647,21 @@ def test_shared_axes_and_branching():
     assert {"vbar:mapping:left", "vbar:mapping:right", "foot:mapping"} <= ids
 
 
+def test_the_weight_matrix_fans_its_subrows_like_any_multi_row_tile():
+    # the d×(d+1) weight matrix is a multi-row tile, so — like the mapping / vectors — it must get one
+    # branching gridline per sub-row, DERIVED from its own cell-row count (row_nsub > 1), not from a
+    # hand-kept FRAMED_ROWS membership. Regression: the weight row used to fall through to a single
+    # flat spine (h:weight) with no internal sub-rules — the row-side of the generators-column bug.
+    lay = _with("minimax-lils-S", weighting=True)  # all-interval + size factor → a 3×4 weight matrix
+    ids = {ln.id for ln in lay.lines}
+    assert {"h:weight:0", "h:weight:1", "h:weight:2"} <= ids  # one fanned rule per matrix sub-row
+    assert "h:weight" not in ids                              # NOT the single-spine fallback
+    # ...fanning through the same left/right bus + foot structure the mapping uses
+    assert {"vbar:weight:left", "vbar:weight:right", "foot:weight"} <= ids
+    # a single-row value row (damage) still gets its lone spine, no fan
+    assert "h:damage" in ids and "h:damage:0" not in ids
+
+
 def test_convergence_buses_keep_solid_corners_and_the_top_bus_reaches_the_plus():
     # both buses fan from half a line-width before the first sub-line, so the near (fan-out)
     # corner stays solid at LINE_W. The BOTTOM bus rejoins half past the last sub-line (its far

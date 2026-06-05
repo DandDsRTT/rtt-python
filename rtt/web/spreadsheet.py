@@ -3029,19 +3029,20 @@ class _GridBuilder:
 
         # A matrix row is the horizontal mirror of a group column: it fans out at the node into
         # one rule per cell-row, runs through the data, and rejoins on the right to a foot past it.
-        # The matrices are exactly FRAMED_ROWS, so membership there — not a hand-named special case
-        # (it used to be just "mapping") — decides what fans, and the count is the row's own cell
-        # height. So vectors/canon/prescaling fan like the mapping, automatically. Sub-rules are
-        # keyed by the row (h:mapping:i, h:vectors:i): unlike a column, whose element type picks
-        # one column, several rows share an element type (vectors and prescaling are both d primes
-        # tall), so the row key — not the element — is what keeps the ids unique.
+        # Whether a row fans is DERIVED from its own cell-row count (row_nsub > 1), exactly as a
+        # column fans on its element count — NOT a hand-kept membership list. So ANY multi-row tile
+        # (the mapping, vectors, prescaling, the d×(d+1) weight matrix, …) fans automatically and a
+        # new one can never be left with a lone centre spine (the row-side of the generators-column
+        # bug). Sub-rules are keyed by the row (h:mapping:i, h:weight:i): unlike a column, whose
+        # element type picks one column, several rows share an element type (vectors and prescaling
+        # are both d primes tall), so the row key — not the element — is what keeps the ids unique.
         self.right_bus_x = self.total_w - self.FAN
 
-        # one pass over the present rows (top to bottom): fan the matrices, give every other row a
-        # single full-width rule across its band. Derived from row_y, so a row can never lack its
+        # one pass over the present rows (top to bottom): fan the multi-row tiles, give every single-
+        # row band one full-width rule. Derived from row_y + row_nsub, so a row can never lack its
         # gridline — present or collapsed (a folded row still leaves its rule, fanned or spine).
         for key in self.row_y:
-            if key in FRAMED_ROWS:
+            if self.row_nsub[key] > 1:
                 self.row_axis(key)
             else:
                 self.gridline(f"h:{key}", "h", self.row_y[key] + self.row_h[key] / 2, self.node_edge, self.total_w - self.node_edge,
