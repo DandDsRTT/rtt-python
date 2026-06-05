@@ -586,16 +586,19 @@
            opacity:0; pointer-events:none; transition:opacity var(--t); }
 .rtt-minus-zone:hover .rtt-minus-btn-v { opacity:1; pointer-events:auto; }
 
-/* drag-and-drop interval columns. A grip (.rtt-colgrip) is the draggable handle tucked at each
-   column's left edge on the fan, above the − zone (z) so it stays grabbable; it dims to a faint
-   dotted handle until hovered. A drop slot (.rtt-dropslot) covers each gap but is INERT until a
-   drag is in progress (body.rtt-dragging, set by drag.js) — so idle it never masks the −/+ or the
-   editable cells. While dragging, the slots arm and the other fan controls go inert so only slots
-   catch; the hovered slot shows a red insertion bar at the gap it would drop into. */
-.rtt-colgrip { z-index:5; cursor:grab; }
-.rtt-colgrip:active { cursor:grabbing; }
-.rtt-colgrip .rtt-glyph { color:#bdbdbd; cursor:grab; }
-.rtt-colgrip:hover .rtt-glyph { color:#666; }
+/* drag-and-drop interval columns. A grip (.rtt-colgrip) is the draggable REORDER handle centred
+   above each column on the fan — the shared .rtt-drag-handle grip (the ⠿ the row/combine handles
+   use), but z-index:5 so it sits above the − zone, and a touch smaller for the shorter fan band.
+   It owns the upper fan; the column's − reveals in the bottom strip below it (.rtt-minus-low). A
+   drop slot (.rtt-dropslot) covers each gap but is INERT until a drag is in progress
+   (body.rtt-dragging, set by drag.js) — so idle it never masks the −/+ or the editable cells.
+   While dragging the slots arm and the other fan controls go inert so only slots catch; the
+   hovered slot shows a red insertion bar at the gap it would drop into. */
+.rtt-colgrip { z-index:5; }
+.rtt-colgrip .rtt-grip { font-size:16px; }  /* the reorder grip rides the shorter fan band */
+/* the grip overlays the top of the − zone, so reveal this − at the zone's BOTTOM (just above the
+   cell), clear of the grip — the zone stays full-height (frozen with the fan); only the button drops */
+.rtt-minus-low .rtt-minus-btn { top:auto; bottom:0; transform:translate(-50%,0); }
 .rtt-dropslot { z-index:6; pointer-events:none; }
 body.rtt-dragging .rtt-dropslot { pointer-events:auto; }
 body.rtt-dragging .rtt-colgrip,

@@ -332,17 +332,21 @@ def test_interval_columns_carry_drag_grips_and_drop_slots():
     assert all(f"drop:interest:{g}" in cells for g in range(2))  # one column → gaps 0, append
 
 
-def test_a_drag_grip_rides_the_frozen_fan_left_of_its_columns_minus():
-    # the grip tucks against its column's left edge, ending at the centred −'s reach so the two
-    # never fight, and rides the frozen strip with the rest of the fan (anchored above the seam)
+def test_a_drag_grip_is_a_prominent_handle_above_its_column_clear_of_the_minus():
+    # the grip is a full-width handle centred on its column at the top of the fan (the prominent
+    # ⠿ the generator rows use), riding the frozen strip; it stops a button's height short of the
+    # cell, leaving the bottom of the fan band for the −'s lowered reveal so the two never fight
     ed = Editor()
     ed.set_held_vectors([(-1, 1, 0), (2, 0, -1)])
     lay = spreadsheet.build(ed.state, _all_on(), held_vectors=ed.held_vectors)
     cells = {c.id: c for c in lay.cells}
-    sub = {ln.id: ln for ln in lay.lines}["v:held:1"].pos  # column 1's fanned sub-axis (the − axis)
-    grip = cells["grip:held:1"]
-    assert grip.x + grip.w <= sub - spreadsheet.BTN / 2 + 0.01  # ends at (not past) the −'s left edge
-    assert grip.y < lay.freeze_y  # rides the frozen column strip, like the ± above the seam
+    sub = {ln.id: ln for ln in lay.lines}["v:held:1"].pos  # column 1's fanned sub-axis
+    grip, minus = cells["grip:held:1"], cells["held_minus:1"]
+    assert abs((grip.x + grip.w / 2) - sub) < 0.51  # centred on the column...
+    assert grip.w >= spreadsheet.COL_W - 0.51        # ...spanning its full width (a big grab target)
+    assert grip.y < lay.freeze_y                     # rides the frozen column strip with the fan
+    # the grip leaves a button-tall strip at the fan's bottom for the −'s lowered reveal (CSS)
+    assert (minus.y + minus.h) - (grip.y + grip.h) >= spreadsheet.BTN - 0.51
 
 
 def test_an_empty_interval_list_still_offers_an_append_drop_slot():

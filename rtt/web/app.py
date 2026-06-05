@@ -216,15 +216,6 @@ def _control_svg(glyph: str) -> str:
             f" stroke-linecap='round' stroke-linejoin='round'/></svg>")
 
 
-def _grip_svg() -> str:
-    """A column drag-handle glyph: two columns of three dots (a ⠿ grip) in currentColor, so the
-    cell's CSS colour and :hover tint it. No bordered box (unlike the ± buttons) — a dotted grip
-    reads as 'grab me' rather than 'click me', and it's a thin vertical handle for the narrow slot."""
-    dots = "".join(f"<circle cx='{cx}' cy='{cy}' r='0.9' fill='currentColor'/>"
-                   for cx in (2, 5) for cy in (3, 8, 13))
-    return f"<svg viewBox='0 0 7 16' xmlns='http://www.w3.org/2000/svg'>{dots}</svg>"
-
-
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --rail-w:{_RAIL_W}px; --panel-w:{_PANEL_W}px;
   --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --preview-color:{_PREVIEW_COLOR};
@@ -1739,7 +1730,7 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
 
     def _build_comma_minus(self, cb, wrap):  # drop the last comma, or cancel the pending draft
-        wrap.classes("rtt-minus-zone")
+        wrap.classes("rtt-minus-zone rtt-minus-low")  # reveals below the column's drag grip
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.remove_comma))
 
@@ -1749,9 +1740,10 @@ class _Reconciler:
 
     def _build_list_minus(self, cb, wrap, cancel, remove):
         # an interval-list column's − (interest / held / target): the draft column's cancels the
-        # draft, every other drops just its interval (cb.comma) — each is independently removable
+        # draft, every other drops just its interval (cb.comma) — each is independently removable.
+        # rtt-minus-low: a drag grip owns the upper fan, so this − reveals in the bottom strip.
         action = cancel if cb.id.endswith(":pending") else (lambda idx=cb.comma: remove(idx))
-        wrap.classes("rtt-minus-zone")
+        wrap.classes("rtt-minus-zone rtt-minus-low")
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(action))
 
@@ -1777,11 +1769,14 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(self._editor.add_target))
 
     def _build_colgrip(self, cb, wrap):  # a per-column drag handle on the fan (the drag source)
+        # the same prominent ⠿ grip the row / drag-to-combine handles use (the shared .rtt-drag-handle
+        # + .rtt-grip, pointer-events:none so the drag starts from the draggable wrap, not the icon);
+        # .rtt-colgrip lifts it above the − zone and centres it above its column
         _, lst, idx = cb.id.split(":")  # "grip:{list}:{idx}"
-        wrap.classes("rtt-colgrip").props("draggable=true")
+        wrap.classes("rtt-drag-handle rtt-colgrip").props("draggable=true")
         wrap.on("dragstart", lambda _=None, l=lst, i=int(idx): self._cb.on_drag_start(l, i))
         wrap.on("dragend", lambda _=None: self._cb.on_drag_end())
-        ui.html(_grip_svg()).classes("rtt-glyph")
+        ui.icon("drag_indicator").classes("rtt-grip")
 
     def _build_dropslot(self, cb, wrap):  # a per-gap drop target on the fan (insert-before this gap)
         # the drop fires the move; dragover.preventDefault + the dragging-state class + the hover
