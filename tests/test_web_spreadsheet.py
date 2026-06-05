@@ -6774,3 +6774,112 @@ def test_M_jL_tile_carries_identity_equivalence():
     cells = {c.id: c for c in _barbados_ss(symbols=True, equivalences=True).cells}
     sym = cells["symbol:ss_just_mapping:ssprimes"].text
     assert sym == "\U0001D440ⱼₗ = \U0001D43C"  # "𝑀ⱼₗ = 𝐼" — math-italic I = U+1D43C
+
+
+# ---------------------------------------------------------------------------
+# Phase 4F — cyan superspace tuning maps (𝒈ₗ, 𝒕ₗ, 𝒋ₗ, 𝒓ₗ). The tuning, just,
+# and retune rows pick up cells over the ssgens / ssprimes columns the green
+# block already runs above them.
+# ---------------------------------------------------------------------------
+
+
+def _barbados_state():
+    return service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+
+
+def _barbados_superspace_tuning():
+    # match the spreadsheet's default scheme (DEFAULT_DOCUMENT_SCHEME) so the test computes
+    # the same cents values the grid renders
+    return service.superspace_tuning(_barbados_state(), service.DEFAULT_DOCUMENT_SCHEME)
+
+
+def test_superspace_tuning_emits_g_L_cells_over_the_ssgens_column():
+    # 𝒈ₗ — the rL cents values of the superspace generator tuning map. Cells of kind
+    # "tval" (matches the existing 𝒈 cells), text formatted at the grid's 3-dp.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for i, v in enumerate(_barbados_superspace_tuning().generator_map):
+        assert cells[f"tuning:ssgen:{i}"].text == service.cents(v)
+
+
+def test_superspace_tuning_emits_t_L_cells_over_the_ssprimes_column():
+    # 𝒕ₗ — the dL cents values of the superspace tuning map
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for i, v in enumerate(_barbados_superspace_tuning().tuning_map):
+        assert cells[f"tuning:ssprime:{i}"].text == service.cents(v)
+
+
+def test_superspace_just_emits_j_L_cells_over_the_ssprimes_column():
+    # 𝒋ₗ — the dL just sizes (each 1200·log₂p for each superspace prime)
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for i, v in enumerate(_barbados_superspace_tuning().just_map):
+        assert cells[f"just:ssprime:{i}"].text == service.cents(v)
+
+
+def test_superspace_retune_emits_r_L_cells_over_the_ssprimes_column():
+    # 𝒓ₗ — the dL retuning errors (𝒕ₗ − 𝒋ₗ component-wise)
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for i, v in enumerate(_barbados_superspace_tuning().retuning_map):
+        assert cells[f"retune:ssprime:{i}"].text == service.cents(v)
+
+
+def test_superspace_tuning_row_off_omits_the_cells():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()  # nonstandard_domain off
+    cids = {c.id for c in spreadsheet.build(state, s).cells}
+    assert not any(cid.startswith("tuning:ssgen:") for cid in cids)
+    assert not any(cid.startswith("tuning:ssprime:") for cid in cids)
+    assert not any(cid.startswith("just:ssprime:") for cid in cids)
+    assert not any(cid.startswith("retune:ssprime:") for cid in cids)
+
+
+def test_superspace_tuning_tiles_carry_their_brackets():
+    # the cyan tuning row tiles get the existing bracket convention: 𝒈ₗ uses { … ] (the
+    # genmap shape), 𝒕ₗ / 𝒋ₗ / 𝒓ₗ use ⟨ … ] (the map shape) — matching their non-superspace
+    # 𝒈, 𝒕, 𝒋, 𝒓 cousins per the rendered mockup.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    # 𝒈ₗ — genmap brackets { … ]
+    assert cells["bracket:tuning:ssgenmap:l"].text == spreadsheet.GENMAP_BRACKETS[0]
+    assert cells["bracket:tuning:ssgenmap:r"].text == spreadsheet.GENMAP_BRACKETS[1]
+    # 𝒕ₗ, 𝒋ₗ, 𝒓ₗ — map brackets ⟨ … ]
+    for key in ("tuning", "just", "retune"):
+        assert cells[f"bracket:{key}:ssprimes:l"].text == spreadsheet.MAP_BRACKETS[0]
+        assert cells[f"bracket:{key}:ssprimes:r"].text == spreadsheet.MAP_BRACKETS[1]
+
+
+def test_superspace_tuning_row_captions_and_symbols():
+    # the cyan tuning row tiles get captions + symbols when names/symbols are on
+    cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
+    assert cells["caption:tuning:ssgens"].text == "superspace generator tuning map"
+    assert cells["caption:tuning:ssprimes"].text == "superspace tuning map"
+    assert cells["caption:just:ssprimes"].text == "superspace just tuning map"
+    assert cells["caption:retune:ssprimes"].text == "superspace retuning map"
+    # 𝒈ₗ = U+1D488 + ₗ, 𝒕ₗ = U+1D495 + ₗ, 𝒋ₗ = U+1D48B + ₗ, 𝒓ₗ = U+1D493 + ₗ
+    assert cells["symbol:tuning:ssgens"].text == "\U0001D488ₗ"
+    assert cells["symbol:tuning:ssprimes"].text == "\U0001D495ₗ"
+    assert cells["symbol:just:ssprimes"].text == "\U0001D48Bₗ"
+    assert cells["symbol:retune:ssprimes"].text == "\U0001D493ₗ"
+
+
+def test_superspace_tuning_row_equivalences():
+    # equivalences on appends the defining equation: 𝒕ₗ = 𝒈ₗ𝑀ₗ; 𝒓ₗ = 𝒕ₗ − 𝒋ₗ.
+    # 𝒈ₗ and 𝒋ₗ are primary, no continuation.
+    cells = {c.id: c for c in _barbados_ss(symbols=True, equivalences=True).cells}
+    # 𝒕ₗ = 𝒈ₗ𝑀ₗ
+    assert cells["symbol:tuning:ssprimes"].text == "\U0001D495ₗ = \U0001D488ₗ\U0001D440ₗ"
+    # 𝒓ₗ = 𝒕ₗ − 𝒋ₗ
+    assert cells["symbol:retune:ssprimes"].text == "\U0001D493ₗ = \U0001D495ₗ − \U0001D48Bₗ"
+
+
+def test_superspace_tuning_standard_domain_trivially_passes_through():
+    # over a standard prime domain the superspace IS the domain — 𝒈ₗ = 𝒈, 𝒕ₗ = 𝒕 etc.
+    # Build doesn't crash; cells render with the same cents values as the existing rows.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults() | {"nonstandard_domain": True}
+    cells = {c.id: c for c in spreadsheet.build(state, s).cells}
+    # rL=2 ssgens
+    assert "tuning:ssgen:0" in cells and "tuning:ssgen:1" in cells
+    # dL=3 ssprimes
+    for i in range(3):
+        assert f"tuning:ssprime:{i}" in cells
+        assert f"just:ssprime:{i}" in cells
+        assert f"retune:ssprime:{i}" in cells

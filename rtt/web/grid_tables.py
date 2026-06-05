@@ -71,6 +71,10 @@ CAPTIONS = {
     ("ss_vectors", "primes"): "basis embedding matrix",
     ("ss_mapping", "ssprimes"): "superspace mapping",
     ("ss_just_mapping", "ssprimes"): "superspace JI mapping",
+    ("tuning", "ssgens"): "superspace generator tuning map",
+    ("tuning", "ssprimes"): "superspace tuning map",
+    ("just", "ssprimes"): "superspace just tuning map",
+    ("retune", "ssprimes"): "superspace retuning map",
     # the chapter-9 CONVERSION tiles — the target list and complexity prescaler lifted
     # into the superspace. Captions parallel the on-domain ones (target interval list /
     # complexity prescaler) with a "superspace" prefix so the eye traces the conversion.
@@ -151,6 +155,10 @@ SYMBOLS = {
     ("ss_vectors", "primes"): "Bₗ",      # B (upright) + Unicode subscript L
     ("ss_mapping", "ssprimes"): "𝑀ₗ",   # math-italic M (\U0001D440) + subscript L
     ("ss_just_mapping", "ssprimes"): "𝑀ⱼₗ",  # math-italic M + Unicode subscript j (U+2C7C) + ₗ
+    ("tuning", "ssgens"): "𝒈ₗ",
+    ("tuning", "ssprimes"): "𝒕ₗ",
+    ("just", "ssprimes"): "𝒋ₗ",
+    ("retune", "ssprimes"): "𝒓ₗ",
     # the chapter-9 CONVERSION symbols: Tₗ (upright T like the on-domain target list T,
     # subscript L for the lift) and 𝑋ₗ (math italic, parallel to the bare prescaler 𝑋)
     ("ss_targets", "targets"): "Tₗ",
@@ -471,6 +479,10 @@ MNEMONICS = {
     ("ss_vectors", "primes"): "basis",        # Bₗ → underline the "b" in "basis embedding…"
     ("ss_mapping", "ssprimes"): "mapping",    # 𝑀ₗ → underline the "m" in "superspace mapping"
     ("ss_just_mapping", "ssprimes"): "mapping",  # 𝑀ⱼₗ → "m" in "superspace JI mapping"
+    ("tuning", "ssgens"): "generator",        # 𝒈ₗ → "g" in "superspace generator tuning map"
+    ("tuning", "ssprimes"): "tuning",         # 𝒕ₗ → "t" in "superspace tuning map"
+    ("just", "ssprimes"): "just",             # 𝒋ₗ → "j" in "superspace just tuning map"
+    ("retune", "ssprimes"): "retuning",       # 𝒓ₗ → "r" in "superspace retuning map"
     # the chapter-9 CONVERSION tiles — underline the symbol letters in their captions
     ("ss_targets", "targets"): "target",  # Tₗ → underline the "t" of "target"
     ("ss_prescaler", "ssprimes"): "x",    # 𝑋ₗ → underline the mid-word "x" of "compleXity" (matches 𝑋)
@@ -501,8 +513,11 @@ MNEMONICS = {
 # continuation yet; the mapped comma basis instead vanishes to the zero matrix.
 EQUIVALENCES = {
     # the chapter-9 superspace M_jL is trivially the identity (each superspace prime is
-    # its own basis element). Phase 4F adds the cyan tuning row's product chains.
+    # its own basis element). 𝒕ₗ products parallel the existing 𝒕 = 𝒈𝑀 / 𝒓 = 𝒕 − 𝒋
+    # chains; 𝒈ₗ and 𝒋ₗ are primary (no continuation).
     ("ss_just_mapping", "ssprimes"): " = 𝐼",  # math-italic I
+    ("tuning", "ssprimes"): " = 𝒈ₗ𝑀ₗ",
+    ("retune", "ssprimes"): " = 𝒕ₗ − 𝒋ₗ",
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",
     # the chapter-9 CONVERSION tile: Tₗ = BₗT (the on-domain target list lifted through
@@ -558,6 +573,12 @@ UNITS = {
     ("ss_vectors", "primes"): "b",
     ("ss_mapping", "ssprimes"): "g/b",
     ("ss_just_mapping", "ssprimes"): "b/b",
+    # the cyan superspace tuning row mirrors the on-domain tuning row over the superspace
+    # primes ("b" for the basis-element axis); 𝒈ₗ is ¢ per superspace generator.
+    ("tuning", "ssgens"): "¢/g",
+    ("tuning", "ssprimes"): "¢/b",
+    ("just", "ssprimes"): "¢/b",
+    ("retune", "ssprimes"): "¢/b",
     ("mapping", "primes"): "g/p",
     ("mapping", "commas"): "g",
     ("mapping", "targets"): "g",

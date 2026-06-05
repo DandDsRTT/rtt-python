@@ -2475,6 +2475,22 @@ class _GridBuilder:
             for i, v in enumerate(self.tun.generator_map):
                 self.cells.append(CellBox(f"tuning:gen:{i}", self.group_left["gens"](i), self.row_y["tuning"], COL_W, ROW_H,
                                      "gentuningcell", text=service.cents(v), unit=self.cell_unit("tuning", "gens", gen=i)))
+        # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column (rL cells, read-only
+        # tval — NOT editable yet; Phase 5 will wire the "if you mod 𝒈 then prime-based mode
+        # falls off" behaviour), 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over the ssprimes column. The superspace tuning
+        # is computed by service.superspace_tuning(state, scheme, approach) — the same optimizer
+        # the on-domain tuning uses, lifted into M_L over the prime superspace.
+        # TODO (Phase 5, per the maximized mockup's CSV row 4): when 𝒈 is editable, mutating
+        # any of its cents cells should auto-flip Editor.nonprime_basis_approach away from
+        # "prime-based" — the prime-based optimum no longer determines 𝒈 once it's been moved.
+        if self.show_nonstandard_domain and self.row_open("tuning"):
+            ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach)
+            self.tval_row("tuning", "ssgens", ss_tun.generator_map)
+            self.tval_row("tuning", "ssprimes", ss_tun.tuning_map)
+            if self.row_open("just"):
+                self.tval_row("just", "ssprimes", ss_tun.just_map)
+            if self.row_open("retune"):
+                self.tval_row("retune", "ssprimes", ss_tun.retuning_map)
         # the detempering column's size rows: tempering the detempering intervals recovers the
         # generators, so its tuning row IS the generator tuning map (𝒕D = 𝒈); its just and
         # retuning sizes are ordinary interval lists (𝒋D, 𝒓D), the latter charted like the targets.
@@ -2862,6 +2878,11 @@ class _GridBuilder:
         # { … ]; its just/retune rows are ordinary interval lists, framed below with the rest
         if self.tile_open("tuning", "detempering"):
             self.bracket("tuning:detempering", GENMAP_BRACKETS, "detempering", self.row_y["tuning"], ROW_H)
+        # the cyan superspace tuning row's 𝒈ₗ tile takes the same { … ] genmap shape as 𝒈
+        # (a covector over the rL superspace generators); 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over the ssprimes
+        # column take the regular ⟨ … ] map brackets (covectors over the dL superspace primes).
+        if self.tile_open("tuning", "ssgens"):
+            self.bracket("tuning:ssgenmap", GENMAP_BRACKETS, "ssgens", self.row_y["tuning"], ROW_H)
         for key in ("tuning", "just", "retune", "complexity"):
             if self.row_open(key):
                 if self.tile_open(key, "primes"):
@@ -2878,6 +2899,10 @@ class _GridBuilder:
                 # is the genmap, bracketed { … ] above (so it's skipped here)
                 if key != "tuning" and self.tile_open(key, "detempering"):
                     self.bracket(f"{key}:detemperinglist", LIST_BRACKETS, "detempering", self.row_y[key], ROW_H)
+                # the chapter-9 superspace tuning cells over the ssprimes column: each row is a
+                # covector over the dL ss_primes, ⟨ … ] like the primes column above (𝒕ₗ / 𝒋ₗ / 𝒓ₗ)
+                if key != "complexity" and self.tile_open(key, "ssprimes"):
+                    self.bracket(f"{key}:ssprimes", MAP_BRACKETS, "ssprimes", self.row_y[key], ROW_H)
         if self.tile_open("weight", "targets"):
             if self.weight_is_matrix:
                 # one tall [ … ] spanning the whole weight matrix (per the guide's display): d columns
