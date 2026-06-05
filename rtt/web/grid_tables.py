@@ -64,12 +64,13 @@ SUPERSPACE_COUNTS_TILES = tuple(
 # shows the comma's genuine untempered size, so it omits the note.
 CAPTIONS = {
     # the chapter-9 superspace tiles — the basis-embedding matrix B_L lives in
-    # (ss_vectors, primes), and the temperament's superspace mapping M_L lives in
-    # (ss_mapping, ssprimes). Phase 3 captions only those two anchors; Phase 4 adds the
-    # captions for the dependent superspace tiles (𝒈ₗ / 𝒕ₗ / 𝒋ₗ / 𝒓ₗ, Cₗ, Tₗ) as their
-    # content cells are emitted.
+    # (ss_vectors, primes), the temperament's superspace mapping M_L lives in
+    # (ss_mapping, ssprimes), and the trivial superspace JI mapping M_jL = I lives in
+    # (ss_just_mapping, ssprimes). Phase 4 also adds 𝒈ₗ / 𝒕ₗ / 𝒋ₗ / 𝒓ₗ captions over the
+    # superspace tuning rows when their cells are emitted.
     ("ss_vectors", "primes"): "basis embedding matrix",
     ("ss_mapping", "ssprimes"): "superspace mapping",
+    ("ss_just_mapping", "ssprimes"): "superspace JI mapping",
     # the chapter-9 CONVERSION tiles — the target list and complexity prescaler lifted
     # into the superspace. Captions parallel the on-domain ones (target interval list /
     # complexity prescaler) with a "superspace" prefix so the eye traces the conversion.
@@ -144,14 +145,16 @@ CAPTIONED_ROWS = frozenset(row for row, _ in CAPTIONS)
 # interest" carry none.
 SYMBOLS = {
     # the chapter-9 superspace anchors: B_L the basis-embedding matrix (upright capital,
-    # parallel to C/T/D — an interval basis) and 𝑀ₗ the temperament's superspace mapping
-    # (math-italic M, parallel to 𝑀). Phase 4 adds the dependent superspace symbols.
+    # parallel to C/T/D — an interval basis), 𝑀ₗ the temperament's superspace mapping
+    # (math-italic M, parallel to 𝑀), 𝑀ⱼₗ the trivial superspace JI mapping (parallel to
+    # the just tuning map 𝒋). Phase 4F adds the cyan tuning row's superspace symbols.
     ("ss_vectors", "primes"): "Bₗ",      # B (upright) + Unicode subscript L
-    ("ss_mapping", "ssprimes"): "𝑀ₗ",   # math-italic M (\\U0001D440) + subscript L
+    ("ss_mapping", "ssprimes"): "𝑀ₗ",   # math-italic M (\U0001D440) + subscript L
+    ("ss_just_mapping", "ssprimes"): "𝑀ⱼₗ",  # math-italic M + Unicode subscript j (U+2C7C) + ₗ
     # the chapter-9 CONVERSION symbols: Tₗ (upright T like the on-domain target list T,
     # subscript L for the lift) and 𝑋ₗ (math italic, parallel to the bare prescaler 𝑋)
     ("ss_targets", "targets"): "Tₗ",
-    ("ss_prescaler", "ssprimes"): "𝑋ₗ",   # math-italic X (\\U0001D44B) + subscript L
+    ("ss_prescaler", "ssprimes"): "𝑋ₗ",   # math-italic X (\U0001D44B) + subscript L
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -219,6 +222,9 @@ ROW_LABEL_LETTERS = {
     # the chapter-9 superspace mapping M_L: each row a covector over the dL ss_primes,
     # labelled 𝒎ₗᵢ (math-italic 𝒎 + subscript ₗ + index), parallel to the existing M's 𝒎ᵢ
     ("ss_mapping", "ssprimes"): "𝒎ₗ",
+    # M_jL's identity rows likewise: each row labelled 𝒎ⱼₗᵢ — math-italic 𝒎 + subscript j
+    # (U+2C7C) + subscript ₗ
+    ("ss_just_mapping", "ssprimes"): "𝒎ⱼₗ",
 }
 ROW_LABELED_TILES = frozenset(ROW_LABEL_LETTERS)
 COL_LABEL_LETTERS = {
@@ -268,7 +274,8 @@ COL_LABEL_LETTERS = {
 # superspace rows (B_L's monzo columns, M_L's covector stack) likewise frame their
 # tiles when Phase 4 populates them — Phase 3 reserves the frame bands so the
 # row_axis fan splits into one rule per cell-row (dL / rL sub-rules).
-FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling", "ss_vectors", "ss_mapping",
+FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling",
+                         "ss_vectors", "ss_mapping", "ss_just_mapping",
                          "ss_targets", "ss_prescaler"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 # Value rows whose tiles carry per-column matrix labels (𝐜ᵢ, 𝒕ᵢ, 𝐲ᵢ, …) when symbols
@@ -463,6 +470,7 @@ MNEMONICS = {
     # superspace anchors — underline the symbol-letter where it sits in the caption
     ("ss_vectors", "primes"): "basis",        # Bₗ → underline the "b" in "basis embedding…"
     ("ss_mapping", "ssprimes"): "mapping",    # 𝑀ₗ → underline the "m" in "superspace mapping"
+    ("ss_just_mapping", "ssprimes"): "mapping",  # 𝑀ⱼₗ → "m" in "superspace JI mapping"
     # the chapter-9 CONVERSION tiles — underline the symbol letters in their captions
     ("ss_targets", "targets"): "target",  # Tₗ → underline the "t" of "target"
     ("ss_prescaler", "ssprimes"): "x",    # 𝑋ₗ → underline the mid-word "x" of "compleXity" (matches 𝑋)
@@ -492,6 +500,9 @@ MNEMONICS = {
 # dropped — the mapping over primes and the just tuning map thus carry no
 # continuation yet; the mapped comma basis instead vanishes to the zero matrix.
 EQUIVALENCES = {
+    # the chapter-9 superspace M_jL is trivially the identity (each superspace prime is
+    # its own basis element). Phase 4F adds the cyan tuning row's product chains.
+    ("ss_just_mapping", "ssprimes"): " = 𝐼",  # math-italic I
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",
     # the chapter-9 CONVERSION tile: Tₗ = BₗT (the on-domain target list lifted through
@@ -540,6 +551,13 @@ UNITS = {
     ("vectors", "held"): "p",
     ("vectors", "detempering"): "p",
     ("vectors", "interest"): "p",
+    # the chapter-9 green superspace tiles: B_L embeds the d domain elements in dL prime
+    # coordinates (a domain-basis-element-axis "b" denominator), M_L is g/b (one generator
+    # entry per superspace prime), M_jL is b/b (identity). Phase 4F adds the cyan tuning
+    # row's superspace units.
+    ("ss_vectors", "primes"): "b",
+    ("ss_mapping", "ssprimes"): "g/b",
+    ("ss_just_mapping", "ssprimes"): "b/b",
     ("mapping", "primes"): "g/p",
     ("mapping", "commas"): "g",
     ("mapping", "targets"): "g",
@@ -658,6 +676,7 @@ SUPERSPACE_TILES = (
     ("block:ss_vectors:targets", "ss_vectors", "targets"),         # the target list as superspace monzos
     ("block:ss_mapping:gens", "ss_mapping", "gens"),               # M_L over its own generators (trivially identity)
     ("block:ss_mapping:ssprimes", "ss_mapping", "ssprimes"),       # M_L itself, the rL × dL mapping
+    ("block:ss_just_mapping:ssprimes", "ss_just_mapping", "ssprimes"),  # M_jL = I (dL × dL identity)
     # the chapter-9 CONVERSION tiles — only render under prime-based / neutral approaches
     # (their rows are gated on show_ss_conversion; an inert tile costs nothing here)
     ("block:ss_targets:quantities", "ss_targets", "quantities"),   # spine: the superspace primes index

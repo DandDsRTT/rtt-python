@@ -1072,12 +1072,14 @@ class _GridBuilder:
             ("mapping", self.r * ROW_H, show_temp, True, "mapping"),
             # the chapter-9 superspace rows sit between mapping and tuning, the row
             # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
-            # monzo columns (B_L, target/comma monzos in the superspace), ss_mapping the
-            # rL × dL matrix M_L. Phase 3 only reserves their band heights — Phase 4
-            # populates the cells. Gated on the same nonstandard_domain toggle as the
-            # columns, so the band collapses to nothing whenever the toggle is off.
+            # monzo columns (B_L, target/comma monzos in the superspace); ss_mapping the
+            # rL × dL matrix M_L; ss_just_mapping the dL × dL identity M_jL (each
+            # superspace prime is its own basis element). All three gate on the same
+            # nonstandard_domain toggle as the columns, so the bands collapse to nothing
+            # whenever the toggle is off.
             ("ss_vectors", self.dL * ROW_H, self.show_nonstandard_domain, True, "superspace\ninterval vectors"),
             ("ss_mapping", self.rL * ROW_H, self.show_nonstandard_domain, True, "superspace\nmapping"),
+            ("ss_just_mapping", self.dL * ROW_H, self.show_nonstandard_domain, True, "superspace\nJI mapping"),
             # the chapter-9 CONVERSION rows: ss_targets (B_L·T, the target list re-expressed
             # over the superspace primes) and ss_prescaler (X_L, the complexity prescaler
             # lifted into the superspace). Mode-gated — present only with the nonstandard-
@@ -1590,6 +1592,9 @@ class _GridBuilder:
 
     def ss_map_top(self, i):  # the y of ss_mapping row i (the rL stacked superspace maps)
         return self.row_y["ss_mapping"] + i * ROW_H
+
+    def ss_just_map_top(self, i):  # the y of ss_just_mapping row i (the dL stacked superspace JI maps)
+        return self.row_y["ss_just_mapping"] + i * ROW_H
 
     # The element +/− controls ride each fanning column's TOP bus (the fan-out, just after the
     # toggle), not the quantities row: the − sits on a branch point (a per-element split), the +
@@ -2381,6 +2386,19 @@ class _GridBuilder:
                         "mapping", text=str(ml[gen_idx][ss_prime_idx]),
                         gen=gen_idx, prime=ss_prime_idx,
                     ))
+        # M_jL (superspace JI mapping): the dL × dL identity. Each superspace prime is its
+        # own basis element, so the just mapping is trivially I. Same "mapping" cell kind
+        # and bracket convention as M_L; lives in its own row band ss_just_mapping below it.
+        if self.row_open("ss_just_mapping") and self.tile_open("ss_just_mapping", "ssprimes"):
+            mjl = service.superspace_just_mapping(self.superspace_primes)
+            for i in range(self.dL):
+                for j in range(self.dL):
+                    self.cells.append(CellBox(
+                        f"cell:ss_just_mapping:ssprimes:{i}:{j}",
+                        self.ss_prime_left(j), self.ss_just_map_top(i), COL_W, ROW_H,
+                        "mapping", text=str(mjl[i][j]),
+                        gen=i, prime=j,
+                    ))
 
         # the chapter-9 CONVERSION rows. Each carries the same dL-tall spine basis index
         # (the superspace primes, one per row) so its right-hand matrix's rows align with
@@ -2805,6 +2823,11 @@ class _GridBuilder:
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
             for i in range(self.rL):
                 self.bracket(f"ss_map:{i}", MAP_BRACKETS, "ssprimes", self.ss_map_top(i), ROW_H)
+        # M_jL = I: a dL × dL identity, framed identically to M_L (per-row ⟨ … ] + frame)
+        if self.row_open("ss_just_mapping") and self.tile_open("ss_just_mapping", "ssprimes"):
+            for i in range(self.dL):
+                self.bracket(f"ss_just_map:{i}", MAP_BRACKETS, "ssprimes",
+                             self.ss_just_map_top(i), ROW_H)
         if self.row_open("vectors"):  # each group is a list of vectors: a [ ] spanning the d components
             for group in ("commas", "targets"):
                 if self.tile_open("vectors", group):
@@ -2888,9 +2911,11 @@ class _GridBuilder:
                 ("mapping", "primes"): self.map_top,
                 ("prescaling", "primes"): lambda i: self.row_y["prescaling"] + i * ROW_H,
                 ("ss_mapping", "ssprimes"): self.ss_map_top,
+                ("ss_just_mapping", "ssprimes"): self.ss_just_map_top,
             }
             row_count = {("mapping", "primes"): self.r, ("prescaling", "primes"): self.d + self.size_rows,
-                         ("ss_mapping", "ssprimes"): self.rL}
+                         ("ss_mapping", "ssprimes"): self.rL,
+                         ("ss_just_mapping", "ssprimes"): self.dL}
             for (rkey, ckey), glyph in self.row_labels.items():
                 if not self.tile_open(rkey, ckey):
                     continue
@@ -3190,6 +3215,8 @@ class _GridBuilder:
         # the chapter-9 superspace mapping M_L is M's parallel over the superspace primes,
         # framed the same way (top bracket + bottom curly brace spanning the rL × dL matrix)
         self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")
+        # M_jL = I rides the same matrix-frame pattern over its own dL × dL identity band
+        self.matrix_frame("ss_just_mapping", "ssprimes", "ss_just_mapping")
 
         self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc)
         self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.k)

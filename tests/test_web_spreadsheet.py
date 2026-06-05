@@ -6697,3 +6697,80 @@ def test_M_L_tile_row_labels_each_covector():
     for i in range(3):  # rL=3 rows
         sub_i = str(i + 1).translate(_SUBSCRIPT_DIGITS)
         assert cells[f"matlabel:row:ss_mapping:ssprimes:{i}"].text == f"\U0001D48Eₗ{sub_i}"
+
+
+# ---------------------------------------------------------------------------
+# Phase 4E.3 — ss_just_mapping row + M_jL = I cells. Each superspace prime is
+# its own basis element, so M_jL is trivially the dL × dL identity; its row
+# band seats between ss_mapping and tuning and reuses the same matrix-frame
+# pattern (per-row ⟨ … ] + outer ebktop / ebkbrace).
+# ---------------------------------------------------------------------------
+
+
+def test_M_jL_row_band_seats_between_ss_mapping_and_tuning():
+    # the M_jL = I tile lives in a new row band ss_just_mapping (dL tall), between the
+    # ss_mapping row and the tuning row. Like ss_mapping it's a covector stack — but over
+    # the superspace primes themselves, the trivial identity since each prime IS a basis
+    # element. The band gates on nonstandard_domain like ss_vectors / ss_mapping.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert cells["label:ss_just_mapping"].text == "superspace\nJI mapping"
+    # ordered: ss_mapping < ss_just_mapping < tuning
+    assert cells["label:ss_mapping"].y < cells["label:ss_just_mapping"].y < cells["label:tuning"].y
+
+
+def test_M_jL_band_height_is_dL_rows():
+    # M_jL is dL × dL (identity), so the band is dL ROW_H tall (one row per ss prime, like
+    # ss_vectors but a square dL × dL matrix instead of a dL × d rectangle)
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert cells["label:ss_just_mapping"].h == 4 * spreadsheet.ROW_H  # dL = 4
+
+
+def test_M_jL_emits_a_cell_per_ss_prime_row_and_ss_prime_col_as_identity():
+    # M_jL = I: each prime is its own basis element. Cells of kind "mapping" (matches the
+    # existing M and the new M_L) — integer entries with 1 on the diagonal, 0 elsewhere.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for i in range(4):  # dL = 4
+        for j in range(4):
+            expected = "1" if i == j else "0"
+            assert cells[f"cell:ss_just_mapping:ssprimes:{i}:{j}"].text == expected
+
+
+def test_M_jL_tile_has_brackets_and_matrix_frame():
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for i in range(4):  # dL=4 covector rows
+        assert cells[f"bracket:ss_just_map:{i}:l"].text == spreadsheet.MAP_BRACKETS[0]
+        assert cells[f"bracket:ss_just_map:{i}:r"].text == spreadsheet.MAP_BRACKETS[1]
+    assert "ebktop:ss_just_mapping" in cells
+    assert "ebkbrace:ss_just_mapping" in cells
+
+
+def test_M_jL_off_omits_the_row():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()  # nonstandard_domain off
+    cids = {c.id for c in spreadsheet.build(state, s).cells}
+    assert "label:ss_just_mapping" not in cids
+    assert not any(cid.startswith("cell:ss_just_mapping:ssprimes:") for cid in cids)
+
+
+def test_M_jL_tile_carries_caption_and_symbol():
+    # caption: "superspace JI mapping", symbol: 𝑀ⱼₗ — math-italic M + subscript j + ₗ
+    # (parallel to M_L's 𝑀ₗ). With ALPHABET subscripts we use j (U+2C7C is the latin j sub)
+    cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
+    assert cells["caption:ss_just_mapping:ssprimes"].text == "superspace JI mapping"
+    # 𝑀 = U+1D440. Subscript j = U+2C7C. Subscript L = U+2097.
+    assert cells["symbol:ss_just_mapping:ssprimes"].text == "\U0001D440ⱼₗ"
+
+
+def test_M_jL_tile_row_labels_each_covector():
+    # each row labelled 𝒎ⱼₗᵢ — math-italic 𝒎 + subscript j (U+2C7C) + ₗ + index
+    cells = {c.id: c for c in _barbados_ss(symbols=True).cells}
+    for i in range(4):  # dL=4 rows
+        sub_i = str(i + 1).translate(_SUBSCRIPT_DIGITS)
+        assert cells[f"matlabel:row:ss_just_mapping:ssprimes:{i}"].text == f"\U0001D48Eⱼₗ{sub_i}"
+
+
+def test_M_jL_tile_carries_identity_equivalence():
+    # equivalences on adds " = 𝐼" after the 𝑀ⱼₗ symbol — the trivial-identity equation
+    cells = {c.id: c for c in _barbados_ss(symbols=True, equivalences=True).cells}
+    sym = cells["symbol:ss_just_mapping:ssprimes"].text
+    assert sym == "\U0001D440ⱼₗ = \U0001D43C"  # "𝑀ⱼₗ = 𝐼" — math-italic I = U+1D43C
