@@ -7,7 +7,7 @@ text of their own.
 
   - :data:`SHOW_HELP`   — one entry per Show-toggle key (see :mod:`rtt.web.settings`).
   - :data:`CHROME_HELP` — the app-chrome buttons (undo / redo / reset / settings / select-all).
-  - :data:`AUDIO_HELP`  — the dummy tile's audio bank controls (waveform / play-mode / hold / 1-1).
+  - :data:`AUDIO_HELP`  — the dummy tile's audio bank controls (mute / waveform / play-mode / hold / 1-1).
   - :func:`control_help` — a grid cell's ``(kind, id)`` → its hover text, or ``None`` for
     the read-only output kinds listed in :data:`READONLY_KINDS`.
   - :func:`objective_help` — the optimization objective's hover text, which names a different
@@ -76,6 +76,7 @@ CHROME_HELP: dict[str, str] = {
 # longer per-tile: one bank on the settings panel's dummy tile drives every speaker from a single
 # global config, so the wording speaks of "every pitch", not "this tile". Keyed by the control name.
 AUDIO_HELP: dict[str, str] = {
+    "mute": "Mute all audio — also stops anything still sounding; unmute to play a pitch by clicking its cell.",
     "wave": "Cycle the waveform every pitch sounds — sine, square, triangle, sawtooth.",
     "mode": "Cycle the play mode — note, arpeggio, chord, rolled chord.",
     "hold": "Toggle sustain — hold or loop the notes.",

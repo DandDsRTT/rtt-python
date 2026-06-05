@@ -179,6 +179,8 @@ _MODE_FILLS = (
 # Glyph variants the bank cycles through. Generated once in Python and shared with the JS
 # (injected as rttAudio.glyphs) so the click-side redraw uses the very same markup.
 _AUDIO_GLYPHS = {
+    "mute": ['<span class="material-icons rtt-audio-glyph">volume_up</span>',    # [0] unmuted: plain speaker
+             '<span class="material-icons rtt-audio-glyph">volume_off</span>'],  # [1] muted: speaker with a slash
     "wave": [_wave_svg(w) for w in ("sine", "square", "triangle", "sawtooth")],
     "mode": [_mode_svg(f) for f in _MODE_FILLS],
     "lock": ['<span class="material-icons rtt-audio-glyph">lock_open</span>',
@@ -735,11 +737,13 @@ def _tile_fold_html() -> str:
     return _control_svg(_FOLD_GLYPH["unfold_less"])
 
 
-# The audio control bank — the single, global home for what used to ride each audio tile's
-# top-right corner. It sits in the dummy tile's head strip opposite the fold toggle (mirroring a
-# real audio tile) and drives every speaker through the engine's ONE shared config (window.rttAudio).
-# (ctrl, initial glyph, engine fn) left-to-right: waveform, play-mode, hold/loop, include-1/1.
+# The audio control bank — the single, global home for the shared playback config (window.rttAudio).
+# It sits in the dummy tile's head strip opposite the fold toggle. (ctrl, initial glyph, engine fn)
+# left-to-right: mute, waveform, play-mode, hold/loop, include-1/1. Mute LEADS and doubles as the
+# kill switch: it stops everything sounding and gates whether a clicked cell can play at all. Audio
+# starts MUTED, so mute's initial glyph is the slashed one (index 1); the rest start at index 0.
 _AUDIO_BANK = (
+    ("mute", _AUDIO_GLYPHS["mute"][1], "toggleMute"),
     ("wave", _AUDIO_GLYPHS["wave"][0], "cycleWave"),
     ("mode", _AUDIO_GLYPHS["mode"][0], "cycleMode"),
     ("hold", _AUDIO_GLYPHS["lock"][0], "toggleHold"),

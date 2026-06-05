@@ -717,7 +717,7 @@
    horizontally in the pane (margin auto). Generous side padding keeps the tile closer to square
    than a thin column. */
 .rtt-show-tile { display:flex; flex-direction:column; align-items:center; gap:2px;
-                 width:fit-content; min-width:190px; margin:8px auto; padding:8px 10px;
+                 width:fit-content; min-width:210px; margin:8px auto; padding:8px 10px;
                  background:#e0e0e0; border:1px solid #8a8a8a;
                  box-sizing:border-box; font-family:'Cambria',Georgia,serif; }
 /* the tile's head strip, like a real audio tile's: the decorative fold toggle on the left, the
@@ -727,10 +727,10 @@
 /* the decorative fold toggle at the head strip's left (inert — it only makes the panel read as a
    tile); a 12x12 boxed double-chevron in the fan-control grey */
 .rtt-tile-fold { width:12px; height:12px; color:#555; }
-/* the audio control bank at the head strip's right: the four 12px glyph controls (waveform /
-   play-mode / hold / 1-1) relocated here from the per-tile banks. They reuse the grid bank's
-   .rtt-audio-ctrl styling; render() adds rtt-bank-off to grey + disable the bank while audio is
-   off (the speakers it drives are hidden then), like a value-cell part inert without its host cell. */
+/* the audio control bank at the head strip's right: the five 12px glyph controls (mute / waveform /
+   play-mode / hold / 1-1). They reuse the grid bank's .rtt-audio-ctrl styling; the leading mute
+   doubles as the kill switch (and the engage gate via the body.rtt-audio-muted class the CSS keys
+   off). render() adds rtt-bank-off to grey + disable the bank while audio is off. */
 .rtt-tile-bank { display:flex; gap:3px; }
 .rtt-tile-bank .rtt-audio-ctrl { width:12px; height:12px; flex:none; }
 .rtt-tile-bank.rtt-bank-off { opacity:0.4; pointer-events:none; }

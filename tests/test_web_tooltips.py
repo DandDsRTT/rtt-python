@@ -186,10 +186,11 @@ def test_chrome_help_covers_the_app_chrome_buttons():
     assert all(text.strip() for text in tooltips.CHROME_HELP.values())
 
 
-def test_audio_help_covers_the_four_bank_controls_with_global_wording():
-    # the single dummy-tile audio bank's four controls each carry distinct, non-empty help; the
+def test_audio_help_covers_the_five_bank_controls_with_global_wording():
+    # the single dummy-tile audio bank's five controls each carry distinct, non-empty help; the
     # wording is global ("every pitch", never "this tile") now that one bank drives every speaker.
-    assert set(tooltips.AUDIO_HELP) == {"wave", "mode", "hold", "root"}
-    assert len(set(tooltips.AUDIO_HELP.values())) == 4
+    # mute leads the bank and doubles as the kill switch (muting silences all sounding audio).
+    assert set(tooltips.AUDIO_HELP) == {"mute", "wave", "mode", "hold", "root"}
+    assert len(set(tooltips.AUDIO_HELP.values())) == 5
     for text in tooltips.AUDIO_HELP.values():
         assert text.strip() and "this tile" not in text

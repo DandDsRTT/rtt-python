@@ -5,7 +5,7 @@ window.rttAudio = (function () {
   // it); a speaker's `tile` is used ONLY to pick which speakers to highlight while they ring. The
   // hold-stack (mode 0) keys its held notes by tile:idx so each speaker toggles on/off independently
   // even though the waveform / mode / hold / root config is shared.
-  const S = { wave: 0, mode: 0, hold: false, root: false, stop: null, held: {} };
+  const S = { wave: 0, mode: 0, hold: false, root: false, muted: true, stop: null, held: {} };
   const api = { glyphs: null };
   function actx() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -87,6 +87,7 @@ window.rttAudio = (function () {
     return document.querySelector('[data-actrl="' + ctrl + '"]');
   }
   api.hit = function (tile, idx, cents) {
+    if (S.muted) return;                                  // muted: the kill switch is also the gate
     if (S.mode === 0) {                                   // one-off / hold-stack
       if (!S.hold) { const stop = together(tile, [{ idx: idx, cents: cents[idx] }], S.root); setTimeout(stop, 650); return; }
       const key = tile + ':' + idx;                       // hold-stack: key per speaker so each toggles alone
@@ -119,5 +120,12 @@ window.rttAudio = (function () {
     const e = ctrlEl('hold'); if (e) { e.innerHTML = api.glyphs.lock[S.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', S.hold); } };
   api.toggleRoot = function () { S.root = !S.root;
     const e = ctrlEl('root'); if (e) e.classList.toggle('rtt-audio-on', S.root); };
+  // mute leads the bank and is also the kill switch: muting stops everything sounding and (via the
+  // body class the CSS keys off) hides every cell's hover speaker, so a clicked cell can't play.
+  // Unmuting re-reveals the speakers but sounds nothing until the next click.
+  api.toggleMute = function () { S.muted = !S.muted; if (S.muted) stopAll();
+    const e = ctrlEl('mute'); if (e) e.innerHTML = api.glyphs.mute[S.muted ? 1 : 0];
+    document.body.classList.toggle('rtt-audio-muted', S.muted); };
+  if (document.body) document.body.classList.add('rtt-audio-muted');  // start muted (matches S.muted)
   return api;
 })();
