@@ -2522,16 +2522,48 @@ def test_weighting_rows_show_their_units_line_when_units_on():
     assert cells["units:prescaling:primes"].text == "units: oct/p"   # the prescaler matrix L
     assert cells["units:prescaling:targets"].text == "units: oct"     # L applied to a vector set
     assert cells["units:complexity:primes"].text == "units: (C)/p"    # the domain-prime complexity map
-    assert cells["units:complexity:targets"].text == "units: (C)"     # a complexity list
-    assert cells["units:weight:targets"].text == "units: (C)"
+    assert cells["units:complexity:targets"].text == "units: (C)"     # a complexity list (taxicab → C)
+    assert cells["units:weight:targets"].text == "units: (S)"         # minimax-S is simplicity-weight → (S)
 
 
 def test_weighting_rows_have_units_column_tiles_when_domain_units_on():
     cells = {c.id: c for c in _with("TILT minimax-S", weighting=True, domain_units=True).cells}  # non-unity slope reveals the prescaling/complexity rows
     # the units-column (spine) marginal label per weighting row, like the tuning rows' ¢/
     assert cells["ucol:prescaling:0"].text == "oct/"   # one per matrix row (d-tall)
-    assert cells["ucol:complexity"].text == "(C)/"
-    assert cells["ucol:weight"].text == "(C)/"
+    assert cells["ucol:complexity"].text == "(C)/"     # taxicab complexity → (C)
+    assert cells["ucol:weight"].text == "(S)/"         # minimax-S is simplicity-weight → (S)
+
+
+def test_damage_weight_and_complexity_units_track_the_tuning_scheme():
+    # the annotated units follow the live scheme (guide ch.10 "Annotated units"): the weight
+    # slope picks the letter — U (unity) / C (complexity) / S (simplicity) — and an Euclidean
+    # (q=2) complexity norm prefixes E. Damage is the ¢-prefixed weighted-cents form, the weight
+    # the bare parenthetical, the complexity its own slope-free code (always C / EC). All three
+    # renderings agree: the per-box "units:" line, the per-cell unit, and the units-column spine.
+    # (scheme, damage, weight, complexity); complexity is None when its row is hidden (unity weight).
+    cases = [
+        ("TILT minimax-U", "¢(U)", "(U)", None),       # unity-weight: no complexity, the row is hidden
+        ("TILT minimax-C", "¢(C)", "(C)", "(C)"),      # complexity-weight, taxicab
+        ("TILT minimax-S", "¢(S)", "(S)", "(C)"),      # simplicity-weight, taxicab
+        ("TILT minimax-EC", "¢(EC)", "(EC)", "(EC)"),  # complexity-weight, Euclidean
+        ("TILT minimax-ES", "¢(ES)", "(ES)", "(EC)"),  # simplicity-weight, Euclidean: weight (ES), complexity (EC)
+    ]
+    for scheme, damage, weight, complexity in cases:
+        cells = {c.id: c for c in _with(scheme, weighting=True, units=True, domain_units=True).cells}
+        # damage (the tuning's own column) and the weight list always show under weighting
+        assert cells["units:damage:targets"].text == f"units: {damage}", scheme
+        assert cells["damage:target:0"].unit == damage, scheme
+        assert cells["ucol:damage"].text == f"{damage}/", scheme
+        assert cells["units:weight:targets"].text == f"units: {weight}", scheme
+        assert cells["weight:target:0"].unit == weight, scheme
+        assert cells["ucol:weight"].text == f"{weight}/", scheme
+        # the complexity row only shows when the weight derives from complexity (not unity-weight)
+        if complexity is None:
+            assert "units:complexity:targets" not in cells, scheme
+        else:
+            assert cells["units:complexity:targets"].text == f"units: {complexity}", scheme
+            assert cells["complexity:prime:0"].unit == f"{complexity}/p₁", scheme
+            assert cells["ucol:complexity"].text == f"{complexity}/", scheme
 
 
 def test_weighting_rows_render_a_plain_text_box_when_plain_text_on():
@@ -4729,7 +4761,7 @@ def test_units_annotate_each_box_with_its_unit_string():
     assert on["units:mapping:primes"].text == "units: g/p"  # mapping matrix g/p
     assert on["units:mapping:targets"].text == "units: g"  # mapped target list g
     assert on["units:vectors:targets"].text == "units: p"  # target interval list p
-    assert on["units:damage:targets"].text == "units: ¢"   # damage list ¢
+    assert on["units:damage:targets"].text == "units: ¢(U)"  # damage is weighted cents; default scheme is unity-weight → ¢(U)
     # nothing rendered when units is off
     assert not any(c.startswith("units:") for c in off)
     # the units line sits below the name caption for the same box
@@ -4770,7 +4802,7 @@ def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels():
     assert on["ucol:vectors:2"].text == "p₃/"   # p₃/
     assert on["ucol:mapping:0"].text == "g₁/"   # g₁/
     assert on["ucol:tuning"].text == "¢/"
-    assert on["ucol:damage"].text == "¢/"
+    assert on["ucol:damage"].text == "¢(U)/"   # damage is unity-weighted cents (default scheme)
     # the units ROW (a spine row right after quantities) labels each column's
     # coordinate: /gᵢ over the generators, /pᵢ over the domain primes, /1 over the
     # ratio columns (commas, targets)

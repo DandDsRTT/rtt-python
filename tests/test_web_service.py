@@ -653,6 +653,28 @@ def test_is_euclidean_reports_the_complexity_norm_power():
     assert service.is_euclidean(service.scheme_with_complexity_norm_power("minimax-S", 2)) is True
 
 
+def test_weight_annotation_codes_the_slope_and_euclideanization():
+    # the damage/weight annotated-unit code (guide ch.10 "Annotated units"): the weight-slope
+    # letter — U (unity), C (complexity), S (simplicity) — gaining an E prefix when the
+    # complexity norm is Euclideanized (q=2). Damage renders ¢(<code>), the weight (<code>).
+    assert service.weight_annotation("minimax-U") == "U"
+    assert service.weight_annotation("minimax-C") == "C"
+    assert service.weight_annotation("minimax-S") == "S"
+    assert service.weight_annotation("minimax-EC") == "EC"
+    assert service.weight_annotation("minimax-ES") == "ES"
+    # unity weight applies no complexity, so it never Euclideanizes — stays U even at q=2
+    assert service.weight_annotation(service.scheme_with_complexity_norm_power("minimax-U", 2.0)) == "U"
+
+
+def test_complexity_annotation_codes_only_euclideanization():
+    # the complexity quantity carries no weight slope (it is always "complexity"); only the
+    # Euclidean norm varies it — C (taxicab) vs EC (q=2) — independent of the weight slope.
+    assert service.complexity_annotation("minimax-S") == "C"     # simplicity slope, taxicab
+    assert service.complexity_annotation("minimax-C") == "C"     # complexity slope, taxicab
+    assert service.complexity_annotation("minimax-ES") == "EC"   # simplicity slope, Euclidean
+    assert service.complexity_annotation("minimax-EC") == "EC"   # complexity slope, Euclidean
+
+
 def test_prescaler_of_reports_the_schemes_current_prescaler():
     assert service.prescaler_of("minimax-S") == "log-prime"  # the default
     assert service.prescaler_of("minimax-sopfr-S") == "prime"  # sopfr

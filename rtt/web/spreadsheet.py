@@ -704,6 +704,13 @@ class _GridBuilder:
         # on the slope, NOT a fold default (INITIAL_COLLAPSED stays empty; see no-collapsed-defaults).
         self._complexity_shown = (self.show_weighting
                                   and service.damage_weight_slope(self.tuning_scheme) != "unityWeight")
+        # the damage/weight/complexity unit annotations track the live scheme (guide ch.10
+        # "Annotated units"): the weight is (U)/(C)/(S)/(EC)/(ES), damage the ¢-prefixed form,
+        # the complexity its own slope-free (C)/(EC). Built once here, consumed by tile_unit and
+        # the weighting rows' units-column spine.
+        self.weight_unit = f"({service.weight_annotation(self.tuning_scheme)})"
+        self.complexity_unit = f"({service.complexity_annotation(self.tuning_scheme)})"
+        self.damage_unit = f"¢{self.weight_unit}"  # weighted cents — the ¢-prefixed weight unit
         self._lbox_show = _f.lbox and self._complexity_shown
         self._cbox_show = _f.cbox and self._complexity_shown
         show_audio = _f.audio
@@ -1551,6 +1558,24 @@ class _GridBuilder:
         return ((rkey, ckey) in self.declared_tiles and self.row_open(rkey) and self.col_open(ckey)
                 and f"tile:{rkey}:{ckey}" not in self.collapsed)
 
+    def tile_unit(self, rkey, ckey):
+        """The (rkey, ckey) tile's unit string before per-cell subscripting — the static UNITS
+        template, but with the damage / weight / complexity annotation resolved from the live
+        scheme (guide ch.10 "Annotated units"): the weight reads ``(<weight_code>)``, damage its
+        ``¢``-prefixed form, the complexity ``(<complexity_code>)``. The slope/Euclidean
+        parenthetical is the only scheme-dependent unit; every other tile is the static template.
+        ``""`` for a tile that carries no unit."""
+        base = UNITS.get((rkey, ckey))
+        if base is None:
+            return ""
+        if rkey == "complexity":
+            return base.replace("(C)", self.complexity_unit)
+        if rkey == "weight":
+            return self.weight_unit
+        if rkey == "damage":
+            return self.damage_unit
+        return base
+
     def cell_unit(self, rkey, ckey, *, gen=None, prime=None):
         # the per-value unit shown beneath a gridded cell when units is on: the tile's
         # unit (UNITS) with its g/p/b variables subscripted by this cell's generator/prime
@@ -1562,7 +1587,7 @@ class _GridBuilder:
         # itself produces (p → b₁) don't get re-subscripted to b₁₁ when domain_label is b.
         if not self.show_units:
             return ""
-        u = UNITS.get((rkey, ckey), "")
+        u = self.tile_unit(rkey, ckey)
         if gen is not None:
             u = u.replace("g", f"g{_sub(gen + 1)}")
         if prime is not None:
@@ -2097,20 +2122,24 @@ class _GridBuilder:
             for i in range(self.r):
                 self.cells.append(CellBox(f"ucol:mapping:{i}", self.col_x["units"], self.map_top(i), self.col_w["units"], ROW_H,
                                      "units", text=f"g{_sub(i + 1)}/"))
-        for key in ("tuning", "just", "retune", "damage"):
+        for key in ("tuning", "just", "retune"):
             if self.tile_open(key, "units"):
                 self.cells.append(CellBox(f"ucol:{key}", self.col_x["units"], self.row_y[key], self.col_w["units"], ROW_H,
                                      "units", text="¢/"))
         # the weighting rows' units-column labels: the prescaler is octaves (one per matrix row,
-        # like the d-tall interval vectors), complexity and weight are complexity units (C)/
+        # like the d-tall interval vectors); complexity and weight carry the scheme's annotated
+        # units ((C)/ … (ES)/), and damage their ¢-prefixed form (¢(C)/ …) — all tracking the live
+        # scheme like tile_unit (guide ch.10 "Annotated units").
         if self.tile_open("prescaling", "units"):
             for i in range(self.d):
                 self.cells.append(CellBox(f"ucol:prescaling:{i}", self.col_x["units"], self.row_y["prescaling"] + i * ROW_H,
                                      self.col_w["units"], ROW_H, "units", text="oct/"))
-        for key in ("complexity", "weight"):
+        spine = {"complexity": f"{self.complexity_unit}/", "weight": f"{self.weight_unit}/",
+                 "damage": f"{self.damage_unit}/"}
+        for key, text in spine.items():
             if self.tile_open(key, "units"):
                 self.cells.append(CellBox(f"ucol:{key}", self.col_x["units"], self.row_y[key], self.col_w["units"], ROW_H,
-                                     "units", text="(C)/"))
+                                     "units", text=text))
         if "units" in self.row_y:
             uy = self.row_y["units"]
             if self.tile_open("units", "gens"):
@@ -3223,11 +3252,13 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"caption:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], self.row_cap[rkey],
                                      "caption", text=name, underlines=underlines))
             # the "units: …" line sits below the caption band (independent of names/symbols),
-            # reading the box's entry from UNITS — bold-upright unit glyphs via _math_html
-            if self.show_units and (rkey, ckey) in UNITS:
+            # reading the box's entry from tile_unit (UNITS, with the damage/weight/complexity
+            # annotation resolved from the live scheme) — bold-upright unit glyphs via _math_html
+            unit = self.tile_unit(rkey, ckey)
+            if self.show_units and unit:
                 uy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_sym[rkey] + self.row_cap[rkey]
                 self.cells.append(CellBox(f"units:{rkey}:{ckey}", self.col_x[ckey], uy, self.col_w[ckey], UNIT_H,
-                                     "units", text=f"units: {UNITS[(rkey, ckey)]}"))
+                                     "units", text=f"units: {unit}"))
 
         # preset chooser dropdowns, in the reserved band below each governing tile's
         # plain-text box. The tuning/target choosers carry the live selection; the
