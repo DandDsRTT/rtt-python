@@ -498,10 +498,16 @@
    red rule caused by overriding the stacked-cell transparency with !important. */
 .rtt-cell-input.rtt-pending:focus-within .rtt-cellinput .q-field__native { color:var(--pending-color) !important; }
 /* a held interval the current tuning no longer holds just (its retuning error reads nonzero):
-   the WHOLE cell renders red — every face inside the wrap, the input text, and the fraction
-   bar — in the same red as a draft comma, clearing to black when the tuning is re-optimized */
+   the WHOLE cell renders red — every face inside the wrap, a plain input's text, and the
+   fraction bar — clearing to black when the tuning is re-optimized */
 .rtt-alert, .rtt-alert * { color:var(--pending-color) !important; }
 .rtt-alert .rtt-frac-num { border-bottom-color:var(--pending-color) !important; }
+/* a STACKED ratio (the held interval's editable ratiocell) is the exception: the blanket red
+   above would reveal its hidden raw "num/den" on top of the stacked fraction face — doubling the
+   value. Keep the input text transparent while unfocused (only the red FACE shows); reveal it red
+   only while focused, the same focus-scoped handling a pending draft's "?/?" already gets. */
+.rtt-alert.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
+.rtt-alert.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--pending-color) !important; }
 /* the edit-preview highlight: while one cell is being edited, every OTHER cell whose value that
    edit moves wears an amber ring + faint wash, so the user previews the ripple before leaving the
    cell. INSET so it never bleeds onto the densely-packed neighbours; amber to stay clear of the red
