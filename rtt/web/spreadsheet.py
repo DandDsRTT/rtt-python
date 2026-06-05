@@ -178,6 +178,17 @@ def _sub(n: int) -> str:
     return str(n).translate(_SUBSCRIPTS)
 
 
+def _pretransform_label(text: str) -> str:
+    """A rendered label with "prescal…" swapped to the "pretransform…" stem — the guide's term for
+    the rectangular (size-factored) 𝑋, which shears rather than scales, so "prescaler" is a misnomer.
+    Applied to every prescaling label (caption, row title, preset) while the size factor is on.
+    "prescaled"/"prescaling" are swapped before "prescaler" (which also fixes the plural prescalers)."""
+    for old, new in (("prescaled", "pretransformed"), ("prescaling", "pretransforming"),
+                     ("prescaler", "pretransformer")):
+        text = text.replace(old, new)
+    return text
+
+
 def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool) -> dict:
     """Per-column header labels for the prescaling- and complexity-row product tiles, using
     ``letter`` for the prescaler glyph — 𝐿 when the prescaler IS the log-prime matrix, else
@@ -566,6 +577,8 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     # factor) is not "the log-prime matrix", so it keeps the bare caption.
     if is_log_prime and not size_factor and show_equiv:
         effective_captions[("prescaling", "primes")] += " = log-prime matrix"
+    if size_factor:  # the rectangular 𝑋 is a "pretransformer", not a "prescaler" (guide terminology)
+        effective_captions = {k: _pretransform_label(v) for k, v in effective_captions.items()}
     return _PrescalerLabels(
         scheme_prescaler=scheme_prescaler, symbol=symbol, equivalence=equivalence,
         prescaling_symbols=prescaling_symbols,
@@ -1792,7 +1805,8 @@ class _GridBuilder:
         # row labels (always shown; a collapsed row keeps its label as the strip)
         # plus a fold toggle in the gutter for the collapsible ones
         for key in self.row_y:
-            self.cells.append(CellBox(f"label:{key}", 0, self.row_y[key], LABEL_W, self.row_h[key], "rowlabel", text=self.row_label[key]))
+            label = _pretransform_label(self.row_label[key]) if self.size_factor else self.row_label[key]
+            self.cells.append(CellBox(f"label:{key}", 0, self.row_y[key], LABEL_W, self.row_h[key], "rowlabel", text=label))
             if self.row_collapsible[key]:
                 glyph = _fold_glyph(f"row:{key}" in self.collapsed)
                 ty = self.row_y[key] + (self.row_h[key] - TOGGLE) / 2
@@ -2778,6 +2792,8 @@ class _GridBuilder:
             def emit_preset(cid, name, rkey, ckey, label):
                 if not self.tile_open(rkey, ckey):
                     return
+                if self.size_factor:  # "predefined prescalers" → "…pretransformers" (guide terminology)
+                    label = _pretransform_label(label)
                 top = self.ptext_band_y(rkey) + self.row_ptext[rkey]  # below the plain-text band
                 # all-interval targets every interval, so the target set scheme chooser doesn't apply —
                 # grey it out disabled, its caption with it (it also falls back to "-"; see app._target_preset_values)

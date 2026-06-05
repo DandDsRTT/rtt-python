@@ -2076,7 +2076,8 @@ def test_size_factor_names_the_bare_prescaler_ZL_not_just_L():
     lils = {c.id: c for c in _with(scheme="TILT minimax-lils-S", weighting=True,
                                    symbols=True, names=True, equivalences=True).cells}
     assert lils["symbol:prescaling:primes"].text == "𝑋 = 𝑍𝐿"
-    assert lils["caption:prescaling:primes"].text == "complexity prescaler"
+    # the size factor also renames "prescaler" → "pretransformer" (the guide's term for rectangular 𝑋)
+    assert lils["caption:prescaling:primes"].text == "complexity pretransformer"
     # lp keeps 𝑋 = 𝐿 and the log-prime-matrix name
     lp = {c.id: c for c in _with(scheme="TILT minimax-S", weighting=True,
                                  symbols=True, names=True, equivalences=True).cells}
@@ -2149,6 +2150,27 @@ def test_prescaler_symbol_never_mixes_L_and_X_within_a_tile():
     on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-S").cells}
     assert on["symbol:prescaling:detempering"].text == "𝐿D"          # the tile's big symbol
     assert on["matlabel:col:prescaling:detempering:0"].text == "𝐿𝐝₁"  # its column headers — same 𝐿
+
+
+def test_size_factor_renames_prescaler_to_pretransformer_in_the_labels():
+    # the guide names the rectangular (size-factored) 𝑋 a "pretransformer", not a "prescaler" (which
+    # shears, not scales). So when "replace diminuator" is checked, every rendered "prescal…" label
+    # takes the pretransform stem: the captions, the row title, and the predefined-… preset.
+    lp = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True,
+                                 names=True, presets=True).cells}
+    lils = {c.id: c for c in _with("TILT minimax-lils-S", weighting=True, alt_complexity=True,
+                                   names=True, presets=True).cells}
+    # the bare tile caption + a product caption
+    assert lp["caption:prescaling:primes"].text == "complexity prescaler"
+    assert lils["caption:prescaling:primes"].text == "complexity pretransformer"
+    assert lp["caption:prescaling:targets"].text == "complexity prescaled target interval list"
+    assert lils["caption:prescaling:targets"].text == "complexity pretransformed target interval list"
+    # the row title (the left gutter label)
+    assert lp["label:prescaling"].text == "complexity prescaling"
+    assert lils["label:prescaling"].text == "complexity pretransforming"
+    # the predefined-prescalers preset's field label
+    assert lp["block:preset:prescaler:label"].text == "predefined prescalers"
+    assert lils["block:preset:prescaler:label"].text == "predefined pretransformers"
 
 
 def test_custom_prescaler_diagonal_keeps_the_generic_symbol():
