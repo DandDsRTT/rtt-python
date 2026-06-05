@@ -452,8 +452,8 @@ def test_cwe_held_octave_minimax_e_lils_s(name, expected):
 # (lils) all-interval scheme. The phantom-prime augmentation has to carry each held vector's own
 # size component into the phantom column; the octave's component happens to be log2(2) = 1, so a
 # hard-coded 1 held only the octave and silently mistuned every other held interval. tests.m never
-# paired a non-octave held interval with the Weil/lils family (its held + size-factor cases all
-# hold the octave), so the suite never caught it.
+# paired a non-octave held interval with the size-factor (lils) family (its held + size-factor
+# cases all hold the octave), so the suite never caught it.
 HELD_NON_OCTAVE_SIZE_FACTOR = [
     ("minimax-lils-S", "2/1", (1, 0, 0)),  # the octave: already correct, a control
     ("minimax-lils-S", "3/2", (-1, 1, 0)),
@@ -472,7 +472,7 @@ def test_held_interval_is_just_in_size_factor_all_interval(scheme, ratio, vector
 
 
 def test_held_non_octave_minimax_e_lils_s_tuning_map():
-    # The full tuning map for meantone holding 3/2 just under minimax-E-lils-S (Weil-Euclidean).
+    # The full tuning map for meantone holding 3/2 just under minimax-E-lils-S.
     # No published reference exists — tests.m never held a non-octave interval under a size-factor
     # scheme — so this locks the corrected phantom-prime augmentation exactly. The Euclidean (E)
     # variant is chosen deliberately: it is strictly convex, so its optimum is unique. The taxicab
