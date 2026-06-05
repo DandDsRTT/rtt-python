@@ -2442,9 +2442,9 @@ def test_box_c_complexity_dropdown_shows_with_weighting_lp_only_until_alt_comple
     # for the default scheme (log-prime taxicab) that's "lp (log-product)"
     assert ctrl.text == "lp (log-product)"
     assert ctrl.values == ("lp (log-product)",)  # lp-only while alt. complexity is off
-    # the master chooser sits below the complexity list (box 𝒄), at the targets-column left edge
+    # the master chooser sits below the complexity list, inset within box 𝒄's border (BOX_INNER)
     assert ctrl.y > on["complexity:target:0"].y
-    assert ctrl.x == on["header:targets"].x
+    assert ctrl.x == on["header:targets"].x + spreadsheet.BOX_INNER
     # turning alt. complexity on restores the full preset list + custom
     full = {c.id: c for c in _with("TILT minimax-S", weighting=True, alt_complexity=True).cells}
     assert full["control:complexity"].values == tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",)
@@ -2756,12 +2756,31 @@ def test_alt_complexity_lays_box_l_out_with_just_the_diminuator_checkbox():
     assert cap_d.kind == "caption"
     assert cap_d.text == "replace diminuator"
     dim = on["control:diminuator"]
-    # the square sits at the column's left, its caption hugging its bottom (the cell is sized to
-    # the rendered square, OPTION_BOX_PX, so its bottom IS the square's bottom)
-    assert dim.x == on["header:primes"].x
+    # the square sits inset within box 𝐋's border (BOX_INNER off the column's left), its caption
+    # hugging its bottom (the cell is sized to the rendered square, OPTION_BOX_PX, so its bottom IS
+    # the square's bottom)
+    assert dim.x == on["header:primes"].x + spreadsheet.BOX_INNER
     assert cap_d.y == dim.y + dim.h
     # ...and is horizontally CENTRED above its caption slot (both at the column's left edge)
     assert abs((dim.x + dim.w / 2) - (cap_d.x + cap_d.w / 2)) < 1
+
+
+def test_weighting_controls_each_sit_in_a_bordered_box():
+    # box 𝐋 (replace diminuator), box 𝒄 (predefined complexity + norm), and box 𝒘 (weight slope)
+    # each sit in a bordered control box — a boxed Block, like the preset / optimization boxes —
+    # with their controls inset within the border, not floating bare on the tile.
+    lay = _with("TILT minimax-S", weighting=True, alt_complexity=True)  # non-unity slope reveals the boxes
+    blocks = {b.id: b for b in lay.blocks}
+    cells = {c.id: c for c in lay.cells}
+    for box_id, ctrl_id in (("block:diminuator", "control:diminuator"),
+                            ("block:complexity", "control:complexity"),
+                            ("block:slope", "control:slope")):
+        box = blocks[box_id]
+        assert box.boxed, box_id
+        ctrl = cells[ctrl_id]
+        # the control sits fully inside its box, inset off the left/top border
+        assert box.x < ctrl.x and ctrl.x + ctrl.w <= box.x + box.w + 0.01, box_id
+        assert box.y < ctrl.y and ctrl.y + ctrl.h <= box.y + box.h + 0.01, box_id
 
 
 def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
@@ -2799,9 +2818,10 @@ def test_weighting_adds_a_weight_slope_chooser_to_the_weight_box():
     assert ctrl.disabled is False  # live and interactive while target-based (locked only all-interval)
     assert ctrl.text == "unity-weight"  # the default scheme's damage-weight slope (unity)
     assert ctrl.values == ("complexity-weight", "unity-weight", "simplicity-weight")
-    # it rides below the weight list (box 𝒘), spanning the targets column
+    # it rides below the weight list, filling box 𝒘's interior (the targets column inset by its border)
     assert ctrl.y > on["weight:target:0"].y
-    assert ctrl.x == on["header:targets"].x and ctrl.w == on["header:targets"].w
+    assert ctrl.x == on["header:targets"].x + spreadsheet.BOX_INNER
+    assert ctrl.w == on["header:targets"].w - 2 * spreadsheet.BOX_INNER
 
 
 def test_all_interval_greys_and_locks_the_weight_slope_chooser():

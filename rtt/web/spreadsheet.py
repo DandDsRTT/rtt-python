@@ -1031,7 +1031,7 @@ class _GridBuilder:
         self.lbox_ctrl = self._lbox_show and self.col_open("primes")
         # box 𝐋's lone control is the diminuator checkbox at the column's left, over its "replace
         # diminuator" caption: a small square (OPTION_BOX_PX) plus a one-line caption sets the reserve.
-        self.lbox_extra = (RANGE_GAP + OPTION_BOX_PX + CAPTION_LINE) if self.lbox_ctrl else 0
+        self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
         # box 𝒄 lays its three controls in ONE row below the complexity list: the predefined-
         # complexity master dropdown on the left, then the q norm-power field and the dual(q)
         # display, each captioned (q/dual using the optimization box's value-symbol-caption stack).
@@ -1039,7 +1039,7 @@ class _GridBuilder:
         # three lines in their overhanging caption slot — reserve the height up front. The
         # targets column was widened up front (by _control_floor) to CBOX_W to enclose them.
         self.cbox_ctrl = self._cbox_show and self.col_open("targets")
-        self.cbox_extra = (RANGE_GAP + ROW_H + SYMBOL_H + 3 * CAPTION_LINE) if self.cbox_ctrl else 0
+        self.cbox_extra = (RANGE_GAP + self.control_region_band_h(ROW_H + SYMBOL_H + 3 * CAPTION_LINE)) if self.cbox_ctrl else 0
         # the optimization controls (the power 𝑝 etc.) nest at the bottom of the target interval
         # damage list tile (like the ranges box in the gens tile), gated on the optimization
         # sub-control. Reserve their height up front so the board stays clear below the tile.
@@ -1069,7 +1069,7 @@ class _GridBuilder:
                       and "row:weight" not in self.collapsed
                       and self.col_open("targets") and "tile:weight:targets" not in self.collapsed)
         self.slope_locked = self.slope_ctrl and service.is_all_interval(self.tuning_scheme)
-        self.slope_extra = (RANGE_GAP + PRESET_H + CAPTION_LINE) if self.slope_ctrl else 0
+        self.slope_extra = (RANGE_GAP + self.control_region_band_h(PRESET_H + CAPTION_LINE)) if self.slope_ctrl else 0
         # Each of these nested controls lives at the bottom of one tile of its row, but its reserved
         # height (keyed here by row) is added to the whole row's tile_h: the rows below drop clear of
         # it AND every tile in the row grows to the same height, so the row stays one uniform band.
@@ -1258,10 +1258,12 @@ class _GridBuilder:
         # column's right edge (e.g. the narrow targets column is widened to seat box 𝒄's wide
         # predefined-complexities dropdown); widens the column to enclose them
         floor = 0
+        # each weighting control sits in a bordered box (control_region), so the column must fit the
+        # control PLUS the box's BOX_INNER inset on each side, like the optimization box's OPT_PAD.
         if key == "primes" and self._lbox_show:
-            floor = LBOX_DIM_W  # box 𝐋's lone control now: the diminuator checkbox + its caption
+            floor = LBOX_DIM_W + 2 * BOX_INNER  # box 𝐋: the diminuator checkbox + caption, boxed
         if key == "targets" and self._cbox_show:
-            floor = max(floor, CBOX_W)
+            floor = max(floor, CBOX_W + 2 * BOX_INNER)  # box 𝒄: the complexity + norm choosers, boxed
         if key == "targets" and self.show_presets and self.settings["all_interval"]:
             floor = max(floor, TBOX_W)  # box 𝐓: target chooser + all-interval checkbox, one box
         if (key == "targets" and self.show_optimization and "row:damage" not in self.collapsed
@@ -1676,6 +1678,22 @@ class _GridBuilder:
             self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
                                  "caption", text=label, align="left", disabled=disabled))
         return ctrl_x, dropdown_w, ctrl_y
+
+    def control_region(self, box_id, ckey, top, content_h):
+        """A bordered control box (boxed Block) spanning tile ``ckey`` from ``top``, enclosing
+        ``content_h`` of stacked controls inset BOX_INNER at the top and CTRL_LABEL_GAP at the
+        bottom — the control_box frame, but for arbitrary content (the box-𝐋 checkbox, the box-𝒄
+        multi-control row) rather than just a dropdown+label. Returns the inner top-left (x, y) the
+        controls start at, so each control's own offsets stay as they were, just shifted inside."""
+        box_y = top + BOX_OUTER
+        self.blocks.append(Block(box_id, self.col_x[ckey], box_y, self.col_w[ckey],
+                                 BOX_INNER + content_h + CTRL_LABEL_GAP, boxed=True))
+        return self.col_x[ckey] + BOX_INNER, box_y + BOX_INNER
+
+    def control_region_band_h(self, content_h):
+        """The full band a :func:`control_region` of ``content_h`` reserves — the box plus its
+        BOX_OUTER vertical padding above and below (the counterpart of :func:`control_band_h`)."""
+        return 2 * BOX_OUTER + BOX_INNER + content_h + CTRL_LABEL_GAP
 
     def emit_all_interval_check(self, check_x, ctrl_y):
         # the all-interval checkbox + its caption, seated on a control row at ctrl_y: an OPTION_BOX_PX
@@ -2230,24 +2248,26 @@ class _GridBuilder:
                     else:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
                                              text=service.prescale_text(value), unit=u, alert=alert))
-        if self.lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox at the
-            # bottom of the prescaling matrix (the prescaler chooser is a preset now, riding the
-            # preset band above). A SQUARE (no inline label — it wraps broken in the narrow primes
-            # column) at the column's left, over its "replace diminuator" caption hugging its bottom.
-            py = self.tile_top["prescaling"] + self.tile_h["prescaling"] - self.lbox_extra + RANGE_GAP
-            self.cells.append(CellBox("control:diminuator", self.col_x["primes"], py, LBOX_DIM_W, OPTION_BOX_PX,
+        if self.lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox,
+            # in a bordered box at the bottom of the prescaling matrix (the prescaler chooser is a preset
+            # now, riding the preset band above). A SQUARE (no inline label — it wraps broken in the narrow
+            # primes column) over its "replace diminuator" caption hugging its bottom.
+            box_top = self.tile_top["prescaling"] + self.tile_h["prescaling"] - self.lbox_extra + RANGE_GAP
+            bx, by = self.control_region("block:diminuator", "primes", box_top, OPTION_BOX_PX + CAPTION_LINE)
+            self.cells.append(CellBox("control:diminuator", bx, by, LBOX_DIM_W, OPTION_BOX_PX,
                                  "control_check", text="",  # square only; label moves to a caption below
                                  checked=service.diminuator_replaced(self.tuning_scheme)))
-            self.cells.append(CellBox("caption:diminuator", self.col_x["primes"], py + OPTION_BOX_PX, LBOX_DIM_W,
+            self.cells.append(CellBox("caption:diminuator", bx, by + OPTION_BOX_PX, LBOX_DIM_W,
                                  CAPTION_LINE, "caption", text="replace diminuator"))
-        if self.cbox_ctrl:  # box 𝒄's three controls sit on one row at the bottom of the complexity list:
-            # [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its bottom; q
-            # and dual(q) use the optimization box's value-over-symbol-over-caption stack — the
+        if self.cbox_ctrl:  # box 𝒄's three controls sit on one row in a bordered box at the bottom of the
+            # complexity list: [predefined complexities ▼] | q | dual(q). The dropdown's caption hugs its
+            # bottom; q and dual(q) use the optimization box's value-over-symbol-over-caption stack — the
             # value cell stays at COL_W (a standard gridded number), but the symbol/caption sit in
             # a wider overhanging SLOT so "dual(q)" doesn't overflow and multi-word captions wrap
             # readable. dual(q) only appears in all-interval mode (the dual norm power is
             # meaningful via the dual-norm inequality used to minimax over every interval).
-            cy = self.tile_top["complexity"] + self.tile_h["complexity"] - self.cbox_extra + RANGE_GAP
+            box_top = self.tile_top["complexity"] + self.tile_h["complexity"] - self.cbox_extra + RANGE_GAP
+            tx, cy = self.control_region("block:complexity", "targets", box_top, ROW_H + SYMBOL_H + 3 * CAPTION_LINE)
             sym_y = cy + ROW_H
             cap_y = sym_y + SYMBOL_H
             cap_h = 3 * CAPTION_LINE
@@ -2264,15 +2284,15 @@ class _GridBuilder:
             complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
             complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
                                  if self.settings["alt_complexity"] else (complexity_text,))
-            self.cells.append(CellBox("control:complexity", self.col_x["targets"], cy, drop_w, PRESET_H,
+            self.cells.append(CellBox("control:complexity", tx, cy, drop_w, PRESET_H,
                                  "control_select", text=complexity_text, values=complexity_values))
-            self.cells.append(CellBox("caption:complexity", self.col_x["targets"], cy + PRESET_H, drop_w,
+            self.cells.append(CellBox("caption:complexity", tx, cy + PRESET_H, drop_w,
                                  CAPTION_LINE, "caption", text="predefined complexities", align="left"))
             # the q norm-power field: an editable white box (a powerinput) styled to match the
             # optimization box's 𝑝 field; wiring (typing a new q to drive the norm) comes later.
             # The slot is wider than the value cell, with the value centred so the italic symbol
             # 𝑞 and the multi-word caption have room to render without overflow.
-            q_slot_x = self.col_x["targets"] + drop_w + OPT_COL_GAP
+            q_slot_x = tx + drop_w + OPT_COL_GAP
             q_x = q_slot_x + (slot_w - COL_W) / 2
             q_text = _format_power(service.complexity_norm_power(self.tuning_scheme))
             self.cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, "powerinput", text=q_text))
@@ -2310,14 +2330,16 @@ class _GridBuilder:
                                              "tval", text=service.cents(val)))
             else:  # weight is over the targets only, like damage (it scales them)
                 self.tval_row("weight", "targets", self.target_weights)
-        if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), nested at the bottom of the weight list,
-            # with its "damage weight slope" caption beneath (the optimization box's caption pattern)
-            py = self.tile_top["weight"] + self.tile_h["weight"] - self.slope_extra + RANGE_GAP
-            self.cells.append(CellBox("control:slope", self.col_x["targets"], py, self.col_w["targets"], PRESET_H,
+        if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), in a bordered box at the bottom of the
+            # weight list, with its "damage weight slope" caption beneath (the optimization box's caption pattern)
+            box_top = self.tile_top["weight"] + self.tile_h["weight"] - self.slope_extra + RANGE_GAP
+            bx, by = self.control_region("block:slope", "targets", box_top, PRESET_H + CAPTION_LINE)
+            slope_w = self.col_w["targets"] - 2 * BOX_INNER  # the chooser fills the box, inset off its border
+            self.cells.append(CellBox("control:slope", bx, by, slope_w, PRESET_H,
                                  "control_select", text=service.weight_slope_of(self.tuning_scheme),
                                  values=tuple(service.WEIGHT_SLOPES), disabled=self.slope_locked))
-            self.cells.append(CellBox("caption:slope", self.col_x["targets"], py + PRESET_H,
-                                 self.col_w["targets"], CAPTION_LINE, "caption",
+            self.cells.append(CellBox("caption:slope", bx, by + PRESET_H,
+                                 slope_w, CAPTION_LINE, "caption",
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
         if self.row_open("damage"):  # damage is over the targets only (the tuning's own column)
             self.tval_row("damage", "targets", self.target_sizes.damage)
