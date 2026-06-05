@@ -955,6 +955,7 @@ class _Reconciler:
         self.rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
         self.opt_buttons: dict = {}  # optimize-button cell id -> its ui.button (for the auto-lock visual)
         self.objective_tips: dict = {}  # optimization-objective cell id -> its ui.tooltip (text swaps with all-interval mode)
+        self.target_limit_tip = None  # the target chooser's ui.tooltip (text swaps to an invalid-limit message)
         self.captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
         self.caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
         self.math_cells: dict = {}  # symbol/count cell id -> the ui.html holding its _math_html glyph(s)
@@ -1093,6 +1094,12 @@ class _Reconciler:
                 # render() can swap its wording in place when the mode flips, like the symbol glyph
                 with wrap:
                     self.objective_tips[cb.id] = ui.tooltip(help_text)
+            elif cb.id == "preset:target":
+                # keep the target chooser's tooltip handle so the limit validator can swap in an
+                # invalid-limit message (an even OLD limit, or a non-whole number) and back — the
+                # same in-place relabel the objective uses
+                with wrap:
+                    self.target_limit_tip = ui.tooltip(help_text)
             else:
                 wrap.tooltip(help_text)
         self.els[cb.id] = wrap
@@ -1587,11 +1594,16 @@ class _Reconciler:
             # the select via display-value, the number via its "-" placeholder.
             limit, family = self._target_preset_values()
             with ui.element("div").classes("rtt-preset-target"):
+                # limit_changed tells the handler the user TYPED a limit (toast on a bad one) vs
+                # PICKED a family (a switch to OLD that turns an even limit invalid only reddens it).
+                # debounce collapses a multi-digit entry into one settled event, so typing "21" never
+                # flashes a toast at the even intermediate "2" (the programmatic render echo is
+                # Python-side and stays inside the building[0] guard, so debounce can't leak it).
                 num = ui.number(value=limit, min=2,
-                        on_change=lambda e: self._cb.on_target_change()) \
-                    .props('dense borderless hide-bottom-space placeholder="-"').classes("rtt-preset-num")
+                        on_change=lambda e: self._cb.on_target_change(limit_changed=True)) \
+                    .props('dense borderless hide-bottom-space placeholder="-" debounce=300').classes("rtt-preset-num")
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
-                        on_change=lambda e: self._cb.on_target_change()) \
+                        on_change=lambda e: self._cb.on_target_change(limit_changed=False)) \
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
             _set_offlist_prompt(sel, family)
             self.selects[cb.id] = (num, sel)
@@ -1650,6 +1662,7 @@ class _Reconciler:
             _set_offlist_prompt(sel, family)
             num.set_enabled(not cb.disabled)  # all-interval greys+locks the chooser (it also shows "-")
             sel.set_enabled(not cb.disabled)
+            self._clear_target_limit_error(num)  # a committed limit is always valid -> drop any red flag
         elif cb.id == "preset:prescaler":  # the scheme's prescaler, "-" on a deviating edit; the
             # option list widens/narrows as alt-complexities flips, so refresh it too
             options = list(presets.prescaler_options(self._editor.settings["alt_complexity"]))
@@ -1669,6 +1682,20 @@ class _Reconciler:
             scheme = name if name in options else None
             self.selects[cb.id].set_options(options, value=scheme)
             _set_offlist_prompt(self.selects[cb.id], scheme)
+
+    def flag_target_limit_error(self, num, message):
+        """Red-flag the target chooser's limit field and point its tooltip at the reason (an even
+        OLD limit, or a non-whole number). The handler returns without re-rendering, so the flag
+        persists until a later render restores the committed (always-valid) limit."""
+        num.classes(add="rtt-limit-error")
+        if self.target_limit_tip is not None:
+            self.target_limit_tip.set_text(message)
+
+    def _clear_target_limit_error(self, num):
+        """Drop the limit field's red flag and restore the chooser's normal hover help."""
+        num.classes(remove="rtt-limit-error")
+        if self.target_limit_tip is not None:
+            self.target_limit_tip.set_text(tooltips.control_help("preset", "preset:target"))
 
     def _build_control_select(self, cb, wrap):  # a weighting chooser (complexity / norm / weight slope)
         self.selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
@@ -2321,7 +2348,7 @@ def index() -> None:
             editor.canonicalize_comma_basis()
         render()
 
-    def on_target_change():
+    def on_target_change(limit_changed=False):
         # the target chooser is a numeric limit + a TILT/OLD family; compose them into
         # a spec ("9-TILT", or just "TILT" when the limit is blank). An incomplete or
         # out-of-range limit (one that resolves to no intervals) is held without
@@ -2330,6 +2357,17 @@ def index() -> None:
             return
         num, sel = rec.selects["preset:target"]
         family = sel.value or "TILT"
+        # the odd-limit diamond (OLD) needs an odd limit; any limit must be a whole number. A bad
+        # entry reddens the field with an explaining tooltip and is NOT applied (the grid keeps the
+        # last valid set, like a half-typed cell). Switching the family to OLD over an even limit
+        # reddens it too; only a directly TYPED bad limit also toasts.
+        problem = service.target_limit_problem(family, num.value)
+        if problem:
+            message = tooltips.target_limit_help(problem)
+            rec.flag_target_limit_error(num, message)
+            if limit_changed:
+                ui.notify(message, type="negative", position="top")
+            return
         spec = f"{int(num.value)}-{family}" if num.value else family
         try:
             valid = bool(service.target_interval_set(spec, editor.state.domain_basis))
@@ -2337,7 +2375,7 @@ def index() -> None:
             valid = False
         if not valid:
             return
-        editor.set_target_spec(spec)
+        editor.set_target_spec(spec)  # valid -> render() clears the red flag via _update_preset
         render()
 
     def on_control_select(cid, value):

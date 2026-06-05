@@ -204,6 +204,31 @@ def default_target_limit(family: str, domain_basis) -> int:
     return default_old_limit(domain) if "OLD" in family else default_tilt_limit(domain)
 
 
+def target_limit_problem(family: str | None, limit_value) -> str | None:
+    """Classify a target-limit chooser entry against its family, returning an error key, or
+    ``None`` when the value is acceptable:
+
+      - ``"whole"`` — the value isn't a whole number (a decimal, or unparseable text).
+      - ``"odd"``   — an even limit for the odd-limit diamond (``OLD``), which is odd by construction;
+        the truncated integer-limit triangle (``TILT``) takes any whole number.
+
+    A blank or zero value reads as "no manual limit" (the family tracks the domain default),
+    matching the chooser handler that treats a falsy entry as the bare family. A ``None`` family
+    (a typed override / all-interval chooser) has no parity rule, so only the whole-number check
+    applies."""
+    if not limit_value:  # None / "" / 0 -> no manual limit (the bare family)
+        return None
+    try:
+        number = float(limit_value)
+    except (TypeError, ValueError):
+        return "whole"
+    if number != int(number):
+        return "whole"
+    if "OLD" in (family or "") and int(number) % 2 == 0:
+        return "odd"
+    return None
+
+
 def _vectors_to_ratios(vectors, domain_basis=None) -> tuple[str, ...]:
     """Each vector as a ``"num/den"`` ratio string (the shared rendering for generators
     and commas). A vector's components are exponents on the domain basis: the standard

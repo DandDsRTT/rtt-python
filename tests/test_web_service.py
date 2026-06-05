@@ -400,6 +400,23 @@ def test_default_target_limit_is_the_number_a_bare_family_resolves_to():
     assert service.default_target_limit("TILT", (2, 3, 5, 7)) == 10
 
 
+def test_target_limit_problem_validates_the_chooser_entry():
+    # the odd-limit diamond (OLD) is odd by construction, so an even limit is invalid; the
+    # truncated integer-limit triangle (TILT) accepts any whole number. A non-whole / unparseable
+    # entry is invalid for either family. A blank (or zero) entry is fine — the family then
+    # tracks the domain default. (None family = an override / all-interval chooser: no parity rule.)
+    assert service.target_limit_problem("OLD", 8) == "odd"      # even odd-limit -> rejected
+    assert service.target_limit_problem("OLD", 8.0) == "odd"    # ...as a float too (ui.number gives floats)
+    assert service.target_limit_problem("OLD", 9) is None       # odd odd-limit -> fine
+    assert service.target_limit_problem("TILT", 8) is None      # even is fine for the triangle
+    assert service.target_limit_problem("TILT", 9.5) == "whole" # a decimal isn't a whole number
+    assert service.target_limit_problem("OLD", "abc") == "whole"  # unparseable text
+    assert service.target_limit_problem("OLD", None) is None    # blank -> the domain default
+    assert service.target_limit_problem("OLD", "") is None      # blank -> the domain default
+    assert service.target_limit_problem("OLD", 0) is None       # zero reads as blank (matches the chooser)
+    assert service.target_limit_problem(None, 8) is None        # no named family -> no parity rule
+
+
 def test_tuning_maps_under_top():
     import pytest
 

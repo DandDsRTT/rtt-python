@@ -187,6 +187,16 @@ _PTEXT_HELP: dict[str, str] = {
 }
 
 
+def target_limit_help(problem: str) -> str:
+    """Hover (and toast) text for an invalid target-limit entry, keyed by the problem
+    :func:`rtt.web.service.target_limit_problem` reports: an even limit for the odd-limit
+    diamond (``"odd"``), or a value that isn't a whole number (``"whole"``)."""
+    return {
+        "odd": "The odd-limit diamond (OLD) needs an odd limit.",
+        "whole": "The target limit must be a whole number.",
+    }[problem]
+
+
 def objective_help(all_interval: bool) -> str:
     """Hover text for the optimization objective, which names a DIFFERENT quantity per mode.
 

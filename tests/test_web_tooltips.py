@@ -127,6 +127,17 @@ def test_objective_help_names_a_different_quantity_per_mode():
     assert "retuning" in allint and "every interval" in allint
 
 
+def test_target_limit_help_distinguishes_the_two_errors():
+    # the two target-limit problems service.target_limit_problem reports each get their own
+    # wording (the hover tip AND the toast read the same string): an even odd-limit-diamond limit
+    # must be odd; any limit must be a whole number. Distinct, non-empty, and naming the fix.
+    odd = tooltips.target_limit_help("odd")
+    whole = tooltips.target_limit_help("whole")
+    assert odd.strip() and whole.strip() and odd != whole
+    assert "odd" in odd  # tells the user the OLD limit must be odd
+    assert "whole number" in whole
+
+
 def test_every_editable_dual_has_a_distinct_tooltip():
     # the editable plain-text duals are exactly EDITABLE_PTEXT (the layout's source of truth);
     # each must carry its own hover text so no editable value is left unexplained
