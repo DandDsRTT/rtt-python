@@ -2585,12 +2585,12 @@ class _GridBuilder:
         # temperament chooser is a placeholder (it loads, not mirrors). These are controls,
         # so they ride the tile whether or not math expressions has emptied its values.
         if self.show_presets:
-            # the tuning chooser shows the scheme name; a scheme refined by the alt.-complexity
-            # control is a resolved spec (no preset name), so it shows blank rather than a repr.
-            # the prescaler chooser shows the scheme's named prescaler, blank ("-") when a custom
-            # diagonal override deviates from it (the bare prescaler tile's manual edits).
+            # the tuning chooser shows the scheme's bare systematic name (rendered from its spec),
+            # blank ("-") when the scheme has no systematic name. The prescaler chooser shows the
+            # scheme's named prescaler, blank when a custom diagonal override deviates from it (the
+            # bare prescaler tile's manual edits).
             preset_text = {"temperament": "", "target": self.target_spec,
-                              "tuning": self.tuning_scheme if isinstance(self.tuning_scheme, str) else "",
+                              "tuning": service.base_scheme_name(self.tuning_scheme) or "",
                               "prescaler": service.displayed_prescaler_name(
                                   self.state.mapping, self.tuning_scheme, self.custom_prescaler) or ""}
 

@@ -399,7 +399,9 @@ def test_removing_a_real_comma_drops_the_last_when_no_draft_is_pending():
 
 def test_editor_starts_with_default_tuning_scheme_and_target_spec():
     editor = Editor()
-    assert editor.tuning_scheme == service.DEFAULT_DOCUMENT_SCHEME  # target-based, unity-weighted
+    # the scheme is held as the canonical spec, equal to the resolved as-shipped document scheme
+    assert editor.tuning_scheme == service.resolve_tuning_scheme(service.DEFAULT_DOCUMENT_SCHEME)
+    assert editor.displayed_tuning_scheme_name == "minimax-U"  # target-based, unity-weighted
     assert service.is_all_interval(editor.tuning_scheme) is False  # all-interval OFF by default
     assert editor.target_spec == "TILT"
 

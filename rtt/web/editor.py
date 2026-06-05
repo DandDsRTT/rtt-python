@@ -49,7 +49,7 @@ class _Doc:
     place; :meth:`Editor._restore` copies them back to the editor's working forms."""
 
     state: TemperamentState
-    tuning_scheme: object  # str (a named scheme) | TuningSchemeSpec (a control-refined one)
+    tuning_scheme: object  # a TuningSchemeSpec (the canonical representation; named via the renderer)
     target_family: str
     target_limit: int | None
     interest_vectors: tuple[tuple[int, ...], ...]
@@ -81,9 +81,9 @@ def _initial_doc() -> _Doc:
         state=state,
         # all-interval is OFF by default: the as-shipped scheme targets the displayed interval
         # list (the default TILT family) at unity weight, so the target-controls "all-interval"
-        # checkbox starts unchecked. It stays a named string ("TILT minimax-U") so the chooser
-        # still names it.
-        tuning_scheme=service.DEFAULT_DOCUMENT_SCHEME,
+        # checkbox starts unchecked. Held as a resolved spec — the canonical representation the
+        # whole editor now uses — which the chooser names back via the renderer ("minimax-U").
+        tuning_scheme=service.resolve_tuning_scheme(service.DEFAULT_DOCUMENT_SCHEME),
         target_family=service.DEFAULT_TARGET_SPEC,
         target_limit=None,
         interest_vectors=(),

@@ -501,11 +501,6 @@ WEIGHT_SLOPES = {
     "simplicity-weight": "simplicityWeight",
 }
 
-# the trailing letter each weight slope carries in a systematic scheme name (minimax-U/-S/-C) —
-# the slope is always the name's final character, so a named scheme's slope is swapped by
-# replacing that letter, keeping the scheme nameable rather than degrading it to an unnamed spec.
-WEIGHT_SLOPE_LETTERS = {"unity-weight": "U", "simplicity-weight": "S", "complexity-weight": "C"}
-
 # the order the weight variants are offered (per complexity family) in the scheme chooser:
 # simplicity, unity, complexity — the slope running from 1/𝒄 through 1 to 𝒄
 _WEIGHT_VARIANT_ORDER = ("simplicity-weight", "unity-weight", "complexity-weight")
@@ -619,22 +614,19 @@ def scheme_with_targets(scheme, target_intervals: str):
 
 def scheme_with_weight_slope(scheme, slope: str):
     """``scheme`` with its damage-weight slope swapped to ``slope`` (a :data:`WEIGHT_SLOPES`
-    key) — the weight box's chooser — keeping the complexity and optimization power. A named
-    scheme keeps its name (the trailing U/S/C letter is swapped, e.g. ``minimax-S`` →
-    ``minimax-U``) so the chooser can still name it; a control-refined spec stays a spec."""
-    if isinstance(scheme, str):
-        bare = scheme.rstrip()
-        if bare and bare[-1] in "USC":  # a systematic name ends in its slope letter
-            return bare[:-1] + WEIGHT_SLOPE_LETTERS[slope]
+    key) — the weight box's chooser — keeping the complexity and optimization power. Returns a
+    resolved spec; the renderer names it back when a chooser needs a label."""
     return replace(resolve_tuning_scheme(scheme), damage_weight_slope=WEIGHT_SLOPES[slope])
 
 
 def weight_slope_variants(name: str) -> tuple[str, ...]:
-    """``name``'s simplicity / unity / complexity weight variants — its trailing U/S/C letter
-    swapped to each slope. The established-tuning-scheme chooser lists these per complexity family
-    so a weight slope is pickable by name (T minimax-S / -U / -C), staying in sync with the box-𝒘
-    weight chooser (both set the same scheme trait)."""
-    return tuple(scheme_with_weight_slope(name, slope) for slope in _WEIGHT_VARIANT_ORDER)
+    """``name``'s simplicity / unity / complexity weight variants as systematic names — its slope
+    swapped to each and rendered back. The established-tuning-scheme chooser lists these per
+    complexity family so a weight slope is pickable by name (T minimax-S / -U / -C), staying in sync
+    with the box-𝒘 weight chooser (both set the same scheme trait)."""
+    return tuple(
+        systematic_name(scheme_with_weight_slope(name, slope)) for slope in _WEIGHT_VARIANT_ORDER
+    )
 
 
 def weight_slope_of(scheme) -> str:
@@ -705,24 +697,21 @@ def prescaler_of(scheme) -> str:
 
 
 def scheme_to_json(scheme):
-    """A tuning scheme as a JSON-safe value, for persistence: a bare name string, or a
-    spec dict for a control-refined scheme. The infinite optimization power (minimax) is
-    encoded as the string ``"inf"`` because the JSON layer writes a raw float infinity as
-    null. The inverse is :func:`scheme_from_json`."""
-    if isinstance(scheme, str):
-        return scheme
-    data = asdict(scheme)
+    """A tuning scheme as a JSON-safe value, for persistence: the resolved spec's fields as a
+    dict. The infinite optimization power (minimax) is encoded as the string ``"inf"`` because
+    the JSON layer writes a raw float infinity as null. The inverse is :func:`scheme_from_json`."""
+    data = asdict(resolve_tuning_scheme(scheme))
     if data["optimization_power"] == float("inf"):
         data["optimization_power"] = "inf"
     return data
 
 
 def scheme_from_json(data):
-    """Rebuild a tuning scheme from :func:`scheme_to_json`'s output — a name string passes
-    through; a spec dict is rehydrated into a :class:`TuningSchemeSpec`, decoding the
-    ``"inf"`` optimization-power sentinel back to a float."""
+    """Rebuild a tuning scheme spec from :func:`scheme_to_json`'s output (or a legacy saved name
+    string), decoding the ``"inf"`` optimization-power sentinel back to a float. Always returns a
+    :class:`TuningSchemeSpec`, so a loaded document carries the canonical (spec) representation."""
     if isinstance(data, str):
-        return data
+        return resolve_tuning_scheme(data)  # a legacy saved name -> its spec
     data = dict(data)
     if data.get("optimization_power") == "inf":
         data["optimization_power"] = float("inf")
