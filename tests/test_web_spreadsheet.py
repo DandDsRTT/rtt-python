@@ -55,6 +55,19 @@ def test_freeze_seam_sits_at_the_first_value_tile():
     assert by_id["trunk:mapping"].start < lay.freeze_x  # the mapping row trunk, left of the seam
 
 
+def test_the_first_columns_title_clears_the_frozen_corner():
+    # the leftmost column's title ("quantities") is centred on its column and renders unwrapped,
+    # so on a narrow spine it overhangs both sides. Its LEFT overhang can't show: the frozen corner
+    # (opaque, higher z) abuts the first tile at freeze_x and paints over anything left of it — the
+    # title was clipped to "…iantities". So the first visible column's footprint is floored to seat
+    # its centred title clear of the corner (left edge at/right of the seam); the other columns'
+    # titles still overhang freely into the inter-column gaps (no corner there to clip them).
+    lay = _layout()
+    h = {c.id: c for c in lay.cells}["header:quantities"]
+    title_left = (h.x + h.w / 2) - spreadsheet._title_w(h.text) / 2  # the centred, unwrapped title
+    assert title_left >= lay.freeze_x - 0.51  # not tucked under the frozen corner
+
+
 def test_branch_controls_ride_the_frozen_bands():
     # the always-shown + sits wholly inside the frozen band, cleared from the seam by the
     # button's own height — pinning the band-to-tile gap so a future constant change can't
@@ -775,16 +788,16 @@ def test_quantities_spine_column_is_present_with_a_vertical_gridline():
     assert "toggle:col:quantities" in cells
 
 
-def test_spine_columns_hug_their_col_w_content_not_the_long_title():
-    # the quantities and units spine columns each carry only a single COL_W-wide index per
-    # row (the domain basis square / generator ratio; the per-row unit label), so their
-    # footprint hugs that COL_W content. The long "quantities"/"units" titles are wider than
-    # the column and overhang it (rendered without wrapping) rather than setting its width.
+def test_a_spine_hugs_col_w_and_overhangs_its_title_unless_it_is_leftmost():
+    # a spine column carries only a single COL_W-wide index per row (the domain basis square /
+    # generator ratio; the per-row unit label), so it hugs that COL_W content and lets its long
+    # title overhang — as "units" (the second spine) does here. The LEFTMOST spine is the exception:
+    # its left overhang would vanish under the frozen corner, so it's floored wider to hold its title
+    # (see test_the_first_columns_title_clears_the_frozen_corner).
     cells = {c.id: c for c in _with(domain_units=True).cells}
-    assert cells["header:quantities"].w == spreadsheet.COL_W
-    assert cells["header:units"].w == spreadsheet.COL_W
-    assert cells["header:quantities"].w < spreadsheet._title_w("quantities")
-    assert cells["header:units"].w < spreadsheet._title_w("units")
+    assert cells["header:units"].w == spreadsheet.COL_W             # hugs the COL_W content...
+    assert cells["header:units"].w < spreadsheet._title_w("units")  # ...the title overhanging it
+    assert cells["header:quantities"].w > cells["header:units"].w   # but the leftmost is floored wider
 
 
 def test_generators_column_fans_into_per_generator_axes():
@@ -1016,16 +1029,17 @@ def test_a_collapsed_multiline_title_strip_fits_its_widest_line():
 
 
 def test_collapsing_a_spine_column_never_widens_it():
-    # a spine (quantities/units) is one COL_W wide open — narrower than its long title, which
-    # overhangs it. Collapsing it must NOT balloon it out to the title's strip width: collapsing
-    # a column should never make it wider. It stays a COL_W strip with the title still overhanging.
+    # collapsing a column must never BALLOON it out to its title's strip width — a column should only
+    # get narrower when folded. The overhanging "units" spine stays a COL_W strip; the leftmost
+    # "quantities" (floored wider so its title clears the frozen corner) keeps that floored width
+    # rather than the still-wider full-title strip.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults(); s["domain_units"] = True
     opened = {c.id: c for c in spreadsheet.build(base, s).cells}
     collapsed = {c.id: c for c in spreadsheet.build(base, s, collapsed={"col:quantities", "col:units"}).cells}
     for key in ("quantities", "units"):
         assert collapsed[f"header:{key}"].w <= opened[f"header:{key}"].w  # collapse never widens
-        assert collapsed[f"header:{key}"].w == spreadsheet.COL_W  # ...stays a single-COL_W strip
+    assert collapsed["header:units"].w == spreadsheet.COL_W  # the overhanging spine stays one COL_W
 
 
 def test_a_rows_nested_control_grows_every_tile_in_that_row_uniformly():

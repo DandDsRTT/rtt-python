@@ -1116,18 +1116,29 @@ class _GridBuilder:
         # (they sit up on the fan's top bus, see plus_stub_x), so no column reserves overhang for one.
         self.col_x, self.col_w, self.content_w, self.col_collapsible, self.open_col_w = {}, {}, {}, {}, {}
         x = content_x0
+        first_present = True  # the leftmost column carries a title-clearance floor (see below)
         for key, natural, present, collapsible in col_bands:
             if not present:
                 continue
             collapsed_col = f"col:{key}" in self.collapsed
             hug_w = max(natural, self._caption_floor(key), self._control_floor(key))  # the open footprint: hugs content (+ caption / control room)
+            if first_present:
+                # The leftmost column's title can't overhang LEFT: the frozen corner abuts the first
+                # tile at freeze_x and paints over anything left of it (clipping "quantities" to
+                # "…iantities"). So unlike the other spine titles — free to overhang into the
+                # inter-column gaps — this one's footprint is floored to seat its centred title within
+                # its own grey tile, clear of the corner. The tile (panel) is col_w + 2·PAD wide, so it
+                # holds the title once col_w ≥ title_w − 2·PAD.
+                hug_w = max(hug_w, _title_w(self.col_header[key]) - 2 * PAD)
+                first_present = False
             self.open_col_w[key] = hug_w  # the width it has (or would have) OPEN — collapse-independent, for caption wrapping
             # The content (value cells + their bracket gutters) is the natural width. The column
             # footprint (col_w) hugs that content, or widens where a long caption needs the room;
-            # it does NOT reserve room for a wider title. A title wider than its column (the
-            # "quantities"/"units" spines, the long interest header) overhangs it instead, rendered
-            # without wrapping and centred on the column gridline. The grey tile fills the footprint,
-            # with content centred within it (see content_x).
+            # it does NOT otherwise reserve room for a wider title (the leftmost column above is the
+            # one exception). A title wider than its column (the "quantities"/"units" spines, the long
+            # interest header) overhangs it instead, rendered without wrapping and centred on the
+            # column gridline. The grey tile fills the footprint, with content centred within it (see
+            # content_x).
             if collapsed_col:
                 # Folded to a title strip — sized to read the (widest line of the) title, but capped
                 # at the open footprint so collapsing never WIDENS a column: one already narrower than
