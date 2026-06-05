@@ -6127,10 +6127,18 @@ def test_changed_cell_ids_rings_only_value_cells_not_marks_or_controls():
 
 
 # ---------------------------------------------------------------------------
-# Chapter 9 nonstandard-domain scaffolding — the superspace columns and rows
-# the toggle adds. The Show toggle stays out of settings.IMPLEMENTED for now
-# (scaffolding only; no content yet), so the tests pass the setting directly.
+# Chapter 9 nonstandard-domain — the superspace columns and rows the toggle
+# adds. The toggle is live in IMPLEMENTED now that the green/cyan superspace
+# block, conversion rows, brackets, plain text, and units all build content;
+# the tests still pass the setting directly so each one is self-contained.
 # ---------------------------------------------------------------------------
+
+
+def test_nonstandard_domain_toggle_is_implemented():
+    # the superspace block (B_L / M_L / M_jL green + 𝒈L / 𝒕L / 𝒋L / 𝒓L cyan + the
+    # mode-gated B_L·T and X_L conversion rows + EBKs + plain text + units) is built,
+    # so the Show panel offers the toggle live rather than greyed out
+    assert "nonstandard_domain" in settings.IMPLEMENTED
 
 
 def _barbados_ss(**overrides):
