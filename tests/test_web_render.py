@@ -920,6 +920,25 @@ async def test_weighting_complexity_chooser_renders_its_live_value(user: User) -
     assert list(chooser.options)  # ...with its option list populated
 
 
+async def test_alt_complexity_widens_the_predefined_complexities_chooser_in_place(user: User) -> None:
+    # the box-𝒄 "predefined complexities" chooser offers only the live complexity until alt.
+    # complexity opens the whole measure list. Turning that toggle on while the chooser is already
+    # shown must widen its OPTIONS in place — the control_select update branch has to refresh the
+    # option list, not just the value. Without that (build-time options frozen, no set_options on
+    # update) it stays stuck on the lone log-product entry until the row is rebuilt from hidden
+    # (e.g. by toggling the weight slope), the reported bug this guards.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # a non-unity slope reveals box 𝒄
+    await user.should_see(marker="control:complexity")
+    assert list(_cell_child(user, "control:complexity").options) == ["lp (log-product)"]  # only the live measure
+    user.find(kind=ui.checkbox, content="alt. complexity").click()      # open the full measure list
+    await user.should_see(marker="control:complexity")
+    widened = _cell_child(user, "control:complexity")
+    assert set(widened.options) == set(service.COMPLEXITY_DISPLAYS.values()) | {"custom"}  # full list + off-preset sentinel
+    assert widened.value == "lp (log-product)"  # the live value is preserved across the widening
+
+
 async def test_typing_the_q_field_drives_the_complexity_norm(user: User) -> None:
     # the q field (box 𝒄) is an editable powerinput ONLY with alt. complexity on (it switches the
     # scheme's Lq complexity); typing then routes through on_power_change -> set_complexity_norm_power

@@ -1754,7 +1754,10 @@ class _Reconciler:
             .props(_select_props(cb.w)).classes("rtt-preset")
 
     def _update_control_select(self, cb):  # mirror the live choice; grey it when locked (box 𝒘 all-interval)
-        self.selects[cb.id].value = cb.text or None
+        # the complexity chooser's option list widens/narrows as alt. complexity flips, so refresh the
+        # options in place (not just the value) — otherwise the build-time list goes stale until the row
+        # is rebuilt from hidden. A no-op for the fixed-option slope chooser, whose values never change.
+        self.selects[cb.id].set_options(list(cb.values), value=cb.text or None)
         self.selects[cb.id].set_enabled(not cb.disabled)
 
     def _build_control_check(self, cb, wrap):  # the box-𝐋 "replace diminuator" checkbox (size factor)
