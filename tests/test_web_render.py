@@ -349,15 +349,16 @@ def _target_preset(user: User):
     return num, sel
 
 
-async def test_tuning_preset_offers_only_lp_while_alt_complexity_is_off(user: User) -> None:
-    # alternative-complexity schemes are gated behind the alt. complexity setting (off by default), so with
-    # it off the tuning chooser offers only the log-product family — but at all three weight slopes
-    # (its simplicity / unity / complexity variants), since the target-based default is unity. (The
-    # chooser's options are {value: label}, the labels T-prefixed; check the offered values.)
+async def test_tuning_preset_offers_only_unity_lp_in_the_default_view(user: User) -> None:
+    # the default view has both gates off: alternative-complexity schemes are gated behind the alt.
+    # complexity setting, so only the log-product family is offered (no minimax-EU etc.); and the
+    # simplicity/complexity weight slopes are gated behind the weighting feature, so only the unity
+    # variant shows. Together that leaves a single option — T minimax-U. (The chooser's options are
+    # {value: label}, the labels T-prefixed; check the offered values.)
     await user.open("/")
     _toggle(user, "presets")
     await user.should_see(marker="preset:tuning")
-    assert list(_cell_child(user, "preset:tuning").options) == ["minimax-S", "minimax-U", "minimax-C"]
+    assert list(_cell_child(user, "preset:tuning").options) == ["minimax-U"]
 
 
 async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(user: User) -> None:

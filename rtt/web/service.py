@@ -662,14 +662,15 @@ def scheme_with_weight_slope(scheme, slope: str):
     return replace(resolve_tuning_scheme(scheme), damage_weight_slope=WEIGHT_SLOPES[slope])
 
 
-def weight_slope_variants(name: str) -> tuple[str, ...]:
-    """``name``'s simplicity / unity / complexity weight variants as systematic names — its slope
-    swapped to each and rendered back. The established-tuning-scheme chooser lists these per
-    complexity family so a weight slope is pickable by name (T minimax-S / -U / -C), staying in sync
-    with the box-𝒘 weight chooser (both set the same scheme trait)."""
-    return tuple(
-        systematic_name(scheme_with_weight_slope(name, slope)) for slope in _WEIGHT_VARIANT_ORDER
-    )
+def weight_slope_variants(name: str, weighting: bool) -> tuple[str, ...]:
+    """``name``'s weight-slope variants as systematic names — its slope swapped to each offered slope
+    and rendered back. With ``weighting`` on the established-tuning-scheme chooser lists all three per
+    complexity family (simplicity / unity / complexity, T minimax-S / -U / -C) so a weight slope is
+    pickable by name, staying in sync with the box-𝒘 weight chooser (both set the same scheme trait).
+    With ``weighting`` off there is no box-𝒘 chooser and the weight is unity by construction, so the
+    simplicity/complexity slopes aren't reachable — only the unity variant (T minimax-U) is offered."""
+    slopes = _WEIGHT_VARIANT_ORDER if weighting else ("unity-weight",)
+    return tuple(systematic_name(scheme_with_weight_slope(name, slope)) for slope in slopes)
 
 
 def weight_slope_of(scheme) -> str:

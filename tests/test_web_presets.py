@@ -17,8 +17,8 @@ def test_tuning_scheme_options_prefix_T_when_not_all_interval():
     # bare canonical family names. The target-based list instead offers each family at all three
     # weight slopes (its simplicity / unity / complexity variants), each label prefixing an upright
     # "T " (the target-list symbol) to mark it optimizes over the target list, not every interval.
-    all_interval = presets.tuning_scheme_options(True, include_alternatives=True)
-    targeted = presets.tuning_scheme_options(False, include_alternatives=True)
+    all_interval = presets.tuning_scheme_options(True, include_alternatives=True, weighting=True)
+    targeted = presets.tuning_scheme_options(False, include_alternatives=True, weighting=True)
     assert set(all_interval) == set(presets.TUNING_SCHEMES)  # the bare canonical (simplicity) names
     assert all_interval["minimax-S"] == "minimax-S"
     assert all(label == name for name, label in all_interval.items())  # bare when all-interval
@@ -30,9 +30,27 @@ def test_tuning_scheme_options_prefix_T_when_not_all_interval():
     assert all(label.startswith("T ") for label in targeted.values())
     # composes with the alternative-complexity gate: without alternatives, only the lp family —
     # its single bare simplicity name (all-interval) or its three weight variants (target-based)
-    assert set(presets.tuning_scheme_options(True, include_alternatives=False)) == {"minimax-S"}
-    assert set(presets.tuning_scheme_options(False, include_alternatives=False)) == {
+    assert set(presets.tuning_scheme_options(True, include_alternatives=False, weighting=True)) == {"minimax-S"}
+    assert set(presets.tuning_scheme_options(False, include_alternatives=False, weighting=True)) == {
         "minimax-S", "minimax-U", "minimax-C"}
+
+
+def test_tuning_scheme_options_offer_only_unity_variant_when_weighting_off():
+    # the simplicity/complexity weight slopes are reachable only through the weighting feature
+    # (the box-𝒘 chooser). With weighting off there is no slope chooser and the weight is unity by
+    # construction, so the target-based chooser must offer only each family's unity variant
+    # (T minimax-U) — never the simplicity (T minimax-S) or complexity (T minimax-C) slopes.
+    lp_only = presets.tuning_scheme_options(False, include_alternatives=False, weighting=False)
+    assert lp_only == {"minimax-U": "T minimax-U"}
+    full = presets.tuning_scheme_options(False, include_alternatives=True, weighting=False)
+    assert "minimax-U" in full
+    assert "minimax-S" not in full and "minimax-C" not in full
+    # exactly one (unity) variant per complexity family, still T-prefixed (target-based)
+    assert len(full) == len(presets.tuning_schemes(include_alternatives=True))
+    assert all(label.startswith("T ") for label in full.values())
+    # all-interval is simplicity by construction and ignores the weighting gate: still the bare names
+    assert presets.tuning_scheme_options(True, include_alternatives=True, weighting=False) == \
+        {name: name for name in presets.TUNING_SCHEMES}
 
 
 def test_temperament_presets_span_prime_limits_5_through_13():

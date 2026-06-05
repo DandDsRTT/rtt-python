@@ -210,21 +210,23 @@ def temperament_options() -> dict[str, str]:
     return options
 
 
-def tuning_scheme_options(all_interval: bool, include_alternatives: bool) -> dict[str, str]:
+def tuning_scheme_options(all_interval: bool, include_alternatives: bool, weighting: bool) -> dict[str, str]:
     """The established-tuning-scheme chooser's ``{value: label}``. The offered complexity families
     are those of :func:`tuning_schemes` (so alternative-complexity schemes stay gated behind that
     feature). All-interval schemes are simplicity-weighted by construction, so the all-interval
-    list is the bare canonical names. The target-based list instead offers each family at all three
-    weight slopes — the simplicity / unity / complexity variants (T minimax-S / -U / -C) — its
-    labels prefixing an upright T (the target-list symbol) to mark that it optimizes over the target
-    interval list rather than every interval. The all-interval checkbox flips between the two."""
+    list is the bare canonical names. The target-based list instead offers each family's weight-slope
+    variants (see :func:`rtt.web.service.weight_slope_variants`): all three (T minimax-S / -U / -C)
+    with ``weighting`` on, or just the unity variant (T minimax-U) with it off — the simplicity and
+    complexity slopes are reachable only through the weighting feature. Labels prefix an upright T (the
+    target-list symbol) to mark optimizing over the target list, not every interval. The all-interval
+    checkbox flips between the two lists."""
     families = tuning_schemes(include_alternatives)
     if all_interval:
         return {name: name for name in families}
     return {
         variant: f"T {variant}"
         for name in families
-        for variant in service.weight_slope_variants(name)
+        for variant in service.weight_slope_variants(name, weighting)
     }
 
 

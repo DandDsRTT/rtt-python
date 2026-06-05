@@ -1621,7 +1621,8 @@ class _Reconciler:
             # a control-refined scheme has no name, shown as the "-" placeholder. Alternative-
             # complexity schemes are gated behind the alt. complexity setting.
             options = presets.tuning_scheme_options(
-                service.is_all_interval(self._editor.tuning_scheme), self._editor.settings["alt_complexity"])
+                service.is_all_interval(self._editor.tuning_scheme),
+                self._editor.settings["alt_complexity"], self._editor.settings["weighting"])
             # "-" when the displayed tuning is off the named list — a refined spec, or a manual
             # override deviating from the scheme's optimum; else the offered name
             name = self._editor.displayed_tuning_scheme_name
@@ -1660,7 +1661,8 @@ class _Reconciler:
             # the option LABELS T-prefix only while target-based, so recompute them as the all-
             # interval checkbox flips (set once at creation, they would otherwise go stale)
             options = presets.tuning_scheme_options(
-                service.is_all_interval(self._editor.tuning_scheme), self._editor.settings["alt_complexity"])
+                service.is_all_interval(self._editor.tuning_scheme),
+                self._editor.settings["alt_complexity"], self._editor.settings["weighting"])
             # a name off the offered list (e.g. a finite-power miniRMS scheme — nameable, but not in
             # the lp-only list) falls back to the "-" placeholder, matching the build path
             scheme = name if name in options else None
