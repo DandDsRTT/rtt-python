@@ -241,6 +241,27 @@ def superspace_just_mapping(primes) -> Matrix:
     return tuple(tuple(1 if i == j else 0 for j in range(dl)) for i in range(dl))
 
 
+def targets_in_superspace(
+    state: TemperamentState, target_spec: str = DEFAULT_TARGET_SPEC,
+) -> Matrix:
+    """Each TILT/OLD target interval as a monzo over the superspace primes — the
+    ``(ss_vectors, targets)`` tile the nonstandard-domain superspace region renders.
+    Returned as k rows of length dL (rows-as-targets), matching the storage convention of
+    :func:`target_interval_vectors` (the on-domain target column). The target set is
+    resolved against the live domain (TILT / OLD; the filter that drops intervals the
+    nonstandard domain can't voice), then each ratio re-expressed over the superspace
+    primes — exactly what the existing prime-based optimization runs over. For BARBADOS
+    over 2.3.13/5 with superspace (2, 3, 5, 13) the rows include ``13/5 → (0,0,-1,1)``."""
+    targets = target_interval_set(target_spec, state.domain_basis)
+    superspace = superspace_primes(state.domain_basis)
+    return tuple(
+        tuple(int(x) for x in v)
+        for v in express_quotients_in_domain_basis(
+            tuple(Fraction(r) for r in targets), superspace
+        )
+    )
+
+
 def superspace_tuning(
     state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME, nonprime_approach: str = "",
 ) -> Tuning:
