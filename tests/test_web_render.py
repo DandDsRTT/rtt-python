@@ -913,6 +913,26 @@ async def test_picking_a_prescaler_clears_a_manual_diagonal_override(user: User)
     assert _cell_child(user, "cell:prescaling:primes:1:1").value == seed  # diagonal snapped back
 
 
+async def test_editing_the_prescaler_wipes_then_restores_the_complexity_chooser(user: User) -> None:
+    # the complexity is built on the prescaler, so hand-editing the prescaler diagonal off log-prime
+    # (the prescaler chooser drops to "-") wipes the predefined-complexity chooser downstream too: its
+    # value flips from the named "lp (log-product)" to "custom". Re-picking "log-prime" snaps the
+    # diagonal back, and the complexity recovers its name.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # reveals box 𝒄 + the prescaling row
+    _toggle(user, "presets")  # the complexity + prescaler choosers are presets
+    await user.should_see(marker="control:complexity")
+    assert _cell_child(user, "control:complexity").value == "lp (log-product)"  # log-prime -> lp
+    _cell_child(user, "cell:prescaling:primes:1:1").set_value("4.0")  # deviate from log₂3 = 1.585
+    await user.should_see(marker="control:complexity")
+    assert _cell_child(user, "preset:prescaler")._props.get("display-value") == "-"  # prescaler deviates
+    assert _cell_child(user, "control:complexity").value == "custom"  # ...and the complexity wipes
+    _cell_child(user, "preset:prescaler").set_value("log-prime")  # snap the prescaler back
+    await user.should_see(marker="control:complexity")
+    assert _cell_child(user, "control:complexity").value == "lp (log-product)"  # complexity recovers
+
+
 async def test_target_chooser_shows_the_prompt_when_an_interval_is_overridden(user: User) -> None:
     # the target chooser names the live TILT/OLD family + its limit; hand-editing a target
     # interval column freezes an explicit list no named family realises, so BOTH parts fall

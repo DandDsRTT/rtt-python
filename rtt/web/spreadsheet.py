@@ -2551,6 +2551,12 @@ class _GridBuilder:
             if self.show_presets:
                 drop_w = CBOX_DROP_W
                 complexity_key = service.complexity_name_of(self.tuning_scheme)
+                # the prescaler is one of the complexity's defining controls (box 𝐋), so a hand-edited
+                # prescaler diagonal/matrix that deviates from any named prescaler (realized is None)
+                # leaves the complexity shape off-preset too — the chooser shows "custom", matching the
+                # prescaler chooser's own "-". (complexity_name_of sees only the scheme, not the override.)
+                if self._realized_prescaler is None:
+                    complexity_key = "custom"
                 complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
                 complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
                                      if self.show_alt_complexity else (complexity_text,))

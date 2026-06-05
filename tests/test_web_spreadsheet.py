@@ -2556,6 +2556,23 @@ def test_prescaler_chooser_shows_dash_when_a_custom_diagonal_deviates():
     assert devi["preset:prescaler"].text == ""  # off the named list -> the "-" placeholder
 
 
+def test_editing_the_prescaler_wipes_the_predefined_complexity_to_custom():
+    # the complexity is built ON the prescaler (box 𝐋 feeds box 𝒄), so hand-editing the prescaler
+    # diagonal off its named matrix — the same custom_prescaler override that drops the prescaler
+    # chooser to "-" — also leaves the complexity shape off-preset: the predefined-complexity chooser
+    # wipes from "lp (log-product)" to "custom", since the setup no longer realises a named complexity.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["presets"], s["weighting"] = True, True
+    scheme = "TILT minimax-S"  # non-unity slope reveals box 𝒄 + the prescaling tile
+    named = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme=scheme).cells}
+    assert named["control:complexity"].text == "lp (log-product)"  # log-prime prescaler -> lp
+    devi = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme=scheme,
+                                               custom_prescaler=(1.0, 9.9, 2.322)).cells}
+    assert devi["preset:prescaler"].text == ""          # the prescaler chooser deviates ("-")
+    assert devi["control:complexity"].text == "custom"  # ...and the complexity follows, downstream
+
+
 def test_complexity_machinery_hides_under_unity_weight():
     # the prescaling + complexity rows (and box 𝒄's complexity subsection) only matter when the
     # damage weight derives from complexity; under the default unity-weight the weight is 1
