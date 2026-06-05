@@ -519,6 +519,11 @@
    the live value, appearing the instant the value does. */
 .rtt-cell.rtt-preview-change { box-shadow:inset 0 0 0 2px var(--preview-color);
             background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
+/* an EDITABLE cell's opaque white Quasar control (.q-field__control) fills the wrap and would hide
+   the ring/wash above (e.g. the row/column a drag-to-combine is dropped onto — its input cells get
+   the ring). Repeat the highlight on the control so it shows on input cells too. */
+.rtt-cell.rtt-preview-change .q-field__control { box-shadow:inset 0 0 0 2px var(--preview-color);
+            background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
 /* the comma basis plain text while a comma is pending: not an editable input (which is
    one colour) but a static box matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */
