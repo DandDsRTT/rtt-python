@@ -164,7 +164,16 @@ def _optimize_augmented_all_interval(
     weights = np.append(prime_weights, 1.0)  # phantom prime weighted 1
 
     held = _held_vectors(spec, d)
-    aug_held = None if held is None else np.hstack([held, np.ones((held.shape[0], 1))])
+    # Each held vector's phantom component is size_factor · (log_primes · v) — its just log2 size,
+    # scaled — mirroring the size-stretch row of the mapping augmentation (``size_factor·log2(p)``).
+    # That makes the phantom generator's stretch cancel out of the held constraint, so the held
+    # interval's real tempered size equals its just size. The octave's component is
+    # size_factor · log2(2) = 1, which a bare constant 1 matched only by coincidence — silently
+    # mistuning every non-octave held interval.
+    aug_held = (
+        None if held is None
+        else np.hstack([held, size_factor * (held @ log_primes)[:, None]])
+    )
 
     generators = _constrained_solve(aug_mapping, aug_just, aug_vectors, weights, power, aug_held)
     return generators[:rank]  # drop the phantom generator

@@ -4,7 +4,8 @@ minimized over every interval, which by duality is an optimization over the prim
 the dual of the complexity norm power."""
 
 from dataclasses import replace
-from math import inf
+from fractions import Fraction
+from math import inf, log2
 
 import pytest
 
@@ -444,6 +445,43 @@ def test_cwe_held_octave_minimax_e_lils_s(name, expected):
     t = parse_temperament_data(TEMPERAMENTS[name])
     assert optimize_tuning_map(t, "held-octave minimax-E-lils-S") == pytest.approx(
         expected, abs=TOL
+    )
+
+
+# A held interval must come out exactly just (trait 0's defining contract) even in a size-factor
+# (lils) all-interval scheme. The phantom-prime augmentation has to carry each held vector's own
+# size component into the phantom column; the octave's component happens to be log2(2) = 1, so a
+# hard-coded 1 held only the octave and silently mistuned every other held interval. tests.m never
+# paired a non-octave held interval with the Weil/lils family (its held + size-factor cases all
+# hold the octave), so the suite never caught it.
+HELD_NON_OCTAVE_SIZE_FACTOR = [
+    ("minimax-lils-S", "2/1", (1, 0, 0)),  # the octave: already correct, a control
+    ("minimax-lils-S", "3/2", (-1, 1, 0)),
+    ("minimax-lils-S", "5/4", (-2, 0, 1)),
+    ("minimax-E-lils-S", "3/2", (-1, 1, 0)),
+    ("minimax-E-lils-S", "5/4", (-2, 0, 1)),
+]
+
+
+@pytest.mark.parametrize("scheme, ratio, vector", HELD_NON_OCTAVE_SIZE_FACTOR)
+def test_held_interval_is_just_in_size_factor_all_interval(scheme, ratio, vector):
+    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+    tuning_map = optimize_tuning_map(meantone, f"held-{ratio} {scheme}")
+    tempered = sum(t * v for t, v in zip(tuning_map, vector))
+    assert tempered == pytest.approx(1200.0 * log2(float(Fraction(ratio))), abs=TOL)
+
+
+def test_held_non_octave_minimax_e_lils_s_tuning_map():
+    # The full tuning map for meantone holding 3/2 just under minimax-E-lils-S (Weil-Euclidean).
+    # No published reference exists — tests.m never held a non-octave interval under a size-factor
+    # scheme — so this locks the corrected phantom-prime augmentation exactly. The Euclidean (E)
+    # variant is chosen deliberately: it is strictly convex, so its optimum is unique. The taxicab
+    # minimax-lils-S held here has a flat optimal face (many tuning maps share the minimum damage),
+    # which would make an exact full-map assertion solver-dependent; that case is pinned by the
+    # held-just contract above instead. 3/2 = (-1,1,0) lands exactly just: 1907.1065 - 1205.1515.
+    meantone = parse_temperament_data(TEMPERAMENTS["meantone"])
+    assert optimize_tuning_map(meantone, "held-3/2 minimax-E-lils-S") == pytest.approx(
+        (1205.1515, 1907.1065, 2807.820), abs=TOL
     )
 
 
