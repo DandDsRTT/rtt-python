@@ -133,6 +133,11 @@ body.rtt-dark .rtt-preset.q-field--disabled .q-field__native,
 body.rtt-dark .rtt-preset.q-field--disabled .q-icon,
 body.rtt-dark .rtt-preset-num.q-field--disabled .q-field__native,
 body.rtt-dark .rtt-preset-num.q-field--disabled .q-field__native::placeholder { color:#71777f; }
+/* the invalid-limit flag, dark-toned: the light rules redden on white, but the dark base above
+   (background:#1b1f24; border #4e555d; text #e3e6ea) outspecifies them, so restate all three for
+   dark — a dark-red fill with a brighter red border + number, readable on the dark pane. */
+body.rtt-dark .rtt-preset-num.rtt-limit-error .q-field__control { border-color:#e06666; background:#4a2327; }
+body.rtt-dark .rtt-preset-num.rtt-limit-error .q-field__native { color:#f0a0a0; }
 body.rtt-dark .rtt-select-popup { background:#272c33; }
 body.rtt-dark .rtt-select-popup .q-item,
 body.rtt-dark .rtt-select-popup .q-item__label { color:#e3e6ea; }

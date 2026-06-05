@@ -402,10 +402,11 @@
 .rtt-preset-num .q-field__control { min-height:0 !important; height:30px;
             background:#fff; border:1px solid #999; border-radius:2px; padding:0 2px; }
 /* an invalid limit -- an even odd-limit-diamond (OLD) limit -- is flagged unmistakably red: the
-   number itself, the field's border, and a light red fill (a thin border alone reads as too subtle
-   on the tiny square). The explaining tooltip goes red too (.rtt-tip-error below). */
-.rtt-preset-num.rtt-limit-error .q-field__control { border-color:#d33; background:#fdeaea; }
-.rtt-preset-num.rtt-limit-error .q-field__native { color:#d33; }
+   number itself, the field's border, and a red fill that highlights the whole square (a thin border
+   alone reads as too subtle). The explaining tooltip goes red too (.rtt-tip-error below). DARK MODE:
+   rtt-dark.css restates all three on the dark field -- its body.rtt-dark rules outspecify these. */
+.rtt-preset-num.rtt-limit-error .q-field__control { border-color:#d33; background:#fbdada; }
+.rtt-preset-num.rtt-limit-error .q-field__native { color:#c0392b; }
 /* the matching red error tooltip (set on the target chooser's kept tooltip handle): a red box with
    white text, like a negative toast, instead of the default dark hover bubble. */
 .q-tooltip.rtt-tip-error { background:#d33 !important; color:#fff !important; }
