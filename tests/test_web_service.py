@@ -763,6 +763,23 @@ def test_damage_weight_matrix_left_inverts_the_rectangular_pretransformer():
     assert W[1] == pytest.approx([-0.31546, 0.31546, -0.31546, 0.31546], abs=1e-4)
 
 
+def test_damage_weight_matrix_inverts_a_non_diagonal_pretransformer_square():
+    import numpy as np
+
+    mapping = [[1, 1, 0], [0, 1, 4]]
+    square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))  # an off-diagonal editable square 𝑋
+    # no size factor: a non-diagonal 𝑋 still has no per-prime-list weight, so 𝑊 is the square inverse 𝑋⁻¹
+    W = np.array(service.damage_weight_matrix(mapping, "minimax-S", override=square))
+    assert W.shape == (3, 3)
+    assert np.allclose(W, np.linalg.inv(np.array(square, float)))      # 𝑊 = 𝑋⁻¹
+    assert np.allclose(W @ np.array(square, float), np.eye(3))         # it inverts 𝑋
+    # with the size factor too, 𝑋 → 𝑍𝑋 is rectangular and 𝑊 = (𝑍𝑋)⁻ = 𝑋⁻¹𝑍⁻ left-inverts it
+    Wz = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S", override=square))
+    assert Wz.shape == (3, 4)
+    ZX = np.vstack([np.eye(3), np.ones(3)]) @ np.array(square, float)  # the size-sensitized 𝑍𝑋, (d+1)×d
+    assert np.allclose(Wz @ ZX, np.eye(3))
+
+
 def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
     import pytest
 

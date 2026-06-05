@@ -1924,6 +1924,31 @@ def test_all_interval_weight_matrix_carries_the_W_symbol_and_a_spanning_bracket(
     assert on["bracket:weight:r"].x > on["cell:weight:targets:0:3"].x
 
 
+def test_a_non_diagonal_pretransformer_makes_the_all_interval_weight_the_square_inverse():
+    # editing the pretransformer square off-diagonal (a non-diagonal 𝑋, no size factor) also costs the
+    # per-prime weight list its diagonal form: the weight becomes the d×d inverse 𝑊 = 𝑋⁻¹. Unlike the
+    # size-factor case it's square (d columns, no overflowing size column), so the bracket hugs the last.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s.update(weighting=True, charts=True, symbols=True, equivalences=True)
+    square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))  # an off-diagonal editable square
+    on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S",
+                                             custom_prescaler=square).cells}
+    W = service.damage_weight_matrix(((1, 1, 0), (0, 1, 4)), "minimax-S", override=square)
+    assert len(W) == 3 and len(W[0]) == 3  # square 𝑋⁻¹ — no extra size column
+    # the d×d matrix of value cells; the scalar list and its chart are both gone
+    assert "weight:target:0" not in on
+    assert "chart:weight:targets" not in on
+    for i in range(3):
+        for j in range(3):
+            assert on[f"cell:weight:targets:{i}:{j}"].text == service.cents(W[i][j])
+    # capital 𝑊 = 𝑋⁻¹ (the square inverse — NOT (𝑍𝑋)⁻, there's no size factor here)
+    assert on["symbol:weight:targets"].text == "𝑊 = 𝑋⁻¹"
+    # one tall [ … ] spanning all 3 rows; the right bracket hugs the last column's right edge (no overflow)
+    assert on["bracket:weight:l"].h == 3 * spreadsheet.ROW_H
+    assert on["bracket:weight:r"].x == on["cell:weight:targets:0:2"].x + spreadsheet.COL_W
+
+
 def test_weight_row_carries_its_symbol_and_caption():
     on = {c.id: c for c in _with(weighting=True, symbols=True, names=True).cells}
     # 𝒘 (bold italic, the same glyph the damage equivalence's 𝒘 factor uses)

@@ -644,17 +644,20 @@ def damage_weight_matrix(mapping, scheme: str = DEFAULT_TUNING_SCHEME, override=
     size-sensitizing matrix's left inverse 𝑍⁻ = [𝐼 − ½𝐽 | ½𝟏] (so each row i is 𝐷ᵢ⁻¹ times
     ``[…, δᵢⱼ − ½, …, ½]``).
 
-    This is the guide's REPRESENTATIVE inverse (the one it prints, sans a typo: its displayed
-    grid scales row i by 𝐷ᵢ rather than 𝐷ᵢ⁻¹). It is illustrative, not the literal solve: 𝑍𝐿 is
-    rectangular, so its left inverse is not unique, and the true minimax uses the max−min dual
-    norm rather than a fixed matrix. ``override`` rides the custom prescaler diagonal through, like
-    the other weight/complexity helpers."""
-    diag = complexity_prescaler(mapping, scheme, override=override)
-    d = len(diag)
-    return tuple(
-        tuple((1.0 - 0.5) / diag[i] if i == j else -0.5 / diag[i] for j in range(d)) + (0.5 / diag[i],)
-        for i in range(d)
-    )
+    A NON-DIAGONAL pretransformer 𝑋 (the editable square, no size factor) has the same problem — its
+    per-prime list can't carry the off-diagonal — so 𝑊 = 𝑋⁻¹ (a square d×d matrix) there. A diagonal
+    𝑋 = 𝐷 reduces to 𝐷⁻¹ (or 𝐷⁻¹𝑍⁻). For the rectangular case this is the guide's REPRESENTATIVE
+    inverse (illustrative — 𝑍𝑋's left inverse is not unique, and the true minimax uses the max−min
+    dual norm, not a fixed matrix). ``override`` rides the custom prescaler (diagonal or matrix) through."""
+    import numpy as np
+    pre = complexity_prescaler(mapping, scheme, override=override)  # d-diagonal or d×d matrix
+    d = len(pre)
+    matrix = np.asarray(pre, dtype=float) if _is_matrix(pre) else np.diag([float(x) for x in pre])
+    inverse = np.linalg.inv(matrix)  # 𝑋⁻¹, d×d
+    if not complexity_size_factor(scheme):
+        return tuple(tuple(float(x) for x in row) for row in inverse)  # 𝑋⁻¹ (square)
+    z_minus = np.hstack([np.eye(d) - 0.5, np.full((d, 1), 0.5)])  # 𝑍⁻ = [𝐼 − ½𝐽 | ½𝟏], d×(d+1)
+    return tuple(tuple(float(x) for x in row) for row in inverse @ z_minus)  # (𝑍𝑋)⁻ = 𝑋⁻¹𝑍⁻
 
 
 # The three predefined complexity prescalers the alt.-complexity control offers, as the

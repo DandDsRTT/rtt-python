@@ -817,6 +817,10 @@ class _GridBuilder:
         # the scheme's computed diagonal here, threading the user's typed values into every
         # prescaling/complexity/weight/tuning calculation downstream.
         self.prescaler = service.complexity_prescaler(self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)
+        # a non-diagonal pretransformer (the editable square, off-diagonal entries typed in) is a
+        # d×d matrix rather than a per-prime diagonal; its rows/products multiply, and — like the
+        # size factor — its inverse weight has no per-prime-list form (see weight_is_matrix below).
+        self.prescaler_is_matrix = isinstance(self.prescaler[0], (tuple, list))
         # a pending draft alone (no committed intervals) declares just the two tiles that host
         # it — the editable vector ket and its "?" ratio header; the derived rows (sizes,
         # complexity, …) have no value until it commits, so they stay undeclared (no empty
@@ -977,11 +981,12 @@ class _GridBuilder:
         # products) grow that one row; every other row is unchanged.
         self.size_factor = service.complexity_size_factor(self.tuning_scheme)
         self.size_rows = 1 if self.size_factor else 0
-        # All-interval + size factor: the per-prime simplicity-weight list is blind to the size
-        # factor (a prime's complexity is unchanged), so it can't represent the weighting — the
-        # weight becomes the d×(d+1) matrix 𝑊 = (𝑍𝐿)⁻ (and a bar chart can't draw a matrix). In
-        # target-based mode the per-target weights still differ, so the list + chart stay.
-        self.weight_is_matrix = self.all_interval and bool(self.size_factor)
+        # All-interval, whenever the pretransformer isn't a plain per-prime diagonal: the simplicity-
+        # weight list can't carry it, so the weight becomes a matrix 𝑊 (and a bar chart can't draw a
+        # matrix). The size factor makes it the d×(d+1) left inverse (𝑍𝑋)⁻; a non-diagonal editable
+        # square 𝑋 makes it the d×d inverse 𝑋⁻¹. In target-based mode the per-target weights still
+        # differ (the off-diagonal/size factor already rode into them), so the list + chart stay.
+        self.weight_is_matrix = self.all_interval and (bool(self.size_factor) or self.prescaler_is_matrix)
 
         # Row bands top-to-bottom: (key, natural height, present, collapsible, label), laid
         # out below by the same running-cursor rule as the columns. Defined here, ahead of
@@ -2281,7 +2286,7 @@ class _GridBuilder:
                 # the prescaled vector 𝑋·v: a diagonal pretransformer multiplies element-wise (𝐿ᵢvᵢ);
                 # a non-diagonal one (the editable square's matrix override) is a matrix-vector product
                 prescaled = ([sum(self.prescaler[i][k] * vec[k] for k in range(self.d)) for i in range(self.d)]
-                             if isinstance(self.prescaler[0], (tuple, list))
+                             if self.prescaler_is_matrix
                              else [self.prescaler[i] * vec[i] for i in range(self.d)])
                 for i in range(self.d + self.size_rows):
                     # the d prescaled rows are (𝑋·v)ᵢ; the extra size row (i == d, present only with the
@@ -2385,8 +2390,9 @@ class _GridBuilder:
                               alerts=self.held_unheld if group == "held" else ())
         if self.row_open("weight") and self.tile_open("weight", "targets"):
             if self.weight_is_matrix:
-                # the d×(d+1) weight matrix 𝑊 = (𝑍𝐿)⁻: its d columns ride the target gridlines,
-                # the extra (size) column overflows one COL_W to the right. No chart (it's a matrix).
+                # the weight matrix 𝑊 (square 𝑋⁻¹, or the d×(d+1) left inverse (𝑍𝑋)⁻ with the size
+                # factor): its first d columns ride the target gridlines, any extra (size) column
+                # overflows one COL_W to the right. No chart (it's a matrix).
                 left = self.group_left["targets"]
                 for i, row in enumerate(service.damage_weight_matrix(
                         self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)):
@@ -2602,12 +2608,14 @@ class _GridBuilder:
                     self.bracket(f"{key}:detemperinglist", LIST_BRACKETS, "detempering", self.row_y[key], ROW_H)
         if self.tile_open("weight", "targets"):
             if self.weight_is_matrix:
-                # one tall [ … ] spanning the whole d×(d+1) matrix (per the guide's display), wide
-                # enough to enclose the size column that overflows one COL_W past the target gridlines
+                # one tall [ … ] spanning the whole weight matrix (per the guide's display): d columns
+                # over the target gridlines, plus — with the size factor — the extra column that
+                # overflows one COL_W to the right (so the right edge rides 1 + size_rows columns out)
                 left = self.group_left["targets"]
                 top, h = self.row_y["weight"], self.d * ROW_H
                 self.cells.append(CellBox("bracket:weight:l", left(0) - BRACKET_W, top, BRACKET_W, h, "bracket", text="["))
-                self.cells.append(CellBox("bracket:weight:r", left(self.k - 1) + 2 * COL_W, top, BRACKET_W, h, "bracket", text="]"))
+                self.cells.append(CellBox("bracket:weight:r", left(self.k - 1) + (1 + self.size_rows) * COL_W, top,
+                                     BRACKET_W, h, "bracket", text="]"))
             else:
                 self.bracket("weight", LIST_BRACKETS, "targets", self.row_y["weight"], ROW_H)
         if self.tile_open("damage", "targets"):
@@ -2780,9 +2788,11 @@ class _GridBuilder:
             equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
             equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
             equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
-        if self.weight_is_matrix:  # the size factor makes the weight the d×(d+1) left inverse (𝑍𝐿)⁻,
-            # not the per-prime diagonal diag(𝐿)⁻¹ (which is blind to the size factor)
-            equivalences[("weight", "targets")] = f" = (𝑍{self.prescaler_symbol})⁻"
+        if self.weight_is_matrix:  # a non-diagonal pretransformer has no per-prime diagonal diag(𝑋)⁻¹:
+            # the size factor makes the weight the d×(d+1) left inverse (𝑍𝑋)⁻; an editable square 𝑋,
+            # the d×d inverse 𝑋⁻¹ (both blind to the per-prime list the slope reciprocal would give)
+            equivalences[("weight", "targets")] = (f" = (𝑍{self.prescaler_symbol})⁻" if self.size_factor
+                                                   else f" = {self.prescaler_symbol}⁻¹")
         if not self.show_weighting:  # the weight factor's row is hidden, so don't dangle it (𝒘 / 𝐿⁻¹)
             equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
         for (rkey, ckey), name in self.effective_captions.items():
