@@ -100,12 +100,14 @@ HELPED_READONLY_IDS: frozenset[str] = OBJECTIVE_IDS | frozenset({"control:dual"}
 # Hover text per interactive cell kind whose meaning is fixed by the kind alone.
 # (Kinds backing several controls are disambiguated by id in _ID_HELP below.)
 _KIND_HELP: dict[str, str] = {
-    # editable matrix / vector entries
-    "mapping": "Mapping entry — how many of this generator map to this prime. Type to edit the temperament.",
-    "commacell": "Comma-vector entry — this prime's exponent in a comma the temperament tempers out. Type to edit.",
-    "interestcell": "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type to edit.",
-    "heldcell": "Held-interval entry — this prime's exponent in an interval held unchanged (pure) by the tuning. Type to edit.",
-    "targetcell": "Target-interval entry — this prime's exponent in a target the tuning optimizes over. Type to override the chosen target set.",
+    # editable matrix / vector entries. Each is a single integer, so it also steps by 1 on a mouse-
+    # wheel notch once the cell is focused (the coarse-integer analogue of the generator-tuning
+    # cell's thousandth-cent wheel fine-adjust).
+    "mapping": "Mapping entry — how many of this generator map to this prime. Type to edit the temperament, or scroll the wheel to step it by 1.",
+    "commacell": "Comma-vector entry — this prime's exponent in a comma the temperament tempers out. Type to edit, or scroll the wheel to step it by 1.",
+    "interestcell": "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type to edit, or scroll the wheel to step it by 1.",
+    "heldcell": "Held-interval entry — this prime's exponent in an interval held unchanged (pure) by the tuning. Type to edit, or scroll the wheel to step it by 1.",
+    "targetcell": "Target-interval entry — this prime's exponent in a target the tuning optimizes over. Type to override the chosen target set, or scroll the wheel to step it by 1.",
     "prescalercell": "Prescaler entry — the weight on this prime applied before optimizing. Type to override the scheme's value.",
     "gentuningcell": "Generator tuning — this generator's tuned size in cents. Type to override the optimum, click its sign to reverse the generator (its mapping row flips too, so the tuning is unchanged), or scroll the wheel to fine-tune by a thousandth of a cent.",
     # other grid controls

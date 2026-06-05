@@ -471,6 +471,31 @@ async def test_scrolling_a_generator_tuning_cell_nudges_it_by_a_thousandth_cent(
     assert round(float(_cell_child(user, "tuning:gen:1").value) - before, 3) == 0.0
 
 
+async def test_scrolling_an_integer_cell_steps_it_by_one(user: User) -> None:
+    await user.open("/")
+    # an editable integer matrix entry steps by ±1 per wheel notch while focused (scroll up = +1,
+    # down = −1) — the coarse-integer counterpart to the generator-tuning cell's thousandth-cent
+    # fine-adjust. The wheel listener rides the cell wrap, so trigger it on the marked wrap.
+    before = int(_cell_child(user, "cell:mapping:1:2").value)  # the fifth's prime-5 entry (meantone: 4)
+    user.find(marker="cell:mapping:1:2").trigger("wheel", {"deltaY": -100})  # scroll up = +1
+    await user.should_see(marker="cell:mapping:0:0")
+    assert int(_cell_child(user, "cell:mapping:1:2").value) == before + 1
+    user.find(marker="cell:mapping:1:2").trigger("wheel", {"deltaY": 100})  # scroll down = −1
+    await user.should_see(marker="cell:mapping:0:0")
+    assert int(_cell_child(user, "cell:mapping:1:2").value) == before
+
+
+async def test_the_integer_wheel_step_is_generic_over_cell_kinds(user: User) -> None:
+    await user.open("/")
+    # the ±1 wheel step is wired by cell KIND, not a hardcoded column, so any integer entry gets it.
+    # Here a comma-basis vector component: stepping it fires the cell's own on_comma_change, which
+    # re-derives the temperament — proving the step rides whatever apply path the cell already has.
+    before = int(_cell_child(user, "cell:comma:0:0").value)  # the syntonic comma's prime-2 exponent (4)
+    user.find(marker="cell:comma:0:0").trigger("wheel", {"deltaY": -50})  # one notch up = +1
+    await user.should_see(marker="cell:comma:0:0")
+    assert int(_cell_child(user, "cell:comma:0:0").value) == before + 1
+
+
 async def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(user: User) -> None:
     # the generator tuning map shows each generator's sign as an explicit glyph — the "+" of a
     # positive generator (ordinarily assumed) made visible, so it can be clicked to flip. The

@@ -135,6 +135,18 @@ _DARK_MUTED = "#71777f"   # disabled text — and the indeterminate option-box's
 _AUDIO_KINDS = {"speaker"}  # cells whose baked cents rebuild when the tuning changes
 _AUDIO_CTRLS = {"audio_wave", "audio_mode", "audio_hold", "audio_root"}  # the per-tile bank controls
 
+# Editable cells whose value is a single integer (a matrix or vector component). Scrolling the
+# wheel over one of these while it is focused steps it by ±1 — the coarse-integer analogue of the
+# generator-tuning cell's thousandth-cent wheel fine-adjust. (The cents/ratio/power cells are not
+# integers, so they are not listed.)
+_INT_CELL_KINDS = {"mapping", "commacell", "interestcell", "heldcell", "targetcell"}
+# The client-side gate for the integer wheel step: only step (and swallow the scroll) when the
+# cell's own input holds focus — otherwise let the event through so the grid pane scrolls as usual.
+# So a notch nudges only the cell you have clicked into, and an idle scroll over the grid never
+# fires a server round-trip. ``emit`` ships deltaY to ``on_int_wheel`` (see make_cell).
+_INT_WHEEL_JS = ("(e) => { if (e.currentTarget.contains(document.activeElement)) "
+                 "{ e.preventDefault(); emit(e); } }")
+
 
 def _wave_svg(kind: str) -> str:
     """A small waveform glyph (sine/square/triangle/sawtooth) for the bank's waveform control."""
@@ -1170,6 +1182,12 @@ class _Reconciler:
         if edit_input is not None:
             edit_input.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid))
             edit_input.on("blur", lambda _=None: self._cb.on_cell_blur())
+        # an integer matrix/vector cell also steps by ±1 on a wheel notch while focused. The listener
+        # rides the wrap (so a scroll anywhere in the cell counts) and its js_handler only emits when
+        # the cell holds focus, so an unfocused scroll just pages the grid (see _INT_WHEEL_JS).
+        if cb.kind in _INT_CELL_KINDS:
+            wrap.on("wheel", lambda e, cid=cb.id: self._cb.on_int_wheel(cid, e.args.get("deltaY")),
+                    args=["deltaY"], js_handler=_INT_WHEEL_JS)
         if cb.kind in _AUDIO_KINDS:
             self.audio_keys[cb.id] = cb.values
 
@@ -2377,6 +2395,17 @@ def index() -> None:
         editor.nudge_generator_tuning_component(int(cid.rsplit(":", 1)[1]), 1 if delta_y < 0 else -1)
         render()
 
+    def on_int_wheel(cid, delta_y):
+        # step a focused integer matrix/vector cell by ±1 per wheel notch — scroll up (deltaY < 0)
+        # raises it, down lowers it. Setting the input's value fires the cell's OWN on_change
+        # (on_mapping_change / on_comma_change / …), which validates, applies, and re-renders — so a
+        # notch travels the exact path a typed digit does, with no per-kind dispatch here. A blank
+        # cell (an unfilled draft component) starts from 0. The client only emits for the focused
+        # cell (see _INT_WHEEL_JS), so this is always a deliberate edit, never a stray scroll.
+        if building[0] or not delta_y or cid not in rec.inputs:
+            return
+        rec.inputs[cid].value = str((_parse_int(rec.inputs[cid].value) or 0) + (1 if delta_y < 0 else -1))
+
     def on_prescaler_change(cid):
         # a bare prescaler 𝐿 diagonal cell (cid "cell:prescaling:primes:i:i"): a valid float
         # overrides that one diagonal entry (which then drives EVERY downstream consumer — the
@@ -2774,6 +2803,7 @@ def index() -> None:
         on_form_choose=on_form_choose,
         on_gentuning_change=on_gentuning_change,
         on_gentuning_wheel=on_gentuning_wheel,
+        on_int_wheel=on_int_wheel,
         on_temperament_hover=on_temperament_hover,
         on_held_change=on_held_change,
         on_interest_change=on_interest_change,
