@@ -182,8 +182,11 @@ def _pretransform_label(text: str) -> str:
     """A rendered label with "prescal…" swapped to the "pretransform…" stem — the guide's term for
     the rectangular (size-factored) 𝑋, which shears rather than scales, so "prescaler" is a misnomer.
     Applied to every prescaling label (caption, row title, preset) while the size factor is on.
-    "prescaled"/"prescaling" are swapped before "prescaler" (which also fixes the plural prescalers)."""
-    for old, new in (("prescaled", "pretransformed"), ("prescaling", "pretransforming"),
+    "prescaled"/"prescaling" are swapped before "prescaler" (which also fixes the plural prescalers).
+    "prescaling" (the row title) takes the noun "pretransform", not the gerund "pretransforming" —
+    the longer word is one unbreakable token wider than the row-label column, so it would overflow
+    rather than right-justify; the noun also reads parallel to the "complexity" / "weight" rows."""
+    for old, new in (("prescaled", "pretransformed"), ("prescaling", "pretransform"),
                      ("prescaler", "pretransformer")):
         text = text.replace(old, new)
     return text
@@ -1705,10 +1708,11 @@ class _GridBuilder:
         ``content_h`` of stacked controls inset BOX_INNER at the top and CTRL_LABEL_GAP at the
         bottom — the control_box frame, but for arbitrary content (the box-𝐋 checkbox, the box-𝒄
         multi-control row) rather than just a dropdown+label. Returns the inner top-left (x, y) the
-        controls start at, so each control's own offsets stay as they were, just shifted inside."""
+        controls start at, so each control's own offsets stay as they were, just shifted inside. The
+        box Block is DEFERRED (collected, not appended now) so it layers on top of the grey panels."""
         box_y = top + BOX_OUTER
-        self.blocks.append(Block(box_id, self.col_x[ckey], box_y, self.col_w[ckey],
-                                 BOX_INNER + content_h + CTRL_LABEL_GAP, boxed=True))
+        self._control_region_boxes.append(Block(box_id, self.col_x[ckey], box_y, self.col_w[ckey],
+                                                 BOX_INNER + content_h + CTRL_LABEL_GAP, boxed=True))
         return self.col_x[ckey] + BOX_INNER, box_y + BOX_INNER
 
     def control_region_band_h(self, content_h):
@@ -1786,6 +1790,10 @@ class _GridBuilder:
         self.cells: list[CellBox] = []
         self.lines: list[Line] = []
         self.blocks: list[Block] = []
+        # the box-𝐋/𝒄/𝒘 control boxes are emitted during the cell pass (to position their controls)
+        # but must LAYER ON TOP of the grey tile panels — appended below the panel loop, like the
+        # optimization / ranges boxes — so collect them here and flush them after the panels.
+        self._control_region_boxes: list[Block] = []
 
         # column headers (always shown; a collapsed column keeps its title) plus a
         # fold toggle in the header band for collapsible ones. A matlabel-widened column
@@ -2676,6 +2684,8 @@ class _GridBuilder:
         for bid, rkey, ckey in self.tiles:
             if (rkey, ckey) in self.declared_tiles:  # a dropped tile (e.g. all-interval's redundant ones) loses its panel too
                 self.panel(bid, ckey, rkey)
+        # the box-𝐋/𝒄/𝒘 control boxes, on top of the panels now (collected during the cell pass)
+        self.blocks.extend(self._control_region_boxes)
         # the nested tuning-ranges box: a thin-bordered frame around the chart + selector,
         # appended after the tile panels so it layers on top of the generator tuning map tile
         if gtm_box is not None:

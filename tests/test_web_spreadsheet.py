@@ -2165,9 +2165,10 @@ def test_size_factor_renames_prescaler_to_pretransformer_in_the_labels():
     assert lils["caption:prescaling:primes"].text == "complexity pretransformer"
     assert lp["caption:prescaling:targets"].text == "complexity prescaled target interval list"
     assert lils["caption:prescaling:targets"].text == "complexity pretransformed target interval list"
-    # the row title (the left gutter label)
+    # the row title (the left gutter label) — the noun "pretransform" (not the gerund), so the one
+    # token fits the narrow row-label column and right-justifies rather than overflowing it
     assert lp["label:prescaling"].text == "complexity prescaling"
-    assert lils["label:prescaling"].text == "complexity pretransforming"
+    assert lils["label:prescaling"].text == "complexity pretransform"
     # the predefined-prescalers preset's field label
     assert lp["block:preset:prescaler:label"].text == "predefined prescalers"
     assert lils["block:preset:prescaler:label"].text == "predefined pretransformers"
@@ -2854,6 +2855,17 @@ def test_weighting_controls_each_sit_in_a_bordered_box():
         # the control sits fully inside its box, inset off the left/top border
         assert box.x < ctrl.x and ctrl.x + ctrl.w <= box.x + box.w + 0.01, box_id
         assert box.y < ctrl.y and ctrl.y + ctrl.h <= box.y + box.h + 0.01, box_id
+
+
+def test_weighting_control_boxes_layer_above_their_tile_panels():
+    # the box-𝐋/𝒄/𝒘 borders must render ON TOP of the grey tile panels, not behind them — so each
+    # box block appears AFTER its tile's panel in the blocks list (later = drawn on top), the way the
+    # optimization / ranges boxes do. Otherwise the panel covers the border and no box shows.
+    lay = _with("TILT minimax-S", weighting=True, alt_complexity=True)
+    order = {b.id: i for i, b in enumerate(lay.blocks)}
+    assert order["block:diminuator"] > order["block:prescaling:primes"]  # box 𝐋 over the prescaling panel
+    assert order["block:complexity"] > order["block:complexity:targets"]  # box 𝒄 over the complexity panel
+    assert order["block:slope"] > order["block:weight:targets"]           # box 𝒘 over the weight panel
 
 
 def test_alt_complexity_adds_an_ignore_diminuator_checkbox_to_box_l():
