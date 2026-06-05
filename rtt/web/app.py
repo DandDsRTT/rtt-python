@@ -1070,6 +1070,13 @@ class _Reconciler:
         self._editing = None
         self._wheel_cid = None
         self._control_hovering = False
+        # the temperament-dropdown hover preview REFLOWS the grid (so a different rank/dimensionality
+        # shows its new columns/rows): _temp_token is the snapshot to revert/commit from, _temp_baseline
+        # the grid before it (for the ring diff), _previewing_temperament keeps the chooser's own value
+        # and open popup steady (the GRID previews, not the chooser) while it's live.
+        self._temp_token = None
+        self._temp_baseline = None
+        self._previewing_temperament = False
         # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build[, update]).
         # Every kind is registered below; make_cell/update_cell index it directly (no fallback),
         # so an unregistered kind raises loudly rather than rendering a silent blank cell.
@@ -1833,6 +1840,8 @@ class _Reconciler:
         # placeholder), the target chooser splits into limit + family, the tuning chooser shows its
         # scheme. building[0] guards echoes.
         if cb.id.startswith("preset:temperament"):  # base + the comma-basis copy
+            if self._previewing_temperament:
+                return  # a hover preview reflows the GRID; leave the chooser's value + open popup steady
             value = presets.identify(self._editor.state)
             self.selects[cb.id].value = value
             _set_offlist_prompt(self.selects[cb.id], value)
@@ -2562,6 +2571,12 @@ def index() -> None:
             # (not a row), so only a preset reaches here; load its comma basis as an
             # undoable edit, then re-render to snap the box onto the now-matching preset.
             if value in presets.TEMPERAMENT_COMMAS:
+                if rec._temp_token is not None:  # a hover preview is live — revert it so the commit is
+                    editor.restore_for_preview(rec._temp_token)  # one clean undo step from the real base
+                    rec._temp_token = None
+                    rec._temp_baseline = None
+                    rec._previewing_temperament = False
+                    rec.preview_baseline = None
                 editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
             render()
         elif name == "tuning" and value is not None:
@@ -2747,15 +2762,25 @@ def index() -> None:
             rec._control_hovering = False
             rec.clear_preview()
 
+    def _end_temperament_preview():
+        # revert a live temperament hover preview (pointer left an option / popup closed)
+        if rec._temp_token is not None:
+            editor.restore_for_preview(rec._temp_token)
+            rec._temp_token = None
+            rec._temp_baseline = None
+            rec._previewing_temperament = False
+            rec.preview_baseline = None
+            render()
+
     def on_temperament_hover(value):
-        # hovering a temperament option in the open dropdown previews loading it: ring the cells its
-        # comma basis would change. It's the same ring-only, no-reflow preview a +/- hover gives —
-        # loading the temperament is just another hypothetical edit (edit_comma_basis) — so it reuses
-        # control_hover. A divider header, the mouse leaving an option, or the popup closing clears.
-        # The option slot emits the hovered option's INDEX (NiceGUI sets each Quasar option's `value`
-        # to its position in the list — see ChoiceElement._update_options — NOT the temperament key),
-        # or null otherwise; and marshals the arg as a payload. So normalize to a bare index, then map
-        # it back through the chooser's ordered options to the temperament key.
+        # hovering a temperament option in the open dropdown previews loading it — and unlike the
+        # ring-only +/- hover it REFLOWS: it applies the temperament to a snapshot and re-renders the
+        # whole would-be grid, so a different rank/dimensionality shows its new columns/rows (not just
+        # rings on cells that already exist), with the changed cells ringed against the pre-hover grid.
+        # It reverts on leave / popup-close (_end_temperament_preview) and commits for real on select
+        # (on_preset). The hover delegation marshals the hovered option's INDEX in `detail` (NiceGUI
+        # sets each option's value to its POSITION, not the key — see ChoiceElement._update_options),
+        # so normalize the payload and map the index back through the ordered options.
         if isinstance(value, dict):
             value = next(iter(value.values()), None)
         if isinstance(value, (list, tuple)):
@@ -2763,10 +2788,18 @@ def index() -> None:
         keys = list(presets.temperament_options())
         key = keys[int(value)] if isinstance(value, (int, float)) and not isinstance(value, bool) \
             and 0 <= int(value) < len(keys) else None
-        if key in presets.TEMPERAMENT_COMMAS:  # a real temperament — not a divider header or null
-            control_hover(lambda: editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key]))
-        else:
-            control_unhover()
+        if key not in presets.TEMPERAMENT_COMMAS:  # a divider header, null, or the mouse leaving
+            _end_temperament_preview()
+            return
+        if rec._temp_token is None:  # first option of this gesture: snapshot the real document + its grid
+            rec._temp_token = editor.capture_for_preview()
+            rec._temp_baseline = last_lay[0]
+        editor.restore_for_preview(rec._temp_token)              # re-apply from the same base each option
+        editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key])
+        rec._previewing_temperament = True                       # keep the chooser's own value + popup steady
+        rec.preview_baseline = rec._temp_baseline                # ring every cell this temperament moves
+        rec.preview_source = None
+        render()
 
     # generator-tuning wheel preview: hovering the cell snapshots a baseline so each wheel notch (a
     # real, committed nudge — handled by on_gentuning_wheel, which re-renders) rings the OTHER cells

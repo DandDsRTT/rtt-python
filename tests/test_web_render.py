@@ -1702,11 +1702,11 @@ async def test_hovering_a_generator_tuning_sign_previews_reversing_it(user: User
 
 
 async def test_hovering_a_temperament_option_previews_loading_it(user: User) -> None:
-    # hovering a temperament in the OPEN dropdown previews loading it: the cells its comma basis would
-    # change ring, no reflow. A divider header / leaving the option (detail -1) clears. The option slot
-    # dispatches a native `opthover` CustomEvent at the cell WRAP carrying the option's INDEX in
-    # `detail` (the popup is teleported, so a slot $emit can't reach the select); the wrap's handler
-    # maps the index back to the temperament key. Here we drive that wrap event directly.
+    # hovering a temperament in the OPEN dropdown previews loading it: it reflows the would-be grid and
+    # rings the cells its comma basis would change. A divider header / leaving the option (detail -1)
+    # reverts. The option slot dispatches a native `opthover` CustomEvent at the cell WRAP carrying the
+    # option's INDEX in `detail` (the popup is teleported, so a slot $emit can't reach the select); the
+    # wrap's handler maps the index back to the temperament key. Here we drive that wrap event directly.
     from rtt.web import presets
     await user.open("/")
     _toggle(user, "presets")                                  # the temperament chooser is presets-gated
@@ -1761,3 +1761,21 @@ async def test_hovering_a_resolving_plus_reddens_what_it_consumes(user: User) ->
     assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:1")   # the re-solved tuning → amber
     UserInteraction(user, btn, None).trigger("mouseleave")
     assert "rtt-preview-remove" not in _wrap_classes(user, "comma:0")
+
+
+async def test_hovering_a_temperament_of_a_different_dimensionality_reflows_the_grid(user: User) -> None:
+    # the hover REFLOWS the would-be grid, so a temperament with a different d shows its new columns —
+    # not just rings on cells that already exist. From the 5-limit default, hovering a 7-limit
+    # temperament makes the prime-7 column appear; leaving reverts to the 5-limit grid.
+    from rtt.web import presets
+    await user.open("/")
+    _toggle(user, "presets")
+    await user.should_see(marker="preset:temperament")
+    await user.should_not_see(marker="prime:3")              # 5-limit default (d=3): no prime-7 column
+    wrap = set(user.find(marker="preset:temperament").elements)
+    seven = next(k for k in presets.temperament_options() if k.startswith("7:") and k in presets.TEMPERAMENT_COMMAS)
+    idx = list(presets.temperament_options()).index(seven)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})  # hover a 7-limit temperament
+    await user.should_see(marker="prime:3")                  # reflowed: the would-be grid's new prime-7 column
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})   # leave
+    await user.should_not_see(marker="prime:3")              # reverted to the 5-limit grid
