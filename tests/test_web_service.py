@@ -406,7 +406,7 @@ def test_target_limit_problem_validates_the_chooser_entry():
     # entry is invalid for either family. A blank (or zero) entry is fine — the family then
     # tracks the domain default. (None family = an override / all-interval chooser: no parity rule.)
     assert service.target_limit_problem("OLD", 8) == "odd"      # even odd-limit -> rejected
-    assert service.target_limit_problem("OLD", 8.0) == "odd"    # ...as a float too (ui.number gives floats)
+    assert service.target_limit_problem("OLD", 8.0) == "odd"    # ...as a float too
     assert service.target_limit_problem("OLD", 9) is None       # odd odd-limit -> fine
     assert service.target_limit_problem("TILT", 8) is None      # even is fine for the triangle
     assert service.target_limit_problem("TILT", 9.5) == "whole" # a decimal isn't a whole number
@@ -415,6 +415,10 @@ def test_target_limit_problem_validates_the_chooser_entry():
     assert service.target_limit_problem("OLD", "") is None      # blank -> the domain default
     assert service.target_limit_problem("OLD", 0) is None       # zero reads as blank (matches the chooser)
     assert service.target_limit_problem(None, 8) is None        # no named family -> no parity rule
+    # the chooser's limit is a TEXT field, so the entry arrives as a string: validate those too
+    assert service.target_limit_problem("OLD", "8") == "odd"
+    assert service.target_limit_problem("OLD", "9") is None
+    assert service.target_limit_problem("TILT", "8.5") == "whole"
 
 
 def test_tuning_maps_under_top():

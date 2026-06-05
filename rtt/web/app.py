@@ -454,6 +454,12 @@ def _parse_int(text):
         return None
 
 
+def _limit_text(limit) -> str | None:
+    """The target-limit field's text for a resolved limit: the number as a string, or None
+    (the "-" placeholder) when there is no limit to show (a typed override / all-interval)."""
+    return None if limit is None else str(limit)
+
+
 def _ratio_parts(text):
     """Split a ratio like ``"3/2"`` into ``("3", "2")``; None if it isn't a fraction."""
     num, sep, den = str(text).partition("/")
@@ -1645,14 +1651,18 @@ class _Reconciler:
             # the select via display-value, the number via its "-" placeholder.
             limit, family = self._target_preset_values()
             with ui.element("div").classes("rtt-preset-target"):
-                # limit_changed tells the handler the user TYPED a limit (toast on a bad one) vs
-                # PICKED a family (a switch to OLD that turns an even limit invalid only reddens it).
-                # debounce collapses a multi-digit entry into one settled event, so typing "21" never
-                # flashes a toast at the even intermediate "2" (the programmatic render echo is
-                # Python-side and stays inside the building[0] guard, so debounce can't leak it).
-                num = ui.number(value=limit, min=2,
+                # A TEXT input, not ui.number: a number input lets the browser swallow non-numeric
+                # keystrokes to empty, so "abc" would silently blank the limit with no way to toast
+                # it. As text, the raw entry reaches the handler, which validates it (whole number?
+                # odd for OLD?) and reddens/toasts a bad one. limit_changed tells the handler the
+                # user TYPED a limit (toast on a bad one) vs PICKED a family (a switch to OLD that
+                # turns an even limit invalid only reddens it). debounce collapses a multi-digit
+                # entry into one settled event, so typing "21" never flashes a toast at the even
+                # intermediate "2" (the programmatic render echo is Python-side and stays inside the
+                # building[0] guard, so debounce can't leak it).
+                num = ui.input(value=_limit_text(limit),
                         on_change=lambda e: self._cb.on_target_change(limit_changed=True)) \
-                    .props('dense borderless hide-bottom-space placeholder="-" debounce=300').classes("rtt-preset-num")
+                    .props('dense borderless hide-bottom-space placeholder="-" inputmode=numeric debounce=300').classes("rtt-preset-num")
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
                         on_change=lambda e: self._cb.on_target_change(limit_changed=False)) \
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
@@ -1708,7 +1718,7 @@ class _Reconciler:
         elif cb.id == "preset:target":
             num, sel = self.selects[cb.id]
             limit, family = self._target_preset_values()  # (None, None) -> both show "-"
-            num.value = limit
+            num.value = _limit_text(limit)  # the text field shows the number (or "-" placeholder)
             sel.value = family
             _set_offlist_prompt(sel, family)
             num.set_enabled(not cb.disabled)  # all-interval greys+locks the chooser (it also shows "-")
@@ -2433,7 +2443,9 @@ def index() -> None:
             if limit_changed:
                 ui.notify(message, type="negative", position="top")
             return
-        spec = f"{int(num.value)}-{family}" if num.value else family
+        # past the validator the text is blank or a whole number (possibly "6.0"): float→int is safe
+        text = (num.value or "").strip()
+        spec = f"{int(float(text))}-{family}" if text else family
         try:
             valid = bool(service.target_interval_set(spec, editor.state.domain_basis))
         except Exception:
