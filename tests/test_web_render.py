@@ -716,8 +716,12 @@ async def test_a_finite_power_fills_the_cell_when_re_synced_from_infinity(user: 
     # the optimization power is the same stacked face, but reached through the UPDATE path: the cell
     # is re-synced (not rebuilt) when the power changes, so the full-size toggle must fire on sync
     # too. ∞ keeps its small "(max)" sub (NOT solo); editing it to a finite power makes a bare
-    # integer that must flip to the full-size (solo) face on that re-sync.
-    await _enable(user, "optimization")
+    # integer that must flip to the full-size (solo) face on that re-sync. The power is editable only
+    # with alt. complexity on (else it locks read-only), so enable that to type into it.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="alt. complexity").click()
     main, sub = _stacked_face(user, "optimization:power")
     assert (main.text, sub.text) == ("∞", "(max)")
     assert "rtt-stacked-solo" not in main._classes        # ∞ keeps its stacked "(max)" annotation
@@ -799,6 +803,8 @@ async def test_tuning_chooser_shows_the_prompt_as_a_placeholder_when_off_list(us
     await user.open("/")
     _toggle(user, "presets")
     user.find(kind=ui.checkbox, content="optimization").click()
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="alt. complexity").click()  # 𝑝 editable (else read-only)
     assert "display-value" not in _cell_child(user, "preset:tuning")._props
     _cell_child(user, "optimization:power").set_value("2")  # minimax (∞) -> a miniRMS spec (no name)
     await user.should_see(marker="preset:tuning")
@@ -1040,9 +1046,13 @@ async def test_optimization_renders_the_optimize_button(user: User) -> None:
 
 
 async def test_minimax_power_stacks_a_max_annotation_below_infinity(user: User) -> None:
-    # the power cell reads ∞ for the default minimax scheme; like every gridded value it stacks
-    # a small line below the main glyph — here "(max)", naming what ∞ means (the max norm)
-    await _enable(user, "optimization")
+    # the power cell reads ∞ for the default minimax scheme; like every gridded value it stacks a
+    # small line below the main glyph — here "(max)", naming what ∞ means (the max norm). The power is
+    # editable only with alt. complexity on (else it locks read-only), so turn that on to type into it.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="alt. complexity").click()
     main, sub = _stacked_face(user, "optimization:power")
     assert (main.text, sub.text) == ("∞", "(max)")
     # a finite power (miniRMS, p = 2) shows bare — no annotation, like a plain numeric value
@@ -1057,9 +1067,10 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     # just no white box (no input). rtt-cell-input on the wrap marks the editable powerinput; the
     # read-only powerdisplay lacks it but keeps the identical face (both ∞ AND the "(max)" sub-line).
     await user.open("/")
-    user.find(kind=ui.checkbox, content="optimization").click()   # reveal the power cell
-    user.find(kind=ui.checkbox, content="weighting").click()      # reveal the all-interval entry
-    user.find(kind=ui.checkbox, content="all-interval").click()   # show the target-controls checkbox
+    user.find(kind=ui.checkbox, content="optimization").click()     # reveal the power cell
+    user.find(kind=ui.checkbox, content="weighting").click()        # reveal the all-interval + alt entries
+    user.find(kind=ui.checkbox, content="alt. complexity").click()  # 𝑝 editable while target-based
+    user.find(kind=ui.checkbox, content="all-interval").click()     # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input while target-based
     edit_main, edit_sub = _stacked_face(user, "optimization:power")       # editable face: ∞ over (max)

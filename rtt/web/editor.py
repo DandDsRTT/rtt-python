@@ -883,14 +883,25 @@ class Editor:
         self._snapshot()
         self.range_mode = mode
 
+    def _reset_to_basic_tuning(self) -> None:
+        """Drop the advanced tuning knobs back to basic minimax-lp — the lp interval complexity
+        (which also clears any custom prescaler) and the minimax power 𝑝 = ∞. Called when alt.
+        complexity is turned off, since those knobs are reachable only with it on; the caller has
+        already snapshotted, so the reset shares that one undo step with the toggle that fired it."""
+        self.tuning_scheme = service.scheme_with_power(
+            service.scheme_with_complexity(self.tuning_scheme, "lp"), float("inf"))
+        self.custom_prescaler = None
+
     def set_show(self, key: str, value: bool) -> None:
         """Set one Show toggle (which parts of the grid are visible) — an undoable change. The
         sub-control hierarchy (:data:`show_settings.SUBCONTROLS`) is kept consistent both ways:
         selecting a sub-control also selects every layer it refines (a refinement can't show
         without its base — equivalences needs symbols, mnemonics needs names), and deselecting a
         toggle deselects every sub-control nested under it (so a hidden parent never strands its
-        sub-controls' content or panel rows on screen)."""
+        sub-controls' content or panel rows on screen). Turning alt. complexity off (directly or by
+        deselecting a parent like weighting) also resets the tuning to basic minimax-lp."""
         self._snapshot()
+        had_alt_complexity = self.settings["alt_complexity"]
         self.settings[key] = value
         if value:
             for parent in show_settings.ancestors_of(key):
@@ -898,14 +909,19 @@ class Editor:
         else:
             for child in show_settings.subcontrols_of(key):
                 self.settings[child] = False
+        if had_alt_complexity and not self.settings["alt_complexity"]:
+            self._reset_to_basic_tuning()
 
     def set_all_show(self, value: bool) -> None:
         """The settings panel's select-all/none: turn every *implemented* Show toggle on
         (``True``) or off (``False``) at once. The not-yet-built toggles are left at their
         defaults (the user can't toggle them individually either)."""
         self._snapshot()
+        had_alt_complexity = self.settings["alt_complexity"]
         for key in show_settings.IMPLEMENTED:
             self.settings[key] = value
+        if had_alt_complexity and not self.settings["alt_complexity"]:
+            self._reset_to_basic_tuning()
 
     def toggle_collapsed(self, item: str) -> None:
         """Fold or unfold one row, column, or tile (``"row:tuning"``, ``"col:targets"``,

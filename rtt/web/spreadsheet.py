@@ -644,8 +644,11 @@ class _GridBuilder:
         show_tuning = _f.tuning
         self.show_optimization = _f.optimization
         self.show_weighting = _f.weighting
-        show_alt_complexity = _f.alt_complexity
-        self.show_alt_complexity = show_alt_complexity  # gates the WHOLE pretransformer square's editability
+        # alt. complexity, resolved (it needs weighting). Gates the advanced tuning knobs' EDITABILITY:
+        # the norm power 𝑞 and the optimization power 𝑝 are editable only with it on, read-only
+        # (powerdisplay) otherwise (matching the all-interval lock; the editor keeps the scheme basic,
+        # minimax-lp, whenever it's off). It also gates the whole pretransformer square's editability.
+        self.show_alt_complexity = _f.alt_complexity
         # The prescaling + complexity machinery only matters when the damage weight derives from
         # complexity (complexity-/simplicity-weight). Under the default unity-weight the weight is 1
         # regardless, so those rows and their box-𝐋/𝒄 controls don't render — a visibility condition
@@ -2310,7 +2313,7 @@ class _GridBuilder:
             complexity_key = service.complexity_name_of(self.tuning_scheme)
             complexity_text = service.COMPLEXITY_DISPLAYS.get(complexity_key, complexity_key)
             complexity_values = ((tuple(service.COMPLEXITY_DISPLAYS.values()) + ("custom",))
-                                 if self.settings["alt_complexity"] else (complexity_text,))
+                                 if self.show_alt_complexity else (complexity_text,))
             self.cells.append(CellBox("control:complexity", tx, cy, drop_w, PRESET_H,
                                  "control_select", text=complexity_text, values=complexity_values))
             self.cells.append(CellBox("caption:complexity", tx, cy + PRESET_H, drop_w,
@@ -2324,7 +2327,7 @@ class _GridBuilder:
             q_slot_x = tx + drop_w + OPT_COL_GAP
             q_x = q_slot_x + (slot_w - COL_W) / 2
             q_text = _format_power(service.complexity_norm_power(self.tuning_scheme))
-            q_kind = "powerinput" if self.settings["alt_complexity"] else "powerdisplay"
+            q_kind = "powerinput" if self.show_alt_complexity else "powerdisplay"
             self.cells.append(CellBox("control:q", q_x, cy, COL_W, ROW_H, q_kind, text=q_text))
             self.cells.append(CellBox("symbol:q", q_slot_x, sym_y, slot_w, SYMBOL_H, "symbol", text="𝑞"))
             self.cells.append(CellBox("caption:q", q_slot_x, cap_y, slot_w, cap_h, "caption",
@@ -2472,14 +2475,16 @@ class _GridBuilder:
             # spans the objective column, centred on it, wrapping to the lines cap_band reserves.
             self.cells.append(CellBox("optimization:objective:caption", obj_x, cap_top, OPT_OBJ_W, cap_band,
                                  "caption", text=self.obj_caption))
-            # the power: the editable ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — a COL_W gridded cell
-            # — over the symbol 𝑝 and the caption "optimization power" (one line, centred under it).
-            # All-interval locks 𝑝 at ∞ (the solver minimaxes over every interval, ignoring the stored
-            # 𝑝), so it renders as a read-only value (a powerdisplay — the SAME ∞-over-"(max)" stacked
-            # face as the editable input, just with no white box) and its symbol/caption stay the normal
-            # value black (a read-only value, not a greyed-out control).
+            # the power: the ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — a COL_W gridded cell — over
+            # the symbol 𝑝 and the caption "optimization power" (one line, centred under it). 𝑝 ≠ ∞ is an
+            # ADVANCED choice (every preset is minimax), so 𝑝 is editable only with alt. complexity on;
+            # off, the editor holds the scheme at minimax so it shows ∞ read-only. All-interval likewise
+            # locks 𝑝 at ∞ (the solver minimaxes over every interval, ignoring the stored 𝑝). Either way
+            # it renders as a read-only value (a powerdisplay — the SAME ∞-over-"(max)" stacked face as
+            # the editable input, just no white box; its symbol/caption stay the normal value black).
+            power_locked = self.all_interval or not self.show_alt_complexity
             self.cells.append(CellBox("optimization:power", pow_x, content_top, COL_W, ROW_H,
-                                 "powerdisplay" if self.all_interval else "powerinput", text=power))
+                                 "powerdisplay" if power_locked else "powerinput", text=power))
             self.cells.append(CellBox("optimization:power:symbol", pow_x, sym_top, COL_W, SYMBOL_H,
                                  "symbol", text="𝑝"))
             self.cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,

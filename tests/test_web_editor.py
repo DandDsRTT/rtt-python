@@ -282,6 +282,36 @@ def test_nonprime_basis_approach_resets_when_the_domain_loses_its_nonprimes():
     assert editor.nonprime_basis_approach == ""
 
 
+def test_turning_off_alt_complexity_resets_the_tuning_to_basic_minimax_lp():
+    # alt. complexity gates the advanced tuning knobs — a non-lp interval complexity (norm power
+    # 𝑞 ≠ 1) and a non-∞ optimization power 𝑝. Turning it off returns the tuning to plain minimax-lp
+    # (𝑝 = ∞, the lp complexity with 𝑞 = 1), discarding the advanced choices as ONE undoable step.
+    editor = Editor()
+    editor.set_show("alt_complexity", True)  # also enables its ancestors (weighting, tuning_boxes)
+    editor.set_complexity_norm_power(2)       # Euclidean (q = 2) — an alternative complexity
+    editor.set_optimization_power(2)          # miniRMS (p = 2) — an alternative power
+    editor.set_show("alt_complexity", False)  # basic mode -> reset
+    assert service.optimization_power(editor.tuning_scheme) == float("inf")  # minimax again
+    assert service.complexity_norm_power(editor.tuning_scheme) == 1          # lp norm again
+    assert service.complexity_name_of(editor.tuning_scheme) == "lp"
+    assert editor.custom_prescaler is None
+    editor.undo()  # one snapshot: the toggle AND the scheme reset undo together
+    assert editor.settings["alt_complexity"] is True
+    assert service.optimization_power(editor.tuning_scheme) == 2
+    assert service.complexity_norm_power(editor.tuning_scheme) == 2
+
+
+def test_deselecting_weighting_also_resets_alt_complexity_to_basic():
+    # turning off a PARENT (weighting) deselects alt_complexity beneath it, so the same reset fires:
+    # the advanced power is discarded even though alt_complexity wasn't the toggle the user clicked.
+    editor = Editor()
+    editor.set_show("alt_complexity", True)
+    editor.set_optimization_power(2)
+    editor.set_show("weighting", False)  # deselects alt_complexity (a sub-control) -> reset
+    assert editor.settings["alt_complexity"] is False
+    assert service.optimization_power(editor.tuning_scheme) == float("inf")
+
+
 def test_set_diminuator_replaced_toggles_the_size_factor():
     editor = Editor()
     assert service.diminuator_replaced(editor.tuning_scheme) is False  # lp default uses it

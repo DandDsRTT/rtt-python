@@ -2675,8 +2675,23 @@ def test_all_interval_locks_the_optimization_power_to_infinity():
     allint = {c.id: c for c in _with(scheme=finite_ai, optimization=True).cells}
     assert allint["optimization:power"].text == "∞" and allint["optimization:power"].kind == "powerdisplay"
     finite_based = service.scheme_with_power("TILT minimax-S", 2.0)  # target-based, stored power 2
-    based = {c.id: c for c in _with(scheme=finite_based, optimization=True).cells}
+    # alt. complexity on so the power is editable (it locks read-only when off — see the test below)
+    based = {c.id: c for c in _with(scheme=finite_based, optimization=True,
+                                    weighting=True, alt_complexity=True).cells}
     assert based["optimization:power"].text == "2" and based["optimization:power"].kind == "powerinput"
+
+
+def test_optimization_power_is_editable_only_with_alt_complexity():
+    # the optimization power 𝑝 (∞ minimax, 2 miniRMS, 1 miniaverage) is an ADVANCED knob: every tuning
+    # preset is a minimax (𝑝 = ∞) scheme, so a non-∞ power is reachable only by typing it — an
+    # alternate-complexity-level choice. So like the norm power 𝑞 it is an editable powerinput only
+    # with alt. complexity on; otherwise it locks read-only (a powerdisplay), as the all-interval lock
+    # does. (alt. complexity rides under weighting, so both must be on to edit 𝑝.)
+    off = {c.id: c for c in _with("TILT minimax-S", optimization=True).cells}  # alt. complexity OFF (default)
+    assert off["optimization:power"].kind == "powerdisplay"
+    assert off["optimization:power"].text == "∞"  # the basic minimax power, shown read-only
+    on = {c.id: c for c in _with("TILT minimax-S", optimization=True, weighting=True, alt_complexity=True).cells}
+    assert on["optimization:power"].kind == "powerinput"
 
 
 def test_all_interval_greys_and_locks_the_target_chooser():
@@ -4526,8 +4541,9 @@ def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
     # the objective: a cents value over the symbol ⟪𝐝⟫ₚ (double-angle brackets, power subscript)
     assert on["optimization:objective"].kind == "tval"
     assert on["optimization:objective:symbol"].text == "⟪𝐝⟫ₚ"
-    # the power: an editable field over the symbol 𝑝 and the "optimization power" caption
-    assert on["optimization:power"].kind == "powerinput"            # the power is editable
+    # the power: 𝑝 over its symbol and the "optimization power" caption. With alt. complexity off (the
+    # default here) it is read-only — a powerdisplay (its editability is covered separately).
+    assert on["optimization:power"].kind == "powerdisplay"
     assert on["optimization:power"].text == "∞"                     # ...showing the current Lp order
     assert on["optimization:power:symbol"].text == "𝑝"
     assert on["optimization:power:caption"].text == "optimization power"
