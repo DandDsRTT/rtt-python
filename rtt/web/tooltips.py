@@ -135,7 +135,7 @@ _KIND_HELP: dict[str, str] = {
     "int_drag": "Drag this interval onto another in the same column to combine them into their product. For the comma basis this re-expresses the same temperament; for a target / held / interest list it just combines the two intervals.",
     "basis_minus": "Remove the highest prime from the domain.",
     "comma_plus": "Add a comma to the basis.",
-    "comma_minus": "Remove the last comma from the basis.",
+    "comma_minus": "Remove the last comma — un-tempers it, raising the rank; removing the sole comma leaves just intonation.",
     "interest_plus": "Add an interval of interest.",
     "interest_minus": "Remove this interval of interest.",
     "held_plus": "Add a held interval.",

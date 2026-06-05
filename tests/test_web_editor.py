@@ -495,13 +495,14 @@ def test_incomplete_or_dependent_pending_comma_is_held_not_committed():
 
 
 def test_removing_a_pending_comma_cancels_the_draft():
+    # a pending draft takes precedence: remove_comma cancels the DRAFT rather than dropping a real
+    # comma (even though the last real comma is itself removable now — see the un-tempering tests).
     editor = Editor()
-    assert editor.can_remove_comma is False  # the sole real comma cannot be removed
     editor.add_comma()
-    assert editor.can_remove_comma is True  # ...but a pending draft can be cancelled
+    assert editor.can_remove_comma is True  # a pending draft can be cancelled
     editor.remove_comma()
     assert editor.pending_comma is None
-    assert editor.state.comma_basis == ((4, -4, 1),)  # unchanged
+    assert editor.state.comma_basis == ((4, -4, 1),)  # the real comma untouched — the draft went, not it
     assert editor.can_undo is False  # cancelling a draft is not an undoable edit
 
 
@@ -961,11 +962,22 @@ def test_move_a_comma_out_to_a_list_untempers_it_using_its_pre_removal_vector():
     assert editor.interest_vectors == [vector]
 
 
-def test_dragging_out_the_sole_comma_is_blocked():
-    editor = Editor()  # exactly one comma — the basis must never empty (parity with the −)
-    before = editor.state.comma_basis
+def test_dragging_out_the_sole_comma_un_tempers_it_to_just_intonation():
+    # parity with the comma − (which un-temps the last comma): dragging the sole comma out to an
+    # interval list un-temps it all the way to nullity 0 (just intonation) AND lands it in that list.
+    editor = Editor()
+    assert editor.move_interval("commas", 0, "held", 0) is True
+    assert editor.state.n == 0  # nothing tempered — full rank
+    assert editor.held_vectors == [(4, -4, 1)]  # 81/80 is now a held interval
+
+
+def test_dragging_a_comma_out_is_blocked_with_nothing_tempered():
+    # at nullity 0 there is no real comma to drag out (only the full-rank zero placeholder), so the
+    # move is infeasible — the dual of "tempering in needs to genuinely raise the nullity".
+    editor = Editor()
+    editor.remove_comma()  # -> just intonation, n=0
     assert editor.move_interval("commas", 0, "held", 0) is False
-    assert editor.state.comma_basis == before and editor.held_vectors == []
+    assert editor.held_vectors == []
 
 
 def test_targets_are_inert_in_all_interval_mode():
@@ -1183,13 +1195,27 @@ def test_can_shrink_is_false_when_the_shrink_would_degenerate():
     assert editor.can_shrink is True
 
 
-def test_remove_comma_is_a_noop_at_the_last_comma():
-    # the comma − is disabled in the UI at one comma; the method self-guards too (like its
-    # siblings shrink / remove_mapping_row) rather than emptying the basis and crashing.
+def test_remove_comma_un_tempers_the_last_comma_to_just_intonation():
+    # the comma − un-tempers down to AND INCLUDING the sole comma — the comma-space face of the
+    # mapping + (add_mapping_row), which already reaches nullity 0. Removing meantone's 81/80 leaves
+    # 5-limit just intonation (the identity mapping), one undoable edit.
     editor = Editor()
-    assert editor.can_remove_comma is False
-    editor.remove_comma()  # no-op, no crash
-    assert editor.state.comma_basis == ((4, -4, 1),) and editor.can_undo is False
+    assert editor.can_remove_comma is True  # the last comma IS removable
+    editor.remove_comma()
+    assert (editor.state.d, editor.state.r, editor.state.n) == (3, 3, 0)  # full rank: nothing tempered
+    assert editor.state.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))  # JI over 2.3.5
+    editor.undo()
+    assert editor.state.comma_basis == ((4, -4, 1),)  # one undoable edit restores meantone
+
+
+def test_remove_comma_is_a_noop_with_nothing_tempered():
+    # at nullity 0 (full rank, no comma) there is nothing to un-temper, so the − self-guards (and
+    # the UI hides it); the + adds a comma back. Reaching n=0 first, a second − must not crash.
+    editor = Editor()
+    editor.remove_comma()  # meantone -> JI (n=0)
+    assert editor.state.n == 0 and editor.can_remove_comma is False
+    editor.remove_comma()  # guarded no-op
+    assert editor.state.n == 0 and editor.can_undo is True  # still just the one edit
 
 
 def _cents_map(values):

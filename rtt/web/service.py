@@ -1405,17 +1405,29 @@ def can_shrink_domain(state: TemperamentState) -> bool:
         return False
 
 
+def just_intonation(domain_basis) -> TemperamentState:
+    """The untempered temperament over a domain — nothing tempered out, every basis element its
+    own generator (the identity mapping), so nullity 0. The endpoint both the comma − (removing the
+    last comma) and the mapping + (un-tempering it) arrive at. Built from the identity mapping
+    rather than by dualizing an empty comma basis, which can't recover the dimension d — and which
+    keeps a nonstandard domain that re-dualing would lose."""
+    d = len(domain_basis)
+    identity = tuple(tuple(int(row == col) for col in range(d)) for row in range(d))
+    return from_mapping(identity, domain_basis)
+
+
 def remove_comma(state: TemperamentState, index: int = -1) -> TemperamentState:
     """Drop comma ``index`` (the last by default) from the basis, then re-dual — raising
     rank as nullity falls (the temperament tempers out one fewer comma). An arbitrary index
     is the comma-space twin of :func:`remove_mapping_row`, reached by dragging a comma column
     out of the basis (un-tempering it). Adding a comma is the Editor's job (it stages a
     pending draft and commits it once valid), not a service primitive, since an arbitrary
-    blank comma would be dependent and re-rank nothing. Callers guard against removing the
-    sole comma."""
+    blank comma would be dependent and re-rank nothing. Removing the SOLE comma un-tempers
+    everything — just intonation over the domain (see :func:`just_intonation`)."""
     basis = state.comma_basis
     i = index % len(basis)  # normalize, so the -1 default drops the last comma
-    return from_comma_basis(basis[:i] + basis[i + 1:])
+    remaining = basis[:i] + basis[i + 1:]
+    return from_comma_basis(remaining) if remaining else just_intonation(state.domain_basis)
 
 
 def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:
@@ -1429,16 +1441,12 @@ def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:
 
 
 def add_mapping_row(state: TemperamentState) -> TemperamentState:
-    """Add a generator by un-tempering a comma: drop a comma from the basis and re-dual to the
-    canonical higher-rank mapping — rank rises, nullity falls, dimensionality held (+r, −n).
-    Re-dualing (rather than splicing the comma in as a raw row) keeps the generators simple:
-    a raw comma row detempers to an astronomically complex ratio. Un-tempering the LAST comma
-    leaves nothing tempered — just intonation over the d primes (the identity mapping, whose
-    generators are the primes themselves). Callers guard on there being a comma (nullity > 0)."""
-    remaining = state.comma_basis[:-1]
-    if remaining:
-        return from_comma_basis(remaining)
-    return from_mapping(tuple(tuple(int(i == j) for j in range(state.d)) for i in range(state.d)))
+    """Add a generator by un-tempering a comma — the row-space face of :func:`remove_comma`:
+    dropping the last comma and re-dualing IS adding a generator (+r, −n, dimensionality held).
+    Re-dualing (rather than splicing the comma in as a raw row) keeps the generators simple: a raw
+    comma row detempers to an astronomically complex ratio. Un-tempering the LAST comma leaves
+    just intonation over the d primes. Callers guard on there being a comma (nullity > 0)."""
+    return remove_comma(state)  # drop the last comma — the same primitive, viewed from the mapping
 
 
 def add_mapping_row_to(state: TemperamentState, source: int, target: int) -> TemperamentState:

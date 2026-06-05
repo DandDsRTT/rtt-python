@@ -106,6 +106,22 @@ def test_undo_reverts_the_latest_comma_basis_change():
     assert _comma_basis(editor) == original
 
 
+# --- removing the last comma (un-tempering to just intonation) ---
+
+def test_removing_the_last_comma_reaches_just_intonation_and_renders():
+    # the comma − un-tempers the sole comma all the way to nullity 0 — just intonation over the
+    # domain — and the grid renders that full-rank state: an empty commas column with its + but no −.
+    editor = Editor()
+    editor.remove_comma()  # drop meantone's only comma (81/80)
+    assert _mapping(editor) == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]  # identity: nothing tempered
+    assert editor.state.n == 0
+    ids = {c.id for c in editor.layout().cells}
+    assert "comma_plus" in ids and "comma_minus" not in ids  # + to add one back; nothing to remove
+    assert "comma:0" not in ids and "cell:comma:0:0" not in ids  # the commas column is empty
+    editor.undo()
+    assert _comma_basis(editor) == [[4, -4, 1]]  # one undoable edit restores meantone
+
+
 # --- inputting ---
 
 def test_a_temporarily_invalid_cell_value_does_not_recompute():

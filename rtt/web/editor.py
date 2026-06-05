@@ -322,9 +322,10 @@ class Editor:
 
     @property
     def can_remove_comma(self) -> bool:
-        """Whether the comma − is live: it cancels a pending draft, or (with none)
-        drops a real comma without emptying the basis."""
-        return self.pending_comma is not None or len(self.state.comma_basis) > 1
+        """Whether the comma − is live: it cancels a pending draft, or un-tempers a comma — down
+        to and including the last one, which leaves just intonation (the comma-space face of the
+        mapping +). Off only with nothing tempered (nullity 0) and no draft."""
+        return self.pending_comma is not None or self.state.n > 0
 
     def _apply(self, state: TemperamentState) -> None:
         """Make a temperament edit: snapshot for undo, abandon any pending drafts, set state."""
@@ -838,8 +839,8 @@ class Editor:
             return False
         if "targets" in (src, dst) and service.is_all_interval(self.tuning_scheme):
             return False  # the target list is auto Tₚ = I there, not a user-curated set
-        if src == "commas" and len(self.state.comma_basis) <= 1:
-            return False  # never empty the comma basis (parity with the comma −)
+        if src == "commas" and self.state.n == 0:
+            return False  # nothing tempered: no real comma to drag out (parity with the comma −)
         if dst == "commas":  # tempering the interval out must genuinely raise the nullity
             extended = service.from_comma_basis(self.state.comma_basis + (tuple(vector),))
             if extended.n <= self.state.n:
@@ -1070,8 +1071,8 @@ class Editor:
         if self.pending_comma is not None:
             self.pending_comma = None  # cancel the draft (not an undoable edit)
             return
-        if len(self.state.comma_basis) <= 1:
-            return  # never empty the basis — self-guard like shrink / remove_mapping_row do
+        if self.state.n == 0:
+            return  # nothing tempered: no comma to un-temper (the + adds one back)
         self._snapshot()
         self.state = service.remove_comma(self.state)
 

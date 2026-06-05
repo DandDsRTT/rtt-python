@@ -2175,8 +2175,9 @@ class _GridBuilder:
                     # (or its vector cells). A distinct id so it's removed, not restructured, on commit.
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
                 # commas mirror the domain controls: + starts a (pending) comma; the − rides the
-                # last column's branch point — cancelling the draft, or dropping a real comma when >1
-                if self.pending is not None or self.nc > 1:
+                # last column's branch point — cancelling the draft, or un-tempering a real comma,
+                # down to the last one (which leaves just intonation, nullity 0 — nothing to remove)
+                if self.pending is not None or self.nc > 0:
                     branch_minus("comma_minus", "commas", self.nc_shown - 1, "comma_minus")
             if self.tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
                 for i in range(self.r):                       # derived from M like the comma ratios — no ± control)
@@ -2230,9 +2231,11 @@ class _GridBuilder:
             # dropping INTO a list is ALWAYS "drop on the gridline", identical whether the list is
             # full (drop on a column grip) or empty (drop on the lone trunk zone): no separate header
             # or + target. The grips sit above the freeze seam (the band is reserved within the frozen
-            # fan), so the colhead doesn't clip them. Commas can be dragged OUT only with one to spare
-            # (the basis must never empty, like the comma −) but always accept a drop (temper out); the
-            # target list is inert in all-interval (the auto Tₚ = I set isn't curated).
+            # fan), so the colhead doesn't clip them. A comma grip both drags one comma INTO another to
+            # combine them (add_comma_to) and drags a comma OUT to another list to un-temper it — so
+            # even a lone comma grips (dragging it out leaves just intonation, parity with the −). A
+            # comma always accepts a drop (temper an interval in). The target list is inert in
+            # all-interval (the auto Tₚ = I set isn't curated).
             grip_top = self.branch_top_y + GAP - PAD  # top of the reserved grip band (the old seam)
 
             def drag_controls(ckey, n):
@@ -2245,11 +2248,11 @@ class _GridBuilder:
                                      grip_top, COL_W, GRIP_BAND, "colgrip"))
 
             # gate on _plus_shows — the same "this list's fan (with its +) is visible" test the + uses.
-            # Commas need a spare (nc > 1) to drag one out; the others grip every existing column.
+            # Every list grips each existing column: even a sole comma drags out now (un-tempering it).
             counts = {"commas": self.nc, "targets": self.k, "held": self.nh, "interest": self.mi}
             for ckey in ("commas", "targets", "held", "interest"):
                 if self._plus_shows(ckey):
-                    drag_controls(ckey, counts[ckey] if (ckey != "commas" or self.nc > 1) else 0)
+                    drag_controls(ckey, counts[ckey])
 
         # generator ratios (aligned with the mapping rows they label) + the mapping
         # matrix and its mapped target interval list

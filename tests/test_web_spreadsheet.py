@@ -418,14 +418,16 @@ def test_an_empty_interval_list_still_offers_a_gridline_drop_zone():
     assert "grip:interest:add" in cells    # ...but its gridline drop zone is there to receive one
 
 
-def test_comma_grips_need_a_spare_comma_but_the_list_always_accepts_a_drop():
-    # one comma: dragging it out would empty the basis (parity with the −), so no drag-out grip —
-    # but the list still offers its gridline "add" zone (dropping an interval in tempers it out).
+def test_comma_grips_let_even_the_sole_comma_be_dragged_out():
+    # the sole comma is now draggable out — un-tempering it to just intonation (parity with the −) —
+    # so it grips like every other list's columns; the comma special-case is gone. The list also
+    # offers its gridline "add" zone (dropping an interval in tempers it out).
     one = {c.id for c in spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), _all_on()).cells}
-    assert "grip:commas:0" not in one and "grip:commas:add" in one
-    # two commas: each is now draggable out
+    assert "grip:commas:0" in one and "grip:commas:add" in one  # the lone comma grips too
     two = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),)), _all_on()).cells}  # r=1, n=2
     assert "grip:commas:0" in two and "grip:commas:1" in two
+    ji = {c.id for c in spreadsheet.build(service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4)))), _all_on()).cells}
+    assert "grip:commas:0" not in ji  # ...but nothing to drag at full rank (n = 0)
 
 
 def test_targets_have_no_drag_grips_in_all_interval():
@@ -3507,16 +3509,19 @@ def test_commas_column_has_an_add_comma_control():
     assert cells["comma_plus"].x > cells["comma:0"].x  # in the gutter right of the basis
 
 
-def test_comma_minus_rides_the_last_comma_only_when_more_than_one():
-    one = {c.id for c in _layout().cells}  # meantone exposes a single comma
-    assert "comma_minus" not in one  # the sole comma cannot be removed
-    two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real (independent) commas
-    cells = {c.id: c for c in spreadsheet.build(two).cells}
-    assert "comma_minus" in cells  # ...but with two, the last is removable
-    by_id = {ln.id: ln for ln in spreadsheet.build(two).lines}
-    cm = cells["comma_minus"]  # centred on the last comma's branch point, dropping from the top bus
-    assert abs((cm.x + cm.w / 2) - by_id["v:comma:1"].pos) < 0.51
-    assert cm.y == by_id["bus:commas:top"].pos
+def test_comma_minus_rides_the_last_comma_whenever_one_is_tempered():
+    lay = _layout()  # meantone exposes a single comma
+    one, by1 = {c.id: c for c in lay.cells}, {ln.id: ln for ln in lay.lines}
+    assert "comma_minus" in one  # the SOLE comma is removable now (un-tempers to just intonation)
+    cm = one["comma_minus"]  # centred on the lone comma's branch point, dropping from the top bus
+    assert abs((cm.x + cm.w / 2) - by1["v:comma:0"].pos) < 0.51
+    assert cm.y == by1["bus:commas:top"].pos
+    two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real commas: − tracks the new last
+    tlay = spreadsheet.build(two)
+    cells, by2 = {c.id: c for c in tlay.cells}, {ln.id: ln for ln in tlay.lines}
+    assert abs((cells["comma_minus"].x + cells["comma_minus"].w / 2) - by2["v:comma:1"].pos) < 0.51
+    ji = service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # full rank, n=0
+    assert "comma_minus" not in {c.id for c in spreadsheet.build(ji).cells}  # nothing tempered to remove
 
 
 def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():

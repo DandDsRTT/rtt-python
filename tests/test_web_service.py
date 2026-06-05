@@ -122,6 +122,28 @@ def test_remove_comma_can_drop_an_arbitrary_index():
     assert service.remove_comma(st).comma_basis == ((4, -4, 1),)  # default still drops the last
 
 
+def test_remove_comma_un_tempers_the_sole_comma_to_just_intonation():
+    # removing the LAST comma un-tempers everything — just intonation over the domain (the identity
+    # mapping, every prime its own generator), nullity 0. Dualizing an empty comma basis can't
+    # recover d, so it builds the identity directly; the result matches reaching n=0 the mapping way.
+    meantone = service.from_comma_basis(((4, -4, 1),))  # d=3, n=1
+    ji = service.remove_comma(meantone)
+    assert (ji.d, ji.r, ji.n) == (3, 3, 0)  # full rank: nothing tempered
+    assert ji.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))  # JI over 2.3.5
+    assert ji.comma_basis == ((0, 0, 0),)  # the nullity-0 placeholder (the full-rank dual)
+
+
+def test_un_tempering_the_last_comma_keeps_a_nonstandard_domain():
+    # un-tempering the sole comma builds the identity over the DOMAIN — it must keep a nonstandard
+    # subgroup (2.3.7), not silently revert to the standard 2.3.5. And the mapping + is the same
+    # primitive, so it reaches an identical state.
+    archytas = service.from_comma_basis(((6, -2, -1),), domain_basis=(2, 3, 7))  # n=1
+    ji = service.remove_comma(archytas)
+    assert ji.domain_basis == (2, 3, 7)  # the subgroup survives
+    assert (ji.d, ji.r, ji.n) == (3, 3, 0) and ji.mapping == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+    assert service.add_mapping_row(archytas) == ji  # the mapping + IS removing the last comma
+
+
 def test_remove_mapping_row_drops_a_generator_holding_dimensionality():
     # the mapping-row − drops a generator (any row), keeping the primes and tempering one
     # more comma: −r, +n, dimensionality held — the dual of the generators − (which drops a prime).
