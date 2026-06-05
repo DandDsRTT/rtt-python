@@ -29,6 +29,15 @@ from __future__ import annotations
 # match (``SHOW_HELP`` == ``DEFAULTS``), so adding a toggle without its help text fails the suite.
 SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
     (
+        # interaction toggles ride the top of the pane, above the general dummy tile. They are not
+        # value-display layers (so they don't belong among the dummy tile's parts) — they switch
+        # whole grid affordances on and off. Rendered as plain checkboxes like the specific group.
+        "interaction",
+        (
+            ("drag_to_combine", "drag to combine", False),
+        ),
+    ),
+    (
         "general",
         (
             ("names", "names", True),
@@ -94,7 +103,8 @@ SUBCONTROLS: dict[str, str] = {
 # Toggles whose behaviour the layout actually builds today; the panel disables
 # (greys out) the rest until their content exists.
 IMPLEMENTED: frozenset[str] = frozenset(
-    {"names", "symbols", "mnemonics", "equivalences", "gridded_values", "plain_text_values",
+    {"drag_to_combine",
+     "names", "symbols", "mnemonics", "equivalences", "gridded_values", "plain_text_values",
      "quantities", "domain_quantities", "units", "domain_units", "counts", "presets",
      "temperament_boxes", "tuning_boxes", "math_expressions", "charts", "tuning_ranges",
      "tuning_colorization", "temperament_colorization", "weighting", "audio",

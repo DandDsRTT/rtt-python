@@ -7,6 +7,12 @@ def _layout(mapping=((1, 1, 0), (0, 1, 4))):
     return spreadsheet.build(service.from_mapping(mapping))
 
 
+def _drag_layout(mapping=((1, 1, 0), (0, 1, 4)), **kw):
+    # a layout with the "drag to combine" handles turned on (the feature is off by default)
+    return spreadsheet.build(service.from_mapping(mapping),
+                             {**settings.defaults(), "drag_to_combine": True}, **kw)
+
+
 def _with(scheme=None, **overrides):
     # scheme=None uses build's (target-based, all-interval-OFF) default; pass an all-interval
     # name like "minimax-S" to exercise all-interval rendering (dual(q), the primes target column)
@@ -1499,11 +1505,21 @@ def test_mapping_row_minus_gated_on_rank_and_plus_on_nullity():
     assert {"map_minus:0", "map_minus:1", "map_minus:2"} <= ji  # ...but each generator is removable
 
 
+def test_drag_handles_are_gated_on_the_drag_to_combine_toggle():
+    # the whole feature is OFF by default — no row or interval drag handles render until the
+    # "drag to combine" toggle (the top of the settings pane) turns it on.
+    off = {c.id for c in _layout().cells}  # default settings
+    assert not any(c.startswith(("map_drag:", "int_drag:")) for c in off)
+    on = {c.id for c in _drag_layout().cells}  # meantone with the toggle on
+    assert "map_drag:0" in on  # the generator-row handles appear
+    assert any(c.startswith("int_drag:target:") for c in on)  # ...and the interval handles
+
+
 def test_mapping_row_drag_handles_hug_the_left_of_each_row():
     # each generator row carries a drag handle just left of the matrix's opening bracket: drag one
     # row onto another to ADD it in (a generator-basis change). One per row, aligned with it, sitting
     # to the RIGHT of the left-bus ± controls so the two affordances stay deliberately separate.
-    lay = _layout()  # meantone, r = 2
+    lay = _drag_layout()  # meantone, r = 2, drag handles on
     cells = {c.id: c for c in lay.cells}
     bracket_left = cells["cell:mapping:0:0"].x - spreadsheet.BRACKET_W  # the ⟨ at the matrix's left edge
     for i in range(2):
@@ -1515,20 +1531,20 @@ def test_mapping_row_drag_handles_hug_the_left_of_each_row():
 
 
 def test_mapping_row_drag_handles_need_two_rows():
-    rank1 = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}
+    rank1 = {c.id for c in _drag_layout(((1, 0, 0),)).cells}
     assert not any(c.startswith("map_drag:") for c in rank1)  # a lone generator has nothing to combine with
-    assert {"map_drag:0", "map_drag:1"} <= {c.id for c in _layout().cells}  # a handle per generator row
+    assert {"map_drag:0", "map_drag:1"} <= {c.id for c in _drag_layout().cells}  # a handle per generator row
 
 
 def test_interval_drag_handles_hug_below_each_ratio():
     # each interval column (commas / targets / held / interest) with ≥2 entries gets a drag handle
     # just below each ratio cell — drag one interval onto another to combine them. They sit clear of
     # the branch-point ± / reorder handles, which ride the fan-out gap ABOVE the ratio.
-    st = service.from_mapping(((12, 19, 28),))  # 12-ET 5-limit: two commas
-    opts = {**settings.defaults(), "optimization": True}  # show the held column
-    lay = spreadsheet.build(st, opts, interest=((-1, 1, 0), (0, 0, 1)), held_vectors=((1, 0, 0), (-1, 1, 0)))
+    lay = _drag_layout(((12, 19, 28),), interest=((-1, 1, 0), (0, 0, 1)),  # 12-ET 5-limit: two commas
+                       held_vectors=((1, 0, 0), (-1, 1, 0)))
     cells = {c.id: c for c in lay.cells}
-    for group in ("comma", "held", "interest"):
+    # held shows with optimization on; _drag_layout's settings have it off, so check the always-on columns
+    for group in ("comma", "interest"):
         for i in range(2):
             handle, ratio = cells[f"int_drag:{group}:{i}"], cells[f"{group}:{i}"]
             assert handle.comma == i and handle.x == ratio.x  # aligned under its own ratio column
@@ -1538,7 +1554,7 @@ def test_interval_drag_handles_hug_below_each_ratio():
 
 def test_interval_drag_handles_need_two_entries_and_skip_all_interval_targets():
     one_comma = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone: a single comma
-    cells = {c.id for c in spreadsheet.build(one_comma).cells}
+    cells = {c.id for c in _drag_layout(((1, 1, 0), (0, 1, 4))).cells}
     assert not any(c.startswith("int_drag:comma") for c in cells)  # one comma — nothing to combine
     # an all-interval target list is auto (Tₚ = I, not editable), so it carries no combine handles
     ai = {c.id for c in spreadsheet.build(one_comma, settings.defaults(), tuning_scheme="minimax-S").cells}

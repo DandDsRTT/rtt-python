@@ -1740,11 +1740,11 @@ class _GridBuilder:
 
             def int_drag(group, count, col_left):
                 # a drag handle hugging the bottom of each interval ratio (commas / targets / held /
-                # interest): drag one interval onto another to ADD it in (their product). Needs ≥ 2
-                # entries to have something to combine; rides the clear gap just below the ratio, so it
-                # stays clear of the branch-point ± / reorder handles up top — deliberately separate
-                # from those, the column twin of the mapping-row handles.
-                if count < 2:
+                # interest): drag one interval onto another to ADD it in (their product). Gated on the
+                # "drag to combine" toggle (off by default); needs ≥ 2 entries to have something to
+                # combine; rides the clear gap just below the ratio, so it stays clear of the branch-
+                # point ± / reorder handles up top — the column twin of the mapping-row handles.
+                if not self.settings.get("drag_to_combine") or count < 2:
                     return
                 for i in range(count):
                     self.cells.append(CellBox(f"int_drag:{group}:{i}", col_left(i), qy + ROW_H, COL_W, ROW_HANDLE_W, "int_drag", comma=i))
@@ -1877,7 +1877,7 @@ class _GridBuilder:
             # Needs ≥ 2 rows to combine; rides the gap just before the matrix's opening bracket, clear
             # of the left-bus ± controls. (The column-reorder handles a sibling concern adds ride the
             # branch points up top — these stay deliberately separate, hugging the rows they drag.)
-            if self.r > 1 and self.tile_open("mapping", "primes"):
+            if self.settings.get("drag_to_combine") and self.r > 1 and self.tile_open("mapping", "primes"):
                 handle_x = self.prime_left(0) - BRACKET_W - ROW_HANDLE_GAP - ROW_HANDLE_W
                 for i in range(self.r):
                     self.cells.append(CellBox(f"map_drag:{i}", handle_x, self.map_top(i), ROW_HANDLE_W, ROW_H, "map_drag", gen=i))

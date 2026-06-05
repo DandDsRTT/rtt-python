@@ -1121,7 +1121,7 @@ async def test_dragging_a_generator_row_onto_another_adds_it_in(user: User) -> N
     # the per-row drag handle drives the whole pipeline: dragstart records the dragged row, drop on
     # another row's handle adds it into that row (a generator-basis change) and the page re-renders.
     # Meantone: drop row 0 (the octave) onto row 1 (the fifth) → row 1's mapping becomes (1, 2, 4).
-    await user.open("/")
+    await _enable(user, "drag to combine")  # the feature is off by default
     row1 = lambda: [_cell_child(user, f"cell:mapping:1:{p}").value for p in range(3)]
     assert row1() == ["0", "1", "4"]
     handle = lambda i: set(user.find(marker=f"map_drag:{i}").elements)
@@ -1136,7 +1136,7 @@ async def test_dragging_an_interval_onto_another_combines_them(user: User) -> No
     # the interval drag handle drives the same pipeline for a column: dragstart records the dragged
     # interval, drop on another interval's handle combines them into their product and re-renders.
     # The default target list is on screen — drag target 0 onto target 1 → target 1 is the product.
-    await user.open("/")
+    await _enable(user, "drag to combine")  # the feature is off by default
     tval = lambda i: _cell_child(user, f"target:{i}").value
     before0, before1 = tval(0), tval(1)
     handle = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)

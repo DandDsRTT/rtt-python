@@ -24,6 +24,8 @@ from __future__ import annotations
 # Hover text per Show toggle (settings.SHOW_GROUPS key). Every toggle is covered,
 # greyed-out ones included — the text explains what the toggle would reveal.
 SHOW_HELP: dict[str, str] = {
+    # interaction
+    "drag_to_combine": "Show drag handles for combining basis elements: drag one generator row (or one interval) onto another to add it in.",
     # general
     "names": "Show each tile's name caption (e.g. “mapping”, “generators”).",
     "mnemonics": "Underline the letter of each name that its symbol uses — a memory aid. Refines “names”.",

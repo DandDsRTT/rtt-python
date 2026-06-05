@@ -557,6 +557,8 @@ def _example_html(key: str) -> str:
         letter = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}[group]
         return (f'<span style="display:inline-flex;align-items:center;justify-content:center;'
                 f'width:36px;height:14px;background:{_TINTS[group]}">{_math_html(letter)}</span>')
+    if key == "drag_to_combine":  # a grip glyph — the drag handle this layer adds to rows and intervals
+        return '<span class="material-icons" style="font-size:18px;color:#444">drag_indicator</span>'
     if key == "audio":  # a speaker glyph — the per-pitch play button the audio rows carry
         return '<span class="material-icons" style="font-size:18px;color:#444">volume_up</span>'
     if key == "tuning_ranges":  # the tuning-range I-beam (min/max generator bars)
