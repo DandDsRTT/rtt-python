@@ -6,6 +6,10 @@ commas it tempers out, and the app derives the rest — canonical form, generato
 tunings under dozens of schemes, and the damage each does to your target intervals — and
 lays it all out as an interactive spreadsheet you can edit cell by cell.
 
+**▶ Try it live at [rtt-python.onrender.com](https://rtt-python.onrender.com)** — no
+install required. It's hosted on Render's free tier, which spins down after about 15
+minutes idle, so the first load after a quiet spell can take up to a minute to wake.
+
 It is the working companion to *[Dave Keenan & Douglas Blumeyer's guide to
 RTT](https://en.xen.wiki/w/Dave_Keenan_%26_Douglas_Blumeyer%27s_guide_to_RTT)*; the
 [`guide/`](guide/) folder mirrors that text, and the app is built to match its notation and
@@ -29,7 +33,8 @@ puts a visual editor on top of it.
 
 ## Quick start
 
-Requires **Python 3.10+**.
+The app is hosted live at **[rtt-python.onrender.com](https://rtt-python.onrender.com)** —
+no install needed. To run it locally you'll need **Python 3.10+**:
 
 ```bash
 git clone git@github.com:DandDsRTT/rtt-python.git
