@@ -2204,7 +2204,11 @@ class _GridBuilder:
             for i in range(self.r):
                 if self.tile_open("mapping", "primes"):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:mapping:{i}:{p}", self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
+                        # text carries the mapping entry into the CellBox content (like the comma /
+                        # target / held / interest vector cells already do) so changed_cell_ids sees a
+                        # mapping change — otherwise the edit preview is blind to the matrix a
+                        # temperament swap or a +/- rewrites. The input still shows it via _update_mapping.
+                        self.cells.append(CellBox(f"cell:mapping:{i}:{p}", self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
                 if self.tile_open("mapping", "targets"):
                     for j in range(self.k):
                         self.cells.append(CellBox(f"cell:mapped:{i}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))

@@ -6035,6 +6035,9 @@ def test_changed_cell_ids_tracks_a_mapping_edit_through_a_real_layout():
     ed.edit_mapping([[1, 1, 0], [0, 1, 7]])  # the fifth's prime-5 entry: 4 -> 7
     changed = spreadsheet.changed_cell_ids(before, ed.layout())
     assert "cell:mapped:1:6" in changed   # the mapped list recomputed
+    assert "cell:mapping:1:2" in changed  # the mapping cell ITSELF — an input cell whose value must
+                                          # live in the CellBox content, or the diff is blind to the
+                                          # matrix a temperament swap / +/- rewrites (like the others)
     assert "prime:2" not in changed       # a domain prime label is structural — untouched
 
 
