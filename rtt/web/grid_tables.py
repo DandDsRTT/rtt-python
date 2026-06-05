@@ -256,7 +256,8 @@ COL_LABEL_LETTERS = {
 # superspace rows (B_L's monzo columns, M_L's covector stack) likewise frame their
 # tiles when Phase 4 populates them — Phase 3 reserves the frame bands so the
 # row_axis fan splits into one rule per cell-row (dL / rL sub-rules).
-FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling", "ss_vectors", "ss_mapping"})
+FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling", "ss_vectors", "ss_mapping",
+                         "ss_targets", "ss_prescaler"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 # Value rows whose tiles carry per-column matrix labels (𝐜ᵢ, 𝒕ᵢ, 𝐲ᵢ, …) when symbols
 # is on — every row with multi-cell tiles in the built layout. The counts/quantities/
@@ -637,6 +638,12 @@ SUPERSPACE_TILES = (
     ("block:ss_vectors:targets", "ss_vectors", "targets"),         # the target list as superspace monzos
     ("block:ss_mapping:gens", "ss_mapping", "gens"),               # M_L over its own generators (trivially identity)
     ("block:ss_mapping:ssprimes", "ss_mapping", "ssprimes"),       # M_L itself, the rL × dL mapping
+    # the chapter-9 CONVERSION tiles — only render under prime-based / neutral approaches
+    # (their rows are gated on show_ss_conversion; an inert tile costs nothing here)
+    ("block:ss_targets:quantities", "ss_targets", "quantities"),   # spine: the superspace primes index
+    ("block:ss_targets:targets", "ss_targets", "targets"),         # B_L·T: the target list re-expressed over the superspace primes
+    ("block:ss_prescaler:quantities", "ss_prescaler", "quantities"),  # spine: the superspace primes index
+    ("block:ss_prescaler:ssprimes", "ss_prescaler", "ssprimes"),   # X_L: the prescaler over the superspace (dL × dL)
     ("block:tuning:ssgens", "tuning", "ssgens"),                   # 𝒈L (Phase 4F)
     ("block:tuning:ssprimes", "tuning", "ssprimes"),               # 𝒕L (Phase 4F)
     ("block:just:ssprimes", "just", "ssprimes"),                   # 𝒋L (Phase 4F)

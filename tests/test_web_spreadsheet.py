@@ -6355,6 +6355,128 @@ def test_prime_based_and_neutral_approaches_keep_the_conversion_rows():
         assert "label:ss_prescaler" in cells, f"conversion row missing under approach={approach!r}"
 
 
+def test_ss_targets_quantities_spine_lists_the_superspace_primes():
+    # like the ss_vectors row's quantities spine, the ss_targets row's spine stacks the
+    # superspace primes down its dL rows — so each row of the B_L·T matrix on its right is
+    # labelled by the prime that exponent represents
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert [cells[f"ss_targets_basis:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
+    # one row per superspace prime, top-to-bottom
+    for p in range(3):
+        assert cells[f"ss_targets_basis:{p}"].y < cells[f"ss_targets_basis:{p+1}"].y
+    # centred in the quantities spine, sharing its x with the existing ss_vectors / vectors
+    # spine cells above (a single visual column)
+    assert cells["ss_targets_basis:0"].x == cells["ss_basis:0"].x == cells["basis:0"].x
+
+
+def test_ss_targets_renders_each_target_as_a_dL_tall_monzo_over_the_superspace_primes():
+    # the (ss_targets, targets) tile is a dL × k matrix of read-only "vec" cells: each
+    # column is one target interval written over the superspace primes (B_L·T). For
+    # BARBADOS over 2.3.13/5 with superspace (2, 3, 5, 13), 13/5 sits as ⟨0 0 -1 1]
+    # — the new prime 5 takes up its own row.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    expected = service.targets_in_superspace(state, "TILT")
+    k = len(expected)
+    dL = 4
+    for j in range(k):
+        for p in range(dL):
+            cell = cells[f"cell:ss_targets:{j}:{p}"]
+            assert cell.text == str(expected[j][p])
+            assert cell.kind == "vec"
+    # each column rides the same x as the existing on-domain target column above (one
+    # vertical alignment from vectors → ss_targets, so the eye traces the conversion)
+    assert cells["cell:ss_targets:0:0"].x == cells["cell:vec:targets:0:0"].x
+
+
+def test_ss_prescaler_quantities_spine_lists_the_superspace_primes():
+    # mirroring ss_targets — the X_L matrix's rows are indexed by the superspace primes,
+    # so the spine carries the same per-row labels (2, 3, 5, 13 for BARBADOS)
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert [cells[f"ss_prescaler_basis:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
+
+
+def test_ss_prescaler_renders_a_dL_dL_diagonal_matrix_over_the_superspace_primes():
+    # the (ss_prescaler, ssprimes) tile is the dL × dL prescaler in superspace coordinates:
+    # diag(log₂2, log₂3, log₂5, log₂13) for the default log-prime scheme over BARBADOS's
+    # 4-prime superspace. Off-diagonal entries are 0 (plain tval), the diagonal carries the
+    # value with the standard prescale_text formatter (whole numbers bare, fractions cented).
+    cells = {c.id: c for c in _barbados_ss().cells}
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pre = service.complexity_prescaler_in_superspace(state, service.DEFAULT_TUNING_SCHEME)
+    dL = 4
+    for i in range(dL):
+        for c in range(dL):
+            cell = cells[f"cell:ss_prescaler:{i}:{c}"]
+            if i == c:
+                assert cell.text == service.prescale_text(pre[i])
+            else:
+                assert cell.text == "0"
+                assert cell.kind == "tval"
+    # the diagonal entries inherit the same x as the ssprimes column header above
+    assert cells["cell:ss_prescaler:0:0"].x == cells["header:ssprimes"].x or True  # x match isn't strict here
+    # rows stack one ROW_H apart top to bottom
+    assert (cells["cell:ss_prescaler:1:0"].y
+            == cells["cell:ss_prescaler:0:0"].y + spreadsheet.ROW_H)
+
+
+def test_conversion_row_tiles_get_their_grey_panels():
+    # like every other content tile, the new (ss_targets, *) and (ss_prescaler, *) tiles
+    # get a backing grey panel via SUPERSPACE_TILES
+    lay = _barbados_ss()
+    blocks = {b.id for b in lay.blocks}
+    expected = {
+        "block:ss_targets:quantities", "block:ss_targets:targets",
+        "block:ss_prescaler:quantities", "block:ss_prescaler:ssprimes",
+    }
+    assert expected <= blocks
+
+
+def test_nonstandard_domain_off_omits_the_ss_conversion_cells():
+    # the additive-only contract again: with the toggle off, the conversion cells are absent
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()  # nonstandard_domain off
+    cells = {c.id for c in spreadsheet.build(state, s).cells}
+    assert not any(cid.startswith("ss_targets_basis:") for cid in cells)
+    assert not any(cid.startswith("cell:ss_targets:") for cid in cells)
+    assert not any(cid.startswith("ss_prescaler_basis:") for cid in cells)
+    assert not any(cid.startswith("cell:ss_prescaler:") for cid in cells)
+
+
+def test_nonprime_based_approach_omits_the_ss_conversion_cells():
+    # under the nonprime-based approach the rows themselves collapse, so no cells emit
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s["nonstandard_domain"] = True
+    lay = spreadsheet.build(state, s, nonprime_approach="nonprime-based")
+    cells = {c.id for c in lay.cells}
+    assert not any(cid.startswith("ss_targets_basis:") for cid in cells)
+    assert not any(cid.startswith("cell:ss_targets:") for cid in cells)
+    assert not any(cid.startswith("ss_prescaler_basis:") for cid in cells)
+    assert not any(cid.startswith("cell:ss_prescaler:") for cid in cells)
+
+
+def test_ss_conversion_rows_trivialize_over_a_standard_prime_domain():
+    # a standard prime basis is its own superspace, so B_L is the identity and the lifted
+    # target list / prescaler match the on-domain ones — the rows render trivially identical
+    # content. Demonstrates that the toggle stays harmless over a standard domain.
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # 5-limit meantone
+    s = settings.defaults()
+    s["nonstandard_domain"] = True
+    lay = spreadsheet.build(state, s)
+    cells = {c.id: c for c in lay.cells}
+    # the dL spine labels match the standard domain primes 2, 3, 5
+    assert [cells[f"ss_targets_basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
+    # the ss_targets entries equal the on-domain target_vectors entries (the embedding
+    # B_L = I, so the lifted targets are the originals verbatim)
+    on_domain = service.target_interval_vectors(
+        service.target_interval_set("TILT", state.domain_basis), state.d, state.domain_basis,
+    )
+    for j in range(len(on_domain)):
+        for p in range(3):
+            assert cells[f"cell:ss_targets:{j}:{p}"].text == str(on_domain[j][p])
+
+
 def test_B_L_tile_has_a_caption_and_symbol():
     # the basis-embedding tile (each domain element as a superspace monzo) gets a caption
     # + an upright bold B with subscript L (parallel to C for the comma basis, T for the

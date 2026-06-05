@@ -743,6 +743,19 @@ class _GridBuilder:
         self.show_ss_conversion = (
             self.show_nonstandard_domain and self.nonprime_approach != "nonprime-based"
         )
+        # the chapter-9 CONVERSION row matrices the prime-based optimization reads: B_L·T (each
+        # target interval re-expressed as a dL-tall monzo over the superspace primes) and X_L
+        # (the prescaler lifted into the superspace, a dL-tuple diagonal). Computed once here so
+        # the cell emission below pulls from one source. Resolves against the state's
+        # target_spec — for the default non-all-interval TILT case the result matches the live
+        # on-domain target column above; an all-interval scheme / typed target_override drifts
+        # here until a future phase teaches the helper to track displayed_targets.
+        if self.show_ss_conversion:
+            self.ss_target_vectors = service.targets_in_superspace(self.state, self.target_spec)
+            self.ss_prescaler = service.complexity_prescaler_in_superspace(self.state, self.tuning_scheme)
+        else:
+            self.ss_target_vectors = ()
+            self.ss_prescaler = ()
         # the domain coordinate label that indexes each element in unit strings — 𝑝 (prime)
         # over a standard prime limit, 𝒃 (basis element) over a nonstandard subgroup, since
         # a nonprime basis element isn't a prime. Switches every domain-side unit at once: the
@@ -2338,6 +2351,47 @@ class _GridBuilder:
             for p in range(self.dL):
                 self.cells.append(CellBox(f"ss_basis:{p}", bx, self.ss_vec_top(p), COL_W, ROW_H,
                                           "prime", text=str(self.superspace_primes[p]), prime=p))
+
+        # the chapter-9 CONVERSION rows. Each carries the same dL-tall spine basis index
+        # (the superspace primes, one per row) so its right-hand matrix's rows align with
+        # the ss_vectors spine above. Rendered only when the rows themselves are present —
+        # the row_open gate captures the nonstandard_domain + mode (prime-based / neutral)
+        # combination via show_ss_conversion.
+        ss_bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2 \
+            if "quantities" in self.col_x else 0
+        if self.row_open("ss_targets") and self.tile_open("ss_targets", "quantities"):
+            for p in range(self.dL):
+                self.cells.append(CellBox(f"ss_targets_basis:{p}", ss_bx,
+                                          self.row_y["ss_targets"] + p * ROW_H, COL_W, ROW_H,
+                                          "prime", text=str(self.superspace_primes[p]), prime=p))
+        # (ss_targets, targets) tile: B_L·T — each target interval as a dL-tall monzo over
+        # the superspace primes. Read-only "vec" cells, mirroring how (vectors, detempering)
+        # renders the D matrix one row above.
+        if self.row_open("ss_targets") and self.tile_open("ss_targets", "targets"):
+            for j in range(min(self.k, len(self.ss_target_vectors))):
+                for p in range(self.dL):
+                    self.cells.append(CellBox(
+                        f"cell:ss_targets:{j}:{p}", self.target_left(j),
+                        self.row_y["ss_targets"] + p * ROW_H, COL_W, ROW_H,
+                        "vec", text=str(self.ss_target_vectors[j][p]), prime=p, comma=j))
+        if self.row_open("ss_prescaler") and self.tile_open("ss_prescaler", "quantities"):
+            for p in range(self.dL):
+                self.cells.append(CellBox(f"ss_prescaler_basis:{p}", ss_bx,
+                                          self.row_y["ss_prescaler"] + p * ROW_H, COL_W, ROW_H,
+                                          "prime", text=str(self.superspace_primes[p]), prime=p))
+        # (ss_prescaler, ssprimes) tile: X_L over the superspace primes — a dL × dL diagonal
+        # matrix laid out like the on-domain (prescaling, primes) tile (the diagonal carries
+        # the prescaler value via prescale_text; off-diagonal entries are plain "0" tvals).
+        # Read-only here — the user edits the on-domain prescaler (the diagonal lives there);
+        # X_L is a derived display of how that flows into the superspace.
+        if self.row_open("ss_prescaler") and self.tile_open("ss_prescaler", "ssprimes"):
+            for i in range(self.dL):
+                for c in range(self.dL):
+                    value = self.ss_prescaler[i] if i == c else 0.0
+                    self.cells.append(CellBox(
+                        f"cell:ss_prescaler:{i}:{c}", self.ss_prime_left(c),
+                        self.row_y["ss_prescaler"] + i * ROW_H, COL_W, ROW_H,
+                        "tval", text=service.prescale_text(value)))
 
         # tuning rows over the primes, commas and targets (cents); each can collapse on
         # its own. Commas sit on the same footing as targets — they are just the dual
