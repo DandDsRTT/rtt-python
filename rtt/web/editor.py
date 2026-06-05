@@ -677,6 +677,89 @@ class Editor:
         self._snapshot()
         self.target_override = tuple(targets)
 
+    # --- drag-and-drop: move one interval column between or within the lists ---
+    # The four interval lists are heterogeneous — targets ride as ratio strings off a
+    # materialized override, held/interest as plain vector lists, commas as the temperament's
+    # dual — so a move composes per-list take/put primitives over a common vector currency
+    # rather than one generic list edit. A move is ONE undoable step: it snapshots once, reads
+    # the moved vector BEFORE mutating, and removes from the source BEFORE inserting into the
+    # destination (so a targets→commas move can't clobber the override it just wrote).
+    MOVE_LISTS = ("targets", "held", "interest", "commas")
+
+    def _list_vectors(self, name: str) -> list[tuple[int, ...]]:
+        """The named interval list as vectors over the domain — the currency a move reads."""
+        if name == "targets":
+            return [tuple(v) for v in service.target_interval_vectors(
+                self._current_targets(), self.state.d, self.state.domain_basis)]
+        if name == "held":
+            return [tuple(v) for v in self.held_vectors]
+        if name == "interest":
+            return [tuple(v) for v in self.interest_vectors]
+        return [tuple(v) for v in self.state.comma_basis]  # commas
+
+    def _peek_vector(self, name: str, i: int) -> tuple[int, ...] | None:
+        vectors = self._list_vectors(name)
+        return vectors[i] if 0 <= i < len(vectors) else None
+
+    def _move_feasible(self, src: str, dst: str, vector: tuple[int, ...]) -> bool:
+        if src not in self.MOVE_LISTS or dst not in self.MOVE_LISTS:
+            return False
+        if "targets" in (src, dst) and service.is_all_interval(self.tuning_scheme):
+            return False  # the target list is auto Tₚ = I there, not a user-curated set
+        if src == "commas" and len(self.state.comma_basis) <= 1:
+            return False  # never empty the comma basis (parity with the comma −)
+        if dst == "commas":  # tempering the interval out must genuinely raise the nullity
+            extended = service.from_comma_basis(self.state.comma_basis + (tuple(vector),))
+            if extended.n <= self.state.n:
+                return False  # a dependent interval re-ranks nothing — reject the drop
+        return True
+
+    def _take_from(self, name: str, i: int) -> None:
+        if name == "targets":  # mirror remove_target (materialize the spec, then drop i)
+            targets = self._current_targets()
+            del targets[i]
+            self.target_override = tuple(targets)
+        elif name == "held":
+            del self.held_vectors[i]
+        elif name == "interest":
+            del self.interest_vectors[i]
+        else:  # commas — re-dual the basis without comma i (un-temper it: −n, +r)
+            self.state = service.remove_comma(self.state, i)
+
+    def _put_into(self, name: str, i: int, vector: tuple[int, ...]) -> None:
+        if name == "targets":  # mirror the target draft's commit (materialize, insert the ratio)
+            targets = self._current_targets()
+            targets.insert(i, service.comma_ratios([vector], self.state.domain_basis)[0])
+            self.target_override = tuple(targets)
+        elif name == "held":
+            self.held_vectors.insert(i, tuple(vector))
+        elif name == "interest":
+            self.interest_vectors.insert(i, tuple(vector))
+        else:  # commas — temper the interval out (+n, −r); the dual fixes the column order
+            self.state = service.from_comma_basis(self.state.comma_basis + (tuple(vector),))
+
+    def move_interval(self, src_list: str, src_idx: int, dst_list: str, dst_idx: int) -> bool:
+        """Move interval ``src_idx`` of ``src_list`` to gap ``dst_idx`` of ``dst_list`` — the
+        drag-and-drop of an interval column. targets ↔ held ↔ interest are plain interval
+        moves; a move into commas tempers the interval out (re-ranking the temperament), out of
+        commas un-tempers it. ``dst_idx`` is an insert-before gap (== length appends). Returns
+        False (no change, no undo step) for an infeasible or no-op move; one undoable step
+        otherwise."""
+        vector = self._peek_vector(src_list, src_idx)
+        if vector is None or not self._move_feasible(src_list, dst_list, vector):
+            return False
+        if src_list == dst_list and (src_list == "commas" or dst_idx in (src_idx, src_idx + 1)):
+            return False  # dropping onto a column's own slot/adjacent gap is a no-op; a commas
+            # reorder is unobservable (the dual canonicalizes the column order)
+        self._snapshot()
+        if "commas" in (src_list, dst_list):
+            self._clear_pending()  # a rank change invalidates the per-list drafts
+        self._take_from(src_list, src_idx)
+        if src_list == dst_list and dst_idx > src_idx:
+            dst_idx -= 1  # the gap shifts down once the source column is removed
+        self._put_into(dst_list, dst_idx, vector)
+        return True
+
     def set_range_mode(self, mode: str) -> None:
         self._snapshot()
         self.range_mode = mode

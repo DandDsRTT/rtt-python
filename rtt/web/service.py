@@ -1087,13 +1087,17 @@ def shrink_domain(state: TemperamentState) -> TemperamentState:
     return from_comma_basis(shrunk)
 
 
-def remove_comma(state: TemperamentState) -> TemperamentState:
-    """Drop the last comma from the basis, then re-dual — raising rank as nullity
-    falls (the temperament tempers out one fewer comma). Adding a comma is the
-    Editor's job (it stages a pending draft and commits it once valid), not a service
-    primitive, since an arbitrary blank comma would be dependent and re-rank nothing.
-    Callers guard against removing the sole comma."""
-    return from_comma_basis(state.comma_basis[:-1])
+def remove_comma(state: TemperamentState, index: int = -1) -> TemperamentState:
+    """Drop comma ``index`` (the last by default) from the basis, then re-dual — raising
+    rank as nullity falls (the temperament tempers out one fewer comma). An arbitrary index
+    is the comma-space twin of :func:`remove_mapping_row`, reached by dragging a comma column
+    out of the basis (un-tempering it). Adding a comma is the Editor's job (it stages a
+    pending draft and commits it once valid), not a service primitive, since an arbitrary
+    blank comma would be dependent and re-rank nothing. Callers guard against removing the
+    sole comma."""
+    basis = state.comma_basis
+    i = index % len(basis)  # normalize, so the -1 default drops the last comma
+    return from_comma_basis(basis[:i] + basis[i + 1:])
 
 
 def remove_mapping_row(state: TemperamentState, i: int) -> TemperamentState:

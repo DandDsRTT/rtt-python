@@ -97,6 +97,15 @@ def test_remove_comma_drops_the_last_comma_and_reranks():
     assert (removed.d, removed.r, removed.n) == (3, 2, 1)  # rank rises as nullity falls
 
 
+def test_remove_comma_can_drop_an_arbitrary_index():
+    # dragging a comma column out of the basis un-tempers THAT comma, not just the last
+    st = service.from_comma_basis(((4, -4, 1), (1, 0, 0)))  # d=3, n=2, r=1
+    dropped_first = service.remove_comma(st, 0)  # drop (4,-4,1), keep (1,0,0)
+    assert dropped_first.comma_basis == service.from_comma_basis(((1, 0, 0),)).comma_basis
+    assert (dropped_first.d, dropped_first.r, dropped_first.n) == (3, 2, 1)
+    assert service.remove_comma(st).comma_basis == ((4, -4, 1),)  # default still drops the last
+
+
 def test_remove_mapping_row_drops_a_generator_holding_dimensionality():
     # the mapping-row − drops a generator (any row), keeping the primes and tempering one
     # more comma: −r, +n, dimensionality held — the dual of the generators − (which drops a prime).
