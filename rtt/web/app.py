@@ -520,6 +520,27 @@ def _ptext_font(text, width):
     return int(min(spreadsheet.PTEXT_MAX_FONT, fit) * 10) / 10
 
 
+_RATIO_MAX_FONT = 13.0  # px — the comfortable stacked-fraction size (matches .rtt-ratio in rtt.css)
+_RATIO_DIGIT_EM = _PTEXT_GLYPH_EM["0"]  # a digit's width in em (the ptext estimate; fraction lines are all digits)
+_RATIO_PAD = 6.0  # px — the .rtt-frac-num/.rtt-frac-den left+right padding (3px a side, the bar's overhang),
+                  # fixed regardless of font, so it is reserved before the digits get the rest of the cell
+
+
+def _ratio_font(num, den, width):
+    """The largest font (px, capped at ``_RATIO_MAX_FONT``) at which a stacked fraction's longer
+    line fits its ``width``-px square. A long numerator or denominator (e.g. 65536 = the target
+    2/1 re-vectored to [16 0 0⟩) spills the 30px cell at the comfortable size, so the whole
+    fraction shrinks to fit — num and den share the size, as a fraction should. The lines are all
+    digits, so a uniform digit width estimates the fit without a browser; the fixed bar padding is
+    reserved first. Truncated (not rounded) to 0.1px so the chosen size never rounds back up and
+    spills. Like ``_ptext_font`` there is no readability floor — the cell is a hard boundary."""
+    longest = max(len(num), len(den))
+    if not longest:
+        return _RATIO_MAX_FONT
+    fit = (width - _RATIO_PAD) / (longest * _RATIO_DIGIT_EM)
+    return int(min(_RATIO_MAX_FONT, fit) * 10) / 10
+
+
 _DESCENDERS = "gjpqy"  # letters whose tail dips below the baseline
 
 
@@ -1192,8 +1213,17 @@ class _Reconciler:
                     num = ui.label(parts[0]).classes("rtt-frac-num")
                     den = ui.label(parts[1]).classes("rtt-frac-den")
                 self.fracs[cb.id] = (num, den)
+                self._fit_ratio(cb.id, parts[0], parts[1], cb.w)
             else:
                 self.labels[cb.id] = ui.label(cb.text).classes("rtt-val")
+
+    def _fit_ratio(self, cid, num, den, width):
+        """Size a stacked fraction's two lines to fit its square: a long numerator/denominator
+        would spill the cell at the comfortable face size, so num and den shrink together (see
+        _ratio_font). Shared by the build and the in-place update so a re-vectored ratio re-fits."""
+        font = f"font-size:{_ratio_font(num, den, width):.2f}px"
+        self.fracs[cid][0].style(font)
+        self.fracs[cid][1].style(font)
 
     # ---- cell-kind handlers (audit #3): each kind's build + update, co-located here so a
     # built-but-not-filled drift between the two ladders becomes structurally impossible ----
@@ -1504,6 +1534,7 @@ class _Reconciler:
             num, den = _ratio_parts(cb.text) or (cb.text, "")
             self.fracs[cb.id][0].set_text(num)
             self.fracs[cb.id][1].set_text(den)
+            self._fit_ratio(cb.id, num, den, cb.w)  # a re-vectored ratio (e.g. 2/1 -> 65536/1) re-fits
 
     def _build_tval(self, cb, wrap):
         self.cents_face(cb, "rtt-tval")  # the read-only stacked int-over-fraction cents face

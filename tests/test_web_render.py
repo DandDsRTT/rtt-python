@@ -22,6 +22,7 @@ from nicegui.testing.user_interaction import UserInteraction
 
 from rtt.web import service
 from rtt.web import settings as show_settings
+from rtt.web import spreadsheet
 from rtt.web.editor import Editor
 
 
@@ -582,6 +583,43 @@ async def test_editable_ratio_cell_renders_a_stacked_fraction_face(user: User) -
     assert isinstance(_cell_child(user, "comma:0"), ui.input)  # the editable box, not a static label
     num, den = _ratio_face(user, "comma:0")
     assert (num.text, den.text) == ("80", "81")                # the overlaid syntonic-comma fraction
+
+
+def test_ratio_font_shrinks_a_long_fraction_to_fit_its_square() -> None:
+    # the stacked fraction face sits at a fixed comfortable size, but a long numerator or
+    # denominator (e.g. 65536 = the target 2/1 re-vectored to [16 0 0⟩) outgrows the 30px square.
+    # _ratio_font caps a short fraction at the comfortable size and shrinks a long one until its
+    # longer line plus the fraction-bar padding fits the cell — num and den scaled together.
+    from rtt.web.app import _ratio_font, _RATIO_MAX_FONT, _RATIO_DIGIT_EM, _RATIO_PAD
+    cell = spreadsheet.COL_W
+    assert _ratio_font("2", "1", cell) == _RATIO_MAX_FONT          # 1-digit: sits at the cap
+    assert _ratio_font("128", "125", cell) == _RATIO_MAX_FONT      # 3-digit still fits the cap
+    for num, den in [("65536", "1"), ("1", "65536"), ("2048", "2025"), ("9999999", "1")]:
+        font = _ratio_font(num, den, cell)
+        assert font < _RATIO_MAX_FONT                             # a long fraction shrinks
+        longest = max(len(num), len(den))
+        assert longest * _RATIO_DIGIT_EM * font + _RATIO_PAD <= cell + 1e-9  # ...enough to fit
+    widths = [_ratio_font("9" * n, "1", cell) for n in range(1, 9)]
+    assert widths == sorted(widths, reverse=True)                 # longer never grows the font
+
+
+async def test_a_long_ratio_face_shrinks_to_fit_its_cell(user: User) -> None:
+    # Bug: a fraction whose numerator/denominator outgrows the 30px square — e.g. the target 2/1
+    # re-vectored to [16 0 0⟩ = 65536/1 — spilled past the cell at the fixed 13px face. The stacked
+    # fraction must shrink to fit (num and den together), like the cents / plain-text faces do.
+    await user.open("/")
+    num, den = _ratio_face(user, "target:0")
+    assert (num.text, den.text) == ("2", "1")
+    assert "font-size" in num._style, "the ratio face must carry a fitted font size"
+    big = float(num._style["font-size"].rstrip("px"))             # the comfortable 1-digit size
+    _cell_child(user, "target:0").set_value("65536/1")            # 2^16 = the [16 0 0⟩ target vector
+    _commit(user, "target:0")
+    await user.should_see(marker="target:0")
+    num, den = _ratio_face(user, "target:0")
+    assert (num.text, den.text) == ("65536", "1")
+    small = float(num._style["font-size"].rstrip("px"))
+    assert small < big                                            # the 5-digit fraction shrank to fit
+    assert num._style["font-size"] == den._style["font-size"]     # num and den share one size
 
 
 async def test_typing_the_prescaler_plain_text_overrides_the_scheme(user: User) -> None:
