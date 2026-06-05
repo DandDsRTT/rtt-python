@@ -763,7 +763,6 @@ class _GridBuilder:
         # generator that tempers to it (the mapping's right-inverse), framed like the comma
         # basis / target list. An independent box toggle, riding between domain primes and commas.
         self.detempering_vectors = service.generator_detempering(self.state.mapping) if self.show_detempering else ()
-        self.mapped_detempering = service.mapped_detempering(self.state.mapping) if self.show_detempering else ()  # M·D = I
         # the detempering intervals' sizes under the tuning: the tempered sizes ARE the generator
         # tuning map (𝒕D = 𝒈, since each D tempers to its generator), with just and retuning sizes
         # like any interval set. gens is the detempering as ratio strings (service.generators = D).
@@ -771,7 +770,6 @@ class _GridBuilder:
         detempering_tiles = (
             ("block:detempering", "quantities", "detempering"),
             ("block:vec:detempering", "vectors", "detempering"),
-            ("block:mapped_detempering", "mapping", "detempering"),
             ("block:tuning:detempering", "tuning", "detempering"),
             ("block:just:detempering", "just", "detempering"),
             ("block:retune:detempering", "retune", "detempering"),
@@ -1902,11 +1900,6 @@ class _GridBuilder:
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
                         self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
-                # the detempering mapped through M — it is the identity (M·D = I), the dual of
-                # the comma basis vanishing; the raw detempering D lives in the interval-vectors row
-                if self.tile_open("mapping", "detempering"):
-                    for j in range(self.r):
-                        self.cells.append(CellBox(f"cell:mapped_detempering:{i}:{j}", self.detempering_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_detempering[i][j]), gen=i, unit=self.cell_unit("mapping", "detempering", gen=i)))
 
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
@@ -2320,8 +2313,6 @@ class _GridBuilder:
                     self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H)
             if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
                 self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], self.r * ROW_H, fit=True)
-            if self.tile_open("mapping", "detempering"):  # M·D = I: a [ ] over r rows, like the mapped commas
-                self.bracket("mapped_detempering", LIST_BRACKETS, "detempering", self.row_y["mapping"], self.r * ROW_H, fit=True)
             if self.tile_open("mapping", "targets"):
                 self.bracket("mapped", LIST_BRACKETS, "targets", self.row_y["mapping"], self.r * ROW_H, fit=True)
             # the interest mapped images stand alone (no outer [ … ]), mirroring the vectors row
@@ -2673,7 +2664,6 @@ class _GridBuilder:
         self.matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle")
 
         self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc)
-        self.vector_list_marks("mapping", "mapped_detempering", "detempering", self.detempering_left, self.r)
         self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.k)
         # the interest column's mapped images stand alone — no separator rules between columns
         self.vector_list_marks("mapping", "imapped", "interest", self.interest_left, self.mi, separators=False)

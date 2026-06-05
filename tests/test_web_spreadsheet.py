@@ -4552,26 +4552,20 @@ def test_generator_detempering_vectors_tile_carries_the_D_symbol():
     assert cap.underlines == ((cap.text.index("detempering"), 1),)
 
 
-def test_generator_detempering_mapping_row_is_the_identity():
-    # the mapping row over the detempering column shows M·D — each detempering generator
-    # mapped back through M to its own generator coordinate, so M·D = I (D is the right-
-    # inverse). Parallels the mapped comma basis (M·C = O) one column to its right.
-    cells = {c.id: c for c in _with(generator_detempering=True).cells}
-    assert [cells[f"cell:mapped_detempering:{i}:0"].text for i in range(2)] == ["1", "0"]
-    assert [cells[f"cell:mapped_detempering:{i}:1"].text for i in range(2)] == ["0", "1"]
-    # framed as a mapped list: an enclosing [ ] over the r rows, like the mapped comma basis
-    assert "bracket:mapped_detempering:l" in cells
-    assert cells["caption:mapping:detempering"].text == "mapped generator detempering"
-    # symbols + equivalences read "𝑀D = 𝐼", the dual of the mapped comma basis's "𝑀C = 𝑂"
-    eq = {c.id: c for c in _with(generator_detempering=True, symbols=True, equivalences=True).cells}
-    assert eq["symbol:mapping:detempering"].text == "𝑀D = 𝐼"
-
-
-def test_generator_detempering_mapping_row_plain_text():
-    # the mapped detempering as a generator-coordinate ket list (} close), like the mapped
-    # comma basis — M·D = I, so two unit kets
-    cells = {c.id: c for c in _with(generator_detempering=True, plain_text_values=True).cells}
-    assert cells["ptext:mapping:detempering"].text == "[[1 0} [0 1}]"
+def test_mapped_generator_detempering_is_deferred_to_identity_objects():
+    # 𝑀·D = 𝐼 (the detempering is M's right-inverse) is a trivial "identity object", like the
+    # mapping-over-generators self-map and the domain-primes vectors identity — it won't show
+    # until the identity_objects setting is built. So even with the detempering column on, the
+    # mapping row over it carries NOTHING: no cells, framing kets / separators, enclosing
+    # bracket, fold toggle, caption, symbol or plain text.
+    cells = {c.id for c in _with(generator_detempering=True, names=True, symbols=True,
+                                 equivalences=True, plain_text_values=True).cells}
+    assert not any("mapped_detempering" in c for c in cells)  # cells, ket marks, separators, bracket
+    assert {"toggle:tile:mapping:detempering", "caption:mapping:detempering",
+            "symbol:mapping:detempering", "ptext:mapping:detempering"}.isdisjoint(cells)
+    # only the identity tile is deferred — the detempering column itself stays (its header, the
+    # D matrix in the interval-vectors row, and the tuning/just/… rows below it)
+    assert {"header:detempering", "cell:vec:detempering:0:0"} <= cells
 
 
 def test_generator_detempering_tuning_row_equals_the_genmap():
@@ -5069,9 +5063,10 @@ def test_off_by_default_rows_colorize_by_content_too():
 def test_generator_detempering_column_colorizes_by_content():
     # the generator detempering column is NEUTRAL — like the intervals-of-interest column,
     # the basis itself (D) carries no colour, and a tile takes only the colour of the OTHER
-    # objects its row multiplies in. So the basis + mapped-detempering tiles are uncoloured,
-    # the mapping product 𝑀·D is yellow (the 𝑀), and the tuning/retune family stays green
-    # (its 𝒈𝑀), while the just / prescaled / complexity products are CYAN (their bare 𝒋 / 𝑋).
+    # objects its row multiplies in. So the basis is uncoloured, the tuning/retune family
+    # stays green (its 𝒈𝑀), and the just / prescaled / complexity products are CYAN (their
+    # bare 𝒋 / 𝑋). The mapping product 𝑀·D = 𝐼 is an identity object deferred to
+    # identity_objects, so the column carries no yellow mapping tile.
     s = settings.defaults()
     s["tuning_colorization"] = True
     s["temperament_colorization"] = True
@@ -5085,7 +5080,6 @@ def test_generator_detempering_column_colorizes_by_content():
     # the detempering basis carries no colour (like the interest list); only its products colour
     assert at("detempering:0") == N                    # quantities × detempering (the detempering list, neutral)
     assert at("cell:vec:detempering:0:0") == N         # interval-vectors × detempering (the basis, neutral)
-    assert at("cell:mapped_detempering:0:0") == Y      # mapping × detempering (𝑀·D → the 𝑀 yellow)
     # the tuning/retune family keeps its 𝒈𝑀 green; the bare 𝒋 / 𝑋 products are cyan-only now
     assert at("tuning:detempering:0") == G             # tuning × detempering (𝒕·D, the 𝒈𝑀 greens)
     assert at("just:detempering:0") == C               # just × detempering (𝒋·D, bare cyan 𝒋)

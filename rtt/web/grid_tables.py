@@ -57,7 +57,6 @@ CAPTIONS = {
     ("vectors", "detempering"): "generator detempering",
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
-    ("mapping", "detempering"): "mapped generator detempering",
     ("mapping", "targets"): "mapped target interval list",
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
@@ -122,7 +121,6 @@ SYMBOLS = {
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
     ("mapping", "primes"): "𝑀",
     ("mapping", "commas"): "𝑀C",
-    ("mapping", "detempering"): "𝑀D",
     ("mapping", "targets"): "Y",
     ("tuning", "gens"): "𝒈",
     ("tuning", "primes"): "𝒕",
@@ -194,7 +192,6 @@ COL_LABEL_LETTERS = {
     ("mapping", "commas"): "𝑀𝐜",
     ("mapping", "targets"): "𝐲",
     ("mapping", "held"): "𝑀𝐡",
-    ("mapping", "detempering"): "𝑀𝐝",
     # tuning row — single covector applied to each column set; the tempered target
     # list 𝐚 is bold-upright as a list, but each cell is a SCALAR so its index reads
     # as plain "a" (neither bold nor italic) — same for the other scalar lists below
@@ -289,7 +286,6 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # carries C — since every primes-column quantity is a map/list over the domain primes
     ("mapping", "primes"): frozenset({"M", "P"}),      # 𝑀 (over the domain primes P)
     ("mapping", "commas"): frozenset({"M", "C"}),      # 𝑀C
-    ("mapping", "detempering"): frozenset({"M"}),      # 𝑀·D (the detempering list is neutral, so just 𝑀)
     ("mapping", "targets"): frozenset({"M", "T"}),     # 𝑀T (the mapping carries the cyan target list)
     ("mapping", "interest"): frozenset({"M"}),         # 𝑀·interest (other-intervals are colourless)
     ("mapping", "held"): frozenset({"M", "H"}),        # 𝑀H (the mapping carries the cyan held basis)
@@ -448,7 +444,6 @@ MNEMONICS = {
 # continuation yet; the mapped comma basis instead vanishes to the zero matrix.
 EQUIVALENCES = {
     ("mapping", "commas"): " = 𝑂",
-    ("mapping", "detempering"): " = 𝐼",  # M·D = the identity (D is M's right-inverse)
     ("mapping", "targets"): " = 𝑀T",
     ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
     ("tuning", "primes"): " = 𝒈𝑀",
@@ -493,7 +488,6 @@ UNITS = {
     ("vectors", "interest"): "p",
     ("mapping", "primes"): "g/p",
     ("mapping", "commas"): "g",
-    ("mapping", "detempering"): "g",
     ("mapping", "targets"): "g",
     ("mapping", "interest"): "g",
     ("tuning", "gens"): "¢/g",
