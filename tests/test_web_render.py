@@ -423,11 +423,14 @@ async def test_single_option_tuning_chooser_is_a_disabled_dropdown(user: User) -
 async def test_checking_all_interval_drops_the_T_prefix_from_the_scheme_chooser(user: User) -> None:
     # the chooser's option LABELS T-prefix only while target-based; checking the all-interval box
     # must flip them to the bare names. The options are recomputed on the toggle (not just the
-    # value), so the label updates — regression for them going stale on re-render.
+    # value), so the label updates — regression for them going stale on re-render. alt. complexity
+    # is on so the all-interval list keeps several schemes (it stays a multi-option dropdown rather
+    # than collapsing to a single hardcoded value, which is what we want to inspect here).
     await user.open("/")
     _toggle(user, "presets")  # show the chooser dropdowns
-    user.find(kind=ui.checkbox, content="weighting").click()   # reveal the nested all-interval entry
-    user.find(kind=ui.checkbox, content="all-interval").click()  # show the target-controls checkbox
+    user.find(kind=ui.checkbox, content="weighting").click()       # reveal the nested entries
+    user.find(kind=ui.checkbox, content="alt. complexity").click()  # ≥2 all-interval schemes -> stays a dropdown
+    user.find(kind=ui.checkbox, content="all-interval").click()    # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
     assert _cell_child(user, "preset:tuning").options["minimax-S"] == "T minimax-S"  # target-based default
     _cell_child(user, "control:all_interval").set_value(True)  # check the box -> all-interval
@@ -1036,6 +1039,25 @@ async def test_weight_slope_chooser_mirrors_a_scheme_change(user: User) -> None:
     _cell_child(user, "preset:tuning").set_value("minimax-C")  # the complexity-weighted variant
     await user.should_see(marker="control:slope")
     assert _cell_child(user, "control:slope").value != before  # the slope chooser mirrored the change
+
+
+async def test_changing_the_weight_slope_renames_the_established_scheme_chooser(user: User) -> None:
+    # the reported bug, end to end: picking complexity-weight in the box-𝒘 slope chooser re-
+    # establishes the scheme, so the established-tuning-scheme chooser must show its complexity-
+    # weighted variant (minimax-U -> minimax-C) rather than blanking to "-". Both choosers set the
+    # same scheme trait; the frozen tuning stays put (auto-optimize off) — only the name follows.
+    await user.open("/")
+    _toggle(user, "presets")                                  # the established-scheme dropdown
+    user.find(kind=ui.checkbox, content="weighting").click()  # the box-𝒘 slope chooser + the -S/-C variants
+    await user.should_see(marker="control:slope")
+    await user.should_see(marker="preset:tuning")
+    assert _cell_child(user, "preset:tuning").value == "minimax-U"  # default, unity-weighted
+    _cell_child(user, "control:slope").set_value("complexity-weight")
+    await user.should_see(marker="preset:tuning")
+    assert _cell_child(user, "preset:tuning").value == "minimax-C"  # tracked the slope, not "-"
+    _cell_child(user, "control:slope").set_value("simplicity-weight")
+    await user.should_see(marker="preset:tuning")
+    assert _cell_child(user, "preset:tuning").value == "minimax-S"
 
 
 async def test_all_interval_greys_and_locks_the_weight_slope_chooser(user: User) -> None:

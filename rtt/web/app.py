@@ -1754,8 +1754,9 @@ class _Reconciler:
             options = presets.tuning_scheme_options(
                 service.is_all_interval(self._editor.tuning_scheme),
                 self._editor.settings["alt_complexity"], self._editor.settings["weighting"])
-            # "-" when the displayed tuning is off the named list — a refined spec, or a manual
-            # override deviating from the scheme's optimum; else the offered name
+            # the established scheme's name, or "-" — off the offered list (a finite-power spec the
+            # lp-only list omits, or an unnameable one), or a hand-edited / held-off tuning that
+            # leaves the scheme (displayed_tuning_scheme_name None). A plain scheme pick stays named.
             name = self._editor.displayed_tuning_scheme_name
             scheme = name if name in options else None
             sel = ui.select(options, value=scheme,
@@ -1789,7 +1790,7 @@ class _Reconciler:
             self.selects[cb.id].set_options(options, value=value)
             _set_offlist_prompt(self.selects[cb.id], value)
             self.selects[cb.id].set_enabled(not cb.disabled)  # greyed+locked when it's the lone prescaler
-        else:  # tuning — a refined spec or a deviating manual override shows "-"
+        else:  # tuning — an off-list spec or a hand-edited / held-off tuning shows "-"; a pick stays named
             name = self._editor.displayed_tuning_scheme_name
             # the option LABELS T-prefix only while target-based, so recompute them as the all-
             # interval checkbox flips (set once at creation, they would otherwise go stale)

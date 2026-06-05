@@ -324,9 +324,8 @@ def test_set_diminuator_replaced_toggles_the_size_factor():
 def test_set_all_interval_toggles_the_scheme_target_set():
     editor = Editor()
     assert service.is_all_interval(editor.tuning_scheme) is False  # all-interval OFF by default
-    # check the scheme's identity by name (base_scheme_name), not displayed_tuning_scheme_name:
-    # with auto-optimize off the frozen tuning goes stale across these toggles, so the chooser's
-    # displayed name drops to "-" — a separate, tuning-coupled concern from the scheme itself
+    # check the scheme's identity directly by name (base_scheme_name); displayed_tuning_scheme_name
+    # tracks it too (a scheme pick keeps the established name even with the frozen tuning left stale)
     assert service.base_scheme_name(editor.tuning_scheme) == "minimax-U"  # target-based default, unity-weighted
     # the unchecked state targets the displayed interval-list family (the editor's live target spec)
     assert service.resolve_tuning_scheme(editor.tuning_scheme).target_intervals == editor.target_spec
@@ -1333,18 +1332,75 @@ def test_displayed_tuning_scheme_name_drops_to_none_when_a_held_interval_deviate
     assert octave.displayed_tuning_scheme_name == "minimax-U"
 
 
-def test_displayed_tuning_scheme_name_tracks_a_typed_target_list_after_optimize():
+def test_a_scheme_pick_keeps_the_established_scheme_name_without_retuning():
+    # picking a different scheme re-establishes it (minimax-U -> minimax-C via the weight slope,
+    # -> miniRMS-U via the optimization power); the chooser must track the new name. With auto-
+    # optimize off the frozen tuning goes STALE (it is the old scheme's optimum) but that is the
+    # optimize button's concern, not a scheme deviation — so the name follows the pick rather than
+    # dropping to "-". Regression: a stale frozen tuning wrongly read as a deviation and blanked it.
+    editor = Editor()
+    assert editor.displayed_tuning_scheme_name == "minimax-U"
+    editor.set_weight_slope("complexity-weight")
+    assert editor.displayed_tuning_scheme_name == "minimax-C"
+    editor.set_weight_slope("simplicity-weight")
+    assert editor.displayed_tuning_scheme_name == "minimax-S"
+    editor.set_weight_slope("unity-weight")
+    assert editor.displayed_tuning_scheme_name == "minimax-U"
+    editor.set_optimization_power(2.0)  # a different (finite-power) scheme, still named
+    assert editor.displayed_tuning_scheme_name == "miniRMS-U"
+
+
+def test_a_hand_edit_blanks_the_chooser_even_after_a_scheme_pick():
+    # a scheme pick keeps the name, but a SUBSEQUENT hand-edit is a genuine custom tuning that
+    # leaves the scheme — so it still blanks to "-". The manual-edit status outweighs the pick.
+    editor = Editor()
+    editor.set_weight_slope("complexity-weight")
+    assert editor.displayed_tuning_scheme_name == "minimax-C"  # the pick is named
+    editor.set_generator_tuning_component(1, 700.0)  # hand-edit off the optimum
+    assert editor.displayed_tuning_scheme_name is None  # the custom tuning blanks it
+
+
+def test_optimizing_a_hand_edit_lets_a_later_scheme_pick_keep_the_name():
+    # optimizing a hand-edit re-freezes at the scheme's optimum, clearing the manual-edit status; a
+    # later scheme pick then leaves a merely-STALE frozen tuning, which keeps the name. Regression:
+    # if optimize did not clear that status, the stale tuning would wrongly read as a hand-edit.
+    editor = Editor()
+    editor.set_generator_tuning_component(1, 700.0)  # hand-edit -> "-"
+    assert editor.displayed_tuning_scheme_name is None
+    editor.optimize()  # re-freeze at the optimum -> the name is back
+    assert editor.displayed_tuning_scheme_name == "minimax-U"
+    editor.set_weight_slope("complexity-weight")  # a scheme pick, tuning now stale (not a hand-edit)
+    assert editor.displayed_tuning_scheme_name == "minimax-C"
+
+
+def test_manual_tuning_status_travels_with_the_document():
+    # the manual-edit status is document state: it survives serialize/load (a page refresh) and is
+    # restored by undo, so a hand-edited tuning keeps reading as off-scheme ("-") across both.
+    editor = Editor()
+    editor.set_weight_slope("complexity-weight")
+    editor.set_generator_tuning_component(1, 700.0)  # hand-edit -> "-"
+    assert editor.displayed_tuning_scheme_name is None
+    reloaded = Editor()
+    reloaded.load(editor.serialize())
+    assert reloaded.displayed_tuning_scheme_name is None  # the status persisted across a refresh
+    editor.undo()  # back to before the hand-edit (the scheme pick still stands)
+    assert editor.displayed_tuning_scheme_name == "minimax-C"  # the status was restored to non-manual
+
+
+def test_displayed_tuning_scheme_name_keeps_the_name_under_a_typed_target_list():
     # a typed explicit target list changes WHICH intervals the scheme optimises over, but it is
-    # still the same named scheme (the target set is a separate control from the tuning scheme).
-    # With auto-optimize off the frozen tuning first deviates (chooser shows "-"); after Optimize the
-    # tuning IS the optimum over the typed list, so the name returns — which requires the bare-scheme
-    # comparison to optimise over the SAME typed list, else the typed list reads as a false deviation.
+    # still the same named scheme (the target set is a separate control, and the chooser lists
+    # target-agnostic base names). It is neither a hand-edit nor a held interval, so the chooser
+    # keeps the name — even though, with auto-optimize off, the frozen tuning goes stale over the
+    # new list (the optimize button flags that). Optimising re-tunes over the typed list and the
+    # name still holds — which needs the bare comparison to optimise over the SAME typed list, else
+    # a held interval over a typed list would mis-read.
     editor = Editor()
     editor.set_target_override_vectors([(-1, 1, 0), (-2, 0, 1)])  # type 3/2, 5/4 as the target list
     assert editor.target_override == ("3/2", "5/4")
-    assert editor.displayed_tuning_scheme_name is None  # the frozen tuning deviates -> "-"
+    assert editor.displayed_tuning_scheme_name == "minimax-U"  # the scheme is unchanged -> name kept
     editor.optimize()  # re-optimise over the typed list
-    assert editor.displayed_tuning_scheme_name == "minimax-U"  # name returns (compared over the typed list)
+    assert editor.displayed_tuning_scheme_name == "minimax-U"  # still the same named scheme
 
 
 def test_picking_a_scheme_leaves_the_tuning_frozen_until_optimize():
