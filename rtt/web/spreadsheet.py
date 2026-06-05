@@ -2387,8 +2387,10 @@ class _GridBuilder:
                     ))
         # M_L (superspace mapping): the rL × dL covector stack the temperament lifts to over its
         # superspace primes. Sits in (ss_mapping, ssprimes), each row a covector over the dL
-        # ss_primes (a "mapping" cell per (gen_idx, ss_prime_idx)) — the parallel of the existing
-        # M mapping over primes, just shifted into the superspace.
+        # ss_primes — read-only "mapped" cells (the kind the canonical-form row and mapped-target
+        # tiles use), since M_L is DERIVED from M via the basis embedding B_L; the user edits the
+        # on-domain M and M_L follows. Editable "mapping" cells would crash the renderer too —
+        # _update_mapping reads state.mapping[cb.gen][cb.prime], and rL can exceed r / dL exceed d.
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
             ml = service.superspace_mapping(self.state)
             for gen_idx in range(self.rL):
@@ -2396,12 +2398,12 @@ class _GridBuilder:
                     self.cells.append(CellBox(
                         f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}",
                         self.ss_prime_left(ss_prime_idx), self.ss_map_top(gen_idx), COL_W, ROW_H,
-                        "mapping", text=str(ml[gen_idx][ss_prime_idx]),
+                        "mapped", text=str(ml[gen_idx][ss_prime_idx]),
                         gen=gen_idx, prime=ss_prime_idx,
                         unit=self.cell_unit("ss_mapping", "ssprimes", gen=gen_idx, prime=ss_prime_idx),
                     ))
         # M_jL (superspace JI mapping): the dL × dL identity. Each superspace prime is its
-        # own basis element, so the just mapping is trivially I. Same "mapping" cell kind
+        # own basis element, so the just mapping is trivially I. Same read-only "mapped" kind
         # and bracket convention as M_L; lives in its own row band ss_just_mapping below it.
         # Units b/b — each cell's row dimension is the i-th basis element, its column the
         # j-th, both subscripted via cell_unit. (Two prime subscripts on one unit don't
@@ -2414,7 +2416,7 @@ class _GridBuilder:
                     self.cells.append(CellBox(
                         f"cell:ss_just_mapping:ssprimes:{i}:{j}",
                         self.ss_prime_left(j), self.ss_just_map_top(i), COL_W, ROW_H,
-                        "mapping", text=str(mjl[i][j]),
+                        "mapped", text=str(mjl[i][j]),
                         gen=i, prime=j,
                         unit=self.cell_unit("ss_just_mapping", "ssprimes", prime=j),
                     ))

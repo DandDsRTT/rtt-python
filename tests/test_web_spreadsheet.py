@@ -6770,13 +6770,28 @@ def test_M_jL_band_height_is_dL_rows():
 
 
 def test_M_jL_emits_a_cell_per_ss_prime_row_and_ss_prime_col_as_identity():
-    # M_jL = I: each prime is its own basis element. Cells of kind "mapping" (matches the
-    # existing M and the new M_L) — integer entries with 1 on the diagonal, 0 elsewhere.
+    # M_jL = I: each prime is its own basis element. Read-only "mapped" cells (a
+    # derived display, same kind the canonical-form row and the mapped-target tiles
+    # use — not the editable "mapping" kind, since the user can't edit identity).
     cells = {c.id: c for c in _barbados_ss().cells}
     for i in range(4):  # dL = 4
         for j in range(4):
             expected = "1" if i == j else "0"
             assert cells[f"cell:ss_just_mapping:ssprimes:{i}:{j}"].text == expected
+            assert cells[f"cell:ss_just_mapping:ssprimes:{i}:{j}"].kind == "mapped"
+
+
+def test_M_L_and_M_jL_cells_are_read_only_mapped_kind():
+    # the superspace mapping M_L (rL × dL) and the superspace JI mapping M_jL = I (dL × dL)
+    # are DERIVED from the on-domain M via the basis embedding B_L — not directly editable
+    # by the user. So their cells take the "mapped" kind (a read-only label, like the
+    # canonical-form row's cells and the mapped-target tiles) — not the editable "mapping"
+    # kind whose update handler reads state.mapping[gen][prime] (which would crash on
+    # gen >= r or prime >= d when rL > r or dL > d).
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for gen_idx in range(3):  # rL = 3
+        for ss_prime_idx in range(4):  # dL = 4
+            assert cells[f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}"].kind == "mapped"
 
 
 def test_M_jL_tile_has_brackets_and_matrix_frame():
