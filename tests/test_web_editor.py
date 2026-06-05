@@ -98,6 +98,22 @@ def test_set_custom_prescaler_entry_promotes_to_a_matrix_on_an_off_diagonal_edit
     assert isinstance(editor.custom_prescaler[0], tuple) and editor.custom_prescaler[2][2] == 9.0
 
 
+def test_load_round_trips_a_matrix_pretransformer_override():
+    import json
+
+    # a non-diagonal pretransformer (a matrix override) survives serialize/load, not just a diagonal
+    editor = Editor()
+    editor.set_custom_prescaler_entry(0, 1, 0.5)
+    e2 = Editor()
+    e2.load(editor.serialize())
+    assert e2.custom_prescaler == editor.custom_prescaler
+    assert isinstance(e2.custom_prescaler[0], tuple)  # still a matrix
+    # and through a real JSON round-trip (lists, not tuples) too
+    e3 = Editor()
+    e3.load(json.loads(json.dumps(editor.serialize())))
+    assert e3.custom_prescaler == editor.custom_prescaler
+
+
 def test_clear_custom_prescaler_reverts_to_the_scheme():
     editor = Editor()
     editor.set_custom_prescaler_entry(0, 0, 4.0)

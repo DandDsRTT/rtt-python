@@ -63,13 +63,32 @@ class _Doc:
     # traits), so the bare prescaler tile shows that, and complexity / damage / tuning flow
     # from it as they always did. Once set, the override drives EVERY downstream consumer
     # (the prescaler tile's cells, the 𝐿·basis product tiles, complexity, weights, the
-    # tuning solve and its derived retunings/damages) — the bare tile is the single source
-    # of truth for the prescaler. Stored as a d-tuple (the diagonal) rather than the full
-    # d×d matrix because 𝐿 IS conceptually diag(...); off-diagonal cells are pinned at 0.
-    custom_prescaler: tuple[float, ...] | None
+    # tuning solve and its derived retunings/damages) — the bare tile is the single source of
+    # truth for the pretransformer. Stored as a d-tuple (the diagonal) while it stays diagonal; once
+    # alt complexity makes the whole square editable and an off-diagonal cell is touched, it becomes
+    # a full d×d matrix (a non-diagonal pretransformer).
+    custom_prescaler: tuple | None
     target_override: tuple[str, ...] | None  # a typed explicit target list, overriding the TILT/OLD spec
     settings: tuple[tuple[str, bool], ...]
     collapsed: frozenset[str]
+
+
+def _prescaler_to_json(p):
+    """A custom pretransformer override as a JSON-safe value: a flat list (a diagonal) or a list of
+    rows (a non-diagonal matrix), or None — so a matrix override persists, not just a diagonal."""
+    if p is None:
+        return None
+    return [list(row) for row in p] if isinstance(p[0], (tuple, list)) else list(p)
+
+
+def _prescaler_from_json(p):
+    """Rebuild a custom pretransformer override from :func:`_prescaler_to_json`: a tuple diagonal, or
+    a tuple-of-tuples matrix when the saved value is a list of rows. The inverse of the above."""
+    if p is None:
+        return None
+    if p and isinstance(p[0], (list, tuple)):
+        return tuple(tuple(float(x) for x in row) for row in p)
+    return tuple(float(x) for x in p)
 
 
 @functools.lru_cache(maxsize=1)
@@ -1019,7 +1038,7 @@ class Editor:
             "range_mode": self.range_mode,
             "optimize_locked": self.optimize_locked,
             "generator_tuning": list(self.generator_tuning) if self.generator_tuning is not None else None,
-            "custom_prescaler": list(self.custom_prescaler) if self.custom_prescaler is not None else None,
+            "custom_prescaler": _prescaler_to_json(self.custom_prescaler),
             "target_override": list(self.target_override) if self.target_override is not None else None,
             "settings": dict(self.settings),
             "collapsed": sorted(self.collapsed),
@@ -1047,8 +1066,7 @@ class Editor:
             optimize_locked=bool(data.get("optimize_locked", False)),
             generator_tuning=tuple(data["generator_tuning"])
             if data.get("generator_tuning") is not None else None,
-            custom_prescaler=tuple(float(x) for x in data["custom_prescaler"])
-            if data.get("custom_prescaler") is not None else None,
+            custom_prescaler=_prescaler_from_json(data.get("custom_prescaler")),
             target_override=tuple(data["target_override"])
             if data.get("target_override") is not None else None,
             settings=tuple(sorted(show_settings.from_persisted(data.get("settings", {})).items())),
