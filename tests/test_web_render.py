@@ -496,6 +496,25 @@ async def test_the_integer_wheel_step_is_generic_over_cell_kinds(user: User) -> 
     assert int(_cell_child(user, "cell:comma:0:0").value) == before + 1
 
 
+async def test_scrolling_the_target_limit_steps_it_by_one(user: User) -> None:
+    # the TILT/OLD target-limit square is a gridded integer too, so it gets the same ±1 wheel step
+    # as the matrix/vector cells. A notch sets the limit input's value, firing its own
+    # on_target_change, which re-derives the target set and re-renders — the exact path a typed
+    # limit takes. The chooser nests two controls, so the listener rides the limit input itself.
+    await _enable(user, "presets")  # reveal the chooser dropdowns
+    await user.should_see(marker="preset:target")
+    num, _sel = _target_preset(user)
+    before = int(num.value)
+    UserInteraction(user, {num}, None).trigger("wheel", {"deltaY": -100})  # scroll up = +1
+    await user.should_see(marker="preset:target")
+    num, _sel = _target_preset(user)  # re-fetch after the re-render reconciles the cell
+    assert int(num.value) == before + 1
+    UserInteraction(user, {num}, None).trigger("wheel", {"deltaY": 100})  # scroll down = −1
+    await user.should_see(marker="preset:target")
+    num, _sel = _target_preset(user)
+    assert int(num.value) == before
+
+
 async def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(user: User) -> None:
     # the generator tuning map shows each generator's sign as an explicit glyph — the "+" of a
     # positive generator (ordinarily assumed) made visible, so it can be clicked to flip. The

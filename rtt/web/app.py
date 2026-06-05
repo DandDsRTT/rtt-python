@@ -142,10 +142,12 @@ _AUDIO_KINDS = {"speaker"}  # cells whose baked cents rebuild when the tuning ch
 # generator-tuning cell's thousandth-cent wheel fine-adjust. (The cents/ratio/power cells are not
 # integers, so they are not listed.)
 _INT_CELL_KINDS = {"mapping", "commacell", "interestcell", "heldcell", "targetcell"}
-# The client-side gate for the integer wheel step: only step (and swallow the scroll) when the
-# cell's own input holds focus — otherwise let the event through so the grid pane scrolls as usual.
-# So a notch nudges only the cell you have clicked into, and an idle scroll over the grid never
-# fires a server round-trip. ``emit`` ships deltaY to ``on_int_wheel`` (see make_cell).
+# The client-side gate for the integer wheel step, shared by every gridded integer input: only
+# step (and swallow the scroll) when the input holds focus — otherwise let the event through so the
+# grid/panel scrolls as usual. So a notch nudges only the input you have clicked into, and an idle
+# scroll never fires a server round-trip. ``emit`` ships deltaY to that input's wheel handler —
+# ``on_int_wheel`` for a matrix/vector cell (see make_cell), ``on_target_limit_wheel`` for the
+# TILT/OLD target-limit square (see _build_preset).
 _INT_WHEEL_JS = ("(e) => { if (e.currentTarget.contains(document.activeElement)) "
                  "{ e.preventDefault(); emit(e); } }")
 
@@ -467,6 +469,13 @@ def _parse_int(text):
         return int(str(text).strip())
     except (TypeError, ValueError):
         return None
+
+
+def _wheel_step(value, delta_y) -> str:
+    """One integer wheel notch applied to a gridded cell's text value: scroll up (``delta_y`` < 0)
+    is +1, down is −1; a blank/partial value starts from 0. Shared by the matrix/vector cells and
+    the TILT/OLD target-limit square so every gridded integer steps identically."""
+    return str((_parse_int(value) or 0) + (1 if delta_y < 0 else -1))
 
 
 def _limit_text(limit) -> str | None:
@@ -1801,6 +1810,11 @@ class _Reconciler:
                 # server's value always wins — debounce keeps the echo to once-per-settled-entry.
                 num.LOOPBACK = True
                 num._props['loopback'] = True
+                # scroll the wheel over the focused limit square to step it by ±1, like the integer
+                # matrix/vector cells. The js gate only emits while the square holds focus, so an
+                # unfocused scroll still pages the panel (see _INT_WHEEL_JS / on_target_limit_wheel).
+                num.on("wheel", lambda e: self._cb.on_target_limit_wheel(e.args.get("deltaY")),
+                       args=["deltaY"], js_handler=_INT_WHEEL_JS)
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
                         on_change=lambda e: self._cb.on_target_change(limit_changed=False)) \
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
@@ -2483,7 +2497,19 @@ def index() -> None:
         # cell (see _INT_WHEEL_JS), so this is always a deliberate edit, never a stray scroll.
         if building[0] or not delta_y or cid not in rec.inputs:
             return
-        rec.inputs[cid].value = str((_parse_int(rec.inputs[cid].value) or 0) + (1 if delta_y < 0 else -1))
+        rec.inputs[cid].value = _wheel_step(rec.inputs[cid].value, delta_y)
+
+    def on_target_limit_wheel(delta_y):
+        # the TILT/OLD target-limit square is a gridded integer too, so a wheel notch steps it by
+        # ±1 just like the matrix/vector cells (on_int_wheel). Setting the input's value fires its
+        # own on_change (on_target_change), so a notch travels the exact path a typed limit does —
+        # validate, redden/toast a bad one, commit, re-render — with no extra dispatch here. The
+        # client only emits while the square holds focus (see _INT_WHEEL_JS), so an idle scroll
+        # over the panel pages it rather than nudging the limit.
+        if building[0] or not delta_y:
+            return
+        num = rec.selects["preset:target"][0]
+        num.value = _wheel_step(num.value, delta_y)
 
     def on_prescaler_change(cid):
         # a bare prescaler 𝐿 diagonal cell (cid "cell:prescaling:primes:i:i"): a valid float
@@ -2918,6 +2944,7 @@ def index() -> None:
         on_gentuning_change=on_gentuning_change,
         on_gentuning_wheel=on_gentuning_wheel,
         on_int_wheel=on_int_wheel,
+        on_target_limit_wheel=on_target_limit_wheel,
         on_temperament_hover=on_temperament_hover,
         on_held_change=on_held_change,
         on_interest_change=on_interest_change,
