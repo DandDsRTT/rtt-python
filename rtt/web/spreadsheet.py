@@ -659,6 +659,12 @@ class _GridBuilder:
         # the d domain elements: the standard primes, or a nonstandard subgroup's (possibly
         # nonprime) basis. Every interval set is read over this basis (so 13/5 keeps its 13).
         self.elements = self.state.domain_basis
+        # the domain coordinate label that indexes each element in unit strings — 𝑝 (prime)
+        # over a standard prime limit, 𝒃 (basis element) over a nonstandard subgroup, since
+        # a nonprime basis element isn't a prime. Switches every domain-side unit at once: the
+        # interval-vectors row's 𝒃ᵢ/, the basis-elements column's /𝒃ᵢ, and each gridded cell's
+        # per-coordinate denominator (𝑔/𝒃ᵢ, ¢/𝒃ᵢ, oct/𝒃ᵢ, (C)/𝒃ᵢ).
+        self.domain_label = "p" if service.is_standard_domain(self.elements) else "b"
         # trait 7: the nonstandard-domain box, when shown, reads the temperament in its prime
         # superspace ("prime-based"); this coincides with the neutral mode on a standard domain,
         # so it is harmless until that box is enabled.
@@ -1363,13 +1369,14 @@ class _GridBuilder:
         # the per-value unit shown beneath a gridded cell when units is on: the tile's
         # unit (UNITS) with its g/p variables subscripted by this cell's generator/prime
         # index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped list g₁.
+        # A nonstandard subgroup swaps the domain p for b (basis element); see domain_label.
         if not self.show_units:
             return ""
         u = UNITS.get((rkey, ckey), "")
         if gen is not None:
             u = u.replace("g", f"g{_sub(gen + 1)}")
         if prime is not None:
-            u = u.replace("p", f"p{_sub(prime + 1)}")
+            u = u.replace("p", f"{self.domain_label}{_sub(prime + 1)}")
         return u
 
     def matlabel_gutter_w(self, group_key):
@@ -1819,7 +1826,7 @@ class _GridBuilder:
         if self.tile_open("vectors", "units"):
             for p in range(self.d):
                 self.cells.append(CellBox(f"ucol:vectors:{p}", self.col_x["units"], self.vec_top(p), self.col_w["units"], ROW_H,
-                                     "units", text=f"p{_sub(p + 1)}/"))
+                                     "units", text=f"{self.domain_label}{_sub(p + 1)}/"))
         if self.tile_open("mapping", "units"):
             for i in range(self.r):
                 self.cells.append(CellBox(f"ucol:mapping:{i}", self.col_x["units"], self.map_top(i), self.col_w["units"], ROW_H,
@@ -1845,7 +1852,7 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"urow:gens:{g}", self.gen_left(g), uy, COL_W, ROW_H, "units", text=f"/g{_sub(g + 1)}"))
             if self.tile_open("units", "primes"):
                 for p in range(self.d):
-                    self.cells.append(CellBox(f"urow:primes:{p}", self.prime_left(p), uy, COL_W, ROW_H, "units", text=f"/p{_sub(p + 1)}"))
+                    self.cells.append(CellBox(f"urow:primes:{p}", self.prime_left(p), uy, COL_W, ROW_H, "units", text=f"/{self.domain_label}{_sub(p + 1)}"))
             if self.tile_open("units", "commas"):
                 for c in range(self.nc):
                     self.cells.append(CellBox(f"urow:commas:{c}", self.comma_left(c), uy, COL_W, ROW_H, "units", text="/1"))

@@ -4390,6 +4390,32 @@ def test_domain_units_adds_a_units_row_and_column_of_coordinate_labels():
     assert on["label:quantities"].y < on["label:units"].y < on["label:vectors"].y
 
 
+def test_nonstandard_domain_units_use_basis_element_label_b():
+    # over a nonstandard subgroup (whose basis may be nonprime), the domain coordinate
+    # label switches from 𝑝 (prime) to 𝒃 (basis element) — so the interval-vectors row
+    # reads 𝒃₁/, 𝒃₂/, 𝒃₃/ and the basis-elements column reads /𝒃₁, /𝒃₂, /𝒃₃. The per-
+    # gridded-cell units carry the same swap (𝑔₁/𝒃₁ over the mapping, ¢/𝒃₁ in the
+    # tuning map, 𝒃₁ in an interval vector). A standard prime limit is unaffected (locked
+    # by test_domain_units_adds_a_units_row_and_column_of_coordinate_labels above).
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s["domain_units"] = True
+    s["units"] = True   # also turn on the per-cell unit annotations
+    s["weighting"] = True  # opens the prescaling row so its per-cell oct/𝒃 unit shows
+    on = {c.id: c for c in spreadsheet.build(state, s, tuning_scheme="TILT minimax-S").cells}
+    # the units column over the interval-vectors row: basis-element coordinate
+    assert on["ucol:vectors:0"].text == "b₁/"
+    assert on["ucol:vectors:2"].text == "b₃/"
+    # the units row over the basis-elements column: per-column basis coordinate
+    assert on["urow:primes:0"].text == "/b₁"
+    assert on["urow:primes:2"].text == "/b₃"
+    # per-gridded-cell units: the prime denominator becomes a basis-element denominator
+    assert on["cell:mapping:0:0"].unit == "g₁/b₁"        # 𝑔/𝑝 → 𝑔/𝒃
+    assert on["tuning:prime:0"].unit == "¢/b₁"            # ¢/𝑝 → ¢/𝒃
+    assert on["cell:vec:targets:0:0"].unit == "b₁"        # the vector coordinate itself
+    assert on["cell:prescaling:primes:0:1"].unit == "oct/b₂"  # column-tracked denominator
+
+
 def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
     # per the mockup, the optimization controls live INSIDE the target interval damage list
     # tile as a bordered, titled box — not a separate row — laid out as two value-over-label
