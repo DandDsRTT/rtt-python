@@ -453,14 +453,21 @@ def test_panes_hug_their_content_and_cap_at_the_window():
 
 
 def test_seam_appears_only_when_the_body_is_scrolled():
-    # each frozen region's body-facing edge is transparent until the body is scrolled on that axis,
-    # when .rtt-app gains rtt-scrolled-x/y (see _FREEZE_JS) and the edge takes the grey seam; the
-    # border is always 1px so revealing it shifts nothing.
+    # each frozen region's body-facing edge is seamless at rest and takes a 1px grey seam only once the
+    # body is scrolled on that axis (.rtt-app gains rtt-scrolled-x/y, see _FREEZE_JS). Drawn as a drop
+    # SHADOW, not a border: a 1px transparent border would reserve a 1px strip at rest that shows the
+    # grey pane THROUGH the colour washes as a thin line (the frozen edge-wash copies clip to the
+    # content box, inside the border). A shadow reserves no layout, so the frozen content + its wash
+    # copies sit flush to the seam with no rest-state gap; a per-axis custom property carries the
+    # colour, transparent until that axis scrolls (so revealing it still shifts nothing).
     css = app._CSS
-    assert "border-bottom:1px solid transparent" in css  # column-strip seam, hidden at rest
-    assert "border-right:1px solid transparent" in css   # row-band seam, hidden at rest
-    assert ".rtt-app.rtt-scrolled-y .rtt-colhead" in css and "border-bottom-color:var(--seam)" in css
-    assert ".rtt-app.rtt-scrolled-x .rtt-rowband" in css and "border-right-color:var(--seam)" in css
+    colhead, rowband = _css_rule(".rtt-colhead"), _css_rule(".rtt-rowband")
+    assert "box-shadow:0 1px 0 var(--seam-y" in colhead  # column-strip seam (below the strip)
+    assert "border-bottom" not in colhead                # NOT a layout-reserving border
+    assert "box-shadow:1px 0 0 var(--seam-x" in rowband  # row-band seam (right of the band)
+    assert "border-right" not in rowband
+    assert ".rtt-app.rtt-scrolled-y .rtt-colhead" in css and "--seam-y:var(--seam)" in css
+    assert ".rtt-app.rtt-scrolled-x .rtt-rowband" in css and "--seam-x:var(--seam)" in css
     assert f"--seam:{app._SEAM}" in css  # the seam colour, set in :root
 
 

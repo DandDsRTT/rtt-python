@@ -114,10 +114,10 @@
    holds the cells at native coords shifted up by freeze_y (the strip's height), so a body cell lands
    at the same pane position it always had. */
 .rtt-colhead { position:absolute; top:var(--pad); left:var(--pad); right:0; z-index:4; overflow:hidden;
-               background:#c0c0c0; box-sizing:border-box; border-bottom:1px solid transparent; }
+               background:#c0c0c0; box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent); }
 .rtt-colhead-inner { position:absolute; top:0; left:0; will-change:transform; }
 .rtt-corner { position:absolute; top:var(--pad); left:var(--pad); z-index:6; background:#c0c0c0;
-              box-sizing:border-box; border-right:1px solid transparent; border-bottom:1px solid transparent; }
+              box-sizing:border-box; box-shadow:0 1px 0 var(--seam-y,transparent), 1px 0 0 var(--seam-x,transparent); }
 .rtt-gridbody { position:absolute; left:var(--pad); right:0; bottom:0; overflow:auto;
                 padding:0 var(--pad) var(--pad) 0; }
 /* isolate the board so the washes' mix-blend-mode composes only with the board's own layers
@@ -129,12 +129,16 @@
    none of it spills over the scrolling body to its right (the column strip clips the same way via
    .rtt-colhead). The body copy of each row gridline picks up past the seam, continuous. */
 .rtt-rowband { position:sticky; left:0; z-index:5; background:#c0c0c0; box-sizing:border-box;
-               pointer-events:auto; overflow:hidden; border-right:1px solid transparent; }
-/* the seam on each frozen region's body-facing edge stays transparent until the body is scrolled
-   on that axis (classes toggled on .rtt-app in _FREEZE_JS); the border is always 1px so revealing
-   it shifts nothing */
-.rtt-app.rtt-scrolled-y .rtt-colhead, .rtt-app.rtt-scrolled-y .rtt-corner { border-bottom-color:var(--seam); }
-.rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner { border-right-color:var(--seam); }
+               pointer-events:auto; overflow:hidden; box-shadow:1px 0 0 var(--seam-x,transparent); }
+/* the seam on each frozen region's body-facing edge stays invisible until the body is scrolled on
+   that axis (classes toggled on .rtt-app in _FREEZE_JS). It is a drop SHADOW, not a border: a 1px
+   transparent border would reserve a 1px strip at rest that shows the grey pane THROUGH the colour
+   washes as a thin line (the frozen edge-wash copies clip to the content box, inside the border, so
+   they stop a pixel short of the seam). A shadow reserves no layout, so the frozen content + its wash
+   copies sit flush to the seam — no rest-state gap — and a per-axis custom property (--seam-y/--seam-x,
+   unset = transparent) lights the shadow only when that axis scrolls, still shifting nothing. */
+.rtt-app.rtt-scrolled-y .rtt-colhead, .rtt-app.rtt-scrolled-y .rtt-corner { --seam-y:var(--seam); }
+.rtt-app.rtt-scrolled-x .rtt-rowband, .rtt-app.rtt-scrolled-x .rtt-corner { --seam-x:var(--seam); }
 /* A top-row / left-column wash overhangs the seam, so besides the body copy it renders one into the
    frozen column strip / row band / corner (see _block_panes in app.py), filling the inter-title gap
    the body scroller would otherwise clip. That copy only completes the RESTING picture: once the body
