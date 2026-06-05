@@ -203,7 +203,7 @@ def _pretransform_label(text: str) -> str:
     Applied to every prescaling label (caption, row title, preset) while the size factor is on.
     "prescaled"/"prescaling" are swapped before "prescaler" (which also fixes the plural prescalers).
     "prescaling" → "pretransforming" stays parallel to the un-swapped "complexity prescaling" row
-    title; the row-label renderer shrinks the font so the longer word still fits its narrow gutter."""
+    title; the row title then hard-wraps the long word (".. pre-" / "transforming") rather than shrink."""
     for old, new in (("prescaled", "pretransformed"), ("prescaling", "pretransforming"),
                      ("prescaler", "pretransformer")):
         text = text.replace(old, new)
@@ -1956,7 +1956,14 @@ class _GridBuilder:
         # row labels (always shown; a collapsed row keeps its label as the strip)
         # plus a fold toggle in the gutter for the collapsible ones
         for key in self.row_y:
-            label = _pretransform_label(self.row_label[key]) if self.size_factor else self.row_label[key]
+            label = self.row_label[key]
+            if self.size_factor:
+                label = _pretransform_label(label)
+                # "complexity pretransforming" is too long for the narrow gutter; hyphenate the word at
+                # "pre-" and hard-break before "transforming" (full font, no shrink). The pre-line
+                # rtt-rowlabel honours the newline and still soft-wraps the over-wide "complexity pre-"
+                # at its space, so it renders as "complexity" / "pre-" / "transforming" — no clipping.
+                label = label.replace("pretransforming", "pre-" + chr(10) + "transforming")
             self.cells.append(CellBox(f"label:{key}", 0, self.row_y[key], LABEL_W, self.row_h[key], "rowlabel", text=label))
             if self.row_collapsible[key]:
                 glyph = _fold_glyph(f"row:{key}" in self.collapsed)

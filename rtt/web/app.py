@@ -317,15 +317,6 @@ def _fit_font(line: str, width: float, max_font: float = _EXPR_MAX_FONT,
     return max(min_font, min(max_font, fit))
 
 
-def _rowlabel_font(text: str) -> float:
-    """The font size a right-justified row title renders at: the full 13 px, unless its LONGEST word
-    is too wide for the narrow LABEL_W gutter (e.g. "pretransforming") — then shrink so that word
-    fits on its line instead of overflowing and clipping at the grid's left edge. The title wraps at
-    spaces, so only the longest single token's width binds; short titles keep 13 px (the cap)."""
-    longest = max(text.split() or [text], key=len)
-    return _fit_font(longest, spreadsheet.LABEL_W - 10, max_font=13.0, min_font=9.0, char_w=0.56)
-
-
 def _mathexpr_html(text: str, width: float) -> str:
     """The stacked HTML for a math-expression cell: each newline-separated line on
     its own row, its font shrunk to fit the cell so long expressions stay in-bounds."""
@@ -1075,7 +1066,7 @@ class _Reconciler:
         self.cell_kinds["mapped"] = _KindHandlers(_val_builder, self._update_label)
         self.cell_kinds["vec"] = _KindHandlers(_val_builder, self._update_label)
         self.cell_kinds["colheader"] = _KindHandlers(self._label_builder("rtt-colheader"), self._update_label)
-        self.cell_kinds["rowlabel"] = _KindHandlers(self._build_rowlabel, self._update_rowlabel)
+        self.cell_kinds["rowlabel"] = _KindHandlers(self._label_builder("rtt-rowlabel"), self._update_label)
         self.cell_kinds["ptext"] = _KindHandlers(self._label_builder("rtt-ptext"), self._update_ptext)
         self.cell_kinds["boxtitle"] = _KindHandlers(self._label_builder("rtt-boxtitle"), None)  # a static in-tile title
 
@@ -1606,13 +1597,6 @@ class _Reconciler:
         def build(cb, wrap):
             self.labels[cb.id] = ui.label(cb.text).classes(cls)
         return build
-
-    def _build_rowlabel(self, cb, wrap):  # a row title, font-shrunk so its longest word fits the gutter
-        self.labels[cb.id] = ui.label(cb.text).classes("rtt-rowlabel").style(f"font-size:{_rowlabel_font(cb.text):.1f}px")
-
-    def _update_rowlabel(self, cb):  # re-fit on text change (e.g. prescaling -> pretransforming on the size factor)
-        self.labels[cb.id].set_text(cb.text)
-        self.labels[cb.id].style(f"font-size:{_rowlabel_font(cb.text):.1f}px")
 
     def _build_white_label(self, cb, wrap):  # prime / formcell: a read-only bordered cell
         with ui.element("div").classes("rtt-white"):

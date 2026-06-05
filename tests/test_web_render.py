@@ -26,14 +26,17 @@ from rtt.web import spreadsheet
 from rtt.web.editor import Editor
 
 
-def test_rowlabel_font_shrinks_only_a_too_wide_word():
-    from rtt.web.app import _rowlabel_font
-
-    # short titles keep the full 13px; a title whose longest word overflows the narrow gutter
-    # shrinks to fit (so it right-justifies instead of clipping at the grid's left edge)
-    assert _rowlabel_font("mapping") == 13.0
-    assert _rowlabel_font("complexity prescaling") == 13.0      # both words fit at 13px
-    assert _rowlabel_font("complexity pretransforming") < 13.0  # "pretransforming" is too wide
+def test_rowlabel_renders_a_hard_newline_as_a_line_break():
+    # the "complexity pretransforming" row title carries a hard \n ("... pre-\ntransforming") so it
+    # wraps at full font instead of shrinking; the rtt-rowlabel must be white-space:pre-line for the
+    # \n to render as a break (default `normal` would collapse it to a space)
+    import os
+    import re
+    css_path = os.path.join(os.path.dirname(spreadsheet.__file__), "assets", "rtt.css")
+    with open(css_path, encoding="utf-8") as f:
+        css = f.read()
+    rule = re.search(r"\.rtt-rowlabel\s*\{[^}]*\}", css).group(0)
+    assert "white-space:pre-line" in rule.replace(" ", "")
 
 
 async def test_default_page_renders_without_error(user: User) -> None:
@@ -124,6 +127,23 @@ async def test_enabling_all_interval_renders_the_target_controls_checkbox(user: 
     user.find(kind=ui.checkbox, content="weighting").click()  # reveal the nested all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()
     await user.should_see(marker="control:all_interval")
+
+
+async def test_off_diagonal_pretransformer_edit_makes_the_all_interval_weight_a_matrix(user: User) -> None:
+    # the full live pipeline behind the weight matrix: in all-interval mode with alt complexity on, the
+    # pretransformer square is editable; typing an OFF-diagonal entry promotes 𝑋 to a non-diagonal
+    # matrix, so the weight tile switches from the per-prime list 𝒘 to the d×d matrix 𝑊 = 𝑋⁻¹. This
+    # exercises input → on_prescaler_change → set_custom_prescaler_entry → re-render end-to-end.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()       # show the weight row
+    user.find(kind=ui.checkbox, content="all-interval").click()    # reveal the all-interval control
+    _cell_child(user, "control:all_interval").set_value(True)      # enter all-interval mode (targets = primes)
+    user.find(kind=ui.checkbox, content="alt. complexity").click()  # make the whole square editable
+    await user.should_see(marker="cell:prescaling:primes:1:0")     # the editable off-diagonal cell
+    await user.should_see(marker="weight:target:0")                # before: the per-prime weight LIST
+    _cell_child(user, "cell:prescaling:primes:1:0").set_value("0.3")  # type an off-diagonal entry → 𝑋 non-diagonal
+    await user.should_see(marker="cell:weight:targets:0:0")        # after: the weight is the matrix 𝑊
+    await user.should_not_see(marker="weight:target:0")            # ...the scalar list is gone
 
 
 async def test_interval_columns_render_draggable_reorder_grips(user: User) -> None:
