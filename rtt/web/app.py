@@ -1016,6 +1016,13 @@ class _Reconciler:
         # layout content signature), so they'd update silently with no ring. This predicate, set on
         # the previewing hover, marks those target cells so render() rings them too. None otherwise.
         self.combine_target_pred = None
+        # which gesture currently owns the preview, so each one only clears its own rings:
+        # _editing is the focused editable cell (a keyboard edit), _wheel_cid the generator-tuning
+        # cell whose wheel preview a hover armed, _control_hovering whether a +/- button is showing
+        # its hover preview. (A drag owns it via _drag_token.)
+        self._editing = None
+        self._wheel_cid = None
+        self._control_hovering = False
         # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build[, update]).
         # Every kind is registered below; make_cell/update_cell index it directly (no fallback),
         # so an unregistered kind raises loudly rather than rendering a silent blank cell.
@@ -1111,6 +1118,17 @@ class _Reconciler:
             if eid in self.els:
                 self.els[eid].classes(remove="rtt-preview-change")
         self.preview_shown = set()
+
+    def show_preview(self, ids):
+        """Ring the on-screen cells in ``ids`` straight away, WITHOUT a re-render — the hover preview
+        of a +/- control whose click would change them. Skipping the render keeps the control from
+        sliding out from under the cursor (an add/remove reflows the grid), so the highlight reads as
+        a steady "these will change" rather than a flicker. clear_preview strips them on mouse-out."""
+        self.clear_preview()
+        shown = {eid for eid in ids if eid in self.els}
+        for eid in shown:
+            self.els[eid].classes(add="rtt-preview-change")
+        self.preview_shown = shown
 
     def make_cell(self, cb):
         # build a cell's element in the active parent (the caller opens the freeze container),
@@ -1477,6 +1495,10 @@ class _Reconciler:
         wrap.on("wheel.prevent",
                 lambda e, cid=cb.id: self._cb.on_gentuning_wheel(cid, e.args.get("deltaY")),
                 args=["deltaY"])
+        # hovering arms the wheel preview: a baseline is snapshotted so each notch rings the cells it
+        # moves; leaving the cell clears the rings (the committed nudge stays).
+        wrap.on("mouseenter", lambda _=None, cid=cb.id: self._cb.gentuning_hover(cid))
+        wrap.on("mouseleave", lambda _=None, cid=cb.id: self._cb.gentuning_unhover(cid))
 
     def _update_gentuningcell(self, cb):
         text = "" if cb.blank else cb.text  # blank when quantities off
@@ -1803,32 +1825,44 @@ class _Reconciler:
 
     # ---- static controls (build only, no update): the domain/comma/interest/held ± buttons,
     # the speaker, and the audio bank glyphs. Their click / JS handlers are baked at build time. ----
+    def _preview_control(self, wrap, apply):
+        """Arm a +/- control's hover preview: entering it rings the on-screen cells its click would
+        change (control_hover), leaving clears them. The click still commits via its own handler."""
+        wrap.on("mouseenter", lambda _=None: self._cb.control_hover(apply))
+        wrap.on("mouseleave", lambda _=None: self._cb.control_unhover())
+
     def _build_minus(self, cb, wrap):  # remove the highest prime; a hover − centred on the last prime's branch point
         wrap.classes("rtt-minus-zone")  # clear of the editable cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
+        self._preview_control(wrap, self._editor.shrink)
 
     def _build_plus(self, cb, wrap):  # add a prime; the always-shown + on the bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.expand))
+        self._preview_control(wrap, self._editor.expand)
 
     def _build_gen_minus(self, cb, wrap):  # drop the last generator (+n, −r); the mapping-row − reached from the column
         wrap.classes("rtt-minus-zone")  # clear of the genmap cell below
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
+        self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
 
     def _build_gen_plus(self, cb, wrap):  # add a generator by un-tempering a comma (−n, +r); the + on the bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
+        self._preview_control(wrap, self._editor.add_mapping_row)
 
     def _build_map_minus(self, cb, wrap):  # remove generator cb.gen (a mapping row); a hover − on the left bus
         wrap.classes("rtt-minus-zone")  # clear of the generator-ratio spine it drops over
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
+        self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
 
     def _build_map_plus(self, cb, wrap):  # add a generator (un-temper a comma); the + on the left-bus stub
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
+        self._preview_control(wrap, self._editor.add_mapping_row)
 
     def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another row's grip to merge
         # HTML5 drag-to-combine, built EXACTLY like the working column-reorder grip (_build_colgrip):
@@ -2510,13 +2544,17 @@ def index() -> None:
         # an editable cell took focus: snapshot the on-screen grid as the preview baseline so every
         # subsequent live edit can ring exactly the cells it moves (computed against this snapshot in
         # render), until the cell is left. No render needed — nothing has changed against itself yet.
+        # The keyboard edit now OWNS the preview (rec._editing), so a wheel/control hover stands down.
         rec.preview_baseline = last_lay[0]
         rec.preview_source = cid
+        rec._editing = cid
 
     def on_cell_blur():
         # leaving the cell ends the preview: forget the baseline and strip every highlight ring
         rec.preview_baseline = None
         rec.preview_source = None
+        rec._editing = None
+        rec._wheel_cid = None
         rec.clear_preview()
 
     # drag-to-combine preview: while a row/interval is dragged onto another, show what the drop would
@@ -2562,6 +2600,51 @@ def index() -> None:
         rec.preview_source = None
         rec.combine_target_pred = None
         render()
+
+    # +/- control hover preview: hovering a structural +/- (add/remove a prime or a generator) rings
+    # the on-screen cells its click would change, so the ripple is visible before committing. Unlike
+    # the drag preview it does NOT reflow the grid — an add/remove would slide the very button being
+    # hovered out from under the cursor (and flicker enter/leave) — so it applies the hypothetical to
+    # a SNAPSHOT, diffs it, rings the changed cells in place, and reverts immediately. The click then
+    # commits for real via the control's own handler. A keyboard edit or a drag owns the preview
+    # while active, so the control hover stands down for them.
+    def control_hover(apply):
+        if rec._editing is not None or rec._drag_token is not None or last_lay[0] is None:
+            return
+        token = editor.capture_for_preview()
+        try:
+            apply()
+            changed = spreadsheet.changed_cell_ids(last_lay[0], editor.layout(prev_ids=last_lay[0].identities))
+        finally:
+            editor.restore_for_preview(token)  # leave no trace: the grid never actually moved
+        rec.show_preview(changed)
+        rec._control_hovering = True
+
+    def control_unhover():
+        # leaving the +/- clears only the rings IT showed (not a live edit's or drag's)
+        if rec._control_hovering:
+            rec._control_hovering = False
+            rec.clear_preview()
+
+    # generator-tuning wheel preview: hovering the cell snapshots a baseline so each wheel notch (a
+    # real, committed nudge — handled by on_gentuning_wheel, which re-renders) rings the OTHER cells
+    # it moves against that baseline. Leaving the cell drops the rings; the nudge itself stays. The
+    # scrolled cell is the preview source, so it is never rung. A keyboard edit of the same cell owns
+    # the preview instead (focus set the baseline), so the wheel hover neither arms nor clears it.
+    def gentuning_hover(cid):
+        if rec._editing is not None or rec._drag_token is not None or rec._control_hovering:
+            return
+        rec.preview_baseline = last_lay[0]
+        rec.preview_source = cid
+        rec._wheel_cid = cid
+
+    def gentuning_unhover(cid):
+        if rec._wheel_cid != cid or rec._editing == cid:
+            return  # not our gesture, or a keyboard edit took it over — leave its rings be
+        rec._wheel_cid = None
+        rec.preview_baseline = None
+        rec.preview_source = None
+        rec.clear_preview()
 
     # drag-and-drop reorder: a grip's dragstart records the column it picked up; dropping it onto
     # another column's grip (drop reads the recorded source) moves it to that column's slot, or onto a
@@ -2630,6 +2713,10 @@ def index() -> None:
         combine_preview=combine_preview,
         combine_commit=combine_commit,
         combine_end=combine_end,
+        control_hover=control_hover,
+        control_unhover=control_unhover,
+        gentuning_hover=gentuning_hover,
+        gentuning_unhover=gentuning_unhover,
         on_cell_blur=on_cell_blur,
         on_cell_focus=on_cell_focus,
         on_comma_change=on_comma_change,

@@ -1566,3 +1566,32 @@ async def test_an_unfocused_grid_rings_no_cells(user: User) -> None:
     _cell_child(user, "cell:mapping:1:2").set_value("7")  # edit without focusing first
     await user.should_see(marker="cell:mapped:1:6")
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")
+
+
+async def test_wheeling_a_generator_tuning_rings_the_cells_it_moves(user: User) -> None:
+    # hovering the generator-tuning cell arms a baseline; each wheel notch (a real, committed nudge)
+    # then rings the OTHER cells whose value it moves — the tempered tunings / retunings — so the user
+    # sees the ripple while scrolling. The scrolled cell itself is the source and is never rung;
+    # leaving the cell clears the rings (the committed nudge stays).
+    await user.open("/")
+    cell = set(user.find(marker="tuning:gen:0").elements)
+    UserInteraction(user, cell, None).trigger("mouseenter")                     # arm the baseline
+    UserInteraction(user, cell, None).trigger("wheel.prevent", {"deltaY": -1})  # one notch up -> nudge + render
+    await user.should_see(marker="retune:target:0")
+    assert "rtt-preview-change" in _wrap_classes(user, "retune:target:0")       # a moved cell rings
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:0")      # ...not the scrolled cell
+    UserInteraction(user, cell, None).trigger("mouseleave")                     # leaving clears the rings
+    assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:0")
+
+
+async def test_hovering_a_generator_minus_previews_what_it_changes_without_reflowing(user: User) -> None:
+    # hovering a structural − rings the on-screen cells its click would change (removing the last
+    # generator re-solves the tuning) WITHOUT reflowing the grid — the generator is NOT actually
+    # dropped while hovering, so the button stays put under the cursor — and leaving clears the rings.
+    await user.open("/")
+    btn = set(user.find(marker="gen_minus").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:0")  # the ripple rings...
+    await user.should_see(marker="tuning:gen:1")                           # ...but the generator stays (no reflow)
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:0")  # cleared on mouse-out
