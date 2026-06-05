@@ -262,6 +262,27 @@ def targets_in_superspace(
     )
 
 
+def complexity_prescaler_in_superspace(
+    state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME,
+) -> tuple[float, ...]:
+    """The complexity prescaler re-expressed over the superspace primes — a dL-tuple
+    diagonal, the prescaler the prime-based optimization actually runs over. Built from the
+    lifted temperament (:func:`superspace_mapping` over :func:`superspace_primes`) so it picks
+    up the new prime above the original basis: for BARBADOS over 2.3.13/5 with superspace
+    (2, 3, 5, 13), the log-prime diagonal grows by one entry (``log₂13``). A standard prime
+    basis passes through as-is. Returned as a flat tuple, matching the diagonal-case shape
+    of :func:`complexity_prescaler`; the renderer formats it as a dL×dL matrix on display."""
+    superspace = superspace_primes(state.domain_basis)
+    ml = superspace_mapping(state)
+    t = Temperament(ml, Variance.ROW, superspace)
+    spec = resolve_tuning_scheme(scheme)
+    return tuple(
+        get_complexity_prescaler(
+            t, spec.complexity_log_prime_power, spec.complexity_prime_power, spec.nonprime_basis_approach
+        )
+    )
+
+
 def superspace_tuning(
     state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME, nonprime_approach: str = "",
 ) -> Tuning:

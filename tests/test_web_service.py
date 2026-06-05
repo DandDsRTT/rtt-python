@@ -1385,3 +1385,24 @@ def test_targets_in_superspace_passes_through_when_already_prime_only():
     # same shape, same entries — the prime basis is the superspace basis here
     assert len(primes) == state.d
     assert in_super == on_domain
+
+
+def test_complexity_prescaler_in_superspace_runs_over_the_superspace_primes():
+    import pytest
+
+    # the prescaler the prime-based optimization runs over: log-prime over the superspace.
+    # For BARBADOS over 2.3.13/5 with superspace (2, 3, 5, 13) it is a dL-tuple diagonal
+    # (log₂2, log₂3, log₂5, log₂13) — one more entry than the domain prescaler (log₂13).
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pre = service.complexity_prescaler_in_superspace(state, "TILT minimax-S")
+    assert pre == pytest.approx(
+        (math.log2(2), math.log2(3), math.log2(5), math.log2(13)), abs=1e-9,
+    )
+
+
+def test_complexity_prescaler_in_superspace_passes_through_when_already_prime_only():
+    # a standard prime basis = its own superspace, so the result matches the on-domain
+    # complexity_prescaler entry-for-entry.
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # 5-limit meantone
+    assert service.complexity_prescaler_in_superspace(state, "TILT minimax-S") == \
+        service.complexity_prescaler(state.mapping, "TILT minimax-S")
