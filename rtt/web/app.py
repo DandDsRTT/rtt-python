@@ -1833,6 +1833,9 @@ class _Reconciler:
             self.target_limit_tip.set_text(
                 tooltips.target_limit_help(problem) if problem
                 else tooltips.control_help("preset", "preset:target"))
+            # the explaining tooltip goes red (a red box) while invalid, plain dark otherwise
+            self.target_limit_tip.classes(add="rtt-tip-error" if problem else "",
+                                          remove="" if problem else "rtt-tip-error")
 
     def _build_control_select(self, cb, wrap):  # a weighting chooser (complexity / norm / weight slope)
         self.selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
