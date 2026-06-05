@@ -2025,11 +2025,14 @@ def test_size_factor_makes_the_all_interval_weight_a_matrix_dropping_the_chart()
 def test_all_interval_weight_matrix_carries_the_W_symbol_and_a_spanning_bracket():
     on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True,
                                  symbols=True, equivalences=True).cells}
-    # capital 𝑊 with its (𝑍𝐿)⁻ equivalence — NOT the per-prime diag(𝐿)⁻¹ the lp all-interval shows
-    assert on["symbol:weight:targets"].text == "𝑊 = (𝑍𝐿)⁻"
-    # one tall [ … ] spanning all d = 3 matrix rows, the right bracket past the overflowing size column
+    # capital 𝑊 = 𝑋⁻ — the inverse pretransformer (𝑋 = 𝑍𝐿), simpler than spelling out (𝑍𝐿)⁻, and NOT
+    # the per-prime diag(𝐿)⁻¹ the lp all-interval shows
+    assert on["symbol:weight:targets"].text == "𝑊 = 𝑋⁻"
+    # the appendix's [[…] …] form: outer [ … ] over all d = 3 rows + one [ … ] per row, the outer right
+    # bracket past the overflowing size column
     assert on["bracket:weight:l"].text == "[" and on["bracket:weight:r"].text == "]"
     assert on["bracket:weight:l"].h == 3 * spreadsheet.ROW_H
+    assert {"bracket:weight:row:0:l", "bracket:weight:row:0:r", "bracket:weight:row:2:l"} <= set(on)
     assert on["bracket:weight:r"].x > on["cell:weight:targets:0:3"].x
 
 
@@ -2046,6 +2049,28 @@ def test_the_weight_matrix_size_bar_is_one_structure_in_both_the_grid_and_the_pl
     # a weight LIST (no size factor → not a matrix) has the divider in NEITHER view
     off = {c.id: c for c in _with(scheme="minimax-S", weighting=True, plain_text_values=True).cells}
     assert "bar:weight" not in off and "|" not in off["ptext:weight:targets"].text
+
+
+def test_the_size_factor_prescaler_carries_a_horizontal_size_bar():
+    # 𝑋 = 𝑍𝐿 is the log-prime square plus an appended size ROW; per the guide's \hline that row is set
+    # off by a horizontal rule (bar:prescaling, kind hbar) — the mirror of the vertical ` | ` size bar
+    # in the inverse 𝑊 = 𝑋⁻.
+    on = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    bar = on["bar:prescaling"]
+    assert bar.kind == "hbar"
+    # sits at the boundary between the last square (prime) row and the appended size row
+    assert on["cell:prescaling:primes:2:0"].y < bar.y < on["cell:prescaling:primes:3:0"].y
+    # a square (lp) prescaler has no size row, so no horizontal bar
+    assert "bar:prescaling" not in {c.id for c in _with("minimax-S", weighting=True).cells}
+
+
+def test_the_size_factor_drops_the_diag_complexity_equivalence():
+    # the lils complexity is ‖𝑍𝐿·i‖ (the size row doubles each prime), NOT diag(𝐿) — so the size factor
+    # drops the "𝒄 = diag(𝐿)" closed form, leaving the bare 𝒄 (a plain diagonal lp prescaler keeps it).
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, equivalences=True).cells}
+    assert lils["symbol:complexity:targets"].text == "𝒄"            # no " = diag(𝐿)"
+    lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True, equivalences=True).cells}
+    assert lp["symbol:complexity:targets"].text == "𝒄 = diag(𝐿)"    # the plain diagonal keeps it
 
 
 def test_a_non_diagonal_pretransformer_makes_the_all_interval_weight_the_square_inverse():
@@ -2068,9 +2093,12 @@ def test_a_non_diagonal_pretransformer_makes_the_all_interval_weight_the_square_
             assert on[f"cell:weight:targets:{i}:{j}"].text == service.cents(W[i][j])
     # capital 𝑊 = 𝑋⁻¹ (the square inverse — NOT (𝑍𝑋)⁻, there's no size factor here)
     assert on["symbol:weight:targets"].text == "𝑊 = 𝑋⁻¹"
-    # one tall [ … ] spanning all 3 rows; the right bracket hugs the last column's right edge (no overflow)
+    # appendix form [[…] …]: an outer [ … ] over all 3 rows + one [ … ] per row, no size bar (square)
     assert on["bracket:weight:l"].h == 3 * spreadsheet.ROW_H
-    assert on["bracket:weight:r"].x == on["cell:weight:targets:0:2"].x + spreadsheet.COL_W
+    assert "bracket:weight:row:0:l" in on and "bracket:weight:row:2:r" in on
+    assert "bar:weight" not in on  # no size column → no size divider
+    # the outer right bracket sits one bracket-width past the last column's right edge (outside the per-row ])
+    assert on["bracket:weight:r"].x == on["cell:weight:targets:0:2"].x + spreadsheet.COL_W + spreadsheet.BRACKET_W
 
 
 def test_weight_row_carries_its_symbol_and_caption():

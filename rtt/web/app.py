@@ -345,7 +345,7 @@ def _mathexpr_html(text: str, width: float) -> str:
 # the rejected font glyph scaled its weight with its height, and a fixed viewBox
 # stretched to the cell sheared its serifs. Square/top brackets are crisp filled
 # rects; the calligraphic ⟨ and brace are filled variable-width ribbons (_ribbon).
-_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar"}
+_EBK_SVG_KINDS = {"bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "hbar"}
 
 
 def _chart_ticks(lo, hi):

@@ -2917,6 +2917,11 @@ class _GridBuilder:
                 for i in range(self.d + self.size_rows):
                     self.bracket(f"prescaling:row:{i}", MAP_BRACKETS, "primes",
                             self.row_y["prescaling"] + i * ROW_H, ROW_H)
+                if self.size_rows:  # the guide's \hline in 𝑋 = 𝑍𝐿: a horizontal rule separating the bottom
+                    # size row from the top d×d square — the mirror of the ` | ` size bar in the inverse 𝑊
+                    gx, gw = self.matrix_span("primes")
+                    self.cells.append(CellBox("bar:prescaling", gx, self.row_y["prescaling"] + self.d * ROW_H - SEP_W / 2,
+                                         gw, SEP_W, "hbar"))
         if self.tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
             self.bracket("tuning:genmap", GENMAP_BRACKETS, "gens", self.row_y["tuning"], ROW_H)
         # the detempering tuning row IS the generator tuning map (𝒕D = 𝒈), so it too is framed
@@ -2950,16 +2955,22 @@ class _GridBuilder:
                     self.bracket(f"{key}:ssprimes", MAP_BRACKETS, "ssprimes", self.row_y[key], ROW_H)
         if self.tile_open("weight", "targets"):
             if self.weight_is_matrix:
-                # one tall [ … ] spanning the whole weight matrix (per the guide's plain [ {rrr|r} ]):
-                # d columns over the target gridlines, plus — with the size factor — the extra column
-                # that overflows one COL_W to the right (so the right edge rides 1 + size_rows columns out)
+                # the weight matrix in the notation appendix's form [[…] …]: an OUTER [ … ] enclosing one
+                # [ … ] per ROW, so the rows are unmistakable (3×4 can't read as 2×6) — the SAME structure
+                # the plain text prints. d columns ride the target gridlines; with the size factor the
+                # extra column overflows one COL_W right, set off by a ` | ` bar.
                 left = self.group_left["targets"]
                 top, h = self.row_y["weight"], self.d * ROW_H
-                self.cells.append(CellBox("bracket:weight:l", left(0) - BRACKET_W, top, BRACKET_W, h, "bracket", text="["))
-                self.cells.append(CellBox("bracket:weight:r", left(self.k - 1) + (1 + self.size_rows) * COL_W, top,
-                                     BRACKET_W, h, "bracket", text="]"))
-                if self.size_rows:  # the guide's ` | ` divider before the size column — the same separator the
-                    # plain text shows (⟨… | …]); one tall rule between the last prime column and the size column
+                rightx = left(self.k - 1) + (1 + self.size_rows) * COL_W  # right edge, past any size column
+                # outer [ … ] over all rows, seated one bracket-width outside the per-row brackets
+                self.cells.append(CellBox("bracket:weight:l", left(0) - 2 * BRACKET_W, top, BRACKET_W, h, "bracket", text="["))
+                self.cells.append(CellBox("bracket:weight:r", rightx + BRACKET_W, top, BRACKET_W, h, "bracket", text="]"))
+                # one [ … ] per row — short and centred like a covector's brackets — the inner brackets
+                for i in range(self.d):
+                    ry = top + i * ROW_H + (ROW_H - VAL_BRACKET_H) / 2
+                    self.cells.append(CellBox(f"bracket:weight:row:{i}:l", left(0) - BRACKET_W, ry, BRACKET_W, VAL_BRACKET_H, "bracket", text="["))
+                    self.cells.append(CellBox(f"bracket:weight:row:{i}:r", rightx, ry, BRACKET_W, VAL_BRACKET_H, "bracket", text="]"))
+                if self.size_rows:  # the ` | ` size divider — one tall rule between the last prime column and the size column
                     self.cells.append(CellBox("bar:weight", left(self.k - 1) + COL_W - SEP_W / 2, top, SEP_W, h, "vbar"))
             else:
                 self.bracket("weight", LIST_BRACKETS, "targets", self.row_y["weight"], ROW_H)
@@ -3139,16 +3150,16 @@ class _GridBuilder:
             # weight its reciprocal — diag(𝐿)⁻¹, more concrete than the slope's 𝒄⁻¹; the damage the
             # retuning-MAP magnitude times that weight — |𝒓|𝐿⁻¹ (there is no target error list 𝐞 here,
             # the retune row's 𝐞→𝒓). These need the live glyph, so they can't be static.
-            if not self.prescaler_is_matrix:  # a NON-diagonal 𝑋 has no diagonal — diag(𝑋) is meaningless,
-                # so 𝒄 (and its diag-reciprocal 𝒘) get NO closed-form equivalence (𝒘's is set below anyway)
+            if not self.prescaler_is_matrix and not self.size_factor:  # ONLY a plain diagonal 𝑋 has
+                # 𝒄 = diag(𝑋). A non-diagonal 𝑋 has no diagonal; the SIZE FACTOR makes the lils complexity
+                # ‖𝑍𝐿·i‖ ≠ diag(𝐿) (the size row doubles each prime) — so neither gets the diag equivalence.
                 equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
                 equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
             equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
-        if self.weight_is_matrix:  # a non-diagonal pretransformer has no per-prime diagonal diag(𝑋)⁻¹:
-            # the size factor makes the weight the d×(d+1) left inverse (𝑍𝑋)⁻; an editable square 𝑋,
-            # the d×d inverse 𝑋⁻¹ (both blind to the per-prime list the slope reciprocal would give)
-            equivalences[("weight", "targets")] = (f" = (𝑍{self.prescaler_symbol})⁻" if self.size_factor
-                                                   else f" = {self.prescaler_symbol}⁻¹")
+        if self.weight_is_matrix:  # the weight is the inverse pretransformer 𝑋⁻ (no per-prime diagonal form):
+            # the size factor makes 𝑋 = 𝑍𝐿 rectangular, so 𝑊 is its LEFT inverse 𝑋⁻ (superscript minus, the
+            # guide's notation); a non-diagonal square 𝑋, the true inverse 𝑋⁻¹. Simpler than spelling out 𝑍𝐿.
+            equivalences[("weight", "targets")] = " = 𝑋⁻" if self.size_factor else " = 𝑋⁻¹"
         if not self.show_weighting:  # the weight factor's row is hidden, so don't dangle it (𝒘 / 𝐿⁻¹)
             equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
         for (rkey, ckey), name in self.effective_captions.items():

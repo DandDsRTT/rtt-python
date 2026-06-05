@@ -1063,14 +1063,15 @@ def plain_text_values(
     # extending each column the way the products do.
     bare_size_row = ((tuple(size_factor * w for w in prescaler),) if size_factor else ())
     # the weight row is the per-target simplicity-weight list — or, when the size factor makes the
-    # pretransformer rectangular (all-interval lils), the d×(d+1) weight MATRIX 𝑊 = (𝑍𝐿)⁻. The guide
-    # writes it as a PLAIN matrix [ {rrr|r} ] — one [ … ] enclosing the rows, a single ` | ` bar
-    # before the size column — so the plain text mirrors the grid: [ row | size  row | size  … ]. Each
-    # row's ` | ` is exactly the gridline the grid draws between the prime and size columns; the per-
-    # prime list can't carry it.
+    # pretransformer rectangular (all-interval lils), the d×(d+1) weight MATRIX 𝑊 = 𝑋⁻. Per the
+    # notation appendix a weight matrix is written [[…] …] — an OUTER [ … ] enclosing one [ … ] per
+    # ROW — so the rows are unmistakable (3×4 can't read as 2×6). Each row sets off its appended SIZE
+    # entry with a ` | ` bar (the guide's [… | …] augmentation separator), exactly the divider the
+    # grid draws. The grid renders this same structure (per-row brackets + the size bar), so the two
+    # views are one structure and can't disagree. The per-prime list can't carry it.
     if size_factor and is_all_interval(scheme):
-        weight_text = "[" + "  ".join(_augmented_row(row, state.d) for row in
-                                      damage_weight_matrix(state.mapping, scheme)) + "]"
+        weight_text = "[" + " ".join("[" + _augmented_row(row, state.d) + "]" for row in
+                                     damage_weight_matrix(state.mapping, scheme)) + "]"
     else:
         weight_text = _cents_list(interval_weights(state.mapping, scheme, targets, domain_basis=db))
     # Keyed by the tile each value group occupies. The interval-vectors row holds the

@@ -1102,16 +1102,17 @@ def test_plain_text_lils_prescaler_grows_the_size_row_matching_the_grid():
 
 
 def test_plain_text_all_interval_lils_weight_is_the_matrix_not_the_list():
-    # all-interval lils: the weight plain text matches the grid — the guide's PLAIN matrix 𝑊 = (𝑍𝐿)⁻,
-    # one [ … ] enclosing the rows with a single ` | ` bar before each row's size column (the exact
-    # divider the grid draws), not the per-prime list (which is blind to the size factor).
+    # all-interval lils: the weight plain text matches the grid — the notation appendix's weight-matrix
+    # form [[…] …], an OUTER [ … ] enclosing one [ … ] per row (so rows can't read as a 2×6 block), each
+    # row's size entry set off by ` | ` (the exact divider the grid draws), not the per-prime list.
     mapping = [[1, 1, 0], [0, 1, 4]]
     W = service.damage_weight_matrix(mapping, "minimax-lils-S")
     pt = service.plain_text_values(service.from_mapping(mapping), scheme="minimax-lils-S")
-    expected = "[" + "  ".join(
-        " ".join(service.cents(x) for x in row[:3]) + " | " + service.cents(row[3]) for row in W) + "]"
+    expected = "[" + " ".join(
+        "[" + " ".join(service.cents(x) for x in row[:3]) + " | " + service.cents(row[3]) + "]" for row in W) + "]"
     assert pt[("weight", "targets")] == expected
     assert pt[("weight", "targets")].count(" | ") == len(W)  # one size bar per matrix row
+    assert pt[("weight", "targets")].startswith("[[") and pt[("weight", "targets")].endswith("]]")  # outer + per-row
     # the square (lp) all-interval weight stays a flat per-prime list — no size bar
     pt_lp = service.plain_text_values(service.from_mapping(mapping), scheme="minimax-S")
     assert "|" not in pt_lp[("weight", "targets")]

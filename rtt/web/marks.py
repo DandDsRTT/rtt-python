@@ -200,6 +200,12 @@ def _vbar(w, h):
     return _svg(w, h, _rect((w - _BR_BAR) / 2, 0, _BR_BAR, h))
 
 
+def _hbar(w, h):
+    """A horizontal rule — the size-sensitizing matrix's \\hline, separating 𝑋 = 𝑍𝐿's bottom size row
+    from its top square (the mirror of the vertical size bar in the inverse 𝑊 = 𝑋⁻)."""
+    return _svg(w, h, _rect(0, (h - _BR_BAR) / 2, w, _BR_BAR))
+
+
 def _ebk_svg(cb):
     """The SVG for one EBK cell, generated from its current px box (cb.w, cb.h). A
     pending comma's marks are recoloured red to match its draft cells."""
@@ -216,6 +222,8 @@ def _ebk_svg(cb):
         svg = _brace(cb.w, cb.h)
     elif cb.kind == "ebkangle":
         svg = _angle_foot(cb.w, cb.h)
+    elif cb.kind == "hbar":
+        svg = _hbar(cb.w, cb.h)
     else:
         svg = _vbar(cb.w, cb.h)  # "vbar"
     return svg.replace(_BR_COLOR, _PENDING_COLOR) if cb.pending else svg
