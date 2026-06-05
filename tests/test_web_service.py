@@ -1222,3 +1222,103 @@ def test_tuning_exposes_diamond_generator_ranges():
     assert t.tradeoff_generator_range[0] == pytest.approx((1200.0, 1200.0), abs=1e-6)
     assert t.tradeoff_generator_range[1] == pytest.approx((694.786, 701.955), abs=1e-2)
     assert t.monotone_generator_range[1] == pytest.approx((685.714, 720.0), abs=1e-2)
+
+
+def test_domain_has_nonprimes_flags_any_nonprime_element():
+    # The mode-radio (prime-based / nonprime-based / neutral) only matters when the domain
+    # has nonprime elements: a reordering of primes still has the prime-only structure, so
+    # this is a finer test than `is_standard_domain` (which is True only for canonical-order
+    # prime limits). BARBADOS over 2.3.13/5 has the nonprime 13/5; 2.9.5 has the composite 9.
+    assert service.domain_has_nonprimes((2, 3, 5)) is False  # standard primes
+    assert service.domain_has_nonprimes((3, 2, 5)) is False  # reordered primes, still all prime
+    assert service.domain_has_nonprimes((2, 3, Fraction(13, 5))) is True  # 13/5 has a denominator
+    assert service.domain_has_nonprimes((2, 9, 5)) is True  # 9 = 3² is composite
+
+
+def test_superspace_primes_collects_every_prime_appearing_in_the_basis():
+    # The superspace is the smallest prime-only basis containing all the domain's primes —
+    # the rail the prime-based optimization runs over and the column header (α β γ δ ε …) of
+    # the nonstandard-domain superspace region. BARBADOS over 2.3.13/5 collects 2,3,5,13.
+    assert service.superspace_primes((2, 3, 5)) == (2, 3, 5)  # already prime-only: passes through
+    assert service.superspace_primes((3, 2, 5)) == (2, 3, 5)  # reordered, sorted on the way out
+    assert service.superspace_primes((2, 3, Fraction(13, 5))) == (2, 3, 5, 13)  # BARBADOS
+    assert service.superspace_primes((2, 9, 5)) == (2, 3, 5)  # 9 = 3² contributes prime 3
+
+
+def test_superspace_dimension_is_the_count_of_superspace_primes():
+    # dL = len(superspace_primes); for BARBADOS d=3 grows to dL=4 (the extra prime 13).
+    assert service.superspace_dimension((2, 3, 5)) == 3
+    assert service.superspace_dimension((2, 3, Fraction(13, 5))) == 4  # +13
+    assert service.superspace_dimension((2, 9, 5)) == 3  # collapses to {2,3,5}
+
+
+def test_basis_in_superspace_writes_each_element_as_a_monzo_over_the_superspace_primes():
+    # Convention (chosen rows-as-elements, matching the comma-basis / target-vector storage in
+    # this service): each ROW is one domain element written as a monzo over the superspace
+    # primes — d rows of length dL. For BARBADOS over 2.3.13/5 with superspace (2,3,5,13):
+    # 2 → ⟨1 0 0 0], 3 → ⟨0 1 0 0], 13/5 → ⟨0 0 -1 1].
+    barbados = service.basis_in_superspace((2, 3, Fraction(13, 5)))
+    assert barbados == ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, -1, 1))
+    # a standard prime basis is the identity over itself (each element is one prime, one slot)
+    assert service.basis_in_superspace((2, 3, 5)) == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+    # composites factor: 9 = 3² → (0, 2, 0) over (2, 3, 5)
+    assert service.basis_in_superspace((2, 9, 5)) == ((1, 0, 0), (0, 2, 0), (0, 0, 1))
+
+
+def test_superspace_mapping_re_expresses_the_temperament_over_the_superspace_primes():
+    # M_L is the temperament's mapping re-expressed over the simplest prime-only basis: rL × dL,
+    # integer, full row rank, tempering out every comma the original tempered. For BARBADOS
+    # over 2.3.13/5 with comma (2,-3,2) → 676/675 (= 2² · 13² / (3³ · 5²) over (2,3,5,13)
+    # = (2,-3,-2,2)), M_L is a 3×4 integer matrix that tempers out (2,-3,-2,2).
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    ml = service.superspace_mapping(state)
+    assert len(ml) == 3 and all(len(row) == 4 for row in ml)  # rL × dL = 3 × 4
+    assert all(isinstance(x, int) for row in ml for x in row)  # integer entries
+    embedded_comma = (2, -3, -2, 2)  # 676/675 over (2, 3, 5, 13)
+    for row in ml:
+        assert sum(a * b for a, b in zip(row, embedded_comma)) == 0  # tempers out the comma
+
+
+def test_superspace_mapping_returns_the_canonical_mapping_when_already_prime_only():
+    # over a standard prime basis the superspace IS the domain, so the embedding is a no-op:
+    # M_L equals the canonical form of M itself — no extra rows, no new primes to lift.
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # 5-limit meantone
+    assert service.superspace_mapping(state) == service.canonical_mapping(state.mapping)
+
+
+def test_superspace_rank_is_r_plus_the_extra_primes():
+    # rL = r + (dL − d): nullity is preserved by the embedding, so each new prime above the
+    # original basis contributes one extra generator. BARBADOS: r=2, d=3, dL=4 → rL=3. A
+    # standard-prime temperament's rL equals its own r (no extra primes).
+    barbados = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert service.superspace_rank(barbados) == 3
+    meantone = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    assert service.superspace_rank(meantone) == 2
+
+
+def test_superspace_just_mapping_is_the_dL_identity():
+    # M_jL = I_dL: in the superspace each prime IS a basis element, so the just mapping is
+    # the identity. Exposed as a named function so the layout can render it uniformly
+    # alongside the other superspace matrices. dL=4 for BARBADOS.
+    assert service.superspace_just_mapping((2, 3, 5, 13)) == (
+        (1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)
+    )
+    assert service.superspace_just_mapping((2, 3, 5)) == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+
+
+def test_superspace_tuning_runs_over_the_superspace_primes():
+    import pytest
+
+    # BARBADOS over 2.3.13/5 lifts into a 3×4 mapping over (2, 3, 5, 13). The just map over
+    # the superspace is the size of each prime; the tuning has rL=3 generators and dL=4
+    # prime sizes. retuning_map = tempered - just (component-wise).
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    tun = service.superspace_tuning(state, "minimax-S")
+    assert len(tun.generator_map) == 3  # rL
+    assert len(tun.tuning_map) == 4 and len(tun.just_map) == 4  # dL
+    assert tun.just_map == pytest.approx(
+        (1200.0, 1200.0 * math.log2(3), 1200.0 * math.log2(5), 1200.0 * math.log2(13)), abs=1e-6
+    )
+    assert tun.retuning_map == pytest.approx(
+        tuple(t - j for t, j in zip(tun.tuning_map, tun.just_map)), abs=1e-9
+    )

@@ -10,12 +10,16 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, replace
 from fractions import Fraction
 
+import sympy as sp
+
 from rtt.canonicalization import canonical_ca, canonical_ma
+from rtt.change_basis import change_domain_basis_for_c
 from rtt.dimensions import get_d, get_n, get_r
 from rtt.domain_basis import (
     express_quotients_in_domain_basis,
     filter_target_intervals_for_nonstandard_domain_basis,
     get_domain_basis,
+    get_simplest_prime_only_basis,
     is_standard_prime_limit_domain_basis,
 )
 from rtt.dual import dual
@@ -161,6 +165,107 @@ def is_standard_domain(domain_basis) -> bool:
     """Whether a domain basis is a standard prime limit (the first d primes) — so the
     prime-walking domain ± controls apply, as opposed to a nonstandard subgroup."""
     return is_standard_prime_limit_domain_basis(tuple(domain_basis))
+
+
+def domain_has_nonprimes(domain_basis) -> bool:
+    """Whether the domain basis contains any nonprime element (a composite integer or a
+    Fraction with a denominator > 1, like ``13/5``) — the gate for the nonprime-basis-approach
+    mode radio, which is only meaningful when there is a nonprime to embed differently. Finer
+    than :func:`is_standard_domain`: a reordered prime limit (``3.2.5``) still has the
+    prime-only structure, so this returns False where ``is_standard_domain`` does."""
+    for element in domain_basis:
+        fraction = Fraction(element)
+        if fraction.denominator != 1 or not sp.isprime(fraction.numerator):
+            return True
+    return False
+
+
+def superspace_primes(domain_basis) -> tuple[int, ...]:
+    """The simplest prime-only basis containing the domain — the sorted unique primes that
+    appear in any element's numerator or denominator. Over 2.3.13/5 (BARBADOS) the superspace
+    primes are ``(2, 3, 5, 13)``: the rL × dL embedding the nonstandard-domain superspace
+    region runs over. A standard / reordered prime basis passes through (sorted)."""
+    return get_simplest_prime_only_basis(tuple(domain_basis))
+
+
+def superspace_dimension(domain_basis) -> int:
+    """The superspace's dimension dL — the number of primes the domain embeds into. Equal to
+    ``len(superspace_primes(domain_basis))``; ≥ d, with equality iff the basis is already
+    prime-only. For BARBADOS over 2.3.13/5: d=3 grows to dL=4 (the extra prime 13)."""
+    return len(superspace_primes(domain_basis))
+
+
+def basis_in_superspace(domain_basis) -> Matrix:
+    """Each domain element as a monzo over the superspace primes — the embedding matrix B_L
+    the nonstandard-domain superspace region renders. Returned as a tuple of d ROWS of length
+    dL (each row is one element), matching the comma-basis/target-vector storage convention
+    in this module. The conceptual matrix is dL × d with elements as columns; transpose the
+    stored value to consume it that way. For BARBADOS over 2.3.13/5 with superspace
+    (2, 3, 5, 13): ``((1,0,0,0), (0,1,0,0), (0,0,-1,1))`` — 2→prime 2, 3→prime 3, 13/5→prime
+    13 minus prime 5."""
+    superspace = superspace_primes(domain_basis)
+    elements = tuple(Fraction(e) for e in domain_basis)
+    return tuple(
+        tuple(int(x) for x in v)
+        for v in express_quotients_in_domain_basis(elements, superspace)
+    )
+
+
+def superspace_mapping(state: TemperamentState) -> Matrix:
+    """The temperament's mapping M_L re-expressed over its superspace primes — rL × dL,
+    where rL = r + (dL − d) (nullity is preserved; the new primes contribute new generators).
+    Derived by embedding the comma basis into the superspace and taking the dual: the
+    public-API equivalent of the library's ``_change_to_simplest_prime_basis``. For BARBADOS
+    over 2.3.13/5 it is the 3×4 integer mapping that tempers out 676/675 expressed over
+    (2, 3, 5, 13)."""
+    superspace = superspace_primes(state.domain_basis)
+    comma_t = Temperament(state.comma_basis, Variance.COL, state.domain_basis)
+    embedded = change_domain_basis_for_c(comma_t, superspace)
+    return _to_matrix(dual(embedded).matrix)
+
+
+def superspace_rank(state: TemperamentState) -> int:
+    """rL, the rank of M_L over the superspace. Equals r + (dL − d): nullity is preserved
+    by the embedding, so each extra prime adds one extra generator. For BARBADOS over
+    2.3.13/5 (r=2, d=3, dL=4): rL = 3. A standard-prime temperament passes through unchanged."""
+    return len(superspace_mapping(state))
+
+
+def superspace_just_mapping(primes) -> Matrix:
+    """M_jL = I (dL × dL identity) — the just mapping over the superspace. Each prime in the
+    superspace is its own basis element, so the just mapping is trivially the identity.
+    Exposed as a named function so the layout renders it uniformly with the other superspace
+    matrices. ``primes`` is the superspace prime tuple from :func:`superspace_primes`; only
+    its length is read."""
+    dl = len(tuple(primes))
+    return tuple(tuple(1 if i == j else 0 for j in range(dl)) for i in range(dl))
+
+
+def superspace_tuning(
+    state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME, nonprime_approach: str = "",
+) -> Tuning:
+    """The temperament's tuning over its superspace primes — the maps the nonstandard-domain
+    superspace region needs (𝒈L, 𝒕L, 𝒋L, 𝒓L). Built by lifting the temperament to M_L over
+    the prime superspace and running the same optimization the on-domain :func:`tuning` uses.
+    Generator-tuning ranges are omitted (left as ``None``): the ranges chart isn't a superspace
+    concept. ``nonprime_approach`` is accepted for signature parity with :func:`tuning` but has
+    no effect — the superspace is prime-only by construction, so the optimizer ignores it."""
+    superspace = superspace_primes(state.domain_basis)
+    ml = superspace_mapping(state)
+    t = Temperament(ml, Variance.ROW, superspace)
+    spec = resolve_tuning_scheme(scheme)
+    if nonprime_approach:
+        spec = replace(spec, nonprime_basis_approach=nonprime_approach)
+    tempered = optimize_tuning_map(t, spec)
+    just = get_just_tuning_map(t)
+    return Tuning(
+        generator_map=optimize_generator_tuning_map(t, spec),
+        tuning_map=tempered,
+        just_map=just,
+        retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
+        monotone_generator_range=None,
+        tradeoff_generator_range=None,
+    )
 
 
 def is_proper_temperament(mapping) -> bool:
