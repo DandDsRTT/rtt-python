@@ -6619,3 +6619,81 @@ def test_B_L_standard_domain_is_the_identity():
         for ss_prime_idx in range(3):
             expected = 1 if elem_idx == ss_prime_idx else 0
             assert cells[f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}"].text == str(expected)
+
+
+# ---------------------------------------------------------------------------
+# Phase 4E.2 — M_L (superspace mapping) cells in (ss_mapping, ssprimes). The
+# rL × dL covector stack is framed exactly like M (per-row ⟨ … ] + outer
+# matrix_frame's ebktop / ebkbrace), with row-labels 𝒎ₗᵢ in the gutter.
+# ---------------------------------------------------------------------------
+
+
+_SUBSCRIPT_DIGITS = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+
+
+def test_M_L_emits_one_cell_per_superspace_generator_row_and_superspace_prime_col():
+    # the superspace mapping M_L lives in (ss_mapping, ssprimes) — a rL × dL covector stack
+    # like the existing M mapping (each row a covector over the superspace primes). Its
+    # entries are the same integers service.superspace_mapping returns.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    ml = service.superspace_mapping(
+        service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"))
+    # rL × dL = 3 × 4 for BARBADOS
+    for gen_idx, row in enumerate(ml):
+        for ss_prime_idx, val in enumerate(row):
+            assert cells[f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}"].text == str(val)
+
+
+def test_M_L_cells_ride_the_ssprimes_gridlines_and_ss_mapping_rows():
+    cells = {c.id: c for c in _barbados_ss().cells}
+    # the dL=4 ssprimes cells share x with the column axis (one per ss_prime_idx); the
+    # rL=3 ss_mapping rows share y with their map_top
+    for gen_idx in range(3):
+        for ss_prime_idx in range(4):
+            cell = cells[f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}"]
+            # consistent x within the column across all rows
+            assert cell.x == cells[f"cell:ss_mapping:ssprimes:0:{ss_prime_idx}"].x
+            # consistent y within the row across all columns
+            assert cell.y == cells[f"cell:ss_mapping:ssprimes:{gen_idx}:0"].y
+
+
+def test_M_L_off_omits_the_cells():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()  # nonstandard_domain off
+    cids = {c.id for c in spreadsheet.build(state, s).cells}
+    assert not any(cid.startswith("cell:ss_mapping:ssprimes:") for cid in cids)
+
+
+def test_M_L_standard_domain_equals_M():
+    # a standard prime-limit domain has dL == d and rL == r, and M_L is M canonicalized.
+    # 2.3.5 meantone: M = ((1,1,0),(0,1,4)). canonical form is the same here, so M_L = M.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults() | {"nonstandard_domain": True}
+    cells = {c.id: c for c in spreadsheet.build(state, s).cells}
+    ml = service.superspace_mapping(state)
+    for gen_idx, row in enumerate(ml):
+        for ss_prime_idx, val in enumerate(row):
+            assert cells[f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}"].text == str(val)
+
+
+def test_M_L_tile_carries_per_row_map_brackets_and_a_matrix_frame():
+    # the M_L tile is framed like M — per-row ⟨ … ] covector brackets stacking down the rL
+    # rows, plus the outer top bracket + bottom curly brace spanning the whole matrix
+    # (matrix_frame, like mapping/canon)
+    cells = {c.id: c for c in _barbados_ss().cells}
+    for i in range(3):
+        assert cells[f"bracket:ss_map:{i}:l"].text == spreadsheet.MAP_BRACKETS[0]
+        assert cells[f"bracket:ss_map:{i}:r"].text == spreadsheet.MAP_BRACKETS[1]
+    # top/bottom spanning frame, like the existing M tile (ebktop:primes / ebkbrace:primes)
+    assert "ebktop:ss_mapping" in cells
+    assert "ebkbrace:ss_mapping" in cells
+
+
+def test_M_L_tile_row_labels_each_covector():
+    # M's row label is 𝒎ᵢ (each row a covector 𝒎ᵢ — see ROW_LABEL_LETTERS). M_L's parallel:
+    # each row labelled 𝒎ₗᵢ (math-italic 𝒎 + subscript ₗ + i+1). With symbols on the row
+    # labels render in the row-label gutter at the left of each ⟨ bracket.
+    cells = {c.id: c for c in _barbados_ss(symbols=True).cells}
+    for i in range(3):  # rL=3 rows
+        sub_i = str(i + 1).translate(_SUBSCRIPT_DIGITS)
+        assert cells[f"matlabel:row:ss_mapping:ssprimes:{i}"].text == f"\U0001D48Eₗ{sub_i}"

@@ -2367,6 +2367,20 @@ class _GridBuilder:
                         self.prime_left(elem_idx), self.ss_vec_top(ss_prime_idx), COL_W, ROW_H,
                         "vec", text=str(val), prime=ss_prime_idx, comma=elem_idx,
                     ))
+        # M_L (superspace mapping): the rL × dL covector stack the temperament lifts to over its
+        # superspace primes. Sits in (ss_mapping, ssprimes), each row a covector over the dL
+        # ss_primes (a "mapping" cell per (gen_idx, ss_prime_idx)) — the parallel of the existing
+        # M mapping over primes, just shifted into the superspace.
+        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
+            ml = service.superspace_mapping(self.state)
+            for gen_idx in range(self.rL):
+                for ss_prime_idx in range(self.dL):
+                    self.cells.append(CellBox(
+                        f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}",
+                        self.ss_prime_left(ss_prime_idx), self.ss_map_top(gen_idx), COL_W, ROW_H,
+                        "mapping", text=str(ml[gen_idx][ss_prime_idx]),
+                        gen=gen_idx, prime=ss_prime_idx,
+                    ))
 
         # the chapter-9 CONVERSION rows. Each carries the same dL-tall spine basis index
         # (the superspace primes, one per row) so its right-hand matrix's rows align with
@@ -2786,6 +2800,11 @@ class _GridBuilder:
             # the interest mapped images stand alone (no outer [ … ]), mirroring the vectors row
             if self.nh and self.tile_open("mapping", "held"):  # held mapped list, like the targets / interest
                 self.bracket("hmapped", LIST_BRACKETS, "held", self.row_y["mapping"], self.r * ROW_H, fit=True)
+        # the chapter-9 superspace mapping M_L: a rL × dL covector stack over the ssprimes
+        # column, framed exactly like M (per-row ⟨ … ] brackets + top/bottom matrix_frame)
+        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
+            for i in range(self.rL):
+                self.bracket(f"ss_map:{i}", MAP_BRACKETS, "ssprimes", self.ss_map_top(i), ROW_H)
         if self.row_open("vectors"):  # each group is a list of vectors: a [ ] spanning the d components
             for group in ("commas", "targets"):
                 if self.tile_open("vectors", group):
@@ -2860,14 +2879,18 @@ class _GridBuilder:
             # the per-column group's count, so a tile's columns are iterated by its
             # (rkey, ckey) without re-deriving the loop bounds each time
             group_count = {"gens": self.r, "primes": self.d, "commas": self.nc, "targets": self.k,
-                           "held": self.nh, "detempering": self.r}
+                           "held": self.nh, "detempering": self.r,
+                           "ssgens": self.rL, "ssprimes": self.dL}
             # the y of the i-th row inside a row-labelled tile: the mapping stacks under
-            # row_y["mapping"]; the prescaler stacks d rows under row_y["prescaling"]
+            # row_y["mapping"]; the prescaler stacks d rows under row_y["prescaling"]; the
+            # chapter-9 superspace mapping M_L stacks rL rows under row_y["ss_mapping"]
             row_top = {
                 ("mapping", "primes"): self.map_top,
                 ("prescaling", "primes"): lambda i: self.row_y["prescaling"] + i * ROW_H,
+                ("ss_mapping", "ssprimes"): self.ss_map_top,
             }
-            row_count = {("mapping", "primes"): self.r, ("prescaling", "primes"): self.d + self.size_rows}
+            row_count = {("mapping", "primes"): self.r, ("prescaling", "primes"): self.d + self.size_rows,
+                         ("ss_mapping", "ssprimes"): self.rL}
             for (rkey, ckey), glyph in self.row_labels.items():
                 if not self.tile_open(rkey, ckey):
                     continue
@@ -3164,6 +3187,9 @@ class _GridBuilder:
         # matrix_frame + per-row bracket pattern the mapping uses, just with an angle ⟩
         # (ebkangle) at the bottom-span instead of the curly } (ebkbrace).
         self.matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle")
+        # the chapter-9 superspace mapping M_L is M's parallel over the superspace primes,
+        # framed the same way (top bracket + bottom curly brace spanning the rL × dL matrix)
+        self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")
 
         self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc)
         self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.k)

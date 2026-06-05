@@ -216,6 +216,9 @@ ROW_LABEL_LETTERS = {
     # glyph it realises — build() swaps in 𝒍ᵢ when 𝑋 = 𝐿 (the log-prime matrix), else the generic
     # 𝒙ᵢ (see row_labels). The static value is that generic fallback.
     ("prescaling", "primes"): "𝒙",
+    # the chapter-9 superspace mapping M_L: each row a covector over the dL ss_primes,
+    # labelled 𝒎ₗᵢ (math-italic 𝒎 + subscript ₗ + index), parallel to the existing M's 𝒎ᵢ
+    ("ss_mapping", "ssprimes"): "𝒎ₗ",
 }
 ROW_LABELED_TILES = frozenset(ROW_LABEL_LETTERS)
 COL_LABEL_LETTERS = {
