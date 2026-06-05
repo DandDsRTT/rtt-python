@@ -26,6 +26,16 @@ from rtt.web import spreadsheet
 from rtt.web.editor import Editor
 
 
+def test_rowlabel_font_shrinks_only_a_too_wide_word():
+    from rtt.web.app import _rowlabel_font
+
+    # short titles keep the full 13px; a title whose longest word overflows the narrow gutter
+    # shrinks to fit (so it right-justifies instead of clipping at the grid's left edge)
+    assert _rowlabel_font("mapping") == 13.0
+    assert _rowlabel_font("complexity prescaling") == 13.0      # both words fit at 13px
+    assert _rowlabel_font("complexity pretransforming") < 13.0  # "pretransforming" is too wide
+
+
 async def test_default_page_renders_without_error(user: User) -> None:
     await user.open("/")
     # the board built: a representative slice of the default grid's row/column titles

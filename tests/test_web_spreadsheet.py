@@ -2192,10 +2192,10 @@ def test_size_factor_renames_prescaler_to_pretransformer_in_the_labels():
     assert lils["caption:prescaling:primes"].text == "complexity pretransformer"
     assert lp["caption:prescaling:targets"].text == "complexity prescaled target interval list"
     assert lils["caption:prescaling:targets"].text == "complexity pretransformed target interval list"
-    # the row title (the left gutter label) — the noun "pretransform" (not the gerund), so the one
-    # token fits the narrow row-label column and right-justifies rather than overflowing it
+    # the row title (the left gutter label) stays parallel to "complexity prescaling" — the app
+    # font-shrinks the long "pretransforming" word so it fits the gutter (app._rowlabel_font)
     assert lp["label:prescaling"].text == "complexity prescaling"
-    assert lils["label:prescaling"].text == "complexity pretransform"
+    assert lils["label:prescaling"].text == "complexity pretransforming"
     # the predefined-prescalers preset's field label
     assert lp["block:preset:prescaler:label"].text == "predefined prescalers"
     assert lils["block:preset:prescaler:label"].text == "predefined pretransformers"
@@ -2921,6 +2921,22 @@ def test_weighting_controls_each_sit_in_a_bordered_box():
         # the control sits fully inside its box, inset off the left/top border
         assert box.x < ctrl.x and ctrl.x + ctrl.w <= box.x + box.w + 0.01, box_id
         assert box.y < ctrl.y and ctrl.y + ctrl.h <= box.y + box.h + 0.01, box_id
+
+
+def test_diminuator_rides_the_pretransformer_chooser_box_when_presets_on():
+    # box 𝐋's "replace diminuator" check rides INSIDE the predefined-pretransformers chooser box (to
+    # the dropdown's right), not a separate box — the way the all-interval check rides the target box.
+    # Its own box (block:diminuator) is only the presets-OFF fallback.
+    on = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))),
+                           {**settings.defaults(), "weighting": True, "alt_complexity": True, "presets": True},
+                           tuning_scheme="TILT minimax-S")
+    cells = {c.id: c for c in on.cells}
+    blocks = {b.id for b in on.blocks}
+    assert cells["control:diminuator"].x > cells["preset:prescaler"].x  # to the RIGHT of the dropdown
+    assert "block:diminuator" not in blocks  # no separate box — it's inside the chooser box
+    # presets OFF: the diminuator falls back to its own box
+    off_blocks = {b.id for b in _with("TILT minimax-S", weighting=True, alt_complexity=True).blocks}
+    assert "block:diminuator" in off_blocks
 
 
 def test_weighting_control_boxes_layer_above_their_tile_panels():

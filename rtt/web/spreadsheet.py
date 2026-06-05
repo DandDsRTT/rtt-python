@@ -131,6 +131,9 @@ CTRL_LABEL_GAP = 2  # padding below the label, to the box's bottom edge
 # padding (BOX_OUTER off the tile, BOX_INNER off the border, each side) so _control_floor can
 # widen the target column enough that the box never overhangs the tile.
 TBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + TARGET_PRESET_W + 8 + LBOX_DIM_W  # 8 = OPT_COL_GAP
+# box 𝐋's footprint when the diminuator rides the predefined-pretransformers chooser box: the
+# dropdown + the "replace diminuator" checkbox slot on one row (the box-𝐓 shape, with PRESET_W).
+PBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + PRESET_W + 8 + LBOX_DIM_W  # 8 = OPT_COL_GAP
 BOX_TITLE_H = 14  # px height of the optimization / tuning-ranges boxes' bold title strip
 BOX_TITLE_GAP = 4  # gap below that title, before the box's content
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
@@ -184,10 +187,9 @@ def _pretransform_label(text: str) -> str:
     the rectangular (size-factored) 𝑋, which shears rather than scales, so "prescaler" is a misnomer.
     Applied to every prescaling label (caption, row title, preset) while the size factor is on.
     "prescaled"/"prescaling" are swapped before "prescaler" (which also fixes the plural prescalers).
-    "prescaling" (the row title) takes the noun "pretransform", not the gerund "pretransforming" —
-    the longer word is one unbreakable token wider than the row-label column, so it would overflow
-    rather than right-justify; the noun also reads parallel to the "complexity" / "weight" rows."""
-    for old, new in (("prescaled", "pretransformed"), ("prescaling", "pretransform"),
+    "prescaling" → "pretransforming" stays parallel to the un-swapped "complexity prescaling" row
+    title; the row-label renderer shrinks the font so the longer word still fits its narrow gutter."""
+    for old, new in (("prescaled", "pretransformed"), ("prescaling", "pretransforming"),
                      ("prescaler", "pretransformer")):
         text = text.replace(old, new)
     return text
@@ -1062,7 +1064,9 @@ class _GridBuilder:
         # predefined-complexity chooser then the norm chooser, and box 𝒘 (the weight list over the
         # targets) carries the weight-slope chooser. (The prescaler chooser is a preset now, riding
         # the preset band above — see PRESETS.) Each tile reserves its controls' height up front.
-        self.lbox_ctrl = self._lbox_show and self.col_open("primes")
+        # the diminuator rides the pretransformer chooser's box when presets is on; its own box (here)
+        # is only the presets-OFF fallback, mirroring the all-interval checkbox's vectors-row fallback
+        self.lbox_ctrl = self._lbox_show and self.col_open("primes") and not self.show_presets
         # box 𝐋's lone control is the diminuator checkbox at the column's left, over its "replace
         # diminuator" caption: a small square (OPTION_BOX_PX) plus a one-line caption sets the reserve.
         self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
@@ -1296,7 +1300,9 @@ class _GridBuilder:
         # each weighting control sits in a bordered box (control_region), so the column must fit the
         # control PLUS the box's BOX_INNER inset on each side, like the optimization box's OPT_PAD.
         if key == "primes" and self._lbox_show:
-            floor = LBOX_DIM_W + 2 * BOX_INNER  # box 𝐋: the diminuator checkbox + caption, boxed
+            # box 𝐋: with presets on, the diminuator rides the pretransformer-chooser box (PBOX_W,
+            # the box-𝐓 shape); with presets off it falls back to its own diminuator-only box
+            floor = PBOX_W if self.show_presets else LBOX_DIM_W + 2 * BOX_INNER
         if key == "targets" and self._cbox_show:
             # box 𝒄: the complexity + norm choosers, boxed. The predefined-complexities dropdown is a
             # preset, so it (and the width it needs) drops out when the presets layer is off.
@@ -1744,6 +1750,16 @@ class _GridBuilder:
                              "control_check", text="", checked=service.is_all_interval(self.tuning_scheme)))
         self.cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="all-interval"))
+
+    def emit_diminuator_check(self, check_x, ctrl_y):
+        # the "replace diminuator" checkbox + caption, seated to the RIGHT of the predefined-
+        # pretransformers dropdown inside its preset box — box 𝐋's control riding the existing
+        # pretransformer-chooser box, the way the all-interval check rides the target chooser box.
+        check_y = ctrl_y + (PRESET_H - OPTION_BOX_PX) / 2  # centre the square on the control row
+        self.cells.append(CellBox("control:diminuator", check_x, check_y, LBOX_DIM_W, OPTION_BOX_PX,
+                             "control_check", text="", checked=service.diminuator_replaced(self.tuning_scheme)))
+        self.cells.append(CellBox("caption:diminuator", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
+                             CAPTION_LINE, "caption", text="replace diminuator"))
 
     # a framed matrix's top bracket + bottom brace stand off the cells by FRAME_GAP:
     # the top bracket just above row 0 (below the toggle head), the brace a matching
@@ -2839,6 +2855,11 @@ class _GridBuilder:
                 # empty space of its now-tile-spanning box (box 𝐓); TBOX_W floors the column wide enough.
                 if name == "target" and self.settings["all_interval"]:
                     self.emit_all_interval_check(cx + cw + OPT_COL_GAP, cy)
+                # the pretransformer chooser likewise carries the "replace diminuator" checkbox to its
+                # right (box 𝐋), in one box; PBOX_W floors the column. With presets off it falls back to
+                # its own box at the matrix bottom (lbox_ctrl), mirroring the all-interval checkbox.
+                if name == "prescaler" and self.settings["alt_complexity"]:
+                    self.emit_diminuator_check(cx + cw + OPT_COL_GAP, cy)
 
             for name, rkey, ckey, label in PRESETS:
                 emit_preset(f"preset:{name}", name, rkey, ckey, label)
