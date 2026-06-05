@@ -1063,10 +1063,14 @@ def plain_text_values(
     # extending each column the way the products do.
     bare_size_row = ((tuple(size_factor * w for w in prescaler),) if size_factor else ())
     # the weight row is the per-target simplicity-weight list — or, when the size factor makes the
-    # pretransformer rectangular (all-interval lils), the d×(d+1) weight MATRIX 𝑊 = (𝑍𝐿)⁻ as a
-    # covector-row stack ([⟨…] ⟨…] …]), matching the grid; the per-prime list can't carry it.
+    # pretransformer rectangular (all-interval lils), the d×(d+1) weight MATRIX 𝑊 = (𝑍𝐿)⁻. The guide
+    # writes it as a PLAIN matrix [ {rrr|r} ] — one [ … ] enclosing the rows, a single ` | ` bar
+    # before the size column — so the plain text mirrors the grid: [ row | size  row | size  … ]. Each
+    # row's ` | ` is exactly the gridline the grid draws between the prime and size columns; the per-
+    # prime list can't carry it.
     if size_factor and is_all_interval(scheme):
-        weight_text = "[" + " ".join(_cents_map(row) for row in damage_weight_matrix(state.mapping, scheme)) + "]"
+        weight_text = "[" + "  ".join(_augmented_row(row, state.d) for row in
+                                      damage_weight_matrix(state.mapping, scheme)) + "]"
     else:
         weight_text = _cents_list(interval_weights(state.mapping, scheme, targets, domain_basis=db))
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
@@ -1238,6 +1242,15 @@ def prescale_text(value: float) -> str:
 def _cents_map(values) -> str:
     """A tuning covector over the primes: ``⟨1200.000 1901.955 …]``."""
     return "⟨" + " ".join(cents(v) for v in values) + "]"
+
+
+def _augmented_row(values, d: int) -> str:
+    """One row of the plain weight matrix, its entries past the first ``d`` (the size-sensitizing
+    augmentation) set off by a ` | ` bar — ``0.500 -0.500 -0.500 | 0.500`` — the guide's [… | …⟩
+    augmentation separator, matching the gridline the grid draws between the prime and size columns."""
+    head = " ".join(cents(v) for v in values[:d])
+    tail = " ".join(cents(v) for v in values[d:])
+    return head + (f" | {tail}" if tail else "")
 
 
 def _cents_list(values, wrap: bool = True) -> str:

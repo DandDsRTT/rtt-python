@@ -2924,14 +2924,17 @@ class _GridBuilder:
                     self.bracket(f"{key}:ssprimes", MAP_BRACKETS, "ssprimes", self.row_y[key], ROW_H)
         if self.tile_open("weight", "targets"):
             if self.weight_is_matrix:
-                # one tall [ … ] spanning the whole weight matrix (per the guide's display): d columns
-                # over the target gridlines, plus — with the size factor — the extra column that
-                # overflows one COL_W to the right (so the right edge rides 1 + size_rows columns out)
+                # one tall [ … ] spanning the whole weight matrix (per the guide's plain [ {rrr|r} ]):
+                # d columns over the target gridlines, plus — with the size factor — the extra column
+                # that overflows one COL_W to the right (so the right edge rides 1 + size_rows columns out)
                 left = self.group_left["targets"]
                 top, h = self.row_y["weight"], self.d * ROW_H
                 self.cells.append(CellBox("bracket:weight:l", left(0) - BRACKET_W, top, BRACKET_W, h, "bracket", text="["))
                 self.cells.append(CellBox("bracket:weight:r", left(self.k - 1) + (1 + self.size_rows) * COL_W, top,
                                      BRACKET_W, h, "bracket", text="]"))
+                if self.size_rows:  # the guide's ` | ` divider before the size column — the same separator the
+                    # plain text shows (⟨… | …]); one tall rule between the last prime column and the size column
+                    self.cells.append(CellBox("bar:weight", left(self.k - 1) + COL_W - SEP_W / 2, top, SEP_W, h, "vbar"))
             else:
                 self.bracket("weight", LIST_BRACKETS, "targets", self.row_y["weight"], ROW_H)
         if self.tile_open("damage", "targets"):

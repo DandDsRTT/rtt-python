@@ -1982,6 +1982,21 @@ def test_all_interval_weight_matrix_carries_the_W_symbol_and_a_spanning_bracket(
     assert on["bracket:weight:r"].x > on["cell:weight:targets:0:3"].x
 
 
+def test_the_weight_matrix_size_bar_is_one_structure_in_both_the_grid_and_the_plain_text():
+    # the size-augmentation ` | ` divider is a single structure shown two ways and they must agree: the
+    # grid draws a vertical rule (bar:weight) at the prime|size seam, and the plain text shows the same
+    # ` | ` divider per row (the guide's [… | …] augmentation separator). Neither can have it alone.
+    on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True, plain_text_values=True).cells}
+    assert "bar:weight" in on                              # the grid's vertical size-divider
+    assert " | " in on["ptext:weight:targets"].text        # the plain text's matching size-divider
+    bar = on["bar:weight"]                                 # ...sitting between the last prime and the size column
+    assert on["cell:weight:targets:0:2"].x < bar.x <= on["cell:weight:targets:0:3"].x
+    assert bar.h == 3 * spreadsheet.ROW_H                  # spanning all d matrix rows, like the [ … ]
+    # a weight LIST (no size factor → not a matrix) has the divider in NEITHER view
+    off = {c.id: c for c in _with(scheme="minimax-S", weighting=True, plain_text_values=True).cells}
+    assert "bar:weight" not in off and "|" not in off["ptext:weight:targets"].text
+
+
 def test_a_non_diagonal_pretransformer_makes_the_all_interval_weight_the_square_inverse():
     # editing the pretransformer square off-diagonal (a non-diagonal 𝑋, no size factor) also costs the
     # per-prime weight list its diagonal form: the weight becomes the d×d inverse 𝑊 = 𝑋⁻¹. Unlike the
