@@ -1725,26 +1725,23 @@ class _Reconciler:
     def _build_map_drag(self, cb, wrap):  # the drag SOURCE grip for generator row cb.gen
         # HTML5 drag-to-combine. The grip is only the drag SOURCE — the DROP TARGETS are the mapping
         # ROWS themselves (every mapping cell is armed by _arm_row_target), so you drop onto a whole
-        # row you can actually hover, not a 14px grip. dragstart records the source row server-side
-        # and marks the body 'rtt-combining-mapping' so the row cells light up as copy targets (that
-        # body mark is what gives the + cursor over a row); it also sets effectAllowed='copy' and
-        # setData (the latter lets the drag start in Firefox). dragend clears the source + the mark.
+        # row you can actually hover, not a 14px grip. dragstart records the source row server-side;
+        # the js dragstart sets effectAllowed='copy' (the drag reads as a copy → + cursor) and setData
+        # (lets the drag start in Firefox). dragend clears the source.
         wrap.classes("rtt-drag-handle rtt-row-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, idx=cb.gen: self._begin_row_drag(idx))
         wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
-                                        "e.dataTransfer.setData('application/x-rtt-row','');"
-                                        "document.body.classList.add('rtt-combining-mapping');}")
+                                        "e.dataTransfer.setData('application/x-rtt-row','');}")
         wrap.on("dragend", lambda _=None: self._end_row_drag())
-        wrap.on("dragend", js_handler="(e)=>{document.body.classList.remove('rtt-combining-mapping');}")
         ui.icon("drag_indicator").classes("rtt-grip")
 
     def _arm_row_target(self, wrap, gen):  # make a mapping cell a drop target for its row (gen)
-        # while a row-combine drag is in flight (body.rtt-combining-mapping) every mapping cell is a
-        # copy target: dragover gives the + cursor, dragenter previews dropping the dragged row INTO
-        # this row, drop commits it. Inert otherwise (no body mark, _row_drag is None), so ordinary
-        # cell editing is untouched. Dropping a row on its own cells is a no-op (see _drop_on_row).
-        wrap.on("dragover", js_handler="(e)=>{if(document.body.classList.contains('rtt-combining-mapping'))"
-                                       "{e.preventDefault();e.dataTransfer.dropEffect='copy';}}")
+        # the mapping row is the drop target for a dragged generator row: dragover keeps every cell a
+        # droppable copy surface (preventDefault makes a drop land here; dropEffect='copy' gives the +
+        # cursor), dragenter previews dropping the dragged row INTO this row, drop commits it. The py
+        # preview/drop are no-ops unless a row drag is actually in flight (_row_drag set), so a
+        # non-combine drag — or a row over its own cells — passing over a cell changes nothing.
+        wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
         wrap.on("dragenter.prevent", lambda _=None, idx=gen: self._preview_row_drop(idx))
         wrap.on("drop.prevent", lambda _=None, idx=gen: self._drop_on_row(idx))
 
@@ -1784,15 +1781,15 @@ class _Reconciler:
         wrap.classes("rtt-drag-handle rtt-col-handle").props("draggable=true")
         wrap.on("dragstart", lambda _=None, g=group, idx=cb.comma: self._begin_col_drag(g, idx))
         wrap.on("dragstart", js_handler="(e)=>{e.dataTransfer.effectAllowed='copy';"
-                                        "e.dataTransfer.setData('application/x-rtt-int','');"
-                                        f"document.body.classList.add('rtt-combining-{group}');}}")
+                                        "e.dataTransfer.setData('application/x-rtt-int','');}")
         wrap.on("dragend", lambda _=None: self._end_col_drag())
-        wrap.on("dragend", js_handler=f"(e)=>{{document.body.classList.remove('rtt-combining-{group}');}}")
         ui.icon("drag_indicator").classes("rtt-grip")
 
     def _arm_col_target(self, wrap, group, idx):  # make an interval cell a drop target for its column
-        wrap.on("dragover", js_handler=f"(e)=>{{if(document.body.classList.contains('rtt-combining-{group}'))"
-                                       "{e.preventDefault();e.dataTransfer.dropEffect='copy';}}")
+        # the column twin of _arm_row_target: dragover keeps the cell a droppable copy surface, the py
+        # dragenter previews / drop commits the combine, gated server-side to the same column and a
+        # DIFFERENT interval (see _int_combine), so a non-matching drag over the cell does nothing.
+        wrap.on("dragover", js_handler="(e)=>{e.preventDefault();e.dataTransfer.dropEffect='copy';}")
         wrap.on("dragenter.prevent", lambda _=None, g=group, i=idx: self._preview_int_drop(g, i))
         wrap.on("drop.prevent", lambda _=None, g=group, i=idx: self._drop_on_interval(g, i))
 
