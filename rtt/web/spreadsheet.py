@@ -2162,10 +2162,16 @@ class _GridBuilder:
             for p in range(self.d):
                 self.cells.append(CellBox(f"ucol:vectors:{p}", self.col_x["units"], self.vec_top(p), self.col_w["units"], ROW_H,
                                      "units", text=f"{self.domain_label}{_sub(p + 1)}/"))
+            if self.phantom_dim:  # the dummy prime component has no real prime — "–", greyed
+                self.cells.append(CellBox(f"ucol:vectors:{self.d}", self.col_x["units"], self.vec_top(self.d), self.col_w["units"], ROW_H,
+                                     "units", text="–", phantom=True))
         if self.tile_open("mapping", "units"):
             for i in range(self.r):
                 self.cells.append(CellBox(f"ucol:mapping:{i}", self.col_x["units"], self.map_top(i), self.col_w["units"], ROW_H,
                                      "units", text=f"g{_sub(i + 1)}/"))
+            if self.phantom_dim:  # the size generator's unit follows the generator units (g₍ᵣ₊₁₎/), greyed
+                self.cells.append(CellBox(f"ucol:mapping:{self.r}", self.col_x["units"], self.map_top(self.r), self.col_w["units"], ROW_H,
+                                     "units", text=f"g{_sub(self.r + 1)}/", phantom=True))
         for key in ("tuning", "just", "retune"):
             if self.tile_open(key, "units"):
                 self.cells.append(CellBox(f"ucol:{key}", self.col_x["units"], self.row_y[key], self.col_w["units"], ROW_H,
@@ -2175,7 +2181,7 @@ class _GridBuilder:
         # units ((C)/ … (ES)/), and damage their ¢-prefixed form (¢(C)/ …) — all tracking the live
         # scheme like tile_unit (guide ch.10 "Annotated units").
         if self.tile_open("prescaling", "units"):
-            for i in range(self.d):
+            for i in range(self.d + self.size_rows):  # incl. the real 𝒛 size row (size factor) — also octaves
                 self.cells.append(CellBox(f"ucol:prescaling:{i}", self.col_x["units"], self.row_y["prescaling"] + i * ROW_H,
                                      self.col_w["units"], ROW_H, "units", text="oct/"))
         spine = {"complexity": f"{self.complexity_unit}/", "weight": f"{self.weight_unit}/",
@@ -3198,7 +3204,7 @@ class _GridBuilder:
                 ("ss_mapping", "ssprimes"): self.ss_map_top,
                 ("ss_just_mapping", "ssprimes"): self.ss_just_map_top,
             }
-            row_count = {("mapping", "primes"): self.r, ("prescaling", "primes"): self.d + self.size_rows,
+            row_count = {("mapping", "primes"): self.r + self.phantom_dim, ("prescaling", "primes"): self.d + self.size_rows,
                          ("ss_mapping", "ssprimes"): self.rL,
                          ("ss_just_mapping", "ssprimes"): self.dL}
             for (rkey, ckey), glyph in self.row_labels.items():
@@ -3209,12 +3215,14 @@ class _GridBuilder:
                     # the bare pretransformer 𝑋 = 𝑍𝐿's bottom (size-sensitizing) row is labelled 𝒛 (the
                     # size-sensitizing matrix 𝑍's row variable), NOT 𝒍₄ / 𝒙₄ — it isn't a fourth prime.
                     size_row = (rkey, ckey) == ("prescaling", "primes") and i == self.d and self.size_rows
+                    # the mapping's (r+1)-th row is the size generator (the dropped dummy generator): 𝒎₍ᵣ₊₁₎, greyed
+                    dummy_gen = (rkey, ckey) == ("mapping", "primes") and i == self.r and self.phantom_dim
                     text = "𝒛" if size_row else f"{glyph}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
                         # past the drag-handle gutter (when present), so the handle sits to its left
                         self.content_x[ckey] + self.handle_gutter_w(ckey), top(i), MATLABEL_W, ROW_H,
-                        "matlabel", text=text,
+                        "matlabel", text=text, phantom=dummy_gen,
                     ))
             # column labels — one per cell of each col-labelled tile, in the band above
             # the top frame (so a framed matrix reads label / [bracket] / cells). A label
@@ -3223,6 +3231,10 @@ class _GridBuilder:
             # than glyph+subscript (the complexity row's norm expressions). The prescaling/
             # complexity product-column labels carry the LIVE prescaler glyph (𝐿𝐜/𝐿𝐭/… or
             # 𝑋𝐜/𝑋𝐭/…) — matching the tile-symbol slot below — via col_labels.
+            # the augmented dimension adds one more label per primes / gens / targets covector: the size
+            # generator's gens sub-column is numbered (𝒈₍ᵣ₊₁₎); the dummy prime ISN'T a real prime (cf. the
+            # 𝒛 size row), so its primes / (Tₚ = I) targets columns are "–". All greyed (dropped / junk).
+            augmented_cols = {"primes", "gens", "targets"}
             for (rkey, ckey), val in self.col_labels.items():
                 if ckey not in group_count or rkey not in self.row_matlabel_top:
                     continue
@@ -3230,12 +3242,17 @@ class _GridBuilder:
                     continue
                 left = self.group_left[ckey]
                 y = self.row_matlabel_top[rkey]
-                for i in range(group_count[ckey]):
-                    text = val(i) if callable(val) else f"{val}{_sub(i + 1)}"
+                n = group_count[ckey] + (self.phantom_dim if ckey in augmented_cols else 0)
+                for i in range(n):
+                    dummy = self.phantom_dim and ckey in augmented_cols and i == group_count[ckey]
+                    if dummy and ckey != "gens":  # the dummy prime / target has no per-tile symbol
+                        text = "–"
+                    else:
+                        text = val(i) if callable(val) else f"{val}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:col:{rkey}:{ckey}:{i}",
                         left(i), y, COL_W, MATLABEL_H,
-                        "matlabel", text=text,
+                        "matlabel", text=text, phantom=dummy,
                     ))
 
         # Shared axes. A multi-element group is one line that fans out at the near end

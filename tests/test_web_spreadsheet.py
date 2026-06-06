@@ -2240,6 +2240,39 @@ def test_size_factor_completes_the_generators_axis_in_the_genmap():
     assert "tuning:gen:2" not in lp and "qgen:2" not in lp
 
 
+def test_size_factor_completes_the_units_column_for_the_augmented_rows():
+    # the units column gains a unit cell for each augmented row, so it isn't ragged against the d+1 / r+1
+    # bands: the dummy prime component has no unit — "–", greyed; the size generator follows the generator
+    # units (g₃/), greyed (the dropped generator); the bare 𝑋's real size row 𝒛 carries an octave unit
+    # (NOT greyed — a genuine row of 𝑍, with real octave values).
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True).cells}
+    assert lils["ucol:vectors:3"].text == "–" and lils["ucol:vectors:3"].phantom
+    assert lils["ucol:mapping:2"].text == "g₃/" and lils["ucol:mapping:2"].phantom
+    assert lils["ucol:prescaling:3"].text == "oct/" and not lils["ucol:prescaling:3"].phantom
+    # a square (lp) all-interval has no augmented rows, so no extra unit cells
+    lp = {c.id for c in _with("minimax-S", weighting=True, symbols=True, domain_units=True).cells}
+    assert "ucol:vectors:3" not in lp and "ucol:mapping:2" not in lp and "ucol:prescaling:3" not in lp
+
+
+def test_size_factor_completes_the_matrix_labels_for_the_augmented_dimension():
+    # the row + column label bands gain the augmented dimension's labels (when symbols is on). The size
+    # generator is the (r+1)-th map row / generator sub-column, numbered 𝒎₃ / 𝒈₃ but greyed (the dropped
+    # generator). The dummy prime ISN'T a real prime (cf. the 𝒛 size row), so its column labels are "–",
+    # greyed — across both the primes covectors and, since Tₚ = I, the target covectors.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
+    assert lils["matlabel:row:mapping:primes:2"].text == "𝒎₃" and lils["matlabel:row:mapping:primes:2"].phantom
+    assert lils["matlabel:col:tuning:gens:2"].text == "𝒈₃" and lils["matlabel:col:tuning:gens:2"].phantom
+    for rkey in ("tuning", "just", "retune"):
+        assert lils[f"matlabel:col:{rkey}:primes:3"].text == "–" and lils[f"matlabel:col:{rkey}:primes:3"].phantom
+    for rkey in ("vectors", "complexity", "damage", "weight"):
+        assert lils[f"matlabel:col:{rkey}:targets:3"].text == "–" and lils[f"matlabel:col:{rkey}:targets:3"].phantom
+    # the X = ZL size row keeps its real 𝒛 (not greyed); the dummy-prime column labels don't displace it
+    assert lils["matlabel:row:prescaling:primes:3"].text == "𝒛" and not lils["matlabel:row:prescaling:primes:3"].phantom
+    # a square (lp) all-interval has no augmented labels
+    lp = {c.id for c in _with("minimax-S", weighting=True, symbols=True).cells}
+    assert "matlabel:row:mapping:primes:2" not in lp and "matlabel:col:tuning:primes:3" not in lp
+
+
 def test_size_factor_marks_the_dummy_prime_quantity_with_a_dash():
     # the dummy prime has no real prime number, so its quantity reads "–" (greyed) in both prime spines —
     # the quantities row (prime:d) and the interval-vectors basis spine (basis:d, labelling the dummy row).
