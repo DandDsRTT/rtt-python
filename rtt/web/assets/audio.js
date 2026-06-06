@@ -111,8 +111,8 @@ window.rttAudio = (function () {
       return;
     }
     if (S.stop) { S.stop(); S.stop = null; S.finish = null; if (S.hold) return; }  // a second click stops it
-    if (S.mode === 1) {                                   // arpeggiate, from the clicked note, wrapping
-      const order = []; for (let k = 0; k < cents.length; k++) order.push((idx + k) % cents.length);
+    if (S.mode === 1) {                                   // arpeggiate, always from the leftmost pitch
+      const order = []; for (let k = 0; k < cents.length; k++) order.push(k);  // (float is per-tile; idx is moot)
       const seq = sequence(tile, order, cents, S.root, false, S.hold);
       if (S.hold) { S.stop = seq.stop; S.finish = seq.finish; }   // held arp loops; lock-off finishes the pass
     } else if (S.mode === 2) {                            // chord: all together
