@@ -629,16 +629,19 @@
 .rtt-audio-ctrl:hover { color:#000; }
 .rtt-audio-ctrl.rtt-audio-on { background:#666; color:#fff; border-radius:2px; }
 .rtt-audio-glyph { width:12px; height:12px; display:block; }
-/* the per-cell hover speaker: an unobtrusive corner glyph on every click-to-play interval cell.
-   Hidden until the cursor rests on the cell AND audio is engaged (body not muted); click to sound.
-   The white halo keeps it legible over a colorization wash or the cell's own number. */
-.rtt-cell-spk { position:absolute; top:0; right:0; font-size:12px; line-height:1; color:#777;
-    cursor:pointer; opacity:0; pointer-events:none; transition:opacity 0.1s; z-index:6;
-    text-shadow:0 0 2px #fff, 0 0 2px #fff; }
-/* descendant, not direct-child: ui.html wraps the speaker span in its own div, so the icon is a
-   grandchild of the cell — a ">" combinator would miss it and the speaker would never reveal */
-body:not(.rtt-audio-muted) .rtt-cell:hover .rtt-cell-spk { opacity:0.85; pointer-events:auto; }
-.rtt-cell-spk:hover { opacity:1 !important; color:#000; }
+/* the per-interval audio affordance. Hovering any cell of an interval's COLUMN SEGMENT lights the
+   whole segment (.rtt-spk-hover, like the sounding flash) and floats ONE speaker above it —
+   tooltip-style, over the app — so the control reads as applying to the column, not a single vector
+   entry. audio.js positions + shows the float and manages the hover; clicking it sounds the interval.
+   Both only while unmuted (the engage gate). */
+.rtt-spk-hover { background:#d0d0d0 !important; border-radius:3px; }
+.rtt-spk-float { position:fixed; transform:translate(-50%, calc(-100% - 4px)); z-index:50; display:none;
+    align-items:center; justify-content:center; width:20px; height:20px; background:#fff;
+    border:1px solid #8a8a8a; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.3);
+    color:#444; cursor:pointer; }
+.rtt-spk-float.rtt-spk-float-on { display:flex; }
+.rtt-spk-float:hover { color:#000; background:#f2f2f2; }
+.rtt-spk-float .material-icons { font-size:15px; }
 .material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
 .rtt-audio-rootglyph { font-size:8px; font-family:'Cambria',Georgia,serif; line-height:1; }
 /* the domain − is a hover affordance: an invisible zone dropping from the removable

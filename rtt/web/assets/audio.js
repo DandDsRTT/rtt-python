@@ -5,7 +5,9 @@ window.rttAudio = (function () {
   // it); a speaker's `tile` is used ONLY to pick which speakers to highlight while they ring. The
   // hold-stack (mode 0) keys its held notes by tile:idx so each speaker toggles on/off independently
   // even though the waveform / mode / hold / root config is shared.
-  const S = { wave: 0, mode: 0, hold: false, root: false, muted: true, stop: null, held: {} };
+  // `live` is EVERY currently-sounding voice's release fn — the kill switch (stopAll) clears it, so a
+  // note/drone can always be silenced no matter how it was started (S.stop/S.held don't track them all).
+  const S = { wave: 0, mode: 0, hold: false, root: false, muted: true, stop: null, held: {}, live: new Set() };
   const api = { glyphs: null };
   function actx() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -31,15 +33,18 @@ window.rttAudio = (function () {
     o.connect(g); g.connect(ac.destination); o.start(t);
     if (idx >= 0) hl(tile, idx, true);
     let done = false;
-    return function () {
+    function release() {
       if (done) return; done = true;
+      S.live.delete(release);
       const r = actx().currentTime;
       g.gain.cancelScheduledValues(r);
       g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), r);
       g.gain.exponentialRampToValueAtTime(0.0001, r + 0.09);
       o.stop(r + 0.12);
       if (idx >= 0) setTimeout(function () { hl(tile, idx, false); }, 110);
-    };
+    }
+    S.live.add(release);
+    return release;
   }
   // sound a set of {idx,cents} together (+ optional root drone); returns a stop()
   function together(tile, items, root) {
@@ -68,8 +73,14 @@ window.rttAudio = (function () {
               for (let i = 0; i < rels.length; i++) rels[i]();  // end the pass, then repeat
               pass();
             }, roll ? 520 : STEP * 1000));
-          } else if (k === order.length - 1 && roll && !loop) {
-            timers.push(setTimeout(function () { for (let i = 0; i < rels.length; i++) rels[i](); }, 900));
+          } else if (k === order.length - 1 && !loop) {
+            // one-shot end: release any still-ringing notes (a rolled chord) AND the root drone, then
+            // clear the highlights — without releasing rootRel the 1/1 would drone forever (the bug)
+            timers.push(setTimeout(function () {
+              for (let i = 0; i < rels.length; i++) rels[i]();
+              if (rootRel) rootRel();
+              clearHl(tile);
+            }, roll ? 900 : STEP * 1000));
           }
         }.bind(null, k), k * STEP * 1000));
       }
@@ -110,8 +121,10 @@ window.rttAudio = (function () {
       if (!S.hold) S.stop = null;
     }
   };
-  function stopAll() { if (S.stop) { S.stop(); S.stop = null; }
-    for (const k in S.held) S.held[k](); S.held = {}; }   // each release clears its own speaker's highlight
+  function stopAll() {  // the kill switch: release EVERY sounding voice, however it was started, so a
+    Array.from(S.live).forEach(function (r) { r(); });    // stuck note or 1/1 drone can always be silenced
+    S.live.clear(); S.stop = null; S.held = {};
+  }
   api.cycleWave = function () { S.wave = (S.wave + 1) % 4;
     const e = ctrlEl('wave'); if (e) e.innerHTML = api.glyphs.wave[S.wave]; };
   api.cycleMode = function () { stopAll(); S.mode = (S.mode + 1) % 4;
@@ -123,23 +136,64 @@ window.rttAudio = (function () {
   // mute leads the bank and is also the kill switch: muting stops everything sounding and (via the
   // body class the CSS keys off) hides every cell's hover speaker, so a clicked cell can't play.
   // Unmuting re-reveals the speakers but sounds nothing until the next click.
-  api.toggleMute = function () { S.muted = !S.muted; if (S.muted) stopAll();
+  api.toggleMute = function () { S.muted = !S.muted; if (S.muted) { stopAll(); hideFloat(); }
     const e = ctrlEl('mute'); if (e) e.innerHTML = api.glyphs.mute[S.muted ? 1 : 0];
     document.body.classList.toggle('rtt-audio-muted', S.muted); };
   if (document.body) document.body.classList.add('rtt-audio-muted');  // start muted (matches S.muted)
-  // one delegated listener for every cell's hover speaker: read the clicked cell's voice (its tile +
-  // slot), derive the tile's chord from its sibling cells LIVE (so reorder / retune need no rebaking),
-  // and sound it through the shared config. hit() itself no-ops while muted.
-  document.addEventListener('click', function (ev) {
-    const icon = ev.target.closest && ev.target.closest('.rtt-cell-spk');
-    if (!icon) return;
-    const cell = icon.closest('.rtt-spk[data-audio]');
+  // Per-COLUMN-SEGMENT audio affordance: a vector's entries aren't individually playable, so the
+  // control applies to the whole interval column. Hovering any cell of a column segment lights the
+  // segment (.rtt-spk-hover) and floats ONE speaker above it (tooltip-style, over the app); clicking
+  // the float sounds the interval. Gated on unmuted; the chord is derived from the segment's sibling
+  // cells live (reorder / retune safe). A grace timer lets the cursor cross the gap onto the button.
+  let floatEl = null, floatSeg = null, hideT = null;
+  function segCells(tile, idx) {
+    return document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"][data-idx="' + idx + '"]');
+  }
+  function clearHover() {
+    const es = document.querySelectorAll('.rtt-spk-hover');
+    for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-spk-hover');
+  }
+  function hideFloat() { if (floatEl) floatEl.classList.remove('rtt-spk-float-on'); clearHover(); floatSeg = null; }
+  function keepFloat() { if (hideT) { clearTimeout(hideT); hideT = null; } }
+  function planHide() { keepFloat(); hideT = setTimeout(hideFloat, 90); }
+  function showFloat(tile, idx) {
+    const cells = segCells(tile, idx); if (!cells.length) return;
+    let l = Infinity, t = Infinity, r = -Infinity;
+    for (let i = 0; i < cells.length; i++) { const k = cells[i].getBoundingClientRect(); l = Math.min(l, k.left); t = Math.min(t, k.top); r = Math.max(r, k.right); }
+    if (!floatEl) {
+      floatEl = document.createElement('div');
+      floatEl.className = 'rtt-spk-float';
+      floatEl.innerHTML = '<span class="material-icons">volume_up</span>';
+      floatEl.addEventListener('mouseenter', keepFloat);
+      floatEl.addEventListener('mouseleave', planHide);
+      floatEl.addEventListener('click', function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        if (!floatSeg) return;
+        const chord = [], sibs = document.querySelectorAll('.rtt-spk[data-audio="' + floatSeg.tile + '"]');
+        for (let i = 0; i < sibs.length; i++) chord[+sibs[i].dataset.idx] = +sibs[i].dataset.cents;
+        api.hit(floatSeg.tile, floatSeg.idx, chord);
+      });
+      document.body.appendChild(floatEl);
+    }
+    floatEl.style.left = ((l + r) / 2) + 'px';   // centred over the column, floated above its top
+    floatEl.style.top = t + 'px';
+    floatEl.classList.add('rtt-spk-float-on');
+    clearHover();
+    for (let i = 0; i < cells.length; i++) cells[i].classList.add('rtt-spk-hover');
+    floatSeg = { tile: tile, idx: idx };
+  }
+  document.addEventListener('mouseover', function (ev) {
+    if (S.muted) return;                                   // muted = disengaged: no hover affordance
+    const cell = ev.target.closest && ev.target.closest('.rtt-spk[data-audio]');
     if (!cell) return;
-    ev.preventDefault(); ev.stopPropagation();
-    const tile = cell.dataset.audio, chord = [];
-    const sibs = document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"]');
-    for (let i = 0; i < sibs.length; i++) chord[+sibs[i].dataset.idx] = +sibs[i].dataset.cents;
-    api.hit(tile, +cell.dataset.idx, chord);
+    keepFloat();
+    showFloat(cell.dataset.audio, +cell.dataset.idx);
+  });
+  document.addEventListener('mouseout', function (ev) {
+    const cell = ev.target.closest && ev.target.closest('.rtt-spk[data-audio]');
+    if (!cell) return;
+    const to = ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.rtt-spk[data-audio],.rtt-spk-float');
+    if (!to) planHide();                                   // left the column for something non-audio
   });
   return api;
 })();
