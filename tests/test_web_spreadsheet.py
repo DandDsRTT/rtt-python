@@ -2044,12 +2044,12 @@ def test_size_factor_makes_the_all_interval_weight_a_matrix_dropping_the_chart()
     assert not lils["cell:weight:targets:0:0"].phantom
 
 
-def test_all_interval_weight_matrix_carries_the_W_symbol_and_a_spanning_bracket():
+def test_all_interval_weight_matrix_carries_the_Sp_symbol_and_a_spanning_bracket():
     on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True,
                                  symbols=True, equivalences=True).cells}
-    # capital 𝑊 = 𝑋⁻ — the inverse pretransformer (𝑋 the augmented square), and NOT the per-prime
-    # diag(𝐿)⁻¹ the lp all-interval shows
-    assert on["symbol:weight:targets"].text == "𝑊 = 𝑋⁻"
+    # 𝑆ₚ — the guide's prime-proxy simplicity weight matrix (all-interval is simplicity-weighted); no
+    # "= 𝑋⁻¹" equivalence, since 𝑆ₚ is NOT an inverse of 𝑋 (the log-size lives in 𝑋 = 𝑍𝐿)
+    assert on["symbol:weight:targets"].text == "𝑆ₚ"
     # the appendix's [[…] …] form: outer [ … ] over all d+1 = 4 rows + one [ … ] per row, the outer right
     # bracket past the overflowing phantom (size) column
     assert on["bracket:weight:l"].text == "[" and on["bracket:weight:r"].text == "]"
@@ -2253,7 +2253,7 @@ def test_a_non_diagonal_pretransformer_makes_the_all_interval_weight_the_square_
         for j in range(3):
             assert on[f"cell:weight:targets:{i}:{j}"].text == service.cents(W[i][j])
     # capital 𝑊 = 𝑋⁻¹ (the square inverse — NOT (𝑍𝑋)⁻, there's no size factor here)
-    assert on["symbol:weight:targets"].text == "𝑊 = 𝑋⁻¹"
+    assert on["symbol:weight:targets"].text == "𝑆 = 𝑋⁻¹"
     # appendix form [[…] …]: an outer [ … ] over all 3 rows + one [ … ] per row, no size bar (square)
     assert on["bracket:weight:l"].h == 3 * spreadsheet.ROW_H
     assert "bracket:weight:row:0:l" in on and "bracket:weight:row:2:r" in on
@@ -3258,7 +3258,7 @@ def test_a_non_diagonal_pretransformer_drops_the_complexity_diag_equivalence():
     on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S",
                                              custom_prescaler=square).cells}
     assert on["symbol:complexity:targets"].text == "𝒄"       # NOT "𝒄 = diag(𝑋)"
-    assert on["symbol:weight:targets"].text == "𝑊 = 𝑋⁻¹"    # the square inverse, not the diag reciprocal
+    assert on["symbol:weight:targets"].text == "𝑆 = 𝑋⁻¹"    # the square inverse, not the diag reciprocal
 
 
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():

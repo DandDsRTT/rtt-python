@@ -812,44 +812,37 @@ def test_complexity_size_factor_reports_the_schemes_size_factor():
     assert service.complexity_size_factor("TILT minimax-lils-S") == 1
 
 
-def test_damage_weight_matrix_inverts_the_augmented_pretransformer():
+def test_size_factor_weight_is_the_prime_proxy_simplicity_matrix():
     import numpy as np
     import pytest
 
     mapping = [[1, 1, 0], [0, 1, 4]]
-    # with the size factor on (lils), the weight is the (d+1)×(d+1) inverse 𝑊 = 𝑋⁻¹ of the AUGMENTED
-    # pretransformer 𝑋 — the log-prime square plus a size ROW (sf·column-sums) and a phantom COLUMN
-    # [0…0 1] (the phantom prime mapping to the size output). 𝒓 is measured against this shared d+1 shape.
-    W = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S"))
-    assert W.shape == (4, 4)
-    L = np.diag(service.complexity_prescaler(mapping, "minimax-S"))
-    X = np.eye(4)
-    X[:3, :3] = L
-    X[3, :3] = L.sum(axis=0)  # diag(𝐿) over the phantom column [0,0,0|1], size row sf·column-sums
-    assert np.allclose(W @ X, np.eye(4))   # 𝑊 = 𝑋⁻¹ inverts the augmented square
-    # top-left is the simple diagonal 𝐿⁻¹; the size ROW is −sf·ones | 1; the phantom COLUMN is [0,0,0|1]
-    assert W[0] == pytest.approx([1.0, 0.0, 0.0, 0.0])
-    assert W[3] == pytest.approx([-1.0, -1.0, -1.0, 1.0])
-    assert [row[3] for row in W] == pytest.approx([0.0, 0.0, 0.0, 1.0])
+    # with the size factor on (lils), the weight is the guide's prime-proxy simplicity weight matrix
+    # 𝑆ₚ = block-diag(𝐿⁻¹, 1): the d×d inverse 𝐿⁻¹ over an augmented dummy prime weighted 1 (dummy
+    # row/col [0…0 1]). Per the guide this is an extrapolation of 𝐿⁻¹, NOT any inverse of 𝑋 = 𝑍𝐿.
+    Sp = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S"))
+    assert Sp.shape == (4, 4)
+    L_inv = np.diag(1.0 / np.array(service.complexity_prescaler(mapping, "minimax-S")))
+    assert np.allclose(Sp[:3, :3], L_inv)          # the d×d block is the simple diagonal 𝐿⁻¹
+    assert Sp[3] == pytest.approx([0.0, 0.0, 0.0, 1.0])          # dummy ROW [0…0 1]
+    assert [row[3] for row in Sp] == pytest.approx([0.0, 0.0, 0.0, 1.0])  # dummy COL [0…0 1]
 
 
-def test_damage_weight_matrix_inverts_a_non_diagonal_pretransformer_square():
+def test_size_factor_weight_block_diagonalises_a_non_diagonal_pretransformer():
     import numpy as np
 
     mapping = [[1, 1, 0], [0, 1, 4]]
     square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))  # an off-diagonal editable square 𝑋
-    # no size factor: a non-diagonal 𝑋 still has no per-prime-list weight, so 𝑊 is the square inverse 𝑋⁻¹
-    W = np.array(service.damage_weight_matrix(mapping, "minimax-S", override=square))
-    assert W.shape == (3, 3)
-    assert np.allclose(W, np.linalg.inv(np.array(square, float)))      # 𝑊 = 𝑋⁻¹
-    assert np.allclose(W @ np.array(square, float), np.eye(3))         # it inverts 𝑋
-    # with the size factor too, 𝑋 augments to the (d+1)×(d+1) square (size row + phantom column) and 𝑊 = 𝑋⁻¹
-    Wz = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S", override=square))
-    assert Wz.shape == (4, 4)
-    Xa = np.eye(4)
-    Xa[:3, :3] = np.array(square, float)
-    Xa[3, :3] = np.array(square, float).sum(axis=0)  # the augmented square: size row sf·column-sums, phantom col
-    assert np.allclose(Wz @ Xa, np.eye(4))
+    # no size factor: a non-diagonal 𝑋 has no per-prime-list weight, so the simplicity weight 𝑆 is 𝑋⁻¹
+    S = np.array(service.damage_weight_matrix(mapping, "minimax-S", override=square))
+    assert S.shape == (3, 3)
+    assert np.allclose(S, np.linalg.inv(np.array(square, float)))      # 𝑆 = 𝑋⁻¹
+    assert np.allclose(S @ np.array(square, float), np.eye(3))         # it inverts 𝑋
+    # with the size factor too, 𝑆ₚ = block-diag(𝑋⁻¹, 1): the square inverse over the dummy prime weighted 1
+    Sp = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S", override=square))
+    assert Sp.shape == (4, 4)
+    assert np.allclose(Sp[:3, :3], np.linalg.inv(np.array(square, float)))  # the d×d block is 𝑋⁻¹
+    assert np.allclose(Sp[3], [0, 0, 0, 1]) and np.allclose(Sp[:, 3], [0, 0, 0, 1])  # dummy row/col [0…0 1]
 
 
 def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():

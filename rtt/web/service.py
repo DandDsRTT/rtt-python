@@ -680,30 +680,27 @@ def damage_weight_slope(scheme: str = DEFAULT_TUNING_SCHEME) -> str:
 
 
 def damage_weight_matrix(mapping, scheme: str = DEFAULT_TUNING_SCHEME, override=None) -> tuple:
-    """The all-interval damage weight MATRIX 𝑊 — the inverse complexity pretransformer the
-    retuning map is measured against in the objective ‖𝒓𝑊‖. When the size factor is on (the lils
-    family) the pretransformer 𝑋 is the AUGMENTED (d+1)×(d+1) square: the d×d diagonal 𝐿 (or the
-    editable square) over a phantom COLUMN [0…0 1], with a size ROW sf·(column-sums) and the corner
-    1 — the phantom prime mapping to the size output. 𝑊 is its true inverse 𝑋⁻¹: diag(𝐿)⁻¹ top-left,
-    the size row −sf·𝟏 | 1, and the phantom column [0…0 1]. So 𝑊, 𝑋, the target identity Tₚ, the
-    complexity 𝒄 and the damage 𝐝 all share the (d+1)-augmented-prime shape and line up.
+    """The all-interval damage weight MATRIX the retuning map is measured against in the objective.
+    All-interval damage is SIMPLICITY-weighted, so this is the simplicity weight matrix 𝑆 = 𝑋⁻¹ — for
+    a NON-DIAGONAL pretransformer 𝑋 (the editable square, no size factor) the true square inverse; a
+    diagonal 𝑋 reduces to 𝐷⁻¹.
 
-    A NON-DIAGONAL pretransformer 𝑋 (the editable square, no size factor) has no per-prime-list
-    weight either, so 𝑊 = 𝑋⁻¹ (a square d×d matrix) there; a diagonal 𝑋 reduces to 𝐷⁻¹. The
-    size-factor 𝑊 is illustrative (the engine augments the MAPPING with the phantom prime and never
-    forms 𝑊; the true minimax is the max−min dual norm, not a fixed matrix). ``override`` rides the
-    custom prescaler (diagonal or matrix) through."""
+    When the size factor is on (the lils family) it is the guide's PRIME-PROXY simplicity weight matrix
+    𝑆ₚ = block-diag(𝑋⁻¹, 1): the d×d inverse 𝐿⁻¹ over an augmented dummy prime weighted 1 (dummy row/col
+    [0…0 1]). Per the guide this is an extrapolation of 𝐿⁻¹ — explicitly NOT any inverse of 𝑋 = 𝑍𝐿 (its
+    log-size is built into 𝑋 instead). 𝑆ₚ shares the (d+1)-augmented-prime shape with 𝑋, Tₚ, 𝒄 and 𝐝.
+    Illustrative (the engine augments the MAPPING with the dummy prime and never forms 𝑆ₚ; the true
+    minimax is the max−min dual norm). ``override`` rides the custom prescaler (diagonal or matrix)."""
     import numpy as np
     pre = complexity_prescaler(mapping, scheme, override=override)  # d-diagonal or d×d matrix
     d = len(pre)
     matrix = np.asarray(pre, dtype=float) if _is_matrix(pre) else np.diag([float(x) for x in pre])
-    sf = complexity_size_factor(scheme)
-    if not sf:
-        return tuple(tuple(float(x) for x in row) for row in np.linalg.inv(matrix))  # 𝑋⁻¹ (square)
-    x_aug = np.eye(d + 1)  # the augmented pretransformer 𝑋: 𝐿 over a phantom column [0…0 1]…
-    x_aug[:d, :d] = matrix
-    x_aug[d, :d] = sf * matrix.sum(axis=0)  # …with the size ROW (sf·column-sums) and the corner 1
-    return tuple(tuple(float(x) for x in row) for row in np.linalg.inv(x_aug))  # 𝑊 = 𝑋⁻¹, (d+1)×(d+1)
+    inverse = np.linalg.inv(matrix)  # 𝑆 = 𝑋⁻¹, d×d
+    if not complexity_size_factor(scheme):
+        return tuple(tuple(float(x) for x in row) for row in inverse)  # 𝑆 = 𝑋⁻¹ (square)
+    sp = np.eye(d + 1)  # 𝑆ₚ = block-diag(𝑋⁻¹, 1): the dummy prime weighted 1 (guide's prime-proxy form)
+    sp[:d, :d] = inverse
+    return tuple(tuple(float(x) for x in row) for row in sp)
 
 
 # The three predefined complexity prescalers the alt.-complexity control offers, as the

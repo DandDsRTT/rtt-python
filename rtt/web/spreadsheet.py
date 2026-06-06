@@ -3320,10 +3320,10 @@ class _GridBuilder:
                 equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
                 equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
             equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
-        if self.weight_is_matrix:  # the weight is the inverse pretransformer 𝑋⁻ (no per-prime diagonal form):
-            # the size factor makes 𝑋 = 𝑍𝐿 rectangular, so 𝑊 is its LEFT inverse 𝑋⁻ (superscript minus, the
-            # guide's notation); a non-diagonal square 𝑋, the true inverse 𝑋⁻¹. Simpler than spelling out 𝑍𝐿.
-            equivalences[("weight", "targets")] = " = 𝑋⁻" if self.size_factor else " = 𝑋⁻¹"
+        if self.weight_is_matrix:  # the all-interval weight is the SIMPLICITY weight matrix (no per-prime
+            # list form): the square non-diagonal case is the true inverse 𝑆 = 𝑋⁻¹; the size factor makes it
+            # the guide's prime-proxy 𝑆ₚ = block-diag(𝑋⁻¹, 1), which is NOT 𝑋⁻¹ (the log-size lives in 𝑋 = 𝑍𝐿).
+            equivalences[("weight", "targets")] = "" if self.size_factor else " = 𝑋⁻¹"
         if not self.show_weighting:  # the weight factor's row is hidden, so don't dangle it (𝒘 / 𝐿⁻¹)
             equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
         for (rkey, ckey), name in self.effective_captions.items():
@@ -3334,7 +3334,7 @@ class _GridBuilder:
             if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:  # the prime-proxy name (per the Guide)
                 name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
             if self.weight_is_matrix and (rkey, ckey) == ("weight", "targets"):
-                name = "target interval weight matrix"  # it's a matrix 𝑊 now, not the list 𝒘
+                name = "target interval simplicity weight matrix"  # the all-interval weight 𝑆 / 𝑆ₚ (§10), not the list
             cy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey]
             if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
                 equiv = equivalences.get((rkey, ckey), "") if self.show_equiv else ""
@@ -3342,7 +3342,8 @@ class _GridBuilder:
                 if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
                     base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
                 if self.weight_is_matrix and (rkey, ckey) == ("weight", "targets"):
-                    base_symbol = "𝑊"  # the weight is now a MATRIX, not the list 𝒘
+                    # the all-interval simplicity weight matrix: 𝑆ₚ (prime-proxy, augmented) or 𝑆 (square), per §10
+                    base_symbol = "𝑆ₚ" if self.size_factor else "𝑆"
                 glyph = base_symbol if (self.show_symbols or equiv) else ""
                 if glyph or equiv:
                     self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
