@@ -1883,6 +1883,21 @@ async def test_hovering_a_locked_weight_slope_shows_no_preview(user: User) -> No
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")  # locked: no preview
 
 
+async def test_hovering_the_form_canonical_option_previews_canonicalizing(user: User) -> None:
+    # the mapping/comma-basis <choose form> control previews canonicalizing IN PLACE: hovering
+    # "canonical" rings the mapping cells it would re-store (the default mapping is not canonical), and
+    # leaving clears them. Amber only — the cells change value where they sit, no reflow.
+    await user.open("/")
+    _toggle(user, "form controls")
+    await user.should_see(marker="formchooser:mapping")
+    wrap = set(user.find(marker="formchooser:mapping").elements)
+    # options are {"": "choose form", "canonical": "canonical"}, so index 1 is the canonical entry
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": 1})
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # a re-stored mapping cell rings
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")
+
+
 async def test_hovering_a_structural_minus_rings_removed_cells_red_and_moved_cells_amber(user: User) -> None:
     # hovering a structural − previews the click WITHOUT reflowing the grid (the generator is not
     # actually dropped, so the button stays under the cursor): the cells it REMOVES ring RED — they

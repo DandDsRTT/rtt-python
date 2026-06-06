@@ -2091,9 +2091,11 @@ class _Reconciler:
 
     def _build_formchooser(self, cb, wrap):  # the <choose form> control: canonicalizes its matrix on select
         name = cb.id.split(":", 1)[1]  # mapping / comma_basis
-        self.selects[cb.id] = ui.select({"": "choose form", "canonical": "canonical"}, value="",
+        sel = ui.select({"": "choose form", "canonical": "canonical"}, value="",
                 on_change=lambda e, n=name: self._cb.on_form_choose(n, e.value)) \
             .props(_select_props(cb.w)).classes("rtt-preset")
+        self._arm_option_hover(sel, wrap, cb.id)  # hovering "canonical" previews canonicalizing in place
+        self.selects[cb.id] = sel
 
     def _update_formchooser(self, cb):  # a one-shot action: snap back to the placeholder
         self.selects[cb.id].value = ""
@@ -3055,6 +3057,11 @@ def index() -> None:
             return lambda: editor.set_complexity_name(internal)
         if cid == "control:slope":
             return lambda: editor.set_weight_slope(value)
+        if cid.startswith("formchooser:"):  # the <choose form> control: only "canonical" acts
+            if value != "canonical":
+                return None
+            name = cid.split(":", 1)[1]  # mapping / comma_basis
+            return editor.canonicalize_mapping if name == "mapping" else editor.canonicalize_comma_basis
         return None
 
     def on_chooser_hover(cid, detail):
