@@ -366,6 +366,20 @@ def test_sidebar_hugs_its_content_as_a_fixed_left_column():
     assert "align-self:flex-start" in drawer   # ...and the panelgroup doesn't stretch it back open
 
 
+def test_opening_the_pane_swaps_the_vertical_title_tab_for_a_horizontal_top_bar():
+    # Saving horizontal space: closed, the sidebar is a narrow tab (.rtt-rail) whose chrome STACKS —
+    # the hamburger over the app title turned a quarter-turn (writing-mode) so it fits the tab width.
+    # Opening folds that tab to zero width and lays the same chrome across the top of the pane
+    # (.rtt-chrome): the title upright (normal text) beside the hamburger, so the open pane spends no
+    # width on a vertical band.
+    assert "flex-direction:column" in _css_rule(".rtt-rail")            # closed tab: stacked
+    assert "writing-mode:vertical-rl" in _css_rule(".rtt-sidetitle")    # ...title turned a quarter-turn
+    assert "flex-direction:row" in _css_rule(".rtt-chrome")             # open bar: laid across the top
+    assert "writing-mode:horizontal-tb" in _css_rule(".rtt-chrome .rtt-sidetitle")  # ...title upright
+    # opening folds the closed tab to zero width, so its band no longer eats horizontal space
+    assert "width:0" in _css_rule(".rtt-panelgroup.rtt-open .rtt-rail")
+
+
 def _z(selector):
     m = re.search(r"z-index:(\d+)", _css_rule(selector))
     assert m, f"no z-index in {selector}"

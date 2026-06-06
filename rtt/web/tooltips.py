@@ -61,7 +61,7 @@ SHOW_HELP: dict[str, str] = {
     "identity_objects": "Show the identity-object tiles — trivial self-maps built from the other boxes.",
 }
 
-# Hover text for the always-present app chrome (the rail + the title tile).
+# Hover text for the always-present app chrome (the settings hamburger + the undo/redo/reset band).
 CHROME_HELP: dict[str, str] = {
     "settings": "Show or hide the Show settings panel.",
     "select_all": "Turn every available Show toggle on, or all off.",

@@ -61,7 +61,8 @@ _ASSETS = Path(__file__).parent / "assets"  # CSS/JS asset files, loaded at impo
 _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 _PANEL_W = 330  # px width the settings drawer opens to (the Show + example columns)
-_RAIL_W = 40  # px width of the permanent left rail (hamburger + the rotated app title)
+_TAB_W = 40  # px width of the collapsed settings tab (the hamburger over the quarter-turned title)
+_CHROME_H = 40  # px height of the open pane's horizontal title bar (hamburger + upright title)
 _TOOLTIP_DELAY_MS = 700  # hover delay before a tooltip appears — long enough that the dense grid's
 # help waits for a deliberate rest instead of popping on every passing cursor (Quasar defaults to 0)
 _STORE_KEY = "rtt_doc"  # store key holding the serialized document (survives refresh)
@@ -260,7 +261,7 @@ def _control_svg(glyph: str) -> str:
 
 
 _CSS_VARS = f""":root {{
-  --pad:{_PAD}px; --t:{_T}; --rail-w:{_RAIL_W}px; --panel-w:{_PANEL_W}px;
+  --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
   --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
@@ -3277,9 +3278,10 @@ def index() -> None:
         # the settings pane's frozen header takes the same height as the grid's frozen column
         # strip, so the two frozen/scrolling seams line up across the app
         show_frozen.style(f"height:{fy}px")
-        # the settings body sizes to its own content but caps at the window less the inset (12px) and
-        # the frozen header (fy) above it, so a tall toggle list scrolls there instead of off-screen
-        show_scroll.style(f"max-height:calc(100vh - {12 + fy}px)")
+        # the settings body sizes to its own content but caps at the window less the inset, the
+        # chrome title bar and the frozen header above it, so a tall toggle list scrolls there
+        # instead of off-screen
+        show_scroll.style(f"max-height:calc(100vh - {_PAD + _CHROME_H + fy}px)")
         seen = set()
 
         # Each gridline renders into every pane its extent reaches, so the branching stays put in
@@ -3423,25 +3425,40 @@ def index() -> None:
         _doc_store()[_STORE_KEY] = editor.serialize()
         building[0] = False
 
-    # the corner hamburger toggles the settings drawer, which slides the app right
+    # the hamburger toggles the settings pane. Opening (panelgroup gets .rtt-open) collapses the
+    # closed-state tab and slides the drawer out, the app reflowing to its right.
     drawer_open = [False]
 
     def toggle_drawer():
         drawer_open[0] = not drawer_open[0]
-        drawer.classes(add="rtt-drawer-open") if drawer_open[0] else drawer.classes(remove="rtt-drawer-open")
+        panelgroup.classes(add="rtt-open") if drawer_open[0] else panelgroup.classes(remove="rtt-open")
+
+    def _pane_chrome():
+        """The settings hamburger + the app title. Rendered twice: in the closed-state tab (the rail,
+        where the title is turned a quarter-turn and stacked under the hamburger) and in the open
+        pane's top bar (the chrome, where the title lies flat beside it). CSS orients each by its
+        parent, so a single definition serves both states and only the showing one is interactive."""
+        ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense") \
+            .classes("rtt-hamburger").tooltip(tooltips.CHROME_HELP["settings"])
+        ui.label("D&D's RTT app").classes("rtt-sidetitle")
 
     with ui.element("div").classes("rtt-shell"):
-        # the rail and the settings pane share one group so the rail's grey stretches to the
-        # pane's height; the app sits to the group's right
-        with ui.element("div").classes("rtt-panelgroup"):
-            # the left rail: the hamburger on top, the app title rotated a quarter-turn below it.
-            # The rail is left of the pane, so opening the pane never moves the title.
+        # the sidebar = the closed-state tab (rail) + the settings pane (drawer), laid in a row with
+        # the grid to their right. Opening collapses the rail to nothing and slides the drawer out, so
+        # the open pane spends no width on a vertical title band — its chrome rides across the top.
+        panelgroup = ui.element("div").classes("rtt-panelgroup")
+        with panelgroup:
+            # the closed-state tab: the chrome stacked vertically (title a quarter-turn). It sits left
+            # of the drawer and folds to zero width when the pane opens.
             with ui.element("div").classes("rtt-rail"):
-                ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense") \
-                    .classes("rtt-hamburger").tooltip(tooltips.CHROME_HELP["settings"])
-                ui.label("D&D's RTT app").classes("rtt-sidetitle")
+                _pane_chrome()
             drawer = ui.element("div").classes("rtt-drawer")
             with drawer, ui.element("div").classes("rtt-drawer-inner"):
+                # the open pane's top bar: the same chrome laid across (title upright, hamburger slid
+                # in from the edge). It rides inside the drawer, so it shows only with the pane open —
+                # the moment the closed tab's vertical band is gone.
+                with ui.element("div").classes("rtt-chrome"):
+                    _pane_chrome()
                 # the frozen header: just the select-all/none master, pinned above the scrolling
                 # groups (render() sizes it to the layout's freeze_y, matching the main app's frozen
                 # band). Its bottom border is the frozen/scrolling seam. The show/example column

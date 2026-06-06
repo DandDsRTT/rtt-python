@@ -1544,14 +1544,15 @@ async def test_grid_pane_hugs_the_grid_with_a_margin_all_round(user: User) -> No
 
 
 async def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_fits(user: User) -> None:
-    # the settings body sizes to its own content but render() caps it at the window less the inset and
-    # the frozen header (calc(100vh - (12 + freeze_y)px)), so it scrolls only once its content genuinely
-    # exceeds that — a self-contained cap that doesn't depend on the flex hug rounding out exactly.
+    # the settings body sizes to its own content but render() caps it at the window less the inset, the
+    # chrome title bar and the frozen header (calc(100vh - (pad + chrome_h + freeze_y)px)), so it
+    # scrolls only once its content genuinely exceeds that — a self-contained cap that doesn't depend
+    # on the flex hug rounding out exactly.
     await user.open("/")
     scroll = next(iter(user.find(marker="showscroll").elements))
     colhead = next(iter(user.find(marker="colhead").elements))
     fy = _px(colhead, "height")  # the frozen header / column-strip height (freeze_y)
-    assert scroll._style.get("max-height") == f"calc(100vh - {12 + fy}px)"
+    assert scroll._style.get("max-height") == f"calc(100vh - {web_app._PAD + web_app._CHROME_H + fy}px)"
 
 
 async def test_state_persists_across_a_refresh(user: User) -> None:
