@@ -2373,6 +2373,8 @@ class _GridBuilder:
                         # mapping change — otherwise the edit preview is blind to the matrix a
                         # temperament swap or a +/- rewrites. The input still shows it via _update_mapping.
                         self.cells.append(CellBox(f"cell:mapping:{i}:{p}", self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
+                    if self.phantom_dim:  # the dummy prime column (0 — the real generators don't reach it), greyed
+                        self.cells.append(CellBox(f"cell:mapping:{i}:{self.d}", self.prime_left(self.d), self.map_top(i), COL_W, ROW_H, "vec", text="0", phantom=True))
                 if self.tile_open("mapping", "targets"):
                     for j in range(self.k):
                         self.cells.append(CellBox(f"cell:mapped:{i}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))
@@ -3014,8 +3016,9 @@ class _GridBuilder:
         if self.row_open("mapping"):
             # the primes mapping is a stack of maps: ⟨ … ] per row
             if self.tile_open("mapping", "primes"):
+                mspan = self.prescaler_span()  # the d (+1 augmented dummy-prime column) span — the mapping grows it too
                 for i in range(self.r):
-                    self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H)
+                    self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H, span=mspan)
             if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
                 self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], self.r * ROW_H, fit=True)
             if self.tile_open("mapping", "targets"):
@@ -3468,7 +3471,7 @@ class _GridBuilder:
             # a quantities-row plain text — "2.3.5", the compact prime-limit notation (from the
             # service seam above), which the gridded "2 3 5" cells don't show that way.
 
-        self.matrix_frame("mapping", "primes", "primes")
+        self.matrix_frame("mapping", "primes", "primes", span=self.prescaler_span())  # spans the dummy-prime column too (augmented)
         self.matrix_frame("canon", "primes", "canon")
         self.matrix_frame("canon", "gens", "form")
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer

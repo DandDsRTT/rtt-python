@@ -2172,13 +2172,27 @@ def test_size_factor_augments_the_bare_pretransformer_with_a_phantom_column():
     assert lils["bar:prescaling:vline"].h == 4 * spreadsheet.ROW_H
     # the bare 𝑋's per-row ⟨ … ] extends past the phantom column (its ] sits right of it)
     assert lils["bracket:prescaling:row:0:r"].x > lils["cell:prescaling:primes:0:phantom"].x
-    # the MAPPING in the SAME primes column is byte-identical to a non-augmented build — its cells and its
-    # ] are unmoved, since the phantom slot is a right-side reservation that 𝑋 alone spans (matrix_span hides it)
+    # the MAPPING's real cells are unmoved (prime_left(p<d) is unchanged), but it now augments TOO —
+    # the dummy prime is a full column dimension, so the mapping's ] extends to the dummy column as well
     lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True).cells}
-    assert lils["cell:mapping:0:0"].x == lp["cell:mapping:0:0"].x
-    assert lils["bracket:map:0:r"].x == lp["bracket:map:0:r"].x
+    assert lils["cell:mapping:0:0"].x == lp["cell:mapping:0:0"].x          # real mapping cells stay put
+    assert lils["bracket:map:0:r"].x > lp["bracket:map:0:r"].x             # the mapping ] now spans the dummy column
     # a square (lp) pretransformer has no phantom column
     assert "cell:prescaling:primes:0:phantom" not in lp and "bar:prescaling:vline" not in lp
+
+
+def test_size_factor_adds_the_dummy_prime_column_to_the_mapping():
+    # the dummy prime is a full column dimension: the mapping 𝑀 gains a greyed 0 dummy column (the real
+    # generators don't reach the dummy prime — that's the size generator's job, added with its row), and
+    # the mapping's frame + per-row ⟨ … ] span d+1 to enclose it.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    assert lils["cell:mapping:0:3"].text == "0" and lils["cell:mapping:0:3"].phantom   # the dummy column, greyed
+    assert not lils["cell:mapping:0:0"].phantom                                          # real entries unchanged
+    assert lils["cell:mapping:0:3"].x == lils["cell:mapping:0:2"].x + spreadsheet.COL_W  # one COL_W past the d-block
+    assert lils["ebktop:primes"].w > lils["cell:mapping:0:0"].w * 3                      # the frame spans d+1
+    # a square (lp) mapping has no dummy column
+    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
+    assert "cell:mapping:0:3" not in lp
 
 
 def test_size_factor_augments_the_weighting_region_plain_text_to_the_phantom():
