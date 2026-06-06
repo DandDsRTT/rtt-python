@@ -1985,3 +1985,55 @@ async def test_hovering_a_lower_limit_temperament_keeps_the_dropped_column_red(u
     await user.should_see(marker="prime:3")                          # ...still on screen (NOT reflowed away)
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})    # leave the option
     assert "rtt-preview-remove" not in _wrap_classes(user, "prime:3")  # cleared on mouse-out
+
+
+async def test_hovering_the_replace_diminuator_checkbox_previews_its_reweighting(user: User) -> None:
+    # the box-𝐋 "replace diminuator" checkbox swaps the complexity's size factor (lp ↔ lils). Like the
+    # +/- buttons it previews on hover: entering it rings the cells its click would re-weight, leaving
+    # clears them, and the click still commits on its own. Under a simplicity-weighted scheme the
+    # complexity drives the weights, so the change ripples to the weight/complexity columns.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()       # reveal the weighting region (slope chooser)
+    user.find(kind=ui.checkbox, content="alt. complexity").click()  # ...and the size-factor checkbox
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # complexity now drives the weights
+    await user.should_see(marker="control:diminuator")
+    btn = set(user.find(marker="control:diminuator").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:2")   # the re-weighted column rings amber
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:2")  # cleared on mouse-out
+
+
+async def test_hovering_the_all_interval_checkbox_previews_collapsing_to_the_primes(user: User) -> None:
+    # the target-controls "all-interval" checkbox collapses the finite target list to the primes, so its
+    # hover is genuinely structural: the dropped target ratios still on screen ring RED (what the click
+    # removes) and the re-weighted survivors ring amber. Leaving clears both, and the click still commits.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()     # the weight columns + the entry's parent
+    user.find(kind=ui.checkbox, content="all-interval").click()  # reveal the target-controls checkbox
+    await user.should_see(marker="control:all_interval")
+    btn = set(user.find(marker="control:all_interval").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-remove" in _wrap_classes(user, "target:2")     # a dropped non-prime target → red
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")  # a survivor's re-weight → amber
+    await user.should_see(marker="target:2")                          # ...still on screen (no reflow)
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "target:2")
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+
+
+async def test_hovering_the_optimize_button_previews_toggling_the_auto_lock(user: User) -> None:
+    # the optimize button's double-click toggles the auto-optimize lock; hovering it previews that toggle.
+    # With a hand-edited (off-optimum) generator tuning, locking auto-optimize snaps the tuning back to
+    # the optimum — so the hover rings the cells that snap-back moves. The op only fires on the real
+    # double-click; the hover just shows it.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()   # reveal the optimize button
+    await user.should_see(marker="optimization:button")
+    _cell_child(user, "tuning:gen:0").set_value("1150")           # hand-edit the octave off its optimum
+    await user.should_see(marker="optimization:button")
+    btn = set(user.find(marker="optimization:button").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:0")   # snapping back to the optimum rings
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:prime:0")  # cleared on mouse-out

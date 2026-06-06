@@ -1864,6 +1864,9 @@ class _Reconciler:
         self.opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: self._cb.act(self._editor.optimize), color=None) \
             .props("unelevated dense no-caps").classes("rtt-optimize")
         self.opt_buttons[cb.id].on("dblclick", lambda: self._cb.act(self._editor.toggle_optimize_lock))
+        # hover-preview the double-click's lock toggle: with an off-optimum tuning, locking snaps it back,
+        # so the hover rings what that would move (the op still fires only on the real double-click)
+        self._preview_control(wrap, self._editor.toggle_optimize_lock)
 
     def _update_optimize(self, cb):  # reflect the auto-optimize lock + grey it when already optimal
         btn = self.opt_buttons[cb.id]
@@ -2085,6 +2088,21 @@ class _Reconciler:
         self.checks[cb.id] = ui.checkbox(cb.text, value=cb.checked,
                 on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
             .props("dense").classes("rtt-control-check")
+        apply = self._control_check_preview(cb)
+        if apply is not None:  # hover-preview the cells the toggle would change (red/amber), like the +/-
+            self._preview_control(wrap, apply)
+
+    def _control_check_preview(self, cb):
+        """The hover-preview op for a control checkbox: the SAME trait flip its click commits, toward the
+        toggled state. The state is read live (not captured at build) so a re-render that updates the cell
+        in place can't strand a stale target."""
+        if cb.id == "control:diminuator":  # swap the complexity size factor (lp ↔ lils)
+            return lambda: self._editor.set_diminuator_replaced(
+                not service.diminuator_replaced(self._editor.tuning_scheme))
+        if cb.id == "control:all_interval":  # collapse the targets to the primes (structural: red + amber)
+            return lambda: self._editor.set_all_interval(
+                not service.is_all_interval(self._editor.tuning_scheme))
+        return None
 
     def _update_control_check(self, cb):  # mirror the live "replace diminuator" state
         self.checks[cb.id].value = cb.checked
