@@ -7,7 +7,7 @@ window.rttAudio = (function () {
   // even though the waveform / mode / hold / root config is shared.
   // `live` is EVERY currently-sounding voice's release fn — the kill switch (stopAll) clears it, so a
   // note/drone can always be silenced no matter how it was started (S.stop/S.held don't track them all).
-  const S = { wave: 0, mode: 0, hold: false, root: false, muted: true, stop: null, held: {}, live: new Set() };
+  const S = { wave: 0, mode: 0, hold: false, root: false, muted: true, stop: null, finish: null, held: {}, live: new Set() };
   const api = { glyphs: null };
   function actx() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -70,8 +70,9 @@ window.rttAudio = (function () {
           if (k === order.length - 1 && loop) {
             timers.push(setTimeout(function () {
               if (stopped) return;
-              for (let i = 0; i < rels.length; i++) rels[i]();  // end the pass, then repeat
-              pass();
+              for (let i = 0; i < rels.length; i++) rels[i]();  // end the pass...
+              if (loop) pass();                                 // ...repeat only while the lock is still on
+              else { if (rootRel) rootRel(); clearHl(tile); }   // lock turned off mid-loop: finish here, no repeat
             }, roll ? 520 : STEP * 1000));
           } else if (k === order.length - 1 && !loop) {
             // one-shot end: release any still-ringing notes (a rolled chord) AND the root drone, then
@@ -86,12 +87,15 @@ window.rttAudio = (function () {
       }
     }
     pass();
-    return function () {
-      stopped = true;
-      for (let i = 0; i < timers.length; i++) clearTimeout(timers[i]);
-      for (let i = 0; i < rels.length; i++) rels[i]();
-      if (rootRel) rootRel();
-      clearHl(tile);
+    return {  // stop() = hard kill (mute); finish() = stop looping but let the current pass play out (lock off)
+      stop: function () {
+        stopped = true;
+        for (let i = 0; i < timers.length; i++) clearTimeout(timers[i]);
+        for (let i = 0; i < rels.length; i++) rels[i]();
+        if (rootRel) rootRel();
+        clearHl(tile);
+      },
+      finish: function () { loop = false; }
     };
   }
   function ctrlEl(ctrl) {  // the single dummy-tile bank control (data-actrl only — no per-tile copies)
@@ -106,33 +110,42 @@ window.rttAudio = (function () {
       else { S.held[key] = together(tile, [{ idx: idx, cents: cents[idx] }], S.root); }
       return;
     }
-    if (S.stop) { S.stop(); S.stop = null; if (S.hold) return; }  // hold/loop: a second click stops it
+    if (S.stop) { S.stop(); S.stop = null; S.finish = null; if (S.hold) return; }  // a second click stops it
     if (S.mode === 1) {                                   // arpeggiate, from the clicked note, wrapping
       const order = []; for (let k = 0; k < cents.length; k++) order.push((idx + k) % cents.length);
-      S.stop = sequence(tile, order, cents, S.root, false, S.hold);
-      if (!S.hold) S.stop = null;
+      const seq = sequence(tile, order, cents, S.root, false, S.hold);
+      if (S.hold) { S.stop = seq.stop; S.finish = seq.finish; }   // held arp loops; lock-off finishes the pass
     } else if (S.mode === 2) {                            // chord: all together
       const items = []; for (let i = 0; i < cents.length; i++) items.push({ idx: i, cents: cents[i] });
       const stop = together(tile, items, S.root);
-      if (S.hold) S.stop = stop; else setTimeout(stop, 1000);
+      if (S.hold) { S.stop = stop; S.finish = null; }     // a held chord sustains; lock-off releases it (no pass)
+      else setTimeout(stop, 1000);
     } else {                                              // rolled chord
       const order = []; for (let i = 0; i < cents.length; i++) order.push(i);
-      S.stop = sequence(tile, order, cents, S.root, true, S.hold);
-      if (!S.hold) S.stop = null;
+      const seq = sequence(tile, order, cents, S.root, true, S.hold);
+      if (S.hold) { S.stop = seq.stop; S.finish = seq.finish; }   // held rolled chord loops; lock-off finishes it
     }
   };
-  function stopAll() {  // the kill switch / loop-stopper: S.stop() clears a looping sequence's timers +
-    if (S.stop) { S.stop(); S.stop = null; }              // its `stopped` flag so the LOOP can't reschedule
-    for (const k in S.held) S.held[k](); S.held = {};     // (nulling it without calling it stranded the loop);
-    Array.from(S.live).forEach(function (r) { r(); });    // then release the hold-stack and sweep any voice
-    S.live.clear();                                       // still live (a one-shot's leaked root) — all die
+  function stopAll() {  // the HARD kill (mute / mode change): stop the looping/held sequence outright (stop()
+    if (S.stop) { S.stop(); S.stop = null; }              // clears its timers + `stopped` flag), drop the graceful
+    S.finish = null;                                       // finish handle, release the hold-stack, and sweep any
+    for (const k in S.held) S.held[k](); S.held = {};     // voice still live (a one-shot's leaked root) — so a
+    Array.from(S.live).forEach(function (r) { r(); });    // loop, a held note or a stuck drone ALL die now
+    S.live.clear();
   }
   api.cycleWave = function () { S.wave = (S.wave + 1) % 4;
     const e = ctrlEl('wave'); if (e) e.innerHTML = api.glyphs.wave[S.wave]; };
   api.cycleMode = function () { stopAll(); S.mode = (S.mode + 1) % 4;
     const e = ctrlEl('mode'); if (e) e.innerHTML = api.glyphs.mode[S.mode]; };
-  api.toggleHold = function () { stopAll(); S.hold = !S.hold;
-    const e = ctrlEl('hold'); if (e) { e.innerHTML = api.glyphs.lock[S.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', S.hold); } };
+  api.toggleHold = function () {
+    S.hold = !S.hold;
+    if (!S.hold) {                                        // lock OFF: don't hard-cut — let a loop's current pass
+      if (S.finish) { S.finish(); S.finish = null; }      // finish (then stop, no repeat); a sustained chord or
+      else if (S.stop) { S.stop(); S.stop = null; }       // held note has no pass to finish, so just release it
+      for (const k in S.held) S.held[k](); S.held = {};
+    }
+    const e = ctrlEl('hold'); if (e) { e.innerHTML = api.glyphs.lock[S.hold ? 1 : 0]; e.classList.toggle('rtt-audio-on', S.hold); }
+  };
   api.toggleRoot = function () { S.root = !S.root;
     const e = ctrlEl('root'); if (e) e.classList.toggle('rtt-audio-on', S.root); };
   // mute leads the bank and is also the kill switch: muting stops everything sounding and (via the
