@@ -828,6 +828,17 @@ def test_size_factor_weight_is_the_prime_proxy_simplicity_matrix():
     assert [row[3] for row in Sp] == pytest.approx([0.0, 0.0, 0.0, 1.0])  # dummy COL [0…0 1]
 
 
+def test_augmented_mapping_adds_the_size_generator_row_and_dummy_prime_column():
+    # the lils augmented mapping (r+1)×(d+1): the real mapping over a dummy-prime COLUMN (0 for the
+    # real generators), plus the size-generator ROW — the integer summation ⟨1…1] with a −1 dummy
+    # corner (the guide's 𝑀Tₚ𝑆ₚ size row). The log-size lives in 𝑋 = 𝑍𝐿, so this stays integer.
+    assert service.augmented_mapping(((1, 1, 0), (0, 1, 4)), "minimax-lils-S") == (
+        (1, 1, 0, 0), (0, 1, 4, 0), (1, 1, 1, -1))
+    # porcupine — matches the guide's worked example (𝑀Tₚ𝑆ₚ)
+    assert service.augmented_mapping(((1, 2, 3), (0, -3, -5)), "minimax-lils-S") == (
+        (1, 2, 3, 0), (0, -3, -5, 0), (1, 1, 1, -1))
+
+
 def test_size_factor_weight_block_diagonalises_a_non_diagonal_pretransformer():
     import numpy as np
 

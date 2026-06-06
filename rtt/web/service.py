@@ -703,6 +703,20 @@ def damage_weight_matrix(mapping, scheme: str = DEFAULT_TUNING_SCHEME, override=
     return tuple(tuple(float(x) for x in row) for row in sp)
 
 
+def augmented_mapping(mapping, scheme: str = DEFAULT_TUNING_SCHEME) -> tuple:
+    """The lils augmented mapping (r+1)×(d+1): the real mapping 𝑀 over a dummy-prime COLUMN (0 for the
+    real generators), plus a size-generator ROW — the summation map sf·⟨1…1] with a −1 in the dummy
+    corner (the guide's 𝑀Tₚ𝑆ₚ size row). The size generator + dummy prime are the engine's augmentation
+    (the dummy generator just-tuned, then dropped); displayed greyed. The log-size lives in 𝑋 = 𝑍𝐿, so
+    this stays integer (the summation 𝟙 is the size-sensitizing matrix 𝑍's bottom row, before 𝐿)."""
+    sf = complexity_size_factor(scheme)
+    size = int(sf) if float(sf).is_integer() else sf
+    d = len(mapping[0])
+    rows = [tuple(int(x) for x in row) + (0,) for row in mapping]  # real generators: dummy-prime column 0
+    rows.append(tuple(size for _ in range(d)) + (-1,))  # size generator: summation row, dummy corner −1
+    return tuple(rows)
+
+
 # The three predefined complexity prescalers the alt.-complexity control offers, as the
 # (log-prime power, prime power) traits each sets — identity (count), log-prime, prime (sopfr).
 PRESCALERS = {"identity": (0, 0), "log-prime": (1, 0), "prime": (0, 1)}
