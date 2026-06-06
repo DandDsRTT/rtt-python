@@ -121,9 +121,11 @@ window.rttAudio = (function () {
       if (!S.hold) S.stop = null;
     }
   };
-  function stopAll() {  // the kill switch: release EVERY sounding voice, however it was started, so a
-    Array.from(S.live).forEach(function (r) { r(); });    // stuck note or 1/1 drone can always be silenced
-    S.live.clear(); S.stop = null; S.held = {};
+  function stopAll() {  // the kill switch / loop-stopper: S.stop() clears a looping sequence's timers +
+    if (S.stop) { S.stop(); S.stop = null; }              // its `stopped` flag so the LOOP can't reschedule
+    for (const k in S.held) S.held[k](); S.held = {};     // (nulling it without calling it stranded the loop);
+    Array.from(S.live).forEach(function (r) { r(); });    // then release the hold-stack and sweep any voice
+    S.live.clear();                                       // still live (a one-shot's leaked root) — all die
   }
   api.cycleWave = function () { S.wave = (S.wave + 1) % 4;
     const e = ctrlEl('wave'); if (e) e.innerHTML = api.glyphs.wave[S.wave]; };
@@ -154,14 +156,26 @@ window.rttAudio = (function () {
     return document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"][data-idx="' + idx + '"]');
   }
   function clearHover() {
-    const es = document.querySelectorAll('.rtt-spk-hover');
-    for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-spk-hover');
+    const es = document.querySelectorAll('.rtt-spk-hover, .rtt-spk-dim');
+    for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-spk-hover', 'rtt-spk-dim');
   }
   function hideFloat() { if (floatEl) floatEl.classList.remove('rtt-spk-float-on'); clearHover(); floatSeg = null; }
   function keepFloat() { if (hideT) { clearTimeout(hideT); hideT = null; } }
   function planHide() { keepFloat(); hideT = setTimeout(hideFloat, 250); }
   function showFloat(tile, idx) {
-    const cells = segCells(tile, idx); if (!cells.length) return;
+    const all = document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"]');
+    if (!all.length) return;
+    clearHover();
+    // single-note mode lights just the hovered column SEGMENT; chord / arp modes light the WHOLE tile
+    // (hovered column bright, the rest dim) to preview that every pitch plays, and float over them all.
+    let cells;
+    if (S.mode === 0) {
+      cells = segCells(tile, idx);
+      for (let i = 0; i < cells.length; i++) cells[i].classList.add('rtt-spk-hover');
+    } else {
+      cells = all; const key = String(idx);
+      for (let i = 0; i < all.length; i++) all[i].classList.add(all[i].dataset.idx === key ? 'rtt-spk-hover' : 'rtt-spk-dim');
+    }
     let l = Infinity, t = Infinity, r = -Infinity;
     for (let i = 0; i < cells.length; i++) { const k = cells[i].getBoundingClientRect(); l = Math.min(l, k.left); t = Math.min(t, k.top); r = Math.max(r, k.right); }
     if (!floatEl) {
@@ -179,11 +193,9 @@ window.rttAudio = (function () {
       });
       document.body.appendChild(floatEl);
     }
-    floatEl.style.left = ((l + r) / 2) + 'px';   // centred over the column, floated above its top
+    floatEl.style.left = ((l + r) / 2) + 'px';   // centred over the highlighted cells, floated above them
     floatEl.style.top = t + 'px';
     floatEl.classList.add('rtt-spk-float-on');
-    clearHover();
-    for (let i = 0; i < cells.length; i++) cells[i].classList.add('rtt-spk-hover');
     floatSeg = { tile: tile, idx: idx };
   }
   document.addEventListener('mouseover', function (ev) {
