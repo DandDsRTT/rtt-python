@@ -3742,7 +3742,7 @@ def main() -> None:
         # watch the assets too, not just *.py (uvicorn's default), so an audio.js / rtt.css edit
         # hot-reloads on its own — otherwise a JS/CSS-only change leaves the running instance stale
         # until some unrelated .py file happens to change (a JS-only audio fix silently failed to land).
-        run_kwargs.update(reload=True, uvicorn_reload_includes=["*.py", "*.css", "*.js"],
+        run_kwargs.update(reload=True, uvicorn_reload_includes="*.py,*.css,*.js",
                           uvicorn_reload_excludes=_reload_excludes(worktrees))
     ui.run(**run_kwargs)
 

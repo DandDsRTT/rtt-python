@@ -107,7 +107,11 @@ def test_main_watches_assets_so_js_and_css_edits_hot_reload(monkeypatch):
     # reload — the running instance keeps stale JS/CSS until some .py file happens to change (which is
     # how a JS-only audio fix silently failed to reach the user). main() widens the watch to the
     # assets so a JS / CSS edit hot-reloads on its own.
-    includes = _capture_main_run(monkeypatch)["uvicorn_reload_includes"]
+    captured = _capture_main_run(monkeypatch)
+    # NiceGUI's ui.run does split_args(...).split(',') on this, so it MUST be a comma-STRING, not a
+    # list (a list crashed the server at startup: 'list' object has no attribute 'split'). Splitting
+    # it the way NiceGUI does both checks the patterns AND would catch a list (it'd have no .split).
+    includes = [p.strip() for p in captured["uvicorn_reload_includes"].split(",")]
     for pat in ("*.py", "*.css", "*.js"):
         assert pat in includes, f"{pat} not watched for reload"
 
