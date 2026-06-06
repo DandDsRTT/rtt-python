@@ -2143,6 +2143,28 @@ def test_the_size_factor_prescaler_carries_a_horizontal_size_bar():
     assert "bar:prescaling" not in {c.id for c in _with("minimax-S", weighting=True).cells}
 
 
+def test_size_factor_augments_the_bare_pretransformer_with_a_phantom_column():
+    # all-interval + size factor: the bare pretransformer 𝑋 gains its phantom prime COLUMN [0…0 1] so it is
+    # the (d+1)×(d+1) square that 𝑊 = 𝑋⁻¹ inverts (it already has the size ROW). The phantom column is 0 in
+    # the real outputs, 1 at the size-row corner; greyed, | -set off, one COL_W right of the d-block.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
+    assert lils["cell:prescaling:primes:0:phantom"].text == "0" and lils["cell:prescaling:primes:0:phantom"].phantom
+    assert lils["cell:prescaling:primes:3:phantom"].text == "1" and lils["cell:prescaling:primes:3:phantom"].phantom
+    assert lils["cell:prescaling:primes:0:phantom"].x == lils["cell:prescaling:primes:0:2"].x + spreadsheet.COL_W
+    # the | vbar sets off the phantom column (mirroring the | in 𝑊); spans all d+1 rows
+    assert lils["bar:prescaling:vline"].kind == "vbar"
+    assert lils["bar:prescaling:vline"].h == 4 * spreadsheet.ROW_H
+    # the bare 𝑋's per-row ⟨ … ] extends past the phantom column (its ] sits right of it)
+    assert lils["bracket:prescaling:row:0:r"].x > lils["cell:prescaling:primes:0:phantom"].x
+    # the MAPPING in the SAME primes column is byte-identical to a non-augmented build — its cells and its
+    # ] are unmoved, since the phantom slot is a right-side reservation that 𝑋 alone spans (matrix_span hides it)
+    lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True).cells}
+    assert lils["cell:mapping:0:0"].x == lp["cell:mapping:0:0"].x
+    assert lils["bracket:map:0:r"].x == lp["bracket:map:0:r"].x
+    # a square (lp) pretransformer has no phantom column
+    assert "cell:prescaling:primes:0:phantom" not in lp and "bar:prescaling:vline" not in lp
+
+
 def test_the_size_factor_drops_the_diag_complexity_equivalence():
     # the lils complexity is ‖𝑍𝐿·i‖ (the size row doubles each prime), NOT diag(𝐿) — so the size factor
     # drops the "𝒄 = diag(𝐿)" closed form, leaving the bare 𝒄 (a plain diagonal lp prescaler keeps it).
