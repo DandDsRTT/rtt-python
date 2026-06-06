@@ -614,10 +614,11 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     is_log_prime = realized == "log-prime"
     symbol = "𝐿" if is_log_prime else "𝑋"
     # the bare tile's SYMBOL equivalence names the realised prescaler concretely; a real deviation
-    # has no closed form, so none. The size factor sizes the diagonal 𝐿 into the rectangular 𝑍𝐿
-    # (the guide's 𝑋 = 𝑍𝐿), so the bare tile names THAT rather than the bare 𝐿.
-    if realized == "log-prime" and size_factor:
-        equivalence = " = 𝑍𝐿"
+    # has no closed form, so none. The size factor COMPOSES the size-sensitizing matrix 𝑍 with the base
+    # prescaler (the guide's 𝑋 = 𝑍𝐿, 𝑍diag(𝒑), or just 𝑍 since 𝑍𝐼 vaporizes), so the bare tile names THAT.
+    if size_factor and realized:
+        base = "" if realized == "identity" else PRESCALER_LETTER[realized]  # 𝑍𝐼 = 𝑍, so identity drops its base
+        equivalence = f" = 𝑍{base}"
     elif realized:
         equivalence = f" = {PRESCALER_LETTER[realized]}"
     else:
@@ -630,10 +631,18 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     # else the generic 𝒙ᵢ — so they don't mix with the 𝐿 the products/headers carry
     row_labels = {**ROW_LABEL_LETTERS, ("prescaling", "primes"): "𝒍" if is_log_prime else "𝒙"}
     effective_captions = dict(CAPTIONS)
-    # the NAME gains "= log-prime matrix" only for the plain diagonal 𝐿; the rectangular 𝑍𝐿 (size
-    # factor) is not "the log-prime matrix", so it keeps the bare caption.
-    if is_log_prime and not size_factor and show_equiv:
-        effective_captions[("prescaling", "primes")] += " = log-prime matrix"
+    # the NAME spells the equivalence out in words (guide ch8 table names). The plain diagonal is just
+    # its base matrix ("= log-prime matrix"); the size factor composes the size-sensitizing matrix with
+    # that base ("= size-sensitizing matrix × log-prime matrix" / "× diagonal matrix of primes", or just
+    # "= size-sensitizing matrix" when the base is the identity). A real deviation (realized None) gets none.
+    _BASE_MATRIX_NAME = {"log-prime": "log-prime matrix", "prime": "diagonal matrix of primes", "identity": "identity matrix"}
+    if show_equiv and realized:
+        if size_factor:
+            base = _BASE_MATRIX_NAME[realized]
+            effective_captions[("prescaling", "primes")] += (
+                " = size-sensitizing matrix" + ("" if realized == "identity" else f" × {base}"))
+        elif is_log_prime:
+            effective_captions[("prescaling", "primes")] += f" = {_BASE_MATRIX_NAME['log-prime']}"
     if size_factor:  # the rectangular 𝑋 is a "pretransformer", not a "prescaler" (guide terminology)
         effective_captions = {k: _pretransform_label(v) for k, v in effective_captions.items()}
     return _PrescalerLabels(

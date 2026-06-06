@@ -2184,6 +2184,34 @@ def test_size_factor_augments_the_weighting_region_plain_text_to_the_phantom():
     assert "|" not in lp["ptext:vectors:targets"].text and "|" not in lp["ptext:prescaling:primes"].text
 
 
+def test_size_factor_composes_the_size_sensitizing_matrix_with_each_base_prescaler():
+    # "replace diminuator" (the size factor) composes the size-sensitizing matrix 𝑍 with the base
+    # prescaler — 𝑋 = 𝑍𝐿 (log-prime), 𝑋 = 𝑍 (identity: 𝑍𝐼 vaporizes), 𝑋 = 𝑍diag(𝒑) (prime) — per the
+    # guide's ch8 table, and the NAME spells it out ("= size-sensitizing matrix × …").
+    st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+
+    def labels(scheme):
+        s = settings.defaults()
+        s.update(weighting=True, symbols=True, equivalences=True, names=True, alt_complexity=True)
+        cells = {c.id: c for c in spreadsheet.build(st, s, tuning_scheme=scheme).cells}
+        return cells["symbol:prescaling:primes"].text, cells["caption:prescaling:primes"].text
+
+    identity = service.scheme_with_diminuator(service.scheme_with_complexity("minimax-S", "copfr"), True)
+    prime = service.scheme_with_diminuator(service.scheme_with_complexity("minimax-S", "sopfr"), True)
+    assert labels("minimax-lils-S") == (
+        "𝑋 = 𝑍𝐿", "complexity pretransformer = size-sensitizing matrix × log-prime matrix")
+    assert labels(identity) == (
+        "𝑋 = 𝑍", "complexity pretransformer = size-sensitizing matrix")
+    assert labels(prime) == (
+        "𝑋 = 𝑍diag(𝒑)", "complexity pretransformer = size-sensitizing matrix × diagonal matrix of primes")
+    # without the size factor the base prescaler stands alone (existing behavior, unchanged)
+    s = settings.defaults()
+    s.update(weighting=True, symbols=True, equivalences=True, names=True)
+    lp = {c.id: c for c in spreadsheet.build(st, s, tuning_scheme="minimax-S").cells}
+    assert lp["symbol:prescaling:primes"].text == "𝑋 = 𝐿"
+    assert lp["caption:prescaling:primes"].text == "complexity prescaler = log-prime matrix"
+
+
 def test_the_size_factor_drops_the_diag_complexity_equivalence():
     # the lils complexity is ‖𝑍𝐿·i‖ (the size row doubles each prime), NOT diag(𝐿) — so the size factor
     # drops the "𝒄 = diag(𝐿)" closed form, leaving the bare 𝒄 (a plain diagonal lp prescaler keeps it).
@@ -2395,13 +2423,13 @@ def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():
 
 def test_size_factor_names_the_bare_prescaler_ZL_not_just_L():
     # with equivalences on, the rectangular pretransformer's bare tile names 𝑋 = 𝑍𝐿 (the guide's
-    # size-sensitized form), not 𝑋 = 𝐿 (the square diagonal); and the NAME drops "= log-prime matrix"
-    # (the rectangular 𝑍𝐿 is not "the log-prime matrix").
+    # size-sensitized form), not 𝑋 = 𝐿 (the square diagonal); and the NAME spells the composition out
+    # (here on the all-interval-OFF TILT scheme — the rectangular 𝑍𝐿 with no phantom column).
     lils = {c.id: c for c in _with(scheme="TILT minimax-lils-S", weighting=True,
                                    symbols=True, names=True, equivalences=True).cells}
     assert lils["symbol:prescaling:primes"].text == "𝑋 = 𝑍𝐿"
     # the size factor also renames "prescaler" → "pretransformer" (the guide's term for rectangular 𝑋)
-    assert lils["caption:prescaling:primes"].text == "complexity pretransformer"
+    assert lils["caption:prescaling:primes"].text == "complexity pretransformer = size-sensitizing matrix × log-prime matrix"
     # lp keeps 𝑋 = 𝐿 and the log-prime-matrix name
     lp = {c.id: c for c in _with(scheme="TILT minimax-S", weighting=True,
                                  symbols=True, names=True, equivalences=True).cells}
