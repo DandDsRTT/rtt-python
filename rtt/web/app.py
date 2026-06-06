@@ -1025,33 +1025,38 @@ def _select_props(min_width: float) -> str:
             f"popup-content-style=min-width:{min_width}px;width:max-content")
 
 
-# The temperament-chooser hover preview's client side. The dropdown popup is TELEPORTED to <body>,
-# so the slot can reach the server neither via `$parent.$emit` (its $parent is the menu, not the
-# q-select that `.on()` listens on) nor via a `document` call in the slot expression (Vue templates
-# block non-whitelisted globals). So the option slot only STAMPS each option's index onto its q-item
-# (`:data-optidx`), and this one-time, document-level delegation (real JS — globals available, and it
-# survives virtual scroll since it's not per-item) reads that index off the hovered option and fires
-# a native `opthover` CustomEvent at the chooser's cell wrap, which listens for it. detail -1 clears.
+# The option-hover preview's client side, shared by every q-select armed via
+# _Reconciler._arm_option_hover (temperament / tuning / prescaler / complexity / weight-slope / form).
+# The dropdown popup is TELEPORTED to <body>, so the slot can reach the server neither via
+# `$parent.$emit` (its $parent is the menu, not the q-select that `.on()` listens on) nor via a
+# `document` call in the slot expression (Vue templates block non-whitelisted globals). So the option
+# slot only STAMPS each option's index (`:data-optidx`) AND its chooser's cell id (`data-optcid`) onto
+# its q-item, and this one-time, document-level delegation (real JS — globals available, and it
+# survives virtual scroll since it's not per-item) reads them off the hovered option and fires a native
+# `opthover` CustomEvent at THAT chooser's cell wrap, which listens for it. detail -1 clears.
 #
-# It DEBOUNCES + dedupes: each preview is a full temperament re-solve on the server, and `mouseover`
-# bubbles many times per second, so firing on every micro-move floods the socket and the client misses
-# its heartbeat (-> "implicit handshake failed" -> reload, which also eats clicks). So a hover only
-# fires after the pointer SETTLES on an option (~90 ms), and never re-fires the same option.
-_TEMP_HOVER_DELEGATION = """
+# It DEBOUNCES + dedupes: each preview is a server-side re-solve, and `mouseover` bubbles many times per
+# second, so firing on every micro-move floods the socket and the client misses its heartbeat (->
+# "implicit handshake failed" -> reload, which also eats clicks). So a hover only fires after the
+# pointer SETTLES on an option (~90 ms), and never re-fires the same (chooser, option).
+_OPTION_HOVER_DELEGATION = """
 (() => {
-  if (window.__rttTempHover) return;
-  window.__rttTempHover = true;
-  let last = null, timer = null;
-  const fire = (d) => { if (d === last) return; last = d;
-    document.querySelectorAll('[data-eid^="preset:temperament"]')
-      .forEach(w => w.dispatchEvent(new CustomEvent('opthover', {detail: d}))); };
+  if (window.__rttOptHover) return;
+  window.__rttOptHover = true;
+  let lastCid = null, lastIdx = null, timer = null;
+  const fire = (cid, d) => { if (cid === lastCid && d === lastIdx) return; lastCid = cid; lastIdx = d;
+    const w = cid && document.querySelector('[data-eid="' + cid + '"]');
+    if (w) w.dispatchEvent(new CustomEvent('opthover', {detail: d})); };
   const optOf = (n) => n && n.closest && n.closest('.q-item[data-optidx]');
   document.addEventListener('mouseover', (e) => {
     const it = optOf(e.target);
-    if (it) { clearTimeout(timer); timer = setTimeout(() => fire(parseInt(it.getAttribute('data-optidx'), 10)), 90); }
+    if (it) { clearTimeout(timer);
+      const cid = it.getAttribute('data-optcid'), idx = parseInt(it.getAttribute('data-optidx'), 10);
+      timer = setTimeout(() => fire(cid, idx), 90); }
   });
   document.addEventListener('mouseout', (e) => {
-    if (optOf(e.target) && !optOf(e.relatedTarget)) { clearTimeout(timer); fire(-1); }
+    const it = optOf(e.target);
+    if (it && !optOf(e.relatedTarget)) { clearTimeout(timer); fire(it.getAttribute('data-optcid'), -1); }
   });
 })()
 """
@@ -1110,6 +1115,32 @@ def _set_offlist_prompt(select: ui.select, value) -> None:
         select.props('display-value="-"')
     else:
         select.props(remove="display-value")
+
+
+def _hover_index(detail):
+    """Normalize an ``opthover`` payload — the hovered option's positional index, or -1 / None on a
+    leave — to a 0-based index, or None for a leave. The delegation marshals the index in ``detail``;
+    popup-hide passes None. Be defensive about the wrapper shape (a dict/list can slip through the
+    event plumbing)."""
+    if isinstance(detail, dict):
+        detail = next(iter(detail.values()), None)
+    if isinstance(detail, (list, tuple)):
+        detail = detail[0] if detail else None
+    if isinstance(detail, bool) or not isinstance(detail, (int, float)):
+        return None
+    index = int(detail)
+    return index if index >= 0 else None
+
+
+def _option_key(select: ui.select, index):
+    """The option key (the value the select would commit) at a 0-based option index, or None when out
+    of range / a leave. NiceGUI numbers each option's client-side value by POSITION (see
+    ChoiceElement._update_options), so the hovered index maps back through the live option order —
+    the keys of a dict, the items of a list."""
+    if index is None:
+        return None
+    keys = list(select.options)
+    return keys[index] if 0 <= index < len(keys) else None
 
 
 class _Reconciler:
@@ -1876,6 +1907,24 @@ class _Reconciler:
                 family, self._editor.state.domain_basis)
         return limit, family
 
+    def _arm_option_hover(self, sel, wrap, cid):
+        """Arm a q-select for the shared option-hover preview (any chooser: temperament / tuning /
+        prescaler / complexity / weight-slope / form). Hovering an option in the OPEN dropdown rings
+        the cells selecting it would change, reverting on leave / popup-close. The teleported Quasar
+        popup blocks both a slot ``$emit`` and any ``document`` use inside the slot, so the option slot
+        only STAMPS each option's positional index (``:data-optidx``) and this chooser's cell id
+        (``data-optcid``); the one document-level delegation (``_OPTION_HOVER_DELEGATION``) reads them
+        on hover and fires ``opthover`` at this cell wrap, handled by ``on_chooser_hover``. ``v-bind
+        itemProps`` keeps each option clickable and carries a divider's disabled state. Reusable by any
+        q-select — a sibling chooser need only call this."""
+        sel.add_slot("option", f"""
+            <q-item v-bind="props.itemProps" :data-optidx="props.opt.value" data-optcid="{cid}">
+                <q-item-section><q-item-label>{{{{ props.opt.label }}}}</q-item-label></q-item-section>
+            </q-item>
+        """)
+        wrap.on("opthover", lambda e: self._cb.on_chooser_hover(cid, e.args), args=["detail"])
+        sel.on("popup-hide", lambda _=None: self._cb.on_chooser_hover(cid, None))
+
     def _build_preset(self, cb, wrap):
         name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
         if name == "target":
@@ -1924,20 +1973,8 @@ class _Reconciler:
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
             # hovering an option in the OPEN dropdown previews loading that temperament (reflow the
-            # would-be grid, or redden what it would drop — see on_temperament_hover). The option slot
-            # stamps each option's index onto its q-item (:data-optidx — a plain Vue binding, since the
-            # teleported popup blocks both a
-            # slot $emit and any `document` use inside the slot expression); the document-level
-            # delegation (_TEMP_HOVER_DELEGATION) reads that index on hover and fires `opthover` at this
-            # cell wrap, which listens for it. v-bind itemProps keeps each option clickable/selectable
-            # and carries the divider's disabled state.
-            sel.add_slot("option", """
-                <q-item v-bind="props.itemProps" :data-optidx="props.opt.value">
-                    <q-item-section><q-item-label>{{ props.opt.label }}</q-item-label></q-item-section>
-                </q-item>
-            """)
-            wrap.on("opthover", lambda e: self._cb.on_temperament_hover(e.args), args=["detail"])
-            sel.on("popup-hide", lambda _=None: self._cb.on_temperament_hover(None))
+            # would-be grid, or redden what it would drop — see on_chooser_hover's temperament branch)
+            self._arm_option_hover(sel, wrap, cb.id)
             self.selects[cb.id] = sel
         elif name == "prescaler":
             # the predefined-prescalers chooser: log-prime always, the rest (identity / prime) gated
@@ -2356,8 +2393,8 @@ def index() -> None:
     # cancel it so the commit never renders into a gone client (which would just log an error).
     ui.context.client.on_disconnect(
         lambda: target_limit_commit[0].cancel() if target_limit_commit[0] is not None else None)
-    # install the temperament-chooser hover delegation once per page (inert until the dropdown opens)
-    ui.run_javascript(_TEMP_HOVER_DELEGATION)
+    # install the shared chooser-option hover delegation once per page (inert until a dropdown opens)
+    ui.run_javascript(_OPTION_HOVER_DELEGATION)
     # dismiss any hover tooltip on pointerdown so it can't strand when the click removes/reflows its
     # anchor (the +/- buttons rebuild the grid out from under the cursor — see _TOOLTIP_DISMISS_JS)
     ui.run_javascript(_TOOLTIP_DISMISS_JS)
@@ -2929,7 +2966,7 @@ def index() -> None:
             if was_reflow:
                 render()             # only a reflow needs rebuilding back to the real grid
 
-    def on_temperament_hover(value):
+    def _temperament_hover_preview(key):
         # hovering a temperament option in the open dropdown previews loading it. How it previews
         # depends on whether the temperament GROWS/keeps the grid or SHRINKS it:
         #   • grow / value-only — REFLOW: apply to a snapshot and re-render the whole would-be grid, so
@@ -2940,17 +2977,10 @@ def index() -> None:
         #     screen and ring it RED (the +/- remove preview's behaviour — the user asked to see what a
         #     hover would delete), the surviving changed cells amber. In a mixed change the deletion
         #     wins (additions aren't shown); seeing what goes away is what was asked for.
-        # Reverts on leave / popup-close (_end_temperament_preview), commits for real on select
-        # (on_preset). The hover delegation marshals the hovered option's INDEX in `detail` (NiceGUI
-        # sets each option's value to its POSITION, not the key — see ChoiceElement._update_options),
-        # so normalize the payload and map the index back through the ordered options.
-        if isinstance(value, dict):
-            value = next(iter(value.values()), None)
-        if isinstance(value, (list, tuple)):
-            value = value[0] if value else None
-        keys = list(presets.temperament_options())
-        key = keys[int(value)] if isinstance(value, (int, float)) and not isinstance(value, bool) \
-            and 0 <= int(value) < len(keys) else None
+        # Temperament alone REFLOWS (it changes the grid's dimensionality), so it keeps this sticky path
+        # rather than the amber-only chooser_hover the other dropdowns use. Reverts on leave / popup-
+        # close (_end_temperament_preview), commits for real on select (on_preset); on_chooser_hover has
+        # already mapped the hovered option's index back to its key.
         if key not in presets.TEMPERAMENT_COMMAS:  # a divider header, null, or the mouse leaving
             _end_temperament_preview()
             return
@@ -2977,6 +3007,18 @@ def index() -> None:
             rec.preview_baseline = rec._temp_baseline            # ring every cell this temperament moves
             rec.preview_source = None
             render()
+
+    def on_chooser_hover(cid, detail):
+        # the shared option-hover preview entry for every q-select armed via _arm_option_hover: the
+        # delegation fires `opthover` at the chooser's cell wrap carrying the hovered option's positional
+        # index in `detail` (-1 / None on leave). Map it back to the option's key through the live
+        # select, then preview applying it. Temperament reflows the grid, so it routes to its own sticky
+        # path; the rest are amber-only re-solves handled below.
+        sel = rec.selects.get(cid)
+        if not isinstance(sel, ui.select):
+            return  # the chooser is gone, or it is the (num, sel) target tuple — not single-armed
+        if cid.startswith("preset:temperament"):
+            _temperament_hover_preview(_option_key(sel, _hover_index(detail)))
 
     # generator-tuning wheel preview: hovering the cell snapshots a baseline so each wheel notch (a
     # real, committed nudge — handled by on_gentuning_wheel, which re-renders) rings the OTHER cells
@@ -3082,7 +3124,7 @@ def index() -> None:
         on_gentuning_wheel=on_gentuning_wheel,
         on_value_wheel=on_value_wheel,
         on_target_limit_wheel=on_target_limit_wheel,
-        on_temperament_hover=on_temperament_hover,
+        on_chooser_hover=on_chooser_hover,
         on_held_change=on_held_change,
         on_interest_change=on_interest_change,
         on_mapping_change=on_mapping_change,
