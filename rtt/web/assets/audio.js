@@ -140,6 +140,10 @@ window.rttAudio = (function () {
     const e = ctrlEl('mute'); if (e) e.innerHTML = api.glyphs.mute[S.muted ? 1 : 0];
     document.body.classList.toggle('rtt-audio-muted', S.muted); };
   if (document.body) document.body.classList.add('rtt-audio-muted');  // start muted (matches S.muted)
+  // Close the AudioContext when the page is hidden / reloaded. Without this, each reload leaks its
+  // context; a browser caps how many a tab may hold, so after enough reloads (a hot-reload session
+  // reloads on every save) new contexts fail to construct and ALL audio dies until the tab is closed.
+  window.addEventListener('pagehide', function () { if (ctx) { try { ctx.close(); } catch (e) {} ctx = null; } });
   // Per-COLUMN-SEGMENT audio affordance: a vector's entries aren't individually playable, so the
   // control applies to the whole interval column. Hovering any cell of a column segment lights the
   // segment (.rtt-spk-hover) and floats ONE speaker above it (tooltip-style, over the app); clicking
@@ -155,7 +159,7 @@ window.rttAudio = (function () {
   }
   function hideFloat() { if (floatEl) floatEl.classList.remove('rtt-spk-float-on'); clearHover(); floatSeg = null; }
   function keepFloat() { if (hideT) { clearTimeout(hideT); hideT = null; } }
-  function planHide() { keepFloat(); hideT = setTimeout(hideFloat, 90); }
+  function planHide() { keepFloat(); hideT = setTimeout(hideFloat, 250); }
   function showFloat(tile, idx) {
     const cells = segCells(tile, idx); if (!cells.length) return;
     let l = Infinity, t = Infinity, r = -Infinity;

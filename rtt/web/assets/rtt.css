@@ -613,15 +613,6 @@
 .rtt-boxtitle { font-family:'Cambria',Georgia,serif; font-size:11px; font-weight:bold;
                  color:#000; width:100%; text-align:left; padding-left:8px;
                  white-space:nowrap; overflow:visible; }
-/* the audio rows' speaker buttons (one per pitch). Flat and transparent so the cyan/green
-   wash shows through; the icon fills the (square) cell. .rtt-spk-on highlights it while sounding. */
-.rtt-audio-btn { width:100% !important; height:100% !important; min-width:0 !important;
-           min-height:0 !important; padding:0 !important; box-shadow:none !important;
-           background:transparent !important; color:#444 !important; }
-.rtt-audio-btn .q-btn__content { min-height:0; padding:0; }
-.rtt-audio-btn .q-icon, .rtt-audio-btn .material-icons { font-size:15px; color:#444 !important; }
-.rtt-spk-on .q-icon, .rtt-spk-on .material-icons { color:#000 !important; }
-.rtt-spk-on { background:#bdbdbd !important; border-radius:3px; }
 /* a per-tile bank control square (waveform / play-mode / hold-loop / include-1/1), the same
    12px box as the fold toggle; .rtt-audio-on marks the active hold/1-1 (greyscale, not blue). */
 .rtt-audio-ctrl { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
@@ -634,14 +625,21 @@
    tooltip-style, over the app — so the control reads as applying to the column, not a single vector
    entry. audio.js positions + shows the float and manages the hover; clicking it sounds the interval.
    Both only while unmuted (the engage gate). */
-.rtt-spk-hover { background:#d0d0d0 !important; border-radius:3px; }
-.rtt-spk-float { position:fixed; transform:translate(-50%, calc(-100% - 4px)); z-index:50; display:none;
-    align-items:center; justify-content:center; width:20px; height:20px; background:#fff;
+/* the hover + sounding highlights ride a ::after RING so they show OVER the opaque value face (a
+   background on the wrap is hidden behind the white .rtt-white cell); hover = soft, sounding = strong */
+.rtt-spk-hover::after, .rtt-spk-on::after { content:""; position:absolute; inset:0; pointer-events:none;
+    z-index:4; border-radius:3px; }
+.rtt-spk-hover::after { box-shadow:inset 0 0 0 2px #9aa0a6; }
+.rtt-spk-on::after { box-shadow:inset 0 0 0 2px #4a4a4a; }
+/* the float sits flush ABOVE the column segment (its bottom on the segment's top edge) so moving the
+   cursor up onto it never crosses dead space — the mouseout's relatedTarget is the float itself. */
+.rtt-spk-float { position:fixed; transform:translate(-50%, -100%); z-index:50; display:none;
+    align-items:center; justify-content:center; width:24px; height:24px; background:#fff;
     border:1px solid #8a8a8a; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.3);
     color:#444; cursor:pointer; }
 .rtt-spk-float.rtt-spk-float-on { display:flex; }
 .rtt-spk-float:hover { color:#000; background:#f2f2f2; }
-.rtt-spk-float .material-icons { font-size:15px; }
+.rtt-spk-float .material-icons { font-size:16px; }
 .material-icons.rtt-audio-glyph { font-size:12px; width:auto; height:auto; }
 .rtt-audio-rootglyph { font-size:8px; font-family:'Cambria',Georgia,serif; line-height:1; }
 /* the domain − is a hover affordance: an invisible zone dropping from the removable
