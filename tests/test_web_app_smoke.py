@@ -353,31 +353,41 @@ def test_temperament_divider_headers_read_as_centred_grey_rules_inset_like_the_i
 
 
 def test_sidebar_hugs_its_content_as_a_fixed_left_column():
-    # The rail + settings drawer share .rtt-panelgroup, the app's fixed left sidebar (flex:none, and
+    # The chrome + settings drawer share .rtt-panelgroup, the app's fixed left sidebar (flex:none, and
     # no position:sticky — the page never scrolls). Under the shell's align-items:flex-start it HUGS
-    # its content height rather than stretching its grey down the window: the rail's title tab when
+    # its content height rather than stretching its grey down the window: the chrome's title tab when
     # the drawer is collapsed, the settings panel's height when open. The drawer animates its height
-    # (grid-template-rows 0fr->1fr) so a collapsed drawer contributes no height (sidebar = rail tab).
+    # (grid-template-rows 0fr->1fr) so a collapsed drawer contributes no height (sidebar = the tab).
     rule = _css_rule(".rtt-panelgroup")
     assert "flex:none" in rule                # fixed width; doesn't grow/shrink with the grid
     assert "position:sticky" not in rule      # no page scroll to pin against
     drawer = _css_rule(".rtt-drawer")
-    assert "grid-template-rows:0fr" in drawer  # collapsed -> zero height, so the sidebar hugs the rail
+    assert "grid-template-rows:0fr" in drawer  # collapsed -> zero height, so the sidebar hugs the chrome
     assert "align-self:flex-start" in drawer   # ...and the panelgroup doesn't stretch it back open
 
 
-def test_opening_the_pane_swaps_the_vertical_title_tab_for_a_horizontal_top_bar():
-    # Saving horizontal space: closed, the sidebar is a narrow tab (.rtt-rail) whose chrome STACKS —
-    # the hamburger over the app title turned a quarter-turn (writing-mode) so it fits the tab width.
-    # Opening folds that tab to zero width and lays the same chrome across the top of the pane
-    # (.rtt-chrome): the title upright (normal text) beside the hamburger, so the open pane spends no
-    # width on a vertical band.
-    assert "flex-direction:column" in _css_rule(".rtt-rail")            # closed tab: stacked
-    assert "writing-mode:vertical-rl" in _css_rule(".rtt-sidetitle")    # ...title turned a quarter-turn
-    assert "flex-direction:row" in _css_rule(".rtt-chrome")             # open bar: laid across the top
-    assert "writing-mode:horizontal-tb" in _css_rule(".rtt-chrome .rtt-sidetitle")  # ...title upright
-    # opening folds the closed tab to zero width, so its band no longer eats horizontal space
-    assert "width:0" in _css_rule(".rtt-panelgroup.rtt-open .rtt-rail")
+def test_opening_widens_the_single_sidebar_so_the_tab_becomes_the_pane():
+    # One sidebar that WIDENS from the closed tab to the open pane (a single transitioned width), so
+    # the collapsed sidebar becomes the expanded one rather than one panel replacing another. The
+    # chrome stacks over the settings drawer (column), and only the width animates.
+    pg = _css_rule(".rtt-panelgroup")
+    assert "flex-direction:column" in pg                  # chrome stacked over the settings drawer
+    assert "width:var(--tab-w)" in pg                     # closed: the narrow tab
+    assert "transition:width" in pg                       # ...animated...
+    assert "width:var(--panel-w)" in _css_rule(".rtt-panelgroup.rtt-open")  # ...to the full pane
+
+
+def test_the_chrome_pins_the_hamburger_and_swings_the_title_upright():
+    # The chrome is ONE hamburger + ONE title that morph in place (no second copy swapped in). The
+    # hamburger is absolutely pinned, so opening never reflows it out from under the cursor; the title
+    # swings via an animated transform from a quarter-turn (down the closed tab) to upright (across the
+    # open bar).
+    assert "position:absolute" in _css_rule(".rtt-hamburger")   # pinned — never reflows on open/close
+    title = _css_rule(".rtt-sidetitle")
+    assert "position:absolute" in title
+    assert "rotate(90deg)" in title                             # closed: turned a quarter-turn down the tab
+    assert "transition" in title and "transform" in title       # ...and the swing is animated
+    assert "rotate(0deg)" in _css_rule(".rtt-panelgroup.rtt-open .rtt-sidetitle")  # open: upright
 
 
 def _z(selector):

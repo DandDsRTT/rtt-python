@@ -35,7 +35,7 @@ def test_dark_overlay_is_gated_on_the_body_class():
 
 
 def test_dark_theme_darkens_every_core_surface():
-    for surface in (".rtt-app", ".rtt-rowband", ".rtt-drawer-inner", ".rtt-rail",
+    for surface in (".rtt-app", ".rtt-rowband", ".rtt-panelgroup",
                     ".rtt-block", ".rtt-show-group", ".rtt-show-tile", ".rtt-white"):
         assert _dark_sets(surface, "background"), surface
 

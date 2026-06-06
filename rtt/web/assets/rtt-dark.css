@@ -47,9 +47,9 @@ body.rtt-dark .rtt-app,
 body.rtt-dark .rtt-colhead,
 body.rtt-dark .rtt-corner,
 body.rtt-dark .rtt-rowband { background:#1f2329; }
-/* the raised panels: rail, drawer, the title tile, and the grey tile blocks behind the cells */
-body.rtt-dark .rtt-rail,
-body.rtt-dark .rtt-drawer-inner,
+/* the raised panels: the settings sidebar (spans the chrome + drawer), the title tile, and the grey
+   tile blocks behind the cells */
+body.rtt-dark .rtt-panelgroup,
 body.rtt-dark .rtt-titletile,
 body.rtt-dark .rtt-block,
 body.rtt-dark .rtt-show-tile { background:#272c33; }
@@ -100,7 +100,7 @@ body.rtt-dark .rtt-caption.rtt-caption-disabled { color:#71777f; }
 body.rtt-dark .rtt-cellunit { color:#9aa1a9; }
 body.rtt-dark .rtt-gensign:hover { background:#31373f; }   /* the generator sign's clickable hover box */
 
-/* ── app chrome: the rail title and the undo/redo/hamburger buttons ──────────────────────────
+/* ── app chrome: the sidebar title and the undo/redo/hamburger buttons ──────────────────────────
    these light rules use !important (to beat Quasar), so the dark overrides must too. */
 body.rtt-dark .rtt-sidetitle { color:#e3e6ea; }
 body.rtt-dark .rtt-iconbtn { background:#1b1f24 !important; border-color:#8d949d; }

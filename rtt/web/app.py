@@ -62,6 +62,7 @@ _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 _PANEL_W = 330  # px width the settings drawer opens to (the Show + example columns)
 _TAB_W = 40  # px width of the collapsed settings tab (the hamburger over the quarter-turned title)
+_TAB_H = 200  # px height of the collapsed tab's chrome (room for the title turned a quarter-turn)
 _CHROME_H = 40  # px height of the open pane's horizontal title bar (hamburger + upright title)
 _TOOLTIP_DELAY_MS = 700  # hover delay before a tooltip appears — long enough that the dense grid's
 # help waits for a deliberate rest instead of popping on every passing cursor (Quasar defaults to 0)
@@ -261,7 +262,7 @@ def _control_svg(glyph: str) -> str:
 
 
 _CSS_VARS = f""":root {{
-  --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
+  --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --tab-h:{_TAB_H}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
   --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
@@ -3434,31 +3435,25 @@ def index() -> None:
         panelgroup.classes(add="rtt-open") if drawer_open[0] else panelgroup.classes(remove="rtt-open")
 
     def _pane_chrome():
-        """The settings hamburger + the app title. Rendered twice: in the closed-state tab (the rail,
-        where the title is turned a quarter-turn and stacked under the hamburger) and in the open
-        pane's top bar (the chrome, where the title lies flat beside it). CSS orients each by its
-        parent, so a single definition serves both states and only the showing one is interactive."""
+        """The settings hamburger + the app title — one each, rendered once. CSS pins the hamburger
+        (absolute, top-left) so it never moves between states, and swings the title (animated
+        transform) from a quarter-turn down the closed tab to upright across the open bar."""
         ui.button(icon="menu", on_click=toggle_drawer, color=None).props("flat dense") \
             .classes("rtt-hamburger").tooltip(tooltips.CHROME_HELP["settings"])
         ui.label("D&D's RTT app").classes("rtt-sidetitle")
 
     with ui.element("div").classes("rtt-shell"):
-        # the sidebar = the closed-state tab (rail) + the settings pane (drawer), laid in a row with
-        # the grid to their right. Opening collapses the rail to nothing and slides the drawer out, so
-        # the open pane spends no width on a vertical title band — its chrome rides across the top.
+        # the sidebar is ONE element that widens from a tab into the settings pane (.rtt-panelgroup, a
+        # column), the grid to its right. Its chrome sits on top and morphs in place — the hamburger
+        # pinned, the title swinging from a quarter-turn to upright — while the drawer below reveals
+        # the settings. Opening just widens the panelgroup, so the tab becomes the pane (no swap).
         panelgroup = ui.element("div").classes("rtt-panelgroup")
         with panelgroup:
-            # the closed-state tab: the chrome stacked vertically (title a quarter-turn). It sits left
-            # of the drawer and folds to zero width when the pane opens.
-            with ui.element("div").classes("rtt-rail"):
+            # the chrome: one hamburger + one title, pinned/swung by CSS (see _pane_chrome).
+            with ui.element("div").classes("rtt-chrome"):
                 _pane_chrome()
             drawer = ui.element("div").classes("rtt-drawer")
             with drawer, ui.element("div").classes("rtt-drawer-inner"):
-                # the open pane's top bar: the same chrome laid across (title upright, hamburger slid
-                # in from the edge). It rides inside the drawer, so it shows only with the pane open —
-                # the moment the closed tab's vertical band is gone.
-                with ui.element("div").classes("rtt-chrome"):
-                    _pane_chrome()
                 # the frozen header: just the select-all/none master, pinned above the scrolling
                 # groups (render() sizes it to the layout's freeze_y, matching the main app's frozen
                 # band). Its bottom border is the frozen/scrolling seam. The show/example column

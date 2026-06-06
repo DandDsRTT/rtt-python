@@ -1,8 +1,8 @@
 /* the grid's empty top-left corner cell now holds only the undo/redo buttons (the app
-   title moved to the left rail). It fills the corner exactly — LABEL_W wide so its right
+   title moved to the settings sidebar). It fills the corner exactly — LABEL_W wide so its right
    edge meets the row-label column, HEADER_H tall so its bottom meets the column-header row
    — i.e. aligned with both the row titles and the column titles. Square (no radius), on the
-   same light grey as the rail and pane; the buttons centre within it. It sits in the fixed
+   same light grey as the sidebar and pane; the buttons centre within it. It sits in the fixed
    .rtt-corner region (top-left of the frozen panes), positioned at the corner's origin. */
 .rtt-titletile { position:absolute; top:0; left:0; box-sizing:border-box;
                  width:var(--label-w); height:var(--header-h); background:#e0e0e0;
@@ -37,34 +37,31 @@
   .disabled, .disabled *, [disabled], [disabled] *,
   .q-field--disabled, .q-field--disabled * { cursor:default !important; }
 }
-/* the closed-state tab (rail): a light-grey column at the screen's left edge holding the chrome
-   stacked vertically — the hamburger over the app title turned a quarter-turn (writing-mode) so it
-   reads top-to-bottom and fits the narrow tab. It sits LEFT of the drawer and stays #e0e0e0 while
-   closed. When the pane opens (.rtt-panelgroup.rtt-open) it folds to zero width: the open pane
-   carries its own horizontal title bar (.rtt-chrome) instead, so no vertical band eats horizontal
-   space. It carries no align-self, so the group (align-items:stretch) makes it as tall as the group,
-   which hugs the drawer — the rail matches the settings height: a title tab closed, the panel open. */
-.rtt-rail { flex:none; width:var(--tab-w); overflow:hidden; background:#e0e0e0;
-            display:flex; flex-direction:column; align-items:center; gap:10px; padding:7px 0 14px;
-            transition:width var(--t), padding var(--t); }
-.rtt-panelgroup.rtt-open .rtt-rail { width:0; padding:0; }  /* the band folds away when the pane opens */
-/* the app title. In the tab it is turned a quarter-turn (vertical-rl) so it reads down the narrow
-   column; in the open pane's top bar (.rtt-chrome) it lies flat as normal text. Noticeably larger
-   than the 13px row/column titles. */
-.rtt-sidetitle { writing-mode:vertical-rl; font-family:'Cambria',Georgia,serif; font-size:22px;
-                 font-weight:bold; color:#000; white-space:nowrap; line-height:1; }
-.rtt-chrome .rtt-sidetitle { writing-mode:horizontal-tb; }  /* upright in the open pane's bar */
-/* the open pane's top bar: the chrome laid horizontally across the top of the drawer — the hamburger
-   slid in from the left edge with the app title flat beside it. It rides inside the drawer (showing
-   only when the pane is open) above the settings header, replacing the closed tab's vertical band. */
-.rtt-chrome { flex:none; display:flex; flex-direction:row; align-items:center; gap:8px;
-              height:var(--chrome-h); padding:0 12px; }
-/* the hamburger: in the closed tab (top) and again in the open bar (left) */
-.rtt-hamburger { width:28px !important; min-width:28px !important; height:28px !important;
+/* the chrome holds the one hamburger + one title at the top of the sidebar, and is their positioning
+   context (both absolute). Its height shrinks from the tall closed tab (--tab-h, room for the title
+   turned a quarter-turn down the column) to a short bar (--chrome-h) when the pane opens; overflow is
+   visible so the title can swing through the gap between the two states without being clipped. */
+.rtt-chrome { flex:none; position:relative; width:100%; height:var(--tab-h);
+              transition:height var(--t); }
+.rtt-panelgroup.rtt-open .rtt-chrome { height:var(--chrome-h); }
+/* the hamburger is PINNED at the sidebar's top-left in both states — absolute, so opening the pane
+   never reflows it out from under the cursor (it must not move at all). */
+.rtt-hamburger { position:absolute; top:7px; left:6px;
+                 width:28px !important; min-width:28px !important; height:28px !important;
                  min-height:28px !important; padding:0 !important; background:#fff !important;
                  border:1px solid #999; border-radius:3px !important; box-shadow:none !important; }
 .rtt-hamburger .q-icon { color:#333 !important; font-size:19px; }
-/* the shell lays the fixed left sidebar (rail + settings pane) and the grid pane in a row. It is
+/* the app title swings in place between the two states (an animated transform, so it reorients
+   smoothly rather than a hard flip): a quarter-turn reading DOWN the closed tab (below the hamburger),
+   upright ACROSS the open bar (beside it). Absolutely placed and pivoted about its top-left corner —
+   which barely moves — so it reads as one title turning, not two titles swapping. Noticeably larger
+   than the 13px row/column titles. */
+.rtt-sidetitle { position:absolute; transform-origin:top left; left:31px; top:38px;
+                 transform:rotate(90deg); font-family:'Cambria',Georgia,serif; font-size:22px;
+                 font-weight:bold; color:#000; white-space:nowrap; line-height:1;
+                 transition:transform var(--t), left var(--t), top var(--t); }
+.rtt-panelgroup.rtt-open .rtt-sidetitle { left:42px; top:10px; transform:rotate(0deg); }
+/* the shell lays the fixed left sidebar (chrome + settings pane) and the grid pane in a row. It is
    position:fixed at a 6px inset from every window edge, so it fills the window exactly (the page
    itself never scrolls) and the 6px of white body shows as a margin framing the whole app. The
    grid spills inside its OWN pane (.rtt-app) rather than off the page, which keeps the sidebar
@@ -73,31 +70,33 @@
    size is what each pane caps against (max-height / flex-shrink) before scrolling internally. */
 .rtt-shell { position:fixed; top:6px; left:6px; right:6px; bottom:6px;
              display:flex; flex-wrap:nowrap; gap:0; align-items:flex-start; }
-/* the rail+pane group is the fixed left sidebar: a flex:none column the shell holds at the left
-   edge for the whole session. align-self defaults to the shell's align-items:flex-start, so the
-   sidebar HUGS its content — the rail's title tab when the drawer is collapsed, the settings panel's
-   height when open — rather than stretching its grey down the whole window. The page no longer
-   scrolls, so it needs no position:sticky; it stays put while the grid pane to its right scrolls.
-   Opening the drawer widens it, narrowing the grid pane (which reflows). */
-.rtt-panelgroup { display:flex; flex-wrap:nowrap; flex:none; }
-/* the drawer animates BOTH width (the slide-over) and height (grid-template-rows 0fr->1fr, growing
-   the pane to its content height) so the sidebar's grey hugs the settings rather than the window.
-   align-self:flex-start stops the panelgroup stretching it (which would defeat the content-fr
-   sizing); a collapsed 0fr drawer contributes no height, so the sidebar falls to the rail's tab.
-   Opening keys off .rtt-panelgroup.rtt-open (set on the group, since the rail — which the same state
-   folds away — precedes the drawer and CSS can't reach a previous sibling). */
-.rtt-drawer { display:grid; grid-template-rows:0fr; align-self:flex-start; width:0; overflow:hidden;
-              transition:width var(--t), grid-template-rows var(--t); flex:none; }
-.rtt-panelgroup.rtt-open .rtt-drawer { width:var(--panel-w); grid-template-rows:1fr; }
+/* the sidebar is ONE element: a flex:none column the shell holds at the left edge for the whole
+   session, the chrome stacked over the settings drawer. align-self defaults to the shell's
+   align-items:flex-start, so it HUGS its content height — the chrome's title tab when the drawer is
+   collapsed, the settings panel's height when open — rather than stretching its grey down the window.
+   The page no longer scrolls, so it needs no position:sticky. Opening (it gains .rtt-open) WIDENS it
+   from the tab to the full panel — one transitioned slide, so the tab becomes the pane rather than a
+   second panel replacing it — narrowing the grid pane to its right (which reflows). */
+.rtt-panelgroup { display:flex; flex-direction:column; flex:none; width:var(--tab-w);
+                  background:#e0e0e0; transition:width var(--t); }
+.rtt-panelgroup.rtt-open { width:var(--panel-w); }
+/* the drawer below the chrome holds the settings; it animates its height (grid-template-rows 0fr->1fr,
+   growing the pane to its content height) so the sidebar's grey hugs the settings rather than the
+   window — a collapsed 0fr drawer contributes no height, so the closed sidebar is just the chrome tab.
+   Width follows the panelgroup (the chrome and drawer are full-width); the drawer-inner is the fixed
+   panel width that the narrow tab clips. */
+.rtt-drawer { display:grid; grid-template-rows:0fr; align-self:flex-start; width:100%; overflow:hidden;
+              transition:grid-template-rows var(--t); flex:none; }
+.rtt-panelgroup.rtt-open .rtt-drawer { grid-template-rows:1fr; }
 /* the pane is a flex column: a frozen header (select-all/none + show/example) over a scrolling body
    (the toggle groups), mirroring the grid pane's frozen titles above its scrolling body. It hugs its
    content; the window-height cap lives on the body (.rtt-show-scroll's max-height) so the frozen
    header + a body capped to (window − inset − header) never exceeds the window. overflow:hidden lets
    the drawer's grid-rows open/close animation clip and grow it. */
-/* padding-top:var(--pad) insets the settings content by the same _PAD the grid pane insets its
-   column-header band, so the settings frozen header lines up with the main app's header (the
-   undo/redo band) instead of floating ~12px above it. */
-.rtt-drawer-inner { width:var(--panel-w); box-sizing:border-box; background:#e0e0e0; overflow:hidden;
+/* padding-top:var(--pad) sets a small gap between the chrome title bar above and the settings frozen
+   header, matching the _PAD the grid pane insets its column-header band. The background is the
+   panelgroup's (it spans the whole sidebar), so the inner needs none of its own. */
+.rtt-drawer-inner { width:var(--panel-w); box-sizing:border-box; overflow:hidden;
                     min-height:0; display:flex; flex-direction:column; padding-top:var(--pad);
                     font-family:'Cambria',Georgia,serif; color:#000; }
 /* the grid pane sits right of the sidebar. It HUGS the grid (render() sizes it to the grid's full
@@ -709,7 +708,7 @@
    now sits below the whole header (.rtt-show-frozen's border), so it keeps only its inset. */
 .rtt-show-all { display:flex; align-items:center; justify-content:space-between; padding:0 9px; }
 /* the dark-mode toggle: a compact sun/moon icon button beside select-all. Flat and borderless so
-   it reads as a chrome glyph (like the rail's hamburger), not a raised button. */
+   it reads as a chrome glyph (like the sidebar's hamburger), not a raised button. */
 .rtt-darktoggle { width:24px !important; min-width:24px !important; height:24px !important;
                   min-height:24px !important; padding:0 !important; color:#555 !important;
                   background:transparent !important; box-shadow:none !important; }
