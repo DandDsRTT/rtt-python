@@ -22,14 +22,14 @@ Two new files added by commit `a051d69` on `main`:
 - [`rtt/generator_embedding.py`](rtt/generator_embedding.py) — 30 lines
   - `get_generator_embedding(mapping, held)` → **G = H·(M·H)⁻¹**
     (rational d×r right-inverse of the mapping; columns are the held intervals'
-    fractional monzos)
+    fractional vectors)
   - `get_tempering_projection(mapping, held)` → **P = G·M**
     (rational d×d projection; idempotent; kernel = comma space; image = held-prime
     subspace)
 - [`tests/test_generator_embedding.py`](tests/test_generator_embedding.py) — 4 tests
 
 It is **convention-free**: the caller supplies the held intervals (a `Temperament`
-with `COL` variance, rows are monzos). Nothing about which primes are
+with `COL` variance, rows are vectors). Nothing about which primes are
 "canonical" is baked in.
 
 ### Verified against the quarter-comma meantone target
