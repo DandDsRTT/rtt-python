@@ -1815,6 +1815,26 @@ async def test_hovering_a_tuning_scheme_option_previews_reselecting(user: User) 
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
 
 
+async def test_hovering_a_prescaler_option_previews_reselecting(user: User) -> None:
+    # the predefined-prescalers chooser previews its options too: under a non-unity weight slope the
+    # prescaler defines the complexity that the weights derive from, so hovering a different prescaler
+    # rings the re-weighted targets. (Under unity weight the prescaler doesn't reach the weights and
+    # the prescaling tile is hidden, so a non-unity slope is set first.)
+    from rtt.web import presets
+    await user.open("/")
+    _toggle(user, "presets")
+    _toggle(user, "weighting")
+    _toggle(user, "alt. complexity")                           # >1 prescaler option
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # make the prescaler reach the weights
+    await user.should_see(marker="preset:prescaler")
+    wrap = set(user.find(marker="preset:prescaler").elements)
+    idx = list(presets.prescaler_options(True)).index("identity")  # hover a prescaler other than log-prime
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+
+
 async def test_hovering_a_structural_minus_rings_removed_cells_red_and_moved_cells_amber(user: User) -> None:
     # hovering a structural − previews the click WITHOUT reflowing the grid (the generator is not
     # actually dropped, so the button stays under the cursor): the cells it REMOVES ring RED — they

@@ -1989,6 +1989,7 @@ class _Reconciler:
                     on_change=lambda e: self._cb.on_preset("prescaler", e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
+            self._arm_option_hover(sel, wrap, cb.id)  # hovering a prescaler previews re-solving to it
             self.selects[cb.id] = sel
         else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-interval);
             # a control-refined scheme has no name, shown as the "-" placeholder. Alternative-
@@ -3041,6 +3042,8 @@ def index() -> None:
             return None
         if cid.startswith("preset:tuning"):
             return lambda: editor.set_tuning_scheme(value)
+        if cid.startswith("preset:prescaler"):
+            return lambda: editor.set_complexity_prescaler(value)
         return None
 
     def on_chooser_hover(cid, detail):
