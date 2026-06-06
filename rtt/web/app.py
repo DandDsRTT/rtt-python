@@ -3601,6 +3601,10 @@ def index() -> None:
                 # Hidden when the domain has no nonprime element — the trait is meaningless there
                 # — and revealed when a basis like 2.3.13/5 carries one. The visibility is updated
                 # by render() through refs["approach"] each pass.
+                approach_options = {"": "neutral", "prime-based": "prime-based",
+                                    "nonprime-based": "nonprime-based"}
+                approach_keys = list(approach_options)  # index → approach key (the client sends the index)
+
                 def on_approach_change(value):
                     # building[0] is True while render() programmatically syncs the radio's
                     # value to editor.nonprime_basis_approach (after an undo, a domain change
@@ -3610,11 +3614,47 @@ def index() -> None:
                     editor.set_nonprime_basis_approach(value)
                     render()
 
+                def on_approach_hover(value):
+                    # preview the hovered approach option: ring the cells reading the temperament that way
+                    # would move, without committing (control_hover reverts it). The client delegation sends
+                    # the hovered option's index in `detail`; -1 / out of range = leaving, so clear. Mirrors
+                    # the temperament chooser's index-in-detail hover normalization.
+                    if isinstance(value, dict):
+                        value = next(iter(value.values()), None)
+                    if isinstance(value, (list, tuple)):
+                        value = value[0] if value else None
+                    if not isinstance(value, (int, float)) or isinstance(value, bool) \
+                            or not 0 <= int(value) < len(approach_keys):
+                        control_unhover()
+                        return
+                    control_hover(lambda a=approach_keys[int(value)]: editor.set_nonprime_basis_approach(a))
+
                 refs["approach"] = ui.radio(
-                    {"": "neutral", "prime-based": "prime-based", "nonprime-based": "nonprime-based"},
+                    approach_options,
                     value=editor.nonprime_basis_approach,
                     on_change=lambda e: on_approach_change(e.value),
                 ).props("dense").classes("rtt-approach").mark("approach")
+                # per-option hover preview: the radio is not one hover target like the +/- buttons (each
+                # option means a different approach), so a tiny client delegation finds the hovered .q-radio's
+                # index and fires an `approachhover` event carrying it; leaving the radio fires -1. It dedupes
+                # (a settled pointer doesn't re-fire), so the server re-solves only on an option change. The
+                # handler maps the index back to the approach and routes it through the shared control_hover.
+                refs["approach"].on("mouseover", js_handler="""(e) => {
+                    const group = e.target.closest && e.target.closest('.rtt-approach');
+                    if (!group) return;
+                    const opt = e.target.closest('.q-radio');
+                    const idx = opt ? Array.from(group.querySelectorAll('.q-radio')).indexOf(opt) : -1;
+                    if (group.__rttApproach === idx) return;
+                    group.__rttApproach = idx;
+                    group.dispatchEvent(new CustomEvent('approachhover', {detail: idx}));
+                }""")
+                refs["approach"].on("mouseleave", js_handler="""(e) => {
+                    const group = e.target.closest && e.target.closest('.rtt-approach');
+                    if (!group || group.__rttApproach === -1) return;
+                    group.__rttApproach = -1;
+                    group.dispatchEvent(new CustomEvent('approachhover', {detail: -1}));
+                }""")
+                refs["approach"].on("approachhover", lambda e: on_approach_hover(e.args), args=["detail"])
             gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
             with gridbody:
                 board = ui.element("div").classes("rtt-gridcontent").mark("board")
