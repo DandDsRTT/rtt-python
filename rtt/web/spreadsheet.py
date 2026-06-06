@@ -152,9 +152,11 @@ VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
 MARK_INSET = 8  # inset of a mapped column's top/bottom mark, so it clears the rules
 SEP_W = 2  # width of a vertical rule between vector columns (the renderer draws it
 # as thick as a square bracket's main bar; this is just the cell it centres in)
-KET_INSET = 4  # inset (each side) of an intervals-of-interest ket box within its COL_W
-# slot: the interest column is a loose collection, not a matrix, so its boxes stand apart
-# with a gap (2·KET_INSET) between them rather than abutting into a grid (per the mockup)
+KET_INSET = 4  # inset (each side) of an editable interval-vector ket box within its COL_W
+# slot, leaving a gap (2·KET_INSET) between adjacent boxes. The interest column (a loose
+# collection, not a matrix) uses it so its boxes stand apart rather than abutting into a grid;
+# the target list (a matrix WITH separator rules) uses it so the rule shows through the gap
+# instead of being painted over by the opaque input box (per the mockup)
 LINE_W = 2  # px thickness of the shared-axis gridlines: the renderer's .rtt-line border
 # weight, and here the overlap by which a convergence bus reaches past its outer sub-lines
 # so the rejoin corners stay solid (the cells sit centred on these rules)
@@ -2429,9 +2431,15 @@ class _GridBuilder:
                 # basis (typing a column overrides the target set) — except the auto Tₚ = I list, which
                 # is read-only, the computed twin of its quantities ratio (a plain "vec", like D)
                 target_kind = "targetcell" if self.targets_editable else "vec"
+                # the list is a matrix drawn WITH separator rules between its columns; an editable
+                # input's opaque box, flush at the slot boundary, would paint over the thin rule. So
+                # the editable cells are inset within their COL_W slot (like the interest kets, KET_INSET)
+                # — leaving a gap the separator shows through — while the read-only Tₚ vecs stay full
+                # COL_W (no covering box, and they must abut the phantom-prime augmentation column).
+                cell_inset = KET_INSET if self.targets_editable else 0
                 for j in range(self.k):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{p}", self.target_left(j), self.vec_top(p), COL_W, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
+                        self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{p}", self.target_left(j) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
                         self._voice("vectors:targets", j, self.target_sizes.just[j])
                 if self.phantom_dim:
                     # the augmented Tₚ = I_(d+1): a phantom prime-component ROW (p == d, 0 under each real
@@ -2447,7 +2455,7 @@ class _GridBuilder:
                 if self.pending_target is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_target[p]
-                        self.cells.append(CellBox(f"cell:vec:targets:{self.pending_col_token('targets')}:{p}", self.target_left(self.k), self.vec_top(p), COL_W, ROW_H, "targetcell",
+                        self.cells.append(CellBox(f"cell:vec:targets:{self.pending_col_token('targets')}:{p}", self.target_left(self.k) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, "targetcell",
                                              text="" if v is None else str(v), prime=p, comma=self.k, pending=True, unit=self.cell_unit("vectors", "targets", prime=p)))
             if self.tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
                 for i in range(self.nh):

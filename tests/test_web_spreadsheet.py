@@ -1720,7 +1720,10 @@ def test_interval_vectors_show_targets_as_vectors():
     assert [cells[f"cell:vec:targets:0:{p}"].text for p in range(3)] == ["1", "0", "0"]
     assert [cells[f"cell:vec:targets:2:{p}"].text for p in range(3)] == ["-1", "1", "0"]
     assert [cells[f"cell:vec:targets:6:{p}"].text for p in range(3)] == ["-2", "0", "1"]
-    assert cells["cell:vec:targets:2:0"].x == cells["target:2"].x  # column on its target axis
+    # the editable vector cell is inset within its COL_W slot (leaving the separator rule a gap),
+    # so it shares the ratio header's column AXIS by centre, not by left edge
+    v, hdr = cells["cell:vec:targets:2:0"], cells["target:2"]
+    assert v.x + v.w / 2 == hdr.x + hdr.w / 2  # column centred on its target axis
     # the d components stack downward, one ROW_H apart
     assert cells["cell:vec:targets:0:1"].y - cells["cell:vec:targets:0:0"].y == spreadsheet.ROW_H
 
@@ -5165,6 +5168,35 @@ def test_all_interval_target_list_is_read_only():
     assert based["ptext:vectors:targets"].kind == "ptextedit"
 
 
+def test_editable_target_vector_cells_clear_the_column_separator():
+    # the target list is a matrix drawn WITH separator rules between its interval columns
+    # (unlike the loose interest collection). But its vector cells are editable inputs whose
+    # opaque box, sitting flush at the slot boundary, would paint over the thin rule. So the
+    # editable target cells are inset within their COL_W slot — like the interest kets — leaving
+    # a gap the separator shows through, while staying centred so the per-column marks/axis align.
+    cells = {c.id: c for c in _layout().cells}
+    c0, c1 = cells["cell:vec:targets:0:0"], cells["cell:vec:targets:1:0"]
+    sep = cells["sep:vec:targets:1"]            # the rule between target intervals 0 and 1
+    full = cells["cell:mapped:0:0"]             # the mapped image spans the full COL_W slot
+    assert c0.w < full.w                        # the input box is inset (narrower than the slot)
+    assert c0.x + c0.w / 2 == full.x + full.w / 2   # ...but centred on the same slot
+    # the rule lies entirely in the gap between the two input boxes — neither covers it
+    assert c0.x + c0.w <= sep.x                 # cell 0 ends at/before the rule's left edge
+    assert sep.x + sep.w <= c1.x                # cell 1 starts at/after the rule's right edge
+
+
+def test_read_only_target_vectors_stay_full_width_for_the_phantom_augmentation():
+    # the all-interval Tₚ = 𝐈 list is read-only ("vec"), not editable: its plain text lets the
+    # separator show without a gap, and it must abut the phantom-prime augmentation column at full
+    # COL_W (the inset is an editable-input affordance only — a narrowed Tₚ would mis-align with the
+    # phantom column and the d+1 𝑋/𝑊/𝒄/𝐝). minimax-lils-S is all-interval WITH a size factor (phantom).
+    cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}
+    real = cells["cell:vec:targets:0:0"]
+    phantom = cells["cell:vec:targets:phantom:0"]
+    assert real.kind == "vec"          # read-only (not the editable targetcell)
+    assert real.w == phantom.w         # full COL_W, matching the augmentation column
+
+
 def test_typing_the_target_interval_list_drives_the_grid_through_the_editor():
     # the editable target interval list end to end: a typed vector list, applied via the editor,
     # drives the built target columns (the hybrid override)
@@ -6705,9 +6737,11 @@ def test_ss_targets_renders_each_target_as_a_dL_tall_monzo_over_the_superspace_p
             cell = cells[f"cell:ss_targets:{j}:{p}"]
             assert cell.text == str(expected[j][p])
             assert cell.kind == "vec"
-    # each column rides the same x as the existing on-domain target column above (one
-    # vertical alignment from vectors → ss_targets, so the eye traces the conversion)
-    assert cells["cell:ss_targets:0:0"].x == cells["cell:vec:targets:0:0"].x
+    # each column rides the same axis as the existing on-domain target column above (one
+    # vertical alignment from vectors → ss_targets, so the eye traces the conversion). The
+    # on-domain cell is the inset editable targetcell, so they share the axis by CENTRE.
+    ss, on = cells["cell:ss_targets:0:0"], cells["cell:vec:targets:0:0"]
+    assert ss.x + ss.w / 2 == on.x + on.w / 2
 
 
 def test_ss_prescaler_quantities_spine_lists_the_superspace_primes():
