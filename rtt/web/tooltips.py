@@ -119,7 +119,7 @@ _KIND_HELP: dict[str, str] = {
     "interestcell": "Interval-of-interest entry — this prime's exponent in an interval you're tracking. Type to edit, or scroll the wheel to step it by 1.",
     "heldcell": "Held-interval entry — this prime's exponent in an interval held unchanged (pure) by the tuning. Type to edit, or scroll the wheel to step it by 1.",
     "targetcell": "Target-interval entry — this prime's exponent in a target the tuning optimizes over. Type to override the chosen target set, or scroll the wheel to step it by 1.",
-    "prescalercell": "Prescaler entry — the weight on this prime applied before optimizing. Type to override the scheme's value.",
+    "prescalercell": "Prescaler entry — the weight on this prime applied before optimizing. Type to override the scheme's value, or scroll the wheel to nudge it by 0.001.",
     "gentuningcell": "Generator tuning — this generator's tuned size in cents. Type to override the optimum, click its sign to reverse the generator (its mapping row flips too, so the tuning is unchanged), or scroll the wheel to fine-tune by a thousandth of a cent.",
     # other grid controls
     "rangemode": "Choose how the generator's tuning range is measured — monotone or tradeoff.",
@@ -155,8 +155,8 @@ _KIND_HELP: dict[str, str] = {
 # Controls whose kind backs several roles, told apart by the cell's exact id.
 _ID_HELP: dict[str, str] = {
     # powerinput: the optimization power vs the complexity norm power and its dual
-    "optimization:power": "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean.",
-    "control:q": "Interval-complexity norm power 𝑞.",
+    "optimization:power": "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean. Type ∞, or scroll the wheel to step a finite power by 1.",
+    "control:q": "Interval-complexity norm power 𝑞. Type it, or scroll the wheel to step it by 1.",
     "control:dual": "Dual norm power — the dual exponent of 𝑞, used to minimax over every interval.",
     # control_select: the complexity and weight-slope choosers (the prescaler is a preset now)
     "control:complexity": "Choose the interval-complexity measure used to weight damage.",

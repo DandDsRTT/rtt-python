@@ -136,16 +136,21 @@ _DARK_MARK = "#8d949d"    # the cell rule, the EBK brackets, and the option-box 
 _DARK_TEXT = "#e3e6ea"    # primary text — and the checked option-box's inner fill
 _DARK_MUTED = "#71777f"   # disabled text — and the indeterminate option-box's inner fill
 
-# Editable cells whose value is a single integer (a matrix or vector component). Scrolling the
-# wheel over one of these while it is focused steps it by ±1 — the coarse-integer analogue of the
-# generator-tuning cell's thousandth-cent wheel fine-adjust. (The cents/ratio/power cells are not
-# integers, so they are not listed.)
-_INT_CELL_KINDS = {"mapping", "commacell", "interestcell", "heldcell", "targetcell"}
+# Every editable numeric input maps here to the amount one wheel notch nudges it: ±1 for a
+# matrix/vector or power entry, ±0.001 for a complexity-prescaler weight (matching its thousandths
+# display). The make_cell listener and on_value_wheel both read this one table, so a NEW numeric
+# input gets scroll-to-step by adding a row here — there is no per-input wheel handler. (The
+# generator-tuning cell and the target-limit square scroll through their own handlers instead: the
+# first fine-tunes by 1/1000 cent with hover + grouped undo, the second debounces its costly commit.)
+_WHEEL_STEPS = {
+    "mapping": 1, "commacell": 1, "interestcell": 1, "heldcell": 1, "targetcell": 1,
+    "powerinput": 1, "prescalercell": 0.001,
+}
 # The client-side gate for the integer wheel step, shared by every gridded integer input (the
 # matrix/vector cells and the TILT/OLD target-limit square): only step (and swallow the scroll) when
 # the input holds focus — otherwise let the event through so the grid/panel scrolls as usual. So a
 # notch nudges only the input you have clicked into, and an idle scroll never fires a server round-
-# trip. ``emit`` ships deltaY to that input's handler (on_int_wheel / on_target_limit_wheel).
+# trip. ``emit`` ships deltaY to that input's handler (on_value_wheel / on_target_limit_wheel).
 _INT_WHEEL_JS = ("(e) => { if (e.currentTarget.contains(document.activeElement)) "
                  "{ e.preventDefault(); emit(e); } }")
 # How long after the last target-limit wheel notch to run the commit. Each notch cheaply steps the
@@ -497,11 +502,25 @@ def _parse_int(text):
         return None
 
 
-def _wheel_step(value, delta_y) -> str:
-    """One integer wheel notch applied to a gridded cell's text value: scroll up (``delta_y`` < 0)
-    is +1, down is −1; a blank/partial value starts from 0. Shared by the matrix/vector cells and
-    the TILT/OLD target-limit square so every gridded integer steps identically."""
-    return str((_parse_int(value) or 0) + (1 if delta_y < 0 else -1))
+def _wheel_step(value, delta_y, step=1) -> str:
+    """One wheel notch on a numeric input's text value: scroll up (``delta_y`` < 0) adds ``step``,
+    down subtracts it. A blank/partial value starts from 0; ``∞`` (the max-norm power) is left
+    unchanged — a wheel can't reach it, you type it. An int ``step`` formats a bare integer
+    (``2`` → ``3``); a fractional one keeps its own decimal precision (``0.001``: ``1.585`` →
+    ``1.586``), so the stepped text reads like the cell already does. The one step shared by every
+    gridded numeric input (and the target-limit square)."""
+    text = str(value).strip()
+    try:
+        cur = float(text.replace("∞", "inf"))
+    except ValueError:
+        cur = 0.0  # blank / partial component starts from 0
+    if not math.isfinite(cur):
+        return text  # ∞ / inf: leave it; the wheel can't step the max-norm power
+    new = cur + (step if delta_y < 0 else -step)
+    if isinstance(step, int):
+        return str(int(new)) if new == int(new) else str(new)
+    decimals = max(0, -math.floor(math.log10(step)))
+    return f"{round(new, decimals):.{decimals}f}"
 
 
 def _limit_text(limit) -> str | None:
@@ -1316,11 +1335,12 @@ class _Reconciler:
         if edit_input is not None:
             edit_input.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid))
             edit_input.on("blur", lambda _=None: self._cb.on_cell_blur())
-        # an integer matrix/vector cell also steps by ±1 on a wheel notch while focused. The listener
-        # rides the wrap (so a scroll anywhere in the cell counts) and its js_handler only emits when
-        # the cell holds focus, so an unfocused scroll just pages the grid (see _INT_WHEEL_JS).
-        if cb.kind in _INT_CELL_KINDS:
-            wrap.on("wheel", lambda e, cid=cb.id: self._cb.on_int_wheel(cid, e.args.get("deltaY")),
+        # every editable numeric input steps by its _WHEEL_STEPS amount on a wheel notch while
+        # focused. The listener rides the wrap (so a scroll anywhere in the cell counts) and its
+        # js_handler only emits when the cell holds focus, so an unfocused scroll just pages the grid
+        # (see _INT_WHEEL_JS). One wiring for every kind in the table — no per-input special-casing.
+        if cb.kind in _WHEEL_STEPS:
+            wrap.on("wheel", lambda e, cid=cb.id: self._cb.on_value_wheel(cid, e.args.get("deltaY")),
                     args=["deltaY"], js_handler=_INT_WHEEL_JS)
 
     def update_cell(self, cb):
@@ -2327,6 +2347,10 @@ def index() -> None:
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
     target_limit_commit = [None]  # pending debounced commit task for the target-limit wheel
+    # a pending target-limit debounce must not outlive the page: if the user leaves mid-gesture,
+    # cancel it so the commit never renders into a gone client (which would just log an error).
+    ui.context.client.on_disconnect(
+        lambda: target_limit_commit[0].cancel() if target_limit_commit[0] is not None else None)
     # install the temperament-chooser hover delegation once per page (inert until the dropdown opens)
     ui.run_javascript(_TEMP_HOVER_DELEGATION)
     # dismiss any hover tooltip on pointerdown so it can't strand when the click removes/reflows its
@@ -2549,16 +2573,20 @@ def index() -> None:
         editor.nudge_generator_tuning_component(int(cid.rsplit(":", 1)[1]), 1 if delta_y < 0 else -1)
         render()
 
-    def on_int_wheel(cid, delta_y):
-        # step a focused integer matrix/vector cell by ±1 per wheel notch — scroll up (deltaY < 0)
-        # raises it, down lowers it. Setting the input's value fires the cell's OWN on_change
-        # (on_mapping_change / on_comma_change / …), which validates, applies, and re-renders — so a
-        # notch travels the exact path a typed digit does, with no per-kind dispatch here. A blank
-        # cell (an unfilled draft component) starts from 0. The client only emits for the focused
-        # cell (see _INT_WHEEL_JS), so this is always a deliberate edit, never a stray scroll.
+    def on_value_wheel(cid, delta_y):
+        # step a focused numeric input by one notch — the per-kind amount in _WHEEL_STEPS (±1 for a
+        # matrix/vector or power entry, ±0.001 for a prescaler weight). Setting the input's value
+        # fires its OWN on_change (on_mapping_change / on_power_change / on_prescaler_change / …),
+        # which validates, applies, and re-renders — so a notch travels the exact path a typed value
+        # does, with no per-kind dispatch here. A blank cell starts from 0. The client only emits for
+        # the focused cell (see _INT_WHEEL_JS), so this is always a deliberate edit, never a stray
+        # scroll. Generic over kind: a new numeric input scrolls the moment it is added to _WHEEL_STEPS.
         if building[0] or not delta_y or cid not in rec.inputs:
             return
-        rec.inputs[cid].value = _wheel_step(rec.inputs[cid].value, delta_y)
+        step = _WHEEL_STEPS.get(rec.kinds.get(cid))
+        if step is None:
+            return
+        rec.inputs[cid].value = _wheel_step(rec.inputs[cid].value, delta_y, step)
 
     def on_target_limit_wheel(delta_y):
         # step the TILT/OLD limit by ±1 per wheel notch. Unlike a matrix/vector cell, COMMITTING a
@@ -3047,7 +3075,7 @@ def index() -> None:
         on_form_choose=on_form_choose,
         on_gentuning_change=on_gentuning_change,
         on_gentuning_wheel=on_gentuning_wheel,
-        on_int_wheel=on_int_wheel,
+        on_value_wheel=on_value_wheel,
         on_target_limit_wheel=on_target_limit_wheel,
         on_temperament_hover=on_temperament_hover,
         on_held_change=on_held_change,

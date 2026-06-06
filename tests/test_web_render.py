@@ -12,6 +12,7 @@ Cells are located by the marker each carries (``.mark(cb.id)`` in _make_cell, th
 Python-side parallel of the data-eid the JS reconciler uses).
 """
 
+import asyncio
 from fractions import Fraction
 
 import nicegui.ui as ui
@@ -497,6 +498,44 @@ async def test_the_integer_wheel_step_is_generic_over_cell_kinds(user: User) -> 
     assert int(_cell_child(user, "cell:comma:0:0").value) == before + 1
 
 
+async def test_scrolling_the_optimization_power_steps_a_finite_power_and_leaves_infinity(user: User) -> None:
+    # the norm power is wired into the SAME _WHEEL_STEPS table as the matrix cells, stepping by 1.
+    # ∞ (the default minimax power) can't be reached by a wheel, so a notch leaves it untouched; a
+    # finite power steps. Same mechanism, no per-input handler. (The power is an editable input only
+    # with alt. complexity on — else it locks read-only.)
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="optimization").click()
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="alt. complexity").click()
+    await user.should_see(marker="optimization:power")
+    assert _cell_child(user, "optimization:power").value == "∞"
+    user.find(marker="optimization:power").trigger("wheel", {"deltaY": -100})  # scroll up on ∞
+    await user.should_see(marker="optimization:power")
+    assert _cell_child(user, "optimization:power").value == "∞"   # unchanged — you type ∞, not scroll to it
+    _cell_child(user, "optimization:power").set_value("2")        # a finite power
+    await user.should_see(marker="optimization:power")
+    user.find(marker="optimization:power").trigger("wheel", {"deltaY": -100})  # scroll up = +1
+    await user.should_see(marker="optimization:power")
+    assert _cell_child(user, "optimization:power").value == "3"
+
+
+async def test_scrolling_a_prescaler_weight_nudges_it_by_a_thousandth(user: User) -> None:
+    # the complexity prescaler is in the same _WHEEL_STEPS table too, with a fractional step (0.001,
+    # its thousandths display) instead of 1 — the float counterpart to the integer cells, wired and
+    # stepped by the one shared mechanism rather than a snowflake handler.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()              # gates the prescaling row
+    _cell_child(user, "control:slope").set_value("simplicity-weight")     # a non-unity slope reveals it
+    await user.should_see(marker="cell:prescaling:primes:1:1")
+    assert _cell_child(user, "cell:prescaling:primes:1:1").value == "1.585"  # log₂3, shown to 3 dp
+    user.find(marker="cell:prescaling:primes:1:1").trigger("wheel", {"deltaY": -100})  # up = +0.001
+    await user.should_see(marker="cell:prescaling:primes:1:1")
+    assert _cell_child(user, "cell:prescaling:primes:1:1").value == "1.586"
+    user.find(marker="cell:prescaling:primes:1:1").trigger("wheel", {"deltaY": 100})   # down = −0.001
+    await user.should_see(marker="cell:prescaling:primes:1:1")
+    assert _cell_child(user, "cell:prescaling:primes:1:1").value == "1.585"
+
+
 async def test_scrolling_the_target_limit_steps_then_commits(user: User, monkeypatch) -> None:
     # a wheel notch on the TILT/OLD limit steps the shown number at once (like the matrix cells),
     # then DEBOUNCES the heavy commit (rebuild the target set, re-solve) so a fast scroll can't grind
@@ -511,7 +550,7 @@ async def test_scrolling_the_target_limit_steps_then_commits(user: User, monkeyp
     UserInteraction(user, {num}, None).trigger("wheel", {"deltaY": -100})  # scroll up = +1
     num, _sel = _target_preset(user)
     assert int(num.value) == before + 1            # the shown number steps immediately
-    await user.should_see(marker="preset:target")  # let the debounced commit + render settle
+    await asyncio.sleep(0.05)                       # drain the zero-delay debounced commit task
     num, _sel = _target_preset(user)
     assert int(num.value) == before + 1            # committed, not reverted
 
