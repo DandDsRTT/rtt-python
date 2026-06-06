@@ -2090,6 +2090,30 @@ def test_the_augmented_weight_matrix_sets_off_the_phantom_row_with_an_hline():
     assert "bar:weight:hline" not in sq
 
 
+def test_size_factor_augments_the_all_interval_target_identity_to_d_plus_one():
+    # all-interval + size factor: the target identity Tₚ grows to the (d+1)×(d+1) identity I_(d+1) so it
+    # shares the augmented-prime shape with 𝑋 / 𝑊 / 𝒄 / 𝐝. The phantom target COLUMN (j == k) is the unit
+    # [0…0 1]; the phantom prime ROW (p == d) is 0 under each real target. Both render greyed.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    # the d×d real block is the plain identity, not greyed
+    assert lils["cell:vec:targets:0:0"].text == "1" and not lils["cell:vec:targets:0:0"].phantom
+    assert lils["cell:vec:targets:1:0"].text == "0" and not lils["cell:vec:targets:1:0"].phantom
+    # the phantom target column [0,0,0,1], greyed
+    assert lils["cell:vec:targets:phantom:0"].text == "0" and lils["cell:vec:targets:phantom:0"].phantom
+    assert lils["cell:vec:targets:phantom:3"].text == "1" and lils["cell:vec:targets:phantom:3"].phantom
+    # the phantom prime ROW under a real target (its phantom component is 0), greyed
+    assert lils["cell:vec:targets:0:3"].text == "0" and lils["cell:vec:targets:0:3"].phantom
+    # the phantom column rides one COL_W right of the last real target; the phantom row one ROW_H below
+    assert lils["cell:vec:targets:phantom:0"].x == lils["cell:vec:targets:2:0"].x + spreadsheet.COL_W
+    assert lils["cell:vec:targets:0:3"].y == lils["cell:vec:targets:0:2"].y + spreadsheet.ROW_H
+    # the enclosing [ ] spans all d+1 rows; the | / \hline bars set off the phantom column / row
+    assert lils["bracket:vec:targets:l"].h == 4 * spreadsheet.ROW_H
+    assert lils["bar:vectors:targets"].kind == "vbar" and lils["bar:vectors:targets:hline"].kind == "hbar"
+    # a square (lp) all-interval Tₚ stays the plain d×d identity — no phantom cells / bars
+    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
+    assert "cell:vec:targets:phantom:0" not in lp and "bar:vectors:targets" not in lp
+
+
 def test_the_size_factor_prescaler_carries_a_horizontal_size_bar():
     # 𝑋 = 𝑍𝐿 is the log-prime square plus an appended size ROW; per the guide's \hline that row is set
     # off by a horizontal rule (bar:prescaling, kind hbar) — the mirror of the vertical ` | ` size bar

@@ -1072,9 +1072,10 @@ class _GridBuilder:
         # generator-embedding augmentation — an extra mapping row sf·log₂(p), just-tuned to 0 then
         # dropped). The pretransformer 𝑋, its inverse 𝑊, the target identity Tₚ, the complexity 𝒄 and
         # the damage 𝐝 all grow to the (d+1)-shape so their rows/columns line up. The phantom row/column
-        # render greyed (derived, not a real interval). target_phantom is the extra target COLUMN it adds.
+        # render greyed (derived, not a real interval). phantom_dim is the one extra augmented dimension
+        # (1 when on) — it is BOTH a trailing target COLUMN and a trailing prime-component ROW (Tₚ = I_(d+1)).
         self.augmented = self.all_interval and bool(self.size_factor)
-        self.target_phantom = 1 if self.augmented else 0
+        self.phantom_dim = 1 if self.augmented else 0
         col_bands = (
             ("quantities", COL_W, show_domain_quantities, True),
             ("units", COL_W, show_domain_units, True),
@@ -1088,9 +1089,9 @@ class _GridBuilder:
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
-            # the augmented phantom prime adds one trailing target COLUMN (target_phantom) so the
+            # the augmented phantom prime adds one trailing target COLUMN (phantom_dim) so the
             # weighting region's d+1 shapes (Tₚ, 𝒄, 𝑊, 𝐝) sit in-column with their gridlines + brackets
-            ("targets", 2 * BRACKET_W + (self.k_shown + self.target_phantom) * COL_W, show_tuning, True),
+            ("targets", 2 * BRACKET_W + (self.k_shown + self.phantom_dim) * COL_W, show_tuning, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
             # padding. Its long two-line title needs more room, so the column's *footprint*
             # is floored at the title width (see the loop below) and the narrow content is
@@ -1113,7 +1114,9 @@ class _GridBuilder:
             ("counts", ROW_H, show_counts, True, "counts"),
             ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
             ("units", ROW_H, show_domain_units, True, "units"),
-            ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
+            # the augmented Tₚ = I_(d+1) adds one phantom prime-component ROW (phantom_dim); the other
+            # vectors tiles (commas/held/detempering) are real d-dim intervals and stay d-tall in the band
+            ("vectors", (self.d + self.phantom_dim) * ROW_H, show_temp, True, "interval vectors"),
             ("canon", self.rc * ROW_H, self.show_form_controls, True, "canonical mapping"),
             ("mapping", self.r * ROW_H, show_temp, True, "mapping"),
             # the chapter-9 superspace rows sit between mapping and tuning, the row
@@ -1415,7 +1418,7 @@ class _GridBuilder:
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
         self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown,
-                   "targets": self.k_shown + self.target_phantom,  # the phantom column fans its own sub-axis
+                   "targets": self.k_shown + self.phantom_dim,  # the phantom column fans its own sub-axis
                    "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r,
                    "ssgens": self.rL, "ssprimes": self.dL}
         self.group_ratio = {  # the just interval ratio each value group is taken over
@@ -2407,6 +2410,17 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{p}", self.target_left(j), self.vec_top(p), COL_W, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
                         self._voice("vectors:targets", j, self.target_sizes.just[j])
+                if self.phantom_dim:
+                    # the augmented Tₚ = I_(d+1): a phantom prime-component ROW (p == d, 0 under each real
+                    # target) and a phantom target COLUMN [0…0 1] (j == k). Both greyed — derived from the
+                    # dropped augmentation, not real intervals — so Tₚ lines up with the d+1 𝑋 / 𝑊 / 𝒄 / 𝐝.
+                    # (No _voice — the phantom isn't a real interval to sound.)
+                    for j in range(self.k):
+                        self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{self.d}",
+                                             self.target_left(j), self.vec_top(self.d), COL_W, ROW_H, "vec", text="0", phantom=True))
+                    for p in range(self.d + 1):
+                        self.cells.append(CellBox(f"cell:vec:targets:phantom:{p}", self.target_left(self.k),
+                                             self.vec_top(p), COL_W, ROW_H, "vec", text="1" if p == self.d else "0", phantom=True))
                 if self.pending_target is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_target[p]
@@ -2953,7 +2967,19 @@ class _GridBuilder:
         if self.row_open("vectors"):  # each group is a list of vectors: a [ ] spanning the d components
             for group in ("commas", "targets"):
                 if self.tile_open("vectors", group):
-                    self.bracket(f"vec:{group}", LIST_BRACKETS, group, self.row_y["vectors"], self.d * ROW_H, fit=True)
+                    # the augmented Tₚ = I_(d+1) is one phantom prime-component ROW taller; the comma basis
+                    # (real d-dim intervals) keeps its d rows, so only the targets [ ] grows
+                    vh = (self.d + (self.phantom_dim if group == "targets" else 0)) * ROW_H
+                    self.bracket(f"vec:{group}", LIST_BRACKETS, group, self.row_y["vectors"], vh, fit=True)
+            if self.phantom_dim and self.tile_open("vectors", "targets"):
+                # set off Tₚ's phantom prime: the ` | ` vbar before the phantom target COLUMN and the
+                # \hline hbar before the phantom prime ROW — the same pair framing 𝑋 and 𝑊's phantom prime
+                top = self.row_y["vectors"]
+                h = (self.d + self.phantom_dim) * ROW_H
+                tl = self.target_left
+                self.cells.append(CellBox("bar:vectors:targets", tl(self.k) - SEP_W / 2, top, SEP_W, h, "vbar"))
+                self.cells.append(CellBox("bar:vectors:targets:hline", tl(0), top + self.d * ROW_H - SEP_W / 2,
+                                     tl(self.k) + COL_W - tl(0), SEP_W, "hbar"))
             # the interest column is a loose collection, not a matrix — its kets stand alone,
             # so no outer [ … ] wraps them (see the de-matrixed mapped/imapped row below)
             if self.nh and self.tile_open("vectors", "held"):
