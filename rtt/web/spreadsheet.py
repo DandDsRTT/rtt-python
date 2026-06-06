@@ -2239,6 +2239,8 @@ class _GridBuilder:
                 for p in range(self.d):
                     self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
                     self._voice("quantities:primes", p, self.tun.just_map[p])
+                if self.phantom_dim:  # the dummy prime has no real prime number — "–", greyed (no audio, not a real interval)
+                    self.cells.append(CellBox(f"prime:{self.d}", self.prime_left(self.d), qy, COL_W, ROW_H, "prime", text="–", prime=self.d, phantom=True))
                 # Only the highest prime is removable (shrink_domain trims the last), so its
                 # − rides that prime's branch point (the last top-bus split) — and only when the
                 # shrink actually applies (gated like editor.shrink, never shown inert).
@@ -2428,6 +2430,8 @@ class _GridBuilder:
                 bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
                 for p in range(self.d):
                     self.cells.append(CellBox(f"basis:{p}", bx, self.vec_top(p), COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
+                if self.phantom_dim:  # the dummy prime's basis square (labels the dummy vector row) — "–", greyed
+                    self.cells.append(CellBox(f"basis:{self.d}", bx, self.vec_top(self.d), COL_W, ROW_H, "prime", text="–", prime=self.d, phantom=True))
                 # the left bus the controls ride (node_edge + FAN when the row fans — matching
                 # row_axis); the − zone drops from it rightward over the bottom prime as the hover target
                 basis_bus_x = self.node_edge + self.FAN if self._row_fans("vectors") else self.node_edge

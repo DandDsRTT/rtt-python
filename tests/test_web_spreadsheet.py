@@ -2222,6 +2222,17 @@ def test_size_factor_completes_the_primes_axis_in_the_tuning_and_complexity_maps
     assert "tuning:prime:3" not in lp and "complexity:prime:3" not in lp
 
 
+def test_size_factor_marks_the_dummy_prime_quantity_with_a_dash():
+    # the dummy prime has no real prime number, so its quantity reads "–" (greyed) in both prime spines —
+    # the quantities row (prime:d) and the interval-vectors basis spine (basis:d, labelling the dummy row).
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    assert lils["prime:3"].text == "–" and lils["prime:3"].phantom
+    assert lils["basis:3"].text == "–" and lils["basis:3"].phantom
+    # a square (lp) all-interval has no dummy prime
+    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
+    assert "prime:3" not in lp and "basis:3" not in lp
+
+
 def test_size_factor_augments_the_weighting_region_plain_text_to_the_phantom():
     # the plain text must show the grid's augmented d+1 numbers (the ptext-matches-the-grid rule), so the
     # phantom appears in Tₚ / 𝒄 / 𝐝 / 𝑋 — each | -set off, the same divider 𝑊's plain text already uses.
