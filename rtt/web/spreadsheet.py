@@ -2782,6 +2782,12 @@ class _GridBuilder:
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
                 self.tval_row("complexity", group, self.complexities[group],
                               alerts=self.held_unheld if group == "held" else ())
+            if self.phantom_dim and self.tile_open("complexity", "targets"):
+                # the phantom target's complexity is 1 — the augmented 𝑋's phantom column [0…0 1] has unit
+                # norm — greyed, riding the phantom column so 𝒄 lines up with the d+1 𝑊 / Tₚ
+                self.cells.append(CellBox("complexity:target:phantom", self.target_left(self.k),
+                                     self.row_y["complexity"], COL_W, ROW_H, "tval",
+                                     text=service.cents(1.0), phantom=True))
         if self.row_open("weight") and self.tile_open("weight", "targets"):
             if self.weight_is_matrix:
                 # the weight matrix 𝑊 (square 𝑋⁻¹, or the d×(d+1) left inverse (𝑍𝑋)⁻ with the size
@@ -2814,6 +2820,12 @@ class _GridBuilder:
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
         if self.row_open("damage"):  # damage is over the targets only (the tuning's own column)
             self.tval_row("damage", "targets", self.target_sizes.damage)
+            if self.phantom_dim and self.tile_open("damage", "targets"):
+                # the phantom target's damage is the discarded augmentation output (the phantom generator is
+                # just-tuned to 0, then dropped) — greyed, riding the phantom column so 𝐝 lines up with 𝑊
+                self.cells.append(CellBox("damage:target:phantom", self.target_left(self.k),
+                                     self.row_y["damage"], COL_W, ROW_H, "tval",
+                                     text=service.cents(0.0), phantom=True))
             # optimization adds the horizontal minimized-damage indicator (the objective ⟪𝐝⟫ₚ
             # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
             # (∞ / 2 / 1); off, the chart is plain bars. Recorded for the chart loop below.

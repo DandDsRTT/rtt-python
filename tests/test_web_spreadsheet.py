@@ -2114,6 +2114,22 @@ def test_size_factor_augments_the_all_interval_target_identity_to_d_plus_one():
     assert "cell:vec:targets:phantom:0" not in lp and "bar:vectors:targets" not in lp
 
 
+def test_size_factor_augments_the_complexity_and_damage_rows_with_a_phantom_cell():
+    # all-interval + size factor: the complexity 𝒄 and damage 𝐝 covectors gain the phantom target column
+    # so they line up with the d+1 𝑊 / Tₚ. The phantom 𝒄 is 1 (the augmented 𝑋's phantom column [0…0 1]
+    # has unit norm); the phantom 𝐝 is the discarded augmentation output. Both render greyed.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    assert not lils["complexity:target:0"].phantom                       # a real complexity is not greyed
+    assert lils["complexity:target:phantom"].text == service.cents(1.0)  # the phantom 𝒄 = 1
+    assert lils["complexity:target:phantom"].phantom
+    assert lils["complexity:target:phantom"].x == lils["complexity:target:2"].x + spreadsheet.COL_W
+    assert lils["damage:target:phantom"].phantom                         # the phantom 𝐝, greyed (discarded)
+    assert lils["damage:target:phantom"].x == lils["damage:target:2"].x + spreadsheet.COL_W
+    # a square (lp) all-interval has no phantom 𝒄 / 𝐝 cell
+    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
+    assert "complexity:target:phantom" not in lp and "damage:target:phantom" not in lp
+
+
 def test_the_size_factor_prescaler_carries_a_horizontal_size_bar():
     # 𝑋 = 𝑍𝐿 is the log-prime square plus an appended size ROW; per the guide's \hline that row is set
     # off by a horizontal rule (bar:prescaling, kind hbar) — the mirror of the vertical ` | ` size bar
