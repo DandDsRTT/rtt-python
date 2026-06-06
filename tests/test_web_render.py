@@ -1835,6 +1835,54 @@ async def test_hovering_a_prescaler_option_previews_reselecting(user: User) -> N
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
 
 
+async def test_hovering_a_complexity_option_previews_reselecting(user: User) -> None:
+    # the predefined-complexities chooser (box 𝒄) — a control_select, not a preset — previews its
+    # options through the same hook: under a non-unity slope the complexity measure drives the weights,
+    # so hovering a different one rings the re-weighted targets. The hovered DISPLAY name maps back to
+    # its internal key in _candidate_apply, mirroring the on-select commit.
+    await user.open("/")
+    _toggle(user, "presets")
+    _toggle(user, "weighting")
+    _toggle(user, "alt. complexity")
+    _cell_child(user, "control:slope").set_value("simplicity-weight")  # make the complexity reach the weights
+    await user.should_see(marker="control:complexity")
+    wrap = set(user.find(marker="control:complexity").elements)
+    idx = list(service.COMPLEXITY_DISPLAYS).index("sopfr")     # hover a measure other than the live lp
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+
+
+async def test_hovering_a_weight_slope_option_previews_reselecting(user: User) -> None:
+    # the box-𝒘 weight-slope chooser previews its options: the slope is exactly what scales each
+    # target's weight, so hovering a different slope rings the re-weighted targets.
+    await user.open("/")
+    _toggle(user, "weighting")                                # the slope chooser shows with weighting
+    await user.should_see(marker="control:slope")
+    wrap = set(user.find(marker="control:slope").elements)
+    idx = list(service.WEIGHT_SLOPES).index("simplicity-weight")  # default is unity-weight
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+
+
+async def test_hovering_a_locked_weight_slope_shows_no_preview(user: User) -> None:
+    # all-interval locks the weight slope (simplicity-weighted by construction), greying the chooser. A
+    # disabled / locked chooser must not preview — on_chooser_hover skips it on `sel.enabled`, so
+    # hovering its options rings nothing even though the slope branch would otherwise re-weight.
+    await user.open("/")
+    _toggle(user, "weighting")
+    _toggle(user, "all-interval")                                 # reveal the all-interval checkbox
+    _cell_child(user, "control:all_interval").set_value(True)     # all-interval -> the slope chooser locks
+    await user.should_see(marker="control:slope")
+    wrap = set(user.find(marker="control:slope").elements)
+    idx = list(service.WEIGHT_SLOPES).index("complexity-weight")
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")  # locked: no preview
+
+
 async def test_hovering_a_structural_minus_rings_removed_cells_red_and_moved_cells_amber(user: User) -> None:
     # hovering a structural − previews the click WITHOUT reflowing the grid (the generator is not
     # actually dropped, so the button stays under the cursor): the cells it REMOVES ring RED — they

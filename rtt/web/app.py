@@ -2067,10 +2067,12 @@ class _Reconciler:
             self.target_limit_tip.classes(add="rtt-tip-error" if problem else "",
                                           remove="" if problem else "rtt-tip-error")
 
-    def _build_control_select(self, cb, wrap):  # a weighting chooser (complexity / norm / weight slope)
-        self.selects[cb.id] = ui.select(list(cb.values), value=cb.text or None,
+    def _build_control_select(self, cb, wrap):  # a weighting chooser (complexity / weight slope)
+        sel = ui.select(list(cb.values), value=cb.text or None,
                 on_change=lambda e, cid=cb.id: self._cb.on_control_select(cid, e.value)) \
             .props(_select_props(cb.w)).classes("rtt-preset")
+        self._arm_option_hover(sel, wrap, cb.id)  # hovering an option previews re-weighting to it
+        self.selects[cb.id] = sel
 
     def _update_control_select(self, cb):  # mirror the live choice; grey it when locked (box 𝒘 all-interval)
         # the complexity chooser's option list widens/narrows as alt. complexity flips, so refresh the
@@ -3044,6 +3046,15 @@ def index() -> None:
             return lambda: editor.set_tuning_scheme(value)
         if cid.startswith("preset:prescaler"):
             return lambda: editor.set_complexity_prescaler(value)
+        if cid == "control:complexity":
+            if value == "custom":  # the off-preset display state — selecting it is a no-op, so is a hover
+                return None
+            # the dropdown presents the friendly display name ("lp (log-product)"); map it back to the
+            # internal complexity key the editor takes ("lp"), exactly as on_control_select commits it
+            internal = next((k for k, v in service.COMPLEXITY_DISPLAYS.items() if v == value), value)
+            return lambda: editor.set_complexity_name(internal)
+        if cid == "control:slope":
+            return lambda: editor.set_weight_slope(value)
         return None
 
     def on_chooser_hover(cid, detail):
