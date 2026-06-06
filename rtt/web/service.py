@@ -1409,9 +1409,20 @@ def expand_domain(state: TemperamentState) -> TemperamentState:
 
 
 def shrink_domain(state: TemperamentState) -> TemperamentState:
-    """Drop the highest prime from the domain: trim each comma, then re-dual."""
-    shrunk = tuple(comma[:-1] for comma in state.comma_basis)
-    return from_comma_basis(shrunk)
+    """Drop the highest prime from the domain: trim the last component off each comma, then re-dual.
+    Trimming can collapse commas that were independent into dependent ones over the smaller domain —
+    leaving more comma vectors than the new nullity, which would violate d = r + n and show phantom
+    comma columns. So keep only a maximal independent subset (each comma that still raises the
+    nullity), preserving the surviving commas' values; an emptied set is full rank — just intonation
+    over the smaller domain."""
+    independent: list[tuple[int, ...]] = []
+    for comma in (c[:-1] for c in state.comma_basis):
+        trial = independent + [comma]
+        if from_comma_basis(tuple(trial)).n == len(trial):  # this comma adds a new nullity dimension
+            independent.append(comma)
+    if not independent:
+        return just_intonation(standard_primes(state.d - 1))  # nothing tempered survives the trim
+    return from_comma_basis(tuple(independent))
 
 
 def can_shrink_domain(state: TemperamentState) -> bool:

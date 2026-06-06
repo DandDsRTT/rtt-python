@@ -100,9 +100,20 @@ def test_expand_domain_appends_prime_and_redualizes():
 def test_shrink_domain_is_inverse_of_expand():
     meantone = service.from_comma_basis([[-4, 4, -1]])
     state = service.shrink_domain(service.expand_domain(meantone))
-    assert state.comma_basis == ((-4, 4, -1),)
+    assert state.comma_basis == ((-4, 4, -1),)  # a clean round-trip leaves the comma untouched
     assert state.mapping == ((1, 0, -4), (0, 1, 4))
     assert (state.d, state.r, state.n) == (3, 2, 1)
+
+
+def test_shrinking_keeps_the_comma_count_equal_to_the_nullity():
+    # trimming a prime can collapse independent commas to dependent ones over the smaller domain;
+    # shrink must then drop the now-redundant rows so the basis carries exactly n commas — otherwise
+    # the state holds more comma vectors than the nullity (d ≠ r + n) and the grid shows phantom
+    # comma columns. 12-ET (n=2) shrunk twice reaches a single prime, where the nullity is 1.
+    twelve = service.from_mapping(((12, 19, 28),))  # d=3 r=1 n=2, two commas
+    one = service.shrink_domain(service.shrink_domain(twelve))  # -> d=1
+    assert (one.d, one.r, one.n) == (1, 0, 1) and one.d == one.r + one.n
+    assert len(one.comma_basis) == one.n == 1  # one comma, not the two it would naively keep
 
 
 def test_remove_comma_drops_the_last_comma_and_reranks():

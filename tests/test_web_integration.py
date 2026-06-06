@@ -68,6 +68,20 @@ def test_shrinking_shrinks_the_comma_basis():
     assert _comma_basis(editor) == [[4, -4]]
 
 
+def test_shrinking_to_a_degenerate_state_shows_no_phantom_comma_columns():
+    # a degenerate shrink (12-ET down to a single prime) used to leave more comma vectors than the
+    # nullity, so the grid drew phantom comma columns (n == 1 but two columns, breaking d = r + n).
+    # The state now carries exactly n commas, so the rendered column count matches the nullity.
+    editor = Editor()
+    editor.edit_mapping(((12, 19, 28),))  # 12-ET, n = 2
+    editor.shrink()
+    editor.shrink()  # down to a single prime
+    assert editor.state.d == editor.state.r + editor.state.n  # the invariant holds
+    cols = [c.id for c in editor.layout().cells
+            if c.id.startswith("comma:") and not c.id.endswith(":pending")]
+    assert len(cols) == editor.state.n == 1  # one comma column, matching the nullity
+
+
 # --- changing the mapping updates the comma basis ---
 
 def test_changing_the_mapping_updates_the_comma_basis():
