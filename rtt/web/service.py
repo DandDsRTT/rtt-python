@@ -1088,6 +1088,10 @@ def plain_text_values(
     # size-sensitizing covector sf·𝐋 (each entry sf·𝐿ᵢ), keeping the row length d — rather than
     # extending each column the way the products do.
     bare_size_row = ((tuple(size_factor * w for w in prescaler),) if size_factor else ())
+    # the PHANTOM-PRIME augmentation (all-interval + size factor, lils): Tₚ, 𝒄, 𝐝 and the bare 𝑋 grow one
+    # augmented dimension, so the plain text shows the SAME d+1 shape the grid does (the phantom | -set off,
+    # the divider the weight matrix already uses) — the ptext and the grid stay one structure, can't disagree.
+    augmented = bool(size_factor) and is_all_interval(scheme)
     # the weight row is the per-target simplicity-weight list — or, when the size factor makes the
     # pretransformer rectangular (all-interval lils), the d×(d+1) weight MATRIX 𝑊 = 𝑋⁻. Per the
     # notation appendix a weight matrix is written [[…] …] — an OUTER [ … ] enclosing one [ … ] per
@@ -1095,11 +1099,27 @@ def plain_text_values(
     # entry with a ` | ` bar (the guide's [… | …] augmentation separator), exactly the divider the
     # grid draws. The grid renders this same structure (per-row brackets + the size bar), so the two
     # views are one structure and can't disagree. The per-prime list can't carry it.
-    if size_factor and is_all_interval(scheme):
+    if augmented:
         weight_text = "[" + " ".join("[" + _augmented_row(row, state.d) + "]" for row in
                                      damage_weight_matrix(state.mapping, scheme)) + "]"
     else:
         weight_text = _cents_list(interval_weights(state.mapping, scheme, targets, domain_basis=db))
+    # the four weighting-region tiles that gain the phantom prime under augmentation: Tₚ → I_(d+1), the
+    # bare 𝑋 → its phantom COLUMN, and the 𝒄 / 𝐝 covectors → one phantom entry. Each grows the SAME d+1
+    # shape the grid renders, with the phantom | -set off at index d (the weight matrix's divider).
+    complexity_targets = interval_complexities(state.mapping, scheme, targets, domain_basis=db)
+    tp_text = _ket_list(target_vectors, "⟩")
+    bare_x_text = _prescale_vector_list(_prescaled(prime_units) + bare_size_row, col="⟨]", outer="[⟩")
+    complexity_text = _cents_list(complexity_targets)
+    damage_text = _cents_list(target_sizes.damage)
+    if augmented:
+        tp_aug = tuple(tuple(v) + (0,) for v in target_vectors) + (tuple(0 for _ in range(state.d)) + (1,),)
+        tp_text = _ket_list(tp_aug, "⟩", bar_at=state.d)  # I_(d+1): each real ket gains a 0, + the phantom target [0…0 1]
+        x_cov = _prescaled(prime_units) + bare_size_row  # the bare 𝑋's covectors (prime rows + size row)
+        x_aug = tuple(tuple(v) + (1 if i == state.d else 0,) for i, v in enumerate(x_cov))  # phantom column: 1 at the size-row corner
+        bare_x_text = _prescale_vector_list(x_aug, col="⟨]", outer="[⟩", bar_at=state.d)
+        complexity_text = "[" + _augmented_row(tuple(complexity_targets) + (1.0,), state.d) + "]"  # phantom 𝒄 = 1
+        damage_text = "[" + _augmented_row(tuple(target_sizes.damage) + (0.0,), state.d) + "]"  # phantom 𝐝 (discarded)
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
     # vector lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
@@ -1110,7 +1130,7 @@ def plain_text_values(
     values = {
         ("quantities", "primes"): ".".join(str(e) for e in db),
         ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
-        ("vectors", "targets"): _ket_list(target_vectors, "⟩"),
+        ("vectors", "targets"): tp_text,  # Tₚ — the augmented I_(d+1) under the size factor, else the plain identity
         ("mapping", "primes"): mapping_ebk(state),
         ("mapping", "commas"): _ket_list(zip(*mapped_comma), "}"),
         ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
@@ -1129,21 +1149,21 @@ def plain_text_values(
         ("retune", "commas"): _cents_list(comma_sizes.errors),
         ("retune", "detempering"): _cents_list(detemper_sizes.errors),
         ("retune", "targets"): _cents_list(target_sizes.errors),
-        ("damage", "targets"): _cents_list(target_sizes.damage),
+        ("damage", "targets"): damage_text,  # gains the phantom (discarded) entry under the size factor
         # the bare prescaler 𝐿 is the asymmetric exception of the prescaling row: it reads
         # as a covector stack like the mapping — per-row ⟨ … ] (angle open + square close)
         # inside outer [ … ⟩ (square open + ket close). Every 𝐿·basis product (𝐿C/𝐿D/𝐿H/𝐿T)
         # is instead a matrix of prescaled VECTORS — per-column ket [ … ⟩ inside symmetric
         # outer [ … ] — so the bare prescaler reads as the matrix itself rather than a
         # product with another basis.
-        ("prescaling", "primes"): _prescale_vector_list(_prescaled(prime_units) + bare_size_row, col="⟨]", outer="[⟩"),
+        ("prescaling", "primes"): bare_x_text,  # the bare 𝑋 — gains its phantom prime COLUMN under the size factor
         ("prescaling", "commas"): _prescale_vector_list(_sized(_prescaled(state.comma_basis))),
         ("prescaling", "detempering"): _prescale_vector_list(_sized(_prescaled(detemper_vectors))),
         ("prescaling", "targets"): _prescale_vector_list(_sized(_prescaled(target_vectors))),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
         ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas, domain_basis=db)),
         ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios, domain_basis=db)),
-        ("complexity", "targets"): _cents_list(interval_complexities(state.mapping, scheme, targets, domain_basis=db)),
+        ("complexity", "targets"): complexity_text,  # gains the phantom 𝒄 = 1 under the size factor
         ("weight", "targets"): weight_text,
     }
     # the held interval column mirrors the comma column: the basis as a vector list, mapped
@@ -1211,16 +1231,26 @@ def plain_text_values(
     return values
 
 
-def _ket_list(vectors, close: str, wrap: bool = True) -> str:
+def _bar_split(parts, bar_at):
+    """Insert the ` | ` augmentation divider before component ``bar_at`` of a formatted token
+    list (the augmented-prime phantom column/row) — ``["1","0","0","0"], 3 -> "1 0 0 | 0"``. None
+    leaves the tokens joined plain. The same divider the weight matrix's ``_augmented_row`` uses."""
+    if bar_at is not None:
+        parts = list(parts[:bar_at]) + ["|"] + list(parts[bar_at:])
+    return " ".join(parts)
+
+
+def _ket_list(vectors, close: str, wrap: bool = True, bar_at=None) -> str:
     """A list of column vectors: ``[[1 0 0⟩ [0 1 0⟩]`` for vectors (close ``⟩``),
     ``[[1 0} [0 1}]`` for generator-coordinate vectors (close ``}``). The outer ``[ ]``
     wraps the whole list (a matrix presentation, even a single vector); ``wrap=False``
-    drops it for the intervals-of-interest column, whose intervals stand alone."""
-    kets = " ".join("[" + " ".join(str(x) for x in v) + close for v in vectors)
+    drops it for the intervals-of-interest column, whose intervals stand alone. ``bar_at``
+    sets the augmented phantom component off with a ` | ` (the lils Tₚ = I_(d+1))."""
+    kets = " ".join("[" + _bar_split([str(x) for x in v], bar_at) + close for v in vectors)
     return f"[{kets}]" if wrap else kets
 
 
-def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]") -> str:
+def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]", bar_at=None) -> str:
     """A list of complexity-prescaler matrix columns — for the weighting prescaling matrices
     (the prescaled vectors 𝐿·v). A 𝐿·basis product is a matrix of prescaled VECTORS, so each
     column is a ket ``[ … ⟩`` (square open + angle close — the default ``col``); the OUTER
@@ -1233,8 +1263,9 @@ def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]") -> str:
         the mapping's ``[ … }`` but with the angle ⟩ instead of the curly }).
 
     Each value is formatted with prescale_text, so the string shows exactly the grid's
-    numbers (whole numbers bare, else 3-dp) rather than a denser all-3-dp form."""
-    cols = " ".join(col[0] + " ".join(prescale_text(x) for x in v) + col[1] for v in vectors)
+    numbers (whole numbers bare, else 3-dp) rather than a denser all-3-dp form. ``bar_at``
+    sets the augmented phantom column off with a ` | ` (the lils bare 𝑋's phantom prime)."""
+    cols = " ".join(col[0] + _bar_split([prescale_text(x) for x in v], bar_at) + col[1] for v in vectors)
     if not outer:
         return cols
     return f"{outer[0]}{cols}{outer[1]}"

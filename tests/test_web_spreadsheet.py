@@ -2165,6 +2165,22 @@ def test_size_factor_augments_the_bare_pretransformer_with_a_phantom_column():
     assert "cell:prescaling:primes:0:phantom" not in lp and "bar:prescaling:vline" not in lp
 
 
+def test_size_factor_augments_the_weighting_region_plain_text_to_the_phantom():
+    # the plain text must show the grid's augmented d+1 numbers (the ptext-matches-the-grid rule), so the
+    # phantom appears in Tₚ / 𝒄 / 𝐝 / 𝑋 — each | -set off, the same divider 𝑊's plain text already uses.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, plain_text_values=True).cells}
+    assert lils["ptext:complexity:targets"].text == "[1.000 1.585 2.322 | 1.000]"   # 𝒄 gains the phantom 1
+    assert lils["ptext:damage:targets"].text == "[0.000 5.377 0.000 | 0.000]"        # 𝐝 gains the phantom
+    # Tₚ is the augmented identity I_4: four kets (the 4th the phantom target), each | -set off before the phantom row
+    assert lils["ptext:vectors:targets"].text == "[[1 0 0 | 0⟩ [0 1 0 | 0⟩ [0 0 1 | 0⟩ [0 0 0 | 1⟩]"
+    # the bare 𝑋 gains the phantom column (each covector's last component | -set off; the size-row corner is 1)
+    assert lils["ptext:prescaling:primes"].text == "[⟨1 0 0 | 0] ⟨0 1.585 0 | 0] ⟨0 0 2.322 | 0] ⟨1 1.585 2.322 | 1]⟩"
+    # a square (lp) all-interval keeps the plain d-length plain text (no phantom, no | )
+    lp = {c.id: c for c in _with("minimax-S", weighting=True, plain_text_values=True).cells}
+    assert lp["ptext:complexity:targets"].text == "[1.000 1.585 2.322]"
+    assert "|" not in lp["ptext:vectors:targets"].text and "|" not in lp["ptext:prescaling:primes"].text
+
+
 def test_the_size_factor_drops_the_diag_complexity_equivalence():
     # the lils complexity is ‖𝑍𝐿·i‖ (the size row doubles each prime), NOT diag(𝐿) — so the size factor
     # drops the "𝒄 = diag(𝐿)" closed form, leaving the bare 𝒄 (a plain diagonal lp prescaler keeps it).
