@@ -1354,6 +1354,11 @@ class _Reconciler:
         # black when the flag lifts. Toggled generically so any alerting cell kind picks it up.
         self.els[cb.id].classes(add="rtt-alert" if cb.alert else "",
                                 remove="" if cb.alert else "rtt-alert")
+        # a derived "augmented-prime" phantom cell (the lils weighting region's phantom row/column in
+        # 𝑋 / 𝑊 / Tₚ / 𝒄 / 𝐝) greys its whole face — .rtt-phantom recolors every face inside the wrap,
+        # the same blanket mechanism as rtt-alert, so it reads as derived (not a real interval).
+        self.els[cb.id].classes(add="rtt-phantom" if cb.phantom else "",
+                                remove="" if cb.phantom else "rtt-phantom")
         # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
         # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
         # this adds/updates/removes the overlay as the toggle (or the domain) changes.

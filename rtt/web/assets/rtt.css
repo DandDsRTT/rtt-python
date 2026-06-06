@@ -521,6 +521,10 @@
    only while focused, the same focus-scoped handling a pending draft's "?/?" already gets. */
 .rtt-alert.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
 .rtt-alert.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--pending-color) !important; }
+/* a derived "augmented-prime" phantom cell (the lils weighting region's phantom row/column in
+   𝑋 / 𝑊 / Tₚ / 𝒄 / 𝐝): the WHOLE face greys to the disabled #999, the blanket-recolor mirror of
+   .rtt-alert above, since it isn't a real interval (the phantom prime is dropped after solving). */
+.rtt-phantom, .rtt-phantom * { color:#999 !important; }
 /* the edit-preview highlight: while one cell is being edited, every OTHER cell whose value that
    edit moves wears an amber ring + faint wash, so the user previews the ripple before leaving the
    cell. INSET so it never bleeds onto the densely-packed neighbours; amber to stay clear of the red

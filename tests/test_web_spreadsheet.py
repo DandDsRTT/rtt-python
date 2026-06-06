@@ -2019,36 +2019,39 @@ def test_charts_on_adds_a_weight_bar_chart_over_the_targets():
 
 
 def test_size_factor_makes_the_all_interval_weight_a_matrix_dropping_the_chart():
-    # all-interval + size factor (lils): the per-prime weight list is blind to the size factor,
-    # so the weight tile renders the d×(d+1) matrix 𝑊 = (𝑍𝐿)⁻ instead — and a bar chart can't
-    # draw a matrix, so it's dropped. lp (the square pretransformer) keeps the list + chart.
+    # all-interval + size factor (lils): the per-prime weight list is blind to the size factor, so the
+    # weight tile renders the AUGMENTED (d+1)×(d+1) matrix 𝑊 = 𝑋⁻¹ instead — and a bar chart can't draw
+    # a matrix, so it's dropped. lp (the square pretransformer) keeps the list + chart.
     lp = {c.id: c for c in _with(scheme="minimax-S", weighting=True, charts=True).cells}
     lils = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True, charts=True).cells}
     W = service.damage_weight_matrix(((1, 1, 0), (0, 1, 4)), "minimax-lils-S")
     # lp: the per-prime weight list, with its bar chart
     assert "weight:target:0" in lp and "chart:weight:targets" in lp
-    # lils: a 3×4 matrix of value cells; the scalar list and the chart are both gone
+    # lils: a 4×4 matrix of value cells; the scalar list and the chart are both gone
     assert "weight:target:0" not in lils
     assert "chart:weight:targets" not in lils
-    for i in range(3):
+    for i in range(4):
         for j in range(4):
             assert lils[f"cell:weight:targets:{i}:{j}"].text == service.cents(W[i][j])
-    # the matrix is d (= 3) rows tall, stepping ROW_H; the size column overflows one COL_W right
-    assert lils["cell:weight:targets:1:0"].y == lils["cell:weight:targets:0:0"].y + spreadsheet.ROW_H
+    # the matrix is d+1 (= 4) rows tall, stepping ROW_H; the phantom (size) column overflows one COL_W right
+    assert lils["cell:weight:targets:3:0"].y == lils["cell:weight:targets:0:0"].y + 3 * spreadsheet.ROW_H
     assert lils["cell:weight:targets:0:3"].x == lils["cell:weight:targets:0:2"].x + spreadsheet.COL_W
+    # the augmented phantom ROW (i == d) and phantom COLUMN (j == d) render greyed (derived/discarded)
+    assert lils["cell:weight:targets:3:0"].phantom and lils["cell:weight:targets:0:3"].phantom
+    assert not lils["cell:weight:targets:0:0"].phantom
 
 
 def test_all_interval_weight_matrix_carries_the_W_symbol_and_a_spanning_bracket():
     on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True,
                                  symbols=True, equivalences=True).cells}
-    # capital 𝑊 = 𝑋⁻ — the inverse pretransformer (𝑋 = 𝑍𝐿), simpler than spelling out (𝑍𝐿)⁻, and NOT
-    # the per-prime diag(𝐿)⁻¹ the lp all-interval shows
+    # capital 𝑊 = 𝑋⁻ — the inverse pretransformer (𝑋 the augmented square), and NOT the per-prime
+    # diag(𝐿)⁻¹ the lp all-interval shows
     assert on["symbol:weight:targets"].text == "𝑊 = 𝑋⁻"
-    # the appendix's [[…] …] form: outer [ … ] over all d = 3 rows + one [ … ] per row, the outer right
-    # bracket past the overflowing size column
+    # the appendix's [[…] …] form: outer [ … ] over all d+1 = 4 rows + one [ … ] per row, the outer right
+    # bracket past the overflowing phantom (size) column
     assert on["bracket:weight:l"].text == "[" and on["bracket:weight:r"].text == "]"
-    assert on["bracket:weight:l"].h == 3 * spreadsheet.ROW_H
-    assert {"bracket:weight:row:0:l", "bracket:weight:row:0:r", "bracket:weight:row:2:l"} <= set(on)
+    assert on["bracket:weight:l"].h == 4 * spreadsheet.ROW_H
+    assert {"bracket:weight:row:0:l", "bracket:weight:row:0:r", "bracket:weight:row:3:l"} <= set(on)
     assert on["bracket:weight:r"].x > on["cell:weight:targets:0:3"].x
 
 
@@ -2059,12 +2062,32 @@ def test_the_weight_matrix_size_bar_is_one_structure_in_both_the_grid_and_the_pl
     on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True, plain_text_values=True).cells}
     assert "bar:weight" in on                              # the grid's vertical size-divider
     assert " | " in on["ptext:weight:targets"].text        # the plain text's matching size-divider
-    bar = on["bar:weight"]                                 # ...sitting between the last prime and the size column
+    bar = on["bar:weight"]                                 # ...sitting between the last prime and the phantom column
     assert on["cell:weight:targets:0:2"].x < bar.x <= on["cell:weight:targets:0:3"].x
-    assert bar.h == 3 * spreadsheet.ROW_H                  # spanning all d matrix rows, like the [ … ]
+    assert bar.h == 4 * spreadsheet.ROW_H                  # spanning all d+1 matrix rows, like the [ … ]
     # a weight LIST (no size factor → not a matrix) has the divider in NEITHER view
     off = {c.id: c for c in _with(scheme="minimax-S", weighting=True, plain_text_values=True).cells}
     assert "bar:weight" not in off and "|" not in off["ptext:weight:targets"].text
+
+
+def test_the_augmented_weight_matrix_sets_off_the_phantom_row_with_an_hline():
+    # the augmented 𝑊 = 𝑋⁻¹ is (d+1)×(d+1): its phantom prime is a size ROW (i == d) set off by a
+    # horizontal \hline (hbar), mirroring the vertical ` | ` bar before the phantom COLUMN — both frame
+    # the same phantom prime, like the matching hbar/vbar pair on the pretransformer 𝑋 and its inverse.
+    on = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    hline = on["bar:weight:hline"]
+    assert hline.kind == "hbar"
+    # sits at the boundary between the top d×d square and the appended phantom (size) row
+    assert on["cell:weight:targets:2:0"].y < hline.y < on["cell:weight:targets:3:0"].y
+    # spans the matrix width, past the overflowing phantom column (like the outer [ … ])
+    assert hline.x <= on["cell:weight:targets:0:0"].x and hline.x + hline.w >= on["cell:weight:targets:0:3"].x
+    # a square (non-size-factor) weight matrix has no phantom row, so no \hline
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s.update(weighting=True)
+    square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))
+    sq = {c.id for c in spreadsheet.build(base, s, tuning_scheme="minimax-S", custom_prescaler=square).cells}
+    assert "bar:weight:hline" not in sq
 
 
 def test_the_size_factor_prescaler_carries_a_horizontal_size_bar():

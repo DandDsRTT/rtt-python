@@ -1053,6 +1053,28 @@ class _GridBuilder:
         # the matlabel gutter) so the matrix stays centred in its tile.
         self.row_handle_w = (ROW_HANDLE_W + ROW_HANDLE_GAP) if (
             self.settings.get("drag_to_combine") and show_temp and self.r > 1) else 0
+        # The complexity size factor (the box-𝐋 "replace diminuator" trait, lp→lils): a nonzero
+        # factor makes the complexity pretransformer 𝑋 rectangular — the guide's 𝑋 = 𝑍𝐿, the
+        # diagonal log-prime matrix 𝐿 composed with a size-sensitizing matrix 𝑍 that appends one
+        # extra row, the size-weighted sf·𝐿. The prescaling matrices (the bare 𝑋 and its 𝑋·basis
+        # products) grow that one row; every other row is unchanged.
+        self.size_factor = service.complexity_size_factor(self.tuning_scheme)
+        self.size_rows = 1 if self.size_factor else 0
+        # All-interval, whenever the pretransformer isn't a plain per-prime diagonal: the simplicity-
+        # weight list can't carry it, so the weight becomes a matrix 𝑊 (and a bar chart can't draw a
+        # matrix). The size factor makes it the augmented (d+1)×(d+1) inverse 𝑋⁻¹ (see below); a
+        # non-diagonal editable square 𝑋 makes it the d×d inverse 𝑋⁻¹. In target-based mode the per-
+        # target weights still differ (the off-diagonal/size factor already rode into them), so the
+        # list + chart stay.
+        self.weight_is_matrix = self.all_interval and (bool(self.size_factor) or self.prescaler_is_matrix)
+        # The PHANTOM-PRIME augmentation (all-interval + size factor, the lils family): the weighting
+        # region renders over d+1 "augmented primes" = the d real primes + 1 phantom prime (the engine's
+        # generator-embedding augmentation — an extra mapping row sf·log₂(p), just-tuned to 0 then
+        # dropped). The pretransformer 𝑋, its inverse 𝑊, the target identity Tₚ, the complexity 𝒄 and
+        # the damage 𝐝 all grow to the (d+1)-shape so their rows/columns line up. The phantom row/column
+        # render greyed (derived, not a real interval). target_phantom is the extra target COLUMN it adds.
+        self.augmented = self.all_interval and bool(self.size_factor)
+        self.target_phantom = 1 if self.augmented else 0
         col_bands = (
             ("quantities", COL_W, show_domain_quantities, True),
             ("units", COL_W, show_domain_units, True),
@@ -1066,7 +1088,9 @@ class _GridBuilder:
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
-            ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning, True),
+            # the augmented phantom prime adds one trailing target COLUMN (target_phantom) so the
+            # weighting region's d+1 shapes (Tₚ, 𝒄, 𝑊, 𝐝) sit in-column with their gridlines + brackets
+            ("targets", 2 * BRACKET_W + (self.k_shown + self.target_phantom) * COL_W, show_tuning, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
             # padding. Its long two-line title needs more room, so the column's *footprint*
             # is floored at the title width (see the loop below) and the narrow content is
@@ -1081,20 +1105,6 @@ class _GridBuilder:
         self.node_x = label_w + GAP
         self.node_edge = self.node_x + TOGGLE  # the node's content-facing (right) edge
         content_x0 = self.node_x + TOGGLE + GAP
-
-        # The complexity size factor (the box-𝐋 "replace diminuator" trait, lp→lils): a nonzero
-        # factor makes the complexity pretransformer 𝑋 rectangular — the guide's 𝑋 = 𝑍𝐿, the
-        # diagonal log-prime matrix 𝐿 composed with a size-sensitizing matrix 𝑍 that appends one
-        # extra row, the size-weighted sf·𝐿. The prescaling matrices (the bare 𝑋 and its 𝑋·basis
-        # products) grow that one row; every other row is unchanged.
-        self.size_factor = service.complexity_size_factor(self.tuning_scheme)
-        self.size_rows = 1 if self.size_factor else 0
-        # All-interval, whenever the pretransformer isn't a plain per-prime diagonal: the simplicity-
-        # weight list can't carry it, so the weight becomes a matrix 𝑊 (and a bar chart can't draw a
-        # matrix). The size factor makes it the d×(d+1) left inverse (𝑍𝑋)⁻; a non-diagonal editable
-        # square 𝑋 makes it the d×d inverse 𝑋⁻¹. In target-based mode the per-target weights still
-        # differ (the off-diagonal/size factor already rode into them), so the list + chart stay.
-        self.weight_is_matrix = self.all_interval and (bool(self.size_factor) or self.prescaler_is_matrix)
 
         # Row bands top-to-bottom: (key, natural height, present, collapsible, label), laid
         # out below by the same running-cursor rule as the columns. Defined here, ahead of
@@ -1129,7 +1139,7 @@ class _GridBuilder:
             ("retune", ROW_H, show_tuning, True, "retuning"),
             ("prescaling", (self.d + self.size_rows) * ROW_H, self._complexity_shown, True, "complexity prescaling"),
             ("complexity", ROW_H, self._complexity_shown, True, "complexity"),
-            ("weight", (self.d if self.weight_is_matrix else 1) * ROW_H, self.show_weighting, True, "weight"),
+            ("weight", ((self.d + self.size_rows) if self.weight_is_matrix else 1) * ROW_H, self.show_weighting, True, "weight"),
             ("damage", ROW_H, show_tuning, True, "damage"),
         )
         # the present rows that carry an in-tile caption; a column is floored wide enough to
@@ -1404,7 +1414,8 @@ class _GridBuilder:
         # gridline pass can fan every group column into that many vertical sub-axes (commas
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
-        self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown, "targets": self.k_shown,
+        self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown,
+                   "targets": self.k_shown + self.target_phantom,  # the phantom column fans its own sub-axis
                    "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r,
                    "ssgens": self.rL, "ssprimes": self.dL}
         self.group_ratio = {  # the just interval ratio each value group is taken over
@@ -2767,9 +2778,13 @@ class _GridBuilder:
                         self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)):
                     for j, val in enumerate(row):
                         x = left(j) if j < self.k else left(self.k - 1) + COL_W
+                        # the augmented (d+1)×(d+1) inverse 𝑊 = 𝑋⁻¹ has a phantom prime: its size ROW
+                        # (i == d) and phantom COLUMN (j == d) render greyed (derived from the dropped
+                        # augmentation, not a real interval). The square d×d case (no size factor) has neither.
+                        phantom = self.augmented and (i == self.d or j == self.d)
                         self.cells.append(CellBox(f"cell:weight:targets:{i}:{j}", x,
                                              self.row_y["weight"] + i * ROW_H, COL_W, ROW_H,
-                                             "tval", text=service.cents(val)))
+                                             "tval", text=service.cents(val), phantom=phantom))
             else:  # weight is over the targets only, like damage (it scales them)
                 self.tval_row("weight", "targets", self.target_weights)
         if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), in a bordered box at the bottom of the
@@ -3002,22 +3017,28 @@ class _GridBuilder:
         if self.tile_open("weight", "targets"):
             if self.weight_is_matrix:
                 # the weight matrix in the notation appendix's form [[…] …]: an OUTER [ … ] enclosing one
-                # [ … ] per ROW, so the rows are unmistakable (3×4 can't read as 2×6) — the SAME structure
-                # the plain text prints. d columns ride the target gridlines; with the size factor the
-                # extra column overflows one COL_W right, set off by a ` | ` bar.
+                # [ … ] per ROW, so the rows are unmistakable (4×4 can't read as 2×8) — the SAME structure
+                # the plain text prints. d columns ride the target gridlines; the augmented phantom column
+                # overflows one COL_W right, set off by a ` | ` bar, and its phantom ROW by an \hline.
                 left = self.group_left["targets"]
-                top, h = self.row_y["weight"], self.d * ROW_H
-                rightx = left(self.k - 1) + (1 + self.size_rows) * COL_W  # right edge, past any size column
+                rows = self.d + self.size_rows  # d+1 with the phantom prime (size factor), else the square d
+                top, h = self.row_y["weight"], rows * ROW_H
+                rightx = left(self.k - 1) + (1 + self.size_rows) * COL_W  # right edge, past any phantom column
                 # outer [ … ] over all rows, seated one bracket-width outside the per-row brackets
                 self.cells.append(CellBox("bracket:weight:l", left(0) - 2 * BRACKET_W, top, BRACKET_W, h, "bracket", text="["))
                 self.cells.append(CellBox("bracket:weight:r", rightx + BRACKET_W, top, BRACKET_W, h, "bracket", text="]"))
                 # one [ … ] per row — short and centred like a covector's brackets — the inner brackets
-                for i in range(self.d):
+                for i in range(rows):
                     ry = top + i * ROW_H + (ROW_H - VAL_BRACKET_H) / 2
                     self.cells.append(CellBox(f"bracket:weight:row:{i}:l", left(0) - BRACKET_W, ry, BRACKET_W, VAL_BRACKET_H, "bracket", text="["))
                     self.cells.append(CellBox(f"bracket:weight:row:{i}:r", rightx, ry, BRACKET_W, VAL_BRACKET_H, "bracket", text="]"))
-                if self.size_rows:  # the ` | ` size divider — one tall rule between the last prime column and the size column
+                if self.size_rows:
+                    # the ` | ` phantom-column divider — one tall rule between the last prime and the phantom column
                     self.cells.append(CellBox("bar:weight", left(self.k - 1) + COL_W - SEP_W / 2, top, SEP_W, h, "vbar"))
+                    # the \hline phantom-row divider — a horizontal rule between the d×d square and the phantom
+                    # (size) row, mirroring the same \hline on the pretransformer 𝑋 (bar:prescaling)
+                    self.cells.append(CellBox("bar:weight:hline", left(0), top + self.d * ROW_H - SEP_W / 2,
+                                         rightx - left(0), SEP_W, "hbar"))
             else:
                 self.bracket("weight", LIST_BRACKETS, "targets", self.row_y["weight"], ROW_H)
         if self.tile_open("damage", "targets"):

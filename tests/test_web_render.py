@@ -148,6 +148,25 @@ async def test_off_diagonal_pretransformer_edit_makes_the_all_interval_weight_a_
     await user.should_not_see(marker="weight:target:0")            # ...the scalar list is gone
 
 
+async def test_the_lils_weight_matrix_greys_its_phantom_prime_cells(user: User) -> None:
+    # all-interval + the size factor (lils, set via the box-𝐋 "replace diminuator" checkbox) renders the
+    # AUGMENTED (d+1)×(d+1) weight matrix 𝑊 = 𝑋⁻¹; its phantom prime — the size ROW (i == d) and phantom
+    # COLUMN (j == d) — must render greyed (the rtt-phantom class), since it isn't a real interval. This
+    # pins the app-side toggle that recolors a CellBox.phantom cell — no other render test reaches a
+    # size-factor page, so a dropped phantom-greying branch would slip past the ERROR-log guard.
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="all-interval").click()
+    _cell_child(user, "control:all_interval").set_value(True)       # all-interval (targets = primes)
+    user.find(kind=ui.checkbox, content="alt. complexity").click()  # reveal box 𝐋's diminuator checkbox
+    await user.should_see(marker="control:diminuator")
+    _cell_child(user, "control:diminuator").set_value(True)         # replace diminuator → size factor → lils
+    await user.should_see(marker="cell:weight:targets:3:0")         # the augmented matrix's phantom (size) row
+    assert "rtt-phantom" in _wrap_classes(user, "cell:weight:targets:3:0")  # the phantom row greys
+    assert "rtt-phantom" in _wrap_classes(user, "cell:weight:targets:0:3")  # the phantom column greys
+    assert "rtt-phantom" not in _wrap_classes(user, "cell:weight:targets:0:0")  # a real cell does not
+
+
 async def test_interval_columns_render_draggable_reorder_grips(user: User) -> None:
     # the target list shows by default, so its reorder grip renders with no setup: a draggable
     # ⠿ over each column (also the drop target). Drive the builder and confirm it's a drag source.

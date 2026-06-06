@@ -812,21 +812,25 @@ def test_complexity_size_factor_reports_the_schemes_size_factor():
     assert service.complexity_size_factor("TILT minimax-lils-S") == 1
 
 
-def test_damage_weight_matrix_left_inverts_the_rectangular_pretransformer():
+def test_damage_weight_matrix_inverts_the_augmented_pretransformer():
     import numpy as np
     import pytest
 
     mapping = [[1, 1, 0], [0, 1, 4]]
-    # with the size factor on (lils), the weight has no per-prime-list form: it is the d×(d+1)
-    # left inverse 𝑊 = (𝑍𝐿)⁻ = 𝐿⁻¹𝑍⁻ (the guide's representative; 𝑍⁻ = [𝐼 − ½𝐽 | ½𝟏])
+    # with the size factor on (lils), the weight is the (d+1)×(d+1) inverse 𝑊 = 𝑋⁻¹ of the AUGMENTED
+    # pretransformer 𝑋 — the log-prime square plus a size ROW (sf·column-sums) and a phantom COLUMN
+    # [0…0 1] (the phantom prime mapping to the size output). 𝒓 is measured against this shared d+1 shape.
     W = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S"))
-    assert W.shape == (3, 4)
+    assert W.shape == (4, 4)
     L = np.diag(service.complexity_prescaler(mapping, "minimax-S"))
-    ZL = np.vstack([np.eye(3), np.ones(3)]) @ L
-    assert np.allclose(W @ ZL, np.eye(3))   # it left-inverts the rectangular pretransformer 𝑋 = 𝑍𝐿
-    # row 0 is the guide's representative ½[1,-1,-1,1] (𝐿₀ = log₂2 = 1); row 1 divides by log₂3
-    assert W[0] == pytest.approx([0.5, -0.5, -0.5, 0.5])
-    assert W[1] == pytest.approx([-0.31546, 0.31546, -0.31546, 0.31546], abs=1e-4)
+    X = np.eye(4)
+    X[:3, :3] = L
+    X[3, :3] = L.sum(axis=0)  # diag(𝐿) over the phantom column [0,0,0|1], size row sf·column-sums
+    assert np.allclose(W @ X, np.eye(4))   # 𝑊 = 𝑋⁻¹ inverts the augmented square
+    # top-left is the simple diagonal 𝐿⁻¹; the size ROW is −sf·ones | 1; the phantom COLUMN is [0,0,0|1]
+    assert W[0] == pytest.approx([1.0, 0.0, 0.0, 0.0])
+    assert W[3] == pytest.approx([-1.0, -1.0, -1.0, 1.0])
+    assert [row[3] for row in W] == pytest.approx([0.0, 0.0, 0.0, 1.0])
 
 
 def test_damage_weight_matrix_inverts_a_non_diagonal_pretransformer_square():
@@ -839,11 +843,13 @@ def test_damage_weight_matrix_inverts_a_non_diagonal_pretransformer_square():
     assert W.shape == (3, 3)
     assert np.allclose(W, np.linalg.inv(np.array(square, float)))      # 𝑊 = 𝑋⁻¹
     assert np.allclose(W @ np.array(square, float), np.eye(3))         # it inverts 𝑋
-    # with the size factor too, 𝑋 → 𝑍𝑋 is rectangular and 𝑊 = (𝑍𝑋)⁻ = 𝑋⁻¹𝑍⁻ left-inverts it
+    # with the size factor too, 𝑋 augments to the (d+1)×(d+1) square (size row + phantom column) and 𝑊 = 𝑋⁻¹
     Wz = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S", override=square))
-    assert Wz.shape == (3, 4)
-    ZX = np.vstack([np.eye(3), np.ones(3)]) @ np.array(square, float)  # the size-sensitized 𝑍𝑋, (d+1)×d
-    assert np.allclose(Wz @ ZX, np.eye(3))
+    assert Wz.shape == (4, 4)
+    Xa = np.eye(4)
+    Xa[:3, :3] = np.array(square, float)
+    Xa[3, :3] = np.array(square, float).sum(axis=0)  # the augmented square: size row sf·column-sums, phantom col
+    assert np.allclose(Wz @ Xa, np.eye(4))
 
 
 def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
