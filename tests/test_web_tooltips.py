@@ -51,7 +51,6 @@ _INTERACTIVE_KINDS = [
     ("coltoggle", "coltoggle:col:targets"),
     ("tiletoggle", "tiletoggle:tile:mapping:primes"),
     ("alltoggle", "alltoggle"),
-    ("speaker", "speaker:mapping:primes:0"),
 ]
 
 

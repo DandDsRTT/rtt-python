@@ -737,11 +737,10 @@ body:not(.rtt-audio-muted) .rtt-cell:hover > .rtt-cell-spk { opacity:0.85; point
 .rtt-tile-fold { width:12px; height:12px; color:#555; }
 /* the audio control bank at the head strip's right: the five 12px glyph controls (mute / waveform /
    play-mode / hold / 1-1). They reuse the grid bank's .rtt-audio-ctrl styling; the leading mute
-   doubles as the kill switch (and the engage gate via the body.rtt-audio-muted class the CSS keys
-   off). render() adds rtt-bank-off to grey + disable the bank while audio is off. */
+   doubles as the kill switch and the engage gate (via the body.rtt-audio-muted class the CSS keys
+   off). The bank is always live — mute is itself the on/off, so there is no greyed state. */
 .rtt-tile-bank { display:flex; gap:3px; }
 .rtt-tile-bank .rtt-audio-ctrl { width:12px; height:12px; flex:none; }
-.rtt-tile-bank.rtt-bank-off { opacity:0.4; pointer-events:none; }
 /* one stacked layer line; the symbol and name lines seat two parts (parent + sub-control) */
 .rtt-tile-line { display:flex; justify-content:center; align-items:center;
                  min-height:14px; line-height:1.1; }

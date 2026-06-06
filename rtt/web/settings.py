@@ -51,7 +51,6 @@ SHOW_GROUPS: tuple[tuple[str, tuple[tuple[str, str, bool], ...]], ...] = (
         "specific boxes & controls",
         (
             ("counts", "counts", False),
-            ("audio", "audio", False),
             ("domain_quantities", "quantities", True),
             ("domain_units", "units", False),
             ("temperament_boxes", "temperament boxes", True),
@@ -101,7 +100,7 @@ IMPLEMENTED: frozenset[str] = frozenset(
      "names", "symbols", "mnemonics", "equivalences", "gridded_values", "plain_text_values",
      "quantities", "domain_quantities", "units", "domain_units", "counts", "presets",
      "temperament_boxes", "tuning_boxes", "math_expressions", "charts", "tuning_ranges",
-     "tuning_colorization", "temperament_colorization", "weighting", "audio",
+     "tuning_colorization", "temperament_colorization", "weighting",
      "generator_detempering", "optimization", "interest", "all_interval", "alt_complexity",
      "nonstandard_domain"}
 )

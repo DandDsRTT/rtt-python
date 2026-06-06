@@ -41,7 +41,6 @@ SHOW_HELP: dict[str, str] = {
     "math_expressions": "Show just values as closed-form expressions (e.g. 1200·log₂(3/2)).",
     # specific boxes & controls
     "counts": "Show the dimension counts — dimensionality 𝑑, rank 𝑟, nullity 𝑛.",
-    "audio": "Show audio controls — play each pitch and pick its waveform and play mode.",
     "domain_quantities": "Show the numeric quantities in the domain basis (the prime column).",
     "domain_units": "Show the units on the domain-basis row and column labels.",
     "temperament_boxes": "Show the temperament boxes — the mapping 𝑀 and the comma basis C.",
@@ -150,9 +149,6 @@ _KIND_HELP: dict[str, str] = {
     "coltoggle": "Collapse or expand this column.",
     "tiletoggle": "Collapse or expand this tile.",
     "alltoggle": "Collapse or expand the entire grid.",
-    # audio (the per-pitch play buttons; the bank's controls live in AUDIO_HELP — they are no
-    # longer grid cells but a single panel bank, so they aren't keyed by a grid kind)
-    "speaker": "Play this pitch.",
 }
 
 

@@ -320,7 +320,7 @@ COL_LABELED_ROWS = frozenset(rkey for rkey, _ in COL_LABEL_LETTERS) | {"prescali
 # (G, M, J, T) across the 𝒓 = 𝒕 − 𝒋 difference. A norm carries its operand's factors, so
 # the complexity 𝒄 = ‖𝑋·v‖ inherits 𝑋 and the basis v's own colour. CELL_FACTORS lists
 # only the colour-bearing factors of each tile; a (row, col) absent here carries no wash.
-# Keys match TILES / AUDIO_TILES. NB the generator RATIOS shown in the spine (mapping ×
+# Keys match TILES. NB the generator RATIOS shown in the spine (mapping ×
 # quantities) are a chosen input, neither the embedding G nor the tuning map 𝒈 — so by
 # CONTENT they'd be uncoloured; the spine-band rule (see SPINE_*) tints them by the mapping
 # row instead. The genmap 𝒈 (tuning × generators) reads green: its cyan G over the yellow
@@ -394,21 +394,6 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # the weight 𝒘 incorporates the target complexity list (𝒘 = 𝒄, 1, or 1∕𝒄 by the damage-
     # weight slope), so it inherits that list's cyan 𝑋 and rides the cyan target column T → cyan
     ("weight", "targets"): frozenset({"X", "T"}),      # 𝒘 (built from the cyan complexity 𝒄)
-    # the audio rows mirror the just (cyan 𝒋; comma column greens via C) and tempered (G·M;
-    # the target / held columns add the cyan T / H) sizes they sound
-    ("just_audio", "primes"): frozenset({"J", "P"}),   # sounds 𝒋 over the yellow domain basis P → green
-    ("just_audio", "commas"): frozenset({"J", "C"}),   # sounds 𝒋C (→ green)
-    ("just_audio", "targets"): frozenset({"J", "T"}),  # sounds 𝐨 = 𝒋T
-    ("just_audio", "interest"): frozenset({"J"}),      # sounds 𝒋·interest
-    ("just_audio", "held"): frozenset({"J", "H"}),     # sounds 𝒋H
-    ("just_audio", "detempering"): frozenset({"J"}),   # sounds 𝒋·D (neutral detempering list, bare cyan 𝒋)
-    ("tempered_audio", "gens"): frozenset({"G", "B"}),   # sounds 𝒈 over the yellow generator basis B → green
-    ("tempered_audio", "primes"): frozenset({"G", "M", "P"}),  # sounds 𝒕 = 𝒈𝑀 over the domain primes P
-    ("tempered_audio", "commas"): frozenset({"G", "M", "C"}),
-    ("tempered_audio", "detempering"): frozenset({"G", "M"}),  # sounds 𝒕·D (the 𝒈𝑀 greens; D is neutral)
-    ("tempered_audio", "targets"): frozenset({"G", "M", "T"}),  # sounds 𝐚 = 𝒈𝑀T
-    ("tempered_audio", "interest"): frozenset({"G", "M"}),
-    ("tempered_audio", "held"): frozenset({"G", "M", "H"}),   # sounds 𝒕H
 }
 
 # The spine label cells carry no algebraic quantity — they head a value row or column, so
@@ -710,20 +695,6 @@ SUPERSPACE_TILES = (
     ("block:retune:ssprimes", "retune", "ssprimes"),               # 𝒓L (Phase 4F)
 )
 
-# The audio rows' tiles mirror the just / tuning rows they sound: just_audio (the JI
-# sizes) over primes/commas/targets, tempered_audio (the tempered sizes) over those plus
-# the generators (whose tuned size the tuning row also carries; a generator has no just
-# size, so just_audio has no generators tile). The interest column's audio tiles are
-# appended dynamically in build() like its other tiles.
-AUDIO_TILES = (
-    ("block:just_audio:primes", "just_audio", "primes"),
-    ("block:just_audio:commas", "just_audio", "commas"),
-    ("block:just_audio:targets", "just_audio", "targets"),
-    ("block:tempered_audio:gens", "tempered_audio", "gens"),
-    ("block:tempered_audio:primes", "tempered_audio", "primes"),
-    ("block:tempered_audio:commas", "tempered_audio", "commas"),
-    ("block:tempered_audio:targets", "tempered_audio", "targets"),
-)
 
 # The domain-units tiles (shown with the specific `domain_units` toggle): the units
 # COLUMN holds each row's coordinate-unit labels (the basis primes pᵢ/, the mapping

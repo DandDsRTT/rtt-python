@@ -555,7 +555,6 @@ def test_example_html_renders_each_specific_groups_special_sample_kind():
         html = app._example_html(key)
         assert f"--wash-{group}" in html         # the swatch rides the group's wash variable (so it
         assert app._math_html(letter) in html    # retints with the grid in dark mode)...stamped with its matrix letter
-    assert "volume_up" in app._example_html("audio")     # the speaker glyph
     assert "<svg" in app._example_html("tuning_ranges")  # the min/max I-beam
 
 

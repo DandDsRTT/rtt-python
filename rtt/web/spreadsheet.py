@@ -516,7 +516,6 @@ class _ShowFlags:
     alt_complexity: bool
     lbox: bool
     cbox: bool
-    audio: bool
     detempering: bool
     interest: bool
     gridded: bool
@@ -566,7 +565,6 @@ def _resolve_show_flags(settings, collapsed) -> _ShowFlags:
         cbox=(weighting
               and "col:targets" not in collapsed and "row:complexity" not in collapsed
               and "tile:complexity:targets" not in collapsed),
-        audio=settings["audio"],  # the just / tempered audio rows between counts and quantities
         detempering=settings["generator_detempering"],  # the generator-detempering column (matrix D)
         interest=settings["interest"],  # the other-intervals-of-interest column (its own box toggle)
         # Value-display toggles. "gridded values" is the master switch: off filters every value a
@@ -723,7 +721,6 @@ class _GridBuilder:
         self.damage_unit = f"¢{self.weight_unit}"  # weighted cents — the ¢-prefixed weight unit
         self._lbox_show = _f.lbox and self._complexity_shown
         self._cbox_show = _f.cbox and self._complexity_shown
-        show_audio = _f.audio
         self.show_detempering = _f.detempering
         show_interest = _f.interest
         self.gridded = _f.gridded
@@ -951,8 +948,6 @@ class _GridBuilder:
                 ("block:urow:interest", "units", "interest"),  # the units row's /1 over the interest column
                 ("block:prescaling:interest", "prescaling", "interest"),
                 ("block:complexity:interest", "complexity", "interest"),
-                ("block:just_audio:interest", "just_audio", "interest"),
-                ("block:tempered_audio:interest", "tempered_audio", "interest"),
             )
         # the held interval column's tiles: a user-editable interval list, like the intervals of
         # interest. Empty by default. A pending draft alone declares just the two tiles that host
@@ -973,8 +968,6 @@ class _GridBuilder:
                 ("block:urow:held", "units", "held"),       # the units row's /1 over the held column
                 ("block:prescaling:held", "prescaling", "held"),
                 ("block:complexity:held", "complexity", "held"),
-                ("block:just_audio:held", "just_audio", "held"),
-                ("block:tempered_audio:held", "tempered_audio", "held"),
             )
         # The optimization box's other mockup column — unchanged intervals (count u) — is
         # deferred to the projection feature: the unchanged interval basis is U = nullspace(P − I),
@@ -998,14 +991,12 @@ class _GridBuilder:
             ("block:prescaling:detempering", "prescaling", "detempering"),
             ("block:complexity:detempering", "complexity", "detempering"),
             ("block:urow:detempering", "units", "detempering"),
-            ("block:just_audio:detempering", "just_audio", "detempering"),
-            ("block:tempered_audio:detempering", "tempered_audio", "detempering"),
         ) if self.show_detempering else ()
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
                  + SUPERSPACE_COUNTS_TILES
-                 + TILES + AUDIO_TILES + UNITS_TILES + SUPERSPACE_TILES
+                 + TILES + UNITS_TILES + SUPERSPACE_TILES
                  + interest_tiles + held_tiles + detempering_tiles)
         # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
         # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
@@ -1110,8 +1101,6 @@ class _GridBuilder:
         # that layout, so each column's width can reserve room for its present rows' captions.
         row_bands = (
             ("counts", ROW_H, show_counts, True, "counts"),
-            ("just_audio", ROW_H, show_audio, True, "just audio"),
-            ("tempered_audio", ROW_H, show_audio, True, "tempered audio"),
             ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
             ("units", ROW_H, show_domain_units, True, "units"),
             ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
@@ -1786,24 +1775,6 @@ class _GridBuilder:
             self.cells.append(CellBox(f"chart:{rkey}:{ckey}", x, self.chart_top[rkey],
                                  2 * BRACKET_W + len(vals) * COL_W, CHART_H, "chart", values=vals,
                                  indicator=indicator, indicator_label=indicator_label))
-
-    # the audio rows: a speaker button per pitch, sounding the just (just_audio) or
-    # tempered (tempered_audio) cents of each interval — the same data the just / tuning
-    # rows display, so the ear and the eye agree. tempered_audio also sounds the generators
-    # (their tuned size, as the tuning row's genmap does); a generator has no just size.
-    # The waveform / play-mode / hold / 1-1 controls are NOT per-tile: a single bank lives on
-    # the settings panel's dummy tile and drives every speaker from one global config (the JS
-    # engine keys playing-state by the speaker's tile only for highlighting; see app._audio_bank).
-    def audio_tile(self, key, group, vals):
-        if not self.tile_open(key, group):
-            return
-        vals = tuple(vals)
-        # one speaker per pitch, aligned under the value columns. Each carries the WHOLE
-        # tile's cents list (not just its own) so the play-mode can arp/chord the tile, and
-        # text = the tile key the engine highlights while it sounds (and the global bank drives).
-        for i in range(len(vals)):
-            self.cells.append(CellBox(f"speaker:{key}:{self.group_elem[group]}:{i}", self.group_left[group](i),
-                                 self.row_y[key], COL_W, ROW_H, "speaker", text=f"{key}:{group}", values=vals))
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
@@ -2635,20 +2606,6 @@ class _GridBuilder:
                 if self.row_open(key):
                     self.tval_row(key, "detempering", vals)
 
-        # Source the pitches from tuning_data so the audio rows stay in lockstep with the just /
-        # tuning rows they sound (one source of truth for "what those rows contain").
-        list_groups = ("primes", "commas", "targets", "interest", "held")  # tuning_data's tuple order
-        if self.row_open("just_audio"):
-            for group, vals in zip(list_groups, tuning_data["just"]):
-                self.audio_tile("just_audio", group, vals)
-            if self.show_detempering:  # sound the detempering intervals' JI sizes, like the commas
-                self.audio_tile("just_audio", "detempering", self.detempering_sizes.just)
-        if self.row_open("tempered_audio"):
-            self.audio_tile("tempered_audio", "gens", self.tun.generator_map)  # the genmap, as the tuning row carries
-            for group, vals in zip(list_groups, tuning_data["tuning"]):
-                self.audio_tile("tempered_audio", group, vals)
-            if self.show_detempering:  # their tempered sizes (= the generators' tuned sizes, 𝒕D = 𝒈)
-                self.audio_tile("tempered_audio", "detempering", self.detempering_sizes.tempered)
         # the prescaling row applies the prescaler L to each column group's vectors: over the
         # primes it is the d×d diagonal (L·eₚ — the prescaler matrix itself), over the comma /
         # target / interest sets it is L·vector (each component scaled by the diagonal), a d-tall

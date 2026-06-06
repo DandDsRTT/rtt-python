@@ -135,8 +135,6 @@ _DARK_MARK = "#8d949d"    # the cell rule, the EBK brackets, and the option-box 
 _DARK_TEXT = "#e3e6ea"    # primary text — and the checked option-box's inner fill
 _DARK_MUTED = "#71777f"   # disabled text — and the indeterminate option-box's inner fill
 
-_AUDIO_KINDS = {"speaker"}  # cells whose baked cents rebuild when the tuning changes
-
 # Editable cells whose value is a single integer (a matrix or vector component). Scrolling the
 # wheel over one of these while it is focused steps it by ±1 — the coarse-integer analogue of the
 # generator-tuning cell's thousandth-cent wheel fine-adjust. (The cents/ratio/power cells are not
@@ -661,8 +659,6 @@ def _example_html(key: str) -> str:
         letter = {"temperament": "𝑀", "tuning": "𝐺", "form": "𝐹"}[group]
         return (f'<span style="display:inline-flex;align-items:center;justify-content:center;'
                 f'width:36px;height:14px;background:var(--wash-{group})">{_math_html(letter)}</span>')
-    if key == "audio":  # a speaker glyph — the per-pitch play button the audio rows carry
-        return '<span class="material-icons" style="font-size:18px;color:#444">volume_up</span>'
     if key == "tuning_ranges":  # the tuning-range I-beam (min/max generator bars)
         return ('<svg width="14" height="20" viewBox="0 0 14 20" style="display:block">'
                 '<rect x="6" y="2" width="2" height="16" fill="#000"/>'
@@ -757,10 +753,9 @@ _AUDIO_BANK = (
 
 
 def _audio_bank() -> "ui.element":
-    """Build the dummy tile's audio control bank — the four glyph controls, each wired to the global
-    Web Audio engine (it cycles its state + redraws its glyph with no server round-trip). Returns the
-    bank container so render() can grey + inert it while audio is off (the speakers it drives are
-    hidden then), exactly as a value-cell part greys without its host cell."""
+    """Build the dummy tile's audio control bank — the five glyph controls (mute leads), each wired to
+    the global Web Audio engine (it cycles its state + redraws its glyph with no server round-trip).
+    The bank is always live now: mute is itself the on/off gate, so there is no greyed state."""
     bank = ui.element("div").classes("rtt-tile-bank").mark("audiobank")
     with bank:
         for ctrl, glyph, fn in _AUDIO_BANK:
@@ -1095,7 +1090,6 @@ class _Reconciler:
         self.ebk_sizes: dict = {}  # EBK svg cell id -> last (w, h) it was drawn at, to redraw on resize
         self.chart_keys: dict = {}  # chart cell id -> last (w, h, values) drawn, to redraw on resize/data change
         self.range_keys: dict = {}  # range-chart cell id -> last (w, h, ranges) drawn, to redraw on resize/data change
-        self.audio_keys: dict = {}  # speaker/arp/chord cell id -> last cents tuple, to rebuild its click handler on change
         self.exprs: dict = {}  # math-expression cell id -> the ui.html holding its stacked lines
         self.expr_state: dict = {}  # math-expression cell id -> last (text, w) rendered, to redraw on change
         self.kinds: dict = {}  # entity id -> the kind its element was built for (rebuild when it changes)
@@ -1116,7 +1110,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.audio_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The edit-preview highlight: while one editable cell is focused, every render rings the
         # OTHER cells whose value the in-progress edit has moved, so the user previews the ripple
         # before leaving the cell. preview_baseline is the layout captured when the cell took focus
@@ -1222,7 +1216,6 @@ class _Reconciler:
         self.cell_kinds["target_minus"] = _KindHandlers(self._build_target_minus)
         self.cell_kinds["target_plus"] = _KindHandlers(self._build_target_plus)
         self.cell_kinds["colgrip"] = _KindHandlers(self._build_colgrip)
-        self.cell_kinds["speaker"] = _KindHandlers(self._build_speaker)
 
     def drop(self, eid):
         """Remove an entity's element and forget every per-id handle for it (see _handle_dicts)."""
@@ -1308,8 +1301,6 @@ class _Reconciler:
         if cb.kind in _INT_CELL_KINDS:
             wrap.on("wheel", lambda e, cid=cb.id: self._cb.on_int_wheel(cid, e.args.get("deltaY")),
                     args=["deltaY"], js_handler=_INT_WHEEL_JS)
-        if cb.kind in _AUDIO_KINDS:
-            self.audio_keys[cb.id] = cb.values
 
     def update_cell(self, cb):
         # reconcile a present cell: run its registered update (value/glyph in sync) then
@@ -2248,18 +2239,6 @@ class _Reconciler:
         wrap.on("drop.prevent", lambda _=None, l=lst, i=idx: self._cb.on_drop(l, i))
         ui.icon("drag_indicator").classes("rtt-grip")
 
-    def _build_speaker(self, cb, wrap):  # play this pitch per the global bank's mode (client-side engine)
-        tile = cb.text  # the tile key "<row>:<group>" — the engine highlights this tile's speakers
-        idx = int(cb.id.rsplit(":", 1)[1])
-        pitches = ",".join(f"{float(v):.6f}" for v in cb.values)  # the whole tile (for arp/chord)
-        # color=None drops Quasar's default primary (blue): the app is greyscale, leaving colour to
-        # the yellow/cyan/magenta colorization. .rtt-spk + the data attrs let the engine highlight
-        # this speaker while it sounds.
-        ui.button(icon="volume_up", color=None) \
-            .props(f'flat dense round data-audio="{tile}" data-idx="{idx}"') \
-            .classes("rtt-audio-btn rtt-spk") \
-            .on("click", js_handler=f"() => window.rttAudio.hit('{tile}', {idx}, [{pitches}])")
-
 
 @ui.page("/")
 def index() -> None:
@@ -3142,8 +3121,6 @@ def index() -> None:
             seen.add(cb.id)
             if cb.id in rec.els and rec.kinds[cb.id] != cb.kind:
                 rec.drop(cb.id)  # a cell changed kind (e.g. cents <-> math expression): rebuild it
-            if cb.kind in _AUDIO_KINDS and cb.id in rec.els and rec.audio_keys.get(cb.id) != cb.values:
-                rec.drop(cb.id)  # cents changed -> rebuild so the baked-in click handler sounds the new pitch
             container = _freeze_container(cb, fx, fy)
             if cb.id not in rec.els:
                 with cell_parents[container]:
@@ -3203,10 +3180,6 @@ def index() -> None:
                 if key == "mnemonics":
                     part.classes(add="rtt-mnem-underline") if editor.settings["mnemonics"] \
                         else part.classes(remove="rtt-mnem-underline")
-        # the single audio bank rides the dummy tile but drives the grid's speakers: grey + inert it
-        # while audio is off (the speakers it would sound aren't shown then), live once audio is on.
-        refs["audio_bank"].classes(add="rtt-bank-off") if not editor.settings["audio"] \
-            else refs["audio_bank"].classes(remove="rtt-bank-off")
         # the master checkbox: checked (true / black fill) when all on, unchecked (false /
         # empty) when all off, MIXED (grey fill) when some-but-not-all are on
         states = [editor.settings[k] for k in show_settings.IMPLEMENTED]

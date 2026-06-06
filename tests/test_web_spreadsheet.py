@@ -534,8 +534,9 @@ def test_reordered_held_column_keeps_its_vector_cell_id_and_glides():
 # SET is re-presented in a new order. The deterministic per-column cells left over — the vectors,
 # ratios, just sizes, and mapped products — are the oracle for whether a column's cells re-keyed.
 def _reorder_volatile(cid):
-    # speaker cells carry the WHOLE tile's cents list (for arp/chord), so their values reorder too
-    return cid.startswith(("chart:", "ptext:", "tuning:", "retune:", "speaker:", "rangechart:"))
+    # tuning-derived cells (tempered sizes, errors, charts, plain-text re-lists) shift by sub-cent
+    # solver noise / re-list on reorder, so they're expected to "change" — filter them out
+    return cid.startswith(("chart:", "ptext:", "tuning:", "retune:", "rangechart:"))
 
 
 def test_reordering_held_rekeys_every_column_cell_not_just_the_vectors():
@@ -553,7 +554,7 @@ def test_reordering_held_rekeys_every_column_cell_not_just_the_vectors():
 
 def test_reorder_keeps_controls_position_bound_while_values_glide():
     # the VALUE cells re-key by interval identity (they glide), but the per-column CONTROLS — the
-    # grip, the −, the audio speaker — stay INDEX-keyed: each is bound to a SLOT, not a column. So a
+    # grip and the − — stay INDEX-keyed: each is bound to a SLOT, not a column. So a
     # control's build-time index never goes stale (it always addresses the column now in its slot —
     # the bug a token-keyed control hit on a SECOND reorder), and it does not drift out from under
     # the cursor mid-drag (which is what keeps a hover preview stable).
@@ -565,7 +566,6 @@ def test_reorder_keeps_controls_position_bound_while_values_glide():
         _held_state(), _all_on(), held_vectors=[held[2], held[0], held[1]], prev_ids=lay1.identities).cells}
     assert [c2[f"grip:held:{i}"].x for i in range(3)] == slot_x  # grips stayed at their slots...
     assert all(f"held_minus:{i}" in c2 for i in range(3))        # ...and the −'s are slot-keyed too
-    assert "speaker:just_audio:held:0" in c2                     # ...and the speakers
     assert c2["cell:held:0:2"].x == slot_x[0]                    # but the value column DID glide to the front
 
 
@@ -5286,12 +5286,10 @@ def test_held_column_shows_plain_text_values():
 
 def test_held_column_has_the_full_interval_column_tile_set():
     # the held column mirrors the intervals-of-interest column's FULL tile set: besides the
-    # vectors / mapping / sizes / complexity tiles, it gets the units-row label, the complexity-
-    # prescaling matrix, and the just / tempered audio rows (each gated on its own toggle)
-    on = _held("TILT minimax-S", weighting=True, audio=True, domain_units=True)  # non-unity slope opens the prescaling row
+    # vectors / mapping / sizes / complexity tiles, it gets the units-row label and the
+    # complexity-prescaling matrix
+    on = _held("TILT minimax-S", weighting=True, domain_units=True)  # non-unity slope opens the prescaling row
     assert "cell:prescaling:held:0:0" in on     # the complexity-prescaling matrix over the held interval
-    assert "speaker:just_audio:held:0" in on    # the just audio row sounds the held interval
-    assert "speaker:tempered_audio:held:0" in on  # the tempered audio row
     assert "urow:held:0" in on                  # the units row's /1 over the held column
 
 
@@ -5429,17 +5427,6 @@ def test_generator_detempering_units_row_labels_each_generator():
     # the commas and targets
     cells = {c.id: c for c in _with(generator_detempering=True, domain_units=True).cells}
     assert [cells[f"urow:detempering:{i}"].text for i in range(2)] == ["/1", "/1"]
-
-
-def test_generator_detempering_audio_rows_sound_each_generator():
-    # like the commas/targets, the detempering column gets audio: just_audio sounds the JI
-    # sizes of its intervals, tempered_audio their tempered sizes (= the generators' sizes)
-    cells = {c.id: c for c in _with(generator_detempering=True, audio=True).cells}
-    assert {f"speaker:just_audio:detempering:{i}" for i in range(2)} <= set(cells)
-    assert {f"speaker:tempered_audio:detempering:{i}" for i in range(2)} <= set(cells)
-    # each speaker carries the whole tile's cents (for arp/chord play): the JI octave + fifth
-    vals = cells["speaker:just_audio:detempering:0"].values
-    assert [round(v, 3) for v in vals] == [1200.0, 701.955]
 
 
 def test_generator_detempering_column_fans_without_a_centre_trunk():
@@ -5862,8 +5849,6 @@ def test_generator_detempering_column_colorizes_by_content():
     assert at("retune:detempering:0") == G             # retune × detempering (𝒓·D, keeps 𝒈𝑀)
     assert at("cell:prescaling:detempering:0:0") == C  # prescaling × detempering (𝑋·D, bare cyan 𝑋)
     assert at("complexity:detempering:0") == C         # complexity × detempering (norm of 𝑋·D, cyan)
-    assert at("speaker:just_audio:detempering:0") == C    # just audio × detempering (sounds 𝒋·D, cyan)
-    assert at("speaker:tempered_audio:detempering:0") == G  # tempered audio × detempering (sounds 𝒕·D, green)
 
 
 def _spine_colormap():
@@ -6051,29 +6036,6 @@ def test_every_interval_ratio_and_vector_is_click_to_play():
     assert dv.audio and dv.audio[0] == "vectors:detempering"
 
 
-# --- audio rows (hear just & mapped intervals) -------------------------------
-
-def _audio(**overrides):
-    # tuning boxes default on, so the target interval column (and its audio tile) is present
-    return _with(audio=True, **overrides)
-
-
-def test_audio_is_a_top_level_toggle_between_counts_and_quantities():
-    # audio is NOT nested under tuning boxes; it is a top-level Show toggle sitting between
-    # counts and quantities, matching where its rows land in the grid
-    assert "audio" not in settings.SUBCONTROLS
-    keys = [k for k, *_ in dict(settings.SHOW_GROUPS)["specific boxes & controls"]]
-    assert keys[keys.index("counts") + 1] == "audio"
-    assert keys[keys.index("audio") + 1] == "domain_quantities"  # the "quantities" toggle
-    assert settings.defaults()["audio"] is False
-
-
-def test_audio_rows_depend_only_on_the_audio_toggle():
-    # top-level: the rows appear whenever audio is on, independent of the tuning boxes
-    assert "label:just_audio" in {c.id for c in _with(audio=True, tuning_boxes=False).cells}
-    assert "label:just_audio" not in {c.id for c in _with(audio=False).cells}
-
-
 def test_form_colorization_is_a_greyed_form_subcontrol():
     # form colorization completes the M/G/F colour trio alongside temperament (𝑀) and
     # tuning (G) colorization, but its content — the form matrix 𝐹 — isn't a built tile
@@ -6119,47 +6081,6 @@ def test_interest_column_follows_its_own_toggle_not_tuning_boxes():
     assert not any(c.startswith(("interest:", "cell:interest:", "cell:imapped:")) for c in off_interest)
 
 
-def test_audio_adds_two_rows_between_counts_and_quantities():
-    cells = {c.id: c for c in _audio(counts=True).cells}
-    assert cells["label:just_audio"].text == "just audio"
-    assert cells["label:tempered_audio"].text == "tempered audio"
-    # ordered: counts, then just audio, then tempered audio, then quantities
-    ys = [cells[f"label:{k}"].y for k in ("counts", "just_audio", "tempered_audio", "quantities")]
-    assert ys == sorted(ys)
-
-
-def test_audio_speakers_carry_the_whole_tiles_pitch_list():
-    # every speaker carries its tile's full cents list (so arp/chord modes can sound the
-    # whole tile); the list matches the displayed tuning (mapped) / just-tuning row sizes
-    cells = {c.id: c for c in _audio().cells}
-    k = len([c for c in cells if c.startswith("speaker:tempered_audio:target:")])
-    spk = cells["speaker:tempered_audio:target:0"]
-    assert spk.kind == "speaker"
-    assert [service.cents(v) for v in spk.values] == [cells[f"tuning:target:{j}"].text for j in range(k)]
-    just = cells["speaker:just_audio:target:0"]
-    assert [service.cents(v) for v in just.values] == [cells[f"just:target:{j}"].text for j in range(k)]
-
-
-def test_tempered_audio_sounds_generators_but_just_audio_has_no_generator_pitch():
-    # the tempered row carries the generator tuning map (like the tuning row); a generator
-    # has no just size, so the just-audio row has no generator speaker
-    cells = {c.id: c for c in _audio().cells}
-    assert service.cents(cells["speaker:tempered_audio:gen:0"].values[0]) == cells["tuning:gen:0"].text
-    assert "speaker:just_audio:gen:0" not in cells
-
-
-def test_audio_tiles_have_no_per_tile_control_bank():
-    # the waveform / play-mode / hold / 1-1 bank is no longer per-tile: it lives once, on the
-    # settings panel's dummy tile, driving every speaker from one global config. An audio tile now
-    # carries only its speakers and the shared fold toggle — no bank cells, no audio_* control kind.
-    cells = {c.id: c for c in _audio().cells}
-    assert "speaker:tempered_audio:target:0" in cells        # the speakers stay
-    assert "toggle:tile:tempered_audio:targets" in cells      # so does the fold toggle
-    for ctrl in ("wave", "mode", "hold", "root"):
-        assert f"{ctrl}:tempered_audio:targets" not in cells  # ...but the four bank controls are gone
-    assert not any(c.kind.startswith("audio_") for c in cells.values())  # no audio_* control kind anywhere
-
-
 def test_caption_widened_commas_tile_keeps_its_fold_toggle_on_the_panel_edge():
     # Regression: the commas column's long captions ("mapped comma basis (made to vanish!)")
     # widen its grey tile well past its narrow one-comma content, so the content centres within
@@ -6174,33 +6095,6 @@ def test_caption_widened_commas_tile_keeps_its_fold_toggle_on_the_panel_edge():
     assert panel.w > narrow["block:vec:commas"].w           # the caption really did widen it
     fold = cells["toggle:tile:vectors:commas"]
     assert fold.x == panel.x + spreadsheet.TOGGLE_INSET     # the fold hugs the panel's left edge
-
-
-def _audio_colormap():
-    s = settings.defaults()
-    s["tuning_colorization"] = s["temperament_colorization"] = s["audio"] = True
-    s["optimization"] = True  # reveal the held-intervals column (and its audio tiles)
-    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
-                             interest=((-1, 1, 0),), held_vectors=((-1, 1, 0),))
-
-
-def test_audio_rows_colorize_by_content_like_the_rows_they_sound():
-    # the audio rows mirror the rows they sound. just audio plays the just sizes 𝒋, cyan;
-    # the primes and comma columns green (the just sizes 𝒋 over the yellow domain basis P /
-    # comma basis C), while the target / held columns stay cyan. tempered audio plays the
-    # tempered sizes: the generator tuning map 𝒈 over the generators (cyan 𝒈 over the yellow
-    # generator basis B → green), and 𝒕 = 𝒈𝑀 (G·M → green) over the value columns.
-    lay = _audio_colormap()
-    cells = {c.id: c for c in lay.cells}
-    Y, C, G, N = {"temperament"}, {"tuning"}, {"temperament", "tuning"}, set()
-    at = lambda cid: _color_at(lay, *_mid(cells, cid))
-    assert at("speaker:just_audio:prime:0") == G           # 𝒋 over the yellow domain basis P (green)
-    assert at("speaker:just_audio:comma:0") == G           # 𝒋C (cyan 𝒋 over the yellow comma basis)
-    for g in ("target", "interest", "held"):
-        assert at(f"speaker:just_audio:{g}:0") == C         # 𝐨 / 𝒋H: cyan 𝒋 (T/H also cyan)
-    assert at("speaker:tempered_audio:gen:0") == G           # 𝒈 over the yellow generator basis B (green)
-    for g in ("prime", "comma", "target", "interest", "held"):
-        assert at(f"speaker:tempered_audio:{g}:0") == G       # 𝒕 / 𝒕H = 𝒈𝑀
 
 
 def test_show_flags_gate_sub_controls_under_their_parent():
