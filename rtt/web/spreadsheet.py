@@ -1090,7 +1090,7 @@ class _GridBuilder:
         col_bands = (
             ("quantities", COL_W, show_domain_quantities, True),
             ("units", COL_W, show_domain_units, True),
-            ("gens", 2 * BRACKET_W + self.r * COL_W, show_temp, True),
+            ("gens", 2 * BRACKET_W + (self.r + self.phantom_dim) * COL_W, show_temp, True),
             # the chapter-9 superspace columns ride between gens and the domain primes — rL
             # cells (superspace generators) and dL cells (superspace primes), each in the
             # standard EBK-gutter footprint like the gens/primes columns they parallel
@@ -1645,11 +1645,13 @@ class _GridBuilder:
         return self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
 
     def augment_w(self, group_key):
-        # The bare pretransformer 𝑋's trailing phantom prime COLUMN (augmented lils only): one COL_W
-        # reserved on the RIGHT of the primes d-block, OUTSIDE matrix_span. Only 𝑋's own frame/brackets
-        # span it (𝑋 = the (d+1)×(d+1) square 𝑊 = 𝑋⁻¹ inverts) — the mapping / tuning / column fan keep
-        # hugging the d real primes, since matrix_span subtracts it (so it adds room without moving them).
-        return self.phantom_dim * COL_W if group_key == "primes" else 0
+        # The augmented phantom slot (augmented lils only): one COL_W reserved on the RIGHT of a block,
+        # OUTSIDE matrix_span. On "primes" it is the bare pretransformer 𝑋's trailing dummy-prime COLUMN
+        # (𝑋 = the (d+1)×(d+1) square 𝑊 = 𝑋⁻¹ inverts); on "gens" it is the genmap's trailing size-
+        # generator sub-column (𝒈 is 1×(r+1) so 𝒕 = 𝒈M lines up). matrix_span subtracts it, so the fan /
+        # the real cells keep hugging the d primes / r generators — only the augmented matrix's own
+        # frame + brackets span it (via augment_span), adding room without moving the real cells.
+        return self.phantom_dim * COL_W if group_key in ("primes", "gens") else 0
 
     def matrix_span(self, group_key):
         # The (x, width) of a group's CELL matrix — its content_box minus the outer gutters, which
@@ -1659,19 +1661,20 @@ class _GridBuilder:
         # frame runs its full width. Anchored to the cells (not the wider grey footprint), so a
         # column widened past them keeps the EBK hugging the matrix with the labels/handles outside.
         # The bare-𝑋 phantom column (augment_w) is excluded — it is a right-side reservation 𝑋 alone
-        # spans (via prescaler_span), so every OTHER tile in the column keeps hugging the d real cells.
+        # spans (via augment_span), so every OTHER tile in the column keeps hugging the d real cells.
         x, w = self.content_box(group_key)
         mx = self.outer_gutter_w(group_key)
         return x + mx, w - 2 * mx - self.augment_w(group_key)
 
-    def prescaler_span(self):
-        # the bare pretransformer 𝑋's frame + per-row ⟨ … ] span its d-block PLUS the trailing phantom
-        # column (augment_w) — the (d+1)-wide square, the phantom | -set off inside it. None when the
-        # primes column is hidden (temperament off): the frame is skipped, so the span is never used.
-        if "primes" not in self.col_x:
+    def augment_span(self, group_key):
+        # an augmented matrix's frame + per-row brackets span its real-cell block PLUS the trailing
+        # phantom slot (augment_w): on "primes" the bare pretransformer 𝑋's (d+1)-wide square (the
+        # dummy-prime | -set off inside it); on "gens" the genmap's (r+1)-wide row (the size generator
+        # set off). None when the column is hidden (the frame is skipped, so the span is never used).
+        if group_key not in self.col_x:
             return None
-        gx, gw = self.matrix_span("primes")
-        return gx, gw + self.augment_w("primes")
+        gx, gw = self.matrix_span(group_key)
+        return gx, gw + self.augment_w(group_key)
 
     def prime_left(self, p):
         return self.primes_x + self.outer_gutter_w("primes") + BRACKET_W + p * COL_W
@@ -2230,6 +2233,8 @@ class _GridBuilder:
             if self.tile_open("quantities", "gens"):  # the generator ratios heading their sub-columns,
                 for g in range(self.r):                # the column-header dual of the spine list (gen:i)
                     self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.gens[g], gen=g))
+                if self.phantom_dim:  # the size generator has no ratio — "–", greyed (the dropped dummy generator, no ± control)
+                    self.cells.append(CellBox(f"qgen:{self.r}", self.gen_left(self.r), qy, COL_W, ROW_H, "genratio", text="–", gen=self.r, phantom=True))
                 # the generators ± mirrors the mapping-row ± (same quantity, the generators): the + on
                 # the column stub un-temps a comma (−n, +r, hold d), the − on the LAST generator's
                 # branch point drops that row (+n, −r, hold d), removable when r > 1
@@ -2671,6 +2676,9 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"tuning:gen:{i}", self.group_left["gens"](i), self.row_y["tuning"], COL_W, ROW_H,
                                      "gentuningcell", text=service.cents(v), unit=self.cell_unit("tuning", "gens", gen=i)))
                 self._voice("tuning:gens", i, v)  # the genmap sounds each generator's tuned size
+            if self.phantom_dim:  # the size generator's tuning is junk (the dropped dummy generator) — "–", greyed, not editable, no audio
+                self.cells.append(CellBox(f"tuning:gen:{self.r}", self.group_left["gens"](self.r), self.row_y["tuning"], COL_W, ROW_H,
+                                     "gentuningcell", text="–", phantom=True))
         # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column (rL cells, read-only
         # tval — NOT editable yet; Phase 5 will wire the "if you mod 𝒈 then prime-based mode
         # falls off" behaviour), 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over the ssprimes column. The superspace tuning
@@ -3038,7 +3046,7 @@ class _GridBuilder:
         if self.row_open("mapping"):
             # the primes mapping is a stack of maps: ⟨ … ] per row
             if self.tile_open("mapping", "primes"):
-                mspan = self.prescaler_span()  # the d (+1 augmented dummy-prime column) span — the mapping grows it too
+                mspan = self.augment_span("primes")  # the d (+1 augmented dummy-prime column) span — the mapping grows it too
                 for i in range(self.r + self.phantom_dim):  # incl. the size-generator row (the dropped dummy generator)
                     self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H, span=mspan)
             if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
@@ -3093,10 +3101,10 @@ class _GridBuilder:
                             self.row_y["prescaling"], (self.d + self.size_rows) * ROW_H, fit=True)
             # the bare prescaler 𝐿 is mapping-style: per-row ⟨ … ] brackets, one pair per row (the size
             # factor adds one more, for the size row; the augmented phantom column widens each past the
-            # d-block via prescaler_span). Its outer top + bottom frame is the matrix_frame call above
+            # d-block via augment_span). Its outer top + bottom frame is the matrix_frame call above
             # (ebktop + ebkangle), which spans the grown matrix height and that same width.
             if self.tile_open("prescaling", "primes"):
-                pspan = self.prescaler_span()  # the d-block + the trailing phantom column (augmented only)
+                pspan = self.augment_span("primes")  # the d-block + the trailing phantom column (augmented only)
                 for i in range(self.d + self.size_rows):
                     self.bracket(f"prescaling:row:{i}", MAP_BRACKETS, "primes",
                             self.row_y["prescaling"] + i * ROW_H, ROW_H, span=pspan)
@@ -3110,7 +3118,7 @@ class _GridBuilder:
                     self.cells.append(CellBox("bar:prescaling:vline", self.prime_left(self.d) - SEP_W / 2,
                                          self.row_y["prescaling"], SEP_W, (self.d + self.size_rows) * ROW_H, "vbar"))
         if self.tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
-            self.bracket("tuning:genmap", GENMAP_BRACKETS, "gens", self.row_y["tuning"], ROW_H)
+            self.bracket("tuning:genmap", GENMAP_BRACKETS, "gens", self.row_y["tuning"], ROW_H, span=self.augment_span("gens"))  # spans the size generator (augmented)
         # the detempering tuning row IS the generator tuning map (𝒕D = 𝒈), so it too is framed
         # { … ]; its just/retune rows are ordinary interval lists, framed below with the rest
         if self.tile_open("tuning", "detempering"):
@@ -3123,7 +3131,7 @@ class _GridBuilder:
         for key in ("tuning", "just", "retune", "complexity"):
             if self.row_open(key):
                 if self.tile_open(key, "primes"):
-                    self.bracket(f"{key}:map", MAP_BRACKETS, "primes", self.row_y[key], ROW_H, span=self.prescaler_span())  # spans the dummy prime column (augmented)
+                    self.bracket(f"{key}:map", MAP_BRACKETS, "primes", self.row_y[key], ROW_H, span=self.augment_span("primes"))  # spans the dummy prime column (augmented)
                 if self.tile_open(key, "commas"):
                     self.bracket(f"{key}:commalist", LIST_BRACKETS, "commas", self.row_y[key], ROW_H)
                 if self.tile_open(key, "targets"):
@@ -3493,14 +3501,14 @@ class _GridBuilder:
             # a quantities-row plain text — "2.3.5", the compact prime-limit notation (from the
             # service seam above), which the gridded "2 3 5" cells don't show that way.
 
-        self.matrix_frame("mapping", "primes", "primes", span=self.prescaler_span())  # spans the dummy-prime column too (augmented)
+        self.matrix_frame("mapping", "primes", "primes", span=self.augment_span("primes"))  # spans the dummy-prime column too (augmented)
         self.matrix_frame("canon", "primes", "canon")
         self.matrix_frame("canon", "gens", "form")
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer
         # ``[ … ⟩`` with per-row ``⟨ … ]`` covectors — so its gridded EBK uses the SAME
         # matrix_frame + per-row bracket pattern the mapping uses, just with an angle ⟩
         # (ebkangle) at the bottom-span instead of the curly } (ebkbrace).
-        self.matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle", span=self.prescaler_span())
+        self.matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle", span=self.augment_span("primes"))
         # the chapter-9 superspace mapping M_L is M's parallel over the superspace primes,
         # framed the same way (top bracket + bottom curly brace spanning the rL × dL matrix)
         self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")

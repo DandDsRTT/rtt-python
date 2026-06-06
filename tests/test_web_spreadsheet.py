@@ -2172,12 +2172,14 @@ def test_size_factor_augments_the_bare_pretransformer_with_a_phantom_column():
     assert lils["bar:prescaling:vline"].h == 4 * spreadsheet.ROW_H
     # the bare 𝑋's per-row ⟨ … ] extends past the phantom column (its ] sits right of it)
     assert lils["bracket:prescaling:row:0:r"].x > lils["cell:prescaling:primes:0:phantom"].x
-    # the MAPPING's real cells are unmoved (prime_left(p<d) is unchanged), but it now augments TOO —
-    # the dummy prime is a full column dimension, so the mapping's ] extends to the dummy column as well
-    lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True).cells}
-    assert lils["cell:mapping:0:0"].x == lp["cell:mapping:0:0"].x          # real mapping cells stay put
-    assert lils["bracket:map:0:r"].x > lp["bracket:map:0:r"].x             # the mapping ] now spans the dummy column
+    # the MAPPING augments TOO — the dummy prime is a full column dimension. Its real cells keep hugging
+    # the primes column (each aligned with its prime quantity), and the mapping's ] reaches past the dummy
+    # column. (The whole augmented grid is one COL_W wider on the GEN axis — the size generator's sub-column
+    # — so cells shift vs the un-augmented lp grid; the invariant is the within-grid alignment, not lp's x.)
+    assert lils["cell:mapping:0:0"].x == lils["prime:0"].x                 # real mapping cells hug the primes
+    assert lils["bracket:map:0:r"].x > lils["cell:mapping:0:3"].x          # the mapping ] spans the dummy column
     # a square (lp) pretransformer has no phantom column
+    lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True).cells}
     assert "cell:prescaling:primes:0:phantom" not in lp and "bar:prescaling:vline" not in lp
 
 
@@ -2220,6 +2222,22 @@ def test_size_factor_completes_the_primes_axis_in_the_tuning_and_complexity_maps
     # a square (lp) all-interval has no dummy column in these maps
     lp = {c.id for c in _with("minimax-S", weighting=True).cells}
     assert "tuning:prime:3" not in lp and "complexity:prime:3" not in lp
+
+
+def test_size_factor_completes_the_generators_axis_in_the_genmap():
+    # the size generator (the mapping's (r+1)-th row, the dropped dummy generator) is ALSO the (r+1)-th
+    # generator sub-column, so the generators axis matches the mapping's r+1 rows: the generator tuning
+    # map 𝒈 gains its junk tuning "–" and the generator-ratio header gains its "–", both greyed — 𝒕 = 𝒈M
+    # lines up (𝒈 is 1×(r+1), M is (r+1)×(d+1)). The genmap's { ] bracket reaches past the size generator.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    assert lils["tuning:gen:2"].text == "–" and lils["tuning:gen:2"].phantom    # the size generator's junk tuning
+    assert lils["qgen:2"].text == "–" and lils["qgen:2"].phantom                # its generator-ratio header
+    assert lils["tuning:gen:2"].x == lils["tuning:gen:1"].x + spreadsheet.COL_W  # one sub-column right of the real gens
+    assert lils["qgen:2"].x == lils["tuning:gen:2"].x                            # the header sits above its tuning cell
+    assert lils["bracket:tuning:genmap:r"].x > lils["tuning:gen:2"].x           # the { ] spans the augmented r+1
+    # a square (lp) all-interval has no size generator in the genmap
+    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
+    assert "tuning:gen:2" not in lp and "qgen:2" not in lp
 
 
 def test_size_factor_marks_the_dummy_prime_quantity_with_a_dash():
