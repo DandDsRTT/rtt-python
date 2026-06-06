@@ -102,6 +102,16 @@ def test_main_passes_crash_safe_reload_excludes(monkeypatch):
     assert (str(worktrees) in excludes) == worktrees.is_dir()
 
 
+def test_main_watches_assets_so_js_and_css_edits_hot_reload(monkeypatch):
+    # uvicorn's reloader watches *.py ONLY by default, so an edit to audio.js / rtt.css would NOT
+    # reload — the running instance keeps stale JS/CSS until some .py file happens to change (which is
+    # how a JS-only audio fix silently failed to reach the user). main() widens the watch to the
+    # assets so a JS / CSS edit hot-reloads on its own.
+    includes = _capture_main_run(monkeypatch)["uvicorn_reload_includes"]
+    for pat in ("*.py", "*.css", "*.js"):
+        assert pat in includes, f"{pat} not watched for reload"
+
+
 def test_reload_excludes_omits_worktrees_when_missing(tmp_path):
     # When the agent-worktrees subtree doesn't exist, main() must NOT hand uvicorn an
     # absolute path for it: uvicorn globs any exclude that isn't an existing dir relative
@@ -131,12 +141,15 @@ def test_reload_excludes_filter_skips_worktrees_but_reloads_source(tmp_path):
     (repo / "rtt" / "web").mkdir(parents=True)
 
     excludes = [e.strip() for e in app._reload_excludes(worktrees).split(",")] + [sys.prefix]
-    config = Config("rtt.web.app:app", reload=True,
+    config = Config("rtt.web.app:app", reload=True, reload_includes=["*.py", "*.css", "*.js"],
                     reload_excludes=excludes, reload_dirs=[str(repo)])  # must not raise on Py3.14
     file_filter = FileFilter(config)
 
-    assert file_filter(worktrees / "wt1" / "rtt" / "web" / "app.py") is False  # agent edit: no reload
-    assert file_filter(repo / "rtt" / "web" / "app.py") is True  # main-repo source edit: reloads
+    # a .py OR an asset (audio.js / rtt.css) edit reloads from the main repo but is skipped under a worktree
+    assert file_filter(worktrees / "wt1" / "rtt" / "web" / "app.py") is False    # agent .py edit: no reload
+    assert file_filter(repo / "rtt" / "web" / "app.py") is True                  # main .py edit: reloads
+    assert file_filter(worktrees / "wt1" / "rtt" / "web" / "audio.js") is False  # agent JS edit: no reload
+    assert file_filter(repo / "rtt" / "web" / "audio.js") is True                # main JS edit: reloads
 
 
 def test_parse_int_accepts_integers_and_rejects_partial_input():
