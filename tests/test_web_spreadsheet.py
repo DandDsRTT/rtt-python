@@ -2117,6 +2117,19 @@ def test_size_factor_augments_the_all_interval_target_identity_to_d_plus_one():
     assert "cell:vec:targets:phantom:0" not in lp and "bar:vectors:targets" not in lp
 
 
+def test_size_factor_adds_the_dummy_prime_row_to_the_interval_vectors():
+    # the dummy prime is a (d+1)-th component everywhere: the comma / held / detempering vectors gain a
+    # greyed 0 dummy row (a real interval has no dummy-prime content), filling the augmented d+1 band
+    # alongside Tₚ — so every interval vector lines up with the augmented Tₚ / 𝑋.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    assert lils["cell:comma:3:0"].text == "0" and lils["cell:comma:3:0"].phantom  # the dummy row, greyed
+    assert not lils["cell:comma:0:0"].phantom                                      # real components unchanged
+    assert lils["bracket:vec:commas:l"].h == 4 * spreadsheet.ROW_H                 # the [ ] spans all d+1 rows
+    # a square (lp) all-interval has no dummy row in the commas
+    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
+    assert "cell:comma:3:0" not in lp
+
+
 def test_size_factor_augments_the_complexity_and_damage_rows_with_a_phantom_cell():
     # all-interval + size factor: the complexity 𝒄 and damage 𝐝 covectors gain the phantom target column
     # so they line up with the d+1 𝑊 / Tₚ. The phantom 𝒄 is 1 (the augmented 𝑋's phantom column [0…0 1]

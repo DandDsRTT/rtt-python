@@ -2430,6 +2430,8 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:comma:{p}:{c}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                         self._voice("vectors:commas", c, self.comma_sizes.just[c])
+                    if self.phantom_dim:  # the dummy prime component (0 — a real comma has no dummy content), greyed
+                        self.cells.append(CellBox(f"cell:comma:{self.d}:{c}", self.comma_left(c), self.vec_top(self.d), COL_W, ROW_H, "vec", text="0", phantom=True))
                 if self.pending is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending[p]
@@ -2471,6 +2473,8 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:held:{p}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p), alert=self.held_unheld[i]))
                         self._voice("vectors:held", i, self.held_sizes.just[i])
+                    if self.phantom_dim:  # the dummy prime component (0 — a real interval has no dummy content), greyed
+                        self.cells.append(CellBox(f"cell:held:{self.d}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(self.d), COL_W, ROW_H, "vec", text="0", phantom=True))
                 if self.pending_held is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_held[p]
@@ -2481,6 +2485,8 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:vec:detempering:{i}:{p}", self.detempering_left(i), self.vec_top(p), COL_W, ROW_H, "vec", text=str(self.detempering_vectors[i][p]), unit=self.cell_unit("vectors", "detempering", prime=p)))
                         self._voice("vectors:detempering", i, self.detempering_sizes.just[i])
+                    if self.phantom_dim:  # the dummy prime component (0 — a real interval has no dummy content), greyed
+                        self.cells.append(CellBox(f"cell:vec:detempering:{i}:{self.d}", self.detempering_left(i), self.vec_top(self.d), COL_W, ROW_H, "vec", text="0", phantom=True))
             if self.tile_open("vectors", "interest"):  # the user's intervals of interest: editable vectors, like the comma basis
                 for i in range(self.mi):
                     for p in range(self.d):
@@ -2488,6 +2494,8 @@ class _GridBuilder:
                         # gap to its neighbours — the interest column is a collection, not a matrix
                         self.cells.append(CellBox(f"cell:interest:{p}:{self.col_token('interest', i)}", self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
                         self._voice("vectors:interest", i, self.interest_sizes.just[i])
+                    if self.phantom_dim:  # the dummy prime component (0 — a real interval has no dummy content), greyed
+                        self.cells.append(CellBox(f"cell:interest:{self.d}:{self.col_token('interest', i)}", self.interest_left(i) + KET_INSET, self.vec_top(self.d), COL_W - 2 * KET_INSET, ROW_H, "vec", text="0", phantom=True))
                 if self.pending_interest is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_interest[p]
@@ -3028,9 +3036,9 @@ class _GridBuilder:
         if self.row_open("vectors"):  # each group is a list of vectors: a [ ] spanning the d components
             for group in ("commas", "targets"):
                 if self.tile_open("vectors", group):
-                    # the augmented Tₚ = I_(d+1) is one phantom prime-component ROW taller; the comma basis
-                    # (real d-dim intervals) keeps its d rows, so only the targets [ ] grows
-                    vh = (self.d + (self.phantom_dim if group == "targets" else 0)) * ROW_H
+                    # the dummy prime is a (d+1)-th component everywhere, so every interval-vector list
+                    # grows one row (a real interval's dummy component is 0; the augmented Tₚ = I_(d+1))
+                    vh = (self.d + self.phantom_dim) * ROW_H
                     self.bracket(f"vec:{group}", LIST_BRACKETS, group, self.row_y["vectors"], vh, fit=True)
             if self.phantom_dim and self.tile_open("vectors", "targets"):
                 # set off Tₚ's phantom prime: the ` | ` vbar before the phantom target COLUMN and the
@@ -3044,9 +3052,9 @@ class _GridBuilder:
             # the interest column is a loose collection, not a matrix — its kets stand alone,
             # so no outer [ … ] wraps them (see the de-matrixed mapped/imapped row below)
             if self.nh and self.tile_open("vectors", "held"):
-                self.bracket("vec:held", LIST_BRACKETS, "held", self.row_y["vectors"], self.d * ROW_H, fit=True)
+                self.bracket("vec:held", LIST_BRACKETS, "held", self.row_y["vectors"], (self.d + self.phantom_dim) * ROW_H, fit=True)
             if self.tile_open("vectors", "detempering"):
-                self.bracket("vec:detempering", LIST_BRACKETS, "detempering", self.row_y["vectors"], self.d * ROW_H, fit=True)
+                self.bracket("vec:detempering", LIST_BRACKETS, "detempering", self.row_y["vectors"], (self.d + self.phantom_dim) * ROW_H, fit=True)
         if self.row_open("prescaling"):  # 𝐿·basis matrices: outer brackets over the d-tall prescaled columns.
             # Each 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) gets symmetric ``[ … ]`` left/right brackets
             # like the mapped lists; the interest tile (standalone columns) gets none. The bare
