@@ -20,6 +20,7 @@ from nicegui.elements.tooltip import Tooltip
 from nicegui.testing import User
 from nicegui.testing.user_interaction import UserInteraction
 
+from rtt.web import app as web_app
 from rtt.web import service
 from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
@@ -496,23 +497,23 @@ async def test_the_integer_wheel_step_is_generic_over_cell_kinds(user: User) -> 
     assert int(_cell_child(user, "cell:comma:0:0").value) == before + 1
 
 
-async def test_scrolling_the_target_limit_steps_it_by_one(user: User) -> None:
-    # the TILT/OLD target-limit square is a gridded integer too, so it gets the same ±1 wheel step
-    # as the matrix/vector cells. A notch sets the limit input's value, firing its own
-    # on_target_change, which re-derives the target set and re-renders — the exact path a typed
-    # limit takes. The chooser nests two controls, so the listener rides the limit input itself.
+async def test_scrolling_the_target_limit_steps_then_commits(user: User, monkeypatch) -> None:
+    # a wheel notch on the TILT/OLD limit steps the shown number at once (like the matrix cells),
+    # then DEBOUNCES the heavy commit (rebuild the target set, re-solve) so a fast scroll can't grind
+    # the app. With the debounce zeroed the commit still lands and the stepped limit sticks — a
+    # reverted/failed commit would snap it back, and the user fixture fails on any render error. The
+    # chooser nests two controls, so the listener rides the limit input itself.
+    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 0)
     await _enable(user, "presets")  # reveal the chooser dropdowns
     await user.should_see(marker="preset:target")
     num, _sel = _target_preset(user)
     before = int(num.value)
     UserInteraction(user, {num}, None).trigger("wheel", {"deltaY": -100})  # scroll up = +1
-    await user.should_see(marker="preset:target")
-    num, _sel = _target_preset(user)  # re-fetch after the re-render reconciles the cell
-    assert int(num.value) == before + 1
-    UserInteraction(user, {num}, None).trigger("wheel", {"deltaY": 100})  # scroll down = −1
-    await user.should_see(marker="preset:target")
     num, _sel = _target_preset(user)
-    assert int(num.value) == before
+    assert int(num.value) == before + 1            # the shown number steps immediately
+    await user.should_see(marker="preset:target")  # let the debounced commit + render settle
+    num, _sel = _target_preset(user)
+    assert int(num.value) == before + 1            # committed, not reverted
 
 
 async def test_positive_gen_tuning_cell_shows_an_explicit_plus_sign(user: User) -> None:

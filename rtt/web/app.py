@@ -10,6 +10,7 @@ in-process; domain expand/shrink and undo are available. No HTTP layer.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import os
@@ -20,7 +21,7 @@ from types import SimpleNamespace
 from typing import Callable, NamedTuple
 from urllib.parse import quote
 
-from nicegui import app, helpers, ui
+from nicegui import app, background_tasks, helpers, ui
 
 from rtt.web import presets
 from rtt.web import service
@@ -140,14 +141,20 @@ _DARK_MUTED = "#71777f"   # disabled text — and the indeterminate option-box's
 # generator-tuning cell's thousandth-cent wheel fine-adjust. (The cents/ratio/power cells are not
 # integers, so they are not listed.)
 _INT_CELL_KINDS = {"mapping", "commacell", "interestcell", "heldcell", "targetcell"}
-# The client-side gate for the integer wheel step, shared by every gridded integer input: only
-# step (and swallow the scroll) when the input holds focus — otherwise let the event through so the
-# grid/panel scrolls as usual. So a notch nudges only the input you have clicked into, and an idle
-# scroll never fires a server round-trip. ``emit`` ships deltaY to that input's wheel handler —
-# ``on_int_wheel`` for a matrix/vector cell (see make_cell), ``on_target_limit_wheel`` for the
-# TILT/OLD target-limit square (see _build_preset).
+# The client-side gate for the integer wheel step, shared by every gridded integer input (the
+# matrix/vector cells and the TILT/OLD target-limit square): only step (and swallow the scroll) when
+# the input holds focus — otherwise let the event through so the grid/panel scrolls as usual. So a
+# notch nudges only the input you have clicked into, and an idle scroll never fires a server round-
+# trip. ``emit`` ships deltaY to that input's handler (on_int_wheel / on_target_limit_wheel).
 _INT_WHEEL_JS = ("(e) => { if (e.currentTarget.contains(document.activeElement)) "
                  "{ e.preventDefault(); emit(e); } }")
+# How long after the last target-limit wheel notch to run the commit. Each notch cheaply steps the
+# shown number (server-side, so the loopback-controlled field actually updates), but COMMITTING a
+# new limit rebuilds the whole target set, re-solves the tuning and re-renders the grid — far too
+# heavy per notch (a fast scroll would queue one such solve per notch, each costlier as the set
+# grows, and grind the app). So the commit is debounced by this much, mirroring the limit input's
+# typing ``debounce=300``. See on_target_limit_wheel.
+_TARGET_LIMIT_DEBOUNCE = 0.3
 
 
 def _wave_svg(kind: str) -> str:
@@ -1870,9 +1877,10 @@ class _Reconciler:
                 # server's value always wins — debounce keeps the echo to once-per-settled-entry.
                 num.LOOPBACK = True
                 num._props['loopback'] = True
-                # scroll the wheel over the focused limit square to step it by ±1, like the integer
-                # matrix/vector cells. The js gate only emits while the square holds focus, so an
-                # unfocused scroll still pages the panel (see _INT_WHEEL_JS / on_target_limit_wheel).
+                # scroll the focused limit square to step it by ±1, like the integer matrix/vector
+                # cells (focus-gated via _INT_WHEEL_JS). Each notch cheaply steps the shown number;
+                # the heavy commit (target-set rebuild + solve) is debounced so a fast scroll can't
+                # grind the app (see on_target_limit_wheel).
                 num.on("wheel", lambda e: self._cb.on_target_limit_wheel(e.args.get("deltaY")),
                        args=["deltaY"], js_handler=_INT_WHEEL_JS)
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
@@ -2318,6 +2326,7 @@ def index() -> None:
     building = [False]
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
+    target_limit_commit = [None]  # pending debounced commit task for the target-limit wheel
     # install the temperament-chooser hover delegation once per page (inert until the dropdown opens)
     ui.run_javascript(_TEMP_HOVER_DELEGATION)
     # dismiss any hover tooltip on pointerdown so it can't strand when the click removes/reflows its
@@ -2552,16 +2561,36 @@ def index() -> None:
         rec.inputs[cid].value = _wheel_step(rec.inputs[cid].value, delta_y)
 
     def on_target_limit_wheel(delta_y):
-        # the TILT/OLD target-limit square is a gridded integer too, so a wheel notch steps it by
-        # ±1 just like the matrix/vector cells (on_int_wheel). Setting the input's value fires its
-        # own on_change (on_target_change), so a notch travels the exact path a typed limit does —
-        # validate, redden/toast a bad one, commit, re-render — with no extra dispatch here. The
-        # client only emits while the square holds focus (see _INT_WHEEL_JS), so an idle scroll
-        # over the panel pages it rather than nudging the limit.
+        # step the TILT/OLD limit by ±1 per wheel notch. Unlike a matrix/vector cell, COMMITTING a
+        # new limit rebuilds the whole target-interval set, re-solves the tuning and re-renders the
+        # grid — far too heavy to run on every notch. A fast scroll would queue one such solve per
+        # notch, each costlier than the last as the set grows, and grind the app to a halt. So step
+        # the shown number now (under the build guard, so the field's own on_target_change echo is a
+        # no-op — handle_event runs it inline) and DEBOUNCE the commit: the value is server-side, so
+        # the loopback-controlled field actually advances, while a re-armed task collapses the whole
+        # gesture into ONE solve at the limit you land on. Focus-gated client-side (see _INT_WHEEL_JS).
         if building[0] or not delta_y:
             return
         num = rec.selects["preset:target"][0]
+        building[0] = True  # advance the shown number without committing it
         num.value = _wheel_step(num.value, delta_y)
+        building[0] = False
+        if target_limit_commit[0] is not None:
+            target_limit_commit[0].cancel()  # a fresh notch restarts the debounce window
+        target_limit_commit[0] = background_tasks.create(
+            _debounced_target_commit(), name="target-limit-commit")
+
+    async def _debounced_target_commit():
+        # the tail of a target-limit wheel gesture: once the notches stop for _TARGET_LIMIT_DEBOUNCE,
+        # commit the number now in the field with the one real solve + render. A new notch cancels
+        # this and arms a fresh one. limit_changed=False so landing on an even odd-limit (OLD) reddens
+        # the field rather than toasting once per gesture.
+        try:
+            await asyncio.sleep(_TARGET_LIMIT_DEBOUNCE)
+        except asyncio.CancelledError:
+            return
+        target_limit_commit[0] = None
+        on_target_change(limit_changed=False)
 
     def on_prescaler_change(cid):
         # a bare prescaler 𝐿 diagonal cell (cid "cell:prescaling:primes:i:i"): a valid float
