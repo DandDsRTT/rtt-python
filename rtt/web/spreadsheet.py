@@ -1131,7 +1131,8 @@ class _GridBuilder:
             # vectors tiles (commas/held/detempering) are real d-dim intervals and stay d-tall in the band
             ("vectors", (self.d + self.phantom_dim) * ROW_H, show_temp, True, "interval vectors"),
             ("canon", self.rc * ROW_H, self.show_form_controls, True, "canonical mapping"),
-            ("mapping", self.r * ROW_H, show_temp, True, "mapping"),
+            # the size generator adds one mapping ROW (phantom_dim) — the dummy generator ⟨sf·𝟙 | −1]
+            ("mapping", (self.r + self.phantom_dim) * ROW_H, show_temp, True, "mapping"),
             # the chapter-9 superspace rows sit between mapping and tuning, the row
             # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
             # monzo columns (B_L, target/comma monzos in the superspace); ss_mapping the
@@ -2344,6 +2345,8 @@ class _GridBuilder:
             if self.tile_open("mapping", "quantities"):
                 for i in range(self.r):
                     self.cells.append(CellBox(f"gen:{i}", self.col_x["quantities"], self.map_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.gens[i] if i < len(self.gens) else "", gen=i))
+                if self.phantom_dim:  # the size generator's ratio slot — "–" (the dropped dummy generator, not a real one), greyed
+                    self.cells.append(CellBox(f"gen:{self.r}", self.col_x["quantities"], self.map_top(self.r), self.col_w["quantities"], ROW_H, "genratio", text="–", gen=self.r, phantom=True))
                 # the mapping-row ± ride the row's LEFT bus (like the basis controls on the vectors
                 # row), out to the left of the generator-ratio spine: a − on EACH generator's branch
                 # point (any row removable, −r,+n), the + on the stub below the stack (un-temper a
@@ -2389,6 +2392,13 @@ class _GridBuilder:
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
                         self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+            if self.phantom_dim and self.tile_open("mapping", "primes"):
+                # the SIZE GENERATOR: the (r+1)-th mapping row ⟨sf·𝟙 | −1] (the size-sensitizing summation
+                # over the real primes, −1 in the dummy-prime corner) — the dropped generator the engine
+                # augments with, greyed. Integer (the log-size lives in 𝑋 = 𝑍𝐿, not here).
+                size_row = service.augmented_mapping(self.state.mapping, self.tuning_scheme)[self.r]
+                for p in range(self.d + 1):
+                    self.cells.append(CellBox(f"cell:mapping:{self.r}:{p}", self.prime_left(p), self.map_top(self.r), COL_W, ROW_H, "vec", text=str(size_row[p]), phantom=True))
 
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
@@ -3017,7 +3027,7 @@ class _GridBuilder:
             # the primes mapping is a stack of maps: ⟨ … ] per row
             if self.tile_open("mapping", "primes"):
                 mspan = self.prescaler_span()  # the d (+1 augmented dummy-prime column) span — the mapping grows it too
-                for i in range(self.r):
+                for i in range(self.r + self.phantom_dim):  # incl. the size-generator row (the dropped dummy generator)
                     self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H, span=mspan)
             if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
                 self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], self.r * ROW_H, fit=True)

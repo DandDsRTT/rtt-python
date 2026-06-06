@@ -2195,6 +2195,20 @@ def test_size_factor_adds_the_dummy_prime_column_to_the_mapping():
     assert "cell:mapping:0:3" not in lp
 
 
+def test_size_factor_adds_the_size_generator_row_to_the_mapping():
+    # the dummy/size generator is the (r+1)-th mapping row ⟨sf·𝟙 | −1] (the size-sensitizing summation
+    # over the real primes, −1 in the dummy-prime corner) — the dropped generator, greyed; the guide's
+    # 𝑀Tₚ𝑆ₚ. Its generator-ratio slot reads "–". So the mapping is the full (r+1)×(d+1) augmented matrix.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    assert [lils[f"cell:mapping:2:{p}"].text for p in range(4)] == ["1", "1", "1", "-1"]
+    assert all(lils[f"cell:mapping:2:{p}"].phantom for p in range(4))      # the whole size-gen row greys
+    assert lils["cell:mapping:2:0"].y == lils["cell:mapping:1:0"].y + spreadsheet.ROW_H  # one row below the real gens
+    assert lils["gen:2"].text == "–" and lils["gen:2"].phantom            # its ratio slot — the dropped generator
+    # a square (lp) mapping has no size-generator row
+    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
+    assert "cell:mapping:2:0" not in lp and "gen:2" not in lp
+
+
 def test_size_factor_augments_the_weighting_region_plain_text_to_the_phantom():
     # the plain text must show the grid's augmented d+1 numbers (the ptext-matches-the-grid rule), so the
     # phantom appears in Tₚ / 𝒄 / 𝐝 / 𝑋 — each | -set off, the same divider 𝑊's plain text already uses.
