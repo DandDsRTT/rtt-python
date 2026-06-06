@@ -1962,10 +1962,22 @@ class _Reconciler:
                 # grind the app (see on_target_limit_wheel).
                 num.on("wheel", lambda e: self._cb.on_target_limit_wheel(e.args.get("deltaY")),
                        args=["deltaY"], js_handler=_INT_WHEEL_JS)
+                # the limit field drives the grid's edit-preview, like an editable matrix/vector cell:
+                # focusing it snapshots the baseline, so each committed change (a typed or wheeled limit,
+                # both via on_target_change) rings the target rows it moves, and leaving clears them. It
+                # lives in `selects` not `inputs`, so make_cell's generic focus/blur wiring misses it.
+                # The invalid-limit reddening (_sync_target_limit_error) rides the field itself, a
+                # different signal that coexists with the rings (which ride OTHER cells).
+                num.on("focus", lambda _=None: self._cb.on_cell_focus(cb.id))
+                num.on("blur", lambda _=None: self._cb.on_cell_blur())
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
                         on_change=lambda e: self._cb.on_target_change(limit_changed=False)) \
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
             _set_offlist_prompt(sel, family)
+            # hovering TILT/OLD previews the family switch, like the other choosers: it rings the target
+            # rows the switch would drop (red) / move (amber) in place (see on_chooser_hover's target
+            # branch). Same shared option-hover hook; the family select rides the (num, sel) tuple.
+            self._arm_option_hover(sel, wrap, cb.id)
             self.selects[cb.id] = (num, sel)
         elif name == "temperament":
             # a normal dropdown listing only the rank/limit section dividers and their presets
@@ -3083,16 +3095,33 @@ def index() -> None:
         # delegation fires `opthover` at the chooser's cell wrap carrying the hovered option's positional
         # index in `detail` (-1 / None on leave). Map it back to the option's key through the live
         # select, then preview applying it. Temperament reflows the grid, so it routes to its own sticky
-        # path; the rest are amber-only re-solves handled below.
-        sel = rec.selects.get(cid)
+        # path; the rest (including the TILT/OLD family) are amber-only re-solves handled below.
+        entry = rec.selects.get(cid)
+        sel = entry[1] if isinstance(entry, tuple) else entry  # the target chooser rides a (num, sel) tuple
         if not isinstance(sel, ui.select):
-            return  # the chooser is gone, or it is the (num, sel) target tuple — not single-armed
+            return  # the chooser is gone
         index = _hover_index(detail)
         if cid.startswith("preset:temperament"):
             _temperament_hover_preview(_option_key(sel, index))
             return
         if index is None or not sel.enabled:       # a leave, or a disabled / locked chooser → no preview
             chooser_unhover()
+            return
+        if cid == "preset:target":
+            # the TILT/OLD family: preview switching to it. Compose the spec from the displayed limit +
+            # the hovered family, exactly what on_target_change commits, and ring in place — the target
+            # set re-derives, so rows the switch drops ring red and survivors that move ring amber, with
+            # no reflow (the chooser keeps its value + open popup, like the other amber-only choosers).
+            family = _option_key(sel, index)
+            if family not in presets.TARGET_SETS:
+                chooser_unhover()
+                return
+            text = (entry[0].value or "").strip()  # the displayed limit (entry[0] is the num input)
+            try:
+                spec = f"{int(float(text))}-{family}" if text else family
+            except ValueError:
+                spec = family
+            chooser_hover(lambda: editor.set_target_spec(spec))
             return
         apply = _candidate_apply(cid, _option_key(sel, index))
         if apply is None:                          # a placeholder / no-op option

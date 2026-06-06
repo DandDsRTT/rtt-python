@@ -1742,6 +1742,50 @@ async def test_editing_a_cell_highlights_the_cells_its_edit_changes(user: User) 
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")
 
 
+async def test_typing_a_target_limit_rings_the_rows_it_moves(user: User) -> None:
+    # the target chooser's numeric limit is an editable control, so it drives the same edit-preview as a
+    # grid cell: focusing it captures a baseline, and typing a new limit (which commits live and
+    # re-derives the target set) rings the rows the change brings in, while leaving clears them. From the
+    # 5-limit default (6-TILT, 8 targets) typing a 9 grows the set, so the new target rows ring; an
+    # unmoved generator tuning does not. The chooser is the source and so is never rung itself.
+    await _enable(user, "presets")
+    await user.should_see(marker="preset:target")
+    num, _sel = _target_preset(user)
+    UserInteraction(user, {num}, None).trigger("focus")    # capture the pre-edit baseline
+    num.set_value("9")                                     # grow 6-TILT -> 9-TILT, adding target rows
+    await user.should_see(marker="retune:target:8")        # a target row the larger limit brings in
+    assert "rtt-preview-change" in _wrap_classes(user, "retune:target:8")     # ...rings as moved
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:0")    # an unmoved cell does not
+    UserInteraction(user, {num}, None).trigger("blur")     # leaving the field clears the preview
+    assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:8")
+
+
+# NOTE: scrolling the limit rings the same rows typing does — both commit through the identical
+# on_target_change → render → edit-preview path (proven above), and the wheel's debounced commit itself
+# is covered by test_scrolling_the_target_limit_steps_then_commits. A dedicated wheel-then-ring assertion
+# isn't added: the wheel commits in a background task (on_target_limit_wheel debounces), whose render the
+# in-process User fixture can't observe via should_see/find (ElementFilter only_visible misses
+# background-task renders), so such a test can't be made reliable without reaching into fixture internals.
+
+
+async def test_an_invalid_target_limit_stays_reddened_through_the_edit_preview_gesture(user: User) -> None:
+    # the limit field carries two independent signals that must coexist: it reddens in place when the
+    # displayed (family, limit) is invalid (an even limit for the odd-limit diamond), and it drives the
+    # edit-preview while focused. The preview rings OTHER cells, never the field itself, so its focus/blur
+    # gesture must not strip the validation reddening — a reddened field stays red across it.
+    await _enable(user, "presets")
+    await user.should_see(marker="preset:target")
+    _num, sel = _target_preset(user)
+    sel.set_value("OLD")                                   # the even default limit (6) is invalid for OLD
+    await user.should_see(marker="preset:target")
+    num, _sel = _target_preset(user)
+    assert "rtt-limit-error" in num._classes               # the validation reddening is on
+    UserInteraction(user, {num}, None).trigger("focus")    # the edit-preview gesture: arm then leave
+    UserInteraction(user, {num}, None).trigger("blur")
+    num, _sel = _target_preset(user)
+    assert "rtt-limit-error" in num._classes               # ...and never strips the reddening
+
+
 async def test_an_unfocused_grid_rings_no_cells(user: User) -> None:
     # with no cell being edited there is no baseline, so a plain edit (here via the mapped list's
     # source cell, then read back) leaves nothing ringed — the highlight is strictly an editing aid
@@ -1896,6 +1940,46 @@ async def test_hovering_the_form_canonical_option_previews_canonicalizing(user: 
     assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # a re-stored mapping cell rings
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")
+
+
+async def test_hovering_a_target_family_reddens_the_rows_it_drops(user: User) -> None:
+    # the TILT/OLD family chooser gets the same option-hover preview through the shared _arm_option_hover
+    # hook (it rides the (num, sel) target tuple). Hovering a family previews switching to it: the target
+    # set re-derives in place, so the rows the hovered family DROPS ring red and survivors that move ring
+    # amber — no reflow (the chooser keeps its value, like the other amber-only choosers). From the
+    # 5-limit default (6-TILT) hovering OLD reddens the targets OLD doesn't include; leaving clears it.
+    from rtt.web import presets
+    await _enable(user, "presets")
+    await user.should_see(marker="preset:target")
+    wrap = set(user.find(marker="preset:target").elements)         # the cell wrap holds the opthover listener
+    idx = list(presets.TARGET_SETS).index("OLD")
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # hover OLD over the live TILT
+    assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:1")    # a dropped target row → red
+    await user.should_see(marker="retune:target:1")                          # ...still on screen (not reflowed)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})    # leave the option
+    assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:1")
+
+
+async def test_hovering_a_same_count_target_family_rings_the_moved_rows_amber(user: User) -> None:
+    # when the hovered family keeps the SAME number of targets but different intervals (no net rows
+    # dropped), the preview rings the rows whose value moves amber, in place, and keeps the chooser's own
+    # value steady (no reflow, like the other amber-only choosers). From a committed 5-TILT, hovering
+    # 5-OLD (both 7 targets, different intervals) rings the moved rows amber; leaving clears them.
+    from rtt.web import presets
+    await _enable(user, "presets")
+    await user.should_see(marker="preset:target")
+    num, _sel = _target_preset(user)
+    num.set_value("5")                                                       # commit 5-TILT (default is 6)
+    await user.should_see(marker="retune:target:1")
+    wrap = set(user.find(marker="preset:target").elements)
+    idx = list(presets.TARGET_SETS).index("OLD")
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # hover 5-OLD (same count)
+    assert "rtt-preview-change" in _wrap_classes(user, "retune:target:1")    # a moved row rings amber
+    assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:1")  # nothing net-dropped → no red
+    _num, sel = _target_preset(user)
+    assert sel.value == "TILT"                                               # chooser held steady, not flipped
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})    # leave the option
+    assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:1")
 
 
 async def test_hovering_a_structural_minus_rings_removed_cells_red_and_moved_cells_amber(user: User) -> None:
