@@ -1971,7 +1971,7 @@ class _Reconciler:
             value = presets.identify(self._editor.state)
             sel = _GroupedSelect(presets.temperament_options(), value=value,
                     is_divider=presets.is_divider,
-                    on_change=lambda e: self._cb.on_preset("temperament", e.value)) \
+                    on_change=lambda e: self._cb.on_preset(cb.id, e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
             # hovering an option in the OPEN dropdown previews loading that temperament (reflow the
@@ -1986,7 +1986,7 @@ class _Reconciler:
             value = self._editor.displayed_prescaler_name
             value = value if value in options else None
             sel = ui.select(options, value=value,
-                    on_change=lambda e: self._cb.on_preset("prescaler", e.value)) \
+                    on_change=lambda e: self._cb.on_preset(cb.id, e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, value)
             self._arm_option_hover(sel, wrap, cb.id)  # hovering a prescaler previews re-solving to it
@@ -2003,7 +2003,7 @@ class _Reconciler:
             name = self._editor.displayed_tuning_scheme_name
             scheme = name if name in options else None
             sel = ui.select(options, value=scheme,
-                    on_change=lambda e: self._cb.on_preset("tuning", e.value)) \
+                    on_change=lambda e: self._cb.on_preset(cb.id, e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, scheme)
             self._arm_option_hover(sel, wrap, cb.id)  # hovering a scheme previews re-solving to it
@@ -2090,9 +2090,8 @@ class _Reconciler:
         self.checks[cb.id].value = cb.checked
 
     def _build_formchooser(self, cb, wrap):  # the <choose form> control: canonicalizes its matrix on select
-        name = cb.id.split(":", 1)[1]  # mapping / comma_basis
         sel = ui.select({"": "choose form", "canonical": "canonical"}, value="",
-                on_change=lambda e, n=name: self._cb.on_form_choose(n, e.value)) \
+                on_change=lambda e, c=cb.id: self._cb.on_form_choose(c, e.value)) \
             .props(_select_props(cb.w)).classes("rtt-preset")
         self._arm_option_hover(sel, wrap, cb.id)  # hovering "canonical" previews canonicalizing in place
         self.selects[cb.id] = sel
@@ -2760,15 +2759,15 @@ def index() -> None:
         editor.set_show(key, not editor.settings[key])
         render()
 
-    def on_preset(name, value):
-        # the temperament chooser loads a mapping (an undoable edit); the tuning chooser
-        # sets the view scheme. A re-render echo is ignored via the building guard.
+    def on_preset(cid, value):
+        # a preset chooser commits its option: temperament loads a comma basis (an undoable edit), the
+        # tuning / prescaler presets re-solve. building[0] guards the re-render echo.
         if building[0]:
             return
-        if name == "temperament":
-            # the divider rows are disabled and the prompt is a display-value placeholder
-            # (not a row), so only a preset reaches here; load its comma basis as an
-            # undoable edit, then re-render to snap the box onto the now-matching preset.
+        if cid.startswith("preset:temperament"):
+            # the divider rows are disabled and the prompt is a display-value placeholder (not a row),
+            # so only a real preset reaches here; load its comma basis (undoable), then re-render to
+            # snap the box onto the now-matching preset.
             if value in presets.TEMPERAMENT_COMMAS:
                 if rec._temp_token is not None:  # a hover preview is live — revert it so the commit is
                     editor.restore_for_preview(rec._temp_token)  # one clean undo step from the real base
@@ -2778,24 +2777,22 @@ def index() -> None:
                     rec.preview_baseline = None
                 editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
             render()
-        elif name == "tuning" and value is not None:
-            editor.set_tuning_scheme(value)  # the bare name, applied in the live target mode
-            render()
-        elif name == "prescaler" and value is not None:
-            editor.set_complexity_prescaler(value)  # swaps the scheme's prescaler, clears the override
+            return
+        apply = _candidate_apply(cid, value)  # tuning / prescaler — the same option→edit map the hover uses
+        if apply is not None:
+            apply()
             render()
 
-    def on_form_choose(name, value):
-        # the <choose form> control: selecting "canonical" re-stores that matrix in
-        # canonical form (an undoable edit). The select snaps back to its placeholder on
-        # the re-render. building[0] guards the echo from that reset.
-        if building[0] or value != "canonical":
+    def on_form_choose(cid, value):
+        # the <choose form> control: selecting "canonical" re-stores that matrix in canonical form (an
+        # undoable edit); the placeholder "choose form" yields no edit. The select snaps back to the
+        # placeholder on the re-render; building[0] guards that echo.
+        if building[0]:
             return
-        if name == "mapping":
-            editor.canonicalize_mapping()
-        elif name == "comma_basis":
-            editor.canonicalize_comma_basis()
-        render()
+        apply = _candidate_apply(cid, value)
+        if apply is not None:
+            apply()
+            render()
 
     def on_target_change(limit_changed=False):
         # the target chooser is a numeric limit + a TILT/OLD family; compose them into a spec
@@ -2833,24 +2830,21 @@ def index() -> None:
         render()
 
     def on_control_select(cid, value):
-        # the weighting choosers (box 𝒄 complexity, box 𝒘 weight slope): each swaps a
-        # scheme trait, re-weighting and retuning. The re-render echo is ignored via the guards.
-        # (The prescaler chooser is a preset now — see on_preset.)
+        # the weighting controls: the box 𝒄 complexity / box 𝒘 weight-slope dropdowns swap a scheme
+        # trait (the same option→edit map the hover preview uses, via _candidate_apply), while the box 𝐋
+        # / 𝐓 checkboxes pass a bool. The re-render echo is ignored via the guards. (The prescaler
+        # chooser is a preset now — see on_preset.)
         if building[0] or value is None:
             return
-        if cid == "control:slope":
-            editor.set_weight_slope(value)
-        elif cid == "control:complexity":
-            if value == "custom":  # a display-only state (a shape off the preset list): no-op
-                return
-            # the dropdown presents the friendly display name ("log-product (lp)"); map it back
-            # to the internal complexity key the editor takes ("lp")
-            internal = next((k for k, v in service.COMPLEXITY_DISPLAYS.items() if v == value), value)
-            editor.set_complexity_name(internal)
+        apply = _candidate_apply(cid, value)  # complexity / slope dropdowns
+        if apply is not None:
+            apply()
         elif cid == "control:diminuator":  # the checkbox passes a bool (replace the diminuator?)
             editor.set_diminuator_replaced(bool(value))
         elif cid == "control:all_interval":  # the target-controls checkbox: all-interval vs target-based
             editor.set_all_interval(bool(value))
+        else:
+            return  # the complexity "custom" off-preset state (no candidate) is a no-op — no re-render
         render()
 
     def on_range_mode(value):
@@ -3038,10 +3032,12 @@ def index() -> None:
             render()
 
     def _candidate_apply(cid, value):
-        # the editor edit an amber chooser option would commit, as a zero-arg thunk — or None for a
-        # no-op (a leave / placeholder). The single map from a hovered option to its mutation, keyed by
-        # chooser id; chooser_hover runs it on a snapshot and reverts. (Temperament is not here — it
-        # reflows the grid, handled by _temperament_hover_preview.)
+        # the SINGLE map from a chooser option to the editor edit it commits, as a zero-arg thunk — or
+        # None for a no-op (a leave / placeholder / the off-preset "custom" complexity). Keyed by chooser
+        # id and shared by both sides: the hover preview (chooser_hover) runs it on a snapshot and
+        # reverts, while on_preset / on_control_select / on_form_choose run it for real and re-render. So
+        # an option's effect is defined once. (Temperament is not here — it reflows the grid, handled by
+        # _temperament_hover_preview / on_preset's own branch.)
         if value is None:
             return None
         if cid.startswith("preset:tuning"):
