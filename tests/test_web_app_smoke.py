@@ -939,3 +939,26 @@ def test_dense_prescaling_plain_text_fits_its_cell():
     for cid in ("ptext:prescaling:primes", "ptext:prescaling:targets"):
         c = cells[cid]
         assert app._ptext_units(c.text) * app._ptext_font(c.text, c.w) <= c.w, cid
+
+
+def test_units_fit_their_cell_for_long_alternative_complexity_annotations():
+    # the units column / per-cell units carry the live scheme's annotated unit — ¢(E-sopfr-S)/,
+    # (E-sopfr-C) — far longer than the old ¢/ or (C)/. Each must fit its cell width at the fitted
+    # font, never spilling the tile (the reported "units spill the units col" bug). The 0.5 char
+    # estimate overshoots the units sans (Corbel ≈0.42 em), so an estimate-fit guarantees the
+    # render fits.
+    s = show_settings.defaults()
+    s.update(units=True, domain_units=True, weighting=True)
+    cells = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                              tuning_scheme="TILT minimax-E-sopfr-S").cells
+    shrunk = False
+    for c in cells:
+        if c.kind == "units":
+            font = app._units_font(c.text, c.w, app._UNITS_MAX_FONT)
+            assert len(c.text) * app._EXPR_CHAR_W * font <= c.w, f"units {c.id}={c.text!r}"
+            shrunk = shrunk or font < app._UNITS_MAX_FONT
+        if c.unit:
+            font = app._units_font(c.unit, c.w, app._CELLUNIT_MAX_FONT)
+            assert len(c.unit) * app._EXPR_CHAR_W * font <= c.w, f"cellunit {c.id}={c.unit!r}"
+    # the long annotation actually triggered a shrink (the fit engaged — not a trivial pass)
+    assert shrunk, "no units cell shrank — the long-annotation fit never engaged"

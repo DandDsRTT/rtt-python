@@ -348,6 +348,20 @@ def _mathexpr_html(text: str, width: float) -> str:
     )
     return f'<div class="rtt-mathexpr-stack">{lines}</div>'
 
+
+# the units labels (the domain-units column/row and the per-box "units:" line) and the per-value
+# unit overlay shrink to fit their cell, like the math-expression cells — so a long annotated unit
+# (¢(E-sopfr-S)/, (E-sopfr-C)) fits its narrow COL_W spine instead of spilling the tile.
+_UNITS_MAX_FONT = 10.0    # px — the comfortable units-label size (matches .rtt-units in rtt.css)
+_CELLUNIT_MAX_FONT = 6.0  # px — the per-value unit overlay (matches .rtt-cellunit)
+
+
+def _units_font(text: str, width: float, max_font: float) -> float:
+    """Font (px) at which a unit label fits ``width`` on one line, so a long annotated unit
+    shrinks to its cell rather than spilling. Reuses the math-expression fit; the 0.5 char-width
+    estimate overshoots the units sans (Corbel ≈0.42 em), so the chosen size never spills."""
+    return _fit_font(text, width, max_font=max_font)
+
 # Every EBK mark is drawn by hand as an SVG sized to the cell. The viewBox is the
 # cell's own px box (0 0 w h), so one viewBox unit == one px: a stroke we declare
 # as N px renders exactly N px wide regardless of how tall/long the mark spans.
@@ -1321,9 +1335,10 @@ class _Reconciler:
                 with self.els[cb.id]:
                     self.cell_units[cb.id] = ui.html("").classes("rtt-cellunit")
                 self.els[cb.id].classes(add="rtt-cell-united")
-            if self.cell_unit_text.get(cb.id) != cb.unit:
+            if self.cell_unit_text.get(cb.id) != (cb.unit, cb.w):  # re-fit on a value or width change
                 self.cell_units[cb.id].set_content(_bold_units(cb.unit))
-                self.cell_unit_text[cb.id] = cb.unit
+                self.cell_units[cb.id].style(f"font-size:{_units_font(cb.unit, cb.w, _CELLUNIT_MAX_FONT):.2f}px")
+                self.cell_unit_text[cb.id] = (cb.unit, cb.w)
         elif cb.id in self.cell_units:
             self.cell_units[cb.id].delete()
             self.cell_units.pop(cb.id, None)
@@ -1461,8 +1476,16 @@ class _Reconciler:
 
     def _update_mathcell(self, cb):  # shared by symbol / count / units / matlabel
         # symbols/equivalence tails/counts and matrix row/col labels go through _math_html (styled
-        # math glyphs); units use _units_html (a single-story-g sans value, serif label)
-        html = _units_html(cb.text) if cb.kind == "units" else _math_html(cb.text)
+        # math glyphs); units use _units_html (a single-story-g sans value, serif label) and shrink
+        # to fit their cell, so a long annotated unit (¢(E-sopfr-S)/) never spills its COL_W spine
+        if cb.kind == "units":
+            html = _units_html(cb.text)
+            if self.math_rendered.get(cb.id) != (html, cb.w):  # rewrite on a toggle / value / width change
+                self.math_cells[cb.id].set_content(html)
+                self.math_cells[cb.id].style(f"font-size:{_units_font(cb.text, cb.w, _UNITS_MAX_FONT):.2f}px")
+                self.math_rendered[cb.id] = (html, cb.w)
+            return
+        html = _math_html(cb.text)
         if self.math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
             self.math_cells[cb.id].set_content(html)
             self.math_rendered[cb.id] = html
