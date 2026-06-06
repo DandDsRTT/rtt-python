@@ -197,6 +197,11 @@ _AUDIO_GLYPHS = {
 # (mode 0 stacks notes, keyed by tile:idx) or loops (2 & 4).
 _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
 
+# The hover speaker overlaid on every click-to-play interval cell (a CellBox with `audio` set). Hidden
+# until the cursor rests on the cell AND audio is engaged (body not muted); a delegated listener in
+# audio.js sounds the cell's pitch when it's clicked. See _Reconciler._tag_audio + make_cell.
+_CELL_SPK_HTML = '<span class="material-icons rtt-cell-spk">volume_up</span>'
+
 # Frozen-pane support. The row band freezes by position:sticky (zero JS on its scroll path), but the
 # column-title strip sits OUTSIDE the body scroller (so the vertical scrollbar can stop below it), so
 # it can't ride the scroll via CSS — this listener translateX-syncs it to the body's horizontal
@@ -1262,6 +1267,11 @@ class _Reconciler:
             # every cell kind is registered (audit #3); indexing rather than .get means an
             # unregistered kind raises loudly here — drift surfaces as a crash, not a silent blank cell
             self.cell_kinds[cb.kind].build(cb, wrap)
+            # a click-to-play interval cell (cb.audio set): tag the wrap so the JS engine can find it
+            # (for highlight + sibling-derived chord) and overlay a hover speaker that sounds it
+            if cb.audio is not None:
+                self._tag_audio(wrap, cb)
+                ui.html(_CELL_SPK_HTML)
         # explanatory hover text for the interactive controls (read-only value cells get none).
         # All wording lives in rtt.web.tooltips; a NEW cell kind must be classified there
         # (in READONLY_KINDS or with a help entry) or test_web_tooltips' completeness sweep fails.
@@ -1328,6 +1338,15 @@ class _Reconciler:
             self.cell_units.pop(cb.id, None)
             self.cell_unit_text.pop(cb.id, None)
             self.els[cb.id].classes(remove="rtt-cell-united")
+        if cb.audio is not None:  # refresh the baked pitch / slot so a reorder or retune stays in sync
+            self._tag_audio(self.els[cb.id], cb)
+
+    def _tag_audio(self, el, cb):
+        """Tag a cell wrap as a click-to-play voice: the JS engine reads data-audio (its highlight /
+        chord group), data-idx (its slot in that group) and data-cents (its pitch) off it, and lights
+        it (.rtt-spk) while it sounds. Set on build, refreshed each render so reorder + retune stay live."""
+        tile, idx, cents = cb.audio
+        el.classes(add="rtt-spk").props(f'data-audio="{tile}" data-idx="{idx}" data-cents="{cents:.6f}"')
 
     def _put_stacked_face(self, cid, cls, main, sub):
         """Build a stacked value face into the active cell — a big main glyph over a smaller

@@ -5970,6 +5970,87 @@ def test_mapped_comma_basis_vanishes_and_the_damage_weight_is_bold_italic():
     assert on["symbol:damage:targets"].text == "𝐝 = |𝐞|𝒘"
 
 
+# --- per-cell audio (click an interval cell to hear it) ----------------------
+# Audio is triggered by clicking the interval cells themselves (a hover speaker icon), not by
+# dedicated audio rows. Each playable cell carries an `audio = (tile, idx, cents)` tuple: `cents`
+# is the pitch it sounds, and `tile`+`idx` group a row's cells so the bank's arp/chord modes sweep
+# the whole tile from the clicked note. The JI representations (ratios/vectors/primes) sound the
+# JUST size; the tuning row sounds the TEMPERED size; the genmap sounds the generators.
+
+
+def test_comma_ratio_cell_is_click_to_play_with_its_just_size():
+    cells = {c.id: c for c in _layout().cells}
+    cb = cells["comma:0"]
+    assert cb.audio is not None
+    tile, idx, cents = cb.audio
+    assert (tile, idx) == ("quantities:commas", 0)
+    # the meantone comma 81/80 is ~21.506¢ JUST (it is tempered to ~0¢) — so a magnitude of ~21.5
+    # confirms the ratio sounds the JUST size, not the tempered one (sign is the comma's stored
+    # orientation, the same value the old audio rows sounded)
+    assert abs(abs(cents) - 21.506) < 0.01
+
+
+def test_prime_cell_plays_its_size_but_a_generator_ratio_does_not():
+    cells = {c.id: c for c in _layout().cells}
+    p = cells["prime:1"]  # the prime 3
+    assert p.audio is not None
+    tile, idx, cents = p.audio
+    assert (tile, idx) == ("quantities:primes", 1)
+    assert abs(cents - 1901.955) < 0.01  # 3/1 sounds 1901.955¢ (its JUST size)
+    # generators have no JUST size, so the generator-ratio cells stay silent (not click-to-play)
+    assert cells["qgen:0"].audio is None
+
+
+def test_tuning_sounds_tempered_just_sounds_just_and_retuning_errors_are_silent():
+    cells = {c.id: c for c in _layout().cells}
+    # the SAME comma sounds ~0¢ from the tuning row (meantone tempers 81/80 out) and ~21.5¢ from
+    # the just row — so the two rows demonstrably sound the tempered vs the just size
+    tuned = cells["tuning:comma:0"]
+    assert tuned.audio is not None and tuned.audio[0] == "tuning:commas"
+    assert abs(tuned.audio[2]) < 0.01
+    just = cells["just:comma:0"]
+    assert just.audio is not None and just.audio[0] == "just:commas"
+    assert abs(abs(just.audio[2]) - 21.506) < 0.01
+    # the retuning-error row is not a pitch — none of its cells play
+    assert all(c.audio is None for c in cells.values() if c.id.startswith("retune:"))
+
+
+def test_genmap_cell_sounds_the_generators_tuned_size():
+    cells = {c.id: c for c in _layout().cells}
+    g = cells["tuning:gen:0"]
+    assert g.audio is not None
+    tile, idx, cents = g.audio
+    assert (tile, idx) == ("tuning:gens", 0)
+    assert abs(cents) > 100                                  # a real generator pitch, not silence
+    assert abs(cents - float(cells["tuning:gen:0"].text)) < 0.6  # matches the displayed tuned size
+
+
+def test_every_interval_ratio_and_vector_is_click_to_play():
+    # commas were covered above; the targets / held / intervals-of-interest / detempering ratios
+    # AND their vector columns are click-to-play too, each sounding its JUST size. A vector column's
+    # every component cell carries the column's pitch (keyed to the interval, not the prime row).
+    base = {c.id: c for c in _layout().cells}
+    tr = next(c for c in base.values() if c.id.startswith("target:") and c.id != "target:pending")
+    assert tr.audio and tr.audio[0] == "quantities:targets"
+    tv = next(c for c in base.values() if c.id.startswith("cell:vec:targets:"))
+    assert tv.audio and tv.audio[0] == "vectors:targets"
+    assert base["cell:comma:0:0"].audio and base["cell:comma:0:0"].audio[0] == "vectors:commas"
+    interest = {c.id: c for c in _with_interest([(-2, 0, 1)]).cells}  # 5/4 = 2⁻²·5
+    ir = next(c for c in interest.values() if c.id.startswith("interest:") and c.id != "interest:pending")
+    assert ir.audio and ir.audio[0] == "quantities:interest"
+    iv = next(c for c in interest.values() if c.id.startswith("cell:interest:"))
+    assert iv.audio and iv.audio[0] == "vectors:interest"
+    held = _held()
+    hr = next(c for c in held.values() if c.id.startswith("held:") and c.id != "held:pending")
+    assert hr.audio and hr.audio[0] == "quantities:held"
+    hv = next(c for c in held.values() if c.id.startswith("cell:held:"))
+    assert hv.audio and hv.audio[0] == "vectors:held"
+    det = {c.id: c for c in _with(generator_detempering=True).cells}
+    assert det["detempering:0"].audio and det["detempering:0"].audio[0] == "quantities:detempering"
+    dv = next(c for c in det.values() if c.id.startswith("cell:vec:detempering:"))
+    assert dv.audio and dv.audio[0] == "vectors:detempering"
+
+
 # --- audio rows (hear just & mapped intervals) -------------------------------
 
 def _audio(**overrides):

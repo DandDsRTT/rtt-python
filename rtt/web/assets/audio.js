@@ -12,10 +12,10 @@ window.rttAudio = (function () {
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
   }
-  function spk(tile, idx) {
-    return document.querySelector('.rtt-spk[data-audio="' + tile + '"][data-idx="' + idx + '"]');
+  function hl(tile, idx, on) {  // light EVERY cell sharing this voice (a vector column shares one idx)
+    const es = document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"][data-idx="' + idx + '"]');
+    for (let i = 0; i < es.length; i++) es[i].classList.toggle('rtt-spk-on', on);
   }
-  function hl(tile, idx, on) { const e = spk(tile, idx); if (e) e.classList.toggle('rtt-spk-on', on); }
   function clearHl(tile) {
     const es = document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"]');
     for (let i = 0; i < es.length; i++) es[i].classList.remove('rtt-spk-on');
@@ -127,5 +127,19 @@ window.rttAudio = (function () {
     const e = ctrlEl('mute'); if (e) e.innerHTML = api.glyphs.mute[S.muted ? 1 : 0];
     document.body.classList.toggle('rtt-audio-muted', S.muted); };
   if (document.body) document.body.classList.add('rtt-audio-muted');  // start muted (matches S.muted)
+  // one delegated listener for every cell's hover speaker: read the clicked cell's voice (its tile +
+  // slot), derive the tile's chord from its sibling cells LIVE (so reorder / retune need no rebaking),
+  // and sound it through the shared config. hit() itself no-ops while muted.
+  document.addEventListener('click', function (ev) {
+    const icon = ev.target.closest && ev.target.closest('.rtt-cell-spk');
+    if (!icon) return;
+    const cell = icon.closest('.rtt-spk[data-audio]');
+    if (!cell) return;
+    ev.preventDefault(); ev.stopPropagation();
+    const tile = cell.dataset.audio, chord = [];
+    const sibs = document.querySelectorAll('.rtt-spk[data-audio="' + tile + '"]');
+    for (let i = 0; i < sibs.length; i++) chord[+sibs[i].dataset.idx] = +sibs[i].dataset.cents;
+    api.hit(tile, +cell.dataset.idx, chord);
+  });
   return api;
 })();

@@ -69,6 +69,9 @@ class CellBox:
     # it under the control it labels, like a preset chooser's "predefined prescalers" label)
     disabled: bool = False  # a "control_select" rendered greyed and non-interactive: the box-𝒘
     # weight-slope chooser in all-interval mode, locked to its forced simplicity-weight value
+    audio: tuple | None = None  # (tile, idx, cents): this cell is click-to-play — hovering it reveals
+    # a speaker that sounds `cents`; `tile`+`idx` group a row's cells so the audio bank's arp/chord
+    # modes can sweep the whole tile from the clicked note (the client derives the chord from siblings)
 
 
 @dataclass(frozen=True)

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, replace
+from dataclasses import replace
 from fractions import Fraction
 
 from rtt.web import presets
@@ -1736,6 +1737,13 @@ class _GridBuilder:
         historical ``…:count`` draft-cell ids."""
         return pending_token([tok for tok, _ in self._col_ids[group]])
 
+    def _voice(self, tile, idx, cents):
+        """Make the just-built cell (``self.cells[-1]``) click-to-play: hovering it reveals a speaker
+        that sounds ``cents``. ``tile`` + ``idx`` group a row's cells so the bank's arp / chord /
+        rolled-chord modes sweep the whole tile from the clicked note — the client derives the chord
+        from the tile's sibling cells, so it stays correct across reorders with no baked pitch list."""
+        self.cells[-1] = replace(self.cells[-1], audio=(tile, int(idx), float(cents)))
+
     def tval_row(self, key, group, vals, alerts=()):
         if not self.tile_open(key, group):
             return
@@ -1760,6 +1768,8 @@ class _GridBuilder:
                 self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities), unit=u, alert=alert))
             else:
                 self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v), unit=u, alert=alert))
+            if key in ("tuning", "just"):  # the tuning row sounds each interval's TEMPERED size, the
+                self._voice(f"{key}:{group}", i, v)  # just row its JUST size; retune (errors) is no pitch
 
     # a charted tile draws a bar chart in the band reserved above its values. The box spans
     # the value block exactly — the left bracket gutter, the value columns, and the right
@@ -2208,6 +2218,7 @@ class _GridBuilder:
             if self.tile_open("quantities", "primes"):
                 for p in range(self.d):
                     self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
+                    self._voice("quantities:primes", p, self.tun.just_map[p])
                 # Only the highest prime is removable (shrink_domain trims the last), so its
                 # − rides that prime's branch point (the last top-bus split) — and only when the
                 # shrink actually applies (gated like editor.shrink, never shown inert).
@@ -2218,6 +2229,7 @@ class _GridBuilder:
                     # the comma ratio is editable — a ratiocell, the scalar twin of the editable
                     # comma vector below it: typing a fraction re-parses to that comma's vector
                     self.cells.append(CellBox(f"comma:{c}", self.comma_left(c), qy, COL_W, ROW_H, "ratiocell", text=self.comma_ratios[c], comma=c))
+                    self._voice("quantities:commas", c, self.comma_sizes.just[c])
                 if self.pending is not None:  # the draft's editable "?/?" ratio: type a fraction to fill it
                     # (or its vector cells). A distinct id so it's removed, not restructured, on commit.
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
@@ -2229,12 +2241,14 @@ class _GridBuilder:
             if self.tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
                 for i in range(self.r):                       # derived from M like the comma ratios — no ± control)
                     self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.gens[i]))
+                    self._voice("quantities:detempering", i, self.detempering_sizes.just[i])
             if self.tile_open("quantities", "targets"):
                 # editable like the comma ratio (typing a fraction overrides the target set), but the
                 # auto Tₚ = I list is the read-only computed twin of its vectors column (commaratio, as D)
                 target_ratio_kind = "ratiocell" if self.targets_editable else "commaratio"
                 for j in range(self.k):
                     self.cells.append(CellBox(f"target:{self.col_token('targets', j)}", self.target_left(j), qy, COL_W, ROW_H, target_ratio_kind, text=self.targets[j], comma=j))
+                    self._voice("quantities:targets", j, self.target_sizes.just[j])
                     # each user-curated target carries its own − (like the intervals of interest); the
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
                     if self.targets_editable:
@@ -2246,6 +2260,7 @@ class _GridBuilder:
                 for i in range(self.nh):
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
                     self.cells.append(CellBox(f"held:{self.col_token('held', i)}", self.held_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
+                    self._voice("quantities:held", i, self.held_sizes.just[i])
                     # each held interval carries its own − on its branch point (any one is removable)
                     branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
                 if self.pending_held is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
@@ -2255,6 +2270,7 @@ class _GridBuilder:
                 for i in range(self.mi):
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
                     self.cells.append(CellBox(f"interest:{self.col_token('interest', i)}", self.interest_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.interest_ratios[i], comma=i))
+                    self._voice("quantities:interest", i, self.interest_sizes.just[i])
                     # every interval carries its own − on its branch point: any one is removable,
                     # unlike the domain/comma last-only −
                     branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
@@ -2394,6 +2410,7 @@ class _GridBuilder:
                 for c in range(self.nc):
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:comma:{p}:{c}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
+                        self._voice("vectors:commas", c, self.comma_sizes.just[c])
                 if self.pending is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending[p]
@@ -2407,6 +2424,7 @@ class _GridBuilder:
                 for j in range(self.k):
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{p}", self.target_left(j), self.vec_top(p), COL_W, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
+                        self._voice("vectors:targets", j, self.target_sizes.just[j])
                 if self.pending_target is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_target[p]
@@ -2416,6 +2434,7 @@ class _GridBuilder:
                 for i in range(self.nh):
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:held:{p}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p), alert=self.held_unheld[i]))
+                        self._voice("vectors:held", i, self.held_sizes.just[i])
                 if self.pending_held is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_held[p]
@@ -2425,12 +2444,14 @@ class _GridBuilder:
                 for i in range(self.r):
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:vec:detempering:{i}:{p}", self.detempering_left(i), self.vec_top(p), COL_W, ROW_H, "vec", text=str(self.detempering_vectors[i][p]), unit=self.cell_unit("vectors", "detempering", prime=p)))
+                        self._voice("vectors:detempering", i, self.detempering_sizes.just[i])
             if self.tile_open("vectors", "interest"):  # the user's intervals of interest: editable vectors, like the comma basis
                 for i in range(self.mi):
                     for p in range(self.d):
                         # inset within the COL_W slot (centred) so each ket is its own box with a
                         # gap to its neighbours — the interest column is a collection, not a matrix
                         self.cells.append(CellBox(f"cell:interest:{p}:{self.col_token('interest', i)}", self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
+                        self._voice("vectors:interest", i, self.interest_sizes.just[i])
                 if self.pending_interest is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_interest[p]
@@ -2587,6 +2608,7 @@ class _GridBuilder:
             for i, v in enumerate(self.tun.generator_map):
                 self.cells.append(CellBox(f"tuning:gen:{i}", self.group_left["gens"](i), self.row_y["tuning"], COL_W, ROW_H,
                                      "gentuningcell", text=service.cents(v), unit=self.cell_unit("tuning", "gens", gen=i)))
+                self._voice("tuning:gens", i, v)  # the genmap sounds each generator's tuned size
         # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column (rL cells, read-only
         # tval — NOT editable yet; Phase 5 will wire the "if you mod 𝒈 then prime-based mode
         # falls off" behaviour), 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over the ssprimes column. The superspace tuning
