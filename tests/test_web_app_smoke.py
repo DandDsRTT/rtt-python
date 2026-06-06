@@ -589,8 +589,18 @@ def test_general_tile_renders_its_special_samples():
     assert "arrow_drop_down" in app._general_part_html("presets")  # ...and the dropdown caret
     chart = app._general_part_html("charts")
     assert "<svg" in chart                  # the sparkline...
-    assert "#bbb" in chart                  # ...with at least one grey horizontal tick line
+    assert app._CHART_GRID in chart         # ...with at least one grey horizontal tick line
     assert "<svg" in app._tile_fold_html()  # the decorative top-left fold toggle (a boxed chevron)
+
+
+def test_dummy_tile_chart_rides_the_themeable_mark_colors():
+    # the sample sparkline's bars + axes must ride the shared mark colour (_BR_COLOR) and its
+    # gridlines the shared chart-grid colour — the same tokens the real chart and the EBK frame
+    # use — so the dark overlay's attribute rules retint them. A hardcoded pure black would be
+    # invisible on the dark pane (the bug: bars/axes that stay black in dark mode).
+    chart = app._example_chart()
+    assert app._BR_COLOR in chart and app._CHART_GRID in chart
+    assert "#000" not in chart
 
 
 def test_general_tile_equivalence_mixes_object_stylings():

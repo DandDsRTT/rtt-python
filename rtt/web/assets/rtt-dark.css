@@ -9,11 +9,13 @@
    --option-box-* SVGs) are retinted once — here, or in app._CSS_DARK_VARS for the baked SVGs —
    and their rules follow for free; the rest are re-targeted by selector below.
 
-   The colorization washes, the per-tile charts and the optimize button's 3-D face are all OFF in
-   the default document, so they are deliberately left un-themed for now (their light colours only
-   surface once those Show layers are turned on). The audio bank — always present on the dummy tile
-   now — and the per-cell hover speakers ARE themed below. Accent hues — the pending-comma red and
-   the edit-preview amber — read on dark unchanged and are kept as-is.
+   The colorization washes and the optimize button's 3-D face are OFF in the default document, so
+   they are left un-themed for now (their light colours only surface once those Show layers are
+   turned on). What IS always present — and so themed below — is the audio bank, the per-cell hover
+   speakers, and the dummy tile's sample chart (its bars and axes ride _BR_COLOR, retinted by the
+   marks rule below; the real per-tile charts share that token, so they follow for free once the
+   charts layer is on). Accent hues — the pending-comma red and the edit-preview amber — read on
+   dark unchanged and are kept as-is.
 
    Palette (mirrors the anchors in app.py): pane #1f2329 · panel #272c33 · group #2c323a ·
    box #31373f · cell #1b1f24 · text #e3e6ea · caption #aeb4bc · muted #71777f · icon #9aa1a9 ·
@@ -31,10 +33,13 @@ body.rtt-dark {
      mirroring the light cyan ⊓ yellow = green. */
   --wash-base:#454545; --wash-tuning:#1e4545; --wash-temperament:#45451e; --wash-form:#451e45;
 }
-/* the EBK bracket & brace marks bake _BR_COLOR (#1a1a1a) into their SVG fill; a CSS rule beats
-   the presentation attribute, and matching the exact value leaves a pending comma's red marks
-   (#e53935) — and the differently-filled charts — untouched, so only the frame retints. */
+/* the EBK bracket & brace marks — and the chart bars / axes (the per-tile damage chart and the
+   dummy tile's sample sparkline) — bake _BR_COLOR (#1a1a1a) into their SVG fill (bars, the y-axis
+   rect, tick labels) or stroke (the axes and zero baseline); a CSS rule beats the presentation
+   attribute, so retint exactly that value on both. The pending comma's red marks (#e53935) and the
+   chart gridlines / indicator (#bbbbbb · #888888) use other greys, so they're left untouched. */
 body.rtt-dark [fill="#1a1a1a"] { fill:#8d949d; }
+body.rtt-dark [stroke="#1a1a1a"] { stroke:#8d949d; }
 
 /* ── surfaces ──────────────────────────────────────────────────────────────────────────────── */
 /* the deepest surface: the grid pane and its frozen title bands */

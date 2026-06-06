@@ -671,20 +671,21 @@ _EXAMPLE_TEXT: dict[str, str] = {
 def _example_chart() -> str:
     """The charts sample: a tiny signed bar sparkline — a 5 / −5 axis with grey horizontal
     gridlines (the chart's tick lines) and a bar dipping below the zero line, as the mockup's
-    legend shows."""
+    legend shows. Bars + axes ride _BR_COLOR and the gridlines _CHART_GRID — the same tokens the
+    real chart and the EBK frame use — so the dark overlay's [fill]/[stroke] rules retint them."""
     return ('<div style="position:relative;width:84px;height:34px">'
             '<span style="position:absolute;left:0;top:0;font-size:9px">5</span>'
             '<span style="position:absolute;left:0;bottom:0;font-size:9px">-5</span>'
             '<svg width="66" height="34" viewBox="0 0 66 34" '
             'style="position:absolute;left:16px;top:0">'
             # grey horizontal tick lines at the ±5 levels (the chart's gridlines)
-            '<line x1="2" y1="5" x2="64" y2="5" stroke="#bbb" stroke-width="1"/>'
-            '<line x1="2" y1="29" x2="64" y2="29" stroke="#bbb" stroke-width="1"/>'
-            '<line x1="2" y1="3" x2="2" y2="31" stroke="#000" stroke-width="1.4"/>'
-            '<line x1="0" y1="5" x2="6" y2="5" stroke="#000" stroke-width="1.4"/>'
-            '<line x1="0" y1="29" x2="6" y2="29" stroke="#000" stroke-width="1.4"/>'
-            '<line x1="2" y1="17" x2="62" y2="17" stroke="#000" stroke-width="1"/>'
-            '<rect x="16" y="17" width="22" height="6" fill="#000"/>'
+            f'<line x1="2" y1="5" x2="64" y2="5" stroke="{_CHART_GRID}" stroke-width="1"/>'
+            f'<line x1="2" y1="29" x2="64" y2="29" stroke="{_CHART_GRID}" stroke-width="1"/>'
+            f'<line x1="2" y1="3" x2="2" y2="31" stroke="{_BR_COLOR}" stroke-width="1.4"/>'
+            f'<line x1="0" y1="5" x2="6" y2="5" stroke="{_BR_COLOR}" stroke-width="1.4"/>'
+            f'<line x1="0" y1="29" x2="6" y2="29" stroke="{_BR_COLOR}" stroke-width="1.4"/>'
+            f'<line x1="2" y1="17" x2="62" y2="17" stroke="{_BR_COLOR}" stroke-width="1"/>'
+            f'<rect x="16" y="17" width="22" height="6" fill="{_BR_COLOR}"/>'
             '</svg></div>')
 
 

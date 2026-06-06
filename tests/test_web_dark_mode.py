@@ -64,6 +64,13 @@ def test_dark_theme_retints_the_baked_in_marks_without_disturbing_the_pending_re
     assert f'[fill="{app._PENDING_COLOR}"]' not in app._CSS
 
 
+def test_dark_theme_retints_stroke_drawn_marks_too():
+    # some _BR_COLOR marks are STROKE-drawn, not filled: the chart axes / zero baseline (and the
+    # dummy tile's sample-chart axes). The fill attribute rule can't reach a stroke, so a parallel
+    # stroke rule retints exactly that value — else those lines stay near-black on the dark pane.
+    assert f'body.rtt-dark [stroke="{app._BR_COLOR}"]' in app._CSS
+
+
 def test_dark_theme_overrides_the_themed_variables():
     # the colours already behind a custom property are retinted once, under body.rtt-dark, so
     # every consumer (gridlines, the cell/bracket rule, the frozen seam) follows for free
