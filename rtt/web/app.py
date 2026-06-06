@@ -1199,10 +1199,12 @@ class _Reconciler:
         # which gesture currently owns the preview, so each one only clears its own rings:
         # _editing is the focused editable cell (a keyboard edit), _wheel_cid the generator-tuning
         # cell whose wheel preview a hover armed, _control_hovering whether a +/- button is showing
-        # its hover preview. (A drag owns it via _drag_token.)
+        # its hover preview, _chooser_hovering whether a dropdown option-hover is showing one. (A drag
+        # owns it via _drag_token.)
         self._editing = None
         self._wheel_cid = None
         self._control_hovering = False
+        self._chooser_hovering = False
         # the temperament-dropdown hover preview REFLOWS the grid (so a different rank/dimensionality
         # shows its new columns/rows): _temp_token is the snapshot to revert/commit from, _temp_baseline
         # the grid before it (for the ring diff), _previewing_temperament keeps the chooser's own value
@@ -2003,6 +2005,7 @@ class _Reconciler:
                     on_change=lambda e: self._cb.on_preset("tuning", e.value)) \
                 .props(_select_props(cb.w)).classes("rtt-preset")
             _set_offlist_prompt(sel, scheme)
+            self._arm_option_hover(sel, wrap, cb.id)  # hovering a scheme previews re-solving to it
             self.selects[cb.id] = sel
 
     def _update_preset(self, cb):
@@ -2933,9 +2936,13 @@ def index() -> None:
     # off-screen until committed, so it isn't ringed (show_preview skips ids not in the DOM). The
     # click then commits for real via the control's own handler. A keyboard edit or a drag owns the
     # preview while active, so the control hover stands down for them.
-    def control_hover(apply):
+    def _preview_apply(apply):
+        # the snapshot → apply-hypothetical → diff → ring → revert core shared by the +/- control hover
+        # and the dropdown option hover (chooser_hover): neither reflows, so the diff rings what MOVES
+        # (amber) and what's REMOVED (red), brand-new cells stay off-screen, and the real document is
+        # left untouched. Returns whether it rang (False when another gesture already owns the grid).
         if rec._editing is not None or rec._drag_token is not None or last_lay[0] is None:
-            return
+            return False
         token = editor.capture_for_preview()
         try:
             apply()
@@ -2945,12 +2952,29 @@ def index() -> None:
         finally:
             editor.restore_for_preview(token)  # leave no trace: the grid never actually moved
         rec.show_preview(modified, removed)
-        rec._control_hovering = True
+        return True
+
+    def control_hover(apply):
+        if _preview_apply(apply):
+            rec._control_hovering = True
 
     def control_unhover():
         # leaving the +/- clears only the rings IT showed (not a live edit's or drag's)
         if rec._control_hovering:
             rec._control_hovering = False
+            rec.clear_preview()
+
+    def chooser_hover(apply):
+        # a dropdown option hover previews applying its candidate, exactly like control_hover (snapshot,
+        # ring the diff, revert at once — no reflow, so the open popup and the chooser's own value stay
+        # put). Its own ownership flag so leaving/closing clears only its rings.
+        if _preview_apply(apply):
+            rec._chooser_hovering = True
+
+    def chooser_unhover():
+        # leaving an option / closing the popup clears only the rings the chooser hover showed
+        if rec._chooser_hovering:
+            rec._chooser_hovering = False
             rec.clear_preview()
 
     def _end_temperament_preview():
@@ -3008,6 +3032,17 @@ def index() -> None:
             rec.preview_source = None
             render()
 
+    def _candidate_apply(cid, value):
+        # the editor edit an amber chooser option would commit, as a zero-arg thunk — or None for a
+        # no-op (a leave / placeholder). The single map from a hovered option to its mutation, keyed by
+        # chooser id; chooser_hover runs it on a snapshot and reverts. (Temperament is not here — it
+        # reflows the grid, handled by _temperament_hover_preview.)
+        if value is None:
+            return None
+        if cid.startswith("preset:tuning"):
+            return lambda: editor.set_tuning_scheme(value)
+        return None
+
     def on_chooser_hover(cid, detail):
         # the shared option-hover preview entry for every q-select armed via _arm_option_hover: the
         # delegation fires `opthover` at the chooser's cell wrap carrying the hovered option's positional
@@ -3017,8 +3052,18 @@ def index() -> None:
         sel = rec.selects.get(cid)
         if not isinstance(sel, ui.select):
             return  # the chooser is gone, or it is the (num, sel) target tuple — not single-armed
+        index = _hover_index(detail)
         if cid.startswith("preset:temperament"):
-            _temperament_hover_preview(_option_key(sel, _hover_index(detail)))
+            _temperament_hover_preview(_option_key(sel, index))
+            return
+        if index is None or not sel.enabled:       # a leave, or a disabled / locked chooser → no preview
+            chooser_unhover()
+            return
+        apply = _candidate_apply(cid, _option_key(sel, index))
+        if apply is None:                          # a placeholder / no-op option
+            chooser_unhover()
+            return
+        chooser_hover(apply)
 
     # generator-tuning wheel preview: hovering the cell snapshots a baseline so each wheel notch (a
     # real, committed nudge — handled by on_gentuning_wheel, which re-renders) rings the OTHER cells

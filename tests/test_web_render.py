@@ -1797,6 +1797,24 @@ async def test_hovering_a_temperament_option_previews_loading_it(user: User) -> 
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
 
 
+async def test_hovering_a_tuning_scheme_option_previews_reselecting(user: User) -> None:
+    # the tuning-scheme chooser gets the same option-hover preview as the temperament chooser, through
+    # the shared _arm_option_hover hook: hovering a scheme rings the cells reselecting it would move —
+    # here the damage weights, which the weight slope (minimax-U → minimax-S) re-derives — and leaving
+    # clears them. Amber only: a re-solve moves values without reflowing the grid.
+    from rtt.web import presets
+    await user.open("/")
+    _toggle(user, "presets")                                   # the tuning chooser is presets-gated
+    _toggle(user, "weighting")                                 # >1 scheme variant (S/U/C) + the weight row
+    await user.should_see(marker="preset:tuning")
+    wrap = set(user.find(marker="preset:tuning").elements)
+    idx = list(presets.tuning_scheme_options(False, False, True)).index("minimax-S")
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})  # hover the simplicity variant
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")   # a re-weighted target rings amber
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": -1})   # leave the option
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
+
+
 async def test_hovering_a_structural_minus_rings_removed_cells_red_and_moved_cells_amber(user: User) -> None:
     # hovering a structural − previews the click WITHOUT reflowing the grid (the generator is not
     # actually dropped, so the button stays under the cursor): the cells it REMOVES ring RED — they
