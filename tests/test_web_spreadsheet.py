@@ -2184,6 +2184,19 @@ def test_size_factor_augments_the_weighting_region_plain_text_to_the_phantom():
     assert "|" not in lp["ptext:vectors:targets"].text and "|" not in lp["ptext:prescaling:primes"].text
 
 
+def test_the_size_sensitizing_row_is_labelled_z_not_a_fourth_prime():
+    # the bottom (size-sensitizing) row of 𝑋 = 𝑍𝐿 is labelled 𝒛 (the size-sensitizing matrix 𝑍's row
+    # variable, §10), NOT 𝒍₄ / 𝒙₄ — it isn't a fourth prime. The d real prime rows keep their 𝒍ᵢ.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
+    assert lils["matlabel:row:prescaling:primes:0"].text == "𝒍₁"
+    assert lils["matlabel:row:prescaling:primes:2"].text == "𝒍₃"
+    assert lils["matlabel:row:prescaling:primes:3"].text == "𝒛"  # the size row — not 𝒍₄
+    # a square (no size factor) prescaler has only the d prime rows, all 𝒍ᵢ (no 𝒛 row)
+    lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True).cells}
+    assert lp["matlabel:row:prescaling:primes:2"].text == "𝒍₃"
+    assert "matlabel:row:prescaling:primes:3" not in lp
+
+
 def test_size_factor_composes_the_size_sensitizing_matrix_with_each_base_prescaler():
     # "replace diminuator" (the size factor) composes the size-sensitizing matrix 𝑍 with the base
     # prescaler — 𝑋 = 𝑍𝐿 (log-prime), 𝑋 = 𝑍 (identity: 𝑍𝐼 vaporizes), 𝑋 = 𝑍diag(𝒑) (prime) — per the
@@ -2394,8 +2407,8 @@ def test_size_factor_grows_the_prescaler_product_tiles_and_labels_the_size_row()
     expected = service.prescale_text(sum(pre[j] * comma[j] for j in range(3)))
     assert lils["cell:prescaling:commas:3:0"].text == expected
     assert lils["cell:prescaling:commas:3:0"].kind == "tval"
-    # the bare matrix's size row carries a row label (the (d+1)-th = 4th covector of 𝑋)
-    assert lils_sym["matlabel:row:prescaling:primes:3"].text.endswith("₄")
+    # the bare matrix's size row carries the 𝒛 row label (the size-sensitizing row, not a 4th prime 𝒍₄)
+    assert lils_sym["matlabel:row:prescaling:primes:3"].text == "𝒛"
 
 
 def test_prescaling_tiles_carry_their_per_tile_symbols_and_equivalences():

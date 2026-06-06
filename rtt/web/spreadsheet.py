@@ -3165,11 +3165,15 @@ class _GridBuilder:
                     continue
                 top = row_top[(rkey, ckey)]
                 for i in range(row_count[(rkey, ckey)]):
+                    # the bare pretransformer 𝑋 = 𝑍𝐿's bottom (size-sensitizing) row is labelled 𝒛 (the
+                    # size-sensitizing matrix 𝑍's row variable), NOT 𝒍₄ / 𝒙₄ — it isn't a fourth prime.
+                    size_row = (rkey, ckey) == ("prescaling", "primes") and i == self.d and self.size_rows
+                    text = "𝒛" if size_row else f"{glyph}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
                         # past the drag-handle gutter (when present), so the handle sits to its left
                         self.content_x[ckey] + self.handle_gutter_w(ckey), top(i), MATLABEL_W, ROW_H,
-                        "matlabel", text=f"{glyph}{_sub(i + 1)}",
+                        "matlabel", text=text,
                     ))
             # column labels — one per cell of each col-labelled tile, in the band above
             # the top frame (so a framed matrix reads label / [bracket] / cells). A label
