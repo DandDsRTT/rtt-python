@@ -9,10 +9,11 @@
    --option-box-* SVGs) are retinted once — here, or in app._CSS_DARK_VARS for the baked SVGs —
    and their rules follow for free; the rest are re-targeted by selector below.
 
-   The colorization washes, the per-tile charts, the optimize button's 3-D face and the audio
-   controls are all OFF in the default document, so they are deliberately left un-themed for now
-   (their light colours only surface once those Show layers are turned on). Accent hues — the
-   pending-comma red and the edit-preview amber — read on dark unchanged and are kept as-is.
+   The colorization washes, the per-tile charts and the optimize button's 3-D face are all OFF in
+   the default document, so they are deliberately left un-themed for now (their light colours only
+   surface once those Show layers are turned on). The audio bank — always present on the dummy tile
+   now — and the per-cell hover speakers ARE themed below. Accent hues — the pending-comma red and
+   the edit-preview amber — read on dark unchanged and are kept as-is.
 
    Palette (mirrors the anchors in app.py): pane #1f2329 · panel #272c33 · group #2c323a ·
    box #31373f · cell #1b1f24 · text #e3e6ea · caption #aeb4bc · muted #71777f · icon #9aa1a9 ·
@@ -117,6 +118,15 @@ body.rtt-dark .rtt-part-off { color:#71777f; }
 body.rtt-dark .rtt-tile-fold { color:#9aa1a9; }
 body.rtt-dark .rtt-tile-mnem { text-decoration-color:#71777f; }
 body.rtt-dark .rtt-mnem-underline { text-decoration-color:#e3e6ea; }
+/* the audio bank controls (always present on the dummy tile) + the per-cell hover speakers: the
+   light greys vanish on the dark panel/cells, so re-light them with the icon palette, give the
+   speaker a dark halo (it reads over a dark cell or wash), and dark-tone the sounding flash. */
+body.rtt-dark .rtt-audio-ctrl { color:#9aa1a9; }
+body.rtt-dark .rtt-audio-ctrl:hover { color:#cfd4da; }
+body.rtt-dark .rtt-audio-ctrl.rtt-audio-on { background:#4e555d; color:#e3e6ea; }
+body.rtt-dark .rtt-cell-spk { color:#9aa1a9; text-shadow:0 0 2px #1b1f24, 0 0 2px #1b1f24; }
+body.rtt-dark .rtt-cell-spk:hover { color:#e3e6ea; }
+body.rtt-dark .rtt-spk-on { background:#4e555d !important; }
 
 /* ── choosers: the preset/target dropdowns and their popup ──────────────────────────────────── */
 body.rtt-dark .rtt-preset .q-field__control,
