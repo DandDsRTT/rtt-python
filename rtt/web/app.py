@@ -3584,6 +3584,18 @@ def index() -> None:
                         # as-shipped defaults — itself an undoable action
                         refs["reset"] = ui.button(icon="restart_alt", on_click=lambda: act(editor.reset), color=None) \
                             .props("flat dense").classes("rtt-iconbtn").mark("reset").tooltip(tooltips.CHROME_HELP["reset"])
+
+                        # hovering a history button previews its effect: it rings exactly the cells one
+                        # undo/redo/reset would move (red for a removal, amber for the re-solve) and clears
+                        # on leave, like the +/- buttons — the op still fires only on the click. A disabled
+                        # button (history at its end, or nothing to reset) shows no preview, matching its
+                        # greyed state; the enabled flag is read live, mirroring set_enabled in render().
+                        def arm_history_preview(btn, can, op):
+                            btn.on("mouseenter", lambda _=None: control_hover(op) if can() else None)
+                            btn.on("mouseleave", lambda _=None: control_unhover())
+                        arm_history_preview(refs["undo"], lambda: editor.can_undo, editor.undo)
+                        arm_history_preview(refs["redo"], lambda: editor.can_redo, editor.redo)
+                        arm_history_preview(refs["reset"], lambda: editor.can_reset, editor.reset)
                 # the chapter-9 nonstandard-domain-approach radio: prime-based, nonprime-based, or
                 # the library's neutral default (which reads a nonprime element as a formal prime).
                 # Hidden when the domain has no nonprime element — the trait is meaningless there

@@ -2037,3 +2037,54 @@ async def test_hovering_the_optimize_button_previews_toggling_the_auto_lock(user
     assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:0")   # snapping back to the optimum rings
     UserInteraction(user, btn, None).trigger("mouseleave")
     assert "rtt-preview-change" not in _wrap_classes(user, "tuning:prime:0")  # cleared on mouse-out
+
+
+async def test_hovering_undo_rings_what_reverting_the_last_edit_changes(user: User) -> None:
+    # the undo button reverts the last edit; hovering it previews that revert — ringing exactly the
+    # cells one undo step would move — without committing. Make an edit so there is something to undo.
+    await user.open("/")
+    _cell_child(user, "cell:mapping:1:2").set_value("7")          # edit the mapping (an undoable step)
+    await user.should_see(marker="tuning:target:4")
+    btn = set(user.find(marker="undo").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:4")   # reverting the edit rings it
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:4")  # cleared on mouse-out
+
+
+async def test_hovering_redo_rings_what_redoing_the_undone_edit_changes(user: User) -> None:
+    # the redo button re-applies the last undone edit; hovering it previews that, ringing the cells redo
+    # would move, without committing. Edit then undo, so a redo step is waiting.
+    await user.open("/")
+    _cell_child(user, "cell:mapping:1:2").set_value("7")          # edit (an undoable step)
+    user.find(marker="undo").click()                             # undo it -> a redo step is now available
+    await user.should_see(marker="tuning:target:4")
+    btn = set(user.find(marker="redo").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:4")   # redoing re-applies the edit
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:4")  # cleared on mouse-out
+
+
+async def test_hovering_reset_rings_everything_snapping_back_to_defaults(user: User) -> None:
+    # the reset button restores the whole document to the as-shipped defaults; hovering it previews that,
+    # ringing every cell the snap-back moves, without committing. An edit makes reset have something to do.
+    await user.open("/")
+    _cell_child(user, "cell:mapping:1:2").set_value("7")          # diverge from the defaults
+    await user.should_see(marker="tuning:target:4")
+    btn = set(user.find(marker="reset").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:4")   # the reverted edit rings
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:4")  # cleared on mouse-out
+
+
+async def test_a_disabled_history_button_shows_no_preview(user: User) -> None:
+    # at the history root nothing has been edited, so undo is disabled (greyed) — hovering it must show no
+    # preview, matching its inert state. (reset is likewise disabled with no changes, redo at the tip.)
+    await user.open("/")
+    btn = set(user.find(marker="undo").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:4")  # nothing rings...
+    assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:target:4")  # ...neither colour
+    UserInteraction(user, btn, None).trigger("mouseleave")
