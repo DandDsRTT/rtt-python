@@ -2209,6 +2209,19 @@ def test_size_factor_adds_the_size_generator_row_to_the_mapping():
     assert "cell:mapping:2:0" not in lp and "gen:2" not in lp
 
 
+def test_size_factor_completes_the_primes_axis_in_the_tuning_and_complexity_maps():
+    # the dummy prime is a (d+1)-th column in the tuning / just / retuning maps (greyed "–" — the dropped
+    # generator's junk) and the complexity-over-primes (greyed 1, the dummy's unit norm), so every
+    # primes-indexed covector is the augmented d+1 width, lining up with the mapping and 𝑋.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    for key in ("tuning", "just", "retune"):
+        assert lils[f"{key}:prime:3"].text == "–" and lils[f"{key}:prime:3"].phantom
+    assert lils["complexity:prime:3"].text == service.cents(1.0) and lils["complexity:prime:3"].phantom
+    # a square (lp) all-interval has no dummy column in these maps
+    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
+    assert "tuning:prime:3" not in lp and "complexity:prime:3" not in lp
+
+
 def test_size_factor_augments_the_weighting_region_plain_text_to_the_phantom():
     # the plain text must show the grid's augmented d+1 numbers (the ptext-matches-the-grid rule), so the
     # phantom appears in Tₚ / 𝒄 / 𝐝 / 𝑋 — each | -set off, the same divider 𝑊's plain text already uses.

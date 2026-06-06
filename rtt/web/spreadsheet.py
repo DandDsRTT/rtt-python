@@ -2652,6 +2652,8 @@ class _GridBuilder:
         for key, (prime_vals, comma_vals, target_vals, interest_vals, held_vals) in tuning_data.items():
             if self.row_open(key):
                 self.tval_row(key, "primes", prime_vals)
+                if self.phantom_dim and self.tile_open(key, "primes"):  # the dummy prime's tuning is the dropped-generator junk → "–", greyed
+                    self.cells.append(CellBox(f"{key}:prime:{self.d}", self.prime_left(self.d), self.row_y[key], COL_W, ROW_H, "tval", text="–", phantom=True))
                 self.tval_row(key, "commas", comma_vals)
                 self.tval_row(key, "targets", target_vals)
                 self.tval_row(key, "interest", interest_vals)
@@ -2851,6 +2853,12 @@ class _GridBuilder:
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
                 self.tval_row("complexity", group, self.complexities[group],
                               alerts=self.held_unheld if group == "held" else ())
+            if self.phantom_dim and self.tile_open("complexity", "primes"):
+                # the dummy prime's complexity is 1 (the augmented 𝑋's dummy column [0…0 1] has unit norm),
+                # like the phantom target's — greyed, completing the d+1 complexity map over the primes
+                self.cells.append(CellBox(f"complexity:prime:{self.d}", self.prime_left(self.d),
+                                     self.row_y["complexity"], COL_W, ROW_H, "tval",
+                                     text=service.cents(1.0), phantom=True))
             if self.phantom_dim and self.tile_open("complexity", "targets"):
                 # the phantom target's complexity is 1 — the augmented 𝑋's phantom column [0…0 1] has unit
                 # norm — greyed, riding the phantom column so 𝒄 lines up with the d+1 𝑊 / Tₚ
@@ -3111,7 +3119,7 @@ class _GridBuilder:
         for key in ("tuning", "just", "retune", "complexity"):
             if self.row_open(key):
                 if self.tile_open(key, "primes"):
-                    self.bracket(f"{key}:map", MAP_BRACKETS, "primes", self.row_y[key], ROW_H)
+                    self.bracket(f"{key}:map", MAP_BRACKETS, "primes", self.row_y[key], ROW_H, span=self.prescaler_span())  # spans the dummy prime column (augmented)
                 if self.tile_open(key, "commas"):
                     self.bracket(f"{key}:commalist", LIST_BRACKETS, "commas", self.row_y[key], ROW_H)
                 if self.tile_open(key, "targets"):
