@@ -2231,6 +2231,38 @@ def test_size_factor_adds_the_size_generator_row_to_the_mapping():
     assert "cell:mapping:2:0" not in lp and "gen:2" not in lp
 
 
+def test_size_factor_adds_the_size_generator_row_to_every_mapping_matrix():
+    # the size generator is the (r+1)-th row of EVERY shown matrix in the mapping row, not just the bare
+    # 𝑀: each mapped product gains the size gen's image of its source intervals (Σ size_row · components),
+    # greyed, with an hline separating it (mirroring 𝑋 = 𝑍𝐿's \hline). (In all-interval the redundant
+    # mapped TARGET list = 𝑀 is hidden, so the shown matrices are 𝑀 itself + the mapped comma.)
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
+    assert lils["cell:mapping:2:0"].text == "1" and lils["cell:mapping:2:3"].text == "-1"         # 𝑀's size row ⟨1 1 1 | −1]
+    assert lils["cell:mapped_comma:2:0"].text == "1" and lils["cell:mapped_comma:2:0"].phantom    # 80/81=(4,−4,1) → size 1
+    for hl in ("bar:mapping:hline", "bar:mapped_comma:hline"):
+        assert lils[hl].kind == "hbar"                                                             # an hline per shown matrix
+    assert lils["cell:mapping:1:0"].y < lils["bar:mapping:hline"].y < lils["cell:mapping:2:0"].y   # between last real row + size row
+    assert lils["bracket:mapped_comma:l"].h == 3 * spreadsheet.ROW_H                               # [ ] grows to enclose the size row
+    # a square (lp) mapping has no size-generator row in the products, and no hline
+    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
+    assert "cell:mapped_comma:2:0" not in lp and "bar:mapped_comma:hline" not in lp
+
+
+def test_size_factor_completes_the_dummy_target_subcol():
+    # the augmented dummy TARGET subcol (the d+1-th Tₚ column) must be complete like the real ones: its
+    # interval-vectors EBK (per-column top + bottom angle), a "–" in the quantities (ratio) row and the
+    # units row — it isn't a real target interval. All greyed.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True, counts=True).cells}
+    assert lils["target:phantom"].text == "–" and lils["target:phantom"].phantom              # quantities (ratio) row
+    assert lils["urow:targets:phantom"].text == "–" and lils["urow:targets:phantom"].phantom  # units row
+    assert lils["ebktop:vec:targets:phantom"].kind == "ebktop"                                # EBK top bracket
+    assert lils["ebkangle:vec:targets:phantom"].kind == "ebkangle"                            # EBK bottom angle
+    assert lils["target:phantom"].x == lils["cell:vec:targets:phantom:0"].x                   # aligned with the dummy col
+    # a square (lp) all-interval has no dummy target subcol
+    lp = {c.id for c in _with("minimax-S", weighting=True, symbols=True, domain_units=True, counts=True).cells}
+    assert "target:phantom" not in lp and "ebktop:vec:targets:phantom" not in lp
+
+
 def test_size_factor_completes_the_primes_axis_in_the_tuning_and_complexity_maps():
     # the dummy prime is a (d+1)-th column in the tuning / just / retuning maps (greyed "–" — the dropped
     # generator's junk) and the complexity-over-primes (greyed 1, the dummy's unit norm), so every

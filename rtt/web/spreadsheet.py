@@ -2209,6 +2209,8 @@ class _GridBuilder:
             if self.tile_open("units", "targets"):
                 for j in range(self.k):
                     self.cells.append(CellBox(f"urow:targets:{j}", self.target_left(j), uy, COL_W, ROW_H, "units", text="/1"))
+                if self.phantom_dim:  # the dummy target has no unit — "–", greyed
+                    self.cells.append(CellBox("urow:targets:phantom", self.target_left(self.k), uy, COL_W, ROW_H, "units", text="–", phantom=True))
             if self.tile_open("units", "interest"):
                 for ii in range(self.mi):
                     self.cells.append(CellBox(f"urow:interest:{ii}", self.interest_left(ii), uy, COL_W, ROW_H, "units", text="/1"))
@@ -2288,6 +2290,8 @@ class _GridBuilder:
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
                     if self.targets_editable:
                         branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
+                if self.phantom_dim:  # the dummy target (the augmented Tₚ column) has no real ratio — "–", greyed
+                    self.cells.append(CellBox("target:phantom", self.target_left(self.k), qy, COL_W, ROW_H, "commaratio", text="–", comma=self.k, phantom=True))
                 if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
                     branch_minus("target_minus:pending", "targets", self.k, "target_minus")
@@ -2407,13 +2411,27 @@ class _GridBuilder:
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
                         self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
-            if self.phantom_dim and self.tile_open("mapping", "primes"):
-                # the SIZE GENERATOR: the (r+1)-th mapping row ⟨sf·𝟙 | −1] (the size-sensitizing summation
-                # over the real primes, −1 in the dummy-prime corner) — the dropped generator the engine
-                # augments with, greyed. Integer (the log-size lives in 𝑋 = 𝑍𝐿, not here).
+            if self.phantom_dim:
+                # the SIZE GENERATOR is the (r+1)-th row of EVERY matrix in the mapping row (the dropped
+                # generator the engine augments with, greyed). On the bare 𝑀 it is ⟨sf·𝟙 | −1] (the size-
+                # sensitizing summation over the real primes, −1 in the dummy-prime corner; integer — the
+                # log-size lives in 𝑋 = 𝑍𝐿). On each mapped PRODUCT it is the size gen's image of that
+                # column's source interval: Σ (size_row · the interval's components).
                 size_row = service.augmented_mapping(self.state.mapping, self.tuning_scheme)[self.r]
-                for p in range(self.d + 1):
-                    self.cells.append(CellBox(f"cell:mapping:{self.r}:{p}", self.prime_left(p), self.map_top(self.r), COL_W, ROW_H, "vec", text=str(size_row[p]), phantom=True))
+                if self.tile_open("mapping", "primes"):
+                    for p in range(self.d + 1):
+                        self.cells.append(CellBox(f"cell:mapping:{self.r}:{p}", self.prime_left(p), self.map_top(self.r), COL_W, ROW_H, "vec", text=str(size_row[p]), phantom=True))
+                def _size_image(vec):
+                    return str(sum(size_row[p] * vec[p] for p in range(self.d)))
+                for group, prefix, left, src in (("targets", "mapped", self.target_left, self.target_vectors),
+                                                 ("interest", "imapped", self.interest_left, self.interest),
+                                                 ("held", "hmapped", self.held_left, self.held),
+                                                 ("commas", "mapped_comma", self.comma_left, self.state.comma_basis)):
+                    if self.tile_open("mapping", group):
+                        for col in range(len(src)):
+                            self.cells.append(CellBox(f"cell:{prefix}:{self.r}:{self.col_token(group, col)}",
+                                                 left(col), self.map_top(self.r), COL_W, ROW_H, "vec",
+                                                 text=_size_image(src[col]), phantom=True))
 
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
@@ -3058,12 +3076,21 @@ class _GridBuilder:
                 for i in range(self.r + self.phantom_dim):  # incl. the size-generator row (the dropped dummy generator)
                     self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H, span=mspan)
             if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
-                self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], self.r * ROW_H, fit=True)
+                self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], (self.r + self.phantom_dim) * ROW_H, fit=True)
             if self.tile_open("mapping", "targets"):
-                self.bracket("mapped", LIST_BRACKETS, "targets", self.row_y["mapping"], self.r * ROW_H, fit=True)
+                self.bracket("mapped", LIST_BRACKETS, "targets", self.row_y["mapping"], (self.r + self.phantom_dim) * ROW_H, fit=True)
             # the interest mapped images stand alone (no outer [ … ]), mirroring the vectors row
             if self.nh and self.tile_open("mapping", "held"):  # held mapped list, like the targets / interest
-                self.bracket("hmapped", LIST_BRACKETS, "held", self.row_y["mapping"], self.r * ROW_H, fit=True)
+                self.bracket("hmapped", LIST_BRACKETS, "held", self.row_y["mapping"], (self.r + self.phantom_dim) * ROW_H, fit=True)
+            if self.phantom_dim:  # an hline separating each matrix's size-generator (bottom) row — mirrors 𝑋 = 𝑍𝐿's \hline
+                hy = self.map_top(self.r) - SEP_W / 2
+                for group, bid, left, n in (("primes", "mapping", self.prime_left, self.d + 1),
+                                            ("targets", "mapped", self.target_left, self.k),
+                                            ("commas", "mapped_comma", self.comma_left, self.nc),
+                                            ("held", "hmapped", self.held_left, self.nh),
+                                            ("interest", "imapped", self.interest_left, self.mi)):
+                    if n and self.tile_open("mapping", group):
+                        self.cells.append(CellBox(f"bar:{bid}:hline", left(0), hy, n * COL_W, SEP_W, "hbar"))
         # the chapter-9 superspace mapping M_L: a rL × dL covector stack over the ssprimes
         # column, framed exactly like M (per-row ⟨ … ] brackets + top/bottom matrix_frame)
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
@@ -3556,6 +3583,11 @@ class _GridBuilder:
         self.vector_list_marks("vectors", "vec:held", "held", self.held_left, self.nh_shown, foot="ebkangle",
                          pending_col=(self.nh if self.pending_held is not None else -1))
         self.vector_list_marks("vectors", "vec:detempering", "detempering", self.detempering_left, self.r, foot="ebkangle")
+        if self.phantom_dim and self.tile_open("vectors", "targets"):  # the augmented dummy target column's EBK (ket: top + bottom angle)
+            mx = self.target_left(self.k) + MARK_INSET
+            mark_w = COL_W - 2 * MARK_INSET
+            self.cells.append(CellBox("ebktop:vec:targets:phantom", mx, self.frame_top_y("vectors"), mark_w, FRAME_H, "ebktop"))
+            self.cells.append(CellBox("ebkangle:vec:targets:phantom", mx, self.frame_brace_y("vectors"), mark_w, BRACE_H, "ebkangle"))
         # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
         # Every 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile is a matrix of prescaled
         # VECTORS, so each column is a ket ``[ … ⟩`` — top = ebktop (square open ⌐), foot =
