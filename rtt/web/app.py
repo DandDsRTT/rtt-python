@@ -3269,7 +3269,18 @@ def index() -> None:
         # window. The top/left margin is the frozen regions' _PAD inset; the right/bottom margin is the
         # body's own scroll padding, so it survives scrolling to the end (see .rtt-gridbody). The CSS
         # caps the pane at the window, past which the body scrolls.
-        grid_pane.style(f"width:{lay.width + lay.right_overhang + 2 * _PAD}px; height:{lay.height + 2 * _PAD}px")
+        base_w = lay.width + lay.right_overhang + 2 * _PAD
+        base_h = lay.height + 2 * _PAD
+        grid_pane.style(f"width:{base_w}px; height:{base_h}px")
+        # publish sizes for the scrollbar-fit pass (rttFreeze.fit): it resets the pane to the base size,
+        # sees which axis the window caps, then grows the pane by a scrollbar width on the PERPENDICULAR
+        # axis so a vertical scrollbar never tips a spurious horizontal one (and the grid never reflows
+        # when a bar appears). base-w/-h are the pane's footprint (incl. the right_overhang the last
+        # column title spills); fit-w is the gridlines' own width — the pane width below which the BODY
+        # must scroll horizontally. They differ by the overhang, which lives in the frozen colhead (not
+        # the body scroller), so it must not count toward needing a body h-scrollbar. See freeze.js.
+        fit_w = lay.width + 2 * _PAD
+        grid_pane.props(f'data-base-w="{base_w}" data-base-h="{base_h}" data-fit-w="{fit_w}"')
         board.style(f"width:{lay.width}px; height:{lay.height - fy}px")
         colhead.style(f"height:{fy}px")
         colhead_inner.style(f"width:{lay.width}px; height:{fy}px")
@@ -3426,6 +3437,8 @@ def index() -> None:
         # persist the whole document so a browser refresh restores exactly this state
         _doc_store()[_STORE_KEY] = editor.serialize()
         building[0] = False
+        # (the scrollbar-fit pass re-runs on its own when the grid resizes — the board's width/height
+        # CSS transition fires the listener in freeze.js — so render needn't push any JS here.)
 
     # the hamburger toggles the settings pane. Opening (panelgroup gets .rtt-open) collapses the
     # closed-state tab and slides the drawer out, the app reflowing to its right.
@@ -3434,6 +3447,8 @@ def index() -> None:
     def toggle_drawer():
         drawer_open[0] = not drawer_open[0]
         panelgroup.classes(add="rtt-open") if drawer_open[0] else panelgroup.classes(remove="rtt-open")
+        # (opening/closing narrows the grid pane via the panelgroup's width transition, which fires the
+        # scrollbar-fit listener in freeze.js once it settles — no JS push needed here.)
 
     def _pane_chrome():
         """The settings hamburger + the app title — one each, rendered once. CSS pins the hamburger

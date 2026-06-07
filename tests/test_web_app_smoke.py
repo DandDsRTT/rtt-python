@@ -547,11 +547,11 @@ def test_frozen_wash_copies_show_only_at_rest_dropping_once_the_body_scrolls():
 
 
 def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scroll():
-    # the only JS is a capture-phase scroll listener over .rtt-gridbody (the body scroller). It
+    # the freeze SYNC is a capture-phase scroll listener over .rtt-gridbody (the body scroller). It
     # translateX-syncs the column-title strip to the body's horizontal scroll (the one thing CSS
     # can't do for a strip lifted out of the scroller) and toggles rtt-scrolled-x/y on .rtt-app from
     # the body's scroll offset to reveal the seams. It never moves the row titles — position:sticky
-    # does that — so there is no bobble.
+    # does that — so there is no bobble. (A second pass reserves scrollbar space; see the next test.)
     js = app._FREEZE_JS
     assert ".rtt-gridbody" in js                                # listens to the body scroller
     assert "scrollTop" in js and "scrollLeft" in js             # reads its scroll offset
@@ -559,6 +559,25 @@ def test_freeze_script_syncs_the_column_strip_and_toggles_the_seam_on_body_scrol
     assert "rtt-scrolled-x" in js and "rtt-scrolled-y" in js    # toggles the seams
     assert "addEventListener('scroll'" in js
     assert "ResizeObserver" not in js and "scroll-timeline" not in js  # no fixed-box machinery
+
+
+def test_freeze_script_reserves_a_scrollbar_so_one_bar_never_forces_a_second():
+    # The body scroller fills the pane, which HUGS the grid with only a _PAD margin — narrower than a
+    # scrollbar. So a scrollbar on one axis used to eat into the perpendicular margin and tip a SECOND,
+    # spurious scrollbar onto the other axis (the reported bug: a vertical scrollbar forcing a needless
+    # horizontal one). rttFreeze.fit removes the coupling: it reads the pane's published base size
+    # (data-base-w/-h), detects which axis the window caps, then (a) grows the pane by a scrollbar's
+    # width on the axis PERPENDICULAR to a needed scrollbar — borrowing the surrounding white margin so
+    # the bar sits in reserved space and the grid never reflows — and (b) drops that side's scroll-
+    # padding, so even when the pane is already maxed (no room to grow) the gridlines themselves still
+    # fit. It runs off resize/boot (and a render/sidebar nudge), never the scroll path — no scroll-time
+    # work, no bobble — and uses no ResizeObserver / scroll-timeline.
+    js = app._FREEZE_JS
+    assert "fit" in js                                          # the reservation pass
+    assert "data-base" in js or "baseW" in js                  # reads the pane's published base size
+    assert "paddingRight" in js and "paddingBottom" in js      # drops the cross-axis margin if maxed
+    assert "offsetWidth" in js and "clientWidth" in js         # measures the live scrollbar width
+    assert "ResizeObserver" not in js and "scroll-timeline" not in js  # still no fixed-box machinery
 
 
 def test_tooltip_dismiss_script_drops_hover_help_on_pointerdown():

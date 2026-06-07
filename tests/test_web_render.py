@@ -48,6 +48,23 @@ async def test_default_page_renders_without_error(user: User) -> None:
     await user.should_see("tuning")
 
 
+async def test_grid_pane_publishes_its_base_size_for_the_scrollbar_fit(user: User) -> None:
+    # the scrollbar-fit pass (rttFreeze.fit) reserves a scrollbar's width so one bar never forces a
+    # second; to do that it must reset the pane to its UN-reserved size before measuring the window
+    # caps. render publishes that base size as data-base-w/-h, which must equal the inline width/height
+    # it sets — the value the JS resets to (see assets/freeze.js, tests in test_web_app_smoke).
+    await user.open("/")
+    pane = next(iter(user.find(marker="gridpane").elements))
+    base_w, base_h = pane._props.get("data-base-w"), pane._props.get("data-base-h")
+    fit_w = pane._props.get("data-fit-w")
+    assert base_w is not None and base_h is not None and fit_w is not None
+    assert float(base_w) == float(pane._style["width"].rstrip("px"))
+    assert float(base_h) == float(pane._style["height"].rstrip("px"))
+    # fit-w is the gridlines' own width — base-w minus the last column title's right overhang — so it
+    # never exceeds base-w; a horizontal scrollbar is owed only when the pane is capped below it.
+    assert 0 < float(fit_w) <= float(base_w)
+
+
 # --- tier 2: each Show feature's render branch (paths the default render never reaches) ---
 
 # The "general" Show layers are toggled by clicking their part of the dummy tile (located by
