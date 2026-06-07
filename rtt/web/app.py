@@ -1466,7 +1466,7 @@ class _Reconciler:
         ratiocell) instead of a read-only cell — it shows when the cell isn't focused."""
         parts = _ratio_parts(cb.text)
         with ui.element("div").classes("rtt-ratio rtt-cellface" if overlay else "rtt-ratio"):
-            if approx:
+            if approx and parts:  # the ~ marks an approximate FRACTION; a non-ratio ("–", the phantom gen) gets none
                 ui.label("~").classes("rtt-approx")
             if parts:
                 with ui.element("div").classes("rtt-frac"):

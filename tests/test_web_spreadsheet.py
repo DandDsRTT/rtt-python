@@ -2044,6 +2044,22 @@ def test_size_factor_makes_the_all_interval_weight_a_matrix_dropping_the_chart()
     assert not lils["cell:weight:targets:0:0"].phantom
 
 
+def test_matrix_weight_reserves_no_chart_band_above_it():
+    # the weight matrix 𝑆ₚ draws no bar chart (a chart is one bar per column; a matrix has rows), so
+    # turning charts on must NOT reserve an empty chart band above it — that band was the big gap in the
+    # tile's top third. Generic: a charted row reserves the band only when its value band is a single row.
+    def gaps(charts):
+        b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))),
+                                     dict(settings.defaults(), weighting=True, charts=charts),
+                                     tuning_scheme="minimax-lils-S")
+        b.layout()
+        return b.row_y["weight"] - b.tile_top["weight"], b.row_y["damage"] - b.tile_top["damage"]
+    w_on, d_on = gaps(True)
+    w_off, d_off = gaps(False)
+    assert w_on == w_off   # matrix weight: charts on vs off → identical top gap (no reserved band)
+    assert d_on > d_off    # a single-row charted row (damage) still reserves its chart band
+
+
 def test_all_interval_weight_matrix_carries_the_Sp_symbol_and_a_spanning_bracket():
     on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True,
                                  symbols=True, equivalences=True).cells}

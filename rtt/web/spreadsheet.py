@@ -1358,8 +1358,10 @@ class _GridBuilder:
             # and a taller bottom curly brace (BRACE_H, with room for its spike)
             top_frame = (FRAME_H + FRAME_GAP) if framed else 0
             bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
-            # a charted row grows a chart band (above the values, below the top frame)
-            charted = show_charts and key in CHARTED_ROWS and not folded
+            # a charted row grows a chart band (above the values, below the top frame) — but ONLY when its
+            # value band is a single row: a bar chart is one bar per column, so a matrix-valued charted row
+            # (the weight 𝑆ₚ) draws no chart and must reserve no band (else its tile's top third sits empty)
+            charted = show_charts and key in CHARTED_ROWS and not folded and natural == ROW_H
             chart_band = (CHART_H + CHART_GAP) if charted else 0
             cap = self.caption_band(key, folded)
             # the symbol line reserves a slot above the caption for every symboled row;

@@ -167,6 +167,25 @@ async def test_the_lils_weight_matrix_greys_its_phantom_prime_cells(user: User) 
     assert "rtt-phantom" not in _wrap_classes(user, "cell:weight:targets:0:0")  # a real cell does not
 
 
+async def test_the_phantom_generator_ratio_has_no_approx_tilde(user: User) -> None:
+    # the size generator's ratio is "–" (no real ratio), so it must NOT get the "~" approximate marker
+    # that real tempered generator ratios carry — that rendered an insane "~–". The ~ shows only when
+    # there is an actual fraction to approximate (a render-layer regression the model dump can't see —
+    # the ~ is added by app._ratio, not stored in the cell text).
+    await user.open("/")
+    user.find(kind=ui.checkbox, content="weighting").click()
+    user.find(kind=ui.checkbox, content="all-interval").click()
+    _cell_child(user, "control:all_interval").set_value(True)       # all-interval (targets = primes)
+    user.find(kind=ui.checkbox, content="alt. complexity").click()  # reveal box 𝐋's diminuator checkbox
+    await user.should_see(marker="control:diminuator")
+    _cell_child(user, "control:diminuator").set_value(True)         # replace diminuator → size factor → lils
+    await user.should_see(marker="qgen:2")                          # the size generator's ratio header
+    phantom = _cell_child(user, "qgen:2")                           # its rtt-ratio div
+    assert not any("rtt-approx" in ch._classes for ch in phantom.default_slot.children)  # no "~" on "–"
+    real = _cell_child(user, "qgen:0")                              # the period generator's ratio (2/1)
+    assert any("rtt-approx" in ch._classes for ch in real.default_slot.children)         # ~ still shows for a real ratio
+
+
 async def test_interval_columns_render_draggable_reorder_grips(user: User) -> None:
     # the target list shows by default, so its reorder grip renders with no setup: a draggable
     # ⠿ over each column (also the drop target). Drive the builder and confirm it's a drag source.
