@@ -2047,9 +2047,13 @@ def test_size_factor_makes_the_all_interval_weight_a_matrix_dropping_the_chart()
 def test_all_interval_weight_matrix_carries_the_Sp_symbol_and_a_spanning_bracket():
     on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True,
                                  symbols=True, equivalences=True).cells}
-    # 𝑆ₚ — the guide's prime-proxy simplicity weight matrix (all-interval is simplicity-weighted); no
-    # "= 𝑋⁻¹" equivalence, since 𝑆ₚ is NOT an inverse of 𝑋 (the log-size lives in 𝑋 = 𝑍𝐿)
-    assert on["symbol:weight:targets"].text == "𝑆ₚ"
+    # 𝑆ₚ — the guide's prime-proxy simplicity weight matrix (all-interval is simplicity-weighted). NOT 𝑋⁻¹
+    # (the log-size lives in 𝑋 = 𝑍𝐿); its honest form is the direct sum 𝐿⁻¹ ⊕ 1 — the real-prime simplicity
+    # block (the live base glyph 𝐿 for log-prime) plus the dummy prime's 1 corner. Shown with equivalences on.
+    assert on["symbol:weight:targets"].text == "𝑆ₚ = 𝐿⁻¹ ⊕ 1"
+    # without equivalences it's the bare glyph
+    bare = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True, symbols=True).cells}
+    assert bare["symbol:weight:targets"].text == "𝑆ₚ"
     # the appendix's [[…] …] form: outer [ … ] over all d+1 = 4 rows + one [ … ] per row, the outer right
     # bracket past the overflowing phantom (size) column
     assert on["bracket:weight:l"].text == "[" and on["bracket:weight:r"].text == "]"

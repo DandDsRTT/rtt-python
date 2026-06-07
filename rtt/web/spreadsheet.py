@@ -3380,8 +3380,11 @@ class _GridBuilder:
             equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
         if self.weight_is_matrix:  # the all-interval weight is the SIMPLICITY weight matrix (no per-prime
             # list form): the square non-diagonal case is the true inverse 𝑆 = 𝑋⁻¹; the size factor makes it
-            # the guide's prime-proxy 𝑆ₚ = block-diag(𝑋⁻¹, 1), which is NOT 𝑋⁻¹ (the log-size lives in 𝑋 = 𝑍𝐿).
-            equivalences[("weight", "targets")] = "" if self.size_factor else " = 𝑋⁻¹"
+            # the guide's prime-proxy 𝑆ₚ, which is NOT 𝑋⁻¹ (the log-size lives in 𝑋 = 𝑍𝐿) but the direct sum
+            # 𝐿⁻¹ ⊕ 1 — the base simplicity block (live glyph) plus the dummy prime's 1 corner. Consistent
+            # with the non-size-factor all-interval weight diag(𝐿)⁻¹, which it just extends with that corner.
+            equivalences[("weight", "targets")] = (
+                f" = {self.prescaler_symbol}⁻¹ ⊕ 1" if self.size_factor else " = 𝑋⁻¹")
         if not self.show_weighting:  # the weight factor's row is hidden, so don't dangle it (𝒘 / 𝐿⁻¹)
             equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
         for (rkey, ckey), name in self.effective_captions.items():
