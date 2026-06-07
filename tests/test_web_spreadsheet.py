@@ -2254,6 +2254,28 @@ def test_size_factor_completes_the_units_column_for_the_augmented_rows():
     assert "ucol:vectors:3" not in lp and "ucol:mapping:2" not in lp and "ucol:prescaling:3" not in lp
 
 
+def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first():
+    # GENERIC: a row-tile's units span its actual cell-row count (row_nsub), so a matrix-valued row
+    # (the weight 𝑆ₚ, the prescaler 𝑋) gets a unit on EVERY subrow — not just the first (the old bug,
+    # from when the weight was always a single scalar row). Multi-row tiles index the id by subrow;
+    # single-row tiles keep the bare id. The weight's augmented (phantom) row greys, mirroring its cells.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True).cells}
+    units = [lils[f"ucol:weight:{i}"].text for i in range(4)]
+    assert len(set(units)) == 1 and units[0].endswith("/")                       # one identical unit per subrow
+    assert lils["ucol:weight:3"].phantom and not lils["ucol:weight:0"].phantom   # the phantom row greys
+    assert "ucol:weight" not in lils                                              # multi-row → indexed, no bare id
+    # a single-row weight (the all-interval scalar list, no matrix) keeps the bare id — generic, not snowflaked
+    scalar = {c.id for c in _with("minimax-S", weighting=True, symbols=True, domain_units=True).cells}
+    assert "ucol:weight" in scalar and "ucol:weight:0" not in scalar
+
+
+def test_size_factor_weight_caption_is_the_prime_proxy_simplicity_name():
+    # the matrix weight is named for what its 𝑆ₚ subscript means — the PRIME-PROXY simplicity weights
+    # (parallel to the prime-proxy target list Tₚ), not "target interval …".
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, names=True).cells}
+    assert lils["caption:weight:targets"].text == "prime proxy simplicity weight matrix"
+
+
 def test_size_factor_completes_the_matrix_labels_for_the_augmented_dimension():
     # the row + column label bands gain the augmented dimension's labels (when symbols is on). The size
     # generator is the (r+1)-th map row / generator sub-column, numbered 𝒎₃ / 𝒈₃ but greyed (the dropped

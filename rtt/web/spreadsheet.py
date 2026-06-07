@@ -2172,24 +2172,24 @@ class _GridBuilder:
             if self.phantom_dim:  # the size generator's unit follows the generator units (g₍ᵣ₊₁₎/), greyed
                 self.cells.append(CellBox(f"ucol:mapping:{self.r}", self.col_x["units"], self.map_top(self.r), self.col_w["units"], ROW_H,
                                      "units", text=f"g{_sub(self.r + 1)}/", phantom=True))
-        for key in ("tuning", "just", "retune"):
-            if self.tile_open(key, "units"):
-                self.cells.append(CellBox(f"ucol:{key}", self.col_x["units"], self.row_y[key], self.col_w["units"], ROW_H,
-                                     "units", text="¢/"))
-        # the weighting rows' units-column labels: the prescaler is octaves (one per matrix row,
-        # like the d-tall interval vectors); complexity and weight carry the scheme's annotated
-        # units ((C)/ … (ES)/), and damage their ¢-prefixed form (¢(C)/ …) — all tracking the live
-        # scheme like tile_unit (guide ch.10 "Annotated units").
-        if self.tile_open("prescaling", "units"):
-            for i in range(self.d + self.size_rows):  # incl. the real 𝒛 size row (size factor) — also octaves
-                self.cells.append(CellBox(f"ucol:prescaling:{i}", self.col_x["units"], self.row_y["prescaling"] + i * ROW_H,
-                                     self.col_w["units"], ROW_H, "units", text="oct/"))
-        spine = {"complexity": f"{self.complexity_unit}/", "weight": f"{self.weight_unit}/",
-                 "damage": f"{self.damage_unit}/"}
-        for key, text in spine.items():
-            if self.tile_open(key, "units"):
-                self.cells.append(CellBox(f"ucol:{key}", self.col_x["units"], self.row_y[key], self.col_w["units"], ROW_H,
-                                     "units", text=text))
+        # the cents / octave / annotated-unit rows (guide ch.10 "Annotated units"). Each renders one
+        # unit cell PER SUBROW — derived from the cell-row count row_nsub — so a matrix-valued row (the
+        # prescaler 𝑋, the weight 𝑆ₚ) carries a unit on EVERY row, not just its first. Generic to any
+        # multi-row tile, so this can't silently regress when a new matrix row appears. Single-row tiles
+        # keep the bare id; multi-row ones index it by subrow (matching the prescaler's existing ids).
+        const_units = {"tuning": "¢/", "just": "¢/", "retune": "¢/", "prescaling": "oct/",
+                       "complexity": f"{self.complexity_unit}/", "weight": f"{self.weight_unit}/",
+                       "damage": f"{self.damage_unit}/"}
+        for key, text in const_units.items():
+            if not self.tile_open(key, "units"):
+                continue
+            n = self.row_nsub[key]
+            for i in range(n):
+                cid = f"ucol:{key}:{i}" if n > 1 else f"ucol:{key}"
+                # the weight matrix greys its augmented (size/phantom) row — mirror that on its unit
+                phantom = key == "weight" and self.augmented and i == self.d
+                self.cells.append(CellBox(cid, self.col_x["units"], self.row_y[key] + i * ROW_H,
+                                     self.col_w["units"], ROW_H, "units", text=text, phantom=phantom))
         if "units" in self.row_y:
             uy = self.row_y["units"]
             if self.tile_open("units", "gens"):
@@ -3392,7 +3392,7 @@ class _GridBuilder:
             if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:  # the prime-proxy name (per the Guide)
                 name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
             if self.weight_is_matrix and (rkey, ckey) == ("weight", "targets"):
-                name = "target interval simplicity weight matrix"  # the all-interval weight 𝑆 / 𝑆ₚ (§10), not the list
+                name = "prime proxy simplicity weight matrix"  # the all-interval weight 𝑆 / 𝑆ₚ (§10) — prime-proxy like Tₚ, not the list
             cy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey]
             if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
                 equiv = equivalences.get((rkey, ckey), "") if self.show_equiv else ""
