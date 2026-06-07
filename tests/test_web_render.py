@@ -1509,15 +1509,18 @@ async def test_body_cells_render_on_the_board_under_no_frozen_region(user: User)
         assert not _renders_inside(user, "cell:mapping:0:0", region)
 
 
-async def test_settings_frozen_header_matches_the_grid_column_strip_height(user: User) -> None:
-    # "exactly the same height as the frozen part of the main app pane": render() sizes the settings
-    # pane's frozen header to the layout's freeze_y — the very value the grid's frozen column strip
-    # is sized to — so the two frozen/scrolling seams sit at the same height across the app.
+async def test_settings_frozen_header_plus_chrome_bar_matches_the_grid_column_strip_height(user: User) -> None:
+    # "exactly the same height as the frozen part of the main app pane": the settings frozen header now
+    # sits BELOW the chrome title bar, so the two together must span the grid's frozen column strip
+    # height (freeze_y) for the settings and grid frozen/scrolling seams to sit at the same height
+    # across the app. render() therefore sizes the header to freeze_y MINUS the chrome bar. (The title-
+    # bar rework regressed this by leaving the header at the full freeze_y, so its seam sat a chrome-
+    # bar's height below the grid's — this guard now accounts for the bar above it.)
     await user.open("/")
     frozen = next(iter(user.find(marker="showfrozen").elements))
     colhead = next(iter(user.find(marker="colhead").elements))
     assert frozen._style.get("height")  # the header is sized (not left to hug its content)...
-    assert frozen._style.get("height") == colhead._style.get("height")  # ...to the strip's height
+    assert _px(frozen, "height") == _px(colhead, "height") - web_app._CHROME_H  # ...to strip minus the bar
 
 
 def _px(el, prop: str) -> float:
@@ -1544,15 +1547,15 @@ async def test_grid_pane_hugs_the_grid_with_a_margin_all_round(user: User) -> No
 
 
 async def test_settings_body_caps_below_the_window_so_it_doesnt_scroll_when_it_fits(user: User) -> None:
-    # the settings body sizes to its own content but render() caps it at the window less the inset, the
-    # chrome title bar and the frozen header (calc(100vh - (pad + chrome_h + freeze_y)px)), so it
-    # scrolls only once its content genuinely exceeds that — a self-contained cap that doesn't depend
-    # on the flex hug rounding out exactly.
+    # the settings body sizes to its own content but render() caps it at the window less the inset and
+    # the frozen band — the chrome title bar + frozen header together span the inset+freeze_y, same as
+    # the grid — (calc(100vh - (pad + freeze_y)px)), so it scrolls only once its content genuinely
+    # exceeds that — a self-contained cap that doesn't depend on the flex hug rounding out exactly.
     await user.open("/")
     scroll = next(iter(user.find(marker="showscroll").elements))
     colhead = next(iter(user.find(marker="colhead").elements))
     fy = _px(colhead, "height")  # the frozen header / column-strip height (freeze_y)
-    assert scroll._style.get("max-height") == f"calc(100vh - {web_app._PAD + web_app._CHROME_H + fy}px)"
+    assert scroll._style.get("max-height") == f"calc(100vh - {web_app._PAD + fy}px)"
 
 
 async def test_state_persists_across_a_refresh(user: User) -> None:

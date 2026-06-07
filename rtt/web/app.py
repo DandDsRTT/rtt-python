@@ -3276,13 +3276,14 @@ def index() -> None:
         corner.style(f"width:{fx}px; height:{fy}px")
         gridbody.style(f"top:{_PAD + fy}px")
         rowband.style(f"width:{fx}px; height:{lay.height - fy}px")
-        # the settings pane's frozen header takes the same height as the grid's frozen column
-        # strip, so the two frozen/scrolling seams line up across the app
-        show_frozen.style(f"height:{fy}px")
-        # the settings body sizes to its own content but caps at the window less the inset, the
-        # chrome title bar and the frozen header above it, so a tall toggle list scrolls there
-        # instead of off-screen
-        show_scroll.style(f"max-height:calc(100vh - {_PAD + _CHROME_H + fy}px)")
+        # the chrome title bar + the settings frozen header below it together span the grid's frozen
+        # column-strip height (freeze_y), so the settings and grid frozen/scrolling seams line up
+        # across the app. The header itself is therefore freeze_y minus the chrome bar.
+        show_frozen.style(f"height:{max(0, fy - _CHROME_H)}px")
+        # the settings body sizes to its own content but caps at the window less the inset and that
+        # combined frozen band (which equals the inset + freeze_y), so a tall toggle list scrolls
+        # there instead of off-screen
+        show_scroll.style(f"max-height:calc(100vh - {_PAD + fy}px)")
         seen = set()
 
         # Each gridline renders into every pane its extent reaches, so the branching stays put in
