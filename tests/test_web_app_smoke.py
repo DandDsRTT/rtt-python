@@ -223,7 +223,7 @@ def test_math_html_styles_products_per_letter_and_honours_the_subscript_sentinel
     assert app._math_html("𝒕C") == app._math_html("𝒕") + "C"
     assert app._math_html(" = 𝒈𝑀") == " = " + app._math_html("𝒈") + app._math_html("𝑀")
     # NORM_SUB forces an italic subscript (the complexity row's trailing q); SUB is a PLAIN
-    # subscript where only the math-italic 𝑞 slants (the dual(q) objective: "dual" upright)
+    # subscript where only the math-italic 𝑞 slants (the dual(q) mean damage: "dual" upright)
     assert app._math_html(spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE) == \
         '<sub style="font-style:italic">q</sub>'
     plain = app._math_html(spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE)
@@ -857,7 +857,7 @@ def test_bar_chart_straddles_a_shared_zero_baseline_for_signed_values():
     assert up[0] < down[0]  # positive rises above the baseline, negative drops below it
 
 
-def test_bar_chart_indicator_line_is_broken_by_its_power_labelled_objective():
+def test_bar_chart_indicator_line_is_broken_by_its_power_labelled_mean_damage():
     # the minimized-damage indicator: a solid grey line BROKEN by its ⟪𝐝⟫ label (the label
     # sits in a gap in the line), the scheme's Lp power as the subscript
     svg = app._bar_chart(272, 64, (0.0, 10.0, 26.385), indicator=26.385, indicator_label="∞")

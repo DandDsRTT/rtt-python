@@ -1439,7 +1439,7 @@ def test_picking_a_scheme_leaves_the_tuning_frozen_until_optimize():
 
 
 def test_tuning_is_optimized_tracks_whether_the_grid_shows_the_optimum():
-    # the objective wraps in min() only while the displayed tuning sits at the scheme's optimum.
+    # the mean damage wraps in min() only while the displayed tuning sits at the scheme's optimum.
     editor = Editor()
     assert editor.tuning_is_optimized is True  # default: the grid shows the freshly-computed optimum
     editor.set_generator_tuning_component(1, 700.0)  # hand-edit a generator off the optimum
@@ -1481,18 +1481,18 @@ def test_optimize_redundant_greys_the_button_only_when_frozen_at_the_optimum():
     assert editor.optimize_redundant is False           # ...so it does NOT grey — it stays the live toggle
 
 
-def test_layout_wraps_the_objective_symbol_in_min_while_optimized():
-    # end to end: the editor feeds tuning_is_optimized into the layout, so the rendered objective
+def test_layout_wraps_the_mean_damage_symbol_in_min_while_optimized():
+    # end to end: the editor feeds tuning_is_optimized into the layout, so the rendered mean damage
     # symbol carries the min() wrap while optimized and drops it after a manual generator deviation.
     editor = Editor()
     editor.set_show("optimization", True)
 
-    def objective_symbol() -> str:
-        return {c.id: c for c in editor.layout().cells}["optimization:objective:symbol"].text
+    def mean_damage_symbol() -> str:
+        return {c.id: c for c in editor.layout().cells}["optimization:mean_damage:symbol"].text
 
-    assert objective_symbol() == "min(⟪𝐝⟫ₚ)"  # default: the displayed tuning is the scheme's optimum
+    assert mean_damage_symbol() == "min(⟪𝐝⟫ₚ)"  # default: the displayed tuning is the scheme's optimum
     editor.set_generator_tuning_component(1, 700.0)  # hand-edit a generator off the optimum
-    assert objective_symbol() == "⟪𝐝⟫ₚ"
+    assert mean_damage_symbol() == "⟪𝐝⟫ₚ"
 
 
 def test_set_target_override_text_and_vectors():

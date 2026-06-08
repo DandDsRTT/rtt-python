@@ -117,13 +117,13 @@ def test_target_preset_help_describes_an_integer_or_odd_limit_not_a_prime_limit(
     assert "integer limit" in help_text and "odd limit" in help_text
 
 
-def test_objective_help_names_a_different_quantity_per_mode():
-    # the optimization objective is a read-only value but still carries help, and that help must
+def test_mean_damage_help_names_a_different_quantity_per_mode():
+    # the optimization mean damage is a read-only value but still carries help, and that help must
     # track the scheme: target-based it is the minimized damage ⟪𝐝⟫ₚ over the target list;
     # all-interval it is the retuning magnitude minimized over every interval. Two distinct,
     # non-empty wordings, each naming the quantity the live symbol shows.
-    target = tooltips.objective_help(all_interval=False)
-    allint = tooltips.objective_help(all_interval=True)
+    target = tooltips.mean_damage_help(all_interval=False)
+    allint = tooltips.mean_damage_help(all_interval=True)
     assert target.strip() and allint.strip()
     assert target != allint
     assert "⟪𝐝⟫ₚ" in target and "target" in target
@@ -167,8 +167,8 @@ def test_every_rendered_cell_is_classified_for_tooltips():
     # the safety net behind control_help: sweep a full build and require each rendered cell to
     # be either a declared read-only output (no tooltip) or an interactive control with hover
     # text. A brand-new control kind with no tooltips.py entry trips this — closing the gap a
-    # hardcoded test list would leave open. The optimization objective is the lone read-only
-    # exception (OBJECTIVE_IDS): it carries help despite being a value, so it must read like a
+    # hardcoded test list would leave open. The optimization mean damage is the lone read-only
+    # exception (MEAN_DAMAGE_IDS): it carries help despite being a value, so it must read like a
     # control here, not like a bare output.
     for cb in _rendered_cells():
         text = tooltips.control_help(cb.kind, cb.id)

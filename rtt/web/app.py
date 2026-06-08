@@ -404,7 +404,7 @@ def _chart_ticks(lo, hi):
 def _bar_chart(w, h, values, indicator=None, indicator_label=""):
     """A bar chart filling its 1:1 px box: one bar per value, aligned to the value
     columns below, rising/falling from a zero baseline; gridlines mark nice ticks. When
-    ``indicator`` is set (the optimization objective ⟪𝐝⟫ₚ on the damage chart), a solid
+    ``indicator`` is set (the optimization mean damage ⟪𝐝⟫ₚ on the damage chart), a solid
     lighter-grey line marks that minimized-damage level across the plot, broken by a
     ⟪𝐝⟫ label whose subscript is ``indicator_label`` (the scheme's Lp power ∞ / 2 / 1)."""
     axis_x, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
@@ -1167,7 +1167,7 @@ class _Reconciler:
         self.ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
         self.rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
         self.opt_buttons: dict = {}  # optimize-button cell id -> its ui.button (for the auto-lock visual)
-        self.objective_tips: dict = {}  # optimization-objective cell id -> its ui.tooltip (text swaps with all-interval mode)
+        self.mean_damage_tips: dict = {}  # optimization-mean damage cell id -> its ui.tooltip (text swaps with all-interval mode)
         self.target_limit_tip = None  # the target chooser's ui.tooltip (text swaps to an invalid-limit message)
         self.captions: dict = {}  # caption cell id -> the ui.html holding its (maybe underlined) name
         self.caption_html: dict = {}  # caption cell id -> last html, to rewrite on a mnemonic toggle
@@ -1179,7 +1179,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.objective_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The edit-preview highlight: while one editable cell is focused, every render rings the
         # OTHER cells whose value the in-progress edit has moved, so the user previews the ripple
         # before leaving the cell. preview_baseline is the layout captured when the cell took focus
@@ -1341,16 +1341,16 @@ class _Reconciler:
         # The mark/data-eid ride the wrap, so the tooltip hangs off it too — one shared anchor.
         help_text = tooltips.control_help(cb.kind, cb.id)
         if help_text:
-            if cb.id in tooltips.OBJECTIVE_IDS:
-                # the read-only objective's help names a different quantity per mode (damage
+            if cb.id in tooltips.MEAN_DAMAGE_IDS:
+                # the read-only mean damage's help names a different quantity per mode (damage
                 # ⟪𝐝⟫ₚ vs the all-interval retuning magnitude); keep the Tooltip handle so
                 # render() can swap its wording in place when the mode flips, like the symbol glyph
                 with wrap:
-                    self.objective_tips[cb.id] = ui.tooltip(help_text)
+                    self.mean_damage_tips[cb.id] = ui.tooltip(help_text)
             elif cb.id == "preset:target":
                 # keep the target chooser's tooltip handle so the limit validator can swap in an
                 # invalid-limit message (an even OLD limit, or a non-whole number) and back — the
-                # same in-place relabel the objective uses
+                # same in-place relabel the mean damage uses
                 with wrap:
                     self.target_limit_tip = ui.tooltip(help_text)
             else:
@@ -1559,7 +1559,7 @@ class _Reconciler:
                 # the label may have changed shape (bare wₙ → wₙ = cₙ⁻¹); re-pick its size class
                 # so a now-wider header takes the shrink/wrap variant instead of overspilling.
                 self.math_cells[cb.id].classes(replace=self._matlabel_classes(cb.text))
-            if cb.id == "optimization:objective:symbol":
+            if cb.id == "optimization:mean_damage:symbol":
                 # all-interval relabels this to the wide retuning magnitude ‖𝒓𝐿⁻¹‖dual(q); shrink
                 # it (rtt-opt-wide) so it stays centred over its COL_W value
                 wide = "‖" in cb.text
@@ -1571,10 +1571,10 @@ class _Reconciler:
         wrap.classes("rtt-caption-cell")
         # the optimization box's captions stay on one line (no wrap), unlike tile names; a caption
         # with align="left" reads left-justified under its control (e.g. a preset chooser's label).
-        # The lone exception is the objective's own label, whose wide all-interval "retuning
+        # The lone exception is the mean damage's own label, whose wide all-interval "retuning
         # magnitude" must wrap to two lines (its slot is too narrow to spread it on one) — it wraps
         # at the space like a tile name, while the short "power mean" still fits on a single line.
-        one_line = cb.id.startswith("optimization:") and cb.id != "optimization:objective:caption"
+        one_line = cb.id.startswith("optimization:") and cb.id != "optimization:mean_damage:caption"
         cls = "rtt-caption rtt-opt-1line" if one_line else "rtt-caption"
         if cb.align == "left":
             cls += " rtt-caption-left"
@@ -3392,14 +3392,14 @@ def index() -> None:
         for eid in [e for e in rec.els if e not in seen]:
             rec.drop(eid)
 
-        # the optimization objective is read-only yet helped, and that help names a different
+        # the optimization mean damage is read-only yet helped, and that help names a different
         # quantity per mode — the minimized damage ⟪𝐝⟫ₚ over the targets, or (all-interval) the
         # retuning magnitude. Swap its tooltip(s) to match the live scheme, the same in-place
         # relabel the symbol glyph makes; set_text only pushes when the wording actually changes.
-        if rec.objective_tips:
-            obj_help = tooltips.objective_help(service.is_all_interval(editor.tuning_scheme))
-            for tip in rec.objective_tips.values():
-                tip.set_text(obj_help)
+        if rec.mean_damage_tips:
+            mean_damage_help_text = tooltips.mean_damage_help(service.is_all_interval(editor.tuning_scheme))
+            for tip in rec.mean_damage_tips.values():
+                tip.set_text(mean_damage_help_text)
 
         refs["undo"].set_enabled(editor.can_undo)
         refs["redo"].set_enabled(editor.can_redo)

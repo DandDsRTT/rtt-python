@@ -10,13 +10,13 @@ text of their own.
   - :data:`AUDIO_HELP`  — the dummy tile's audio bank controls (mute / waveform / play-mode / hold / 1-1).
   - :func:`control_help` — a grid cell's ``(kind, id)`` → its hover text, or ``None`` for
     the read-only output kinds listed in :data:`READONLY_KINDS`.
-  - :func:`objective_help` — the optimization objective's hover text, which names a different
-    quantity per mode (see :data:`OBJECTIVE_IDS`); the renderer swaps it live as all-interval flips.
+  - :func:`mean_damage_help` — the optimization mean damage's hover text, which names a different
+    quantity per mode (see :data:`MEAN_DAMAGE_IDS`); the renderer swaps it live as all-interval flips.
 
 Coverage is test-enforced (``tests/test_web_tooltips.py``): ``SHOW_HELP`` must match
 ``settings.DEFAULTS``, every editable dual must match ``spreadsheet.EDITABLE_PTEXT``, and
 every kind a full-feature build renders must be either in ``READONLY_KINDS`` or carry help
-(the lone read-only exceptions are the :data:`OBJECTIVE_IDS` cells) — so a new setting or
+(the lone read-only exceptions are the :data:`MEAN_DAMAGE_IDS` cells) — so a new setting or
 control can't ship without its hover text.
 """
 
@@ -48,7 +48,7 @@ SHOW_HELP: dict[str, str] = {
     "form_controls": "Show the form controls — rewrite the mapping or comma basis into a chosen form.",
     "form_colorization": "Tint the cells touched by the form 𝐹. Refines “form controls”.",
     "tuning_boxes": "Show the tuning boxes — the generator tuning map, prescaler, damage, and more.",
-    "optimization": "Show the optimization box — the objective, the optimize button, and the power 𝑝.",
+    "optimization": "Show the optimization box — the mean damage, the optimize button, and the power 𝑝.",
     "tuning_ranges": "Chart each generator's tuning range as an I-beam under the generator tuning map.",
     "weighting": "Show the weighting boxes — the prescaler, the complexity 𝒄, and the weight 𝒘.",
     "all_interval": "Show the all-interval control — optimize over every interval rather than a finite target list.",
@@ -96,17 +96,17 @@ READONLY_KINDS: frozenset[str] = frozenset({
 
 # Read-only OUTPUT values that nonetheless carry hover help — exempt from the no-tooltip rule.
 # Two kinds qualify:
-#   - the optimization objective's value cell (a ``tval``) and symbol cell (a ``symbol``). Like the
-#     power 𝑝, the objective carries a label caption ("power mean" / "retuning magnitude"), but that
+#   - the optimization mean damage's value cell (a ``tval``) and symbol cell (a ``symbol``). Like the
+#     power 𝑝, the mean damage carries a label caption ("power mean" / "retuning magnitude"), but that
 #     two-word label only names the quantity — the hover text explains it, and flips with all-interval
 #     mode (the damage ⟪𝐝⟫ₚ vs the retuning magnitude). Both ids hang the tooltip so the whole
-#     displayed value is hoverable; the renderer swaps the wording live (see :func:`objective_help`).
+#     displayed value is hoverable; the renderer swaps the wording live (see :func:`mean_damage_help`).
 #   - the dual norm power dual(𝑞), a value DERIVED from 𝑞 (never editable, so a read-only
 #     ``powerdisplay``) but advanced enough to warrant a word; its help lives in :data:`_ID_HELP`.
 # :func:`control_help` returns help for all of these ahead of / through the READONLY_KINDS check,
 # and the completeness sweep exempts them from the no-tooltip rule.
-OBJECTIVE_IDS: frozenset[str] = frozenset({"optimization:objective", "optimization:objective:symbol"})
-HELPED_READONLY_IDS: frozenset[str] = OBJECTIVE_IDS | frozenset({"control:dual"})
+MEAN_DAMAGE_IDS: frozenset[str] = frozenset({"optimization:mean_damage", "optimization:mean_damage:symbol"})
+HELPED_READONLY_IDS: frozenset[str] = MEAN_DAMAGE_IDS | frozenset({"control:dual"})
 
 # Hover text per interactive cell kind whose meaning is fixed by the kind alone.
 # (Kinds backing several controls are disambiguated by id in _ID_HELP below.)
@@ -209,21 +209,20 @@ def target_limit_help(problem: str) -> str:
     }[problem]
 
 
-def objective_help(all_interval: bool) -> str:
-    """Hover text for the optimization objective, which names a DIFFERENT quantity per mode.
+def mean_damage_help(all_interval: bool) -> str:
+    """Hover text for the optimization mean damage, which names a DIFFERENT quantity per mode.
 
-    Target-based, the objective is the minimized damage ⟪𝐝⟫ₚ over the target list (the
-    targets' damage combined by the optimization power 𝑝). All-interval, that quantity IS the
-    retuning magnitude — the size of the prescaled retuning map 𝒓 at the dual-norm power
-    dual(𝑞), minimized over every interval at once — matching the symbol's live relabel (see
+    Target-based, the mean damage is the power mean ⟪𝐝⟫ₚ over the target list (the targets'
+    damage combined by the optimization power 𝑝). All-interval, that quantity IS the retuning
+    magnitude — the size of the prescaled retuning map 𝒓 at the dual-norm power dual(𝑞),
+    minimized over every interval at once — matching the symbol's live relabel (see
     :mod:`rtt.web.spreadsheet`). The prescaler is named in words, never glyphed (it is 𝐿 or 𝑋
     depending on the scheme). :func:`control_help` returns the target-based wording as the static
-    default for the objective cells; the renderer swaps in the all-interval wording in place."""
+    default for the mean damage cells; the renderer swaps in the all-interval wording in place."""
     if all_interval:
-        return ("Optimization objective — the retuning magnitude that the tuning minimizes over "
-                "every interval at once: the size of the prescaled retuning map 𝒓 at the "
-                "dual-norm power dual(𝑞).")
-    return ("Optimization objective ⟪𝐝⟫ₚ — the damage that the tuning minimizes over the target "
+        return ("Retuning magnitude — the magnitude that the tuning minimizes over every interval "
+                "at once: the size of the prescaled retuning map 𝒓 at the dual-norm power dual(𝑞).")
+    return ("Mean damage ⟪𝐝⟫ₚ — the power mean of damage that the tuning minimizes over the target "
             "list: the targets' damage combined by the optimization power 𝑝.")
 
 
@@ -233,8 +232,8 @@ def control_help(kind: str, cid: str) -> str | None:
     Keyed on the cell's ``kind`` (see :mod:`rtt.web.spreadsheet`), with a few kinds
     disambiguated by their ``id`` where one kind backs several controls (e.g. a
     ``powerinput`` is the optimization power 𝑝, the norm power 𝑞, or its dual)."""
-    if cid in OBJECTIVE_IDS:  # a read-only value that still carries help (text swapped live by the renderer)
-        return objective_help(all_interval=False)
+    if cid in MEAN_DAMAGE_IDS:  # a read-only value that still carries help (text swapped live by the renderer)
+        return mean_damage_help(all_interval=False)
     if kind in READONLY_KINDS:
         # most read-only kinds carry no tooltip; a few derived values (e.g. the dual norm power
         # dual(𝑞), a powerdisplay) still do — their ids are listed in HELPED_READONLY_IDS

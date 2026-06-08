@@ -620,7 +620,7 @@ def interval_sizes(tun: Tuning, ratios, domain_basis=None, weights=None) -> Inte
 
     ``weights`` (a per-interval list aligned to ``ratios``, e.g. the scheme's damage weights
     from :func:`interval_weights`) scales each |error| into the scheme-weighted damage
-    ``𝐝 = |𝐞|·W`` — the displayed damage list and the minimized objective the optimizer
+    ``𝐝 = |𝐞|·W`` — the displayed damage list and the minimized mean damage the optimizer
     actually targets. Default ``None`` is unity weight (``|error|×1 = |error|``)."""
     vectors = _interval_vectors(ratios, domain_basis, len(tun.tuning_map))
     tempered = tuple(_over(tun.tuning_map, m) for m in vectors)

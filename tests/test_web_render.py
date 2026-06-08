@@ -1219,9 +1219,9 @@ async def test_optimization_renders_the_optimize_button(user: User) -> None:
     # catches any error rendering the new "optimize" cell branch.
     await _enable(user, "optimization")
     await user.should_see(marker="optimization:button")
-    # the box's value-over-label cells render too: the objective value + its ⟪𝐝⟫ₚ symbol,
+    # the box's value-over-label cells render too: the mean damage value + its ⟪𝐝⟫ₚ symbol,
     # the editable power, and the power's symbol + "optimization power" caption
-    for marker in ("optimization:objective", "optimization:objective:symbol",
+    for marker in ("optimization:mean_damage", "optimization:mean_damage:symbol",
                    "optimization:power", "optimization:power:symbol", "optimization:power:caption"):
         await user.should_see(marker=marker)
 
@@ -1267,29 +1267,29 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     assert "rtt-cell-input" in _wrap_classes(user, "optimization:power")  # editable input again
 
 
-async def test_objective_tooltip_tracks_the_all_interval_mode(user: User) -> None:
-    # the optimization objective is read-only but carries help, and that help names a different
+async def test_mean_damage_tooltip_tracks_the_all_interval_mode(user: User) -> None:
+    # the optimization mean damage is read-only but carries help, and that help names a different
     # quantity per mode: target-based the minimized damage ⟪𝐝⟫ₚ, all-interval the retuning
-    # magnitude. The objective cells are NOT rebuilt when the mode flips, so render() must swap
+    # magnitude. The mean damage cells are NOT rebuilt when the mode flips, so render() must swap
     # the tooltip text in place. Scan the client's Tooltip registry (it holds even un-hovered
     # tooltips, which the visible-only search can't reach).
     await user.open("/")
-    user.find(kind=ui.checkbox, content="optimization").click()  # reveal the objective box
+    user.find(kind=ui.checkbox, content="optimization").click()  # reveal the mean damage box
 
-    def objective_tips() -> list[str]:
+    def mean_damage_tips() -> list[str]:
         return [el.text for el in user.client.elements.values()
-                if isinstance(el, Tooltip) and "Optimization objective" in el.text]
+                if isinstance(el, Tooltip) and "the tuning minimizes over" in el.text]
 
-    assert any("⟪𝐝⟫ₚ" in t for t in objective_tips())                 # the target-based wording
-    assert not any("retuning magnitude" in t for t in objective_tips())
+    assert any("⟪𝐝⟫ₚ" in t for t in mean_damage_tips())                 # the target-based wording
+    assert not any("retuning magnitude" in t.lower() for t in mean_damage_tips())
 
     user.find(kind=ui.checkbox, content="weighting").click()          # reveal the all-interval entry
     user.find(kind=ui.checkbox, content="all-interval").click()       # show the target-controls checkbox
     await user.should_see(marker="control:all_interval")
     _cell_child(user, "control:all_interval").set_value(True)         # check it -> flip to all-interval
 
-    assert any("retuning magnitude" in t for t in objective_tips())   # the wording swapped in place
-    assert not any("⟪𝐝⟫ₚ" in t for t in objective_tips())
+    assert any("retuning magnitude" in t.lower() for t in mean_damage_tips())   # the wording swapped in place
+    assert not any("⟪𝐝⟫ₚ" in t for t in mean_damage_tips())
 
 
 async def test_all_interval_disables_the_target_chooser_and_falls_back_to_dash(user: User) -> None:

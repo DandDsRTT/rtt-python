@@ -98,28 +98,28 @@ RANGE_GAP = 2  # gap between the ranges chart and its mode selector (and the val
 OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization")
 OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
 OPT_PAD_B = 4  # bottom margin below the captions (the box hugs the contents vertically too)
-OPT_PAD_L = 8  # left margin: inset of the objective from the box's left edge
+OPT_PAD_L = 8  # left margin: inset of the mean damage from the box's left edge
 OPT_PAD_R = 8  # right margin: inset of the optimize button from the box's right edge
 OPT_TITLE_GAP = 6  # bottom margin under the title, before the control row
 OPT_COL_GAP = 8  # the standard gap between adjacent in-tile controls — sizes OPT_BOX_MIN_W
 # (the clearance around the optimization box's centered power) and the box-𝐋 / q-dual / all-
 # interval slots elsewhere
 # The box spans the FULL width of the damage tile; its three controls DISTRIBUTE across it: the
-# objective hugs the left edge, the optimize button the right edge, and the power 𝑝 sits centered
+# mean damage hugs the left edge, the optimize button the right edge, and the power 𝑝 sits centered
 # in the gap between them, so the "optimization power" caption has clear room either side. The
 # min-damage value and the ∞ field are ordinary COL_W gridded cells (contents centred); their
 # symbols/captions centre under them. The captions stay on ONE line each.
 OPT_BTN_W = 94   # optimize button — wide enough to seat "double-click to unlock" on one line beneath it
 OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred under the ∞ cell)
-OPT_OBJ_W = 64  # the objective's COLUMN: its value cell is COL_W centred within this, and its symbol
-# and caption span it, so the WIDEST objective label — the min()-wrapped symbol min(⟪𝐝⟫ₚ) (~69px) /
+OPT_MEAN_DAMAGE_W = 64  # the mean damage's COLUMN: its value cell is COL_W centred within this, and its symbol
+# and caption span it, so the WIDEST mean damage label — the min()-wrapped symbol min(⟪𝐝⟫ₚ) (~69px) /
 # min(‖𝒓𝐿⁻¹‖dual(q)) — stays centred over the value without overflowing the box's left border or the
 # "optimization power" caption to its right. Also the caption's wrap width: "power mean" fits on one
 # line, while the wider "retuning magnitude" breaks at the space into the two lines cap_band reserves.
 # the narrowest the box can be and still seat its spread-out controls with the power's caption clear
-# of both neighbors — left pad | objective column | gap | power+caption | gap | button | right pad.
+# of both neighbors — left pad | mean damage column | gap | power+caption | gap | button | right pad.
 # A damage tile narrower than this floors its column up to fit (see _control_floor).
-OPT_BOX_MIN_W = OPT_PAD_L + OPT_OBJ_W + OPT_COL_GAP + OPT_POW_CAP_W + OPT_COL_GAP + OPT_BTN_W + OPT_PAD_R
+OPT_BOX_MIN_W = OPT_PAD_L + OPT_MEAN_DAMAGE_W + OPT_COL_GAP + OPT_POW_CAP_W + OPT_COL_GAP + OPT_BTN_W + OPT_PAD_R
 # An in-tile control box: a dropdown / checkbox enclosed in a thin-bordered frame that SPANS its
 # tile's full width (like the optimization / tuning-ranges boxes), with the control at its top-left
 # and a small field LABEL beneath naming what it sets ("established tuning scheme"). BOX_OUTER is
@@ -305,8 +305,8 @@ def _format_power(power: float) -> str:
     return str(int(power)) if power == int(power) else str(power)
 
 
-def _lp_objective(damages, power: float) -> float:
-    """The optimization objective ⟨𝐝⟩ₚ — the Lp power-mean of the damage list the scheme
+def _power_mean(damages, power: float) -> float:
+    """The optimization mean damage ⟨𝐝⟩ₚ — the Lp power-mean of the damage list the scheme
     minimizes: ``max`` for a minimax (∞) scheme, the RMS for miniRMS (2), the mean for
     miniaverage (1). The damage chart's horizontal indicator sits at this level."""
     ds = [abs(d) for d in damages]
@@ -867,7 +867,7 @@ class _GridBuilder:
                                                   prescaler_override=self.custom_prescaler,
                                                   domain_basis=self.elements)  # the damage row's 𝒘
         # the target damage list is the scheme-weighted 𝐝 = |𝐞|·W (the same weights shown in the
-        # weight row and minimized by the optimizer), so it — and the optimization tile's objective
+        # weight row and minimized by the optimizer), so it — and the optimization tile's mean damage
         # over it — tracks the unity/complexity/simplicity slope rather than staying plain |error|.
         self.target_sizes = service.interval_sizes(self.tun, self.targets, self.elements, weights=self.target_weights)
         self.held_mapped = service.mapped_intervals(self.state.mapping, self.held_ratios, self.elements)  # M·held (gen coords)
@@ -1251,19 +1251,19 @@ class _GridBuilder:
         self.opt_ctrl = (self.show_optimization and "row:damage" not in self.collapsed
                     and self.col_open("targets") and "tile:damage:targets" not in self.collapsed)
         # the optimization box: a title strip over a row of three controls distributed across the
-        # tile's full width — the objective (the minimized damage ⟪𝐝⟫ₚ, "power mean", or the
+        # tile's full width — the mean damage (the minimized damage ⟪𝐝⟫ₚ, "power mean", or the
         # all-interval retuning magnitude) and the editable power 𝑝 (each a value above its symbol
         # above its caption) plus the optimize button. Its height = a title inset + the title + a
         # title gap + the value row + the symbol row + the caption band + pad (the width is the
-        # targets column, floored to OPT_BOX_MIN_W). The objective's caption names the quantity, and
+        # targets column, floored to OPT_BOX_MIN_W). The mean damage's caption names the quantity, and
         # gains a "minimized" prefix while the tuning is optimized (matching the symbol's min() wrap).
-        # It wraps within the objective column, so reserve however many lines it takes — one ("power
+        # It wraps within the mean damage column, so reserve however many lines it takes — one ("power
         # mean"), two ("minimized power mean" / "retuning magnitude"), or three ("minimized retuning
         # magnitude").
-        self.obj_caption = "retuning magnitude" if self.all_interval else "power mean"
+        self.mean_damage_caption = "retuning magnitude" if self.all_interval else "power mean"
         if self.tuning_optimized:
-            self.obj_caption = f"minimized {self.obj_caption}"
-        self.opt_cap_lines = _wrap_lines(self.obj_caption, OPT_OBJ_W) if self.opt_ctrl else 1
+            self.mean_damage_caption = f"minimized {self.mean_damage_caption}"
+        self.opt_cap_lines = _wrap_lines(self.mean_damage_caption, OPT_MEAN_DAMAGE_W) if self.opt_ctrl else 1
         self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
@@ -1517,21 +1517,21 @@ class _GridBuilder:
         # the optimization power 𝑝 as shown: ∞ in all-interval mode, the scheme's stored power
         # otherwise. All-interval tuning minimaxes over every interval (it optimizes the primes at
         # the dual norm power and never reads the stored 𝑝), so 𝑝 is fixed at ∞ there — the cell
-        # shows ∞ and goes disabled (app._update_powerinput). The power cell, the objective, and the
+        # shows ∞ and goes disabled (app._update_powerinput). The power cell, the mean damage, and the
         # damage-chart indicator all read this so the locked display stays consistent.
         if service.is_all_interval(self.tuning_scheme):
             return float("inf")
         return service.optimization_power(self.tuning_scheme)
 
-    def displayed_objective_power(self) -> float:
-        # the power at which the displayed objective AGGREGATES the per-target/per-prime weighted
+    def displayed_mean_damage_power(self) -> float:
+        # the power at which the displayed mean damage AGGREGATES the per-target/per-prime weighted
         # damages — i.e. the power the optimizer actually minimized at (matching
         # tuning.get_tuning_map_mean_damage). For a target-based scheme that is the optimization
         # power 𝑝 (∞/2/1), same as displayed_optimization_power(). For an all-interval scheme the
         # minimax-over-every-interval is, by duality, an optimization over the PRIMES at the DUAL of
         # the complexity norm power — 2 for a Euclidean (ES) norm, ∞ for taxicab (-S) — so the
-        # objective is that dual-power mean of the per-prime damages, NOT their max. (The 𝑝 cell still
-        # shows ∞: that is the power over intervals; this is the power over primes, the objective
+        # mean damage is that dual-power mean of the per-prime damages, NOT their max. (The 𝑝 cell still
+        # shows ∞: that is the power over intervals; this is the power over primes, the mean damage
         # symbol's dual(𝑞) subscript.) For -S, dual(𝑞) = ∞ so this coincides with 𝑝, as before.
         if service.is_all_interval(self.tuning_scheme):
             return service.dual_norm_power(self.tuning_scheme)
@@ -2831,14 +2831,14 @@ class _GridBuilder:
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
         if self.row_open("damage"):  # damage is over the targets only (the tuning's own column)
             self.tval_row("damage", "targets", self.target_sizes.damage)
-            # optimization adds the horizontal minimized-damage indicator (the objective ⟪𝐝⟫ₚ
+            # optimization adds the horizontal minimized-damage indicator (the mean damage ⟪𝐝⟫ₚ
             # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
             # (∞ / 2 / 1); off, the chart is plain bars. Recorded for the chart loop below.
             if self.show_optimization:
-                power = self.displayed_objective_power()  # 𝑝 target-based; dual(𝑞) all-interval (the
+                power = self.displayed_mean_damage_power()  # 𝑝 target-based; dual(𝑞) all-interval (the
                 # aggregation power the optimizer minimized at — NOT the ∞ the 𝑝 cell shows all-interval)
                 chart_indicators[("damage", "targets")] = (
-                    _lp_objective(self.target_sizes.damage, power), _format_power(power))
+                    _power_mean(self.target_sizes.damage, power), _format_power(power))
 
         # Draw a bar chart over every tile a charted row recorded (see chart_tiles above):
         # one pass, so the set of charts always equals the set of charted-row value tiles.
@@ -2875,7 +2875,7 @@ class _GridBuilder:
         # the optimization box, nested at the BOTTOM of the target interval damage list tile (the
         # tuning's own column, whose damages it minimizes): a bordered box titled "optimization",
         # spanning the FULL width of the tile (like the tuning-ranges box) and DISTRIBUTING three
-        # controls across it — the minimized-damage objective (a read-only gridded value over ⟪𝐝⟫ₚ)
+        # controls across it — the minimized-damage mean damage (a read-only gridded value over ⟪𝐝⟫ₚ)
         # hugging the left, the optimize button (over its "double-click to lock" hint) hugging the
         # right, and the editable power (the ∞ cell over 𝑝 over "optimization power") centered in the
         # gap between them, so its caption has clear room either side. The min-damage and ∞ are plain
@@ -2891,47 +2891,47 @@ class _GridBuilder:
             content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP  # a gap below the title
             sym_top = content_top + ROW_H            # the symbol/hint row, under the values
             cap_top = sym_top + SYMBOL_H             # the caption row, under the symbols
-            cap_band = self.opt_cap_lines * CAPTION_LINE  # one line, or two when the wide objective wraps
+            cap_band = self.opt_cap_lines * CAPTION_LINE  # one line, or two when the wide mean damage wraps
             body_h = ROW_H + SYMBOL_H + cap_band + OPT_PAD_B  # value + symbol + caption band + pad
-            # the three controls, distributed across the box: the objective column at the left, the
+            # the three controls, distributed across the box: the mean damage column at the left, the
             # optimize button at the right, the power centered in the gap between them (so its caption
-            # clears both neighbors). The objective's value/symbol/caption all centre on the column's
+            # clears both neighbors). The mean damage's value/symbol/caption all centre on the column's
             # mid-line, so a wide symbol/caption overflows evenly and stays within the box.
-            obj_x = ox + OPT_PAD_L                       # the objective column's left edge
-            obj_val_x = obj_x + (OPT_OBJ_W - COL_W) / 2  # the COL_W value cell, centred in the column
+            mean_damage_x = ox + OPT_PAD_L                       # the mean damage column's left edge
+            mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_W - COL_W) / 2  # the COL_W value cell, centred in the column
             btn_x = ox + box_w - OPT_PAD_R - OPT_BTN_W
-            pow_x = ((obj_x + OPT_OBJ_W) + btn_x) / 2 - COL_W / 2
-            # the objective aggregates the damages at the power the optimizer MINIMIZED at — 𝑝 target-
+            pow_x = ((mean_damage_x + OPT_MEAN_DAMAGE_W) + btn_x) / 2 - COL_W / 2
+            # the mean damage aggregates the damages at the power the optimizer MINIMIZED at — 𝑝 target-
             # based, dual(𝑞) all-interval (the ‖𝒓𝑋⁻¹‖ symbol's dual(𝑞) subscript). The 𝑝 cell below
             # keeps displayed_optimization_power() (∞ all-interval): power over intervals vs over primes.
-            objective = _lp_objective(self.target_sizes.damage, self.displayed_objective_power())
+            mean_damage = _power_mean(self.target_sizes.damage, self.displayed_mean_damage_power())
             power = _format_power(self.displayed_optimization_power())
             self.cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
                                  text="optimization"))
-            # the objective: the minimized-damage value (read-only, so unboxed — a plain centred gridded
+            # the mean damage: the minimized-damage value (read-only, so unboxed — a plain centred gridded
             # value, the same COL_W cell as any damage value) over its symbol and a label caption, the
             # same value/symbol/caption stack as the power beside it.
-            self.cells.append(CellBox("optimization:objective", obj_val_x, content_top, COL_W, ROW_H, "tval",
-                                 text=service.cents(objective)))
-            # all-interval: the minimized objective IS the retuning magnitude ‖𝒓𝑋⁻¹‖ at the dual norm
+            self.cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COL_W, ROW_H, "tval",
+                                 text=service.cents(mean_damage)))
+            # all-interval: the minimized mean damage IS the retuning magnitude ‖𝒓𝑋⁻¹‖ at the dual norm
             # power (the mockup's "becomes 'retuning magnitude'") — relabel the symbol, with dual(q) as
             # the norm subscript; its value already computes over the primes. The prescaler inverse
             # carries the live glyph (𝐿⁻¹ for the log-prime matrix, else generic 𝑋⁻¹).
-            obj_symbol = (f"‖𝒓{self.prescaler_symbol}⁻¹‖{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
+            mean_damage_symbol = (f"‖𝒓{self.prescaler_symbol}⁻¹‖{SUB_OPEN}dual(𝑞){SUB_CLOSE}"
                           if self.all_interval else "⟪𝐝⟫ₚ")
             # once the displayed tuning is the scheme's optimum, the value shown IS the minimized
-            # objective, so wrap the symbol in min(…) (the mockup's "make ⟪𝐝⟫ₚ into min(⟪𝐝⟫ₚ)"); a
+            # mean damage, so wrap the symbol in min(…) (the mockup's "make ⟪𝐝⟫ₚ into min(⟪𝐝⟫ₚ)"); a
             # hand-edited tuning that deviates shows the bare symbol — its value is no longer the min.
             if self.tuning_optimized:
-                obj_symbol = f"min({obj_symbol})"
-            self.cells.append(CellBox("optimization:objective:symbol", obj_x, sym_top, OPT_OBJ_W, SYMBOL_H,
-                                 "symbol", text=obj_symbol))
-            # the caption naming the objective, the analogue of "optimization power": the Lp "power
+                mean_damage_symbol = f"min({mean_damage_symbol})"
+            self.cells.append(CellBox("optimization:mean_damage:symbol", mean_damage_x, sym_top, OPT_MEAN_DAMAGE_W, SYMBOL_H,
+                                 "symbol", text=mean_damage_symbol))
+            # the caption naming the mean damage, the analogue of "optimization power": the Lp "power
             # mean" of the target damages, or the "retuning magnitude" when all-interval (so the label
             # tracks the symbol's relabel), prefixed "minimized" while the tuning is optimized. It
-            # spans the objective column, centred on it, wrapping to the lines cap_band reserves.
-            self.cells.append(CellBox("optimization:objective:caption", obj_x, cap_top, OPT_OBJ_W, cap_band,
-                                 "caption", text=self.obj_caption))
+            # spans the mean damage column, centred on it, wrapping to the lines cap_band reserves.
+            self.cells.append(CellBox("optimization:mean_damage:caption", mean_damage_x, cap_top, OPT_MEAN_DAMAGE_W, cap_band,
+                                 "caption", text=self.mean_damage_caption))
             # the power: the ∞ cell (∞ minimax, 2 miniRMS, 1 miniaverage) — a COL_W gridded cell — over
             # the symbol 𝑝 and the caption "optimization power" (one line, centred under it). 𝑝 ≠ ∞ is an
             # ADVANCED choice (every preset is minimax), so 𝑝 is editable only with alt. complexity on;
@@ -3186,7 +3186,7 @@ class _GridBuilder:
         # appended after the tile panels so it layers on top of the generator tuning map tile
         if gtm_box is not None:
             self.blocks.append(Block("block:tuning:rangesbox", *gtm_box, boxed=True))
-        # the optimization box's thin border, around its title + objective/power/button
+        # the optimization box's thin border, around its title + mean damage/power/button
         if opt_box is not None:
             self.blocks.append(Block("block:optimization:box", *opt_box, boxed=True))
 

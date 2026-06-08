@@ -579,7 +579,7 @@ def test_reordering_interest_rekeys_its_column_cells():
 
 
 def test_reordering_targets_rekeys_its_column_cells():
-    # targets carry the optimization objective, so the damage row shifts by solver noise on reorder
+    # targets carry the optimization mean damage, so the damage row shifts by solver noise on reorder
     # (filtered); the per-column cells (vectors, ratios, weights, complexity, prescaling, mapped) glide
     targets = ("2/1", "3/2", "5/4")
     lay1 = spreadsheet.build(_held_state(), _all_on(), target_override=targets)
@@ -2868,20 +2868,20 @@ def test_all_interval_removes_all_redundant_target_tiles():
             "block:damage:targets"} <= allint  # the kept target tiles remain
 
 
-def test_all_interval_relabels_the_optimization_objective():
-    # the optimization objective ⟪𝐝⟫ₚ is the minimized total damage; when all-interval that quantity
+def test_all_interval_relabels_the_optimization_mean_damage():
+    # the optimization mean damage ⟪𝐝⟫ₚ is the minimized total damage; when all-interval that quantity
     # IS the retuning magnitude ‖𝒓𝐿⁻¹‖ at the dual norm power, so the symbol relabels with dual(q)
     # as the norm subscript — a PLAIN subscript (SUB_*) so the function name "dual" stays upright and
     # only the math-italic 𝑞 slants. A target-based scheme keeps ⟪𝐝⟫ₚ.
     based = {c.id: c for c in _with(scheme="TILT minimax-S", optimization=True).cells}
-    assert based["optimization:objective:symbol"].text == "⟪𝐝⟫ₚ"
+    assert based["optimization:mean_damage:symbol"].text == "⟪𝐝⟫ₚ"
     allint = {c.id: c for c in _with(scheme="minimax-S", optimization=True).cells}
     expected = "‖𝒓𝐿⁻¹‖" + spreadsheet.SUB_OPEN + "dual(𝑞)" + spreadsheet.SUB_CLOSE
-    assert allint["optimization:objective:symbol"].text == expected
+    assert allint["optimization:mean_damage:symbol"].text == expected
 
 
-def test_optimization_objective_carries_a_label_caption():
-    # the objective gains a caption under its symbol, mirroring the power's "optimization power":
+def test_optimization_mean_damage_carries_a_label_caption():
+    # the mean damage gains a caption under its symbol, mirroring the power's "optimization power":
     # target-based it is the Lp "power mean" of the target damages; all-interval that quantity is
     # the "retuning magnitude" (the ‖𝒓𝐿⁻¹‖ relabel). The wide all-interval label does not fit on
     # one line in the min-width box, so it wraps to two lines (centred under the value cell, like
@@ -2890,18 +2890,18 @@ def test_optimization_objective_carries_a_label_caption():
     allint = _with(scheme="minimax-S", optimization=True)
     on_based = {c.id: c for c in based.cells}
     on_allint = {c.id: c for c in allint.cells}
-    assert on_based["optimization:objective:caption"].text == "power mean"
-    assert on_allint["optimization:objective:caption"].text == "retuning magnitude"
-    # it sits below the symbol and stays centred on the objective value cell (the power's stack)
-    cap = on_based["optimization:objective:caption"]
-    obj = on_based["optimization:objective"]
-    sym = on_based["optimization:objective:symbol"]
+    assert on_based["optimization:mean_damage:caption"].text == "power mean"
+    assert on_allint["optimization:mean_damage:caption"].text == "retuning magnitude"
+    # it sits below the symbol and stays centred on the mean damage value cell (the power's stack)
+    cap = on_based["optimization:mean_damage:caption"]
+    mean_damage = on_based["optimization:mean_damage"]
+    sym = on_based["optimization:mean_damage:symbol"]
     assert cap.y > sym.y
-    assert abs((cap.x + cap.w / 2) - (obj.x + obj.w / 2)) < 0.5
+    assert abs((cap.x + cap.w / 2) - (mean_damage.x + mean_damage.w / 2)) < 0.5
     # target-based the short label is one line; all-interval the wide label reserves two, so the
     # box (and thus the damage tile) grows by exactly that extra line
-    assert on_based["optimization:objective:caption"].h == spreadsheet.CAPTION_LINE
-    assert on_allint["optimization:objective:caption"].h == 2 * spreadsheet.CAPTION_LINE
+    assert on_based["optimization:mean_damage:caption"].h == spreadsheet.CAPTION_LINE
+    assert on_allint["optimization:mean_damage:caption"].h == 2 * spreadsheet.CAPTION_LINE
     box_based = {b.id: b for b in based.blocks}["block:optimization:box"]
     box_allint = {b.id: b for b in allint.blocks}["block:optimization:box"]
     assert box_allint.h == box_based.h + spreadsheet.CAPTION_LINE
@@ -2947,9 +2947,9 @@ def test_all_interval_greys_and_locks_the_target_chooser():
     assert based["preset:target"].disabled is False
 
 
-def test_optimized_tuning_wraps_the_objective_symbol_in_min():
+def test_optimized_tuning_wraps_the_mean_damage_symbol_in_min():
     # mockup: "make ⟪𝐝⟫ₚ into min(⟪𝐝⟫ₚ)". When the displayed tuning sits at the scheme's optimum,
-    # the objective value IS the minimized one, so its symbol wraps in min(...); a deviating (hand-
+    # the mean damage value IS the minimized one, so its symbol wraps in min(...); a deviating (hand-
     # edited) tuning shows the bare symbol — the displayed value is no longer the minimum.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
@@ -2958,7 +2958,7 @@ def test_optimized_tuning_wraps_the_objective_symbol_in_min():
     def symbol(scheme, optimized):
         cells = {c.id: c for c in spreadsheet.build(
             base, s, tuning_scheme=scheme, tuning_optimized=optimized).cells}
-        return cells["optimization:objective:symbol"].text
+        return cells["optimization:mean_damage:symbol"].text
 
     assert symbol("TILT minimax-S", True) == "min(⟪𝐝⟫ₚ)"
     assert symbol("TILT minimax-S", False) == "⟪𝐝⟫ₚ"
@@ -2968,9 +2968,9 @@ def test_optimized_tuning_wraps_the_objective_symbol_in_min():
     assert symbol("minimax-S", False) == inner
 
 
-def test_minimized_objective_prefixes_its_label_with_minimized():
+def test_minimized_mean_damage_prefixes_its_label_with_minimized():
     # when the displayed tuning is optimized (the symbol wraps in min()), the value shown IS the
-    # minimized objective, so its label is prefixed "minimized": "minimized power mean", or
+    # minimized mean damage, so its label is prefixed "minimized": "minimized power mean", or
     # "minimized retuning magnitude" all-interval. A deviating tuning drops the prefix. The extra
     # word wraps to its own line, so the caption band — and the box — reserves it.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -2980,7 +2980,7 @@ def test_minimized_objective_prefixes_its_label_with_minimized():
     def cap(scheme, optimized):
         cells = {c.id: c for c in spreadsheet.build(
             base, s, tuning_scheme=scheme, tuning_optimized=optimized).cells}
-        return cells["optimization:objective:caption"]
+        return cells["optimization:mean_damage:caption"]
 
     assert cap("TILT minimax-S", True).text == "minimized power mean"
     assert cap("TILT minimax-S", False).text == "power mean"
@@ -2993,11 +2993,11 @@ def test_minimized_objective_prefixes_its_label_with_minimized():
     assert cap("minimax-S", False).h == 2 * spreadsheet.CAPTION_LINE
 
 
-def test_all_interval_objective_aggregates_at_the_dual_norm_power_not_infinity():
-    # the all-interval objective is computed at the DUAL of the complexity norm power — the power the
+def test_all_interval_mean_damage_aggregates_at_the_dual_norm_power_not_infinity():
+    # the all-interval mean damage is computed at the DUAL of the complexity norm power — the power the
     # optimizer actually minimized at (it minimaxes over every interval, which by duality is an
     # optimization over the primes at dual(𝑞)) — NOT the ∞ the 𝑝 cell shows. For a Euclidean (ES)
-    # scheme dual(𝑞)=2, so the objective is the RMS of the per-prime weighted damages, not their max:
+    # scheme dual(𝑞)=2, so the mean damage is the RMS of the per-prime weighted damages, not their max:
     # the value must equal tuning.get_tuning_map_mean_damage, the optimizer's own minimized quantity.
     import pytest
     from rtt import tuning
@@ -3008,38 +3008,38 @@ def test_all_interval_objective_aggregates_at_the_dual_norm_power_not_infinity()
     base = service.from_mapping(((1, 0, -4), (0, 1, 4)))  # meantone
     t = parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")
 
-    def objective(scheme):
+    def mean_damage(scheme):
         cells = {c.id: c for c in spreadsheet.build(
             base, s, tuning_scheme=scheme, tuning_optimized=True).cells}
-        return float(cells["optimization:objective"].text)
+        return float(cells["optimization:mean_damage"].text)
 
     # minimax-ES (TE): per-prime weighted damages [1.397, 2.214, 0.811]; the bug showed their MAX
     # (2.214 — the ∞ aggregate), the fix shows their RMS (1.582 — the dual(𝑞)=2 aggregate)
-    es = objective("minimax-ES")
+    es = mean_damage("minimax-ES")
     assert es == pytest.approx(1.582, abs=1e-3)   # the dual-power mean (RMS)
     assert es != pytest.approx(2.214, abs=1e-2)   # NOT the max (the pre-fix bug)
     assert es == pytest.approx(
         tuning.get_tuning_map_mean_damage(t, tuning.optimize_tuning_map(t, "minimax-ES"), "minimax-ES"),
-        abs=1e-3)  # equals the optimizer's own minimized objective
-    # minimax-S (TOP): 𝑞=1 so dual(𝑞)=∞ — there the objective IS a max, so the value is unchanged
+        abs=1e-3)  # equals the optimizer's own minimized mean damage
+    # minimax-S (TOP): 𝑞=1 so dual(𝑞)=∞ — there the mean damage IS a max, so the value is unchanged
     # by the fix (this is why the bug hid behind the default scheme)
-    ss = objective("minimax-S")
+    ss = mean_damage("minimax-S")
     assert ss == pytest.approx(1.699, abs=1e-3)
     assert ss == pytest.approx(
         tuning.get_tuning_map_mean_damage(t, tuning.optimize_tuning_map(t, "minimax-S"), "minimax-S"),
         abs=1e-3)
     # held-octave minimax-ES (CTE): the Euclidean fix carries to the held-octave all-interval form too
-    assert objective("held-octave minimax-ES") == pytest.approx(
+    assert mean_damage("held-octave minimax-ES") == pytest.approx(
         tuning.get_tuning_map_mean_damage(
             t, tuning.optimize_tuning_map(t, "held-octave minimax-ES"), "held-octave minimax-ES"),
         abs=1e-3)
 
 
-def test_all_interval_objective_power_label_tracks_the_dual_norm_power():
-    # the objective is aggregated at dual(𝑞), so the damage chart's indicator (the same minimized
+def test_all_interval_mean_damage_power_label_tracks_the_dual_norm_power():
+    # the mean damage is aggregated at dual(𝑞), so the damage chart's indicator (the same minimized
     # value, drawn as a horizontal line) and its power label track dual(𝑞): "2" for a Euclidean (ES)
     # scheme, "∞" for taxicab (-S, dual(𝑞)=∞). The 𝑝 cell stays ∞ either way — that is the power over
-    # intervals, not the over-primes aggregation power the objective and chart use.
+    # intervals, not the over-primes aggregation power the mean damage and chart use.
     s = settings.defaults()
     s["optimization"] = True
     s["charts"] = True
@@ -3298,8 +3298,8 @@ def test_all_interval_greys_and_locks_the_weight_slope_chooser():
 def test_all_interval_greys_the_locked_target_chooser_caption_but_not_the_power_value():
     # the all-interval-locked TARGET chooser (a control) greys its caption with it, so the label reads
     # in the same disabled grey as the locked value. The optimization power, by contrast, is now a
-    # read-only VALUE (a tval like the objective) — not a greyed control — so its "optimization power"
-    # caption stays the normal value colour in both modes, matching the objective's caption beside it.
+    # read-only VALUE (a tval like the mean damage) — not a greyed control — so its "optimization power"
+    # caption stays the normal value colour in both modes, matching the mean damage's caption beside it.
     on = {c.id: c for c in _with(scheme="minimax-S", optimization=True, presets=True).cells}
     assert on["block:preset:target:label"].disabled is True   # the locked target chooser's caption greys
     assert on["optimization:power:caption"].disabled is False  # the power is a value: caption not greyed
@@ -4883,13 +4883,13 @@ def test_nonstandard_domain_units_use_basis_element_label_b():
 def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
     # per the mockup, the optimization controls live INSIDE the target interval damage list
     # tile as a bordered, titled box — not a separate row — laid out as two value-over-label
-    # columns (the objective ⟪𝐝⟫ₚ and the editable power 𝑝) with the optimize button at right.
+    # columns (the mean damage ⟪𝐝⟫ₚ and the editable power 𝑝) with the optimize button at right.
     lay = _with(optimization=True)
     on = {c.id: c for c in lay.cells}
     assert on["optimization:title"].text == "optimization"
-    # the objective: a cents value over the symbol ⟪𝐝⟫ₚ (double-angle brackets, power subscript)
-    assert on["optimization:objective"].kind == "tval"
-    assert on["optimization:objective:symbol"].text == "⟪𝐝⟫ₚ"
+    # the mean damage: a cents value over the symbol ⟪𝐝⟫ₚ (double-angle brackets, power subscript)
+    assert on["optimization:mean_damage"].kind == "tval"
+    assert on["optimization:mean_damage:symbol"].text == "⟪𝐝⟫ₚ"
     # the power: 𝑝 over its symbol and the "optimization power" caption. With alt. complexity off (the
     # default here) it is read-only — a powerdisplay (its editability is covered separately).
     assert on["optimization:power"].kind == "powerdisplay"
@@ -4935,41 +4935,41 @@ def test_optimization_needs_its_parent_tuning_boxes():
     assert "optimization:title" not in cells
 
 
-def test_optimization_box_lays_out_objective_power_and_button_in_columns():
+def test_optimization_box_lays_out_mean_damage_power_and_button_in_columns():
     lay = _with(optimization=True)
     on = {c.id: c for c in lay.cells}
     box = {b.id: b for b in lay.blocks}["block:optimization:box"]
-    # the three controls sit on one row, left to right: objective | power | optimize button
-    assert on["optimization:objective"].x < on["optimization:power"].x < on["optimization:button"].x
-    assert on["optimization:objective"].y == on["optimization:power"].y == on["optimization:button"].y
+    # the three controls sit on one row, left to right: mean damage | power | optimize button
+    assert on["optimization:mean_damage"].x < on["optimization:power"].x < on["optimization:button"].x
+    assert on["optimization:mean_damage"].y == on["optimization:power"].y == on["optimization:button"].y
     # within each column the value/control sits above its symbol/label
-    assert on["optimization:objective"].y < on["optimization:objective:symbol"].y
+    assert on["optimization:mean_damage"].y < on["optimization:mean_damage:symbol"].y
     assert (on["optimization:power"].y < on["optimization:power:symbol"].y
             < on["optimization:power:caption"].y)
     # the min-damage and the power are ordinary gridded cells (COL_W wide); their contents are
     # centred like any other value cell (not stretched/left-justified within the control)
-    assert on["optimization:objective"].w == spreadsheet.COL_W
+    assert on["optimization:mean_damage"].w == spreadsheet.COL_W
     assert on["optimization:power"].w == spreadsheet.COL_W
-    # the controls DISTRIBUTE across the full-width box (no longer packed left): the objective is a
+    # the controls DISTRIBUTE across the full-width box (no longer packed left): the mean damage is a
     # COLUMN hugging the left edge — its symbol and caption span the column width and its COL_W value
     # cell is centred within it, so a wide min()-wrapped symbol overflows evenly and stays inside the
     # box. The optimize button hugs the right edge; the power sits centered in the gap between them.
-    obj_col_x = box.x + spreadsheet.OPT_PAD_L
-    assert on["optimization:objective:symbol"].x == obj_col_x
-    assert on["optimization:objective:symbol"].w == spreadsheet.OPT_OBJ_W
-    assert on["optimization:objective:caption"].x == obj_col_x
-    assert on["optimization:objective"].x == obj_col_x + (spreadsheet.OPT_OBJ_W - spreadsheet.COL_W) / 2
+    mean_damage_col_x = box.x + spreadsheet.OPT_PAD_L
+    assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
+    assert on["optimization:mean_damage:symbol"].w == spreadsheet.OPT_MEAN_DAMAGE_W
+    assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
+    assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet.OPT_MEAN_DAMAGE_W - spreadsheet.COL_W) / 2
     assert (on["optimization:button"].x + on["optimization:button"].w
             == box.x + box.w - spreadsheet.OPT_PAD_R)
-    obj_r = obj_col_x + spreadsheet.OPT_OBJ_W  # the objective column's right edge
+    mean_damage_r = mean_damage_col_x + spreadsheet.OPT_MEAN_DAMAGE_W  # the mean damage column's right edge
     btn_l = on["optimization:button"].x
     pow_c = on["optimization:power"].x + on["optimization:power"].w / 2
-    assert abs(pow_c - (obj_r + btn_l) / 2) < 1  # power centered in the gap between column and button
+    assert abs(pow_c - (mean_damage_r + btn_l) / 2) < 1  # power centered in the gap between column and button
     cap = on["optimization:power:caption"]
-    assert cap.x > obj_r and cap.x + cap.w < btn_l  # ...and its caption clears both neighbors
+    assert cap.x > mean_damage_r and cap.x + cap.w < btn_l  # ...and its caption clears both neighbors
     # the optimize button is a normal rectangle the same height as the value boxes (the p input),
     # not a giant full-height button, with a "double-click to lock" hint beneath it
-    assert on["optimization:button"].h == on["optimization:objective"].h
+    assert on["optimization:button"].h == on["optimization:mean_damage"].h
     assert on["optimization:button:hint"].text == "double-click to lock"
     assert on["optimization:button:hint"].y > on["optimization:button"].y
     # the captions occupy a single line (so "optimization power" sits right under 𝑝, not a
@@ -4978,7 +4978,7 @@ def test_optimization_box_lays_out_objective_power_and_button_in_columns():
     assert on["optimization:button:hint"].h == spreadsheet.CAPTION_LINE
     # the title sits inside the box (below its top border) with a gap before the controls
     assert on["optimization:title"].y > box.y
-    assert on["optimization:objective"].y > on["optimization:title"].y + on["optimization:title"].h
+    assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].h
     assert "optimization:button" not in {c.id for c in _with(optimization=False).cells}
 
 
@@ -5003,7 +5003,7 @@ def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box():
     s["optimization"] = True
     blk = {b.id: b for b in spreadsheet.build(base, s).blocks}
     box = blk["block:optimization:box"]
-    assert box.w >= spreadsheet.OPT_BOX_MIN_W  # wide enough to seat objective | power | button
+    assert box.w >= spreadsheet.OPT_BOX_MIN_W  # wide enough to seat mean damage | power | button
     assert box.w == blk["block:damage:targets"].w - 2 * spreadsheet.PAD  # still fills its tile
 
 
@@ -5118,7 +5118,7 @@ def test_typing_the_target_interval_list_drives_the_grid_through_the_editor():
 
 def test_optimization_draws_the_minimized_damage_indicator_on_the_chart():
     # optimization adds a horizontal indicator at the minimized-damage level (the
-    # objective ⟪𝐝⟫ₚ: max damage for the default minimax) to the damage chart
+    # mean damage ⟪𝐝⟫ₚ: max damage for the default minimax) to the damage chart
     on = {c.id: c for c in _with(optimization=True, charts=True).cells}
     chart = on["chart:damage:targets"]
     assert chart.indicator is not None

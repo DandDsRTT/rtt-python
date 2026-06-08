@@ -54,7 +54,7 @@ class CellBox:
     values: tuple[float, ...] = ()  # per-column data for a "chart" cell's bars
     ranges: tuple[tuple[float, float], ...] = ()  # per-generator (low, high) for a "rangechart" cell's I-beams
     indicator: float | None = None  # a "chart" cell's horizontal indicator level (the optimization
-    # objective ⟪𝐝⟫ₚ on the damage chart), drawn as a line across the plot when set
+    # mean damage ⟪𝐝⟫ₚ on the damage chart), drawn as a line across the plot when set
     indicator_label: str = ""  # the subscript on that indicator's ⟪𝐝⟫ label — the scheme's Lp
     # power (∞ / 2 / 1) — so the renderer can letter the line-breaking label
     pending: bool = False  # a not-yet-valid comma draft cell — rendered blank and red-outlined

@@ -916,24 +916,24 @@ def test_all_interval_solver_handles_a_non_diagonal_pretransformer():
 
     mapping = [[1, 1, 0], [0, 1, 4]]
     # a 2-D DIAGONAL override gives the SAME all-interval tuning as the equivalent 1-D diagonal —
-    # the new X⁻¹-columns objective reduces to the old per-prime path for a diagonal matrix
+    # the new X⁻¹-columns mean damage reduces to the old per-prime path for a diagonal matrix
     diag = (1.0, 1.585, 2.322)
     diag_2d = tuple(tuple(diag[i] if i == k else 0.0 for k in range(3)) for i in range(3))
     t1 = service.tuning(mapping, "minimax-S", prescaler_override=diag)
     t2 = service.tuning(mapping, "minimax-S", prescaler_override=diag_2d)
     assert t2.tuning_map == pytest.approx(t1.tuning_map, abs=1e-4)
-    # a NON-diagonal pretransformer: the all-interval solve minimizes the TRUE objective ‖𝒓𝑋⁻¹‖∞
+    # a NON-diagonal pretransformer: the all-interval solve minimizes the TRUE mean damage ‖𝒓𝑋⁻¹‖∞
     # (minimax-S's dual norm power is ∞), not the per-prime diagonal approximation
     nondiag = ((1.0, 0.5, 0.0), (0.0, 1.585, 0.0), (0.0, 0.0, 2.322))
     t3 = service.tuning(mapping, "minimax-S", prescaler_override=nondiag)
     M, j = np.array(mapping, float), np.array(t3.just_map)
     Xinv = np.linalg.inv(np.array(nondiag))
-    obj = lambda g: float(np.max(np.abs((np.array(g) @ M - j) @ Xinv)))
+    magnitude = lambda g: float(np.max(np.abs((np.array(g) @ M - j) @ Xinv)))
     g0 = np.array(t3.generator_map)
-    base = obj(g0)
-    # g0 is the minimax of ‖𝒓𝑋⁻¹‖∞: no small generator perturbation reduces the objective
+    base = magnitude(g0)
+    # g0 is the minimax of ‖𝒓𝑋⁻¹‖∞: no small generator perturbation reduces the mean damage
     for dg in ([0.5, 0], [0, 0.5], [-0.5, 0], [0, -0.5], [0.3, 0.3], [-0.3, 0.3]):
-        assert obj(g0 + np.array(dg)) >= base - 1e-6
+        assert magnitude(g0 + np.array(dg)) >= base - 1e-6
 
 
 def test_tuning_optimizes_over_an_explicit_target_override():

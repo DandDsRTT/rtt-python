@@ -217,7 +217,7 @@
    to lock") stay on ONE line — centred under their control, overflowing sideways if need be —
    so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
 .rtt-opt-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
-/* the all-interval objective relabels to the retuning magnitude ‖𝒓𝐿⁻¹‖dual(q), far wider than
+/* the all-interval mean damage relabels to the retuning magnitude ‖𝒓𝐿⁻¹‖dual(q), far wider than
    the short ⟪𝐝⟫ₚ — shrink it (to the .rtt-matlabel-norm size used for the other wide ‖…‖q norm
    labels) so it reads within and stays centred over its COL_W value cell, overflowing symmetrically
    rather than clipping if it still spills. The selector is compounded (.rtt-symbol.rtt-opt-wide, not

@@ -483,7 +483,7 @@ class Editor:
     @property
     def tuning_is_optimized(self) -> bool:
         """Whether the grid's displayed generator tuning sits at the scheme's optimum — so the
-        objective shown IS the minimized value and its symbol wraps in min(). True with auto-optimize
+        mean damage shown IS the minimized value and its symbol wraps in min(). True with auto-optimize
         on, with nothing frozen, or once optimized (the frozen tuning equals the current optimum);
         False as soon as a manual generator edit pulls it off. Compared at DISPLAY precision like
         :attr:`displayed_tuning_scheme_name`, but against the optimum that HOLDS any held intervals
