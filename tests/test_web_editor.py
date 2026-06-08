@@ -1787,3 +1787,28 @@ def test_load_falls_back_when_the_core_fields_are_missing():
     del both_missing["mapping_ebk"]
     del both_missing["tuning_scheme"]
     Editor().load(both_missing)  # must not raise
+
+
+def test_no_chooser_scheme_yields_an_invalid_target_less_tuning():
+    # A bare simplicity name (minimax-S, miniRMS-S, …) is all-interval, but a bare UNITY or
+    # COMPLEXITY name (minimax-U / minimax-C) is an invalid, unpinnable tuning that must never be
+    # reachable in the app. It isn't: the tuning-scheme chooser offers those bare strings only as
+    # identifiers, and picking one applies the live target set (target-based) while all-interval mode
+    # forces the simplicity slope. So every option, in either mode, lands on a scheme that is either
+    # all-interval or carries a concrete target list — and thus optimizes to a finite tuning, never
+    # the degenerate all-zero (nan-mean-damage) solve. Locks that guarantee across the whole chooser.
+    from rtt.web import presets
+
+    editor = Editor()
+    for all_interval in (False, True):
+        editor.set_all_interval(all_interval)
+        options = presets.tuning_scheme_options(
+            all_interval, include_alternatives=True, weighting=True)
+        for value in options:
+            editor.set_tuning_scheme(value)
+            spec = service.resolve_tuning_scheme(editor.tuning_scheme)
+            if not service.is_all_interval(editor.tuning_scheme):
+                assert spec.target_intervals not in (None, "", "{}"), value  # a real target applied
+            tm = service.tuning(
+                editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis).tuning_map
+            assert all(x == x for x in tm), value  # finite (no nan) — a valid, pinnable tuning
