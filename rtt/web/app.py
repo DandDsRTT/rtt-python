@@ -1293,6 +1293,9 @@ class _Reconciler:
         self.cell_kinds["basis_minus"] = _KindHandlers(self._build_basis_minus)
         self.cell_kinds["comma_minus"] = _KindHandlers(self._build_comma_minus)
         self.cell_kinds["comma_plus"] = _KindHandlers(self._build_comma_plus)
+        # the chapter-9 domain basis element draft +/- (nonstandard-domain box on)
+        self.cell_kinds["element_plus"] = _KindHandlers(self._build_element_plus)
+        self.cell_kinds["element_minus"] = _KindHandlers(self._build_element_minus)
         self.cell_kinds["interest_minus"] = _KindHandlers(self._build_interest_minus)
         self.cell_kinds["interest_plus"] = _KindHandlers(self._build_interest_plus)
         self.cell_kinds["held_minus"] = _KindHandlers(self._build_held_minus)
@@ -1826,23 +1829,22 @@ class _Reconciler:
         self._update_ratio(cb)              # the overlaid stacked face mirrors the fraction
 
     def _build_elementcell(self, cb, wrap):
-        # an editable chapter-9 domain basis element (nonstandard-domain box on): built exactly like
-        # a ratiocell — an input under a stacked fraction face — but its commit RELABELS that basis
-        # element (or fills the ?/? draft to add a new one held just), not an interval edit. Commits
-        # the whole typed rational on blur / Enter, like the other ratio cells.
-        wrap.classes("rtt-cell-input rtt-cell-stacked")
+        # an editable chapter-9 domain basis element (nonstandard-domain box on): a PLAIN input (like
+        # a mapping / comma cell), showing the element directly — NOT the stacked ratio face, which
+        # shrinks the text on focus and overlays a static face that can't morph to the new value. Its
+        # commit RELABELS this basis element (or fills the ?/? draft to add a new one held just),
+        # committing the whole typed rational on blur / Enter.
+        wrap.classes("rtt-cell-input")
         commit = lambda _=None, cid=cb.id: self._cb.on_element_change(cid)
         inp = ui.input().props("dense borderless").classes("rtt-cellinput")
         inp.on("blur", commit)
         inp.on("keydown.enter", commit)
         self.inputs[cb.id] = inp
-        self._ratio(cb, approx=False, overlay=True)
 
     def _update_elementcell(self, cb):
-        self.inputs[cb.id].value = cb.text  # the live element (e.g. "13/5"); a draft pre-fills "?/?"
-        self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                remove="" if cb.pending else "rtt-pending")  # red draft styling
-        self._update_ratio(cb)
+        self.inputs[cb.id].value = cb.text  # the live element (e.g. "13/5"), or "?/?" for a draft
+        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                   remove="" if cb.pending else "rtt-pending")  # red draft styling
 
     def _update_ratio(self, cb):  # genratio / commaratio / ratiocell: refresh the stacked fraction face
         # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
@@ -2344,6 +2346,16 @@ class _Reconciler:
     def _build_comma_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.act(self._editor.add_comma))
+
+    def _build_element_plus(self, cb, wrap):  # nonstandard-domain box on: open a blank ?/? element draft
+        ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.add_element))
+
+    def _build_element_minus(self, cb, wrap):  # cancel the pending element draft (the ?/? column's −)
+        wrap.classes("rtt-minus-zone")
+        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
+            .on("click", lambda _=None: self._cb.act(self._editor.remove_element))
+        self._preview_control(wrap, self._editor.remove_element)
 
     def _build_list_minus(self, cb, wrap, cancel, remove):
         # an interval-list column's − (interest / held / target): the draft column's cancels the

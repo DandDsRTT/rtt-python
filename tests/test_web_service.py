@@ -1549,3 +1549,13 @@ def test_can_set_domain_element_rejects_a_dependent_relabel():
     assert not service.can_set_domain_element(state, 2, "9")  # 2.3.9 is dependent
     assert not service.can_set_domain_element(state, 2, "8")  # 2.3.8 (8 = 2³) is dependent
     assert not service.can_set_domain_element(state, 2, "1")
+
+
+def test_generator_tuning_range_is_none_for_an_unmeasurable_mixed_basis():
+    # 2.3.5.13/5 (5 and 13/5 share the prime 5): the odd-limit diamond the range solver works over
+    # isn't defined, so the range gracefully degrades to None rather than crashing the tuning build.
+    state = service.from_mapping(((1, 1, 0, 0), (0, 1, 4, 0), (0, 0, 0, 1)),
+                                 domain_basis=(2, 3, 5, Fraction(13, 5)))
+    t = service.tuning(state.mapping, service.DEFAULT_TUNING_SCHEME, state.domain_basis)
+    assert t.monotone_generator_range is None and t.tradeoff_generator_range is None
+    assert all(x == x for x in t.tuning_map)  # the tuning itself is finite and unaffected

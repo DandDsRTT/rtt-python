@@ -1856,3 +1856,23 @@ def test_domain_drafts_clear_on_a_domain_change():
     ed.add_element()
     ed.shrink()  # any domain ± invalidates the draft
     assert ed.pending_element is None
+
+
+def test_add_element_commits_a_nonprime_and_the_grid_builds():
+    # regression: committing a held-just nonprime (2.3.5 -> 2.3.5.13/5) must not crash the build —
+    # the range solver can't measure that mixed basis, so it degrades to a range-less tuning.
+    ed = Editor()
+    ed.settings["nonstandard_domain"] = True
+    ed.add_element()
+    ed.set_pending_element("13/5")
+    assert ed.state.domain_basis == (2, 3, 5, Fraction(13, 5))
+    assert ed.pending_element is None
+    ed.layout()  # must not raise
+
+
+def test_remove_element_cancels_the_draft():
+    ed = Editor()
+    ed.settings["nonstandard_domain"] = True
+    ed.add_element()
+    ed.remove_element()
+    assert ed.pending_element is None

@@ -1101,6 +1101,11 @@ class Editor:
             self.state = service.add_domain_element(self.state, service.parse_domain_element(self.pending_element))
             self.pending_element = None
 
+    def remove_element(self) -> None:
+        """Cancel the pending domain basis element draft (the red ?/? column's −). Not an undoable
+        edit — the draft was never committed. A no-op when there is no draft."""
+        self.pending_element = None
+
     def set_domain_element(self, index: int, text) -> None:
         """Relabel domain basis element ``index`` to the typed ``text`` — a pure basis relabel that
         leaves the mapping coordinates untouched. Commits only a valid, independent relabel (a

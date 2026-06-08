@@ -921,6 +921,13 @@ class _GridBuilder:
         # of the ratios/sizes/complexity below — only the displayed column count grows.
         self.pending_interest = list(self.pending_interest) if self.pending_interest is not None else None
         self.mi_shown = self.mi + (1 if self.pending_interest is not None else 0)
+        # the chapter-9 domain basis element draft: with the nonstandard-domain box on, a typed-in
+        # new basis element rides as a red ?/? column to the right of the d real elements (exactly
+        # like the pending comma), until a valid rational fills it (then it commits, added held
+        # just). It is not a real element — no mapping/tuning/count — so the matrix rows still
+        # iterate self.d and leave its column empty; only the displayed domain width grows by one.
+        self.element_draft = self.show_nonstandard_domain and self.pending_element is not None
+        self.d_shown = self.d + (1 if self.element_draft else 0)
         self.interest_ratios = service.comma_ratios(self.interest, self.elements)  # vector -> "num/den" (shared renderer)
         self.interest_mapped = service.mapped_intervals(self.state.mapping, self.interest_ratios, self.elements)
         self.interest_sizes = service.interval_sizes(self.tun, self.interest_ratios, self.elements)
@@ -1129,7 +1136,7 @@ class _GridBuilder:
             # standard EBK-gutter footprint like the gens/primes columns they parallel
             ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_superspace, True),
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W, self.show_superspace, True),
-            ("primes", 2 * BRACKET_W + self.d * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
+            ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
@@ -1464,7 +1471,7 @@ class _GridBuilder:
         # gridline pass can fan every group column into that many vertical sub-axes (commas
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
-        self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown,
+        self.group_n = {"gens": self.r, "primes": self.d_shown, "commas": self.nc_shown,
                    "targets": self.k_shown,
                    "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r,
                    "ssgens": self.rL, "ssprimes": self.dL}
@@ -1652,23 +1659,24 @@ class _GridBuilder:
 
     def cell_unit(self, rkey, ckey, *, gen=None, prime=None):
         # the per-value unit shown beneath a gridded cell when units is on: the tile's unit
-        # (tile_unit) with its STANDALONE g/p/b coordinate variables subscripted by this cell's
+        # (tile_unit) with its STANDALONE coordinate variables subscripted by this cell's
         # generator/prime index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped
-        # list g₁. Only standalone letters subscript (see _subscript_coord), so the p inside an
+        # list g₁. Only standalone tokens subscript (see _subscript_coord), so the p inside an
         # annotation family like (sopfr-C)/p stays put while the trailing prime coordinate becomes
         # p₁. A nonstandard subgroup swaps the on-domain p for b (basis element); see domain_label.
-        # The chapter-9 superspace tiles use literal b in UNITS (¢/b for the cyan tuning row, g/b
-        # for M_L, b/b for M_jL) — so a prime arg subscripts b directly too. The literal-b
-        # substitution runs FIRST so the b's the p-swap itself produces (p → b₁) don't get
-        # re-subscripted to b₁₁ when domain_label is b.
+        # The chapter-9 superspace tiles run over true primes (p) and superspace generators (gL),
+        # NOT the on-domain g/b — so they keep p (the p → b swap is scoped to non-superspace
+        # tiles) and subscript the gL token (gL₁) for M_L / 𝒈ₗ.
         if not self.show_units:
             return ""
         u = self.tile_unit(rkey, ckey)
+        superspace = rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")
         if gen is not None:
-            u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
+            gtok = "gL" if superspace else "g"
+            u = _subscript_coord(u, gtok, f"{gtok}{_sub(gen + 1)}")
         if prime is not None:
-            u = _subscript_coord(u, "b", f"b{_sub(prime + 1)}")
-            u = _subscript_coord(u, "p", f"{self.domain_label}{_sub(prime + 1)}")
+            coord = "p" if superspace else self.domain_label
+            u = _subscript_coord(u, "p", f"{coord}{_sub(prime + 1)}")
         return u
 
     def matlabel_gutter_w(self, group_key):
@@ -1780,8 +1788,9 @@ class _GridBuilder:
             return self.tile_open("quantities", "targets") and not self.all_interval
         if ckey == "gens":  # the generators + un-temps a comma (−n, +r), so it needs one to un-temper
             return self.tile_open("quantities", "gens") and self.state.n > 0
-        if ckey == "primes":  # the + walks to the next standard prime — inapplicable to a subgroup
-            return self.tile_open("quantities", "primes") and self.standard_domain
+        if ckey == "primes":  # off: the + walks to the next standard prime (inapplicable to a subgroup).
+            # On (nonstandard-domain box): the + starts a typed ?/? element draft, valid for ANY domain.
+            return self.tile_open("quantities", "primes") and (self.show_nonstandard_domain or self.standard_domain)
         return self.tile_open("quantities", ckey)
 
     def closed_form_operand(self, key, group, i):
@@ -1826,8 +1835,9 @@ class _GridBuilder:
             self.chart_tiles.append((key, group, vals))
         y = self.row_y[key]
         # the tuning-family unit is cents per the column's coordinate: over the generators
-        # it's ¢/gᵢ (gens AND the chapter-9 superspace ssgens), over the primes ¢/pᵢ /
-        # ¢/bᵢ (primes AND ssprimes), and over the (dimensionless) interval columns plain ¢
+        # it's ¢/gᵢ (gens) or ¢/gLᵢ (the chapter-9 superspace ssgens), over the primes ¢/pᵢ /
+        # ¢/bᵢ (the domain primes / basis elements) or ¢/pᵢ (the superspace ssprimes, true
+        # primes), and over the (dimensionless) interval columns plain ¢
         is_gen_group = group in ("gens", "ssgens")
         is_prime_group = group in ("primes", "ssprimes")
         for i, v in enumerate(vals):
@@ -2199,6 +2209,21 @@ class _GridBuilder:
             for i in range(self.r):
                 self.cells.append(CellBox(f"ucol:mapping:{i}", self.col_x["units"], self.map_top(i), self.col_w["units"], ROW_H,
                                      "units", text=f"g{_sub(i + 1)}/"))
+        # the chapter-9 superspace rows label their coordinate in the units column too: B_L's
+        # components and M_jL's identity are superspace primes (pᵢ/), M_L's rows are superspace
+        # generators (gLᵢ/) — true primes / superspace generators, never the on-domain b/g
+        if self.tile_open("ss_vectors", "units"):
+            for p in range(self.dL):
+                self.cells.append(CellBox(f"ucol:ss_vectors:{p}", self.col_x["units"], self.ss_vec_top(p), self.col_w["units"], ROW_H,
+                                     "units", text=f"p{_sub(p + 1)}/"))
+        if self.tile_open("ss_mapping", "units"):
+            for i in range(self.rL):
+                self.cells.append(CellBox(f"ucol:ss_mapping:{i}", self.col_x["units"], self.ss_map_top(i), self.col_w["units"], ROW_H,
+                                     "units", text=f"gL{_sub(i + 1)}/"))
+        if self.tile_open("ss_just_mapping", "units"):
+            for p in range(self.dL):
+                self.cells.append(CellBox(f"ucol:ss_just_mapping:{p}", self.col_x["units"], self.ss_just_map_top(p), self.col_w["units"], ROW_H,
+                                     "units", text=f"p{_sub(p + 1)}/"))
         # the cents / octave / annotated-unit rows (guide ch.10 "Annotated units"). Each renders one
         # unit cell PER SUBROW — derived from the cell-row count row_nsub — so a matrix-valued row (the
         # prescaler 𝑋 = 𝑍𝐿's size row) carries a unit on EVERY row, not just its first. Generic to any
@@ -2223,6 +2248,14 @@ class _GridBuilder:
             if self.tile_open("units", "primes"):
                 for p in range(self.d):
                     self.cells.append(CellBox(f"urow:primes:{p}", self.prime_left(p), uy, COL_W, ROW_H, "units", text=f"/{self.domain_label}{_sub(p + 1)}"))
+            # the chapter-9 superspace columns: /gLᵢ over the superspace generators, /pᵢ over
+            # the superspace primes (true primes p — NOT the on-domain b, even when nonstandard)
+            if self.tile_open("units", "ssgens"):
+                for g in range(self.rL):
+                    self.cells.append(CellBox(f"urow:ssgens:{g}", self.ss_gen_left(g), uy, COL_W, ROW_H, "units", text=f"/gL{_sub(g + 1)}"))
+            if self.tile_open("units", "ssprimes"):
+                for p in range(self.dL):
+                    self.cells.append(CellBox(f"urow:ssprimes:{p}", self.ss_prime_left(p), uy, COL_W, ROW_H, "units", text=f"/p{_sub(p + 1)}"))
             if self.tile_open("units", "commas"):
                 for c in range(self.nc):
                     self.cells.append(CellBox(f"urow:commas:{c}", self.comma_left(c), uy, COL_W, ROW_H, "units", text="/1"))
@@ -2277,10 +2310,17 @@ class _GridBuilder:
                 for p in range(self.d):
                     self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, element_kind, text=str(self.elements[p]), prime=p))
                     self._voice("quantities:primes", p, self.tun.just_map[p])
+                if self.element_draft:  # the red ?/? draft column: type a rational to add a new basis
+                    # element (held just). A distinct id so it's removed, not restructured, on commit.
+                    self.cells.append(CellBox("prime:pending", self.prime_left(self.d), qy, COL_W, ROW_H, "elementcell",
+                                              text=self.pending_element or "?/?", prime=self.d, pending=True))
+                    branch_minus("element_minus:pending", "primes", self.d, "element_minus")
                 # Only the highest prime is removable (shrink_domain trims the last), so its
                 # − rides that prime's branch point (the last top-bus split) — and only when the
-                # shrink actually applies (gated like editor.shrink, never shown inert).
-                if self.domain_can_shrink:
+                # shrink actually applies (gated like editor.shrink, never shown inert). With the
+                # nonstandard-domain box on the domain is edited by typing, not prime-walked, so the
+                # walk − is suppressed (the draft column carries its own − to cancel instead).
+                if self.domain_can_shrink and not self.show_nonstandard_domain:
                     branch_minus("minus", "primes", self.d - 1, "minus")
             # the chapter-9 superspace columns' quantity headers (the dual of their spine basis
             # index): the rL superspace generators as ~ratios (read-only — derived from M_L) and
@@ -2350,7 +2390,10 @@ class _GridBuilder:
             # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
             # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
             # the first interval can still be added). The − is the hover counterpart on a branch point.
-            for ckey, cid in (("gens", "gen_plus"), ("primes", "plus"), ("commas", "comma_plus"),
+            # with the nonstandard-domain box on, the domain + starts a typed ?/? element draft
+            # (element_plus → editor.add_element) rather than walking to the next prime (plus → expand)
+            primes_plus = "element_plus" if self.show_nonstandard_domain else "plus"
+            for ckey, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
                               ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
                 if ckey in self.plus_stub_x:
                     branch_plus(cid, ckey, cid)

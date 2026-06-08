@@ -551,19 +551,22 @@ UNITS = {
     ("vectors", "held"): "p",
     ("vectors", "detempering"): "p",
     ("vectors", "interest"): "p",
-    # the chapter-9 green superspace tiles: B_L embeds the d domain elements in dL prime
-    # coordinates (a domain-basis-element-axis "b" denominator), M_L is g/b (one generator
-    # entry per superspace prime), M_jL is b/b (identity). Phase 4F adds the cyan tuning
-    # row's superspace units.
-    ("ss_vectors", "primes"): "b",
-    ("ss_mapping", "ssprimes"): "g/b",
-    ("ss_just_mapping", "ssprimes"): "b/b",
+    # the chapter-9 green superspace tiles run over TRUE primes — the superspace is prime-only
+    # by construction — so their coordinate is p, NOT the on-domain basis element b, even when
+    # the domain itself is nonstandard (the whole point of the superspace: it re-expresses a
+    # nonprime domain b over genuine primes p). Its generators are the superspace generators gL
+    # (distinct from the on-domain g). So B_L embeds the d domain elements in dL superspace-prime
+    # coordinates (p), M_L is gL/p (one superspace generator per superspace prime), M_jL is p/p
+    # (identity). The p → b on-domain swap (see cell_unit) does NOT reach these tiles.
+    ("ss_vectors", "primes"): "p",
+    ("ss_mapping", "ssprimes"): "gL/p",
+    ("ss_just_mapping", "ssprimes"): "p/p",
     # the cyan superspace tuning row mirrors the on-domain tuning row over the superspace
-    # primes ("b" for the basis-element axis); 𝒈ₗ is ¢ per superspace generator.
-    ("tuning", "ssgens"): "¢/g",
-    ("tuning", "ssprimes"): "¢/b",
-    ("just", "ssprimes"): "¢/b",
-    ("retune", "ssprimes"): "¢/b",
+    # primes (p, true primes); 𝒈ₗ is ¢ per superspace generator gL.
+    ("tuning", "ssgens"): "¢/gL",
+    ("tuning", "ssprimes"): "¢/p",
+    ("just", "ssprimes"): "¢/p",
+    ("retune", "ssprimes"): "¢/p",
     ("mapping", "primes"): "g/p",
     ("mapping", "commas"): "g",
     ("mapping", "targets"): "g",
@@ -721,6 +724,15 @@ UNITS_TILES = (
     ("block:urow:primes", "units", "primes"),
     ("block:urow:commas", "units", "commas"),
     ("block:urow:targets", "units", "targets"),
+    # the chapter-9 superspace units (gated on nonstandard_domain too — both row and column
+    # bands must be present): the units COLUMN over the superspace rows (B_L / M_L / M_jL in
+    # pᵢ/ and gLᵢ/) and the units ROW over the superspace columns (/gLᵢ over ssgens, /pᵢ over
+    # ssprimes — true primes p, not the on-domain b)
+    ("block:ucol:ss_vectors", "ss_vectors", "units"),
+    ("block:ucol:ss_mapping", "ss_mapping", "units"),
+    ("block:ucol:ss_just_mapping", "ss_just_mapping", "units"),
+    ("block:urow:ssgens", "units", "ssgens"),
+    ("block:urow:ssprimes", "units", "ssprimes"),
 )
 
 # The plain-text tiles whose string is an editable input that drives the grid —
