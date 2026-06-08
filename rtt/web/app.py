@@ -86,6 +86,13 @@ def _doc_store() -> dict:
 # generators, or a prime tempered to a unison (see service.is_proper_temperament)
 _INVALID_TEMPERAMENT = "Not a valid temperament: the generators must be independent and every prime reached."
 
+# the toast shown when the "nonstandard domain" Show toggle is turned off while a nonstandard
+# basis is still live — the setting can't go off until the basis is back to a standard prime limit
+_NONSTANDARD_BASIS_IN_USE = (
+    "Can't turn off the nonstandard domain setting while a nonstandard basis is in use — "
+    "change the domain back to a standard prime limit first."
+)
+
 _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
 _PREVIEW_COLOR = "#f5a623"  # amber ring on a cell the in-progress edit moves (the edit-preview
 # highlight) — a warm "this changed" hue, kept distinct from the red _PENDING_COLOR error/alert
@@ -2816,6 +2823,12 @@ def index() -> None:
         # building[0] guards the echo when render() syncs a checkbox to the document
         # (e.g. after undo/redo/reset/select-all) rather than a real user toggle
         if building[0]:
+            return
+        if key == "nonstandard_domain" and not value and editor.basis_is_nonstandard:
+            # the setting can't go off while a nonstandard basis is live (its content would be
+            # stranded with nowhere to show). Toast and re-render to restore the checkbox to on.
+            ui.notify(_NONSTANDARD_BASIS_IN_USE, type="negative", position="top")
+            render()
             return
         editor.set_show(key, value)
         render()  # the reconciling renderer animates the affected rows/columns in or out

@@ -136,6 +136,34 @@ def test_removing_the_last_comma_reaches_just_intonation_and_renders():
     assert _comma_basis(editor) == [[4, -4, 1]]  # one undoable edit restores meantone
 
 
+# --- the nonstandard-domain Show toggle can't go off while a nonstandard basis is live ---
+
+def test_basis_is_nonstandard_tracks_the_domain():
+    editor = Editor()
+    assert editor.basis_is_nonstandard is False  # the 2.3.5 default is a standard prime limit
+    assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True  # Barbados
+    assert editor.basis_is_nonstandard is True  # 2.3.13/5 is a nonstandard subgroup
+
+
+def test_select_none_keeps_nonstandard_domain_on_while_the_basis_is_nonstandard():
+    # the bulk select-none path turns off every implemented Show toggle — but it must leave
+    # "nonstandard domain" on while the basis is nonstandard, so its content isn't stranded.
+    editor = Editor()
+    editor.set_show("nonstandard_domain", True)
+    assert editor.try_edit_mapping_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}") is True
+    editor.set_all_show(False)
+    assert editor.settings["nonstandard_domain"] is True
+
+
+def test_select_none_turns_nonstandard_domain_off_on_a_standard_basis():
+    # the guard is conditional: over a standard prime limit, select-none clears it like any other.
+    editor = Editor()
+    editor.set_show("nonstandard_domain", True)
+    assert editor.basis_is_nonstandard is False
+    editor.set_all_show(False)
+    assert editor.settings["nonstandard_domain"] is False
+
+
 # --- inputting ---
 
 def test_a_temporarily_invalid_cell_value_does_not_recompute():

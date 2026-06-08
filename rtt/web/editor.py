@@ -311,6 +311,13 @@ class Editor:
         return service.is_standard_domain(self.state.domain_basis)
 
     @property
+    def basis_is_nonstandard(self) -> bool:
+        """Whether the current domain basis is a nonstandard subgroup (not the first d
+        primes) — the state the "nonstandard domain" Show toggle exists to represent, so it
+        can't be turned off until the basis is back to a standard prime limit."""
+        return not service.is_standard_domain(self.state.domain_basis)
+
+    @property
     def can_shrink(self) -> bool:
         """Whether the domain − applies — see :func:`service.can_shrink_domain`, the shared
         predicate the renderer gates the − button on too (so it never shows while inert)."""
@@ -943,6 +950,10 @@ class Editor:
         had_alt_complexity = self.settings["alt_complexity"]
         for key in show_settings.IMPLEMENTED:
             self.settings[key] = value
+        # "nonstandard domain" can't go off while a nonstandard basis is live (see
+        # on_show_toggle's guard) — keep it on so select-none can't strand that content.
+        if not value and self.basis_is_nonstandard:
+            self.settings["nonstandard_domain"] = True
         if had_alt_complexity and not self.settings["alt_complexity"]:
             self._reset_to_basic_tuning()
 
