@@ -618,7 +618,10 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     # prescaler (the guide's 𝑋 = 𝑍𝐿, 𝑍diag(𝒑), or just 𝑍 since 𝑍𝐼 vaporizes), so the bare tile names THAT.
     if size_factor and realized:
         base = "" if realized == "identity" else PRESCALER_LETTER[realized]  # 𝑍𝐼 = 𝑍, so identity drops its base
-        equivalence = f" = 𝑍{base}"
+        # a single-glyph base juxtaposes cleanly (𝑍𝐿, the guide's form); a multi-letter one (diag(𝒑))
+        # needs a · so "𝑍diag" doesn't read as one word
+        sep = "·" if base.startswith("diag") else ""
+        equivalence = f" = 𝑍{sep}{base}"
     elif realized:
         equivalence = f" = {PRESCALER_LETTER[realized]}"
     else:
@@ -937,7 +940,8 @@ class _GridBuilder:
         self.prescaler = service.complexity_prescaler(self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)
         # a non-diagonal pretransformer (the editable square, off-diagonal entries typed in) is a
         # d×d matrix rather than a per-prime diagonal; its rows/products multiply, and — like the
-        # size factor — its inverse weight has no per-prime-list form (see weight_is_matrix below).
+        # size factor — its inverse weight has no per-prime diagonal closed form (see
+        # all_interval_simplicity_weight below, which gives the weight tile its 𝑆 = 𝑋⁻¹ symbol).
         self.prescaler_is_matrix = isinstance(self.prescaler[0], (tuple, list))
         # a pending draft alone (no committed intervals) declares just the two tiles that host
         # it — the editable vector ket and its "?" ratio header; the derived rows (sizes,
@@ -1071,40 +1075,29 @@ class _GridBuilder:
         # products) grow that one row; every other row is unchanged.
         self.size_factor = service.complexity_size_factor(self.tuning_scheme)
         self.size_rows = 1 if self.size_factor else 0
-        # All-interval, whenever the pretransformer isn't a plain per-prime diagonal: the simplicity-
-        # weight list can't carry it, so the weight becomes a matrix 𝑊 (and a bar chart can't draw a
-        # matrix). The size factor makes it the augmented (d+1)×(d+1) inverse 𝑋⁻¹ (see below); a
-        # non-diagonal editable square 𝑋 makes it the d×d inverse 𝑋⁻¹. In target-based mode the per-
+        # All-interval, whenever the pretransformer isn't a plain per-prime diagonal: the simplicity
+        # weight has no per-prime-list closed form (the size factor / off-diagonal entries don't ride
+        # into a diagonal). The weight still renders as a LIST — what's special is carried by the tile's
+        # big-symbol EQUIVALENCE (𝑆ₚ = 𝐿⁻¹ ⊕ 1 with the size factor, 𝑆 = 𝑋⁻¹ for a non-diagonal square 𝑋)
+        # and its per-column simplicity headers, NOT by drawing a matrix. In target-based mode the per-
         # target weights still differ (the off-diagonal/size factor already rode into them), so the
-        # list + chart stay.
-        self.weight_is_matrix = self.all_interval and (bool(self.size_factor) or self.prescaler_is_matrix)
-        # The PHANTOM-PRIME augmentation (all-interval + size factor, the lils family): the weighting
-        # region renders over d+1 "augmented primes" = the d real primes + 1 phantom prime (the engine's
-        # generator-embedding augmentation — an extra mapping row sf·log₂(p), just-tuned to 0 then
-        # dropped). The pretransformer 𝑋, its inverse 𝑊, the target identity Tₚ, the complexity 𝒄 and
-        # the damage 𝐝 all grow to the (d+1)-shape so their rows/columns line up. The phantom row/column
-        # render greyed (derived, not a real interval). phantom_dim is the one extra augmented dimension
-        # (1 when on) — it is BOTH a trailing target COLUMN and a trailing prime-component ROW (Tₚ = I_(d+1)).
-        self.augmented = self.all_interval and bool(self.size_factor)
-        self.phantom_dim = 1 if self.augmented else 0
+        # list + chart stay too.
+        self.all_interval_simplicity_weight = self.all_interval and (
+            bool(self.size_factor) or self.prescaler_is_matrix)
         col_bands = (
             ("quantities", COL_W, show_domain_quantities, True),
             ("units", COL_W, show_domain_units, True),
-            ("gens", 2 * BRACKET_W + (self.r + self.phantom_dim) * COL_W, show_temp, True),
+            ("gens", 2 * BRACKET_W + self.r * COL_W, show_temp, True),
             # the chapter-9 superspace columns ride between gens and the domain primes — rL
             # cells (superspace generators) and dL cells (superspace primes), each in the
             # standard EBK-gutter footprint like the gens/primes columns they parallel
             ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_nonstandard_domain, True),
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W, self.show_nonstandard_domain, True),
-            # the augmented bare pretransformer 𝑋 reserves one trailing phantom-prime COLUMN (phantom_dim);
-            # matrix_span subtracts it so the mapping / tuning hug the d real cells unchanged (𝑋 alone spans it)
-            ("primes", 2 * BRACKET_W + (self.d + self.phantom_dim) * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
+            ("primes", 2 * BRACKET_W + self.d * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
-            # the augmented phantom prime adds one trailing target COLUMN (phantom_dim) so the
-            # weighting region's d+1 shapes (Tₚ, 𝒄, 𝑊, 𝐝) sit in-column with their gridlines + brackets
-            ("targets", 2 * BRACKET_W + (self.k_shown + self.phantom_dim) * COL_W, show_tuning, True),
+            ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
             # padding. Its long two-line title needs more room, so the column's *footprint*
             # is floored at the title width (see the loop below) and the narrow content is
@@ -1127,12 +1120,9 @@ class _GridBuilder:
             ("counts", ROW_H, show_counts, True, "counts"),
             ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
             ("units", ROW_H, show_domain_units, True, "units"),
-            # the augmented Tₚ = I_(d+1) adds one phantom prime-component ROW (phantom_dim); the other
-            # vectors tiles (commas/held/detempering) are real d-dim intervals and stay d-tall in the band
-            ("vectors", (self.d + self.phantom_dim) * ROW_H, show_temp, True, "interval vectors"),
+            ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
             ("canon", self.rc * ROW_H, self.show_form_controls, True, "canonical mapping"),
-            # the size generator adds one mapping ROW (phantom_dim) — the dummy generator ⟨sf·𝟙 | −1]
-            ("mapping", (self.r + self.phantom_dim) * ROW_H, show_temp, True, "mapping"),
+            ("mapping", self.r * ROW_H, show_temp, True, "mapping"),
             # the chapter-9 superspace rows sit between mapping and tuning, the row
             # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
             # monzo columns (B_L, target/comma monzos in the superspace); ss_mapping the
@@ -1156,7 +1146,7 @@ class _GridBuilder:
             ("retune", ROW_H, show_tuning, True, "retuning"),
             ("prescaling", (self.d + self.size_rows) * ROW_H, self._complexity_shown, True, "complexity prescaling"),
             ("complexity", ROW_H, self._complexity_shown, True, "complexity"),
-            ("weight", ((self.d + self.size_rows) if self.weight_is_matrix else 1) * ROW_H, self.show_weighting, True, "weight"),
+            ("weight", ROW_H, self.show_weighting, True, "weight"),
             ("damage", ROW_H, show_tuning, True, "damage"),
         )
         # the present rows that carry an in-tile caption; a column is floored wide enough to
@@ -1434,7 +1424,7 @@ class _GridBuilder:
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
         self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown,
-                   "targets": self.k_shown + self.phantom_dim,  # the phantom column fans its own sub-axis
+                   "targets": self.k_shown,
                    "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r,
                    "ssgens": self.rL, "ssprimes": self.dL}
         self.group_ratio = {  # the just interval ratio each value group is taken over
@@ -1646,15 +1636,6 @@ class _GridBuilder:
         # gutter. Used wherever the cells' true left edge matters (prime_left, the EBK span, the header).
         return self.handle_gutter_w(group_key) + self.matlabel_gutter_w(group_key)
 
-    def augment_w(self, group_key):
-        # The augmented phantom slot (augmented lils only): one COL_W reserved on the RIGHT of a block,
-        # OUTSIDE matrix_span. On "primes" it is the bare pretransformer 𝑋's trailing dummy-prime COLUMN
-        # (𝑋 = the (d+1)×(d+1) square 𝑊 = 𝑋⁻¹ inverts); on "gens" it is the genmap's trailing size-
-        # generator sub-column (𝒈 is 1×(r+1) so 𝒕 = 𝒈M lines up). matrix_span subtracts it, so the fan /
-        # the real cells keep hugging the d primes / r generators — only the augmented matrix's own
-        # frame + brackets span it (via augment_span), adding room without moving the real cells.
-        return self.phantom_dim * COL_W if group_key in ("primes", "gens") else 0
-
     def matrix_span(self, group_key):
         # The (x, width) of a group's CELL matrix — its content_box minus the outer gutters, which
         # content_w carries on BOTH sides (the left holds the handles + row labels, the right
@@ -1662,21 +1643,19 @@ class _GridBuilder:
         # their ⟨ at its left edge and ] at its right, and the spanning ebktop/ebkbrace/ebkangle
         # frame runs its full width. Anchored to the cells (not the wider grey footprint), so a
         # column widened past them keeps the EBK hugging the matrix with the labels/handles outside.
-        # The bare-𝑋 phantom column (augment_w) is excluded — it is a right-side reservation 𝑋 alone
-        # spans (via augment_span), so every OTHER tile in the column keeps hugging the d real cells.
         x, w = self.content_box(group_key)
         mx = self.outer_gutter_w(group_key)
-        return x + mx, w - 2 * mx - self.augment_w(group_key)
+        return x + mx, w - 2 * mx
 
-    def augment_span(self, group_key):
-        # an augmented matrix's frame + per-row brackets span its real-cell block PLUS the trailing
-        # phantom slot (augment_w): on "primes" the bare pretransformer 𝑋's (d+1)-wide square (the
-        # dummy-prime | -set off inside it); on "gens" the genmap's (r+1)-wide row (the size generator
-        # set off). None when the column is hidden (the frame is skipped, so the span is never used).
-        if group_key not in self.col_x:
-            return None
-        gx, gw = self.matrix_span(group_key)
-        return gx, gw + self.augment_w(group_key)
+    def _weight_simplicity_header(self, i):
+        # the all-interval simplicity weight's per-column header — the reciprocal of the complexity
+        # row's ‖𝐿‖q (see _prescaler_col_labels.complexity_target): 𝑠ₙ on its own, gaining the norm
+        # 𝑠ₙ = ‖𝐿‖q⁻¹ as its equivalence tail when the equivalences layer is on. All-interval (Tₚ = I)
+        # so the inner norm is the bare prescaler glyph (every target proxies a prime).
+        symbol = f"s{_sub(i + 1)}"
+        if not self.show_equiv:
+            return symbol
+        return f"{symbol} = ‖{self.prescaler_symbol}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}⁻¹"
 
     def prime_left(self, p):
         return self.primes_x + self.outer_gutter_w("primes") + BRACKET_W + p * COL_W
@@ -1737,9 +1716,7 @@ class _GridBuilder:
         if n == 0:  # an empty set has no branch points: the + centres on the single trunk
             mx, mw = self.matrix_span(ckey)
             return mx + mw / 2
-        # one slot past the last branch point — and clear of the bare-𝑋 phantom column (augment_w), so
-        # the "add a prime" + does not land over 𝑋's greyed phantom slot
-        return self.sub_axis_x(ckey, n - 1) + COL_W + self.augment_w(ckey)
+        return self.sub_axis_x(ckey, n - 1) + COL_W  # one slot past the last branch point
 
     def _plus_shows(self, ckey):  # mirrors the +'s emit gate in the quantities block (col_open for the
         if ckey in ("interest", "held"):  # addable sets, so an empty-but-open column still adds one)
@@ -1836,8 +1813,7 @@ class _GridBuilder:
         # gap); the enclosing mapped-list [ ] passes fit=True to span the matrix.
         # matrix_span hugs the cells (interest's content, not its footprint) and steps
         # the left ⟨ right past the matlabel gutter, so the row labels sit inside the
-        # panel left of the ⟨ rather than overflowing it. ``span`` overrides it — the bare
-        # pretransformer 𝑋's per-row ⟨ … ] reach past its d-block to include the phantom column.
+        # panel left of the ⟨ rather than overflowing it. ``span`` overrides the default span.
         gx, gw = span if span else self.matrix_span(group_key)
         by, bh = (y, h) if fit else (y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H)
         self.cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
@@ -2061,7 +2037,7 @@ class _GridBuilder:
         # plain-text bracket but with ⟩ in place of }).
         if not self.tile_open(rkey, ckey):
             return
-        gx, gw = span if span else self.matrix_span(ckey)  # ``span`` widens the frame past the d-block (𝑋's phantom column)
+        gx, gw = span if span else self.matrix_span(ckey)  # ``span`` overrides the default cell-matrix span
         self.cells.append(CellBox(f"ebktop:{bid}", gx, self.frame_top_y(rkey), gw, FRAME_H, "ebktop"))
         self.cells.append(CellBox(f"{foot}:{bid}", gx, self.frame_brace_y(rkey), gw, BRACE_H, foot))
     # the 𝐿·basis product matrices (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile use a
@@ -2164,19 +2140,13 @@ class _GridBuilder:
             for p in range(self.d):
                 self.cells.append(CellBox(f"ucol:vectors:{p}", self.col_x["units"], self.vec_top(p), self.col_w["units"], ROW_H,
                                      "units", text=f"{self.domain_label}{_sub(p + 1)}/"))
-            if self.phantom_dim:  # the dummy prime component has no real prime — "–", greyed
-                self.cells.append(CellBox(f"ucol:vectors:{self.d}", self.col_x["units"], self.vec_top(self.d), self.col_w["units"], ROW_H,
-                                     "units", text="–", phantom=True))
         if self.tile_open("mapping", "units"):
             for i in range(self.r):
                 self.cells.append(CellBox(f"ucol:mapping:{i}", self.col_x["units"], self.map_top(i), self.col_w["units"], ROW_H,
                                      "units", text=f"g{_sub(i + 1)}/"))
-            if self.phantom_dim:  # the size generator's unit follows the generator units (g₍ᵣ₊₁₎/), greyed
-                self.cells.append(CellBox(f"ucol:mapping:{self.r}", self.col_x["units"], self.map_top(self.r), self.col_w["units"], ROW_H,
-                                     "units", text=f"g{_sub(self.r + 1)}/", phantom=True))
         # the cents / octave / annotated-unit rows (guide ch.10 "Annotated units"). Each renders one
         # unit cell PER SUBROW — derived from the cell-row count row_nsub — so a matrix-valued row (the
-        # prescaler 𝑋, the weight 𝑆ₚ) carries a unit on EVERY row, not just its first. Generic to any
+        # prescaler 𝑋 = 𝑍𝐿's size row) carries a unit on EVERY row, not just its first. Generic to any
         # multi-row tile, so this can't silently regress when a new matrix row appears. Single-row tiles
         # keep the bare id; multi-row ones index it by subrow (matching the prescaler's existing ids).
         const_units = {"tuning": "¢/", "just": "¢/", "retune": "¢/", "prescaling": "oct/",
@@ -2188,10 +2158,8 @@ class _GridBuilder:
             n = self.row_nsub[key]
             for i in range(n):
                 cid = f"ucol:{key}:{i}" if n > 1 else f"ucol:{key}"
-                # the weight matrix greys its augmented (size/phantom) row — mirror that on its unit
-                phantom = key == "weight" and self.augmented and i == self.d
                 self.cells.append(CellBox(cid, self.col_x["units"], self.row_y[key] + i * ROW_H,
-                                     self.col_w["units"], ROW_H, "units", text=text, phantom=phantom))
+                                     self.col_w["units"], ROW_H, "units", text=text))
         if "units" in self.row_y:
             uy = self.row_y["units"]
             if self.tile_open("units", "gens"):
@@ -2209,8 +2177,6 @@ class _GridBuilder:
             if self.tile_open("units", "targets"):
                 for j in range(self.k):
                     self.cells.append(CellBox(f"urow:targets:{j}", self.target_left(j), uy, COL_W, ROW_H, "units", text="/1"))
-                if self.phantom_dim:  # the dummy target has no unit — "–", greyed
-                    self.cells.append(CellBox("urow:targets:phantom", self.target_left(self.k), uy, COL_W, ROW_H, "units", text="–", phantom=True))
             if self.tile_open("units", "interest"):
                 for ii in range(self.mi):
                     self.cells.append(CellBox(f"urow:interest:{ii}", self.interest_left(ii), uy, COL_W, ROW_H, "units", text="/1"))
@@ -2243,8 +2209,6 @@ class _GridBuilder:
             if self.tile_open("quantities", "gens"):  # the generator ratios heading their sub-columns,
                 for g in range(self.r):                # the column-header dual of the spine list (gen:i)
                     self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.gens[g], gen=g))
-                if self.phantom_dim:  # the size generator has no ratio — "–", greyed (the dropped dummy generator, no ± control)
-                    self.cells.append(CellBox(f"qgen:{self.r}", self.gen_left(self.r), qy, COL_W, ROW_H, "genratio", text="–", gen=self.r, phantom=True))
                 # the generators ± mirrors the mapping-row ± (same quantity, the generators): the + on
                 # the column stub un-temps a comma (−n, +r, hold d), the − on the LAST generator's
                 # branch point drops that row (+n, −r, hold d), removable when r > 1
@@ -2254,8 +2218,6 @@ class _GridBuilder:
                 for p in range(self.d):
                     self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
                     self._voice("quantities:primes", p, self.tun.just_map[p])
-                if self.phantom_dim:  # the dummy prime has no real prime number — "–", greyed (no audio, not a real interval)
-                    self.cells.append(CellBox(f"prime:{self.d}", self.prime_left(self.d), qy, COL_W, ROW_H, "prime", text="–", prime=self.d, phantom=True))
                 # Only the highest prime is removable (shrink_domain trims the last), so its
                 # − rides that prime's branch point (the last top-bus split) — and only when the
                 # shrink actually applies (gated like editor.shrink, never shown inert).
@@ -2290,8 +2252,6 @@ class _GridBuilder:
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
                     if self.targets_editable:
                         branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
-                if self.phantom_dim:  # the dummy target (the augmented Tₚ column) has no real ratio — "–", greyed
-                    self.cells.append(CellBox("target:phantom", self.target_left(self.k), qy, COL_W, ROW_H, "commaratio", text="–", comma=self.k, phantom=True))
                 if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
                     self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
                     branch_minus("target_minus:pending", "targets", self.k, "target_minus")
@@ -2364,8 +2324,6 @@ class _GridBuilder:
             if self.tile_open("mapping", "quantities"):
                 for i in range(self.r):
                     self.cells.append(CellBox(f"gen:{i}", self.col_x["quantities"], self.map_top(i), self.col_w["quantities"], ROW_H, "genratio", text=self.gens[i] if i < len(self.gens) else "", gen=i))
-                if self.phantom_dim:  # the size generator's ratio slot — "–" (the dropped dummy generator, not a real one), greyed
-                    self.cells.append(CellBox(f"gen:{self.r}", self.col_x["quantities"], self.map_top(self.r), self.col_w["quantities"], ROW_H, "genratio", text="–", gen=self.r, phantom=True))
                 # the mapping-row ± ride the row's LEFT bus (like the basis controls on the vectors
                 # row), out to the left of the generator-ratio spine: a − on EACH generator's branch
                 # point (any row removable, −r,+n), the + on the stub below the stack (un-temper a
@@ -2395,8 +2353,6 @@ class _GridBuilder:
                         # mapping change — otherwise the edit preview is blind to the matrix a
                         # temperament swap or a +/- rewrites. The input still shows it via _update_mapping.
                         self.cells.append(CellBox(f"cell:mapping:{i}:{p}", self.prime_left(p), self.map_top(i), COL_W, ROW_H, "mapping", text=str(self.state.mapping[i][p]), gen=i, prime=p, unit=self.cell_unit("mapping", "primes", gen=i, prime=p)))
-                    if self.phantom_dim:  # the dummy prime column (0 — the real generators don't reach it), greyed
-                        self.cells.append(CellBox(f"cell:mapping:{i}:{self.d}", self.prime_left(self.d), self.map_top(i), COL_W, ROW_H, "vec", text="0", phantom=True))
                 if self.tile_open("mapping", "targets"):
                     for j in range(self.k):
                         self.cells.append(CellBox(f"cell:mapped:{i}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))
@@ -2411,27 +2367,6 @@ class _GridBuilder:
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
                         self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
-            if self.phantom_dim:
-                # the SIZE GENERATOR is the (r+1)-th row of EVERY matrix in the mapping row (the dropped
-                # generator the engine augments with, greyed). On the bare 𝑀 it is ⟨sf·𝟙 | −1] (the size-
-                # sensitizing summation over the real primes, −1 in the dummy-prime corner; integer — the
-                # log-size lives in 𝑋 = 𝑍𝐿). On each mapped PRODUCT it is the size gen's image of that
-                # column's source interval: Σ (size_row · the interval's components).
-                size_row = service.augmented_mapping(self.state.mapping, self.tuning_scheme)[self.r]
-                if self.tile_open("mapping", "primes"):
-                    for p in range(self.d + 1):
-                        self.cells.append(CellBox(f"cell:mapping:{self.r}:{p}", self.prime_left(p), self.map_top(self.r), COL_W, ROW_H, "vec", text=str(size_row[p]), phantom=True))
-                def _size_image(vec):
-                    return str(sum(size_row[p] * vec[p] for p in range(self.d)))
-                for group, prefix, left, src in (("targets", "mapped", self.target_left, self.target_vectors),
-                                                 ("interest", "imapped", self.interest_left, self.interest),
-                                                 ("held", "hmapped", self.held_left, self.held),
-                                                 ("commas", "mapped_comma", self.comma_left, self.state.comma_basis)):
-                    if self.tile_open("mapping", group):
-                        for col in range(len(src)):
-                            self.cells.append(CellBox(f"cell:{prefix}:{self.r}:{self.col_token(group, col)}",
-                                                 left(col), self.map_top(self.r), COL_W, ROW_H, "vec",
-                                                 text=_size_image(src[col]), phantom=True))
 
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
@@ -2461,8 +2396,6 @@ class _GridBuilder:
                 bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
                 for p in range(self.d):
                     self.cells.append(CellBox(f"basis:{p}", bx, self.vec_top(p), COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
-                if self.phantom_dim:  # the dummy prime's basis square (labels the dummy vector row) — "–", greyed
-                    self.cells.append(CellBox(f"basis:{self.d}", bx, self.vec_top(self.d), COL_W, ROW_H, "prime", text="–", prime=self.d, phantom=True))
                 # the left bus the controls ride (node_edge + FAN when the row fans — matching
                 # row_axis); the − zone drops from it rightward over the bottom prime as the hover target
                 basis_bus_x = self.node_edge + self.FAN if self._row_fans("vectors") else self.node_edge
@@ -2477,8 +2410,6 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:comma:{p}:{c}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                         self._voice("vectors:commas", c, self.comma_sizes.just[c])
-                    if self.phantom_dim:  # the dummy prime component (0 — a real comma has no dummy content), greyed
-                        self.cells.append(CellBox(f"cell:comma:{self.d}:{c}", self.comma_left(c), self.vec_top(self.d), COL_W, ROW_H, "vec", text="0", phantom=True))
                 if self.pending is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending[p]
@@ -2493,23 +2424,12 @@ class _GridBuilder:
                 # input's opaque box, flush at the slot boundary, would paint over the thin rule. So
                 # the editable cells are inset within their COL_W slot (like the interest kets, KET_INSET)
                 # — leaving a gap the separator shows through — while the read-only Tₚ vecs stay full
-                # COL_W (no covering box, and they must abut the phantom-prime augmentation column).
+                # COL_W (no covering box, so they abut their column separators).
                 cell_inset = KET_INSET if self.targets_editable else 0
                 for j in range(self.k):
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{p}", self.target_left(j) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
                         self._voice("vectors:targets", j, self.target_sizes.just[j])
-                if self.phantom_dim:
-                    # the augmented Tₚ = I_(d+1): a phantom prime-component ROW (p == d, 0 under each real
-                    # target) and a phantom target COLUMN [0…0 1] (j == k). Both greyed — derived from the
-                    # dropped augmentation, not real intervals — so Tₚ lines up with the d+1 𝑋 / 𝑊 / 𝒄 / 𝐝.
-                    # (No _voice — the phantom isn't a real interval to sound.)
-                    for j in range(self.k):
-                        self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{self.d}",
-                                             self.target_left(j), self.vec_top(self.d), COL_W, ROW_H, "vec", text="0", phantom=True))
-                    for p in range(self.d + 1):
-                        self.cells.append(CellBox(f"cell:vec:targets:phantom:{p}", self.target_left(self.k),
-                                             self.vec_top(p), COL_W, ROW_H, "vec", text="1" if p == self.d else "0", phantom=True))
                 if self.pending_target is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_target[p]
@@ -2520,8 +2440,6 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:held:{p}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p), alert=self.held_unheld[i]))
                         self._voice("vectors:held", i, self.held_sizes.just[i])
-                    if self.phantom_dim:  # the dummy prime component (0 — a real interval has no dummy content), greyed
-                        self.cells.append(CellBox(f"cell:held:{self.d}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(self.d), COL_W, ROW_H, "vec", text="0", phantom=True))
                 if self.pending_held is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_held[p]
@@ -2532,8 +2450,6 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:vec:detempering:{i}:{p}", self.detempering_left(i), self.vec_top(p), COL_W, ROW_H, "vec", text=str(self.detempering_vectors[i][p]), unit=self.cell_unit("vectors", "detempering", prime=p)))
                         self._voice("vectors:detempering", i, self.detempering_sizes.just[i])
-                    if self.phantom_dim:  # the dummy prime component (0 — a real interval has no dummy content), greyed
-                        self.cells.append(CellBox(f"cell:vec:detempering:{i}:{self.d}", self.detempering_left(i), self.vec_top(self.d), COL_W, ROW_H, "vec", text="0", phantom=True))
             if self.tile_open("vectors", "interest"):  # the user's intervals of interest: editable vectors, like the comma basis
                 for i in range(self.mi):
                     for p in range(self.d):
@@ -2541,8 +2457,6 @@ class _GridBuilder:
                         # gap to its neighbours — the interest column is a collection, not a matrix
                         self.cells.append(CellBox(f"cell:interest:{p}:{self.col_token('interest', i)}", self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
                         self._voice("vectors:interest", i, self.interest_sizes.just[i])
-                    if self.phantom_dim:  # the dummy prime component (0 — a real interval has no dummy content), greyed
-                        self.cells.append(CellBox(f"cell:interest:{self.d}:{self.col_token('interest', i)}", self.interest_left(i) + KET_INSET, self.vec_top(self.d), COL_W - 2 * KET_INSET, ROW_H, "vec", text="0", phantom=True))
                 if self.pending_interest is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_interest[p]
@@ -2687,8 +2601,6 @@ class _GridBuilder:
         for key, (prime_vals, comma_vals, target_vals, interest_vals, held_vals) in tuning_data.items():
             if self.row_open(key):
                 self.tval_row(key, "primes", prime_vals)
-                if self.phantom_dim and self.tile_open(key, "primes"):  # the dummy prime's tuning is the dropped-generator junk → "–", greyed
-                    self.cells.append(CellBox(f"{key}:prime:{self.d}", self.prime_left(self.d), self.row_y[key], COL_W, ROW_H, "tval", text="–", phantom=True))
                 self.tval_row(key, "commas", comma_vals)
                 self.tval_row(key, "targets", target_vals)
                 self.tval_row(key, "interest", interest_vals)
@@ -2702,9 +2614,6 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"tuning:gen:{i}", self.group_left["gens"](i), self.row_y["tuning"], COL_W, ROW_H,
                                      "gentuningcell", text=service.cents(v), unit=self.cell_unit("tuning", "gens", gen=i)))
                 self._voice("tuning:gens", i, v)  # the genmap sounds each generator's tuned size
-            if self.phantom_dim:  # the size generator's tuning is junk (the dropped dummy generator) — "–", greyed, not editable, no audio
-                self.cells.append(CellBox(f"tuning:gen:{self.r}", self.group_left["gens"](self.r), self.row_y["tuning"], COL_W, ROW_H,
-                                     "gentuningcell", text="–", phantom=True))
         # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column (rL cells, read-only
         # tval — NOT editable yet; Phase 5 will wire the "if you mod 𝒈 then prime-based mode
         # falls off" behaviour), 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over the ssprimes column. The superspace tuning
@@ -2795,15 +2704,6 @@ class _GridBuilder:
                     else:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
                                              text=service.prescale_text(value), unit=u, alert=alert))
-        if self.phantom_dim and self.tile_open("prescaling", "primes"):
-            # the augmented bare 𝑋's phantom prime COLUMN [0…0 1]: 0 in the real outputs (the phantom prime
-            # vanishes from the square), 1 at the size-row corner (it maps to the size output). Greyed, riding
-            # one COL_W right of the d-block (| -set off), so 𝑋 is the (d+1)×(d+1) square that 𝑊 = 𝑋⁻¹ inverts.
-            px = self.prime_left(self.d)
-            for i in range(self.d + self.size_rows):
-                self.cells.append(CellBox(f"cell:prescaling:primes:{i}:phantom", px,
-                                     self.row_y["prescaling"] + i * ROW_H, COL_W, ROW_H, "tval",
-                                     text=service.prescale_text(1.0 if i == self.d else 0.0), phantom=True))
         if self.lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox,
             # in a bordered box at the bottom of the prescaling matrix (the prescaler chooser is a preset
             # now, riding the preset band above). A SQUARE (no inline label — it wraps broken in the narrow
@@ -2891,37 +2791,12 @@ class _GridBuilder:
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
                 self.tval_row("complexity", group, self.complexities[group],
                               alerts=self.held_unheld if group == "held" else ())
-            if self.phantom_dim and self.tile_open("complexity", "primes"):
-                # the dummy prime's complexity is 1 (the augmented 𝑋's dummy column [0…0 1] has unit norm),
-                # like the phantom target's — greyed, completing the d+1 complexity map over the primes
-                self.cells.append(CellBox(f"complexity:prime:{self.d}", self.prime_left(self.d),
-                                     self.row_y["complexity"], COL_W, ROW_H, "tval",
-                                     text=service.cents(1.0), phantom=True))
-            if self.phantom_dim and self.tile_open("complexity", "targets"):
-                # the phantom target's complexity is 1 — the augmented 𝑋's phantom column [0…0 1] has unit
-                # norm — greyed, riding the phantom column so 𝒄 lines up with the d+1 𝑊 / Tₚ
-                self.cells.append(CellBox("complexity:target:phantom", self.target_left(self.k),
-                                     self.row_y["complexity"], COL_W, ROW_H, "tval",
-                                     text=service.cents(1.0), phantom=True))
         if self.row_open("weight") and self.tile_open("weight", "targets"):
-            if self.weight_is_matrix:
-                # the weight matrix 𝑊 (square 𝑋⁻¹, or the d×(d+1) left inverse (𝑍𝑋)⁻ with the size
-                # factor): its first d columns ride the target gridlines, any extra (size) column
-                # overflows one COL_W to the right. No chart (it's a matrix).
-                left = self.group_left["targets"]
-                for i, row in enumerate(service.damage_weight_matrix(
-                        self.state.mapping, self.tuning_scheme, override=self.custom_prescaler)):
-                    for j, val in enumerate(row):
-                        x = left(j) if j < self.k else left(self.k - 1) + COL_W
-                        # the augmented (d+1)×(d+1) inverse 𝑊 = 𝑋⁻¹ has a phantom prime: its size ROW
-                        # (i == d) and phantom COLUMN (j == d) render greyed (derived from the dropped
-                        # augmentation, not a real interval). The square d×d case (no size factor) has neither.
-                        phantom = self.augmented and (i == self.d or j == self.d)
-                        self.cells.append(CellBox(f"cell:weight:targets:{i}:{j}", x,
-                                             self.row_y["weight"] + i * ROW_H, COL_W, ROW_H,
-                                             "tval", text=service.cents(val), phantom=phantom))
-            else:  # weight is over the targets only, like damage (it scales them)
-                self.tval_row("weight", "targets", self.target_weights)
+            # the weight is always a per-target list (it scales the targets, like damage). The all-
+            # interval simplicity weight that has no per-prime closed form (the size factor / a non-
+            # diagonal 𝑋) still renders as this list — what's special is carried by the tile's symbol
+            # equivalence (𝑆ₚ = 𝐿⁻¹ ⊕ 1 / 𝑆 = 𝑋⁻¹) and its per-column simplicity headers, not a matrix.
+            self.tval_row("weight", "targets", self.target_weights)
         if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), in a bordered box at the bottom of the
             # weight list, with its "damage weight slope" caption beneath (the optimization box's caption pattern)
             box_top = self.tile_top["weight"] + self.tile_h["weight"] - self.slope_extra + RANGE_GAP
@@ -2935,12 +2810,6 @@ class _GridBuilder:
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
         if self.row_open("damage"):  # damage is over the targets only (the tuning's own column)
             self.tval_row("damage", "targets", self.target_sizes.damage)
-            if self.phantom_dim and self.tile_open("damage", "targets"):
-                # the phantom target's damage is the discarded augmentation output (the phantom generator is
-                # just-tuned to 0, then dropped) — greyed, riding the phantom column so 𝐝 lines up with 𝑊
-                self.cells.append(CellBox("damage:target:phantom", self.target_left(self.k),
-                                     self.row_y["damage"], COL_W, ROW_H, "tval",
-                                     text=service.cents(0.0), phantom=True))
             # optimization adds the horizontal minimized-damage indicator (the objective ⟪𝐝⟫ₚ
             # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
             # (∞ / 2 / 1); off, the chart is plain bars. Recorded for the chart loop below.
@@ -3072,25 +2941,15 @@ class _GridBuilder:
         if self.row_open("mapping"):
             # the primes mapping is a stack of maps: ⟨ … ] per row
             if self.tile_open("mapping", "primes"):
-                mspan = self.augment_span("primes")  # the d (+1 augmented dummy-prime column) span — the mapping grows it too
-                for i in range(self.r + self.phantom_dim):  # incl. the size-generator row (the dropped dummy generator)
-                    self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H, span=mspan)
+                for i in range(self.r):
+                    self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H)
             if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
-                self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], (self.r + self.phantom_dim) * ROW_H, fit=True)
+                self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], self.r * ROW_H, fit=True)
             if self.tile_open("mapping", "targets"):
-                self.bracket("mapped", LIST_BRACKETS, "targets", self.row_y["mapping"], (self.r + self.phantom_dim) * ROW_H, fit=True)
+                self.bracket("mapped", LIST_BRACKETS, "targets", self.row_y["mapping"], self.r * ROW_H, fit=True)
             # the interest mapped images stand alone (no outer [ … ]), mirroring the vectors row
             if self.nh and self.tile_open("mapping", "held"):  # held mapped list, like the targets / interest
-                self.bracket("hmapped", LIST_BRACKETS, "held", self.row_y["mapping"], (self.r + self.phantom_dim) * ROW_H, fit=True)
-            if self.phantom_dim:  # an hline separating each matrix's size-generator (bottom) row — mirrors 𝑋 = 𝑍𝐿's \hline
-                hy = self.map_top(self.r) - SEP_W / 2
-                for group, bid, left, n in (("primes", "mapping", self.prime_left, self.d + 1),
-                                            ("targets", "mapped", self.target_left, self.k),
-                                            ("commas", "mapped_comma", self.comma_left, self.nc),
-                                            ("held", "hmapped", self.held_left, self.nh),
-                                            ("interest", "imapped", self.interest_left, self.mi)):
-                    if n and self.tile_open("mapping", group):
-                        self.cells.append(CellBox(f"bar:{bid}:hline", left(0), hy, n * COL_W, SEP_W, "hbar"))
+                self.bracket("hmapped", LIST_BRACKETS, "held", self.row_y["mapping"], self.r * ROW_H, fit=True)
         # the chapter-9 superspace mapping M_L: a rL × dL covector stack over the ssprimes
         # column, framed exactly like M (per-row ⟨ … ] brackets + top/bottom matrix_frame)
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):
@@ -3104,25 +2963,13 @@ class _GridBuilder:
         if self.row_open("vectors"):  # each group is a list of vectors: a [ ] spanning the d components
             for group in ("commas", "targets"):
                 if self.tile_open("vectors", group):
-                    # the dummy prime is a (d+1)-th component everywhere, so every interval-vector list
-                    # grows one row (a real interval's dummy component is 0; the augmented Tₚ = I_(d+1))
-                    vh = (self.d + self.phantom_dim) * ROW_H
-                    self.bracket(f"vec:{group}", LIST_BRACKETS, group, self.row_y["vectors"], vh, fit=True)
-            if self.phantom_dim and self.tile_open("vectors", "targets"):
-                # set off Tₚ's phantom prime: the ` | ` vbar before the phantom target COLUMN and the
-                # \hline hbar before the phantom prime ROW — the same pair framing 𝑋 and 𝑊's phantom prime
-                top = self.row_y["vectors"]
-                h = (self.d + self.phantom_dim) * ROW_H
-                tl = self.target_left
-                self.cells.append(CellBox("bar:vectors:targets", tl(self.k) - SEP_W / 2, top, SEP_W, h, "vbar"))
-                self.cells.append(CellBox("bar:vectors:targets:hline", tl(0), top + self.d * ROW_H - SEP_W / 2,
-                                     tl(self.k) + COL_W - tl(0), SEP_W, "hbar"))
+                    self.bracket(f"vec:{group}", LIST_BRACKETS, group, self.row_y["vectors"], self.d * ROW_H, fit=True)
             # the interest column is a loose collection, not a matrix — its kets stand alone,
             # so no outer [ … ] wraps them (see the de-matrixed mapped/imapped row below)
             if self.nh and self.tile_open("vectors", "held"):
-                self.bracket("vec:held", LIST_BRACKETS, "held", self.row_y["vectors"], (self.d + self.phantom_dim) * ROW_H, fit=True)
+                self.bracket("vec:held", LIST_BRACKETS, "held", self.row_y["vectors"], self.d * ROW_H, fit=True)
             if self.tile_open("vectors", "detempering"):
-                self.bracket("vec:detempering", LIST_BRACKETS, "detempering", self.row_y["vectors"], (self.d + self.phantom_dim) * ROW_H, fit=True)
+                self.bracket("vec:detempering", LIST_BRACKETS, "detempering", self.row_y["vectors"], self.d * ROW_H, fit=True)
         if self.row_open("prescaling"):  # 𝐿·basis matrices: outer brackets over the d-tall prescaled columns.
             # Each 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) gets symmetric ``[ … ]`` left/right brackets
             # like the mapped lists; the interest tile (standalone columns) gets none. The bare
@@ -3135,25 +2982,20 @@ class _GridBuilder:
                     self.bracket(f"prescaling:{group}", LIST_BRACKETS, group,
                             self.row_y["prescaling"], (self.d + self.size_rows) * ROW_H, fit=True)
             # the bare prescaler 𝐿 is mapping-style: per-row ⟨ … ] brackets, one pair per row (the size
-            # factor adds one more, for the size row; the augmented phantom column widens each past the
-            # d-block via augment_span). Its outer top + bottom frame is the matrix_frame call above
-            # (ebktop + ebkangle), which spans the grown matrix height and that same width.
+            # factor adds one more, for the size row). Its outer top + bottom frame is the matrix_frame
+            # call above (ebktop + ebkangle), which spans the grown matrix height and that same width.
             if self.tile_open("prescaling", "primes"):
-                pspan = self.augment_span("primes")  # the d-block + the trailing phantom column (augmented only)
+                pspan = self.matrix_span("primes")
                 for i in range(self.d + self.size_rows):
                     self.bracket(f"prescaling:row:{i}", MAP_BRACKETS, "primes",
                             self.row_y["prescaling"] + i * ROW_H, ROW_H, span=pspan)
                 if self.size_rows:  # the guide's \hline in 𝑋 = 𝑍𝐿: a horizontal rule separating the bottom
-                    # size row from the top d×d square — the mirror of the ` | ` size bar in the inverse 𝑊
+                    # size row from the top d×d square
                     gx, gw = pspan
                     self.cells.append(CellBox("bar:prescaling", gx, self.row_y["prescaling"] + self.d * ROW_H - SEP_W / 2,
                                          gw, SEP_W, "hbar"))
-                if self.phantom_dim:  # the ` | ` phantom-prime COLUMN divider — between the d-block and the
-                    # phantom column, mirroring the | in 𝑊 (and the \hline above sets off the phantom ROW)
-                    self.cells.append(CellBox("bar:prescaling:vline", self.prime_left(self.d) - SEP_W / 2,
-                                         self.row_y["prescaling"], SEP_W, (self.d + self.size_rows) * ROW_H, "vbar"))
         if self.tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
-            self.bracket("tuning:genmap", GENMAP_BRACKETS, "gens", self.row_y["tuning"], ROW_H, span=self.augment_span("gens"))  # spans the size generator (augmented)
+            self.bracket("tuning:genmap", GENMAP_BRACKETS, "gens", self.row_y["tuning"], ROW_H)
         # the detempering tuning row IS the generator tuning map (𝒕D = 𝒈), so it too is framed
         # { … ]; its just/retune rows are ordinary interval lists, framed below with the rest
         if self.tile_open("tuning", "detempering"):
@@ -3166,7 +3008,7 @@ class _GridBuilder:
         for key in ("tuning", "just", "retune", "complexity"):
             if self.row_open(key):
                 if self.tile_open(key, "primes"):
-                    self.bracket(f"{key}:map", MAP_BRACKETS, "primes", self.row_y[key], ROW_H, span=self.augment_span("primes"))  # spans the dummy prime column (augmented)
+                    self.bracket(f"{key}:map", MAP_BRACKETS, "primes", self.row_y[key], ROW_H)
                 if self.tile_open(key, "commas"):
                     self.bracket(f"{key}:commalist", LIST_BRACKETS, "commas", self.row_y[key], ROW_H)
                 if self.tile_open(key, "targets"):
@@ -3184,32 +3026,7 @@ class _GridBuilder:
                 if key != "complexity" and self.tile_open(key, "ssprimes"):
                     self.bracket(f"{key}:ssprimes", MAP_BRACKETS, "ssprimes", self.row_y[key], ROW_H)
         if self.tile_open("weight", "targets"):
-            if self.weight_is_matrix:
-                # the weight matrix in the notation appendix's form [[…] …]: an OUTER [ … ] enclosing one
-                # [ … ] per ROW, so the rows are unmistakable (4×4 can't read as 2×8) — the SAME structure
-                # the plain text prints. d columns ride the target gridlines; the augmented phantom column
-                # overflows one COL_W right, set off by a ` | ` bar, and its phantom ROW by an \hline.
-                left = self.group_left["targets"]
-                rows = self.d + self.size_rows  # d+1 with the phantom prime (size factor), else the square d
-                top, h = self.row_y["weight"], rows * ROW_H
-                rightx = left(self.k - 1) + (1 + self.size_rows) * COL_W  # right edge, past any phantom column
-                # outer [ … ] over all rows, seated one bracket-width outside the per-row brackets
-                self.cells.append(CellBox("bracket:weight:l", left(0) - 2 * BRACKET_W, top, BRACKET_W, h, "bracket", text="["))
-                self.cells.append(CellBox("bracket:weight:r", rightx + BRACKET_W, top, BRACKET_W, h, "bracket", text="]"))
-                # one [ … ] per row — short and centred like a covector's brackets — the inner brackets
-                for i in range(rows):
-                    ry = top + i * ROW_H + (ROW_H - VAL_BRACKET_H) / 2
-                    self.cells.append(CellBox(f"bracket:weight:row:{i}:l", left(0) - BRACKET_W, ry, BRACKET_W, VAL_BRACKET_H, "bracket", text="["))
-                    self.cells.append(CellBox(f"bracket:weight:row:{i}:r", rightx, ry, BRACKET_W, VAL_BRACKET_H, "bracket", text="]"))
-                if self.size_rows:
-                    # the ` | ` phantom-column divider — one tall rule between the last prime and the phantom column
-                    self.cells.append(CellBox("bar:weight", left(self.k - 1) + COL_W - SEP_W / 2, top, SEP_W, h, "vbar"))
-                    # the \hline phantom-row divider — a horizontal rule between the d×d square and the phantom
-                    # (size) row, mirroring the same \hline on the pretransformer 𝑋 (bar:prescaling)
-                    self.cells.append(CellBox("bar:weight:hline", left(0), top + self.d * ROW_H - SEP_W / 2,
-                                         rightx - left(0), SEP_W, "hbar"))
-            else:
-                self.bracket("weight", LIST_BRACKETS, "targets", self.row_y["weight"], ROW_H)
+            self.bracket("weight", LIST_BRACKETS, "targets", self.row_y["weight"], ROW_H)
         if self.tile_open("damage", "targets"):
             self.bracket("damage", LIST_BRACKETS, "targets", self.row_y["damage"], ROW_H)
 
@@ -3233,7 +3050,7 @@ class _GridBuilder:
                 ("ss_mapping", "ssprimes"): self.ss_map_top,
                 ("ss_just_mapping", "ssprimes"): self.ss_just_map_top,
             }
-            row_count = {("mapping", "primes"): self.r + self.phantom_dim, ("prescaling", "primes"): self.d + self.size_rows,
+            row_count = {("mapping", "primes"): self.r, ("prescaling", "primes"): self.d + self.size_rows,
                          ("ss_mapping", "ssprimes"): self.rL,
                          ("ss_just_mapping", "ssprimes"): self.dL}
             for (rkey, ckey), glyph in self.row_labels.items():
@@ -3244,14 +3061,12 @@ class _GridBuilder:
                     # the bare pretransformer 𝑋 = 𝑍𝐿's bottom (size-sensitizing) row is labelled 𝒛 (the
                     # size-sensitizing matrix 𝑍's row variable), NOT 𝒍₄ / 𝒙₄ — it isn't a fourth prime.
                     size_row = (rkey, ckey) == ("prescaling", "primes") and i == self.d and self.size_rows
-                    # the mapping's (r+1)-th row is the size generator (the dropped dummy generator): 𝒎₍ᵣ₊₁₎, greyed
-                    dummy_gen = (rkey, ckey) == ("mapping", "primes") and i == self.r and self.phantom_dim
                     text = "𝒛" if size_row else f"{glyph}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
                         # past the drag-handle gutter (when present), so the handle sits to its left
                         self.content_x[ckey] + self.handle_gutter_w(ckey), top(i), MATLABEL_W, ROW_H,
-                        "matlabel", text=text, phantom=dummy_gen,
+                        "matlabel", text=text,
                     ))
             # column labels — one per cell of each col-labelled tile, in the band above
             # the top frame (so a framed matrix reads label / [bracket] / cells). A label
@@ -3260,28 +3075,26 @@ class _GridBuilder:
             # than glyph+subscript (the complexity row's norm expressions). The prescaling/
             # complexity product-column labels carry the LIVE prescaler glyph (𝐿𝐜/𝐿𝐭/… or
             # 𝑋𝐜/𝑋𝐭/…) — matching the tile-symbol slot below — via col_labels.
-            # the augmented dimension adds one more label per primes / gens / targets covector: the size
-            # generator's gens sub-column is numbered (𝒈₍ᵣ₊₁₎); the dummy prime ISN'T a real prime (cf. the
-            # 𝒛 size row), so its primes / (Tₚ = I) targets columns are "–". All greyed (dropped / junk).
-            augmented_cols = {"primes", "gens", "targets"}
             for (rkey, ckey), val in self.col_labels.items():
                 if ckey not in group_count or rkey not in self.row_matlabel_top:
                     continue
                 if not self.tile_open(rkey, ckey):
                     continue
+                # the all-interval simplicity weight (size factor / non-diagonal 𝑋) carries the
+                # SAME per-column norm headers the complexity row does, in reciprocal (simplicity)
+                # form: 𝑠ₙ = ‖𝐿‖q⁻¹ (the per-prime simplicity weight is 1/the complexity). The list
+                # itself is the plain per-target weights; the header + the tile symbol 𝑆ₚ = 𝐿⁻¹ ⊕ 1
+                # express the augmented form a per-prime list can't carry.
+                if (rkey, ckey) == ("weight", "targets") and self.all_interval_simplicity_weight:
+                    val = self._weight_simplicity_header
                 left = self.group_left[ckey]
                 y = self.row_matlabel_top[rkey]
-                n = group_count[ckey] + (self.phantom_dim if ckey in augmented_cols else 0)
-                for i in range(n):
-                    dummy = self.phantom_dim and ckey in augmented_cols and i == group_count[ckey]
-                    if dummy and ckey != "gens":  # the dummy prime / target has no per-tile symbol
-                        text = "–"
-                    else:
-                        text = val(i) if callable(val) else f"{val}{_sub(i + 1)}"
+                for i in range(group_count[ckey]):
+                    text = val(i) if callable(val) else f"{val}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:col:{rkey}:{ckey}:{i}",
                         left(i), y, COL_W, MATLABEL_H,
-                        "matlabel", text=text, phantom=dummy,
+                        "matlabel", text=text,
                     ))
 
         # Shared axes. A multi-element group is one line that fans out at the near end
@@ -3407,11 +3220,12 @@ class _GridBuilder:
                 equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
                 equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
             equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
-        if self.weight_is_matrix:  # the all-interval weight is the SIMPLICITY weight matrix (no per-prime
-            # list form): the square non-diagonal case is the true inverse 𝑆 = 𝑋⁻¹; the size factor makes it
-            # the guide's prime-proxy 𝑆ₚ, which is NOT 𝑋⁻¹ (the log-size lives in 𝑋 = 𝑍𝐿) but the direct sum
-            # 𝐿⁻¹ ⊕ 1 — the base simplicity block (live glyph) plus the dummy prime's 1 corner. Consistent
-            # with the non-size-factor all-interval weight diag(𝐿)⁻¹, which it just extends with that corner.
+        if self.all_interval_simplicity_weight:  # the all-interval weight is the SIMPLICITY weight (no
+            # per-prime closed form as a diagonal): the square non-diagonal case is the true inverse 𝑆 = 𝑋⁻¹;
+            # the size factor makes it the guide's prime-proxy 𝑆ₚ, which is NOT 𝑋⁻¹ (the log-size lives in
+            # 𝑋 = 𝑍𝐿) but the direct sum 𝐿⁻¹ ⊕ 1 — the base simplicity block (live glyph) plus the dummy
+            # prime's 1 corner. Consistent with the non-size-factor all-interval weight diag(𝐿)⁻¹, which it
+            # just extends with that corner. The weight still RENDERS as a list; this only sets its symbol.
             equivalences[("weight", "targets")] = (
                 f" = {self.prescaler_symbol}⁻¹ ⊕ 1" if self.size_factor else " = 𝑋⁻¹")
         if not self.show_weighting:  # the weight factor's row is hidden, so don't dangle it (𝒘 / 𝐿⁻¹)
@@ -3423,16 +3237,16 @@ class _GridBuilder:
                 continue
             if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:  # the prime-proxy name (per the Guide)
                 name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
-            if self.weight_is_matrix and (rkey, ckey) == ("weight", "targets"):
-                name = "prime proxy simplicity weight matrix"  # the all-interval weight 𝑆 / 𝑆ₚ (§10) — prime-proxy like Tₚ, not the list
+            if self.all_interval_simplicity_weight and (rkey, ckey) == ("weight", "targets"):
+                name = "prime proxy simplicity weight"  # the all-interval weight 𝑆 / 𝑆ₚ (§10) — prime-proxy like Tₚ
             cy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey]
             if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
                 equiv = equivalences.get((rkey, ckey), "") if self.show_equiv else ""
                 base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
                 if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
                     base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
-                if self.weight_is_matrix and (rkey, ckey) == ("weight", "targets"):
-                    # the all-interval simplicity weight matrix: 𝑆ₚ (prime-proxy, augmented) or 𝑆 (square), per §10
+                if self.all_interval_simplicity_weight and (rkey, ckey) == ("weight", "targets"):
+                    # the all-interval simplicity weight: 𝑆ₚ (prime-proxy, size factor) or 𝑆 (non-diagonal 𝑋), per §10
                     base_symbol = "𝑆ₚ" if self.size_factor else "𝑆"
                 glyph = base_symbol if (self.show_symbols or equiv) else ""
                 if glyph or equiv:
@@ -3550,14 +3364,14 @@ class _GridBuilder:
             # a quantities-row plain text — "2.3.5", the compact prime-limit notation (from the
             # service seam above), which the gridded "2 3 5" cells don't show that way.
 
-        self.matrix_frame("mapping", "primes", "primes", span=self.augment_span("primes"))  # spans the dummy-prime column too (augmented)
+        self.matrix_frame("mapping", "primes", "primes")
         self.matrix_frame("canon", "primes", "canon")
         self.matrix_frame("canon", "gens", "form")
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer
         # ``[ … ⟩`` with per-row ``⟨ … ]`` covectors — so its gridded EBK uses the SAME
         # matrix_frame + per-row bracket pattern the mapping uses, just with an angle ⟩
         # (ebkangle) at the bottom-span instead of the curly } (ebkbrace).
-        self.matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle", span=self.augment_span("primes"))
+        self.matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle")
         # the chapter-9 superspace mapping M_L is M's parallel over the superspace primes,
         # framed the same way (top bracket + bottom curly brace spanning the rL × dL matrix)
         self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")
@@ -3583,11 +3397,6 @@ class _GridBuilder:
         self.vector_list_marks("vectors", "vec:held", "held", self.held_left, self.nh_shown, foot="ebkangle",
                          pending_col=(self.nh if self.pending_held is not None else -1))
         self.vector_list_marks("vectors", "vec:detempering", "detempering", self.detempering_left, self.r, foot="ebkangle")
-        if self.phantom_dim and self.tile_open("vectors", "targets"):  # the augmented dummy target column's EBK (ket: top + bottom angle)
-            mx = self.target_left(self.k) + MARK_INSET
-            mark_w = COL_W - 2 * MARK_INSET
-            self.cells.append(CellBox("ebktop:vec:targets:phantom", mx, self.frame_top_y("vectors"), mark_w, FRAME_H, "ebktop"))
-            self.cells.append(CellBox("ebkangle:vec:targets:phantom", mx, self.frame_brace_y("vectors"), mark_w, BRACE_H, "ebkangle"))
         # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
         # Every 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile is a matrix of prescaled
         # VECTORS, so each column is a ket ``[ … ⟩`` — top = ebktop (square open ⌐), foot =

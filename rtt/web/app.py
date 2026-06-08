@@ -1384,11 +1384,6 @@ class _Reconciler:
         # black when the flag lifts. Toggled generically so any alerting cell kind picks it up.
         self.els[cb.id].classes(add="rtt-alert" if cb.alert else "",
                                 remove="" if cb.alert else "rtt-alert")
-        # a derived "augmented-prime" phantom cell (the lils weighting region's phantom row/column in
-        # 𝑋 / 𝑊 / Tₚ / 𝒄 / 𝐝) greys its whole face — .rtt-phantom recolors every face inside the wrap,
-        # the same blanket mechanism as rtt-alert, so it reads as derived (not a real interval).
-        self.els[cb.id].classes(add="rtt-phantom" if cb.phantom else "",
-                                remove="" if cb.phantom else "rtt-phantom")
         # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
         # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
         # this adds/updates/removes the overlay as the toggle (or the domain) changes.
@@ -1466,7 +1461,7 @@ class _Reconciler:
         ratiocell) instead of a read-only cell — it shows when the cell isn't focused."""
         parts = _ratio_parts(cb.text)
         with ui.element("div").classes("rtt-ratio rtt-cellface" if overlay else "rtt-ratio"):
-            if approx and parts:  # the ~ marks an approximate FRACTION; a non-ratio ("–", the phantom gen) gets none
+            if approx and parts:  # the ~ marks an approximate FRACTION; a non-ratio ("–") gets none
                 ui.label("~").classes("rtt-approx")
             if parts:
                 with ui.element("div").classes("rtt-frac"):

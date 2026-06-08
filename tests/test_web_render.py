@@ -148,59 +148,21 @@ async def test_enabling_all_interval_renders_the_target_controls_checkbox(user: 
     await user.should_see(marker="control:all_interval")
 
 
-async def test_off_diagonal_pretransformer_edit_makes_the_all_interval_weight_a_matrix(user: User) -> None:
-    # the full live pipeline behind the weight matrix: in all-interval mode with alt complexity on, the
+async def test_off_diagonal_pretransformer_edit_keeps_the_all_interval_weight_a_list(user: User) -> None:
+    # the full live pipeline behind the weight tile: in all-interval mode with alt complexity on, the
     # pretransformer square is editable; typing an OFF-diagonal entry promotes 𝑋 to a non-diagonal
-    # matrix, so the weight tile switches from the per-prime list 𝒘 to the d×d matrix 𝑊 = 𝑋⁻¹. This
-    # exercises input → on_prescaler_change → set_custom_prescaler_entry → re-render end-to-end.
+    # matrix. The weight stays the per-target LIST (never a matrix) — only its tile symbol changes to
+    # 𝑆 = 𝑋⁻¹. Exercises input → on_prescaler_change → set_custom_prescaler_entry → re-render end-to-end.
     await user.open("/")
     user.find(kind=ui.checkbox, content="weighting").click()       # show the weight row
     user.find(kind=ui.checkbox, content="all-interval").click()    # reveal the all-interval control
     _cell_child(user, "control:all_interval").set_value(True)      # enter all-interval mode (targets = primes)
     user.find(kind=ui.checkbox, content="alt. complexity").click()  # make the whole square editable
     await user.should_see(marker="cell:prescaling:primes:1:0")     # the editable off-diagonal cell
-    await user.should_see(marker="weight:target:0")                # before: the per-prime weight LIST
+    await user.should_see(marker="weight:target:0")                # before: the per-target weight LIST
     _cell_child(user, "cell:prescaling:primes:1:0").set_value("0.3")  # type an off-diagonal entry → 𝑋 non-diagonal
-    await user.should_see(marker="cell:weight:targets:0:0")        # after: the weight is the matrix 𝑊
-    await user.should_not_see(marker="weight:target:0")            # ...the scalar list is gone
-
-
-async def test_the_lils_weight_matrix_greys_its_phantom_prime_cells(user: User) -> None:
-    # all-interval + the size factor (lils, set via the box-𝐋 "replace diminuator" checkbox) renders the
-    # AUGMENTED (d+1)×(d+1) weight matrix 𝑊 = 𝑋⁻¹; its phantom prime — the size ROW (i == d) and phantom
-    # COLUMN (j == d) — must render greyed (the rtt-phantom class), since it isn't a real interval. This
-    # pins the app-side toggle that recolors a CellBox.phantom cell — no other render test reaches a
-    # size-factor page, so a dropped phantom-greying branch would slip past the ERROR-log guard.
-    await user.open("/")
-    user.find(kind=ui.checkbox, content="weighting").click()
-    user.find(kind=ui.checkbox, content="all-interval").click()
-    _cell_child(user, "control:all_interval").set_value(True)       # all-interval (targets = primes)
-    user.find(kind=ui.checkbox, content="alt. complexity").click()  # reveal box 𝐋's diminuator checkbox
-    await user.should_see(marker="control:diminuator")
-    _cell_child(user, "control:diminuator").set_value(True)         # replace diminuator → size factor → lils
-    await user.should_see(marker="cell:weight:targets:3:0")         # the augmented matrix's phantom (size) row
-    assert "rtt-phantom" in _wrap_classes(user, "cell:weight:targets:3:0")  # the phantom row greys
-    assert "rtt-phantom" in _wrap_classes(user, "cell:weight:targets:0:3")  # the phantom column greys
-    assert "rtt-phantom" not in _wrap_classes(user, "cell:weight:targets:0:0")  # a real cell does not
-
-
-async def test_the_phantom_generator_ratio_has_no_approx_tilde(user: User) -> None:
-    # the size generator's ratio is "–" (no real ratio), so it must NOT get the "~" approximate marker
-    # that real tempered generator ratios carry — that rendered an insane "~–". The ~ shows only when
-    # there is an actual fraction to approximate (a render-layer regression the model dump can't see —
-    # the ~ is added by app._ratio, not stored in the cell text).
-    await user.open("/")
-    user.find(kind=ui.checkbox, content="weighting").click()
-    user.find(kind=ui.checkbox, content="all-interval").click()
-    _cell_child(user, "control:all_interval").set_value(True)       # all-interval (targets = primes)
-    user.find(kind=ui.checkbox, content="alt. complexity").click()  # reveal box 𝐋's diminuator checkbox
-    await user.should_see(marker="control:diminuator")
-    _cell_child(user, "control:diminuator").set_value(True)         # replace diminuator → size factor → lils
-    await user.should_see(marker="qgen:2")                          # the size generator's ratio header
-    phantom = _cell_child(user, "qgen:2")                           # its rtt-ratio div
-    assert not any("rtt-approx" in ch._classes for ch in phantom.default_slot.children)  # no "~" on "–"
-    real = _cell_child(user, "qgen:0")                              # the period generator's ratio (2/1)
-    assert any("rtt-approx" in ch._classes for ch in real.default_slot.children)         # ~ still shows for a real ratio
+    await user.should_see(marker="weight:target:0")                # after the re-render: still the LIST
+    await user.should_not_see(marker="cell:weight:targets:0:0")    # ...never promoted to a matrix
 
 
 async def test_interval_columns_render_draggable_reorder_grips(user: User) -> None:

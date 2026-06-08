@@ -72,8 +72,6 @@ class CellBox:
     audio: tuple | None = None  # (tile, idx, cents): this cell is click-to-play — hovering it reveals
     # a speaker that sounds `cents`; `tile`+`idx` group a row's cells so the audio bank's arp/chord
     # modes can sweep the whole tile from the clicked note (the client derives the chord from siblings)
-    phantom: bool = False  # a derived "augmented-prime" value cell (the phantom prime's row/column in
-    # the lils weighting region — 𝑋, 𝑊, Tₚ, 𝒄, 𝐝): rendered greyed, since it isn't a real interval
 
 
 @dataclass(frozen=True)

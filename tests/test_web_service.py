@@ -828,17 +828,6 @@ def test_size_factor_weight_is_the_prime_proxy_simplicity_matrix():
     assert [row[3] for row in Sp] == pytest.approx([0.0, 0.0, 0.0, 1.0])  # dummy COL [0…0 1]
 
 
-def test_augmented_mapping_adds_the_size_generator_row_and_dummy_prime_column():
-    # the lils augmented mapping (r+1)×(d+1): the real mapping over a dummy-prime COLUMN (0 for the
-    # real generators), plus the size-generator ROW — the integer summation ⟨1…1] with a −1 dummy
-    # corner (the guide's 𝑀Tₚ𝑆ₚ size row). The log-size lives in 𝑋 = 𝑍𝐿, so this stays integer.
-    assert service.augmented_mapping(((1, 1, 0), (0, 1, 4)), "minimax-lils-S") == (
-        (1, 1, 0, 0), (0, 1, 4, 0), (1, 1, 1, -1))
-    # porcupine — matches the guide's worked example (𝑀Tₚ𝑆ₚ)
-    assert service.augmented_mapping(((1, 2, 3), (0, -3, -5)), "minimax-lils-S") == (
-        (1, 2, 3, 0), (0, -3, -5, 0), (1, 1, 1, -1))
-
-
 def test_size_factor_weight_block_diagonalises_a_non_diagonal_pretransformer():
     import numpy as np
 
@@ -1177,23 +1166,6 @@ def test_plain_text_lils_prescaler_grows_the_size_row_matching_the_grid():
     assert pt[("prescaling", "commas")] == "[[" + " ".join(_t(x) for x in col) + "⟩]"
 
 
-def test_plain_text_all_interval_lils_weight_is_the_matrix_not_the_list():
-    # all-interval lils: the weight plain text matches the grid — the notation appendix's weight-matrix
-    # form [[…] …], an OUTER [ … ] enclosing one [ … ] per row (so rows can't read as a 2×6 block), each
-    # row's size entry set off by ` | ` (the exact divider the grid draws), not the per-prime list.
-    mapping = [[1, 1, 0], [0, 1, 4]]
-    W = service.damage_weight_matrix(mapping, "minimax-lils-S")
-    pt = service.plain_text_values(service.from_mapping(mapping), scheme="minimax-lils-S")
-    expected = "[" + " ".join(
-        "[" + " ".join(service.cents(x) for x in row[:3]) + " | " + service.cents(row[3]) + "]" for row in W) + "]"
-    assert pt[("weight", "targets")] == expected
-    assert pt[("weight", "targets")].count(" | ") == len(W)  # one size bar per matrix row
-    assert pt[("weight", "targets")].startswith("[[") and pt[("weight", "targets")].endswith("]]")  # outer + per-row
-    # the square (lp) all-interval weight stays a flat per-prime list — no size bar
-    pt_lp = service.plain_text_values(service.from_mapping(mapping), scheme="minimax-S")
-    assert "|" not in pt_lp[("weight", "targets")]
-
-
 def test_plain_text_over_a_nonstandard_domain_uses_the_basis():
     # the plain-text view of a 2.3.13/5 temperament names the domain basis in dot
     # notation and tunes over its elements (not the standard primes)
@@ -1519,3 +1491,12 @@ def test_plain_text_values_omits_superspace_entries_when_superspace_off():
                 ("ss_just_mapping", "ssprimes"), ("tuning", "ssgens"),
                 ("tuning", "ssprimes"), ("just", "ssprimes"), ("retune", "ssprimes")):
         assert key not in pt
+
+
+def test_plain_text_all_interval_lils_weight_is_the_per_target_list():
+    # all-interval lils: the weight plain text is the per-target simplicity-weight LIST (the same the grid
+    # renders) — NOT the [[…] …] matrix form. Its 𝑆ₚ = 𝐿⁻¹ ⊕ 1 form lives in the tile symbol, not here.
+    pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]), scheme="minimax-lils-S")
+    w = pt[("weight", "targets")]
+    assert w.startswith("[") and not w.startswith("[[")   # a flat list, not a nested matrix
+    assert "|" not in w                                    # no size-augmentation divider

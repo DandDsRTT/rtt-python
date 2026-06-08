@@ -696,21 +696,6 @@ def test_shared_axes_and_branching():
     assert {"vbar:mapping:left", "vbar:mapping:right", "foot:mapping"} <= ids
 
 
-def test_the_weight_matrix_fans_its_subrows_like_any_multi_row_tile():
-    # the d×(d+1) weight matrix is a multi-row tile, so — like the mapping / vectors — it must get one
-    # branching gridline per sub-row, DERIVED from its own cell-row count (row_nsub > 1), not from a
-    # hand-kept FRAMED_ROWS membership. Regression: the weight row used to fall through to a single
-    # flat spine (h:weight) with no internal sub-rules — the row-side of the generators-column bug.
-    lay = _with("minimax-lils-S", weighting=True)  # all-interval + size factor → a 3×4 weight matrix
-    ids = {ln.id for ln in lay.lines}
-    assert {"h:weight:0", "h:weight:1", "h:weight:2"} <= ids  # one fanned rule per matrix sub-row
-    assert "h:weight" not in ids                              # NOT the single-spine fallback
-    # ...fanning through the same left/right bus + foot structure the mapping uses
-    assert {"vbar:weight:left", "vbar:weight:right", "foot:weight"} <= ids
-    # a single-row value row (damage) still gets its lone spine, no fan
-    assert "h:damage" in ids and "h:damage:0" not in ids
-
-
 def test_convergence_buses_keep_solid_corners_and_the_top_bus_reaches_the_plus():
     # both buses fan from half a line-width before the first sub-line, so the near (fan-out)
     # corner stays solid at LINE_W. The BOTTOM bus rejoins half past the last sub-line (its far
@@ -2021,151 +2006,6 @@ def test_charts_on_adds_a_weight_bar_chart_over_the_targets():
     assert ch.y + ch.h <= on["weight:target:0"].y  # the chart sits above its values
 
 
-def test_size_factor_makes_the_all_interval_weight_a_matrix_dropping_the_chart():
-    # all-interval + size factor (lils): the per-prime weight list is blind to the size factor, so the
-    # weight tile renders the AUGMENTED (d+1)×(d+1) matrix 𝑊 = 𝑋⁻¹ instead — and a bar chart can't draw
-    # a matrix, so it's dropped. lp (the square pretransformer) keeps the list + chart.
-    lp = {c.id: c for c in _with(scheme="minimax-S", weighting=True, charts=True).cells}
-    lils = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True, charts=True).cells}
-    W = service.damage_weight_matrix(((1, 1, 0), (0, 1, 4)), "minimax-lils-S")
-    # lp: the per-prime weight list, with its bar chart
-    assert "weight:target:0" in lp and "chart:weight:targets" in lp
-    # lils: a 4×4 matrix of value cells; the scalar list and the chart are both gone
-    assert "weight:target:0" not in lils
-    assert "chart:weight:targets" not in lils
-    for i in range(4):
-        for j in range(4):
-            assert lils[f"cell:weight:targets:{i}:{j}"].text == service.cents(W[i][j])
-    # the matrix is d+1 (= 4) rows tall, stepping ROW_H; the phantom (size) column overflows one COL_W right
-    assert lils["cell:weight:targets:3:0"].y == lils["cell:weight:targets:0:0"].y + 3 * spreadsheet.ROW_H
-    assert lils["cell:weight:targets:0:3"].x == lils["cell:weight:targets:0:2"].x + spreadsheet.COL_W
-    # the augmented phantom ROW (i == d) and phantom COLUMN (j == d) render greyed (derived/discarded)
-    assert lils["cell:weight:targets:3:0"].phantom and lils["cell:weight:targets:0:3"].phantom
-    assert not lils["cell:weight:targets:0:0"].phantom
-
-
-def test_matrix_weight_reserves_no_chart_band_above_it():
-    # the weight matrix 𝑆ₚ draws no bar chart (a chart is one bar per column; a matrix has rows), so
-    # turning charts on must NOT reserve an empty chart band above it — that band was the big gap in the
-    # tile's top third. Generic: a charted row reserves the band only when its value band is a single row.
-    def gaps(charts):
-        b = spreadsheet._GridBuilder(service.from_mapping(((1, 1, 0), (0, 1, 4))),
-                                     dict(settings.defaults(), weighting=True, charts=charts),
-                                     tuning_scheme="minimax-lils-S")
-        b.layout()
-        return b.row_y["weight"] - b.tile_top["weight"], b.row_y["damage"] - b.tile_top["damage"]
-    w_on, d_on = gaps(True)
-    w_off, d_off = gaps(False)
-    assert w_on == w_off   # matrix weight: charts on vs off → identical top gap (no reserved band)
-    assert d_on > d_off    # a single-row charted row (damage) still reserves its chart band
-
-
-def test_all_interval_weight_matrix_carries_the_Sp_symbol_and_a_spanning_bracket():
-    on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True,
-                                 symbols=True, equivalences=True).cells}
-    # 𝑆ₚ — the guide's prime-proxy simplicity weight matrix (all-interval is simplicity-weighted). NOT 𝑋⁻¹
-    # (the log-size lives in 𝑋 = 𝑍𝐿); its honest form is the direct sum 𝐿⁻¹ ⊕ 1 — the real-prime simplicity
-    # block (the live base glyph 𝐿 for log-prime) plus the dummy prime's 1 corner. Shown with equivalences on.
-    assert on["symbol:weight:targets"].text == "𝑆ₚ = 𝐿⁻¹ ⊕ 1"
-    # without equivalences it's the bare glyph
-    bare = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True, symbols=True).cells}
-    assert bare["symbol:weight:targets"].text == "𝑆ₚ"
-    # the appendix's [[…] …] form: outer [ … ] over all d+1 = 4 rows + one [ … ] per row, the outer right
-    # bracket past the overflowing phantom (size) column
-    assert on["bracket:weight:l"].text == "[" and on["bracket:weight:r"].text == "]"
-    assert on["bracket:weight:l"].h == 4 * spreadsheet.ROW_H
-    assert {"bracket:weight:row:0:l", "bracket:weight:row:0:r", "bracket:weight:row:3:l"} <= set(on)
-    assert on["bracket:weight:r"].x > on["cell:weight:targets:0:3"].x
-
-
-def test_the_weight_matrix_size_bar_is_one_structure_in_both_the_grid_and_the_plain_text():
-    # the size-augmentation ` | ` divider is a single structure shown two ways and they must agree: the
-    # grid draws a vertical rule (bar:weight) at the prime|size seam, and the plain text shows the same
-    # ` | ` divider per row (the guide's [… | …] augmentation separator). Neither can have it alone.
-    on = {c.id: c for c in _with(scheme="minimax-lils-S", weighting=True, plain_text_values=True).cells}
-    assert "bar:weight" in on                              # the grid's vertical size-divider
-    assert " | " in on["ptext:weight:targets"].text        # the plain text's matching size-divider
-    bar = on["bar:weight"]                                 # ...sitting between the last prime and the phantom column
-    assert on["cell:weight:targets:0:2"].x < bar.x <= on["cell:weight:targets:0:3"].x
-    assert bar.h == 4 * spreadsheet.ROW_H                  # spanning all d+1 matrix rows, like the [ … ]
-    # a weight LIST (no size factor → not a matrix) has the divider in NEITHER view
-    off = {c.id: c for c in _with(scheme="minimax-S", weighting=True, plain_text_values=True).cells}
-    assert "bar:weight" not in off and "|" not in off["ptext:weight:targets"].text
-
-
-def test_the_augmented_weight_matrix_sets_off_the_phantom_row_with_an_hline():
-    # the augmented 𝑊 = 𝑋⁻¹ is (d+1)×(d+1): its phantom prime is a size ROW (i == d) set off by a
-    # horizontal \hline (hbar), mirroring the vertical ` | ` bar before the phantom COLUMN — both frame
-    # the same phantom prime, like the matching hbar/vbar pair on the pretransformer 𝑋 and its inverse.
-    on = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    hline = on["bar:weight:hline"]
-    assert hline.kind == "hbar"
-    # sits at the boundary between the top d×d square and the appended phantom (size) row
-    assert on["cell:weight:targets:2:0"].y < hline.y < on["cell:weight:targets:3:0"].y
-    # spans the matrix width, past the overflowing phantom column (like the outer [ … ])
-    assert hline.x <= on["cell:weight:targets:0:0"].x and hline.x + hline.w >= on["cell:weight:targets:0:3"].x
-    # a square (non-size-factor) weight matrix has no phantom row, so no \hline
-    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    s = settings.defaults()
-    s.update(weighting=True)
-    square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))
-    sq = {c.id for c in spreadsheet.build(base, s, tuning_scheme="minimax-S", custom_prescaler=square).cells}
-    assert "bar:weight:hline" not in sq
-
-
-def test_size_factor_augments_the_all_interval_target_identity_to_d_plus_one():
-    # all-interval + size factor: the target identity Tₚ grows to the (d+1)×(d+1) identity I_(d+1) so it
-    # shares the augmented-prime shape with 𝑋 / 𝑊 / 𝒄 / 𝐝. The phantom target COLUMN (j == k) is the unit
-    # [0…0 1]; the phantom prime ROW (p == d) is 0 under each real target. Both render greyed.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    # the d×d real block is the plain identity, not greyed
-    assert lils["cell:vec:targets:0:0"].text == "1" and not lils["cell:vec:targets:0:0"].phantom
-    assert lils["cell:vec:targets:1:0"].text == "0" and not lils["cell:vec:targets:1:0"].phantom
-    # the phantom target column [0,0,0,1], greyed
-    assert lils["cell:vec:targets:phantom:0"].text == "0" and lils["cell:vec:targets:phantom:0"].phantom
-    assert lils["cell:vec:targets:phantom:3"].text == "1" and lils["cell:vec:targets:phantom:3"].phantom
-    # the phantom prime ROW under a real target (its phantom component is 0), greyed
-    assert lils["cell:vec:targets:0:3"].text == "0" and lils["cell:vec:targets:0:3"].phantom
-    # the phantom column rides one COL_W right of the last real target; the phantom row one ROW_H below
-    assert lils["cell:vec:targets:phantom:0"].x == lils["cell:vec:targets:2:0"].x + spreadsheet.COL_W
-    assert lils["cell:vec:targets:0:3"].y == lils["cell:vec:targets:0:2"].y + spreadsheet.ROW_H
-    # the enclosing [ ] spans all d+1 rows; the | / \hline bars set off the phantom column / row
-    assert lils["bracket:vec:targets:l"].h == 4 * spreadsheet.ROW_H
-    assert lils["bar:vectors:targets"].kind == "vbar" and lils["bar:vectors:targets:hline"].kind == "hbar"
-    # a square (lp) all-interval Tₚ stays the plain d×d identity — no phantom cells / bars
-    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
-    assert "cell:vec:targets:phantom:0" not in lp and "bar:vectors:targets" not in lp
-
-
-def test_size_factor_adds_the_dummy_prime_row_to_the_interval_vectors():
-    # the dummy prime is a (d+1)-th component everywhere: the comma / held / detempering vectors gain a
-    # greyed 0 dummy row (a real interval has no dummy-prime content), filling the augmented d+1 band
-    # alongside Tₚ — so every interval vector lines up with the augmented Tₚ / 𝑋.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    assert lils["cell:comma:3:0"].text == "0" and lils["cell:comma:3:0"].phantom  # the dummy row, greyed
-    assert not lils["cell:comma:0:0"].phantom                                      # real components unchanged
-    assert lils["bracket:vec:commas:l"].h == 4 * spreadsheet.ROW_H                 # the [ ] spans all d+1 rows
-    # a square (lp) all-interval has no dummy row in the commas
-    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
-    assert "cell:comma:3:0" not in lp
-
-
-def test_size_factor_augments_the_complexity_and_damage_rows_with_a_phantom_cell():
-    # all-interval + size factor: the complexity 𝒄 and damage 𝐝 covectors gain the phantom target column
-    # so they line up with the d+1 𝑊 / Tₚ. The phantom 𝒄 is 1 (the augmented 𝑋's phantom column [0…0 1]
-    # has unit norm); the phantom 𝐝 is the discarded augmentation output. Both render greyed.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    assert not lils["complexity:target:0"].phantom                       # a real complexity is not greyed
-    assert lils["complexity:target:phantom"].text == service.cents(1.0)  # the phantom 𝒄 = 1
-    assert lils["complexity:target:phantom"].phantom
-    assert lils["complexity:target:phantom"].x == lils["complexity:target:2"].x + spreadsheet.COL_W
-    assert lils["damage:target:phantom"].phantom                         # the phantom 𝐝, greyed (discarded)
-    assert lils["damage:target:phantom"].x == lils["damage:target:2"].x + spreadsheet.COL_W
-    # a square (lp) all-interval has no phantom 𝒄 / 𝐝 cell
-    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
-    assert "complexity:target:phantom" not in lp and "damage:target:phantom" not in lp
-
-
 def test_the_size_factor_prescaler_carries_a_horizontal_size_bar():
     # 𝑋 = 𝑍𝐿 is the log-prime square plus an appended size ROW; per the guide's \hline that row is set
     # off by a horizontal rule (bar:prescaling, kind hbar) — the mirror of the vertical ` | ` size bar
@@ -2177,201 +2017,6 @@ def test_the_size_factor_prescaler_carries_a_horizontal_size_bar():
     assert on["cell:prescaling:primes:2:0"].y < bar.y < on["cell:prescaling:primes:3:0"].y
     # a square (lp) prescaler has no size row, so no horizontal bar
     assert "bar:prescaling" not in {c.id for c in _with("minimax-S", weighting=True).cells}
-
-
-def test_size_factor_augments_the_bare_pretransformer_with_a_phantom_column():
-    # all-interval + size factor: the bare pretransformer 𝑋 gains its phantom prime COLUMN [0…0 1] so it is
-    # the (d+1)×(d+1) square that 𝑊 = 𝑋⁻¹ inverts (it already has the size ROW). The phantom column is 0 in
-    # the real outputs, 1 at the size-row corner; greyed, | -set off, one COL_W right of the d-block.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
-    assert lils["cell:prescaling:primes:0:phantom"].text == "0" and lils["cell:prescaling:primes:0:phantom"].phantom
-    assert lils["cell:prescaling:primes:3:phantom"].text == "1" and lils["cell:prescaling:primes:3:phantom"].phantom
-    assert lils["cell:prescaling:primes:0:phantom"].x == lils["cell:prescaling:primes:0:2"].x + spreadsheet.COL_W
-    # the | vbar sets off the phantom column (mirroring the | in 𝑊); spans all d+1 rows
-    assert lils["bar:prescaling:vline"].kind == "vbar"
-    assert lils["bar:prescaling:vline"].h == 4 * spreadsheet.ROW_H
-    # the bare 𝑋's per-row ⟨ … ] extends past the phantom column (its ] sits right of it)
-    assert lils["bracket:prescaling:row:0:r"].x > lils["cell:prescaling:primes:0:phantom"].x
-    # the MAPPING augments TOO — the dummy prime is a full column dimension. Its real cells keep hugging
-    # the primes column (each aligned with its prime quantity), and the mapping's ] reaches past the dummy
-    # column. (The whole augmented grid is one COL_W wider on the GEN axis — the size generator's sub-column
-    # — so cells shift vs the un-augmented lp grid; the invariant is the within-grid alignment, not lp's x.)
-    assert lils["cell:mapping:0:0"].x == lils["prime:0"].x                 # real mapping cells hug the primes
-    assert lils["bracket:map:0:r"].x > lils["cell:mapping:0:3"].x          # the mapping ] spans the dummy column
-    # a square (lp) pretransformer has no phantom column
-    lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True).cells}
-    assert "cell:prescaling:primes:0:phantom" not in lp and "bar:prescaling:vline" not in lp
-
-
-def test_size_factor_adds_the_dummy_prime_column_to_the_mapping():
-    # the dummy prime is a full column dimension: the mapping 𝑀 gains a greyed 0 dummy column (the real
-    # generators don't reach the dummy prime — that's the size generator's job, added with its row), and
-    # the mapping's frame + per-row ⟨ … ] span d+1 to enclose it.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    assert lils["cell:mapping:0:3"].text == "0" and lils["cell:mapping:0:3"].phantom   # the dummy column, greyed
-    assert not lils["cell:mapping:0:0"].phantom                                          # real entries unchanged
-    assert lils["cell:mapping:0:3"].x == lils["cell:mapping:0:2"].x + spreadsheet.COL_W  # one COL_W past the d-block
-    assert lils["ebktop:primes"].w > lils["cell:mapping:0:0"].w * 3                      # the frame spans d+1
-    # a square (lp) mapping has no dummy column
-    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
-    assert "cell:mapping:0:3" not in lp
-
-
-def test_size_factor_adds_the_size_generator_row_to_the_mapping():
-    # the dummy/size generator is the (r+1)-th mapping row ⟨sf·𝟙 | −1] (the size-sensitizing summation
-    # over the real primes, −1 in the dummy-prime corner) — the dropped generator, greyed; the guide's
-    # 𝑀Tₚ𝑆ₚ. Its generator-ratio slot reads "–". So the mapping is the full (r+1)×(d+1) augmented matrix.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    assert [lils[f"cell:mapping:2:{p}"].text for p in range(4)] == ["1", "1", "1", "-1"]
-    assert all(lils[f"cell:mapping:2:{p}"].phantom for p in range(4))      # the whole size-gen row greys
-    assert lils["cell:mapping:2:0"].y == lils["cell:mapping:1:0"].y + spreadsheet.ROW_H  # one row below the real gens
-    assert lils["gen:2"].text == "–" and lils["gen:2"].phantom            # its ratio slot — the dropped generator
-    # a square (lp) mapping has no size-generator row
-    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
-    assert "cell:mapping:2:0" not in lp and "gen:2" not in lp
-
-
-def test_size_factor_adds_the_size_generator_row_to_every_mapping_matrix():
-    # the size generator is the (r+1)-th row of EVERY shown matrix in the mapping row, not just the bare
-    # 𝑀: each mapped product gains the size gen's image of its source intervals (Σ size_row · components),
-    # greyed, with an hline separating it (mirroring 𝑋 = 𝑍𝐿's \hline). (In all-interval the redundant
-    # mapped TARGET list = 𝑀 is hidden, so the shown matrices are 𝑀 itself + the mapped comma.)
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    assert lils["cell:mapping:2:0"].text == "1" and lils["cell:mapping:2:3"].text == "-1"         # 𝑀's size row ⟨1 1 1 | −1]
-    assert lils["cell:mapped_comma:2:0"].text == "1" and lils["cell:mapped_comma:2:0"].phantom    # 80/81=(4,−4,1) → size 1
-    for hl in ("bar:mapping:hline", "bar:mapped_comma:hline"):
-        assert lils[hl].kind == "hbar"                                                             # an hline per shown matrix
-    assert lils["cell:mapping:1:0"].y < lils["bar:mapping:hline"].y < lils["cell:mapping:2:0"].y   # between last real row + size row
-    assert lils["bracket:mapped_comma:l"].h == 3 * spreadsheet.ROW_H                               # [ ] grows to enclose the size row
-    # a square (lp) mapping has no size-generator row in the products, and no hline
-    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
-    assert "cell:mapped_comma:2:0" not in lp and "bar:mapped_comma:hline" not in lp
-
-
-def test_size_factor_completes_the_dummy_target_subcol():
-    # the augmented dummy TARGET subcol (the d+1-th Tₚ column) must be complete like the real ones: its
-    # interval-vectors EBK (per-column top + bottom angle), a "–" in the quantities (ratio) row and the
-    # units row — it isn't a real target interval. All greyed.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True, counts=True).cells}
-    assert lils["target:phantom"].text == "–" and lils["target:phantom"].phantom              # quantities (ratio) row
-    assert lils["urow:targets:phantom"].text == "–" and lils["urow:targets:phantom"].phantom  # units row
-    assert lils["ebktop:vec:targets:phantom"].kind == "ebktop"                                # EBK top bracket
-    assert lils["ebkangle:vec:targets:phantom"].kind == "ebkangle"                            # EBK bottom angle
-    assert lils["target:phantom"].x == lils["cell:vec:targets:phantom:0"].x                   # aligned with the dummy col
-    # a square (lp) all-interval has no dummy target subcol
-    lp = {c.id for c in _with("minimax-S", weighting=True, symbols=True, domain_units=True, counts=True).cells}
-    assert "target:phantom" not in lp and "ebktop:vec:targets:phantom" not in lp
-
-
-def test_size_factor_completes_the_primes_axis_in_the_tuning_and_complexity_maps():
-    # the dummy prime is a (d+1)-th column in the tuning / just / retuning maps (greyed "–" — the dropped
-    # generator's junk) and the complexity-over-primes (greyed 1, the dummy's unit norm), so every
-    # primes-indexed covector is the augmented d+1 width, lining up with the mapping and 𝑋.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    for key in ("tuning", "just", "retune"):
-        assert lils[f"{key}:prime:3"].text == "–" and lils[f"{key}:prime:3"].phantom
-    assert lils["complexity:prime:3"].text == service.cents(1.0) and lils["complexity:prime:3"].phantom
-    # a square (lp) all-interval has no dummy column in these maps
-    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
-    assert "tuning:prime:3" not in lp and "complexity:prime:3" not in lp
-
-
-def test_size_factor_completes_the_generators_axis_in_the_genmap():
-    # the size generator (the mapping's (r+1)-th row, the dropped dummy generator) is ALSO the (r+1)-th
-    # generator sub-column, so the generators axis matches the mapping's r+1 rows: the generator tuning
-    # map 𝒈 gains its junk tuning "–" and the generator-ratio header gains its "–", both greyed — 𝒕 = 𝒈M
-    # lines up (𝒈 is 1×(r+1), M is (r+1)×(d+1)). The genmap's { ] bracket reaches past the size generator.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    assert lils["tuning:gen:2"].text == "–" and lils["tuning:gen:2"].phantom    # the size generator's junk tuning
-    assert lils["qgen:2"].text == "–" and lils["qgen:2"].phantom                # its generator-ratio header
-    assert lils["tuning:gen:2"].x == lils["tuning:gen:1"].x + spreadsheet.COL_W  # one sub-column right of the real gens
-    assert lils["qgen:2"].x == lils["tuning:gen:2"].x                            # the header sits above its tuning cell
-    assert lils["bracket:tuning:genmap:r"].x > lils["tuning:gen:2"].x           # the { ] spans the augmented r+1
-    # a square (lp) all-interval has no size generator in the genmap
-    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
-    assert "tuning:gen:2" not in lp and "qgen:2" not in lp
-
-
-def test_size_factor_completes_the_units_column_for_the_augmented_rows():
-    # the units column gains a unit cell for each augmented row, so it isn't ragged against the d+1 / r+1
-    # bands: the dummy prime component has no unit — "–", greyed; the size generator follows the generator
-    # units (g₃/), greyed (the dropped generator); the bare 𝑋's real size row 𝒛 carries an octave unit
-    # (NOT greyed — a genuine row of 𝑍, with real octave values).
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True).cells}
-    assert lils["ucol:vectors:3"].text == "–" and lils["ucol:vectors:3"].phantom
-    assert lils["ucol:mapping:2"].text == "g₃/" and lils["ucol:mapping:2"].phantom
-    assert lils["ucol:prescaling:3"].text == "oct/" and not lils["ucol:prescaling:3"].phantom
-    # a square (lp) all-interval has no augmented rows, so no extra unit cells
-    lp = {c.id for c in _with("minimax-S", weighting=True, symbols=True, domain_units=True).cells}
-    assert "ucol:vectors:3" not in lp and "ucol:mapping:2" not in lp and "ucol:prescaling:3" not in lp
-
-
-def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first():
-    # GENERIC: a row-tile's units span its actual cell-row count (row_nsub), so a matrix-valued row
-    # (the weight 𝑆ₚ, the prescaler 𝑋) gets a unit on EVERY subrow — not just the first (the old bug,
-    # from when the weight was always a single scalar row). Multi-row tiles index the id by subrow;
-    # single-row tiles keep the bare id. The weight's augmented (phantom) row greys, mirroring its cells.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True).cells}
-    units = [lils[f"ucol:weight:{i}"].text for i in range(4)]
-    assert len(set(units)) == 1 and units[0].endswith("/")                       # one identical unit per subrow
-    assert lils["ucol:weight:3"].phantom and not lils["ucol:weight:0"].phantom   # the phantom row greys
-    assert "ucol:weight" not in lils                                              # multi-row → indexed, no bare id
-    # a single-row weight (the all-interval scalar list, no matrix) keeps the bare id — generic, not snowflaked
-    scalar = {c.id for c in _with("minimax-S", weighting=True, symbols=True, domain_units=True).cells}
-    assert "ucol:weight" in scalar and "ucol:weight:0" not in scalar
-
-
-def test_size_factor_weight_caption_is_the_prime_proxy_simplicity_name():
-    # the matrix weight is named for what its 𝑆ₚ subscript means — the PRIME-PROXY simplicity weights
-    # (parallel to the prime-proxy target list Tₚ), not "target interval …".
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, names=True).cells}
-    assert lils["caption:weight:targets"].text == "prime proxy simplicity weight matrix"
-
-
-def test_size_factor_completes_the_matrix_labels_for_the_augmented_dimension():
-    # the row + column label bands gain the augmented dimension's labels (when symbols is on). The size
-    # generator is the (r+1)-th map row / generator sub-column, numbered 𝒎₃ / 𝒈₃ but greyed (the dropped
-    # generator). The dummy prime ISN'T a real prime (cf. the 𝒛 size row), so its column labels are "–",
-    # greyed — across both the primes covectors and, since Tₚ = I, the target covectors.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
-    assert lils["matlabel:row:mapping:primes:2"].text == "𝒎₃" and lils["matlabel:row:mapping:primes:2"].phantom
-    assert lils["matlabel:col:tuning:gens:2"].text == "𝒈₃" and lils["matlabel:col:tuning:gens:2"].phantom
-    for rkey in ("tuning", "just", "retune"):
-        assert lils[f"matlabel:col:{rkey}:primes:3"].text == "–" and lils[f"matlabel:col:{rkey}:primes:3"].phantom
-    for rkey in ("vectors", "complexity", "damage", "weight"):
-        assert lils[f"matlabel:col:{rkey}:targets:3"].text == "–" and lils[f"matlabel:col:{rkey}:targets:3"].phantom
-    # the X = ZL size row keeps its real 𝒛 (not greyed); the dummy-prime column labels don't displace it
-    assert lils["matlabel:row:prescaling:primes:3"].text == "𝒛" and not lils["matlabel:row:prescaling:primes:3"].phantom
-    # a square (lp) all-interval has no augmented labels
-    lp = {c.id for c in _with("minimax-S", weighting=True, symbols=True).cells}
-    assert "matlabel:row:mapping:primes:2" not in lp and "matlabel:col:tuning:primes:3" not in lp
-
-
-def test_size_factor_marks_the_dummy_prime_quantity_with_a_dash():
-    # the dummy prime has no real prime number, so its quantity reads "–" (greyed) in both prime spines —
-    # the quantities row (prime:d) and the interval-vectors basis spine (basis:d, labelling the dummy row).
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True).cells}
-    assert lils["prime:3"].text == "–" and lils["prime:3"].phantom
-    assert lils["basis:3"].text == "–" and lils["basis:3"].phantom
-    # a square (lp) all-interval has no dummy prime
-    lp = {c.id for c in _with("minimax-S", weighting=True).cells}
-    assert "prime:3" not in lp and "basis:3" not in lp
-
-
-def test_size_factor_augments_the_weighting_region_plain_text_to_the_phantom():
-    # the plain text must show the grid's augmented d+1 numbers (the ptext-matches-the-grid rule), so the
-    # phantom appears in Tₚ / 𝒄 / 𝐝 / 𝑋 — each | -set off, the same divider 𝑊's plain text already uses.
-    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, plain_text_values=True).cells}
-    assert lils["ptext:complexity:targets"].text == "[1.000 1.585 2.322 | 1.000]"   # 𝒄 gains the phantom 1
-    assert lils["ptext:damage:targets"].text == "[0.000 5.377 0.000 | 0.000]"        # 𝐝 gains the phantom
-    # Tₚ is the augmented identity I_4: four kets (the 4th the phantom target), each | -set off before the phantom row
-    assert lils["ptext:vectors:targets"].text == "[[1 0 0 | 0⟩ [0 1 0 | 0⟩ [0 0 1 | 0⟩ [0 0 0 | 1⟩]"
-    # the bare 𝑋 gains the phantom column (each covector's last component | -set off; the size-row corner is 1)
-    assert lils["ptext:prescaling:primes"].text == "[⟨1 0 0 | 0] ⟨0 1.585 0 | 0] ⟨0 0 2.322 | 0] ⟨1 1.585 2.322 | 1]⟩"
-    # a square (lp) all-interval keeps the plain d-length plain text (no phantom, no | )
-    lp = {c.id: c for c in _with("minimax-S", weighting=True, plain_text_values=True).cells}
-    assert lp["ptext:complexity:targets"].text == "[1.000 1.585 2.322]"
-    assert "|" not in lp["ptext:vectors:targets"].text and "|" not in lp["ptext:prescaling:primes"].text
 
 
 def test_the_size_sensitizing_row_is_labelled_z_not_a_fourth_prime():
@@ -2389,8 +2034,8 @@ def test_the_size_sensitizing_row_is_labelled_z_not_a_fourth_prime():
 
 def test_size_factor_composes_the_size_sensitizing_matrix_with_each_base_prescaler():
     # "replace diminuator" (the size factor) composes the size-sensitizing matrix 𝑍 with the base
-    # prescaler — 𝑋 = 𝑍𝐿 (log-prime), 𝑋 = 𝑍 (identity: 𝑍𝐼 vaporizes), 𝑋 = 𝑍diag(𝒑) (prime) — per the
-    # guide's ch8 table, and the NAME spells it out ("= size-sensitizing matrix × …").
+    # prescaler — 𝑋 = 𝑍𝐿 (log-prime), 𝑋 = 𝑍 (identity: 𝑍𝐼 vaporizes), 𝑋 = 𝑍·diag(𝒑) (prime; the ·
+    # keeps "𝑍diag" from reading as one word) — per the guide's ch8 table, and the NAME spells it out.
     st = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
     def labels(scheme):
@@ -2406,7 +2051,7 @@ def test_size_factor_composes_the_size_sensitizing_matrix_with_each_base_prescal
     assert labels(identity) == (
         "𝑋 = 𝑍", "complexity pretransformer = size-sensitizing matrix")
     assert labels(prime) == (
-        "𝑋 = 𝑍diag(𝒑)", "complexity pretransformer = size-sensitizing matrix × diagonal matrix of primes")
+        "𝑋 = 𝑍·diag(𝒑)", "complexity pretransformer = size-sensitizing matrix × diagonal matrix of primes")
     # without the size factor the base prescaler stands alone (existing behavior, unchanged)
     s = settings.defaults()
     s.update(weighting=True, symbols=True, equivalences=True, names=True)
@@ -2422,34 +2067,6 @@ def test_the_size_factor_drops_the_diag_complexity_equivalence():
     assert lils["symbol:complexity:targets"].text == "𝒄"            # no " = diag(𝐿)"
     lp = {c.id: c for c in _with("minimax-S", weighting=True, symbols=True, equivalences=True).cells}
     assert lp["symbol:complexity:targets"].text == "𝒄 = diag(𝐿)"    # the plain diagonal keeps it
-
-
-def test_a_non_diagonal_pretransformer_makes_the_all_interval_weight_the_square_inverse():
-    # editing the pretransformer square off-diagonal (a non-diagonal 𝑋, no size factor) also costs the
-    # per-prime weight list its diagonal form: the weight becomes the d×d inverse 𝑊 = 𝑋⁻¹. Unlike the
-    # size-factor case it's square (d columns, no overflowing size column), so the bracket hugs the last.
-    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    s = settings.defaults()
-    s.update(weighting=True, charts=True, symbols=True, equivalences=True)
-    square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))  # an off-diagonal editable square
-    on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S",
-                                             custom_prescaler=square).cells}
-    W = service.damage_weight_matrix(((1, 1, 0), (0, 1, 4)), "minimax-S", override=square)
-    assert len(W) == 3 and len(W[0]) == 3  # square 𝑋⁻¹ — no extra size column
-    # the d×d matrix of value cells; the scalar list and its chart are both gone
-    assert "weight:target:0" not in on
-    assert "chart:weight:targets" not in on
-    for i in range(3):
-        for j in range(3):
-            assert on[f"cell:weight:targets:{i}:{j}"].text == service.cents(W[i][j])
-    # capital 𝑊 = 𝑋⁻¹ (the square inverse — NOT (𝑍𝑋)⁻, there's no size factor here)
-    assert on["symbol:weight:targets"].text == "𝑆 = 𝑋⁻¹"
-    # appendix form [[…] …]: an outer [ … ] over all 3 rows + one [ … ] per row, no size bar (square)
-    assert on["bracket:weight:l"].h == 3 * spreadsheet.ROW_H
-    assert "bracket:weight:row:0:l" in on and "bracket:weight:row:2:r" in on
-    assert "bar:weight" not in on  # no size column → no size divider
-    # the outer right bracket sits one bracket-width past the last column's right edge (outside the per-row ])
-    assert on["bracket:weight:r"].x == on["cell:weight:targets:0:2"].x + spreadsheet.COL_W + spreadsheet.BRACKET_W
 
 
 def test_weight_row_carries_its_symbol_and_caption():
@@ -5416,18 +5033,6 @@ def test_editable_target_vector_cells_clear_the_column_separator():
     assert sep.x + sep.w <= c1.x                # cell 1 starts at/after the rule's right edge
 
 
-def test_read_only_target_vectors_stay_full_width_for_the_phantom_augmentation():
-    # the all-interval Tₚ = 𝐈 list is read-only ("vec"), not editable: its plain text lets the
-    # separator show without a gap, and it must abut the phantom-prime augmentation column at full
-    # COL_W (the inset is an editable-input affordance only — a narrowed Tₚ would mis-align with the
-    # phantom column and the d+1 𝑋/𝑊/𝒄/𝐝). minimax-lils-S is all-interval WITH a size factor (phantom).
-    cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}
-    real = cells["cell:vec:targets:0:0"]
-    phantom = cells["cell:vec:targets:phantom:0"]
-    assert real.kind == "vec"          # read-only (not the editable targetcell)
-    assert real.w == phantom.w         # full COL_W, matching the augmentation column
-
-
 def test_typing_the_target_interval_list_drives_the_grid_through_the_editor():
     # the editable target interval list end to end: a typed vector list, applied via the editor,
     # drives the built target columns (the hybrid override)
@@ -6497,8 +6102,6 @@ def test_prescaler_labels_resolve_the_log_prime_glyph_and_gated_name():
     assert p.effective_captions[("prescaling", "primes")].endswith("= log-prime matrix")
     bare = spreadsheet._resolve_prescaler_labels(state, service.DEFAULT_DOCUMENT_SCHEME, None, show_equiv=False)
     assert "log-prime matrix" not in bare.effective_captions[("prescaling", "primes")]  # gated on equivalences
-
-
 
 
 # --- changed_cell_ids: the per-edit preview-highlight diff ----------------------------------
@@ -7675,3 +7278,64 @@ def test_per_cell_units_on_the_M_L_cells_carry_g_over_b():
     assert cells["cell:ss_mapping:ssprimes:0:0"].unit == "g₁/b₁"
     assert cells["cell:ss_mapping:ssprimes:0:1"].unit == "g₁/b₂"
     assert cells["cell:ss_mapping:ssprimes:1:0"].unit == "g₂/b₁"
+
+
+def test_size_factor_all_interval_weight_is_a_list_with_chart_and_Sp_symbol():
+    # all-interval + size factor (lils): the simplicity weight has no per-prime diagonal closed form, but
+    # it still renders as a per-target LIST (with its bar chart). What's special is carried by the tile's
+    # symbol equivalence 𝑆ₚ = 𝐿⁻¹ ⊕ 1 (the ⊕ 1 dummy-prime corner) and its per-column simplicity headers
+    # 𝑠ₙ = ‖𝐿‖q⁻¹ (the reciprocal of the complexity row's ‖𝐿‖q) — NOT by drawing a matrix.
+    q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, charts=True,
+                                   symbols=True, equivalences=True, names=True).cells}
+    assert "weight:target:0" in lils and "chart:weight:targets" in lils   # a single-row list, with its chart
+    assert "cell:weight:targets:1:0" not in lils and "bar:weight" not in lils  # NOT a matrix, no size bar
+    assert lils["symbol:weight:targets"].text == "𝑆ₚ = 𝐿⁻¹ ⊕ 1"
+    assert lils["caption:weight:targets"].text == "prime proxy simplicity weight"
+    assert lils["matlabel:col:weight:targets:0"].text == f"s₁ = ‖𝐿‖{q}⁻¹"
+    # symbols only (no equivalences) → the bare glyph 𝑆ₚ and the bare per-column 𝑠ₙ
+    bare = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
+    assert bare["symbol:weight:targets"].text == "𝑆ₚ"
+    assert bare["matlabel:col:weight:targets:0"].text == "s₁"
+    # a plain all-interval diagonal weight (no size factor) keeps the 𝒘 list + wₙ headers (unchanged)
+    lp = {c.id: c for c in _with("minimax-S", weighting=True, charts=True, symbols=True).cells}
+    assert lp["symbol:weight:targets"].text == "𝒘" and lp["matlabel:col:weight:targets:0"].text == "w₁"
+    assert "weight:target:0" in lp and "cell:weight:targets:1:0" not in lp
+
+
+def test_a_non_diagonal_pretransformer_all_interval_weight_is_a_list_with_S_symbol():
+    # editing the pretransformer square off-diagonal (a non-diagonal 𝑋, no size factor) also costs the
+    # per-prime weight list its diagonal closed form — but the weight still renders as a per-target LIST,
+    # now carrying the symbol 𝑆 = 𝑋⁻¹ and the per-column simplicity headers 𝑠ₙ = ‖𝑋‖q⁻¹.
+    q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s.update(weighting=True, charts=True, symbols=True, equivalences=True)
+    square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))  # an off-diagonal editable square
+    on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S",
+                                             custom_prescaler=square).cells}
+    assert "weight:target:0" in on and "chart:weight:targets" in on       # a list, with its chart
+    assert "cell:weight:targets:1:0" not in on and "bar:weight" not in on  # NOT a matrix
+    assert on["symbol:weight:targets"].text == "𝑆 = 𝑋⁻¹"                 # capital 𝑆 = 𝑋⁻¹ (no size factor)
+    assert on["matlabel:col:weight:targets:0"].text == f"s₁ = ‖𝑋‖{q}⁻¹"
+
+
+def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first():
+    # GENERIC: a row-tile's units span its actual cell-row count (row_nsub), so a matrix-valued row
+    # (the pretransformer 𝑋 = 𝑍𝐿, grown by its size row) gets a unit on EVERY subrow — not just the
+    # first. Multi-row tiles index the id by subrow; single-row tiles keep the bare id.
+    lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True, domain_units=True).cells}
+    units = [lils[f"ucol:prescaling:{i}"].text for i in range(4)]  # d=3 prime rows + the size row
+    assert len(set(units)) == 1 and units[0].endswith("/")        # one identical unit per subrow
+    assert "ucol:prescaling" not in lils                          # multi-row → indexed, no bare id
+    # a single-row tile (the weight list) keeps the bare id — generic, not snowflaked
+    assert "ucol:weight" in lils and "ucol:weight:0" not in lils
+
+
+def test_read_only_target_vectors_stay_full_width():
+    # the all-interval Tₚ = 𝐈 list is read-only ("vec"), not editable: its cells stay full COL_W (the
+    # inset is an editable-input affordance only — see KET_INSET on the editable comma / interest kets).
+    cells = {c.id: c for c in _with(scheme="minimax-lils-S").cells}
+    real = cells["cell:vec:targets:0:0"]
+    assert real.kind == "vec"            # read-only (not the editable targetcell)
+    assert real.w == spreadsheet.COL_W   # full width, no inset
