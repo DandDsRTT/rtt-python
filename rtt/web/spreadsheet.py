@@ -922,6 +922,13 @@ class _GridBuilder:
         # of the ratios/sizes/complexity below — only the displayed column count grows.
         self.pending_interest = list(self.pending_interest) if self.pending_interest is not None else None
         self.mi_shown = self.mi + (1 if self.pending_interest is not None else 0)
+        # the chapter-9 domain basis element draft: with the nonstandard-domain box on, a typed-in
+        # new basis element rides as a red ?/? column to the right of the d real elements (exactly
+        # like the pending comma), until a valid rational fills it (then it commits, added held
+        # just). It is not a real element — no mapping/tuning/count — so the matrix rows still
+        # iterate self.d and leave its column empty; only the displayed domain width grows by one.
+        self.element_draft = self.show_nonstandard_domain and self.pending_element is not None
+        self.d_shown = self.d + (1 if self.element_draft else 0)
         self.interest_ratios = service.comma_ratios(self.interest, self.elements)  # vector -> "num/den" (shared renderer)
         self.interest_mapped = service.mapped_intervals(self.state.mapping, self.interest_ratios, self.elements)
         self.interest_sizes = service.interval_sizes(self.tun, self.interest_ratios, self.elements)
@@ -1130,7 +1137,7 @@ class _GridBuilder:
             # standard EBK-gutter footprint like the gens/primes columns they parallel
             ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_superspace, True),
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W, self.show_superspace, True),
-            ("primes", 2 * BRACKET_W + self.d * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
+            ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
@@ -1465,7 +1472,7 @@ class _GridBuilder:
         # gridline pass can fan every group column into that many vertical sub-axes (commas
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
-        self.group_n = {"gens": self.r, "primes": self.d, "commas": self.nc_shown,
+        self.group_n = {"gens": self.r, "primes": self.d_shown, "commas": self.nc_shown,
                    "targets": self.k_shown,
                    "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r,
                    "ssgens": self.rL, "ssprimes": self.dL}
@@ -1782,8 +1789,9 @@ class _GridBuilder:
             return self.tile_open("quantities", "targets") and not self.all_interval
         if ckey == "gens":  # the generators + un-temps a comma (−n, +r), so it needs one to un-temper
             return self.tile_open("quantities", "gens") and self.state.n > 0
-        if ckey == "primes":  # the + walks to the next standard prime — inapplicable to a subgroup
-            return self.tile_open("quantities", "primes") and self.standard_domain
+        if ckey == "primes":  # off: the + walks to the next standard prime (inapplicable to a subgroup).
+            # On (nonstandard-domain box): the + starts a typed ?/? element draft, valid for ANY domain.
+            return self.tile_open("quantities", "primes") and (self.show_nonstandard_domain or self.standard_domain)
         return self.tile_open("quantities", ckey)
 
     def closed_form_operand(self, key, group, i):
@@ -2303,10 +2311,17 @@ class _GridBuilder:
                 for p in range(self.d):
                     self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, element_kind, text=str(self.elements[p]), prime=p))
                     self._voice("quantities:primes", p, self.tun.just_map[p])
+                if self.element_draft:  # the red ?/? draft column: type a rational to add a new basis
+                    # element (held just). A distinct id so it's removed, not restructured, on commit.
+                    self.cells.append(CellBox("prime:pending", self.prime_left(self.d), qy, COL_W, ROW_H, "elementcell",
+                                              text=self.pending_element or "?/?", prime=self.d, pending=True))
+                    branch_minus("element_minus:pending", "primes", self.d, "element_minus")
                 # Only the highest prime is removable (shrink_domain trims the last), so its
                 # − rides that prime's branch point (the last top-bus split) — and only when the
-                # shrink actually applies (gated like editor.shrink, never shown inert).
-                if self.domain_can_shrink:
+                # shrink actually applies (gated like editor.shrink, never shown inert). With the
+                # nonstandard-domain box on the domain is edited by typing, not prime-walked, so the
+                # walk − is suppressed (the draft column carries its own − to cancel instead).
+                if self.domain_can_shrink and not self.show_nonstandard_domain:
                     branch_minus("minus", "primes", self.d - 1, "minus")
             # the chapter-9 superspace columns' quantity headers (the dual of their spine basis
             # index): the rL superspace generators as ~ratios (read-only — derived from M_L) and
@@ -2376,7 +2391,10 @@ class _GridBuilder:
             # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
             # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
             # the first interval can still be added). The − is the hover counterpart on a branch point.
-            for ckey, cid in (("gens", "gen_plus"), ("primes", "plus"), ("commas", "comma_plus"),
+            # with the nonstandard-domain box on, the domain + starts a typed ?/? element draft
+            # (element_plus → editor.add_element) rather than walking to the next prime (plus → expand)
+            primes_plus = "element_plus" if self.show_nonstandard_domain else "plus"
+            for ckey, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
                               ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
                 if ckey in self.plus_stub_x:
                     branch_plus(cid, ckey, cid)

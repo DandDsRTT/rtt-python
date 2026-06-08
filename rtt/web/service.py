@@ -45,7 +45,20 @@ from rtt.tuning import (
     optimize_tuning_map,
     tuning_map_from_generators,
 )
-from rtt.tuning_ranges import get_generator_tuning_range
+from rtt.tuning_ranges import get_generator_tuning_range as _get_generator_tuning_range
+
+
+def get_generator_tuning_range(t, mode):
+    """The generator tuning range for the I-beam range chart, or ``None`` when the range solver
+    can't measure this basis. The odd-limit diamond it works over isn't defined for every
+    nonstandard subgroup — a mixed basis like ``2.3.5.13/5`` (where 5 and 13/5 share the prime 5)
+    yields 0-width diamond vectors and the projection through the mapping fails. The range is a
+    chart-only nicety with no bearing on the tuning itself, so a basis it can't measure simply
+    shows no range — the same ``None`` the superspace tuning already uses for its (range-less) maps."""
+    try:
+        return _get_generator_tuning_range(t, mode)
+    except (ValueError, IndexError):
+        return None
 from rtt.tuning_scheme_names import (
     TuningSchemeSpec,
     annotation_code,

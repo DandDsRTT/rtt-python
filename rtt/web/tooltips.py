@@ -135,6 +135,8 @@ _KIND_HELP: dict[str, str] = {
     "map_drag": "Drag this generator (a mapping row) onto another row to add it into that row — a change of generator basis that holds the temperament and its tuning.",
     "int_drag": "Drag this interval onto another in the same column to combine them into their product. For the comma basis this re-expresses the same temperament; for a target / held / interest list it just combines the two intervals.",
     "basis_minus": "Remove the highest prime from the domain.",
+    "element_plus": "Add a domain basis element — opens a blank ?/? draft; type any positive rational (e.g. 13/5) to add it, held just (its own pure generator).",
+    "element_minus": "Cancel the pending domain basis element draft.",
     "comma_plus": "Add a comma to the basis.",
     "comma_minus": "Remove the last comma — un-tempers it, raising the rank; removing the sole comma leaves just intonation.",
     "interest_plus": "Add an interval of interest.",

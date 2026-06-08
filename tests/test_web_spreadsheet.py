@@ -7543,3 +7543,23 @@ def test_basis_spine_stays_read_only_with_the_box_on():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
     assert on["basis:0"].kind == "prime"
+
+
+def test_domain_plus_is_element_draft_with_the_box_on():
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # standard 2.3.5
+    on = {c.id: c for c in spreadsheet.build(state, settings.defaults() | {"nonstandard_domain": True}).cells}
+    assert "element_plus" in on and "plus" not in on  # the + opens a typed draft, not a prime walk
+    off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
+    assert "plus" in off and "element_plus" not in off  # the + walks to the next prime
+
+
+def test_pending_element_renders_a_red_draft_column():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults() | {"nonstandard_domain": True}
+    cells = {c.id: c for c in spreadsheet.build(state, s, pending_element="").cells}
+    draft = cells["prime:pending"]
+    assert draft.kind == "elementcell" and draft.pending and draft.text == "?/?"
+    assert "element_minus:pending" in cells  # its − cancels the draft
+    # a partially-typed draft shows the raw text
+    typed = {c.id: c for c in spreadsheet.build(state, s, pending_element="9").cells}
+    assert typed["prime:pending"].text == "9"
