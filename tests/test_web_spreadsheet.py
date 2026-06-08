@@ -7336,7 +7336,9 @@ def _nonstd_on(state):
 def test_domain_elements_are_editable_elementcells_with_the_box_on():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
-    assert on["prime:0"].kind == "elementcell" and on["prime:0"].text == "2"
+    # the editable element shows its full num/den ratio, so it renders as a stacked fraction face
+    # (horizontal bar) like every other gridded ratio — not a bare integer / diagonal slash
+    assert on["prime:0"].kind == "elementcell" and on["prime:0"].text == "2/1"
     assert on["prime:2"].kind == "elementcell" and on["prime:2"].text == "13/5"
     # the box off: the same elements are read-only domain primes
     off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}

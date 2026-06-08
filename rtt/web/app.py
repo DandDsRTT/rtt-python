@@ -1829,22 +1829,25 @@ class _Reconciler:
         self._update_ratio(cb)              # the overlaid stacked face mirrors the fraction
 
     def _build_elementcell(self, cb, wrap):
-        # an editable chapter-9 domain basis element (nonstandard-domain box on): a PLAIN input (like
-        # a mapping / comma cell), showing the element directly — NOT the stacked ratio face, which
-        # shrinks the text on focus and overlays a static face that can't morph to the new value. Its
-        # commit RELABELS this basis element (or fills the ?/? draft to add a new one held just),
-        # committing the whole typed rational on blur / Enter.
-        wrap.classes("rtt-cell-input")
+        # an editable chapter-9 domain basis element (nonstandard-domain box on): built EXACTLY like a
+        # ratiocell — the stacked fraction face (horizontal bar, denominator below) over an input —
+        # so a nonprime like 13/5 reads as a proper fraction, identical to every other gridded ratio.
+        # Its commit RELABELS this basis element (or fills the ?/? draft to add a new one held just)
+        # rather than editing an interval; the build/face/preview are otherwise shared. The element
+        # text is always num/den (service.element_ratio), so the face never switches int↔fraction form.
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
         commit = lambda _=None, cid=cb.id: self._cb.on_element_change(cid)
         inp = ui.input().props("dense borderless").classes("rtt-cellinput")
         inp.on("blur", commit)
         inp.on("keydown.enter", commit)
         self.inputs[cb.id] = inp
+        self._ratio(cb, approx=False, overlay=True)
 
     def _update_elementcell(self, cb):
         self.inputs[cb.id].value = cb.text  # the live element (e.g. "13/5"), or "?/?" for a draft
-        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                   remove="" if cb.pending else "rtt-pending")  # red draft styling
+        self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                remove="" if cb.pending else "rtt-pending")  # red draft styling
+        self._update_ratio(cb)  # the overlaid stacked fraction face mirrors the value
 
     def _update_ratio(self, cb):  # genratio / commaratio / ratiocell: refresh the stacked fraction face
         # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
@@ -2662,16 +2665,27 @@ def index() -> None:
         if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
             render()
             return
-        if tok == "pending":  # the draft column -> add a new element held just (commits when valid)
-            editor.set_pending_element(raw)
+        # parse first, toasting why on failure — the same parse-then-act pattern the interval ratio
+        # cells use (on_ratio_change), so the ?/? draft and a relabel report invalid input alike
+        parsed = service.parse_domain_element(raw)
+        if parsed is None:
+            ui.notify(f"“{raw}” is not a positive rational basis element (≠ 1)",
+                      type="negative", position="top")
+            render()
+            return
+        if tok == "pending":  # the draft column -> add a new element held just
+            if not service.can_add_domain_element(editor.state, parsed):
+                ui.notify(f"{raw} isn’t independent of the existing basis", type="negative", position="top")
+                render()
+                return
+            editor.set_pending_element(raw)  # valid -> commits and clears the draft
             render()
             return
         index = int(tok)
-        if str(editor.state.domain_basis[index]) == raw:
+        if parsed == editor.state.domain_basis[index]:
             return  # a no-op blur (the element is unchanged) — no undo step
-        if not service.can_set_domain_element(editor.state, index, raw):
-            ui.notify("not a valid independent basis element (need a positive rational ≠ 1)",
-                      type="negative", position="top")
+        if not service.can_set_domain_element(editor.state, index, parsed):
+            ui.notify(f"{raw} would make the basis dependent", type="negative", position="top")
             render()  # revert the field to the current element
             return
         editor.set_domain_element(index, raw)

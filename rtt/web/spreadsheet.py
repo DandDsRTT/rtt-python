@@ -2287,7 +2287,11 @@ class _GridBuilder:
                 # coordinates). Off, they're read-only domain primes walked by the ± only.
                 element_kind = "elementcell" if self.show_nonstandard_domain else "prime"
                 for p in range(self.d):
-                    self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, element_kind, text=str(self.elements[p]), prime=p))
+                    # the editable element shows its full num/den ratio (a stacked fraction face, like
+                    # every other gridded ratio — and never switching int↔fraction form on a relabel);
+                    # the read-only prime keeps the bare element label.
+                    text = service.element_ratio(self.elements[p]) if self.show_nonstandard_domain else str(self.elements[p])
+                    self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, element_kind, text=text, prime=p))
                     self._voice("quantities:primes", p, self.tun.just_map[p])
                 if self.element_draft:  # the red ?/? draft column: type a rational to add a new basis
                     # element (held just). A distinct id so it's removed, not restructured, on commit.
