@@ -54,6 +54,7 @@ body.rtt-dark .rtt-titletile,
 body.rtt-dark .rtt-block,
 body.rtt-dark .rtt-show-tile { background:#272c33; }
 body.rtt-dark .rtt-drawer-inner { color:#e3e6ea; }   /* most panel text inherits this */
+body.rtt-dark .rtt-approach { color:#e3e6ea; }       /* the approach radio's option labels over the dark tile */
 /* the lighter inset boxes (a tile's control boxes, the nested tuning-ranges frame) */
 body.rtt-dark .rtt-block-boxed,
 body.rtt-dark .rtt-tile-cbox { background:#31373f; border-color:#454c54; }

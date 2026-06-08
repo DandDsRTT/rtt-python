@@ -91,3 +91,5 @@ class Layout:
     identities: dict | None = None  # per reorderable interval list, the [(token, vector), …] this
     # build assigned its columns — fed back as the next build's prev_ids so a reorder keeps a
     # column's id-token (its cells glide) and the change handlers can map a column index to its token
+    approach_box: tuple | None = None  # (x, y, w, h) the chapter-9 approach radio is positioned over
+    # (a reserved band at the bottom of the damage tile); None when the basis has no nonprime element

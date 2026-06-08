@@ -1279,6 +1279,15 @@ class _GridBuilder:
         self.opt_cap_lines = _wrap_lines(self.mean_damage_caption, OPT_MEAN_DAMAGE_W) if self.opt_ctrl else 1
         self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
+        # the chapter-9 nonstandard-domain-approach radio (neutral / prime-based / nonprime-based)
+        # rides a reserved band at the very bottom of the damage tile, below the optimization box —
+        # shown only when the basis carries a NONPRIME element (the same domain_has_nonprimes gate
+        # as the superspace columns/rows), and only while the damage tile is open (its home). Reserve
+        # a caption line + a control row so the rows below drop clear, exactly like opt_extra.
+        self.show_approach = (service.domain_has_nonprimes(self.elements)
+                          and "row:damage" not in self.collapsed and self.col_open("targets")
+                          and "tile:damage:targets" not in self.collapsed)
+        self.approach_extra = (RANGE_GAP + CAPTION_LINE + ROW_H) if self.show_approach else 0
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
         # shows with WEIGHTING itself, not gated on the alt. complexity extra. In all-interval
         # mode the weight is simplicity by construction, not a free choice, so the chooser stays put
@@ -1296,7 +1305,7 @@ class _GridBuilder:
             "prescaling": self.lbox_extra,   # box 𝐋: the "replace diminuator" checkbox
             "complexity": self.cbox_extra,   # box 𝒄: the predefined-complexity + norm choosers
             "weight": self.slope_extra,      # box 𝒘: the weight-slope chooser
-            "damage": self.opt_extra,        # the optimization controls under the damage list
+            "damage": self.opt_extra + self.approach_extra,  # optimization controls + the approach radio band
         }
 
         self.header_y = 0
@@ -2916,10 +2925,13 @@ class _GridBuilder:
         # the box's height, and the targets column is floored to OPT_BOX_MIN_W (see _control_floor) so
         # the spread-out controls always fit.
         opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
+        self.approach_box = None  # (x, y, w, h) the approach radio is positioned over (None ⇒ hidden)
         if self.opt_ctrl:
             ox = self.col_x["targets"]
             box_w = self.col_w["targets"]                 # the box spans the full width of the damage tile
-            box_top = self.tile_top["damage"] + self.tile_h["damage"] - self.opt_extra + RANGE_GAP
+            # the opt box sits just above the approach band, so it shifts up by approach_extra too
+            box_top = (self.tile_top["damage"] + self.tile_h["damage"]
+                       - self.opt_extra - self.approach_extra + RANGE_GAP)
             title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
             content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP  # a gap below the title
             sym_top = content_top + ROW_H            # the symbol/hint row, under the values
@@ -2988,6 +3000,19 @@ class _GridBuilder:
             self.cells.append(CellBox("optimization:button:hint", btn_x, sym_top, OPT_BTN_W, CAPTION_LINE,
                                  "caption", text=f"double-click to {'unlock' if self.optimize_locked else 'lock'}"))
             opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
+
+        # the chapter-9 approach radio band: a caption over the neutral/prime-based/nonprime-based
+        # radio, seated in the reserved approach_extra slice at the very bottom of the damage tile.
+        # The radio itself is an interactive widget app.py owns; here we only emit its caption and
+        # publish approach_box (its target x/y/w/h) for render() to position the widget over.
+        if self.show_approach:
+            ax = self.col_x["targets"]
+            aw = self.col_w["targets"]
+            app_top = self.tile_top["damage"] + self.tile_h["damage"] - self.approach_extra + RANGE_GAP
+            self.cells.append(CellBox("optimization:approach:caption", ax, app_top, aw, CAPTION_LINE,
+                                 "caption", text="nonstandard domain approach"))
+            self.approach_box = (ax + OPT_PAD_L, app_top + CAPTION_LINE,
+                                 aw - OPT_PAD_L - OPT_PAD_R, ROW_H)
 
         if self.row_open("canon") and self.tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
             for i in range(self.rc):
@@ -3510,7 +3535,8 @@ class _GridBuilder:
         # the value tiles scroll beneath them.
         return Layout(self.total_w, self.total_h, tuple(self.lines), tuple(self.blocks), tuple(self.cells),
                       freeze_x=self.node_edge + GAP - PAD, freeze_y=self.branch_top_y + GAP + GRIP_BAND - PAD,
-                      right_overhang=right_overhang, identities=self._col_ids)
+                      right_overhang=right_overhang, identities=self._col_ids,
+                      approach_box=self.approach_box)
 
 
 def build(state, settings=None, collapsed=None,

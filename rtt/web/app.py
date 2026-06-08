@@ -3504,10 +3504,18 @@ def index() -> None:
         refs["undo"].set_enabled(editor.can_undo)
         refs["redo"].set_enabled(editor.can_redo)
         refs["reset"].set_enabled(editor.can_reset)
-        # the nonstandard-domain-approach radio shows iff the loaded domain has a nonprime
-        # element; its value mirrors editor.nonprime_basis_approach (building[0] is True, so
-        # the programmatic write is swallowed by the on_change guard rather than re-firing).
-        refs["approach"].set_visibility(_approach_visible(editor))
+        # the nonstandard-domain-approach radio: positioned over the reserved band at the bottom of
+        # the damage tile (lay.approach_box, body coordinates → shift up by fy like any body cell)
+        # when the domain carries a nonprime element, hidden otherwise. Its value mirrors
+        # editor.nonprime_basis_approach (building[0] is True, so the programmatic write is swallowed
+        # by the on_change guard rather than re-firing).
+        if lay.approach_box is not None:
+            ax, ay, aw, ah = lay.approach_box
+            refs["approach"].style(f"position:absolute; left:{ax}px; top:{ay - fy}px; "
+                                   f"width:{aw}px; height:{ah}px")
+            refs["approach"].set_visibility(True)
+        else:
+            refs["approach"].set_visibility(False)
         if refs["approach"].value != editor.nonprime_basis_approach:
             refs["approach"].value = editor.nonprime_basis_approach
         # reflect the document's Show settings into the panel (after undo/redo/reset/
@@ -3793,7 +3801,7 @@ def index() -> None:
                     approach_options,
                     value=editor.nonprime_basis_approach,
                     on_change=lambda e: on_approach_change(e.value),
-                ).props("dense").classes("rtt-approach").mark("approach")
+                ).props("dense inline").classes("rtt-approach").mark("approach")
                 # per-option hover preview: the radio is not one hover target like the +/- buttons (each
                 # option means a different approach), so a tiny client delegation finds the hovered .q-radio's
                 # index and fires an `approachhover` event carrying it; leaving the radio fires -1. It dedupes
@@ -3820,6 +3828,11 @@ def index() -> None:
                 board = ui.element("div").classes("rtt-gridcontent").mark("board")
                 with board, ui.element("div").classes("rtt-band"):
                     rowband = ui.element("div").classes("rtt-rowband").mark("rowband")
+            # the chapter-9 approach radio was created in the corner (where the closures it needs
+            # live), but the corner is clipped to freeze_x×freeze_y and overlaid by the title tile,
+            # so re-home it onto the scrolling board — render() positions it over lay.approach_box
+            # (the reserved band at the bottom of the damage tile) in body coordinates.
+            refs["approach"].move(board)
             # where each cell renders: a frozen region (corner/column strip/row band) or the body board
             cell_parents = {"corner": corner, "col": colhead_inner, "row": rowband, "body": board}
 
