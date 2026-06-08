@@ -6767,25 +6767,16 @@ def test_nonprime_based_approach_omits_the_ss_conversion_cells():
     assert not any(cid.startswith("cell:ss_prescaler:") for cid in cells)
 
 
-def test_ss_conversion_rows_trivialize_over_a_standard_prime_domain():
-    # a standard prime basis is its own superspace, so B_L is the identity and the lifted
-    # target list / prescaler match the on-domain ones — the rows render trivially identical
-    # content. Demonstrates that the toggle stays harmless over a standard domain.
-    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # 5-limit meantone
+def test_ss_conversion_rows_absent_over_a_standard_prime_domain():
+    # a standard prime basis IS its own superspace, so there's nothing to convert — the
+    # superspace block (conversion rows included) stays hidden even with the toggle on. The
+    # rows appear only once the basis is actually nonstandard (see the BARBADOS tests above).
+    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # 5-limit meantone — standard prime limit
     s = settings.defaults()
     s["nonstandard_domain"] = True
-    lay = spreadsheet.build(state, s)
-    cells = {c.id: c for c in lay.cells}
-    # the dL spine labels match the standard domain primes 2, 3, 5
-    assert [cells[f"ss_targets_basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
-    # the ss_targets entries equal the on-domain target_vectors entries (the embedding
-    # B_L = I, so the lifted targets are the originals verbatim)
-    on_domain = service.target_interval_vectors(
-        service.target_interval_set("TILT", state.domain_basis), state.d, state.domain_basis,
-    )
-    for j in range(len(on_domain)):
-        for p in range(3):
-            assert cells[f"cell:ss_targets:{j}:{p}"].text == str(on_domain[j][p])
+    cids = {c.id for c in spreadsheet.build(state, s).cells}
+    assert not any(cid.startswith("cell:ss_targets:") or cid.startswith("cell:ss_prescaler:")
+                   or cid.startswith("ss_targets_basis:") for cid in cids)
 
 
 def test_ss_conversion_tiles_carry_captions_and_symbols():
@@ -6841,21 +6832,23 @@ def test_nonstandard_domain_off_leaves_no_superspace_trace():
     assert not any(s in i for i in ids for s in ("ssgens", "ssprimes", "ss_vectors", "ss_mapping", "ss_basis", "ssgen", "ssprime"))
 
 
-def test_standard_domain_with_toggle_on_renders_a_trivial_identity_superspace():
-    # a standard prime-limit domain has dL == d and rL == r (its superspace IS its domain),
-    # so the new columns/rows just look like trivial copies. The build doesn't crash, and
-    # the trivial sizes flow through to the counts row's rL / dL = the existing r / d.
+def test_standard_domain_with_toggle_on_shows_no_superspace_but_enables_editing():
+    # checking the nonstandard-domain toggle over a STILL-standard prime limit must not reveal
+    # the superspace columns/rows (the superspace would merely clone the domain — nothing to
+    # show yet). The only things it changes: the domain basis becomes editable and the column
+    # is renamed. The superspace appears later, once the basis is actually made nonstandard.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5 meantone — standard prime limit
     s = settings.defaults() | {"nonstandard_domain": True, "counts": True}
-    cells = {c.id: c for c in spreadsheet.build(state, s).cells}
-    # the superspace columns / rows render — but with the same dimensions as the domain
-    assert "header:ssgens" in cells and "header:ssprimes" in cells
-    assert "label:ss_vectors" in cells and "label:ss_mapping" in cells
-    # the counts show rL == r and dL == d (the trivial-superspace passthrough)
-    assert cells["count:ssgens"].text == "\U0001D45Fₗ = 2"   # rL = r = 2
-    assert cells["count:ssprimes"].text == "\U0001D451ₗ = 3"  # dL = d = 3
-    # the spine basis index lists the standard primes themselves (no extra primes)
-    assert [cells[f"ss_basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
+    lay = spreadsheet.build(state, s)
+    cells = {c.id: c for c in lay.cells}
+    ids = {c.id for c in lay.cells} | {b.id for b in lay.blocks} | {ln.id for ln in lay.lines}
+    # no superspace trace: no columns, rows, counts, spine, or cells keyed by the ss prefixes
+    assert not any(tok in i for i in ids
+                   for tok in ("ssgens", "ssprimes", "ss_vectors", "ss_mapping", "ss_basis",
+                               "ss_targets", "ss_prescaler", "ssgen", "ssprime"))
+    # but the toggle DID take effect: the domain basis is editable and the column is renamed
+    assert cells["prime:0"].kind == "elementcell"
+    assert cells["header:primes"].text == "domain basis\nelements"
 
 
 # ---------------------------------------------------------------------------
@@ -6903,16 +6896,13 @@ def test_B_L_off_omits_the_cells():
     assert not any(cid.startswith("cell:ss_vectors:primes:") for cid in cids)
 
 
-def test_B_L_standard_domain_is_the_identity():
-    # a standard prime-limit domain has dL == d, and B_L = I (each element is one prime,
-    # one slot). 2.3.5 meantone: B_L is the 3×3 identity, no crash.
+def test_B_L_absent_over_a_standard_prime_domain():
+    # a standard prime-limit domain IS its own superspace (B_L would be the identity), so the
+    # embedding tile has nothing to add — the superspace stays hidden even with the toggle on.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults() | {"nonstandard_domain": True}
-    cells = {c.id: c for c in spreadsheet.build(state, s).cells}
-    for elem_idx in range(3):
-        for ss_prime_idx in range(3):
-            expected = 1 if elem_idx == ss_prime_idx else 0
-            assert cells[f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}"].text == str(expected)
+    cids = {c.id for c in spreadsheet.build(state, s).cells}
+    assert not any(cid.startswith("cell:ss_vectors:primes:") for cid in cids)
 
 
 # ---------------------------------------------------------------------------
@@ -6958,16 +6948,13 @@ def test_M_L_off_omits_the_cells():
     assert not any(cid.startswith("cell:ss_mapping:ssprimes:") for cid in cids)
 
 
-def test_M_L_standard_domain_equals_M():
-    # a standard prime-limit domain has dL == d and rL == r, and M_L is M canonicalized.
-    # 2.3.5 meantone: M = ((1,1,0),(0,1,4)). canonical form is the same here, so M_L = M.
+def test_M_L_absent_over_a_standard_prime_domain():
+    # a standard prime-limit domain IS its own superspace (M_L would just be M), so the
+    # superspace mapping tile stays hidden even with the toggle on.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults() | {"nonstandard_domain": True}
-    cells = {c.id: c for c in spreadsheet.build(state, s).cells}
-    ml = service.superspace_mapping(state)
-    for gen_idx, row in enumerate(ml):
-        for ss_prime_idx, value in enumerate(row):
-            assert cells[f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}"].text == str(value)
+    cids = {c.id for c in spreadsheet.build(state, s).cells}
+    assert not any(cid.startswith("cell:ss_mapping:ssprimes:") for cid in cids)
 
 
 def test_M_L_tile_carries_per_row_map_brackets_and_a_matrix_frame():
@@ -7204,19 +7191,14 @@ def test_superspace_tuning_row_equivalences():
     assert cells["symbol:retune:ssprimes"].text == "\U0001D493ₗ = \U0001D495ₗ − \U0001D48Bₗ"
 
 
-def test_superspace_tuning_standard_domain_trivially_passes_through():
-    # over a standard prime domain the superspace IS the domain — 𝒈ₗ = 𝒈, 𝒕ₗ = 𝒕 etc.
-    # Build doesn't crash; cells render with the same cents values as the existing rows.
+def test_superspace_tuning_rows_absent_over_a_standard_prime_domain():
+    # over a standard prime domain the superspace IS the domain (𝒈ₗ = 𝒈, 𝒕ₗ = 𝒕 …), so the
+    # superspace tuning cells add nothing — they stay hidden even with the toggle on.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults() | {"nonstandard_domain": True}
-    cells = {c.id: c for c in spreadsheet.build(state, s).cells}
-    # rL=2 ssgens
-    assert "tuning:ssgen:0" in cells and "tuning:ssgen:1" in cells
-    # dL=3 ssprimes
-    for i in range(3):
-        assert f"tuning:ssprime:{i}" in cells
-        assert f"just:ssprime:{i}" in cells
-        assert f"retune:ssprime:{i}" in cells
+    cids = {c.id for c in spreadsheet.build(state, s).cells}
+    assert not any(cid.startswith(pfx) for cid in cids
+                   for pfx in ("tuning:ssgen", "tuning:ssprime", "just:ssprime", "retune:ssprime"))
 
 
 # ---------------------------------------------------------------------------

@@ -775,12 +775,21 @@ class _GridBuilder:
         # the dL superspace primes (e.g. (2, 3, 5, 13) for BARBADOS) — the basis the
         # ss_vectors row's spine column labels its rows with, and the columns of M_L
         self.superspace_primes = service.superspace_primes(self.elements)
-        # the chapter-9 "nonstandard domain" Show toggle. Scaffolding only this phase, so it
-        # stays out of settings.IMPLEMENTED — the panel can't flip it; tests pass it through
-        # build's settings directly. Renders the superspace columns/rows independent of whether
-        # the domain is actually nonstandard: a standard prime limit has dL == d / rL == r, so
-        # the superspace columns just look like clones of the domain, which is harmless.
+        # the chapter-9 "nonstandard domain" Show toggle. Checking it makes the domain basis
+        # editable (the cells become "elementcell" rather than read-only "prime") and renames the
+        # column to "domain basis elements" — but on its own it does NOT reveal the superspace
+        # columns/rows; that waits on the basis actually becoming nonstandard (see show_superspace).
         self.show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
+        # the superspace columns/rows render only once the basis is ACTUALLY nonstandard (not the
+        # first d primes): over a standard prime limit dL == d / rL == r, so the superspace would
+        # merely clone the domain, and the superspace basis (the basis factored into primes) only
+        # diverges from the domain once the basis is a real subgroup. So checking the toggle on a
+        # still-standard basis shows nothing yet; the columns/rows appear when the basis becomes
+        # nonstandard. Uses the same not-is_standard_domain test as editor.basis_is_nonstandard
+        # (the toggle's own can't-disable lock), so superspace visibility and that lock agree.
+        self.show_superspace = (
+            self.show_nonstandard_domain and not service.is_standard_domain(self.elements)
+        )
         # identity objects — the trivial self-maps that equal 𝐼 (mapping over its own
         # generators, domain primes as vectors over themselves, 𝑀·D, and in the superspace
         # block M_L over its own generators and the JI mapping M_jL = I). They're deferred to
@@ -797,7 +806,7 @@ class _GridBuilder:
         # and the rows drop. The anchor rows (ss_vectors carrying B_L, ss_mapping carrying
         # M_L) stay regardless — they describe the embedding itself.
         self.show_ss_conversion = (
-            self.show_nonstandard_domain and self.nonprime_approach != "nonprime-based"
+            self.show_superspace and self.nonprime_approach != "nonprime-based"
         )
         # the chapter-9 CONVERSION row matrices the prime-based optimization reads: B_L·T (each
         # target interval re-expressed as a dL-tall monzo over the superspace primes) and X_L
@@ -1119,8 +1128,8 @@ class _GridBuilder:
             # the chapter-9 superspace columns ride between gens and the domain primes — rL
             # cells (superspace generators) and dL cells (superspace primes), each in the
             # standard EBK-gutter footprint like the gens/primes columns they parallel
-            ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_nonstandard_domain, True),
-            ("ssprimes", 2 * BRACKET_W + self.dL * COL_W, self.show_nonstandard_domain, True),
+            ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_superspace, True),
+            ("ssprimes", 2 * BRACKET_W + self.dL * COL_W, self.show_superspace, True),
             ("primes", 2 * BRACKET_W + self.d * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
@@ -1158,14 +1167,14 @@ class _GridBuilder:
             # superspace prime is its own basis element). All three gate on the same
             # nonstandard_domain toggle as the columns, so the bands collapse to nothing
             # whenever the toggle is off.
-            ("ss_vectors", self.dL * ROW_H, self.show_nonstandard_domain, True, "superspace\ninterval vectors"),
-            ("ss_mapping", self.rL * ROW_H, self.show_nonstandard_domain, True, "superspace\nmapping"),
+            ("ss_vectors", self.dL * ROW_H, self.show_superspace, True, "superspace\ninterval vectors"),
+            ("ss_mapping", self.rL * ROW_H, self.show_superspace, True, "superspace\nmapping"),
             # the M_jL = I band exists ONLY to hold that identity object, so it gates on
             # identity_objects too (its sole tile is the deferred ss_just_mapping × ssprimes —
             # see declared_tiles below). The ss_mapping band stays: it also carries the real
             # rL × dL mapping M_L (ss_mapping × ssprimes), only its gens-column self-map drops.
             ("ss_just_mapping", self.dL * ROW_H,
-             self.show_nonstandard_domain and self.show_identity_objects, True, "superspace\nJI mapping"),
+             self.show_superspace and self.show_identity_objects, True, "superspace\nJI mapping"),
             # the chapter-9 CONVERSION rows: ss_targets (B_L·T, the target list re-expressed
             # over the superspace primes) and ss_prescaler (X_L, the complexity prescaler
             # lifted into the superspace). Mode-gated — present only with the nonstandard-
@@ -1350,7 +1359,7 @@ class _GridBuilder:
                                                    generator_tuning=generator_tuning,
                                                    target_override=target_override,
                                                    nonprime_approach=self.nonprime_approach,
-                                                   superspace=self.show_nonstandard_domain)
+                                                   superspace=self.show_superspace)
                          if self.show_ptext else {})
 
         y = rows_top_y
@@ -2684,7 +2693,7 @@ class _GridBuilder:
         # TODO (Phase 5, per the maximized mockup's CSV row 4): when 𝒈 is editable, mutating
         # any of its cents cells should auto-flip Editor.nonprime_basis_approach away from
         # "prime-based" — the prime-based optimum no longer determines 𝒈 once it's been moved.
-        if self.show_nonstandard_domain and self.row_open("tuning"):
+        if self.show_superspace and self.row_open("tuning"):
             ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach)
             self.tuning_value_row("tuning", "ssgens", ss_tun.generator_map)
             self.tuning_value_row("tuning", "ssprimes", ss_tun.tuning_map)
