@@ -3,6 +3,21 @@
 The RTT monolith is a microtonal/RTT engine with a NiceGUI web front end
 (`rtt/web/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`).
 
+## Use the persistent `.venv` — don't rebuild a throwaway one
+
+The repo keeps a persistent virtualenv at `.venv/` (gitignored). All deps (runtime **and**
+test: `pytest`, `pytest-asyncio`, `nicegui` are pinned right in `requirements.txt`) are
+already installed there, so `.venv/bin/python -m pytest -q` "just works" (~2,400 tests).
+Always use `.venv/bin/python` — the bare `python`/`python3` on PATH is system 3.9, too old
+for the `numpy`/`scipy`/`sympy`/`nicegui` pins (which need Python ≥ 3.10).
+
+If `.venv/` is ever missing, rebuild it once with a 3.10+ interpreter (this machine has
+`/opt/homebrew/bin/python3.14`; `.python-version` pins 3.11.9 to match the Render build):
+
+```bash
+/opt/homebrew/bin/python3.14 -m venv .venv && .venv/bin/pip install -r requirements.txt
+```
+
 ## When work is done, merge to main — that's how the user sees it
 
 The user validates everything on **their own `python app.py` running on 8137**, which serves
