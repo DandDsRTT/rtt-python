@@ -6,6 +6,20 @@ re-exports everything here (`from rtt.web.grid_tables import *`) so `spreadsheet
 stays the public surface app.py, tooltips and the tests read.
 """
 
+# Sentinel markers wrapping a subscript range, converted to <sub>…</sub> by the renderers
+# (app._math_html for symbols/labels, app._bold_units for units). NORM_SUB forces italic on
+# its whole range (suits a bare "q"); plain SUB leaves each glyph its own slant ("dual(𝑞)").
+# Private-Use-Area code points so they never collide with content. Defined here (not in
+# spreadsheet) so the semantic tables below can embed them; spreadsheet re-exports via import *.
+NORM_SUB_OPEN = chr(0xE001)
+NORM_SUB_CLOSE = chr(0xE002)
+SUB_OPEN = chr(0xE003)
+SUB_CLOSE = chr(0xE004)
+# The chapter-9 superspace marker: a real subscript CAPITAL L (the guide's "lifted to the
+# superspace" subscript). Unicode has no subscript-capital-L, so we render a capital "L" inside
+# <sub> rather than the lowercase ₗ (U+2097) the tables used to embed.
+SUBSCRIPT_L = SUB_OPEN + "L" + SUB_CLOSE
+
 # The counts row: each column's set cardinality, as (column key, symbol, name).
 # The symbol+value (e.g. "r = 2", the symbol rendered math-italic via _mathit) is
 # the cell; the name ("rank") is its caption.
@@ -147,13 +161,13 @@ SYMBOLS = {
     # parallel to C/T/D — an interval basis), 𝑀ₗ the temperament's superspace mapping
     # (math-italic M, parallel to 𝑀), 𝑀ⱼₗ the trivial superspace JI mapping (parallel to
     # the just tuning map 𝒋). Phase 4F adds the cyan tuning row's superspace symbols.
-    ("ss_vectors", "primes"): "Bₗ",      # B (upright) + Unicode subscript L
-    ("ss_mapping", "ssprimes"): "𝑀ₗ",   # math-italic M (\U0001D440) + subscript L
-    ("ss_just_mapping", "ssprimes"): "𝑀ⱼₗ",  # math-italic M + Unicode subscript j (U+2C7C) + ₗ
-    ("tuning", "ssgens"): "𝒈ₗ",
-    ("tuning", "ssprimes"): "𝒕ₗ",
-    ("just", "ssprimes"): "𝒋ₗ",
-    ("retune", "ssprimes"): "𝒓ₗ",
+    ("ss_vectors", "primes"): "BL",      # B (upright) + Unicode subscript L
+    ("ss_mapping", "ssprimes"): "𝑀L",   # math-italic M (\U0001D440) + subscript L
+    ("ss_just_mapping", "ssprimes"): "𝑀ⱼL",  # math-italic M + Unicode subscript j (U+2C7C) + L
+    ("tuning", "ssgens"): "𝒈L",
+    ("tuning", "ssprimes"): "𝒕L",
+    ("just", "ssprimes"): "𝒋L",
+    ("retune", "ssprimes"): "𝒓L",
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -220,10 +234,10 @@ ROW_LABEL_LETTERS = {
     ("prescaling", "primes"): "𝒙",
     # the chapter-9 superspace mapping M_L: each row a covector over the dL ss_primes,
     # labelled 𝒎ₗᵢ (math-italic 𝒎 + subscript ₗ + index), parallel to the existing M's 𝒎ᵢ
-    ("ss_mapping", "ssprimes"): "𝒎ₗ",
+    ("ss_mapping", "ssprimes"): "𝒎L",
     # M_jL's identity rows likewise: each row labelled 𝒎ⱼₗᵢ — math-italic 𝒎 + subscript j
     # (U+2C7C) + subscript ₗ
-    ("ss_just_mapping", "ssprimes"): "𝒎ⱼₗ",
+    ("ss_just_mapping", "ssprimes"): "𝒎ⱼL",
 }
 ROW_LABELED_TILES = frozenset(ROW_LABEL_LETTERS)
 COL_LABEL_LETTERS = {
@@ -260,6 +274,13 @@ COL_LABEL_LETTERS = {
     # damage + weight — scalar lists over the targets only
     ("damage", "targets"): "d",       # damage scalars — plain
     ("weight", "targets"): "w",       # weight scalars — plain
+    # the chapter-9 superspace tuning-family covectors, each entry per superspace generator /
+    # prime — 𝒈ʟᵢ over ssgens, 𝒕ʟᵢ / 𝒋ʟᵢ / 𝒓ʟᵢ over ssprimes (parallel to the on-domain
+    # 𝒈ᵢ / 𝒕ᵢ / 𝒋ᵢ / 𝒓ᵢ). M_L / M_jL head their ROWS (𝒎ʟᵢ) instead, like the on-domain mapping.
+    ("tuning", "ssgens"): f"𝒈{SUBSCRIPT_L}",
+    ("tuning", "ssprimes"): f"𝒕{SUBSCRIPT_L}",
+    ("just", "ssprimes"): f"𝒋{SUBSCRIPT_L}",
+    ("retune", "ssprimes"): f"𝒓{SUBSCRIPT_L}",
     # the complexity row's headers (EVERY column, targets included) track the live prescaler
     # glyph and the equivalences layer, so build() fills them in per-render via
     # _prescaler_col_labels (NOT here): the auxiliary columns spell the bare norm
@@ -451,13 +472,13 @@ FORM_CHOOSER_ROWS = frozenset(row for _, row, _, _ in FORM_CHOOSERS)
 # mapped list (Y), the tempered (𝐚) and just (𝐨) lists.
 MNEMONICS = {
     # superspace anchors — underline the symbol-letter where it sits in the caption
-    ("ss_vectors", "primes"): "basis",        # Bₗ → underline the "b" in "basis embedding…"
-    ("ss_mapping", "ssprimes"): "mapping",    # 𝑀ₗ → underline the "m" in "superspace mapping"
-    ("ss_just_mapping", "ssprimes"): "mapping",  # 𝑀ⱼₗ → "m" in "superspace JI mapping"
-    ("tuning", "ssgens"): "generator",        # 𝒈ₗ → "g" in "superspace generator tuning map"
-    ("tuning", "ssprimes"): "tuning",         # 𝒕ₗ → "t" in "superspace tuning map"
-    ("just", "ssprimes"): "just",             # 𝒋ₗ → "j" in "superspace just tuning map"
-    ("retune", "ssprimes"): "retuning",       # 𝒓ₗ → "r" in "superspace retuning map"
+    ("ss_vectors", "primes"): "basis",        # BL → underline the "b" in "basis embedding…"
+    ("ss_mapping", "ssprimes"): "mapping",    # 𝑀L → underline the "m" in "superspace mapping"
+    ("ss_just_mapping", "ssprimes"): "mapping",  # 𝑀ⱼL → "m" in "superspace JI mapping"
+    ("tuning", "ssgens"): "generator",        # 𝒈L → "g" in "superspace generator tuning map"
+    ("tuning", "ssprimes"): "tuning",         # 𝒕L → "t" in "superspace tuning map"
+    ("just", "ssprimes"): "just",             # 𝒋L → "j" in "superspace just tuning map"
+    ("retune", "ssprimes"): "retuning",       # 𝒓L → "r" in "superspace retuning map"
     ("vectors", "commas"): "comma",     # C
     ("vectors", "targets"): "target",   # T
     ("vectors", "held"): "held",        # H
@@ -488,8 +509,8 @@ EQUIVALENCES = {
     # its own basis element). 𝒕ₗ products parallel the existing 𝒕 = 𝒈𝑀 / 𝒓 = 𝒕 − 𝒋
     # chains; 𝒈ₗ and 𝒋ₗ are primary (no continuation).
     ("ss_just_mapping", "ssprimes"): " = 𝐼",  # math-italic I
-    ("tuning", "ssprimes"): " = 𝒈ₗ𝑀ₗ",
-    ("retune", "ssprimes"): " = 𝒕ₗ − 𝒋ₗ",
+    ("tuning", "ssprimes"): " = 𝒈L𝑀L",
+    ("retune", "ssprimes"): " = 𝒕L − 𝒋L",
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",
     ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
@@ -541,11 +562,11 @@ UNITS = {
     # coordinates (p), M_L is gL/p (one superspace generator per superspace prime), M_jL is p/p
     # (identity). The p → b on-domain swap (see cell_unit) does NOT reach these tiles.
     ("ss_vectors", "primes"): "p",
-    ("ss_mapping", "ssprimes"): "gL/p",
+    ("ss_mapping", "ssprimes"): f"g{SUBSCRIPT_L}/p",
     ("ss_just_mapping", "ssprimes"): "p/p",
     # the cyan superspace tuning row mirrors the on-domain tuning row over the superspace
     # primes (p, true primes); 𝒈ₗ is ¢ per superspace generator gL.
-    ("tuning", "ssgens"): "¢/gL",
+    ("tuning", "ssgens"): f"¢/g{SUBSCRIPT_L}",
     ("tuning", "ssprimes"): "¢/p",
     ("just", "ssprimes"): "¢/p",
     ("retune", "ssprimes"): "¢/p",
@@ -725,7 +746,11 @@ EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band
 # ratio columns show no plain text (the gridded ratio is already the formatted value). Every
 # other row shows one EBK string per tile.
 PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "retune", "damage",
-                        "prescaling", "complexity", "weight"})
+                        "prescaling", "complexity", "weight",
+                        # the chapter-9 superspace matrices carry a plain-text EBK string too
+                        # (B_L, M_L, M_jL); listing them reserves the band height so the text
+                        # doesn't spill past the tile into the row below
+                        "ss_vectors", "ss_mapping", "ss_just_mapping"})
 
 # Cell kinds the value-display toggles filter out. "gridded values" hides
 # everything a tile holds besides its fold toggle, name caption and plain-text

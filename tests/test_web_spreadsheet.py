@@ -6466,8 +6466,8 @@ def test_nonstandard_domain_adds_rL_dL_counts_when_counts_is_on():
     # counts row's letter formatting. For BARBADOS over 2.3.13/5: rL = 3 (the r=2 mapping
     # gains one generator since dL=4 is one prime past d=3), dL = 4.
     cells = {c.id: c for c in _barbados_ss(counts=True).cells}
-    assert cells["count:ssgens"].text == "\U0001D45Fₗ = 3"   # 𝑟ₗ
-    assert cells["count:ssprimes"].text == "\U0001D451ₗ = 4"  # 𝑑ₗ
+    assert cells["count:ssgens"].text == "\U0001D45FL = 3"   # 𝑟L
+    assert cells["count:ssprimes"].text == "\U0001D451L = 4"  # 𝑑L
 
 
 def test_count_panels_back_every_superspace_count_too():
@@ -6588,7 +6588,7 @@ def test_M_L_tile_has_a_caption_and_symbol():
     # (math-italic M for the temperament mapping; subscript ₗ for "L")
     cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
     assert cells["caption:ss_mapping:ssprimes"].text == "superspace mapping"
-    assert cells["symbol:ss_mapping:ssprimes"].text == "\U0001D440ₗ"  # 𝑀ₗ
+    assert cells["symbol:ss_mapping:ssprimes"].text == "\U0001D440L"  # 𝑀L
 
 
 def test_B_L_tile_has_a_caption_and_symbol():
@@ -6597,7 +6597,7 @@ def test_B_L_tile_has_a_caption_and_symbol():
     # target list — upright capitals naming an interval basis)
     cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
     assert cells["caption:ss_vectors:primes"].text == "basis embedding matrix"
-    assert cells["symbol:ss_vectors:primes"].text == "Bₗ"
+    assert cells["symbol:ss_vectors:primes"].text == "BL"
 
 
 def test_nonstandard_domain_off_leaves_no_superspace_trace():
@@ -6792,7 +6792,7 @@ def test_M_L_tile_row_labels_each_covector():
     cells = {c.id: c for c in _barbados_ss(symbols=True).cells}
     for i in range(3):  # rL=3 rows
         sub_i = str(i + 1).translate(_SUBSCRIPT_DIGITS)
-        assert cells[f"matlabel:row:ss_mapping:ssprimes:{i}"].text == f"\U0001D48Eₗ{sub_i}"
+        assert cells[f"matlabel:row:ss_mapping:ssprimes:{i}"].text == f"\U0001D48EL{sub_i}"
 
 
 # ---------------------------------------------------------------------------
@@ -6870,7 +6870,7 @@ def test_M_jL_tile_carries_caption_and_symbol():
     cells = {c.id: c for c in _barbados_ss_identity(names=True, symbols=True).cells}
     assert cells["caption:ss_just_mapping:ssprimes"].text == "superspace JI mapping"
     # 𝑀 = U+1D440. Subscript j = U+2C7C. Subscript L = U+2097.
-    assert cells["symbol:ss_just_mapping:ssprimes"].text == "\U0001D440ⱼₗ"
+    assert cells["symbol:ss_just_mapping:ssprimes"].text == "\U0001D440ⱼL"
 
 
 def test_M_jL_tile_row_labels_each_covector():
@@ -6878,14 +6878,14 @@ def test_M_jL_tile_row_labels_each_covector():
     cells = {c.id: c for c in _barbados_ss_identity(symbols=True).cells}
     for i in range(4):  # dL=4 rows
         sub_i = str(i + 1).translate(_SUBSCRIPT_DIGITS)
-        assert cells[f"matlabel:row:ss_just_mapping:ssprimes:{i}"].text == f"\U0001D48Eⱼₗ{sub_i}"
+        assert cells[f"matlabel:row:ss_just_mapping:ssprimes:{i}"].text == f"\U0001D48EⱼL{sub_i}"
 
 
 def test_M_jL_tile_carries_identity_equivalence():
     # equivalences on adds " = 𝐼" after the 𝑀ⱼₗ symbol — the trivial-identity equation
     cells = {c.id: c for c in _barbados_ss_identity(symbols=True, equivalences=True).cells}
     sym = cells["symbol:ss_just_mapping:ssprimes"].text
-    assert sym == "\U0001D440ⱼₗ = \U0001D43C"  # "𝑀ⱼₗ = 𝐼" — math-italic I = U+1D43C
+    assert sym == "\U0001D440ⱼL = \U0001D43C"  # "𝑀ⱼL = 𝐼" — math-italic I = U+1D43C
 
 
 def test_superspace_identity_objects_are_deferred_to_identity_objects():
@@ -6990,10 +6990,10 @@ def test_superspace_tuning_row_captions_and_symbols():
     assert cells["caption:just:ssprimes"].text == "superspace just tuning map"
     assert cells["caption:retune:ssprimes"].text == "superspace retuning map"
     # 𝒈ₗ = U+1D488 + ₗ, 𝒕ₗ = U+1D495 + ₗ, 𝒋ₗ = U+1D48B + ₗ, 𝒓ₗ = U+1D493 + ₗ
-    assert cells["symbol:tuning:ssgens"].text == "\U0001D488ₗ"
-    assert cells["symbol:tuning:ssprimes"].text == "\U0001D495ₗ"
-    assert cells["symbol:just:ssprimes"].text == "\U0001D48Bₗ"
-    assert cells["symbol:retune:ssprimes"].text == "\U0001D493ₗ"
+    assert cells["symbol:tuning:ssgens"].text == "\U0001D488L"
+    assert cells["symbol:tuning:ssprimes"].text == "\U0001D495L"
+    assert cells["symbol:just:ssprimes"].text == "\U0001D48BL"
+    assert cells["symbol:retune:ssprimes"].text == "\U0001D493L"
 
 
 def test_superspace_tuning_row_equivalences():
@@ -7001,9 +7001,9 @@ def test_superspace_tuning_row_equivalences():
     # 𝒈ₗ and 𝒋ₗ are primary, no continuation.
     cells = {c.id: c for c in _barbados_ss(symbols=True, equivalences=True).cells}
     # 𝒕ₗ = 𝒈ₗ𝑀ₗ
-    assert cells["symbol:tuning:ssprimes"].text == "\U0001D495ₗ = \U0001D488ₗ\U0001D440ₗ"
+    assert cells["symbol:tuning:ssprimes"].text == "\U0001D495L = \U0001D488L\U0001D440L"
     # 𝒓ₗ = 𝒕ₗ − 𝒋ₗ
-    assert cells["symbol:retune:ssprimes"].text == "\U0001D493ₗ = \U0001D495ₗ − \U0001D48Bₗ"
+    assert cells["symbol:retune:ssprimes"].text == "\U0001D493L = \U0001D495L − \U0001D48BL"
 
 
 def test_superspace_tuning_rows_absent_over_a_standard_prime_domain():
@@ -7210,8 +7210,8 @@ def test_per_cell_units_subscript_gL_on_the_g_L_cells():
     # 𝒈ₗ over the ssgens column carries "¢/gL" units (one cents-per-superspace-generator entry),
     # subscripted by the generator index — ¢/gL₁, ¢/gL₂, … (gL, distinct from the on-domain g)
     cells = {c.id: c for c in _barbados_ss(units=True).cells}
-    assert cells["tuning:ssgen:0"].unit == "¢/gL₁"
-    assert cells["tuning:ssgen:1"].unit == "¢/gL₂"
+    assert cells["tuning:ssgen:0"].unit == "¢/gL₁"
+    assert cells["tuning:ssgen:1"].unit == "¢/gL₂"
 
 
 def test_per_cell_units_on_the_M_L_cells_carry_gL_over_p():
@@ -7219,16 +7219,16 @@ def test_per_cell_units_on_the_M_L_cells_carry_gL_over_p():
     # per (superspace generator, superspace prime). The subscripts follow row × column —
     # gL₁/p₁, gL₁/p₂, … like the on-domain mapping cells take g₁/p₁ etc.
     cells = {c.id: c for c in _barbados_ss(units=True).cells}
-    assert cells["cell:ss_mapping:ssprimes:0:0"].unit == "gL₁/p₁"
-    assert cells["cell:ss_mapping:ssprimes:0:1"].unit == "gL₁/p₂"
-    assert cells["cell:ss_mapping:ssprimes:1:0"].unit == "gL₂/p₁"
+    assert cells["cell:ss_mapping:ssprimes:0:0"].unit == "gL₁/p₁"
+    assert cells["cell:ss_mapping:ssprimes:0:1"].unit == "gL₁/p₂"
+    assert cells["cell:ss_mapping:ssprimes:1:0"].unit == "gL₂/p₁"
 
 
 def test_superspace_units_row_labels_columns_gL_and_p():
     # the domain_units row labels each superspace column's coordinate at the top: /gLᵢ over the
     # superspace generators, /pᵢ over the superspace primes (true primes p, NOT the on-domain b)
     cells = {c.id: c for c in _barbados_ss(domain_units=True).cells}
-    assert [cells[f"urow:ssgens:{g}"].text for g in range(3)] == ["/gL₁", "/gL₂", "/gL₃"]
+    assert [cells[f"urow:ssgens:{g}"].text for g in range(3)] == ["/gL₁", "/gL₂", "/gL₃"]
     assert [cells[f"urow:ssprimes:{p}"].text for p in range(4)] == ["/p₁", "/p₂", "/p₃", "/p₄"]
 
 
@@ -7237,7 +7237,7 @@ def test_superspace_units_column_labels_rows_p_and_gL():
     # components are superspace primes (pᵢ/), M_L's rows are superspace generators (gLᵢ/)
     cells = {c.id: c for c in _barbados_ss(domain_units=True).cells}
     assert [cells[f"ucol:ss_vectors:{p}"].text for p in range(4)] == ["p₁/", "p₂/", "p₃/", "p₄/"]
-    assert [cells[f"ucol:ss_mapping:{i}"].text for i in range(3)] == ["gL₁/", "gL₂/", "gL₃/"]
+    assert [cells[f"ucol:ss_mapping:{i}"].text for i in range(3)] == ["gL₁/", "gL₂/", "gL₃/"]
     # M_jL (identity) rows are superspace primes too — shown only with identity objects on
     idc = {c.id: c for c in _barbados_ss_identity(domain_units=True).cells}
     assert [idc[f"ucol:ss_just_mapping:{p}"].text for p in range(4)] == ["p₁/", "p₂/", "p₃/", "p₄/"]
@@ -7262,6 +7262,61 @@ def test_superspace_units_off_without_domain_units():
     # the superspace units ride the domain_units toggle like the rest — off, no urow/ucol cells
     cells = {c.id for c in _barbados_ss().cells}  # domain_units off
     assert not any(c.startswith(("urow:ssgens", "urow:ssprimes", "ucol:ss_")) for c in cells)
+
+
+def test_superspace_L_marker_is_a_capital_subscript():
+    # the superspace "L" subscript is a real CAPITAL L wrapped in the <sub> sentinels (rendered
+    # <sub>L</sub> by app), not the lowercase ₗ — consistently across counts, symbols and units.
+    L = spreadsheet.SUBSCRIPT_L
+    assert L == spreadsheet.SUB_OPEN + "L" + spreadsheet.SUB_CLOSE  # capital L, subscript-wrapped
+    cells = {c.id: c for c in _barbados_ss(counts=True, symbols=True, domain_units=True).cells}
+    assert cells["count:ssgens"].text == f"\U0001D45F{L} = 3"        # 𝑟ʟ = 3 (not 𝑟ₗ)
+    assert cells["symbol:tuning:ssgens"].text == f"\U0001D488{L}"    # 𝒈ʟ
+    assert cells["urow:ssgens:0"].text == f"/g{L}₁"            # /gʟ₁
+
+
+def test_superspace_mapping_row_labels_clear_the_bracket_and_cells():
+    # M_L's row labels (𝒎ʟᵢ) seat in a reserved gutter LEFT of each row's ⟨ bracket and first
+    # cell — the ssprimes column now reserves the same MATLABEL_W gutter the primes column does,
+    # so the labels no longer collide with the EBK or the matrix (the issue-2 fix)
+    cells = {c.id: c for c in _barbados_ss(symbols=True).cells}
+    label = cells["matlabel:row:ss_mapping:ssprimes:0"]
+    bracket = cells["bracket:ss_map:0:l"]
+    cell0 = cells["cell:ss_mapping:ssprimes:0:0"]
+    assert label.x + label.w <= bracket.x        # label ends at/before the ⟨ starts
+    assert bracket.x + bracket.w <= cell0.x      # ⟨ ends at/before the first cell
+
+
+def test_superspace_matrix_plain_text_stays_within_its_tile():
+    # the M_L / M_jL / B_L plain-text EBK strings reserve band height (PTEXT_ROWS), so they sit
+    # inside the tile instead of spilling into the row below (the issue-2 plain-text fix)
+    cells = {c.id: c for c in _barbados_ss(symbols=True, plain_text_values=True, identity_objects=True).cells}
+    ptext = cells["ptext:ss_mapping:ssprimes"]
+    next_label = cells["label:ss_just_mapping"]
+    assert ptext.y + ptext.h <= next_label.y     # the plain text clears the next row's band
+
+
+def test_nonstandard_domain_uses_b_throughout_the_basis_column_not_just_units():
+    # over a nonstandard domain the on-domain p → b swap reaches the TILE-level "units:" line
+    # too (not merely the units row/column + per-cell units) — the whole basis-elements column
+    # reads b consistently. The superspace tiles keep p (true primes).
+    cells = {c.id: c for c in _barbados_ss(names=True, units=True).cells}
+    assert cells["units:mapping:primes"].text == "units: g/b"        # 𝑔/𝑝 → 𝑔/𝒃
+    assert cells["units:tuning:primes"].text == "units: ¢/b"
+    # the superspace mapping's tile-level unit is unchanged (gʟ/p, true primes)
+    assert cells["units:ss_mapping:ssprimes"].text == f"units: g{spreadsheet.SUBSCRIPT_L}/p"
+
+
+def test_superspace_tuning_tiles_get_subcolumn_headers():
+    # the superspace tuning-family covectors head each column with 𝒈ʟᵢ / 𝒕ʟᵢ / 𝒋ʟᵢ / 𝒓ʟᵢ
+    # (the issue-4 fix — they were missing while the on-domain 𝒕ᵢ etc. had them). M_L / M_jL
+    # head their ROWS (𝒎ʟᵢ) instead, like the on-domain mapping, so they carry no col header.
+    L = spreadsheet.SUBSCRIPT_L
+    cells = {c.id: c for c in _barbados_ss(symbols=True).cells}
+    assert cells["matlabel:col:tuning:ssgens:0"].text == f"\U0001D488{L}₁"   # 𝒈ʟ₁
+    assert cells["matlabel:col:tuning:ssprimes:0"].text == f"\U0001D495{L}₁"  # 𝒕ʟ₁
+    assert cells["matlabel:col:just:ssprimes:1"].text == f"\U0001D48B{L}₂"    # 𝒋ʟ₂
+    assert cells["matlabel:col:retune:ssprimes:0"].text == f"\U0001D493{L}₁"  # 𝒓ʟ₁
 
 
 def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row():

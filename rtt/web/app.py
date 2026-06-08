@@ -951,6 +951,18 @@ def _math_html(text):
 _UNIT_PLAIN = ("oct", "¢", "/", " ")
 
 
+_SUB_TAGS = {
+    spreadsheet.SUB_OPEN: "<sub>", spreadsheet.SUB_CLOSE: "</sub>",
+    spreadsheet.NORM_SUB_OPEN: '<sub style="font-style:italic">', spreadsheet.NORM_SUB_CLOSE: "</sub>",
+}
+
+
+def _run_html(s):
+    # a bold-able unit run, HTML-escaped, with the subscript sentinels turned into <sub>…</sub>
+    # (so the superspace marker gʟ reads as g + subscript capital L, not the raw PUA chars)
+    return "".join(_SUB_TAGS.get(ch) or _escape(ch) for ch in s)
+
+
 def _bold_units(value):
     """A unit value with its variable symbols bold (the unit letters g/p and the
     placeholder 1, plus any subscript), leaving the units ¢ and ``oct`` and the ``/``
@@ -960,7 +972,7 @@ def _bold_units(value):
 
     def flush():
         if run:
-            out.append(f"<b>{_escape(''.join(run))}</b>")
+            out.append(f"<b>{_run_html(''.join(run))}</b>")
             run.clear()
 
     i = 0

@@ -75,18 +75,7 @@ MATLABEL_PAD = 4  # padding above + below the label within its band, so the labe
 MATLABEL_W = 22  # width reserved left of an EBK ⟨ bracket for row labels (𝒎₁, 𝒎₂, …):
 # the bold-italic lowercase form of the matrix's capital + a Unicode subscript. Reserved
 # inside the matrix tile's content footprint, so the cells shift right by this much.
-# Sentinel markers wrapping a matlabel's italic-subscript range (the trailing q on the
-# complexity row's "‖L𝐜ᵢ‖q"). The matlabel renderer (app._math_html) converts them to
-# <sub><i>…</i></sub> so the q reads as a proper italic subscript without polluting the
-# source text. Two Private-Use-Area code points so they never collide with content.
-NORM_SUB_OPEN = ""
-NORM_SUB_CLOSE = ""
-# A plain (non-italic) subscript. NORM_SUB above forces italic on its whole range, which suits a
-# bare "q" but not "dual(q)" — there "dual" is a function name and must stay upright like everywhere
-# else, with only the math-italic 𝑞 slanting. app._math_html maps these to a bare <sub>, leaving each
-# glyph's slant to its own code point. Next two Private-Use code points after NORM_SUB.
-SUB_OPEN = ""
-SUB_CLOSE = ""
+# NORM_SUB_OPEN / SUB_OPEN / SUBSCRIPT_L live in grid_tables (re-exported via import * above).
 UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when units shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
@@ -205,7 +194,7 @@ def _count_sym(sym: str) -> str:
     if len(sym) == 1:
         return head
     if sym[1:] == "L":
-        return head + "ₗ"  # U+2097 LATIN SUBSCRIPT SMALL LETTER L
+        return head + SUBSCRIPT_L  # a real subscript capital L (grid_tables.SUBSCRIPT_L)
     raise ValueError(f"unknown counts symbol: {sym!r}")
 
 
@@ -1092,6 +1081,10 @@ class _GridBuilder:
         # on the RIGHT (see col_bands below) so the row labels don't shove the matrix
         # off-centre in its tile — the left label gutter is balanced by the empty right one.
         self.matlabel_primes_w = MATLABEL_W if (self.show_symbols and show_temp) else 0
+        # M_L / M_jL stack covectors in the ssprimes column with row labels (𝒎ʟᵢ), so it needs
+        # the same MATLABEL_W gutter the primes column reserves — without it the labels collide
+        # with each row's ⟨ bracket and first cell
+        self.matlabel_ssprimes_w = MATLABEL_W if (self.show_symbols and self.show_superspace) else 0
         # the drag-to-combine row handles ride a gutter to the LEFT of the row labels (the 𝒎ᵢ
         # matlabels), so the primes column reserves room for them — present when the feature is on
         # and there are ≥ 2 generator rows to combine. Balanced by an equal empty right gutter (like
@@ -1122,7 +1115,7 @@ class _GridBuilder:
             # cells (superspace generators) and dL cells (superspace primes), each in the
             # standard EBK-gutter footprint like the gens/primes columns they parallel
             ("ssgens", 2 * BRACKET_W + self.rL * COL_W, self.show_superspace, True),
-            ("ssprimes", 2 * BRACKET_W + self.dL * COL_W, self.show_superspace, True),
+            ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
             ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
@@ -1651,8 +1644,10 @@ class _GridBuilder:
         u = self.tile_unit(rkey, ckey)
         superspace = rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")
         if gen is not None:
-            gtok = "gL" if superspace else "g"
-            u = _subscript_coord(u, gtok, f"{gtok}{_sub(gen + 1)}")
+            if superspace:  # the superspace generator coordinate gʟ (g + subscript-L marker)
+                u = u.replace(f"g{SUBSCRIPT_L}", f"g{SUBSCRIPT_L}{_sub(gen + 1)}")
+            else:
+                u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
         if prime is not None:
             coord = "p" if superspace else self.domain_label
             u = _subscript_coord(u, "p", f"{coord}{_sub(prime + 1)}")
@@ -1665,7 +1660,11 @@ class _GridBuilder:
         # mirroring it so the matrix stays centred in its tile (see content_w above).
         # Shared by prime_left and the bracket placement so the cells, the left ⟨ and the
         # labels stay in lockstep.
-        return self.matlabel_primes_w if group_key == "primes" else 0
+        if group_key == "primes":
+            return self.matlabel_primes_w
+        if group_key == "ssprimes":
+            return self.matlabel_ssprimes_w
+        return 0
 
     def handle_gutter_w(self, group_key):
         # The drag-handle gutter reserved OUTSIDE the row-label gutter (further from the matrix),
@@ -1724,7 +1723,7 @@ class _GridBuilder:
         return self.ssgens_x + BRACKET_W + g * COL_W
 
     def ss_prime_left(self, p):  # the p-th superspace prime column (chapter-9)
-        return self.ssprimes_x + BRACKET_W + p * COL_W
+        return self.ssprimes_x + self.outer_gutter_w("ssprimes") + BRACKET_W + p * COL_W
 
     def map_top(self, i):
         return self.row_y["mapping"] + i * ROW_H
@@ -2198,7 +2197,7 @@ class _GridBuilder:
         if self.tile_open("ss_mapping", "units"):
             for i in range(self.rL):
                 self.cells.append(CellBox(f"ucol:ss_mapping:{i}", self.col_x["units"], self.ss_map_top(i), self.col_w["units"], ROW_H,
-                                     "units", text=f"gL{_sub(i + 1)}/"))
+                                     "units", text=f"g{SUBSCRIPT_L}{_sub(i + 1)}/"))
         if self.tile_open("ss_just_mapping", "units"):
             for p in range(self.dL):
                 self.cells.append(CellBox(f"ucol:ss_just_mapping:{p}", self.col_x["units"], self.ss_just_map_top(p), self.col_w["units"], ROW_H,
@@ -2231,7 +2230,7 @@ class _GridBuilder:
             # the superspace primes (true primes p — NOT the on-domain b, even when nonstandard)
             if self.tile_open("units", "ssgens"):
                 for g in range(self.rL):
-                    self.cells.append(CellBox(f"urow:ssgens:{g}", self.ss_gen_left(g), uy, COL_W, ROW_H, "units", text=f"/gL{_sub(g + 1)}"))
+                    self.cells.append(CellBox(f"urow:ssgens:{g}", self.ss_gen_left(g), uy, COL_W, ROW_H, "units", text=f"/g{SUBSCRIPT_L}{_sub(g + 1)}"))
             if self.tile_open("units", "ssprimes"):
                 for p in range(self.dL):
                     self.cells.append(CellBox(f"urow:ssprimes:{p}", self.ss_prime_left(p), uy, COL_W, ROW_H, "units", text=f"/p{_sub(p + 1)}"))
@@ -3316,6 +3315,11 @@ class _GridBuilder:
             # reading the box's entry from tile_unit (UNITS, with the damage/weight/complexity
             # annotation resolved from the live scheme) — bold-upright unit glyphs via _math_html
             unit = self.tile_unit(rkey, ckey)
+            # the on-domain coordinate p reads b (basis element) over a nonstandard subgroup —
+            # consistently with the gridded cells and the units row/column, so the whole column
+            # swaps together (the superspace tiles keep p, true primes; see cell_unit)
+            if unit and not (rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")):
+                unit = _subscript_coord(unit, "p", self.domain_label)
             if self.show_units and unit:
                 uy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey] + self.row_sym[rkey] + self.row_cap[rkey]
                 self.cells.append(CellBox(f"units:{rkey}:{ckey}", self.col_x[ckey], uy, self.col_w[ckey], UNIT_H,
