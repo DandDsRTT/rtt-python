@@ -945,7 +945,7 @@ class _GridBuilder:
         # d×d matrix rather than a per-prime diagonal; its rows/products multiply, and — like the
         # size factor — its inverse weight has no per-prime diagonal closed form (see
         # all_interval_simplicity_weight below, which drops the weight tile's concrete diag(𝐿)⁻¹
-        # equivalence for the generic 𝒘 = 𝒄⁻¹ + per-column ‖𝐿[n]‖q⁻¹ headers).
+        # equivalence for the generic 𝒘 = 𝒄⁻¹ + per-column cₙ⁻¹ headers).
         self.prescaler_is_matrix = isinstance(self.prescaler[0], (tuple, list))
         # a pending draft alone (no committed intervals) declares just the two tiles that host
         # it — the editable vector ket and its "?" ratio header; the derived rows (sizes,
@@ -1083,7 +1083,7 @@ class _GridBuilder:
         # simplicity weight has no concrete diagonal closed form (the size factor / off-diagonal entries
         # don't ride into a diagonal). The weight still renders as a LIST — it just drops the concrete
         # diag(𝐿)⁻¹ tile equivalence for the generic 𝒘 = 𝒄⁻¹ (reciprocal complexity, exactly as the
-        # complexity row drops diag(𝐿) for a bare 𝒄), spelling each entry out in per-column ‖𝐿[n]‖q⁻¹
+        # complexity row drops diag(𝐿) for a bare 𝒄), spelling each entry out in per-column cₙ⁻¹
         # headers. In target-based mode the per-target weights still differ (the off-diagonal/size factor
         # already rode into them), so the list + chart stay too.
         self.all_interval_simplicity_weight = self.all_interval and (
@@ -1652,14 +1652,14 @@ class _GridBuilder:
         return x + mx, w - 2 * mx
 
     def _weight_simplicity_header(self, i):
-        # the all-interval simplicity weight's per-column header — the reciprocal of the per-prime
-        # complexity ‖𝐿[n]‖q (the n-th column of the prescaler; see _prescaler_col_labels). All-interval
-        # Tₚ = I means target n IS prime n, so this is exactly the domain prime complexity map's per-
-        # column vector norm, reciprocated: wₙ = ‖𝐿[n]‖q⁻¹ (wₙ on its own when equivalences are off).
+        # the all-interval simplicity weight's per-column header — simply the reciprocal of the
+        # complexity column cₙ (whose own header cₙ = ‖𝐿[n]‖q carries the norm detail, so it needn't be
+        # repeated here). Matches the tile's big symbol 𝒘 = 𝒄⁻¹, subscripted per column: wₙ = cₙ⁻¹ (bare
+        # wₙ when equivalences are off).
         symbol = f"w{_sub(i + 1)}"
         if not self.show_equiv:
             return symbol
-        return f"{symbol} = ‖{self.prescaler_symbol}[{i + 1}]‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}⁻¹"
+        return f"{symbol} = c{_sub(i + 1)}⁻¹"
 
     def prime_left(self, p):
         return self.primes_x + self.outer_gutter_w("primes") + BRACKET_W + p * COL_W
@@ -2799,7 +2799,7 @@ class _GridBuilder:
             # the weight is always a per-target list (it scales the targets, like damage). The all-
             # interval simplicity weight that has no concrete diagonal form (the size factor / a non-
             # diagonal 𝑋) still renders as this list — it just shows the generic 𝒘 = 𝒄⁻¹ symbol and per-
-            # column ‖𝐿[n]‖q⁻¹ headers instead of the concrete diag(𝐿)⁻¹ equivalence, never a matrix.
+            # column cₙ⁻¹ headers instead of the concrete diag(𝐿)⁻¹ equivalence, never a matrix.
             self.tval_row("weight", "targets", self.target_weights)
         if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), in a bordered box at the bottom of the
             # weight list, with its "damage weight slope" caption beneath (the optimization box's caption pattern)
@@ -3084,10 +3084,10 @@ class _GridBuilder:
                     continue
                 if not self.tile_open(rkey, ckey):
                     continue
-                # the all-interval simplicity weight (size factor / non-diagonal 𝑋) carries the
-                # SAME per-column norm headers the complexity row does, in reciprocal (simplicity)
-                # form: wₙ = ‖𝐿[n]‖q⁻¹ (the per-prime simplicity weight is 1/the complexity) — spelling out
-                # each entry of the list, whose tile symbol is the generic 𝒘 = 𝒄⁻¹ (no concrete diagonal).
+                # the all-interval simplicity weight (size factor / non-diagonal 𝑋) heads each column with
+                # the reciprocal of that column's complexity: wₙ = cₙ⁻¹ (the per-prime simplicity weight is
+                # 1/the complexity) — the norm detail stays on the 𝒄 tile's own cₙ = ‖𝐿[n]‖q header, not
+                # repeated here. Matches the list's generic tile symbol 𝒘 = 𝒄⁻¹ (no concrete diagonal).
                 if (rkey, ckey) == ("weight", "targets") and self.all_interval_simplicity_weight:
                     val = self._weight_simplicity_header
                 left = self.group_left[ckey]
@@ -3226,7 +3226,7 @@ class _GridBuilder:
             # the all-interval weight is the per-prime SIMPLICITY weight = reciprocal complexity. Only a
             # PLAIN diagonal 𝑋 gets the concrete diag(𝐿)⁻¹ above; the size factor / a non-diagonal 𝑋 break
             # that diagonal (as they do the complexity's diag(𝐿)), so the weight keeps the generic slope
-            # form 𝒘 = 𝒄⁻¹ (set in the defaults), with its per-column ‖𝐿[n]‖q⁻¹ headers spelling out each entry.
+            # form 𝒘 = 𝒄⁻¹ (set in the defaults), with its per-column cₙ⁻¹ headers spelling out each entry.
         if not self.show_weighting:  # the weight factor's row is hidden, so don't dangle it (𝒘 / 𝐿⁻¹)
             equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
         for (rkey, ckey), name in self.effective_captions.items():

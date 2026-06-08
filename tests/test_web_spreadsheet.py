@@ -3058,7 +3058,7 @@ def test_a_non_diagonal_pretransformer_drops_the_complexity_diag_equivalence():
     # diag(𝑋) is meaningless once 𝑋 has off-diagonal entries (each prime's complexity is then the norm
     # of a whole column, not one diagonal entry), so the complexity carries NO closed-form equivalence
     # then — just the bare 𝒄. The weight stays a LIST: the concrete diag(𝐿)⁻¹ form is gone too, leaving
-    # the generic 𝒘 = 𝒄⁻¹ symbol with per-column ‖𝑋[n]‖q⁻¹ headers spelling each entry out.
+    # the generic 𝒘 = 𝒄⁻¹ symbol with per-column wₙ = cₙ⁻¹ headers (referencing each complexity column).
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s.update(weighting=True, alt_complexity=True, symbols=True, equivalences=True)
@@ -3067,7 +3067,7 @@ def test_a_non_diagonal_pretransformer_drops_the_complexity_diag_equivalence():
                                              custom_prescaler=square).cells}
     assert on["symbol:complexity:targets"].text == "𝒄"       # NOT "𝒄 = diag(𝑋)"
     assert on["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"    # the generic reciprocal, not a matrix inverse
-    assert on["matlabel:col:weight:targets:0"].text.startswith("w₁ = ‖𝑋[1]‖")  # per-column reciprocal norm
+    assert on["matlabel:col:weight:targets:0"].text == "w₁ = c₁⁻¹"  # reciprocal of the complexity column
 
 
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
@@ -7290,19 +7290,17 @@ def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row(
     # all-interval + size factor (lils): the simplicity weight has no concrete diagonal closed form, but
     # it still renders as a per-target LIST (with its bar chart) — and it's labelled as the reciprocal of
     # the complexity row, exactly as the complexity row drops diag(𝐿) for a bare 𝒄. So the weight drops
-    # the concrete diag(𝐿)⁻¹ for the generic 𝒘 = 𝒄⁻¹, with per-column headers wₙ = ‖𝐿[n]‖q⁻¹ — the
-    # reciprocal of the domain prime complexity map's per-column ‖𝐿[n]‖q (a VECTOR norm, since Tₚ = I
-    # makes target n the n-th prime). NOT the matrix 𝑆ₚ / ⊕ 1 — that's the (d+1)×(d+1) form a list can't be.
-    q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
+    # the concrete diag(𝐿)⁻¹ for the generic 𝒘 = 𝒄⁻¹, with per-column headers wₙ = cₙ⁻¹ — just the
+    # reciprocal of that column's complexity cₙ (the norm detail stays on the 𝒄 tile's own cₙ = ‖𝐿[n]‖q
+    # header, not repeated). NOT the matrix 𝑆ₚ / ⊕ 1 — that's the (d+1)×(d+1) form a list can't be.
     lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, charts=True,
                                    symbols=True, equivalences=True, names=True).cells}
     assert "weight:target:0" in lils and "chart:weight:targets" in lils   # a single-row list, with its chart
     assert "cell:weight:targets:1:0" not in lils and "bar:weight" not in lils  # NOT a matrix, no size bar
     assert lils["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"
     assert lils["caption:weight:targets"].text == "target interval weight list"
-    assert lils["matlabel:col:weight:targets:0"].text == f"w₁ = ‖𝐿[1]‖{q}⁻¹"
-    # the per-column header is the prime complexity map's, reciprocated (bar the "wₙ =" prefix)
-    assert lils["matlabel:col:weight:targets:0"].text == f"w₁ = {lils['matlabel:col:complexity:primes:0'].text}⁻¹"
+    assert lils["matlabel:col:weight:targets:0"].text == "w₁ = c₁⁻¹"
+    assert lils["matlabel:col:weight:targets:2"].text == "w₃ = c₃⁻¹"
     # symbols only (no equivalences) → the bare glyph 𝒘 and the bare per-column wₙ
     bare = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
     assert bare["symbol:weight:targets"].text == "𝒘"
@@ -7316,8 +7314,8 @@ def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row(
 def test_a_non_diagonal_pretransformer_all_interval_weight_is_a_reciprocal_list():
     # editing the pretransformer square off-diagonal (a non-diagonal 𝑋, no size factor) also costs the
     # per-prime weight list its diagonal closed form — but the weight still renders as a per-target LIST,
-    # carrying the generic reciprocal symbol 𝒘 = 𝒄⁻¹ and per-column headers wₙ = ‖𝑋[n]‖q⁻¹ (not a matrix).
-    q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
+    # carrying the generic reciprocal symbol 𝒘 = 𝒄⁻¹ and per-column headers wₙ = cₙ⁻¹ (not a matrix); the
+    # norm detail (‖𝑋[n]‖q) lives on the complexity tile, not here.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s.update(weighting=True, charts=True, symbols=True, equivalences=True)
@@ -7327,7 +7325,9 @@ def test_a_non_diagonal_pretransformer_all_interval_weight_is_a_reciprocal_list(
     assert "weight:target:0" in on and "chart:weight:targets" in on       # a list, with its chart
     assert "cell:weight:targets:1:0" not in on and "bar:weight" not in on  # NOT a matrix
     assert on["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"                 # the generic reciprocal, no matrix inverse
-    assert on["matlabel:col:weight:targets:0"].text == f"w₁ = ‖𝑋[1]‖{q}⁻¹"  # per-column vector norm of 𝑋
+    assert on["matlabel:col:weight:targets:0"].text == "w₁ = c₁⁻¹"       # references the complexity column, not the norm
+    # the complexity tile keeps the per-column norm detail
+    assert on["matlabel:col:complexity:targets:0"].text == f"c₁ = ‖𝑋[1]‖{spreadsheet.NORM_SUB_OPEN}q{spreadsheet.NORM_SUB_CLOSE}"
 
 
 def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first():
