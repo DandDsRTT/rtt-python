@@ -2993,6 +2993,71 @@ def test_minimized_objective_prefixes_its_label_with_minimized():
     assert cap("minimax-S", False).h == 2 * spreadsheet.CAPTION_LINE
 
 
+def test_all_interval_objective_aggregates_at_the_dual_norm_power_not_infinity():
+    # the all-interval objective is computed at the DUAL of the complexity norm power — the power the
+    # optimizer actually minimized at (it minimaxes over every interval, which by duality is an
+    # optimization over the primes at dual(𝑞)) — NOT the ∞ the 𝑝 cell shows. For a Euclidean (ES)
+    # scheme dual(𝑞)=2, so the objective is the RMS of the per-prime weighted damages, not their max:
+    # the value must equal tuning.get_tuning_map_mean_damage, the optimizer's own minimized quantity.
+    import pytest
+    from rtt import tuning
+    from rtt.parsing import parse_temperament_data
+
+    s = settings.defaults()
+    s["optimization"] = True
+    base = service.from_mapping(((1, 0, -4), (0, 1, 4)))  # meantone
+    t = parse_temperament_data("[⟨1 0 -4] ⟨0 1 4]}")
+
+    def objective(scheme):
+        cells = {c.id: c for c in spreadsheet.build(
+            base, s, tuning_scheme=scheme, tuning_optimized=True).cells}
+        return float(cells["optimization:objective"].text)
+
+    # minimax-ES (TE): per-prime weighted damages [1.397, 2.214, 0.811]; the bug showed their MAX
+    # (2.214 — the ∞ aggregate), the fix shows their RMS (1.582 — the dual(𝑞)=2 aggregate)
+    es = objective("minimax-ES")
+    assert es == pytest.approx(1.582, abs=1e-3)   # the dual-power mean (RMS)
+    assert es != pytest.approx(2.214, abs=1e-2)   # NOT the max (the pre-fix bug)
+    assert es == pytest.approx(
+        tuning.get_tuning_map_mean_damage(t, tuning.optimize_tuning_map(t, "minimax-ES"), "minimax-ES"),
+        abs=1e-3)  # equals the optimizer's own minimized objective
+    # minimax-S (TOP): 𝑞=1 so dual(𝑞)=∞ — there the objective IS a max, so the value is unchanged
+    # by the fix (this is why the bug hid behind the default scheme)
+    ss = objective("minimax-S")
+    assert ss == pytest.approx(1.699, abs=1e-3)
+    assert ss == pytest.approx(
+        tuning.get_tuning_map_mean_damage(t, tuning.optimize_tuning_map(t, "minimax-S"), "minimax-S"),
+        abs=1e-3)
+    # held-octave minimax-ES (CTE): the Euclidean fix carries to the held-octave all-interval form too
+    assert objective("held-octave minimax-ES") == pytest.approx(
+        tuning.get_tuning_map_mean_damage(
+            t, tuning.optimize_tuning_map(t, "held-octave minimax-ES"), "held-octave minimax-ES"),
+        abs=1e-3)
+
+
+def test_all_interval_objective_power_label_tracks_the_dual_norm_power():
+    # the objective is aggregated at dual(𝑞), so the damage chart's indicator (the same minimized
+    # value, drawn as a horizontal line) and its power label track dual(𝑞): "2" for a Euclidean (ES)
+    # scheme, "∞" for taxicab (-S, dual(𝑞)=∞). The 𝑝 cell stays ∞ either way — that is the power over
+    # intervals, not the over-primes aggregation power the objective and chart use.
+    s = settings.defaults()
+    s["optimization"] = True
+    s["charts"] = True
+    base = service.from_mapping(((1, 0, -4), (0, 1, 4)))
+
+    def chart(scheme):
+        cells = {c.id: c for c in spreadsheet.build(
+            base, s, tuning_scheme=scheme, tuning_optimized=True).cells}
+        return cells["chart:damage:targets"], cells["optimization:power"]
+
+    es_chart, es_power = chart("minimax-ES")
+    assert es_chart.indicator_label == "2"      # dual(𝑞) for q=2
+    assert es_power.text == "∞"                  # the 𝑝 cell stays ∞ (power over intervals)
+    s_chart, s_power = chart("minimax-S")
+    assert s_chart.indicator_label == "∞"        # dual(𝑞) for q=1
+    assert s_power.text == "∞"
+
+
 def test_all_interval_relabels_the_target_list_as_prime_proxy():
     # per the Guide, all-interval relabels the target list: symbol T → Tₚ, equivalence = 𝐼 (the
     # math-italic identity, per the Guide's conventions), and the lowercase name "prime proxy

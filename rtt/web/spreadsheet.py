@@ -1523,6 +1523,20 @@ class _GridBuilder:
             return float("inf")
         return service.optimization_power(self.tuning_scheme)
 
+    def displayed_objective_power(self) -> float:
+        # the power at which the displayed objective AGGREGATES the per-target/per-prime weighted
+        # damages — i.e. the power the optimizer actually minimized at (matching
+        # tuning.get_tuning_map_mean_damage). For a target-based scheme that is the optimization
+        # power 𝑝 (∞/2/1), same as displayed_optimization_power(). For an all-interval scheme the
+        # minimax-over-every-interval is, by duality, an optimization over the PRIMES at the DUAL of
+        # the complexity norm power — 2 for a Euclidean (ES) norm, ∞ for taxicab (-S) — so the
+        # objective is that dual-power mean of the per-prime damages, NOT their max. (The 𝑝 cell still
+        # shows ∞: that is the power over intervals; this is the power over primes, the objective
+        # symbol's dual(𝑞) subscript.) For -S, dual(𝑞) = ∞ so this coincides with 𝑝, as before.
+        if service.is_all_interval(self.tuning_scheme):
+            return service.dual_norm_power(self.tuning_scheme)
+        return service.optimization_power(self.tuning_scheme)
+
     def col_open(self, key):
         return key in self.col_x and f"col:{key}" not in self.collapsed
     # the value cells), so column labels (𝐜₁, 𝒕₁, …) can be emitted at a fixed row-relative y
@@ -2821,7 +2835,8 @@ class _GridBuilder:
             # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
             # (∞ / 2 / 1); off, the chart is plain bars. Recorded for the chart loop below.
             if self.show_optimization:
-                power = self.displayed_optimization_power()  # ∞ when all-interval, like the power cell
+                power = self.displayed_objective_power()  # 𝑝 target-based; dual(𝑞) all-interval (the
+                # aggregation power the optimizer minimized at — NOT the ∞ the 𝑝 cell shows all-interval)
                 chart_indicators[("damage", "targets")] = (
                     _lp_objective(self.target_sizes.damage, power), _format_power(power))
 
@@ -2886,9 +2901,11 @@ class _GridBuilder:
             obj_val_x = obj_x + (OPT_OBJ_W - COL_W) / 2  # the COL_W value cell, centred in the column
             btn_x = ox + box_w - OPT_PAD_R - OPT_BTN_W
             pow_x = ((obj_x + OPT_OBJ_W) + btn_x) / 2 - COL_W / 2
-            opt_power = self.displayed_optimization_power()  # ∞ when all-interval (𝑝 is fixed there)
-            objective = _lp_objective(self.target_sizes.damage, opt_power)
-            power = _format_power(opt_power)
+            # the objective aggregates the damages at the power the optimizer MINIMIZED at — 𝑝 target-
+            # based, dual(𝑞) all-interval (the ‖𝒓𝑋⁻¹‖ symbol's dual(𝑞) subscript). The 𝑝 cell below
+            # keeps displayed_optimization_power() (∞ all-interval): power over intervals vs over primes.
+            objective = _lp_objective(self.target_sizes.damage, self.displayed_objective_power())
+            power = _format_power(self.displayed_optimization_power())
             self.cells.append(CellBox("optimization:title", ox, title_top, box_w, OPT_TITLE_H, "boxtitle",
                                  text="optimization"))
             # the objective: the minimized-damage value (read-only, so unboxed — a plain centred gridded
