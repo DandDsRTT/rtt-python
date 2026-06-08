@@ -863,7 +863,13 @@ class _GridBuilder:
             # the grid's auto-optimized tuning tracks the displayed targets, not just the named set
             self.tun = service.tuning(self.state.mapping, self.tuning_scheme, self.elements, self.nonprime_approach, held=self.held_ratios,
                                  prescaler_override=self.custom_prescaler, targets=target_override)
-        self.target_sizes = service.interval_sizes(self.tun, self.targets, self.elements)
+        self.target_weights = service.interval_weights(self.state.mapping, self.tuning_scheme, self.targets,
+                                                  prescaler_override=self.custom_prescaler,
+                                                  domain_basis=self.elements)  # the damage row's 𝒘
+        # the target damage list is the scheme-weighted 𝐝 = |𝐞|·W (the same weights shown in the
+        # weight row and minimized by the optimizer), so it — and the optimization tile's objective
+        # over it — tracks the unity/complexity/simplicity slope rather than staying plain |error|.
+        self.target_sizes = service.interval_sizes(self.tun, self.targets, self.elements, weights=self.target_weights)
         self.held_mapped = service.mapped_intervals(self.state.mapping, self.held_ratios, self.elements)  # M·held (gen coords)
         self.held_sizes = service.interval_sizes(self.tun, self.held_ratios, self.elements)  # tempered/just/error sizes
         # a held interval stays "held" only while the current tuning tunes it exactly just. Once the
@@ -873,9 +879,6 @@ class _GridBuilder:
         # precision (the shown cents), so typing the displayed optimum — which reads 0.000 though it
         # carries sub-milli-cent float noise — counts as held, not a false red.
         self.held_unheld = tuple(float(service.cents(e)) != 0.0 for e in self.held_sizes.errors)
-        self.target_weights = service.interval_weights(self.state.mapping, self.tuning_scheme, self.targets,
-                                                  prescaler_override=self.custom_prescaler,
-                                                  domain_basis=self.elements)  # the damage row's 𝒘
         # a full-rank temperament (n=0) carries only the trivial zero comma; show nothing, not a "1/1"
         self.comma_ratios = service.comma_ratios(self.state.comma_basis, self.elements) if self.state.n else ()
         self.nc = len(self.comma_ratios)  # the real commas (those that define the temperament)
