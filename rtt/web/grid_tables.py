@@ -471,6 +471,18 @@ SPINE_ROW_GROUP = {
 SPINE_ROWS = frozenset({"counts", "units"})
 SPINE_COLUMNS = frozenset({"quantities", "units"})
 
+# Chapter-9 superspace block colorization — a TUNING-family (cyan) REGION by design: the whole
+# block exists to compute tuning over the prime superspace, so it reads cyan, turning GREEN where
+# a temperament object (a basis / embedding / the M_L mapping) crosses it. This is a deliberate
+# coarse REGION tint, NOT the per-object CELL_FACTORS scheme the rest of the grid uses — that
+# scheme would wash the superspace primes yellow (they ARE genuine primes), but here the block is
+# cyan. A tile is in the region if it sits in a superspace column OR a superspace row; the
+# temperament overlay (→ green) rides the basis quantities, the B_L embedding and the M_L mapping,
+# while the tuning maps (𝒈ₗ/𝒕ₗ/𝒋ₗ/𝒓ₗ) and the JI mapping M_jL stay pure cyan. (tile_groups reads these.)
+SUPERSPACE_REGION_COLUMNS = frozenset({"ssgens", "ssprimes"})
+SUPERSPACE_REGION_ROWS = frozenset({"ss_vectors", "ss_mapping", "ss_just_mapping"})
+SUPERSPACE_TEMPERAMENT_ROWS = frozenset({"quantities", "ss_vectors", "ss_mapping"})
+
 # The preset chooser dropdowns (settings["presets"]) as (name, row, column,
 # title): each is a quick menu for one of the things you actually choose, riding under
 # its governing tile in a titled control box — the temperament under the mapping matrix,

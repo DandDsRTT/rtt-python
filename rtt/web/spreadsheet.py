@@ -1988,6 +1988,14 @@ class _GridBuilder:
             return {SPINE_COLUMN_GROUP[ckey]}          # a counts/units row cell: its column's family
         if ckey in SPINE_COLUMNS and rkey in SPINE_ROW_GROUP:
             return {SPINE_ROW_GROUP[rkey]}             # a quantities/units column cell: its row's family
+        # the chapter-9 superspace block is a cyan (tuning) REGION, green where a temperament row
+        # (the bases / B_L embedding / M_L mapping) crosses it — a coarse region tint, not the
+        # per-object CELL_FACTORS scheme (see SUPERSPACE_REGION_* in grid_tables)
+        if ckey in SUPERSPACE_REGION_COLUMNS or rkey in SUPERSPACE_REGION_ROWS:
+            groups = {"tuning"}
+            if rkey in SUPERSPACE_TEMPERAMENT_ROWS:
+                groups.add("temperament")
+            return groups
         return {_FACTOR_GROUP[f] for f in CELL_FACTORS.get((rkey, ckey), ())}
 
     # the plain-text box sits directly below the symbol/caption/units stack; the preset
