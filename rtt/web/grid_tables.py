@@ -671,11 +671,16 @@ TILES = (
 # OPTIMIZATION_COUNTS_TILES / DETEMPERING_COUNTS_TILES these are gated on their rows /
 # columns being present (i.e. on the nonstandard_domain Show toggle), so they sit
 # unconditionally in the registry; tile_open / panel() early-return whenever the toggle
-# is off and the bands are missing. Phase 3 reserves these positions; Phase 4 populates
-# the actual cells (B_L over the domain primes, M_L over ssprimes, 𝒈L / 𝒕L / 𝒋L / 𝒓L
-# over the superspace columns), so only the spine basis index in
-# ("ss_vectors", "quantities") renders today.
+# is off and the bands are missing. These now render real cells: the superspace generators /
+# primes quantities, B_L over the domain primes, M_L over ssprimes, and 𝒈L / 𝒕L / 𝒋L / 𝒓L
+# over the superspace columns.
 SUPERSPACE_TILES = (
+    # the column-header quantities, the dual of the spine basis index: the rL superspace
+    # generators as ~ratios (𝒈L's detempering) and the dL superspace primes — the chapter-9
+    # counterparts of the (quantities, gens) / (quantities, primes) tiles. Read-only: the
+    # superspace basis is derived from the domain, so there are no ± controls (unlike gens/primes).
+    ("block:ss_quantities:ssgens", "quantities", "ssgens"),        # the rL superspace generators as ~ratios
+    ("block:ss_quantities:ssprimes", "quantities", "ssprimes"),    # the dL superspace primes (2, 3, 5, 13 …)
     ("block:ss_vectors:quantities", "ss_vectors", "quantities"),  # the spine basis index column (the dL superspace primes)
     ("block:ss_vectors:primes", "ss_vectors", "primes"),           # B_L: each domain element as a dL-tall superspace monzo
     ("block:ss_vectors:commas", "ss_vectors", "commas"),           # the commas as superspace monzos

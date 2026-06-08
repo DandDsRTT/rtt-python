@@ -6393,6 +6393,41 @@ def test_nonstandard_domain_off_omits_the_superspace_columns():
     assert "header:ssprimes" not in cells
 
 
+def test_nonstandard_domain_superspace_columns_head_their_quantities():
+    # the superspace columns carry the same quantities-row headers as gens / primes: the
+    # rL superspace generators as ~ratios (the detempering of M_L) and the dL superspace
+    # primes, the column-header duals of the spine basis index. For BARBADOS over 2.3.13/5
+    # the superspace is 2.3.5.13 (dL = 4) and M_L has rL = 3 generators.
+    cells = {c.id: c for c in _barbados_ss().cells}
+    assert [cells[f"ssqprime:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
+    assert [cells[f"ssqgen:{g}"].text for g in range(3)] == ["2/1", "26/3", "130/3"]
+    # the generators read ~approximate (genratio), the primes as white labels (prime)
+    assert cells["ssqgen:0"].kind == "genratio"
+    assert cells["ssqprime:0"].kind == "prime"
+    # each header sits over its column's tuning cells (the 𝒈L / 𝒕L map below it), on the
+    # quantities row (aligned with the gens/primes headers)
+    assert cells["ssqgen:0"].x == cells["tuning:ssgen:0"].x
+    assert cells["ssqprime:0"].x == cells["tuning:ssprime:0"].x
+    assert cells["ssqgen:0"].y == cells["prime:0"].y == cells["ssqprime:0"].y
+
+
+def test_nonstandard_domain_superspace_quantities_are_derived_read_only():
+    # the superspace basis is derived from the domain, not user-edited, so its quantity
+    # headers carry none of the ± controls the editable gens / primes columns ride
+    cells = {c.id for c in _barbados_ss().cells}
+    assert "ssqgen:0" in cells and "ssqprime:0" in cells
+    # no superspace counterparts of gen_plus / gen_minus / plus / minus
+    assert not any(c.startswith(("ssqgen_plus", "ssqgen_minus", "ssqprime_plus", "ssqprime_minus")) for c in cells)
+
+
+def test_nonstandard_domain_off_omits_the_superspace_quantities():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()  # nonstandard_domain off
+    cells = {c.id for c in spreadsheet.build(state, s).cells}
+    assert "ssqgen:0" not in cells
+    assert "ssqprime:0" not in cells
+
+
 def test_nonstandard_domain_adds_superspace_rows_between_mapping_and_tuning():
     # the toggle also adds two new row bands: superspace interval vectors (dL tall, mirroring
     # the existing vectors row over the d domain primes) and superspace mapping (rL tall,

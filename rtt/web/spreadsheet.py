@@ -2274,6 +2274,17 @@ class _GridBuilder:
                 # shrink actually applies (gated like editor.shrink, never shown inert).
                 if self.domain_can_shrink:
                     branch_minus("minus", "primes", self.d - 1, "minus")
+            # the chapter-9 superspace columns' quantity headers (the dual of their spine basis
+            # index): the rL superspace generators as ~ratios (read-only — derived from M_L) and
+            # the dL superspace primes, the column-header twins of the gens / primes ratios above.
+            # Derived bases carry no ± controls.
+            if self.tile_open("quantities", "ssgens"):
+                ss_gens = service.superspace_generators(self.state)
+                for g in range(self.rL):
+                    self.cells.append(CellBox(f"ssqgen:{g}", self.ss_gen_left(g), qy, COL_W, ROW_H, "genratio", text=ss_gens[g]))
+            if self.tile_open("quantities", "ssprimes"):
+                for p in range(self.dL):
+                    self.cells.append(CellBox(f"ssqprime:{p}", self.ss_prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.superspace_primes[p]), prime=p))
             if self.tile_open("quantities", "commas"):
                 for c in range(self.nc):
                     # the comma ratio is editable — a ratiocell, the scalar twin of the editable

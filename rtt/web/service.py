@@ -232,6 +232,17 @@ def superspace_rank(state: TemperamentState) -> int:
     return len(superspace_mapping(state))
 
 
+def superspace_generators(state: TemperamentState) -> tuple[str, ...]:
+    """Each superspace generator as an approximate ratio string — the rL generators of M_L
+    over the superspace primes, the chapter-9 counterpart of :func:`generators`. Built by
+    detempering the lifted mapping M_L (so the ratios are over the prime superspace, not the
+    nonstandard domain). For BARBADOS over 2.3.13/5 with superspace (2, 3, 5, 13) it is the
+    rL = 3 generators of the 3×4 mapping, e.g. ``('2/1', '26/3', '130/3')``."""
+    superspace = superspace_primes(state.domain_basis)
+    m = Temperament(_to_matrix(superspace_mapping(state)), Variance.ROW, superspace)
+    return _vectors_to_ratios(get_generator_detempering(m).matrix, superspace)
+
+
 def superspace_just_mapping(primes) -> Matrix:
     """M_jL = I (dL × dL identity) — the just mapping over the superspace. Each prime in the
     superspace is its own basis element, so the just mapping is trivially the identity.
