@@ -6342,6 +6342,15 @@ def _barbados_ss(**overrides):
     return spreadsheet.build(state, s)
 
 
+def _barbados_ss_identity(**overrides):
+    # BARBADOS superspace WITH the identity objects shown — M_L over its own generators
+    # (ss_mapping × gens, trivially 𝐼) and the JI mapping M_jL = I (ss_just_mapping × ssprimes)
+    # are deferred to the not-yet-built identity_objects setting, so the tests that verify their
+    # rendering opt into it directly (the toggle's out of settings.IMPLEMENTED). See
+    # test_superspace_identity_objects_are_deferred_to_identity_objects for the default-off gate.
+    return _barbados_ss(identity_objects=True, **overrides)
+
+
 def test_nonstandard_domain_adds_superspace_columns_between_gens_and_primes():
     # the toggle adds two new columns to the temperament region: the superspace generators
     # (rL columns) and superspace primes (dL columns), seated between the generators and
@@ -6467,14 +6476,16 @@ def test_nonstandard_domain_off_omits_the_spine_basis_index():
 
 def test_superspace_block_tiles_get_their_grey_panels():
     # every tile in the green superspace block (ss_vectors × {quantities, primes, commas,
-    # targets}, ss_mapping × {gens, ssprimes}, the four ssgens/ssprimes tuning-family
-    # tiles) has a backing grey panel — the same machinery the rest of the grid uses
+    # targets}, the real M_L mapping at ss_mapping × ssprimes, the four ssgens/ssprimes
+    # tuning-family tiles) has a backing grey panel — the same machinery the rest of the
+    # grid uses. The ss_mapping × gens self-map is an identity object, deferred to
+    # identity_objects (see test_superspace_identity_objects_are_deferred_to_identity_objects).
     lay = _barbados_ss()
     blocks = {b.id for b in lay.blocks}
     expected = {
         "block:ss_vectors:quantities", "block:ss_vectors:primes",
         "block:ss_vectors:commas", "block:ss_vectors:targets",
-        "block:ss_mapping:gens", "block:ss_mapping:ssprimes",
+        "block:ss_mapping:ssprimes",
         "block:tuning:ssgens", "block:tuning:ssprimes",
         "block:just:ssprimes", "block:retune:ssprimes",
     }
@@ -6490,7 +6501,7 @@ def test_superspace_block_tiles_get_per_tile_fold_toggles():
     expected = {
         "toggle:tile:ss_vectors:quantities", "toggle:tile:ss_vectors:primes",
         "toggle:tile:ss_vectors:commas", "toggle:tile:ss_vectors:targets",
-        "toggle:tile:ss_mapping:gens", "toggle:tile:ss_mapping:ssprimes",
+        "toggle:tile:ss_mapping:ssprimes",
         "toggle:tile:tuning:ssgens", "toggle:tile:tuning:ssprimes",
         "toggle:tile:just:ssprimes", "toggle:tile:retune:ssprimes",
     }
@@ -6954,8 +6965,9 @@ def test_M_jL_row_band_seats_between_ss_mapping_and_tuning():
     # the M_jL = I tile lives in a new row band ss_just_mapping (dL tall), between the
     # ss_mapping row and the tuning row. Like ss_mapping it's a covector stack — but over
     # the superspace primes themselves, the trivial identity since each prime IS a basis
-    # element. The band gates on nonstandard_domain like ss_vectors / ss_mapping.
-    cells = {c.id: c for c in _barbados_ss().cells}
+    # element. As an identity object the band gates on identity_objects (atop
+    # nonstandard_domain); see test_superspace_identity_objects_are_deferred_to_identity_objects.
+    cells = {c.id: c for c in _barbados_ss_identity().cells}
     assert cells["label:ss_just_mapping"].text == "superspace\nJI mapping"
     # ordered: ss_mapping < ss_just_mapping < tuning
     assert cells["label:ss_mapping"].y < cells["label:ss_just_mapping"].y < cells["label:tuning"].y
@@ -6964,7 +6976,7 @@ def test_M_jL_row_band_seats_between_ss_mapping_and_tuning():
 def test_M_jL_band_height_is_dL_rows():
     # M_jL is dL × dL (identity), so the band is dL ROW_H tall (one row per ss prime, like
     # ss_vectors but a square dL × dL matrix instead of a dL × d rectangle)
-    cells = {c.id: c for c in _barbados_ss().cells}
+    cells = {c.id: c for c in _barbados_ss_identity().cells}
     assert cells["label:ss_just_mapping"].h == 4 * spreadsheet.ROW_H  # dL = 4
 
 
@@ -6972,7 +6984,7 @@ def test_M_jL_emits_a_cell_per_ss_prime_row_and_ss_prime_col_as_identity():
     # M_jL = I: each prime is its own basis element. Read-only "mapped" cells (a
     # derived display, same kind the canonical-form row and the mapped-target tiles
     # use — not the editable "mapping" kind, since the user can't edit identity).
-    cells = {c.id: c for c in _barbados_ss().cells}
+    cells = {c.id: c for c in _barbados_ss_identity().cells}
     for i in range(4):  # dL = 4
         for j in range(4):
             expected = "1" if i == j else "0"
@@ -6994,7 +7006,7 @@ def test_M_L_and_M_jL_cells_are_read_only_mapped_kind():
 
 
 def test_M_jL_tile_has_brackets_and_matrix_frame():
-    cells = {c.id: c for c in _barbados_ss().cells}
+    cells = {c.id: c for c in _barbados_ss_identity().cells}
     for i in range(4):  # dL=4 covector rows
         assert cells[f"bracket:ss_just_map:{i}:l"].text == spreadsheet.MAP_BRACKETS[0]
         assert cells[f"bracket:ss_just_map:{i}:r"].text == spreadsheet.MAP_BRACKETS[1]
@@ -7013,7 +7025,7 @@ def test_M_jL_off_omits_the_row():
 def test_M_jL_tile_carries_caption_and_symbol():
     # caption: "superspace JI mapping", symbol: 𝑀ⱼₗ — math-italic M + subscript j + ₗ
     # (parallel to M_L's 𝑀ₗ). With ALPHABET subscripts we use j (U+2C7C is the latin j sub)
-    cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
+    cells = {c.id: c for c in _barbados_ss_identity(names=True, symbols=True).cells}
     assert cells["caption:ss_just_mapping:ssprimes"].text == "superspace JI mapping"
     # 𝑀 = U+1D440. Subscript j = U+2C7C. Subscript L = U+2097.
     assert cells["symbol:ss_just_mapping:ssprimes"].text == "\U0001D440ⱼₗ"
@@ -7021,7 +7033,7 @@ def test_M_jL_tile_carries_caption_and_symbol():
 
 def test_M_jL_tile_row_labels_each_covector():
     # each row labelled 𝒎ⱼₗᵢ — math-italic 𝒎 + subscript j (U+2C7C) + ₗ + index
-    cells = {c.id: c for c in _barbados_ss(symbols=True).cells}
+    cells = {c.id: c for c in _barbados_ss_identity(symbols=True).cells}
     for i in range(4):  # dL=4 rows
         sub_i = str(i + 1).translate(_SUBSCRIPT_DIGITS)
         assert cells[f"matlabel:row:ss_just_mapping:ssprimes:{i}"].text == f"\U0001D48Eⱼₗ{sub_i}"
@@ -7029,9 +7041,33 @@ def test_M_jL_tile_row_labels_each_covector():
 
 def test_M_jL_tile_carries_identity_equivalence():
     # equivalences on adds " = 𝐼" after the 𝑀ⱼₗ symbol — the trivial-identity equation
-    cells = {c.id: c for c in _barbados_ss(symbols=True, equivalences=True).cells}
+    cells = {c.id: c for c in _barbados_ss_identity(symbols=True, equivalences=True).cells}
     sym = cells["symbol:ss_just_mapping:ssprimes"].text
     assert sym == "\U0001D440ⱼₗ = \U0001D43C"  # "𝑀ⱼₗ = 𝐼" — math-italic I = U+1D43C
+
+
+def test_superspace_identity_objects_are_deferred_to_identity_objects():
+    # M_L over its own generators (ss_mapping × gens, trivially 𝐼) and the JI mapping
+    # M_jL = I (ss_just_mapping × ssprimes) are identity objects, like the standard-domain
+    # mapping × gens / vectors × primes / 𝑀·D self-maps — deferred to the not-yet-built
+    # identity_objects setting. So with the superspace block on but identity_objects off
+    # (the default), neither renders. The dedicated M_jL row band collapses outright; the
+    # ss_mapping band stays for the real M_L, but its gens-column self-map drops.
+    lay = _barbados_ss(names=True, symbols=True, equivalences=True, plain_text_values=True)
+    cids = {c.id for c in lay.cells}
+    bids = {b.id for b in lay.blocks}
+    assert not any("ss_just_mapping" in c for c in cids)  # whole row band gone (label, cells, frame, caption…)
+    assert "block:ss_just_mapping:ssprimes" not in bids
+    # the ss_mapping × gens self-map is a reserved (cell-less) tile — its fold toggle and
+    # backing panel are the only trace, and both drop
+    assert "toggle:tile:ss_mapping:gens" not in cids
+    assert "block:ss_mapping:gens" not in bids
+    # the gate is the only thing hiding them: identity_objects on brings both back, while the
+    # real M_L (ss_mapping × ssprimes) is unaffected either way
+    on = {c.id for c in _barbados_ss_identity(symbols=True).cells}
+    assert {"label:ss_just_mapping", "cell:ss_just_mapping:ssprimes:0:0",
+            "toggle:tile:ss_mapping:gens"} <= on
+    assert "cell:ss_mapping:ssprimes:0:0" in cids  # real M_L renders regardless of the gate
 
 
 # ---------------------------------------------------------------------------
@@ -7167,7 +7203,7 @@ def test_M_L_tile_has_a_plain_text_string():
 
 
 def test_M_jL_tile_has_a_plain_text_string():
-    cells = {c.id: c for c in _barbados_ss(plain_text_values=True).cells}
+    cells = {c.id: c for c in _barbados_ss_identity(plain_text_values=True).cells}
     # the dL × dL identity rendered the same way as M_L
     assert cells["ptext:ss_just_mapping:ssprimes"].text == (
         "[⟨1 0 0 0]⟨0 1 0 0]⟨0 0 1 0]⟨0 0 0 1]}")
@@ -7238,7 +7274,7 @@ def test_superspace_M_L_per_row_brackets_reuse_MAP_BRACKETS():
 
 
 def test_superspace_M_jL_per_row_brackets_reuse_MAP_BRACKETS():
-    cells = {c.id: c for c in _barbados_ss().cells}
+    cells = {c.id: c for c in _barbados_ss_identity().cells}
     for i in range(4):  # dL=4 rows
         assert cells[f"bracket:ss_just_map:{i}:l"].text == "⟨"
         assert cells[f"bracket:ss_just_map:{i}:r"].text == "]"
@@ -7261,7 +7297,7 @@ def test_superspace_M_L_and_M_jL_outer_frame_uses_ebktop_ebkbrace():
     # the spanning top + bottom frame is the existing ebktop / ebkbrace pair — same
     # convention the on-domain mapping uses. The asymmetric "[ … ⟩" plain-text shape
     # (square-open + ket-close) lives only on the bare prescaler 𝐿, not here.
-    cells = {c.id: c for c in _barbados_ss().cells}
+    cells = {c.id: c for c in _barbados_ss_identity().cells}
     assert cells["ebktop:ss_mapping"].kind == "ebktop"
     assert cells["ebkbrace:ss_mapping"].kind == "ebkbrace"
     assert cells["ebktop:ss_just_mapping"].kind == "ebktop"

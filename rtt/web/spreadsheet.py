@@ -780,6 +780,14 @@ class _GridBuilder:
         # the domain is actually nonstandard: a standard prime limit has dL == d / rL == r, so
         # the superspace columns just look like clones of the domain, which is harmless.
         self.show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
+        # identity objects — the trivial self-maps that equal 𝐼 (mapping over its own
+        # generators, domain primes as vectors over themselves, 𝑀·D, and in the superspace
+        # block M_L over its own generators and the JI mapping M_jL = I). They're deferred to
+        # the not-yet-built identity_objects feature, so this defaults off and stays out of
+        # settings.IMPLEMENTED; tests pass it through build's settings directly. Until then
+        # the two superspace identity tiles gate on it the way the standard-domain identity
+        # tiles are simply absent from the tile list.
+        self.show_identity_objects = self.settings.get("identity_objects", False)
         # the chapter-9 CONVERSION rows (ss_targets B_L·T, ss_prescaler X_L) are present only
         # when both the superspace block is shown AND the analysis mode actually performs the
         # conversion: prime-based or neutral (per the mockup transcription, "These two rows
@@ -1033,6 +1041,15 @@ class _GridBuilder:
             # here clears its cells, bracket, caption, panel and fold toggle (never a blank box).
             self.declared_tiles -= {("mapping", "targets"), ("prescaling", "targets"),
                                ("tuning", "targets"), ("just", "targets"), ("retune", "targets")}
+        if not self.show_identity_objects:
+            # the superspace identity objects — M_L over its own generators (ss_mapping × gens,
+            # trivially 𝐼) and the JI mapping M_jL = I (ss_just_mapping × ssprimes) — are deferred
+            # to the not-yet-built identity_objects feature, exactly like their standard-domain
+            # counterparts (mapping × gens, vectors × primes, mapping × detempering), which simply
+            # aren't in the tile list. Dropping them here clears their cells, brackets, captions,
+            # symbols, panels and fold toggles. (ss_just_mapping's whole row band is gated off too,
+            # above; ss_mapping's stays for the real M_L in its ssprimes column.)
+            self.declared_tiles -= {("ss_mapping", "gens"), ("ss_just_mapping", "ssprimes")}
 
         # Column bands left-to-right: (key, natural width, present, collapsible).
         # Each set-column belongs to a box toggle: generators, the domain primes and
@@ -1139,7 +1156,12 @@ class _GridBuilder:
             # whenever the toggle is off.
             ("ss_vectors", self.dL * ROW_H, self.show_nonstandard_domain, True, "superspace\ninterval vectors"),
             ("ss_mapping", self.rL * ROW_H, self.show_nonstandard_domain, True, "superspace\nmapping"),
-            ("ss_just_mapping", self.dL * ROW_H, self.show_nonstandard_domain, True, "superspace\nJI mapping"),
+            # the M_jL = I band exists ONLY to hold that identity object, so it gates on
+            # identity_objects too (its sole tile is the deferred ss_just_mapping × ssprimes —
+            # see declared_tiles below). The ss_mapping band stays: it also carries the real
+            # rL × dL mapping M_L (ss_mapping × ssprimes), only its gens-column self-map drops.
+            ("ss_just_mapping", self.dL * ROW_H,
+             self.show_nonstandard_domain and self.show_identity_objects, True, "superspace\nJI mapping"),
             # the chapter-9 CONVERSION rows: ss_targets (B_L·T, the target list re-expressed
             # over the superspace primes) and ss_prescaler (X_L, the complexity prescaler
             # lifted into the superspace). Mode-gated — present only with the nonstandard-
