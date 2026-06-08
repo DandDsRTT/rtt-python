@@ -3,6 +3,21 @@
 The RTT monolith is a microtonal/RTT engine with a NiceGUI web front end
 (`rtt/web/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`).
 
+## When work is done, merge to main — that's how the user sees it
+
+The user validates everything on **their own `python app.py` running on 8137**, which serves
+the **main checkout** and hot-reloads on `*.py`/`*.css` changes. Work that lives only on a
+worktree branch is **invisible to them**. So the job isn't done until the branch is on `main`:
+
+- When a task is complete (and tests pass), **fast-forward the branch onto `main`**:
+  `git -C <main-checkout> merge --ff-only <branch>`. The main instance reloads and the user
+  can validate immediately on 8137 — no extra steps from them.
+- **Don't make the user think about branches, worktrees, or verification ports.** They don't
+  need a play-by-play of which 8200+ port you used to check your work — just land it on main.
+  Mention the merge (and whether you pushed to `origin`), nothing more.
+- This is a git merge, not an edit of the main checkout — it does **not** violate "all edits
+  go in the worktree." Never hand-edit files in the main checkout; only ever `git merge` into it.
+
 ## Web app port: 8137 is the user's — agents launch on their own port
 
 Port **8137** belongs to the **human user**: they keep `python app.py` running there to
