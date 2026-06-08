@@ -153,7 +153,8 @@ def test_build_renders_a_nonstandard_domain_in_its_elements():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     cells = {c.id: c for c in spreadsheet.build(state).cells}
     assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "13/5"]
-    assert cells["header:primes"].text == "basis\nelements"  # the guide's term for the columns
+    # a nonprime element (13/5) flips the header to the guide's term, keeping the "domain" prefix
+    assert cells["header:primes"].text == "domain basis\nelements"
     assert cells["gen:1"].text == "15/13"  # the Barbados generator, read over the basis
 
 
@@ -189,6 +190,20 @@ def test_standard_domain_header_still_reads_domain_primes():
     cells = {c.id: c for c in _layout().cells}
     assert cells["header:primes"].text == "domain\nprimes"
     assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "5"]
+
+
+def test_nonstandard_but_all_prime_domain_still_reads_domain_primes():
+    # 2.3.7 (archytas) is a nonstandard subgroup but every element is a genuine prime, so the
+    # header stays "domain primes" — the "basis elements" wording is reserved for a basis that
+    # actually carries a NONPRIME (e.g. 2.9.5, 2.3.13/5), not merely a non-contiguous prime set
+    arch = service.from_comma_basis(((6, -2, -1),), domain_basis=(2, 3, 7))  # 2.3.7
+    s = settings.defaults()
+    s["domain_units"] = True  # so the coordinate-label row renders
+    cells = {c.id: c for c in spreadsheet.build(arch, s).cells}
+    assert cells["header:primes"].text == "domain\nprimes"
+    assert [cells[f"prime:{p}"].text for p in range(3)] == ["2", "3", "7"]
+    # its coordinate label is p (true primes) too, not the basis-element b
+    assert cells["urow:primes:0"].text == "/p₁"
 
 
 def test_generator_ratios_are_listed_in_the_quantities_column():
@@ -6635,8 +6650,8 @@ def test_nonstandard_all_prime_subgroup_with_toggle_on_shows_no_superspace():
     # the subtlety: being nonstandard isn't enough — a subgroup that is still ALL PRIMES (e.g.
     # 2.5.7, which merely skips 3) has no nonprime element to embed, so neither the superspace
     # columns/rows nor the matching damage-tile approach radio appear. Only a basis carrying a
-    # nonprime (2.3.13/5) triggers them. The toggle's editability still applies; the header reads
-    # "basis elements" (a nonstandard subgroup), NOT "domain basis elements" — that waits on a nonprime.
+    # nonprime (2.3.13/5) triggers them. The toggle's editability still applies; the header stays
+    # "domain primes" (every element IS a prime), NOT "domain basis elements" — that waits on a nonprime.
     state = service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]}")
     assert not service.domain_has_nonprimes(state.domain_basis)  # all-prime, but...
     assert not service.is_standard_domain(state.domain_basis)    # ...still a nonstandard subgroup
@@ -6648,7 +6663,7 @@ def test_nonstandard_all_prime_subgroup_with_toggle_on_shows_no_superspace():
                    for tok in ("ssgens", "ssprimes", "ss_vectors", "ss_mapping", "ss_basis",
                                "ssgen", "ssprime"))
     assert cells["prime:0"].kind == "elementcell"
-    assert cells["header:primes"].text == "basis\nelements"
+    assert cells["header:primes"].text == "domain\nprimes"  # all-prime ⇒ still "domain primes"
 
 
 def test_nonprime_based_approach_collapses_the_entire_superspace():
@@ -7410,10 +7425,10 @@ def _nonstd_on(state):
 def test_domain_elements_are_editable_elementcells_with_the_box_on():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
-    # the editable element shows its full num/den ratio, so it renders as a stacked fraction face
-    # (horizontal bar) like every other gridded ratio — not a bare integer / diagonal slash
-    assert on["prime:0"].kind == "elementcell" and on["prime:0"].text == "2/1"
-    assert on["prime:2"].kind == "elementcell" and on["prime:2"].text == "13/5"
+    # an integer prime shows as a plain number (elementcell); a nonprime renders as a stacked
+    # fraction face (elementratio — a horizontal bar, denominator below), like every other ratio
+    assert on["prime:0"].kind == "elementcell" and on["prime:0"].text == "2"
+    assert on["prime:2"].kind == "elementratio" and on["prime:2"].text == "13/5"
     # the box off: the same elements are read-only domain primes
     off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
     assert off["prime:0"].kind == "prime"
@@ -7455,7 +7470,8 @@ def test_pending_element_renders_a_red_draft_column():
     s = settings.defaults() | {"nonstandard_domain": True}
     cells = {c.id: c for c in spreadsheet.build(state, s, pending_element="").cells}
     draft = cells["prime:pending"]
-    assert draft.kind == "elementcell" and draft.pending and draft.text == "?/?"
+    # the "?/?" placeholder is a fraction form, so it rides the stacked-fraction kind
+    assert draft.kind == "elementratio" and draft.pending and draft.text == "?/?"
     assert "element_minus:pending" in cells  # its − cancels the draft
     # a partially-typed draft shows the raw text
     typed = {c.id: c for c in spreadsheet.build(state, s, pending_element="9").cells}

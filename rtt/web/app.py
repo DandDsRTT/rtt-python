@@ -1265,7 +1265,12 @@ class _Reconciler:
         self.cell_kinds["ratiocell"] = _KindHandlers(self._build_ratiocell, self._update_ratiocell)
         # a chapter-9 domain basis element (nonstandard-domain box on): an editable ratio cell that
         # commits a basis RELABEL / a new held-just element rather than an interval edit
+        # a chapter-9 domain basis element (nonstandard-domain box on): an integer prime shows as a
+        # plain number (elementcell), a nonprime as a stacked fraction face (elementratio) — like its
+        # read-only form. The build picks the kind by the value's form, so a relabel that crosses
+        # int↔fraction rebuilds the cell (the reconciler rebuilds on a kind change).
         self.cell_kinds["elementcell"] = _KindHandlers(self._build_elementcell, self._update_elementcell)
+        self.cell_kinds["elementratio"] = _KindHandlers(self._build_elementratio, self._update_elementratio)
         self.cell_kinds["commaratio"] = _KindHandlers(self._build_commaratio, self._update_ratio)
         self.cell_kinds["tuningvalue"] = _KindHandlers(self._build_tuning_value, self._update_tuning_value)
 
@@ -1840,22 +1845,36 @@ class _Reconciler:
                                 remove="" if cb.pending else "rtt-pending")  # red draft styling
         self._update_ratio(cb)              # the overlaid stacked face mirrors the fraction
 
-    def _build_elementcell(self, cb, wrap):
-        # an editable chapter-9 domain basis element (nonstandard-domain box on): built EXACTLY like a
-        # ratiocell — the stacked fraction face (horizontal bar, denominator below) over an input —
-        # so a nonprime like 13/5 reads as a proper fraction, identical to every other gridded ratio.
-        # Its commit RELABELS this basis element (or fills the ?/? draft to add a new one held just)
-        # rather than editing an interval; the build/face/preview are otherwise shared. The element
-        # text is always num/den (service.element_ratio), so the face never switches int↔fraction form.
-        wrap.classes("rtt-cell-input rtt-cell-stacked")
+    def _element_input(self, cb):
+        # the shared input for both domain-element cell kinds: commits the relabel / draft-add on
+        # blur / Enter (on_element_change), and previews it LIVE as a valid value is typed
+        # (on_element_preview rings the cells the edit would move, without committing).
         commit = lambda _=None, cid=cb.id: self._cb.on_element_change(cid)
-        inp = ui.input().props("dense borderless").classes("rtt-cellinput")
+        inp = ui.input(on_change=lambda _=None, cid=cb.id: self._cb.on_element_preview(cid)) \
+            .props("dense borderless").classes("rtt-cellinput")
         inp.on("blur", commit)
         inp.on("keydown.enter", commit)
         self.inputs[cb.id] = inp
-        self._ratio(cb, approx=False, overlay=True)
+
+    def _build_elementcell(self, cb, wrap):
+        # an INTEGER domain basis element (a prime): a plain input showing the bare number (e.g. "2"),
+        # like a mapping/comma entry — not the stacked fraction face (a prime has no denominator below).
+        wrap.classes("rtt-cell-input")
+        self._element_input(cb)
 
     def _update_elementcell(self, cb):
+        self.inputs[cb.id].value = cb.text  # the bare element (e.g. "2"), or "?/?" for a draft
+        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                   remove="" if cb.pending else "rtt-pending")
+
+    def _build_elementratio(self, cb, wrap):
+        # a NONPRIME domain basis element (e.g. 13/5): the stacked fraction face (horizontal bar,
+        # denominator below) over an input — identical to every other gridded ratio.
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
+        self._element_input(cb)
+        self._ratio(cb, approx=False, overlay=True)
+
+    def _update_elementratio(self, cb):
         self.inputs[cb.id].value = cb.text  # the live element (e.g. "13/5"), or "?/?" for a draft
         self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
                                 remove="" if cb.pending else "rtt-pending")  # red draft styling
@@ -2703,6 +2722,42 @@ def index() -> None:
         editor.set_domain_element(index, raw)
         render()
 
+    def on_element_preview(cid):
+        # live edit preview: as a VALID element is typed into a domain cell, ring the cells the
+        # relabel / held-just add would move — WITHOUT committing. The scalar ratio cells commit on
+        # blur (so they get no live preview for free the way the per-keystroke vector cells do), so
+        # we apply the hypothetical to a snapshot, diff against the focus baseline, ring, and revert.
+        # An invalid / unchanged value clears the rings. Mirrors _preview_apply, but runs WHILE the
+        # cell is focused (which _preview_apply bails on) and diffs against preview_baseline.
+        if building[0] or rec._editing != cid or rec.preview_baseline is None or cid not in rec.inputs:
+            return
+        raw = str(rec.inputs[cid].value).strip()
+        tok = cid.split(":")[1]
+        parsed = service.parse_domain_element(raw) if raw not in ("", "?/?") else None
+        if tok == "pending":
+            valid = parsed is not None and service.can_add_domain_element(editor.state, parsed)
+        else:
+            valid = (parsed is not None and parsed != editor.state.domain_basis[int(tok)]
+                     and service.can_set_domain_element(editor.state, int(tok), parsed))
+        if not valid:
+            rec.clear_preview()  # nothing valid to preview (yet)
+            return
+        saved_pending = editor.pending_element  # the snapshot doesn't carry the transient draft
+        token = editor.capture_for_preview()
+        try:
+            if tok == "pending":
+                editor.set_pending_element(raw)  # commits the held-just add on the snapshot
+            else:
+                editor.set_domain_element(int(tok), raw)
+            new = editor.layout(prev_ids=rec.preview_baseline.identities)
+            modified = spreadsheet.changed_cell_ids(rec.preview_baseline, new) - {cid}
+            removed = spreadsheet.removed_cell_ids(rec.preview_baseline, new)
+        finally:
+            editor.restore_for_preview(token)
+            editor.pending_element = saved_pending
+        rec.clear_preview()
+        rec.show_preview(modified, removed)
+
     def on_power_change(cid):
         # editable power inputs share this kind: optimization:power drives the Lp optimization
         # power; control:q drives the interval-complexity norm power (box 𝒄). Same parse (∞ or a
@@ -3347,6 +3402,7 @@ def index() -> None:
         on_ptext_edit=on_ptext_edit,
         on_ratio_change=on_ratio_change,
         on_element_change=on_element_change,
+        on_element_preview=on_element_preview,
         on_range_mode=on_range_mode,
         on_target_cells_change=on_target_cells_change,
         on_target_change=on_target_change,

@@ -802,7 +802,10 @@ class _GridBuilder:
         # and the column title, AND gates the domain + (expand walks to the next standard prime, so
         # it doesn't apply to a subgroup — the + is withheld, never shown inert).
         self.standard_domain = service.is_standard_domain(self.elements)
-        self.domain_label = "p" if self.standard_domain else "b"
+        # the coordinate label is p (prime) unless the basis carries a NONPRIME element, in which
+        # case it's b (basis element). Keyed on nonprimes, NOT standard_domain: a nonstandard but
+        # all-prime subgroup like 2.3.7 still reads p (its elements are genuine primes).
+        self.domain_label = "b" if service.domain_has_nonprimes(self.elements) else "p"
         # whether the domain − applies — the shared predicate the editor's shrink guard uses, so the
         # button only shows when a click would actually drop the top prime (not on a nonstandard
         # subgroup, nor when the smaller temperament would be improper). Gates both the quantities-row
@@ -1050,17 +1053,16 @@ class _GridBuilder:
         # wider than it was open — so collapsing a column only ever narrows it (see col_w below).
         # The domain/comma + controls ride just right of their blocks when open; each −
         # is a hover affordance on the removable highest-prime / last-comma column.
-        # the domain column header. It reads the editable "domain basis elements" — the guide's
-        # term — only when the nonstandard-domain box is on AND the basis actually carries a
-        # nonprime element: checking the box makes the cells typeable, but the title doesn't flip
-        # until a nonprime is entered (same domain_has_nonprimes trigger as the superspace
-        # columns/rows and the approach radio), so a still-all-prime basis with the box on keeps
-        # its prime-style title. Otherwise: "domain primes" over a standard prime limit, or
-        # "basis elements" over a nonstandard subgroup (e.g. a nonprime temperament loaded
-        # read-only via the mapping box with the toggle off).
+        # the domain column header reflects the BASIS itself: "domain basis elements" (the guide's
+        # term) once any element is a nonprime, else "domain primes" — including for a nonstandard
+        # but still all-prime subgroup like 2.3.7, whose elements ARE primes. (The "domain" prefix
+        # deviates from the mockup, which dropped it.) Keyed on domain_has_nonprimes like the p/b
+        # coordinate label and the superspace columns — independent of the nonstandard-domain box
+        # (the box makes the cells editable; the title just tracks the actual basis). It is never a
+        # bare "basis elements" and never "domain primes" over a basis that carries a nonprime.
         domain_title = ("domain basis\nelements"
-                        if self.show_nonstandard_domain and service.domain_has_nonprimes(self.elements)
-                        else "domain\nprimes" if self.standard_domain else "basis\nelements")
+                        if service.domain_has_nonprimes(self.elements)
+                        else "domain\nprimes")
         self.col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
                       "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
                       "primes": domain_title, "detempering": "generator\ndetempering",
@@ -1710,6 +1712,14 @@ class _GridBuilder:
     def prime_left(self, p):
         return self.primes_x + self.outer_gutter_w("primes") + BRACKET_W + p * COL_W
 
+    @staticmethod
+    def _element_cell_kind(text):
+        """The editable domain-element kind for a value's display form: a fraction (e.g. "13/5", or
+        the "?/?" draft) renders as a stacked fraction face (elementratio); a bare integer prime
+        ("2") as a plain number (elementcell). Switching kind across a relabel makes the reconciler
+        rebuild the cell, so the face form follows the value."""
+        return "elementratio" if "/" in text else "elementcell"
+
     def comma_left(self, c):
         return self.commas_x + BRACKET_W + c * COL_W
 
@@ -2293,18 +2303,20 @@ class _GridBuilder:
                 # with the nonstandard-domain box on the domain elements are typeable — an editable
                 # elementcell (typing a rational relabels that basis element, holding the mapping
                 # coordinates). Off, they're read-only domain primes walked by the ± only.
-                element_kind = "elementcell" if self.show_nonstandard_domain else "prime"
                 for p in range(self.d):
-                    # the editable element shows its full num/den ratio (a stacked fraction face, like
-                    # every other gridded ratio — and never switching int↔fraction form on a relabel);
-                    # the read-only prime keeps the bare element label.
-                    text = service.element_ratio(self.elements[p]) if self.show_nonstandard_domain else str(self.elements[p])
-                    self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, element_kind, text=text, prime=p))
+                    # with the box on the element is editable: an integer prime shows as a plain number
+                    # (elementcell), a nonprime as a stacked fraction face (elementratio) — matching its
+                    # read-only display, and switching kind (so the cell rebuilds) across a relabel that
+                    # crosses int↔fraction. Off, it's a read-only domain prime.
+                    text = str(self.elements[p])
+                    kind = self._element_cell_kind(text) if self.show_nonstandard_domain else "prime"
+                    self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, kind, text=text, prime=p))
                     self._voice("quantities:primes", p, self.tun.just_map[p])
                 if self.element_draft:  # the red ?/? draft column: type a rational to add a new basis
                     # element (held just). A distinct id so it's removed, not restructured, on commit.
-                    self.cells.append(CellBox("prime:pending", self.prime_left(self.d), qy, COL_W, ROW_H, "elementcell",
-                                              text=self.pending_element or "?/?", prime=self.d, pending=True))
+                    draft_text = self.pending_element or "?/?"
+                    self.cells.append(CellBox("prime:pending", self.prime_left(self.d), qy, COL_W, ROW_H,
+                                              self._element_cell_kind(draft_text), text=draft_text, prime=self.d, pending=True))
                     branch_minus("element_minus:pending", "primes", self.d, "element_minus")
                 # Only the highest prime is removable (shrink_domain trims the last), so its
                 # − rides that prime's branch point (the last top-bus split) — and only when the
