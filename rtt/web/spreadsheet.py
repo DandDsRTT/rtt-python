@@ -1640,7 +1640,7 @@ class _GridBuilder:
             return self.damage_unit
         return base
 
-    def cell_unit(self, rkey, ckey, *, gen=None, prime=None):
+    def cell_unit(self, rkey, ckey, *, gen=None, prime=None, elem=None):
         # the per-value unit shown beneath a gridded cell when units is on: the tile's unit
         # (tile_unit) with its STANDALONE coordinate variables subscripted by this cell's
         # generator/prime index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped
@@ -1662,6 +1662,11 @@ class _GridBuilder:
         if prime is not None:
             coord = "p" if superspace else self.domain_label
             u = _subscript_coord(u, "p", f"{coord}{_sub(prime + 1)}")
+        # the domain-element coordinate b (the on-domain basis elements that head the primes
+        # column): subscripted for tiles whose COLUMN runs over the domain elements — B_L's b/p
+        # and M_s→L's gL/b. ``elem`` is the element (column) index.
+        if elem is not None:
+            u = _subscript_coord(u, self.domain_label, f"{self.domain_label}{_sub(elem + 1)}")
         return u
 
     def matlabel_gutter_w(self, group_key):
@@ -2601,6 +2606,15 @@ class _GridBuilder:
             for p in range(self.dL):
                 self.cells.append(CellBox(f"ss_basis:{p}", bx, self.ss_vec_top(p), COL_W, ROW_H,
                                           "prime", text=str(self.superspace_primes[p]), prime=p))
+        # the chapter-9 superspace MAPPING row's spine: the rL superspace generators as a
+        # vertical ratio list down the quantities spine — the row counterpart of the on-domain
+        # mapping spine (the gen:i generators that label M's rows), here labelling M_L's rows.
+        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "quantities"):
+            ss_gens = service.superspace_generators(self.state)
+            for i in range(self.rL):
+                self.cells.append(CellBox(f"ss_gen:{i}", self.col_x["quantities"], self.ss_map_top(i),
+                                          self.col_w["quantities"], ROW_H, "genratio",
+                                          text=ss_gens[i] if i < len(ss_gens) else ""))
         # B_L (basis-embedding matrix): each domain element as a dL-tall vector of integer
         # monzo coefficients over the superspace primes. The cells form a dL × d grid sharing
         # the prime-column gridlines with the existing vectors row above (the same prime_left
@@ -2616,7 +2630,7 @@ class _GridBuilder:
                         f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}",
                         self.prime_left(elem_idx), self.ss_vec_top(ss_prime_idx), COL_W, ROW_H,
                         "vec", text=str(value), prime=ss_prime_idx, comma=elem_idx,
-                        unit=self.cell_unit("ss_vectors", "primes", prime=ss_prime_idx),
+                        unit=self.cell_unit("ss_vectors", "primes", prime=ss_prime_idx, elem=elem_idx),
                     ))
         # M_L (superspace mapping): the rL × dL covector stack the temperament lifts to over its
         # superspace primes. Sits in (ss_mapping, ssprimes), each row a covector over the dL
@@ -2635,6 +2649,69 @@ class _GridBuilder:
                         gen=gen_idx, prime=ss_prime_idx,
                         unit=self.cell_unit("ss_mapping", "ssprimes", gen=gen_idx, prime=ss_prime_idx),
                     ))
+        # ── the rest of the chapter-9 superspace block: the two new rows mirror the on-domain
+        # vectors / mapping rows, lifted into the superspace. First the "new × new" tiles.
+        # M_jL = I at (ss_vectors, ssprimes): the superspace JI mapping, a dL × dL identity
+        # (each superspace prime is its own basis element) — a covector stack like M_L.
+        if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "ssprimes"):
+            mjl = service.superspace_just_mapping(self.superspace_primes)
+            for i in range(self.dL):
+                for j in range(self.dL):
+                    self.cells.append(CellBox(
+                        f"cell:ss_vectors:ssprimes:{i}:{j}",
+                        self.ss_prime_left(j), self.ss_vec_top(i), COL_W, ROW_H,
+                        "mapped", text=str(mjl[i][j]), gen=i, prime=j,
+                        unit=self.cell_unit("ss_vectors", "ssprimes", prime=j)))
+        # M_LgL = I at (ss_mapping, ssgens): the superspace mapping over its OWN generators, an
+        # rL × rL identity (each superspace generator maps to itself) — the gen-space M_jL.
+        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssgens"):
+            mlgl = service.superspace_self_map(self.state)
+            for i in range(self.rL):
+                for j in range(self.rL):
+                    self.cells.append(CellBox(
+                        f"cell:ss_mapping:ssgens:{i}:{j}",
+                        self.ss_gen_left(j), self.ss_map_top(i), COL_W, ROW_H,
+                        "mapped", text=str(mlgl[i][j]), gen=i,
+                        unit=self.cell_unit("ss_mapping", "ssgens", gen=i)))
+        # M_s→L at (ss_mapping, primes): the rL × d mapping straight from domain intervals to
+        # superspace-generator coordinates (M_L · B_L) — a covector stack over the domain elements.
+        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "primes"):
+            msl = service.mapping_to_superspace_generators(self.state)
+            for i in range(self.rL):
+                for e in range(self.d):
+                    self.cells.append(CellBox(
+                        f"cell:ss_mapping:primes:{i}:{e}",
+                        self.prime_left(e), self.ss_map_top(i), COL_W, ROW_H,
+                        "mapped", text=str(msl[i][e]), gen=i,
+                        unit=self.cell_unit("ss_mapping", "primes", gen=i, elem=e)))
+        # the interval lists, lifted. Each on-domain list (commas C, targets T, held H, interest,
+        # detempering D) becomes dL-tall monzo columns over the superspace primes in the ss_vectors
+        # row (B_L · column), and rL-tall mapped columns over the superspace generators in the
+        # ss_mapping row (M_s→L · column — mapped commas vanish to 0, like the on-domain mapped
+        # comma basis). Same column axes as the on-domain vectors / mapping rows above.
+        ss_lists = (("commas", self.state.comma_basis, self.nc, self.comma_left),
+                    ("targets", self.target_vectors, self.k, self.target_left),
+                    ("held", self.held, self.nh, self.held_left),
+                    ("interest", self.interest, self.mi, self.interest_left),
+                    ("detempering", self.detempering_vectors, self.r, self.detempering_left))
+        for ckey, vectors, n, left in ss_lists:
+            cols = tuple(vectors)[:n]
+            if self.row_open("ss_vectors") and self.tile_open("ss_vectors", ckey):
+                lifted = service.lift_vectors_to_superspace(self.elements, cols)
+                for c in range(len(lifted)):
+                    for p in range(self.dL):
+                        self.cells.append(CellBox(
+                            f"cell:ss_vectors:{ckey}:{p}:{c}", left(c), self.ss_vec_top(p),
+                            COL_W, ROW_H, "vec", text=str(lifted[c][p]), prime=p, comma=c,
+                            unit=self.cell_unit("ss_vectors", ckey, prime=p)))
+            if self.row_open("ss_mapping") and self.tile_open("ss_mapping", ckey):
+                mapped = service.map_vectors_into_superspace_generators(self.state, cols)
+                for c in range(len(mapped)):
+                    for g in range(self.rL):
+                        self.cells.append(CellBox(
+                            f"cell:ss_mapping:{ckey}:{g}:{c}", left(c), self.ss_map_top(g),
+                            COL_W, ROW_H, "mapped", text=str(mapped[c][g]), gen=g, comma=c,
+                            unit=self.cell_unit("ss_mapping", ckey, gen=g)))
         # M_jL (superspace JI mapping): the dL × dL identity. Each superspace prime is its
         # own basis element, so the just mapping is trivially I. Same read-only "mapped" kind
         # and bracket convention as M_L; lives in its own row band ss_just_mapping below it.
@@ -3054,6 +3131,39 @@ class _GridBuilder:
             for i in range(self.dL):
                 self.bracket(f"ss_just_map:{i}", MAP_BRACKETS, "ssprimes",
                              self.ss_just_map_top(i), ROW_H)
+        # the chapter-9 "new × new" tiles. M_jL = I at (ss_vectors, ssprimes): a dL × dL covector
+        # stack ⟨ … ] like M_L. M_s→L at (ss_mapping, primes): rL covectors over the domain
+        # elements. M_LgL = I at (ss_mapping, ssgens): the gen-space self-map, framed { … ] (the
+        # generator dimension, like the canonical generator form F and the genmap).
+        if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "ssprimes"):
+            for i in range(self.dL):
+                self.bracket(f"ss_vec_jmap:{i}", MAP_BRACKETS, "ssprimes", self.ss_vec_top(i), ROW_H)
+        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "primes"):
+            for i in range(self.rL):
+                self.bracket(f"ss_msl:{i}", MAP_BRACKETS, "primes", self.ss_map_top(i), ROW_H)
+        if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssgens"):
+            for i in range(self.rL):
+                self.bracket(f"ss_selfmap:{i}", GENMAP_BRACKETS, "ssgens", self.ss_map_top(i), ROW_H)
+        # the lifted interval lists: B_L over the primes column (the basis change matrix) and the
+        # lifted C/T/H/detempering lists, each a [ … ] over the dL components in the ss_vectors row;
+        # the mapped versions a [ … ] over the rL rows in the ss_mapping row (interest stands alone,
+        # no outer wrap — mirroring the on-domain vectors / mapping rows).
+        if self.row_open("ss_vectors"):
+            for group in ("primes", "commas", "targets"):
+                if self.tile_open("ss_vectors", group):
+                    self.bracket(f"ss_vec:{group}", LIST_BRACKETS, group, self.row_y["ss_vectors"], self.dL * ROW_H, fit=True)
+            if self.nh and self.tile_open("ss_vectors", "held"):
+                self.bracket("ss_vec:held", LIST_BRACKETS, "held", self.row_y["ss_vectors"], self.dL * ROW_H, fit=True)
+            if self.tile_open("ss_vectors", "detempering"):
+                self.bracket("ss_vec:detempering", LIST_BRACKETS, "detempering", self.row_y["ss_vectors"], self.dL * ROW_H, fit=True)
+        if self.row_open("ss_mapping"):
+            for group in ("commas", "targets"):
+                if self.tile_open("ss_mapping", group):
+                    self.bracket(f"ss_mapped:{group}", LIST_BRACKETS, group, self.row_y["ss_mapping"], self.rL * ROW_H, fit=True)
+            if self.nh and self.tile_open("ss_mapping", "held"):
+                self.bracket("ss_mapped:held", LIST_BRACKETS, "held", self.row_y["ss_mapping"], self.rL * ROW_H, fit=True)
+            if self.tile_open("ss_mapping", "detempering"):
+                self.bracket("ss_mapped:detempering", GENMAP_BRACKETS, "detempering", self.row_y["ss_mapping"], self.rL * ROW_H, fit=True)
         if self.row_open("vectors"):  # each group is a list of vectors: a [ ] spanning the d components
             for group in ("commas", "targets"):
                 if self.tile_open("vectors", group):
@@ -3466,6 +3576,11 @@ class _GridBuilder:
         self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")
         # M_jL = I rides the same matrix-frame pattern over its own dL × dL identity band
         self.matrix_frame("ss_just_mapping", "ssprimes", "ss_just_mapping")
+        # the chapter-9 "new × new" covector stacks: M_jL = I in the ss_vectors row, M_s→L over
+        # the domain elements, and the gen-space self-map M_LgL = I — each framed like M_L
+        self.matrix_frame("ss_vectors", "ssprimes", "ss_vec_jmap")
+        self.matrix_frame("ss_mapping", "primes", "ss_msl")
+        self.matrix_frame("ss_mapping", "ssgens", "ss_selfmap")
 
         self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc)
         self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.k)
@@ -3486,6 +3601,21 @@ class _GridBuilder:
         self.vector_list_marks("vectors", "vec:held", "held", self.held_left, self.nh_shown, foot="ebkangle",
                          pending_col=(self.nh if self.pending_held is not None else -1))
         self.vector_list_marks("vectors", "vec:detempering", "detempering", self.detempering_left, self.r, foot="ebkangle")
+        # the chapter-9 superspace lifted lists: B_L (the basis change matrix over the domain
+        # elements) and the lifted C/T/H/detempering, each a matrix of kets (⌐ top, ∨ angle foot)
+        # like the on-domain vectors row; interest stands alone (no separators). The mapped
+        # versions in the ss_mapping row take curly-brace feet (} ) like the on-domain mapped lists.
+        self.vector_list_marks("ss_vectors", "ss_vec:primes", "primes", self.prime_left, self.d, foot="ebkangle", separators=False)
+        self.vector_list_marks("ss_vectors", "ss_vec:commas", "commas", self.comma_left, self.nc, foot="ebkangle", separators=False)
+        self.vector_list_marks("ss_vectors", "ss_vec:targets", "targets", self.target_left, self.k, foot="ebkangle")
+        self.vector_list_marks("ss_vectors", "ss_vec:held", "held", self.held_left, self.nh, foot="ebkangle")
+        self.vector_list_marks("ss_vectors", "ss_vec:interest", "interest", self.interest_left, self.mi, foot="ebkangle", separators=False)
+        self.vector_list_marks("ss_vectors", "ss_vec:detempering", "detempering", self.detempering_left, self.r, foot="ebkangle")
+        self.vector_list_marks("ss_mapping", "ss_mapped:commas", "commas", self.comma_left, self.nc)
+        self.vector_list_marks("ss_mapping", "ss_mapped:targets", "targets", self.target_left, self.k)
+        self.vector_list_marks("ss_mapping", "ss_mapped:held", "held", self.held_left, self.nh)
+        self.vector_list_marks("ss_mapping", "ss_mapped:interest", "interest", self.interest_left, self.mi, separators=False)
+        self.vector_list_marks("ss_mapping", "ss_mapped:detempering", "detempering", self.detempering_left, self.r)
         # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
         # Every 𝐿·basis product (𝐿C/𝐿D/𝐿T/𝐿H) and the interest tile is a matrix of prescaled
         # VECTORS, so each column is a ket ``[ … ⟩`` — top = ebktop (square open ⌐), foot =

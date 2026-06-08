@@ -82,8 +82,21 @@ CAPTIONS = {
     # (ss_mapping, ssprimes), and the trivial superspace JI mapping M_jL = I lives in
     # (ss_just_mapping, ssprimes). Phase 4 also adds 𝒈ₗ / 𝒕ₗ / 𝒋ₗ / 𝒓ₗ captions over the
     # superspace tuning rows when their cells are emitted.
-    ("ss_vectors", "primes"): "basis embedding matrix",
+    ("ss_vectors", "ssprimes"): "superspace JI mapping",
+    ("ss_vectors", "primes"): "basis change matrix",
+    ("ss_vectors", "commas"): "comma basis in superspace",
+    ("ss_vectors", "held"): "held-interval basis in superspace",
+    ("ss_vectors", "targets"): "target-interval list in superspace",
+    ("ss_vectors", "interest"): "intervals in superspace",
+    ("ss_vectors", "detempering"): "generator detempering in superspace",
+    ("ss_mapping", "ssgens"): "superspace mapping over its generators",
     ("ss_mapping", "ssprimes"): "superspace mapping",
+    ("ss_mapping", "primes"): "mapping from domain intervals to superspace generators",
+    ("ss_mapping", "commas"): "comma basis in superspace generators",
+    ("ss_mapping", "held"): "held-interval basis in superspace generators",
+    ("ss_mapping", "targets"): "target-interval list in superspace generators",
+    ("ss_mapping", "interest"): "intervals in superspace generators",
+    ("ss_mapping", "detempering"): "generator detempering in superspace generators",
     ("ss_just_mapping", "ssprimes"): "superspace JI mapping",
     ("tuning", "ssgens"): "superspace generator tuning map",
     ("tuning", "ssprimes"): "superspace tuning map",
@@ -168,6 +181,19 @@ SYMBOLS = {
     ("tuning", "ssprimes"): "𝒕L",
     ("just", "ssprimes"): "𝒋L",
     ("retune", "ssprimes"): "𝒓L",
+    ("ss_vectors", "ssprimes"): f"𝑀ⱼ{SUBSCRIPT_L}",  # M_jL = I (superspace JI mapping)
+    ("ss_vectors", "commas"): f"C{SUBSCRIPT_L}",      # C_L = B_L·C
+    ("ss_vectors", "held"): f"H{SUBSCRIPT_L}",        # H_L = B_L·H
+    ("ss_vectors", "targets"): f"T{SUBSCRIPT_L}",     # T_L = B_L·T
+    ("ss_vectors", "interest"): f"I{SUBSCRIPT_L}",    # interest lifted into the superspace
+    ("ss_vectors", "detempering"): f"D{SUBSCRIPT_L}", # D_L = B_L·D
+    ("ss_mapping", "ssgens"): f"𝑀{SUBSCRIPT_L}g{SUBSCRIPT_L}",  # M_LgL = I
+    ("ss_mapping", "primes"): f"𝑀ₛ→{SUBSCRIPT_L}",   # M_s→L = M_L·B_L
+    ("ss_mapping", "commas"): f"𝑀ₛ→{SUBSCRIPT_L}C",  # mapped commas (vanish)
+    ("ss_mapping", "held"): f"𝑀ₛ→{SUBSCRIPT_L}H",
+    ("ss_mapping", "targets"): f"Y{SUBSCRIPT_L}",     # Y_L = M_s→L·T
+    ("ss_mapping", "interest"): f"𝑀ₛ→{SUBSCRIPT_L}I",
+    ("ss_mapping", "detempering"): f"𝑀ₛ→{SUBSCRIPT_L}D",
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -246,6 +272,20 @@ COL_LABEL_LETTERS = {
     ("vectors", "targets"): "𝐭",
     ("vectors", "held"): "𝐡",
     ("vectors", "detempering"): "𝐝",
+    # chapter-9 superspace interval-vectors row — dL-tall column-vector matrices over the
+    # superspace primes. B_L's columns are the domain elements (𝐛ᵢ); the lifted lists carry
+    # their on-domain letter with a subscript L.
+    ("ss_vectors", "primes"): "𝐛",
+    ("ss_vectors", "commas"): f"𝐜{SUBSCRIPT_L}",
+    ("ss_vectors", "held"): f"𝐡{SUBSCRIPT_L}",
+    ("ss_vectors", "targets"): f"𝐭{SUBSCRIPT_L}",
+    ("ss_vectors", "detempering"): f"𝐝{SUBSCRIPT_L}",
+    # chapter-9 superspace mapping row — mapped lists into the superspace generators (Y_L's
+    # columns are 𝐲ₗᵢ; the others mirror the on-domain mapped lists)
+    ("ss_mapping", "commas"): f"𝑀{SUBSCRIPT_L}𝐜",
+    ("ss_mapping", "targets"): f"𝐲{SUBSCRIPT_L}",
+    ("ss_mapping", "held"): f"𝑀{SUBSCRIPT_L}𝐡",
+    ("ss_mapping", "detempering"): f"𝑀{SUBSCRIPT_L}𝐝",
     # mapping row — mapped lists; the mapped target list Y has its own 𝐲 letter
     ("mapping", "commas"): "𝑀𝐜",
     ("mapping", "targets"): "𝐲",
@@ -561,8 +601,26 @@ UNITS = {
     # (distinct from the on-domain g). So B_L embeds the d domain elements in dL superspace-prime
     # coordinates (p), M_L is gL/p (one superspace generator per superspace prime), M_jL is p/p
     # (identity). The p → b on-domain swap (see cell_unit) does NOT reach these tiles.
-    ("ss_vectors", "primes"): "p",
-    ("ss_mapping", "ssprimes"): f"g{SUBSCRIPT_L}/p",
+    # B_L (basis change matrix) and M_s→L are the two tiles that bridge the two spaces, so they
+    # carry BOTH coordinates: B_L is b/p (each domain element b as superspace-prime p components),
+    # M_s→L is gL/b (each domain element b mapped to superspace generators gL). Every other
+    # superspace tile lives wholly in the superspace (p / gL only). The gL token uses the
+    # SUBSCRIPT_L markup so cell_unit can subscript it per generator.
+    ("ss_vectors", "ssprimes"): "p/p",   # M_jL = I
+    ("ss_vectors", "primes"): "b/p",      # B_L basis change matrix
+    ("ss_vectors", "commas"): "p",        # C_L
+    ("ss_vectors", "held"): "p",          # H_L
+    ("ss_vectors", "targets"): "p",       # T_L
+    ("ss_vectors", "interest"): "p",
+    ("ss_vectors", "detempering"): "p",   # D_L
+    ("ss_mapping", "ssgens"): f"g{SUBSCRIPT_L}/g{SUBSCRIPT_L}",  # M_LgL = I
+    ("ss_mapping", "ssprimes"): f"g{SUBSCRIPT_L}/p",   # M_L
+    ("ss_mapping", "primes"): f"g{SUBSCRIPT_L}/b",     # M_s→L
+    ("ss_mapping", "commas"): f"g{SUBSCRIPT_L}",
+    ("ss_mapping", "held"): f"g{SUBSCRIPT_L}",
+    ("ss_mapping", "targets"): f"g{SUBSCRIPT_L}",      # Y_L
+    ("ss_mapping", "interest"): f"g{SUBSCRIPT_L}",
+    ("ss_mapping", "detempering"): f"g{SUBSCRIPT_L}",
     ("ss_just_mapping", "ssprimes"): "p/p",
     # the cyan superspace tuning row mirrors the on-domain tuning row over the superspace
     # primes (p, true primes); 𝒈ₗ is ¢ per superspace generator gL.
@@ -688,11 +746,27 @@ SUPERSPACE_TILES = (
     ("block:ss_quantities:ssgens", "quantities", "ssgens"),        # the rL superspace generators as ~ratios
     ("block:ss_quantities:ssprimes", "quantities", "ssprimes"),    # the dL superspace primes (2, 3, 5, 13 …)
     ("block:ss_vectors:quantities", "ss_vectors", "quantities"),  # the spine basis index column (the dL superspace primes)
-    ("block:ss_vectors:primes", "ss_vectors", "primes"),           # B_L: each domain element as a dL-tall superspace monzo
-    ("block:ss_vectors:commas", "ss_vectors", "commas"),           # the commas as superspace monzos
-    ("block:ss_vectors:targets", "ss_vectors", "targets"),         # the target list as superspace monzos
-    ("block:ss_mapping:gens", "ss_mapping", "gens"),               # M_L over its own generators (trivially identity)
+    ("block:ss_vectors:ssprimes", "ss_vectors", "ssprimes"),       # M_jL = I (dL × dL superspace JI mapping)
+    ("block:ss_vectors:primes", "ss_vectors", "primes"),           # B_L: each domain element as a dL-tall superspace monzo (basis change matrix)
+    ("block:ss_vectors:commas", "ss_vectors", "commas"),           # C_L: the commas as superspace monzos
+    ("block:ss_vectors:held", "ss_vectors", "held"),               # H_L: the held intervals as superspace monzos
+    ("block:ss_vectors:targets", "ss_vectors", "targets"),         # T_L: the target list as superspace monzos
+    ("block:ss_vectors:interest", "ss_vectors", "interest"),       # the intervals of interest as superspace monzos
+    ("block:ss_vectors:detempering", "ss_vectors", "detempering"), # D_L: the generator detempering as superspace monzos
+    ("block:ss_mapping:quantities", "ss_mapping", "quantities"),   # the spine: the rL superspace generators as ~ratios
+    ("block:ss_mapping:ssgens", "ss_mapping", "ssgens"),           # M_LgL = I: the superspace mapping over its own generators
     ("block:ss_mapping:ssprimes", "ss_mapping", "ssprimes"),       # M_L itself, the rL × dL mapping
+    ("block:ss_mapping:primes", "ss_mapping", "primes"),           # M_s→L: domain intervals mapped straight to superspace generators
+    ("block:ss_mapping:commas", "ss_mapping", "commas"),           # mapped commas (vanish to 0)
+    ("block:ss_mapping:held", "ss_mapping", "held"),               # held mapped into superspace generators
+    ("block:ss_mapping:targets", "ss_mapping", "targets"),         # Y_L: targets mapped into superspace generators
+    ("block:ss_mapping:interest", "ss_mapping", "interest"),       # intervals of interest mapped into superspace generators
+    ("block:ss_mapping:detempering", "ss_mapping", "detempering"), # detempering mapped into superspace generators
+    # the deferred identity objects (gated on the not-yet-built identity_objects setting, off by
+    # default): the old M_L-over-its-own-generators self-map and the dedicated M_jL = I row band.
+    # The mockup's live M_jL / M_LgL are the always-on (ss_vectors, ssprimes) / (ss_mapping, ssgens)
+    # tiles above; these two stay only behind the identity_objects gate.
+    ("block:ss_mapping:gens", "ss_mapping", "gens"),               # M_L over its own generators (trivially identity)
     ("block:ss_just_mapping:ssprimes", "ss_just_mapping", "ssprimes"),  # M_jL = I (dL × dL identity)
     ("block:tuning:ssgens", "tuning", "ssgens"),                   # 𝒈L (Phase 4F)
     ("block:tuning:ssprimes", "tuning", "ssprimes"),               # 𝒕L (Phase 4F)

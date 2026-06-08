@@ -266,6 +266,62 @@ def superspace_just_mapping(primes) -> Matrix:
     return tuple(tuple(1 if i == j else 0 for j in range(dl)) for i in range(dl))
 
 
+def lift_vectors_to_superspace(domain_basis, vectors) -> Matrix:
+    """Each domain monzo (a length-d integer vector over the domain basis) re-expressed as a
+    length-dL monzo over the superspace primes — i.e. ``B_L · v`` for each. ``vectors`` is an
+    iterable of length-d vectors stored rows-as-intervals (the comma basis, target vectors,
+    held/interest vectors, the detempering columns); the result keeps that shape but each row is
+    dL long. The lifted comma/target lists C_L / T_L the superspace block renders. For BARBADOS
+    over 2.3.13/5 a vector touching the domain element 13/5 spreads across the 5 and 13 columns
+    of the superspace (2, 3, 5, 13)."""
+    bl = basis_in_superspace(domain_basis)  # d rows × dL: element e -> its superspace monzo
+    if not bl:
+        return tuple(tuple() for _ in vectors)
+    dL = len(bl[0])
+    return tuple(
+        tuple(sum(v[e] * bl[e][p] for e in range(len(bl))) for p in range(dL))
+        for v in vectors
+    )
+
+
+def mapping_to_superspace_generators(state: TemperamentState) -> Matrix:
+    """M_s→L = M_L · B_L — the rL × d matrix sending each domain element to its coordinates over
+    the rL superspace generators (composing the basis embedding B_L, domain → superspace primes,
+    with the superspace mapping M_L, superspace primes → superspace generators). The
+    ``(ss_mapping, primes)`` tile: "mapping from domain intervals to superspace generators"."""
+    ml = superspace_mapping(state)                 # rL × dL
+    bl = basis_in_superspace(state.domain_basis)   # d × dL
+    if not ml or not bl:
+        return tuple()
+    rL, dL, d = len(ml), len(ml[0]), len(bl)
+    return tuple(
+        tuple(sum(ml[g][p] * bl[e][p] for p in range(dL)) for e in range(d))
+        for g in range(rL)
+    )
+
+
+def map_vectors_into_superspace_generators(state: TemperamentState, vectors) -> Matrix:
+    """Each domain monzo mapped to superspace-generator coordinates: ``M_s→L · v``. Mapped commas
+    vanish to 0 (parallel to the on-domain mapped comma basis); mapped targets give the
+    superspace-generator counts Y_L. ``vectors`` is rows-as-intervals (length d); the result is
+    rows-as-intervals, each length rL."""
+    msl = mapping_to_superspace_generators(state)  # rL × d
+    if not msl:
+        return tuple(tuple() for _ in vectors)
+    rL, d = len(msl), len(msl[0])
+    return tuple(
+        tuple(sum(msl[g][e] * v[e] for e in range(d)) for g in range(rL))
+        for v in vectors
+    )
+
+
+def superspace_self_map(state: TemperamentState) -> Matrix:
+    """M_LgL = I (rL × rL identity) — the superspace mapping expressed over its own generators
+    (each superspace generator maps to itself). The generator-space counterpart of M_jL = I."""
+    rl = superspace_rank(state)
+    return tuple(tuple(1 if i == j else 0 for j in range(rl)) for i in range(rl))
+
+
 def superspace_tuning(
     state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME, nonprime_approach: str = "",
 ) -> Tuning:
@@ -1150,22 +1206,41 @@ def plain_text_values(
     # _cents_genmap for the genmap 𝒈ₗ — so each new EBK string reads consistently with its
     # non-superspace cousin (per the rendered mockup, which kept the existing brackets).
     if superspace:
+        db = state.domain_basis
         ml = superspace_mapping(state)
-        ss_primes = superspace_primes(state.domain_basis)
+        ss_primes = superspace_primes(db)
         mjl = superspace_just_mapping(ss_primes)
-        # B_L: each domain element is one column in its dL-tall monzo representation. The
-        # stored shape is rows-as-elements, so the basis tuple is consumed as one vector
-        # per outer element — the same convention _ket_list expects.
-        bl = basis_in_superspace(state.domain_basis)
+        mlgl = superspace_self_map(state)
+        msl = mapping_to_superspace_generators(state)
+        bl = basis_in_superspace(db)
         ss_tun = superspace_tuning(state, scheme, nonprime_approach)
+
+        def _covector_stack(rows):  # mapping-style: each row ⟨ … ], outer [ … }
+            return "[" + "".join("⟨" + " ".join(str(x) for x in r) + "]" for r in rows) + "}"
+
+        # the lifted interval lists (B_L · each column) over the superspace primes, and the
+        # mapped versions (M_s→L · each column) over the superspace generators
+        C_L = lift_vectors_to_superspace(db, state.comma_basis)
+        T_L = lift_vectors_to_superspace(db, target_vectors)
+        I_L = lift_vectors_to_superspace(db, interest)
+        mapped_C = map_vectors_into_superspace_generators(state, state.comma_basis)
+        mapped_T = map_vectors_into_superspace_generators(state, target_vectors)
+        mapped_I = map_vectors_into_superspace_generators(state, interest)
         values.update({
-            ("ss_vectors", "primes"): _ket_list(bl, "⟩"),
-            # the M_L / M_jL stacks render mapping-style: each row a covector ⟨ … ], the
-            # outer wrap a [ … } (the same mapping shape M uses minus the angle close).
-            ("ss_mapping", "ssprimes"): "[" + "".join(
-                "⟨" + " ".join(str(x) for x in row) + "]" for row in ml) + "}",
-            ("ss_just_mapping", "ssprimes"): "[" + "".join(
-                "⟨" + " ".join(str(x) for x in row) + "]" for row in mjl) + "}",
+            # B_L (basis change matrix): the mockup wraps it ⟨ … ] (distinct from the plain
+            # [ … ] lifted lists), its columns the domain-element kets [ … ⟩.
+            ("ss_vectors", "primes"): "⟨" + _ket_list(bl, "⟩", wrap=False) + "]",
+            ("ss_vectors", "ssprimes"): _covector_stack(mjl),       # M_jL = I
+            ("ss_vectors", "commas"): _ket_list(C_L, "⟩"),          # C_L
+            ("ss_vectors", "targets"): _ket_list(T_L, "⟩"),         # T_L
+            ("ss_vectors", "interest"): _ket_list(I_L, "⟩", wrap=False),
+            ("ss_mapping", "ssprimes"): _covector_stack(ml),        # M_L
+            ("ss_mapping", "primes"): _covector_stack(msl),         # M_s→L
+            ("ss_mapping", "ssgens"): _ket_list(mlgl, "}"),         # M_LgL = I (gen coords)
+            ("ss_mapping", "commas"): _ket_list(mapped_C, "}"),     # mapped commas (→ 0)
+            ("ss_mapping", "targets"): _ket_list(mapped_T, "}"),    # Y_L
+            ("ss_mapping", "interest"): _ket_list(mapped_I, "}", wrap=False),
+            ("ss_just_mapping", "ssprimes"): _covector_stack(mjl),
             ("tuning", "ssgens"): _cents_genmap(ss_tun.generator_map),
             ("tuning", "ssprimes"): _cents_map(ss_tun.tuning_map),
             ("just", "ssprimes"): _cents_map(ss_tun.just_map),

@@ -1396,8 +1396,9 @@ def test_plain_text_values_includes_superspace_entries_when_superspace_on():
     # under each new tile, matching the gridded cells the spreadsheet emits.
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     pt = service.plain_text_values(state, superspace=True)
-    # B_L: each domain element as a ket over the superspace primes (rows-as-elements)
-    assert pt[("ss_vectors", "primes")] == "[[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
+    # B_L (basis change matrix): each domain element as a ket over the superspace primes,
+    # wrapped in the distinct OUTER ⟨ … ] the mockup draws for it
+    assert pt[("ss_vectors", "primes")] == "⟨[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
     # M_L: the temperament's mapping over the superspace primes (covector stack — same
     # mapping-style ⟨ … ] inside [ … } shape the existing M uses)
     ml = service.superspace_mapping(state)

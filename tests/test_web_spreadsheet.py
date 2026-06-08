@@ -6611,7 +6611,7 @@ def test_B_L_tile_has_a_caption_and_symbol():
     # + an upright bold B with subscript L (parallel to C for the comma basis, T for the
     # target list — upright capitals naming an interval basis)
     cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
-    assert cells["caption:ss_vectors:primes"].text == "basis embedding matrix"
+    assert cells["caption:ss_vectors:primes"].text == "basis change matrix"
     assert cells["symbol:ss_vectors:primes"].text == "BL"
 
 
@@ -7059,10 +7059,10 @@ def test_superspace_tuning_rows_absent_over_a_standard_prime_domain():
 
 def test_B_L_tile_has_a_plain_text_string():
     cells = {c.id: c for c in _barbados_ss(plain_text_values=True).cells}
-    # B_L for BARBADOS over 2.3.13/5 → ((1,0,0,0), (0,1,0,0), (0,0,-1,1))
-    # rendered as a wrapped vector-list (the same _ket_list format the existing comma
-    # basis uses — kets space-separated inside the outer [ … ])
-    assert cells["ptext:ss_vectors:primes"].text == "[[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
+    # B_L for BARBADOS over 2.3.13/5 → ((1,0,0,0), (0,1,0,0), (0,0,-1,1)). The basis change
+    # matrix wraps its domain-element kets in an OUTER ⟨ … ] (the mockup's distinct bracket,
+    # setting it apart from the plain [ … ] lifted lists C_L / T_L)
+    assert cells["ptext:ss_vectors:primes"].text == "⟨[1 0 0 0⟩ [0 1 0 0⟩ [0 0 -1 1⟩]"
 
 
 def test_M_L_tile_has_a_plain_text_string():
