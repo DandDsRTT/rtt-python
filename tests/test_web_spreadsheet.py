@@ -7379,34 +7379,74 @@ def test_chart_band_omitted_from_r_L_when_charts_is_off():
     assert "chart:retune:ssprimes" not in cells
 
 
-def test_per_cell_units_subscript_b_on_the_superspace_tuning_cells():
-    # the cyan tuning row's ssprimes cells carry "¢/b" units (the basis-element axis the
-    # nonstandard-domain feature swaps p → b for). With units on, each cell's unit
-    # subscripts the prime index — ¢/b₁, ¢/b₂, … — like the on-domain (tuning, primes)
-    # cells subscript ¢/p₁, ¢/p₂. The same subscripting rides cell_unit through UNITS.
+def test_per_cell_units_subscript_p_on_the_superspace_tuning_cells():
+    # the cyan tuning row's ssprimes cells carry "¢/p" units — the superspace runs over TRUE
+    # primes p (it is prime-only by construction), NOT the on-domain basis element b, even when
+    # the domain is nonstandard. With units on, each cell's unit subscripts the prime index —
+    # ¢/p₁, ¢/p₂, … — and the on-domain p → b swap does NOT reach these tiles.
     cells = {c.id: c for c in _barbados_ss(units=True).cells}
-    assert cells["tuning:ssprime:0"].unit == "¢/b₁"
-    assert cells["tuning:ssprime:1"].unit == "¢/b₂"
-    assert cells["just:ssprime:0"].unit == "¢/b₁"
-    assert cells["retune:ssprime:0"].unit == "¢/b₁"
+    assert cells["tuning:ssprime:0"].unit == "¢/p₁"
+    assert cells["tuning:ssprime:1"].unit == "¢/p₂"
+    assert cells["just:ssprime:0"].unit == "¢/p₁"
+    assert cells["retune:ssprime:0"].unit == "¢/p₁"
 
 
-def test_per_cell_units_subscript_g_on_the_g_L_cells():
-    # 𝒈ₗ over the ssgens column carries "¢/g" units (one cents-per-generator entry per
-    # superspace generator), subscripted by the generator index — ¢/g₁, ¢/g₂, …
+def test_per_cell_units_subscript_gL_on_the_g_L_cells():
+    # 𝒈ₗ over the ssgens column carries "¢/gL" units (one cents-per-superspace-generator entry),
+    # subscripted by the generator index — ¢/gL₁, ¢/gL₂, … (gL, distinct from the on-domain g)
     cells = {c.id: c for c in _barbados_ss(units=True).cells}
-    assert cells["tuning:ssgen:0"].unit == "¢/g₁"
-    assert cells["tuning:ssgen:1"].unit == "¢/g₂"
+    assert cells["tuning:ssgen:0"].unit == "¢/gL₁"
+    assert cells["tuning:ssgen:1"].unit == "¢/gL₂"
 
 
-def test_per_cell_units_on_the_M_L_cells_carry_g_over_b():
-    # M_L (superspace mapping) is generators-per-basis-element (g/b), one entry per
-    # (generator, superspace-prime). The subscript follows the column index — g₁/b₁,
-    # g₁/b₂, … like the on-domain mapping cells take g₁/p₁ etc.
+def test_per_cell_units_on_the_M_L_cells_carry_gL_over_p():
+    # M_L (superspace mapping) is superspace-generators-per-superspace-prime (gL/p), one entry
+    # per (superspace generator, superspace prime). The subscripts follow row × column —
+    # gL₁/p₁, gL₁/p₂, … like the on-domain mapping cells take g₁/p₁ etc.
     cells = {c.id: c for c in _barbados_ss(units=True).cells}
-    assert cells["cell:ss_mapping:ssprimes:0:0"].unit == "g₁/b₁"
-    assert cells["cell:ss_mapping:ssprimes:0:1"].unit == "g₁/b₂"
-    assert cells["cell:ss_mapping:ssprimes:1:0"].unit == "g₂/b₁"
+    assert cells["cell:ss_mapping:ssprimes:0:0"].unit == "gL₁/p₁"
+    assert cells["cell:ss_mapping:ssprimes:0:1"].unit == "gL₁/p₂"
+    assert cells["cell:ss_mapping:ssprimes:1:0"].unit == "gL₂/p₁"
+
+
+def test_superspace_units_row_labels_columns_gL_and_p():
+    # the domain_units row labels each superspace column's coordinate at the top: /gLᵢ over the
+    # superspace generators, /pᵢ over the superspace primes (true primes p, NOT the on-domain b)
+    cells = {c.id: c for c in _barbados_ss(domain_units=True).cells}
+    assert [cells[f"urow:ssgens:{g}"].text for g in range(3)] == ["/gL₁", "/gL₂", "/gL₃"]
+    assert [cells[f"urow:ssprimes:{p}"].text for p in range(4)] == ["/p₁", "/p₂", "/p₃", "/p₄"]
+
+
+def test_superspace_units_column_labels_rows_p_and_gL():
+    # the domain_units column labels each superspace row's coordinate down the spine: B_L's
+    # components are superspace primes (pᵢ/), M_L's rows are superspace generators (gLᵢ/)
+    cells = {c.id: c for c in _barbados_ss(domain_units=True).cells}
+    assert [cells[f"ucol:ss_vectors:{p}"].text for p in range(4)] == ["p₁/", "p₂/", "p₃/", "p₄/"]
+    assert [cells[f"ucol:ss_mapping:{i}"].text for i in range(3)] == ["gL₁/", "gL₂/", "gL₃/"]
+    # M_jL (identity) rows are superspace primes too — shown only with identity objects on
+    idc = {c.id: c for c in _barbados_ss_identity(domain_units=True).cells}
+    assert [idc[f"ucol:ss_just_mapping:{p}"].text for p in range(4)] == ["p₁/", "p₂/", "p₃/", "p₄/"]
+
+
+def test_superspace_keeps_p_while_the_nonstandard_domain_swaps_to_b():
+    # the crux of p vs b: over a nonstandard domain the on-domain coordinate swaps p → b
+    # (basis element), but the superspace — prime-only by construction — keeps p (true primes).
+    # The two coexist in one grid: the domain column reads /b, the superspace column reads /p.
+    cells = {c.id: c for c in _barbados_ss(domain_units=True, units=True).cells}
+    # on-domain: basis-element b (the 2.3.13/5 domain has a nonprime element)
+    assert cells["urow:primes:0"].text == "/b₁"
+    assert cells["ucol:vectors:0"].text == "b₁/"
+    assert cells["tuning:prime:0"].unit == "¢/b₁"
+    # superspace: true prime p, unaffected by the domain swap
+    assert cells["urow:ssprimes:0"].text == "/p₁"
+    assert cells["ucol:ss_vectors:0"].text == "p₁/"
+    assert cells["tuning:ssprime:0"].unit == "¢/p₁"
+
+
+def test_superspace_units_off_without_domain_units():
+    # the superspace units ride the domain_units toggle like the rest — off, no urow/ucol cells
+    cells = {c.id for c in _barbados_ss().cells}  # domain_units off
+    assert not any(c.startswith(("urow:ssgens", "urow:ssprimes", "ucol:ss_")) for c in cells)
 
 
 def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row():

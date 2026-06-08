@@ -1653,23 +1653,24 @@ class _GridBuilder:
 
     def cell_unit(self, rkey, ckey, *, gen=None, prime=None):
         # the per-value unit shown beneath a gridded cell when units is on: the tile's unit
-        # (tile_unit) with its STANDALONE g/p/b coordinate variables subscripted by this cell's
+        # (tile_unit) with its STANDALONE coordinate variables subscripted by this cell's
         # generator/prime index — so the g/p mapping reads g₁/p₁, the tuning map ¢/p₁, a mapped
-        # list g₁. Only standalone letters subscript (see _subscript_coord), so the p inside an
+        # list g₁. Only standalone tokens subscript (see _subscript_coord), so the p inside an
         # annotation family like (sopfr-C)/p stays put while the trailing prime coordinate becomes
         # p₁. A nonstandard subgroup swaps the on-domain p for b (basis element); see domain_label.
-        # The chapter-9 superspace tiles use literal b in UNITS (¢/b for the cyan tuning row, g/b
-        # for M_L, b/b for M_jL) — so a prime arg subscripts b directly too. The literal-b
-        # substitution runs FIRST so the b's the p-swap itself produces (p → b₁) don't get
-        # re-subscripted to b₁₁ when domain_label is b.
+        # The chapter-9 superspace tiles run over true primes (p) and superspace generators (gL),
+        # NOT the on-domain g/b — so they keep p (the p → b swap is scoped to non-superspace
+        # tiles) and subscript the gL token (gL₁) for M_L / 𝒈ₗ.
         if not self.show_units:
             return ""
         u = self.tile_unit(rkey, ckey)
+        superspace = rkey.startswith("ss_") or ckey in ("ssgens", "ssprimes")
         if gen is not None:
-            u = _subscript_coord(u, "g", f"g{_sub(gen + 1)}")
+            gtok = "gL" if superspace else "g"
+            u = _subscript_coord(u, gtok, f"{gtok}{_sub(gen + 1)}")
         if prime is not None:
-            u = _subscript_coord(u, "b", f"b{_sub(prime + 1)}")
-            u = _subscript_coord(u, "p", f"{self.domain_label}{_sub(prime + 1)}")
+            coord = "p" if superspace else self.domain_label
+            u = _subscript_coord(u, "p", f"{coord}{_sub(prime + 1)}")
         return u
 
     def matlabel_gutter_w(self, group_key):
@@ -1827,8 +1828,9 @@ class _GridBuilder:
             self.chart_tiles.append((key, group, vals))
         y = self.row_y[key]
         # the tuning-family unit is cents per the column's coordinate: over the generators
-        # it's ¢/gᵢ (gens AND the chapter-9 superspace ssgens), over the primes ¢/pᵢ /
-        # ¢/bᵢ (primes AND ssprimes), and over the (dimensionless) interval columns plain ¢
+        # it's ¢/gᵢ (gens) or ¢/gLᵢ (the chapter-9 superspace ssgens), over the primes ¢/pᵢ /
+        # ¢/bᵢ (the domain primes / basis elements) or ¢/pᵢ (the superspace ssprimes, true
+        # primes), and over the (dimensionless) interval columns plain ¢
         is_gen_group = group in ("gens", "ssgens")
         is_prime_group = group in ("primes", "ssprimes")
         for i, v in enumerate(vals):
@@ -2200,6 +2202,21 @@ class _GridBuilder:
             for i in range(self.r):
                 self.cells.append(CellBox(f"ucol:mapping:{i}", self.col_x["units"], self.map_top(i), self.col_w["units"], ROW_H,
                                      "units", text=f"g{_sub(i + 1)}/"))
+        # the chapter-9 superspace rows label their coordinate in the units column too: B_L's
+        # components and M_jL's identity are superspace primes (pᵢ/), M_L's rows are superspace
+        # generators (gLᵢ/) — true primes / superspace generators, never the on-domain b/g
+        if self.tile_open("ss_vectors", "units"):
+            for p in range(self.dL):
+                self.cells.append(CellBox(f"ucol:ss_vectors:{p}", self.col_x["units"], self.ss_vec_top(p), self.col_w["units"], ROW_H,
+                                     "units", text=f"p{_sub(p + 1)}/"))
+        if self.tile_open("ss_mapping", "units"):
+            for i in range(self.rL):
+                self.cells.append(CellBox(f"ucol:ss_mapping:{i}", self.col_x["units"], self.ss_map_top(i), self.col_w["units"], ROW_H,
+                                     "units", text=f"gL{_sub(i + 1)}/"))
+        if self.tile_open("ss_just_mapping", "units"):
+            for p in range(self.dL):
+                self.cells.append(CellBox(f"ucol:ss_just_mapping:{p}", self.col_x["units"], self.ss_just_map_top(p), self.col_w["units"], ROW_H,
+                                     "units", text=f"p{_sub(p + 1)}/"))
         # the cents / octave / annotated-unit rows (guide ch.10 "Annotated units"). Each renders one
         # unit cell PER SUBROW — derived from the cell-row count row_nsub — so a matrix-valued row (the
         # prescaler 𝑋 = 𝑍𝐿's size row) carries a unit on EVERY row, not just its first. Generic to any
@@ -2224,6 +2241,14 @@ class _GridBuilder:
             if self.tile_open("units", "primes"):
                 for p in range(self.d):
                     self.cells.append(CellBox(f"urow:primes:{p}", self.prime_left(p), uy, COL_W, ROW_H, "units", text=f"/{self.domain_label}{_sub(p + 1)}"))
+            # the chapter-9 superspace columns: /gLᵢ over the superspace generators, /pᵢ over
+            # the superspace primes (true primes p — NOT the on-domain b, even when nonstandard)
+            if self.tile_open("units", "ssgens"):
+                for g in range(self.rL):
+                    self.cells.append(CellBox(f"urow:ssgens:{g}", self.ss_gen_left(g), uy, COL_W, ROW_H, "units", text=f"/gL{_sub(g + 1)}"))
+            if self.tile_open("units", "ssprimes"):
+                for p in range(self.dL):
+                    self.cells.append(CellBox(f"urow:ssprimes:{p}", self.ss_prime_left(p), uy, COL_W, ROW_H, "units", text=f"/p{_sub(p + 1)}"))
             if self.tile_open("units", "commas"):
                 for c in range(self.nc):
                     self.cells.append(CellBox(f"urow:commas:{c}", self.comma_left(c), uy, COL_W, ROW_H, "units", text="/1"))
