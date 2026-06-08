@@ -7406,10 +7406,10 @@ def _nonstd_on(state):
 def test_domain_elements_are_editable_elementcells_with_the_box_on():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
-    # the editable element shows its full num/den ratio, so it renders as a stacked fraction face
-    # (horizontal bar) like every other gridded ratio — not a bare integer / diagonal slash
-    assert on["prime:0"].kind == "elementcell" and on["prime:0"].text == "2/1"
-    assert on["prime:2"].kind == "elementcell" and on["prime:2"].text == "13/5"
+    # an integer prime shows as a plain number (elementcell); a nonprime renders as a stacked
+    # fraction face (elementratio — a horizontal bar, denominator below), like every other ratio
+    assert on["prime:0"].kind == "elementcell" and on["prime:0"].text == "2"
+    assert on["prime:2"].kind == "elementratio" and on["prime:2"].text == "13/5"
     # the box off: the same elements are read-only domain primes
     off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
     assert off["prime:0"].kind == "prime"
@@ -7451,7 +7451,8 @@ def test_pending_element_renders_a_red_draft_column():
     s = settings.defaults() | {"nonstandard_domain": True}
     cells = {c.id: c for c in spreadsheet.build(state, s, pending_element="").cells}
     draft = cells["prime:pending"]
-    assert draft.kind == "elementcell" and draft.pending and draft.text == "?/?"
+    # the "?/?" placeholder is a fraction form, so it rides the stacked-fraction kind
+    assert draft.kind == "elementratio" and draft.pending and draft.text == "?/?"
     assert "element_minus:pending" in cells  # its − cancels the draft
     # a partially-typed draft shows the raw text
     typed = {c.id: c for c in spreadsheet.build(state, s, pending_element="9").cells}

@@ -1703,6 +1703,14 @@ class _GridBuilder:
     def prime_left(self, p):
         return self.primes_x + self.outer_gutter_w("primes") + BRACKET_W + p * COL_W
 
+    @staticmethod
+    def _element_cell_kind(text):
+        """The editable domain-element kind for a value's display form: a fraction (e.g. "13/5", or
+        the "?/?" draft) renders as a stacked fraction face (elementratio); a bare integer prime
+        ("2") as a plain number (elementcell). Switching kind across a relabel makes the reconciler
+        rebuild the cell, so the face form follows the value."""
+        return "elementratio" if "/" in text else "elementcell"
+
     def comma_left(self, c):
         return self.commas_x + BRACKET_W + c * COL_W
 
@@ -2286,18 +2294,20 @@ class _GridBuilder:
                 # with the nonstandard-domain box on the domain elements are typeable — an editable
                 # elementcell (typing a rational relabels that basis element, holding the mapping
                 # coordinates). Off, they're read-only domain primes walked by the ± only.
-                element_kind = "elementcell" if self.show_nonstandard_domain else "prime"
                 for p in range(self.d):
-                    # the editable element shows its full num/den ratio (a stacked fraction face, like
-                    # every other gridded ratio — and never switching int↔fraction form on a relabel);
-                    # the read-only prime keeps the bare element label.
-                    text = service.element_ratio(self.elements[p]) if self.show_nonstandard_domain else str(self.elements[p])
-                    self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, element_kind, text=text, prime=p))
+                    # with the box on the element is editable: an integer prime shows as a plain number
+                    # (elementcell), a nonprime as a stacked fraction face (elementratio) — matching its
+                    # read-only display, and switching kind (so the cell rebuilds) across a relabel that
+                    # crosses int↔fraction. Off, it's a read-only domain prime.
+                    text = str(self.elements[p])
+                    kind = self._element_cell_kind(text) if self.show_nonstandard_domain else "prime"
+                    self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, kind, text=text, prime=p))
                     self._voice("quantities:primes", p, self.tun.just_map[p])
                 if self.element_draft:  # the red ?/? draft column: type a rational to add a new basis
                     # element (held just). A distinct id so it's removed, not restructured, on commit.
-                    self.cells.append(CellBox("prime:pending", self.prime_left(self.d), qy, COL_W, ROW_H, "elementcell",
-                                              text=self.pending_element or "?/?", prime=self.d, pending=True))
+                    draft_text = self.pending_element or "?/?"
+                    self.cells.append(CellBox("prime:pending", self.prime_left(self.d), qy, COL_W, ROW_H,
+                                              self._element_cell_kind(draft_text), text=draft_text, prime=self.d, pending=True))
                     branch_minus("element_minus:pending", "primes", self.d, "element_minus")
                 # Only the highest prime is removable (shrink_domain trims the last), so its
                 # − rides that prime's branch point (the last top-bus split) — and only when the
