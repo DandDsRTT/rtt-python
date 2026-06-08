@@ -780,15 +780,14 @@ class _GridBuilder:
         # column to "domain basis elements" — but on its own it does NOT reveal the superspace
         # columns/rows; that waits on the basis actually becoming nonstandard (see show_superspace).
         self.show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
-        # the superspace columns/rows render only once the basis is ACTUALLY nonstandard (not the
-        # first d primes): over a standard prime limit dL == d / rL == r, so the superspace would
-        # merely clone the domain, and the superspace basis (the basis factored into primes) only
-        # diverges from the domain once the basis is a real subgroup. So checking the toggle on a
-        # still-standard basis shows nothing yet; the columns/rows appear when the basis becomes
-        # nonstandard. Uses the same not-is_standard_domain test as editor.basis_is_nonstandard
-        # (the toggle's own can't-disable lock), so superspace visibility and that lock agree.
+        # the superspace columns/rows render only when the toggle is on AND the basis carries a
+        # NONPRIME element (e.g. 13/5 in 2.3.13/5). A nonstandard subgroup that's still all primes
+        # (2.5.7) or a mere reordering has nothing to embed, so the superspace would just clone the
+        # domain. The domain_has_nonprimes half matches the damage-tile approach radio's own gate
+        # (app._approach_visible), so the columns/rows and that radio appear together — while the
+        # toggle half preserves the additive-only contract (toggle off ⇒ no superspace trace).
         self.show_superspace = (
-            self.show_nonstandard_domain and not service.is_standard_domain(self.elements)
+            self.show_nonstandard_domain and service.domain_has_nonprimes(self.elements)
         )
         # identity objects — the trivial self-maps that equal 𝐼 (mapping over its own
         # generators, domain primes as vectors over themselves, 𝑀·D, and in the superspace
