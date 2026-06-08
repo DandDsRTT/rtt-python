@@ -1519,13 +1519,22 @@ class _Reconciler:
         cls = "rtt-symbol rtt-opt-1line" if cb.id.startswith("optimization:") else "rtt-symbol"
         self.math_cells[cb.id] = ui.html("").classes(cls)
 
+    @staticmethod
+    def _matlabel_classes(text):
+        # routed through _math_html so a label's bold-italic / bold-upright glyphs draw in the
+        # same styled face as the tile symbol it indexes. A plain single-glyph label (𝒎ᵢ, 𝐜ᵢ, w)
+        # fits the COL_W spine at the default size; any MULTI-TOKEN label — the complexity
+        # norms (‖L𝐜ᵢ‖q) or an equation-form header carrying a space (cₙ = ‖L𝐭ₙ‖q, the
+        # all-interval weight's wₙ = cₙ⁻¹) — takes the smaller shrink/wrap variant so it can
+        # never outgrow its column and collide with its neighbours. A header can change shape
+        # in place (a bare wₙ becoming wₙ = cₙ⁻¹ as all-interval toggles on), so _update_mathcell
+        # re-derives this on every relabel, not just at build — else the new text keeps the old
+        # (overspilling) class.
+        return "rtt-matlabel rtt-matlabel-norm" if ("‖" in text or " " in text) else "rtt-matlabel"
+
     def _build_matlabel(self, cb, wrap):
-        # routed through _math_html so its bold-italic / bold-upright glyphs draw in the same
-        # styled face as the tile symbol it indexes; the complexity row's longer labels (‖L𝐜ᵢ‖q)
-        # take a smaller variant to avoid colliding
-        cls = "rtt-matlabel rtt-matlabel-norm" if "‖" in cb.text else "rtt-matlabel"
         wrap.classes("rtt-matlabel-cell")
-        self.math_cells[cb.id] = ui.html("").classes(cls)
+        self.math_cells[cb.id] = ui.html("").classes(self._matlabel_classes(cb.text))
 
     def _build_units(self, cb, wrap):
         wrap.classes("rtt-units-cell")
@@ -1546,6 +1555,10 @@ class _Reconciler:
         if self.math_rendered.get(cb.id) != html:  # rewrite on a toggle / value change
             self.math_cells[cb.id].set_content(html)
             self.math_rendered[cb.id] = html
+            if cb.kind == "matlabel":
+                # the label may have changed shape (bare wₙ → wₙ = cₙ⁻¹); re-pick its size class
+                # so a now-wider header takes the shrink/wrap variant instead of overspilling.
+                self.math_cells[cb.id].classes(replace=self._matlabel_classes(cb.text))
             if cb.id == "optimization:objective:symbol":
                 # all-interval relabels this to the wide retuning magnitude ‖𝒓𝐿⁻¹‖dual(q); shrink
                 # it (rtt-opt-wide) so it stays centred over its COL_W value

@@ -263,13 +263,15 @@
    but smaller, so the subscript reads at a glance without dominating the value below */
 .rtt-matlabel { width:100%; text-align:center; font-size:11px; color:#000; line-height:1;
               font-family:'Cambria',Georgia,serif; white-space:nowrap; }
-/* the complexity row's column labels spell out the q-norm (‖L𝐜ᵢ‖q), which is much
-   wider than a plain subscripted letter. Drop the font size so the labels don't
-   collide and let them overflow the COL_W cell width without clipping (overflow:visible).
-   white-space:normal (overriding .rtt-matlabel's nowrap) lets the named target header
-   cₙ = ‖L𝐭ₙ‖q — the one label carrying spaces — WRAP at its space onto two stacked lines
-   (cₙ = / ‖L𝐭ₙ‖q), as the mockup shows, instead of overlapping its neighbours. The bare
-   auxiliary norms (‖L𝐜ᵢ‖q, …) are single tokens with no break point, so they stay one line. */
+/* the shrink/wrap variant for any multi-token column label — the complexity row's
+   q-norms (‖L𝐜ᵢ‖q) and equation-form headers carrying a space (cₙ = ‖L𝐭ₙ‖q, the
+   all-interval weight's wₙ = cₙ⁻¹) — all much wider than a plain subscripted letter.
+   Drop the font size so the labels don't collide and let them overflow the COL_W cell
+   width without clipping (overflow:visible). white-space:normal (overriding
+   .rtt-matlabel's nowrap) lets a space-bearing header WRAP at its space onto two stacked
+   lines (cₙ = / ‖L𝐭ₙ‖q, or wₙ = / cₙ⁻¹), as the mockup shows, instead of overlapping its
+   neighbours. The bare auxiliary norms (‖L𝐜ᵢ‖q, …) are single tokens with no break
+   point, so they stay one line. */
 .rtt-matlabel-norm { font-size:8px; overflow:visible; white-space:normal; }
 .rtt-matlabel sub { font-size:70%; vertical-align:sub; line-height:0; }
 /* the per-box "units: …" line below the caption, and the domain-units row/col labels.
