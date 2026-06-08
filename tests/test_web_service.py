@@ -514,6 +514,27 @@ def test_interval_sizes_project_a_set_through_the_tuning():
     assert all(d >= 0 for d in s.damage)  # damage is non-negative
 
 
+def test_interval_sizes_weights_scale_damage_into_the_scheme_weighted_form():
+    # 𝐝 = |𝐞|·W: passing the scheme's damage weights turns the plain |error| damage row
+    # into the weighted quantity the optimizer minimizes and the ¢(C) unit labels. Meantone
+    # under quarter-comma (the unity minimax tuning) with complexity weights reproduces the
+    # guide's per-target damages — e.g. 3/2 → 13.90, 4/3 → 19.28, 6/5 → 26.39, not 5.377.
+    import pytest
+
+    state = service.from_mapping([[1, 0, -4], [0, 1, 4]])
+    tun = service.tuning(state.mapping, "TILT minimax-U")  # quarter-comma meantone, pure octave
+    targets = service.displayed_targets(state, "TILT minimax-C")
+    weights = service.interval_weights(state.mapping, "TILT minimax-C", targets)
+    s = service.interval_sizes(tun, targets, weights=weights)
+    by_ratio = dict(zip(targets, s.damage))
+    assert by_ratio["3/2"] == pytest.approx(13.898, abs=1e-2)
+    assert by_ratio["4/3"] == pytest.approx(19.275, abs=1e-2)
+    assert by_ratio["6/5"] == pytest.approx(26.382, abs=1e-2)
+    # unity weight leaves the damage as plain |error| (the default, weights=None)
+    unweighted = service.interval_sizes(tun, targets)
+    assert unweighted.damage == pytest.approx(tuple(abs(e) for e in s.errors), abs=1e-9)
+
+
 def test_interval_sizes_over_a_nonstandard_domain_express_intervals_in_the_basis():
     import pytest
 
@@ -982,7 +1003,10 @@ def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision():
     pt = service.plain_text_values(state, "TILT minimax-S")
     targets = service.target_interval_set("TILT", service.standard_primes(state.d))
     tun = service.tuning(state.mapping, "TILT minimax-S")
-    sizes = service.interval_sizes(tun, targets)
+    # minimax-S is simplicity-weighted, so the damage row is 𝐝 = |𝐞|·W, not plain |error| —
+    # the comparison sizes must carry the same weights or the two views diverge
+    weights = service.interval_weights(state.mapping, "TILT minimax-S", targets)
+    sizes = service.interval_sizes(tun, targets, weights=weights)
 
     def cents(vals):  # the same 3-dp the grid shows, so the two views agree
         return " ".join(f"{v:.3f}" for v in vals)

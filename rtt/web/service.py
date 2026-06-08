@@ -88,7 +88,7 @@ class IntervalSizes:
     tempered: tuple[float, ...]  # cents
     just: tuple[float, ...]  # cents
     errors: tuple[float, ...]  # tempered - just
-    damage: tuple[float, ...]  # |error| (unity weight)
+    damage: tuple[float, ...]  # 𝐝 = |error|·weight (|error| when no weights passed: unity)
 
 
 @dataclass(frozen=True)
@@ -613,15 +613,24 @@ def held_intervals(scheme: str = DEFAULT_TUNING_SCHEME, d: int = 3) -> tuple[str
     return _vectors_to_ratios(parse_quotient_list(held.replace("octave", "2"), d))
 
 
-def interval_sizes(tun: Tuning, ratios, domain_basis=None) -> IntervalSizes:
+def interval_sizes(tun: Tuning, ratios, domain_basis=None, weights=None) -> IntervalSizes:
     """Project an interval set through ``tun`` — its tempered/just sizes, error, damage.
     Over a nonstandard ``domain_basis`` each ratio is expressed in that basis (matching the
-    basis ``tun`` runs over)."""
+    basis ``tun`` runs over).
+
+    ``weights`` (a per-interval list aligned to ``ratios``, e.g. the scheme's damage weights
+    from :func:`interval_weights`) scales each |error| into the scheme-weighted damage
+    ``𝐝 = |𝐞|·W`` — the displayed damage list and the minimized objective the optimizer
+    actually targets. Default ``None`` is unity weight (``|error|×1 = |error|``)."""
     vectors = _interval_vectors(ratios, domain_basis, len(tun.tuning_map))
     tempered = tuple(_over(tun.tuning_map, m) for m in vectors)
     just = tuple(_over(tun.just_map, m) for m in vectors)
     errors = tuple(t_ - j for t_, j in zip(tempered, just))
-    return IntervalSizes(tempered, just, errors, tuple(abs(e) for e in errors))
+    if weights is None:
+        damage = tuple(abs(e) for e in errors)
+    else:
+        damage = tuple(abs(e) * w for e, w in zip(errors, weights))
+    return IntervalSizes(tempered, just, errors, damage)
 
 
 def _temperament_spec_vectors(mapping, scheme, ratios, domain_basis=None):
@@ -1033,7 +1042,11 @@ def plain_text_values(
         tun = tuning_from_generators(state.mapping, generator_tuning, db)
     else:  # a typed target-list override retunes the optimum, matching the grid's own tuning
         tun = tuning(state.mapping, scheme, db, held=held_ratios, targets=target_override)
-    target_sizes = interval_sizes(tun, targets, db)
+    # the target damage row is the scheme-weighted 𝐝 = |𝐞|·W (the same weights the weight row
+    # shows and the optimizer minimizes), so the displayed damage tracks the unity/complexity/
+    # simplicity slope rather than staying plain |error|.
+    target_damage_weights = interval_weights(state.mapping, scheme, targets, domain_basis=db)
+    target_sizes = interval_sizes(tun, targets, db, weights=target_damage_weights)
     comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
     detemper_ratios = generators(state.mapping, db)  # the detempering as ratios (= service.generators)
     detemper_sizes = interval_sizes(tun, detemper_ratios, db)  # tempered = the genmap, plus just/error
@@ -1063,7 +1076,7 @@ def plain_text_values(
     # weighting region shows; the all-interval simplicity weight stays a per-target list (its generic
     # 𝒘 = 𝒄⁻¹ form lives in the grid tile's symbol, not the plain text).
     bare_size_row = ((tuple(size_factor * w for w in prescaler),) if size_factor else ())
-    weight_text = _cents_list(interval_weights(state.mapping, scheme, targets, domain_basis=db))
+    weight_text = _cents_list(target_damage_weights)
     tp_text = _ket_list(target_vectors, "⟩")
     bare_x_text = _prescale_vector_list(_prescaled(prime_units) + bare_size_row, col="⟨]", outer="[⟩")
     complexity_text = _cents_list(interval_complexities(state.mapping, scheme, targets, domain_basis=db))
