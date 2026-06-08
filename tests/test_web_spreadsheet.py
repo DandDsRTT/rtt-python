@@ -6631,23 +6631,20 @@ def test_nonstandard_domain_off_omits_the_conversion_rows():
     assert "label:ss_prescaler" not in cells
 
 
-def test_nonprime_based_approach_drops_the_conversion_rows():
-    # the rows are conversion artifacts — they only matter when we re-express T and X over
-    # the superspace primes so the prime-based optimization can read them. In the nonprime-
-    # based approach the basis IS honored as-is (no conversion), so they collapse to
-    # nothing. The two anchor rows (ss_vectors carrying B_L, ss_mapping carrying M_L) stay
-    # — they describe the embedding, not the conversion.
+def test_nonprime_based_approach_collapses_the_entire_superspace():
+    # the nonprime-based approach honors the basis as-is and never converts to the prime
+    # superspace, so the WHOLE superspace block — both columns and all rows (embedding B_L,
+    # mapping M_L, and the conversion rows B_L·T / X_L) — collapses. Only neutral / prime-based
+    # show it. (The approach radio itself stays, gated on the nonprime element, so it can be
+    # switched back; see test_build_threads_nonprime_approach_through_to_the_tuning.)
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     s = settings.defaults()
     s["nonstandard_domain"] = True
     lay = spreadsheet.build(state, s, nonprime_approach="nonprime-based")
-    cells = {c.id for c in lay.cells}
-    assert "label:ss_targets" not in cells
-    assert "label:ss_prescaler" not in cells
-    # the anchor rows survive (their content describes the embedding itself, which the
-    # nonprime-based mode still wants to display)
-    assert "label:ss_vectors" in cells
-    assert "label:ss_mapping" in cells
+    ids = {c.id for c in lay.cells} | {b.id for b in lay.blocks} | {ln.id for ln in lay.lines}
+    assert not any(tok in i for i in ids
+                   for tok in ("ssgens", "ssprimes", "ss_vectors", "ss_mapping", "ss_basis",
+                               "ss_targets", "ss_prescaler", "ssgen", "ssprime"))
 
 
 def test_prime_based_and_neutral_approaches_keep_the_conversion_rows():

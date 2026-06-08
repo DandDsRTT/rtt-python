@@ -780,14 +780,20 @@ class _GridBuilder:
         # column to "domain basis elements" — but on its own it does NOT reveal the superspace
         # columns/rows; that waits on the basis actually becoming nonstandard (see show_superspace).
         self.show_nonstandard_domain = self.settings.get("nonstandard_domain", False)
-        # the superspace columns/rows render only when the toggle is on AND the basis carries a
-        # NONPRIME element (e.g. 13/5 in 2.3.13/5). A nonstandard subgroup that's still all primes
-        # (2.5.7) or a mere reordering has nothing to embed, so the superspace would just clone the
-        # domain. The domain_has_nonprimes half matches the damage-tile approach radio's own gate
-        # (app._approach_visible), so the columns/rows and that radio appear together — while the
-        # toggle half preserves the additive-only contract (toggle off ⇒ no superspace trace).
+        # the superspace columns/rows render only when the toggle is on, the basis carries a
+        # NONPRIME element (e.g. 13/5 in 2.3.13/5), AND the approach is prime-based or neutral.
+        # A nonstandard subgroup that's still all primes (2.5.7) or a mere reordering has nothing
+        # to embed, so the superspace would just clone the domain. The domain_has_nonprimes half
+        # matches the damage-tile approach radio's own gate (app._approach_visible), so the
+        # columns/rows and that radio appear together — while the toggle half preserves the
+        # additive-only contract (toggle off ⇒ no superspace trace). The nonprime-based approach
+        # honors the basis as-is and never converts to the prime superspace, so the whole block
+        # (columns AND rows) collapses there; the radio itself stays (it's gated only on the
+        # nonprime element) so it can be switched back. Switch to neutral/prime-based to restore.
         self.show_superspace = (
-            self.show_nonstandard_domain and service.domain_has_nonprimes(self.elements)
+            self.show_nonstandard_domain
+            and service.domain_has_nonprimes(self.elements)
+            and self.nonprime_approach != "nonprime-based"
         )
         # identity objects — the trivial self-maps that equal 𝐼 (mapping over its own
         # generators, domain primes as vectors over themselves, 𝑀·D, and in the superspace
@@ -797,16 +803,12 @@ class _GridBuilder:
         # the two superspace identity tiles gate on it the way the standard-domain identity
         # tiles are simply absent from the tile list.
         self.show_identity_objects = self.settings.get("identity_objects", False)
-        # the chapter-9 CONVERSION rows (ss_targets B_L·T, ss_prescaler X_L) are present only
-        # when both the superspace block is shown AND the analysis mode actually performs the
-        # conversion: prime-based or neutral (per the mockup transcription, "These two rows
-        # appear when using either the prime-based or the neutral approaches"). The nonprime-
-        # based mode honors the original basis as-is, so the lifted T and X aren't computed
-        # and the rows drop. The anchor rows (ss_vectors carrying B_L, ss_mapping carrying
-        # M_L) stay regardless — they describe the embedding itself.
-        self.show_ss_conversion = (
-            self.show_superspace and self.nonprime_approach != "nonprime-based"
-        )
+        # the chapter-9 CONVERSION rows (ss_targets B_L·T, ss_prescaler X_L) appear exactly when
+        # the superspace block does — both are gated on prime-based / neutral now, so the lifted
+        # T and X ride along with the rest of the block and collapse together under nonprime-based
+        # (which honors the original basis as-is, computing neither). Kept as its own name for the
+        # cell-emission guards and the B_L·T / X_L computation below.
+        self.show_ss_conversion = self.show_superspace
         # the chapter-9 CONVERSION row matrices the prime-based optimization reads: B_L·T (each
         # target interval re-expressed as a dL-tall monzo over the superspace primes) and X_L
         # (the prescaler lifted into the superspace, a dL-tuple diagonal). Computed once here so
