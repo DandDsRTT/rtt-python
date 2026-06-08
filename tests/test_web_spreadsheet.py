@@ -6615,8 +6615,8 @@ def test_nonstandard_domain_off_leaves_no_superspace_trace():
 def test_standard_domain_with_toggle_on_shows_no_superspace_but_enables_editing():
     # checking the nonstandard-domain toggle over a STILL-standard prime limit must not reveal
     # the superspace columns/rows (the superspace would merely clone the domain — nothing to
-    # show yet). The only things it changes: the domain basis becomes editable and the column
-    # is renamed. The superspace appears later, once the basis carries a nonprime element.
+    # show yet). The one thing it changes: the domain basis becomes editable. The header stays
+    # "domain primes" (no nonprime yet) and the superspace appears later, once one is entered.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5 meantone — standard prime limit
     s = settings.defaults() | {"nonstandard_domain": True, "counts": True}
     lay = spreadsheet.build(state, s)
@@ -6626,16 +6626,17 @@ def test_standard_domain_with_toggle_on_shows_no_superspace_but_enables_editing(
     assert not any(tok in i for i in ids
                    for tok in ("ssgens", "ssprimes", "ss_vectors", "ss_mapping", "ss_basis",
                                "ssgen", "ssprime"))
-    # but the toggle DID take effect: the domain basis is editable and the column is renamed
+    # the toggle DID make the basis editable — but with no nonprime the header keeps "domain primes"
     assert cells["prime:0"].kind == "elementcell"
-    assert cells["header:primes"].text == "domain basis\nelements"
+    assert cells["header:primes"].text == "domain\nprimes"
 
 
 def test_nonstandard_all_prime_subgroup_with_toggle_on_shows_no_superspace():
     # the subtlety: being nonstandard isn't enough — a subgroup that is still ALL PRIMES (e.g.
     # 2.5.7, which merely skips 3) has no nonprime element to embed, so neither the superspace
     # columns/rows nor the matching damage-tile approach radio appear. Only a basis carrying a
-    # nonprime (2.3.13/5) triggers them. The toggle's editability + rename still apply.
+    # nonprime (2.3.13/5) triggers them. The toggle's editability still applies; the header reads
+    # "basis elements" (a nonstandard subgroup), NOT "domain basis elements" — that waits on a nonprime.
     state = service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]}")
     assert not service.domain_has_nonprimes(state.domain_basis)  # all-prime, but...
     assert not service.is_standard_domain(state.domain_basis)    # ...still a nonstandard subgroup
@@ -6647,7 +6648,22 @@ def test_nonstandard_all_prime_subgroup_with_toggle_on_shows_no_superspace():
                    for tok in ("ssgens", "ssprimes", "ss_vectors", "ss_mapping", "ss_basis",
                                "ssgen", "ssprime"))
     assert cells["prime:0"].kind == "elementcell"
-    assert cells["header:primes"].text == "domain basis\nelements"
+    assert cells["header:primes"].text == "basis\nelements"
+
+
+def test_nonprime_based_approach_collapses_the_entire_superspace():
+    # the nonprime-based approach honors the basis as-is and never converts to the prime
+    # superspace, so the WHOLE superspace block — both columns and both rows (embedding B_L and
+    # mapping M_L) plus the superspace tuning maps — collapses. Only neutral / prime-based show
+    # it. The approach radio itself stays (gated only on the nonprime element) so it can be
+    # switched back; see test_build_threads_nonprime_approach_through_to_the_tuning.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults() | {"nonstandard_domain": True}
+    lay = spreadsheet.build(state, s, nonprime_approach="nonprime-based")
+    ids = {c.id for c in lay.cells} | {b.id for b in lay.blocks} | {ln.id for ln in lay.lines}
+    assert not any(tok in i for i in ids
+                   for tok in ("ssgens", "ssprimes", "ss_vectors", "ss_mapping", "ss_basis",
+                               "ssgen", "ssprime"))
 
 
 # ---------------------------------------------------------------------------
@@ -7328,12 +7344,18 @@ def test_domain_elements_are_editable_elementcells_with_the_box_on():
     assert off["prime:2"].kind == "prime"
 
 
-def test_domain_header_reads_basis_elements_with_the_box_on():
-    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # standard 2.3.5
-    on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
-    assert on["header:primes"].text == "domain basis\nelements"
-    off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
+def test_domain_header_flips_to_basis_elements_only_with_a_nonprime():
+    # the header reads "domain basis elements" only when the box is on AND the basis carries a
+    # nonprime. Over a standard prime limit the box-on header stays "domain primes" (just
+    # editable now); a nonprime basis (2.3.13/5) with the box on flips it.
+    std = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # standard 2.3.5
+    on = {c.id: c for c in spreadsheet.build(std, _nonstd_on(std)).cells}
+    assert on["header:primes"].text == "domain\nprimes"
+    off = {c.id: c for c in spreadsheet.build(std, settings.defaults()).cells}
     assert off["header:primes"].text == "domain\nprimes"
+    nonprime = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    on_np = {c.id: c for c in spreadsheet.build(nonprime, _nonstd_on(nonprime)).cells}
+    assert on_np["header:primes"].text == "domain basis\nelements"
 
 
 def test_basis_spine_stays_read_only_with_the_box_on():

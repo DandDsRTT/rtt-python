@@ -1061,12 +1061,16 @@ class _GridBuilder:
         # wider than it was open — so collapsing a column only ever narrows it (see col_w below).
         # The domain/comma + controls ride just right of their blocks when open; each −
         # is a hover affordance on the removable highest-prime / last-comma column.
-        # the domain column header. With the nonstandard-domain box on, the elements are typeable
-        # (any rational), so it reads "domain basis elements" — the guide's term, signalling the
-        # cells are now editable basis elements rather than fixed primes. With the box off it reads
-        # "domain primes" over a standard prime limit, or "basis elements" over a nonstandard
-        # subgroup loaded via the mapping box (whose basis may be nonprime).
-        domain_title = ("domain basis\nelements" if self.show_nonstandard_domain
+        # the domain column header. It reads the editable "domain basis elements" — the guide's
+        # term — only when the nonstandard-domain box is on AND the basis actually carries a
+        # nonprime element: checking the box makes the cells typeable, but the title doesn't flip
+        # until a nonprime is entered (same domain_has_nonprimes trigger as the superspace
+        # columns/rows and the approach radio), so a still-all-prime basis with the box on keeps
+        # its prime-style title. Otherwise: "domain primes" over a standard prime limit, or
+        # "basis elements" over a nonstandard subgroup (e.g. a nonprime temperament loaded
+        # read-only via the mapping box with the toggle off).
+        domain_title = ("domain basis\nelements"
+                        if self.show_nonstandard_domain and service.domain_has_nonprimes(self.elements)
                         else "domain\nprimes" if self.standard_domain else "basis\nelements")
         self.col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
                       "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
