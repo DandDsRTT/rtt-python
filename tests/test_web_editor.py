@@ -1812,3 +1812,47 @@ def test_no_chooser_scheme_yields_an_invalid_target_less_tuning():
             tm = service.tuning(
                 editor.state.mapping, editor.tuning_scheme, editor.state.domain_basis).tuning_map
             assert all(x == x for x in tm), value  # finite (no nan) — a valid, pinnable tuning
+# ── chapter-9 domain basis element editing (nonstandard-domain box on) ────────────────────────
+
+def test_set_domain_element_relabels_in_place_and_is_undoable():
+    ed = Editor()  # 2.3.5 default
+    ed.set_domain_element(2, "13/5")
+    assert ed.state.domain_basis == (2, 3, Fraction(13, 5))
+    assert ed.state.mapping == Editor().state.mapping  # a pure relabel — coordinates held
+    ed.undo()
+    assert ed.state.domain_basis == (2, 3, 5)
+
+
+def test_set_domain_element_rejects_a_dependent_relabel():
+    ed = Editor()  # 2.3.5
+    ed.set_domain_element(2, "9")  # 2.3.9 is dependent (9 = 3²) — a no-op
+    assert ed.state.domain_basis == (2, 3, 5)
+    assert not ed.can_undo  # nothing committed, so no undo step
+
+
+def test_add_element_draft_commits_a_valid_rational_held_just():
+    ed = Editor()  # 2.3.5
+    ed.add_element()
+    assert ed.pending_element == ""  # a blank red ?/? draft, not yet part of the domain
+    assert ed.state.d == 3
+    ed.set_pending_element("7")  # a valid independent addition commits and clears the draft
+    assert ed.pending_element is None
+    assert ed.state.domain_basis == (2, 3, 5, 7)
+    assert ed.state.d == 4 and ed.state.r == 3  # held just: +d, +r
+    ed.undo()
+    assert ed.state.domain_basis == (2, 3, 5)
+
+
+def test_pending_element_holds_an_invalid_or_partial_draft():
+    ed = Editor()  # 2.3.5
+    ed.add_element()
+    ed.set_pending_element("9")  # dependent — kept as a pending draft, domain unchanged
+    assert ed.pending_element == "9"
+    assert ed.state.domain_basis == (2, 3, 5)
+
+
+def test_domain_drafts_clear_on_a_domain_change():
+    ed = Editor()
+    ed.add_element()
+    ed.shrink()  # any domain ± invalidates the draft
+    assert ed.pending_element is None

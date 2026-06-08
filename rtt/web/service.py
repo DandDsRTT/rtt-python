@@ -1342,10 +1342,10 @@ def parse_prescaler_diagonal(text: str, d: int) -> tuple[float, ...] | None:
         row = t.matrix[i]
         if len(row) != d:
             return None
-        for j, val in enumerate(row):
-            if not isinstance(val, (int, float)) or isinstance(val, bool):
+        for j, value in enumerate(row):
+            if not isinstance(value, (int, float)) or isinstance(value, bool):
                 return None
-            if i != j and val != 0:
+            if i != j and value != 0:
                 return None  # 𝐿 is diagonal; an off-diagonal nonzero is malformed input
     return tuple(float(t.matrix[i][i]) for i in range(d))
 
@@ -1452,6 +1452,85 @@ def add_mapping_row(state: TemperamentState) -> TemperamentState:
     comma row detempers to an astronomically complex ratio. Un-tempering the LAST comma leaves
     just intonation over the d primes. Callers guard on there being a comma (nullity > 0)."""
     return remove_comma(state)  # drop the last comma — the same primitive, viewed from the mapping
+
+
+# ── domain basis element editing (chapter-9 nonstandard-domain input) ────────────────────────
+# When the nonstandard-domain box is on the domain elements are typeable: an element can be
+# relabelled in place (a basis relabel that leaves the mapping coordinates untouched) and a new
+# element can be added (held just — its own new generator). Both demand the basis stay
+# multiplicatively INDEPENDENT, or it names fewer than d directions and d = r + n breaks.
+
+def _as_basis_element(value):
+    """Normalize a domain basis element to the storage convention: a bare ``int`` when it is
+    integral (a prime/integer like ``7``), else a ``Fraction`` (a nonprime like ``13/5``)."""
+    fraction = Fraction(value)
+    return fraction.numerator if fraction.denominator == 1 else fraction
+
+
+def parse_domain_element(text):
+    """Parse a typed domain basis element — a positive rational ``≠ 1`` such as ``"7"`` or
+    ``"13/5"``. Returns the normalized element (int / Fraction) or ``None`` if it is not a valid
+    positive rational (blank, non-numeric, ``≤ 0``, or the unison ``1``, which spans nothing)."""
+    try:
+        fraction = Fraction(str(text).strip())
+    except (ValueError, ZeroDivisionError):
+        return None
+    if fraction <= 0 or fraction == 1:
+        return None
+    return _as_basis_element(fraction)
+
+
+def is_independent_domain_basis(domain_basis) -> bool:
+    """Whether the basis elements are multiplicatively independent — no element is a product of
+    integer powers of the others, so the d elements really span a d-dimensional domain. A
+    dependent basis (e.g. ``2.3.9``, where ``9 = 3²``) is degenerate: it names fewer than d
+    independent directions, breaking ``d = r + n``. Tested by the rank of the elements' monzos over
+    their simplest prime-only superspace (rank == d iff independent)."""
+    elements = tuple(Fraction(e) for e in domain_basis)
+    if not elements:
+        return False
+    superspace = get_simplest_prime_only_basis(tuple(domain_basis))
+    monzos = express_quotients_in_domain_basis(elements, superspace)
+    return sp.Matrix(monzos).rank() == len(elements)
+
+
+def can_set_domain_element(state: TemperamentState, index: int, element) -> bool:
+    """Whether relabelling basis element ``index`` to ``element`` yields a valid domain — a positive
+    rational ``≠ 1`` that leaves the whole basis multiplicatively independent."""
+    parsed = parse_domain_element(element) if isinstance(element, str) else element
+    if parsed is None:
+        return False
+    trial = state.domain_basis[:index] + (_as_basis_element(parsed),) + state.domain_basis[index + 1:]
+    return is_independent_domain_basis(trial)
+
+
+def set_domain_element(state: TemperamentState, index: int, element) -> TemperamentState:
+    """Relabel basis element ``index`` to ``element`` — a pure basis relabel: the mapping
+    coordinates are unchanged, they now read over the new element. Callers guard with
+    :func:`can_set_domain_element`."""
+    new_basis = state.domain_basis[:index] + (_as_basis_element(element),) + state.domain_basis[index + 1:]
+    return from_mapping(state.mapping, new_basis)
+
+
+def can_add_domain_element(state: TemperamentState, element) -> bool:
+    """Whether ``element`` can be added to the domain — a positive rational ``≠ 1`` independent of
+    the existing basis (a dependent addition would name no new direction)."""
+    parsed = parse_domain_element(element) if isinstance(element, str) else element
+    if parsed is None:
+        return False
+    return is_independent_domain_basis(tuple(state.domain_basis) + (_as_basis_element(parsed),))
+
+
+def add_domain_element(state: TemperamentState, element) -> TemperamentState:
+    """Enlarge the domain by one basis element, held just: the element becomes its OWN new
+    generator (a unit row), tuned pure, while every existing generator keeps its columns and gains a
+    0 over the new element. ``d → d+1``, ``r → r+1``, nullity preserved (``n = d − r``) — the
+    superspace 'extra prime held just' construction in the domain-enlarging direction. Callers guard
+    with :func:`can_add_domain_element`."""
+    new_basis = tuple(state.domain_basis) + (_as_basis_element(element),)
+    extended = tuple(tuple(row) + (0,) for row in state.mapping)       # existing gens, 0 over the new element
+    new_generator = tuple(0 for _ in range(state.d)) + (1,)            # the new element's own pure generator
+    return from_mapping(extended + (new_generator,), new_basis)
 
 
 def add_mapping_row_to(state: TemperamentState, source: int, target: int) -> TemperamentState:

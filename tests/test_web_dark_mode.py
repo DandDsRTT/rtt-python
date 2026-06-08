@@ -36,7 +36,7 @@ def test_dark_overlay_is_gated_on_the_body_class():
 
 def test_dark_theme_darkens_every_core_surface():
     for surface in (".rtt-app", ".rtt-rowband", ".rtt-panelgroup",
-                    ".rtt-block", ".rtt-show-group", ".rtt-show-tile", ".rtt-white"):
+                    ".rtt-block", ".rtt-show-group", ".rtt-show-tile"):
         assert _dark_sets(surface, "background"), surface
 
 
@@ -44,7 +44,7 @@ def test_dark_theme_flips_text_light_on_every_text_role():
     # the panel text rides .rtt-drawer-inner's colour; the grid's value/label/caption text
     # each carry their own, so each must be re-lit
     assert _dark_sets(".rtt-drawer-inner", "color")
-    for text in (".rtt-val", ".rtt-rowlabel", ".rtt-symbol", ".rtt-caption", ".rtt-white"):
+    for text in (".rtt-value", ".rtt-rowlabel", ".rtt-symbol", ".rtt-caption"):
         assert _dark_sets(text, "color"), text
 
 

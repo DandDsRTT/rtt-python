@@ -145,6 +145,11 @@ class Editor:
         self.pending_interest: list[int | None] | None = None
         self.pending_held: list[int | None] | None = None
         self.pending_target: list[int | None] | None = None
+        # the chapter-9 domain basis element draft (nonstandard-domain box on): a red ?/? column
+        # the user types a rational into. None = no draft; "" / a partial ratio = being typed. It
+        # commits once the text is a valid, independent addition (added held just — see
+        # service.add_domain_element); like the other drafts it lives outside undo until then.
+        self.pending_element: str | None = None
         # The generator a wheel nudge is currently fine-tuning, so consecutive notches on it
         # coalesce into one undo step (see nudge_generator_tuning_component). Transient, like the
         # drafts: any snapshot or document restore clears it, ending the gesture.
@@ -224,6 +229,7 @@ class Editor:
         self.pending_interest = None
         self.pending_held = None
         self.pending_target = None
+        self.pending_element = None
 
     @property
     def state(self) -> TemperamentState:
@@ -293,6 +299,7 @@ class Editor:
             pending_interest=self.pending_interest,
             pending_held=self.pending_held,
             pending_target=self.pending_target,
+            pending_element=self.pending_element,
             nonprime_approach=self.nonprime_basis_approach,
             displayed_tuning_name=self.displayed_tuning_scheme_name,
             prev_ids=prev_ids)
@@ -1066,6 +1073,32 @@ class Editor:
             self._snapshot()
             self.state = extended
             self.pending_comma = None
+
+    def add_element(self) -> None:
+        """Begin a pending domain basis element: a blank red ?/? draft column. Not part of the
+        domain (d unchanged) and not an undoable edit until it commits — see set_pending_element."""
+        self.pending_element = ""
+
+    def set_pending_element(self, text) -> None:
+        """Hold the draft element's typed text. Once it parses to a valid, independent addition
+        (a positive rational ≠ 1, multiplicatively independent of the basis), commit it — the new
+        element added held just, its own pure generator (d → d+1, r → r+1) — and clear the draft.
+        An incomplete or invalid draft is kept as-is (shown pending), changing nothing."""
+        self.pending_element = "" if text is None else str(text)
+        if service.can_add_domain_element(self.state, self.pending_element):
+            self._snapshot()
+            self.state = service.add_domain_element(self.state, service.parse_domain_element(self.pending_element))
+            self.pending_element = None
+
+    def set_domain_element(self, index: int, text) -> None:
+        """Relabel domain basis element ``index`` to the typed ``text`` — a pure basis relabel that
+        leaves the mapping coordinates untouched. Commits only a valid, independent relabel (a
+        positive rational ≠ 1 keeping the basis independent); an invalid edit is a no-op (the cell
+        reverts to the live element on the next render)."""
+        if not service.can_set_domain_element(self.state, index, str(text)):
+            return
+        self._snapshot()
+        self.state = service.set_domain_element(self.state, index, service.parse_domain_element(str(text)))
 
     def remove_comma(self) -> None:
         if self.pending_comma is not None:

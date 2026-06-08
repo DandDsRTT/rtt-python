@@ -619,9 +619,14 @@ def test_editable_vector_tiles_get_editable_quantities_ratios():
     assert cells["target:0"].kind == "ratiocell"
     assert cells["held:0"].kind == "ratiocell"
     assert cells["interest:0"].kind == "ratiocell"
-    # the read-only twins stay non-editable (the vectors row shows these read-only too)
-    assert cells["prime:0"].kind == "prime"
+    # the generator-detempering D stays a read-only ratio (its vectors row is read-only too)
     assert cells["detempering:0"].kind == "commaratio"
+    # the domain elements are editable (elementcell) ONLY with the nonstandard-domain box on — that
+    # box is what makes the basis typeable; with it off they are read-only domain primes
+    assert cells["prime:0"].kind == "elementcell"  # nonstandard_domain is among the toggles set on above
+    off = settings.defaults()  # nonstandard_domain off
+    off_cells = {c.id: c for c in spreadsheet.build(ed.state, off).cells}
+    assert off_cells["prime:0"].kind == "prime"
 
 
 def test_target_intervals_column_with_mapped_list():
@@ -6278,14 +6283,14 @@ def test_removed_cell_ids_ignores_survivors_added_cells_and_removed_scaffolding(
     # its bracket, separator, grip and − control — carries no value, so a removal mustn't ring it red.
     old = _diff_layout(
         _diff_cell("survivor", "1"),
-        _diff_cell("val", "2"),                                   # a value cell -> rings red when gone
+        _diff_cell("value", "2"),                                 # a value cell -> rings red when gone
         CellBox("ebkangle:vec:commas:1", 0, 0, 10, 10, "ebkangle"),  # marks / controls deleted with it
         CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),
         CellBox("grip:commas:1", 0, 0, 10, 10, "colgrip"),
         CellBox("comma_minus", 0, 0, 10, 10, "comma_minus"),
     )
     new = _diff_layout(_diff_cell("survivor", "1"), _diff_cell("added", "9"))
-    assert spreadsheet.removed_cell_ids(old, new) == frozenset({"val"})
+    assert spreadsheet.removed_cell_ids(old, new) == frozenset({"value"})
 
 
 def test_a_domain_change_keeps_target_columns_shared_by_ratio():
@@ -6838,8 +6843,8 @@ def test_B_L_emits_one_cell_per_superspace_prime_row_and_domain_element_col():
     cells = {c.id: c for c in _barbados_ss().cells}
     expected_by_element = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, -1, 1))
     for elem_idx, monzo in enumerate(expected_by_element):
-        for ss_prime_idx, val in enumerate(monzo):
-            assert cells[f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}"].text == str(val)
+        for ss_prime_idx, value in enumerate(monzo):
+            assert cells[f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}"].text == str(value)
 
 
 def test_B_L_cells_ride_the_existing_prime_gridlines_and_ss_vector_rows():
@@ -6894,8 +6899,8 @@ def test_M_L_emits_one_cell_per_superspace_generator_row_and_superspace_prime_co
         service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"))
     # rL × dL = 3 × 4 for BARBADOS
     for gen_idx, row in enumerate(ml):
-        for ss_prime_idx, val in enumerate(row):
-            assert cells[f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}"].text == str(val)
+        for ss_prime_idx, value in enumerate(row):
+            assert cells[f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}"].text == str(value)
 
 
 def test_M_L_cells_ride_the_ssprimes_gridlines_and_ss_mapping_rows():
@@ -6926,8 +6931,8 @@ def test_M_L_standard_domain_equals_M():
     cells = {c.id: c for c in spreadsheet.build(state, s).cells}
     ml = service.superspace_mapping(state)
     for gen_idx, row in enumerate(ml):
-        for ss_prime_idx, val in enumerate(row):
-            assert cells[f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}"].text == str(val)
+        for ss_prime_idx, value in enumerate(row):
+            assert cells[f"cell:ss_mapping:ssprimes:{gen_idx}:{ss_prime_idx}"].text == str(value)
 
 
 def test_M_L_tile_carries_per_row_map_brackets_and_a_matrix_frame():
@@ -7450,3 +7455,34 @@ def test_read_only_target_vectors_stay_full_width():
     real = cells["cell:vec:targets:0:0"]
     assert real.kind == "vec"            # read-only (not the editable targetcell)
     assert real.w == spreadsheet.COL_W   # full width, no inset
+# ── chapter-9 domain basis elements become editable with the nonstandard-domain box ──────────
+
+def _nonstd_on(state):
+    return settings.defaults() | {"nonstandard_domain": True}
+
+
+def test_domain_elements_are_editable_elementcells_with_the_box_on():
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
+    assert on["prime:0"].kind == "elementcell" and on["prime:0"].text == "2"
+    assert on["prime:2"].kind == "elementcell" and on["prime:2"].text == "13/5"
+    # the box off: the same elements are read-only domain primes
+    off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
+    assert off["prime:0"].kind == "prime"
+    assert off["prime:2"].kind == "prime"
+
+
+def test_domain_header_reads_basis_elements_with_the_box_on():
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # standard 2.3.5
+    on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
+    assert on["header:primes"].text == "domain basis\nelements"
+    off = {c.id: c for c in spreadsheet.build(state, settings.defaults()).cells}
+    assert off["header:primes"].text == "domain\nprimes"
+
+
+def test_basis_spine_stays_read_only_with_the_box_on():
+    # only the quantities-row element cells are the editable home; the interval-vectors spine
+    # shows the same elements read-only (kind "prime"), like the comma ratio's editable twin
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    on = {c.id: c for c in spreadsheet.build(state, _nonstd_on(state)).cells}
+    assert on["basis:0"].kind == "prime"

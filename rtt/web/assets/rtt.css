@@ -185,10 +185,6 @@
              transition:left var(--t), top var(--t), width var(--t), height var(--t), opacity var(--t); }
 .rtt-cell { position:absolute; z-index:3; display:flex; align-items:center; justify-content:center;
             opacity:1; transition:left var(--t), top var(--t), opacity var(--t); }
-.rtt-white { position:absolute; top:0; left:0;
-             width:calc(100% + var(--cell-border-w)); height:calc(100% + var(--cell-border-w));
-             box-sizing:border-box; display:flex; align-items:center; justify-content:center;
-             background:#fff; border:var(--cell-border); color:#000; font-size:var(--cell-font); }
 /* titles carry explicit "\n" breaks (col_header) so a multi-word header stacks to two
    lines (e.g. "domain" / "primes"); `pre` honors them AND never auto-wraps, so a title
    wider than its (content-hugging) column overflows it rather than rewrapping. It is
@@ -200,7 +196,7 @@
                  text-align:center; line-height:1.1; }
 .rtt-rowlabel { font-size:13px; font-weight:bold; color:#000; width:100%; text-align:right;
                 padding-right:8px; line-height:1.1; white-space:pre-line; }
-.rtt-val { font-size:var(--cell-font); color:#000; }
+.rtt-value { font-size:var(--cell-font); color:#000; }
 /* the in-tile quantity name: small (≈0.2 of the cell, per the mockup), capped at two
    lines (the column is widened to fit) and balanced across them by text-wrap:balance —
    an even split, not a long first line and a single trailing word. It centres in the
@@ -290,7 +286,7 @@
 /* a read-only value cell simply stacks [value, unit] in a centred column; the value's
    line-height is tightened so the value + unit pair fits the square and stays centred */
 .rtt-cell-united:not(.rtt-cell-input) { flex-direction:column; line-height:1; }
-.rtt-cell-united:not(.rtt-cell-input) .rtt-val { line-height:1; }
+.rtt-cell-united:not(.rtt-cell-input) .rtt-value { line-height:1; }
 /* an editable value cell keeps its full-size white input box (border stays on the input)
    and overlays the unit INSIDE it, with the number nudged up to clear the unit */
 .rtt-cell-united.rtt-cell-input .rtt-cellunit { position:absolute; left:0; right:0; bottom:2.5px;
@@ -634,7 +630,7 @@
    entry. audio.js positions + shows the float and manages the hover; clicking it sounds the interval.
    Both only while unmuted (the engage gate). */
 /* the highlights are a subtle full-cell background tint, rendered via ::after so they show OVER the
-   opaque value face (a background on the wrap is hidden behind the white .rtt-white cell) and squared
+   opaque value face (a background on the wrap is hidden behind the white cell fill) and squared
    to the cell (no radius). Sounding is most intense; a hovered column a touch less; and in chord / arp
    modes the tile's OTHER pitches dimmer still, previewing that they too will play. */
 .rtt-spk-dim::after, .rtt-spk-hover::after, .rtt-spk-on::after { content:""; position:absolute;

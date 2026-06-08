@@ -1491,3 +1491,61 @@ def test_plain_text_all_interval_lils_weight_is_the_per_target_list():
     w = pt[("weight", "targets")]
     assert w.startswith("[") and not w.startswith("[[")   # a flat list, not a nested matrix
     assert "|" not in w                                    # no size-augmentation divider
+# ── domain basis element editing (chapter-9 nonstandard-domain input) ────────────────────────
+
+def test_parse_domain_element_accepts_positive_rationals_and_rejects_junk():
+    assert service.parse_domain_element("7") == 7  # an integer normalizes to a bare int
+    assert service.parse_domain_element("13/5") == Fraction(13, 5)  # a nonprime stays a Fraction
+    assert service.parse_domain_element("9/3") == 3  # reduces, then normalizes to int
+    for junk in ("abc", "", "1", "0", "-3", "5/0"):
+        assert service.parse_domain_element(junk) is None
+
+
+def test_is_independent_domain_basis_rejects_dependent_elements():
+    assert service.is_independent_domain_basis((2, 3, 5))
+    assert service.is_independent_domain_basis((2, 3, Fraction(13, 5)))  # 13/5 adds the 13 direction
+    assert not service.is_independent_domain_basis((2, 3, 9))  # 9 = 3², dependent
+    assert not service.is_independent_domain_basis((2, 4))  # 4 = 2², dependent
+
+
+def test_add_domain_element_holds_the_new_element_just():
+    # meantone 2.3.5: adding 7 makes it its own pure generator — a block-diagonal mapping row
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    added = service.add_domain_element(state, service.parse_domain_element("7"))
+    assert added.domain_basis == (2, 3, 5, 7)
+    assert added.d == state.d + 1 and added.r == state.r + 1 and added.n == state.n  # +d, +r, n held
+    assert added.mapping == ((1, 1, 0, 0), (0, 1, 4, 0), (0, 0, 0, 1))  # existing cols intact, unit row
+    # the new element's own generator tunes it pure (zero error on 7)
+    tun = service.tuning(added.mapping, service.DEFAULT_TUNING_SCHEME, added.domain_basis)
+    assert tun.tuning_map[3] == pytest.approx(1200 * math.log2(7), abs=1e-6)
+
+
+def test_add_domain_element_accepts_a_nonprime():
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    added = service.add_domain_element(state, service.parse_domain_element("13/5"))
+    assert added.domain_basis == (2, 3, 5, Fraction(13, 5))
+    assert added.d == 4 and added.r == 3 and added.n == state.n
+
+
+def test_can_add_domain_element_guards_validity_and_independence():
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5
+    assert service.can_add_domain_element(state, "7")
+    assert service.can_add_domain_element(state, "13/5")
+    assert not service.can_add_domain_element(state, "9")   # 9 = 3², dependent on the present 3
+    assert not service.can_add_domain_element(state, "1")   # the unison spans nothing
+    assert not service.can_add_domain_element(state, "abc")  # not a rational
+
+
+def test_set_domain_element_is_a_pure_relabel():
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5
+    relabelled = service.set_domain_element(state, 2, service.parse_domain_element("13/5"))
+    assert relabelled.domain_basis == (2, 3, Fraction(13, 5))
+    assert relabelled.mapping == state.mapping  # coordinates untouched — only the basis label changed
+
+
+def test_can_set_domain_element_rejects_a_dependent_relabel():
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 2.3.5
+    assert service.can_set_domain_element(state, 2, "13/5")
+    assert not service.can_set_domain_element(state, 2, "9")  # 2.3.9 is dependent
+    assert not service.can_set_domain_element(state, 2, "8")  # 2.3.8 (8 = 2³) is dependent
+    assert not service.can_set_domain_element(state, 2, "1")

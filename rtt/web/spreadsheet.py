@@ -665,7 +665,7 @@ class _GridBuilder:
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
-                 nonprime_approach="", displayed_tuning_name=None):
+                 pending_element=None, nonprime_approach="", displayed_tuning_name=None):
         self.prev_ids = prev_ids or {}
         self.state = state
         self.settings = settings
@@ -678,6 +678,7 @@ class _GridBuilder:
         self.pending_interest = pending_interest
         self.pending_held = pending_held
         self.pending_target = pending_target
+        self.pending_element = pending_element  # chapter-9 domain basis element draft (str / None)
         self.held_vectors = held_vectors
         self.generator_tuning = generator_tuning
         self.target_override = target_override
@@ -1062,10 +1063,13 @@ class _GridBuilder:
         # wider than it was open — so collapsing a column only ever narrows it (see col_w below).
         # The domain/comma + controls ride just right of their blocks when open; each −
         # is a hover affordance on the removable highest-prime / last-comma column.
-        # the domain column reads "basis elements" over a nonstandard subgroup (whose basis may
-        # be nonprime — "basis elements" is the guide's term for these columns; the mockup had
-        # "domain elements") and "domain primes" over a standard prime limit
-        domain_title = "domain\nprimes" if self.standard_domain else "basis\nelements"
+        # the domain column header. With the nonstandard-domain box on, the elements are typeable
+        # (any rational), so it reads "domain basis elements" — the guide's term, signalling the
+        # cells are now editable basis elements rather than fixed primes. With the box off it reads
+        # "domain primes" over a standard prime limit, or "basis elements" over a nonstandard
+        # subgroup loaded via the mapping box (whose basis may be nonprime).
+        domain_title = ("domain basis\nelements" if self.show_nonstandard_domain
+                        else "domain\nprimes" if self.standard_domain else "basis\nelements")
         self.col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
                       "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
                       "primes": domain_title, "detempering": "generator\ndetempering",
@@ -2258,8 +2262,12 @@ class _GridBuilder:
                 if self.r > 1:
                     branch_minus("gen_minus", "gens", self.r - 1, "gen_minus", gen=self.r - 1)
             if self.tile_open("quantities", "primes"):
+                # with the nonstandard-domain box on the domain elements are typeable — an editable
+                # elementcell (typing a rational relabels that basis element, holding the mapping
+                # coordinates). Off, they're read-only domain primes walked by the ± only.
+                element_kind = "elementcell" if self.show_nonstandard_domain else "prime"
                 for p in range(self.d):
-                    self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
+                    self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, element_kind, text=str(self.elements[p]), prime=p))
                     self._voice("quantities:primes", p, self.tun.just_map[p])
                 # Only the highest prime is removable (shrink_domain trims the last), so its
                 # − rides that prime's branch point (the last top-bus split) — and only when the
@@ -2538,11 +2546,11 @@ class _GridBuilder:
             basis = service.basis_in_superspace(self.elements)
             for ss_prime_idx in range(self.dL):
                 for elem_idx in range(self.d):
-                    val = basis[elem_idx][ss_prime_idx]
+                    value = basis[elem_idx][ss_prime_idx]
                     self.cells.append(CellBox(
                         f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}",
                         self.prime_left(elem_idx), self.ss_vec_top(ss_prime_idx), COL_W, ROW_H,
-                        "vec", text=str(val), prime=ss_prime_idx, comma=elem_idx,
+                        "vec", text=str(value), prime=ss_prime_idx, comma=elem_idx,
                         unit=self.cell_unit("ss_vectors", "primes", prime=ss_prime_idx),
                     ))
         # M_L (superspace mapping): the rL × dL covector stack the temperament lifts to over its
@@ -3121,7 +3129,7 @@ class _GridBuilder:
             # than glyph+subscript (the complexity row's norm expressions). The prescaling/
             # complexity product-column labels carry the LIVE prescaler glyph (𝐿𝐜/𝐿𝐭/… or
             # 𝑋𝐜/𝑋𝐭/…) — matching the tile-symbol slot below — via col_labels.
-            for (rkey, ckey), val in self.col_labels.items():
+            for (rkey, ckey), label in self.col_labels.items():
                 if ckey not in group_count or rkey not in self.row_matlabel_top:
                     continue
                 if not self.tile_open(rkey, ckey):
@@ -3131,11 +3139,11 @@ class _GridBuilder:
                 # 1/the complexity) — the norm detail stays on the 𝒄 tile's own cₙ = ‖𝐿[n]‖q header, not
                 # repeated here. Matches the list's generic tile symbol 𝒘 = 𝒄⁻¹ (no concrete diagonal).
                 if (rkey, ckey) == ("weight", "targets") and self.all_interval_simplicity_weight:
-                    val = self._weight_simplicity_header
+                    label = self._weight_simplicity_header
                 left = self.group_left[ckey]
                 y = self.row_matlabel_top[rkey]
                 for i in range(group_count[ckey]):
-                    text = val(i) if callable(val) else f"{val}{_sub(i + 1)}"
+                    text = label(i) if callable(label) else f"{label}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:col:{rkey}:{ckey}:{i}",
                         left(i), y, COL_W, MATLABEL_H,
@@ -3502,10 +3510,10 @@ def build(state, settings=None, collapsed=None,
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
           pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
-          nonprime_approach="", displayed_tuning_name=None) -> Layout:
+          pending_element=None, nonprime_approach="", displayed_tuning_name=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
         optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
-        prev_ids, nonprime_approach, displayed_tuning_name,
+        prev_ids, pending_element, nonprime_approach, displayed_tuning_name,
     ).layout()

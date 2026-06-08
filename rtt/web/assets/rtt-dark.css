@@ -61,9 +61,9 @@ body.rtt-dark .rtt-show-group { background:#2c323a; border-color:#3c424a; }
 body.rtt-dark .rtt-show-frozen { border-bottom-color:#3c424a; }
 
 /* ── value cells & their text ────────────────────────────────────────────────────────────────
-   read-only cells (.rtt-white) and the editable q-inputs all sit on white in light mode; darken
-   the fill and re-light the text, or edited cells stay blinding. Their 1px rule rides --cell-border. */
-body.rtt-dark .rtt-white { background:#1b1f24; color:#e3e6ea; }
+   the editable q-inputs sit on white in light mode; darken the fill and re-light the text, or
+   edited cells stay blinding. Their 1px rule rides --cell-border. Read-only values are plain
+   rtt-value text (no box), re-lit with the other text roles below. */
 body.rtt-dark .rtt-cellinput .q-field__control { background:#1b1f24; }
 /* an editable cell's raw input text. Plain integer cells (mapping, comma, the vector lists)
    show it directly, so re-light it. But the STACKED cells (cents, ratios, the generator tuning
@@ -79,7 +79,7 @@ body.rtt-dark .rtt-ptextpending { background:#1b1f24; border-color:#4e555d; }
 body.rtt-dark .rtt-ptextedit .q-field__native,
 body.rtt-dark .rtt-ptextpending { color:#e3e6ea; }
 /* every gridded value / scalar / plain-text / ratio face */
-body.rtt-dark .rtt-val,
+body.rtt-dark .rtt-value,
 body.rtt-dark .rtt-count,
 body.rtt-dark .rtt-ptext,
 body.rtt-dark .rtt-ratio,

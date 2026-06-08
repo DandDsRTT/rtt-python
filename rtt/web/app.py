@@ -1244,14 +1244,20 @@ class _Reconciler:
         # the editable quantities-row ratios (comma / target / held / interest): a fraction face
         # overlaid on an input, the scalar twin of the interval-vectors row's editable column cells
         self.cell_kinds["ratiocell"] = _KindHandlers(self._build_ratiocell, self._update_ratiocell)
+        # a chapter-9 domain basis element (nonstandard-domain box on): an editable ratio cell that
+        # commits a basis RELABEL / a new held-just element rather than an interval edit
+        self.cell_kinds["elementcell"] = _KindHandlers(self._build_elementcell, self._update_elementcell)
         self.cell_kinds["commaratio"] = _KindHandlers(self._build_commaratio, self._update_ratio)
         self.cell_kinds["tuningvalue"] = _KindHandlers(self._build_tuning_value, self._update_tuning_value)
 
-        self.cell_kinds["prime"] = _KindHandlers(self._build_white_label, self._update_label)
-        self.cell_kinds["formcell"] = _KindHandlers(self._build_white_label, self._update_label)
-        _val_builder = self._label_builder("rtt-val")
-        self.cell_kinds["mapped"] = _KindHandlers(_val_builder, self._update_label)
-        self.cell_kinds["vec"] = _KindHandlers(_val_builder, self._update_label)
+        # every non-interactive gridded value renders as plain rtt-value text (no box): a box
+        # always means editable. prime / formcell / mapped / vec all share this one read-only
+        # style — there is deliberately no second "boxed read-only" treatment.
+        _value_builder = self._label_builder("rtt-value")
+        self.cell_kinds["prime"] = _KindHandlers(_value_builder, self._update_label)
+        self.cell_kinds["formcell"] = _KindHandlers(_value_builder, self._update_label)
+        self.cell_kinds["mapped"] = _KindHandlers(_value_builder, self._update_label)
+        self.cell_kinds["vec"] = _KindHandlers(_value_builder, self._update_label)
         self.cell_kinds["colheader"] = _KindHandlers(self._label_builder("rtt-colheader"), self._update_label)
         self.cell_kinds["rowlabel"] = _KindHandlers(self._label_builder("rtt-rowlabel"), self._update_label)
         self.cell_kinds["ptext"] = _KindHandlers(self._label_builder("rtt-ptext"), self._update_ptext)
@@ -1470,7 +1476,7 @@ class _Reconciler:
                 self.fracs[cb.id] = (num, den)
                 self._fit_ratio(cb.id, parts[0], parts[1], cb.w)
             else:
-                self.labels[cb.id] = ui.label(cb.text).classes("rtt-val")
+                self.labels[cb.id] = ui.label(cb.text).classes("rtt-value")
 
     def _fit_ratio(self, cid, num, den, width):
         """Size a stacked fraction's two lines to fit its square: a long numerator/denominator
@@ -1787,7 +1793,7 @@ class _Reconciler:
         # pending comma draft's red "?" placeholder (no value until the vector is filled in). The
         # editable comma/target/held/interest ratios are ratiocells (see _build_ratiocell).
         if cb.pending:
-            self.labels[cb.id] = ui.label(cb.text).classes("rtt-val rtt-pending-q")
+            self.labels[cb.id] = ui.label(cb.text).classes("rtt-value rtt-pending-q")
         else:
             self._ratio(cb, approx=False)
 
@@ -1812,6 +1818,25 @@ class _Reconciler:
                                 remove="" if cb.pending else "rtt-pending")  # red draft styling
         self._update_ratio(cb)              # the overlaid stacked face mirrors the fraction
 
+    def _build_elementcell(self, cb, wrap):
+        # an editable chapter-9 domain basis element (nonstandard-domain box on): built exactly like
+        # a ratiocell — an input under a stacked fraction face — but its commit RELABELS that basis
+        # element (or fills the ?/? draft to add a new one held just), not an interval edit. Commits
+        # the whole typed rational on blur / Enter, like the other ratio cells.
+        wrap.classes("rtt-cell-input rtt-cell-stacked")
+        commit = lambda _=None, cid=cb.id: self._cb.on_element_change(cid)
+        inp = ui.input().props("dense borderless").classes("rtt-cellinput")
+        inp.on("blur", commit)
+        inp.on("keydown.enter", commit)
+        self.inputs[cb.id] = inp
+        self._ratio(cb, approx=False, overlay=True)
+
+    def _update_elementcell(self, cb):
+        self.inputs[cb.id].value = cb.text  # the live element (e.g. "13/5"); a draft pre-fills "?/?"
+        self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                remove="" if cb.pending else "rtt-pending")  # red draft styling
+        self._update_ratio(cb)
+
     def _update_ratio(self, cb):  # genratio / commaratio / ratiocell: refresh the stacked fraction face
         # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
         if cb.id in self.fracs:
@@ -1832,10 +1857,6 @@ class _Reconciler:
         def build(cb, wrap):
             self.labels[cb.id] = ui.label(cb.text).classes(cls)
         return build
-
-    def _build_white_label(self, cb, wrap):  # prime / formcell: a read-only bordered cell
-        with ui.element("div").classes("rtt-white"):
-            self.labels[cb.id] = ui.label(cb.text)
 
     def _update_label(self, cb):  # prime / formcell / colheader / rowlabel / mapped / vec
         self.labels[cb.id].set_text(cb.text)
@@ -2610,6 +2631,33 @@ def index() -> None:
                     editor.set_target_override_vectors)
         render()
 
+    def on_element_change(cid):
+        # a chapter-9 domain basis element committing on blur (nonstandard-domain box on). cid is
+        # "prime:{index}" (a relabel) or "prime:pending" (the ?/? draft -> add held just). render()
+        # always runs: a valid relabel/add shows the new basis, an invalid entry snaps the field
+        # back and toasts why. A cleared / unchanged cell is a silent no-op (no toast, no undo step).
+        if building[0] or cid not in rec.inputs:
+            return
+        raw = str(rec.inputs[cid].value).strip()
+        tok = cid.split(":")[1]
+        if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
+            render()
+            return
+        if tok == "pending":  # the draft column -> add a new element held just (commits when valid)
+            editor.set_pending_element(raw)
+            render()
+            return
+        index = int(tok)
+        if str(editor.state.domain_basis[index]) == raw:
+            return  # a no-op blur (the element is unchanged) — no undo step
+        if not service.can_set_domain_element(editor.state, index, raw):
+            ui.notify("not a valid independent basis element (need a positive rational ≠ 1)",
+                      type="negative", position="top")
+            render()  # revert the field to the current element
+            return
+        editor.set_domain_element(index, raw)
+        render()
+
     def on_power_change(cid):
         # editable power inputs share this kind: optimization:power drives the Lp optimization
         # power; control:q drives the interval-complexity norm power (box 𝒄). Same parse (∞ or a
@@ -3247,6 +3295,7 @@ def index() -> None:
         on_preset=on_preset,
         on_ptext_edit=on_ptext_edit,
         on_ratio_change=on_ratio_change,
+        on_element_change=on_element_change,
         on_range_mode=on_range_mode,
         on_target_cells_change=on_target_cells_change,
         on_target_change=on_target_change,
