@@ -802,7 +802,10 @@ class _GridBuilder:
         # and the column title, AND gates the domain + (expand walks to the next standard prime, so
         # it doesn't apply to a subgroup — the + is withheld, never shown inert).
         self.standard_domain = service.is_standard_domain(self.elements)
-        self.domain_label = "p" if self.standard_domain else "b"
+        # the coordinate label is p (prime) unless the basis carries a NONPRIME element, in which
+        # case it's b (basis element). Keyed on nonprimes, NOT standard_domain: a nonstandard but
+        # all-prime subgroup like 2.3.7 still reads p (its elements are genuine primes).
+        self.domain_label = "b" if service.domain_has_nonprimes(self.elements) else "p"
         # whether the domain − applies — the shared predicate the editor's shrink guard uses, so the
         # button only shows when a click would actually drop the top prime (not on a nonstandard
         # subgroup, nor when the smaller temperament would be improper). Gates both the quantities-row
@@ -1050,17 +1053,16 @@ class _GridBuilder:
         # wider than it was open — so collapsing a column only ever narrows it (see col_w below).
         # The domain/comma + controls ride just right of their blocks when open; each −
         # is a hover affordance on the removable highest-prime / last-comma column.
-        # the domain column header. It reads the editable "domain basis elements" — the guide's
-        # term — only when the nonstandard-domain box is on AND the basis actually carries a
-        # nonprime element: checking the box makes the cells typeable, but the title doesn't flip
-        # until a nonprime is entered (same domain_has_nonprimes trigger as the superspace
-        # columns/rows and the approach radio), so a still-all-prime basis with the box on keeps
-        # its prime-style title. Otherwise: "domain primes" over a standard prime limit, or
-        # "basis elements" over a nonstandard subgroup (e.g. a nonprime temperament loaded
-        # read-only via the mapping box with the toggle off).
+        # the domain column header reflects the BASIS itself: "domain basis elements" (the guide's
+        # term) once any element is a nonprime, else "domain primes" — including for a nonstandard
+        # but still all-prime subgroup like 2.3.7, whose elements ARE primes. (The "domain" prefix
+        # deviates from the mockup, which dropped it.) Keyed on domain_has_nonprimes like the p/b
+        # coordinate label and the superspace columns — independent of the nonstandard-domain box
+        # (the box makes the cells editable; the title just tracks the actual basis). It is never a
+        # bare "basis elements" and never "domain primes" over a basis that carries a nonprime.
         domain_title = ("domain basis\nelements"
-                        if self.show_nonstandard_domain and service.domain_has_nonprimes(self.elements)
-                        else "domain\nprimes" if self.standard_domain else "basis\nelements")
+                        if service.domain_has_nonprimes(self.elements)
+                        else "domain\nprimes")
         self.col_header = {"quantities": "quantities", "units": "units", "gens": "generators",
                       "ssgens": "superspace\ngenerators", "ssprimes": "superspace\nprimes",
                       "primes": domain_title, "detempering": "generator\ndetempering",
