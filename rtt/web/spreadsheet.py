@@ -941,7 +941,8 @@ class _GridBuilder:
         # a non-diagonal pretransformer (the editable square, off-diagonal entries typed in) is a
         # d×d matrix rather than a per-prime diagonal; its rows/products multiply, and — like the
         # size factor — its inverse weight has no per-prime diagonal closed form (see
-        # all_interval_simplicity_weight below, which gives the weight tile its 𝑆 = 𝑋⁻¹ symbol).
+        # all_interval_simplicity_weight below, which drops the weight tile's concrete diag(𝐿)⁻¹
+        # equivalence for the generic 𝒘 = 𝒄⁻¹ + per-column ‖𝐿‖q⁻¹ headers).
         self.prescaler_is_matrix = isinstance(self.prescaler[0], (tuple, list))
         # a pending draft alone (no committed intervals) declares just the two tiles that host
         # it — the editable vector ket and its "?" ratio header; the derived rows (sizes,
@@ -1075,13 +1076,13 @@ class _GridBuilder:
         # products) grow that one row; every other row is unchanged.
         self.size_factor = service.complexity_size_factor(self.tuning_scheme)
         self.size_rows = 1 if self.size_factor else 0
-        # All-interval, whenever the pretransformer isn't a plain per-prime diagonal: the simplicity
-        # weight has no per-prime-list closed form (the size factor / off-diagonal entries don't ride
-        # into a diagonal). The weight still renders as a LIST — what's special is carried by the tile's
-        # big-symbol EQUIVALENCE (𝑆ₚ = 𝐿⁻¹ ⊕ 1 with the size factor, 𝑆 = 𝑋⁻¹ for a non-diagonal square 𝑋)
-        # and its per-column simplicity headers, NOT by drawing a matrix. In target-based mode the per-
-        # target weights still differ (the off-diagonal/size factor already rode into them), so the
-        # list + chart stay too.
+        # All-interval, whenever the pretransformer isn't a plain per-prime diagonal: the per-prime
+        # simplicity weight has no concrete diagonal closed form (the size factor / off-diagonal entries
+        # don't ride into a diagonal). The weight still renders as a LIST — it just drops the concrete
+        # diag(𝐿)⁻¹ tile equivalence for the generic 𝒘 = 𝒄⁻¹ (reciprocal complexity, exactly as the
+        # complexity row drops diag(𝐿) for a bare 𝒄), spelling each entry out in per-column ‖𝐿‖q⁻¹
+        # headers. In target-based mode the per-target weights still differ (the off-diagonal/size factor
+        # already rode into them), so the list + chart stay too.
         self.all_interval_simplicity_weight = self.all_interval and (
             bool(self.size_factor) or self.prescaler_is_matrix)
         col_bands = (
@@ -1350,7 +1351,7 @@ class _GridBuilder:
             bot_frame = (BRACE_H + FRAME_GAP) if framed else 0
             # a charted row grows a chart band (above the values, below the top frame) — but ONLY when its
             # value band is a single row: a bar chart is one bar per column, so a matrix-valued charted row
-            # (the weight 𝑆ₚ) draws no chart and must reserve no band (else its tile's top third sits empty)
+            # would draw no chart and must reserve no band (else its tile's top third sits empty)
             charted = show_charts and key in CHARTED_ROWS and not folded and natural == ROW_H
             chart_band = (CHART_H + CHART_GAP) if charted else 0
             cap = self.caption_band(key, folded)
@@ -1649,10 +1650,10 @@ class _GridBuilder:
 
     def _weight_simplicity_header(self, i):
         # the all-interval simplicity weight's per-column header — the reciprocal of the complexity
-        # row's ‖𝐿‖q (see _prescaler_col_labels.complexity_target): 𝑠ₙ on its own, gaining the norm
-        # 𝑠ₙ = ‖𝐿‖q⁻¹ as its equivalence tail when the equivalences layer is on. All-interval (Tₚ = I)
-        # so the inner norm is the bare prescaler glyph (every target proxies a prime).
-        symbol = f"s{_sub(i + 1)}"
+        # row's ‖𝐿‖q (see _prescaler_col_labels.complexity_target): wₙ on its own (matching the tile's
+        # 𝒘 symbol), gaining the norm wₙ = ‖𝐿‖q⁻¹ as its equivalence tail when the equivalences layer is
+        # on. All-interval (Tₚ = I) so the inner norm is the bare prescaler glyph (every target proxies a prime).
+        symbol = f"w{_sub(i + 1)}"
         if not self.show_equiv:
             return symbol
         return f"{symbol} = ‖{self.prescaler_symbol}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}⁻¹"
@@ -2793,9 +2794,9 @@ class _GridBuilder:
                               alerts=self.held_unheld if group == "held" else ())
         if self.row_open("weight") and self.tile_open("weight", "targets"):
             # the weight is always a per-target list (it scales the targets, like damage). The all-
-            # interval simplicity weight that has no per-prime closed form (the size factor / a non-
-            # diagonal 𝑋) still renders as this list — what's special is carried by the tile's symbol
-            # equivalence (𝑆ₚ = 𝐿⁻¹ ⊕ 1 / 𝑆 = 𝑋⁻¹) and its per-column simplicity headers, not a matrix.
+            # interval simplicity weight that has no concrete diagonal form (the size factor / a non-
+            # diagonal 𝑋) still renders as this list — it just shows the generic 𝒘 = 𝒄⁻¹ symbol and per-
+            # column ‖𝐿‖q⁻¹ headers instead of the concrete diag(𝐿)⁻¹ equivalence, never a matrix.
             self.tval_row("weight", "targets", self.target_weights)
         if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), in a bordered box at the bottom of the
             # weight list, with its "damage weight slope" caption beneath (the optimization box's caption pattern)
@@ -3082,9 +3083,8 @@ class _GridBuilder:
                     continue
                 # the all-interval simplicity weight (size factor / non-diagonal 𝑋) carries the
                 # SAME per-column norm headers the complexity row does, in reciprocal (simplicity)
-                # form: 𝑠ₙ = ‖𝐿‖q⁻¹ (the per-prime simplicity weight is 1/the complexity). The list
-                # itself is the plain per-target weights; the header + the tile symbol 𝑆ₚ = 𝐿⁻¹ ⊕ 1
-                # express the augmented form a per-prime list can't carry.
+                # form: wₙ = ‖𝐿‖q⁻¹ (the per-prime simplicity weight is 1/the complexity) — spelling out
+                # each entry of the list, whose tile symbol is the generic 𝒘 = 𝒄⁻¹ (no concrete diagonal).
                 if (rkey, ckey) == ("weight", "targets") and self.all_interval_simplicity_weight:
                     val = self._weight_simplicity_header
                 left = self.group_left[ckey]
@@ -3135,7 +3135,7 @@ class _GridBuilder:
         # one rule per cell-row, runs through the data, and rejoins on the right to a foot past it.
         # Whether a row fans is DERIVED (_row_fans) from its own cell-row count or a row + stub,
         # exactly as a column fans on its element count — NOT a hand-kept membership list. So ANY
-        # multi-row tile (the mapping, vectors, prescaling, the d×(d+1) weight matrix, …) fans
+        # multi-row tile (the mapping, vectors, the d×(d+1) prescaler 𝑋 = 𝑍𝐿, …) fans
         # automatically and a new one can never be left with a lone centre spine (the row-side of
         # the generators-column bug); so too does a SINGLE-row band that adds elements (a rank-1 ET
         # mapping), so its + rides a fanned bus with a connecting bar instead of floating off the
@@ -3220,14 +3220,10 @@ class _GridBuilder:
                 equivalences[("complexity", "targets")] = f" = diag({self.prescaler_symbol})"
                 equivalences[("weight", "targets")] = f" = diag({self.prescaler_symbol})⁻¹"
             equivalences[("damage", "targets")] = f" = |𝒓|{self.prescaler_symbol}⁻¹"
-        if self.all_interval_simplicity_weight:  # the all-interval weight is the SIMPLICITY weight (no
-            # per-prime closed form as a diagonal): the square non-diagonal case is the true inverse 𝑆 = 𝑋⁻¹;
-            # the size factor makes it the guide's prime-proxy 𝑆ₚ, which is NOT 𝑋⁻¹ (the log-size lives in
-            # 𝑋 = 𝑍𝐿) but the direct sum 𝐿⁻¹ ⊕ 1 — the base simplicity block (live glyph) plus the dummy
-            # prime's 1 corner. Consistent with the non-size-factor all-interval weight diag(𝐿)⁻¹, which it
-            # just extends with that corner. The weight still RENDERS as a list; this only sets its symbol.
-            equivalences[("weight", "targets")] = (
-                f" = {self.prescaler_symbol}⁻¹ ⊕ 1" if self.size_factor else " = 𝑋⁻¹")
+            # the all-interval weight is the per-prime SIMPLICITY weight = reciprocal complexity. Only a
+            # PLAIN diagonal 𝑋 gets the concrete diag(𝐿)⁻¹ above; the size factor / a non-diagonal 𝑋 break
+            # that diagonal (as they do the complexity's diag(𝐿)), so the weight keeps the generic slope
+            # form 𝒘 = 𝒄⁻¹ (set in the defaults), with its per-column ‖𝐿‖q⁻¹ headers spelling out each entry.
         if not self.show_weighting:  # the weight factor's row is hidden, so don't dangle it (𝒘 / 𝐿⁻¹)
             equivalences[("damage", "targets")] = " = |𝒓|" if ai else " = |𝐞|"
         for (rkey, ckey), name in self.effective_captions.items():
@@ -3237,17 +3233,12 @@ class _GridBuilder:
                 continue
             if ai and (rkey, ckey) in ALL_INTERVAL_CAPTIONS:  # the prime-proxy name (per the Guide)
                 name = ALL_INTERVAL_CAPTIONS[(rkey, ckey)]
-            if self.all_interval_simplicity_weight and (rkey, ckey) == ("weight", "targets"):
-                name = "prime proxy simplicity weight"  # the all-interval weight 𝑆 / 𝑆ₚ (§10) — prime-proxy like Tₚ
             cy = self.row_y[rkey] + self.row_h[rkey] + self.row_frame[rkey]
             if (self.show_symbols or self.show_equiv) and rkey in SYMBOLED_ROWS:
                 equiv = equivalences.get((rkey, ckey), "") if self.show_equiv else ""
                 base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
                 if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
                     base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
-                if self.all_interval_simplicity_weight and (rkey, ckey) == ("weight", "targets"):
-                    # the all-interval simplicity weight: 𝑆ₚ (prime-proxy, size factor) or 𝑆 (non-diagonal 𝑋), per §10
-                    base_symbol = "𝑆ₚ" if self.size_factor else "𝑆"
                 glyph = base_symbol if (self.show_symbols or equiv) else ""
                 if glyph or equiv:
                     self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))

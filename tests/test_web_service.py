@@ -812,39 +812,6 @@ def test_complexity_size_factor_reports_the_schemes_size_factor():
     assert service.complexity_size_factor("TILT minimax-lils-S") == 1
 
 
-def test_size_factor_weight_is_the_prime_proxy_simplicity_matrix():
-    import numpy as np
-    import pytest
-
-    mapping = [[1, 1, 0], [0, 1, 4]]
-    # with the size factor on (lils), the weight is the guide's prime-proxy simplicity weight matrix
-    # 𝑆ₚ = block-diag(𝐿⁻¹, 1): the d×d inverse 𝐿⁻¹ over an augmented dummy prime weighted 1 (dummy
-    # row/col [0…0 1]). Per the guide this is an extrapolation of 𝐿⁻¹, NOT any inverse of 𝑋 = 𝑍𝐿.
-    Sp = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S"))
-    assert Sp.shape == (4, 4)
-    L_inv = np.diag(1.0 / np.array(service.complexity_prescaler(mapping, "minimax-S")))
-    assert np.allclose(Sp[:3, :3], L_inv)          # the d×d block is the simple diagonal 𝐿⁻¹
-    assert Sp[3] == pytest.approx([0.0, 0.0, 0.0, 1.0])          # dummy ROW [0…0 1]
-    assert [row[3] for row in Sp] == pytest.approx([0.0, 0.0, 0.0, 1.0])  # dummy COL [0…0 1]
-
-
-def test_size_factor_weight_block_diagonalises_a_non_diagonal_pretransformer():
-    import numpy as np
-
-    mapping = [[1, 1, 0], [0, 1, 4]]
-    square = ((1.0, 0.0, 0.0), (0.3, 1.0, 0.0), (0.0, 0.0, 1.0))  # an off-diagonal editable square 𝑋
-    # no size factor: a non-diagonal 𝑋 has no per-prime-list weight, so the simplicity weight 𝑆 is 𝑋⁻¹
-    S = np.array(service.damage_weight_matrix(mapping, "minimax-S", override=square))
-    assert S.shape == (3, 3)
-    assert np.allclose(S, np.linalg.inv(np.array(square, float)))      # 𝑆 = 𝑋⁻¹
-    assert np.allclose(S @ np.array(square, float), np.eye(3))         # it inverts 𝑋
-    # with the size factor too, 𝑆ₚ = block-diag(𝑋⁻¹, 1): the square inverse over the dummy prime weighted 1
-    Sp = np.array(service.damage_weight_matrix(mapping, "minimax-lils-S", override=square))
-    assert Sp.shape == (4, 4)
-    assert np.allclose(Sp[:3, :3], np.linalg.inv(np.array(square, float)))  # the d×d block is 𝑋⁻¹
-    assert np.allclose(Sp[3], [0, 0, 0, 1]) and np.allclose(Sp[:, 3], [0, 0, 0, 1])  # dummy row/col [0…0 1]
-
-
 def test_complexity_prescaler_is_the_diagonal_of_per_prime_weights():
     import pytest
 
@@ -1495,7 +1462,7 @@ def test_plain_text_values_omits_superspace_entries_when_superspace_off():
 
 def test_plain_text_all_interval_lils_weight_is_the_per_target_list():
     # all-interval lils: the weight plain text is the per-target simplicity-weight LIST (the same the grid
-    # renders) — NOT the [[…] …] matrix form. Its 𝑆ₚ = 𝐿⁻¹ ⊕ 1 form lives in the tile symbol, not here.
+    # renders) — NOT the [[…] …] matrix form. The grid's tile symbol carries its 𝒘 = 𝒄⁻¹ form, not here.
     pt = service.plain_text_values(service.from_mapping([[1, 1, 0], [0, 1, 4]]), scheme="minimax-lils-S")
     w = pt[("weight", "targets")]
     assert w.startswith("[") and not w.startswith("[[")   # a flat list, not a nested matrix

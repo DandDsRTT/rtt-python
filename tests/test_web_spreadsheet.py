@@ -3057,7 +3057,8 @@ def test_all_interval_relabels_the_complexity_weight_and_damage_equivalences():
 def test_a_non_diagonal_pretransformer_drops_the_complexity_diag_equivalence():
     # diag(𝑋) is meaningless once 𝑋 has off-diagonal entries (each prime's complexity is then the norm
     # of a whole column, not one diagonal entry), so the complexity carries NO closed-form equivalence
-    # then — just the bare 𝒄. The weight still becomes the matrix 𝑊 = 𝑋⁻¹ (via weight_is_matrix).
+    # then — just the bare 𝒄. The weight stays a LIST: the concrete diag(𝐿)⁻¹ form is gone too, leaving
+    # the generic 𝒘 = 𝒄⁻¹ symbol with per-column ‖𝑋‖q⁻¹ headers spelling each entry out.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     s.update(weighting=True, alt_complexity=True, symbols=True, equivalences=True)
@@ -3065,7 +3066,8 @@ def test_a_non_diagonal_pretransformer_drops_the_complexity_diag_equivalence():
     on = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="minimax-S",
                                              custom_prescaler=square).cells}
     assert on["symbol:complexity:targets"].text == "𝒄"       # NOT "𝒄 = diag(𝑋)"
-    assert on["symbol:weight:targets"].text == "𝑆 = 𝑋⁻¹"    # the square inverse, not the diag reciprocal
+    assert on["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"    # the generic reciprocal, not a matrix inverse
+    assert on["matlabel:col:weight:targets:0"].text.startswith("w₁ = ‖𝑋‖")  # per-column reciprocal norm
 
 
 def test_control_checkbox_cell_matches_the_one_shared_option_box_size():
@@ -7280,33 +7282,34 @@ def test_per_cell_units_on_the_M_L_cells_carry_g_over_b():
     assert cells["cell:ss_mapping:ssprimes:1:0"].unit == "g₂/b₁"
 
 
-def test_size_factor_all_interval_weight_is_a_list_with_chart_and_Sp_symbol():
-    # all-interval + size factor (lils): the simplicity weight has no per-prime diagonal closed form, but
-    # it still renders as a per-target LIST (with its bar chart). What's special is carried by the tile's
-    # symbol equivalence 𝑆ₚ = 𝐿⁻¹ ⊕ 1 (the ⊕ 1 dummy-prime corner) and its per-column simplicity headers
-    # 𝑠ₙ = ‖𝐿‖q⁻¹ (the reciprocal of the complexity row's ‖𝐿‖q) — NOT by drawing a matrix.
+def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row():
+    # all-interval + size factor (lils): the simplicity weight has no concrete diagonal closed form, but
+    # it still renders as a per-target LIST (with its bar chart) — and it's labelled as the reciprocal of
+    # the complexity row, exactly as the complexity row drops diag(𝐿) for a bare 𝒄. So the weight drops
+    # the concrete diag(𝐿)⁻¹ for the generic 𝒘 = 𝒄⁻¹, with per-column headers wₙ = ‖𝐿‖q⁻¹ (the reciprocal
+    # of the complexity's cₙ = ‖𝐿‖q). NOT the matrix 𝑆ₚ / ⊕ 1 — that's the (d+1)×(d+1) form a list can't be.
     q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
     lils = {c.id: c for c in _with("minimax-lils-S", weighting=True, charts=True,
                                    symbols=True, equivalences=True, names=True).cells}
     assert "weight:target:0" in lils and "chart:weight:targets" in lils   # a single-row list, with its chart
     assert "cell:weight:targets:1:0" not in lils and "bar:weight" not in lils  # NOT a matrix, no size bar
-    assert lils["symbol:weight:targets"].text == "𝑆ₚ = 𝐿⁻¹ ⊕ 1"
-    assert lils["caption:weight:targets"].text == "prime proxy simplicity weight"
-    assert lils["matlabel:col:weight:targets:0"].text == f"s₁ = ‖𝐿‖{q}⁻¹"
-    # symbols only (no equivalences) → the bare glyph 𝑆ₚ and the bare per-column 𝑠ₙ
+    assert lils["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"
+    assert lils["caption:weight:targets"].text == "target interval weight list"
+    assert lils["matlabel:col:weight:targets:0"].text == f"w₁ = ‖𝐿‖{q}⁻¹"
+    # symbols only (no equivalences) → the bare glyph 𝒘 and the bare per-column wₙ
     bare = {c.id: c for c in _with("minimax-lils-S", weighting=True, symbols=True).cells}
-    assert bare["symbol:weight:targets"].text == "𝑆ₚ"
-    assert bare["matlabel:col:weight:targets:0"].text == "s₁"
-    # a plain all-interval diagonal weight (no size factor) keeps the 𝒘 list + wₙ headers (unchanged)
-    lp = {c.id: c for c in _with("minimax-S", weighting=True, charts=True, symbols=True).cells}
-    assert lp["symbol:weight:targets"].text == "𝒘" and lp["matlabel:col:weight:targets:0"].text == "w₁"
+    assert bare["symbol:weight:targets"].text == "𝒘"
+    assert bare["matlabel:col:weight:targets:0"].text == "w₁"
+    # a plain all-interval diagonal weight (no size factor) keeps the concrete 𝒘 = diag(𝐿)⁻¹ + bare wₙ
+    lp = {c.id: c for c in _with("minimax-S", weighting=True, charts=True, symbols=True, equivalences=True).cells}
+    assert lp["symbol:weight:targets"].text == "𝒘 = diag(𝐿)⁻¹" and lp["matlabel:col:weight:targets:0"].text == "w₁"
     assert "weight:target:0" in lp and "cell:weight:targets:1:0" not in lp
 
 
-def test_a_non_diagonal_pretransformer_all_interval_weight_is_a_list_with_S_symbol():
+def test_a_non_diagonal_pretransformer_all_interval_weight_is_a_reciprocal_list():
     # editing the pretransformer square off-diagonal (a non-diagonal 𝑋, no size factor) also costs the
     # per-prime weight list its diagonal closed form — but the weight still renders as a per-target LIST,
-    # now carrying the symbol 𝑆 = 𝑋⁻¹ and the per-column simplicity headers 𝑠ₙ = ‖𝑋‖q⁻¹.
+    # carrying the generic reciprocal symbol 𝒘 = 𝒄⁻¹ and per-column headers wₙ = ‖𝑋‖q⁻¹ (not a matrix).
     q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
@@ -7316,8 +7319,8 @@ def test_a_non_diagonal_pretransformer_all_interval_weight_is_a_list_with_S_symb
                                              custom_prescaler=square).cells}
     assert "weight:target:0" in on and "chart:weight:targets" in on       # a list, with its chart
     assert "cell:weight:targets:1:0" not in on and "bar:weight" not in on  # NOT a matrix
-    assert on["symbol:weight:targets"].text == "𝑆 = 𝑋⁻¹"                 # capital 𝑆 = 𝑋⁻¹ (no size factor)
-    assert on["matlabel:col:weight:targets:0"].text == f"s₁ = ‖𝑋‖{q}⁻¹"
+    assert on["symbol:weight:targets"].text == "𝒘 = 𝒄⁻¹"                 # the generic reciprocal, no matrix inverse
+    assert on["matlabel:col:weight:targets:0"].text == f"w₁ = ‖𝑋‖{q}⁻¹"
 
 
 def test_a_matrix_row_carries_a_unit_on_every_subrow_not_just_the_first():

@@ -679,30 +679,6 @@ def damage_weight_slope(scheme: str = DEFAULT_TUNING_SCHEME) -> str:
     return resolve_tuning_scheme(scheme).damage_weight_slope
 
 
-def damage_weight_matrix(mapping, scheme: str = DEFAULT_TUNING_SCHEME, override=None) -> tuple:
-    """The all-interval simplicity weight MATRIX underlying the weight tile's symbol — the matrix the
-    retuning map is measured against in the objective. All-interval damage is SIMPLICITY-weighted, so
-    this is 𝑆 = 𝑋⁻¹ — for a NON-DIAGONAL pretransformer 𝑋 (the editable square, no size factor) the
-    true square inverse; a diagonal 𝑋 reduces to 𝐷⁻¹.
-
-    When the size factor is on (the lils family) it is the guide's PRIME-PROXY simplicity weight matrix
-    𝑆ₚ = block-diag(𝑋⁻¹, 1) = 𝐿⁻¹ ⊕ 1: the d×d inverse 𝐿⁻¹ over a dummy prime weighted 1. Per the guide
-    this is an extrapolation of 𝐿⁻¹ — explicitly NOT any inverse of 𝑋 = 𝑍𝐿 (its log-size is built into 𝑋
-    instead). Illustrative / reference math (the grid shows the weight as a per-target LIST, with this
-    𝑆 / 𝑆ₚ form named only in the tile's symbol equivalence; the engine augments the MAPPING with the
-    dummy prime and never forms 𝑆ₚ). ``override`` rides the custom prescaler (diagonal or matrix)."""
-    import numpy as np
-    pre = complexity_prescaler(mapping, scheme, override=override)  # d-diagonal or d×d matrix
-    d = len(pre)
-    matrix = np.asarray(pre, dtype=float) if _is_matrix(pre) else np.diag([float(x) for x in pre])
-    inverse = np.linalg.inv(matrix)  # 𝑆 = 𝑋⁻¹, d×d
-    if not complexity_size_factor(scheme):
-        return tuple(tuple(float(x) for x in row) for row in inverse)  # 𝑆 = 𝑋⁻¹ (square)
-    sp = np.eye(d + 1)  # 𝑆ₚ = block-diag(𝑋⁻¹, 1): the dummy prime weighted 1 (guide's prime-proxy form)
-    sp[:d, :d] = inverse
-    return tuple(tuple(float(x) for x in row) for row in sp)
-
-
 # The three predefined complexity prescalers the alt.-complexity control offers, as the
 # (log-prime power, prime power) traits each sets — identity (count), log-prime, prime (sopfr).
 PRESCALERS = {"identity": (0, 0), "log-prime": (1, 0), "prime": (0, 1)}
@@ -1084,8 +1060,8 @@ def plain_text_values(
     # the bare prescaler is a covector STACK, so the size factor appends one extra ROW — the
     # size-sensitizing covector sf·𝐋 (each entry sf·𝐿ᵢ), keeping the row length d — rather than
     # extending each column the way the products do. This 𝑋 = 𝑍𝐿 size row is the only growth the
-    # weighting region shows; the all-interval simplicity weight stays a per-target list (its 𝑆ₚ =
-    # 𝐿⁻¹ ⊕ 1 form lives in the tile symbol, not the plain text).
+    # weighting region shows; the all-interval simplicity weight stays a per-target list (its generic
+    # 𝒘 = 𝒄⁻¹ form lives in the grid tile's symbol, not the plain text).
     bare_size_row = ((tuple(size_factor * w for w in prescaler),) if size_factor else ())
     weight_text = _cents_list(interval_weights(state.mapping, scheme, targets, domain_basis=db))
     tp_text = _ket_list(target_vectors, "⟩")
