@@ -3,6 +3,32 @@
 The RTT monolith is a microtonal/RTT engine with a NiceGUI web front end
 (`rtt/web/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`).
 
+## The design mockup is the source of truth — never invent UI
+
+The files `RTT design mockup - default.png` and `RTT design mockup - maximized.png` (repo
+root) are the **authoritative spec** for what the spreadsheet contains. Every row, column,
+tile, caption, symbol and control that exists is in the mockup; the mockup is what the user
+is building toward.
+
+**Do not invent UI structure that is not in the mockup.** This is a hard rule, not a
+nice-to-have:
+
+- Before adding *any* row, column, tile, or labelled quantity, **find it in the mockup
+  first.** Open the relevant PNG (crop/zoom with PIL if needed) and confirm it's there. If
+  it isn't, it does not belong — full stop. Don't add it "for completeness," "for symmetry
+  with an existing tile," or because the math would support it. The mockup already decided.
+- This applies hardest to the **chapter-9 superspace block**, which is mathematically open-
+  ended (you *could* lift almost anything into the superspace). The mockup shows exactly two
+  superspace rows — **superspace interval vectors** (B_L) and **superspace mapping** (M_L) —
+  plus the superspace *tuning* maps in the tuning block. It does **not** contain "superspace
+  target intervals", "superspace complexity prescaling", or any other lifted-conversion row.
+  An agent previously invented those two rows; they were torn out. Do not recreate them or
+  anything like them.
+- If you believe something genuinely *should* exist but isn't in the mockup, **stop and ask
+  the user** — don't ship it on your own judgment. Adding unrequested, unspecified UI is a
+  serious error here: it pollutes a carefully-designed surface and the user has to notice and
+  demand its removal.
+
 ## Use the persistent `.venv` — don't rebuild a throwaway one
 
 The repo keeps a persistent virtualenv at `.venv/` (gitignored). All deps (runtime **and**

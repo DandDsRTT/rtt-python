@@ -1390,67 +1390,6 @@ def test_superspace_tuning_runs_over_the_superspace_primes():
     )
 
 
-def test_targets_in_superspace_writes_each_target_as_a_monzo_over_the_superspace_primes():
-    # the ss_targets row's (ss_vectors, targets) tile shows each target interval as a
-    # dL-tall monzo over the superspace primes, the same way the existing vectors row
-    # carries each target as a d-tall monzo over the domain primes. Returned as k rows
-    # of length dL (rows-as-targets), matching the storage convention of
-    # target_interval_vectors / basis_in_superspace.
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    # BARBADOS's TILT over 2.3.13/5 yields 10 voicable intervals: 2/1, 3/1, 3/2, 4/3,
-    # 8/3, 9/4, 13/5, 13/10, 15/13, 16/9. Over the superspace (2, 3, 5, 13) each gets
-    # one extra slot for the new prime 5 — and 5-bearing intervals (13/5, 13/10, 15/13)
-    # spread between the 5 and 13 columns rather than parking in the lone 13/5 element.
-    targets = service.targets_in_superspace(state, "TILT")
-    assert targets == (
-        (1, 0, 0, 0),    # 2/1
-        (0, 1, 0, 0),    # 3/1
-        (-1, 1, 0, 0),   # 3/2
-        (2, -1, 0, 0),   # 4/3
-        (3, -1, 0, 0),   # 8/3
-        (-2, 2, 0, 0),   # 9/4
-        (0, 0, -1, 1),   # 13/5
-        (-1, 0, -1, 1),  # 13/10
-        (0, 1, 1, -1),   # 15/13
-        (4, -2, 0, 0),   # 16/9
-    )
-
-
-def test_targets_in_superspace_passes_through_when_already_prime_only():
-    # over a standard prime basis the superspace IS the domain, so the per-target monzos
-    # match the on-domain target vectors row exactly.
-    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # 5-limit meantone
-    primes = service.superspace_primes(state.domain_basis)
-    on_domain = service.target_interval_vectors(
-        service.target_interval_set("TILT", state.domain_basis), state.d, state.domain_basis,
-    )
-    in_super = service.targets_in_superspace(state, "TILT")
-    # same shape, same entries — the prime basis is the superspace basis here
-    assert len(primes) == state.d
-    assert in_super == on_domain
-
-
-def test_complexity_prescaler_in_superspace_runs_over_the_superspace_primes():
-    import pytest
-
-    # the prescaler the prime-based optimization runs over: log-prime over the superspace.
-    # For BARBADOS over 2.3.13/5 with superspace (2, 3, 5, 13) it is a dL-tuple diagonal
-    # (log₂2, log₂3, log₂5, log₂13) — one more entry than the domain prescaler (log₂13).
-    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
-    pre = service.complexity_prescaler_in_superspace(state, "TILT minimax-S")
-    assert pre == pytest.approx(
-        (math.log2(2), math.log2(3), math.log2(5), math.log2(13)), abs=1e-9,
-    )
-
-
-def test_complexity_prescaler_in_superspace_passes_through_when_already_prime_only():
-    # a standard prime basis = its own superspace, so the result matches the on-domain
-    # complexity_prescaler entry-for-entry.
-    state = service.from_mapping([[1, 1, 0], [0, 1, 4]])  # 5-limit meantone
-    assert service.complexity_prescaler_in_superspace(state, "TILT minimax-S") == \
-        service.complexity_prescaler(state.mapping, "TILT minimax-S")
-
-
 def test_plain_text_values_includes_superspace_entries_when_superspace_on():
     # Phase 4: the nonstandard-domain superspace region (B_L, M_L, M_jL, 𝒈ₗ / 𝒕ₗ / 𝒋ₗ /
     # 𝒓ₗ) gets its own plain-text strings when the superspace flag is on — the EBK string

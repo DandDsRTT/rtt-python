@@ -266,48 +266,6 @@ def superspace_just_mapping(primes) -> Matrix:
     return tuple(tuple(1 if i == j else 0 for j in range(dl)) for i in range(dl))
 
 
-def targets_in_superspace(
-    state: TemperamentState, target_spec: str = DEFAULT_TARGET_SPEC,
-) -> Matrix:
-    """Each TILT/OLD target interval as a monzo over the superspace primes — the
-    ``(ss_vectors, targets)`` tile the nonstandard-domain superspace region renders.
-    Returned as k rows of length dL (rows-as-targets), matching the storage convention of
-    :func:`target_interval_vectors` (the on-domain target column). The target set is
-    resolved against the live domain (TILT / OLD; the filter that drops intervals the
-    nonstandard domain can't voice), then each ratio re-expressed over the superspace
-    primes — exactly what the existing prime-based optimization runs over. For BARBADOS
-    over 2.3.13/5 with superspace (2, 3, 5, 13) the rows include ``13/5 → (0,0,-1,1)``."""
-    targets = target_interval_set(target_spec, state.domain_basis)
-    superspace = superspace_primes(state.domain_basis)
-    return tuple(
-        tuple(int(x) for x in v)
-        for v in express_quotients_in_domain_basis(
-            tuple(Fraction(r) for r in targets), superspace
-        )
-    )
-
-
-def complexity_prescaler_in_superspace(
-    state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME,
-) -> tuple[float, ...]:
-    """The complexity prescaler re-expressed over the superspace primes — a dL-tuple
-    diagonal, the prescaler the prime-based optimization actually runs over. Built from the
-    lifted temperament (:func:`superspace_mapping` over :func:`superspace_primes`) so it picks
-    up the new prime above the original basis: for BARBADOS over 2.3.13/5 with superspace
-    (2, 3, 5, 13), the log-prime diagonal grows by one entry (``log₂13``). A standard prime
-    basis passes through as-is. Returned as a flat tuple, matching the diagonal-case shape
-    of :func:`complexity_prescaler`; the renderer formats it as a dL×dL matrix on display."""
-    superspace = superspace_primes(state.domain_basis)
-    ml = superspace_mapping(state)
-    t = Temperament(ml, Variance.ROW, superspace)
-    spec = resolve_tuning_scheme(scheme)
-    return tuple(
-        get_complexity_prescaler(
-            t, spec.complexity_log_prime_power, spec.complexity_prime_power, spec.nonprime_basis_approach
-        )
-    )
-
-
 def superspace_tuning(
     state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME, nonprime_approach: str = "",
 ) -> Tuning:
