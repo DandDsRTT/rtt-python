@@ -128,6 +128,8 @@ TBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + TARGET_PRESET_W + 8 + LBOX_DIM_W  # 8 =
 PBOX_W = 2 * BOX_OUTER + 2 * BOX_INNER + PRESET_W + 8 + LBOX_DIM_W  # 8 = OPT_COL_GAP
 BOX_TITLE_H = 14  # px height of the optimization / tuning-ranges boxes' bold title strip
 BOX_TITLE_GAP = 4  # gap below that title, before the box's content
+APPROACH_RADIO_H = 64  # height of the nonstandard-domain-approach selector — three rows of square
+# indicators STACKED (prime-based / nonprime-based / neutral), the tuning-ranges range-mode style
 FRAME_H = 9  # height of a matrix's top-bracket framing band (the bar + down-ticks)
 BRACE_H = 7  # depth of the bottom curly-brace band; kept shallow so the brace's
 # short bounding dimension matches the value brackets' footprint (one EBK weight)
@@ -1282,14 +1284,14 @@ class _GridBuilder:
         self.opt_extra = ((RANGE_GAP + OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + ROW_H + SYMBOL_H
                       + self.opt_cap_lines * CAPTION_LINE + OPT_PAD_B) if self.opt_ctrl else 0)
         # the chapter-9 nonstandard-domain-approach radio (neutral / prime-based / nonprime-based)
-        # rides a reserved band at the very bottom of the damage tile, below the optimization box —
+        # rides a reserved band near the bottom of the damage tile, ABOVE the optimization box —
         # shown only when the basis carries a NONPRIME element (the same domain_has_nonprimes gate
         # as the superspace columns/rows), and only while the damage tile is open (its home). Reserve
-        # a caption line + a control row so the rows below drop clear, exactly like opt_extra.
+        # a bold title strip + the three-row square radio so the rows below drop clear, like opt_extra.
         self.show_approach = (service.domain_has_nonprimes(self.elements)
                           and "row:damage" not in self.collapsed and self.col_open("targets")
                           and "tile:damage:targets" not in self.collapsed)
-        self.approach_extra = (RANGE_GAP + CAPTION_LINE + ROW_H) if self.show_approach else 0
+        self.approach_extra = (RANGE_GAP + BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H) if self.show_approach else 0
         # the weight-slope chooser (U/S/C) is the core of box 𝒘 — like box 𝒄's complexity norm it
         # shows with WEIGHTING itself, not gated on the alt. complexity extra. In all-interval
         # mode the weight is simplicity by construction, not a free choice, so the chooser stays put
@@ -3022,13 +3024,14 @@ class _GridBuilder:
         # the box's height, and the targets column is floored to OPT_BOX_MIN_W (see _control_floor) so
         # the spread-out controls always fit.
         opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
+        approach_frame = None  # (x, y, w, h) of the bordered frame around the approach box
         self.approach_box = None  # (x, y, w, h) the approach radio is positioned over (None ⇒ hidden)
         if self.opt_ctrl:
             ox = self.col_x["targets"]
             box_w = self.col_w["targets"]                 # the box spans the full width of the damage tile
-            # the opt box sits just above the approach band, so it shifts up by approach_extra too
+            # the opt box sits at the very bottom of the tile (the approach box rides above it)
             box_top = (self.tile_top["damage"] + self.tile_h["damage"]
-                       - self.opt_extra - self.approach_extra + RANGE_GAP)
+                       - self.opt_extra + RANGE_GAP)
             title_top = box_top + OPT_PAD_T          # inset below the box's top border (not on it)
             content_top = title_top + OPT_TITLE_H + OPT_TITLE_GAP  # a gap below the title
             sym_top = content_top + ROW_H            # the symbol/hint row, under the values
@@ -3098,18 +3101,23 @@ class _GridBuilder:
                                  "caption", text=f"double-click to {'unlock' if self.optimize_locked else 'lock'}"))
             opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
 
-        # the chapter-9 approach radio band: a caption over the neutral/prime-based/nonprime-based
-        # radio, seated in the reserved approach_extra slice at the very bottom of the damage tile.
-        # The radio itself is an interactive widget app.py owns; here we only emit its caption and
-        # publish approach_box (its target x/y/w/h) for render() to position the widget over.
+        # the chapter-9 approach box: a bordered control box (the tuning-ranges / optimization style)
+        # titled "nonstandard domain approach", framing the prime-based/nonprime-based/neutral square
+        # radio. It rides the reserved approach_extra slice ABOVE the optimization box, spanning the
+        # tile's full width like its siblings. A left-aligned boxtitle tops it (like every control
+        # box); the radio itself is an interactive widget app.py owns, so here we emit the title and
+        # publish approach_box (its target x/y/w/h) for render() to position the square radio over.
         if self.show_approach:
             ax = self.col_x["targets"]
             aw = self.col_w["targets"]
-            app_top = self.tile_top["damage"] + self.tile_h["damage"] - self.approach_extra + RANGE_GAP
-            self.cells.append(CellBox("optimization:approach:caption", ax, app_top, aw, CAPTION_LINE,
-                                 "caption", text="nonstandard domain approach"))
-            self.approach_box = (ax + OPT_PAD_L, app_top + CAPTION_LINE,
-                                 aw - OPT_PAD_L - OPT_PAD_R, ROW_H)
+            box_top = (self.tile_top["damage"] + self.tile_h["damage"]
+                       - self.opt_extra - self.approach_extra + RANGE_GAP)
+            self.cells.append(CellBox("optimization:approach:title", ax, box_top, aw, BOX_TITLE_H, "boxtitle",
+                                 text="nonstandard domain approach", align="left"))
+            radio_top = box_top + BOX_TITLE_H + BOX_TITLE_GAP
+            self.approach_box = (ax + OPT_PAD_L, radio_top,
+                                 aw - OPT_PAD_L - OPT_PAD_R, APPROACH_RADIO_H)
+            approach_frame = (ax, box_top, aw, BOX_TITLE_H + BOX_TITLE_GAP + APPROACH_RADIO_H)
 
         if self.row_open("canon") and self.tile_open("canon", "primes"):  # canonical maps: ⟨ … ] per row
             for i in range(self.rc):
@@ -3377,6 +3385,9 @@ class _GridBuilder:
         # the optimization box's thin border, around its title + mean damage/power/button
         if opt_box is not None:
             self.blocks.append(Block("block:optimization:box", *opt_box, boxed=True))
+        # the approach box's thin border, around its title + the square radio, above the opt box
+        if approach_frame is not None:
+            self.blocks.append(Block("block:optimization:approach:box", *approach_frame, boxed=True))
 
         if self.col_x and self.row_y:
             bands = []  # (id, x, y, w, h, group)

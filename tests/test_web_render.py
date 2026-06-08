@@ -2178,10 +2178,10 @@ async def test_a_disabled_history_button_shows_no_preview(user: User) -> None:
 
 async def test_hovering_a_nonstandard_approach_option_previews_setting_it(user: User) -> None:
     # the chapter-9 nonstandard-domain-approach radio appears once the domain carries a nonprime element.
-    # Hovering one of its options previews reading the temperament that way — ringing the cells the
-    # re-analysis moves — without committing the choice. The hovered option's index rides a CustomEvent
-    # in `detail` (the radio's per-option client delegation); here we drive that event directly. Auto-
-    # optimize is on so the displayed tuning actually re-solves under the hovered approach.
+    # Hovering one of its square options previews reading the temperament that way — ringing the cells the
+    # re-analysis moves — without committing the choice. Each option is its own hover target (mouseenter),
+    # the whole radio its mouse-out; here we drive those events directly. Auto-optimize is on so the
+    # displayed tuning actually re-solves under the hovered approach.
     await user.open("/")
     _toggle(user, "plain text values")                            # reveal the editable mapping EBK dual
     _cell_child(user, "ptext:mapping:primes").set_value("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # a nonprime domain
@@ -2189,8 +2189,8 @@ async def test_hovering_a_nonstandard_approach_option_previews_setting_it(user: 
     user.find(kind=ui.checkbox, content="optimization").click()   # reveal the optimize button
     await user.should_see(marker="optimization:button")
     UserInteraction(user, {_cell_child(user, "optimization:button")}, None).trigger("dblclick")  # auto-optimize on
-    radio = set(user.find(marker="approach").elements)
-    UserInteraction(user, radio, None).trigger("approachhover", {"detail": 1})   # hover "prime-based" (index 1)
+    prime_opt = set(user.find(marker="approach-prime-based").elements)
+    UserInteraction(user, prime_opt, None).trigger("mouseenter")                  # hover "prime-based"
     assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:0")   # the prime-based retune rings
-    UserInteraction(user, radio, None).trigger("approachhover", {"detail": -1})  # leave the options
+    UserInteraction(user, set(user.find(marker="approach").elements), None).trigger("mouseleave")  # leave
     assert "rtt-preview-change" not in _wrap_classes(user, "tuning:prime:0")  # cleared on mouse-out

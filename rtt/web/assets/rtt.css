@@ -134,11 +134,10 @@
    (the white wash bases), not the grey pane behind it */
 .rtt-gridcontent { position:relative; isolation:isolate; transition:width var(--t), height var(--t); }
 .rtt-band { position:absolute; inset:0; pointer-events:none; }
-/* the chapter-9 nonstandard-domain-approach radio, positioned over the reserved band at the bottom
-   of the damage tile (inline left/top/size set by render()); compact so its three options fit one row */
-.rtt-approach { z-index:3; box-sizing:border-box; display:flex; align-items:center;
-                justify-content:center; gap:6px; font-size:11px; white-space:nowrap; }
-.rtt-approach .q-radio__label { font-size:11px; padding-left:2px; }
+/* the chapter-9 nonstandard-domain-approach radio: the standard square radio (.rtt-rangemode does
+   the vertical square-list layout), positioned over the reserved band inside the approach box
+   (inline left/top/size set by render()); this only adds the absolute-positioning stacking. */
+.rtt-approach { z-index:3; box-sizing:border-box; }
 /* overflow:hidden clips the row branching it now holds — the trunks/left-buses + the ± controls,
    and a − hover zone that drops rightward over the spine — to the band's [0, freeze_x] width, so
    none of it spills over the scrolling body to its right (the column strip clips the same way via

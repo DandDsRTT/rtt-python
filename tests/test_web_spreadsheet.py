@@ -6682,19 +6682,19 @@ def test_nonprime_based_approach_collapses_the_entire_superspace():
 
 
 def test_approach_radio_band_only_for_a_nonprime_domain():
-    # the nonstandard-domain approach radio gets a reserved band at the bottom of the damage tile —
-    # a caption plus lay.approach_box (the x/y/w/h app.py positions refs["approach"] over) — only
+    # the nonstandard-domain approach radio gets a reserved band above the optimization box — a bold
+    # boxtitle plus lay.approach_box (the x/y/w/h app.py positions refs["approach"] over) — only
     # when the basis carries a nonprime element, the same gate as the superspace. (Before this it
     # was parked in the frozen corner, clipped and invisible.)
     on = settings.defaults() | {"nonstandard_domain": True}
     nonprime = spreadsheet.build(service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}"), on)
     assert nonprime.approach_box is not None
-    assert {c.id: c for c in nonprime.cells}["optimization:approach:caption"].text \
-        == "nonstandard domain approach"
-    # a standard prime limit: no nonprime → no band, no caption
+    title = {c.id: c for c in nonprime.cells}["optimization:approach:title"]
+    assert title.kind == "boxtitle" and title.text == "nonstandard domain approach"
+    # a standard prime limit: no nonprime → no band, no title
     std = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), on)
     assert std.approach_box is None
-    assert "optimization:approach:caption" not in {c.id for c in std.cells}
+    assert "optimization:approach:title" not in {c.id for c in std.cells}
     # a nonstandard but all-prime subgroup (2.5.7): still no band — it needs a nonprime
     sub = spreadsheet.build(service.from_temperament_data("2.5.7 [⟨1 0 0] ⟨0 1 1]}"), on)
     assert sub.approach_box is None

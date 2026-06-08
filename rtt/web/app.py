@@ -3560,11 +3560,11 @@ def index() -> None:
         refs["undo"].set_enabled(editor.can_undo)
         refs["redo"].set_enabled(editor.can_redo)
         refs["reset"].set_enabled(editor.can_reset)
-        # the nonstandard-domain-approach radio: positioned over the reserved band at the bottom of
-        # the damage tile (lay.approach_box, body coordinates → shift up by fy like any body cell)
-        # when the domain carries a nonprime element, hidden otherwise. Its value mirrors
-        # editor.nonprime_basis_approach (building[0] is True, so the programmatic write is swallowed
-        # by the on_change guard rather than re-firing).
+        # the nonstandard-domain-approach radio: positioned over the reserved band inside the approach
+        # box (lay.approach_box, body coordinates → shift up by fy like any body cell) when the domain
+        # carries a nonprime element, hidden otherwise. The live approach's square is filled and the
+        # others hollow (the _update_rangemode pattern); this runs while building[0] is True, so the
+        # class toggle is a pure display sync, never re-firing as an edit.
         if lay.approach_box is not None:
             ax, ay, aw, ah = lay.approach_box
             refs["approach"].style(f"position:absolute; left:{ax}px; top:{ay - fy}px; "
@@ -3572,8 +3572,9 @@ def index() -> None:
             refs["approach"].set_visibility(True)
         else:
             refs["approach"].set_visibility(False)
-        if refs["approach"].value != editor.nonprime_basis_approach:
-            refs["approach"].value = editor.nonprime_basis_approach
+        for key, opt in refs["approach_opts"].items():
+            (opt.classes(add="rtt-rangeopt-on") if key == editor.nonprime_basis_approach
+             else opt.classes(remove="rtt-rangeopt-on"))
         # reflect the document's Show settings into the panel (after undo/redo/reset/
         # select-all/load). building[0] is still True, so these programmatic value writes
         # are swallowed by on_show_toggle/on_select_all rather than re-firing as edits.
@@ -3822,63 +3823,46 @@ def index() -> None:
                         arm_history_preview(refs["reset"], lambda: editor.can_reset, editor.reset)
                 # the chapter-9 nonstandard-domain-approach radio: prime-based, nonprime-based, or
                 # the library's neutral default (which reads a nonprime element as a formal prime).
-                # Hidden when the domain has no nonprime element — the trait is meaningless there
-                # — and revealed when a basis like 2.3.13/5 carries one. The visibility is updated
-                # by render() through refs["approach"] each pass.
-                approach_options = {"": "neutral", "prime-based": "prime-based",
-                                    "nonprime-based": "nonprime-based"}
-                approach_keys = list(approach_options)  # index → approach key (the client sends the index)
+                # Built as the standard square radio (the tuning-ranges range-mode style — a vertical
+                # list of square options), NOT a Quasar inline radio. Hidden when the domain has no
+                # nonprime element — the trait is meaningless there — and revealed when a basis like
+                # 2.3.13/5 carries one. render() fills the live option and sets visibility each pass.
+                approach_options = {"prime-based": "prime-based",
+                                    "nonprime-based": "nonprime-based", "": "neutral"}
 
                 def on_approach_change(value):
-                    # building[0] is True while render() programmatically syncs the radio's
-                    # value to editor.nonprime_basis_approach (after an undo, a domain change
-                    # that reset the field to "", etc.); the echo must not loop back as a user edit.
+                    # building[0] is True while render() programmatically syncs the radio to
+                    # editor.nonprime_basis_approach (after an undo, a domain change that reset the
+                    # field to "", etc.); that sync toggles the option classes directly, never here.
                     if building[0] or value is None:
                         return
                     editor.set_nonprime_basis_approach(value)
                     render()
 
                 def on_approach_hover(value):
-                    # preview the hovered approach option: ring the cells reading the temperament that way
-                    # would move, without committing (control_hover reverts it). The client delegation sends
-                    # the hovered option's index in `detail`; -1 / out of range = leaving, so clear. Mirrors
-                    # the temperament chooser's index-in-detail hover normalization.
-                    if isinstance(value, dict):
-                        value = next(iter(value.values()), None)
-                    if isinstance(value, (list, tuple)):
-                        value = value[0] if value else None
-                    if not isinstance(value, (int, float)) or isinstance(value, bool) \
-                            or not 0 <= int(value) < len(approach_keys):
+                    # preview the hovered approach option: ring the cells reading the temperament that
+                    # way would move, without committing (control_hover reverts it). None = leaving the
+                    # radio, so clear the preview. Each option is its own hover target (mouseenter).
+                    if value is None:
                         control_unhover()
                         return
-                    control_hover(lambda a=approach_keys[int(value)]: editor.set_nonprime_basis_approach(a))
+                    control_hover(lambda a=value: editor.set_nonprime_basis_approach(a))
 
-                refs["approach"] = ui.radio(
-                    approach_options,
-                    value=editor.nonprime_basis_approach,
-                    on_change=lambda e: on_approach_change(e.value),
-                ).props("dense inline").classes("rtt-approach").mark("approach")
-                # per-option hover preview: the radio is not one hover target like the +/- buttons (each
-                # option means a different approach), so a tiny client delegation finds the hovered .q-radio's
-                # index and fires an `approachhover` event carrying it; leaving the radio fires -1. It dedupes
-                # (a settled pointer doesn't re-fire), so the server re-solves only on an option change. The
-                # handler maps the index back to the approach and routes it through the shared control_hover.
-                refs["approach"].on("mouseover", js_handler="""(e) => {
-                    const group = e.target.closest && e.target.closest('.rtt-approach');
-                    if (!group) return;
-                    const opt = e.target.closest('.q-radio');
-                    const idx = opt ? Array.from(group.querySelectorAll('.q-radio')).indexOf(opt) : -1;
-                    if (group.__rttApproach === idx) return;
-                    group.__rttApproach = idx;
-                    group.dispatchEvent(new CustomEvent('approachhover', {detail: idx}));
-                }""")
-                refs["approach"].on("mouseleave", js_handler="""(e) => {
-                    const group = e.target.closest && e.target.closest('.rtt-approach');
-                    if (!group || group.__rttApproach === -1) return;
-                    group.__rttApproach = -1;
-                    group.dispatchEvent(new CustomEvent('approachhover', {detail: -1}));
-                }""")
-                refs["approach"].on("approachhover", lambda e: on_approach_hover(e.args), args=["detail"])
+                # a square option per approach, stacked vertically (the _build_rangemode shape): a
+                # .rtt-rangebox square the live class fills + its label; click sets it, hover previews.
+                refs["approach"] = ui.element("div").classes("rtt-approach rtt-rangemode").mark("approach")
+                refs["approach_opts"] = {}
+                with refs["approach"]:
+                    for key, label in approach_options.items():
+                        opt = ui.element("div").classes("rtt-rangeopt")
+                        with opt:
+                            ui.element("span").classes("rtt-rangebox")  # the square (filled when selected)
+                            ui.label(label).classes("rtt-rangelabel")
+                        opt.on("click", lambda _=None, k=key: on_approach_change(k))
+                        opt.on("mouseenter", lambda _=None, k=key: on_approach_hover(k))
+                        opt.mark(f"approach-{label}")  # each option its own hover/click target
+                        refs["approach_opts"][key] = opt
+                refs["approach"].on("mouseleave", lambda _=None: on_approach_hover(None))
             gridbody = ui.element("div").classes("rtt-gridbody").mark("gridbody")
             with gridbody:
                 board = ui.element("div").classes("rtt-gridcontent").mark("board")
