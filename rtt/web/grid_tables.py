@@ -75,11 +75,6 @@ CAPTIONS = {
     ("tuning", "ssprimes"): "superspace tuning map",
     ("just", "ssprimes"): "superspace just tuning map",
     ("retune", "ssprimes"): "superspace retuning map",
-    # the chapter-9 CONVERSION tiles — the target list and complexity prescaler lifted
-    # into the superspace. Captions parallel the on-domain ones (target interval list /
-    # complexity prescaler) with a "superspace" prefix so the eye traces the conversion.
-    ("ss_targets", "targets"): "superspace target interval list",
-    ("ss_prescaler", "ssprimes"): "superspace complexity prescaler",
     ("vectors", "commas"): "comma basis",
     ("vectors", "targets"): "target interval list",
     ("canon", "gens"): "generator form matrix",
@@ -159,10 +154,6 @@ SYMBOLS = {
     ("tuning", "ssprimes"): "𝒕ₗ",
     ("just", "ssprimes"): "𝒋ₗ",
     ("retune", "ssprimes"): "𝒓ₗ",
-    # the chapter-9 CONVERSION symbols: Tₗ (upright T like the on-domain target list T,
-    # subscript L for the lift) and 𝑋ₗ (math italic, parallel to the bare prescaler 𝑋)
-    ("ss_targets", "targets"): "Tₗ",
-    ("ss_prescaler", "ssprimes"): "𝑋ₗ",   # math-italic X (\U0001D44B) + subscript L
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -283,8 +274,7 @@ COL_LABEL_LETTERS = {
 # tiles when Phase 4 populates them — Phase 3 reserves the frame bands so the
 # row_axis fan splits into one rule per cell-row (dL / rL sub-rules).
 FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling",
-                         "ss_vectors", "ss_mapping", "ss_just_mapping",
-                         "ss_targets", "ss_prescaler"})
+                         "ss_vectors", "ss_mapping", "ss_just_mapping"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 # Value rows whose tiles carry per-column matrix labels (𝐜ᵢ, 𝒕ᵢ, 𝐲ᵢ, …) when symbols
 # is on — every row with multi-cell tiles in the built layout. The counts/quantities/
@@ -468,9 +458,6 @@ MNEMONICS = {
     ("tuning", "ssprimes"): "tuning",         # 𝒕ₗ → "t" in "superspace tuning map"
     ("just", "ssprimes"): "just",             # 𝒋ₗ → "j" in "superspace just tuning map"
     ("retune", "ssprimes"): "retuning",       # 𝒓ₗ → "r" in "superspace retuning map"
-    # the chapter-9 CONVERSION tiles — underline the symbol letters in their captions
-    ("ss_targets", "targets"): "target",  # Tₗ → underline the "t" of "target"
-    ("ss_prescaler", "ssprimes"): "x",    # 𝑋ₗ → underline the mid-word "x" of "compleXity" (matches 𝑋)
     ("vectors", "commas"): "comma",     # C
     ("vectors", "targets"): "target",   # T
     ("vectors", "held"): "held",        # H
@@ -505,11 +492,6 @@ EQUIVALENCES = {
     ("retune", "ssprimes"): " = 𝒕ₗ − 𝒋ₗ",
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",
-    # the chapter-9 CONVERSION tile: Tₗ = BₗT (the on-domain target list lifted through
-    # the basis-embedding matrix). The prescaler's analogous form is scheme-dependent
-    # (𝑋ₗ = log-prime over the superspace primes for the default scheme), so a follow-up
-    # phase can add it dynamically alongside the existing prescaler_equivalence machinery.
-    ("ss_targets", "targets"): " = BₗT",
     ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",
@@ -691,12 +673,6 @@ SUPERSPACE_TILES = (
     ("block:ss_mapping:gens", "ss_mapping", "gens"),               # M_L over its own generators (trivially identity)
     ("block:ss_mapping:ssprimes", "ss_mapping", "ssprimes"),       # M_L itself, the rL × dL mapping
     ("block:ss_just_mapping:ssprimes", "ss_just_mapping", "ssprimes"),  # M_jL = I (dL × dL identity)
-    # the chapter-9 CONVERSION tiles — only render under prime-based / neutral approaches
-    # (their rows are gated on show_ss_conversion; an inert tile costs nothing here)
-    ("block:ss_targets:quantities", "ss_targets", "quantities"),   # spine: the superspace primes index
-    ("block:ss_targets:targets", "ss_targets", "targets"),         # B_L·T: the target list re-expressed over the superspace primes
-    ("block:ss_prescaler:quantities", "ss_prescaler", "quantities"),  # spine: the superspace primes index
-    ("block:ss_prescaler:ssprimes", "ss_prescaler", "ssprimes"),   # X_L: the prescaler over the superspace (dL × dL)
     ("block:tuning:ssgens", "tuning", "ssgens"),                   # 𝒈L (Phase 4F)
     ("block:tuning:ssprimes", "tuning", "ssprimes"),               # 𝒕L (Phase 4F)
     ("block:just:ssprimes", "just", "ssprimes"),                   # 𝒋L (Phase 4F)
