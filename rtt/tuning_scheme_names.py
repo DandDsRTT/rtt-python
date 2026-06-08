@@ -173,8 +173,15 @@ def tuning_scheme_from_systematic_name(name: str) -> TuningSchemeSpec:
         r"\{[\d/,\s]*\}|\d*-?TILT|\d*-?OLD|primes", name
     )
     target = target_match.group(0) if target_match else None
-    if target is None and ("all-interval" in name or ("minimax" in name and "S" in name)):
-        target = "{}"  # all-interval scheme (e.g. minimax-S = TOP, minimax-ES = TE)
+    # a bare name with no target-set prefix and a SIMPLICITY slope is an all-interval scheme — its
+    # damage is minimized over every interval, which by duality is a dual-norm optimization over the
+    # primes (minimax-S = TOP, minimax-ES = TE, and likewise miniRMS-S / miniaverage-S, all of whose
+    # over-all-intervals optima are well-defined). Test the trailing slope letter, NOT "S" anywhere:
+    # "miniRMS" contains an S of its own, so the old `"minimax" in name and "S" in name` test caught
+    # only the minimax forms and left miniRMS-S / miniaverage-S resolving to a target-less spec the
+    # solver couldn't pin — a degenerate all-zero tuning map (nan mean damage).
+    if target is None and ("all-interval" in name or name.strip().endswith("S")):
+        target = "{}"
     complexity_traits = _complexity_traits_from_name(name)
     held = complexity_traits.pop("held_intervals", None) or held  # odd/ols/lols hold the octave
     # trait 7: "nonprime-based" is checked first since it contains "prime-based" as a substring

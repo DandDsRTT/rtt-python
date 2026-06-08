@@ -578,3 +578,25 @@ def test_copfr_all_interval_equals_primes_optimization(name, all_interval, over_
     assert optimize_generator_tuning_map(t, all_interval) == pytest.approx(
         optimize_generator_tuning_map(t, over_primes), abs=TOL
     )
+
+
+# Regression: a BARE simplicity-weighted name (no target-set prefix) is an all-interval scheme,
+# whatever its mini… power word. The name resolver once special-cased only "minimax…S", so
+# miniRMS-S / miniRMS-ES / miniaverage-S resolved to a target-less spec the solver couldn't pin —
+# an all-zero tuning map whose mean damage was nan. They must instead resolve to the all-interval
+# ({}) form and (since an all-interval optimum minimaxes over every interval by duality, ignoring
+# the stored power) tune identically to their minimax-prefixed twin.
+@pytest.mark.parametrize(
+    "bare, twin",
+    [
+        ("miniRMS-S", "minimax-S"),
+        ("miniRMS-ES", "minimax-ES"),
+        ("miniaverage-S", "minimax-S"),
+    ],
+)
+def test_bare_simplicity_names_are_all_interval_not_a_nan_tuning(bare, twin):
+    t = parse_temperament_data(TEMPERAMENTS["meantone"])
+    assert tuning_scheme_from_systematic_name(bare).target_intervals == "{}"  # resolves all-interval
+    tm = optimize_tuning_map(t, bare)
+    assert all(x == x for x in tm)  # finite (x != x is True only for nan) — not the degenerate solve
+    assert tm == pytest.approx(optimize_tuning_map(t, twin), abs=TOL)  # equals the minimax twin
