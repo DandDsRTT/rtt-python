@@ -384,9 +384,9 @@ def _cell_text(user: User, cell_id: str) -> str:
 
 def _stacked_face(user: User, cell_id: str):
     """The (main label, sub label) of an editable cell's stacked face — the overlay that makes
-    the value read like a read-only tval cell (the main glyph big, a small line below). A cents
+    the value read like a read-only tuning value cell (the main glyph big, a small line below). A cents
     cell stacks the whole part over the decimal; a power cell stacks ∞ over "(max)". The
-    editable input is child[0]; the face is child[1] (a .rtt-tval div holding the
+    editable input is child[0]; the face is child[1] (a .rtt-tuning-value div holding the
     .rtt-stacked-main / .rtt-stacked-sub labels)."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     face = wrap.default_slot.children[1]
@@ -397,7 +397,7 @@ def _gentuning_face(user: User, cell_id: str):
     """The (sign, whole, fraction) labels of a generator-tuning cell's signed cents face. Unlike
     the other cents cells, the genmap shows an explicit, clickable sign glyph (+ ordinarily
     assumed, − when negative) on a row with the big whole part, the small dot-led fraction
-    stacked below. The input is child[0]; the face (rtt-tval.rtt-cellface) is child[1], holding
+    stacked below. The input is child[0]; the face (rtt-tuning-value.rtt-cellface) is child[1], holding
     the sign+whole row (children[0]) over the fraction label (children[1])."""
     wrap = next(iter(user.find(marker=cell_id).elements))
     face = wrap.default_slot.children[1]
@@ -811,7 +811,7 @@ async def test_editing_a_prescaler_diagonal_cell_overrides_the_scheme(user: User
     # the typed value rode the override back to the diagonal cell on re-render (it would
     # otherwise have reverted to the scheme's 1.585), and the off-diagonal "0" stays read-only
     assert _cell_child(user, "cell:prescaling:primes:1:1").value == "4"  # bare (no fractional part)
-    # the off-diagonal cell is plain tval "0" (the rtt-tval div, no editable input); a render
+    # the off-diagonal cell is plain tuning value "0" (the rtt-tuning-value div, no editable input); a render
     # error in that branch would surface here via the fixture's ERROR-log guard
     await user.should_see(marker="cell:prescaling:primes:0:1")
 
@@ -836,12 +836,12 @@ async def test_a_bare_integer_value_fills_the_cell_not_the_reduced_whole_part_si
     # But a value with NO fractional part is a plain integer: it must fill the cell at the full
     # value-cell font (like the mapping / mapped integers), NOT sit at the reduced whole-part size
     # with empty space below — which made integers read as shrunken, "as if they had a decimal part".
-    # The prescaler matrix is mostly integers: its off-diagonal 0s are read-only tval cells.
+    # The prescaler matrix is mostly integers: its off-diagonal 0s are read-only tuning value cells.
     await user.open("/")
     user.find(kind=ui.checkbox, content="weighting").click()
     _cell_child(user, "control:slope").set_value("simplicity-weight")  # reveal the prescaling row
     await user.should_see(marker="cell:prescaling:primes:0:1")
-    zero_face = _cell_child(user, "cell:prescaling:primes:0:1")        # read-only tval: child[0] IS the face
+    zero_face = _cell_child(user, "cell:prescaling:primes:0:1")        # read-only tuning value: child[0] IS the face
     zero_main = zero_face.default_slot.children[0]
     assert zero_main.text == "0"
     assert "rtt-stacked-solo" in zero_main._classes    # the bare integer takes the full-size (solo) face
@@ -1259,7 +1259,7 @@ async def test_all_interval_renders_the_locked_power_as_a_read_only_value(user: 
     _cell_child(user, "control:all_interval").set_value(True)     # check it -> all-interval
     await user.should_see(marker="optimization:power")
     assert "rtt-cell-input" not in _wrap_classes(user, "optimization:power")  # read-only value, no input
-    face = _cell_child(user, "optimization:power")                # the .rtt-tval stacked face div
+    face = _cell_child(user, "optimization:power")                # the .rtt-tuning-value stacked face div
     main, sub = face.default_slot.children[0], face.default_slot.children[1]
     assert (main.text, sub.text) == ("∞", "(max)")               # identical face: ∞ over (max), kept
     _cell_child(user, "control:all_interval").set_value(False)    # back to target-based
@@ -1601,44 +1601,44 @@ async def test_dropping_a_row_grip_directly_onto_another_grip_merges(user: User)
 async def test_dropping_an_interval_grip_directly_onto_another_grip_merges(user: User) -> None:
     # the column twin of the proven grip-to-grip path: drop one interval's grip onto another's grip.
     await _enable(user, "drag to combine")
-    tval = lambda i: _cell_child(user, f"target:{i}").value
-    before0, before1 = tval(0), tval(1)
+    tuning_value = lambda i: _cell_child(user, f"target:{i}").value
+    before0, before1 = tuning_value(0), tuning_value(1)
     grip = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)
     UserInteraction(user, grip(0), None).trigger("dragstart")     # grab target 0's grip
     UserInteraction(user, grip(1), None).trigger("drop.prevent")  # drop onto target 1's grip
     await user.should_see(marker="target:1")
-    assert Fraction(tval(1)) == Fraction(before0) * Fraction(before1)  # target 1 is the product
+    assert Fraction(tuning_value(1)) == Fraction(before0) * Fraction(before1)  # target 1 is the product
 
 
 async def test_dragging_an_interval_onto_another_combines_them(user: User) -> None:
     # the column twin: dragstart on interval A's grip, drop onto another interval's COLUMN cells
     # combines them into their product. Drag target 0 onto target 1 → target 1 is the product.
     await _enable(user, "drag to combine")  # the feature is off by default
-    tval = lambda i: _cell_child(user, f"target:{i}").value
-    before0, before1 = tval(0), tval(1)
+    tuning_value = lambda i: _cell_child(user, f"target:{i}").value
+    before0, before1 = tuning_value(0), tuning_value(1)
     grip = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)
     cell = lambda i, p: set(user.find(marker=f"cell:vec:targets:{i}:{p}").elements)
     assert next(iter(grip(0)))._props.get("draggable")  # the browser starts a drag from the grip
     UserInteraction(user, grip(0), None).trigger("dragstart")        # grab target 0's grip
     UserInteraction(user, cell(1, 0), None).trigger("drop.prevent")  # drop onto target 1's column
     await user.should_see(marker="target:1")
-    assert Fraction(tval(1)) == Fraction(before0) * Fraction(before1)  # target 1 is the product
-    assert tval(0) == before0  # the dragged target is unchanged
+    assert Fraction(tuning_value(1)) == Fraction(before0) * Fraction(before1)  # target 1 is the product
+    assert tuning_value(0) == before0  # the dragged target is unchanged
 
 
 async def test_dragging_over_an_interval_previews_the_product_then_reverts(user: User) -> None:
     # the column twin of the row preview: hovering another interval's COLUMN cells previews their
     # product without committing; releasing off it (dragend) reverts.
     await _enable(user, "drag to combine")
-    tval = lambda i: _cell_child(user, f"target:{i}").value
-    before0, before1 = tval(0), tval(1)
+    tuning_value = lambda i: _cell_child(user, f"target:{i}").value
+    before0, before1 = tuning_value(0), tuning_value(1)
     grip = lambda i: set(user.find(marker=f"int_drag:target:{i}").elements)
     cell = lambda i, p: set(user.find(marker=f"cell:vec:targets:{i}:{p}").elements)
     UserInteraction(user, grip(0), None).trigger("dragstart")             # pick up target 0
     UserInteraction(user, cell(1, 0), None).trigger("dragenter.prevent")  # hover target 1's column → preview
-    assert Fraction(tval(1)) == Fraction(before0) * Fraction(before1)  # previews the product
+    assert Fraction(tuning_value(1)) == Fraction(before0) * Fraction(before1)  # previews the product
     UserInteraction(user, grip(0), None).trigger("dragend")              # released → revert
-    assert tval(1) == before1  # reverted, nothing committed
+    assert tuning_value(1) == before1  # reverted, nothing committed
 
 
 async def test_dragging_over_a_row_previews_the_change_then_reverts(user: User) -> None:

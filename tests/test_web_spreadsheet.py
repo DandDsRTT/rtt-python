@@ -2167,13 +2167,13 @@ def test_weighting_on_adds_the_complexity_prescaling_matrix_over_the_primes():
     assert "cell:prescaling:primes:0:0" not in off  # no prescaling matrix unless weighting is on
     pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)), service.DEFAULT_TUNING_SCHEME)
     # a d×d diagonal matrix over the primes: the prescaler weights on the diagonal (the
-    # editable prescalercell — the user types overrides here), 0 off it (a plain tval since
+    # editable prescalercell — the user types overrides here), 0 off it (a plain tuning value since
     # 𝐿 is diagonal, no point editing what's pinned to zero).
     assert on["cell:prescaling:primes:0:0"].kind == "prescalercell"
     assert on["cell:prescaling:primes:0:0"].text == "1"               # log2(2) = 1, shown bare
     assert on["cell:prescaling:primes:1:1"].text == service.cents(pre[1])  # log2(3) = 1.585
     assert on["cell:prescaling:primes:2:2"].text == service.cents(pre[2])  # log2(5) = 2.322
-    assert on["cell:prescaling:primes:0:1"].kind == "tval"             # off-diagonal stays tval
+    assert on["cell:prescaling:primes:0:1"].kind == "tuningvalue"             # off-diagonal stays tuning value
     assert on["cell:prescaling:primes:0:1"].text == "0"               # off-diagonal entry
     # column p sits under prime p; rows stack one ROW_H apart (a d-tall matrix)
     assert on["cell:prescaling:primes:0:0"].x == on["prime:0"].x
@@ -2190,10 +2190,10 @@ def test_size_factor_grows_the_prescaler_into_the_rectangular_ZL_matrix():
     lils = {c.id: c for c in _with("TILT minimax-lils-S", weighting=True).cells}  # lils: 𝑍𝐿
     pre = service.complexity_prescaler(((1, 1, 0), (0, 1, 4)), "TILT minimax-S")
     assert "cell:prescaling:primes:3:0" not in lp     # lp has no size row (d=3 rows: 0..2)
-    # lils grows row d (= 3): every entry is sf·𝐿_c = the log-prime, a derived (non-editable) tval
+    # lils grows row d (= 3): every entry is sf·𝐿_c = the log-prime, a derived (non-editable) tuning value
     for c in range(3):
         assert lils[f"cell:prescaling:primes:3:{c}"].text == service.prescale_text(pre[c])
-        assert lils[f"cell:prescaling:primes:3:{c}"].kind == "tval"
+        assert lils[f"cell:prescaling:primes:3:{c}"].kind == "tuningvalue"
     # the diagonal rows are unchanged (still the editable prescalercell)
     assert lils["cell:prescaling:primes:0:0"].kind == "prescalercell"
     # the size row sits one ROW_H below the last diagonal row, with its own per-row ⟨ … ] bracket
@@ -2213,7 +2213,7 @@ def test_size_factor_grows_the_prescaler_product_tiles_and_labels_the_size_row()
     # the comma product tile 𝑋C grows the size row: sf·Σ(𝐿ⱼ·commaⱼ) = sf · the comma's log size
     expected = service.prescale_text(sum(pre[j] * comma[j] for j in range(3)))
     assert lils["cell:prescaling:commas:3:0"].text == expected
-    assert lils["cell:prescaling:commas:3:0"].kind == "tval"
+    assert lils["cell:prescaling:commas:3:0"].kind == "tuningvalue"
     # the bare matrix's size row carries the 𝒛 row label (the size-sensitizing row, not a 4th prime 𝒍₄)
     assert lils_sym["matlabel:row:prescaling:primes:3"].text == "𝒛"
 
@@ -2363,12 +2363,12 @@ def test_alt_complexity_makes_the_whole_pretransformer_square_editable():
     assert on["cell:prescaling:primes:1:1"].kind == "prescalercell"
     assert on["cell:prescaling:primes:2:1"].kind == "prescalercell"
     assert on["cell:prescaling:primes:2:1"].text == "0"
-    # WITHOUT alt complexity, only the diagonal is editable; the off-diagonal stays a 0 tval
+    # WITHOUT alt complexity, only the diagonal is editable; the off-diagonal stays a 0 tuning value
     off = {c.id: c for c in spreadsheet.build(
         base, {**settings.defaults(), "weighting": True, "alt_complexity": False},
         tuning_scheme="TILT minimax-S").cells}
     assert off["cell:prescaling:primes:1:1"].kind == "prescalercell"
-    assert off["cell:prescaling:primes:0:1"].kind == "tval"
+    assert off["cell:prescaling:primes:0:1"].kind == "tuningvalue"
 
 
 def test_custom_prescaler_diagonal_keeps_the_generic_symbol():
@@ -2431,7 +2431,7 @@ def test_prescaling_row_spans_commas_and_targets_with_L_scaled_vectors():
     for i, comp in enumerate((4, -4, 1)):
         cell = on[f"cell:prescaling:commas:{i}:0"]
         assert cell.text == _t(pre[i] * comp)
-        assert cell.kind == "tval"
+        assert cell.kind == "tuningvalue"
     # the comma + target prescaling tiles exist with panels, and their EBK is per-column
     # ket ``[ … ⟩`` (ebktop:…:{c} + ebkangle:…:{c}) inside outer left/right ``[ … ]``
     # brackets (see test_prescaling_matrices_have_outer_brackets_and_per_column_marks for
@@ -3298,7 +3298,7 @@ def test_all_interval_greys_and_locks_the_weight_slope_chooser():
 def test_all_interval_greys_the_locked_target_chooser_caption_but_not_the_power_value():
     # the all-interval-locked TARGET chooser (a control) greys its caption with it, so the label reads
     # in the same disabled grey as the locked value. The optimization power, by contrast, is now a
-    # read-only VALUE (a tval like the mean damage) — not a greyed control — so its "optimization power"
+    # read-only VALUE (a tuning value like the mean damage) — not a greyed control — so its "optimization power"
     # caption stays the normal value colour in both modes, matching the mean damage's caption beside it.
     on = {c.id: c for c in _with(scheme="minimax-S", optimization=True, presets=True).cells}
     assert on["block:preset:target:label"].disabled is True   # the locked target chooser's caption greys
@@ -3677,7 +3677,7 @@ def test_math_expressions_leave_the_no_closed_form_cells_and_tiles_untouched():
     on = {c.id: c for c in on_lay.cells}
     for cid in ("tuning:prime:1", "tuning:comma:0", "tuning:target:0",
                 "retune:prime:1", "damage:target:0"):
-        assert on[cid].kind == "tval"  # untouched: still the plain cents cell...
+        assert on[cid].kind == "tuningvalue"  # untouched: still the plain cents cell...
         assert on[cid].text == off[cid].text  # ...with the same value as math off
     # the tempered row's framing brackets, caption and grey panel all remain
     assert {"bracket:tuning:map:l", "caption:tuning:primes"} <= set(on)
@@ -3707,7 +3707,7 @@ def test_math_expressions_render_the_prescaler_diagonal_as_logs():
     assert cells["cell:prescaling:primes:0:0"].text == "1"  # log₂2 == 1, shown bare
     assert cells["cell:prescaling:primes:1:1"].text == "1.585"
     assert cells["cell:prescaling:primes:2:2"].text == "2.322"
-    assert cells["cell:prescaling:primes:0:1"].kind == "tval"  # off-diagonal stays plain
+    assert cells["cell:prescaling:primes:0:1"].kind == "tuningvalue"  # off-diagonal stays plain
     assert cells["cell:prescaling:primes:0:1"].text == "0"
 
 
@@ -3758,7 +3758,7 @@ def test_math_expressions_under_identity_prescaler_emit_no_closed_form():
     # the identity prescaler (𝐼) puts 1 on every diagonal slot, so the closed form
     # would just repeat the coefficient — no new information. Following the just-row
     # rule (mathexpr only where a NON-trivial closed form lives), every product-tile
-    # prescaling cell stays as its plain tval. The bare prescaler 𝐿's diagonal is an
+    # prescaling cell stays as its plain tuning value. The bare prescaler 𝐿's diagonal is an
     # editable prescalercell regardless of scheme (the user types overrides here), so
     # it shows the plain value (1) too — same number, kinder kind.
     scheme = service.scheme_with_prescaler(f"TILT {service.DEFAULT_TUNING_SCHEME}", "identity")
@@ -3770,7 +3770,7 @@ def test_math_expressions_under_identity_prescaler_emit_no_closed_form():
     assert cells["cell:prescaling:primes:1:1"].kind == "prescalercell"
     assert cells["cell:prescaling:primes:1:1"].text == "1"
     # comma column entry — value 4 (= coeff), no log dressing
-    assert cells["cell:prescaling:commas:0:0"].kind == "tval"
+    assert cells["cell:prescaling:commas:0:0"].kind == "tuningvalue"
     assert cells["cell:prescaling:commas:0:0"].text == "4"
 
 
@@ -3778,17 +3778,17 @@ def test_bare_prescaler_diagonal_is_editable_prescalercell_kind():
     # the bare prescaler 𝐿 tile is the editable surface where the user types overrides
     # for the prescaler's diagonal — so each diagonal cell (i == c) is a prescalercell
     # kind (mirroring commacell/interestcell/heldcell, the other editable matrix cells).
-    # The OFF-diagonal cells stay tval "0" — they're pinned at zero because 𝐿 is diagonal.
+    # The OFF-diagonal cells stay tuning value "0" — they're pinned at zero because 𝐿 is diagonal.
     cells = {c.id: c for c in _with("TILT minimax-S", weighting=True).cells}  # non-unity slope reveals the prescaling row
     # diagonal cells are prescalercell
     for i in range(3):
         assert cells[f"cell:prescaling:primes:{i}:{i}"].kind == "prescalercell"
-    # off-diagonal cells stay plain tval "0"
+    # off-diagonal cells stay plain tuning value "0"
     for i in range(3):
         for c in range(3):
             if i == c:
                 continue
-            assert cells[f"cell:prescaling:primes:{i}:{c}"].kind == "tval"
+            assert cells[f"cell:prescaling:primes:{i}:{c}"].kind == "tuningvalue"
             assert cells[f"cell:prescaling:primes:{i}:{c}"].text == "0"
 
 
@@ -4888,7 +4888,7 @@ def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
     on = {c.id: c for c in lay.cells}
     assert on["optimization:title"].text == "optimization"
     # the mean damage: a cents value over the symbol ⟪𝐝⟫ₚ (double-angle brackets, power subscript)
-    assert on["optimization:mean_damage"].kind == "tval"
+    assert on["optimization:mean_damage"].kind == "tuningvalue"
     assert on["optimization:mean_damage:symbol"].text == "⟪𝐝⟫ₚ"
     # the power: 𝑝 over its symbol and the "optimization power" caption. With alt. complexity off (the
     # default here) it is read-only — a powerdisplay (its editability is covered separately).
@@ -6186,7 +6186,7 @@ def _diff_layout(*cells):
 
 
 def _diff_cell(cid, text, **kw):
-    return CellBox(id=cid, x=0, y=0, w=10, h=10, kind="tval", text=text, **kw)
+    return CellBox(id=cid, x=0, y=0, w=10, h=10, kind="tuningvalue", text=text, **kw)
 
 
 def test_changed_cell_ids_is_empty_for_an_unchanged_layout():
@@ -6202,8 +6202,8 @@ def test_changed_cell_ids_flags_a_cell_whose_text_changed():
 
 def test_changed_cell_ids_ignores_a_cell_that_only_moved():
     # a cell shifted because a neighbour widened — same text, new box — has not changed value
-    old = _diff_layout(CellBox("a", 0, 0, 10, 10, "tval", text="1"))
-    new = _diff_layout(CellBox("a", 99, 50, 20, 20, "tval", text="1"))
+    old = _diff_layout(CellBox("a", 0, 0, 10, 10, "tuningvalue", text="1"))
+    new = _diff_layout(CellBox("a", 99, 50, 20, 20, "tuningvalue", text="1"))
     assert spreadsheet.changed_cell_ids(old, new) == frozenset()
 
 
@@ -6659,7 +6659,7 @@ def test_ss_prescaler_quantities_spine_lists_the_superspace_primes():
 def test_ss_prescaler_renders_a_dL_dL_diagonal_matrix_over_the_superspace_primes():
     # the (ss_prescaler, ssprimes) tile is the dL × dL prescaler in superspace coordinates:
     # diag(log₂2, log₂3, log₂5, log₂13) for the default log-prime scheme over BARBADOS's
-    # 4-prime superspace. Off-diagonal entries are 0 (plain tval), the diagonal carries the
+    # 4-prime superspace. Off-diagonal entries are 0 (plain tuning value), the diagonal carries the
     # value with the standard prescale_text formatter (whole numbers bare, fractions cented).
     cells = {c.id: c for c in _barbados_ss().cells}
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
@@ -6672,7 +6672,7 @@ def test_ss_prescaler_renders_a_dL_dL_diagonal_matrix_over_the_superspace_primes
                 assert cell.text == service.prescale_text(pre[i])
             else:
                 assert cell.text == "0"
-                assert cell.kind == "tval"
+                assert cell.kind == "tuningvalue"
     # the diagonal entries inherit the same x as the ssprimes column header above
     assert cells["cell:ss_prescaler:0:0"].x == cells["header:ssprimes"].x or True  # x match isn't strict here
     # rows stack one ROW_H apart top to bottom
@@ -7053,7 +7053,7 @@ def _barbados_superspace_tuning():
 
 def test_superspace_tuning_emits_g_L_cells_over_the_ssgens_column():
     # 𝒈ₗ — the rL cents values of the superspace generator tuning map. Cells of kind
-    # "tval" (matches the existing 𝒈 cells), text formatted at the grid's 3-dp.
+    # "tuningvalue" (matches the existing 𝒈 cells), text formatted at the grid's 3-dp.
     cells = {c.id: c for c in _barbados_ss().cells}
     for i, v in enumerate(_barbados_superspace_tuning().generator_map):
         assert cells[f"tuning:ssgen:{i}"].text == service.cents(v)
@@ -7297,15 +7297,15 @@ def test_math_expressions_render_j_L_cells_as_log_of_superspace_primes():
     assert cells["just:ssprime:3"].text.startswith("1200 · log₂13\n= ")  # 13 — value depends on rounding
 
 
-def test_math_expressions_off_keeps_j_L_cells_as_plain_tval():
-    # math expressions OFF: the just/ssprimes cells stay as plain "tval" cents cells, no
+def test_math_expressions_off_keeps_j_L_cells_as_plain_tuning_value():
+    # math expressions OFF: the just/ssprimes cells stay as plain "tuningvalue" cents cells, no
     # closed-form prefix. (The math toggle is independent of the other display flags.)
     cells = {c.id: c for c in _barbados_ss(math_expressions=False).cells}
-    assert cells["just:ssprime:0"].kind == "tval"
+    assert cells["just:ssprime:0"].kind == "tuningvalue"
 
 
 def test_chart_band_renders_over_the_retune_r_L_tile_when_charts_is_on():
-    # retune ∈ CHARTED_ROWS, so its tval_row records (retune, ssprimes) in chart_tiles,
+    # retune ∈ CHARTED_ROWS, so its tuning_value_row records (retune, ssprimes) in chart_tiles,
     # and the build()'s chart pass emits a "chart" CellBox at that tile. The chart spans
     # the dL value columns, riding the group_left["ssprimes"] gridlines.
     cells = {c.id: c for c in _barbados_ss(charts=True).cells}

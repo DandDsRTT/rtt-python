@@ -1245,7 +1245,7 @@ class _Reconciler:
         # overlaid on an input, the scalar twin of the interval-vectors row's editable column cells
         self.cell_kinds["ratiocell"] = _KindHandlers(self._build_ratiocell, self._update_ratiocell)
         self.cell_kinds["commaratio"] = _KindHandlers(self._build_commaratio, self._update_ratio)
-        self.cell_kinds["tval"] = _KindHandlers(self._build_tval, self._update_tval)
+        self.cell_kinds["tuningvalue"] = _KindHandlers(self._build_tuning_value, self._update_tuning_value)
 
         self.cell_kinds["prime"] = _KindHandlers(self._build_white_label, self._update_label)
         self.cell_kinds["formcell"] = _KindHandlers(self._build_white_label, self._update_label)
@@ -1413,7 +1413,7 @@ class _Reconciler:
 
     def _put_stacked_face(self, cid, cls, main, sub):
         """Build a stacked value face into the active cell — a big main glyph over a smaller
-        sub-line (the read-only tval look) — and register the two labels so the update can
+        sub-line (the read-only tuning value look) — and register the two labels so the update can
         re-sync them. Shared by the cents cells (whole part over .fraction) and the power cells
         (∞ over "(max)")."""
         with ui.element("div").classes(cls):
@@ -1444,13 +1444,13 @@ class _Reconciler:
     def set_cents_face(self, cid, text):
         """Sync a cents cell's stacked face: the whole part over the dot-led fraction (the
         fraction blank when the value is an integer or the cell is blanked). Shared by the
-        read-only tval cells and the editable cents cells (whose face overlays their input)."""
+        read-only tuning value cells and the editable cents cells (whose face overlays their input)."""
         whole, frac = _cents_parts(text)
         self._sync_stacked_face(cid, whole, f".{frac}" if frac else "")
 
     def cents_face(self, cb, cls):
-        """Build the stacked int-over-fraction cents face (the read-only tval look: the whole
-        part big over a smaller dot-led fraction). Shared by the read-only tval cell and the
+        """Build the stacked int-over-fraction cents face (the read-only tuning value look: the whole
+        part big over a smaller dot-led fraction). Shared by the read-only tuning value cell and the
         editable cents cells — the latter pass the overlay class and lay it over their input."""
         whole, frac = _cents_parts(cb.text)
         self._put_stacked_face(cb.id, cls, whole, f".{frac}" if frac else "")
@@ -1670,13 +1670,13 @@ class _Reconciler:
 
     def _build_prescalercell(self, cb, wrap):
         # a bare prescaler 𝐿 diagonal cell, the user's editable override (off-diagonal cells stay
-        # tval "0" — 𝐿 is diagonal). Each input dispatches to set_custom_prescaler_entry; the cid
+        # tuning value "0" — 𝐿 is diagonal). Each input dispatches to set_custom_prescaler_entry; the cid
         # carries the diagonal slot, so the lambda closes over it (a free cb would be the LAST
         # cell's id by the time the user types)
         wrap.classes("rtt-cell-input rtt-cell-stacked")
         self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_prescaler_change(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
-        self.cents_face(cb, "rtt-tval rtt-cellface")  # the stacked face overlaid on the input
+        self.cents_face(cb, "rtt-tuning-value rtt-cellface")  # the stacked face overlaid on the input
 
     def _update_prescalercell(self, cb):
         # reflect the live prescaler diagonal (the override if set, else the scheme-derived value —
@@ -1691,7 +1691,7 @@ class _Reconciler:
         wrap.classes("rtt-cell-input rtt-cell-stacked")
         self.inputs[cb.id] = ui.input(on_change=lambda e, cid=cb.id: self._cb.on_power_change(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
-        self._put_stacked_face(cb.id, "rtt-tval rtt-cellface", *_power_parts(cb.text))
+        self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text))
 
     def _update_powerinput(self, cb):
         # mirror the raw value into the input (shown when focused) and re-sync the overlay face
@@ -1709,7 +1709,7 @@ class _Reconciler:
         # via rtt-cellface), but with no input — so it looks identical to its editable twin minus the
         # white input box. (rtt-cell-stacked is omitted: with no input there's no face to hide on
         # focus, and it keeps the per-cell-unit padding rule off a value that carries no unit.)
-        self._put_stacked_face(cb.id, "rtt-tval rtt-cellface", *_power_parts(cb.text))
+        self._put_stacked_face(cb.id, "rtt-tuning-value rtt-cellface", *_power_parts(cb.text))
 
     def _update_powerdisplay(self, cb):
         self._sync_stacked_face(cb.id, *_power_parts(cb.text))
@@ -1744,7 +1744,7 @@ class _Reconciler:
         the sign takes pointer events; a click elsewhere falls through to focus the input for typing."""
         sign, whole, frac = _gentuning_parts(cb.text)
         i = int(cb.id.rsplit(":", 1)[1])
-        with ui.element("div").classes("rtt-tval rtt-cellface"):
+        with ui.element("div").classes("rtt-tuning-value rtt-cellface"):
             with ui.element("div").classes("rtt-gentuning-main"):
                 s = ui.label(sign).classes("rtt-gensign").mark(f"gensign:{i}") \
                     .on("click", lambda _=None, i=i: self._cb.act(lambda: self._editor.flip_generator(i)))
@@ -1775,7 +1775,7 @@ class _Reconciler:
         self.ptext_inputs[cb.id].value = cb.text
         self.ptext_inputs[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
 
-    # ---- ratio faces (a stacked fraction via _ratio) + the read-only cents (tval) face ----
+    # ---- ratio faces (a stacked fraction via _ratio) + the read-only cents (tuning value) face ----
     def _build_genratio(self, cb, wrap):
         self._ratio(cb, approx=True)  # a generator ratio, shown ~approximate
 
@@ -1820,10 +1820,10 @@ class _Reconciler:
             self.fracs[cb.id][1].set_text(den)
             self._fit_ratio(cb.id, num, den, cb.w)  # a re-vectored ratio (e.g. 2/1 -> 65536/1) re-fits
 
-    def _build_tval(self, cb, wrap):
-        self.cents_face(cb, "rtt-tval")  # the read-only stacked int-over-fraction cents face
+    def _build_tuning_value(self, cb, wrap):
+        self.cents_face(cb, "rtt-tuning-value")  # the read-only stacked int-over-fraction cents face
 
-    def _update_tval(self, cb):
+    def _update_tuning_value(self, cb):
         self.set_cents_face(cb.id, cb.text)
 
     # ---- plain label cells: a ui.label whose text the update keeps in sync (set_text). prime /

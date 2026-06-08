@@ -88,7 +88,7 @@ AUDIO_HELP: dict[str, str] = {
 # the test) so the whole tooltip taxonomy lives in one place; the completeness test asserts
 # every kind a full build renders is either listed here or carries help.
 READONLY_KINDS: frozenset[str] = frozenset({
-    "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tval", "powerdisplay",
+    "prime", "formcell", "colheader", "rowlabel", "mapped", "vec", "tuningvalue", "powerdisplay",
     "genratio", "commaratio", "mathexpr", "ptext", "ptextpending",
     "symbol", "matlabel", "units", "caption", "count", "boxtitle",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "chart", "rangechart",
@@ -96,7 +96,7 @@ READONLY_KINDS: frozenset[str] = frozenset({
 
 # Read-only OUTPUT values that nonetheless carry hover help — exempt from the no-tooltip rule.
 # Two kinds qualify:
-#   - the optimization mean damage's value cell (a ``tval``) and symbol cell (a ``symbol``). Like the
+#   - the optimization mean damage's value cell (a ``tuning value``) and symbol cell (a ``symbol``). Like the
 #     power 𝑝, the mean damage carries a label caption ("power mean" / "retuning magnitude"), but that
 #     two-word label only names the quantity — the hover text explains it, and flips with all-interval
 #     mode (the damage ⟪𝐝⟫ₚ vs the retuning magnitude). Both ids hang the tooltip so the whole

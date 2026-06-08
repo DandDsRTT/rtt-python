@@ -83,7 +83,7 @@ body.rtt-dark .rtt-val,
 body.rtt-dark .rtt-count,
 body.rtt-dark .rtt-ptext,
 body.rtt-dark .rtt-ratio,
-body.rtt-dark .rtt-tval,
+body.rtt-dark .rtt-tuning-value,
 body.rtt-dark .rtt-stacked-sub,
 body.rtt-dark .rtt-mathexpr-stack { color:#e3e6ea; }
 body.rtt-dark .rtt-frac-num { border-bottom-color:#e3e6ea; }   /* the fraction bar */

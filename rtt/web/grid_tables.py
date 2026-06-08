@@ -741,7 +741,7 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
 # plain text on leaves just the inline string — the two value views are independent.)
 GRIDDED_KINDS = frozenset({
     "prime", "ratiocell", "commaratio", "genratio", "mapping", "mapped", "commacell",
-    "vec", "tval", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell", "targetcell",
+    "vec", "tuningvalue", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell", "targetcell",
     "prescalercell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel",
     "minus", "plus", "gen_minus", "gen_plus", "map_minus", "map_plus", "comma_minus", "comma_plus", "basis_minus",
@@ -757,7 +757,7 @@ GRIDDED_KINDS = frozenset({
 # to "domain_quantities"; the just row's "mathexpr" log₂ form is not a bare number,
 # so math_expressions' own show_value logic trims it.)
 BLANKED_NUMBER_KINDS = frozenset({
-    "genratio", "mapping", "mapped", "commacell", "vec", "tval", "interestcell", "formcell", "heldcell",
+    "genratio", "mapping", "mapped", "commacell", "vec", "tuningvalue", "interestcell", "formcell", "heldcell",
     "gentuningcell", "targetcell", "prescalercell",
 })
 

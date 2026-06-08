@@ -455,7 +455,7 @@
 .rtt-frac { display:inline-flex; flex-direction:column; align-items:center; line-height:1.04; }
 .rtt-frac-num { border-bottom:1px solid #000; padding:0 3px; }
 .rtt-frac-den { padding:0 3px; }
-.rtt-tval { display:flex; flex-direction:column; align-items:center; justify-content:center;
+.rtt-tuning-value { display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }
 /* a stacked gridded-value face: a big main glyph over a smaller sub-line. Cents stack the
    whole part over the .fraction; a minimax power stacks ∞ over a small "(max)". */
@@ -488,7 +488,7 @@
 .rtt-cell-united.rtt-cell-stacked .rtt-cellface { padding-bottom:9px; }
 /* a just value's closed form, stacked as "1200 · log₂(3/2)" over "= 701.96"; each
    line's font is scaled (inline) to fit the narrow value square, so it never overflows.
-   No fixed height (like .rtt-tval): the cell centres it, and when a per-cell unit is
+   No fixed height (like .rtt-tuning-value): the cell centres it, and when a per-cell unit is
    added the value+unit hug as one pair — height:100% would float the unit to the bottom. */
 .rtt-mathexpr { width:100%; display:flex; align-items:center; justify-content:center; }
 .rtt-mathexpr-stack { display:flex; flex-direction:column; align-items:center; justify-content:center;

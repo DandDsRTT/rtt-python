@@ -1784,7 +1784,7 @@ class _GridBuilder:
         from the tile's sibling cells, so it stays correct across reorders with no baked pitch list."""
         self.cells[-1] = replace(self.cells[-1], audio=(tile, int(idx), float(cents)))
 
-    def tval_row(self, key, group, vals, alerts=()):
+    def tuning_value_row(self, key, group, vals, alerts=()):
         if not self.tile_open(key, group):
             return
         vals = tuple(vals)
@@ -1807,7 +1807,7 @@ class _GridBuilder:
             if operand is not None:
                 self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities), unit=u, alert=alert))
             else:
-                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tval", text=service.cents(v), unit=u, alert=alert))
+                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tuningvalue", text=service.cents(v), unit=u, alert=alert))
             if key in ("tuning", "just"):  # the tuning row sounds each interval's TEMPERED size, the
                 self._voice(f"{key}:{group}", i, v)  # just row its JUST size; retune (errors) is no pitch
 
@@ -2588,7 +2588,7 @@ class _GridBuilder:
                                           "prime", text=str(self.superspace_primes[p]), prime=p))
         # (ss_prescaler, ssprimes) tile: X_L over the superspace primes — a dL × dL diagonal
         # matrix laid out like the on-domain (prescaling, primes) tile (the diagonal carries
-        # the prescaler value via prescale_text; off-diagonal entries are plain "0" tvals).
+        # the prescaler value via prescale_text; off-diagonal entries are plain "0" tuning values).
         # Read-only here — the user edits the on-domain prescaler (the diagonal lives there);
         # X_L is a derived display of how that flows into the superspace.
         if self.row_open("ss_prescaler") and self.tile_open("ss_prescaler", "ssprimes"):
@@ -2598,7 +2598,7 @@ class _GridBuilder:
                     self.cells.append(CellBox(
                         f"cell:ss_prescaler:{i}:{c}", self.ss_prime_left(c),
                         self.row_y["ss_prescaler"] + i * ROW_H, COL_W, ROW_H,
-                        "tval", text=service.prescale_text(value)))
+                        "tuningvalue", text=service.prescale_text(value)))
 
         # tuning rows over the primes, commas and targets (cents); each can collapse on
         # its own. Commas sit on the same footing as targets — they are just the dual
@@ -2607,7 +2607,7 @@ class _GridBuilder:
         # untouched — it keeps its plain cents cell. Math expressions never removes a
         # value, bracket, caption or tile: those are governed by quantities/gridded/names.
         # Charts track tiles: a charted row (retuning/weight/damage) draws a bar chart over
-        # EVERY tile it shows. tval_row — the one place a charted row's value cells are emitted
+        # EVERY tile it shows. tuning_value_row — the one place a charted row's value cells are emitted
         # — records each tile it draws here, and a single loop below charts them all. So a
         # column joining a charted row is charted automatically (no per-column chart() call to
         # forget), and a chart can never drift from the values beneath it.
@@ -2621,11 +2621,11 @@ class _GridBuilder:
         }
         for key, (prime_vals, comma_vals, target_vals, interest_vals, held_vals) in tuning_data.items():
             if self.row_open(key):
-                self.tval_row(key, "primes", prime_vals)
-                self.tval_row(key, "commas", comma_vals)
-                self.tval_row(key, "targets", target_vals)
-                self.tval_row(key, "interest", interest_vals)
-                self.tval_row(key, "held", held_vals, alerts=self.held_unheld)
+                self.tuning_value_row(key, "primes", prime_vals)
+                self.tuning_value_row(key, "commas", comma_vals)
+                self.tuning_value_row(key, "targets", target_vals)
+                self.tuning_value_row(key, "interest", interest_vals)
+                self.tuning_value_row(key, "held", held_vals, alerts=self.held_unheld)
         # the generator tuning map: the tuning row's map over the generators (the gens-column
         # counterpart of the tuning map over the primes). Its cells are EDITABLE (a hybrid input):
         # typing a cents value overrides that generator's tuning, like typing the whole map in the
@@ -2636,7 +2636,7 @@ class _GridBuilder:
                                      "gentuningcell", text=service.cents(v), unit=self.cell_unit("tuning", "gens", gen=i)))
                 self._voice("tuning:gens", i, v)  # the genmap sounds each generator's tuned size
         # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column (rL cells, read-only
-        # tval — NOT editable yet; Phase 5 will wire the "if you mod 𝒈 then prime-based mode
+        # tuning value — NOT editable yet; Phase 5 will wire the "if you mod 𝒈 then prime-based mode
         # falls off" behaviour), 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over the ssprimes column. The superspace tuning
         # is computed by service.superspace_tuning(state, scheme, approach) — the same optimizer
         # the on-domain tuning uses, lifted into M_L over the prime superspace.
@@ -2645,12 +2645,12 @@ class _GridBuilder:
         # "prime-based" — the prime-based optimum no longer determines 𝒈 once it's been moved.
         if self.show_nonstandard_domain and self.row_open("tuning"):
             ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach)
-            self.tval_row("tuning", "ssgens", ss_tun.generator_map)
-            self.tval_row("tuning", "ssprimes", ss_tun.tuning_map)
+            self.tuning_value_row("tuning", "ssgens", ss_tun.generator_map)
+            self.tuning_value_row("tuning", "ssprimes", ss_tun.tuning_map)
             if self.row_open("just"):
-                self.tval_row("just", "ssprimes", ss_tun.just_map)
+                self.tuning_value_row("just", "ssprimes", ss_tun.just_map)
             if self.row_open("retune"):
-                self.tval_row("retune", "ssprimes", ss_tun.retuning_map)
+                self.tuning_value_row("retune", "ssprimes", ss_tun.retuning_map)
         # the detempering column's size rows: tempering the detempering intervals recovers the
         # generators, so its tuning row IS the generator tuning map (𝒕D = 𝒈); its just and
         # retuning sizes are ordinary interval lists (𝒋D, 𝒓D), the latter charted like the targets.
@@ -2659,7 +2659,7 @@ class _GridBuilder:
                               ("just", self.detempering_sizes.just),
                               ("retune", self.detempering_sizes.errors)):
                 if self.row_open(key):
-                    self.tval_row(key, "detempering", vals)
+                    self.tuning_value_row(key, "detempering", vals)
 
         # the prescaling row applies the prescaler L to each column group's vectors: over the
         # primes it is the d×d diagonal (L·eₚ — the prescaler matrix itself), over the comma /
@@ -2678,12 +2678,12 @@ class _GridBuilder:
         # itself, identity puts a constant ``1`` — and ``1`` IS the value, so the cell would
         # be ``coeff · 1 = coeff`` (no information added). Following the just row's rule
         # (math expressions only where a non-trivial closed form exists), the identity
-        # scheme is read as "no closed form" → cells stay tval.
+        # scheme is read as "no closed form" → cells stay tuning value.
         if self._scheme_prescaler == "log-prime":
             prime_term = {i: f"log₂{p}" for i, p in enumerate(self.elements)}
         elif self._scheme_prescaler == "prime":
             prime_term = {i: str(p) for i, p in enumerate(self.elements)}
-        else:  # "identity" — coeff · 1 is silly, skip mathexpr (cell stays tval)
+        else:  # "identity" — coeff · 1 is silly, skip mathexpr (cell stays tuning value)
             prime_term = {}
         for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
             if not self.tile_open("prescaling", group):
@@ -2692,7 +2692,7 @@ class _GridBuilder:
             for c, vec in enumerate(prescale_vectors[group]):
                 # the prescaler over the primes is a d×d matrix whose columns ARE the domain
                 # primes, so each column's unit subscripts its p by that prime (oct/pᵢ) — like
-                # the mapping's /p denominator (and tval_row's primes rows). The other groups
+                # the mapping's /p denominator (and tuning_value_row's primes rows). The other groups
                 # scale a vector set to plain octaves (no p), so there is nothing to subscript.
                 u = self.cell_unit("prescaling", group, prime=c if group == "primes" else None)
                 # the prescaled vector 𝑋·v: a diagonal pretransformer multiplies element-wise (𝐿ᵢvᵢ);
@@ -2713,9 +2713,9 @@ class _GridBuilder:
                     # user types overrides into — and win over the math-expression closed form. The
                     # diagonal is always editable; with alt complexity the WHOLE top square is, so a
                     # non-diagonal pretransformer can be hand-entered (off the diagonal it reads 0 until
-                    # touched). Without alt complexity the off-diagonal stays a pinned-0 tval. Every
+                    # touched). Without alt complexity the off-diagonal stays a pinned-0 tuning value. Every
                     # 𝑋·basis product (𝑋C/𝑋D/…) is computed, not editable — math_expressions still
-                    # styles a non-zero coefficient with its closed form, a zero one staying tval.
+                    # styles a non-zero coefficient with its closed form, a zero one staying tuning value.
                     if i < self.d and group == "primes" and (i == c or self.show_alt_complexity):
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
                                              text=service.prescale_text(value), prime=i, unit=u))
@@ -2723,7 +2723,7 @@ class _GridBuilder:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
                                              text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities), unit=u, alert=alert))
                     else:
-                        self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tval",
+                        self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue",
                                              text=service.prescale_text(value), unit=u, alert=alert))
         if self.lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox,
             # in a bordered box at the bottom of the prescaling matrix (the prescaler chooser is a preset
@@ -2810,14 +2810,14 @@ class _GridBuilder:
                                      text="dual norm power"))
         if self.row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
-                self.tval_row("complexity", group, self.complexities[group],
+                self.tuning_value_row("complexity", group, self.complexities[group],
                               alerts=self.held_unheld if group == "held" else ())
         if self.row_open("weight") and self.tile_open("weight", "targets"):
             # the weight is always a per-target list (it scales the targets, like damage). The all-
             # interval simplicity weight that has no concrete diagonal form (the size factor / a non-
             # diagonal 𝑋) still renders as this list — it just shows the generic 𝒘 = 𝒄⁻¹ symbol and per-
             # column cₙ⁻¹ headers instead of the concrete diag(𝐿)⁻¹ equivalence, never a matrix.
-            self.tval_row("weight", "targets", self.target_weights)
+            self.tuning_value_row("weight", "targets", self.target_weights)
         if self.slope_ctrl:  # box 𝒘's weight-slope chooser (U/S/C), in a bordered box at the bottom of the
             # weight list, with its "damage weight slope" caption beneath (the optimization box's caption pattern)
             box_top = self.tile_top["weight"] + self.tile_h["weight"] - self.slope_extra + RANGE_GAP
@@ -2830,7 +2830,7 @@ class _GridBuilder:
                                  slope_w, CAPTION_LINE, "caption",
                                  text="damage weight slope", align="left", disabled=self.slope_locked))
         if self.row_open("damage"):  # damage is over the targets only (the tuning's own column)
-            self.tval_row("damage", "targets", self.target_sizes.damage)
+            self.tuning_value_row("damage", "targets", self.target_sizes.damage)
             # optimization adds the horizontal minimized-damage indicator (the mean damage ⟪𝐝⟫ₚ
             # the tuning minimizes) across the damage chart, labelled with the scheme's Lp power
             # (∞ / 2 / 1); off, the chart is plain bars. Recorded for the chart loop below.
@@ -2911,7 +2911,7 @@ class _GridBuilder:
             # the mean damage: the minimized-damage value (read-only, so unboxed — a plain centred gridded
             # value, the same COL_W cell as any damage value) over its symbol and a label caption, the
             # same value/symbol/caption stack as the power beside it.
-            self.cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COL_W, ROW_H, "tval",
+            self.cells.append(CellBox("optimization:mean_damage", mean_damage_val_x, content_top, COL_W, ROW_H, "tuningvalue",
                                  text=service.cents(mean_damage)))
             # all-interval: the minimized mean damage IS the retuning magnitude ‖𝒓𝑋⁻¹‖ at the dual norm
             # power (the mockup's "becomes 'retuning magnitude'") — relabel the symbol, with dual(q) as
