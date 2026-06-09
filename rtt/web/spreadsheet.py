@@ -3292,23 +3292,31 @@ class _GridBuilder:
             # prescaler 𝐿 is the exception — its outer wrap is the matrix_frame top+bottom span
             # above (ebktop + ebkangle), not left/right brackets, mirroring the mapping's
             # construction (plain text ``[ … ⟩``).
-            for group, n_cols in (("commas", self.nc), ("detempering", self.r),
-                                  ("targets", self.k), ("held", self.nh)):
+            # the bare-prescaler column: the domain primes normally, but ss-primes once the superspace
+            # shows (the bare 𝐿 moved there). The domain-primes tile is then 𝐿·B_Ls, a list like the
+            # other products. Every product list grows to prescale_rows (dL over the superspace).
+            ph = (self.prescale_rows + self.size_rows) * ROW_H
+            bare_col = "ssprimes" if self.show_superspace else "primes"
+            list_groups = [("commas", self.nc), ("detempering", self.r),
+                           ("targets", self.k), ("held", self.nh)]
+            if self.show_superspace:  # 𝐿·B_Ls — a list of d prescaled subspace basis-element vectors
+                list_groups.append(("primes", self.d))
+            for group, n_cols in list_groups:
                 if n_cols and self.tile_open("prescaling", group):
                     self.bracket(f"prescaling:{group}", LIST_BRACKETS, group,
-                            self.row_y["prescaling"], (self.d + self.size_rows) * ROW_H, fit=True)
+                            self.row_y["prescaling"], ph, fit=True)
             # the bare prescaler 𝐿 is mapping-style: per-row ⟨ … ] brackets, one pair per row (the size
             # factor adds one more, for the size row). Its outer top + bottom frame is the matrix_frame
             # call above (ebktop + ebkangle), which spans the grown matrix height and that same width.
-            if self.tile_open("prescaling", "primes"):
-                pspan = self.matrix_span("primes")
-                for i in range(self.d + self.size_rows):
-                    self.bracket(f"prescaling:row:{i}", MAP_BRACKETS, "primes",
+            if self.tile_open("prescaling", bare_col):
+                pspan = self.matrix_span(bare_col)
+                for i in range(self.prescale_rows + self.size_rows):
+                    self.bracket(f"prescaling:row:{i}", MAP_BRACKETS, bare_col,
                             self.row_y["prescaling"] + i * ROW_H, ROW_H, span=pspan)
                 if self.size_rows:  # the guide's \hline in 𝑋 = 𝑍𝐿: a horizontal rule separating the bottom
-                    # size row from the top d×d square
+                    # size row from the top square
                     gx, gw = pspan
-                    self.cells.append(CellBox("bar:prescaling", gx, self.row_y["prescaling"] + self.d * ROW_H - SEP_W / 2,
+                    self.cells.append(CellBox("bar:prescaling", gx, self.row_y["prescaling"] + self.prescale_rows * ROW_H - SEP_W / 2,
                                          gw, SEP_W, "hbar"))
         if self.tile_open("tuning", "gens"):  # the generator tuning map is framed { … ] (per the mockup)
             self.bracket("tuning:genmap", GENMAP_BRACKETS, "gens", self.row_y["tuning"], ROW_H)
@@ -3338,8 +3346,10 @@ class _GridBuilder:
                 if key != "tuning" and self.tile_open(key, "detempering"):
                     self.bracket(f"{key}:detemperinglist", LIST_BRACKETS, "detempering", self.row_y[key], ROW_H)
                 # the chapter-9 superspace tuning cells over the ssprimes column: each row is a
-                # covector over the dL ss_primes, ⟨ … ] like the primes column above (𝒕ₗ / 𝒋ₗ / 𝒓ₗ)
-                if key != "complexity" and self.tile_open(key, "ssprimes"):
+                # covector over the dL ss_primes, ⟨ … ] like the primes column above (𝒕ₗ / 𝒋ₗ / 𝒓ₗ).
+                # The complexity row joins them once the superspace shows: its ss-primes tile is the
+                # prime complexity map ‖𝐿[i]‖q, a covector ⟨ … ] just like the domain-primes map.
+                if (key != "complexity" or self.show_superspace) and self.tile_open(key, "ssprimes"):
                     self.bracket(f"{key}:ssprimes", MAP_BRACKETS, "ssprimes", self.row_y[key], ROW_H)
         if self.tile_open("weight", "targets"):
             self.bracket("weight", LIST_BRACKETS, "targets", self.row_y["weight"], ROW_H)
@@ -3689,8 +3699,10 @@ class _GridBuilder:
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer
         # ``[ … ⟩`` with per-row ``⟨ … ]`` covectors — so its gridded EBK uses the SAME
         # matrix_frame + per-row bracket pattern the mapping uses, just with an angle ⟩
-        # (ebkangle) at the bottom-span instead of the curly } (ebkbrace).
-        self.matrix_frame("prescaling", "primes", "prescaling", foot="ebkangle")
+        # (ebkangle) at the bottom-span instead of the curly } (ebkbrace). Once the superspace
+        # shows, the bare 𝐿 lives in the ss-primes column (the domain-primes tile is the 𝐿·B_Ls
+        # product, list-bracketed above), so frame that column instead.
+        self.matrix_frame("prescaling", "ssprimes" if self.show_superspace else "primes", "prescaling", foot="ebkangle")
         # the chapter-9 superspace mapping M_L is M's parallel over the superspace primes,
         # framed the same way (top bracket + bottom curly brace spanning the rL × dL matrix)
         self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")
