@@ -1116,6 +1116,11 @@ class _GridBuilder:
         # products) grow that one row; every other row is unchanged.
         self.size_factor = service.complexity_size_factor(self.tuning_scheme)
         self.size_rows = 1 if self.size_factor else 0
+        # the prescaling matrix's row count: over a nonstandard domain with the superspace shown
+        # (neutral / prime-based), complexity is measured in the prime superspace, so the bare 𝐿 and
+        # every 𝐿·basis product lift to dL rows (the true primes), not the d (possibly nonprime)
+        # domain elements. The size row, if any, still sits one below.
+        self.prescale_rows = self.dL if self.show_superspace else self.d
         # All-interval, whenever the pretransformer isn't a plain per-prime diagonal: the per-prime
         # simplicity weight has no concrete diagonal closed form (the size factor / off-diagonal entries
         # don't ride into a diagonal). The weight still renders as a LIST — it just drops the concrete
@@ -1182,7 +1187,7 @@ class _GridBuilder:
             ("tuning", ROW_H, show_tuning, True, "tuning"),
             ("just", ROW_H, show_tuning, True, "just tuning"),
             ("retune", ROW_H, show_tuning, True, "retuning"),
-            ("prescaling", (self.d + self.size_rows) * ROW_H, self._complexity_shown, True, "complexity prescaling"),
+            ("prescaling", (self.prescale_rows + self.size_rows) * ROW_H, self._complexity_shown, True, "complexity prescaling"),
             ("complexity", ROW_H, self._complexity_shown, True, "complexity"),
             ("weight", ROW_H, self.show_weighting, True, "weight"),
             ("damage", ROW_H, show_tuning, True, "damage"),
@@ -2818,49 +2823,83 @@ class _GridBuilder:
                 if self.row_open(key):
                     self.tuning_value_row(key, "detempering", values)
 
-        # the prescaling row applies the prescaler L to each column group's vectors: over the
-        # primes it is the d×d diagonal (L·eₚ — the prescaler matrix itself), over the comma /
-        # target / interest sets it is L·vector (each component scaled by the diagonal), a d-tall
+        # the prescaling row applies the prescaler 𝐿 to each column group's vectors: over the
+        # primes it is the d×d diagonal (𝐿·eₚ — the prescaler matrix itself), over the comma /
+        # target / interest sets it is 𝐿·vector (each component scaled by the diagonal), a d-tall
         # matrix per group like the interval-vectors row. Rendered as int/frac gridded cells.
-        prescale_vectors = {
-            "primes": tuple(tuple(1 if i == p else 0 for i in range(self.d)) for p in range(self.d)),
-            "commas": self.state.comma_basis,
-            "targets": self.target_vectors,
-            "interest": self.interest,
-            "held": self.held,
-            "detempering": self.detempering_vectors,
-        }
+        #
+        # SUPERSPACE SHIFT (neutral / prime-based over a nonprime domain, self.show_superspace):
+        # log-product complexity is measured in the prime superspace, so the whole row lifts to dL
+        # rows. The bare 𝐿 moves one column LEFT into ss-primes as the (superspace) complexity
+        # prescaler (the dL×dL log-prime diagonal over the TRUE primes); the domain-primes tile
+        # becomes 𝐿·B_Ls, the prescaled subspace basis elements (each domain element lifted through
+        # the basis-embedding B_L, then prescaled); and every product 𝐿·v is taken over the lifted
+        # vector B_L·v. The displayed cells are exactly the operand the corrected get_complexity
+        # norms — ‖𝐿·(B_L·v)‖ — so the tiles and the optimization stay in lockstep.
+        nrows = self.prescale_rows
+        if self.show_superspace:
+            prescaler_diag = service.superspace_complexity_prescaler(self.state, self.tuning_scheme)
+            prescaler_is_matrix = False
+            ss_elements = service.superspace_primes(self.elements)
+            _lift = lambda vs: service.lift_vectors_to_superspace(self.elements, vs)
+            prescale_vectors = {
+                # the bare (superspace) prescaler 𝐿: identity columns over the dL true primes
+                "ssprimes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
+                # 𝐿·B_Ls: each domain element as a dL superspace vector (B_L's rows ARE these columns)
+                "primes": service.basis_in_superspace(self.elements),
+                "commas": _lift(self.state.comma_basis),
+                "targets": _lift(self.target_vectors),
+                "interest": _lift(self.interest),
+                "held": _lift(self.held),
+                "detempering": _lift(self.detempering_vectors),
+            }
+            groups = ("ssprimes", "primes", "commas", "targets", "interest", "held", "detempering")
+            bare_group = "ssprimes"  # the diagonal bare-prescaler column (was "primes" off-superspace)
+        else:
+            prescaler_diag = self.prescaler
+            prescaler_is_matrix = self.prescaler_is_matrix
+            ss_elements = self.elements
+            prescale_vectors = {
+                "primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
+                "commas": self.state.comma_basis,
+                "targets": self.target_vectors,
+                "interest": self.interest,
+                "held": self.held,
+                "detempering": self.detempering_vectors,
+            }
+            groups = ("primes", "commas", "targets", "interest", "held", "detempering")
+            bare_group = "primes"
         # the active prescaler's per-prime diagonal term, lifted as the math-expression
         # operand: log-prime puts ``log₂{prime}`` on the diagonal, prime puts ``{prime}``
         # itself, identity puts a constant ``1`` — and ``1`` IS the value, so the cell would
         # be ``coeff · 1 = coeff`` (no information added). Following the just row's rule
         # (math expressions only where a non-trivial closed form exists), the identity
-        # scheme is read as "no closed form" → cells stay tuning value.
+        # scheme is read as "no closed form" → cells stay tuning value. Over the superspace the
+        # operands are the TRUE primes (ss_elements), so 𝐿·B_Ls's 13/5 column reads −log₂5 + log₂13.
         if self._scheme_prescaler == "log-prime":
-            prime_term = {i: f"log₂{p}" for i, p in enumerate(self.elements)}
+            prime_term = {i: f"log₂{p}" for i, p in enumerate(ss_elements)}
         elif self._scheme_prescaler == "prime":
-            prime_term = {i: str(p) for i, p in enumerate(self.elements)}
+            prime_term = {i: str(p) for i, p in enumerate(ss_elements)}
         else:  # "identity" — coeff · 1 is silly, skip mathexpr (cell stays tuning value)
             prime_term = {}
-        for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
+        for group in groups:
             if not self.tile_open("prescaling", group):
                 continue
             left = self.group_left[group]
             for c, vec in enumerate(prescale_vectors[group]):
-                # the prescaler over the primes is a d×d matrix whose columns ARE the domain
-                # primes, so each column's unit subscripts its p by that prime (oct/pᵢ) — like
-                # the mapping's /p denominator (and tuning_value_row's primes rows). The other groups
-                # scale a vector set to plain octaves (no p), so there is nothing to subscript.
-                u = self.cell_unit("prescaling", group, prime=c if group == "primes" else None)
+                # the bare prescaler's columns ARE the (super)space primes, so each column's unit
+                # subscripts its p by that prime (oct/pᵢ) — like the mapping's /p denominator. The
+                # other groups (incl. 𝐿·B_Ls) scale a vector set, plain octaves (no per-column p).
+                u = self.cell_unit("prescaling", group, prime=c if group == bare_group else None)
                 # the prescaled vector 𝑋·v: a diagonal pretransformer multiplies element-wise (𝐿ᵢvᵢ);
                 # a non-diagonal one (the editable square's matrix override) is a matrix-vector product
-                prescaled = ([sum(self.prescaler[i][k] * vec[k] for k in range(self.d)) for i in range(self.d)]
-                             if self.prescaler_is_matrix
-                             else [self.prescaler[i] * vec[i] for i in range(self.d)])
-                for i in range(self.d + self.size_rows):
-                    # the d prescaled rows are (𝑋·v)ᵢ; the extra size row (i == d, present only with the
-                    # size factor) is the guide's size-sensitizing row, sf·Σ(𝑋·v) (= sf · log₂ the size)
-                    value = prescaled[i] if i < self.d else self.size_factor * sum(prescaled)
+                prescaled = ([sum(prescaler_diag[i][k] * vec[k] for k in range(nrows)) for i in range(nrows)]
+                             if prescaler_is_matrix
+                             else [prescaler_diag[i] * vec[i] for i in range(nrows)])
+                for i in range(nrows + self.size_rows):
+                    # the nrows prescaled rows are (𝑋·v)ᵢ; the extra size row (i == nrows, present only
+                    # with the size factor) is the guide's size-sensitizing row, sf·Σ(𝑋·v) (= sf·log₂ size)
+                    value = prescaled[i] if i < nrows else self.size_factor * sum(prescaled)
                     cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
                     cx, cy = left(c), self.row_y["prescaling"] + i * ROW_H
                     # held column: a prescaled held interval the tuning no longer holds reddens too
@@ -2873,10 +2912,12 @@ class _GridBuilder:
                     # touched). Without alt complexity the off-diagonal stays a pinned-0 tuning value. Every
                     # 𝑋·basis product (𝑋C/𝑋D/…) is computed, not editable — math_expressions still
                     # styles a non-zero coefficient with its closed form, a zero one staying tuning value.
-                    if i < self.d and group == "primes" and (i == c or self.show_alt_complexity):
+                    # The superspace bare 𝐿 is display-only (editing the superspace prescaler isn't
+                    # wired into the lifted optimization yet), so it skips the prescalercell branch.
+                    if i < nrows and not self.show_superspace and group == "primes" and (i == c or self.show_alt_complexity):
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "prescalercell",
                                              text=service.prescale_text(value), prime=i, unit=u))
-                    elif i < self.d and self.show_math and vec[i] != 0 and i in prime_term:
+                    elif i < nrows and self.show_math and vec[i] != 0 and i in prime_term:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
                                              text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities), unit=u, alert=alert))
                     else:
