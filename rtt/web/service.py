@@ -1269,6 +1269,30 @@ def plain_text_values(
             ("just", "ssprimes"): _cents_map(ss_tun.just_map),
             ("retune", "ssprimes"): _cents_map(ss_tun.retuning_map),
         })
+        # the chapter-9 prescaler SHIFT (the plain-text twin of the gridded cells): the bare 𝐿
+        # moves into the ss-primes column — the dL×dL log-prime diagonal over the TRUE primes, a
+        # covector stack [ ⟨…] ⟨…] ⟩ that stays EDITABLE — while the domain-primes tile becomes the
+        # 𝐿·B_Ls product, the prescaled subspace basis elements: a READ-ONLY matrix of d prescaled
+        # kets [ … ⟩ (NOT the bare prescaler's covector stack — that backwards EBK was the bug). The
+        # complexity row mirrors it: the prime complexity map ‖𝐿[i]‖ moves to ss-primes; the domain-
+        # primes complexity becomes the subspace basis element map (prime-factored over the domain).
+        ss_prescaler = superspace_complexity_prescaler(state, scheme)
+        dL = len(ss_primes)
+        ss_units = tuple(tuple(1 if i == p else 0 for i in range(dL)) for p in range(dL))
+
+        def _prescaled_ss(vectors):  # element-wise 𝐿ᵢvᵢ over the dL superspace primes
+            return tuple(tuple(ss_prescaler[i] * v[i] for i in range(dL)) for v in vectors)
+
+        ss_bare_size = ((tuple(size_factor * w for w in ss_prescaler),) if size_factor else ())
+        elem_ratios = tuple(element_ratio(e) for e in db)
+        values.update({
+            ("prescaling", "ssprimes"): _prescale_vector_list(_prescaled_ss(ss_units) + ss_bare_size, col="⟨]", outer="[⟩"),
+            # 𝐿·B_Ls is the prescaled basis-change matrix, so it follows B_L's wrap: outer ⟨ … ]
+            # around the per-column kets [ … ⟩ (matching ss_vectors/primes, not the plain products)
+            ("prescaling", "primes"): _prescale_vector_list(_sized(_prescaled_ss(bl)), col="[⟩", outer="⟨]"),
+            ("complexity", "ssprimes"): _cents_map(ss_prescaler),
+            ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, elem_ratios, domain_basis=db)),
+        })
     return values
 
 
