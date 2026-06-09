@@ -1796,19 +1796,44 @@ async def test_typing_the_target_limit_down_reddens_the_dropped_target_rows(
     # intervals going away in red"). Typing the limit DOWN sheds target intervals, and those going
     # away must flash red before the debounced commit reflows them off. Unlike the wheel, the typing
     # preview can't ride on_change (that's the debounced COMMIT, which set_value would fire and which
-    # would reflow the row away); it rides the RAW DOM `input` event, reading the typed text straight
-    # off the event. So drive that event with the lowered value the way the browser packs it
-    # (args=[["target","value"]] -> a one-element list), from the 6-TILT default down to 5, dropping
-    # 6/5 (target index 7). Pin the debounce far out so no commit can reflow mid-assertion.
+    # would reflow the row away); nor the RAW DOM `input` event (a Quasar QInput never forwards it to a
+    # NiceGUI `.on()` listener — verified in-browser: it produces no socket emit, so the preview silently
+    # never ran). It rides `keyup` (which DOES fire on the QInput) with a js_handler that emits the live
+    # `e.target.value`, since NiceGUI's `args=` only filters top-level event keys and can't pull the
+    # nested value. So drive `keyup` with the lowered value the way the js_handler packs it (a bare
+    # string), from the 6-TILT default down to 5, dropping 6/5 (target index 7). The structural wiring
+    # itself is locked by test_the_typed_target_limit_preview_rides_keyup_not_input below — this test
+    # only exercises the value path. Pin the debounce far out so no commit can reflow mid-assertion.
     monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
     await _enable(user, "presets")
     await user.should_see(marker="retune:target:7")            # the 6/5 row exists at the 6-TILT default
     num, _sel = _target_preset(user)
     UserInteraction(user, {num}, None).trigger("focus")        # snapshot the 6-TILT baseline + own the preview
-    UserInteraction(user, {num}, None).trigger("input", ["5"]) # TYPE the limit down to 5-TILT, dropping 6/5
+    UserInteraction(user, {num}, None).trigger("keyup", "5")   # TYPE the limit down to 5-TILT, dropping 6/5
     assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:7")  # the dropped 6/5 row → red
     assert "rtt-preview-remove" in _wrap_classes(user, "target:7")         # …its target-interval cell too
     assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:6")  # a surviving row is untouched
+
+
+async def test_the_typed_target_limit_preview_rides_keyup_not_input(user: User) -> None:
+    # REGRESSION GUARD for the wiring the value-path test above can't see. The typed-limit preview was
+    # first wired to the DOM `input` event with args=[["target","value"]] — and silently NEVER FIRED:
+    # a Quasar QInput doesn't forward a native `input` to a NiceGUI `.on()` listener (verified in-browser:
+    # zero socket emits), and NiceGUI's `args=` only filters top-level event keys, so it can't pull the
+    # nested target.value either. The in-process tests passed regardless, because triggering the handler
+    # directly injects the value and bypasses BOTH the browser event and the arg extraction. So lock the
+    # wiring STRUCTURALLY: the field must carry a `keyup` listener whose js_handler emits the live
+    # target.value, and must NOT lean on `input`. This is the assertion that would have caught the bug.
+    await _enable(user, "presets")
+    await user.should_see(marker="preset:target")
+    num, _sel = _target_preset(user)
+    listeners = list(num._event_listeners.values())
+    types = {listener.type for listener in listeners}
+    assert "keyup" in types, f"typed-limit preview must ride keyup; got {sorted(types)}"
+    assert "input" not in types, "native `input` never fires on a QInput — the preview must not rely on it"
+    keyup = next(listener for listener in listeners if listener.type == "keyup")
+    assert keyup.js_handler and "target.value" in keyup.js_handler, \
+        f"keyup must emit the live target.value via a js_handler; got {keyup.js_handler!r}"
 
 
 async def test_the_dropped_target_red_preview_clears_when_the_limit_field_is_left(
