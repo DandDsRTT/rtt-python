@@ -6689,8 +6689,26 @@ def _barbados_prescaling(approach="", nonstandard=True):
     # KeyError (they once did, on the hardcoded (prescaling, primes) row_top / equivalence keys).
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     s = settings.defaults() | {"nonstandard_domain": nonstandard, "weighting": True,
-                               "symbols": True, "captions": True, "equivalences": True}
+                               "symbols": True, "captions": True, "equivalences": True,
+                               "plain_text_values": True, "presets": True}
     return spreadsheet.build(state, s, tuning_scheme="TILT minimax-C", nonprime_approach=approach)
+
+
+def test_superspace_prescaler_interactivity_and_controls_shift_to_ss_primes():
+    # Under the shift the bare prescaler's INTERACTIVITY + controls move to ss-primes, while the
+    # domain-primes 𝐿·B_Ls product becomes a read-only matrix with its own row headers.
+    cells = {c.id: c for c in _barbados_prescaling().cells}
+    # the bare prescaler's plain text stays editable — now in ss-primes; the 𝐿·B_Ls plain text is
+    # read-only, and reads ⟨[…⟩ …] (a matrix of kets like B_L), NOT the backwards bare-prescaler stack
+    assert cells["ptext:prescaling:ssprimes"].kind == "ptextedit"
+    assert cells["ptext:prescaling:primes"].kind == "ptext"
+    assert cells["ptext:prescaling:primes"].text.startswith("⟨[") and cells["ptext:prescaling:primes"].text.endswith("]")
+    # 𝐿·B_Ls gains covector row headers (dL of them); the bare prescaler keeps its own
+    assert sum(1 for i in cells if i.startswith("matlabel:row:prescaling:primes:")) == 4
+    assert sum(1 for i in cells if i.startswith("matlabel:row:prescaling:ssprimes:")) == 4
+    # the predefined-prescalers chooser follows the bare prescaler into the ss-primes column
+    assert "preset:prescaler" in cells
+    assert abs(cells["preset:prescaler"].x - cells["header:ssprimes"].x) < abs(cells["preset:prescaler"].x - cells["header:primes"].x)
 
 
 def test_superspace_shifts_the_complexity_prescaler_into_the_ss_primes_column():

@@ -642,12 +642,16 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     # product symbol, the "= log-prime matrix" name, and the captions accordingly.
     bare_col = "ssprimes" if show_superspace else "primes"
     # the bare matrix's per-row labels take the lowercase of the realised glyph — 𝒍ᵢ when 𝑋 = 𝐿,
-    # else the generic 𝒙ᵢ — so they don't mix with the 𝐿 the products/headers carry. The OTHER
-    # prescaling column (the product, or the hidden one) carries no covector row labels.
+    # else the generic 𝒙ᵢ. The bare prescaler always carries them; under the superspace the 𝐿·B_Ls
+    # product (domain-primes column) shares the same dL covector rows, so it gets them too (both
+    # tiles read down the same true-prime rows).
     row_labels = dict(ROW_LABEL_LETTERS)
     row_labels.pop(("prescaling", "primes"), None)
     row_labels.pop(("prescaling", "ssprimes"), None)
-    row_labels[("prescaling", bare_col)] = "𝒍" if is_log_prime else "𝒙"
+    _row_glyph = "𝒍" if is_log_prime else "𝒙"
+    row_labels[("prescaling", bare_col)] = _row_glyph
+    if show_superspace:
+        row_labels[("prescaling", "primes")] = _row_glyph  # 𝐿·B_Ls row headers
     if show_superspace:
         prescaling_symbols[("prescaling", "primes")] = f"{symbol}B{SUBSCRIPT_L}ₛ"
         effective_captions[("prescaling", "primes")] = "complexity prescaled subspace basis elements"
@@ -1297,7 +1301,7 @@ class _GridBuilder:
         # the preset band above — see PRESETS.) Each tile reserves its controls' height up front.
         # the diminuator rides the pretransformer chooser's box when presets is on; its own box (here)
         # is only the presets-OFF fallback, mirroring the all-interval checkbox's vectors-row fallback
-        self.lbox_ctrl = self._lbox_show and self.col_open("primes") and not self.show_presets
+        self.lbox_ctrl = self._lbox_show and self.col_open("ssprimes" if self.show_superspace else "primes") and not self.show_presets
         # box 𝐋's lone control is the diminuator checkbox at the column's left, over its "replace
         # diminuator" caption: a small square (OPTION_BOX_PX) plus a one-line caption sets the reserve.
         self.lbox_extra = (RANGE_GAP + self.control_region_band_h(OPTION_BOX_PX + CAPTION_LINE)) if self.lbox_ctrl else 0
@@ -1554,7 +1558,9 @@ class _GridBuilder:
         floor = 0
         # each weighting control sits in a bordered box (control_region), so the column must fit the
         # control PLUS the box's BOX_INNER inset on each side, like the optimization box's OPT_PAD.
-        if key == "primes" and self._lbox_show:
+        # box 𝐋 rides the bare-prescaler column — ss-primes once the superspace shift moves the
+        # bare 𝐿 (and its chooser) there, else the domain primes.
+        if key == ("ssprimes" if self.show_superspace else "primes") and self._lbox_show:
             # box 𝐋: with presets on, the diminuator rides the pretransformer-chooser box (PBOX_W,
             # the box-𝐓 shape); with presets off it falls back to its own diminuator-only box
             floor = PBOX_W if self.show_presets else LBOX_DIM_W + 2 * BOX_INNER
@@ -1630,8 +1636,17 @@ class _GridBuilder:
                  if (key, c) in self.effective_captions and (key, c) in self.declared_tiles]
         return max(lines, default=1) * CAPTION_LINE
 
+    def ptext_editable(self, rkey, ckey):
+        """Whether a tile's plain text is an editable input. Normally :data:`EDITABLE_PTEXT`, but
+        under the superspace shift the editable bare prescaler MOVES from the domain-primes column
+        to ss-primes (the domain-primes tile is then the read-only 𝐿·B_Ls product), so the
+        prescaling row's editable column follows the bare prescaler."""
+        if rkey == "prescaling":
+            return (rkey, ckey) == ("prescaling", "ssprimes" if self.show_superspace else "primes")
+        return (rkey, ckey) in EDITABLE_PTEXT
+
     def ptext_height(self, rkey, ckey):  # one line; the app shrinks the font to fit the box width
-        return PTEXT_EDIT_H if (rkey, ckey) in EDITABLE_PTEXT else PTEXT_H
+        return PTEXT_EDIT_H if self.ptext_editable(rkey, ckey) else PTEXT_H
 
     def ptext_band(self, key, folded):
         # a single-line band for every value row's plain text (taller for the rows whose
@@ -2957,7 +2972,8 @@ class _GridBuilder:
             # now, riding the preset band above). A SQUARE (no inline label — it wraps broken in the narrow
             # primes column) over its "replace diminuator" caption hugging its bottom.
             box_top = self.tile_top["prescaling"] + self.tile_h["prescaling"] - self.lbox_extra + RANGE_GAP
-            bx, by = self.control_region("block:diminuator", "primes", box_top, OPTION_BOX_PX + CAPTION_LINE)
+            bx, by = self.control_region("block:diminuator", "ssprimes" if self.show_superspace else "primes",
+                                         box_top, OPTION_BOX_PX + CAPTION_LINE)
             self.cells.append(CellBox("control:diminuator", bx, by, LBOX_DIM_W, OPTION_BOX_PX,
                                  "control_check", text="",  # square only; label moves to a caption below
                                  checked=service.diminuator_replaced(self.tuning_scheme)))
@@ -3302,12 +3318,16 @@ class _GridBuilder:
             bare_col = "ssprimes" if self.show_superspace else "primes"
             list_groups = [("commas", self.nc), ("detempering", self.r),
                            ("targets", self.k), ("held", self.nh)]
-            if self.show_superspace:  # 𝐿·B_Ls — a list of d prescaled subspace basis-element vectors
-                list_groups.append(("primes", self.d))
             for group, n_cols in list_groups:
                 if n_cols and self.tile_open("prescaling", group):
                     self.bracket(f"prescaling:{group}", LIST_BRACKETS, group,
                             self.row_y["prescaling"], ph, fit=True)
+            # 𝐿·B_Ls is the prescaled basis-change matrix, so it wraps ⟨ … ] like B_L (not the
+            # symmetric [ … ] of the plain products); its per-column ket caps come from
+            # vector_list_marks below, mirroring ss_vectors/primes.
+            if self.show_superspace and self.tile_open("prescaling", "primes"):
+                self.bracket("prescaling:primes", MAP_BRACKETS, "primes",
+                        self.row_y["prescaling"], ph, fit=True)
             # the bare prescaler 𝐿 is mapping-style: per-row ⟨ … ] brackets, one pair per row (the size
             # factor adds one more, for the size row). Its outer top + bottom frame is the matrix_frame
             # call above (ebktop + ebkangle), which spans the grown matrix height and that same width.
@@ -3656,6 +3676,10 @@ class _GridBuilder:
                     self.emit_diminuator_check(cx + cw + OPT_COL_GAP, cy)
 
             for name, rkey, ckey, label in PRESETS:
+                # the prescaler chooser (+ its "replace diminuator" checkbox) follows the bare
+                # prescaler into the ss-primes column under the superspace shift
+                if name == "prescaler" and self.show_superspace:
+                    ckey = "ssprimes"
                 emit_preset(f"preset:{name}", name, rkey, ckey, label)
             for name, rkey, ckey, label in PRESET_COPIES:  # the same control in a second tile
                 emit_preset(f"preset:{name}:{ckey}", name, rkey, ckey, label)
@@ -3694,7 +3718,7 @@ class _GridBuilder:
                 if (rkey, ckey) == ("vectors", "commas") and self.pending is not None \
                         or (rkey, ckey) == ("vectors", "targets") and self.pending_target is not None:
                     kind = "ptextpending"
-                elif (rkey, ckey) in EDITABLE_PTEXT and (ckey != "targets" or self.targets_editable):
+                elif self.ptext_editable(rkey, ckey) and (ckey != "targets" or self.targets_editable):
                     kind = "ptextedit"  # the auto Tₚ = I list reads as static plain text, not an input
                 else:
                     kind = "ptext"
@@ -3759,6 +3783,10 @@ class _GridBuilder:
         self.vector_list_marks("ss_mapping", "ss_mapped:commas", "commas", self.comma_left, self.nc)
         self.vector_list_marks("ss_mapping", "ss_mapped:targets", "targets", self.target_left, self.k)
         self.vector_list_marks("ss_mapping", "ss_mapped:held", "held", self.held_left, self.nh)
+        # 𝐿·B_Ls (the prescaled basis-change matrix in the domain-primes column once the superspace
+        # shows): per-column ket caps over its dL-tall prescaled columns, exactly like B_L above
+        if self.show_superspace:
+            self.vector_list_marks("prescaling", "prescaling:primes", "primes", self.prime_left, self.d, foot="ebkangle", separators=False)
         self.vector_list_marks("ss_mapping", "ss_mapped:interest", "interest", self.interest_left, self.mi, separators=False)
         self.vector_list_marks("ss_mapping", "ss_mapped:detempering", "detempering", self.detempering_left, self.r)
         # the prescaling row's per-column marks read off as the same EBK its plain-text uses.
