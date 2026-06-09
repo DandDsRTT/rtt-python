@@ -282,6 +282,30 @@ def test_nonprime_basis_approach_resets_when_the_domain_loses_its_nonprimes():
     assert editor.nonprime_basis_approach == ""
 
 
+def test_prime_based_superspace_generator_edit_drives_domain_and_resets():
+    # In prime-based the editable map is the superspace 𝒈L; a manual 𝒈L projects to the on-domain
+    # generators (effective_generator_tuning), so every on-domain map tracks the edit. It's cleared
+    # by an approach switch, an optimize, and a temperament edit (it's over the superspace M_L).
+    editor = Editor()
+    editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    editor.set_nonprime_basis_approach("prime-based")
+    assert editor.effective_generator_tuning() is None or editor.superspace_generator_tuning is None
+    optimum_domain = editor._optimum_generator_tuning()
+    editor.set_superspace_generator_tuning_component(2, 999.0)
+    assert editor.superspace_generator_tuning is not None and editor.superspace_generator_tuning[2] == 999.0
+    projected = editor.effective_generator_tuning()
+    assert projected is not None and len(projected) == len(editor.state.mapping)  # r domain generators
+    assert projected != optimum_domain  # the manual 𝒈L moved the on-domain tuning off the optimum
+    # an approach switch drops the manual 𝒈L (it only lives in the prime-based superspace)
+    editor.set_nonprime_basis_approach("")
+    assert editor.superspace_generator_tuning is None
+    # ... and it's stale after a temperament edit
+    editor.set_nonprime_basis_approach("prime-based")
+    editor.set_superspace_generator_tuning_component(0, 1200.0)
+    editor.edit_mapping([[1, 2, 2], [0, -2, -3]])  # re-enter the same mapping (a temperament edit)
+    assert editor.superspace_generator_tuning is None
+
+
 def test_turning_off_alt_complexity_resets_the_tuning_to_basic_minimax_lp():
     # alt. complexity gates the advanced tuning knobs — a non-lp interval complexity (norm power
     # 𝑞 ≠ 1) and a non-∞ optimization power 𝑝. Turning it off returns the tuning to plain minimax-lp

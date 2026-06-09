@@ -6757,6 +6757,26 @@ def test_superspace_prescaler_shift_only_for_neutral_and_prime_based():
     assert off["caption:prescaling:primes"].text.startswith("complexity prescaler")
 
 
+def test_prime_based_shifts_generator_editing_to_superspace():
+    # In the prime-based approach the optimization solves the superspace generators 𝒈L and projects
+    # them to 𝒈, so 𝒈L (ssgens) is the EDITABLE generator map and 𝒈 (gens) is its READ-ONLY
+    # projection — editing + the tuning chooser move there. Neutral optimizes in the domain, so it
+    # keeps editing on 𝒈 (only prime-based shifts; the prescaler/complexity shift, by contrast,
+    # happens for both — complexity is superspace for both, but only prime-based OPTIMIZES there).
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults() | {"nonstandard_domain": True, "plain_text_values": True, "presets": True}
+    prime = {c.id: c for c in spreadsheet.build(state, s, nonprime_approach="prime-based").cells}
+    assert {prime[i].kind for i in prime if i.startswith("tuning:gen:")} == {"tuningvalue"}      # 𝒈 read-only
+    assert {prime[i].kind for i in prime if i.startswith("tuning:ssgen:")} == {"gentuningcell"}  # 𝒈L editable
+    assert prime["ptext:tuning:gens"].kind == "ptext"
+    assert prime["ptext:tuning:ssgens"].kind == "ptextedit"
+    assert "preset:tuning:ssgens" in prime  # the tuning-scheme chooser copy follows to 𝒈L
+    # neutral: no generator shift — 𝒈 stays editable, 𝒈L read-only
+    neutral = {c.id: c for c in spreadsheet.build(state, s, nonprime_approach="").cells}
+    assert {neutral[i].kind for i in neutral if i.startswith("tuning:gen:")} == {"gentuningcell"}
+    assert {neutral[i].kind for i in neutral if i.startswith("tuning:ssgen:")} == {"tuningvalue"}
+
+
 def test_approach_radio_band_only_for_a_nonprime_domain():
     # the nonstandard-domain approach radio gets a reserved band above the optimization box — a bold
     # boxtitle plus lay.approach_box (the x/y/w/h app.py positions refs["approach"] over) — only
