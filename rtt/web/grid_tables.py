@@ -125,10 +125,18 @@ CAPTIONS = {
     ("retune", "detempering"): "generator detempering interval retuning list",
     ("retune", "targets"): "target interval error list",
     ("prescaling", "primes"): "complexity prescaler",
+    # the chapter-9 superspace shift: once the ss-primes column appears (neutral / prime-based),
+    # the bare prescaler moves here over the TRUE primes; the domain-primes tile then becomes the
+    # prescaled subspace basis elements 𝐿·B_Ls ((prescaling, primes) is overridden to that caption
+    # in _resolve_prescaler_labels when show_superspace).
+    ("prescaling", "ssprimes"): "(superspace) complexity prescaler",
     ("prescaling", "commas"): "complexity prescaled comma basis",
     ("prescaling", "detempering"): "complexity prescaled generator detempering",
     ("prescaling", "targets"): "complexity prescaled target interval list",
     ("complexity", "primes"): "domain prime complexity map",
+    # the prime complexity map ‖𝐿[i]‖q moves here with the bare prescaler; the domain-primes tile
+    # then becomes the "subspace basis element complexity map" (overridden when show_superspace)
+    ("complexity", "ssprimes"): "domain prime complexity map",
     ("complexity", "commas"): "comma basis interval complexity list",
     ("complexity", "detempering"): "generator detempering complexity list",
     ("complexity", "targets"): "target interval complexity list",
@@ -217,6 +225,9 @@ SYMBOLS = {
     # resolves to the LIVE glyph (see prescaling_symbols): 𝐿C/𝐿D/… when 𝑋 = 𝐿 (the log-prime
     # matrix), else generic 𝑋C/𝑋D/… — so a product tile and its column headers never mix 𝐿 and 𝑋.
     ("prescaling", "primes"): "𝑋",   # the complexity prescaler matrix (math italic, like 𝑀)
+    # the superspace bare prescaler (when show_superspace it carries 𝑋; the domain-primes tile then
+    # takes the product symbol 𝐿B_Ls, set live in _resolve_prescaler_labels)
+    ("prescaling", "ssprimes"): "𝑋",
     ("prescaling", "commas"): "LC",   # the product over the comma basis C
     ("prescaling", "detempering"): "LD",   # over the generator detempering D
     ("prescaling", "targets"): "LT",   # over the target interval list T
@@ -256,6 +267,9 @@ ROW_LABEL_LETTERS = {
     # glyph it realises — build() swaps in 𝒍ᵢ when 𝑋 = 𝐿 (the log-prime matrix), else the generic
     # 𝒙ᵢ (see row_labels). The static value is that generic fallback.
     ("prescaling", "primes"): "𝒙",
+    # the superspace bare prescaler's rows, when it moves into the ss-primes column (build() swaps
+    # 𝒍ᵢ for 𝒙ᵢ when 𝑋 = 𝐿, same as the domain-primes bare prescaler)
+    ("prescaling", "ssprimes"): "𝒙",
     # the chapter-9 superspace mapping M_L: each row a covector over the dL ss_primes,
     # labelled 𝒎ₗᵢ (math-italic 𝒎 + subscript ₗ + index), parallel to the existing M's 𝒎ᵢ
     ("ss_mapping", "ssprimes"): "𝒎L",
@@ -429,6 +443,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     # (C) columns add yellow (→ green), the target / held columns add the cyan T / H, and the
     # other-intervals and (neutral) detempering list ride the bare cyan 𝑋
     ("prescaling", "primes"): frozenset({"X", "P"}),   # 𝑋 over the yellow domain basis P → green
+    ("prescaling", "ssprimes"): frozenset({"X", "P"}), # the (superspace) prescaler over the true primes
     ("prescaling", "commas"): frozenset({"X", "C"}),   # 𝑋C (the prescaled comma basis → green)
     ("prescaling", "targets"): frozenset({"X", "T"}),  # 𝑋T
     ("prescaling", "interest"): frozenset({"X"}),      # 𝑋·interest
@@ -436,6 +451,7 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
     ("prescaling", "detempering"): frozenset({"X"}),   # 𝑋·D (the detempering list is neutral, bare cyan 𝑋)
     # complexity 𝒄 = ‖𝑋·v‖ inherits the prescaler's cyan 𝑋 and the basis's own colour
     ("complexity", "primes"): frozenset({"X", "P"}),   # 𝒄 of the primes (norm of 𝑋 over the yellow P → green)
+    ("complexity", "ssprimes"): frozenset({"X", "P"}), # the superspace prime complexity map ‖𝐿[i]‖q
     ("complexity", "commas"): frozenset({"X", "C"}),   # 𝒄 of the comma basis (norm of 𝑋C → green)
     ("complexity", "targets"): frozenset({"X", "T"}),  # 𝒄 of the targets (norm of 𝑋T)
     ("complexity", "interest"): frozenset({"X"}),      # 𝒄 of the other-intervals
@@ -541,6 +557,7 @@ MNEMONICS = {
     ("retune", "primes"): "retuning",   # 𝒓
     ("retune", "targets"): "error",     # 𝐞
     ("prescaling", "primes"): "x",      # 𝑋 — the x mid-word in "compleXity"
+    ("prescaling", "ssprimes"): "x",    # the superspace bare prescaler — same "compleXity" x
     ("complexity", "targets"): "complexity",  # 𝒄 — only the target list carries the symbol
     ("weight", "targets"): "weight",    # 𝒘
     ("damage", "targets"): "damage",    # 𝐝
@@ -677,11 +694,13 @@ UNITS = {
     # applied to a vector set is plain octaves (oct); complexity is in complexity units (C)
     # — a map over the primes (C)/p, a list elsewhere (C); weight too.
     ("prescaling", "primes"): "oct/p",
+    ("prescaling", "ssprimes"): "oct/p",  # the (superspace) prescaler, per true prime
     ("prescaling", "commas"): "oct",
     ("prescaling", "detempering"): "oct",
     ("prescaling", "targets"): "oct",
     ("prescaling", "interest"): "oct",
     ("complexity", "primes"): "(C)/p",
+    ("complexity", "ssprimes"): "(C)/p",  # the superspace prime complexity map
     ("complexity", "commas"): "(C)",
     ("complexity", "detempering"): "(C)",
     ("complexity", "targets"): "(C)",
@@ -795,6 +814,12 @@ SUPERSPACE_TILES = (
     ("block:tuning:ssprimes", "tuning", "ssprimes"),               # 𝒕L (Phase 4F)
     ("block:just:ssprimes", "just", "ssprimes"),                   # 𝒋L (Phase 4F)
     ("block:retune:ssprimes", "retune", "ssprimes"),               # 𝒓L (Phase 4F)
+    # the chapter-9 prescaler shift: the bare 𝐿 and the prime complexity map move into the
+    # ss-primes column when the superspace appears (neutral / prime-based). tile_open still gates
+    # them on the prescaling/complexity rows being present (complexity weighting on), so a
+    # unity-weighted scheme shows neither — just like the domain-primes prescaler tiles.
+    ("block:prescaling:ssprimes", "prescaling", "ssprimes"),       # the (superspace) complexity prescaler 𝐿
+    ("block:complexity:ssprimes", "complexity", "ssprimes"),       # the domain prime complexity map ‖𝐿[i]‖q
 )
 
 

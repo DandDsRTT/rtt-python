@@ -2045,6 +2045,13 @@ class _Reconciler:
                 # different signal that coexists with the rings (which ride OTHER cells).
                 num.on("focus", lambda _=None: self._cb.on_cell_focus(cb.id))
                 num.on("blur", lambda _=None: self._cb.on_cell_blur())
+                # Enter commits the typed limit. The field is debounce=300 + loopback-controlled, so its
+                # value only settles to the server (firing the on_change commit) after a typing pause or
+                # on blur — pressing Enter alone did nothing (the reported "Enter doesn't submit the
+                # TILT/OLD number, only blur"). Blur the input on Enter: Quasar flushes the debounced
+                # value at once (committing via on_change) and the native blur runs on_cell_blur. Pure
+                # client-side, so it also works when the debounce hasn't yet elapsed.
+                num.on("keydown.enter", js_handler="(e) => e.target.blur()")
                 # ...and previews each keystroke LIVE the way a wheel notch does, reddening the rows the
                 # typed limit would drop before the debounced commit reflows them away. on_change is the
                 # debounced model-value (the commit); this must fire at once on each keystroke instead.
@@ -3580,6 +3587,20 @@ def index() -> None:
             for pane in _block_panes(bl, fx, fy):
                 place_block(bl, pane)
 
+        # If this render is about to REBUILD the very cell that owns the edit-preview (a kind flip —
+        # the loop below drops + remakes a cell whose kind changed, e.g. a domain element relabelled
+        # from an integer prime to a fraction, elementcell↔elementratio), end the edit-preview now.
+        # The blur / Enter listeners that normally call on_cell_blur ride that cell's input, so when
+        # the rebuild destroys it those listeners never fire — leaving preview_baseline set and the
+        # moved cells ringed amber until a later blur lands elsewhere (the "highlight lingers until I
+        # click another cell" bug). Dropping the baseline here makes the same render compute an empty
+        # preview set and strip the rings. Gated on _editing (a keyboard edit), so hover/wheel/drag
+        # previews — which stand _editing down — are untouched.
+        if (rec._editing is not None
+                and any(cb.id == rec._editing and rec.kinds.get(cb.id) != cb.kind for cb in lay.cells)):
+            rec.preview_baseline = None
+            rec.preview_source = None
+            rec._editing = None
         # the edit-preview highlight: while a cell is focused, ring every OTHER cell whose value this
         # render has moved against the baseline snapshotted when the cell took focus. With nothing
         # being edited (no baseline) the set is empty, so the loop below clears any lingering rings.
