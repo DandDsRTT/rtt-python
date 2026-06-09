@@ -223,7 +223,7 @@ def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool) -> 
 
     The TARGETS complexity column is the named complexity list 𝒄, so its header is the named
     symbol cₙ, gaining that norm as its EQUIVALENCE tail (cₙ = ‖𝐿𝐭ₙ‖q) when the equivalences
-    layer is on — like the tile big-symbols. All-interval (Tₚ = I) replaces the per-target monzo
+    layer is on — like the tile big-symbols. All-interval (Tₚ = I) replaces the per-target vector
     𝐭ₙ with the n-th prime 𝐞ₙ, i.e. the n-th column 𝐿[n] of the prescaler — so each target's norm
     is exactly the domain prime complexity map's per-column ‖𝐿[n]‖q (not the whole matrix's ‖𝐿‖q)."""
     def norm(inner):
@@ -1152,7 +1152,7 @@ class _GridBuilder:
             ("mapping", self.r * ROW_H, show_temp, True, "mapping"),
             # the chapter-9 superspace rows sit between mapping and tuning, the row
             # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
-            # monzo columns (B_L, target/comma monzos in the superspace); ss_mapping the
+            # vector columns (B_L, target/comma vectors in the superspace); ss_mapping the
             # rL × dL matrix M_L; ss_just_mapping the dL × dL identity M_jL (each
             # superspace prime is its own basis element). All three gate on the same
             # nonstandard_domain toggle as the columns, so the bands collapse to nothing
@@ -2610,7 +2610,7 @@ class _GridBuilder:
         # superspace primes stacked down the quantities spine column, one per row — the
         # row counterpart of the d domain primes that head the existing vectors row's spine
         # (basis:p cells). Phase 3 reserves the band; Phase 4 populates the matrix tiles
-        # (B_L over the domain primes, commas/targets as superspace monzos).
+        # (B_L over the domain primes, commas/targets as superspace vectors).
         if self.row_open("ss_vectors") and self.tile_open("ss_vectors", "quantities"):
             bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
             for p in range(self.dL):
@@ -2626,7 +2626,7 @@ class _GridBuilder:
                                           self.col_w["quantities"], ROW_H, "genratio",
                                           text=ss_gens[i] if i < len(ss_gens) else ""))
         # B_L (basis-embedding matrix): each domain element as a dL-tall vector of integer
-        # monzo coefficients over the superspace primes. The cells form a dL × d grid sharing
+        # vector coefficients over the superspace primes. The cells form a dL × d grid sharing
         # the prime-column gridlines with the existing vectors row above (the same prime_left
         # x-axis, the ss_vec_top y-axis) — a read-only "vec" cell per (ss_prime_row, element_col).
         # service.basis_in_superspace stores ROWS-as-elements (matching the comma-basis storage
@@ -2695,7 +2695,7 @@ class _GridBuilder:
                         "mapped", text=str(msl[i][e]), gen=i,
                         unit=self.cell_unit("ss_mapping", "primes", gen=i, elem=e)))
         # the interval lists, lifted. Each on-domain list (commas C, targets T, held H, interest,
-        # detempering D) becomes dL-tall monzo columns over the superspace primes in the ss_vectors
+        # detempering D) becomes dL-tall vector columns over the superspace primes in the ss_vectors
         # row (B_L · column), and rL-tall mapped columns over the superspace generators in the
         # ss_mapping row (M_s→L · column — mapped commas vanish to 0, like the on-domain mapped
         # comma basis). Same column axes as the on-domain vectors / mapping rows above.

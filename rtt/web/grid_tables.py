@@ -331,7 +331,7 @@ COL_LABEL_LETTERS = {
 # multi-row matrices reserve top/bottom frame bands for their EBK marks: the mapping,
 # the canonical mapping and the complexity-prescaling matrix for their spanning
 # bracket+brace, the interval vectors for the per-column ket marks. The chapter-9
-# superspace rows (B_L's monzo columns, M_L's covector stack) likewise frame their
+# superspace rows (B_L's vector columns, M_L's covector stack) likewise frame their
 # tiles when Phase 4 populates them — Phase 3 reserves the frame bands so the
 # row_axis fan splits into one rule per cell-row (dL / rL sub-rules).
 FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling",
@@ -759,12 +759,12 @@ SUPERSPACE_TILES = (
     ("block:ss_quantities:ssprimes", "quantities", "ssprimes"),    # the dL superspace primes (2, 3, 5, 13 …)
     ("block:ss_vectors:quantities", "ss_vectors", "quantities"),  # the spine basis index column (the dL superspace primes)
     ("block:ss_vectors:ssprimes", "ss_vectors", "ssprimes"),       # M_jL = I (dL × dL superspace JI mapping)
-    ("block:ss_vectors:primes", "ss_vectors", "primes"),           # B_L: each domain element as a dL-tall superspace monzo (basis change matrix)
-    ("block:ss_vectors:commas", "ss_vectors", "commas"),           # C_L: the commas as superspace monzos
-    ("block:ss_vectors:held", "ss_vectors", "held"),               # H_L: the held intervals as superspace monzos
-    ("block:ss_vectors:targets", "ss_vectors", "targets"),         # T_L: the target list as superspace monzos
-    ("block:ss_vectors:interest", "ss_vectors", "interest"),       # the intervals of interest as superspace monzos
-    ("block:ss_vectors:detempering", "ss_vectors", "detempering"), # D_L: the generator detempering as superspace monzos
+    ("block:ss_vectors:primes", "ss_vectors", "primes"),           # B_L: each domain element as a dL-tall superspace vector (basis change matrix)
+    ("block:ss_vectors:commas", "ss_vectors", "commas"),           # C_L: the commas as superspace vectors
+    ("block:ss_vectors:held", "ss_vectors", "held"),               # H_L: the held intervals as superspace vectors
+    ("block:ss_vectors:targets", "ss_vectors", "targets"),         # T_L: the target list as superspace vectors
+    ("block:ss_vectors:interest", "ss_vectors", "interest"),       # the intervals of interest as superspace vectors
+    ("block:ss_vectors:detempering", "ss_vectors", "detempering"), # D_L: the generator detempering as superspace vectors
     ("block:ss_mapping:quantities", "ss_mapping", "quantities"),   # the spine: the rL superspace generators as ~ratios
     ("block:ss_mapping:ssgens", "ss_mapping", "ssgens"),           # M_LgL = I: the superspace mapping over its own generators
     ("block:ss_mapping:ssprimes", "ss_mapping", "ssprimes"),       # M_L itself, the rL × dL mapping

@@ -138,7 +138,7 @@ def test_meet_join_merges(merge, factors, expected):
     assert merge(*factors) == expected
 
 
-# The same examples as wedgies (the EA progressive product = join/meet via duals).
+# The same examples as multivectors (the EA progressive product = join/meet via duals).
 _mm = matrix_to_multivector
 EA_PRODUCT_CASES = [
     (_mm(meantone_m11), _mm(meanpop_m11), Multivector((0, 0, 0, 0, 0), 4, ROW)),

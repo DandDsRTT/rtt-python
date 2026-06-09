@@ -15,7 +15,7 @@ from rtt.temperament import Temperament, Variance
 
 @dataclass(frozen=True)
 class Multivector:
-    """A temperament as a multivector (wedgie): the rank-order minors
+    """A temperament as a multivector: the rank-order minors
     (Plücker coordinates), the grade, the variance, and d (needed only when
     grade == 0, where d can't be inferred from the coordinate count)."""
 

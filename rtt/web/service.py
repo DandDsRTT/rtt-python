@@ -210,7 +210,7 @@ def superspace_dimension(domain_basis) -> int:
 
 
 def basis_in_superspace(domain_basis) -> Matrix:
-    """Each domain element as a monzo over the superspace primes — the embedding matrix B_L
+    """Each domain element as a vector over the superspace primes — the embedding matrix B_L
     the nonstandard-domain superspace region renders. Returned as a tuple of d ROWS of length
     dL (each row is one element), matching the comma-basis/target-vector storage convention
     in this module. The conceptual matrix is dL × d with elements as columns; transpose the
@@ -267,14 +267,14 @@ def superspace_just_mapping(primes) -> Matrix:
 
 
 def lift_vectors_to_superspace(domain_basis, vectors) -> Matrix:
-    """Each domain monzo (a length-d integer vector over the domain basis) re-expressed as a
-    length-dL monzo over the superspace primes — i.e. ``B_L · v`` for each. ``vectors`` is an
+    """Each domain interval vector (a length-d integer vector over the domain basis) re-expressed
+    as a length-dL vector over the superspace primes — i.e. ``B_L · v`` for each. ``vectors`` is an
     iterable of length-d vectors stored rows-as-intervals (the comma basis, target vectors,
     held/interest vectors, the detempering columns); the result keeps that shape but each row is
     dL long. The lifted comma/target lists C_L / T_L the superspace block renders. For BARBADOS
     over 2.3.13/5 a vector touching the domain element 13/5 spreads across the 5 and 13 columns
     of the superspace (2, 3, 5, 13)."""
-    bl = basis_in_superspace(domain_basis)  # d rows × dL: element e -> its superspace monzo
+    bl = basis_in_superspace(domain_basis)  # d rows × dL: element e -> its superspace vector
     if not bl:
         return tuple(tuple() for _ in vectors)
     dL = len(bl[0])
@@ -301,7 +301,7 @@ def mapping_to_superspace_generators(state: TemperamentState) -> Matrix:
 
 
 def map_vectors_into_superspace_generators(state: TemperamentState, vectors) -> Matrix:
-    """Each domain monzo mapped to superspace-generator coordinates: ``M_s→L · v``. Mapped commas
+    """Each domain interval vector mapped to superspace-generator coordinates: ``M_s→L · v``. Mapped commas
     vanish to 0 (parallel to the on-domain mapped comma basis); mapped targets give the
     superspace-generator counts Y_L. ``vectors`` is rows-as-intervals (length d); the result is
     rows-as-intervals, each length rL."""
@@ -1541,14 +1541,14 @@ def is_independent_domain_basis(domain_basis) -> bool:
     """Whether the basis elements are multiplicatively independent — no element is a product of
     integer powers of the others, so the d elements really span a d-dimensional domain. A
     dependent basis (e.g. ``2.3.9``, where ``9 = 3²``) is degenerate: it names fewer than d
-    independent directions, breaking ``d = r + n``. Tested by the rank of the elements' monzos over
+    independent directions, breaking ``d = r + n``. Tested by the rank of the elements' vectors over
     their simplest prime-only superspace (rank == d iff independent)."""
     elements = tuple(Fraction(e) for e in domain_basis)
     if not elements:
         return False
     superspace = get_simplest_prime_only_basis(tuple(domain_basis))
-    monzos = express_quotients_in_domain_basis(elements, superspace)
-    return sp.Matrix(monzos).rank() == len(elements)
+    vectors = express_quotients_in_domain_basis(elements, superspace)
+    return sp.Matrix(vectors).rank() == len(elements)
 
 
 def can_set_domain_element(state: TemperamentState, index: int, element) -> bool:

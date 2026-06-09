@@ -4749,7 +4749,7 @@ def test_complexity_target_col_headers_gain_the_norm_equivalence():
     # layer each header gains its defining equation cₙ = ‖𝐿𝐭ₙ‖q (the q-norm of the prescaled
     # target vector), mirroring the tile big-symbols' "= …" tails. The prescaler glyph follows
     # the X→L rule (𝐿 for the log-prime matrix). All-interval (Tₚ = I) replaces the per-target
-    # monzo 𝐭ₙ with the n-th prime — the n-th column 𝐿[n] — so each header IS the domain prime
+    # vector 𝐭ₙ with the n-th prime — the n-th column 𝐿[n] — so each header IS the domain prime
     # complexity map's per-column ‖𝐿[n]‖q. Without equivalences only the bare cₙ shows.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     q = spreadsheet.NORM_SUB_OPEN + "q" + spreadsheet.NORM_SUB_CLOSE
@@ -6607,7 +6607,7 @@ def test_M_L_tile_has_a_caption_and_symbol():
 
 
 def test_B_L_tile_has_a_caption_and_symbol():
-    # the basis-embedding tile (each domain element as a superspace monzo) gets a caption
+    # the basis-embedding tile (each domain element as a superspace vector) gets a caption
     # + an upright bold B with subscript L (parallel to C for the comma basis, T for the
     # target list — upright capitals naming an interval basis)
     cells = {c.id: c for c in _barbados_ss(names=True, symbols=True).cells}
@@ -6702,7 +6702,7 @@ def test_approach_radio_band_only_for_a_nonprime_domain():
 
 # ---------------------------------------------------------------------------
 # Phase 4E.1 — B_L (basis embedding) cells in (ss_vectors, primes). The new
-# tile renders each domain element as a dL-tall ket of integer monzo
+# tile renders each domain element as a dL-tall ket of integer vector
 # coefficients over the superspace primes; the cells share the existing
 # prime-column gridlines with the vectors row above and the ss_vectors band's
 # spine basis index to the left.
@@ -6712,15 +6712,15 @@ def test_approach_radio_band_only_for_a_nonprime_domain():
 def test_B_L_emits_one_cell_per_superspace_prime_row_and_domain_element_col():
     # the basis-embedding matrix B_L lives in (ss_vectors, primes) — each domain element is
     # one COLUMN (over the d domain primes column axis) of dL components, each component the
-    # integer monzo coefficient over the superspace primes (rows). For BARBADOS over
+    # integer vector coefficient over the superspace primes (rows). For BARBADOS over
     # 2.3.13/5 with superspace (2, 3, 5, 13):
     #   element 2  (col 0): (1, 0, 0, 0)   — 2 is the first superspace prime
     #   element 3  (col 1): (0, 1, 0, 0)   — 3 is the second
     #   element 13/5 (col 2): (0, 0, -1, 1) — −1 in the 5-row, +1 in the 13-row
     cells = {c.id: c for c in _barbados_ss().cells}
     expected_by_element = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, -1, 1))
-    for elem_idx, monzo in enumerate(expected_by_element):
-        for ss_prime_idx, value in enumerate(monzo):
+    for elem_idx, vector in enumerate(expected_by_element):
+        for ss_prime_idx, value in enumerate(vector):
             assert cells[f"cell:ss_vectors:primes:{ss_prime_idx}:{elem_idx}"].text == str(value)
 
 

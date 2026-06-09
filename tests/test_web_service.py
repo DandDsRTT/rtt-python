@@ -1318,9 +1318,9 @@ def test_superspace_dimension_is_the_count_of_superspace_primes():
     assert service.superspace_dimension((2, 9, 5)) == 3  # collapses to {2,3,5}
 
 
-def test_basis_in_superspace_writes_each_element_as_a_monzo_over_the_superspace_primes():
+def test_basis_in_superspace_writes_each_element_as_a_vector_over_the_superspace_primes():
     # Convention (chosen rows-as-elements, matching the comma-basis / target-vector storage in
-    # this service): each ROW is one domain element written as a monzo over the superspace
+    # this service): each ROW is one domain element written as a vector over the superspace
     # primes — d rows of length dL. For BARBADOS over 2.3.13/5 with superspace (2,3,5,13):
     # 2 → ⟨1 0 0 0], 3 → ⟨0 1 0 0], 13/5 → ⟨0 0 -1 1].
     barbados = service.basis_in_superspace((2, 3, Fraction(13, 5)))
