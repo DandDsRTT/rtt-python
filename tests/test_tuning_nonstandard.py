@@ -3,12 +3,12 @@ subgroups like 2.3.13/5, with the "nonprime-based" approach (treat each basis el
 a prime) or the neutral default. Targets are filtered to the subgroup and expressed as
 vectors in the (nonprime) basis. Prime-based cases live in test_tuning_nonstandard_prime.py."""
 
-from math import inf
+from math import inf, log2
 
 import pytest
 
 from rtt.parsing import parse_temperament_data
-from rtt.tuning import optimize_generator_tuning_map
+from rtt.tuning import get_complexity, optimize_generator_tuning_map
 from rtt.tuning_scheme_names import TuningSchemeSpec
 
 TOL = 1e-2  # the library states these to 3-4 decimals; a couple of references are coarser
@@ -34,10 +34,18 @@ def test_barbados_nonprime_explicit_targets():
 
 @pytest.mark.parametrize(
     "nonprime_basis_approach, expected",
-    [("", (1194.291, 135.186)), ("nonprime-based", (1192.399, 133.768))],
+    [("", (1191.880, 133.594)), ("nonprime-based", (1192.399, 133.768))],
 )
 def test_article_example_tilt(nonprime_basis_approach, expected):
     # tests.m 3733-3762: a 2.7/3.11/3 example over the default TILT, neutral vs nonprime-based.
+    # NEUTRAL diverges from the historical tests.m reference (1194.291, 135.186): that value
+    # measured each target's log-product complexity in vector form over the NONPRIME basis,
+    # which double-counts a prime shared by two basis elements (the 3 in 7/3 and 11/3) that
+    # cancels in the true quotient — e.g. 11/7 came out log2(11·3·7·3)=9.437 instead of the
+    # correct log2(11·7)=6.267. The neutral approach is defined to prime-factor as usual, so
+    # complexity is now taken over the prime-count vector (the prime-only superspace); the
+    # corrected optimum is (1191.880, 133.594). nonprime-based (which keeps the atomic basis
+    # by design) and every coprime/standard basis are unaffected.
     t = parse_temperament_data(ARTICLE_EXAMPLE)
     spec = TuningSchemeSpec(
         optimization_power=inf,
@@ -46,6 +54,24 @@ def test_article_example_tilt(nonprime_basis_approach, expected):
         nonprime_basis_approach=nonprime_basis_approach,
     )
     assert optimize_generator_tuning_map(t, spec) == pytest.approx(expected, abs=TOL)
+
+
+def test_neutral_complexity_is_prime_factored_across_shared_basis_elements():
+    # The mechanism behind the corrected neutral article example. log-product complexity is
+    # defined over the prime factorization, so a prime shared between two basis elements
+    # cancels in a quotient. Over 2.7/3.11/3 the target 11/7 = (11/3)/(7/3) is just 11·7⁻¹
+    # (the 3's cancel): its NEUTRAL complexity is log2(11·7) ≈ 6.267, NOT the per-basis-element
+    # sum log2(7·3)+log2(11·3) = log2(693) ≈ 9.437 that a naive vector form over the nonprime
+    # basis would give. The NONPRIME-BASED approach instead protects each element against
+    # factoring, so there the 3's do NOT cancel and the complexity IS log2(7/3)+log2(11/3).
+    t = parse_temperament_data(ARTICLE_EXAMPLE)
+    eleven_over_seven = (0, -1, 1)  # 11/7 as a vector over 2.7/3.11/3
+    # get_complexity(pcv, t, norm_power, log_prime_power, prime_power, size_factor, approach)
+    neutral = get_complexity(eleven_over_seven, t, 1, 1, 0, 0, "")
+    assert neutral == pytest.approx(log2(11 * 7), abs=1e-9)            # 6.267, the quotient form
+    assert neutral != pytest.approx(log2(7 * 3) + log2(11 * 3), abs=1e-2)  # NOT 9.437
+    nonprime = get_complexity(eleven_over_seven, t, 1, 1, 0, 0, "nonprime-based")
+    assert nonprime == pytest.approx(log2(7 / 3) + log2(11 / 3), abs=1e-9)  # 3.097, atomic
 
 
 # Co-prime subgroups: prime-based and nonprime-based agree, so only the nonprime-based name

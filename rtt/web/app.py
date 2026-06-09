@@ -1398,6 +1398,12 @@ class _Reconciler:
         if edit_input is not None:
             edit_input.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid))
             edit_input.on("blur", lambda _=None: self._cb.on_cell_blur())
+            # Enter commits the blur/Enter-committing cells (the ratio cells, the domain-element cell)
+            # but does NOT blur them — focus is retained — so end the edit-preview here too. Otherwise
+            # preview_baseline stays at the pre-edit snapshot and the commit's render leaves the moved
+            # cells ringed amber until a later blur. on_cell_blur only clears the preview state (it
+            # doesn't re-render), so the committed value the handler just rendered is untouched.
+            edit_input.on("keydown.enter", lambda _=None: self._cb.on_cell_blur())
         # every editable numeric input steps by its _WHEEL_STEPS amount on a wheel notch while
         # focused. The listener rides the wrap (so a scroll anywhere in the cell counts) and its
         # js_handler only emits when the cell holds focus, so an unfocused scroll just pages the grid
@@ -3541,8 +3547,17 @@ def index() -> None:
             rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
             rec.update_cell(cb)
             ringed = cb.id in preview
-            rec.els[cb.id].classes(add="rtt-preview-change" if ringed else "",
-                                   remove="" if ringed else "rtt-preview-change")
+            # render owns BOTH ring colours for every cell it touches. The amber "value moved" ring
+            # is the edit/combine preview's, toggled by `ringed`. The red "will be removed" ring is
+            # only ever painted by a no-reflow hover (show_preview: a +/- / chooser hover, a domain-
+            # element edit, a shrinking-temperament hover) and is ALWAYS stale by the time a real
+            # render runs — the document has been committed or reverted, so a surviving cell is no
+            # longer going away. So strip rtt-preview-remove unconditionally here: without it a red
+            # ring on a cell the render KEEPS is orphaned forever (render never re-touched red, and it
+            # clobbers preview_shown below so clear_preview can't reach it either).
+            rec.els[cb.id].classes(
+                add="rtt-preview-change" if ringed else "",
+                remove="rtt-preview-remove" if ringed else "rtt-preview-change rtt-preview-remove")
         rec.preview_shown = set(preview)  # every rung id is a live cell (changed_cell_ids ⊆ lay.cells)
 
         for eid in [e for e in rec.els if e not in seen]:
