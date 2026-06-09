@@ -1790,6 +1790,27 @@ async def test_scrolling_the_target_limit_down_reddens_the_dropped_target_rows(
     assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:6")  # a surviving row is untouched
 
 
+async def test_typing_the_target_limit_down_reddens_the_dropped_target_rows(
+        user: User, monkeypatch) -> None:
+    # the reported gesture (the bug as filed: "changing the TILT from 8 to 6 doesn't preview the
+    # intervals going away in red"). Typing the limit DOWN sheds target intervals, and those going
+    # away must flash red before the debounced commit reflows them off. Unlike the wheel, the typing
+    # preview can't ride on_change (that's the debounced COMMIT, which set_value would fire and which
+    # would reflow the row away); it rides the RAW DOM `input` event, reading the typed text straight
+    # off the event. So drive that event with the lowered value the way the browser packs it
+    # (args=[["target","value"]] -> a one-element list), from the 6-TILT default down to 5, dropping
+    # 6/5 (target index 7). Pin the debounce far out so no commit can reflow mid-assertion.
+    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    await _enable(user, "presets")
+    await user.should_see(marker="retune:target:7")            # the 6/5 row exists at the 6-TILT default
+    num, _sel = _target_preset(user)
+    UserInteraction(user, {num}, None).trigger("focus")        # snapshot the 6-TILT baseline + own the preview
+    UserInteraction(user, {num}, None).trigger("input", ["5"]) # TYPE the limit down to 5-TILT, dropping 6/5
+    assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:7")  # the dropped 6/5 row → red
+    assert "rtt-preview-remove" in _wrap_classes(user, "target:7")         # …its target-interval cell too
+    assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:6")  # a surviving row is untouched
+
+
 async def test_the_dropped_target_red_preview_clears_when_the_limit_field_is_left(
         user: User, monkeypatch) -> None:
     # leaving the limit field ends the gesture: on_cell_blur clears the remove-preview, so the red a
