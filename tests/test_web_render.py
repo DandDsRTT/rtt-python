@@ -1762,12 +1762,64 @@ async def test_typing_a_target_limit_rings_the_rows_it_moves(user: User) -> None
     assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:8")
 
 
-# NOTE: scrolling the limit rings the same rows typing does — both commit through the identical
-# on_target_change → render → edit-preview path (proven above), and the wheel's debounced commit itself
-# is covered by test_scrolling_the_target_limit_steps_then_commits. A dedicated wheel-then-ring assertion
-# isn't added: the wheel commits in a background task (on_target_limit_wheel debounces), whose render the
-# in-process User fixture can't observe via should_see/find (ElementFilter only_visible misses
-# background-task renders), so such a test can't be made reliable without reaching into fixture internals.
+# --- lowering the limit reddens the target rows it drops, BEFORE they reflow away ---
+# The test above proves a GROWING limit rings the survivors that move (amber). A SHRINKING limit must
+# do the other half the user asked for: light up RED the intervals it's about to delete, while they're
+# still on screen. That preview can't ride the post-commit render — the reflow has already removed those
+# cells — so on_target_limit_wheel paints it in place the instant it steps the number, SYNCHRONOUSLY
+# (unlike the debounced commit, which lands in a background task the fixture can't observe). So a wheel-
+# then-ring assertion IS reliable for the red, asserted before the debounce ever fires.
+
+async def test_scrolling_the_target_limit_down_reddens_the_dropped_target_rows(
+        user: User, monkeypatch) -> None:
+    # the reported bug: stepping the TILT limit DOWN sheds target intervals, and those going away must
+    # flash red before they vanish. From the 5-limit default (6-TILT, 8 targets: …5/4, 6/5) one notch
+    # down to 5-TILT drops 6/5 (target index 7); its row must redden in place. The debounce is pinned
+    # far out so the heavy commit can't reflow the row away mid-assertion — only the synchronous,
+    # no-reflow remove-preview is under test (the commit itself is covered by the steps-then-commits test).
+    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    await _enable(user, "presets")
+    await user.should_see(marker="retune:target:7")           # the 6/5 row exists at the 6-TILT default
+    num, _sel = _target_preset(user)
+    UserInteraction(user, {num}, None).trigger("focus")        # snapshot the 6-TILT baseline + own the preview
+    UserInteraction(user, {num}, None).trigger("wheel", {"deltaY": 100})   # scroll down = -1 → 6-TILT to 5-TILT
+    num, _sel = _target_preset(user)
+    assert int(num.value) == 5                                 # the shown number stepped down at once
+    assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:7")  # the dropped 6/5 row → red
+    assert "rtt-preview-remove" in _wrap_classes(user, "target:7")         # …its target-interval cell too
+    assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:6")  # a surviving row is untouched
+
+
+async def test_the_dropped_target_red_preview_clears_when_the_limit_field_is_left(
+        user: User, monkeypatch) -> None:
+    # leaving the limit field ends the gesture: on_cell_blur clears the remove-preview, so the red a
+    # scroll-down armed does not outlive the edit. (Were the debounce allowed to fire it would commit
+    # the lower limit and delete the row outright; pin it out so the BLUR is what clears the red.)
+    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    await _enable(user, "presets")
+    await user.should_see(marker="retune:target:7")
+    num, _sel = _target_preset(user)
+    UserInteraction(user, {num}, None).trigger("focus")
+    UserInteraction(user, {num}, None).trigger("wheel", {"deltaY": 100})   # arm the red on the dropped 6/5 row
+    assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:7")
+    UserInteraction(user, {num}, None).trigger("blur")         # leaving the field clears the preview
+    assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:7")
+
+
+async def test_scrolling_the_target_limit_up_reddens_no_target_rows(user: User, monkeypatch) -> None:
+    # the mirror guard: GROWING the limit removes nothing, so the remove-preview must stay empty — a
+    # raised limit only adds rows (off-screen until committed) and re-solves the survivors. No red
+    # anywhere, even though the re-solve does move survivors (those would ring amber, not red).
+    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    await _enable(user, "presets")
+    await user.should_see(marker="retune:target:7")
+    num, _sel = _target_preset(user)
+    UserInteraction(user, {num}, None).trigger("focus")
+    UserInteraction(user, {num}, None).trigger("wheel", {"deltaY": -100})  # scroll up = +1 → 6-TILT to 7-TILT
+    num, _sel = _target_preset(user)
+    assert int(num.value) == 7                                 # stepped up
+    for idx in range(8):                                       # none of the 6-TILT rows go away → no red
+        assert "rtt-preview-remove" not in _wrap_classes(user, f"retune:target:{idx}")
 
 
 async def test_an_invalid_target_limit_stays_reddened_through_the_edit_preview_gesture(user: User) -> None:

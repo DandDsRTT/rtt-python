@@ -2045,6 +2045,13 @@ class _Reconciler:
                 # different signal that coexists with the rings (which ride OTHER cells).
                 num.on("focus", lambda _=None: self._cb.on_cell_focus(cb.id))
                 num.on("blur", lambda _=None: self._cb.on_cell_blur())
+                # ...and previews each keystroke LIVE the way a wheel notch does, reddening the rows the
+                # typed limit would drop before the debounced commit reflows them away. on_change is the
+                # debounced model-value (the commit); this rides the RAW DOM `input`, which fires at once
+                # and carries the live text in event.target.value (the loopback-debounced model value
+                # lags a keystroke behind, so read it off the event instead of num.value).
+                num.on("input", lambda e: self._cb.on_target_limit_preview(e.args[0] if e.args else None),
+                       args=[["target", "value"]])
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
                         on_change=lambda e: self._cb.on_target_change(limit_changed=False)) \
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
@@ -2841,6 +2848,10 @@ def index() -> None:
         building[0] = True  # advance the shown number without committing it
         num.value = _wheel_step(num.value, delta_y)
         building[0] = False
+        # redden what the stepped limit would drop, in place, NOW — before the debounced commit reflows
+        # them away. Each notch repaints against the focus baseline, so scrolling down lights up exactly
+        # the intervals it's shedding while they're still on screen; the commit then deletes them.
+        on_target_limit_preview()
         if target_limit_commit[0] is not None:
             target_limit_commit[0].cancel()  # a fresh notch restarts the debounce window
         target_limit_commit[0] = background_tasks.create(
@@ -2857,6 +2868,45 @@ def index() -> None:
             return
         target_limit_commit[0] = None
         on_target_change(limit_changed=False)
+
+    def on_target_limit_preview(typed=None):
+        # live edit preview for the TILT/OLD limit field, mirroring on_element_preview: as the shown
+        # limit changes (a wheel notch steps it, a keystroke types it) but BEFORE the debounced commit
+        # reflows the grid, ring the target-interval cells the new limit would MOVE (amber) / REMOVE
+        # (red) — applied to a snapshot, diffed against the focus baseline, reverted. LOWERING the limit
+        # drops intervals; reddening them in place is what shows "what's going away" while they're still
+        # on screen — a post-commit render can't, because the reflow has already deleted them (red only
+        # ever rings live cells). RAISING it just rings the survivors that move (the added rows are off-
+        # screen until committed, so show_preview skips them), like every other no-reflow add preview.
+        # `typed` is the live field text for a keystroke (the loopback field's debounced model value
+        # lags a keystroke behind); the wheel passes None and reads the number it just stepped server-side.
+        if building[0] or rec._editing != "preset:target" or rec.preview_baseline is None:
+            return
+        num, sel = rec.selects["preset:target"]
+        family = sel.value or "TILT"
+        raw = num.value if typed is None else typed
+        if service.target_limit_problem(family, raw) == "whole":
+            rec.clear_preview()  # a non-number isn't a previewable limit (yet); the commit toasts it
+            return
+        text = (str(raw) if raw is not None else "").strip()
+        spec = f"{int(float(text))}-{family}" if text else family  # blank -> the bare family (domain default)
+        try:
+            valid = bool(service.target_interval_set(spec, editor.state.domain_basis))
+        except Exception:
+            valid = False
+        if not valid:
+            rec.clear_preview()
+            return
+        token = editor.capture_for_preview()
+        try:
+            editor.set_target_spec(spec)  # the same edit on_target_change commits, on a snapshot
+            new = editor.layout(prev_ids=rec.preview_baseline.identities)
+            modified = spreadsheet.changed_cell_ids(rec.preview_baseline, new) - {"preset:target"}
+            removed = spreadsheet.removed_cell_ids(rec.preview_baseline, new)
+        finally:
+            editor.restore_for_preview(token)  # leave no trace: the real document never moved
+        rec.clear_preview()
+        rec.show_preview(modified, removed)
 
     def on_prescaler_change(cid):
         # a bare prescaler 𝐿 diagonal cell (cid "cell:prescaling:primes:i:i"): a valid float
@@ -3398,6 +3448,7 @@ def index() -> None:
         on_gentuning_wheel=on_gentuning_wheel,
         on_value_wheel=on_value_wheel,
         on_target_limit_wheel=on_target_limit_wheel,
+        on_target_limit_preview=on_target_limit_preview,
         on_chooser_hover=on_chooser_hover,
         on_held_change=on_held_change,
         on_interest_change=on_interest_change,
