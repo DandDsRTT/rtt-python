@@ -3548,9 +3548,11 @@ class _GridBuilder:
         # (𝐿C/…) and print no "= …".
         ai = service.is_all_interval(self.tuning_scheme)  # all-interval: kept target tiles use prime-proxy labels
         slope = service.damage_weight_slope(self.tuning_scheme)
+        # the "𝑋 = 𝐿" symbol-equivalence rides the BARE prescaler tile — which sits in ss-primes
+        # once the superspace shows (the domain-primes tile is then the 𝐿·B_Ls product, no "= …").
         equivalences = {**EQUIVALENCES,
                         ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
-                        ("prescaling", "primes"): self.prescaler_equivalence,
+                        ("prescaling", "ssprimes" if self.show_superspace else "primes"): self.prescaler_equivalence,
                         **(ALL_INTERVAL_EQUIVALENCES if ai else {})}
         if ai:
             # all-interval (Tₚ = I): the kept target tiles take prime-proxy closed forms in the live
