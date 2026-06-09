@@ -462,8 +462,9 @@ async def test_editing_a_mapping_cell_updates_the_mapped_list(user: User) -> Non
     # meantone [[1,1,0],[0,1,4]]: 5/4 (target 6) maps to 4 fifths in the mapped list
     assert _cell_text(user, "cell:mapped:1:6") == "4"
     _cell_child(user, "cell:mapping:1:2").set_value("7")  # the fifth's prime-5 entry: 4 -> 7
+    _commit(user, "cell:mapping:1:2")                     # commit on blur (typing only previews now)
     await user.should_see(marker="cell:mapped:1:6")
-    assert _cell_text(user, "cell:mapped:1:6") == "7"  # the mapped list recomputed live
+    assert _cell_text(user, "cell:mapped:1:6") == "7"  # the mapped list recomputed on commit
 
 
 async def test_editing_a_generator_tuning_cell_applies_an_override(user: User) -> None:
@@ -617,6 +618,7 @@ async def test_editing_a_target_cell_overrides_the_set(user: User) -> None:
     # explicit override. The default first target is 2/1 = (1 0 0); typing 2 there survives the
     # render only if the override applied (else the cell reverts to the default's component)
     _cell_child(user, "cell:vec:targets:0:0").set_value("2")
+    _commit(user, "cell:vec:targets:0:0")              # commit on blur (typing only previews now)
     await user.should_see(marker="cell:vec:targets:0:0")
     assert _cell_child(user, "cell:vec:targets:0:0").value == "2"
 
@@ -672,9 +674,10 @@ async def test_editing_a_held_ratio_updates_the_interval(user: User) -> None:
     await user.open("/")
     _toggle(user, "optimization")                    # show the optimization box's held column
     _click_glyph(user, "held_plus")                  # start a blank red held-interval draft
-    _cell_child(user, "cell:held:0:0").set_value("-1")  # fill it to 3/2 = (-1 1 0) -> commits
+    _cell_child(user, "cell:held:0:0").set_value("-1")  # fill it to 3/2 = (-1 1 0)
     _cell_child(user, "cell:held:1:0").set_value("1")
     _cell_child(user, "cell:held:2:0").set_value("0")
+    _commit(user, "cell:held:2:0")                    # commit the draft on blur (filling only previews)
     await user.should_see(marker="held:0")
     _cell_child(user, "held:0").set_value("5/4")      # edit the committed ratio to 5/4 = (-2 0 1)
     _commit(user, "held:0")
@@ -687,9 +690,10 @@ async def test_editing_an_interest_ratio_updates_the_interval(user: User) -> Non
     # draft flow first (its column and the interval-vectors row are open by default)
     await user.open("/")
     _click_glyph(user, "interest_plus")              # start a blank red draft
-    _cell_child(user, "cell:interest:0:0").set_value("1")  # fill it to 6/5 = (1 1 -1) -> commits
+    _cell_child(user, "cell:interest:0:0").set_value("1")  # fill it to 6/5 = (1 1 -1)
     _cell_child(user, "cell:interest:1:0").set_value("1")
     _cell_child(user, "cell:interest:2:0").set_value("-1")
+    _commit(user, "cell:interest:2:0")                # commit the draft on blur (filling only previews)
     await user.should_see(marker="interest:0")
     _cell_child(user, "interest:0").set_value("5/4")  # edit the committed ratio to 5/4 = (-2 0 1)
     _commit(user, "interest:0")
@@ -873,6 +877,7 @@ async def test_a_finite_power_fills_the_cell_when_re_synced_from_infinity(user: 
 async def test_undo_button_reverts_a_mapping_edit(user: User) -> None:
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")
+    _commit(user, "cell:mapping:1:2")                     # commit on blur (typing only previews now)
     await user.should_see(marker="cell:mapped:1:6")
     assert _cell_text(user, "cell:mapped:1:6") == "7"
     user.find(marker="undo").click()  # the undo button -> act(editor.undo) -> render
@@ -932,6 +937,7 @@ async def test_temperament_chooser_shows_the_prompt_as_a_placeholder_when_no_pre
     await _enable(user, "presets")
     assert "display-value" not in _cell_child(user, "preset:temperament")._props
     _cell_child(user, "cell:mapping:1:2").set_value("7")  # 4 -> 7 leaves the meantone preset
+    _commit(user, "cell:mapping:1:2")                     # commit on blur (typing only previews now)
     await user.should_see(marker="preset:temperament")
     assert _cell_child(user, "preset:temperament")._props.get("display-value") == "-"
 
@@ -1045,6 +1051,7 @@ async def test_target_chooser_shows_the_prompt_when_an_interval_is_overridden(us
     assert "display-value" not in sel._props  # names the live family
     assert num.value is not None              # shows the family's limit
     _cell_child(user, "cell:vec:targets:0:0").set_value("3")  # deviate from the TILT list
+    _commit(user, "cell:vec:targets:0:0")                     # commit on blur (typing only previews now)
     await user.should_see(marker="preset:target")
     num, sel = _target_preset(user)
     assert sel._props.get("display-value") == "-"
@@ -1060,6 +1067,7 @@ async def test_selecting_a_target_family_clears_an_interval_override(user: User)
     await user.should_see(marker="cell:vec:targets:0:0")
     original = _cell_child(user, "cell:vec:targets:0:0").value  # the TILT list's first cell
     _cell_child(user, "cell:vec:targets:0:0").set_value("3")  # deviate -> override
+    _commit(user, "cell:vec:targets:0:0")                     # commit on blur (typing only previews now)
     await user.should_see(marker="preset:target")
     _, sel = _target_preset(user)
     assert sel._props.get("display-value") == "-"
@@ -1332,7 +1340,8 @@ async def test_unheld_held_interval_renders_red_until_reoptimized(user: User) ->
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")     # make it the fifth 3/2 = (-1 1 0)
     _cell_child(user, "cell:held:1:0").set_value("1")
-    _cell_child(user, "cell:held:2:0").set_value("0")      # every component filled -> the draft commits
+    _cell_child(user, "cell:held:2:0").set_value("0")
+    _commit(user, "cell:held:2:0")                         # commit the draft on blur (filling only previews)
     _cell_child(user, "tuning:gen:1").set_value("700.000")  # freeze a tuning ~2¢ off the held fifth
     await user.should_see(marker="retune:held:0")
     assert "rtt-alert" in _wrap_classes(user, "retune:held:0")  # the retuning-error cell reddens...
@@ -1373,7 +1382,8 @@ async def test_a_held_interval_does_not_retune_the_grid_until_optimize(user: Use
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")  # make it the fifth 3/2
     _cell_child(user, "cell:held:1:0").set_value("1")
-    _cell_child(user, "cell:held:2:0").set_value("0")   # every component filled -> the draft commits
+    _cell_child(user, "cell:held:2:0").set_value("0")
+    _commit(user, "cell:held:2:0")                      # commit the draft on blur (filling only previews)
     await user.should_see(marker="preset:tuning")
     assert _cell_child(user, "cell:held:0:0").value == "-1"          # the held interval is committed...
     assert _cell_child(user, "preset:tuning").value == "minimax-U"   # ...but the tuning didn't retune (still named)
@@ -1389,7 +1399,8 @@ async def test_adding_an_interval_of_interest_commits_when_filled(user: User) ->
     assert "rtt-pending" in _cell_child(user, "cell:interest:0:0")._classes  # the draft cell is red
     _cell_child(user, "cell:interest:0:0").set_value("-1")  # make it 3/2 = (-1 1 0)
     _cell_child(user, "cell:interest:1:0").set_value("1")
-    _cell_child(user, "cell:interest:2:0").set_value("0")   # every component filled -> commits
+    _cell_child(user, "cell:interest:2:0").set_value("0")
+    _commit(user, "cell:interest:2:0")                      # commit the draft on blur (filling only previews)
     await user.should_see(marker="interest:0")              # the committed ratio now heads the column
     assert _cell_child(user, "cell:interest:0:0").value == "-1"  # the vector committed
 
@@ -1404,7 +1415,8 @@ async def test_adding_a_target_commits_when_filled(user: User) -> None:
     assert "rtt-pending" in _cell_child(user, f"cell:vec:targets:{k}:0")._classes
     _cell_child(user, f"cell:vec:targets:{k}:0").set_value("-1")  # make it 3/2 = (-1 1 0)
     _cell_child(user, f"cell:vec:targets:{k}:1").set_value("1")
-    _cell_child(user, f"cell:vec:targets:{k}:2").set_value("0")   # every component filled -> commits
+    _cell_child(user, f"cell:vec:targets:{k}:2").set_value("0")
+    _commit(user, f"cell:vec:targets:{k}:2")                      # commit the draft on blur (filling only previews)
     await user.should_see(marker=f"target:{k}")  # the new target now heads its own column
     assert _cell_child(user, f"cell:vec:targets:{k}:0").value == "-1"
 
@@ -1433,6 +1445,7 @@ async def test_select_all_turns_on_every_implemented_feature(user: User) -> None
 async def test_reset_restores_settings_expand_collapse_and_values(user: User) -> None:
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")  # a value change
+    _commit(user, "cell:mapping:1:2")                     # commit on blur (typing only previews now)
     _toggle(user, "charts")  # a settings change
     await user.should_see(marker="chart:retune:targets")
     assert _cell_text(user, "cell:mapped:1:6") == "7"
@@ -1561,6 +1574,7 @@ async def test_state_persists_across_a_refresh(user: User) -> None:
     # (a fresh open of "/") restores exactly where the user left off
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")
+    _commit(user, "cell:mapping:1:2")                     # commit on blur (typing only previews now)
     await user.should_see(marker="cell:mapped:1:6")
     assert _cell_text(user, "cell:mapped:1:6") == "7"
     await user.open("/")  # the refresh
@@ -1729,19 +1743,25 @@ async def test_a_maximal_render_dispatches_every_emitted_cell_kind(user: User) -
 
 # --- the edit-preview highlight: while a cell is focused, ring the cells its edit changes ---
 
-async def test_editing_a_cell_highlights_the_cells_its_edit_changes(user: User) -> None:
-    # focusing a cell captures a baseline; each live edit then rings every OTHER cell whose value the
-    # edit moved (rtt-preview-change), so the user previews the ripple before leaving the cell. The
-    # focused cell itself is never ringed, and blurring clears the whole preview.
+async def test_editing_a_cell_previews_the_ripple_then_commits_on_blur(user: User) -> None:
+    # the editable matrix/vector integer cells PREVIEW as you type and COMMIT on Enter/blur (like the
+    # ratio + domain-element cells), rather than re-solving on every keystroke. Focusing a cell captures
+    # a baseline; typing then rings every OTHER cell whose value the edit WOULD move (rtt-preview-change)
+    # WITHOUT applying it — the focused cell itself is never ringed — and the value lands only on blur
+    # (or Enter), which also clears the preview.
     await user.open("/")
+    assert _cell_text(user, "cell:mapped:1:6") == "4"    # the committed mapped value (meantone)
     src = _cell_child(user, "cell:mapping:1:2")          # the fifth's prime-5 entry (meantone: 4)
     UserInteraction(user, {src}, None).trigger("focus")  # capture the pre-edit baseline
-    src.set_value("7")                                   # 4 -> 7 commits live and re-renders
+    src.set_value("7")                                   # TYPE 4 -> 7: previews only, not yet committed
     await user.should_see(marker="cell:mapped:1:6")
-    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6")        # the moved cell is ringed
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6")        # the moved cell is ringed...
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")   # ...the source is not
-    UserInteraction(user, {src}, None).trigger("blur")   # leaving the cell clears the preview
-    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")
+    assert _cell_text(user, "cell:mapped:1:6") == "4"    # ...and the edit is NOT applied yet (preview only)
+    UserInteraction(user, {src}, None).trigger("blur")   # blur COMMITS the edit and clears the preview
+    await user.should_see(marker="cell:mapped:1:6")
+    assert _cell_text(user, "cell:mapped:1:6") == "7"                            # now applied
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")    # and the ring cleared
 
 
 async def test_typing_a_target_limit_rings_the_rows_it_moves(user: User) -> None:
@@ -2228,6 +2248,7 @@ async def test_hovering_undo_rings_what_reverting_the_last_edit_changes(user: Us
     # cells one undo step would move — without committing. Make an edit so there is something to undo.
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")          # edit the mapping (an undoable step)
+    _commit(user, "cell:mapping:1:2")                            # commit on blur (typing only previews now)
     await user.should_see(marker="tuning:target:4")
     btn = set(user.find(marker="undo").elements)
     UserInteraction(user, btn, None).trigger("mouseenter")
@@ -2241,6 +2262,7 @@ async def test_hovering_redo_rings_what_redoing_the_undone_edit_changes(user: Us
     # would move, without committing. Edit then undo, so a redo step is waiting.
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")          # edit (an undoable step)
+    _commit(user, "cell:mapping:1:2")                            # commit on blur (typing only previews now)
     user.find(marker="undo").click()                             # undo it -> a redo step is now available
     await user.should_see(marker="tuning:target:4")
     btn = set(user.find(marker="redo").elements)
@@ -2255,6 +2277,7 @@ async def test_hovering_reset_rings_everything_snapping_back_to_defaults(user: U
     # ringing every cell the snap-back moves, without committing. An edit makes reset have something to do.
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")          # diverge from the defaults
+    _commit(user, "cell:mapping:1:2")                            # commit on blur (typing only previews now)
     await user.should_see(marker="tuning:target:4")
     btn = set(user.find(marker="reset").elements)
     UserInteraction(user, btn, None).trigger("mouseenter")
