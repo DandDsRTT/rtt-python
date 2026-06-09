@@ -162,6 +162,12 @@ class Editor:
         # hidden when the domain has no nonprime elements, so the field resets to "" on a domain
         # change that flips :func:`service.domain_has_nonprimes` False (see the state setter).
         self.nonprime_basis_approach: str = ""
+        # The manual SUPERSPACE generator tuning 𝒈L (rL cents), set only in the prime-based
+        # approach over a nonprime domain: there the optimization lives in the prime superspace, so
+        # 𝒈L is the editable generator map and the on-domain 𝒈 is its (read-only) projection. None
+        # = auto (the prime-based optimum). A view-ish field like nonprime_basis_approach (not in
+        # the undo document); cleared on any approach change, domain change, optimize, or restore.
+        self.superspace_generator_tuning: tuple[float, ...] | None = None
         self._restore(_initial_doc())
 
     # --- the document: capture / restore (the unit of undo, reset, persistence) ---
@@ -205,6 +211,7 @@ class Editor:
         self.collapsed = set(doc.collapsed)
         self._clear_pending()  # a draft never survives a document restore
         self._nudging_generator = None  # nor does an in-progress wheel gesture (undo/redo/reset/load)
+        self.superspace_generator_tuning = None  # a manual 𝒈L doesn't survive a document restore either
 
     def capture_for_preview(self) -> tuple:
         """Snapshot the WHOLE editor — document plus undo/redo history — so a hypothetical edit can
@@ -254,6 +261,11 @@ class Editor:
         # between two nonprime domains keeps the chosen mode.
         if not service.domain_has_nonprimes(new_state.domain_basis):
             self.nonprime_basis_approach = ""
+        # a manual 𝒈L is over the superspace mapping M_L, so any temperament or domain edit makes it
+        # stale (rL / M_L change); drop it, as a domain change drops the stale on-domain generators
+        if (new_state.mapping != self._state.mapping
+                or new_state.domain_basis != self._state.domain_basis):
+            self.superspace_generator_tuning = None
         self._state = new_state
 
     @property
@@ -301,6 +313,7 @@ class Editor:
             pending_target=self.pending_target,
             pending_element=self.pending_element,
             nonprime_approach=self.nonprime_basis_approach,
+            superspace_generator_tuning=self.superspace_generator_tuning,
             displayed_tuning_name=self.displayed_tuning_scheme_name,
             prev_ids=prev_ids)
 
@@ -443,6 +456,7 @@ class Editor:
             return  # already at the optimum and not a manual freeze — nothing to apply
         self._snapshot()
         self.generator_tuning = optimum
+        self.superspace_generator_tuning = None  # optimizing drops any manual 𝒈L too
         self.manual_tuning = False  # the freeze is now the scheme's optimum, no longer a hand-edit
 
     def toggle_optimize_lock(self) -> None:
@@ -452,13 +466,22 @@ class Editor:
         self.optimize_locked = not self.optimize_locked
         # auto: recompute the optimum on every change (None); unlocking freezes at it now
         self.generator_tuning = None if self.optimize_locked else self._optimum_generator_tuning()
+        self.superspace_generator_tuning = None  # back to the auto/optimum 𝒈L too
         self.manual_tuning = False  # auto-optimal, or frozen AT the optimum — neither is a hand-edit
 
     def effective_generator_tuning(self) -> tuple[float, ...] | None:
         """The generator tuning the grid should display: None (recompute the optimum every
         render) while the auto-optimize lock is on; else the frozen tuning — the scheme's optimum
         by default (auto-optimize is off, so it does not auto-recompute as the temperament/targets
-        change), a hand-edited map, or whatever the last Optimize froze."""
+        change), a hand-edited map, or whatever the last Optimize froze.
+
+        In the prime-based superspace, a manual 𝒈L drives the on-domain maps too: the editable map
+        is 𝒈L (over the superspace generators), so the on-domain 𝒈 is its projection — every
+        on-domain map then tracks the edited 𝒈L while 𝒈 itself stays read-only."""
+        if self.superspace_generator_tuning is not None \
+                and self.nonprime_basis_approach == "prime-based" \
+                and service.domain_has_nonprimes(self.state.domain_basis):
+            return service.project_superspace_generators_to_domain(self.state, self.superspace_generator_tuning)
         return None if self.optimize_locked else self.generator_tuning
 
     @property
@@ -564,6 +587,48 @@ class Editor:
     def set_generator_tuning_component(self, i: int, cents: float) -> None:
         """Override one generator's tuning (one editable generator-tuning-map cell)."""
         self._override_generator(i, lambda _current: cents)
+
+    def _optimum_superspace_generator_tuning(self) -> tuple[float, ...]:
+        """The prime-based superspace optimum 𝒈L — the seed a manual 𝒈L edit starts from."""
+        return service.superspace_tuning(self.state, self.tuning_scheme, "prime-based").generator_map
+
+    def set_superspace_generator_tuning_text(self, text: str) -> bool:
+        """Freeze a typed manual superspace generator tuning 𝒈L (the prime-based approach's editable
+        generator map): parse a cents map of exactly rL values and hold it, turning auto-optimize
+        off. False (state untouched) when it is not rL cents values, so the caller can flag the
+        input. The on-domain 𝒈 follows as 𝒈L's projection (see effective_generator_tuning)."""
+        gens = service.parse_cents_map(text, service.superspace_rank(self.state))
+        if gens is None:
+            return False
+        self._snapshot()
+        self.optimize_locked = False
+        self.superspace_generator_tuning = gens
+        self.manual_tuning = True
+        return True
+
+    def set_superspace_generator_tuning_component(self, i: int, cents: float) -> None:
+        """Override one superspace generator's tuning (one editable 𝒈L cell), seeding the rest from
+        the frozen 𝒈L or, when none is frozen, the prime-based superspace optimum."""
+        frozen = self.superspace_generator_tuning
+        rL = service.superspace_rank(self.state)
+        base = list(frozen if frozen is not None and len(frozen) == rL
+                    else self._optimum_superspace_generator_tuning())
+        base[i] = float(cents)
+        self._snapshot()
+        self.optimize_locked = False
+        self.superspace_generator_tuning = tuple(base)
+        self.manual_tuning = True
+
+    def nudge_superspace_generator_tuning_component(self, i: int, steps: int) -> None:
+        """Wheel fine-adjust one superspace generator 𝒈L cell by ``steps`` thousandths of a cent
+        (the prime-based shift's counterpart of the on-domain genmap nudge), seeding from the frozen
+        𝒈L or the superspace optimum and rounding to the 3 dp the cell shows."""
+        rL = service.superspace_rank(self.state)
+        frozen = self.superspace_generator_tuning
+        base = list(frozen if frozen is not None and len(frozen) == rL
+                    else self._optimum_superspace_generator_tuning())
+        self.set_superspace_generator_tuning_component(
+            i, round(round(base[i], 3) + steps * _GENERATOR_NUDGE_CENTS, 3))
 
     def flip_generator(self, i: int) -> None:
         """Reverse generator ``i``'s direction — the +/− sign on its generator-tuning-map cell.
@@ -674,6 +739,8 @@ class Editor:
         if approach not in ("", "prime-based", "nonprime-based"):
             raise ValueError(f"unknown nonprime basis approach: {approach!r}")
         self.nonprime_basis_approach = approach
+        # a manual 𝒈L only exists in the prime-based superspace; any approach switch drops it
+        self.superspace_generator_tuning = None
 
     def set_complexity_name(self, name: str) -> None:
         """Set the whole complexity shape from the predefined-complexities master chooser (box

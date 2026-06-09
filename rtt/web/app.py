@@ -2921,7 +2921,13 @@ def index() -> None:
             cents = float(str(rec.inputs[cid].value).strip())
         except ValueError:
             return
-        editor.set_generator_tuning_component(int(cid.rsplit(":", 1)[1]), cents)
+        i = int(cid.rsplit(":", 1)[1])
+        # "tuning:ssgen:i" is a superspace generator 𝒈L cell (prime-based shift); "tuning:gen:i" the
+        # on-domain 𝒈. Each routes to its own manual-tuning setter.
+        if ":ssgen:" in cid:
+            editor.set_superspace_generator_tuning_component(i, cents)
+        else:
+            editor.set_generator_tuning_component(i, cents)
         render()
 
     def on_gentuning_wheel(cid, delta_y):
@@ -2930,7 +2936,11 @@ def index() -> None:
         # cents face shows 3 dp, so one notch moves the last shown digit by one.
         if building[0] or not delta_y:
             return
-        editor.nudge_generator_tuning_component(int(cid.rsplit(":", 1)[1]), 1 if delta_y < 0 else -1)
+        i, steps = int(cid.rsplit(":", 1)[1]), (1 if delta_y < 0 else -1)
+        if ":ssgen:" in cid:  # a superspace generator 𝒈L cell (prime-based shift)
+            editor.nudge_superspace_generator_tuning_component(i, steps)
+        else:
+            editor.nudge_generator_tuning_component(i, steps)
         render()
 
     def on_value_wheel(cid, delta_y):
@@ -3060,6 +3070,8 @@ def index() -> None:
             ok = editor.try_edit_comma_basis_text(value)
         elif cid == "ptext:tuning:gens":  # a typed cents tuning freezes the generator tuning map
             ok = editor.set_generator_tuning_text(value)
+        elif cid == "ptext:tuning:ssgens":  # a typed 𝒈L freezes the superspace generator tuning
+            ok = editor.set_superspace_generator_tuning_text(value)
         elif cid == "ptext:vectors:targets":  # a typed vector list overrides the target interval set
             ok = editor.set_target_override_text(value)
         elif cid == "ptext:prescaling:primes":  # a typed d×d matrix overrides the prescaler 𝐿's

@@ -685,7 +685,8 @@ class _GridBuilder:
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
-                 pending_element=None, nonprime_approach="", displayed_tuning_name=None):
+                 pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
+                 displayed_tuning_name=None):
         self.prev_ids = prev_ids or {}
         self.state = state
         self.settings = settings
@@ -706,6 +707,7 @@ class _GridBuilder:
         self.optimize_locked = optimize_locked
         self.tuning_optimized = tuning_optimized
         self.nonprime_approach = nonprime_approach
+        self.superspace_generator_tuning = superspace_generator_tuning  # manual 𝒈L (rL) in prime-based
         # the named scheme the DISPLAYED tuning realises (editor.displayed_tuning_scheme_name), or
         # None off the named list — threaded in so the tuning chooser's single-option lock matches
         # app._build_preset's on-list check. None (a bare spreadsheet.build) keeps the chooser a
@@ -805,6 +807,13 @@ class _GridBuilder:
             and service.domain_has_nonprimes(self.elements)
             and self.nonprime_approach != "nonprime-based"
         )
+        # the GENERATOR shift is narrower than the prescaler/complexity shift: complexity is measured
+        # in the superspace for BOTH neutral and prime-based (both prime-factor), but the optimization
+        # itself only HAPPENS in the superspace for prime-based — it solves the rL superspace
+        # generators 𝒈L and projects them back to the r domain generators 𝒈. So only prime-based moves
+        # the generator-map editing/controls to 𝒈L (ssgens): there 𝒈L is the live map and 𝒈 is its
+        # read-only projection. Neutral optimizes in the domain, so 𝒈 stays live there.
+        self.show_superspace_generators = self.show_superspace and self.nonprime_approach == "prime-based"
         # Phase 2 — resolve the complexity-prescaler glyph + labels (see _resolve_prescaler_labels).
         # Resolved here, AFTER show_superspace, because the superspace shift renames/relocates the
         # bare-prescaler captions, symbols and row labels (the bare 𝐿 moves into the ss-primes column,
@@ -1402,7 +1411,10 @@ class _GridBuilder:
                                                    generator_tuning=generator_tuning,
                                                    target_override=target_override,
                                                    nonprime_approach=self.nonprime_approach,
-                                                   superspace=self.show_superspace)
+                                                   superspace=self.show_superspace,
+                                                   superspace_generator_override=(
+                                                       self.superspace_generator_tuning
+                                                       if self.show_superspace_generators else None))
                          if self.show_ptext else {})
 
         y = rows_top_y
@@ -1643,6 +1655,10 @@ class _GridBuilder:
         prescaling row's editable column follows the bare prescaler."""
         if rkey == "prescaling":
             return (rkey, ckey) == ("prescaling", "ssprimes" if self.show_superspace else "primes")
+        # the prime-based superspace shift moves the editable generator map from 𝒈 (gens) to 𝒈L
+        # (ssgens) — the same relocation the gridded genmap cells make
+        if rkey == "tuning" and self.show_superspace_generators:
+            return ckey == "ssgens"
         return (rkey, ckey) in EDITABLE_PTEXT
 
     def ptext_height(self, rkey, ckey):  # one line; the app shrinks the font to fit the box width
@@ -2836,22 +2852,32 @@ class _GridBuilder:
         # counterpart of the tuning map over the primes). Its cells are EDITABLE (a hybrid input):
         # typing a cents value overrides that generator's tuning, like typing the whole map in the
         # plain text. The genmap has no closed form, so they are plain editable cells (never mathexpr).
+        # Under the prime-based superspace shift, though, the optimization lives over 𝒈L, so 𝒈 is the
+        # read-only PROJECTION of the editable 𝒈L (ssgens, below) — its cells go plain tuning value.
         if self.row_open("tuning") and self.tile_open("tuning", "gens"):
+            gen_kind = "tuningvalue" if self.show_superspace_generators else "gentuningcell"
             for i, v in enumerate(self.tun.generator_map):
                 self.cells.append(CellBox(f"tuning:gen:{i}", self.group_left["gens"](i), self.row_y["tuning"], COL_W, ROW_H,
-                                     "gentuningcell", text=service.cents(v), unit=self.cell_unit("tuning", "gens", gen=i)))
+                                     gen_kind, text=service.cents(v), unit=self.cell_unit("tuning", "gens", gen=i)))
                 self._voice("tuning:gens", i, v)  # the genmap sounds each generator's tuned size
-        # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column (rL cells, read-only
-        # tuning value — NOT editable yet; Phase 5 will wire the "if you mod 𝒈 then prime-based mode
-        # falls off" behaviour), 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over the ssprimes column. The superspace tuning
-        # is computed by service.superspace_tuning(state, scheme, approach) — the same optimizer
-        # the on-domain tuning uses, lifted into M_L over the prime superspace.
-        # TODO (Phase 5, per the maximized mockup's CSV row 4): when 𝒈 is editable, mutating
-        # any of its cents cells should auto-flip Editor.nonprime_basis_approach away from
-        # "prime-based" — the prime-based optimum no longer determines 𝒈 once it's been moved.
+        # the chapter-9 superspace tuning row: 𝒈ₗ over the ssgens column, 𝒕ₗ / 𝒋ₗ / 𝒓ₗ over ssprimes.
+        # In the prime-based approach the optimization IS over the superspace generators, so 𝒈L is the
+        # EDITABLE generator map (gentuningcell, the editing 𝒈 gave up above) — a manual 𝒈L freezes
+        # via service.superspace_tuning's generator_override and projects down to drive 𝒈 and every
+        # on-domain map. In neutral the superspace is only a complexity lens, so 𝒈L stays read-only.
         if self.show_superspace and self.row_open("tuning"):
-            ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach)
-            self.tuning_value_row("tuning", "ssgens", ss_tun.generator_map)
+            ss_override = self.superspace_generator_tuning if self.show_superspace_generators else None
+            ss_tun = service.superspace_tuning(self.state, self.tuning_scheme, self.nonprime_approach,
+                                               generator_override=ss_override)
+            if self.tile_open("tuning", "ssgens"):
+                if self.show_superspace_generators:  # editable 𝒈L cells (the prime-based live map)
+                    for i, v in enumerate(ss_tun.generator_map):
+                        self.cells.append(CellBox(f"tuning:ssgen:{i}", self.group_left["ssgens"](i), self.row_y["tuning"],
+                                             COL_W, ROW_H, "gentuningcell", text=service.cents(v),
+                                             unit=self.cell_unit("tuning", "ssgens", gen=i)))
+                        self._voice("tuning:ssgens", i, v)
+                else:
+                    self.tuning_value_row("tuning", "ssgens", ss_tun.generator_map)
             self.tuning_value_row("tuning", "ssprimes", ss_tun.tuning_map)
             if self.row_open("just"):
                 self.tuning_value_row("just", "ssprimes", ss_tun.just_map)
@@ -3682,6 +3708,10 @@ class _GridBuilder:
                     ckey = "ssprimes"
                 emit_preset(f"preset:{name}", name, rkey, ckey, label)
             for name, rkey, ckey, label in PRESET_COPIES:  # the same control in a second tile
+                # the tuning-scheme chooser under the generator map follows the editable genmap to
+                # 𝒈L (ssgens) under the prime-based superspace shift
+                if name == "tuning" and ckey == "gens" and self.show_superspace_generators:
+                    ckey = "ssgens"
                 emit_preset(f"preset:{name}:{ckey}", name, rkey, ckey, label)
 
         # the all-interval checkbox is revealed by the show-panel "all-interval" entry ALONE (not the
@@ -3859,10 +3889,12 @@ def build(state, settings=None, collapsed=None,
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
           pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
-          pending_element=None, nonprime_approach="", displayed_tuning_name=None) -> Layout:
+          pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
+          displayed_tuning_name=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
         optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
-        prev_ids, pending_element, nonprime_approach, displayed_tuning_name,
+        prev_ids, pending_element, nonprime_approach, superspace_generator_tuning,
+        displayed_tuning_name,
     ).layout()

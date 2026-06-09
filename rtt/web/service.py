@@ -1110,6 +1110,7 @@ def plain_text_values(
     target_override=None,
     nonprime_approach: str = "",
     superspace: bool = False,
+    superspace_generator_override=None,
 ) -> dict[tuple[str, str], str]:
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
@@ -1264,7 +1265,8 @@ def plain_text_values(
         mlgl = superspace_self_map(state)
         msl = mapping_to_superspace_generators(state)
         bl = basis_in_superspace(db)
-        ss_tun = superspace_tuning(state, scheme, nonprime_approach)
+        ss_tun = superspace_tuning(state, scheme, nonprime_approach,
+                                   generator_override=superspace_generator_override)
 
         def _covector_stack(rows):  # mapping-style: each row ⟨ … ], outer [ … }
             return "[" + "".join("⟨" + " ".join(str(x) for x in r) + "]" for r in rows) + "}"
