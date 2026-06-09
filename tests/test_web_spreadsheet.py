@@ -7597,3 +7597,71 @@ def test_pending_element_renders_a_red_draft_column():
     # a partially-typed draft shows the raw text
     typed = {c.id: c for c in spreadsheet.build(state, s, pending_element="9").cells}
     assert typed["prime:pending"].text == "9"
+
+
+# --- the projection box (a tuning-boxes sub-control; the rational P = GM) ---
+
+
+def test_projection_off_by_default_shows_no_projection_box():
+    cells = {c.id for c in _layout().cells}  # default build: projection off
+    assert "label:projection" not in cells
+    assert not any(c.startswith("cell:proj:") for c in cells)
+
+
+def test_projection_is_an_interactive_toggle():
+    # it builds content now, so the panel offers it live rather than greyed out
+    assert "projection" in settings.IMPLEMENTED
+
+
+def test_projection_on_adds_a_dxd_matrix_between_mapping_and_tuning():
+    cells = {c.id: c for c in _with(projection=True).cells}
+    assert cells["label:projection"].text == "projection"
+    # a d×d matrix of read-only cells (d=3 here), on the shared domain-prime axes
+    for i in range(3):
+        for p in range(3):
+            cell = cells[f"cell:proj:{i}:{p}"]
+            assert cell.kind == "mapped"  # read-only computed value, like the mapped lists
+            assert cell.x == cells[f"cell:mapping:0:{p}"].x  # the same prime columns
+    # its own band, between the mapping and the tuning rows (per the mockup)
+    assert cells["label:mapping"].y < cells["label:projection"].y < cells["label:tuning"].y
+    # square grid cells stacked one ROW_H apart, like the other matrices
+    c00 = cells["cell:proj:0:0"]
+    assert c00.w == c00.h == spreadsheet.ROW_H
+    assert cells["cell:proj:1:0"].y == c00.y + spreadsheet.ROW_H
+
+
+def test_projection_box_shows_the_real_quarter_comma_meantone_projection():
+    # the rational projection P = GM holding {2, 5} — quarter-comma meantone, the fifth
+    # flat by 1/4 comma (the 1/4 on prime 3's image). Reproduces the mockup exactly.
+    cells = {c.id: c for c in _with(projection=True).cells}
+    expected = (("1", "1", "0"), ("0", "0", "0"), ("0", "1/4", "1"))
+    for i in range(3):
+        for p in range(3):
+            assert cells[f"cell:proj:{i}:{p}"].text == expected[i][p]
+
+
+def test_projection_box_is_framed_like_a_matrix_of_maps():
+    cells = {c.id: c for c in _with(projection=True).cells}
+    # each of the d rows is a map: ⟨ … ] brackets, like the mapping rows
+    assert cells["bracket:proj:0:l"].text == "⟨" and cells["bracket:proj:0:r"].text == "]"
+    assert {"bracket:proj:1:l", "bracket:proj:2:l"} <= set(cells)  # d=3 rows
+    # and the whole matrix is enclosed by a spanning top bracket + bottom curly brace
+    assert "ebktop:proj" in cells and "ebkbrace:proj" in cells
+    top, brace = cells["ebktop:proj"], cells["ebkbrace:proj"]
+    first, last = cells["cell:proj:0:0"], cells["cell:proj:2:0"]
+    assert top.y + top.h <= first.y       # the top bracket sits above the matrix
+    assert brace.y >= last.y + last.h     # the brace sits below it
+
+
+def test_projection_row_fans_a_gridline_per_subrow():
+    lines = {ln.id for ln in _with(projection=True).lines}
+    # a d-tall matrix row fans into one rule per cell-row (like the mapping / vectors)
+    assert {"h:projection:0", "h:projection:1", "h:projection:2"} <= lines
+
+
+def test_projection_hides_with_its_parent_tuning_boxes():
+    # projection is a sub-control of tuning boxes, so turning the parent off takes the
+    # projection box with it (even when projection itself is on)
+    cells = {c.id for c in _with(projection=True, tuning_boxes=False).cells}
+    assert "label:projection" not in cells
+    assert not any(c.startswith("cell:proj:") for c in cells)

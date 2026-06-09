@@ -128,6 +128,15 @@ async def test_enabling_generator_detempering_renders_the_column(user: User) -> 
     await user.should_see(marker="header:detempering")
 
 
+async def test_enabling_projection_renders_the_box(user: User) -> None:
+    # the projection box P = GM (a tuning-boxes sub-control). Assert the row label renders, and
+    # lean on the fixture's ERROR-log guard to catch any fault building the d×d matrix's cells,
+    # ⟨ … ] map brackets or spanning frame — the page must not 500 with projection on.
+    await _enable(user, "projection")
+    await user.should_see(marker="label:projection")
+    await user.should_see(marker="cell:proj:2:1")  # the 1/4 entry (mapped kind, locatable like the mapping)
+
+
 async def test_optimization_with_charts_renders_the_damage_indicator(user: User) -> None:
     # optimization + charts: the damage chart gains the minimized-damage indicator line.
     # Drive that _bar_chart(indicator=…) branch and confirm the chart still renders.

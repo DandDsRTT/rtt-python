@@ -1519,3 +1519,25 @@ def test_generator_tuning_range_is_none_for_an_unmeasurable_mixed_basis():
     t = service.tuning(state.mapping, service.DEFAULT_TUNING_SCHEME, state.domain_basis)
     assert t.monotone_generator_range is None and t.tradeoff_generator_range is None
     assert all(x == x for x in t.tuning_map)  # the tuning itself is finite and unaffected
+
+
+def test_tuning_projection_for_meantone_holds_2_and_5():
+    # 5-limit meantone: the default embedding holds the octave (2) and the least-tempered
+    # non-octave prime (5), deriving the most-tempered one (3, |exp| 4 in the syntonic comma).
+    # P = GM is then quarter-comma meantone's rational projection, as display strings.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.tuning_projection(state) == (
+        ("1", "1", "0"),
+        ("0", "0", "0"),
+        ("0", "1/4", "1"),
+    )
+
+
+def test_tuning_projection_of_just_intonation_is_the_identity():
+    # nullity 0 (no commas): nothing is tempered, so every prime is held and P = I.
+    state = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
+    assert service.tuning_projection(state) == (
+        ("1", "0", "0"),
+        ("0", "1", "0"),
+        ("0", "0", "1"),
+    )

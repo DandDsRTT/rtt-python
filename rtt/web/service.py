@@ -25,6 +25,7 @@ from rtt.domain_basis import (
 from rtt.dual import dual
 from rtt.formatting import to_ebk
 from rtt.generator_detempering import get_generator_detempering
+from rtt.generator_embedding import get_tempering_projection
 from rtt.math_utils import get_primes, pcv_to_quotient, quotient_to_pcv
 from rtt.matrix_utils import Matrix
 from rtt.parsing import parse_quotient_list, parse_temperament_data
@@ -571,6 +572,48 @@ def canonical_comma_basis(comma_basis) -> Matrix:
     """The canonical form of a comma basis (the comma-column analogue of
     :func:`canonical_mapping`) — for the comma-basis box's ``<choose form>`` control."""
     return _to_matrix(canonical_ca(_to_matrix(comma_basis)))
+
+
+def _held_prime_indices(state: TemperamentState) -> tuple[int, ...]:
+    """The domain-basis indices of the held primes for the DEFAULT embedding (until the
+    ``<choose embedding>`` control exists): the octave (element 0) is always held, and of
+    the rest the ``n = d − r`` with the largest absolute exponents in the canonical comma
+    basis are DERIVED (the most-tempered directions) — so the remaining ``r`` are held. For
+    5-limit meantone (syntonic comma ``[-4 4 -1⟩``) prime 3 (|exp| 4) is derived, holding
+    {2, 5} — quarter-comma meantone."""
+    d, n = state.d, state.n
+    if n <= 0:                       # nullity 0: nothing tempered, every prime held (P = I)
+        return tuple(range(d))
+    commas = canonical_comma_basis(state.comma_basis)
+    weight = {j: max((abs(c[j]) for c in commas), default=0) for j in range(1, d)}
+    # derive the n non-octave elements with the largest |exponent| (ties broken by index)
+    derived = set(sorted(range(1, d), key=lambda j: (weight[j], j), reverse=True)[:n])
+    return tuple(j for j in range(d) if j not in derived)
+
+
+def tuning_projection(state: TemperamentState):
+    """The rational tempering projection ``P = GM`` as a ``d×d`` grid of display strings
+    (``"1"``, ``"0"``, ``"1/4"`` …), or ``None`` when it cannot be formed. ``P`` sends each
+    just prime to its tempered size (``j·P = t``), holding the auto-picked embedding's primes
+    justly (see :func:`_held_prime_indices`); it is idempotent with the commas in its kernel.
+    Returns ``None`` on any degenerate / unsupported case (a singular pick, an empty domain)
+    so the caller simply omits the box rather than crashing."""
+    try:
+        d, r = state.d, state.r
+        if d <= 0 or not 0 < r <= d:
+            return None
+        held_indices = _held_prime_indices(state)
+        if len(held_indices) != r:
+            return None
+        held_rows = tuple(
+            tuple(1 if k == j else 0 for k in range(d)) for j in held_indices
+        )
+        mapping_t = Temperament(state.mapping, Variance.ROW, state.domain_basis)
+        held_t = Temperament(held_rows, Variance.COL, state.domain_basis)
+        projection = get_tempering_projection(mapping_t, held_t)
+        return tuple(tuple(str(entry) for entry in row) for row in projection)
+    except (ArithmeticError, ValueError, IndexError, TypeError):
+        return None
 
 
 def form_matrix(mapping) -> Matrix:

@@ -1060,6 +1060,14 @@ class _GridBuilder:
             ("block:complexity:detempering", "complexity", "detempering"),
             ("block:urow:detempering", "units", "detempering"),
         ) if self.show_detempering else ()
+        # the rational tempering projection P = GM (the projection sub-control of tuning boxes):
+        # a d×d operator over the domain primes, built from the auto-picked default embedding.
+        # service returns None for any case it can't form, so the row simply drops (no empty box)
+        # rather than rendering — and the matrix is only computed when both the tuning boxes and
+        # the projection toggle are on. Resolved here, ahead of the row-band list, so the band's
+        # presence can gate on it.
+        self.projection_matrix = (service.tuning_projection(self.state)
+                                  if (show_tuning and self.settings["projection"]) else None)
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
@@ -1211,6 +1219,11 @@ class _GridBuilder:
             ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
             ("canon", self.rc * ROW_H, self.show_form_controls, True, "canonical mapping"),
             ("mapping", self.r * ROW_H, show_temp, True, "mapping"),
+            # the rational tempering projection P = GM, a d×d matrix over the domain primes —
+            # d rows tall like the interval-vectors row, framed like the mapping. Placed between
+            # the mapping and the tuning rows (the mockup). Present only when service could build
+            # it (projection on, tuning boxes on); a None matrix drops the band entirely.
+            ("projection", self.d * ROW_H, self.projection_matrix is not None, True, "projection"),
             # the chapter-9 superspace rows sit between mapping and tuning, the row
             # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
             # vector columns (B_L, target/comma vectors in the superspace); ss_mapping the
@@ -1832,6 +1845,9 @@ class _GridBuilder:
 
     def map_top(self, i):
         return self.row_y["mapping"] + i * ROW_H
+
+    def proj_top(self, i):  # the y of projection-matrix row i (the d stacked maps of P = GM)
+        return self.row_y["projection"] + i * ROW_H
 
     def canon_top(self, i):  # the y of canonical-mapping row i (the r stacked canonical maps)
         return self.row_y["canon"] + i * ROW_H
@@ -2580,6 +2596,15 @@ class _GridBuilder:
                     for c in range(self.nc):
                         self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
 
+        # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
+        # maps like the mapping. Its cells are "mapped" (a computed value, not editable like the
+        # mapping's), carrying the rational entry text ("1", "0", "1/4") service stringified.
+        if self.row_open("projection") and self.tile_open("projection", "primes"):
+            for i in range(self.d):
+                for p in range(self.d):
+                    self.cells.append(CellBox(f"cell:proj:{i}:{p}", self.prime_left(p), self.proj_top(i),
+                                         COL_W, ROW_H, "mapped", text=self.projection_matrix[i][p], prime=p))
+
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
         # generator form matrix F (units 𝒈/𝒈) rides its gens column as a bordered r×r grid
@@ -3261,6 +3286,9 @@ class _GridBuilder:
         if self.row_open("canon") and self.tile_open("canon", "gens"):  # the generator form matrix: { … ] per row
             for i in range(len(self.form_M)):
                 self.bracket(f"form:map:{i}", GENMAP_BRACKETS, "gens", self.canon_top(i), ROW_H)
+        if self.row_open("projection") and self.tile_open("projection", "primes"):  # P = GM: ⟨ … ] per row, like the mapping
+            for i in range(self.d):
+                self.bracket(f"proj:{i}", MAP_BRACKETS, "primes", self.proj_top(i), ROW_H)
         if self.row_open("mapping"):
             # the primes mapping is a stack of maps: ⟨ … ] per row
             if self.tile_open("mapping", "primes"):
@@ -3761,6 +3789,7 @@ class _GridBuilder:
             # service seam above), which the gridded "2 3 5" cells don't show that way.
 
         self.matrix_frame("mapping", "primes", "primes")
+        self.matrix_frame("projection", "primes", "proj")  # P = GM, framed like the mapping
         self.matrix_frame("canon", "primes", "canon")
         self.matrix_frame("canon", "gens", "form")
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer

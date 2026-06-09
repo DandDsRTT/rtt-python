@@ -111,6 +111,9 @@ CAPTIONS = {
     ("mapping", "primes"): "(temperament) mapping",
     ("mapping", "commas"): "mapped comma basis (made to vanish!)",
     ("mapping", "targets"): "mapped target interval list",
+    # the rational tempering projection P = GM (a d×d operator over the domain primes),
+    # a stack of maps like the mapping itself (toggled with the projection sub-control)
+    ("projection", "primes"): "projection matrix",
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
     ("tuning", "commas"): "tempered comma basis interval size list (made to vanish!)",
@@ -348,7 +351,7 @@ COL_LABEL_LETTERS = {
 # tiles when Phase 4 populates them — Phase 3 reserves the frame bands so the
 # row_axis fan splits into one rule per cell-row (dL / rL sub-rules).
 FRAMED_ROWS = frozenset({"mapping", "canon", "vectors", "prescaling",
-                         "ss_vectors", "ss_mapping", "ss_just_mapping"})
+                         "ss_vectors", "ss_mapping", "ss_just_mapping", "projection"})
 CHARTED_ROWS = frozenset({"retune", "weight", "damage"})  # rows that grow a bar-chart band above their values when charts shown
 # Value rows whose tiles carry per-column matrix labels (𝐜ᵢ, 𝒕ᵢ, 𝐲ᵢ, …) when symbols
 # is on — every row with multi-cell tiles in the built layout. The counts/quantities/
@@ -751,6 +754,7 @@ TILES = (
     ("block:canon", "canon", "primes"),
     ("block:gens", "mapping", "quantities"),
     ("block:mapping", "mapping", "primes"),
+    ("block:projection", "projection", "primes"),
     ("block:mapped_comma", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),
     ("block:tuning:gens", "tuning", "gens"),
