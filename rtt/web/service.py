@@ -37,6 +37,7 @@ from rtt.target_intervals import (
 from rtt.temperament import Temperament, Variance
 from rtt.tuning import (
     damage_weights,
+    generator_tuning_map_from_t_and_tuning_map,
     get_complexity,
     get_complexity_prescaler,
     get_dual_power,
@@ -347,29 +348,56 @@ def superspace_self_map(state: TemperamentState) -> Matrix:
 
 def superspace_tuning(
     state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME, nonprime_approach: str = "",
+    generator_override=None,
 ) -> Tuning:
     """The temperament's tuning over its superspace primes — the maps the nonstandard-domain
     superspace region needs (𝒈L, 𝒕L, 𝒋L, 𝒓L). Built by lifting the temperament to M_L over
     the prime superspace and running the same optimization the on-domain :func:`tuning` uses.
     Generator-tuning ranges are omitted (left as ``None``): the ranges chart isn't a superspace
     concept. ``nonprime_approach`` is accepted for signature parity with :func:`tuning` but has
-    no effect — the superspace is prime-only by construction, so the optimizer ignores it."""
+    no effect — the superspace is prime-only by construction, so the optimizer ignores it.
+
+    ``generator_override`` (an rL-tuple) freezes a MANUAL superspace generator tuning 𝒈L instead of
+    optimizing — the prime-based approach's editable 𝒈L (the on-domain 𝒈's editing moves here). The
+    superspace maps then read straight off it (𝒕L = 𝒈L·M_L); the on-domain maps are this 𝒈L
+    projected back down (see :func:`project_superspace_generators_to_domain`)."""
     superspace = superspace_primes(state.domain_basis)
     ml = superspace_mapping(state)
     t = Temperament(ml, Variance.ROW, superspace)
     spec = resolve_tuning_scheme(scheme)
     if nonprime_approach:
         spec = replace(spec, nonprime_basis_approach=nonprime_approach)
-    tempered = optimize_tuning_map(t, spec)
+    if generator_override is not None:
+        generator_map = tuple(float(g) for g in generator_override)
+        tempered = tuple(float(x) for x in tuning_map_from_generators(t, generator_map))
+    else:
+        generator_map = optimize_generator_tuning_map(t, spec)
+        tempered = optimize_tuning_map(t, spec)
     just = get_just_tuning_map(t)
     return Tuning(
-        generator_map=optimize_generator_tuning_map(t, spec),
+        generator_map=generator_map,
         tuning_map=tempered,
         just_map=just,
         retuning_map=tuple(t_ - j for t_, j in zip(tempered, just)),
         monotone_generator_range=None,
         tradeoff_generator_range=None,
     )
+
+
+def project_superspace_generators_to_domain(state: TemperamentState, ss_generators) -> tuple[float, ...]:
+    """A manual superspace generator tuning 𝒈L (rL values) projected back to the original domain's
+    r generators — the prime-based approach's final step (ch9 §9–10): lift 𝒈L to the superspace
+    tempered map 𝒕L = 𝒈L·M_L, change basis down to the domain (𝒕 = 𝒕L·B_L), then recover the domain
+    generators via the mapping's right-inverse. Feeding the result as the on-domain ``generator_tuning``
+    makes every on-domain map track the edited 𝒈L, while 𝒈L itself shows the user's manual values."""
+    superspace = superspace_primes(state.domain_basis)
+    ml_t = Temperament(_to_matrix(superspace_mapping(state)), Variance.ROW, superspace)
+    tL = tuning_map_from_generators(ml_t, tuple(float(g) for g in ss_generators))  # over superspace primes
+    bl = basis_in_superspace(state.domain_basis)  # d rows × dL
+    dL = len(superspace)
+    t_s = tuple(sum(tL[p] * bl[e][p] for p in range(dL)) for e in range(len(bl)))  # domain tuning map
+    domain_t = Temperament(_to_matrix(state.mapping), Variance.ROW, state.domain_basis)
+    return tuple(float(g) for g in generator_tuning_map_from_t_and_tuning_map(domain_t, t_s))
 
 
 def is_proper_temperament(mapping) -> bool:
