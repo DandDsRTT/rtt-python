@@ -185,14 +185,12 @@ SYMBOLS = {
     ("ss_vectors", "commas"): f"C{SUBSCRIPT_L}",      # C_L = B_L·C
     ("ss_vectors", "held"): f"H{SUBSCRIPT_L}",        # H_L = B_L·H
     ("ss_vectors", "targets"): f"T{SUBSCRIPT_L}",     # T_L = B_L·T
-    ("ss_vectors", "interest"): f"I{SUBSCRIPT_L}",    # interest lifted into the superspace
     ("ss_vectors", "detempering"): f"D{SUBSCRIPT_L}", # D_L = B_L·D
     ("ss_mapping", "ssgens"): f"𝑀{SUBSCRIPT_L}g{SUBSCRIPT_L}",  # M_LgL = I
     ("ss_mapping", "primes"): f"𝑀ₛ→{SUBSCRIPT_L}",   # M_s→L = M_L·B_L
     ("ss_mapping", "commas"): f"𝑀ₛ→{SUBSCRIPT_L}C",  # mapped commas (vanish)
     ("ss_mapping", "held"): f"𝑀ₛ→{SUBSCRIPT_L}H",
     ("ss_mapping", "targets"): f"Y{SUBSCRIPT_L}",     # Y_L = M_s→L·T
-    ("ss_mapping", "interest"): f"𝑀ₛ→{SUBSCRIPT_L}I",
     ("ss_mapping", "detempering"): f"𝑀ₛ→{SUBSCRIPT_L}D",
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
@@ -261,6 +259,7 @@ ROW_LABEL_LETTERS = {
     # the chapter-9 superspace mapping M_L: each row a covector over the dL ss_primes,
     # labelled 𝒎ₗᵢ (math-italic 𝒎 + subscript ₗ + index), parallel to the existing M's 𝒎ᵢ
     ("ss_mapping", "ssprimes"): "𝒎L",
+    ("ss_mapping", "primes"): "𝒎ₛ→L",   # m_s→L subrow headers (mapping from domain intervals)
     # M_jL's identity rows likewise: each row labelled 𝒎ⱼₗᵢ — math-italic 𝒎 + subscript j
     # (U+2C7C) + subscript ₗ
     ("ss_just_mapping", "ssprimes"): "𝒎ⱼL",
@@ -574,7 +573,6 @@ EQUIVALENCES = {
     ("ss_mapping", "ssgens"): " = 𝐼",
     ("ss_mapping", "ssprimes"): " = null⁻¹(BL·null(𝑀))",
     ("ss_mapping", "primes"): " = 𝑀LBL",
-    ("ss_mapping", "commas"): " = 𝑂",
     ("ss_mapping", "targets"): " = 𝑀ₛ→LT",
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",

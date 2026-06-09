@@ -1042,7 +1042,8 @@ class _GridBuilder:
             # aren't in the tile list. Dropping them here clears their cells, brackets, captions,
             # symbols, panels and fold toggles. (ss_just_mapping's whole row band is gated off too,
             # above; ss_mapping's stays for the real M_L in its ssprimes column.)
-            self.declared_tiles -= {("ss_mapping", "gens"), ("ss_just_mapping", "ssprimes")}
+            self.declared_tiles -= {("ss_mapping", "gens"), ("ss_just_mapping", "ssprimes"),
+                                    ("ss_vectors", "ssprimes"), ("ss_mapping", "ssgens")}
         # the superspace held / interest tiles only exist to lift an actual held / interest list —
         # with none present (nh / mi == 0) they'd be empty boxes, so drop them (cells, panel,
         # caption, brackets and fold toggle all go with the tile).
@@ -3282,10 +3283,12 @@ class _GridBuilder:
                 ("mapping", "primes"): self.map_top,
                 ("prescaling", "primes"): lambda i: self.row_y["prescaling"] + i * ROW_H,
                 ("ss_mapping", "ssprimes"): self.ss_map_top,
+                ("ss_mapping", "primes"): self.ss_map_top,
                 ("ss_just_mapping", "ssprimes"): self.ss_just_map_top,
             }
             row_count = {("mapping", "primes"): self.r, ("prescaling", "primes"): self.d + self.size_rows,
                          ("ss_mapping", "ssprimes"): self.rL,
+                         ("ss_mapping", "primes"): self.rL,
                          ("ss_just_mapping", "ssprimes"): self.dL}
             for (rkey, ckey), glyph in self.row_labels.items():
                 if not self.tile_open(rkey, ckey):
