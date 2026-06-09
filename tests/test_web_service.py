@@ -1335,6 +1335,22 @@ def test_basis_in_superspace_writes_each_element_as_a_vector_over_the_superspace
     assert service.basis_in_superspace((2, 9, 5)) == ((1, 0, 0), (0, 2, 0), (0, 0, 1))
 
 
+def test_superspace_complexity_prescaler_is_log_prime_over_the_superspace_primes():
+    # The prescaler the neutral/prime-based approaches measure complexity with lives over the
+    # SUPERSPACE primes (both prime-factor), not the nonprime domain. For BARBADOS over 2.3.13/5
+    # with superspace (2, 3, 5, 13) the log-prime diagonal is (1, log2 3, log2 5, log2 13) — note
+    # the 13/5 element does NOT appear as log2(13/5); it's the true primes 5 and 13 that carry weight.
+    s = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert service.superspace_complexity_prescaler(s) == pytest.approx(
+        (1.0, math.log2(3), math.log2(5), math.log2(13))
+    )
+    # the article example 2.7/3.11/3 lifts to (2, 3, 7, 11): (1, log2 3, log2 7, log2 11)
+    s2 = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]}")
+    assert service.superspace_complexity_prescaler(s2) == pytest.approx(
+        (1.0, math.log2(3), math.log2(7), math.log2(11))
+    )
+
+
 def test_superspace_mapping_re_expresses_the_temperament_over_the_superspace_primes():
     # M_L is the temperament's mapping re-expressed over the simplest prime-only basis: rL × dL,
     # integer, full row rank, tempering out every comma the original tempered. For BARBADOS

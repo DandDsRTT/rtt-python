@@ -284,6 +284,29 @@ def lift_vectors_to_superspace(domain_basis, vectors) -> Matrix:
     )
 
 
+def superspace_complexity_prescaler(
+    state: TemperamentState, scheme: str = DEFAULT_TUNING_SCHEME,
+) -> tuple[float, ...]:
+    """The diagonal of the complexity prescaler over the SUPERSPACE primes — the dL pre-norm
+    weights (log2 of each true prime for the default log-prime norm). This is the prescaler the
+    neutral and prime-based approaches actually measure complexity with: both prime-factor, so
+    complexity lives over the simplest prime-only basis, not the (possibly nonprime) domain. It
+    feeds the "(superspace) complexity prescaler" tile (the bare L the prescaling row shows once
+    the superspace primes column appears) AND — since the complexity of a lone prime is its own
+    diagonal weight, ‖L[i]‖q = Lᵢᵢ — the "domain prime complexity map" values beneath it. The
+    approach is forced neutral here: in a prime-only basis there is nothing to protect against
+    factoring, so log-prime gives log2(prime) regardless. For BARBADOS over 2.3.13/5 with
+    superspace (2, 3, 5, 13): ``(1.0, log2 3, log2 5, log2 13)``."""
+    superspace = superspace_primes(state.domain_basis)
+    t = Temperament(_to_matrix(superspace_mapping(state)), Variance.ROW, superspace)
+    spec = resolve_tuning_scheme(scheme)
+    return tuple(
+        get_complexity_prescaler(
+            t, spec.complexity_log_prime_power, spec.complexity_prime_power, ""
+        )
+    )
+
+
 def mapping_to_superspace_generators(state: TemperamentState) -> Matrix:
     """M_s→L = M_L · B_L — the rL × d matrix sending each domain element to its coordinates over
     the rL superspace generators (composing the basis embedding B_L, domain → superspace primes,
