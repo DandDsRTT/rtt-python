@@ -2045,6 +2045,13 @@ class _Reconciler:
                 # different signal that coexists with the rings (which ride OTHER cells).
                 num.on("focus", lambda _=None: self._cb.on_cell_focus(cb.id))
                 num.on("blur", lambda _=None: self._cb.on_cell_blur())
+                # Enter commits the typed limit. The field is debounce=300 + loopback-controlled, so its
+                # value only settles to the server (firing the on_change commit) after a typing pause or
+                # on blur — pressing Enter alone did nothing (the reported "Enter doesn't submit the
+                # TILT/OLD number, only blur"). Blur the input on Enter: Quasar flushes the debounced
+                # value at once (committing via on_change) and the native blur runs on_cell_blur. Pure
+                # client-side, so it also works when the debounce hasn't yet elapsed.
+                num.on("keydown.enter", js_handler="(e) => e.target.blur()")
                 # ...and previews each keystroke LIVE the way a wheel notch does, reddening the rows the
                 # typed limit would drop before the debounced commit reflows them away. on_change is the
                 # debounced model-value (the commit); this rides the RAW DOM `input`, which fires at once
