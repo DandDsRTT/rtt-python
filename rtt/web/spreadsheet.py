@@ -76,6 +76,9 @@ MATLABEL_W = 22  # width reserved left of an EBK ⟨ bracket for row labels (�
 # the bold-italic lowercase form of the matrix's capital + a Unicode subscript. Reserved
 # inside the matrix tile's content footprint, so the cells shift right by this much.
 # NORM_SUB_OPEN / SUB_OPEN / SUBSCRIPT_L live in grid_tables (re-exported via import * above).
+MATLABEL_W_SS = 64  # the primes column's wider row-label gutter when the superspace is shown: it
+# also carries M_s→L's 𝒎ₛ→ₗᵢ labels (an arrow + two subscripts, far wider than the plain 𝒎ᵢ),
+# so the gutter widens to fit them rather than overflowing the ⟨ bracket. (Centred, like 𝒎ᵢ.)
 UNIT_H = 12  # height of the per-box "units: …" line (below the caption, when units shown)
 CHART_H = 64  # height of a per-tile bar chart's plot area (when charts shown)
 CHART_GAP = 5  # gap between a chart and the value cells below it
@@ -1092,7 +1095,10 @@ class _GridBuilder:
         # row's ⟨ bracket without overflowing the panel. An equal empty gutter is mirrored
         # on the RIGHT (see col_bands below) so the row labels don't shove the matrix
         # off-centre in its tile — the left label gutter is balanced by the empty right one.
-        self.matlabel_primes_w = MATLABEL_W if (self.show_symbols and show_temp) else 0
+        # widen the primes gutter when the superspace is shown — it also carries M_s→L's wide
+        # 𝒎ₛ→ₗᵢ row labels (see MATLABEL_W_SS), which would otherwise overflow the ⟨ bracket
+        self.matlabel_primes_w = ((MATLABEL_W_SS if self.show_superspace else MATLABEL_W)
+                                  if (self.show_symbols and show_temp) else 0)
         # M_L / M_jL stack covectors in the ssprimes column with row labels (𝒎ʟᵢ), so it needs
         # the same MATLABEL_W gutter the primes column reserves — without it the labels collide
         # with each row's ⟨ bracket and first cell
@@ -3301,8 +3307,11 @@ class _GridBuilder:
                     text = "𝒛" if size_row else f"{glyph}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
-                        # past the drag-handle gutter (when present), so the handle sits to its left
-                        self.content_x[ckey] + self.handle_gutter_w(ckey), top(i), MATLABEL_W, ROW_H,
+                        # past the drag-handle gutter (when present), so the handle sits to its left;
+                        # the box fills the column's row-label gutter (wider in the superspace primes
+                        # column, for M_s→L's 𝒎ₛ→ₗᵢ) so a wide label never overflows the ⟨ bracket
+                        self.content_x[ckey] + self.handle_gutter_w(ckey), top(i),
+                        self.matlabel_gutter_w(ckey), ROW_H,
                         "matlabel", text=text,
                     ))
             # column labels — one per cell of each col-labelled tile, in the band above

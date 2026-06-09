@@ -1553,7 +1553,7 @@ class _Reconciler:
         self.math_cells[cb.id] = ui.html("").classes(cls)
 
     @staticmethod
-    def _matlabel_classes(text):
+    def _matlabel_classes(text, is_row=False):
         # routed through _math_html so a label's bold-italic / bold-upright glyphs draw in the
         # same styled face as the tile symbol it indexes. A plain single-glyph label (𝒎ᵢ, 𝐜ᵢ, w)
         # fits the COL_W spine at the default size; any MULTI-TOKEN label — the complexity
