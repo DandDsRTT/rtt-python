@@ -255,10 +255,13 @@ def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool, sho
         ("complexity", "targets"): complexity_target,
     }
     if show_superspace:
-        # the superspace shift's "next row": the prime complexity map ‖𝐿[i]‖q moves into the
-        # ss-primes column, and the domain-primes complexity tile becomes the subspace basis element
-        # map ‖𝐿𝐛ₗₛᵢ‖q — each domain element, lifted through B_L then prescaled (the corrected
-        # get_complexity value the tile above it shows).
+        # the superspace shift: the 𝐿·B_Ls product (domain-primes column) is a matrix of prescaled
+        # subspace-basis-element kets, so it takes COLUMN headers 𝐿𝐛ₗₛᵢ (one per domain element) like
+        # B_L — NOT the bare prescaler's row headers.
+        labels[("prescaling", "primes")] = letter + "𝐛" + SUBSCRIPT_L + "ₛ"
+        # the "next row": the prime complexity map ‖𝐿[i]‖q moves into the ss-primes column, and the
+        # domain-primes complexity becomes the subspace basis element map ‖𝐿𝐛ₗₛᵢ‖q (each domain
+        # element, lifted through B_L then prescaled — the corrected get_complexity value).
         labels[("complexity", "ssprimes")] = norm(lambda i: f"{letter}[{i + 1}]")
         labels[("complexity", "primes")] = norm(lambda i: f"{letter}𝐛{SUBSCRIPT_L}ₛ{_sub(i + 1)}")
     return labels
@@ -642,16 +645,13 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     # product symbol, the "= log-prime matrix" name, and the captions accordingly.
     bare_col = "ssprimes" if show_superspace else "primes"
     # the bare matrix's per-row labels take the lowercase of the realised glyph — 𝒍ᵢ when 𝑋 = 𝐿,
-    # else the generic 𝒙ᵢ. The bare prescaler always carries them; under the superspace the 𝐿·B_Ls
-    # product (domain-primes column) shares the same dL covector rows, so it gets them too (both
-    # tiles read down the same true-prime rows).
+    # else the generic 𝒙ᵢ. ONLY the bare prescaler carries them: under the superspace the 𝐿·B_Ls
+    # product (domain-primes column) is a matrix of kets (its columns the domain elements), so it
+    # gets COLUMN headers (𝐿𝐛ₗₛᵢ, see _prescaler_col_labels) like B_L, not the bare prescaler's rows.
     row_labels = dict(ROW_LABEL_LETTERS)
     row_labels.pop(("prescaling", "primes"), None)
     row_labels.pop(("prescaling", "ssprimes"), None)
-    _row_glyph = "𝒍" if is_log_prime else "𝒙"
-    row_labels[("prescaling", bare_col)] = _row_glyph
-    if show_superspace:
-        row_labels[("prescaling", "primes")] = _row_glyph  # 𝐿·B_Ls row headers
+    row_labels[("prescaling", bare_col)] = "𝒍" if is_log_prime else "𝒙"
     if show_superspace:
         prescaling_symbols[("prescaling", "primes")] = f"{symbol}B{SUBSCRIPT_L}ₛ"
         effective_captions[("prescaling", "primes")] = "complexity prescaled subspace basis elements"

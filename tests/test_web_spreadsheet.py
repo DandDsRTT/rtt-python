@@ -6703,8 +6703,10 @@ def test_superspace_prescaler_interactivity_and_controls_shift_to_ss_primes():
     assert cells["ptext:prescaling:ssprimes"].kind == "ptextedit"
     assert cells["ptext:prescaling:primes"].kind == "ptext"
     assert cells["ptext:prescaling:primes"].text.startswith("⟨[") and cells["ptext:prescaling:primes"].text.endswith("]")
-    # 𝐿·B_Ls gains covector row headers (dL of them); the bare prescaler keeps its own
-    assert sum(1 for i in cells if i.startswith("matlabel:row:prescaling:primes:")) == 4
+    # 𝐿·B_Ls is a matrix of kets, so it takes COLUMN headers (one per domain element, like B_L),
+    # NOT the bare prescaler's row headers; the bare prescaler (ss-primes) keeps its dL row headers
+    assert sum(1 for i in cells if i.startswith("matlabel:row:prescaling:primes:")) == 0
+    assert sum(1 for i in cells if i.startswith("matlabel:col:prescaling:primes:")) == 3
     assert sum(1 for i in cells if i.startswith("matlabel:row:prescaling:ssprimes:")) == 4
     # the predefined-prescalers chooser follows the bare prescaler into the ss-primes column
     assert "preset:prescaler" in cells
