@@ -2176,6 +2176,95 @@ async def test_a_disabled_history_button_shows_no_preview(user: User) -> None:
     UserInteraction(user, btn, None).trigger("mouseleave")
 
 
+# --- the preview clears once the change is APPLIED, not only on mouse-out ---
+# The hover/edit-preview tests above all clear via mouse-out (mouseleave / opthover -1 / blur). These
+# cover the other way a gesture ends: the user COMMITS (Enter, an unrelated render, a chooser select).
+# A regression here is exactly the reported bug — "preview highlighting persists after the change has
+# been applied." Two mechanisms are guarded: the amber edit-preview after an Enter-commit that keeps
+# focus (so no blur fires), and the red remove-preview that a later render must reconcile away rather
+# than orphan (render owns both ring colours and rewrites preview_shown, so a stranded red is unreachable).
+
+async def test_relabeling_a_domain_element_with_enter_clears_the_edit_preview(user: User) -> None:
+    # a chapter-9 domain basis element commits its relabel on Enter as well as blur, but Enter keeps
+    # FOCUS — so the edit-preview must end here too, else the moved cells stay ringed after the relabel
+    # is applied (the commit's render re-rings them against the now-stale focus baseline, with no blur to
+    # clear it). Relabel element 1 of the (2 3 5) basis to 7: just:prime:1 (its prime-column just value)
+    # moves and survives. The live ring shows while typing, then clears the moment Enter commits.
+    await user.open("/")
+    _toggle(user, "nonstandard domain")          # makes the domain basis elements editable (prime:i inputs)
+    await user.should_see(marker="prime:1")
+    inp = _cell_child(user, "prime:1")
+    UserInteraction(user, {inp}, None).trigger("focus")   # snapshot the edit-preview baseline
+    inp.set_value("7")                                    # a valid independent relabel -> the live preview rings
+    assert "rtt-preview-change" in _wrap_classes(user, "just:prime:1")     # the moved cell rings while editing
+    UserInteraction(user, {inp}, None).trigger("keydown.enter")            # APPLY via Enter (focus retained)
+    await user.should_see(marker="just:prime:1")          # the moved cell survived the relabel (still on screen)
+    assert _cell_child(user, "prime:1").value == "7"       # the relabel committed
+    assert "rtt-preview-change" not in _wrap_classes(user, "just:prime:1")  # ...and the ring cleared on Enter
+
+
+async def test_committing_a_ratio_with_enter_clears_the_edit_preview(user: User) -> None:
+    # the editable quantities-row ratios (comma / target / held / interest) commit on Enter as well as
+    # blur, and Enter keeps focus, so the edit-preview must end here too. Retype the syntonic comma 80/81
+    # as the chromatic semitone 25/24 = (-3 -1 2) and commit with Enter: the comma's interval-vector cells
+    # move and survive, and must not stay ringed once the change has been applied.
+    await user.open("/")
+    await user.should_see(marker="comma:0")
+    inp = _cell_child(user, "comma:0")
+    UserInteraction(user, {inp}, None).trigger("focus")
+    inp.set_value("25/24")
+    UserInteraction(user, {inp}, None).trigger("keydown.enter")            # APPLY via Enter (focus retained)
+    await user.should_see(marker="cell:comma:0:0")
+    assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["-3", "-1", "2"]  # committed
+    for p in range(3):                                     # the surviving moved vector cells carry no ring
+        assert "rtt-preview-change" not in _wrap_classes(user, f"cell:comma:{p}:0")
+
+
+async def test_an_unrelated_render_does_not_strand_a_control_hovers_red_ring(user: User) -> None:
+    # a +/- hover reddens the cells its click would remove, in place (no reflow) — but that red must not
+    # outlive a render. If any unrelated render runs while the hover is up (here toggling a Show layer),
+    # render reconciles the rings: it strips the now-stale red rather than orphaning it (render never
+    # re-touches red on its own and it rewrites preview_shown, so a later mouse-out could not reach a
+    # stranded ring). Hover the generator − (reddens the doomed generator), toggle "counts", and the red
+    # is gone from the surviving cell — and stays gone after mouse-out.
+    await user.open("/")
+    btn = set(user.find(marker="gen_minus").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")
+    assert "rtt-preview-remove" in _wrap_classes(user, "tuning:gen:1")     # armed: the doomed generator → red
+    _toggle(user, "counts")                                                # an UNRELATED render (doc unchanged)
+    await user.should_see(marker="tuning:gen:1")                          # the reddened cell survives the render
+    assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1")  # ...its red was stripped, not orphaned
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1")  # still clear after mouse-out
+
+
+async def test_selecting_a_temperament_clears_a_prior_shrink_hovers_red(user: User) -> None:
+    # a shrinking-temperament hover reddens the column it would drop, in place (no reflow). Committing a
+    # DIFFERENT temperament that KEEPS that column on screen must clear the red — the commit's render
+    # reconciles it away rather than leaving it stranded. Commit a 7-limit rank-2 temperament so prime:3
+    # (the prime-7 column) exists, hover a 5-limit one (reddens prime:3), then select another 7-limit
+    # that keeps prime:3: the red is gone once the new temperament is applied.
+    from rtt.web import presets
+    await user.open("/")
+    _toggle(user, "presets")
+    await user.should_see(marker="preset:temperament")
+    sevens = [k for k in presets.temperament_options()
+              if k.startswith("7:") and k in presets.TEMPERAMENT_COMMAS
+              and len(presets.TEMPERAMENT_COMMAS[k]) == 2]   # rank 2 over d=4: a clean limit-drop hover
+    _cell_child(user, "preset:temperament").set_value(sevens[0])   # commit it — the prime-7 column appears
+    await user.should_see(marker="prime:3")
+    wrap = set(user.find(marker="preset:temperament").elements)
+    five = next(k for k in presets.temperament_options()
+                if k.startswith("5:") and k in presets.TEMPERAMENT_COMMAS)
+    idx = list(presets.temperament_options()).index(five)
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # hover a 5-limit (shrink)
+    assert "rtt-preview-remove" in _wrap_classes(user, "prime:3")            # armed: the dropped prime-7 column → red
+    other7 = next(k for k in sevens if k != sevens[0])
+    _cell_child(user, "preset:temperament").set_value(other7)               # APPLY a different 7-limit (keeps prime:3)
+    await user.should_see(marker="prime:3")                                  # the column survived the commit
+    assert "rtt-preview-remove" not in _wrap_classes(user, "prime:3")        # ...and the stale red was cleared
+
+
 async def test_hovering_a_nonstandard_approach_option_previews_setting_it(user: User) -> None:
     # the chapter-9 nonstandard-domain-approach radio appears once the domain carries a nonprime element.
     # Hovering one of its square options previews reading the temperament that way — ringing the cells the
