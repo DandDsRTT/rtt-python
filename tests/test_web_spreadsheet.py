@@ -7353,26 +7353,29 @@ def test_superspace_tuning_tiles_get_subcolumn_headers():
     assert cells["matlabel:col:retune:ssprimes:0"].text == f"\U0001D493{L}₁"  # 𝒓ʟ₁
 
 
-def test_superspace_block_is_a_cyan_region_green_where_temperament_crosses():
-    # the chapter-9 superspace block reads as a CYAN (tuning) region, turning GREEN where a
-    # temperament object — a basis (the superspace generator/prime quantities), the B_L embedding,
-    # or the M_L mapping — crosses it. The tuning maps (𝒈ₗ/𝒕ₗ/𝒋ₗ/𝒓ₗ) and the JI mapping M_jₗ stay
-    # pure cyan. (A deliberate region tint, NOT the per-object factor scheme — see tile_groups.)
+def test_superspace_block_is_a_cyan_region_green_at_temperament_columns():
+    # the chapter-9 superspace block reads as a CYAN (tuning) region, turning GREEN ONLY where it
+    # crosses a yellow temperament COLUMN — the domain-basis elements (B_L / M_s→L) and the commas
+    # (C_L). Its own ssgens/ssprimes columns (the superspace bases, M_L), the tuning maps
+    # (𝒈ₗ/𝒕ₗ/𝒋ₗ/𝒓ₗ), the JI mapping M_jₗ and the spine all stay pure cyan. (A deliberate region
+    # tint, NOT the per-object factor scheme — see tile_groups.)
     lay = _barbados_ss(tuning_colorization=True, temperament_colorization=True,
                        counts=True, identity_objects=True)
     cells = {c.id: c for c in lay.cells}
     cyan, green = {"tuning"}, {"tuning", "temperament"}
-    # pure cyan: the tuning maps, the JI mapping, and the column spine
+    # pure cyan: the superspace bases/headers, the M_L mapping, the tuning maps, the JI mapping, the spine
+    assert _color_at(lay, *_mid(cells, "ssqgen:0")) == cyan                # superspace generators (ssgens col)
+    assert _color_at(lay, *_mid(cells, "ssqprime:0")) == cyan             # superspace primes (ssprimes col)
+    assert _color_at(lay, *_mid(cells, "cell:ss_mapping:ssprimes:0:0")) == cyan  # M_L (ssprimes col)
     assert _color_at(lay, *_mid(cells, "tuning:ssgen:0")) == cyan          # 𝒈ₗ
     assert _color_at(lay, *_mid(cells, "tuning:ssprime:0")) == cyan        # 𝒕ₗ
     assert _color_at(lay, *_mid(cells, "just:ssprime:0")) == cyan          # 𝒋ₗ
     assert _color_at(lay, *_mid(cells, "cell:ss_just_mapping:ssprimes:0:0")) == cyan  # M_jₗ
     assert _color_at(lay, *_mid(cells, "count:ssprimes")) == cyan          # the spine
-    # green where a temperament object crosses: the bases and the M_L mapping
-    assert _color_at(lay, *_mid(cells, "ssqgen:0")) == green               # superspace generators (basis)
-    assert _color_at(lay, *_mid(cells, "ssqprime:0")) == green             # superspace primes (basis)
-    assert _color_at(lay, *_mid(cells, "cell:ss_mapping:ssprimes:0:0")) == green  # M_L
-    assert _color_at(lay, *_mid(cells, "cell:ss_vectors:primes:0:0")) == green    # B_L embedding
+    # green ONLY where a yellow temperament column crosses: the domain-elements & commas columns
+    assert _color_at(lay, *_mid(cells, "cell:ss_vectors:primes:0:0")) == green    # B_L (domain elements)
+    assert _color_at(lay, *_mid(cells, "cell:ss_vectors:commas:0:0")) == green    # C_L (commas)
+    assert _color_at(lay, *_mid(cells, "cell:ss_mapping:primes:0:0")) == green    # M_s→L (domain elements)
 
 
 def test_size_factor_all_interval_weight_is_a_list_mirroring_the_complexity_row():
