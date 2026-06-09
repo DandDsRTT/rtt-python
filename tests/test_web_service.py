@@ -1008,8 +1008,8 @@ def test_plain_text_tuning_rows_use_map_and_list_brackets_at_grid_precision():
     weights = service.interval_weights(state.mapping, "TILT minimax-S", targets)
     sizes = service.interval_sizes(tun, targets, weights=weights)
 
-    def cents(vals):  # the same 3-dp the grid shows, so the two views agree
-        return " ".join(f"{v:.3f}" for v in vals)
+    def cents(values):  # the same 3-dp the grid shows, so the two views agree
+        return " ".join(f"{v:.3f}" for v in values)
 
     # tuning / just / retuning maps over the primes are covectors: ⟨ … ]
     assert pt[("tuning", "primes")] == f"⟨{cents(tun.tuning_map)}]"
@@ -1039,8 +1039,8 @@ def test_plain_text_commas_column_mirrors_the_grid():
     commas = service.comma_ratios(state.comma_basis)
     sizes = service.interval_sizes(service.tuning(state.mapping), commas)
 
-    def cents(vals):
-        return " ".join(f"{v:.3f}" for v in vals)
+    def cents(values):
+        return " ".join(f"{v:.3f}" for v in values)
 
     # the comma basis (the editable vector matrix) lives in the interval-vectors row,
     # a list of vectors wrapped in an outer [ … ]
@@ -1063,8 +1063,8 @@ def test_plain_text_held_column_mirrors_the_grid():
     tun = service.tuning(state.mapping, held=held_ratios)
     sizes = service.interval_sizes(tun, held_ratios)
 
-    def cents(vals):
-        return " ".join(f"{v:.3f}" for v in vals)
+    def cents(values):
+        return " ".join(f"{v:.3f}" for v in values)
 
     # the held interval basis lives in the interval-vectors row (vectors, close ⟩)
     assert pt[("vectors", "held")] == "[[-1 1 0⟩]"
@@ -1097,8 +1097,8 @@ def test_plain_text_interest_column_is_standalone_kets_not_a_matrix():
     tun = service.tuning(state.mapping)
     sizes = service.interval_sizes(tun, interest_ratios)
 
-    def cents(vals):
-        return " ".join(f"{v:.3f}" for v in vals)
+    def cents(values):
+        return " ".join(f"{v:.3f}" for v in values)
 
     # interval vectors: standalone kets (close ⟩), space-separated, no outer wrapping
     assert pt[("vectors", "interest")] == "[-1 1 0⟩ [-3 2 0⟩ [1 -2 1⟩ [3 0 -1⟩"

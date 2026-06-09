@@ -472,16 +472,16 @@ SPINE_ROWS = frozenset({"counts", "units"})
 SPINE_COLUMNS = frozenset({"quantities", "units"})
 
 # Chapter-9 superspace block colorization — a TUNING-family (cyan) REGION by design: the whole
-# block exists to compute tuning over the prime superspace, so it reads cyan, turning GREEN where
-# a temperament object (a basis / embedding / the M_L mapping) crosses it. This is a deliberate
-# coarse REGION tint, NOT the per-object CELL_FACTORS scheme the rest of the grid uses — that
-# scheme would wash the superspace primes yellow (they ARE genuine primes), but here the block is
-# cyan. A tile is in the region if it sits in a superspace column OR a superspace row; the
-# temperament overlay (→ green) rides the basis quantities, the B_L embedding and the M_L mapping,
-# while the tuning maps (𝒈ₗ/𝒕ₗ/𝒋ₗ/𝒓ₗ) and the JI mapping M_jL stay pure cyan. (tile_groups reads these.)
+# block exists to compute tuning over the prime superspace, so it reads cyan, turning GREEN only
+# where it crosses a yellow temperament COLUMN (the domain-basis elements / commas, carrying P / C).
+# This is a deliberate coarse REGION tint, NOT the per-object CELL_FACTORS scheme the rest of the
+# grid uses — that scheme would wash the superspace primes yellow (they ARE genuine primes), but
+# here the block is cyan. A tile is in the region if it sits in a superspace column OR a superspace
+# row; the temperament overlay (→ green) rides the yellow domain columns it crosses, while its own
+# ssgens / ssprimes columns, the M_L mapping, the tuning maps (𝒈ₗ/𝒕ₗ/𝒋ₗ/𝒓ₗ) and the JI mapping M_jL
+# stay pure cyan. (tile_groups reads these, keying green off SPINE_COLUMN_GROUP's temperament cols.)
 SUPERSPACE_REGION_COLUMNS = frozenset({"ssgens", "ssprimes"})
 SUPERSPACE_REGION_ROWS = frozenset({"ss_vectors", "ss_mapping", "ss_just_mapping"})
-SUPERSPACE_TEMPERAMENT_ROWS = frozenset({"quantities", "ss_vectors", "ss_mapping"})
 
 # The preset chooser dropdowns (settings["presets"]) as (name, row, column,
 # title): each is a quick menu for one of the things you actually choose, riding under
@@ -563,6 +563,19 @@ EQUIVALENCES = {
     ("ss_just_mapping", "ssprimes"): " = 𝐼",  # math-italic I
     ("tuning", "ssprimes"): " = 𝒈L𝑀L",
     ("retune", "ssprimes"): " = 𝒕L − 𝒋L",
+    # the chapter-9 superspace block defining equations (each tile lifted through B_L / M_s→L,
+    # matching the mockup): the two identity objects = 𝐼; lifted lists = B_L·(on-domain list);
+    # mapped lists run those through M_s→L (the mapped comma basis vanishing to 𝑂).
+    ("ss_vectors", "ssprimes"): " = 𝐼",
+    ("ss_vectors", "commas"): " = BLC",
+    ("ss_vectors", "held"): " = BLH",
+    ("ss_vectors", "targets"): " = BLT",
+    ("ss_vectors", "detempering"): " = BLD",
+    ("ss_mapping", "ssgens"): " = 𝐼",
+    ("ss_mapping", "ssprimes"): " = null⁻¹(BL·null(𝑀))",
+    ("ss_mapping", "primes"): " = 𝑀LBL",
+    ("ss_mapping", "commas"): " = 𝑂",
+    ("ss_mapping", "targets"): " = 𝑀ₛ→LT",
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",
     ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
