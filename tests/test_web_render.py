@@ -1752,25 +1752,20 @@ async def test_a_maximal_render_dispatches_every_emitted_cell_kind(user: User) -
 
 # --- the edit-preview highlight: while a cell is focused, ring the cells its edit changes ---
 
-async def test_editing_a_cell_previews_the_ripple_then_commits_on_blur(user: User) -> None:
-    # the editable matrix/vector integer cells PREVIEW as you type and COMMIT on Enter/blur (like the
-    # ratio + domain-element cells), rather than re-solving on every keystroke. Focusing a cell captures
-    # a baseline; typing then rings every OTHER cell whose value the edit WOULD move (rtt-preview-change)
-    # WITHOUT applying it — the focused cell itself is never ringed — and the value lands only on blur
-    # (or Enter), which also clears the preview.
+async def test_editing_a_cell_stages_then_commits_on_blur(user: User) -> None:
+    # the editable matrix/vector integer cells STAGE the typed value and COMMIT it only on Enter/blur
+    # (exactly like the ratio cells), rather than re-solving on every keystroke. Typing does not apply
+    # the edit; blur (or Enter) does.
     await user.open("/")
     assert _cell_text(user, "cell:mapped:1:6") == "4"    # the committed mapped value (meantone)
     src = _cell_child(user, "cell:mapping:1:2")          # the fifth's prime-5 entry (meantone: 4)
-    UserInteraction(user, {src}, None).trigger("focus")  # capture the pre-edit baseline
-    src.set_value("7")                                   # TYPE 4 -> 7: previews only, not yet committed
+    UserInteraction(user, {src}, None).trigger("focus")
+    src.set_value("7")                                   # TYPE 4 -> 7: staged, not yet applied
     await user.should_see(marker="cell:mapped:1:6")
-    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6")        # the moved cell is ringed...
-    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")   # ...the source is not
-    assert _cell_text(user, "cell:mapped:1:6") == "4"    # ...and the edit is NOT applied yet (preview only)
-    UserInteraction(user, {src}, None).trigger("blur")   # blur COMMITS the edit and clears the preview
+    assert _cell_text(user, "cell:mapped:1:6") == "4"    # the edit is NOT applied while typing
+    UserInteraction(user, {src}, None).trigger("blur")   # blur COMMITS the edit
     await user.should_see(marker="cell:mapped:1:6")
-    assert _cell_text(user, "cell:mapped:1:6") == "7"                            # now applied
-    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")    # and the ring cleared
+    assert _cell_text(user, "cell:mapped:1:6") == "7"    # now applied
 
 
 async def test_typing_a_target_limit_rings_the_rows_it_moves(user: User) -> None:
