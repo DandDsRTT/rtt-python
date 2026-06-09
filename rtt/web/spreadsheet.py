@@ -1831,12 +1831,12 @@ class _GridBuilder:
         from the tile's sibling cells, so it stays correct across reorders with no baked pitch list."""
         self.cells[-1] = replace(self.cells[-1], audio=(tile, int(idx), float(cents)))
 
-    def tuning_value_row(self, key, group, vals, alerts=()):
+    def tuning_value_row(self, key, group, values, alerts=()):
         if not self.tile_open(key, group):
             return
-        vals = tuple(vals)
+        values = tuple(values)
         if key in CHARTED_ROWS:
-            self.chart_tiles.append((key, group, vals))
+            self.chart_tiles.append((key, group, values))
         y = self.row_y[key]
         # the tuning-family unit is cents per the column's coordinate: over the generators
         # it's ¢/gᵢ (gens) or ¢/gLᵢ (the chapter-9 superspace ssgens), over the primes ¢/pᵢ /
@@ -1844,7 +1844,7 @@ class _GridBuilder:
         # primes), and over the (dimensionless) interval columns plain ¢
         is_gen_group = group in ("gens", "ssgens")
         is_prime_group = group in ("primes", "ssprimes")
-        for i, v in enumerate(vals):
+        for i, v in enumerate(values):
             cid = f"{key}:{self.group_elem[group]}:{self.col_token(group, i)}"
             x = self.group_left[group](i)
             u = self.cell_unit(key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
@@ -1867,12 +1867,12 @@ class _GridBuilder:
     # offsets the cells within it (the gridlines follow the cells the same way; see
     # column_axis). chart_top[key] exists only where a chart band was reserved (charts on,
     # row charted, not folded), so it gates emission against the layout with no drift.
-    def chart(self, rkey, ckey, vals, indicator=None, indicator_label=""):
-        vals = tuple(vals)
-        if vals and rkey in self.chart_top and self.tile_open(rkey, ckey):
+    def chart(self, rkey, ckey, values, indicator=None, indicator_label=""):
+        values = tuple(values)
+        if values and rkey in self.chart_top and self.tile_open(rkey, ckey):
             x = self.group_left[ckey](0) - BRACKET_W  # the left bracket gutter, where the value block starts
             self.cells.append(CellBox(f"chart:{rkey}:{ckey}", x, self.chart_top[rkey],
-                                 2 * BRACKET_W + len(vals) * COL_W, CHART_H, "chart", values=vals,
+                                 2 * BRACKET_W + len(values) * COL_W, CHART_H, "chart", values=values,
                                  indicator=indicator, indicator_label=indicator_label))
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
@@ -2796,11 +2796,11 @@ class _GridBuilder:
         # generators, so its tuning row IS the generator tuning map (𝒕D = 𝒈); its just and
         # retuning sizes are ordinary interval lists (𝒋D, 𝒓D), the latter charted like the targets.
         if self.show_detempering:
-            for key, vals in (("tuning", self.detempering_sizes.tempered),
-                              ("just", self.detempering_sizes.just),
-                              ("retune", self.detempering_sizes.errors)):
+            for key, values in (("tuning", self.detempering_sizes.tempered),
+                                ("just", self.detempering_sizes.just),
+                                ("retune", self.detempering_sizes.errors)):
                 if self.row_open(key):
-                    self.tuning_value_row(key, "detempering", vals)
+                    self.tuning_value_row(key, "detempering", values)
 
         # the prescaling row applies the prescaler L to each column group's vectors: over the
         # primes it is the d×d diagonal (L·eₚ — the prescaler matrix itself), over the comma /
@@ -2983,9 +2983,9 @@ class _GridBuilder:
 
         # Draw a bar chart over every tile a charted row recorded (see chart_tiles above):
         # one pass, so the set of charts always equals the set of charted-row value tiles.
-        for rkey, ckey, vals in self.chart_tiles:
+        for rkey, ckey, values in self.chart_tiles:
             indicator, label = chart_indicators.get((rkey, ckey), (None, ""))
-            self.chart(rkey, ckey, vals, indicator=indicator, indicator_label=label)
+            self.chart(rkey, ckey, values, indicator=indicator, indicator_label=label)
 
         # The generator tuning-ranges chart nests at the BOTTOM of the generator tuning map
         # tile (below its values and caption), a per-generator [min, max] I-beam (octave held

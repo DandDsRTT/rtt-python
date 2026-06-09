@@ -7087,9 +7087,9 @@ def test_cyan_superspace_tuning_tiles_have_plain_text_strings():
     expected_g = "{" + " ".join(service.cents(v) for v in tun.generator_map) + "]"
     assert cells["ptext:tuning:ssgens"].text == expected_g
     # 𝒕ₗ / 𝒋ₗ / 𝒓ₗ — map shape "⟨ … ]"
-    for row_key, vals in (("tuning", tun.tuning_map), ("just", tun.just_map),
-                          ("retune", tun.retuning_map)):
-        expected = "⟨" + " ".join(service.cents(v) for v in vals) + "]"
+    for row_key, values in (("tuning", tun.tuning_map), ("just", tun.just_map),
+                            ("retune", tun.retuning_map)):
+        expected = "⟨" + " ".join(service.cents(v) for v in values) + "]"
         assert cells[f"ptext:{row_key}:ssprimes"].text == expected
 
 
