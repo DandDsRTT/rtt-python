@@ -2276,6 +2276,37 @@ async def test_relabeling_a_domain_element_with_enter_clears_the_edit_preview(us
     assert "rtt-preview-change" not in _wrap_classes(user, "just:prime:1")  # ...and the ring cleared on Enter
 
 
+async def _relabel_across_kind_change_clears(user: User, submit: str) -> None:
+    # the hard case the same-kind test above misses: a relabel that crosses the element's KIND — an
+    # integer prime (elementcell) → a fraction (elementratio), e.g. 3 → 9/7 — makes the commit's render
+    # REBUILD the prime:1 cell. The rebuilt input is a new element, so the old input's blur / Enter
+    # listeners (which call on_cell_blur) are destroyed before they fire: nothing ends the edit-preview,
+    # and render re-rings the moved cell against the stale focus baseline. render now detects that the
+    # focused cell is being rebuilt and ends the preview itself, so the amber clears on submit (Enter AND
+    # blur) instead of lingering until a later blur lands on another cell. (basis (2 3 5); 9/7 = 3²/7 is
+    # independent of {2,5}, so it is a valid relabel; just:prime:1 moves and survives the rebuild.)
+    await user.open("/")
+    _toggle(user, "nonstandard domain")
+    await user.should_see(marker="prime:1")
+    inp = _cell_child(user, "prime:1")
+    UserInteraction(user, {inp}, None).trigger("focus")
+    inp.set_value("9/7")                                  # int → fraction: a kind change that rebuilds the cell
+    assert "rtt-preview-change" in _wrap_classes(user, "just:prime:1")    # the live preview rings while editing
+    UserInteraction(user, {inp}, None).trigger(submit)    # APPLY (the rebuild destroys the old input)
+    await user.should_see(marker="just:prime:1")          # the moved cell survived the rebuild (still on screen)
+    assert _cell_child(user, "prime:1").value == "9/7"     # the relabel committed
+    assert "rtt-preview-change" not in _wrap_classes(user, "just:prime:1"), \
+        f"the kind-change relabel left the amber ring stuck after {submit}"
+
+
+async def test_relabeling_a_domain_element_across_a_kind_change_clears_on_enter(user: User) -> None:
+    await _relabel_across_kind_change_clears(user, "keydown.enter")
+
+
+async def test_relabeling_a_domain_element_across_a_kind_change_clears_on_blur(user: User) -> None:
+    await _relabel_across_kind_change_clears(user, "blur")
+
+
 async def test_committing_a_ratio_with_enter_clears_the_edit_preview(user: User) -> None:
     # the editable quantities-row ratios (comma / target / held / interest) commit on Enter as well as
     # blur, and Enter keeps focus, so the edit-preview must end here too. Retype the syntonic comma 80/81
