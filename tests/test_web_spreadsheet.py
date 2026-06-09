@@ -6681,6 +6681,48 @@ def test_nonprime_based_approach_collapses_the_entire_superspace():
                                "ssgen", "ssprime"))
 
 
+def _barbados_prescaling(approach="", nonstandard=True):
+    # BARBADOS with a complexity-weighted scheme (so the prescaling + complexity rows show) and the
+    # nonstandard-domain toggle. TILT minimax-C weights damage by complexity → both rows present.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults() | {"nonstandard_domain": nonstandard, "weighting": True}
+    return spreadsheet.build(state, s, tuning_scheme="TILT minimax-C", nonprime_approach=approach)
+
+
+def test_superspace_shifts_the_complexity_prescaler_into_the_ss_primes_column():
+    # The chapter-9 prescaler shift: once the superspace primes column appears (neutral / prime-
+    # based over a nonprime domain), the bare complexity prescaler moves one column LEFT into
+    # ss-primes as the "(superspace) complexity prescaler" (the dL log-prime diagonal over the TRUE
+    # primes), and the domain-primes tile becomes "complexity prescaled subspace basis elements"
+    # (𝐿·B_Ls). The same in the next row: the prime complexity map moves to ss-primes, the domain-
+    # primes complexity becomes the subspace basis element complexity map.
+    cells = {c.id: c for c in _barbados_prescaling().cells}
+    assert cells["caption:prescaling:ssprimes"].text == "(superspace) complexity prescaler"
+    assert cells["caption:prescaling:primes"].text == "complexity prescaled subspace basis elements"
+    assert cells["caption:complexity:ssprimes"].text == "domain prime complexity map"
+    assert cells["caption:complexity:primes"].text == "subspace basis element complexity map"
+    # the prescaling matrices lift to dL = 4 rows (the superspace primes 2.3.5.13), not d = 3: the
+    # bare ss-primes prescaler is dL×dL, so its 4th diagonal entry (row 3, col 3) exists and is
+    # log-prime over the TRUE primes — log₂13 ≈ 3.700, the new prime 13 disentangled from 13/5.
+    assert "cell:prescaling:ssprimes:3:3" in cells
+    assert abs(float(cells["cell:prescaling:ssprimes:3:3"].text) - 3.7004) < 0.01  # log₂13
+    # the lifted domain-primes tile 𝐿·B_Ls is dL-tall too (4 rows over the d = 3 domain elements)
+    assert "cell:prescaling:primes:3:0" in cells
+
+
+def test_superspace_prescaler_shift_only_for_neutral_and_prime_based():
+    # nonprime-based keeps the atomic domain prescaler (it doesn't prime-factor), so NO ss-primes
+    # prescaling/complexity tiles and the domain-primes tile keeps its plain "complexity prescaler"
+    # name. A standard domain (toggle off) likewise shows no shift.
+    for approach in ("nonprime-based",):
+        cells = {c.id: c for c in _barbados_prescaling(approach=approach).cells}
+        assert not any(cid.startswith("cell:prescaling:ssprimes:") for cid in cells)
+        assert cells["caption:prescaling:primes"].text == "complexity prescaler"
+    off = {c.id: c for c in _barbados_prescaling(nonstandard=False).cells}
+    assert not any(cid.startswith("cell:prescaling:ssprimes:") for cid in off)
+    assert off["caption:prescaling:primes"].text == "complexity prescaler"
+
+
 def test_approach_radio_band_only_for_a_nonprime_domain():
     # the nonstandard-domain approach radio gets a reserved band above the optimization box — a bold
     # boxtitle plus lay.approach_box (the x/y/w/h app.py positions refs["approach"] over) — only
