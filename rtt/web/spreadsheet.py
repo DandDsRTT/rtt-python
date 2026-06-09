@@ -216,7 +216,7 @@ def _pretransform_label(text: str) -> str:
     return text
 
 
-def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool) -> dict:
+def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool, show_superspace: bool = False) -> dict:
     """Per-column header labels for the prescaling- and complexity-row product tiles, using
     ``letter`` for the prescaler glyph — 𝐿 when the prescaler IS the log-prime matrix, else
     the generic 𝑋. build() rebuilds these each render so a tile's column headers stay in step
@@ -241,7 +241,7 @@ def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool) -> 
         inner = f"{letter}[{i + 1}]" if all_interval else f"{letter}𝐭{_sub(i + 1)}"
         return f"{symbol} = ‖{inner}‖{NORM_SUB_OPEN}q{NORM_SUB_CLOSE}"
 
-    return {
+    labels = {
         # prescaling row — the prescaled vector lists prescaler·basis (the bare matrix is row-labeled)
         ("prescaling", "commas"): letter + "𝐜",
         ("prescaling", "targets"): letter + "𝐭",
@@ -254,6 +254,14 @@ def _prescaler_col_labels(letter: str, show_equiv: bool, all_interval: bool) -> 
         ("complexity", "detempering"): norm(lambda i: f"{letter}𝐝{_sub(i + 1)}"),
         ("complexity", "targets"): complexity_target,
     }
+    if show_superspace:
+        # the superspace shift's "next row": the prime complexity map ‖𝐿[i]‖q moves into the
+        # ss-primes column, and the domain-primes complexity tile becomes the subspace basis element
+        # map ‖𝐿𝐛ₗₛᵢ‖q — each domain element, lifted through B_L then prescaled (the corrected
+        # get_complexity value the tile above it shows).
+        labels[("complexity", "ssprimes")] = norm(lambda i: f"{letter}[{i + 1}]")
+        labels[("complexity", "primes")] = norm(lambda i: f"{letter}𝐛{SUBSCRIPT_L}ₛ{_sub(i + 1)}")
+    return labels
 
 
 def _log_operand(ratio: str) -> str:
@@ -594,7 +602,7 @@ class _PrescalerLabels:
     effective_captions: dict   # CAPTIONS, the bare tile's name gaining "= log-prime matrix" when 𝑋 = 𝐿
 
 
-def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv) -> _PrescalerLabels:
+def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv, show_superspace=False) -> _PrescalerLabels:
     """Resolve the prescaler glyph + labels. The prescaler 𝑋 "further appears" as 𝐿 in the product
     tiles and their complexity-norm column headers WHEN 𝑋 = 𝐿 — i.e. when the prescaler the displayed
     diagonal realises is the log-prime matrix. A prime/identity scheme, or a custom diagonal that
@@ -627,28 +635,42 @@ def _resolve_prescaler_labels(state, tuning_scheme, custom_prescaler, show_equiv
     # placeholder resolves to the live glyph ("LC"/"LD"/… → 𝐿C/… or 𝑋C/…), matching their headers
     prescaling_symbols = {(r, c): symbol + s[1:] for (r, c), s in SYMBOLS.items()
                           if r == "prescaling" and s.startswith("L")}
-    # the bare matrix's per-row labels take the lowercase of the realised glyph — 𝒍ᵢ when 𝑋 = 𝐿,
-    # else the generic 𝒙ᵢ — so they don't mix with the 𝐿 the products/headers carry
-    row_labels = {**ROW_LABEL_LETTERS, ("prescaling", "primes"): "𝒍" if is_log_prime else "𝒙"}
     effective_captions = dict(CAPTIONS)
+    # the bare prescaler column: normally the domain primes, but once the superspace appears the bare
+    # 𝐿 has moved one column LEFT into ss-primes (over the TRUE primes), and the domain-primes tile is
+    # now the product 𝐿·B_Ls — the prescaled subspace basis elements. Redirect the row labels, the
+    # product symbol, the "= log-prime matrix" name, and the captions accordingly.
+    bare_col = "ssprimes" if show_superspace else "primes"
+    # the bare matrix's per-row labels take the lowercase of the realised glyph — 𝒍ᵢ when 𝑋 = 𝐿,
+    # else the generic 𝒙ᵢ — so they don't mix with the 𝐿 the products/headers carry. The OTHER
+    # prescaling column (the product, or the hidden one) carries no covector row labels.
+    row_labels = dict(ROW_LABEL_LETTERS)
+    row_labels.pop(("prescaling", "primes"), None)
+    row_labels.pop(("prescaling", "ssprimes"), None)
+    row_labels[("prescaling", bare_col)] = "𝒍" if is_log_prime else "𝒙"
+    if show_superspace:
+        prescaling_symbols[("prescaling", "primes")] = f"{symbol}B{SUBSCRIPT_L}ₛ"
+        effective_captions[("prescaling", "primes")] = "complexity prescaled subspace basis elements"
+        effective_captions[("complexity", "primes")] = "subspace basis element complexity map"
     # the NAME spells the equivalence out in words (guide ch8 table names). The plain diagonal is just
     # its base matrix ("= log-prime matrix"); the size factor composes the size-sensitizing matrix with
     # that base ("= size-sensitizing matrix × log-prime matrix" / "× diagonal matrix of primes", or just
-    # "= size-sensitizing matrix" when the base is the identity). A real deviation (realized None) gets none.
+    # "= size-sensitizing matrix" when the base is the identity). A real deviation (realized None) gets
+    # none. It lands on the bare-prescaler column — ss-primes once the superspace shows.
     _BASE_MATRIX_NAME = {"log-prime": "log-prime matrix", "prime": "diagonal matrix of primes", "identity": "identity matrix"}
     if show_equiv and realized:
         if size_factor:
             base = _BASE_MATRIX_NAME[realized]
-            effective_captions[("prescaling", "primes")] += (
+            effective_captions[("prescaling", bare_col)] += (
                 " = size-sensitizing matrix" + ("" if realized == "identity" else f" × {base}"))
         elif is_log_prime:
-            effective_captions[("prescaling", "primes")] += f" = {_BASE_MATRIX_NAME['log-prime']}"
+            effective_captions[("prescaling", bare_col)] += f" = {_BASE_MATRIX_NAME['log-prime']}"
     if size_factor:  # the rectangular 𝑋 is a "pretransformer", not a "prescaler" (guide terminology)
         effective_captions = {k: _pretransform_label(v) for k, v in effective_captions.items()}
     return _PrescalerLabels(
         scheme_prescaler=scheme_prescaler, realized=realized, symbol=symbol, equivalence=equivalence,
         prescaling_symbols=prescaling_symbols,
-        col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equiv, all_interval)},
+        col_labels={**COL_LABEL_LETTERS, **_prescaler_col_labels(symbol, show_equiv, all_interval, show_superspace)},
         row_labels=row_labels, effective_captions=effective_captions,
     )
 
@@ -739,16 +761,6 @@ class _GridBuilder:
         self.show_quantities = _f.quantities
         show_domain_quantities = _f.domain_quantities
         self.show_math = _f.math
-        # Phase 2 — resolve the complexity-prescaler glyph + labels (see _resolve_prescaler_labels).
-        _p = _resolve_prescaler_labels(self.state, self.tuning_scheme, self.custom_prescaler, self.show_equiv)
-        self._scheme_prescaler = _p.scheme_prescaler
-        self._realized_prescaler = _p.realized  # the displayed prescaler's name, or None off the named list
-        self.prescaler_symbol = _p.symbol
-        self.prescaler_equivalence = _p.equivalence
-        self.prescaling_symbols = _p.prescaling_symbols
-        self.col_labels = _p.col_labels
-        self.row_labels = _p.row_labels
-        self.effective_captions = _p.effective_captions
         # Row labels and column headers (and their gutters) are always present.
         label_w = LABEL_W
         header_h = HEADER_H
@@ -789,6 +801,20 @@ class _GridBuilder:
             and service.domain_has_nonprimes(self.elements)
             and self.nonprime_approach != "nonprime-based"
         )
+        # Phase 2 — resolve the complexity-prescaler glyph + labels (see _resolve_prescaler_labels).
+        # Resolved here, AFTER show_superspace, because the superspace shift renames/relocates the
+        # bare-prescaler captions, symbols and row labels (the bare 𝐿 moves into the ss-primes column,
+        # the domain-primes tile becomes 𝐿·B_Ls).
+        _p = _resolve_prescaler_labels(self.state, self.tuning_scheme, self.custom_prescaler,
+                                       self.show_equiv, self.show_superspace)
+        self._scheme_prescaler = _p.scheme_prescaler
+        self._realized_prescaler = _p.realized  # the displayed prescaler's name, or None off the named list
+        self.prescaler_symbol = _p.symbol
+        self.prescaler_equivalence = _p.equivalence
+        self.prescaling_symbols = _p.prescaling_symbols
+        self.col_labels = _p.col_labels
+        self.row_labels = _p.row_labels
+        self.effective_captions = _p.effective_captions
         # identity objects — the trivial self-maps that equal 𝐼 (mapping over its own
         # generators, domain primes as vectors over themselves, 𝑀·D, and in the superspace
         # block M_L over its own generators and the JI mapping M_jL = I). They're deferred to
@@ -3010,6 +3036,14 @@ class _GridBuilder:
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
                 self.tuning_value_row("complexity", group, self.complexities[group],
                               alerts=self.held_unheld if group == "held" else ())
+            # the superspace shift's "next row": the prime complexity map moves into the ss-primes
+            # column (‖𝐿[i]‖q = each true prime's own diagonal weight), while the domain-primes tile
+            # above keeps self.complexities["primes"] — now the SUBSPACE basis element complexity map
+            # (each domain element's complexity, prime-factored through B_L, per the corrected
+            # get_complexity). The two captions are swapped in _resolve_prescaler_labels.
+            if self.show_superspace and self.tile_open("complexity", "ssprimes"):
+                self.tuning_value_row("complexity", "ssprimes",
+                              service.superspace_complexity_prescaler(self.state, self.tuning_scheme))
         if self.row_open("weight") and self.tile_open("weight", "targets"):
             # the weight is always a per-target list (it scales the targets, like damage). The all-
             # interval simplicity weight that has no concrete diagonal form (the size factor / a non-
