@@ -491,14 +491,18 @@ def test_tuning_mode_changes_the_nonstandard_optimum():
     import pytest
 
     # 2.7/3.11/3 over the default TILT, minimax-C: the neutral and nonprime-based
-    # approaches give different optimal generators (library tests.m 3733-3762)
+    # approaches give different optimal generators. Neutral is (1191.880, 133.594): it
+    # prime-factors complexity, so the 3 shared by 7/3 and 11/3 cancels in targets like
+    # 11/7 (see test_tuning_nonstandard for the mechanism). The historical tests.m 3733-3762
+    # reference (1194.291, 135.186) measured that complexity in the nonprime basis-vector
+    # form, double-counting the shared 3 — corrected here.
     state = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]")
     neutral = service.tuning(state.mapping, "TILT minimax-C", domain_basis=state.domain_basis)
     nonprime = service.tuning(
         state.mapping, "TILT minimax-C", domain_basis=state.domain_basis,
         nonprime_approach="nonprime-based",
     )
-    assert neutral.generator_map == pytest.approx((1194.291, 135.186), abs=1e-2)
+    assert neutral.generator_map == pytest.approx((1191.880, 133.594), abs=1e-2)
     assert nonprime.generator_map == pytest.approx((1192.399, 133.768), abs=1e-2)
 
 

@@ -364,7 +364,9 @@ X \\
 \end{array}
 </math>
 
-Okay, where to from here? Well, it's rather straightforward at this point. We just plug these objects into whatever pertinent optimization method. The result should be: <math>𝒈</math> = {{map|1194.291 135.186}}.
+We must add a caveat we originally missed, and it bites in ''this very example''. Setting each entry to the basis element's own log-product complexity is necessary, but it is ''not sufficient'' to make the vector-based form agree with the quotient-based form; it suffices only when the basis elements are pairwise coprime. Ours are not — both <math>\frac{7}{3}</math> and <math>\frac{11}{3}</math> carry a prime 3. That shared 3 cancels in the quotient of any target that divides one of them by the other: our <math>\frac{11}{7} = \frac{11/3}{7/3}</math> is simply <math>11·7^{-1}</math>, with no 3's remaining. But a diagonal pretransformer reading the basis-vector cannot see that cancellation; it counts the 3 once through <math>\frac{7}{3}</math> and again through <math>\frac{11}{3}</math>, and so overstates <math>\text{lp-C}\!\left(\frac{11}{7}\right)</math> as <math>\log_2{(7·3·11·3)} \approx 9.437</math> rather than the correct <math>\log_2{(11·7)} \approx 6.267</math>. So whenever the basis elements share a prime, the vector-based form must act on the interval's ''prime-count vector'' rather than its basis-vector — that is, lift the interval into the prime-only superspace (the same 2.3.7.11 we build below for the prime-based approach) and prescale it there with the ordinary log-prime pretransformer. This is exactly why we reach for the quotient-based form here: it sidesteps the issue entirely.
+
+Okay, where to from here? Well, it's rather straightforward at this point. We just plug these objects into whatever pertinent optimization method. The result should be: <math>𝒈</math> = {{map|1191.880 133.594}}.
 
 === Nonprime-based ===
 Everything's the same from the neutral approach to the nonprime approach, except that we may need to modify some complexity calculations. In our case, we're changing our pre-transformer matrix slightly: 
@@ -383,7 +385,7 @@ C_s \\
 \end{array}
 </math>
 
-Which gives a different result, <math>𝒈 = \val{1198.336 & 136.833}</math>.
+Which gives a different result, <math>𝒈 = \val{1192.399 & 133.768}</math>.
 
 === Prime-based ===
 Finally, we'll look at the prime-based approach. We already briefly touched at how some of this looks in the example section above, in the course of explaining how the tuning of marveltri changes depending on your approach, prime-based or nonprime-based. But we're going to go through all the steps this time around. This process was inspired by the one described here: [[Generalized_Tenney_Norms_and_Tp_Interval_Space#Examples]].
@@ -893,7 +895,7 @@ M^{+}_s \\
 \end{array} \\
 
 \left[ \begin{array} {ccc}
-1193.102 & 135.801 \\
+1193.102 & 135.810 \\
 \end{array} \right] \\
 
 \begin{array} {ccc}

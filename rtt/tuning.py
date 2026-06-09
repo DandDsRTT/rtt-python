@@ -385,8 +385,21 @@ def get_complexity_prescaler(
     tile can hand-edit it without inventing a synthetic spec or monkey-patching every consumer."""
     if override is not None:
         return override
+    return _prescaler_diagonal(
+        get_domain_basis(t), log_prime_power, prime_power, nonprime_basis_approach
+    )
+
+
+def _prescaler_diagonal(
+    domain_basis, log_prime_power, prime_power, nonprime_basis_approach: str
+) -> list[float]:
+    """The log2(prime)**a · prime**b pre-norm weight for each basis element of ``domain_basis``.
+    For a nonprime element the base is its log-product complexity numerator·denominator (e.g.
+    7/3 → 7·3) — UNLESS the nonprime-based approach is in force, which treats the element as an
+    atom protected against factoring (7/3 → 7/3). Kept basis-parameterized (not temperament-
+    parameterized) so :func:`get_complexity` can build it over a lifted prime basis."""
     diagonal = []
-    for q in get_domain_basis(t):
+    for q in domain_basis:
         fraction = Fraction(q)
         base = (
             float(q)
@@ -420,9 +433,38 @@ def get_complexity(
 
     ``prescaler_override`` bypasses the trait-driven prescaler — a d-tuple diagonal, or a full
     d×d matrix (a non-diagonal pretransformer) the web app's editable tile rides in. A diagonal
-    pre-transforms element-wise (𝐿ᵢvᵢ); a matrix as a matrix-vector product (𝑋·v)."""
-    prescaler = get_complexity_prescaler(
-        t, log_prime_power, prime_power, nonprime_basis_approach, override=prescaler_override,
+    pre-transforms element-wise (𝐿ᵢvᵢ); a matrix as a matrix-vector product (𝑋·v).
+
+    Over a NONPRIME basis the default (non-override) neutral path lifts the interval into the
+    simplest prime-only basis (the superspace) and prescales THERE, because log-product
+    complexity is defined on the prime factorization: its quotient form log2(n·d) equals the
+    vector form only when the vector is the PRIME-COUNT vector. A per-basis-element diagonal
+    would instead double-count a prime shared across two elements that cancels in the true
+    quotient (the 3 in 7/3 and 11/3 of 2.7/3.11/3: 11/7 is log2(11·7), not log2(11·3·7·3)).
+    The nonprime-based approach deliberately keeps the atomic basis (it redefines complexity);
+    prime-based already arrives here over its prime superspace, so the lift is a no-op; an
+    override pins the diagonal by hand; coprime and standard bases lift to themselves."""
+    domain_basis = get_domain_basis(t)
+    if (
+        prescaler_override is None
+        and nonprime_basis_approach != "nonprime-based"
+        and len(pcv) == len(domain_basis)
+        and not is_standard_prime_limit_domain_basis(domain_basis)
+    ):
+        prime_basis = get_simplest_prime_only_basis(domain_basis)
+        if tuple(prime_basis) != tuple(domain_basis):  # there really is a nonprime to factor
+            lift = express_quotients_in_domain_basis(domain_basis, prime_basis)  # d rows × dL
+            pcv = tuple(
+                sum(pcv[e] * lift[e][p] for e in range(len(lift)))
+                for p in range(len(prime_basis))
+            )
+            domain_basis = prime_basis
+    prescaler = (
+        prescaler_override
+        if prescaler_override is not None
+        else _prescaler_diagonal(
+            domain_basis, log_prime_power, prime_power, nonprime_basis_approach
+        )
     )
     if np.ndim(prescaler) == 2:  # a full (non-diagonal) pretransformer matrix: 𝑋·v
         transformed = list(np.asarray(prescaler, dtype=float) @ np.asarray(pcv, dtype=float))
