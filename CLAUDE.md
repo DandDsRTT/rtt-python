@@ -59,6 +59,34 @@ worktree branch is **invisible to them**. So the job isn't done until the branch
 - This is a git merge, not an edit of the main checkout — it does **not** violate "all edits
   go in the worktree." Never hand-edit files in the main checkout; only ever `git merge` into it.
 
+## Commit every turn — never let work live only in the working tree
+
+Many agents run in parallel, each in its own worktree, while `main` moves every few minutes.
+The harness's worktree auto-sync can, in that churn, move a dirty tree aside or re-point a
+branch — and **anything that exists only as uncommitted edits or untracked files can be
+silently discarded between turns** (this has happened: a clean tree, vanished edits, an
+absent new file, then a branch reset onto `main`). The defense is simple: **the only safe
+place for work is a commit on your own branch.** Committed work is always recoverable from the
+reflog; uncommitted work is not.
+
+- **End every turn with a commit.** `git add -A && git commit -m "wip: <what changed>"`. A
+  string of `wip:` commits is fine — protecting the work matters far more than tidy history.
+- **`git add` new files the moment you create them.** Untracked files are the most fragile —
+  they're the first thing a stray `clean -fd` / `stash -u` removes. Don't leave a new test
+  file untracked across a turn boundary.
+- **Stay on your own `claude/<name>` branch.** Never `git checkout main` / `git switch main`,
+  and never `git reset` or `git rebase` your branch onto `main`, *inside your worktree* —
+  that is exactly what strands a worktree on `main` and drops your commits. The **only** way
+  to touch `main` is `git -C <main-checkout> merge --ff-only <your-branch>` (see above).
+- **To pick up others' changes, merge `main` *into* your branch** — `git merge main` — and
+  only on a clean tree (commit first). Merge is additive and never discards; rebase/reset
+  rewrite history and can lose work. If it conflicts, resolve and commit — never `reset --hard`
+  to escape.
+- **Never `git reset --hard`, `git clean -fd`, or `git stash` while you have unsaved work.**
+  Those are precisely how work disappears. Commit first, then operate.
+- Want one tidy commit on `main` instead of a chain of `wip:`s? Just before the ff-merge,
+  collapse them without interactive rebase: `git reset --soft main && git commit -m "<msg>"`.
+
 ## Web app port: 8137 is the user's — agents launch on their own port
 
 Port **8137** belongs to the **human user**: they keep `python app.py` running there to
