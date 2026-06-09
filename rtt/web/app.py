@@ -2047,11 +2047,15 @@ class _Reconciler:
                 num.on("blur", lambda _=None: self._cb.on_cell_blur())
                 # ...and previews each keystroke LIVE the way a wheel notch does, reddening the rows the
                 # typed limit would drop before the debounced commit reflows them away. on_change is the
-                # debounced model-value (the commit); this rides the RAW DOM `input`, which fires at once
-                # and carries the live text in event.target.value (the loopback-debounced model value
-                # lags a keystroke behind, so read it off the event instead of num.value).
-                num.on("input", lambda e: self._cb.on_target_limit_preview(e.args[0] if e.args else None),
-                       args=[["target", "value"]])
+                # debounced model-value (the commit); this must fire at once on each keystroke instead.
+                # NOT the DOM `input` event: a Quasar QInput doesn't forward native `input` to a NiceGUI
+                # `.on()` listener (it never reaches the socket — verified), so an `.on("input")` preview
+                # silently never ran. `keyup` DOES fire on the QInput; and since NiceGUI's `args=` only
+                # filters TOP-LEVEL event keys (it can't pull the nested `target.value`), mirror the
+                # wheel's js_handler trick and emit the live DOM text ourselves — `e.args` is then the
+                # typed string (the loopback-debounced model value lags a keystroke, so read the event).
+                num.on("keyup", lambda e: self._cb.on_target_limit_preview(e.args),
+                       js_handler="(e) => emit(e.target.value)")
                 sel = ui.select(list(presets.TARGET_SETS), value=family,
                         on_change=lambda e: self._cb.on_target_change(limit_changed=False)) \
                     .props(_select_props(cb.w - 30)).classes("rtt-preset")  # field = cell − the 30px square (touching, no gap)
