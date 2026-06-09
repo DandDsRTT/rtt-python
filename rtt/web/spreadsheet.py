@@ -955,8 +955,11 @@ class _GridBuilder:
         # domain elements (each element's complexity, log₂ of it for the default log-prime
         # norm), a list over the comma / target / interest interval sets.
         self.complexities = {
+            # over the DOMAIN basis (like every sibling call below) so a nonprime element's complexity
+            # prime-factors correctly — 13/5 reads log₂(13·5), not log₂5 (dropping the out-of-limit 13).
+            # This is the subspace basis element complexity map once the superspace shows.
             "primes": service.interval_complexities(self.state.mapping, self.tuning_scheme, tuple(service.element_ratio(e) for e in self.elements),
-                                                    prescaler_override=self.custom_prescaler),
+                                                    prescaler_override=self.custom_prescaler, domain_basis=self.elements),
             "commas": service.interval_complexities(self.state.mapping, self.tuning_scheme, self.comma_ratios,
                                                     prescaler_override=self.custom_prescaler, domain_basis=self.elements),
             "targets": service.interval_complexities(self.state.mapping, self.tuning_scheme, self.targets,
@@ -3370,14 +3373,22 @@ class _GridBuilder:
             # the y of the i-th row inside a row-labelled tile: the mapping stacks under
             # row_y["mapping"]; the prescaler stacks d rows under row_y["prescaling"]; the
             # chapter-9 superspace mapping M_L stacks rL rows under row_y["ss_mapping"]
+            # the bare prescaler's covector rows stack under row_y["prescaling"]; once the superspace
+            # shows it lives in the ss-primes column (prescale_rows = dL tall), else the domain primes
+            # (d tall). Both keyed so row_labels (which targets whichever column is the bare prescaler)
+            # always resolves.
+            _prescale_top = lambda i: self.row_y["prescaling"] + i * ROW_H
             row_top = {
                 ("mapping", "primes"): self.map_top,
-                ("prescaling", "primes"): lambda i: self.row_y["prescaling"] + i * ROW_H,
+                ("prescaling", "primes"): _prescale_top,
+                ("prescaling", "ssprimes"): _prescale_top,
                 ("ss_mapping", "ssprimes"): self.ss_map_top,
                 ("ss_mapping", "primes"): self.ss_map_top,
                 ("ss_just_mapping", "ssprimes"): self.ss_just_map_top,
             }
-            row_count = {("mapping", "primes"): self.r, ("prescaling", "primes"): self.d + self.size_rows,
+            row_count = {("mapping", "primes"): self.r,
+                         ("prescaling", "primes"): self.prescale_rows + self.size_rows,
+                         ("prescaling", "ssprimes"): self.prescale_rows + self.size_rows,
                          ("ss_mapping", "ssprimes"): self.rL,
                          ("ss_mapping", "primes"): self.rL,
                          ("ss_just_mapping", "ssprimes"): self.dL}
@@ -3388,7 +3399,7 @@ class _GridBuilder:
                 for i in range(row_count[(rkey, ckey)]):
                     # the bare pretransformer 𝑋 = 𝑍𝐿's bottom (size-sensitizing) row is labelled 𝒛 (the
                     # size-sensitizing matrix 𝑍's row variable), NOT 𝒍₄ / 𝒙₄ — it isn't a fourth prime.
-                    size_row = (rkey, ckey) == ("prescaling", "primes") and i == self.d and self.size_rows
+                    size_row = rkey == "prescaling" and i == self.prescale_rows and self.size_rows
                     text = "𝒛" if size_row else f"{glyph}{_sub(i + 1)}"
                     self.cells.append(CellBox(
                         f"matlabel:row:{rkey}:{ckey}:{i}",
