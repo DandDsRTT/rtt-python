@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "d=$(git rev-parse --show-toplevel 2>/dev/null) && bash \"$d/.claude/hooks/wip-checkpoint.sh\" || true",
+            "timeout": 30,
+            "statusMessage": "wip-checkpoint"
+          }
+        ]
+      }
+    ]
+  }
+}
