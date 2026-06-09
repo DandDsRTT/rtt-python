@@ -3121,6 +3121,11 @@ def index() -> None:
         # the settings panel's select-all/none: flip every implemented Show toggle at once
         if building[0]:
             return
+        if not value and editor.basis_is_nonstandard:
+            # select-none can't turn "nonstandard domain" off while a nonstandard basis is live —
+            # set_all_show keeps it on (its content would be stranded), leaving the master checkbox
+            # in its mixed/grey state. Toast to explain why, matching on_show_toggle's guard.
+            ui.notify(_NONSTANDARD_BASIS_IN_USE, type="negative", position="top")
         editor.set_all_show(value)
         render()
 
