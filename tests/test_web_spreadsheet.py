@@ -7743,10 +7743,10 @@ def test_established_projection_choosers_need_both_presets_and_the_projection_bo
 
 
 def test_projection_adds_a_scaling_factors_row_over_v():
-    cells = {c.id: c for c in _with(projection=True).cells}
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # a full rational hold completes U
     assert cells["label:scaling_factors"].text == "scaling factors"
-    # λ = diag(λ): 0 per comma (vanished), 1 per unchanged interval (held). Meantone has
-    # n=1 comma + u=2 unchanged → [0, 1, 1] over the three V sub-columns.
+    # λ = diag(λ): 0 per comma (vanished), 1 per unchanged interval (held). Meantone fully held
+    # has n=1 comma + u=2 unchanged → [0, 1, 1] over the three V sub-columns.
     assert [cells[f"cell:scaling:{c}"].text for c in range(3)] == ["0", "1", "1"]
     # it rides between the header rows and the interval-vectors row (per the mockup)
     assert cells["label:scaling_factors"].y < cells["label:vectors"].y
@@ -7798,6 +7798,19 @@ def test_projection_mapping_row_spans_v_mapping_the_unchanged_intervals():
     assert cells["cell:mapped_unchanged:0:0"].x == cells["cell:unchanged:0:0"].x
 
 
+def test_projection_row_spans_v_with_the_projected_unrotated_vector_list():
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: a full rational hold
+    # P·V over the V column: P·comma = 0 (the eigenvalue-0 direction vanishes), P·unchanged = the
+    # unchanged interval itself (eigenvalue 1). V col 0 = comma, cols 1,2 = the unchanged u₁=2/1, u₂=5/4.
+    assert [cells[f"cell:proj_v:{p}:0"].text for p in range(3)] == ["0", "0", "0"]    # P·c₁ = 𝟎
+    assert [cells[f"cell:proj_v:{p}:1"].text for p in range(3)] == ["1", "0", "0"]    # P·u₁ = 2/1
+    assert [cells[f"cell:proj_v:{p}:2"].text for p in range(3)] == ["-2", "0", "1"]   # P·u₂ = 5/4
+    # it rides the projection row band (same y as P over the primes) on the V sub-axes
+    assert cells["cell:proj_v:0:0"].y == cells["cell:proj:0:0"].y
+    assert cells["cell:proj_v:0:1"].x == cells["cell:unchanged:0:0"].x  # V col 1 = first unchanged col
+    assert cells["caption:projection:commas"].text == "projected unrotated vector list"
+
+
 def test_projection_size_rows_span_v():
     cells = {c.id: c for c in _with(projection=True).cells}
     # tuning / just / retuning size lists run over all d = n+u columns of V
@@ -7805,6 +7818,24 @@ def test_projection_size_rows_span_v():
         assert {f"{key}:comma:{i}" for i in range(3)} <= set(cells)
         # the unchanged size cells sit on the U sub-axes (right of the comma sizes)
         assert cells[f"{key}:comma:2"].x == cells["cell:unchanged:0:1"].x
+
+
+def test_projection_v_column_has_one_c_u_divider_per_tile_and_no_stray_separators():
+    cells = {c.id: c for c in _with(projection=True).cells}
+    # one vertical bar at the C|U boundary (left of the first unchanged column) down each V tile
+    bar = cells["vsplit:vectors"]
+    assert bar.x == cells["cell:unchanged:0:0"].x - spreadsheet.SEP_W / 2
+    assert {"vsplit:scaling_factors", "vsplit:mapping", "vsplit:tuning"} <= set(cells)
+    # the mapped unrotated vector list (M·V) draws NO inter-entry separator rules (the stray-
+    # separator bug is fixed); the lone C|U bar is its only divider
+    assert not any(c.startswith("sep:mapped_comma:") for c in cells)
+
+
+def test_mapped_comma_basis_has_no_stray_separators_off_projection():
+    # the long-standing bug: a 2+-comma mapped basis drew dividing rules between its entries
+    cells = {c.id for c in spreadsheet.build(service.from_mapping(((1, 0, 0),))).cells}  # r=1, n=2 commas
+    assert any(c.startswith("cell:mapped_comma:") for c in cells)  # the tile renders
+    assert not any(c.startswith("sep:mapped_comma:") for c in cells)  # …but with no separators
 
 
 def test_projection_v_column_fans_one_gridline_per_subcolumn():
@@ -7818,6 +7849,17 @@ def test_projection_freezes_the_comma_count_controls():
     # would change the rank and so U) are frozen — no +, no −, no drag grips on V
     assert "comma_plus" not in cells and "comma_minus" not in cells
     assert not any(c.startswith("grip:commas:") for c in cells)
+
+
+def test_projection_v_column_counts_both_nullity_and_unchanged():
+    cells = {c.id: c for c in _with(projection=True, counts=True).cells}
+    # the consolidated V = C|U carries two counts: the nullity n over the comma half and the
+    # unchanged-interval count u over the unchanged half (meantone: n=1, u=2)
+    assert cells["count:commas"].text.endswith("= 1")        # n = 1 (nullity)
+    assert cells["count:commas:u"].text.endswith("= 2")      # u = 2 (unchanged intervals)
+    # the u-count sits over the unchanged sub-columns, right of the n-count
+    assert cells["count:commas:u"].x == cells["cell:unchanged:0:0"].x
+    assert cells["count:commas"].x < cells["count:commas:u"].x
 
 
 def test_no_scaling_factors_or_unchanged_columns_without_projection():
@@ -7835,28 +7877,34 @@ def test_v_consolidation_needs_the_commas_column_present():
     assert not any(c.startswith(("cell:scaling:", "cell:unchanged:")) for c in cells)
 
 
-def test_projection_relabels_the_commas_header_as_the_unrotated_vector_basis():
-    # the consolidated interval-vectors header reads as the whole unrotated vector basis V = C|U,
-    # not the bare comma basis C — caption (names, on by default) and symbol/equivalence (symbols on)
+def test_projection_relabels_the_whole_column_as_the_unrotated_vector_list():
+    # the consolidated column is the unrotated vector list V = C|U — the column TITLE and EVERY
+    # tile's name/symbol read V / "unrotated vector list", not C / "comma basis" (the "(made to
+    # vanish!)" note drops too: only the comma half of V vanishes, which the λ = 0 row marks)
     named = {c.id: c for c in _with(projection=True).cells}
-    assert named["caption:vectors:commas"].text == "unrotated vector basis"
+    assert named["header:commas"].text == "unrotated\nvector list"            # the column title
+    assert named["caption:vectors:commas"].text == "unrotated vector list"
+    assert named["caption:mapping:commas"].text == "mapped unrotated vector list"
+    assert named["caption:tuning:commas"].text == "tempered unrotated vector list interval size list"
     symd = {c.id: c for c in _with(projection=True, symbols=True, equivalences=True).cells}
     assert symd["symbol:vectors:commas"].text == "V = C|U"
+    assert symd["symbol:mapping:commas"].text == "𝑀V"   # C → V; the "= 𝑂" vanish-equivalence dropped
+    assert symd["symbol:tuning:commas"].text == "𝒕V"
     # off projection it stays the plain comma basis C
     plain = {c.id: c for c in _with(symbols=True).cells}
+    assert plain["header:commas"].text == "commas"
     assert plain["caption:vectors:commas"].text == "comma basis"
     assert plain["symbol:vectors:commas"].text == "C"
 
 
-def test_projection_v_column_labels_keep_the_c_and_u_identities():
+def test_projection_v_column_labels_are_v_and_lambda():
     cells = {c.id: c for c in _with(projection=True, symbols=True).cells}
-    # the interval-vectors header labels the comma sub-columns 𝐜ᵢ, the unchanged ones 𝐮ᵢ
-    assert cells["matlabel:col:vectors:commas:0"].text == "𝐜₁"   # the lone comma
-    assert cells["matlabel:col:vectors:commas:1"].text == "𝐮₁"   # first unchanged
-    assert cells["matlabel:col:vectors:commas:2"].text == "𝐮₂"
-    # the scaling-factors row labels every V sub-column λᵢ
-    assert cells["matlabel:col:scaling_factors:commas:0"].text == "λ₁"
-    assert cells["matlabel:col:scaling_factors:commas:2"].text == "λ₃"
+    # the C|U split is the vertical bar, so every V sub-column is labelled 𝐯ᵢ (not a 𝐜/𝐮 split)
+    assert [cells[f"matlabel:col:vectors:commas:{i}"].text for i in range(3)] == ["𝐯₁", "𝐯₂", "𝐯₃"]
+    assert cells["matlabel:col:mapping:commas:2"].text == "𝑀𝐯₃"   # the mapping over V: 𝑀𝐯ᵢ
+    # the scaling-factors row: bold-italic 𝝀 tile symbol, italic 𝜆ᵢ per-column scalar headers
+    assert cells["symbol:scaling_factors:commas"].text == "𝝀"
+    assert [cells[f"matlabel:col:scaling_factors:commas:{i}"].text for i in range(3)] == ["𝜆₁", "𝜆₂", "𝜆₃"]
 
 
 def test_projection_prescaling_and_complexity_rows_span_v():

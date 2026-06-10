@@ -118,6 +118,9 @@ CAPTIONS = {
     # generators as fractional vectors. Rides the projection row band in the gens columns,
     # beside P (which it multiplies the mapping into: P = GM). Same projection sub-control.
     ("projection", "gens"): "generator embedding",
+    # the projected unrotated vector list P·V — each unrotated vector scaled by its eigenvalue:
+    # the comma columns vanish (P·c = 0), the unchanged columns are held unchanged (P·u = u)
+    ("projection", "commas"): "projected unrotated vector list",
     # the scaling factors λ = diag(λ) — the projection's eigenvalue list over the
     # consolidated V = C|U column (0 per comma, 1 per unchanged interval); toggled with
     # projection, one row above the interval-vectors row
@@ -211,7 +214,7 @@ SYMBOLS = {
     ("ss_mapping", "held"): f"𝑀ₛ→{SUBSCRIPT_L}H",
     ("ss_mapping", "targets"): f"Y{SUBSCRIPT_L}",     # Y_L = M_s→L·T
     ("ss_mapping", "detempering"): f"𝑀ₛ→{SUBSCRIPT_L}D",
-    ("scaling_factors", "commas"): "λ",  # the eigenvalue list diag(λ) over V
+    ("scaling_factors", "commas"): "𝝀",  # the eigenvalue list diag(λ) over V (bold-italic λ)
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -292,8 +295,11 @@ ROW_LABEL_LETTERS = {
 }
 ROW_LABELED_TILES = frozenset(ROW_LABEL_LETTERS)
 COL_LABEL_LETTERS = {
-    # the scaling factors λ = diag(λ): one eigenvalue λᵢ per V sub-column (commas then unchanged)
-    ("scaling_factors", "commas"): "λ",
+    # the scaling factors λ = diag(λ): one eigenvalue λᵢ per V sub-column (commas then unchanged),
+    # the scalar entries in italic (𝜆ᵢ), like the other size lists' italic scalar headers
+    ("scaling_factors", "commas"): "𝜆",
+    # the projected unrotated vector list: each column is P·𝐯ᵢ (Pv₁ Pv₂ … in the mockup)
+    ("projection", "commas"): "P𝐯",
     # interval vectors row — d-tall column-vector matrices
     ("vectors", "commas"): "𝐜",
     ("vectors", "targets"): "𝐭",
@@ -772,6 +778,7 @@ TILES = (
     ("block:mapping", "mapping", "primes"),
     ("block:projection", "projection", "primes"),
     ("block:projection_embedding", "projection", "gens"),  # the generator embedding G, beside P
+    ("block:proj_v", "projection", "commas"),  # the projected unrotated vector list P·V over V
     ("block:scaling_factors", "scaling_factors", "commas"),  # the λ list over V (projection on)
     ("block:mapped_comma", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),
