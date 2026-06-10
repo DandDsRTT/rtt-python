@@ -63,6 +63,7 @@ OPTION_BOX_PX = 16   # the one shared size for every small option square: every 
 #                      and the tuning-ranges monotone/tradeoff radio boxes. app.py pins the q-checkbox
 #                      CSS and the .rtt-rangebox to this, and the control-check CELL hugs the square.
 PRESET_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
+SCHEME_BTN_W = 104  # the "back to scheme" button on the projection / embedding tiles
 TARGET_PRESET_W = 144  # wider: the target chooser seats a 30px gridded limit square + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
 # always fits on ONE line within its column (a long tuning row just gets smaller text)
@@ -883,7 +884,7 @@ class _GridBuilder:
         # and the ± — rendering the list as a read-only computed value (like the detempering D)
         self.targets_editable = not self.all_interval
         self.k = len(self.targets)
-        # a target being added rides as a pending draft column (blank red cells + a "?" ratio)
+        # a target being added rides as a pending draft column (blank green cells + a "?" ratio)
         # until its vector is filled in, like the comma / interest / held draft. Suppressed when
         # the list isn't editable (all-interval's auto Tₚ = I set is not user-curated, no + draft).
         self.pending_target = list(self.pending_target) if (self.pending_target is not None and self.targets_editable) else None
@@ -898,7 +899,7 @@ class _GridBuilder:
         # they are folded into service.tuning below. Present only with the optimization sub-control.
         self.held = tuple(tuple(m[p] if p < len(m) else 0 for p in range(self.d)) for m in held_vectors) if self.show_optimization else ()
         self.nh = len(self.held)
-        # a held interval being added rides as a pending draft column (blank red cells + a "?"
+        # a held interval being added rides as a pending draft column (blank green cells + a "?"
         # ratio) until its vector is filled in, like the comma / interest draft. Gated on the
         # optimization sub-control, since the held column only exists there.
         self.pending_held = list(self.pending_held) if (self.pending_held is not None and self.show_optimization) else None
@@ -968,7 +969,7 @@ class _GridBuilder:
             self.unchanged_ratios = self.unchanged_mapped = self.unchanged_complexities = ()
             self.unchanged_sizes = service.IntervalSizes((), (), (), ())
         # a comma being added is shown as a pending draft column to the right of the real
-        # ones: blank red cells and a "?" quantity until it is a valid independent comma
+        # ones: blank green cells and a "?" quantity until it is a valid independent comma
         # (then it commits and the mapping re-ranks). It is not a real comma, so it does
         # not enter the nullity, the mapping, or the sizes — only the displayed column count.
         # (Suppressed under the consolidated V view, where comma structural edits are frozen.)
@@ -1011,13 +1012,13 @@ class _GridBuilder:
         self.interest = tuple(tuple(m[p] if p < len(m) else 0 for p in range(self.d)) for m in self.interest)
         self.mi = len(self.interest)
         # an interval of interest being added rides as a pending draft column to the right of the
-        # committed ones (blank red cells + a "?" ratio), exactly like the pending comma, until its
+        # committed ones (blank green cells + a "?" ratio), exactly like the pending comma, until its
         # vector is filled in (then it commits). The draft is not a real interval, so it stays out
         # of the ratios/sizes/complexity below — only the displayed column count grows.
         self.pending_interest = list(self.pending_interest) if self.pending_interest is not None else None
         self.mi_shown = self.mi + (1 if self.pending_interest is not None else 0)
         # the chapter-9 domain basis element draft: with the nonstandard-domain box on, a typed-in
-        # new basis element rides as a red ?/? column to the right of the d real elements (exactly
+        # new basis element rides as a green ?/? column to the right of the d real elements (exactly
         # like the pending comma), until a valid rational fills it (then it commits, added held
         # just). It is not a real element — no mapping/tuning/count — so the matrix rows still
         # iterate self.d and leave its column empty; only the displayed domain width grows by one.
@@ -1497,6 +1498,7 @@ class _GridBuilder:
         self.row_y, self.row_h, self.row_label, self.row_collapsible = {}, {}, {}, {}
         self.tile_h, self.tile_top, self.row_frame, self.row_sym, self.row_cap, self.row_units, self.row_ptext, self.chart_top = {}, {}, {}, {}, {}, {}, {}, {}
         self.row_pre = {}  # the preset band height, so the <choose form> chooser can stack below it
+        self.row_schemebtn = {}  # the "back to scheme" button band (projection rows), below the preset band
         self.row_nsub = {}  # each row's natural cell-row count (a matrix's height in cells), so the
         # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
         # drawing all of them, converged, while it's folded, so the fold animates as a merge
@@ -1573,6 +1575,10 @@ class _GridBuilder:
             # the form chooser rides one box below the preset chooser, in the mapping and
             # comma-basis boxes, when form controls are shown
             formctrl = self.formchooser_band_h(key) if (self.show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
+            # the always-present "back to scheme" button rides its own band below the preset band on
+            # the projection row (not gated by presets); projection rows have no form chooser, so it
+            # reuses that free slot
+            schemebtn = self.control_region_band_h(PRESET_H) if (key == "projection" and self.settings["projection"] and not folded) else 0
             ptext = self.ptext_band(key, folded)
             self.row_h[key] = STRIP if folded else natural
             self.row_nsub[key] = round(natural / ROW_H)  # matrix height in cells (fold-independent)
@@ -1592,9 +1598,10 @@ class _GridBuilder:
             self.row_units[key] = uni  # the plain-text box and preset chooser sit below the units line
             self.row_ptext[key] = ptext  # the plain-text band, with the preset chooser below it
             self.row_pre[key] = pre  # the preset band, with the <choose form> chooser below it
+            self.row_schemebtn[key] = schemebtn  # the back-to-scheme button band, below the preset band
             self.row_label[key] = label
             self.row_collapsible[key] = collapsible
-            self.tile_h[key] = head + top_frame + chart_band + self.row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl
+            self.tile_h[key] = head + top_frame + chart_band + self.row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl + schemebtn
             # a row with a nested tile-control (ranges chart, alt-complexity chooser, optimization
             # block) adds its reserved height here, so the rows below drop clear of it and every
             # tile in the row grows to the same height (the row stays one uniform band)
@@ -2382,7 +2389,7 @@ class _GridBuilder:
         mark_w = COL_W - 2 * MARK_INSET
         for c in range(n_cols):
             mx = left(c) + MARK_INSET
-            pend = (c == pending_col)  # the draft column's ket marks render red, like its cells
+            pend = (c == pending_col)  # the draft column's ket marks render green, like its cells
             self.cells.append(CellBox(f"{top}:{name}:{c}", mx, self.frame_top_y(rkey), mark_w, FRAME_H, top, pending=pend))
             self.cells.append(CellBox(f"{foot}:{name}:{c}", mx, self.frame_brace_y(rkey), mark_w, BRACE_H, foot, pending=pend))
         if not separators:
@@ -2604,7 +2611,7 @@ class _GridBuilder:
                     kind = self._element_cell_kind(text) if self.show_nonstandard_domain else "prime"
                     self.cells.append(CellBox(f"prime:{p}", self.prime_left(p), qy, COL_W, ROW_H, kind, text=text, prime=p))
                     self._voice("quantities:primes", p, self.tun.just_map[p])
-                if self.element_draft:  # the red ?/? draft column: type a rational to add a new basis
+                if self.element_draft:  # the green ?/? draft column: type a rational to add a new basis
                     # element (held just). A distinct id so it's removed, not restructured, on commit.
                     draft_text = self.pending_element or "?/?"
                     self.cells.append(CellBox("prime:pending", self.prime_left(self.d), qy, COL_W, ROW_H,
@@ -2663,7 +2670,7 @@ class _GridBuilder:
                     # auto-generated all-interval list (Tₚ = I) is not editable, so it carries none
                     if self.targets_editable:
                         branch_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
-                if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
+                if self.pending_target is not None:  # the draft column: an editable "?/?" ratio, blank green cells below, − to cancel
                     self.cells.append(CellBox("target:pending", self.target_left(self.k), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.k, pending=True))
                     branch_minus("target_minus:pending", "targets", self.k, "target_minus")
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
@@ -2673,7 +2680,7 @@ class _GridBuilder:
                     self._voice("quantities:held", i, self.held_sizes.just[i])
                     # each held interval carries its own − on its branch point (any one is removable)
                     branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
-                if self.pending_held is not None:  # the draft column: an editable "?/?" ratio, blank red cells below, − to cancel
+                if self.pending_held is not None:  # the draft column: an editable "?/?" ratio, blank green cells below, − to cancel
                     self.cells.append(CellBox("held:pending", self.held_left(self.nh), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nh, pending=True))
                     branch_minus("held_minus:pending", "held", self.nh, "held_minus")
             if self.tile_open("quantities", "interest"):  # the user's other intervals of interest
@@ -2685,7 +2692,7 @@ class _GridBuilder:
                     # unlike the domain/comma last-only −
                     branch_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
                 if self.pending_interest is not None:  # the draft column: an editable "?/?" ratio,
-                    # blank red vector cells below, and a − on its branch point to cancel the draft
+                    # blank green vector cells below, and a − on its branch point to cancel the draft
                     self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.mi, pending=True))
                     branch_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
             # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
@@ -2899,7 +2906,7 @@ class _GridBuilder:
                         vec_text = DASH if self.unchanged_basis[j] is None else str(self.unchanged_basis[j][p])
                         self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H, "vec", text=vec_text, prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p), alert=doomed))
                     self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
-                if self.pending is not None:  # the draft column: blank, red-outlined cells the user fills in
+                if self.pending is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending[p]
                         self.cells.append(CellBox(f"cell:comma:{p}:{self.nc}", self.comma_left(self.nc), self.vec_top(p), COL_W, ROW_H, "commacell",
@@ -2919,7 +2926,7 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:vec:targets:{self.col_token('targets', j)}:{p}", self.target_left(j) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, target_kind, text=str(self.target_vectors[j][p]), prime=p, comma=j, unit=self.cell_unit("vectors", "targets", prime=p)))
                         self._voice("vectors:targets", j, self.target_sizes.just[j])
-                if self.pending_target is not None:  # the draft column: blank, red-outlined cells the user fills in
+                if self.pending_target is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_target[p]
                         self.cells.append(CellBox(f"cell:vec:targets:{self.pending_col_token('targets')}:{p}", self.target_left(self.k) + cell_inset, self.vec_top(p), COL_W - 2 * cell_inset, ROW_H, "targetcell",
@@ -2929,7 +2936,7 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:held:{p}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p), alert=self.held_unheld[i]))
                         self._voice("vectors:held", i, self.held_sizes.just[i])
-                if self.pending_held is not None:  # the draft column: blank, red-outlined cells the user fills in
+                if self.pending_held is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_held[p]
                         self.cells.append(CellBox(f"cell:held:{p}:{self.pending_col_token('held')}", self.held_left(self.nh), self.vec_top(p), COL_W, ROW_H, "heldcell",
@@ -2946,7 +2953,7 @@ class _GridBuilder:
                         # gap to its neighbours — the interest column is a collection, not a matrix
                         self.cells.append(CellBox(f"cell:interest:{p}:{self.col_token('interest', i)}", self.interest_left(i) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell", text=str(self.interest[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "interest", prime=p)))
                         self._voice("vectors:interest", i, self.interest_sizes.just[i])
-                if self.pending_interest is not None:  # the draft column: blank, red-outlined cells the user fills in
+                if self.pending_interest is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending_interest[p]
                         self.cells.append(CellBox(f"cell:interest:{p}:{self.pending_col_token('interest')}", self.interest_left(self.mi) + KET_INSET, self.vec_top(p), COL_W - 2 * KET_INSET, ROW_H, "interestcell",
@@ -4061,6 +4068,19 @@ class _GridBuilder:
                 cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
 
+        # the always-present "back to scheme" button on the projection (P) and embedding (G) tiles —
+        # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). It
+        # rides its own band below the preset band and is NOT gated by presets (so it shows even with
+        # the established-projection chooser hidden); app.py greys it when there's nothing to revert.
+        if self.settings["projection"]:
+            for ckey in ("primes", "gens"):
+                if not self.tile_open("projection", ckey):
+                    continue
+                top = self.ptext_band_y("projection") + self.row_ptext["projection"] + self.row_pre["projection"]
+                bx, _bw, by = self.control_box(f"block:scheme:{ckey}", ckey, top, SCHEME_BTN_W, "")
+                self.cells.append(CellBox(f"scheme:{ckey}", bx, by, SCHEME_BTN_W, PRESET_H, "scheme_button",
+                                     text="back to scheme"))
+
         # plain-text value band: each tile's value as its natural EBK string, directly
         # below the symbol/caption stack (above the preset chooser). The two editable
         # duals (mapping, comma basis) render as inputs that drive the grid; every other
@@ -4070,7 +4090,7 @@ class _GridBuilder:
                 if not self.tile_open(rkey, ckey):
                     continue
                 # an editable vector-list dual flips to a static two-tone box while its column has
-                # a pending draft (the committed vectors black, the draft vector red — a single-
+                # a pending draft (the committed vectors black, the draft vector green — a single-
                 # colour input can't do that): the comma basis when a comma is pending, the target
                 # list when a target is. The mapping and read-only values keep their normal kinds.
                 if (rkey, ckey) == ("vectors", "commas") and self.pending is not None \
