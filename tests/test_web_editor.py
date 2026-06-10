@@ -1948,21 +1948,35 @@ def test_established_projection_reflects_a_hand_typed_held_basis():
 
 
 def test_targets_in_use_tracks_whether_the_tuning_is_the_target_optimum():
-    # the target list is only computing the tuning while the displayed tuning IS the scheme's
-    # target-driven optimum
+    # with the projection box on, the target list is only computing the tuning while the displayed
+    # tuning IS the scheme's target-driven optimum
     ed = Editor()
+    ed.settings["projection"] = True
     assert ed.targets_in_use is True              # default: the tuning IS the TILT minimax-U optimum
     ed.set_established_projection("1/4-comma")     # 1/4-comma == that optimum, so targets still apply
     assert ed.targets_in_use is True
     deviated = Editor()
+    deviated.settings["projection"] = True
     deviated.set_established_projection("1/3-comma")  # a different tuning — targets no longer compute it
     assert deviated.targets_in_use is False
 
 
+def test_target_list_returns_when_the_projection_box_is_off():
+    # the target-list-hiding is a projection-feature behaviour: a deviating projection hides it only
+    # while the projection box is on; turning the box off brings the target list back
+    ed = Editor()
+    ed.settings["projection"] = True
+    ed.set_established_projection("1/3-comma")
+    assert ed.targets_in_use is False        # projection on + deviated → hidden
+    ed.settings["projection"] = False
+    assert ed.targets_in_use is True         # projection off → restored
+
+
 def test_target_column_hides_when_the_tuning_deviates_from_the_optimum():
     # ch3 h+k≥r: once a projection pins the tuning away from the target optimum, the targets play no
-    # role, so the whole target-interval column disappears
+    # role, so the whole target-interval column disappears (while the projection box is on)
     ed = Editor()
+    ed.settings["projection"] = True
     has_targets = lambda: any(c.id.startswith(("target:", "cell:target")) for c in ed.layout().cells)
     assert has_targets()                           # default: the target list is shown
     ed.set_established_projection("1/3-comma")      # deviate onto a projection

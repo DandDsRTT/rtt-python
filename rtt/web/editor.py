@@ -776,6 +776,9 @@ class Editor:
         holding fewer than r rational intervals) still needs the targets to fix the rest (ch3
         h + k ≥ r), so they stay. True too when the optimum can't be measured, so we never hide
         spuriously."""
+        if not self.settings.get("projection"):
+            return True  # the target-list-hiding is a projection-feature behaviour — with the
+            # projection box off there's no projection in play, so the target list always shows
         if not self.manual_tuning:
             return True  # auto-optimize, or frozen AT the scheme optimum — the targets produce it
         if len(self.unchanged_ratios) < self.state.r:
