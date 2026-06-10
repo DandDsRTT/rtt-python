@@ -96,10 +96,14 @@ _NONSTANDARD_BASIS_IN_USE = (
 
 _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
 _PREVIEW_COLOR = "#f5a623"  # amber ring on a cell the in-progress edit moves (the edit-preview
-# highlight) — a warm "this changed" hue, kept distinct from the red _PENDING_COLOR error/alert
+# highlight) — a warm "this changed" hue, kept distinct from the red _ALERT_COLOR / remove-preview
+# and the green _PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
+_ALERT_COLOR = "#e53935"  # red for an alerting cell (.rtt-alert: a held interval the current tuning
+# no longer holds just). Once shared with the pending draft via _PENDING_COLOR; split off when drafts
+# went green, so "now invalid" stays red while "being created" reads green
 _PREVIEW_REMOVE_COLOR = "#e53935"  # red ring on a cell a hovered +/- will REMOVE (the structural
 # remove-preview) — "this is going away", paired with the amber "this value moved"; its own var so
-# it stays tweakable apart from the matching _PENDING_COLOR draft/alert red
+# it stays tweakable apart from the matching _ALERT_COLOR red
 # the value cells tile into a shared-border grid (a ruled spreadsheet, per the
 # mockup): each cell draws a rule and overlaps its neighbour by exactly the rule
 # width, so two abutting borders coincide as ONE line — no doubled inner rules.
@@ -271,7 +275,7 @@ def _control_svg(glyph: str) -> str:
 
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --tab-h:{_TAB_H}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
-  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
+  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --alert-color:{_ALERT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
@@ -1552,7 +1556,7 @@ class _Reconciler:
 
     def _update_ebk(self, cb):
         # the mark is drawn 1:1 to its px box, so redraw it whenever the box changes size (e.g.
-        # the brace/top bracket as the domain grows) or its pending (red) state flips (a draft
+        # the brace/top bracket as the domain grows) or its pending (green) state flips (a draft
         # comma's marks committing to black)
         if self.ebk_sizes.get(cb.id) != (cb.w, cb.h, cb.pending):
             self.htmls[cb.id].set_content(_ebk_svg(cb))
@@ -1655,11 +1659,11 @@ class _Reconciler:
 
     def _build_ptextpending(self, cb, wrap):
         # an editable vector-list dual mid-draft (comma basis / target list): a static two-tone
-        # box (the draft is typed into the red grid cells, not here); content set in the update
+        # box (the draft is typed into the green grid cells, not here); content set in the update
         self.htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
 
     def _update_ptextpending(self, cb):
-        # the committed vectors black and the draft vector red (same red as its grid cells)
+        # the committed vectors black and the draft vector green (same green as its grid cells)
         ed = self._editor
         if cb.id == "ptext:vectors:targets":
             targets = ed.target_override or service.target_interval_set(ed.target_spec, ed.state.domain_basis)
@@ -1707,7 +1711,7 @@ class _Reconciler:
         self._arm_col_target(wrap, "comma", cb.comma)  # drop a dragged comma onto this one to combine
 
     def _update_commacell(self, cb):
-        if cb.pending:  # the draft column: show the typed component (blank if None), red-outlined
+        if cb.pending:  # the draft column: show the typed component (blank if None), green-ringed
             v = self._editor.pending_comma[cb.prime] if self._editor.pending_comma is not None else None
             self.inputs[cb.id].value = "" if v is None else str(v)
         else:
@@ -1863,7 +1867,7 @@ class _Reconciler:
 
     def _build_ratio_or_pending(self, cb):
         # a read-only comma ratio heading its column — the generator-detempering D ratio, or a
-        # pending comma draft's red "?" placeholder (no value until the vector is filled in). The
+        # pending comma draft's green "?" placeholder (no value until the vector is filled in). The
         # editable comma/target/held/interest ratios are ratiocells (see _build_ratiocell).
         if cb.pending:
             self.labels[cb.id] = ui.label(cb.text).classes("rtt-value rtt-pending-q")
@@ -1876,7 +1880,7 @@ class _Reconciler:
         # the cell reads as a fraction until clicked, then swaps to the raw "num/den" for editing.
         # It commits the WHOLE typed fraction on blur / Enter, not per keystroke — parsing "2" of a
         # "25/24" mid-edit would momentarily retune to 2/1 and fight the typing. A pending draft's
-        # red "?/?" face stays put until a valid fraction fills it (or its vector cells do).
+        # green "?/?" face stays put until a valid fraction fills it (or its vector cells do).
         wrap.classes("rtt-cell-input rtt-cell-stacked")
         commit = lambda _=None, cid=cb.id: self._cb.on_ratio_change(cid)
         inp = ui.input().props("dense borderless").classes("rtt-cellinput")
@@ -1887,7 +1891,7 @@ class _Reconciler:
     def _update_ratiocell(self, cb):
         self.inputs[cb.id].value = cb.text  # committed: the ratio; a draft pre-fills "?/?" so you edit it
         self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                remove="" if cb.pending else "rtt-pending")  # red draft styling
+                                remove="" if cb.pending else "rtt-pending")  # green draft styling
         self._update_ratio(cb)              # the overlaid stacked face mirrors the fraction
 
     def _element_input(self, cb):
@@ -1921,7 +1925,7 @@ class _Reconciler:
     def _update_elementratio(self, cb):
         self.inputs[cb.id].value = cb.text  # the live element (e.g. "13/5"), or "?/?" for a draft
         self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                remove="" if cb.pending else "rtt-pending")  # red draft styling
+                                remove="" if cb.pending else "rtt-pending")  # green draft styling
         self._update_ratio(cb)  # the overlaid stacked fraction face mirrors the value
 
     def _update_ratio(self, cb):  # genratio / commaratio / ratiocell: refresh the stacked fraction face

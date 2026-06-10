@@ -143,14 +143,14 @@ class Editor:
         # An interval being added but not yet complete: a draft vector (d components, each
         # an int or None while blank), one per addable column. It is NOT part of the
         # document and does not survive undo/redo/reset/load; it renders as a blank,
-        # red-outlined column the user fills in. The comma's draft commits once it is a
+        # green-outlined column the user fills in. The comma's draft commits once it is a
         # comma independent of the basis (re-ranking the mapping); the interval-list drafts
         # (interest, held, target) commit once every component is filled.
         self.pending_comma: list[int | None] | None = None
         self.pending_interest: list[int | None] | None = None
         self.pending_held: list[int | None] | None = None
         self.pending_target: list[int | None] | None = None
-        # the chapter-9 domain basis element draft (nonstandard-domain box on): a red ?/? column
+        # the chapter-9 domain basis element draft (nonstandard-domain box on): a green ?/? column
         # the user types a rational into. None = no draft; "" / a partial ratio = being typed. It
         # commits once the text is a valid, independent addition (added held just — see
         # service.add_domain_element); like the other drafts it lives outside undo until then.
@@ -398,7 +398,7 @@ class Editor:
         return None
 
     def add_interest(self) -> None:
-        """Begin a blank interval-of-interest draft (a red, blank column the user fills in),
+        """Begin a blank interval-of-interest draft (a green, blank column the user fills in),
         mirroring add_comma. Not part of the document and not undoable until it commits."""
         self.pending_interest = [None] * self.state.d
 
@@ -1273,7 +1273,7 @@ class Editor:
             self.pending_comma = None
 
     def add_element(self) -> None:
-        """Begin a pending domain basis element: a blank red ?/? draft column. Not part of the
+        """Begin a pending domain basis element: a blank green ?/? draft column. Not part of the
         domain (d unchanged) and not an undoable edit until it commits — see set_pending_element."""
         self.pending_element = ""
 
@@ -1289,7 +1289,7 @@ class Editor:
             self.pending_element = None
 
     def remove_element(self) -> None:
-        """Cancel the pending domain basis element draft (the red ?/? column's −). Not an undoable
+        """Cancel the pending domain basis element draft (the green ?/? column's −). Not an undoable
         edit — the draft was never committed. A no-op when there is no draft."""
         self.pending_element = None
 
