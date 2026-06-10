@@ -7879,6 +7879,19 @@ def test_projected_unrotated_vector_list_tile_is_complete():
     assert cells["ptext:projection:commas"].text == "[[0 0 0⟩ [1 0 0⟩ [-2 0 1⟩]"
 
 
+def test_consolidated_v_column_reads_green():
+    # V = C|U mixes the comma half (temperament/yellow) with the unchanged/held half (tuning/cyan),
+    # so the whole column reads GREEN — every tile carries BOTH washes when both colorizations are on
+    blocks = {b.id for b in _proj_build(("2/1", "5/4"),
+                                        temperament_colorization=True, tuning_colorization=True).blocks}
+    for r in ("vectors", "mapping", "scaling_factors", "projection", "tuning", "just", "retune"):
+        assert f"wash:temperament:{r}:commas" in blocks, r   # yellow (the comma half C)
+        assert f"wash:tuning:{r}:commas" in blocks, r        # cyan (the unchanged half U) → green
+    # off projection the comma column is its plain temperament yellow — no tuning wash (regression)
+    off = {b.id for b in _with(temperament_colorization=True, tuning_colorization=True).blocks}
+    assert "wash:temperament:vectors:commas" in off and "wash:tuning:vectors:commas" not in off
+
+
 def test_v_column_plain_text_shows_both_the_comma_and_unchanged_halves():
     # the inline plain text matches the grid for the WHOLE consolidated V = C|U — not just C. Every
     # value tile appends the unchanged half U (here 2/1, 5/4 under a full rational hold).

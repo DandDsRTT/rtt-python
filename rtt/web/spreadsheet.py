@@ -2177,6 +2177,12 @@ class _GridBuilder:
     # counts + units rows by their column's family, the quantities + units columns by their
     # row's family — continuing each value band's colour through the spine (see SPINE_*).
     def tile_groups(self, rkey, ckey):
+        # the consolidated unrotated-vector-list column V = C|U mixes the comma half (the comma basis
+        # C — temperament/yellow) with the unchanged half (the held/unchanged intervals — tuning/cyan),
+        # so EVERY tile of the column reads GREEN (the darken blend of the two washes). This overrides
+        # the per-tile factors: off projection each commas tile keeps its own colour (C-yellow, etc.).
+        if self.show_unchanged and ckey == "commas":
+            return {"temperament", "tuning"}
         # a spine family may be one string or a set of families (a both-families band reads green)
         as_groups = lambda g: {g} if isinstance(g, str) else set(g)
         if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
