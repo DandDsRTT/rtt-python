@@ -7859,6 +7859,18 @@ def test_projection_keeps_the_comma_add_remove_controls():
     assert cells["comma_plus"].x - cells["comma_minus"].x >= spreadsheet.COL_W - spreadsheet.BTN
 
 
+def test_unchanged_columns_have_cross_list_drag_grips():
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), drag_to_combine=True).cells}
+    # each KNOWN unchanged interval gets a drag grip — a cross-list drag SOURCE (drop it on another
+    # list to copy it there), on its own U sub-axis, like the comma/target/held/interest columns
+    assert cells["grip:unchanged:0"].kind == "colgrip"
+    assert cells["grip:unchanged:1"].kind == "colgrip"
+    assert cells["grip:unchanged:0"].x == cells["cell:unchanged:0:0"].x   # rides the first U column
+    assert cells["grip:unchanged:1"].x == cells["cell:unchanged:0:1"].x
+    # no drop-into-U "add" zone — U is derived, nothing is dropped INTO it (see editor.move_interval)
+    assert "grip:unchanged:add" not in cells
+
+
 def test_projection_pending_comma_pushes_the_unchanged_half_past_the_draft():
     # adding a comma opens a pending draft column at index nc; the unchanged half U must sit PAST it
     # (and past the C|U gap), so the draft and U never overlap
