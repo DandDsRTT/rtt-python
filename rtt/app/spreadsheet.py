@@ -1574,10 +1574,11 @@ class _GridBuilder:
             pre = self.preset_band_h(key) if ((self.show_presets and key in PRESET_ROWS
                                              or self.settings["all_interval"] and key == "vectors")
                                             and not folded) else 0
-            # the ✕ "return to scheme" control rides its own row on the projection tiles, directly
-            # below the established-projection chooser (or the plain-text box when presets is off) —
-            # not in its own bordered box; always shown when projection is on
-            schemebtn = self.control_region_band_h(SCHEME_BTN_SQ) if (key == "projection" and self.settings["projection"] and not folded) else 0
+            # the ✕ "return to scheme" control. With presets ON it lives INSIDE the established-
+            # projection chooser's box (preset_band_h already reserves the extra row via scheme_btn), so
+            # no band here. With presets OFF there is no chooser, so it gets its own small box on this row.
+            schemebtn = (self.control_region_band_h(SCHEME_BTN_SQ)
+                         if (key == "projection" and self.settings["projection"] and not self.show_presets and not folded) else 0)
             # the form chooser rides one box below the preset chooser, in the mapping and
             # comma-basis boxes, when form controls are shown
             formctrl = self.formchooser_band_h(key) if (self.show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
@@ -1801,20 +1802,23 @@ class _GridBuilder:
     # and the dropdown keeps its NATURAL width (cap_w) seated at the box's left — only shrunk if a
     # tiny tile can't seat even that. The label is the standard one-line left-justified caption
     # hugging the dropdown's bottom (the .rtt-caption-left asset), overflowing right if long.
-    def control_dims(self, ckey, cap_w, label):
+    def control_dims(self, ckey, cap_w, label, scheme_btn=False):
         dropdown_w = max(40, min(self.col_w[ckey] - 2 * BOX_INNER, cap_w))
         label_h = CAPTION_LINE if label else 0  # one line (overflows right, never wraps the box wider)
         box_h = BOX_INNER + PRESET_H + (label_h + CTRL_LABEL_GAP if label else BOX_INNER)
+        # the established-projection chooser carries the ✕ "return to scheme" button on a row inside
+        # its own box, below the dropdown + caption (so the button is NOT a separate control box)
+        box_h += (SCHEME_BTN_SQ + CTRL_LABEL_GAP) if scheme_btn else 0
         return dropdown_w, label_h, box_h
 
-    def control_band_h(self, ckey, cap_w, label):  # the box plus outer padding above and below
-        return 2 * BOX_OUTER + self.control_dims(ckey, cap_w, label)[2]
+    def control_band_h(self, ckey, cap_w, label, scheme_btn=False):  # the box plus outer padding
+        return 2 * BOX_OUTER + self.control_dims(ckey, cap_w, label, scheme_btn)[2]
 
     def preset_cap(self, name):
         return TARGET_PRESET_W if name == "target" else PRESET_W
 
     def preset_band_h(self, key):  # the tallest preset control box riding this row
-        return max((self.control_band_h(ckey, self.preset_cap(name), label)
+        return max((self.control_band_h(ckey, self.preset_cap(name), label, scheme_btn=(name == "projection"))
                     for name, rk, ckey, label in PRESETS + PRESET_COPIES
                     if rk == key and ckey in self.col_w), default=0)
 
@@ -2300,14 +2304,16 @@ class _GridBuilder:
     # other labelled control uses. Any sibling control (the target chooser's all-interval checkbox,
     # box 𝐓) rides the empty space to the dropdown's right, inside this same full-width box. Returns
     # the (x, width, y) to seat the dropdown at.
-    def control_box(self, box_id, ckey, top, cap_w, label, disabled=False):
-        dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label)
+    def control_box(self, box_id, ckey, top, cap_w, label, disabled=False, scheme_btn=False):
+        dropdown_w, label_h, box_h = self.control_dims(ckey, cap_w, label, scheme_btn)
         box_x, box_y = self.col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
         self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
         if label:  # disabled greys the label with its control (a locked chooser, e.g. all-interval target)
             self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
                                  "caption", text=label, align="left", disabled=disabled))
+        if scheme_btn:  # the ✕ "return to scheme" row, inside this box below the dropdown + caption
+            self.emit_scheme_button(ctrl_x, ctrl_y + PRESET_H + label_h + CTRL_LABEL_GAP, ckey)
         return ctrl_x, dropdown_w, ctrl_y
 
     def control_region(self, box_id, ckey, top, content_h):
@@ -2337,12 +2343,12 @@ class _GridBuilder:
         self.cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="all-interval"))
 
-    def emit_scheme_button(self, x, ctrl_y, ckey):
-        # the square ✕ "return to scheme" button + a caption to its right, seated on a control row at
-        # ctrl_y. Rides the established-projection chooser's box (seated to the dropdown's right by
-        # emit_preset when presets is on), or the band alone when presets is off. back_to_scheme is
+    def emit_scheme_button(self, x, y, ckey):
+        # the square ✕ "return to scheme" button + a caption to its right, with the ✕'s top-left at
+        # (x, y). Seated INSIDE the established-projection chooser's box (a row below the dropdown +
+        # caption) when presets is on, or in its own small box when presets is off. back_to_scheme is
         # wired in app.py, which greys it when the tuning is already scheme-driven.
-        sq_y = ctrl_y + (PRESET_H - SCHEME_BTN_SQ) / 2  # centre the square on the control row
+        sq_y = y
         self.cells.append(CellBox(f"scheme:{ckey}", x, sq_y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
         self.cells.append(CellBox(f"scheme:{ckey}:label", x + SCHEME_BTN_SQ + 4, sq_y, SCHEME_LABEL_W,
                              SCHEME_BTN_SQ, "caption", text="return to scheme", align="left"))
@@ -4043,7 +4049,7 @@ class _GridBuilder:
                 disabled = (name == "target" and service.is_all_interval(self.tuning_scheme)) \
                     or self._preset_locked(name)
                 cx, cw, cy = self.control_box(f"block:{cid}", ckey, top, self.preset_cap(name), label,
-                                              disabled=disabled)
+                                              disabled=disabled, scheme_btn=(name == "projection"))
                 self.cells.append(CellBox(cid, cx, cy, cw, PRESET_H, "preset", text=preset_text[name],
                                      disabled=disabled))
                 # the target chooser carries the all-interval checkbox to the dropdown's right, in the
@@ -4089,16 +4095,17 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
 
         # the always-present "return to scheme" ✕ button on the projection (P) and embedding (G) tiles —
-        # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). It rides
-        # its own row directly below the established-projection chooser (or the plain-text box when
-        # presets is off), NOT in a separate bordered box — just the ✕ square and its caption. app.py
-        # greys it when there's nothing to revert.
-        if self.settings["projection"]:
+        # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). With
+        # presets ON it rides INSIDE the established-projection chooser's box (control_box's scheme_btn,
+        # below the dropdown + caption). With presets OFF there is no chooser, so it gets its own small
+        # box here. app.py greys it when there's nothing to revert.
+        if self.settings["projection"] and not self.show_presets:
             for ckey in ("primes", "gens"):
                 if not self.tile_open("projection", ckey):
                     continue
-                top = self.ptext_band_y("projection") + self.row_ptext["projection"] + self.row_pre["projection"]
-                self.emit_scheme_button(self.col_x[ckey] + BOX_OUTER, top + BOX_OUTER + BOX_INNER, ckey)
+                top = self.ptext_band_y("projection") + self.row_ptext["projection"]
+                ctrl_x, ctrl_y = self.control_region(f"block:scheme:{ckey}", ckey, top, SCHEME_BTN_SQ)
+                self.emit_scheme_button(ctrl_x, ctrl_y, ckey)
 
         # plain-text value band: each tile's value as its natural EBK string, directly
         # below the symbol/caption stack (above the preset chooser). The two editable

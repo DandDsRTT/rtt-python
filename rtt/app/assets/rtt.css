@@ -623,7 +623,7 @@
 /* the "back to scheme" button on the projection / generator-embedding tiles — the optimize button's
    raised face, greyed (.rtt-scheme-btn-idle) when the tuning is already scheme-driven (nothing to
    hand back). It stays clickable when idle; only the look changes. */
-.rtt-scheme-btn { width:100% !important; min-width:0 !important; height:100% !important;
+.rtt-scheme-btn { width:100% !important; min-width:0 !important; height:100% !important; min-height:0 !important;
             border:var(--cell-border) !important; border-radius:0 !important; padding:0 !important;
             background:linear-gradient(#fafafa,#cfcfcf) !important;
             box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 1px rgba(0,0,0,0.30) !important;
