@@ -25,7 +25,7 @@ from rtt.domain_basis import (
 from rtt.dual import dual
 from rtt.formatting import to_ebk
 from rtt.generator_detempering import get_generator_detempering
-from rtt.generator_embedding import get_tempering_projection
+from rtt.generator_embedding import get_generator_embedding, get_tempering_projection
 from rtt.math_utils import get_primes, pcv_to_quotient, quotient_to_pcv
 from rtt.matrix_utils import Matrix
 from rtt.parsing import parse_quotient_list, parse_temperament_data
@@ -591,27 +591,77 @@ def _held_prime_indices(state: TemperamentState) -> tuple[int, ...]:
     return tuple(j for j in range(d) if j not in derived)
 
 
-def tuning_projection(state: TemperamentState):
+def _held_basis_vectors(state: TemperamentState, held):
+    """The unchanged-interval basis as ``r`` domain vectors that drive ``P`` and ``G``: the
+    user's chosen ratios (the established-projection chooser's named tuning) parsed to vectors,
+    or — when ``held`` is ``None`` — the auto-picked prime defaults (see
+    :func:`_held_prime_indices`). Returns ``None`` when the basis isn't full rank ``r`` or a
+    ratio is unparseable / out of domain, so the caller drops the box rather than crashing."""
+    if held is None:
+        indices = _held_prime_indices(state)
+        if len(indices) != state.r:
+            return None
+        return tuple(
+            tuple(1 if k == j else 0 for k in range(state.d)) for j in indices
+        )
+    try:
+        vectors = tuple(interval_vector(ratio, state.d, state.domain_basis) for ratio in held)
+    except ValueError:
+        return None
+    if len(vectors) != state.r:
+        return None
+    return vectors
+
+
+def _projection_temperaments(state: TemperamentState, held):
+    """The ``(mapping, held)`` :class:`Temperament` pair both ``P = GM`` and ``G`` are built
+    from, or ``None`` when the held basis can't be formed (an empty/over-full domain, a
+    bad-size or out-of-domain basis). Convention-free: the held intervals are columns (COL)."""
+    d, r = state.d, state.r
+    if d <= 0 or not 0 < r <= d:
+        return None
+    held_vectors = _held_basis_vectors(state, held)
+    if held_vectors is None:
+        return None
+    mapping_t = Temperament(state.mapping, Variance.ROW, state.domain_basis)
+    held_t = Temperament(held_vectors, Variance.COL, state.domain_basis)
+    return mapping_t, held_t
+
+
+def _matrix_strings(matrix):
+    """A rational matrix as a grid of display strings (``"1"``, ``"0"``, ``"1/4"``, ``"-1/3"``)."""
+    return tuple(tuple(str(entry) for entry in row) for row in matrix)
+
+
+def tuning_projection(state: TemperamentState, held=None):
     """The rational tempering projection ``P = GM`` as a ``d×d`` grid of display strings
     (``"1"``, ``"0"``, ``"1/4"`` …), or ``None`` when it cannot be formed. ``P`` sends each
-    just prime to its tempered size (``j·P = t``), holding the auto-picked embedding's primes
-    justly (see :func:`_held_prime_indices`); it is idempotent with the commas in its kernel.
-    Returns ``None`` on any degenerate / unsupported case (a singular pick, an empty domain)
-    so the caller simply omits the box rather than crashing."""
+    just prime to its tempered size (``j·P = t``), holding the unchanged-interval basis justly;
+    it is idempotent with the commas in its kernel. ``held`` is the established projection's
+    rational unchanged intervals as ratio strings (e.g. ``("2/1", "5/4")`` for quarter-comma
+    meantone); ``None`` uses the auto-picked prime default (see :func:`_held_prime_indices`).
+    Returns ``None`` on any degenerate / unsupported case (a singular pick like pajara holding
+    ``{2/1, 7/5}``, a bad-size basis, an empty domain) so the caller simply omits the box."""
     try:
-        d, r = state.d, state.r
-        if d <= 0 or not 0 < r <= d:
+        inputs = _projection_temperaments(state, held)
+        if inputs is None:
             return None
-        held_indices = _held_prime_indices(state)
-        if len(held_indices) != r:
+        return _matrix_strings(get_tempering_projection(*inputs))
+    except (ArithmeticError, ValueError, IndexError, TypeError):
+        return None
+
+
+def tuning_embedding(state: TemperamentState, held=None):
+    """The rational generator embedding ``G = H·(M·H)⁻¹`` as a ``d×r`` grid of display strings —
+    its columns are the held tuning's generators expressed as fractional prime vectors (the
+    octave ``[1 0 0]`` and, for quarter-comma meantone, ``5^(1/4) = [0 0 1/4]``). ``held`` and
+    the ``None`` default match :func:`tuning_projection`, so ``P = GM`` stays in sync. ``None``
+    on any degenerate / unsupported case (the caller then omits the embedding box)."""
+    try:
+        inputs = _projection_temperaments(state, held)
+        if inputs is None:
             return None
-        held_rows = tuple(
-            tuple(1 if k == j else 0 for k in range(d)) for j in held_indices
-        )
-        mapping_t = Temperament(state.mapping, Variance.ROW, state.domain_basis)
-        held_t = Temperament(held_rows, Variance.COL, state.domain_basis)
-        projection = get_tempering_projection(mapping_t, held_t)
-        return tuple(tuple(str(entry) for entry in row) for row in projection)
+        return _matrix_strings(get_generator_embedding(*inputs))
     except (ArithmeticError, ValueError, IndexError, TypeError):
         return None
 

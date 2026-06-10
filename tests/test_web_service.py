@@ -1541,3 +1541,91 @@ def test_tuning_projection_of_just_intonation_is_the_identity():
         ("0", "1", "0"),
         ("0", "0", "1"),
     )
+
+
+def test_tuning_projection_takes_an_explicit_held_basis_quarter_comma():
+    # the established-projection chooser drives P by the named tuning's rational unchanged
+    # intervals: quarter-comma meantone holds {2/1, 5/4}, giving P = GM holding 2 and 5/4.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.tuning_projection(state, held=("2/1", "5/4")) == (
+        ("1", "1", "0"),
+        ("0", "0", "0"),
+        ("0", "1/4", "1"),
+    )
+
+
+def test_tuning_projection_takes_an_explicit_held_basis_third_comma():
+    # third-comma meantone holds {2/1, 6/5} (pure minor third) — a different rational tuning.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.tuning_projection(state, held=("2/1", "6/5")) == (
+        ("1", "4/3", "4/3"),
+        ("0", "-1/3", "-4/3"),
+        ("0", "1/3", "4/3"),
+    )
+
+
+def test_tuning_projection_takes_an_explicit_held_basis_pythagorean():
+    # the Pythagorean (0-comma) tuning of meantone holds {2/1, 3/2} (pure fifth).
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.tuning_projection(state, held=("2/1", "3/2")) == (
+        ("1", "0", "-4"),
+        ("0", "1", "4"),
+        ("0", "0", "0"),
+    )
+
+
+def test_tuning_embedding_for_quarter_comma_meantone():
+    # G = H·(M·H)⁻¹: its columns are the generators as fractional vectors. Quarter-comma's
+    # second generator is 5^(1/4) — the [0 0 1/4] column.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.tuning_embedding(state, held=("2/1", "5/4")) == (
+        ("1", "0"),
+        ("0", "0"),
+        ("0", "1/4"),
+    )
+
+
+def test_tuning_embedding_for_third_comma_meantone():
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.tuning_embedding(state, held=("2/1", "6/5")) == (
+        ("1", "1/3"),
+        ("0", "-1/3"),
+        ("0", "1/3"),
+    )
+
+
+def test_tuning_embedding_default_uses_the_same_auto_pick_as_the_projection():
+    # with no held override the embedding falls back to the auto-picked default basis — the
+    # same one the projection uses — so G and P stay in sync (P = GM).
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.tuning_embedding(state) == (
+        ("1", "0"),
+        ("0", "0"),
+        ("0", "1/4"),
+    )
+
+
+def test_tuning_embedding_of_just_intonation_is_the_identity():
+    # nullity 0: every prime is its own generator, so G = I (the d×d identity).
+    state = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
+    assert service.tuning_embedding(state) == (
+        ("1", "0", "0"),
+        ("0", "1", "0"),
+        ("0", "0", "1"),
+    )
+
+
+def test_tuning_projection_and_embedding_drop_a_degenerate_held_basis():
+    # pajara maps 7/5 to exactly half the octave's image, so {2/1, 7/5} cannot be a
+    # simultaneous unchanged-interval basis: M·H is singular and no rational projection
+    # forms. Both helpers return None rather than crash (the chooser then won't offer it).
+    state = service.from_mapping(((2, 3, 5, 6), (0, 1, -2, -2)))
+    assert service.tuning_projection(state, held=("2/1", "7/5")) is None
+    assert service.tuning_embedding(state, held=("2/1", "7/5")) is None
+
+
+def test_tuning_projection_rejects_a_held_basis_of_the_wrong_size():
+    # the held basis must be full rank (r intervals); too few/many can't pin the tuning.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.tuning_projection(state, held=("2/1",)) is None
+    assert service.tuning_embedding(state, held=("2/1", "5/4", "3/2")) is None
