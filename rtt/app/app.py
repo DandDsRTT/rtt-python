@@ -98,6 +98,12 @@ _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the 
 _PREVIEW_COLOR = "#f5a623"  # amber ring on a cell the in-progress edit moves (the edit-preview
 # highlight) — a warm "this changed" hue, kept distinct from the red _ALERT_COLOR / remove-preview
 # and the green _PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
+_PREVIEW_TEXT_COLOR = "#a37b00"  # the matching DARK gold/yellow a "changing" cell's TEXT wears: the
+# bright amber ring above is too light to read as text on the pale wash, so the value face uses this
+# darkened amber instead — the changing analogue of a draft's green text (_PENDING_COLOR) and an
+# alert's red text (_ALERT_COLOR). It also overrides the red a cell would otherwise inherit from
+# .rtt-alert when the live edit moves a cell that is ALSO alerting (gold "changing" wins while the
+# edit previews; the red returns on blur if the cell is still invalid). Tweakable apart from the ring
 _ALERT_COLOR = "#e53935"  # red for an alerting cell (.rtt-alert: a held interval the current tuning
 # no longer holds just). Once shared with the pending draft via _PENDING_COLOR; split off when drafts
 # went green, so "now invalid" stays red while "being created" reads green
@@ -275,7 +281,7 @@ def _control_svg(glyph: str) -> str:
 
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --tab-h:{_TAB_H}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
-  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --alert-color:{_ALERT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
+  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --alert-color:{_ALERT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
