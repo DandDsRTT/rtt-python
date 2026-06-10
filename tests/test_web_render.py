@@ -147,18 +147,18 @@ async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> 
     await user.should_see(marker="cell:embed:2:1")          # G's entry, locatable like P
     await user.should_see(marker="preset:projection")       # established projection, under P
     await user.should_see(marker="preset:projection:gens")  # established embedding, under G
-    # default meantone (TILT minimax-U) holds nothing rational, so it is NOT a rational projection:
-    # the choosers are blank and P/G are DASHED — not a fabricated quarter-comma
-    assert _cell_child(user, "preset:projection").value is None
-    assert _cell_text(user, "cell:proj:2:1") == "—"
-    assert _cell_text(user, "cell:embed:2:1") == "—"
-    # pick third-comma -> P and G fill in (it holds 6/5), both choosers track it, and the genmap
+    # the default meantone (TILT minimax-U) IS quarter-comma — it holds 2/1 and 5/4 — so the choosers
+    # read 1/4-comma and P/G fill in (the 5^(1/4) entries), NOT dashes
+    assert _cell_child(user, "preset:projection").value == "1/4-comma"
+    assert _cell_text(user, "cell:proj:2:1") == "1/4"
+    assert _cell_text(user, "cell:embed:2:1") == "1/4"
+    # pick 1/3-comma -> P and G re-form (it holds 6/5), both choosers track it, and the genmap
     # actually re-solves to third-comma (1200, 694.786)
-    _cell_child(user, "preset:projection").set_value("third-comma")
+    _cell_child(user, "preset:projection").set_value("1/3-comma")
     await user.should_see(marker="cell:embed:2:1")
     assert _cell_text(user, "cell:proj:2:1") == "1/3"
     assert _cell_text(user, "cell:embed:2:1") == "1/3"
-    assert _cell_child(user, "preset:projection:gens").value == "third-comma"
+    assert _cell_child(user, "preset:projection:gens").value == "1/3-comma"
     assert _cell_child(user, "tuning:gen:1").value == "694.786"  # the dropdown changed the tuning
 
 

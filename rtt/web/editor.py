@@ -320,7 +320,7 @@ class Editor:
             nonprime_approach=self.nonprime_basis_approach,
             superspace_generator_tuning=self.superspace_generator_tuning,
             displayed_tuning_name=self.displayed_tuning_scheme_name,
-            held_basis_ratios=self.held_basis_ratios,
+            held_basis_ratios=self.unchanged_ratios,
             displayed_projection_name=self.displayed_projection_scheme_name,
             prev_ids=prev_ids)
 
@@ -710,41 +710,65 @@ class Editor:
         self.tuning_scheme = service.scheme_with_targets(name, target)
 
     def set_established_projection(self, name: str | None) -> None:
-        """Apply an established projection / embedding from that chooser: write the named rational
-        tuning's FULL held basis into the held column and re-solve the generator tuning to it. A
-        fully-held basis pins the tuning, so 𝒈 becomes that named rational tuning regardless of
-        scheme (the established-scheme chooser then shows "-"); P, G and the unchanged basis U all
-        follow from the held basis, so the established-projection and -embedding choosers move
-        together. A no-op when ``name`` isn't a current option. Undoable."""
+        """Apply an established projection / embedding from that chooser: set the generator tuning
+        TO the named rational tuning (e.g. 1/3-comma's 𝒈), as a deliberate tuning choice. It does
+        NOT touch the held column — only the user decides which intervals they deliberately hold;
+        picking a named tuning just sets 𝒈, and the unchanged basis U, P and G then follow from the
+        tuning itself (the intervals it holds at zero damage). Because 𝒈 now departs from the named
+        scheme's optimum, the established-scheme chooser reads "-". A no-op when ``name`` isn't a
+        current option. Undoable."""
         ratios = presets.projection_held_ratios(self.state, name)
         if ratios is None:
             return
         self._snapshot()
-        self.held_vectors = [
-            tuple(service.interval_vector(ratio, self.state.d, self.state.domain_basis))
-            for ratio in ratios
-        ]
-        self.generator_tuning = self._optimum_generator_tuning()  # re-solve, holding the full basis
+        # solve the named rational tuning's 𝒈 (it holds ``ratios`` fully) WITHOUT writing the held
+        # column, then freeze it as a manual tuning so the grid shows exactly that tuning
+        self.generator_tuning = service.tuning(
+            self.state.mapping, self.tuning_scheme, held=ratios, targets=self.target_override
+        ).generator_map
         self.superspace_generator_tuning = None
-        self.manual_tuning = False  # the established tuning IS the optimum (fully held), not a hand-edit
+        self.manual_tuning = True  # a deliberate tuning override (not the scheme optimum)
+
+    def _displayed_retuning_map(self) -> tuple[float, ...] | None:
+        """The per-prime retuning (tempered − just sizes, in cents) of the tuning the grid is
+        actually showing — a frozen/hand-edited/established 𝒈 if there is one, else the scheme's
+        live optimum. Its zeros are the intervals held unchanged, which is what drives U/P/G.
+        ``None`` when it can't be measured (a stale frozen 𝒈 from before a dimension change, or a
+        nonstandard mixed basis the solver can't size) — the projection then simply dashes out."""
+        try:
+            generators = self.effective_generator_tuning()
+            if generators is None or len(generators) != self.state.r:  # auto, or a stale frozen 𝒈
+                held = tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()
+                return service.tuning(self.state.mapping, self.tuning_scheme, held=held,
+                                      targets=self.target_override).retuning_map
+            return service.tuning_from_generators(
+                self.state.mapping, generators, self.state.domain_basis).retuning_map
+        except (ValueError, ArithmeticError, IndexError, TypeError):
+            return None
 
     @property
-    def held_basis_ratios(self) -> tuple[str, ...]:
-        """The tuning's held-interval basis as ratio strings — the scheme's structural held (e.g. a
-        held octave) plus the held column — deduplicated, order preserved. This is what drives the
-        projection P/G and the unchanged basis U; the established-projection chooser sets it (via
-        the held column). Empty when the tuning holds nothing (its projection is then dashed out)."""
-        scheme_held = service.held_intervals(self.tuning_scheme, self.state.d)
-        user_held = tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()
-        return tuple(dict.fromkeys(tuple(scheme_held) + user_held))
+    def unchanged_ratios(self) -> tuple[str, ...]:
+        """The intervals the DISPLAYED tuning holds unchanged, as ratio strings — read off the
+        tuning itself (the candidates it leaves at zero damage), not off the held column, so e.g.
+        the default minimax-U meantone reports {2/1, 5/4} (it IS quarter-comma). This is what drives
+        the projection P/G and the unchanged basis U; fewer than r ⇒ not a full rational projection,
+        and the rest dash. Candidates: the established-projection bases (for clean representatives),
+        the target-interval set, and the held column."""
+        retuning = self._displayed_retuning_map()
+        if retuning is None:  # the tuning can't be measured — nothing known unchanged, all dashes
+            return ()
+        candidates = (presets.projection_candidate_ratios(self.state)
+                      + tuple(service.target_interval_set(self.target_spec, self.state.domain_basis))
+                      + (tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()))
+        return service.unchanged_ratios_of_tuning(self.state, retuning, candidates)
 
     @property
     def displayed_projection_scheme_name(self) -> str | None:
-        """The established-projection / -embedding chooser's value: the named tuning the current
-        held basis realises (matched by projection), or ``None`` (the placeholder) when the tuning
-        isn't a full rational projection or matches no named tuning. Mirrors
+        """The established-projection / -embedding chooser's value: the named tuning the displayed
+        tuning realises (matched by projection), or ``None`` (the placeholder) when the tuning isn't
+        a full rational projection or matches no named tuning. Mirrors
         :attr:`displayed_tuning_scheme_name` for the projection presets."""
-        return presets.identify_established_projection(self.state, self.held_basis_ratios)
+        return presets.identify_established_projection(self.state, self.unchanged_ratios)
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
         """Swap the complexity prescaler (the predefined-prescalers preset), which

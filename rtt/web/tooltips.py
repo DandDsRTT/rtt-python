@@ -180,7 +180,7 @@ _PRESET_HELP: dict[str, str] = {
     "tuning": "Choose a named tuning scheme (e.g. minimax-S).",
     "target": "Choose the target-interval set and its limit — an integer limit for the triangle (TILT), an odd limit for the diamond (OLD). Scroll the wheel over the limit to step it by 1.",
     "prescaler": "Choose a predefined prescaler — the per-prime weighting applied before optimizing.",
-    "projection": "Choose an established projection — a named rational tuning (e.g. quarter-comma) whose held intervals drive the projection 𝑃 = 𝐺𝑀 and the generator embedding 𝐺. Empty when the temperament has no such tuning.",
+    "projection": "Choose an established projection — a named rational tuning (e.g. 1/4-comma) that sets the generator tuning; its unchanged intervals drive the projection 𝑃 = 𝐺𝑀 and the generator embedding 𝐺. Empty when the temperament has no such tuning.",
 }
 
 # the editable quantities-row ratios (kind ``ratiocell``), keyed by the cell-id prefix (the

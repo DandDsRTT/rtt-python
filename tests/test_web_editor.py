@@ -1902,48 +1902,53 @@ def test_remove_element_cancels_the_draft():
     assert ed.pending_element is None
 
 
-def test_established_projection_is_none_for_the_default_under_held_tuning():
-    # a fresh editor is meantone on TILT minimax-U, which holds nothing rational — so it is NOT a
-    # rational projection, and the established-projection chooser shows "-" (None), not a
-    # fabricated quarter-comma. (The held basis is empty.)
+def test_established_projection_shows_for_the_default_meantone():
+    # the default minimax-U meantone IS quarter-comma — it holds 2/1 and 5/4 at zero damage — so the
+    # established-projection chooser reads "1/4-comma" with a real P, NOT a placeholder. U is read off
+    # the tuning itself, not the (empty) held column.
     ed = Editor()
-    assert ed.held_basis_ratios == ()
-    assert ed.displayed_projection_scheme_name is None
+    assert ed.held_vectors == []                      # nothing deliberately held
+    assert ed.unchanged_ratios == ("2/1", "5/4")
+    assert ed.displayed_projection_scheme_name == "1/4-comma"
 
 
-def test_set_established_projection_holds_the_basis_and_resolves_the_tuning():
+def test_set_established_projection_sets_the_tuning_not_the_held_column():
     ed = Editor()
-    ed.set_established_projection("third-comma")
-    # the held column now holds third-comma's full rational basis, and the chooser shows it
-    assert ed.held_basis_ratios == ("2/1", "6/5")
-    assert ed.displayed_projection_scheme_name == "third-comma"
-    # the tuning actually re-solved to third-comma (1200, 694.786) — it CHANGED 𝒈
-    assert [round(x, 3) for x in ed.generator_tuning] == [1200.0, 694.786]
-    # a fully-held tuning isn't the bare scheme's optimum, so the scheme chooser drops to "-"
+    ed.set_established_projection("1/3-comma")
+    # picking does NOT touch the held column — only the user deliberately holds intervals
+    assert ed.held_vectors == []
+    # 𝒈 actually re-solved to third-comma (1200, 694.786) — the tuning CHANGED
+    assert [round(x, 3) for x in ed.effective_generator_tuning()] == [1200.0, 694.786]
+    # U, and so the chooser, follow from the tuning
+    assert ed.unchanged_ratios == ("2/1", "6/5")
+    assert ed.displayed_projection_scheme_name == "1/3-comma"
+    # a deliberate tuning override isn't the bare scheme's optimum, so the scheme chooser drops to "-"
     assert ed.displayed_tuning_scheme_name is None
 
 
 def test_set_established_projection_is_undoable():
     ed = Editor()
-    ed.set_established_projection("quarter-comma")
-    assert ed.displayed_projection_scheme_name == "quarter-comma"
-    assert [round(x, 3) for x in ed.generator_tuning] == [1200.0, 696.578]
+    ed.set_established_projection("1/3-comma")
+    assert [round(x, 3) for x in ed.effective_generator_tuning()] == [1200.0, 694.786]
+    assert ed.displayed_projection_scheme_name == "1/3-comma"
     ed.undo()
-    assert ed.held_basis_ratios == ()
-    assert ed.displayed_projection_scheme_name is None
+    # undo restores the auto optimum (the default 1/4-comma meantone), not the frozen third-comma
+    assert ed.manual_tuning is False
+    assert ed.displayed_projection_scheme_name == "1/4-comma"
 
 
 def test_established_projection_reflects_a_hand_typed_held_basis():
-    # the chooser is just a view of the held basis — typing {2/1, 5/4} into the held column shows
-    # quarter-comma without ever touching the dropdown
+    # holding {2/1, 5/4} pins the tuning to quarter-comma, so U realises that named projection and
+    # the chooser shows 1/4-comma without ever touching the dropdown
     ed = Editor()
     v = lambda r: tuple(service.interval_vector(r, ed.state.d, ed.state.domain_basis))
     ed.set_held_vectors([v("2/1"), v("5/4")])
-    assert ed.displayed_projection_scheme_name == "quarter-comma"
+    assert ed.unchanged_ratios == ("2/1", "5/4")
+    assert ed.displayed_projection_scheme_name == "1/4-comma"
 
 
-def test_established_projection_round_trips_via_the_held_column():
-    # there is no separate projection field — the choice rides the held column, which serializes
+def test_established_projection_round_trips_via_the_generator_tuning():
+    # picking sets 𝒈 (a manual tuning), which serializes — so the choice survives a save/reload
     ed = Editor()
     ed.set_established_projection("Pythagorean")
     reloaded = Editor()

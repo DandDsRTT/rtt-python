@@ -692,6 +692,38 @@ def unchanged_interval_ratios(state: TemperamentState, held_ratios=()) -> tuple 
     return _vectors_to_ratios(known, state.domain_basis)
 
 
+def unchanged_ratios_of_tuning(state: TemperamentState, retuning_map, candidate_ratios, tol=1e-6):
+    """The ratio strings of the intervals the DISPLAYED tuning actually holds unchanged — its
+    rational unchanged-interval basis, read straight off the tuning rather than off the held
+    column. An interval ``i`` is unchanged exactly when its damage is zero, i.e. the per-prime
+    retuning map (tempered − just sizes) dotted with ``i`` is ``0``; genuine holds land at ``0``
+    to floating-point precision while everything else is whole cents away, so the check is a clean
+    threshold with no integer-relation guessing. We only TEST ``candidate_ratios`` (the
+    temperament's established-projection bases first — for clean representatives like ``5/4`` over
+    ``5/2`` — then the target-interval set, then the held column), so a basis of the unchanged
+    subspace is always among them. Returns up to ``r`` independent ratios (fewer ⇒ the tuning isn't
+    a full rational projection, and the caller dashes the rest); JI (``n = 0``) holds every prime."""
+    d, r = state.d, state.r
+    if d <= 0 or not 0 < r <= d:
+        return ()
+    if state.n == 0:  # JI: nothing is tempered, so every prime is unchanged
+        return _vectors_to_ratios(_all_primes_held(state), state.domain_basis)
+    rows, ratios = [], []
+    for ratio in candidate_ratios:
+        try:
+            vector = interval_vector(ratio, d, state.domain_basis)
+        except (ValueError, KeyError, IndexError):
+            continue  # a candidate outside this domain (e.g. a 7-limit target on a 5-limit) — skip
+        if abs(sum(retuning_map[p] * vector[p] for p in range(d))) >= tol:
+            continue  # nonzero damage: the tuning changes this interval, so it isn't unchanged
+        if sp.Matrix(rows + [list(vector)]).rank() == len(rows) + 1:  # independent of those found
+            rows.append(list(vector))
+            ratios.append(ratio)
+            if len(ratios) == r:
+                break
+    return tuple(ratios)
+
+
 def form_matrix(mapping) -> Matrix:
     """The generator form matrix ``F``: the unimodular r×r change of generator basis with
     ``F·M = canonical(M)``. Computed as ``F = canonical(M)·Dᵀ`` where ``D`` is the
