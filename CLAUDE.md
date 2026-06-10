@@ -1,7 +1,7 @@
 # RTT — Project Instructions
 
 The RTT monolith is a microtonal/RTT engine with a NiceGUI web front end
-(`rtt/web/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`).
+(`rtt/app/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`).
 
 ## The design mockup is the source of truth — never invent UI
 
@@ -46,18 +46,25 @@ If `.venv/` is ever missing, rebuild it once with a 3.10+ interpreter (this mach
 
 ## Run the fast suite while iterating; the full suite is a merge gate
 
-The ~2,530-test suite takes ~3:18, but **one file is ~67% of that wall-clock**:
-`tests/test_web_render.py` — 171 in-process page-render tests (NiceGUI's `User` plugin) that
-rebuild the whole spreadsheet page and re-run the RTT math on every `await user.open("/")`
-(~0.8s each). The other ~2,360 tests — all the math / parsing / service / spreadsheet / editor
-checks — finish in ~75s. (Despite its name, `tests/test_web_integration.py` is **not** the slow
-one; it's 16 fast in-process tests — see the section below.) So split the loop:
+Tests live in three folders: **`tests/library/unit/`** (the pure math library — ~1,260 tests,
+~10s), **`tests/app/unit/`** (web logic without a live page: Editor / layout / spreadsheet
+building), and **`tests/app/integration/`** (cross-layer scenarios run in-process — see the
+last section). Convention: a test is *integration* only if it drives multiple layers through a
+whole scenario — currently just the two files in `tests/app/integration/`; everything else,
+library and app alike, is *unit*, and the library has no integration tests. Place new tests
+accordingly.
+
+The full suite is ~2,530 tests in **~3–5 min** (it drifts with parallel-agent CPU load), but
+**one file is ~67% of that wall-clock**: `tests/app/integration/test_web_render.py` — 171
+in-process page-render tests (NiceGUI's `User` plugin) that rebuild the whole spreadsheet page
+and re-run the RTT math on every `await user.open("/")` (~0.8s each). The other ~2,360 tests —
+all the library, service, editor and spreadsheet-layout checks — finish in ~75s. So split the loop:
 
 - **While iterating, run the fast pass** — skip the one heavy file:
-  `.venv/bin/python -m pytest -q --ignore=tests/test_web_render.py` (~75s). Use it for quick
+  `.venv/bin/python -m pytest -q --ignore=tests/app/integration/test_web_render.py` (~75s). Use it for quick
   inner-loop feedback on math/service/spreadsheet work.
 - **Run the render tests — i.e. the full `.venv/bin/python -m pytest -q` — before the ff-merge
-  to main, and whenever your change touches `rtt/web/`** (the renderer those tests cover). They
+  to main, and whenever your change touches `rtt/app/`** (the renderer those tests cover). They
   guard the exact UI the user validates on 8137 and that the mockup governs, so **a green full
   run is the gate for the merge**: never land a web change on main on the strength of the fast
   pass alone.
@@ -65,54 +72,47 @@ one; it's 16 fast in-process tests — see the section below.) So split the loop
   that makes a bare `pytest` silently skip the render tests — the user's own runs and CI must
   stay complete.
 
-## When work is done, merge to main — that's how the user sees it
+## Git: you're on a fast-moving team — rebase onto main, then ff-merge
 
-The user validates everything on **their own `python app.py` running on 8137**, which serves
-the **main checkout** and hot-reloads on `*.py`/`*.css` changes. Work that lives only on a
-worktree branch is **invisible to them**. So the job isn't done until the branch is on `main`:
+You work in your own worktree on a `claude/<name>` branch. Several agents run in parallel and
+`main` moves every few minutes; the user is the **manager**, who deliberately assigns
+**separable** tasks — so when you sync with `main`, conflicts are rare and superficial. The
+user validates everything on **their own `python app.py` on 8137**, which serves the **main
+checkout** and hot-reloads, so work on your branch is invisible until it lands on `main`. Work
+like a normal engineer on that team — branch, rebase onto main, merge. No `reset` gymnastics,
+no fear:
 
-- When a task is complete (and tests pass), **fast-forward the branch onto `main`**:
-  `git -C <main-checkout> merge --ff-only <branch>`. The main instance reloads and the user
-  can validate immediately on 8137 — no extra steps from them.
-- **Don't make the user think about branches, worktrees, or verification ports.** They don't
-  need a play-by-play of which 8200+ port you used to check your work — just land it on main.
-  Mention the merge (and whether you pushed to `origin`), nothing more.
-- This is a git merge, not an edit of the main checkout — it does **not** violate "all edits
-  go in the worktree." Never hand-edit files in the main checkout; only ever `git merge` into it.
-
-## Commit every turn — never let work live only in the working tree
-
-Many agents run in parallel, each in its own worktree, while `main` moves every few minutes.
-The harness's worktree auto-sync can, in that churn, move a dirty tree aside or re-point a
-branch — and **anything that exists only as uncommitted edits or untracked files can be
-silently discarded between turns** (this has happened: a clean tree, vanished edits, an
-absent new file, then a branch reset onto `main`). The defense is simple: **the only safe
-place for work is a commit on your own branch.** Committed work is always recoverable from the
-reflog; uncommitted work is not.
-
-- **End every turn with a commit.** `git add -A && git commit -m "wip: <what changed>"`. A
-  string of `wip:` commits is fine — protecting the work matters far more than tidy history.
-- **`git add` new files the moment you create them.** Untracked files are the most fragile —
-  they're the first thing a stray `clean -fd` / `stash -u` removes. Don't leave a new test
-  file untracked across a turn boundary.
-- **Stay on your own `claude/<name>` branch.** Never `git checkout main` / `git switch main`,
-  and never `git reset` or `git rebase` your branch onto `main`, *inside your worktree* —
-  that is exactly what strands a worktree on `main` and drops your commits. The **only** way
-  to touch `main` is `git -C <main-checkout> merge --ff-only <your-branch>` (see above).
-- **To pick up others' changes, merge `main` *into* your branch** — `git merge main` — and
-  only on a clean tree (commit first). Merge is additive and never discards; rebase/reset
-  rewrite history and can lose work. If it conflicts, resolve and commit — never `reset --hard`
-  to escape.
-- **Never `git reset --hard`, `git clean -fd`, or `git stash` while you have unsaved work.**
-  Those are precisely how work disappears. Commit first, then operate.
-- Want one tidy commit on `main` instead of a chain of `wip:`s? Just before the ff-merge,
-  collapse them without interactive rebase: `git reset --soft main && git commit -m "<msg>"`.
+- **Commit as you go** (and `git add` new files) — always before you rebase or land. A commit
+  on your branch is the safe, recoverable home for work; only uncommitted / untracked files in
+  a worktree are fragile.
+- **Stay on your `claude/<name>` branch.** Never `git checkout` / `switch main`, and never
+  hand-edit the main checkout — it's the live app the user is using (a hook blocks such edits).
+- **Sync by rebasing onto main.** On a clean (committed) tree: `git rebase main`. It replays
+  your commits on top of main's current tip and keeps you on your branch (it does NOT strand
+  your worktree). Resolve the (superficial) conflicts and `git rebase --continue` — don't
+  `--abort` and start over, don't `reset --hard` to escape. Rebase again whenever `main` moves.
+- **Land it when the task is done and tests pass.** A final `git rebase main` makes your branch
+  exactly `main + your commits`, so fast-forward main onto it:
+  `git -C <main-checkout> merge --ff-only <your-branch>`. The live app reloads and the user
+  validates on 8137. If the ff-merge is rejected because `main` moved again, just `git rebase
+  main` and retry — a teammate landed first, nothing more.
+- **Never `reset --soft`/`--hard main`, `clean -fd`, or `stash` to "tidy" or "fix."**
+  `reset --soft main` only does what you want when your base already IS `main`; once `main` has
+  moved past your base it silently **reverts every teammate's commit since that base** into your
+  squash (this has bitten us — it reverted a whole feature, and even reverted THIS very section
+  once, when an agent committed on a stale base). Rebase is the clean tool. Want one commit
+  instead of a `wip:` chain? Squash only your OWN commits:
+  `git reset --soft $(git merge-base main HEAD) && git commit` — never plain `reset --soft main`.
+- **After any ff-merge, sanity-check** `git diff <prev-main> <new-main> --stat` shows only the
+  files you meant to change — a stale-base squash shows up here as a pile of unrelated reverts.
+- **Just report the merge** — not the 8200+ port you tested on, not branch/worktree mechanics,
+  and not `main`-vs-`origin` or push status (the user handles pushing).
 
 ## Web app port: 8137 is the user's — agents launch on their own port
 
 Port **8137** belongs to the **human user**: they keep `python app.py` running there to
-actually use the app. It is also the app's canonical default (`rtt.web.app.main()`), which
-`tests/test_web_app_smoke.py` locks — keep that green. Do **not** change the default.
+actually use the app. It is also the app's canonical default (`rtt.app.app.main()`), which
+`tests/app/unit/test_web_app_smoke.py` locks — keep that green. Do **not** change the default.
 
 **Never launch a server on 8137 yourself.** When any agent starts the app to verify a
 change — `python app.py`, an ad-hoc `ui.run(port=...)`, a preview/run harness, or an
@@ -128,15 +128,19 @@ biggest way agents disrupt the user. So, for **every** agent-initiated launch:
   a `reload=True` agent instance churns on every edit (yours and other agents') and orphans
   workers that keep the port bound. Agents relaunch deliberately; they don't need reload.
 
-## Integration tests run in-process — run them, don't ask
+## The integration tests run in-process — run them, don't ask
 
-This project's only "integration" suite, `tests/test_web_integration.py`, drives the
-`Editor` (service + undo state) **entirely in-process**: no `ui.run`, no port bound, no
-network, no external API — it's a unit test in everything but its filename. **Run it freely
-as part of the normal `pytest` run. Do not ask permission first.**
+`tests/app/integration/` holds the project's integration tests — the ones that drive whole
+user scenarios across layers: `test_web_integration.py` (the `Editor`: service + undo state)
+and `test_web_render.py` (the live page, via NiceGUI's `User` plugin). They are integration
+tests **by scope**, but they run **entirely in-process**: no `ui.run` server, no port bound,
+no network, no external API. That in-process fact — *not* their scope — is what matters here,
+so **run them freely as part of the normal `pytest` run. Do not ask permission first.**
+(`test_web_render.py` is also the slow one — see the fast-suite section above for pacing.)
 
 This overrides the global rule that gates integration tests behind a permission prompt. That
 rule guards against *disruptive* tests — a server launch on the user's port, or slow /
-external / side-effecting runs. None of that can happen here, so the prompt is pure ceremony
-that wastes a round-trip. (If a genuinely disruptive test is ever added — one that binds a
-port or calls out — the global rule applies again to that test; see the port section above.)
+external / side-effecting runs. Neither file does any of that — in-process, no I/O — so the
+prompt is pure ceremony that wastes a round-trip. (If a genuinely disruptive test is ever
+added — one that binds a port or calls out — the global rule applies again to that test; see
+the port section above.)
