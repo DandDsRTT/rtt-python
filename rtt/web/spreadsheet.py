@@ -979,6 +979,14 @@ class _GridBuilder:
         # the u unchanged sub-columns (0 off-projection). One geometry for the width, the gridline
         # fan, the EBK marks and every value tile that renders over the consolidated column.
         self.nv_shown = self.nc_shown + self.nu
+        # at full rank (no comma sub-columns: n = 0 and no pending draft) the comma half would
+        # collapse to zero width, squishing the "nullity" count caption to one character per line
+        # and dropping the "n = 0" tally. Reserve a comma-half stub wide enough for "nullity" on a
+        # single line: the nullity count + caption sit in it, and the unchanged half is pushed right
+        # of it (comma_left), so the space where the commas were "remains". The stub is held OUTSIDE
+        # the EBK matrix (matrix_span subtracts it on the left) so the bracket still hugs U.
+        self.empty_comma_w = (_min_width_for_lines("nullity", 1)
+                              if (self.show_unchanged and self.nc_shown == 0) else 0)
         # under the consolidated view EVERY tile of this column reads as the unrotated vector list
         # V = C|U, not the bare comma basis C: the column title, each tile's name ("comma basis" →
         # "unrotated vector list"), its symbol (C → V, in the caption loop) and its per-column labels
@@ -1266,7 +1274,7 @@ class _GridBuilder:
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
             ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
-            ("commas", 2 * BRACKET_W + self.nv_shown * COL_W + (V_SPLIT_GAP if self.show_unchanged else 0), show_temp, True),
+            ("commas", 2 * BRACKET_W + self.nv_shown * COL_W + (V_SPLIT_GAP if (self.show_unchanged and self.nc_shown > 0) else 0) + self.empty_comma_w, show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
             ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning and self.targets_in_use, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
@@ -1750,7 +1758,7 @@ class _GridBuilder:
         # band must reserve for the taller of the two (the long unchanged name in its u·COL_W half)
         if key == "counts" and self.show_unchanged and "commas" in self.col_x:
             lines.append(_wrap_lines("unchanged interval count", self.nu * COL_W))
-            lines.append(_wrap_lines("nullity", self.nc * COL_W))
+            lines.append(_wrap_lines("nullity", self.nc * COL_W + self.empty_comma_w))
         return max(lines, default=1) * CAPTION_LINE
 
     def ptext_editable(self, rkey, ckey):
@@ -1888,7 +1896,13 @@ class _GridBuilder:
         # column widened past them keeps the EBK hugging the matrix with the labels/handles outside.
         x, w = self.content_box(group_key)
         mx = self.outer_gutter_w(group_key)
-        return x + mx, w - 2 * mx
+        x, w = x + mx, w - 2 * mx
+        # the consolidated V column reserves a comma-half stub on the LEFT (empty_comma_w, for the
+        # nullity count/caption) when there are no comma columns; the EBK matrix hugs U, so the
+        # bracket starts past that stub — drop it from the span's left edge (right edge unchanged).
+        if group_key == "commas" and self.empty_comma_w:
+            x, w = x + self.empty_comma_w, w - self.empty_comma_w
+        return x, w
 
     def _weight_simplicity_header(self, i):
         # the all-interval simplicity weight's per-column header — simply the reciprocal of the
@@ -1917,7 +1931,7 @@ class _GridBuilder:
         # divider clear of the cells. Only when there IS a comma half (nc_shown > 0): at full rank
         # (n = 0) the column is the whole unchanged basis with no C, so no gap and no divider.
         gap = V_SPLIT_GAP if (self.show_unchanged and 0 < self.nc_shown <= c) else 0
-        return self.commas_x + BRACKET_W + c * COL_W + gap
+        return self.commas_x + BRACKET_W + self.empty_comma_w + c * COL_W + gap
 
     def comma_value_pos(self, i):
         # the DISPLAY sub-column for the i-th value of the consolidated commas group, whose value
@@ -2454,10 +2468,15 @@ class _GridBuilder:
                 if ckey == "commas" and self.show_unchanged:
                     # the consolidated V = C|U carries two counts: the nullity n over the comma half,
                     # the unchanged-interval count u over the unchanged half (split by the C|U bar).
-                    # At full rank (n = 0) there is no comma half, so only the u count shows (the
-                    # n count would be a zero-width cell over the empty C side).
-                    if self.nc:
-                        self.cells.append(CellBox("count:commas", self.comma_left(0), self.row_y["counts"], self.nc * COL_W, ROW_H,
+                    # At full rank (n = 0) the comma half is the reserved empty_comma_w stub — the
+                    # n = 0 tally and its "nullity" caption still show there (sized to fit), and only
+                    # a true zero-width comma half (a pending first comma, no stub) drops the tally.
+                    comma_half_w = self.nc * COL_W + self.empty_comma_w
+                    if comma_half_w:
+                        # the reserved stub sits LEFT of the EBK bracket (at commas_x); the real comma
+                        # cells sit after it (comma_left(0)). Pick whichever this case has.
+                        comma_half_x = self.commas_x if self.empty_comma_w else self.comma_left(0)
+                        self.cells.append(CellBox("count:commas", comma_half_x, self.row_y["counts"], comma_half_w, ROW_H,
                                              "count", text=f"{_count_sym('n')} = {self.state.n}"))
                     self.cells.append(CellBox("count:commas:u", self.comma_left(self.nc_shown), self.row_y["counts"], self.nu * COL_W, ROW_H,
                                          "count", text=f"{_count_sym('u')} = {self.nu}"))
@@ -2620,7 +2639,8 @@ class _GridBuilder:
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
                 if self.show_unchanged:  # the unchanged-interval ratios complete V = C|U — read-only
                     for j in range(self.nu):  # (derived from the projection), the held primes "2/1", "5/1"
-                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc_shown + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j] or DASH, comma=self.nc + j))
+                        doomed = self.pending is not None and j == self.nu - 1  # about to be deleted (rank drops)
+                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc_shown + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j] or DASH, comma=self.nc + j, alert=doomed))
                         self._voice("quantities:commas", self.nc + j, self.unchanged_sizes.just[j])
                 # commas mirror the domain controls: + starts a (pending) comma; the − rides the
                 # last column's branch point — cancelling the draft, or un-tempering a real comma,
@@ -2869,11 +2889,15 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"cell:comma:{p}:{c}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                         self._voice("vectors:commas", c, self.comma_sizes.just[c])
                 # the unchanged basis U completes V = C|U: read-only vector columns ("vec", like the
-                # detempering D), the projection's eigenvalue-1 eigenvectors held just (e.g. 2/1, 5/1)
+                # detempering D), the projection's eigenvalue-1 eigenvectors held just (e.g. 2/1, 5/1).
+                # While a comma is being ADDED (a pending draft), the rank drops by one — so the last
+                # unchanged column is about to be deleted: preview it red (the app's standard "this is
+                # going away" highlight, as the comma − reddens the comma it would remove).
                 for j in range(self.nu):
+                    doomed = self.pending is not None and j == self.nu - 1
                     for p in range(self.d):
                         vec_text = DASH if self.unchanged_basis[j] is None else str(self.unchanged_basis[j][p])
-                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H, "vec", text=vec_text, prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p)))
+                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H, "vec", text=vec_text, prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p), alert=doomed))
                     self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
                 if self.pending is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
@@ -3930,8 +3954,11 @@ class _GridBuilder:
                 # the consolidated V counts split into two names, each centred over its half (mirroring
                 # the n / u tallies above them): "nullity" over the comma sub-columns, "unchanged
                 # interval count" over the unchanged ones
-                self.cells.append(CellBox("caption:counts:commas", self.comma_left(0), cy, self.nc * COL_W,
-                                     self.row_cap[rkey], "caption", text="nullity"))
+                comma_half_w = self.nc * COL_W + self.empty_comma_w
+                if comma_half_w:
+                    comma_half_x = self.commas_x if self.empty_comma_w else self.comma_left(0)
+                    self.cells.append(CellBox("caption:counts:commas", comma_half_x, cy, comma_half_w,
+                                         self.row_cap[rkey], "caption", text="nullity"))
                 self.cells.append(CellBox("caption:counts:commas:u", self.comma_left(self.nc_shown), cy, self.nu * COL_W,
                                      self.row_cap[rkey], "caption", text="unchanged interval count"))
                 continue
