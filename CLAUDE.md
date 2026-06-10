@@ -1,7 +1,7 @@
 # RTT — Project Instructions
 
 The RTT monolith is a microtonal/RTT engine with a NiceGUI web front end
-(`rtt/web/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`).
+(`rtt/app/app.py`). Launch it with `python app.py` (optionally `python app.py <port>`).
 
 ## The design mockup is the source of truth — never invent UI
 
@@ -47,17 +47,17 @@ If `.venv/` is ever missing, rebuild it once with a 3.10+ interpreter (this mach
 ## Run the fast suite while iterating; the full suite is a merge gate
 
 The ~2,530-test suite takes ~3:18, but **one file is ~67% of that wall-clock**:
-`tests/test_web_render.py` — 171 in-process page-render tests (NiceGUI's `User` plugin) that
+`tests/app/integration/test_web_render.py` — 171 in-process page-render tests (NiceGUI's `User` plugin) that
 rebuild the whole spreadsheet page and re-run the RTT math on every `await user.open("/")`
 (~0.8s each). The other ~2,360 tests — all the math / parsing / service / spreadsheet / editor
-checks — finish in ~75s. (Despite its name, `tests/test_web_integration.py` is **not** the slow
+checks — finish in ~75s. (Despite its name, `tests/app/integration/test_web_integration.py` is **not** the slow
 one; it's 16 fast in-process tests — see the section below.) So split the loop:
 
 - **While iterating, run the fast pass** — skip the one heavy file:
-  `.venv/bin/python -m pytest -q --ignore=tests/test_web_render.py` (~75s). Use it for quick
+  `.venv/bin/python -m pytest -q --ignore=tests/app/integration/test_web_render.py` (~75s). Use it for quick
   inner-loop feedback on math/service/spreadsheet work.
 - **Run the render tests — i.e. the full `.venv/bin/python -m pytest -q` — before the ff-merge
-  to main, and whenever your change touches `rtt/web/`** (the renderer those tests cover). They
+  to main, and whenever your change touches `rtt/app/`** (the renderer those tests cover). They
   guard the exact UI the user validates on 8137 and that the mockup governs, so **a green full
   run is the gate for the merge**: never land a web change on main on the strength of the fast
   pass alone.
@@ -111,8 +111,8 @@ reflog; uncommitted work is not.
 ## Web app port: 8137 is the user's — agents launch on their own port
 
 Port **8137** belongs to the **human user**: they keep `python app.py` running there to
-actually use the app. It is also the app's canonical default (`rtt.web.app.main()`), which
-`tests/test_web_app_smoke.py` locks — keep that green. Do **not** change the default.
+actually use the app. It is also the app's canonical default (`rtt.app.app.main()`), which
+`tests/app/unit/test_web_app_smoke.py` locks — keep that green. Do **not** change the default.
 
 **Never launch a server on 8137 yourself.** When any agent starts the app to verify a
 change — `python app.py`, an ad-hoc `ui.run(port=...)`, a preview/run harness, or an
@@ -130,7 +130,7 @@ biggest way agents disrupt the user. So, for **every** agent-initiated launch:
 
 ## Integration tests run in-process — run them, don't ask
 
-This project's only "integration" suite, `tests/test_web_integration.py`, drives the
+This project's only "integration" suite, `tests/app/integration/test_web_integration.py`, drives the
 `Editor` (service + undo state) **entirely in-process**: no `ui.run`, no port bound, no
 network, no external API — it's a unit test in everything but its filename. **Run it freely
 as part of the normal `pytest` run. Do not ask permission first.**
