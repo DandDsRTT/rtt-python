@@ -7,9 +7,7 @@ the renderer (app.py) so the page module doesn't carry the geometry."""
 import math
 
 _BR_COLOR = "#1a1a1a"
-_PENDING_COLOR = "#388e3c"  # green for a NEW (pending) entry's draft cells, brackets and "?" —
-# "this is being created", paired against the red alert (_ALERT_COLOR) and remove-preview so the
-# additive draft reads apart from the "now invalid" / "going away" reds at a glance
+_PENDING_COLOR = "#e53935"  # red for a pending comma's draft cells, brackets and "?"
 _BR_BAR = 2  # main bar / vector-rule / square-bracket bar thickness (px)
 _BR_SERIF_T = 0.9  # square + top bracket serif thickness — a thin foot, well under the bar
 _BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches) — also
@@ -210,7 +208,7 @@ def _hbar(w, h):
 
 def _ebk_svg(cb):
     """The SVG for one EBK cell, generated from its current px box (cb.w, cb.h). A
-    pending comma's marks are recoloured green to match its draft cells."""
+    pending comma's marks are recoloured red to match its draft cells."""
     if cb.kind == "bracket":
         if cb.text == "⟨":
             svg = _angle_bracket(cb.w, cb.h)

@@ -1185,7 +1185,7 @@ def test_plain_text_over_a_nonstandard_domain_uses_the_basis():
 def test_vector_list_pending_text_splits_the_draft_for_two_tone_display():
     # while an interval is being added the editable vector-list string (comma basis / target
     # list) is shown two-tone: the committed vectors (and the wrapping brackets) stay black, the
-    # draft vector greens. The helper returns (black prefix, green draft ket, black suffix); the
+    # draft vector reddens. The helper returns (black prefix, red draft ket, black suffix); the
     # draft shows the entered components only (blanks omitted), e.g. (4, _, 1) -> "[4 1⟩".
     prefix, draft, suffix = service.vector_list_pending_text(((4, -4, 1),), [4, None, 1])
     assert (prefix, draft, suffix) == ("[[4 -4 1⟩ ", "[4 1⟩", "]")

@@ -56,10 +56,10 @@ def test_dark_theme_relights_the_editable_cell_inputs():
     assert _dark_sets(".rtt-ptextedit", "background")
 
 
-def test_dark_theme_retints_the_baked_in_marks_without_disturbing_the_pending_green():
+def test_dark_theme_retints_the_baked_in_marks_without_disturbing_the_pending_red():
     # the EBK brackets bake _BR_COLOR into their SVG fill; the overlay retints exactly that
     # value via an attribute rule (CSS beats the presentation attribute). A pending comma's
-    # green marks (#388e3c) don't match it, so they stay green — assert nothing retints that fill.
+    # red marks (#e53935) don't match it, so they stay red — assert nothing retints that fill.
     assert f'body.rtt-dark [fill="{app._BR_COLOR}"]' in app._CSS
     assert f'[fill="{app._PENDING_COLOR}"]' not in app._CSS
 
