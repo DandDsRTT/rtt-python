@@ -1521,16 +1521,14 @@ def test_generator_tuning_range_is_none_for_an_unmeasurable_mixed_basis():
     assert all(x == x for x in t.tuning_map)  # the tuning itself is finite and unaffected
 
 
-def test_tuning_projection_for_meantone_holds_2_and_5():
-    # 5-limit meantone: the default embedding holds the octave (2) and the least-tempered
-    # non-octave prime (5), deriving the most-tempered one (3, |exp| 4 in the syntonic comma).
-    # P = GM is then quarter-comma meantone's rational projection, as display strings.
+def test_tuning_projection_is_dashed_for_an_under_held_tuning():
+    # the corrected model: a tuning is a rational projection ONLY if it holds a full-rank (r)
+    # rational basis. The default meantone tuning holds nothing rational (h=0), and a held-octave
+    # tuning only the octave (h=1) — both < r=2 — so P is dashed out (None), NOT a fabricated
+    # quarter-comma. (P is never auto-picked from the temperament alone any more.)
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.tuning_projection(state) == (
-        ("1", "1", "0"),
-        ("0", "0", "0"),
-        ("0", "1/4", "1"),
-    )
+    assert service.tuning_projection(state) is None
+    assert service.tuning_projection(state, ("2/1",)) is None
 
 
 def test_tuning_projection_of_just_intonation_is_the_identity():
@@ -1543,66 +1541,62 @@ def test_tuning_projection_of_just_intonation_is_the_identity():
     )
 
 
-def test_tuning_projection_takes_an_explicit_held_basis_quarter_comma():
-    # the established-projection chooser drives P by the named tuning's rational unchanged
-    # intervals: quarter-comma meantone holds {2/1, 5/4}, giving P = GM holding 2 and 5/4.
+def test_tuning_projection_for_a_full_rational_held_basis_quarter_comma():
+    # a FULL-RANK rational hold pins the tuning as a rational projection: {2/1, 5/4} is
+    # quarter-comma meantone, P = GM holding 2 and 5/4.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.tuning_projection(state, held=("2/1", "5/4")) == (
+    assert service.tuning_projection(state, ("2/1", "5/4")) == (
         ("1", "1", "0"),
         ("0", "0", "0"),
         ("0", "1/4", "1"),
     )
 
 
-def test_tuning_projection_takes_an_explicit_held_basis_third_comma():
+def test_tuning_projection_third_comma():
     # third-comma meantone holds {2/1, 6/5} (pure minor third) — a different rational tuning.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.tuning_projection(state, held=("2/1", "6/5")) == (
+    assert service.tuning_projection(state, ("2/1", "6/5")) == (
         ("1", "4/3", "4/3"),
         ("0", "-1/3", "-4/3"),
         ("0", "1/3", "4/3"),
     )
 
 
-def test_tuning_projection_takes_an_explicit_held_basis_pythagorean():
+def test_tuning_projection_pythagorean():
     # the Pythagorean (0-comma) tuning of meantone holds {2/1, 3/2} (pure fifth).
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.tuning_projection(state, held=("2/1", "3/2")) == (
+    assert service.tuning_projection(state, ("2/1", "3/2")) == (
         ("1", "0", "-4"),
         ("0", "1", "4"),
         ("0", "0", "0"),
     )
 
 
-def test_tuning_embedding_for_quarter_comma_meantone():
+def test_tuning_embedding_for_a_full_rational_held_basis():
     # G = H·(M·H)⁻¹: its columns are the generators as fractional vectors. Quarter-comma's
     # second generator is 5^(1/4) — the [0 0 1/4] column.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.tuning_embedding(state, held=("2/1", "5/4")) == (
+    assert service.tuning_embedding(state, ("2/1", "5/4")) == (
         ("1", "0"),
         ("0", "0"),
         ("0", "1/4"),
     )
 
 
-def test_tuning_embedding_for_third_comma_meantone():
+def test_tuning_embedding_third_comma():
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.tuning_embedding(state, held=("2/1", "6/5")) == (
+    assert service.tuning_embedding(state, ("2/1", "6/5")) == (
         ("1", "1/3"),
         ("0", "-1/3"),
         ("0", "1/3"),
     )
 
 
-def test_tuning_embedding_default_uses_the_same_auto_pick_as_the_projection():
-    # with no held override the embedding falls back to the auto-picked default basis — the
-    # same one the projection uses — so G and P stay in sync (P = GM).
+def test_tuning_embedding_is_dashed_when_the_projection_is():
+    # G is dashed (None) exactly when P is — an under-held tuning is no rational embedding either.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.tuning_embedding(state) == (
-        ("1", "0"),
-        ("0", "0"),
-        ("0", "1/4"),
-    )
+    assert service.tuning_embedding(state) is None
+    assert service.tuning_embedding(state, ("2/1",)) is None
 
 
 def test_tuning_embedding_of_just_intonation_is_the_identity():
@@ -1620,49 +1614,55 @@ def test_tuning_projection_and_embedding_drop_a_degenerate_held_basis():
     # simultaneous unchanged-interval basis: M·H is singular and no rational projection
     # forms. Both helpers return None rather than crash (the chooser then won't offer it).
     state = service.from_mapping(((2, 3, 5, 6), (0, 1, -2, -2)))
-    assert service.tuning_projection(state, held=("2/1", "7/5")) is None
-    assert service.tuning_embedding(state, held=("2/1", "7/5")) is None
+    assert service.tuning_projection(state, ("2/1", "7/5")) is None
+    assert service.tuning_embedding(state, ("2/1", "7/5")) is None
 
 
-def test_tuning_projection_rejects_a_held_basis_of_the_wrong_size():
-    # the held basis must be full rank (r intervals); too few/many can't pin the tuning.
+# --- the unchanged-interval basis U: the held intervals padded to rank r with dashes ---
+
+def test_unchanged_interval_basis_is_all_dashes_for_an_under_held_tuning():
+    # the default meantone tuning holds nothing rational (h=0), so BOTH unchanged columns are
+    # dashed (None): the tuning isn't a rational projection, and nothing is fabricated.
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.tuning_projection(state, held=("2/1",)) is None
-    assert service.tuning_embedding(state, held=("2/1", "5/4", "3/2")) is None
+    assert service.unchanged_interval_basis(state) == (None, None)
+    assert service.unchanged_interval_ratios(state) == ()  # no KNOWN unchanged intervals
 
 
-def test_unchanged_interval_basis_for_meantone_holds_2_and_5():
-    # U = nullspace(P − I): the eigenvalue-1 eigenvectors of P (the unchanged-interval
-    # basis), as integer column vectors stored rows-as-intervals like the comma basis.
-    # For quarter-comma meantone holding {2, 5}, U is exactly the held primes 2 and 5.
+def test_unchanged_interval_basis_pads_a_partial_hold_with_a_dash():
+    # holding only the octave (h=1 < r=2) fills ONE unchanged column; the other stays dashed
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.unchanged_interval_basis(state) == ((1, 0, 0), (0, 0, 1))
-    assert service.unchanged_interval_ratios(state) == ("2/1", "5/1")
+    assert service.unchanged_interval_basis(state, ("2/1",)) == ((1, 0, 0), None)
+    assert service.unchanged_interval_ratios(state, ("2/1",)) == ("2/1",)
+
+
+def test_unchanged_interval_basis_is_the_held_basis_when_full_rank():
+    # a full-rank rational hold completes U (no dashes) — it IS the held intervals, as entered:
+    # {2/1, 5/4} for quarter-comma, {2/1, 6/5} for third-comma.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.unchanged_interval_basis(state, ("2/1", "5/4")) == ((1, 0, 0), (-2, 0, 1))
+    assert service.unchanged_interval_ratios(state, ("2/1", "5/4")) == ("2/1", "5/4")
+    assert service.unchanged_interval_basis(state, ("2/1", "6/5")) == ((1, 0, 0), (1, 1, -1))
 
 
 def test_unchanged_interval_basis_of_just_intonation_is_every_prime():
-    # nullity 0 (no commas): P = I, so every prime is held — U spans the whole domain.
+    # nullity 0 (no commas): P = I, so every prime is unchanged — U spans the whole domain.
     state = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
     assert service.unchanged_interval_basis(state) == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
     assert service.unchanged_interval_ratios(state) == ("2/1", "3/1", "5/1")
 
 
-def test_unchanged_interval_basis_for_a_rank_2_4d_temperament():
-    # 7-limit pajara (d=4, n=2): the two unchanged intervals are the held primes 2 and 7,
-    # and the count u = r = d − n = 2 (one unchanged direction per generator).
+def test_unchanged_interval_basis_always_has_r_columns():
+    # 7-limit pajara (d=4, r=2): U always has r=2 columns. Under-held → both dashed; holding the
+    # two primes 2 and 7 (a full rational basis) completes it.
     state = service.from_mapping(((2, 3, 5, 6), (0, 1, -2, -2)))
-    U = service.unchanged_interval_basis(state)
-    assert U == ((1, 0, 0, 0), (0, 0, 0, 1))
-    assert len(U) == state.r == state.d - state.n
+    assert service.unchanged_interval_basis(state) == (None, None)
+    assert len(service.unchanged_interval_basis(state)) == state.r == state.d - state.n
+    assert service.unchanged_interval_basis(state, ("2/1", "7/1")) == ((1, 0, 0, 0), (0, 0, 0, 1))
 
 
-def test_unchanged_interval_basis_follows_the_chosen_established_projection():
-    # U is the eigenbasis of the DISPLAYED projection, so the established-projection chooser drives
-    # it just like it drives P and G: third-comma holds 6/5 (NOT 5/4), so prime 5 is no longer
-    # unchanged — U becomes {2, 5/3} rather than quarter-comma's {2, 5}. (Same span as the held
-    # {2, 6/5}; the nullspace returns the denominator-cleared canonical basis.)
+def test_held_basis_vectors_keeps_only_independent_in_domain_intervals():
+    # the held-interval basis reduces to a basis: dependent / out-of-domain / beyond-rank entries
+    # are dropped (a tuning can't hold more than r independent directions).
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    assert service.unchanged_interval_basis(state, held=("2/1", "6/5")) == ((1, 0, 0), (0, -1, 1))
-    assert service.unchanged_interval_ratios(state, held=("2/1", "6/5")) == ("2/1", "5/3")
-    # the None default still gives quarter-comma's {2, 5}, unchanged from before
-    assert service.unchanged_interval_basis(state) == ((1, 0, 0), (0, 0, 1))
+    assert service.held_basis_vectors(state, ("2/1", "4/1")) == ((1, 0, 0),)   # 4/1 ∥ 2/1, dropped
+    assert service.held_basis_vectors(state, ("2/1", "5/4", "3/2")) == ((1, 0, 0), (-2, 0, 1))  # capped at r=2

@@ -576,58 +576,51 @@ def canonical_comma_basis(comma_basis) -> Matrix:
     return _to_matrix(canonical_ca(_to_matrix(comma_basis)))
 
 
-def _held_prime_indices(state: TemperamentState) -> tuple[int, ...]:
-    """The domain-basis indices of the held primes for the DEFAULT embedding (until the
-    ``<choose embedding>`` control exists): the octave (element 0) is always held, and of
-    the rest the ``n = d − r`` with the largest absolute exponents in the canonical comma
-    basis are DERIVED (the most-tempered directions) — so the remaining ``r`` are held. For
-    5-limit meantone (syntonic comma ``[-4 4 -1⟩``) prime 3 (|exp| 4) is derived, holding
-    {2, 5} — quarter-comma meantone."""
-    d, n = state.d, state.n
-    if n <= 0:                       # nullity 0: nothing tempered, every prime held (P = I)
-        return tuple(range(d))
-    commas = canonical_comma_basis(state.comma_basis)
-    weight = {j: max((abs(c[j]) for c in commas), default=0) for j in range(1, d)}
-    # derive the n non-octave elements with the largest |exponent| (ties broken by index)
-    derived = set(sorted(range(1, d), key=lambda j: (weight[j], j), reverse=True)[:n])
-    return tuple(j for j in range(d) if j not in derived)
+def held_basis_vectors(state: TemperamentState, held_ratios) -> tuple:
+    """The tuning's held-interval basis as up to ``r`` INDEPENDENT domain vectors: the held
+    intervals (the scheme's structural held plus the held column) parsed to vectors and reduced
+    to a basis — dependent, out-of-domain, and beyond-rank entries are dropped. These are the
+    KNOWN unchanged intervals of the tuning; a tuning holding fewer than ``r`` of them leaves the
+    rest of the projection undetermined (see :func:`unchanged_interval_basis`). The order of
+    ``held_ratios`` is preserved (the held column reads left to right)."""
+    vectors: list = []
+    rows: list = []
+    for ratio in held_ratios:
+        if len(vectors) >= state.r:
+            break
+        try:
+            vector = interval_vector(ratio, state.d, state.domain_basis)
+        except ValueError:
+            continue
+        if sp.Matrix(rows + [list(vector)]).rank() == len(rows) + 1:  # independent of those so far
+            vectors.append(vector)
+            rows.append(list(vector))
+    return tuple(vectors)
 
 
-def _held_basis_vectors(state: TemperamentState, held):
-    """The unchanged-interval basis as ``r`` domain vectors that drive ``P`` and ``G``: the
-    user's chosen ratios (the established-projection chooser's named tuning) parsed to vectors,
-    or — when ``held`` is ``None`` — the auto-picked prime defaults (see
-    :func:`_held_prime_indices`). Returns ``None`` when the basis isn't full rank ``r`` or a
-    ratio is unparseable / out of domain, so the caller drops the box rather than crashing."""
-    if held is None:
-        indices = _held_prime_indices(state)
-        if len(indices) != state.r:
-            return None
-        return tuple(
-            tuple(1 if k == j else 0 for k in range(state.d)) for j in indices
-        )
-    try:
-        vectors = tuple(interval_vector(ratio, state.d, state.domain_basis) for ratio in held)
-    except ValueError:
-        return None
-    if len(vectors) != state.r:
-        return None
-    return vectors
+def _all_primes_held(state: TemperamentState) -> tuple:
+    """The ``d`` standard unit vectors — the held basis for the trivial temperament (``n = 0``),
+    where nothing is tempered so every prime is unchanged and ``P = I``."""
+    return tuple(tuple(1 if k == j else 0 for k in range(state.d)) for j in range(state.d))
 
 
-def _projection_temperaments(state: TemperamentState, held):
-    """The ``(mapping, held)`` :class:`Temperament` pair both ``P = GM`` and ``G`` are built
-    from, or ``None`` when the held basis can't be formed (an empty/over-full domain, a
-    bad-size or out-of-domain basis). Convention-free: the held intervals are columns (COL)."""
+def _projection_temperaments(state: TemperamentState, held_vectors):
+    """The ``(mapping, held)`` :class:`Temperament` pair both ``P = GM`` and ``G`` are built from
+    for a FULL-RANK held basis (``len == r``), or ``None`` when it can't be formed (an empty /
+    over-full domain, or a basis that isn't full rank). Convention-free: held intervals are
+    columns (COL)."""
     d, r = state.d, state.r
-    if d <= 0 or not 0 < r <= d:
-        return None
-    held_vectors = _held_basis_vectors(state, held)
-    if held_vectors is None:
+    if d <= 0 or not 0 < r <= d or len(held_vectors) != r:
         return None
     mapping_t = Temperament(state.mapping, Variance.ROW, state.domain_basis)
     held_t = Temperament(held_vectors, Variance.COL, state.domain_basis)
     return mapping_t, held_t
+
+
+def _held_for_projection(state: TemperamentState, held_ratios):
+    """The held basis that pins ``P``/``G``: every prime for the trivial temperament (``n = 0``,
+    JI), else the tuning's held-interval basis from ``held_ratios``."""
+    return _all_primes_held(state) if state.n == 0 else held_basis_vectors(state, held_ratios)
 
 
 def _matrix_strings(matrix):
@@ -635,17 +628,17 @@ def _matrix_strings(matrix):
     return tuple(tuple(str(entry) for entry in row) for row in matrix)
 
 
-def tuning_projection(state: TemperamentState, held=None):
-    """The rational tempering projection ``P = GM`` as a ``d×d`` grid of display strings
-    (``"1"``, ``"0"``, ``"1/4"`` …), or ``None`` when it cannot be formed. ``P`` sends each
-    just prime to its tempered size (``j·P = t``), holding the unchanged-interval basis justly;
-    it is idempotent with the commas in its kernel. ``held`` is the established projection's
-    rational unchanged intervals as ratio strings (e.g. ``("2/1", "5/4")`` for quarter-comma
-    meantone); ``None`` uses the auto-picked prime default (see :func:`_held_prime_indices`).
-    Returns ``None`` on any degenerate / unsupported case (a singular pick like pajara holding
-    ``{2/1, 7/5}``, a bad-size basis, an empty domain) so the caller simply omits the box."""
+def tuning_projection(state: TemperamentState, held_ratios=()):
+    """The rational tempering projection ``P = GM`` as a ``d×d`` grid of display strings (``"1"``,
+    ``"0"``, ``"1/4"`` …), or ``None`` when the tuning is NOT a full rational projection — its
+    held basis isn't full rank ``r`` (it holds fewer than ``r`` rational intervals, so ``P`` is
+    undetermined and the caller dashes it out) or is degenerate (a singular hold like pajara's
+    ``{2/1, 7/5}``). ``held_ratios`` is the tuning's held-interval basis (the scheme's structural
+    held plus the held column) as ratio strings; the trivial temperament (``n = 0``) is JI, so
+    ``P = I``. ``P`` sends each just prime to its tempered size (``j·P = t``), idempotent with the
+    commas in its kernel."""
     try:
-        inputs = _projection_temperaments(state, held)
+        inputs = _projection_temperaments(state, _held_for_projection(state, held_ratios))
         if inputs is None:
             return None
         return _matrix_strings(get_tempering_projection(*inputs))
@@ -653,14 +646,14 @@ def tuning_projection(state: TemperamentState, held=None):
         return None
 
 
-def tuning_embedding(state: TemperamentState, held=None):
+def tuning_embedding(state: TemperamentState, held_ratios=()):
     """The rational generator embedding ``G = H·(M·H)⁻¹`` as a ``d×r`` grid of display strings —
-    its columns are the held tuning's generators expressed as fractional prime vectors (the
-    octave ``[1 0 0]`` and, for quarter-comma meantone, ``5^(1/4) = [0 0 1/4]``). ``held`` and
-    the ``None`` default match :func:`tuning_projection`, so ``P = GM`` stays in sync. ``None``
-    on any degenerate / unsupported case (the caller then omits the embedding box)."""
+    its columns are the held tuning's generators as fractional prime vectors (the octave
+    ``[1 0 0]`` and, for quarter-comma meantone, ``5^(1/4) = [0 0 1/4]``). ``held_ratios`` matches
+    :func:`tuning_projection`, so ``P = GM`` stays in sync; ``None`` whenever ``P`` is (the held
+    basis isn't full rank, or is degenerate), and the caller dashes the embedding box."""
     try:
-        inputs = _projection_temperaments(state, held)
+        inputs = _projection_temperaments(state, _held_for_projection(state, held_ratios))
         if inputs is None:
             return None
         return _matrix_strings(get_generator_embedding(*inputs))
@@ -668,52 +661,35 @@ def tuning_embedding(state: TemperamentState, held=None):
         return None
 
 
-def unchanged_interval_basis(state: TemperamentState, held=None) -> Matrix | None:
-    """The unchanged-interval basis ``U = nullspace(P − I)`` — the projection ``P``'s
-    eigenvalue-1 eigenvectors, i.e. the intervals it holds exactly just (``P·u = u``).
-    Returned as ``u`` integer column vectors stored rows-as-intervals (the comma-basis
-    convention), with each vector cleared to primitive integers like a comma. Together
-    with the comma basis ``C = nullspace(P)`` it forms the projection's full eigenvector
-    basis ``V = C | U`` — the commas vanish (eigenvalue 0), the unchanged are held
-    (eigenvalue 1). Its count ``u = d − n = r`` (one unchanged direction per generator).
-
-    ``held`` is the established projection's rational unchanged intervals (the chooser's named
-    tuning) — the SAME basis driving :func:`tuning_projection`, so ``U`` is the eigenbasis of the
-    DISPLAYED projection and tracks the chooser: quarter-comma (the ``None`` default for meantone)
-    holds {2, 5} → ``((1,0,0),(0,0,1))``, third-comma {2, 6/5} → {2, 5/3} → ``((1,0,0),(0,-1,1))``.
-
-    Returns ``None`` on any degenerate / unsupported case, mirroring :func:`tuning_projection`."""
-    try:
-        inputs = _projection_temperaments(state, held)
-        if inputs is None:
-            return None
-        d = state.d
-        projection = get_tempering_projection(*inputs)
-        p_minus_i = sp.Matrix(
-            [[projection[i][j] - (1 if i == j else 0) for j in range(d)] for i in range(d)]
-        )
-        # the rational nullspace, each basis vector cleared to primitive integers (the
-        # same denominator-clearing the comma basis gets via rtt.dual._integer_null_space)
-        unchanged = tuple(
-            tuple(int(entry * reduce(lcm, (int(e.q) for e in vector), 1)) for entry in vector)
-            for vector in p_minus_i.nullspace()
-        )
-        if len(unchanged) != d - state.n:  # u must be the rank r = d − n
-            return None
-        return unchanged
-    except (ArithmeticError, ValueError, IndexError, TypeError):
+def unchanged_interval_basis(state: TemperamentState, held_ratios=()):
+    """The unchanged-interval basis ``U`` as exactly ``r`` columns: the tuning's held intervals
+    (``h`` known, rational vectors, stored rows-as-intervals like the comma basis) padded to rank
+    ``r`` with ``None`` — a DASHED column — for each direction the optimization leaves irrational.
+    A tuning holding fewer than ``r`` rational intervals is not a full rational projection there,
+    so those columns are unknown. Together with the comma basis ``C`` it forms ``V = C | U`` (the
+    commas have eigenvalue 0, the unchanged 1). The trivial temperament (``n = 0``, JI) tempers
+    nothing, so every prime is unchanged — ``U`` is all ``d`` primes with no dashes. ``held_ratios``
+    is the tuning's held-interval basis (scheme held + held column). ``None`` only on a degenerate
+    domain (``d ≤ 0`` / ``r`` out of range)."""
+    d, r = state.d, state.r
+    if d <= 0 or not 0 < r <= d:
         return None
+    if state.n == 0:  # JI: every prime is unchanged (P = I), no irrational free directions
+        return _all_primes_held(state)
+    held = held_basis_vectors(state, held_ratios)
+    return held + (None,) * (r - len(held))
 
 
-def unchanged_interval_ratios(state: TemperamentState, held=None) -> tuple[str, ...] | None:
-    """Each unchanged interval as a ratio string (the held primes ``"2/1"``, ``"5/1"`` …) —
-    the unchanged-basis analogue of :func:`comma_ratios`. ``held`` selects the established
-    projection as in :func:`unchanged_interval_basis`. ``None`` when the basis can't be formed;
-    the empty tuple has no meaning here (a present projection always holds the rank)."""
-    unchanged = unchanged_interval_basis(state, held)
-    if unchanged is None:
+def unchanged_interval_ratios(state: TemperamentState, held_ratios=()) -> tuple | None:
+    """Each KNOWN unchanged interval as a ratio string (the unchanged-basis analogue of
+    :func:`comma_ratios`) — the ``h`` held intervals; a DASHED (``None``) column has no ratio and
+    is dropped here, so this can be shorter than ``r`` (use :func:`unchanged_interval_basis` for
+    the full ``r``-column shape with dashes). ``None`` only when the basis can't be formed."""
+    basis = unchanged_interval_basis(state, held_ratios)
+    if basis is None:
         return None
-    return _vectors_to_ratios(unchanged, state.domain_basis)
+    known = tuple(vector for vector in basis if vector is not None)
+    return _vectors_to_ratios(known, state.domain_basis)
 
 
 def form_matrix(mapping) -> Matrix:
