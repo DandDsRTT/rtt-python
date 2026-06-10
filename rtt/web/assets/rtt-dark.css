@@ -14,7 +14,7 @@
    turned on). What IS always present — and so themed below — is the audio bank, the per-column hover
    speaker, and the dummy tile's sample chart (its bars and axes ride _BR_COLOR, retinted by the
    marks rule below; the real per-tile charts share that token, so they follow for free once the
-   charts layer is on). Accent hues — the pending-comma red and the edit-preview amber — read on
+   charts layer is on). Accent hues — the pending-comma green and the edit-preview amber — read on
    dark unchanged and are kept as-is.
 
    Palette (mirrors the anchors in app.py): pane #1f2329 · panel #272c33 · group #2c323a ·
@@ -36,8 +36,8 @@ body.rtt-dark {
 /* the EBK bracket & brace marks — and the chart bars / axes (the per-tile damage chart and the
    dummy tile's sample sparkline) — bake _BR_COLOR (#1a1a1a) into their SVG fill (bars, the y-axis
    rect, tick labels) or stroke (the axes and zero baseline); a CSS rule beats the presentation
-   attribute, so retint exactly that value on both. The pending comma's red marks (#e53935) and the
-   chart gridlines / indicator (#bbbbbb · #888888) use other greys, so they're left untouched. */
+   attribute, so retint exactly that value on both. The pending comma's green marks (#388e3c) and the
+   chart gridlines / indicator (#bbbbbb · #888888) use other colours, so they're left untouched. */
 body.rtt-dark [fill="#1a1a1a"] { fill:#8d949d; }
 body.rtt-dark [stroke="#1a1a1a"] { stroke:#8d949d; }
 
