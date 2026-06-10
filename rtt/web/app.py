@@ -23,6 +23,7 @@ from urllib.parse import quote
 
 from nicegui import app, background_tasks, helpers, ui
 
+from rtt.formatting import strip_negative_zero
 from rtt.web import presets
 from rtt.web import service
 from rtt.web import settings as show_settings
@@ -484,7 +485,7 @@ def _range_chart(w, h, ranges, tunings=()):
 
     def label(cx, y, v):
         return (f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
-                f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">{v:.3f}</text>')
+                f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">{strip_negative_zero(f"{v:.3f}")}</text>')
 
     body = []
     for i, (lo, hi) in enumerate(ranges):
@@ -528,7 +529,7 @@ def _wheel_step(value, delta_y, step=1) -> str:
     if isinstance(step, int):
         return str(int(new)) if new == int(new) else str(new)
     decimals = max(0, -math.floor(math.log10(step)))
-    return f"{round(new, decimals):.{decimals}f}"
+    return strip_negative_zero(f"{round(new, decimals):.{decimals}f}")
 
 
 def _limit_text(limit) -> str | None:

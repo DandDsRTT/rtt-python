@@ -604,6 +604,15 @@ def test_plain_text_complexity_runs_over_the_nonstandard_domain_basis():
     assert service.cents(truncated[0]) not in band  # not the prime-truncated value
 
 
+def test_cents_drops_negative_zero():
+    # negative zero carries no meaning, so a value that shows as zero never wears a minus sign
+    assert service.cents(-0.0) == "0.000"
+    assert service.cents(-0.0004) == "0.000"  # rounds to zero at 3-dp → unsigned
+    assert service.cents(-0.0006) == "-0.001"  # a real nonzero residual keeps its sign
+    assert service.cents(0.0) == "0.000"
+    assert service.cents(None) == "—"
+
+
 def test_interval_complexities_norm_each_intervals_prescaled_vector():
     import pytest
 

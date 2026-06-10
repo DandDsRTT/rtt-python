@@ -494,6 +494,9 @@ CELL_FACTORS: dict[tuple[str, str], frozenset[str]] = {
 #     are tuning; the detempering spine stays neutral (no entry), like its value tiles.
 #   - SPINE_ROW_GROUP: a value ROW → its family. The quantities + units COLUMN cells at that
 #     row take this. The mapping is temperament; the tuning-family rows are tuning.
+# A family may be a single string OR a set of families: a row/column that genuinely carries
+# both the cyan tuning and the yellow temperament family reads green across its whole band
+# (e.g. the damage row 𝐝 = |𝐞|𝒘 — the tuning retuning error 𝐞 over the temperament mapping 𝑀).
 SPINE_COLUMN_GROUP = {
     "gens": "temperament", "primes": "temperament", "commas": "temperament",
     "held": "tuning", "targets": "tuning",
@@ -502,6 +505,8 @@ SPINE_ROW_GROUP = {
     "mapping": "temperament",
     "tuning": "tuning", "just": "tuning", "retune": "tuning",
     "prescaling": "tuning", "complexity": "tuning",
+    "weight": "tuning",                                  # the cyan weight band 𝒘
+    "damage": frozenset({"tuning", "temperament"}),      # both families → the green damage band 𝐝
 }
 # The spine rows (whose cells colour by their column) and spine columns (by their row).
 SPINE_ROWS = frozenset({"counts", "units"})
@@ -902,9 +907,10 @@ EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band
 # other row shows one EBK string per tile.
 PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "retune", "damage",
                         "prescaling", "complexity", "weight",
-                        # the projection row carries a plain-text EBK string for its P·V tile (the
-                        # projected unrotated vector list); reserving the band keeps it from spilling
-                        "projection",
+                        # the projection row (P·V) and the scaling-factors row (λ) each carry a
+                        # plain-text EBK string over the consolidated V column; reserving the bands
+                        # keeps the text from spilling into the row below
+                        "projection", "scaling_factors",
                         # the chapter-9 superspace matrices carry a plain-text EBK string too
                         # (B_L, M_L, M_jL); listing them reserves the band height so the text
                         # doesn't spill past the tile into the row below

@@ -25,7 +25,7 @@ from rtt.domain_basis import (
     is_standard_prime_limit_domain_basis,
 )
 from rtt.dual import dual
-from rtt.formatting import to_ebk
+from rtt.formatting import strip_negative_zero, to_ebk
 from rtt.generator_detempering import get_generator_detempering
 from rtt.generator_embedding import get_generator_embedding, get_tempering_projection
 from rtt.math_utils import get_primes, pcv_to_quotient, quotient_to_pcv
@@ -692,6 +692,52 @@ def unchanged_interval_ratios(state: TemperamentState, held_ratios=()) -> tuple 
     return _vectors_to_ratios(known, state.domain_basis)
 
 
+@dataclass(frozen=True)
+class UnchangedData:
+    """The unchanged half U of the consolidated V = C|U column, computed ONE way and shared by
+    the grid and the plain text (so the two views can't diverge). Every field runs over the ``r``
+    unchanged sub-columns, with ``None`` in the slots the under-held tuning leaves DASHED:
+    ``basis`` the U vectors, ``ratios`` their ratio strings, ``mapped`` the M·U generator-coordinate
+    rows (one per mapping row), ``sizes`` their tempered/just/error/damage cents, ``complexities``."""
+
+    basis: tuple          # r entries: a domain vector, or None (dashed)
+    ratios: tuple         # r entries: ratio string, or None
+    mapped: tuple         # len(mapping) rows, each r entries (M·U), or None
+    sizes: IntervalSizes  # each list r entries, with None for dashed
+    complexities: tuple   # r entries, or None
+
+
+def unchanged_interval_data(state: TemperamentState, held_ratios, tun: Tuning, scheme,
+                            domain_basis=None, prescaler_override=None) -> UnchangedData | None:
+    """Assemble the dash-aware unchanged half U of V — its vectors, ratios, mapped images, sizes
+    and complexities — from the tuning's held basis. The derived twins are computed over the KNOWN
+    columns only, then scattered back to the ``r`` positions (``None`` for each dashed column), so
+    the grid's value tiles and the plain text both read one geometry. ``None`` when U can't form."""
+    basis = unchanged_interval_basis(state, held_ratios)
+    if basis is None:
+        return None
+    nu = len(basis)
+    known = tuple(v for v in basis if v is not None)
+    kidx = [j for j, v in enumerate(basis) if v is not None]
+
+    def scatter(per_known):
+        out = [None] * nu
+        for pos, j in enumerate(kidx):
+            out[j] = per_known[pos]
+        return tuple(out)
+
+    ratios = comma_ratios(known, domain_basis) if known else ()
+    mapped = mapped_commas(state.mapping, known) if known else ()  # M·U over the known columns
+    mapped_rows = tuple(scatter(mapped[i] if known else ()) for i in range(len(state.mapping)))
+    sizes = interval_sizes(tun, ratios, domain_basis)
+    sized = IntervalSizes(scatter(sizes.tempered), scatter(sizes.just),
+                          scatter(sizes.errors), scatter(sizes.damage))
+    comps = (interval_complexities(state.mapping, scheme, ratios,
+                                   prescaler_override=prescaler_override, domain_basis=domain_basis)
+             if known else ())
+    return UnchangedData(basis, scatter(ratios), mapped_rows, sized, scatter(comps))
+
+
 def unchanged_ratios_of_tuning(state: TemperamentState, retuning_map, candidate_ratios, tol=1e-6):
     """The ratio strings of the intervals the DISPLAYED tuning actually holds unchanged — its
     rational unchanged-interval basis, read straight off the tuning rather than off the held
@@ -1262,6 +1308,8 @@ def plain_text_values(
     nonprime_approach: str = "",
     superspace: bool = False,
     superspace_generator_override=None,
+    consolidate_v: bool = False,
+    held_basis_ratios=(),
 ) -> dict[tuple[str, str], str]:
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
@@ -1322,6 +1370,23 @@ def plain_text_values(
     bare_x_text = _prescale_vector_list(_prescaled(prime_units) + bare_size_row, col="⟨]", outer="[⟩")
     complexity_text = _cents_list(interval_complexities(state.mapping, scheme, targets, domain_basis=db))
     damage_text = _cents_list(target_sizes.damage)
+    # the unchanged half U of the consolidated V = C|U column (projection on): assembled the SAME way
+    # the grid does — service.unchanged_interval_data — so the inline plain text matches the grid
+    # cell-for-cell, em-dashes and all, where the under-held tuning leaves a direction irrational. Off
+    # (or n = 0), the u_* lists stay empty and every V tile reads as the bare comma side C alone.
+    udata = unchanged_interval_data(state, held_basis_ratios, tun, scheme, db) if consolidate_v else None
+    if udata is not None:
+        nrow = len(state.mapping)
+        u_basis = list(udata.basis)  # P·𝐮 = 𝐮, so this also serves the projected list P·V's unchanged half
+        u_mapped_cols = [None if udata.basis[j] is None else tuple(udata.mapped[i][j] for i in range(nrow))
+                         for j in range(len(udata.basis))]
+        u_prescaled = [None if u is None else _sized((tuple(prescaler[i] * u[i] for i in range(state.d)),))[0]
+                       for u in udata.basis]
+        u_tempered, u_just, u_errors = list(udata.sizes.tempered), list(udata.sizes.just), list(udata.sizes.errors)
+        u_comps = list(udata.complexities)
+        u_scaling = [_DASH if v is None else "1" for v in udata.basis]  # λ = 1 (held) / — (dashed)
+    else:
+        u_basis = u_mapped_cols = u_prescaled = u_tempered = u_just = u_errors = u_comps = u_scaling = []
     # Keyed by the tile each value group occupies. The interval-vectors row holds the
     # vector lists (close ⟩); the mapping row holds the mapping (a list of maps, close ])
     # and the mapped lists (generator-coordinate vectors, close }). The editable duals
@@ -1331,28 +1396,32 @@ def plain_text_values(
     # ratio is already the formatted value. The generators (mapping/quantities) carry none either.
     values = {
         ("quantities", "primes"): ".".join(str(e) for e in db),
-        ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
-        # the projected unrotated vector list P·V over the comma half: P·𝐜 = 𝟎 (the commas vanish) —
-        # prime-count vectors (close ⟩), mirroring how the mapped comma basis shows M·C = 𝟎. The
-        # unchanged half (P·𝐮 = 𝐮) is the read-only U, omitted here as in every V-column plain text.
-        ("projection", "commas"): _ket_list(tuple((0,) * state.d for _ in commas), "⟩"),
+        # the consolidated V = C|U column shows BOTH halves in every tile: the comma side C then the
+        # unchanged side U (em-dashed where the tuning leaves a direction irrational). Off projection
+        # the u_* lists are empty, so each tile falls back to the bare comma side exactly as before.
+        ("vectors", "commas"): _ket_list(list(state.comma_basis) + u_basis, "⟩"),
+        # the projected unrotated vector list P·V: P·𝐜 = 𝟎 (the commas vanish), P·𝐮 = 𝐮 (held), so it
+        # is the zero comma columns followed by the unchanged vectors themselves — prime-count (⟩)
+        ("projection", "commas"): _ket_list([(0,) * state.d for _ in commas] + u_basis, "⟩"),
+        # the scaling factors λ = diag(λ): 0 per comma (vanished), 1 per (known) unchanged, — if dashed
+        ("scaling_factors", "commas"): "[" + " ".join(["0"] * len(commas) + u_scaling) + "]",
         ("vectors", "targets"): tp_text,  # Tₚ — the target identity
         ("mapping", "primes"): mapping_ebk(state),
-        ("mapping", "commas"): _ket_list(zip(*mapped_comma), "}"),
+        ("mapping", "commas"): _ket_list(list(zip(*mapped_comma)) + u_mapped_cols, "}"),
         ("mapping", "targets"): _ket_list(zip(*mapped), "}"),
         ("tuning", "gens"): _cents_genmap(tun.generator_map),
         ("tuning", "primes"): _cents_map(tun.tuning_map),
-        ("tuning", "commas"): _cents_list(comma_sizes.tempered),
+        ("tuning", "commas"): _cents_list(list(comma_sizes.tempered) + u_tempered),
         # the detempering's tempered sizes ARE the generator tuning map (𝒕D = 𝒈), shown
         # genmap-style ({ ]); its just and retuning sizes are ordinary cents lists
         ("tuning", "detempering"): _cents_genmap(detemper_sizes.tempered),
         ("tuning", "targets"): _cents_list(target_sizes.tempered),
         ("just", "primes"): _cents_map(tun.just_map),
-        ("just", "commas"): _cents_list(comma_sizes.just),
+        ("just", "commas"): _cents_list(list(comma_sizes.just) + u_just),
         ("just", "detempering"): _cents_list(detemper_sizes.just),
         ("just", "targets"): _cents_list(target_sizes.just),
         ("retune", "primes"): _cents_map(tun.retuning_map),
-        ("retune", "commas"): _cents_list(comma_sizes.errors),
+        ("retune", "commas"): _cents_list(list(comma_sizes.errors) + u_errors),
         ("retune", "detempering"): _cents_list(detemper_sizes.errors),
         ("retune", "targets"): _cents_list(target_sizes.errors),
         ("damage", "targets"): damage_text,
@@ -1363,11 +1432,11 @@ def plain_text_values(
         # outer [ … ] — so the bare prescaler reads as the matrix itself rather than a
         # product with another basis.
         ("prescaling", "primes"): bare_x_text,  # the bare 𝑋 — gains its 𝑍𝐿 size ROW under the size factor
-        ("prescaling", "commas"): _prescale_vector_list(_sized(_prescaled(state.comma_basis))),
+        ("prescaling", "commas"): _prescale_vector_list(list(_sized(_prescaled(state.comma_basis))) + u_prescaled),
         ("prescaling", "detempering"): _prescale_vector_list(_sized(_prescaled(detemper_vectors))),
         ("prescaling", "targets"): _prescale_vector_list(_sized(_prescaled(target_vectors))),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
-        ("complexity", "commas"): _cents_list(interval_complexities(state.mapping, scheme, commas, domain_basis=db)),
+        ("complexity", "commas"): _cents_list(list(interval_complexities(state.mapping, scheme, commas, domain_basis=db)) + u_comps),
         ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios, domain_basis=db)),
         ("complexity", "targets"): complexity_text,
         ("weight", "targets"): weight_text,
@@ -1481,12 +1550,21 @@ def plain_text_values(
     return values
 
 
+_DASH = "—"  # an em-dash column/value: an unknown the under-held tuning doesn't pin (matches the grid)
+
+
 def _ket_list(vectors, close: str, wrap: bool = True) -> str:
     """A list of column vectors: ``[[1 0 0⟩ [0 1 0⟩]`` for vectors (close ``⟩``),
     ``[[1 0} [0 1}]`` for generator-coordinate vectors (close ``}``). The outer ``[ ]``
     wraps the whole list (a matrix presentation, even a single vector); ``wrap=False``
-    drops it for the intervals-of-interest column, whose intervals stand alone."""
-    kets = " ".join("[" + " ".join(str(x) for x in v) + close for v in vectors)
+    drops it for the intervals-of-interest column, whose intervals stand alone. A ``None``
+    column is a DASHED unchanged vector — all em-dashes, width matched to the known columns."""
+    vectors = list(vectors)
+    dim = next((len(v) for v in vectors if v is not None), 0)
+    def _ket(v):
+        comps = [_DASH] * dim if v is None else [str(x) for x in v]
+        return "[" + " ".join(comps) + close
+    kets = " ".join(_ket(v) for v in vectors)
     return f"[{kets}]" if wrap else kets
 
 
@@ -1504,7 +1582,12 @@ def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]") -> str:
 
     Each value is formatted with prescale_text, so the string shows exactly the grid's
     numbers (whole numbers bare, else 3-dp) rather than a denser all-3-dp form."""
-    cols = " ".join(col[0] + " ".join(prescale_text(x) for x in v) + col[1] for v in vectors)
+    vectors = list(vectors)
+    dim = next((len(v) for v in vectors if v is not None), 0)  # a dashed (None) column is all em-dashes
+    def _col(v):
+        body = " ".join([_DASH] * dim if v is None else [prescale_text(x) for x in v])
+        return col[0] + body + col[1]
+    cols = " ".join(_col(v) for v in vectors)
     if not outer:
         return cols
     return f"{outer[0]}{cols}{outer[1]}"
@@ -1527,7 +1610,7 @@ def cents(value) -> str:
     tuning doesn't pin) renders as an em-dash."""
     if value is None:
         return "—"
-    return f"{value:.3f}"
+    return strip_negative_zero(f"{value:.3f}")
 
 
 def prescale_text(value: float) -> str:
@@ -1547,7 +1630,7 @@ def _cents_map(values) -> str:
 def _cents_list(values, wrap: bool = True) -> str:
     """A tuning list over the targets: ``[1200.000 1901.955 …]``. ``wrap=False`` drops the
     enclosing ``[ ]`` for the intervals-of-interest column, whose values stand bare."""
-    body = " ".join(cents(v) for v in values)
+    body = " ".join(_DASH if v is None else cents(v) for v in values)  # None → a dashed (unknown) entry
     return f"[{body}]" if wrap else body
 
 

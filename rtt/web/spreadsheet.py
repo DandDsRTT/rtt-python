@@ -947,38 +947,21 @@ class _GridBuilder:
         # the unchanged basis U from the tuning's held-interval basis: r columns, the h held
         # intervals (known) padded with None (dashed) for what the tuning doesn't pin. So the V =
         # C|U column and the scaling row track the held intervals / established-projection chooser.
-        self.unchanged_basis = (service.unchanged_interval_basis(self.state, self.held_basis_ratios)
-                                if (show_temp and show_tuning and self.settings["projection"] and self.state.n) else None)
-        self.show_unchanged = self.unchanged_basis is not None
-        self.nu = len(self.unchanged_basis) if self.show_unchanged else 0
-        if self.show_unchanged:
-            # U may carry DASHED columns (None) — directions the under-held tuning leaves
-            # irrational. Compute the derived twins (ratios, M·U, sizes, complexities) over the
-            # KNOWN columns only, then scatter them back to the r column positions, leaving None
-            # (rendered as an em-dash) for the dashed ones.
-            known = tuple(v for v in self.unchanged_basis if v is not None)
-            kidx = [j for j, v in enumerate(self.unchanged_basis) if v is not None]
-
-            def _scatter(per_known):
-                out = [None] * self.nu
-                for pos, j in enumerate(kidx):
-                    out[j] = per_known[pos]
-                return tuple(out)
-
-            ratios = service.comma_ratios(known, self.elements) if known else ()
-            self.unchanged_ratios = _scatter(ratios)  # ratio string or None per column
-            mapped = service.mapped_commas(self.state.mapping, known) if known else ()  # M·U over known
-            self.unchanged_mapped = tuple(_scatter(mapped[i] if known else ())
-                                          for i in range(len(self.state.mapping)))
-            sizes = service.interval_sizes(self.tun, ratios, self.elements)  # empty ratios → empty sizes
-            self.unchanged_sizes = service.IntervalSizes(
-                _scatter(sizes.tempered), _scatter(sizes.just),
-                _scatter(sizes.errors), _scatter(sizes.damage))
-            comps = service.interval_complexities(
-                self.state.mapping, self.tuning_scheme, ratios,
-                prescaler_override=self.custom_prescaler, domain_basis=self.elements) if known else ()
-            self.unchanged_complexities = _scatter(comps)
+        # the unchanged half U (vectors, ratios, M·U, sizes, complexities — dash-aware) is assembled
+        # ONCE by service.unchanged_interval_data and shared with the plain text (see
+        # plain_text_values), so the consolidated V = C|U reads identically as a grid and as inline
+        # EBK text. None when projection is off / there is no comma to merge with (n = 0).
+        _udata = (service.unchanged_interval_data(self.state, self.held_basis_ratios, self.tun,
+                                                  self.tuning_scheme, self.elements, self.custom_prescaler)
+                  if (show_temp and show_tuning and self.settings["projection"] and self.state.n) else None)
+        self.show_unchanged = _udata is not None
+        self.nu = len(_udata.basis) if self.show_unchanged else 0
+        if _udata is not None:
+            self.unchanged_basis, self.unchanged_ratios = _udata.basis, _udata.ratios
+            self.unchanged_mapped, self.unchanged_sizes = _udata.mapped, _udata.sizes
+            self.unchanged_complexities = _udata.complexities
         else:
+            self.unchanged_basis = None
             self.unchanged_ratios = self.unchanged_mapped = self.unchanged_complexities = ()
             self.unchanged_sizes = service.IntervalSizes((), (), (), ())
         # a comma being added is shown as a pending draft column to the right of the real
@@ -987,7 +970,7 @@ class _GridBuilder:
         # not enter the nullity, the mapping, or the sizes — only the displayed column count.
         # (Suppressed under the consolidated V view, where comma structural edits are frozen.)
         self.pending = (list(pending_comma)
-                        if (pending_comma is not None and not self.show_unchanged) else None)
+                        if pending_comma is not None else None)
         self.nc_shown = self.nc + (1 if self.pending is not None else 0)
         # the V column's shown sub-columns: the comma sub-columns (with any pending draft) then
         # the u unchanged sub-columns (0 off-projection). One geometry for the width, the gridline
@@ -1521,7 +1504,11 @@ class _GridBuilder:
                                                    superspace=self.show_superspace,
                                                    superspace_generator_override=(
                                                        self.superspace_generator_tuning
-                                                       if self.show_superspace_generators else None))
+                                                       if self.show_superspace_generators else None),
+                                                   # consolidated V = C|U: the plain text appends the
+                                                   # unchanged half U to every V tile, matching the grid
+                                                   consolidate_v=self.show_unchanged,
+                                                   held_basis_ratios=self.held_basis_ratios)
                          if self.show_ptext else {})
 
         y = rows_top_y
@@ -1922,10 +1909,18 @@ class _GridBuilder:
         return "elementratio" if "/" in text else "elementcell"
 
     def comma_left(self, c):
-        # the unchanged half U (sub-columns c ≥ nc) is pushed right by V_SPLIT_GAP, opening the
-        # gap that holds the C|U divider clear of the cells (only under the consolidated V view)
-        gap = V_SPLIT_GAP if (self.show_unchanged and c >= self.nc) else 0
+        # the unchanged half U (the sub-columns at or past nc_shown — i.e. past the comma cells AND
+        # any pending draft) is pushed right by V_SPLIT_GAP, opening the gap that holds the C|U
+        # divider clear of the cells (only under the consolidated V view)
+        gap = V_SPLIT_GAP if (self.show_unchanged and c >= self.nc_shown) else 0
         return self.commas_x + BRACKET_W + c * COL_W + gap
+
+    def comma_value_pos(self, i):
+        # the DISPLAY sub-column for the i-th value of the consolidated commas group, whose value
+        # sequence is the comma values (0..nc-1) then the unchanged values (nc..nc+nu-1). The
+        # unchanged half sits past any pending comma draft (which occupies index nc), so it shifts
+        # right by nc_shown - nc (= 1 while a draft is open, 0 otherwise). Identity off-projection.
+        return i if i < self.nc else i + (self.nc_shown - self.nc)
 
     def target_left(self, j):
         return self.targets_x + BRACKET_W + j * COL_W
@@ -1983,6 +1978,10 @@ class _GridBuilder:
         if n == 0:  # an empty set has no branch points: the + centres on the single trunk
             mx, mw = self.matrix_span(ckey)
             return mx + mw / 2
+        if ckey == "commas" and self.show_unchanged:
+            # no free stub past the commas — U (and the gap) occupy those slots — so the comma + rides
+            # ON the rightmost comma's branch point (the bus still spans all of V; see column_axis)
+            return self.sub_axis_x("commas", self.nc_shown - 1)
         return self.sub_axis_x(ckey, n - 1) + COL_W  # one slot past the last branch point
 
     def _plus_shows(self, ckey):  # mirrors the +'s emit gate in the quantities block (col_open for the
@@ -1995,8 +1994,8 @@ class _GridBuilder:
         if ckey == "primes":  # off: the + walks to the next standard prime (inapplicable to a subgroup).
             # On (nonstandard-domain box): the + starts a typed ?/? element draft, valid for ANY domain.
             return self.tile_open("quantities", "primes") and (self.show_nonstandard_domain or self.standard_domain)
-        if ckey == "commas":  # the consolidated V view freezes the comma count (a +/− would change
-            return self.tile_open("quantities", "commas") and not self.show_unchanged  # the rank, hence U)
+        if ckey == "commas":  # commas stay addable/removable even in the consolidated V view (adding
+            return self.tile_open("quantities", "commas")  # one shrinks U by a column — see comma_value_pos)
         return self.tile_open("quantities", ckey)
 
     def closed_form_operand(self, key, group, i):
@@ -2054,7 +2053,9 @@ class _GridBuilder:
         is_prime_group = group in ("primes", "ssprimes")
         for i, v in enumerate(values):
             cid = f"{key}:{self.group_elem[group]}:{self.col_token(group, i)}"
-            x = self.group_left[group](i)
+            # over the consolidated V the values run comma sizes then unchanged sizes; comma_value_pos
+            # places the unchanged half past any pending comma draft (identity for every other group)
+            x = self.group_left[group](self.comma_value_pos(i) if group == "commas" else i)
             u = self.cell_unit(key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
             # the held column passes per-interval alert flags: an interval the tuning no longer
             # holds reddens its size cells too (alerts is empty — no flags — for every other column)
@@ -2125,7 +2126,9 @@ class _GridBuilder:
         bx, bw = _bus_span(xs)
         # an addable column stretches its TOP bus out past the last sub-axis to the + stub, so the
         # branching bar reaches the + (which rides plus_stub_x); the bottom bus just spans the data.
-        top_end = self.plus_stub_x[key] if key in self.plus_stub_x else bx + bw
+        # max(…, bx + bw) keeps the bus spanning ALL sub-axes when the + rides INSIDE the data rather
+        # than past it (the consolidated V comma +, which sits on the rightmost comma, left of U).
+        top_end = max(self.plus_stub_x[key], bx + bw) if key in self.plus_stub_x else bx + bw
         self.gridline(f"bus:{key}:top", "h", self.fanout_y, bx, top_end - bx, dotted=dotted)
         self.gridline(f"bus:{key}:bot", "h", self.bot_bus_y, bx, bw, dotted=dotted)
         self.gridline(f"trunk:{key}", "v", cx, self.branch_top_y, self.fanout_y - self.branch_top_y, dotted=dotted)
@@ -2194,10 +2197,18 @@ class _GridBuilder:
     # counts + units rows by their column's family, the quantities + units columns by their
     # row's family — continuing each value band's colour through the spine (see SPINE_*).
     def tile_groups(self, rkey, ckey):
+        # the consolidated unrotated-vector-list column V = C|U mixes the comma half (the comma basis
+        # C — temperament/yellow) with the unchanged half (the held/unchanged intervals — tuning/cyan),
+        # so EVERY tile of the column reads GREEN (the darken blend of the two washes). This overrides
+        # the per-tile factors: off projection each commas tile keeps its own colour (C-yellow, etc.).
+        if self.show_unchanged and ckey == "commas":
+            return {"temperament", "tuning"}
+        # a spine family may be one string or a set of families (a both-families band reads green)
+        as_groups = lambda g: {g} if isinstance(g, str) else set(g)
         if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
-            return {SPINE_COLUMN_GROUP[ckey]}          # a counts/units row cell: its column's family
+            return as_groups(SPINE_COLUMN_GROUP[ckey])  # a counts/units row cell: its column's family
         if ckey in SPINE_COLUMNS and rkey in SPINE_ROW_GROUP:
-            return {SPINE_ROW_GROUP[rkey]}             # a quantities/units column cell: its row's family
+            return as_groups(SPINE_ROW_GROUP[rkey])     # a quantities/units column cell: its row's family
         # the chapter-9 superspace block is a cyan (tuning) REGION, green only where it crosses a
         # yellow temperament COLUMN (the domain-basis elements / commas, carrying P / C) — a coarse
         # region tint, not the per-object CELL_FACTORS scheme (see SUPERSPACE_REGION_* in grid_tables).
@@ -2366,7 +2377,7 @@ class _GridBuilder:
         # only the two scalar tallies (n, u), not a matrix, so a dividing rule there reads as noise.
         if not self.show_unchanged or self.commas_x is None:
             return
-        x = self.comma_left(self.nc) - V_SPLIT_GAP / 2 - SEP_W / 2  # mid-gap, between C's end and U's start
+        x = self.comma_left(self.nc_shown) - V_SPLIT_GAP / 2 - SEP_W / 2  # mid-gap, between C (+ any draft) and U
         for rkey in ("quantities", "units", "scaling_factors", "vectors", "projection",
                      "mapping", "tuning", "just", "retune", "prescaling", "complexity"):
             if self.tile_open(rkey, "commas"):
@@ -2438,7 +2449,7 @@ class _GridBuilder:
                     # the unchanged-interval count u over the unchanged half (split by the C|U bar)
                     self.cells.append(CellBox("count:commas", self.comma_left(0), self.row_y["counts"], self.nc * COL_W, ROW_H,
                                          "count", text=f"{_count_sym('n')} = {self.state.n}"))
-                    self.cells.append(CellBox("count:commas:u", self.comma_left(self.nc), self.row_y["counts"], self.nu * COL_W, ROW_H,
+                    self.cells.append(CellBox("count:commas:u", self.comma_left(self.nc_shown), self.row_y["counts"], self.nu * COL_W, ROW_H,
                                          "count", text=f"{_count_sym('u')} = {self.nu}"))
                     continue
                 self.cells.append(CellBox(f"count:{ckey}", self.col_x[ckey], self.row_y["counts"], self.col_w[ckey], ROW_H,
@@ -2599,13 +2610,13 @@ class _GridBuilder:
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
                 if self.show_unchanged:  # the unchanged-interval ratios complete V = C|U — read-only
                     for j in range(self.nu):  # (derived from the projection), the held primes "2/1", "5/1"
-                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j] or DASH, comma=self.nc + j))
+                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc_shown + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j] or DASH, comma=self.nc + j))
                         self._voice("quantities:commas", self.nc + j, self.unchanged_sizes.just[j])
                 # commas mirror the domain controls: + starts a (pending) comma; the − rides the
                 # last column's branch point — cancelling the draft, or un-tempering a real comma,
                 # down to the last one (which leaves just intonation, nullity 0 — nothing to remove).
-                # Frozen under the consolidated V view, where the comma count can't change.
-                if (self.pending is not None or self.nc > 0) and not self.show_unchanged:
+                # Stays live in the consolidated V view (removing a comma grows U by a column).
+                if self.pending is not None or self.nc > 0:
                     branch_minus("comma_minus", "commas", self.nc_shown - 1, "comma_minus")
             if self.tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
                 for i in range(self.r):                       # derived from M like the comma ratios — no ± control)
@@ -2743,7 +2754,7 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
                     for j in range(self.nu):
                         mapped_text = DASH if self.unchanged_mapped[i][j] is None else str(self.unchanged_mapped[i][j])
-                        self.cells.append(CellBox(f"cell:mapped_unchanged:{i}:{j}", self.comma_left(self.nc + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+                        self.cells.append(CellBox(f"cell:mapped_unchanged:{i}:{j}", self.comma_left(self.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
 
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
         # maps like the mapping. Its cells are "mapped" (a computed value, not editable like the
@@ -2780,7 +2791,7 @@ class _GridBuilder:
             for j in range(self.nu):  # P·unchanged = the unchanged interval itself (dashed if U is)
                 dashed = self.unchanged_basis[j] is None
                 for p in range(self.d):
-                    self.cells.append(CellBox(f"cell:proj_v:{p}:{self.nc + j}", self.comma_left(self.nc + j), self.proj_top(p),
+                    self.cells.append(CellBox(f"cell:proj_v:{p}:{self.nc + j}", self.comma_left(self.nc_shown + j), self.proj_top(p),
                                          COL_W, ROW_H, "mapped",
                                          text=DASH if dashed else str(self.unchanged_basis[j][p]), prime=p, comma=self.nc + j))
 
@@ -2791,8 +2802,8 @@ class _GridBuilder:
             # 0 for each comma (vanished), 1 for each KNOWN unchanged direction; a dashed unchanged
             # column (the tuning leaves that direction irrational) has no determined eigenvalue → dash
             scaling = ["0"] * self.nc + [(DASH if v is None else "1") for v in self.unchanged_basis]
-            for c, lam in enumerate(scaling):
-                self.cells.append(CellBox(f"cell:scaling:{c}", self.comma_left(c), self.row_y["scaling_factors"],
+            for c, lam in enumerate(scaling):  # comma_value_pos skips the pending-draft slot for the U half
+                self.cells.append(CellBox(f"cell:scaling:{c}", self.comma_left(self.comma_value_pos(c)), self.row_y["scaling_factors"],
                                      COL_W, ROW_H, "mapped", text=lam, comma=c))
 
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
@@ -2842,7 +2853,7 @@ class _GridBuilder:
                 for j in range(self.nu):
                     for p in range(self.d):
                         vec_text = DASH if self.unchanged_basis[j] is None else str(self.unchanged_basis[j][p])
-                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc + j), self.vec_top(p), COL_W, ROW_H, "vec", text=vec_text, prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p)))
+                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H, "vec", text=vec_text, prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p)))
                     self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
                 if self.pending is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
@@ -3192,7 +3203,7 @@ class _GridBuilder:
                 if vec is None:  # a DASHED unchanged column of V = C|U — its prescaled vector 𝐿·v is unknown
                     for i in range(nrows + self.size_rows):
                         cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
-                        cx, cy = left(c), self.row_y["prescaling"] + i * ROW_H
+                        cx, cy = left(self.comma_value_pos(c) if group == "commas" else c), self.row_y["prescaling"] + i * ROW_H
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue", text=DASH, unit=u))
                     continue
                 # the bare prescaler's columns ARE the (super)space primes, so each column's unit
@@ -3208,7 +3219,7 @@ class _GridBuilder:
                     # with the size factor) is the guide's size-sensitizing row, sf·Σ(𝑋·v) (= sf·log₂ size)
                     value = prescaled[i] if i < nrows else self.size_factor * sum(prescaled)
                     cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
-                    cx, cy = left(c), self.row_y["prescaling"] + i * ROW_H
+                    cx, cy = left(self.comma_value_pos(c) if group == "commas" else c), self.row_y["prescaling"] + i * ROW_H
                     # held column: a prescaled held interval the tuning no longer holds reddens too
                     # (the editable 𝐋 diagonal below is primes-only, so it never carries this flag)
                     alert = self.held_unheld[c] if group == "held" else False
@@ -3901,7 +3912,7 @@ class _GridBuilder:
                 # interval count" over the unchanged ones
                 self.cells.append(CellBox("caption:counts:commas", self.comma_left(0), cy, self.nc * COL_W,
                                      self.row_cap[rkey], "caption", text="nullity"))
-                self.cells.append(CellBox("caption:counts:commas:u", self.comma_left(self.nc), cy, self.nu * COL_W,
+                self.cells.append(CellBox("caption:counts:commas:u", self.comma_left(self.nc_shown), cy, self.nu * COL_W,
                                      self.row_cap[rkey], "caption", text="unchanged interval count"))
                 continue
             if self.show_captions:
