@@ -7744,6 +7744,30 @@ def test_no_scaling_factors_or_unchanged_columns_without_projection():
     assert not any(c.startswith("cell:unchanged:") for c in cells)
 
 
+def test_projection_relabels_the_commas_header_as_the_unrotated_vector_basis():
+    # the consolidated interval-vectors header reads as the whole unrotated vector basis V = C|U,
+    # not the bare comma basis C — caption (names, on by default) and symbol/equivalence (symbols on)
+    named = {c.id: c for c in _with(projection=True).cells}
+    assert named["caption:vectors:commas"].text == "unrotated vector basis"
+    symd = {c.id: c for c in _with(projection=True, symbols=True, equivalences=True).cells}
+    assert symd["symbol:vectors:commas"].text == "V = C|U"
+    # off projection it stays the plain comma basis C
+    plain = {c.id: c for c in _with(symbols=True).cells}
+    assert plain["caption:vectors:commas"].text == "comma basis"
+    assert plain["symbol:vectors:commas"].text == "C"
+
+
+def test_projection_v_column_labels_keep_the_c_and_u_identities():
+    cells = {c.id: c for c in _with(projection=True, symbols=True).cells}
+    # the interval-vectors header labels the comma sub-columns 𝐜ᵢ, the unchanged ones 𝐮ᵢ
+    assert cells["matlabel:col:vectors:commas:0"].text == "𝐜₁"   # the lone comma
+    assert cells["matlabel:col:vectors:commas:1"].text == "𝐮₁"   # first unchanged
+    assert cells["matlabel:col:vectors:commas:2"].text == "𝐮₂"
+    # the scaling-factors row labels every V sub-column λᵢ
+    assert cells["matlabel:col:scaling_factors:commas:0"].text == "λ₁"
+    assert cells["matlabel:col:scaling_factors:commas:2"].text == "λ₃"
+
+
 def test_projection_prescaling_and_complexity_rows_span_v():
     # with complexity weighting on, the prescaling (𝐿·v) and complexity (‖𝐿·v‖) rows run over
     # V = C|U too — the unchanged intervals get prescaled / normed exactly like the commas

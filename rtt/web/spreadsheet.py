@@ -955,6 +955,15 @@ class _GridBuilder:
         # the u unchanged sub-columns (0 off-projection). One geometry for the width, the gridline
         # fan, the EBK marks and every value tile that renders over the consolidated column.
         self.nv_shown = self.nc_shown + self.nu
+        # under the consolidated view the interval-vectors header tile reads as the whole unrotated
+        # vector basis V = C|U, not just the comma basis C (the symbol → V, the equiv → C|U are set
+        # in the caption loop). Overriding the caption here also widens the column to seat the name.
+        if self.show_unchanged:
+            self.effective_captions[("vectors", "commas")] = "unrotated vector basis"
+            # the V column's per-column labels keep the C|U identities the mockup draws: 𝐜ᵢ over the
+            # comma sub-columns, 𝐮ᵢ over the unchanged ones (the scaling row's λᵢ spans all of V).
+            self.col_labels[("vectors", "commas")] = (
+                lambda i: f"𝐜{_sub(i + 1)}" if i < self.nc else f"𝐮{_sub(i - self.nc + 1)}")
         # other intervals of interest: a user-built set held as vectors and edited like
         # the comma basis (editable vector cells). Normalize each vector to the current d
         # (pad/trim) so a domain change can't misalign them, then derive the ratios the
@@ -3515,7 +3524,7 @@ class _GridBuilder:
         if self.show_symbols:
             # the per-column group's count, so a tile's columns are iterated by its
             # (rkey, ckey) without re-deriving the loop bounds each time
-            group_count = {"gens": self.r, "primes": self.d, "commas": self.nc, "targets": self.k,
+            group_count = {"gens": self.r, "primes": self.d, "commas": self.nc + self.nu, "targets": self.k,
                            "held": self.nh, "detempering": self.r,
                            "ssgens": self.rL, "ssprimes": self.dL}
             # the y of the i-th row inside a row-labelled tile: the mapping stacks under
@@ -3701,7 +3710,10 @@ class _GridBuilder:
         equivalences = {**EQUIVALENCES,
                         ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                         ("prescaling", "ssprimes" if self.show_superspace else "primes"): self.prescaler_equivalence,
-                        **(ALL_INTERVAL_EQUIVALENCES if ai else {})}
+                        **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
+                        # the consolidated interval-vectors header: V = C|U (the comma basis and
+                        # the unchanged basis concatenated)
+                        **({("vectors", "commas"): " = C|U"} if self.show_unchanged else {})}
         if ai:
             # all-interval (Tₚ = I): the kept target tiles take prime-proxy closed forms in the live
             # prescaler glyph (X→L). The complexity list IS the prescaler diagonal; the (simplicity)
@@ -3733,6 +3745,8 @@ class _GridBuilder:
                 base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
                 if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
                     base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
+                if self.show_unchanged and (rkey, ckey) == ("vectors", "commas"):  # C → V (the unrotated basis)
+                    base_symbol = "V"
                 glyph = base_symbol if (self.show_symbols or equiv) else ""
                 if glyph or equiv:
                     self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))

@@ -288,6 +288,8 @@ ROW_LABEL_LETTERS = {
 }
 ROW_LABELED_TILES = frozenset(ROW_LABEL_LETTERS)
 COL_LABEL_LETTERS = {
+    # the scaling factors λ = diag(λ): one eigenvalue λᵢ per V sub-column (commas then unchanged)
+    ("scaling_factors", "commas"): "λ",
     # interval vectors row — d-tall column-vector matrices
     ("vectors", "commas"): "𝐜",
     ("vectors", "targets"): "𝐭",
