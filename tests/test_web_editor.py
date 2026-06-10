@@ -1947,6 +1947,28 @@ def test_established_projection_reflects_a_hand_typed_held_basis():
     assert ed.displayed_projection_scheme_name == "1/4-comma"
 
 
+def test_targets_in_use_tracks_whether_the_tuning_is_the_target_optimum():
+    # the target list is only computing the tuning while the displayed tuning IS the scheme's
+    # target-driven optimum
+    ed = Editor()
+    assert ed.targets_in_use is True              # default: the tuning IS the TILT minimax-U optimum
+    ed.set_established_projection("1/4-comma")     # 1/4-comma == that optimum, so targets still apply
+    assert ed.targets_in_use is True
+    deviated = Editor()
+    deviated.set_established_projection("1/3-comma")  # a different tuning — targets no longer compute it
+    assert deviated.targets_in_use is False
+
+
+def test_target_column_hides_when_the_tuning_deviates_from_the_optimum():
+    # ch3 h+k≥r: once a projection pins the tuning away from the target optimum, the targets play no
+    # role, so the whole target-interval column disappears
+    ed = Editor()
+    has_targets = lambda: any(c.id.startswith(("target:", "cell:target")) for c in ed.layout().cells)
+    assert has_targets()                           # default: the target list is shown
+    ed.set_established_projection("1/3-comma")      # deviate onto a projection
+    assert not has_targets()                        # the target column is gone
+
+
 def test_established_projection_round_trips_via_the_generator_tuning():
     # picking sets 𝒈 (a manual tuning), which serializes — so the choice survives a save/reload
     ed = Editor()

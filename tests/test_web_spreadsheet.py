@@ -5325,7 +5325,7 @@ def test_held_interval_held_to_display_precision_is_not_flagged():
     # milli-cent residual that still reads 0.000 — the interval is held to display precision, so
     # NOT red. The red follows the shown retuning error, never hidden float noise.
     cells = _held_with_tuning((1200.0, 701.955))
-    assert cells["retune:held:0"].text in ("0.000", "-0.000")  # reads as zero error
+    assert cells["retune:held:0"].text == "0.000"  # reads as zero error (never a signed -0.000)
     for cid in _held_value_cells():
         assert not cells[cid].alert, cid
 
@@ -7845,12 +7845,28 @@ def test_projection_v_column_fans_one_gridline_per_subcolumn():
     assert {"v:comma:0", "v:comma:1", "v:comma:2"} <= lines  # n+u = 3 sub-axes
 
 
-def test_projection_freezes_the_comma_count_controls():
-    cells = {c.id for c in _with(projection=True).cells}
-    # the consolidated V mixes editable C with read-only U; structural comma edits (which
-    # would change the rank and so U) are frozen — no +, no −, no drag grips on V
-    assert "comma_plus" not in cells and "comma_minus" not in cells
-    assert not any(c.startswith("grip:commas:") for c in cells)
+def test_projection_keeps_the_comma_add_remove_controls():
+    cells = {c.id: c for c in _with(projection=True).cells}
+    # commas stay addable/removable in the consolidated V view (adding one shrinks U by a column);
+    # the + rides the rightmost comma's branch point — no free stub past it, U holds the next slots —
+    # and the − its usual last-comma hover zone. No +/− on the unchanged half.
+    assert "comma_plus" in cells and "comma_minus" in cells
+    assert cells["comma_plus"].x < cells["cell:unchanged:0:0"].x   # the + sits left of U
+    # the + rides the rightmost comma's branch point, NOT a stub one COL_W past it
+    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet.COL_W / 2 - spreadsheet.BTN / 2)) < 0.51
+
+
+def test_projection_pending_comma_pushes_the_unchanged_half_past_the_draft():
+    # adding a comma opens a pending draft column at index nc; the unchanged half U must sit PAST it
+    # (and past the C|U gap), so the draft and U never overlap
+    s = settings.defaults()
+    s["projection"] = True
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None])
+    cells = {c.id: c for c in lay.cells}
+    draft = cells["cell:comma:0:1"]            # the draft column rides at nc = 1
+    u_first = cells["cell:unchanged:0:0"]      # the first unchanged column
+    assert u_first.x > draft.x + spreadsheet.COL_W   # U is past the draft (with the gap between)
 
 
 def test_projection_v_column_counts_both_nullity_and_unchanged():
@@ -7877,6 +7893,19 @@ def test_projected_unrotated_vector_list_tile_is_complete():
     assert cells["units:projection:commas"].text == "units: p"  # prime-count vectors, like V
     # the plain text shows the WHOLE column V = C|U: P·𝐜 = 𝟎 (commas vanish) then P·𝐮 = 𝐮 (held)
     assert cells["ptext:projection:commas"].text == "[[0 0 0⟩ [1 0 0⟩ [-2 0 1⟩]"
+
+
+def test_consolidated_v_column_reads_green():
+    # V = C|U mixes the comma half (temperament/yellow) with the unchanged/held half (tuning/cyan),
+    # so the whole column reads GREEN — every tile carries BOTH washes when both colorizations are on
+    blocks = {b.id for b in _proj_build(("2/1", "5/4"),
+                                        temperament_colorization=True, tuning_colorization=True).blocks}
+    for r in ("vectors", "mapping", "scaling_factors", "projection", "tuning", "just", "retune"):
+        assert f"wash:temperament:{r}:commas" in blocks, r   # yellow (the comma half C)
+        assert f"wash:tuning:{r}:commas" in blocks, r        # cyan (the unchanged half U) → green
+    # off projection the comma column is its plain temperament yellow — no tuning wash (regression)
+    off = {b.id for b in _with(temperament_colorization=True, tuning_colorization=True).blocks}
+    assert "wash:temperament:vectors:commas" in off and "wash:tuning:vectors:commas" not in off
 
 
 def test_v_column_plain_text_shows_both_the_comma_and_unchanged_halves():

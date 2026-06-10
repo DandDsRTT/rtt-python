@@ -61,9 +61,18 @@ def covector_to_ebk(covector: tuple, t: Temperament) -> str:
     return f"[{body}]"
 
 
+def strip_negative_zero(text: str) -> str:
+    """Drop a leading minus from a fixed-point number that displays as zero: ``-0.000`` → ``0.000``.
+    Negative zero carries no meaning here, so a value whose shown digits are all zero should read
+    without the sign. A string with any nonzero digit is left untouched (``-0.001`` stays signed)."""
+    if text.startswith("-") and not any(ch in "123456789" for ch in text):
+        return text[1:]
+    return text
+
+
 def _format_number(entry) -> str:
     if isinstance(entry, int):
         return str(entry)
     if isinstance(entry, Fraction) and entry.denominator == 1:
         return str(entry.numerator)
-    return f"{float(entry):.{_OUTPUT_ACCURACY}f}"
+    return strip_negative_zero(f"{float(entry):.{_OUTPUT_ACCURACY}f}")
