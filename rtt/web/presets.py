@@ -258,11 +258,26 @@ ESTABLISHED_PROJECTIONS: dict[str, dict[str, tuple[str, ...]]] = {
         "1/6-comma": ("2/1", "45/32"),       # Silbermann
         "1/5-comma": ("2/1", "15/8"),
         "2/9-comma": ("2/1", "75/64"),       # Smith
-        "quarter-comma": ("2/1", "5/4"),     # Aron: pure major third
+        "1/4-comma": ("2/1", "5/4"),         # Aron: pure major third
         "2/7-comma": ("2/1", "25/24"),       # Zarlino
-        "third-comma": ("2/1", "6/5"),       # Salinas: pure minor third
+        "1/3-comma": ("2/1", "6/5"),         # Salinas: pure minor third
     },
 }
+
+
+def projection_candidate_ratios(state) -> tuple[str, ...]:
+    """The intervals to test for being held unchanged by the displayed tuning (see
+    :func:`service.unchanged_ratios_of_tuning`): every interval named in this temperament's
+    established projections, octave first then the distinguishing held interval of each tuning,
+    de-duplicated in list order. Putting these first means a tuning that holds, say, ``5/4`` is
+    reported with that clean representative rather than an equivalent like ``5/2``. The caller
+    appends the target-interval set and held column so a basis of the unchanged subspace is always
+    covered even for temperaments with no established projection."""
+    seen: dict[str, None] = {}
+    for ratios in ESTABLISHED_PROJECTIONS.get(identify(state), {}).values():
+        for ratio in ratios:
+            seen.setdefault(ratio, None)
+    return tuple(seen)
 
 
 def established_projections(state) -> dict[str, tuple[str, ...]]:

@@ -943,38 +943,21 @@ class _GridBuilder:
         # the unchanged basis U from the tuning's held-interval basis: r columns, the h held
         # intervals (known) padded with None (dashed) for what the tuning doesn't pin. So the V =
         # C|U column and the scaling row track the held intervals / established-projection chooser.
-        self.unchanged_basis = (service.unchanged_interval_basis(self.state, self.held_basis_ratios)
-                                if (show_temp and show_tuning and self.settings["projection"] and self.state.n) else None)
-        self.show_unchanged = self.unchanged_basis is not None
-        self.nu = len(self.unchanged_basis) if self.show_unchanged else 0
-        if self.show_unchanged:
-            # U may carry DASHED columns (None) — directions the under-held tuning leaves
-            # irrational. Compute the derived twins (ratios, M·U, sizes, complexities) over the
-            # KNOWN columns only, then scatter them back to the r column positions, leaving None
-            # (rendered as an em-dash) for the dashed ones.
-            known = tuple(v for v in self.unchanged_basis if v is not None)
-            kidx = [j for j, v in enumerate(self.unchanged_basis) if v is not None]
-
-            def _scatter(per_known):
-                out = [None] * self.nu
-                for pos, j in enumerate(kidx):
-                    out[j] = per_known[pos]
-                return tuple(out)
-
-            ratios = service.comma_ratios(known, self.elements) if known else ()
-            self.unchanged_ratios = _scatter(ratios)  # ratio string or None per column
-            mapped = service.mapped_commas(self.state.mapping, known) if known else ()  # M·U over known
-            self.unchanged_mapped = tuple(_scatter(mapped[i] if known else ())
-                                          for i in range(len(self.state.mapping)))
-            sizes = service.interval_sizes(self.tun, ratios, self.elements)  # empty ratios → empty sizes
-            self.unchanged_sizes = service.IntervalSizes(
-                _scatter(sizes.tempered), _scatter(sizes.just),
-                _scatter(sizes.errors), _scatter(sizes.damage))
-            comps = service.interval_complexities(
-                self.state.mapping, self.tuning_scheme, ratios,
-                prescaler_override=self.custom_prescaler, domain_basis=self.elements) if known else ()
-            self.unchanged_complexities = _scatter(comps)
+        # the unchanged half U (vectors, ratios, M·U, sizes, complexities — dash-aware) is assembled
+        # ONCE by service.unchanged_interval_data and shared with the plain text (see
+        # plain_text_values), so the consolidated V = C|U reads identically as a grid and as inline
+        # EBK text. None when projection is off / there is no comma to merge with (n = 0).
+        _udata = (service.unchanged_interval_data(self.state, self.held_basis_ratios, self.tun,
+                                                  self.tuning_scheme, self.elements, self.custom_prescaler)
+                  if (show_temp and show_tuning and self.settings["projection"] and self.state.n) else None)
+        self.show_unchanged = _udata is not None
+        self.nu = len(_udata.basis) if self.show_unchanged else 0
+        if _udata is not None:
+            self.unchanged_basis, self.unchanged_ratios = _udata.basis, _udata.ratios
+            self.unchanged_mapped, self.unchanged_sizes = _udata.mapped, _udata.sizes
+            self.unchanged_complexities = _udata.complexities
         else:
+            self.unchanged_basis = None
             self.unchanged_ratios = self.unchanged_mapped = self.unchanged_complexities = ()
             self.unchanged_sizes = service.IntervalSizes((), (), (), ())
         # a comma being added is shown as a pending draft column to the right of the real
@@ -1517,7 +1500,11 @@ class _GridBuilder:
                                                    superspace=self.show_superspace,
                                                    superspace_generator_override=(
                                                        self.superspace_generator_tuning
-                                                       if self.show_superspace_generators else None))
+                                                       if self.show_superspace_generators else None),
+                                                   # consolidated V = C|U: the plain text appends the
+                                                   # unchanged half U to every V tile, matching the grid
+                                                   consolidate_v=self.show_unchanged,
+                                                   held_basis_ratios=self.held_basis_ratios)
                          if self.show_ptext else {})
 
         y = rows_top_y

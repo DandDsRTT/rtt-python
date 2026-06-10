@@ -7872,11 +7872,28 @@ def test_projection_v_column_counts_both_nullity_and_unchanged():
 def test_projected_unrotated_vector_list_tile_is_complete():
     # the P·V tile carries the full complement like every other V-column tile: a symbol, a units
     # line, and a plain-text EBK string (not just the gridded cells)
-    cells = {c.id: c for c in _with(projection=True, symbols=True, units=True, plain_text_values=True).cells}
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, units=True, plain_text_values=True).cells}
     assert cells["symbol:projection:commas"].text == "PV"      # P·V (= V·diag(λ))
     assert cells["units:projection:commas"].text == "units: p"  # prime-count vectors, like V
-    # the plain text shows the comma half P·𝐜 = 𝟎 (the commas vanish), like the mapped comma basis
-    assert cells["ptext:projection:commas"].text == "[[0 0 0⟩]"
+    # the plain text shows the WHOLE column V = C|U: P·𝐜 = 𝟎 (commas vanish) then P·𝐮 = 𝐮 (held)
+    assert cells["ptext:projection:commas"].text == "[[0 0 0⟩ [1 0 0⟩ [-2 0 1⟩]"
+
+
+def test_v_column_plain_text_shows_both_the_comma_and_unchanged_halves():
+    # the inline plain text matches the grid for the WHOLE consolidated V = C|U — not just C. Every
+    # value tile appends the unchanged half U (here 2/1, 5/4 under a full rational hold).
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), plain_text_values=True, weighting=True).cells}
+    assert cells["ptext:vectors:commas"].text == "[[4 -4 1⟩ [1 0 0⟩ [-2 0 1⟩]"   # C | U vectors
+    assert cells["ptext:mapping:commas"].text == "[[0 0} [1 0} [-2 4}]"           # M·C=0 | M·U
+    assert cells["ptext:tuning:commas"].text == "[0.000 1200.000 386.314]"        # comma | unchanged sizes
+    assert cells["ptext:scaling_factors:commas"].text == "[0 1 1]"                # λ over C|U
+    # under-held, the unchanged half dashes out in the plain text exactly as in the grid
+    dashed = {c.id: c for c in _proj_build(plain_text_values=True).cells}
+    assert dashed["ptext:vectors:commas"].text == "[[4 -4 1⟩ [— — —⟩ [— — —⟩]"
+    assert dashed["ptext:tuning:commas"].text == "[0.000 — —]"
+    # OFF projection the column is just C again (no consolidation, no U) — regression guard
+    off = {c.id: c for c in _with(plain_text_values=True).cells}
+    assert off["ptext:vectors:commas"].text == "[[4 -4 1⟩]"
 
 
 def test_no_scaling_factors_or_unchanged_columns_without_projection():

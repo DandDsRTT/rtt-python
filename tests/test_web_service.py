@@ -1523,12 +1523,26 @@ def test_generator_tuning_range_is_none_for_an_unmeasurable_mixed_basis():
 
 def test_tuning_projection_is_dashed_for_an_under_held_tuning():
     # the corrected model: a tuning is a rational projection ONLY if it holds a full-rank (r)
-    # rational basis. The default meantone tuning holds nothing rational (h=0), and a held-octave
-    # tuning only the octave (h=1) — both < r=2 — so P is dashed out (None), NOT a fabricated
-    # quarter-comma. (P is never auto-picked from the temperament alone any more.)
+    # rational basis. Given an EMPTY unchanged basis (a tuning known to hold nothing rational, like
+    # minimax-S) or only the octave (h=1 < r=2), P is dashed out (None), never fabricated. (Which
+    # rational intervals the displayed tuning actually holds is read off it by
+    # unchanged_ratios_of_tuning, then fed here.)
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     assert service.tuning_projection(state) is None
     assert service.tuning_projection(state, ("2/1",)) is None
+
+
+def test_unchanged_ratios_of_tuning_reads_the_held_intervals_off_the_tuning():
+    # U comes from the DISPLAYED tuning, not a held column: the default minimax-U meantone holds 2/1
+    # and 5/4 at zero damage (it IS quarter-comma), so they are reported with no held column at all —
+    # tested only against the candidate ratios, established representatives first for clean output.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    candidates = ("2/1", "5/4", "6/5", "3/2", "9/8")
+    default = service.tuning(state.mapping, service.DEFAULT_DOCUMENT_SCHEME)
+    assert service.unchanged_ratios_of_tuning(state, default.retuning_map, candidates) == ("2/1", "5/4")
+    # an irrational optimum (minimax-S tempers even the octave) holds nothing rational → empty → dashed
+    minimax_s = service.tuning(state.mapping, "minimax-S")
+    assert service.unchanged_ratios_of_tuning(state, minimax_s.retuning_map, candidates) == ()
 
 
 def test_tuning_projection_of_just_intonation_is_the_identity():

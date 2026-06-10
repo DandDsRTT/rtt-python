@@ -176,9 +176,9 @@ _MEANTONE_FAMILY = {
     "1/6-comma": ("2/1", "45/32"),
     "1/5-comma": ("2/1", "15/8"),
     "2/9-comma": ("2/1", "75/64"),
-    "quarter-comma": ("2/1", "5/4"),
+    "1/4-comma": ("2/1", "5/4"),
     "2/7-comma": ("2/1", "25/24"),
-    "third-comma": ("2/1", "6/5"),
+    "1/3-comma": ("2/1", "6/5"),
 }
 
 
@@ -222,10 +222,10 @@ def test_projection_held_ratios_resolves_a_chosen_tuning_else_none():
 def test_identify_established_projection_matches_the_current_held_basis():
     # the chooser shows whichever named tuning the current held basis realises (by projection)
     meantone = service.from_mapping(INITIAL_MAPPING)
-    assert presets.identify_established_projection(meantone, ("2/1", "5/4")) == "quarter-comma"
-    assert presets.identify_established_projection(meantone, ("2/1", "6/5")) == "third-comma"
+    assert presets.identify_established_projection(meantone, ("2/1", "5/4")) == "1/4-comma"
+    assert presets.identify_established_projection(meantone, ("2/1", "6/5")) == "1/3-comma"
     # a span-equivalent basis still matches (5/3 spans the same as 6/5 with the octave)
-    assert presets.identify_established_projection(meantone, ("2/1", "5/3")) == "third-comma"
+    assert presets.identify_established_projection(meantone, ("2/1", "5/3")) == "1/3-comma"
 
 
 def test_identify_established_projection_is_none_when_not_a_full_projection():
