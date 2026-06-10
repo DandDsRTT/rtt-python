@@ -2190,10 +2190,12 @@ class _GridBuilder:
     # counts + units rows by their column's family, the quantities + units columns by their
     # row's family — continuing each value band's colour through the spine (see SPINE_*).
     def tile_groups(self, rkey, ckey):
+        # a spine family may be one string or a set of families (a both-families band reads green)
+        as_groups = lambda g: {g} if isinstance(g, str) else set(g)
         if rkey in SPINE_ROWS and ckey in SPINE_COLUMN_GROUP:
-            return {SPINE_COLUMN_GROUP[ckey]}          # a counts/units row cell: its column's family
+            return as_groups(SPINE_COLUMN_GROUP[ckey])  # a counts/units row cell: its column's family
         if ckey in SPINE_COLUMNS and rkey in SPINE_ROW_GROUP:
-            return {SPINE_ROW_GROUP[rkey]}             # a quantities/units column cell: its row's family
+            return as_groups(SPINE_ROW_GROUP[rkey])     # a quantities/units column cell: its row's family
         # the chapter-9 superspace block is a cyan (tuning) REGION, green only where it crosses a
         # yellow temperament COLUMN (the domain-basis elements / commas, carrying P / C) — a coarse
         # region tint, not the per-object CELL_FACTORS scheme (see SUPERSPACE_REGION_* in grid_tables).
