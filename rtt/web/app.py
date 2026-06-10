@@ -1275,6 +1275,7 @@ class _Reconciler:
 
         self.cell_kinds["mapping"] = _KindHandlers(self._build_mapping, self._update_mapping)
         self.cell_kinds["commacell"] = _KindHandlers(self._build_commacell, self._update_commacell)
+        self.cell_kinds["unchangedcell"] = _KindHandlers(self._build_unchangedcell, self._update_input_text)
         self.cell_kinds["interestcell"] = _KindHandlers(self._build_interestcell, self._update_input_text)
         self.cell_kinds["heldcell"] = _KindHandlers(self._build_heldcell, self._update_input_text)
         self.cell_kinds["targetcell"] = _KindHandlers(self._build_targetcell, self._update_input_text)
@@ -1709,6 +1710,15 @@ class _Reconciler:
         inp.on("blur", lambda _=None: self._cb.on_comma_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_col_target(wrap, "comma", cb.comma)  # drop a dragged comma onto this one to combine
+
+    def _build_unchangedcell(self, cb, wrap):
+        # the editable unchanged-basis cells (U of V = C|U), like the comma cells: preview on type,
+        # commit on Enter/blur. Editing the basis retunes to the projection that holds it.
+        wrap.classes("rtt-cell-input")
+        inp = ui.input(on_change=lambda e: self._cb.on_unchanged_change(preview=True)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        inp.on("blur", lambda _=None: self._cb.on_unchanged_change())
+        self.inputs[cb.id] = inp
 
     def _update_commacell(self, cb):
         if cb.pending:  # the draft column: show the typed component (blank if None), green-ringed
@@ -2708,6 +2718,34 @@ def index() -> None:
         editor.edit_comma_basis(basis)
         render()
 
+    def on_unchanged_change(preview=False):
+        # the unchanged basis U is editable when it is a full rational projection (like the comma
+        # basis): read its d-tall columns and set the tuning to the projection that holds them. A
+        # silent revert when they don't form a valid full projection. Mirrors on_comma_change.
+        if building[0]:
+            return
+        d, r = editor.state.d, editor.state.r
+        if any(f"cell:unchanged:{p}:{j}" not in rec.inputs for j in range(r) for p in range(d)):
+            if preview:
+                rec.clear_preview()
+            return  # U isn't editable (under-rank) or not shown
+        vectors = [[_parse_int(rec.inputs[f"cell:unchanged:{p}:{j}"].value) for p in range(d)] for j in range(r)]
+        if any(v is None for vec in vectors for v in vec):
+            if preview:
+                rec.clear_preview()
+            return  # an in-progress / non-integer edit
+        try:
+            ratios = service.comma_ratios(tuple(tuple(v) for v in vectors), editor.state.domain_basis)
+        except (ValueError, ZeroDivisionError, ArithmeticError):
+            if preview:
+                rec.clear_preview()
+            return
+        if preview:
+            _preview_edit(lambda: editor.set_unchanged_basis(ratios))
+            return
+        editor.set_unchanged_basis(ratios)
+        render()
+
     def on_interest_change(preview=False):
         # the intervals of interest are edited as vectors in the interval-vectors row, like the comma
         # basis; read the d-tall columns and replace the set. preview=True rings without committing.
@@ -3634,6 +3672,7 @@ def index() -> None:
         on_cell_blur=on_cell_blur,
         on_cell_focus=on_cell_focus,
         on_comma_change=on_comma_change,
+        on_unchanged_change=on_unchanged_change,
         on_drag_start=on_drag_start,
         on_drag_enter=on_drag_enter,
         on_drag_end=on_drag_end,
