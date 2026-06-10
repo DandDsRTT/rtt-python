@@ -114,6 +114,10 @@ CAPTIONS = {
     # the rational tempering projection P = GM (a d×d operator over the domain primes),
     # a stack of maps like the mapping itself (toggled with the projection sub-control)
     ("projection", "primes"): "projection matrix",
+    # the rational generator embedding G = H(MH)⁻¹ (d×r): its columns are the held tuning's
+    # generators as fractional vectors. Rides the projection row band in the gens columns,
+    # beside P (which it multiplies the mapping into: P = GM). Same projection sub-control.
+    ("projection", "gens"): "generator embedding",
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
     ("tuning", "commas"): "tempered comma basis interval size list (made to vanish!)",
@@ -511,14 +515,19 @@ PRESETS = (
     ("tuning", "tuning", "primes", "established tuning scheme"),
     ("target", "vectors", "targets", "target interval set scheme"),
     ("prescaler", "prescaling", "primes", "predefined prescalers"),
+    # the established projection chooser rides the projection matrix P; its named rational
+    # tuning's held intervals drive P = GM (and the embedding G, which copies it — see below).
+    ("projection", "projection", "primes", "established projection"),
 )
 # Extra copies of a preset chooser in another governing tile (the same control, its own
 # id so the renderer keeps both): the tuning scheme also under the generator tuning map, the
-# temperament also in the comma basis (which it loads). Each carries the same field label as
-# its primary; the boxes stay within their own tiles, so the labels don't collide.
+# temperament also in the comma basis (which it loads), the established projection also under
+# the generator embedding G (relabelled "established embedding" — one tuning, two views, since
+# P = GM). The boxes stay within their own tiles, so the labels don't collide.
 PRESET_COPIES = (
     ("tuning", "tuning", "gens", "established tuning scheme"),
     ("temperament", "vectors", "commas", "temperament"),
+    ("projection", "projection", "gens", "established embedding"),
 )
 PRESET_ROWS = frozenset(row for _, row, _, _ in PRESETS + PRESET_COPIES)
 
@@ -755,6 +764,7 @@ TILES = (
     ("block:gens", "mapping", "quantities"),
     ("block:mapping", "mapping", "primes"),
     ("block:projection", "projection", "primes"),
+    ("block:projection_embedding", "projection", "gens"),  # the generator embedding G, beside P
     ("block:mapped_comma", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),
     ("block:tuning:gens", "tuning", "gens"),

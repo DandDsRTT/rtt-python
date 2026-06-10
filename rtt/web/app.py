@@ -1122,16 +1122,23 @@ class _GroupedSelect(ui.select):
                 option["disable"] = True
 
 
-def _set_offlist_prompt(select: ui.select, value) -> None:
-    """Show a "-" prompt in a preset chooser's closed box when its current state matches
+def _set_offlist_prompt(select: ui.select, value, prompt: str = "-") -> None:
+    """Show a ``prompt`` in a preset chooser's closed box when its current state matches
     no named entry (``value`` is None) — the temperament chooser with no matching preset, or
     the tuning chooser on a control-refined scheme with no name. It is a Quasar display-value
-    placeholder, so "-" never appears as a pickable row in the open list; when a named entry
-    matches, the override is cleared and Quasar shows its label."""
+    placeholder, so it never appears as a pickable row in the open list; when a named entry
+    matches, the override is cleared and Quasar shows its label. ``prompt`` defaults to "-"; the
+    established-projection / -embedding choosers pass "<choose projection>" / "<choose embedding>"."""
     if value is None:
-        select.props('display-value="-"')
+        select.props(f'display-value="{prompt}"')
     else:
         select.props(remove="display-value")
+
+
+def _projection_prompt(cid: str) -> str:
+    """The placeholder for an established-projection / -embedding chooser when nothing matches:
+    the gens copy (under G) reads "<choose embedding>", the base (under P) "<choose projection>"."""
+    return "<choose embedding>" if cid.endswith(":gens") else "<choose projection>"
 
 
 def _hover_index(detail):
@@ -2114,6 +2121,21 @@ class _Reconciler:
             _set_offlist_prompt(sel, value)
             self._arm_option_hover(sel, wrap, cb.id)  # hovering a prescaler previews re-solving to it
             self.selects[cb.id] = sel
+        elif name == "projection":
+            # the established projection / embedding chooser: the temperament's named rational
+            # tunings (its held intervals drive P = GM and G). The base (primes) rides P, the copy
+            # (gens) rides G; both show the SAME selection — the chosen tuning's name, or the named
+            # tuning matching the auto-picked default — under their own placeholder. "-"-style "off
+            # list" shows when the temperament has no established rational tuning (a disabled chooser).
+            options = presets.projection_options(self._editor.state)
+            value = self._editor.displayed_projection_scheme_name
+            value = value if value in options else None
+            sel = ui.select(options, value=value,
+                    on_change=lambda e: self._cb.on_preset(cb.id, e.value)) \
+                .props(_select_props(cb.w)).classes("rtt-preset")
+            _set_offlist_prompt(sel, value, prompt=_projection_prompt(cb.id))
+            self._arm_option_hover(sel, wrap, cb.id)  # hovering a tuning previews re-forming P/G to it
+            self.selects[cb.id] = sel
         else:  # tuning — systematic scheme names, T-prefixed when targeting a list (not all-interval);
             # a control-refined scheme has no name, shown as the "-" placeholder. Alternative-
             # complexity schemes are gated behind the alt. complexity setting.
@@ -2159,6 +2181,13 @@ class _Reconciler:
             self.selects[cb.id].set_options(options, value=value)
             _set_offlist_prompt(self.selects[cb.id], value)
             self.selects[cb.id].set_enabled(not cb.disabled)  # greyed+locked when it's the lone prescaler
+        elif cb.id.startswith("preset:projection"):  # base (P) + the embedding (G) copy share one selection
+            options = presets.projection_options(self._editor.state)
+            value = self._editor.displayed_projection_scheme_name
+            value = value if value in options else None
+            self.selects[cb.id].set_options(options, value=value)
+            _set_offlist_prompt(self.selects[cb.id], value, prompt=_projection_prompt(cb.id))
+            self.selects[cb.id].set_enabled(not cb.disabled)  # disabled when no established tuning exists
         else:  # tuning — an off-list spec or a hand-edited / held-off tuning shows "-"; a pick stays named
             name = self._editor.displayed_tuning_scheme_name
             # the option LABELS T-prefix only while target-based, so recompute them as the all-
@@ -3423,6 +3452,8 @@ def index() -> None:
             return lambda: editor.set_tuning_scheme(value)
         if cid.startswith("preset:prescaler"):
             return lambda: editor.set_complexity_prescaler(value)
+        if cid.startswith("preset:projection"):  # base (P) + the embedding (G) copy — one selection
+            return lambda: editor.set_projection_scheme(value)
         if cid == "control:complexity":
             if value == "custom":  # the off-preset display state — selecting it is a no-op, so is a hover
                 return None

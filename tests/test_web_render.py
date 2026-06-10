@@ -137,6 +137,29 @@ async def test_enabling_projection_renders_the_box(user: User) -> None:
     await user.should_see(marker="cell:proj:2:1")  # the 1/4 entry (mapped kind, locatable like the mapping)
 
 
+async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> None:
+    # projection + presets: the generator embedding G renders beside P, with the established-
+    # projection (under P) and established-embedding (under G) choosers. They are one selection —
+    # picking a named tuning re-forms BOTH P and G (P = GM) — so both choosers track it.
+    await user.open("/")
+    _toggle(user, "presets")
+    user.find(kind=ui.checkbox, content="projection").click()
+    await user.should_see(marker="cell:embed:2:1")          # G's 5^(1/4) entry, locatable like P
+    await user.should_see(marker="preset:projection")       # established projection, under P
+    await user.should_see(marker="preset:projection:gens")  # established embedding, under G
+    # default meantone shows quarter-comma; both P and G carry the 1/4
+    assert _cell_child(user, "preset:projection").value == "quarter-comma"
+    assert _cell_text(user, "cell:embed:2:1") == "1/4"
+    assert _cell_text(user, "cell:proj:2:1") == "1/4"
+    # pick third-comma -> P and G both re-form (it holds 6/5 instead of 5/4), and the embedding
+    # copy mirrors the selection (one tuning, two views)
+    _cell_child(user, "preset:projection").set_value("third-comma")
+    await user.should_see(marker="cell:embed:2:1")
+    assert _cell_text(user, "cell:embed:2:1") == "1/3"
+    assert _cell_text(user, "cell:proj:2:1") == "1/3"
+    assert _cell_child(user, "preset:projection:gens").value == "third-comma"
+
+
 async def test_optimization_with_charts_renders_the_damage_indicator(user: User) -> None:
     # optimization + charts: the damage chart gains the minimized-damage indicator line.
     # Drive that _bar_chart(indicator=…) branch and confirm the chart still renders.

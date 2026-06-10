@@ -1090,6 +1090,11 @@ class _GridBuilder:
         # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
         # for a stray hardcoded column list to keep drawing a tile that no longer exists.
         self.declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in self.tiles}
+        if self.embedding_matrix is None:
+            # the generator embedding G shares P's held basis, so it forms exactly when P does;
+            # drop its tile whenever P couldn't be built (projection off, or a degenerate basis)
+            # so the gens-column box never shows empty (the P band is already gone in that case).
+            self.declared_tiles -= {("projection", "gens")}
         if service.is_all_interval(self.tuning_scheme):
             # all-interval (Tₚ = I): every target-column list that just re-expresses an existing column
             # collapses to a duplicate, so drop it — mapped 𝑀T → 𝑀, prescaled 𝐿T → 𝐿, and each size/error
@@ -2140,6 +2145,10 @@ class _GridBuilder:
         if name == "prescaler":
             return self._is_sole_option(presets.prescaler_options(self.settings["alt_complexity"]),
                                         self._realized_prescaler)
+        if name == "projection":
+            # a temperament with no established rational tuning has nothing to offer — show a
+            # disabled, placeholder-only chooser (like the all-interval-locked target chooser)
+            return not presets.projection_options(self.state)
         return False
 
     # a control box: a thin-bordered frame SPANNING the full width of its column's tile (like the
@@ -2615,6 +2624,14 @@ class _GridBuilder:
                 for p in range(self.d):
                     self.cells.append(CellBox(f"cell:proj:{i}:{p}", self.prime_left(p), self.proj_top(i),
                                          COL_W, ROW_H, "mapped", text=self.projection_matrix[i][p], prime=p))
+        # the generator embedding G = H(MH)⁻¹ (d×r), beside P in the gens columns: its columns are
+        # the held tuning's generators as fractional vectors. Read-only ("mapped") cells like P, but
+        # over the r generator columns rather than the d primes (rows are the d primes, like P).
+        if self.row_open("projection") and self.tile_open("projection", "gens"):
+            for i in range(self.d):
+                for g in range(self.r):
+                    self.cells.append(CellBox(f"cell:embed:{i}:{g}", self.gen_left(g), self.proj_top(i),
+                                         COL_W, ROW_H, "mapped", text=self.embedding_matrix[i][g], gen=g))
 
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
@@ -3300,6 +3317,9 @@ class _GridBuilder:
         if self.row_open("projection") and self.tile_open("projection", "primes"):  # P = GM: ⟨ … ] per row, like the mapping
             for i in range(self.d):
                 self.bracket(f"proj:{i}", MAP_BRACKETS, "primes", self.proj_top(i), ROW_H)
+        if self.row_open("projection") and self.tile_open("projection", "gens"):  # G: { … ] per row, generator coords
+            for i in range(self.d):
+                self.bracket(f"embed:{i}", GENMAP_BRACKETS, "gens", self.proj_top(i), ROW_H)
         if self.row_open("mapping"):
             # the primes mapping is a stack of maps: ⟨ … ] per row
             if self.tile_open("mapping", "primes"):
@@ -3711,7 +3731,8 @@ class _GridBuilder:
             # bare prescaler tile's manual edits).
             preset_text = {"temperament": "", "target": self.target_spec,
                               "tuning": service.base_scheme_name(self.tuning_scheme) or "",
-                              "prescaler": self._realized_prescaler or ""}
+                              "prescaler": self._realized_prescaler or "",
+                              "projection": self.displayed_projection_name or ""}
 
             def emit_preset(cid, name, rkey, ckey, label):
                 if not self.tile_open(rkey, ckey):
@@ -3801,6 +3822,7 @@ class _GridBuilder:
 
         self.matrix_frame("mapping", "primes", "primes")
         self.matrix_frame("projection", "primes", "proj")  # P = GM, framed like the mapping
+        self.matrix_frame("projection", "gens", "embed", foot="ebkbrace")  # G, framed like the genmap
         self.matrix_frame("canon", "primes", "canon")
         self.matrix_frame("canon", "gens", "form")
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer

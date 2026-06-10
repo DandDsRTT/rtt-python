@@ -7665,3 +7665,47 @@ def test_projection_hides_with_its_parent_tuning_boxes():
     cells = {c.id for c in _with(projection=True, tuning_boxes=False).cells}
     assert "label:projection" not in cells
     assert not any(c.startswith("cell:proj:") for c in cells)
+
+
+def test_projection_on_adds_the_generator_embedding_G_beside_P():
+    cells = {c.id: c for c in _with(projection=True).cells}
+    # G shares the projection band (the d prime rows) but lives in the r generator columns:
+    # a d×r matrix of read-only cells (d=3, r=2 here)
+    for i in range(3):
+        for g in range(2):
+            cell = cells[f"cell:embed:{i}:{g}"]
+            assert cell.kind == "mapped"                  # read-only computed value, like P
+            assert cell.x == cells[f"tuning:gen:{g}"].x   # the same generator columns as 𝒈
+            assert cell.y == cells[f"cell:proj:{i}:0"].y  # the same prime rows as P
+    # default (auto-pick) embedding = quarter-comma meantone's G: the octave and 5^(1/4)
+    expected = (("1", "0"), ("0", "0"), ("0", "1/4"))
+    for i in range(3):
+        for g in range(2):
+            assert cells[f"cell:embed:{i}:{g}"].text == expected[i][g]
+
+
+def test_generator_embedding_is_captioned_and_framed_in_generator_coords():
+    cells = {c.id: c for c in _with(projection=True).cells}
+    assert cells["caption:projection:gens"].text == "generator embedding"
+    # framed like the generator map: { … ] per row, plus a spanning top + bottom brace
+    assert cells["bracket:embed:0:l"].text == "{" and cells["bracket:embed:0:r"].text == "]"
+    assert {"bracket:embed:1:l", "bracket:embed:2:l"} <= set(cells)  # d=3 rows
+    assert "ebktop:embed" in cells and "ebkbrace:embed" in cells
+
+
+def test_generator_embedding_hides_when_projection_is_off():
+    assert not any(c.id.startswith("cell:embed:") for c in _layout().cells)
+
+
+def test_presets_on_adds_the_established_projection_and_embedding_choosers():
+    cells = {c.id: c for c in _with(projection=True, presets=True).cells}
+    assert cells["preset:projection"].kind == "preset"        # established projection, under P
+    assert cells["preset:projection:gens"].kind == "preset"   # established embedding, under G
+    # their field labels (one selection, two views, since P = GM)
+    assert cells["block:preset:projection:label"].text == "established projection"
+    assert cells["block:preset:projection:gens:label"].text == "established embedding"
+
+
+def test_established_projection_choosers_need_both_presets_and_the_projection_box():
+    assert not any(c.id.startswith("preset:projection") for c in _with(presets=True).cells)     # projection off
+    assert not any(c.id.startswith("preset:projection") for c in _with(projection=True).cells)  # presets off
