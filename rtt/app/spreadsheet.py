@@ -63,7 +63,9 @@ OPTION_BOX_PX = 16   # the one shared size for every small option square: every 
 #                      and the tuning-ranges monotone/tradeoff radio boxes. app.py pins the q-checkbox
 #                      CSS and the .rtt-rangebox to this, and the control-check CELL hugs the square.
 PRESET_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
-SCHEME_BTN_W = 104  # the "back to scheme" button on the projection / embedding tiles
+SCHEME_BTN_SQ = 22  # the square ✕ "return to scheme" button on the projection / embedding tiles
+SCHEME_LABEL_W = 92  # the "return to scheme" caption beside it
+SCHEME_CTRL_W = SCHEME_BTN_SQ + 4 + SCHEME_LABEL_W  # the ✕ + gap + caption, as one control slot
 TARGET_PRESET_W = 144  # wider: the target chooser seats a 30px gridded limit square + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
 # always fits on ONE line within its column (a long tuning row just gets smaller text)
@@ -1490,7 +1492,7 @@ class _GridBuilder:
         self.row_y, self.row_h, self.row_label, self.row_collapsible = {}, {}, {}, {}
         self.tile_h, self.tile_top, self.row_frame, self.row_sym, self.row_cap, self.row_units, self.row_ptext, self.chart_top = {}, {}, {}, {}, {}, {}, {}, {}
         self.row_pre = {}  # the preset band height, so the <choose form> chooser can stack below it
-        self.row_schemebtn = {}  # the "back to scheme" button band (projection rows), below the preset band
+        self.row_schemebtn = {}  # the ✕ "return to scheme" row (projection tiles), below the preset band
         self.row_nsub = {}  # each row's natural cell-row count (a matrix's height in cells), so the
         # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
         # drawing all of them, converged, while it's folded, so the fold animates as a merge
@@ -1564,13 +1566,13 @@ class _GridBuilder:
             pre = self.preset_band_h(key) if ((self.show_presets and key in PRESET_ROWS
                                              or self.settings["all_interval"] and key == "vectors")
                                             and not folded) else 0
+            # the ✕ "return to scheme" control rides its own row on the projection tiles, directly
+            # below the established-projection chooser (or the plain-text box when presets is off) —
+            # not in its own bordered box; always shown when projection is on
+            schemebtn = self.control_region_band_h(SCHEME_BTN_SQ) if (key == "projection" and self.settings["projection"] and not folded) else 0
             # the form chooser rides one box below the preset chooser, in the mapping and
             # comma-basis boxes, when form controls are shown
             formctrl = self.formchooser_band_h(key) if (self.show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
-            # the always-present "back to scheme" button rides its own band below the preset band on
-            # the projection row (not gated by presets); projection rows have no form chooser, so it
-            # reuses that free slot
-            schemebtn = self.control_region_band_h(PRESET_H) if (key == "projection" and self.settings["projection"] and not folded) else 0
             ptext = self.ptext_band(key, folded)
             self.row_h[key] = STRIP if folded else natural
             self.row_nsub[key] = round(natural / ROW_H)  # matrix height in cells (fold-independent)
@@ -1590,7 +1592,7 @@ class _GridBuilder:
             self.row_units[key] = uni  # the plain-text box and preset chooser sit below the units line
             self.row_ptext[key] = ptext  # the plain-text band, with the preset chooser below it
             self.row_pre[key] = pre  # the preset band, with the <choose form> chooser below it
-            self.row_schemebtn[key] = schemebtn  # the back-to-scheme button band, below the preset band
+            self.row_schemebtn[key] = schemebtn  # the ✕ return-to-scheme row, below the preset band
             self.row_label[key] = label
             self.row_collapsible[key] = collapsible
             self.tile_h[key] = head + top_frame + chart_band + self.row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl + schemebtn
@@ -1699,6 +1701,10 @@ class _GridBuilder:
         labels += [l for _n, _r, c, l in FORM_CHOOSERS if c == key and l] if self.show_form_controls else []
         if labels:
             floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(l, 1) for l in labels))
+        # the ✕ "return to scheme" control (button + caption) rides its own row on the projection /
+        # embedding tiles; widen the column only enough to seat that one row (no chooser beside it)
+        if key in ("primes", "gens") and self.settings["projection"]:
+            floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_W)
         return floor
 
     def content_box(self, key):
@@ -2316,6 +2322,16 @@ class _GridBuilder:
                              "control_check", text="", checked=service.is_all_interval(self.tuning_scheme)))
         self.cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="all-interval"))
+
+    def emit_scheme_button(self, x, ctrl_y, ckey):
+        # the square ✕ "return to scheme" button + a caption to its right, seated on a control row at
+        # ctrl_y. Rides the established-projection chooser's box (seated to the dropdown's right by
+        # emit_preset when presets is on), or the band alone when presets is off. back_to_scheme is
+        # wired in app.py, which greys it when the tuning is already scheme-driven.
+        sq_y = ctrl_y + (PRESET_H - SCHEME_BTN_SQ) / 2  # centre the square on the control row
+        self.cells.append(CellBox(f"scheme:{ckey}", x, sq_y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
+        self.cells.append(CellBox(f"scheme:{ckey}:label", x + SCHEME_BTN_SQ + 4, sq_y, SCHEME_LABEL_W,
+                             SCHEME_BTN_SQ, "caption", text="return to scheme", align="left"))
 
     def emit_diminuator_check(self, check_x, ctrl_y):
         # the "replace diminuator" checkbox + caption, seated to the RIGHT of the predefined-
@@ -4041,18 +4057,17 @@ class _GridBuilder:
                 cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
 
-        # the always-present "back to scheme" button on the projection (P) and embedding (G) tiles —
-        # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). It
-        # rides its own band below the preset band and is NOT gated by presets (so it shows even with
-        # the established-projection chooser hidden); app.py greys it when there's nothing to revert.
+        # the always-present "return to scheme" ✕ button on the projection (P) and embedding (G) tiles —
+        # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). It rides
+        # its own row directly below the established-projection chooser (or the plain-text box when
+        # presets is off), NOT in a separate bordered box — just the ✕ square and its caption. app.py
+        # greys it when there's nothing to revert.
         if self.settings["projection"]:
             for ckey in ("primes", "gens"):
                 if not self.tile_open("projection", ckey):
                     continue
                 top = self.ptext_band_y("projection") + self.row_ptext["projection"] + self.row_pre["projection"]
-                bx, _bw, by = self.control_box(f"block:scheme:{ckey}", ckey, top, SCHEME_BTN_W, "")
-                self.cells.append(CellBox(f"scheme:{ckey}", bx, by, SCHEME_BTN_W, PRESET_H, "scheme_button",
-                                     text="back to scheme"))
+                self.emit_scheme_button(self.col_x[ckey] + BOX_OUTER, top + BOX_OUTER + BOX_INNER, ckey)
 
         # plain-text value band: each tile's value as its natural EBK string, directly
         # below the symbol/caption stack (above the preset chooser). The two editable
