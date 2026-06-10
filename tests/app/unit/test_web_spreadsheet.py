@@ -7876,6 +7876,46 @@ def test_projection_at_full_rank_shows_the_complete_unchanged_basis():
     assert cells["cell:unchanged:0:1"].x - cells["cell:unchanged:0:0"].x == spreadsheet.COL_W
 
 
+def test_projection_at_full_rank_keeps_the_nullity_count_in_a_readable_stub():
+    # at n = 0 the comma half is empty, but the counts tile must still show "n = 0" and its "nullity"
+    # caption on ONE line — so a comma-half STUB is reserved to the LEFT of the EBK bracket, wide
+    # enough for the word. The unchanged half (and the bracket) sit to its right, flush to U.
+    s = settings.defaults()
+    s["projection"] = True
+    s["counts"] = True
+    cells = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1))), s).cells}
+    n_count = cells["count:commas"]              # the n = 0 tally still renders (not dropped)
+    assert n_count.text.endswith("= 0")
+    cap = cells["caption:counts:commas"]         # …and "nullity" fits on a single line in the stub
+    assert cap.text == "nullity"
+    assert spreadsheet._wrap_lines("nullity", cap.w) == 1
+    # the stub sits LEFT of the bracket; the unchanged count + first U cell sit to its right
+    assert n_count.x == cap.x < cells["bracket:vec:commas:l"].x <= cells["cell:unchanged:0:0"].x
+    assert cells["count:commas:u"].x == cells["cell:unchanged:0:0"].x   # u tally over U
+    # the bracket still hugs U on both sides — the stub is OUTSIDE the matrix (no gap inside the EBK)
+    assert cells["bracket:vec:commas:l"].x + spreadsheet.BRACKET_W == cells["cell:unchanged:0:0"].x
+
+
+def test_projection_pending_comma_reddens_the_unchanged_interval_it_will_delete():
+    # adding a comma drops the rank by one, deleting an unchanged interval — preview that interval red
+    # (the app's standard "this is going away" highlight) on the LAST U column while the draft is open
+    s = settings.defaults()
+    s["projection"] = True
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None])
+    cells = {c.id: c for c in lay.cells}
+    nu = sum(1 for i in cells if i.startswith("cell:unchanged:0:"))
+    assert nu >= 2
+    assert all(cells[f"cell:unchanged:{p}:{nu - 1}"].alert for p in range(3))  # last U column: red
+    assert cells[f"unchanged:{nu - 1}"].alert                                  # its ratio too
+    assert not any(cells[f"cell:unchanged:{p}:0"].alert for p in range(3))     # earlier U columns: not
+    # with NO draft open, nothing is doomed — no U cell is reddened
+    plain = {c.id: c for c in spreadsheet.build(
+        service.from_mapping(((1, 1, 0), (0, 1, 4))), s, held_basis_ratios=("2/1", "5/4")).cells}
+    assert not any(plain[f"cell:unchanged:{p}:{j}"].alert for p in range(3) for j in range(nu))
+
+
 def test_unchanged_columns_have_cross_list_drag_grips():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4"), drag_to_combine=True).cells}
     # each KNOWN unchanged interval gets a drag grip — a cross-list drag SOURCE (drop it on another

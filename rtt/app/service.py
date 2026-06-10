@@ -1320,9 +1320,13 @@ def plain_text_values(
     can't diverge."""
     db = state.domain_basis
     targets = displayed_targets(state, scheme, target_spec, target_override)  # all-interval-aware, like the grid
-    commas = comma_ratios(state.comma_basis, db)
+    # the REAL comma basis: empty at full rank (n = 0), where state.comma_basis is just the trivial
+    # zero comma — the grid shows no comma column there, so the plain text must show no comma vector
+    # either (not a phantom [0 0 0⟩). Everything comma-side below reads this, like the grid's self.nc.
+    comma_basis = state.comma_basis if state.n else ()
+    commas = comma_ratios(comma_basis, db)
     mapped = mapped_intervals(state.mapping, targets, db)
-    mapped_comma = mapped_commas(state.mapping, state.comma_basis)
+    mapped_comma = mapped_commas(state.mapping, comma_basis)
     target_vectors = target_interval_vectors(targets, state.d, db)
     held_ratios = comma_ratios(held, db) if held else ()
     # match the grid's tuning exactly: a frozen manual generator tuning (optimize lock off)
@@ -1399,7 +1403,7 @@ def plain_text_values(
         # the consolidated V = C|U column shows BOTH halves in every tile: the comma side C then the
         # unchanged side U (em-dashed where the tuning leaves a direction irrational). Off projection
         # the u_* lists are empty, so each tile falls back to the bare comma side exactly as before.
-        ("vectors", "commas"): _ket_list(list(state.comma_basis) + u_basis, "⟩"),
+        ("vectors", "commas"): _ket_list(list(comma_basis) + u_basis, "⟩"),
         # the projected unrotated vector list P·V: P·𝐜 = 𝟎 (the commas vanish), P·𝐮 = 𝐮 (held), so it
         # is the zero comma columns followed by the unchanged vectors themselves — prime-count (⟩)
         ("projection", "commas"): _ket_list([(0,) * state.d for _ in commas] + u_basis, "⟩"),
@@ -1432,7 +1436,7 @@ def plain_text_values(
         # outer [ … ] — so the bare prescaler reads as the matrix itself rather than a
         # product with another basis.
         ("prescaling", "primes"): bare_x_text,  # the bare 𝑋 — gains its 𝑍𝐿 size ROW under the size factor
-        ("prescaling", "commas"): _prescale_vector_list(list(_sized(_prescaled(state.comma_basis))) + u_prescaled),
+        ("prescaling", "commas"): _prescale_vector_list(list(_sized(_prescaled(comma_basis))) + u_prescaled),
         ("prescaling", "detempering"): _prescale_vector_list(_sized(_prescaled(detemper_vectors))),
         ("prescaling", "targets"): _prescale_vector_list(_sized(_prescaled(target_vectors))),
         ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
