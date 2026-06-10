@@ -3185,9 +3185,11 @@ def index() -> None:
             target = None
         inp = rec.inputs.get(target) if target is not None else None
         if inp is not None:
-            # the draft cell was just created by render(); defer a frame so Vue has mounted it (its
-            # $ref populated) before runMethod resolves the element — focusing inline races the mount.
-            ui.run_javascript(f'requestAnimationFrame(() => runMethod({inp.id}, "focus", []))')
+            # focus into the draft cell. render() above created it, and the outbox emits that
+            # element's 'update' before this focus message (see outbox.run_loop), so the client has
+            # mounted it by the time runMethod resolves the ref. (A frame-deferred focus would be
+            # fragile — requestAnimationFrame is paused whenever the page isn't visible.)
+            inp.run_method("focus")
 
     def on_show_toggle(key, value):
         # building[0] guards the echo when render() syncs a checkbox to the document
