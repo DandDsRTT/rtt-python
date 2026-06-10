@@ -2488,11 +2488,11 @@ class _Reconciler:
     # only removes and the re-solving adds (a prime, un-tempering a comma) have on-screen cells to ring.
     def _build_comma_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_comma))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_comma, "comma"))
 
     def _build_element_plus(self, cb, wrap):  # nonstandard-domain box on: open a blank ?/? element draft
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_element))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_element, "element"))
 
     def _build_element_minus(self, cb, wrap):  # cancel the pending element draft (the ?/? column's −)
         wrap.classes("rtt-minus-zone")
@@ -2514,21 +2514,21 @@ class _Reconciler:
 
     def _build_interest_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_interest))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_interest, "interest"))
 
     def _build_held_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_held, self._editor.remove_held)
 
     def _build_held_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_held))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_held, "held"))
 
     def _build_target_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_target, self._editor.remove_target)
 
     def _build_target_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_target))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_target, "target"))
 
     def _build_colgrip(self, cb, wrap):  # a per-column drag handle / drop target on the fan gridline:
         # drag one column's grip onto another to MOVE/reorder it; the per-list "grip:{list}:add" zone
@@ -3195,6 +3195,40 @@ def index() -> None:
         action()
         render()
 
+    # the draft-column + buttons (comma / target / held / interest, and the nonstandard-domain
+    # element) drop the cursor straight into the new green column: the quantities-row ratio cell
+    # when that row is shown, else the first gridded value of the interval-vectors column. The map
+    # gives each group its (quantities draft-cell id, vectors draft-cell kind); the element draft
+    # lives only in the header row, so it has no vectors fallback (None).
+    draft_focus = {
+        "comma":    ("comma:pending",    "commacell"),
+        "target":   ("target:pending",   "targetcell"),
+        "held":     ("held:pending",     "heldcell"),
+        "interest": ("interest:pending", "interestcell"),
+        "element":  ("prime:pending",    None),
+    }
+
+    def add_interval(action, group):
+        # add the draft column, then focus into it: the quantities ratio cell if its row is shown
+        # (the layout emitted it), else the first gridded vector cell (prime 0) of the draft column.
+        act(action)
+        quant_id, vec_kind = draft_focus[group]
+        lay = last_lay[0]
+        if any(cb.id == quant_id for cb in lay.cells):
+            target = quant_id
+        elif vec_kind is not None:
+            target = next((cb.id for cb in lay.cells
+                           if cb.pending and cb.prime == 0 and cb.kind == vec_kind), None)
+        else:
+            target = None
+        inp = rec.inputs.get(target) if target is not None else None
+        if inp is not None:
+            # focus into the draft cell. render() above created it, and the outbox emits that
+            # element's 'update' before this focus message (see outbox.run_loop), so the client has
+            # mounted it by the time runMethod resolves the ref. (A frame-deferred focus would be
+            # fragile — requestAnimationFrame is paused whenever the page isn't visible.)
+            inp.run_method("focus")
+
     def on_show_toggle(key, value):
         # building[0] guards the echo when render() syncs a checkbox to the document
         # (e.g. after undo/redo/reset/select-all) rather than a real user toggle
@@ -3661,6 +3695,7 @@ def index() -> None:
     # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
     rec._cb = SimpleNamespace(
         act=act,
+        add_interval=add_interval,
         combine_begin=combine_begin,
         combine_preview=combine_preview,
         combine_commit=combine_commit,
