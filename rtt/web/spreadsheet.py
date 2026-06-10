@@ -920,12 +920,41 @@ class _GridBuilder:
         self.nc = len(self.comma_ratios)  # the real commas (those that define the temperament)
         self.mapped_commas = service.mapped_commas(self.state.mapping, self.state.comma_basis)  # M·commas = 0 (vanish)
         self.comma_sizes = service.interval_sizes(self.tun, self.comma_ratios, self.elements)  # comma sizes (tempered ~0)
+        # the unchanged-interval basis U = nullspace(P − I): the projection P's eigenvalue-1
+        # eigenvectors (the intervals held exactly just). When projection is on, U consolidates
+        # with the comma basis C into one "unrotated vector basis" column V = C|U — the comma
+        # sub-columns then the unchanged ones — and its eigenvalue list λ (0 per comma, 1 per
+        # unchanged) becomes the scaling-factors row above the interval-vectors row. U is
+        # derived/read-only (only C stays editable), so the V view also freezes the comma
+        # +/−/drag and the pending draft (a structural edit would change the rank, hence U). Gated
+        # on there being a comma to merge with (n > 0). Its mapped / sized / complexity twins are
+        # precomputed so the V value tiles read one geometry, exactly as the comma column's do.
+        self.unchanged_basis = (service.unchanged_interval_basis(self.state)
+                                if (show_tuning and self.settings["projection"] and self.state.n) else None)
+        self.show_unchanged = self.unchanged_basis is not None
+        self.nu = len(self.unchanged_basis) if self.show_unchanged else 0
+        if self.show_unchanged:
+            self.unchanged_ratios = service.comma_ratios(self.unchanged_basis, self.elements)
+            self.unchanged_mapped = service.mapped_commas(self.state.mapping, self.unchanged_basis)  # M·U (r × u; held, ≠ 0)
+            self.unchanged_sizes = service.interval_sizes(self.tun, self.unchanged_ratios, self.elements)
+            self.unchanged_complexities = service.interval_complexities(
+                self.state.mapping, self.tuning_scheme, self.unchanged_ratios,
+                prescaler_override=self.custom_prescaler, domain_basis=self.elements)
+        else:
+            self.unchanged_ratios = self.unchanged_mapped = self.unchanged_complexities = ()
+            self.unchanged_sizes = service.IntervalSizes((), (), (), ())
         # a comma being added is shown as a pending draft column to the right of the real
         # ones: blank red cells and a "?" quantity until it is a valid independent comma
         # (then it commits and the mapping re-ranks). It is not a real comma, so it does
         # not enter the nullity, the mapping, or the sizes — only the displayed column count.
-        self.pending = list(pending_comma) if pending_comma is not None else None
+        # (Suppressed under the consolidated V view, where comma structural edits are frozen.)
+        self.pending = (list(pending_comma)
+                        if (pending_comma is not None and not self.show_unchanged) else None)
         self.nc_shown = self.nc + (1 if self.pending is not None else 0)
+        # the V column's shown sub-columns: the comma sub-columns (with any pending draft) then
+        # the u unchanged sub-columns (0 off-projection). One geometry for the width, the gridline
+        # fan, the EBK marks and every value tile that renders over the consolidated column.
+        self.nv_shown = self.nc_shown + self.nu
         # other intervals of interest: a user-built set held as vectors and edited like
         # the comma basis (editable vector cells). Normalize each vector to the current d
         # (pad/trim) so a domain change can't misalign them, then derive the ratios the
@@ -1191,7 +1220,7 @@ class _GridBuilder:
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
             ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
-            ("commas", 2 * BRACKET_W + self.nc_shown * COL_W, show_temp, True),
+            ("commas", 2 * BRACKET_W + self.nv_shown * COL_W, show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
             ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
@@ -1216,6 +1245,11 @@ class _GridBuilder:
             ("counts", ROW_H, show_counts, True, "counts"),
             ("quantities", ROW_H, show_domain_quantities, True, "quantities"),
             ("units", ROW_H, show_domain_units, True, "units"),
+            # the scaling factors λ = diag(λ) — the projection's eigenvalue list (0 per comma,
+            # vanished; 1 per unchanged, held) — a one-row scalar list over the consolidated V
+            # column, riding just above the interval-vectors row (the mockup). Present with the
+            # projection toggle, exactly when V consolidates (show_unchanged).
+            ("scaling_factors", ROW_H, self.show_unchanged, True, "scaling factors"),
             ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
             ("canon", self.rc * ROW_H, self.show_form_controls, True, "canonical mapping"),
             ("mapping", self.r * ROW_H, show_temp, True, "mapping"),
@@ -1533,13 +1567,15 @@ class _GridBuilder:
         # gridline pass can fan every group column into that many vertical sub-axes (commas
         # count the shown columns, draft included). Keyed identically to group_left/group_elem
         # so a column with cells can never be left out of the fan (the generators-column bug).
-        self.group_n = {"gens": self.r, "primes": self.d_shown, "commas": self.nc_shown,
+        self.group_n = {"gens": self.r, "primes": self.d_shown, "commas": self.nv_shown,
                    "targets": self.k_shown,
                    "interest": self.mi_shown, "held": self.nh_shown, "detempering": self.r,
                    "ssgens": self.rL, "ssprimes": self.dL}
         self.group_ratio = {  # the just interval ratio each value group is taken over
             "primes": lambda i: service.element_ratio(self.elements[i]),  # a prime "p/1", or a nonprime element "n/d"
-            "commas": lambda i: self.comma_ratios[i],
+            # over V = C|U the comma sub-columns index the comma ratios, the unchanged sub-columns
+            # (i ≥ nc) the unchanged-interval ratios — so the just/retune closed forms resolve for both
+            "commas": lambda i: self.comma_ratios[i] if i < self.nc else self.unchanged_ratios[i - self.nc],
             "targets": lambda i: self.targets[i],
             "interest": lambda i: self.interest_ratios[i],
             "held": lambda i: self.held_ratios[i],
@@ -1890,6 +1926,8 @@ class _GridBuilder:
         if ckey == "primes":  # off: the + walks to the next standard prime (inapplicable to a subgroup).
             # On (nonstandard-domain box): the + starts a typed ?/? element draft, valid for ANY domain.
             return self.tile_open("quantities", "primes") and (self.show_nonstandard_domain or self.standard_domain)
+        if ckey == "commas":  # the consolidated V view freezes the comma count (a +/− would change
+            return self.tile_open("quantities", "commas") and not self.show_unchanged  # the rank, hence U)
         return self.tile_open("quantities", ckey)
 
     def closed_form_operand(self, key, group, i):
@@ -1897,10 +1935,12 @@ class _GridBuilder:
         when the value has no closed form. A just size IS ``1200·log₂`` of its
         interval. A comma vanishes in the temperament, so its retuning is the negated
         just size — the exact log of the inverted comma. The tempered sizes and the
-        prime/target errors come from optimization, so they have none."""
+        prime/target errors come from optimization, so they have none — as do the
+        unchanged sub-columns of V (i ≥ nc): an unchanged interval isn't tempered out,
+        so its retuning is the optimization error, not the negated-just closed form."""
         if key == "just":
             return _log_operand(self.group_ratio[group](i))
-        if group == "commas" and key == "retune":
+        if group == "commas" and key == "retune" and i < self.nc:
             recip = 1 / Fraction(self.comma_ratios[i])
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
         return None
@@ -2366,7 +2406,7 @@ class _GridBuilder:
                 for p in range(self.dL):
                     self.cells.append(CellBox(f"urow:ssprimes:{p}", self.ss_prime_left(p), uy, COL_W, ROW_H, "units", text=f"/p{_sub(p + 1)}"))
             if self.tile_open("units", "commas"):
-                for c in range(self.nc):
+                for c in range(self.nv_shown):  # over all of V = C|U (each sub-column dimensionless)
                     self.cells.append(CellBox(f"urow:commas:{c}", self.comma_left(c), uy, COL_W, ROW_H, "units", text="/1"))
             if self.tile_open("units", "detempering"):  # each detempering generator is a ratio column
                 for i in range(self.r):
@@ -2457,10 +2497,15 @@ class _GridBuilder:
                 if self.pending is not None:  # the draft's editable "?/?" ratio: type a fraction to fill it
                     # (or its vector cells). A distinct id so it's removed, not restructured, on commit.
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
+                if self.show_unchanged:  # the unchanged-interval ratios complete V = C|U — read-only
+                    for j in range(self.nu):  # (derived from the projection), the held primes "2/1", "5/1"
+                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j], comma=self.nc + j))
+                        self._voice("quantities:commas", self.nc + j, self.unchanged_sizes.just[j])
                 # commas mirror the domain controls: + starts a (pending) comma; the − rides the
                 # last column's branch point — cancelling the draft, or un-tempering a real comma,
-                # down to the last one (which leaves just intonation, nullity 0 — nothing to remove)
-                if self.pending is not None or self.nc > 0:
+                # down to the last one (which leaves just intonation, nullity 0 — nothing to remove).
+                # Frozen under the consolidated V view, where the comma count can't change.
+                if (self.pending is not None or self.nc > 0) and not self.show_unchanged:
                     branch_minus("comma_minus", "commas", self.nc_shown - 1, "comma_minus")
             if self.tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
                 for i in range(self.r):                       # derived from M like the comma ratios — no ± control)
@@ -2591,10 +2636,13 @@ class _GridBuilder:
                     for hi in range(self.nh):
                         self.cells.append(CellBox(f"cell:hmapped:{i}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i), alert=self.held_unheld[hi]))
                 # the comma basis mapped through M — it vanishes to 0 (parallel to the
-                # mapped target list); the raw basis lives in the interval-vectors row
+                # mapped target list); the raw basis lives in the interval-vectors row.
+                # Over V the unchanged basis maps too (M·U ≠ 0 — the held intervals in gen coords).
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
                         self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+                    for j in range(self.nu):
+                        self.cells.append(CellBox(f"cell:mapped_unchanged:{i}:{j}", self.comma_left(self.nc + j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.unchanged_mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
 
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
         # maps like the mapping. Its cells are "mapped" (a computed value, not editable like the
@@ -2604,6 +2652,15 @@ class _GridBuilder:
                 for p in range(self.d):
                     self.cells.append(CellBox(f"cell:proj:{i}:{p}", self.prime_left(p), self.proj_top(i),
                                          COL_W, ROW_H, "mapped", text=self.projection_matrix[i][p], prime=p))
+
+        # the scaling factors λ = diag(λ): the projection's eigenvalue list over the V column —
+        # 0 for each comma sub-column (vanished, eigenvalue 0) then 1 for each unchanged
+        # sub-column (held, eigenvalue 1). Read-only computed values ("mapped"), one ROW_H list.
+        if self.row_open("scaling_factors") and self.tile_open("scaling_factors", "commas"):
+            scaling = [0] * self.nc + [1] * self.nu
+            for c, lam in enumerate(scaling):
+                self.cells.append(CellBox(f"cell:scaling:{c}", self.comma_left(c), self.row_y["scaling_factors"],
+                                     COL_W, ROW_H, "mapped", text=str(lam), comma=c))
 
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
@@ -2647,6 +2704,12 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:comma:{p}:{c}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                         self._voice("vectors:commas", c, self.comma_sizes.just[c])
+                # the unchanged basis U completes V = C|U: read-only vector columns ("vec", like the
+                # detempering D), the projection's eigenvalue-1 eigenvectors held just (e.g. 2/1, 5/1)
+                for j in range(self.nu):
+                    for p in range(self.d):
+                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc + j), self.vec_top(p), COL_W, ROW_H, "vec", text=str(self.unchanged_basis[j][p]), prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p)))
+                    self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
                 if self.pending is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
                         v = self.pending[p]
@@ -2861,10 +2924,14 @@ class _GridBuilder:
         self.chart_tiles = []  # (row, col, values) per open value tile of a charted row
         chart_indicators = {}  # (row, col) -> (indicator, label); only the damage chart carries one
 
+        # the comma-column size lists run over the consolidated V = C|U when projection is on:
+        # the comma sizes then the unchanged-interval sizes (the empty unchanged tuples no-op off
+        # projection). Same geometry as the comma column's, so tuning_value_row places each at
+        # comma_left(i) over the d V sub-columns.
         tuning_data = {
-            "tuning": (self.tun.tuning_map, self.comma_sizes.tempered, self.target_sizes.tempered, self.interest_sizes.tempered, self.held_sizes.tempered),
-            "just": (self.tun.just_map, self.comma_sizes.just, self.target_sizes.just, self.interest_sizes.just, self.held_sizes.just),
-            "retune": (self.tun.retuning_map, self.comma_sizes.errors, self.target_sizes.errors, self.interest_sizes.errors, self.held_sizes.errors),
+            "tuning": (self.tun.tuning_map, self.comma_sizes.tempered + self.unchanged_sizes.tempered, self.target_sizes.tempered, self.interest_sizes.tempered, self.held_sizes.tempered),
+            "just": (self.tun.just_map, self.comma_sizes.just + self.unchanged_sizes.just, self.target_sizes.just, self.interest_sizes.just, self.held_sizes.just),
+            "retune": (self.tun.retuning_map, self.comma_sizes.errors + self.unchanged_sizes.errors, self.target_sizes.errors, self.interest_sizes.errors, self.held_sizes.errors),
         }
         for key, (prime_vals, comma_vals, target_vals, interest_vals, held_vals) in tuning_data.items():
             if self.row_open(key):
@@ -3289,6 +3356,8 @@ class _GridBuilder:
         if self.row_open("projection") and self.tile_open("projection", "primes"):  # P = GM: ⟨ … ] per row, like the mapping
             for i in range(self.d):
                 self.bracket(f"proj:{i}", MAP_BRACKETS, "primes", self.proj_top(i), ROW_H)
+        if self.row_open("scaling_factors") and self.tile_open("scaling_factors", "commas"):  # λ: a [ … ] list over V
+            self.bracket("scaling", LIST_BRACKETS, "commas", self.row_y["scaling_factors"], ROW_H)
         if self.row_open("mapping"):
             # the primes mapping is a stack of maps: ⟨ … ] per row
             if self.tile_open("mapping", "primes"):
@@ -3810,7 +3879,7 @@ class _GridBuilder:
         self.matrix_frame("ss_mapping", "primes", "ss_msl")
         self.matrix_frame("ss_mapping", "ssgens", "ss_selfmap")
 
-        self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc)
+        self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc + self.nu)  # M·C then M·U over V
         self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.k)
         # the interest column's mapped images stand alone — no separator rules between columns
         self.vector_list_marks("mapping", "imapped", "interest", self.interest_left, self.mi, separators=False)
@@ -3820,7 +3889,7 @@ class _GridBuilder:
         # (commacell), so it skips the separator rules (its cell borders divide the columns);
         # nc_shown includes the pending draft column so it gets its ket marks too. The
         # interest column's intervals likewise stand alone (no separators between columns).
-        self.vector_list_marks("vectors", "vec:commas", "commas", self.comma_left, self.nc_shown, foot="ebkangle", separators=False,
+        self.vector_list_marks("vectors", "vec:commas", "commas", self.comma_left, self.nv_shown, foot="ebkangle", separators=False,
                          pending_col=(self.nc if self.pending is not None else -1))
         self.vector_list_marks("vectors", "vec:targets", "targets", self.target_left, self.k_shown, foot="ebkangle",
                          pending_col=(self.k if self.pending_target is not None else -1))

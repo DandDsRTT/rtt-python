@@ -114,6 +114,10 @@ CAPTIONS = {
     # the rational tempering projection P = GM (a d×d operator over the domain primes),
     # a stack of maps like the mapping itself (toggled with the projection sub-control)
     ("projection", "primes"): "projection matrix",
+    # the scaling factors λ = diag(λ) — the projection's eigenvalue list over the
+    # consolidated V = C|U column (0 per comma, 1 per unchanged interval); toggled with
+    # projection, one row above the interval-vectors row
+    ("scaling_factors", "commas"): "scaling factor (eigenvalue) list",
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
     ("tuning", "commas"): "tempered comma basis interval size list (made to vanish!)",
@@ -203,6 +207,7 @@ SYMBOLS = {
     ("ss_mapping", "held"): f"𝑀ₛ→{SUBSCRIPT_L}H",
     ("ss_mapping", "targets"): f"Y{SUBSCRIPT_L}",     # Y_L = M_s→L·T
     ("ss_mapping", "detempering"): f"𝑀ₛ→{SUBSCRIPT_L}D",
+    ("scaling_factors", "commas"): "λ",  # the eigenvalue list diag(λ) over V
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -755,6 +760,7 @@ TILES = (
     ("block:gens", "mapping", "quantities"),
     ("block:mapping", "mapping", "primes"),
     ("block:projection", "projection", "primes"),
+    ("block:scaling_factors", "scaling_factors", "commas"),  # the λ list over V (projection on)
     ("block:mapped_comma", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),
     ("block:tuning:gens", "tuning", "gens"),
