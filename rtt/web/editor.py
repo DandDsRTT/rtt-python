@@ -996,7 +996,10 @@ class Editor:
     # rather than one generic list edit. A move is ONE undoable step: it snapshots once, reads
     # the moved vector BEFORE mutating, and removes from the source BEFORE inserting into the
     # destination (so a targets→commas move can't clobber the override it just wrote).
-    MOVE_LISTS = ("targets", "held", "interest", "commas")
+    # "unchanged" is a COPY source only: the unchanged-interval basis U is derived (read off the
+    # tuning), so dragging one of its intervals to another list copies it there without removing it
+    # from U, and nothing can be dropped INTO U (see _move_feasible / _take_from).
+    MOVE_LISTS = ("targets", "held", "interest", "commas", "unchanged")
 
     def _list_vectors(self, name: str) -> list[tuple[int, ...]]:
         """The named interval list as vectors over the domain — the currency a move reads."""
@@ -1007,6 +1010,8 @@ class Editor:
             return [tuple(v) for v in self.held_vectors]
         if name == "interest":
             return [tuple(v) for v in self.interest_vectors]
+        if name == "unchanged":  # the derived unchanged-interval basis U (None for a dashed column)
+            return list(service.unchanged_interval_basis(self.state, self.unchanged_ratios) or ())
         return [tuple(v) for v in self.state.comma_basis]  # commas
 
     def _peek_vector(self, name: str, i: int) -> tuple[int, ...] | None:
@@ -1016,6 +1021,8 @@ class Editor:
     def _move_feasible(self, src: str, dst: str, vector: tuple[int, ...]) -> bool:
         if src not in self.MOVE_LISTS or dst not in self.MOVE_LISTS:
             return False
+        if dst == "unchanged":
+            return False  # U is derived from the tuning — nothing can be dropped INTO it
         if "targets" in (src, dst) and service.is_all_interval(self.tuning_scheme):
             return False  # the target list is auto Tₚ = I there, not a user-curated set
         if src == "commas" and self.state.n == 0:
@@ -1035,6 +1042,8 @@ class Editor:
             del self.held_vectors[i]
         elif name == "interest":
             del self.interest_vectors[i]
+        elif name == "unchanged":
+            pass  # U is derived — a drag COPIES the interval out; it stays held (nothing removed)
         else:  # commas — re-dual the basis without comma i (un-temper it: −n, +r)
             self.state = service.remove_comma(self.state, i)
 
@@ -1064,9 +1073,9 @@ class Editor:
         vector = self._peek_vector(src_list, src_idx)
         if vector is None or not self._move_feasible(src_list, dst_list, vector):
             return False
-        if src_list == dst_list and (src_list == "commas" or src_idx == dst_idx):
-            return False  # dropping a column on itself is a no-op; a commas reorder is unobservable
-            # (the dual canonicalizes the column order)
+        if src_list == dst_list and (src_list in ("commas", "unchanged") or src_idx == dst_idx):
+            return False  # dropping a column on itself is a no-op; a commas/unchanged reorder is
+            # unobservable (the dual canonicalizes the comma order; U is a derived, unordered basis)
         self._snapshot()
         if "commas" in (src_list, dst_list):
             self._clear_pending()  # a rank change invalidates the per-list drafts

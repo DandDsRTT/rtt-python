@@ -2702,6 +2702,16 @@ class _GridBuilder:
             for ckey in ("commas", "targets", "held", "interest"):
                 if self._plus_shows(ckey):
                     drag_controls(ckey, counts[ckey])
+            # the consolidated V's unchanged half U also grips — each KNOWN unchanged interval is a
+            # cross-list DRAG SOURCE (drop it on another list to copy it there; U is derived, so it
+            # isn't removed and accepts no drops — see editor.move_interval). A dashed column has no
+            # interval, so no grip. Keyed "grip:unchanged:{j}" so the colgrip handler reads list
+            # "unchanged" and idx j (the U index move_interval expects); placed on the U sub-axes.
+            if self.show_unchanged:
+                for j in range(self.nu):
+                    if self.unchanged_basis[j] is not None:
+                        self.cells.append(CellBox(f"grip:unchanged:{j}", self.sub_axis_x("commas", self.nc_shown + j) - COL_W / 2,
+                                             grip_top, COL_W, GRIP_BAND, "colgrip", comma=j))
 
         # generator ratios (aligned with the mapping rows they label) + the mapping
         # matrix and its mapped target interval list
