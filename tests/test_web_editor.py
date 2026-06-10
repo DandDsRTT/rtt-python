@@ -947,6 +947,21 @@ def test_move_interval_carries_a_vector_between_two_lists():
     assert editor.interest_vectors == [(2, 0, -1)]
 
 
+def test_unchanged_interval_drags_out_as_a_copy():
+    # the consolidated V's unchanged half U is a derived basis (read off the tuning), so dragging one
+    # of its intervals to another list COPIES it there without removing it from U — and nothing can
+    # be dropped INTO U. (The default tuning is quarter-comma meantone, which holds 2/1 and 5/4.)
+    editor = Editor()
+    u_known = editor._list_vectors("unchanged")
+    assert u_known and u_known[0] is not None        # U is known (the tuning holds rationally)
+    u0 = u_known[0]
+    assert editor.move_interval("unchanged", 0, "interest", 0) is True
+    assert tuple(editor.interest_vectors[0]) == u0   # copied into the interest list
+    assert editor._list_vectors("unchanged")[0] == u0  # …and U keeps it (derived — not removed)
+    # nothing can be dropped INTO U (it isn't an editable list)
+    assert editor.move_interval("interest", 0, "unchanged", 0) is False
+
+
 def test_move_a_target_into_held_converts_the_ratio_and_materializes_the_override():
     editor = Editor()  # default TILT targets, no override
     targets = service.target_interval_set(editor.target_spec, editor.state.domain_basis)

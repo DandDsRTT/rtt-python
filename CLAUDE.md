@@ -44,6 +44,27 @@ If `.venv/` is ever missing, rebuild it once with a 3.10+ interpreter (this mach
 /opt/homebrew/bin/python3.14 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
+## Run the fast suite while iterating; the full suite is a merge gate
+
+The ~2,530-test suite takes ~3:18, but **one file is ~67% of that wall-clock**:
+`tests/test_web_render.py` — 171 in-process page-render tests (NiceGUI's `User` plugin) that
+rebuild the whole spreadsheet page and re-run the RTT math on every `await user.open("/")`
+(~0.8s each). The other ~2,360 tests — all the math / parsing / service / spreadsheet / editor
+checks — finish in ~75s. (Despite its name, `tests/test_web_integration.py` is **not** the slow
+one; it's 16 fast in-process tests — see the section below.) So split the loop:
+
+- **While iterating, run the fast pass** — skip the one heavy file:
+  `.venv/bin/python -m pytest -q --ignore=tests/test_web_render.py` (~75s). Use it for quick
+  inner-loop feedback on math/service/spreadsheet work.
+- **Run the render tests — i.e. the full `.venv/bin/python -m pytest -q` — before the ff-merge
+  to main, and whenever your change touches `rtt/web/`** (the renderer those tests cover). They
+  guard the exact UI the user validates on 8137 and that the mockup governs, so **a green full
+  run is the gate for the merge**: never land a web change on main on the strength of the fast
+  pass alone.
+- This only changes how *agents pace their own runs*. Do **not** add an `-m`/`addopts` default
+  that makes a bare `pytest` silently skip the render tests — the user's own runs and CI must
+  stay complete.
+
 ## When work is done, merge to main — that's how the user sees it
 
 The user validates everything on **their own `python app.py` running on 8137**, which serves
