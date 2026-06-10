@@ -215,6 +215,7 @@ SYMBOLS = {
     ("ss_mapping", "targets"): f"Y{SUBSCRIPT_L}",     # Y_L = M_s→L·T
     ("ss_mapping", "detempering"): f"𝑀ₛ→{SUBSCRIPT_L}D",
     ("scaling_factors", "commas"): "𝝀",  # the eigenvalue list diag(λ) over V (bold-italic λ)
+    ("projection", "commas"): "PV",  # the projected unrotated vector list P·V = V·diag(λ) over V
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -655,6 +656,9 @@ ALL_INTERVAL_MNEMONICS = {("vectors", "targets"): ("prime", "proxy")}
 # CAPTIONS, so every box with a name also carries a unit (the emission rides the caption loop).
 UNITS = {
     ("vectors", "commas"): "p",
+    # the projected unrotated vector list P·V — prime-count vectors, like the interval-vectors V it
+    # projects (P maps each just prime back to a prime-count vector, hence p, not the mapping's g)
+    ("projection", "commas"): "p",
     ("vectors", "targets"): "p",
     ("vectors", "held"): "p",
     ("vectors", "detempering"): "p",
@@ -898,6 +902,9 @@ EDITABLE_PTEXT_ROWS = frozenset(r for r, _ in EDITABLE_PTEXT)  # rows whose band
 # other row shows one EBK string per tile.
 PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "retune", "damage",
                         "prescaling", "complexity", "weight",
+                        # the projection row carries a plain-text EBK string for its P·V tile (the
+                        # projected unrotated vector list); reserving the band keeps it from spilling
+                        "projection",
                         # the chapter-9 superspace matrices carry a plain-text EBK string too
                         # (B_L, M_L, M_jL); listing them reserves the band height so the text
                         # doesn't spill past the tile into the row below

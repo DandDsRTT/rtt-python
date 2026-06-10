@@ -146,6 +146,8 @@ VAL_BRACKET_H = 16  # a single-row value bracket, kept short and centred in its
 MARK_INSET = 8  # inset of a mapped column's top/bottom mark, so it clears the rules
 SEP_W = 2  # width of a vertical rule between vector columns (the renderer draws it
 # as thick as a square bracket's main bar; this is just the cell it centres in)
+V_SPLIT_GAP = 16  # extra breathing room between the comma half C and the unchanged half U of the
+# consolidated V = C|U column, so the dividing bar clears the interactive gridded cells on each side
 KET_INSET = 4  # inset (each side) of an editable interval-vector ket box within its COL_W
 # slot, leaving a gap (2·KET_INSET) between adjacent boxes. The interest column (a loose
 # collection, not a matrix) uses it so its boxes stand apart rather than abutting into a grid;
@@ -996,8 +998,12 @@ class _GridBuilder:
         if self.show_unchanged:
             for (rk, ck), name in list(self.effective_captions.items()):
                 if ck == "commas":
-                    self.effective_captions[(rk, ck)] = (
-                        name.replace("comma basis", "unrotated vector list").replace(" (made to vanish!)", ""))
+                    renamed = name.replace("comma basis", "unrotated vector list").replace(" (made to vanish!)", "")
+                    # where the rename leaves "list" twice (e.g. "…unrotated vector list interval
+                    # size list") it reads silly, so drop the FIRST one: "unrotated vector list" → "…vector"
+                    if renamed.count("list") > 1:
+                        renamed = renamed.replace("unrotated vector list", "unrotated vector", 1)
+                    self.effective_captions[(rk, ck)] = renamed
         # other intervals of interest: a user-built set held as vectors and edited like
         # the comma basis (editable vector cells). Normalize each vector to the current d
         # (pad/trim) so a domain change can't misalign them, then derive the ratios the
@@ -1270,7 +1276,7 @@ class _GridBuilder:
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
             ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
-            ("commas", 2 * BRACKET_W + self.nv_shown * COL_W, show_temp, True),
+            ("commas", 2 * BRACKET_W + self.nv_shown * COL_W + (V_SPLIT_GAP if self.show_unchanged else 0), show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
             ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
@@ -1745,6 +1751,12 @@ class _GridBuilder:
             return 0
         lines = [_wrap_lines(self.effective_captions[(key, c)], self.open_col_w[c]) for c in self.col_x
                  if (key, c) in self.effective_captions and (key, c) in self.declared_tiles]
+        # the V counts tile carries TWO names — "nullity" over the comma half, "unchanged interval
+        # count" over the unchanged half — each wrapped within its own (narrower) sub-area, so the
+        # band must reserve for the taller of the two (the long unchanged name in its u·COL_W half)
+        if key == "counts" and self.show_unchanged and "commas" in self.col_x:
+            lines.append(_wrap_lines("unchanged interval count", self.nu * COL_W))
+            lines.append(_wrap_lines("nullity", self.nc * COL_W))
         return max(lines, default=1) * CAPTION_LINE
 
     def ptext_editable(self, rkey, ckey):
@@ -1906,7 +1918,10 @@ class _GridBuilder:
         return "elementratio" if "/" in text else "elementcell"
 
     def comma_left(self, c):
-        return self.commas_x + BRACKET_W + c * COL_W
+        # the unchanged half U (sub-columns c ≥ nc) is pushed right by V_SPLIT_GAP, opening the
+        # gap that holds the C|U divider clear of the cells (only under the consolidated V view)
+        gap = V_SPLIT_GAP if (self.show_unchanged and c >= self.nc) else 0
+        return self.commas_x + BRACKET_W + c * COL_W + gap
 
     def target_left(self, j):
         return self.targets_x + BRACKET_W + j * COL_W
@@ -2340,13 +2355,15 @@ class _GridBuilder:
             self.cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, self.row_y[rkey], SEP_W, self.row_h[rkey], "vbar"))
 
     def v_split_bars(self):
-        # the single vertical rule dividing the comma half C from the unchanged half U in EVERY
-        # tile of the consolidated unrotated-vector-list column V = C|U (the mockup's V | divider).
-        # The per-column separators are off throughout V, so this lone bar is its only divider.
+        # the single vertical rule dividing the comma half C from the unchanged half U, centred in
+        # the V_SPLIT_GAP between them, down EVERY value tile of the consolidated unrotated-vector-
+        # list column V = C|U (the mockup's V | divider). The per-column separators are off
+        # throughout V, so this lone bar is its only divider. The counts tile is excluded — it holds
+        # only the two scalar tallies (n, u), not a matrix, so a dividing rule there reads as noise.
         if not self.show_unchanged or self.commas_x is None:
             return
-        x = self.comma_left(self.nc) - SEP_W / 2
-        for rkey in ("counts", "quantities", "units", "scaling_factors", "vectors", "projection",
+        x = self.comma_left(self.nc) - V_SPLIT_GAP / 2 - SEP_W / 2  # mid-gap, between C's end and U's start
+        for rkey in ("quantities", "units", "scaling_factors", "vectors", "projection",
                      "mapping", "tuning", "just", "retune", "prescaling", "complexity"):
             if self.tile_open(rkey, "commas"):
                 self.cells.append(CellBox(f"vsplit:{rkey}", x, self.row_y[rkey], SEP_W, self.row_h[rkey], "vbar"))
@@ -3874,6 +3891,15 @@ class _GridBuilder:
                 if glyph or equiv:
                     self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
                 cy += SYMBOL_H
+            if self.show_captions and self.show_unchanged and (rkey, ckey) == ("counts", "commas"):
+                # the consolidated V counts split into two names, each centred over its half (mirroring
+                # the n / u tallies above them): "nullity" over the comma sub-columns, "unchanged
+                # interval count" over the unchanged ones
+                self.cells.append(CellBox("caption:counts:commas", self.comma_left(0), cy, self.nc * COL_W,
+                                     self.row_cap[rkey], "caption", text="nullity"))
+                self.cells.append(CellBox("caption:counts:commas:u", self.comma_left(self.nc), cy, self.nu * COL_W,
+                                     self.row_cap[rkey], "caption", text="unchanged interval count"))
+                continue
             if self.show_captions:
                 kw = MNEMONICS.get((rkey, ckey)) if self.show_mnemonics else None
                 underlines = ((name.index(kw), 1),) if (kw and kw in name) else ()

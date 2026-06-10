@@ -1300,6 +1300,10 @@ def plain_text_values(
     values = {
         ("quantities", "primes"): ".".join(str(e) for e in db),
         ("vectors", "commas"): _ket_list(state.comma_basis, "⟩"),
+        # the projected unrotated vector list P·V over the comma half: P·𝐜 = 𝟎 (the commas vanish) —
+        # prime-count vectors (close ⟩), mirroring how the mapped comma basis shows M·C = 𝟎. The
+        # unchanged half (P·𝐮 = 𝐮) is the read-only U, omitted here as in every V-column plain text.
+        ("projection", "commas"): _ket_list(tuple((0,) * state.d for _ in commas), "⟩"),
         ("vectors", "targets"): tp_text,  # Tₚ — the target identity
         ("mapping", "primes"): mapping_ebk(state),
         ("mapping", "commas"): _ket_list(zip(*mapped_comma), "}"),

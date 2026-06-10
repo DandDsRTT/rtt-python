@@ -7762,8 +7762,9 @@ def test_projection_consolidates_commas_and_unchanged_into_v():
     assert cells["cell:comma:0:0"].kind == "commacell"   # C stays editable
     u_first = cells["cell:unchanged:0:0"]
     assert u_first.kind == "vec"                         # U is read-only
-    # U columns sit immediately right of the comma column(s), one COL_W apart
-    assert u_first.x == cells["cell:comma:0:0"].x + spreadsheet.COL_W
+    # the unchanged half U is pushed right of the comma half by the extra C|U gap (so the divider
+    # clears the cells); within U the columns stay one COL_W apart
+    assert u_first.x == cells["cell:comma:0:0"].x + spreadsheet.COL_W + spreadsheet.V_SPLIT_GAP
     assert cells["cell:unchanged:0:1"].x == u_first.x + spreadsheet.COL_W
     # U is the held basis as entered — u₁ = 2/1 = (1,0,0), u₂ = 5/4 = (-2,0,1)
     assert [cells[f"cell:unchanged:{p}:0"].text for p in range(3)] == ["1", "0", "0"]
@@ -7822,10 +7823,11 @@ def test_projection_size_rows_span_v():
 
 def test_projection_v_column_has_one_c_u_divider_per_tile_and_no_stray_separators():
     cells = {c.id: c for c in _with(projection=True).cells}
-    # one vertical bar at the C|U boundary (left of the first unchanged column) down each V tile
+    # one vertical bar centred in the C|U gap (left of the first unchanged column) down each V tile
     bar = cells["vsplit:vectors"]
-    assert bar.x == cells["cell:unchanged:0:0"].x - spreadsheet.SEP_W / 2
+    assert bar.x == cells["cell:unchanged:0:0"].x - spreadsheet.V_SPLIT_GAP / 2 - spreadsheet.SEP_W / 2
     assert {"vsplit:scaling_factors", "vsplit:mapping", "vsplit:tuning"} <= set(cells)
+    assert "vsplit:counts" not in cells  # the counts tile (two scalar tallies, not a matrix) gets none
     # the mapped unrotated vector list (M·V) draws NO inter-entry separator rules (the stray-
     # separator bug is fixed); the lone C|U bar is its only divider
     assert not any(c.startswith("sep:mapped_comma:") for c in cells)
@@ -7860,6 +7862,21 @@ def test_projection_v_column_counts_both_nullity_and_unchanged():
     # the u-count sits over the unchanged sub-columns, right of the n-count
     assert cells["count:commas:u"].x == cells["cell:unchanged:0:0"].x
     assert cells["count:commas"].x < cells["count:commas:u"].x
+    # each half is NAMED too, the name centred over the same area as its tally
+    assert cells["caption:counts:commas"].text == "nullity"
+    assert cells["caption:counts:commas:u"].text == "unchanged interval count"
+    assert (cells["caption:counts:commas"].x, cells["caption:counts:commas"].w) == (cells["count:commas"].x, cells["count:commas"].w)
+    assert (cells["caption:counts:commas:u"].x, cells["caption:counts:commas:u"].w) == (cells["count:commas:u"].x, cells["count:commas:u"].w)
+
+
+def test_projected_unrotated_vector_list_tile_is_complete():
+    # the P·V tile carries the full complement like every other V-column tile: a symbol, a units
+    # line, and a plain-text EBK string (not just the gridded cells)
+    cells = {c.id: c for c in _with(projection=True, symbols=True, units=True, plain_text_values=True).cells}
+    assert cells["symbol:projection:commas"].text == "PV"      # P·V (= V·diag(λ))
+    assert cells["units:projection:commas"].text == "units: p"  # prime-count vectors, like V
+    # the plain text shows the comma half P·𝐜 = 𝟎 (the commas vanish), like the mapped comma basis
+    assert cells["ptext:projection:commas"].text == "[[0 0 0⟩]"
 
 
 def test_no_scaling_factors_or_unchanged_columns_without_projection():
@@ -7885,7 +7902,9 @@ def test_projection_relabels_the_whole_column_as_the_unrotated_vector_list():
     assert named["header:commas"].text == "unrotated\nvector list"            # the column title
     assert named["caption:vectors:commas"].text == "unrotated vector list"
     assert named["caption:mapping:commas"].text == "mapped unrotated vector list"
-    assert named["caption:tuning:commas"].text == "tempered unrotated vector list interval size list"
+    # where the rename would double "list" ("…vector list interval size list") the first is dropped
+    assert named["caption:tuning:commas"].text == "tempered unrotated vector interval size list"
+    assert named["caption:just:commas"].text == "(just) unrotated vector interval size list"
     symd = {c.id: c for c in _with(projection=True, symbols=True, equivalences=True).cells}
     assert symd["symbol:vectors:commas"].text == "V = C|U"
     assert symd["symbol:mapping:commas"].text == "𝑀V"   # C → V; the "= 𝑂" vanish-equivalence dropped
