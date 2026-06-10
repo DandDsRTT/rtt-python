@@ -552,6 +552,19 @@
    the ring). Repeat the highlight on the control so it shows on input cells too. */
 .rtt-cell.rtt-preview-change .q-field__control { box-shadow:inset 0 0 0 2px var(--preview-color);
             background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
+/* the changing cell's TEXT, the changing analogue of a draft's green and an alert's red: a moved
+   value reads in dark gold (--preview-text-color, the amber ring darkened so it's legible as text on
+   the pale wash) — "this changed" — instead of the default black. It also WINS over .rtt-alert's
+   blanket red on a cell that BOTH alerts and is moved by the live edit (the user saw red text on the
+   amber ring there): while the edit previews, the changing hue dominates, reverting to red on blur
+   if the cell is still invalid. Mirrors the alert rule (blanket * + frac-bar + the stacked-focus
+   exception, each one class more specific so it overrides the red) so it recolours every value face
+   yet never reveals a stacked ratio's hidden raw input doubled over its face. The value-cell SVG
+   marks (EBK lattice, bar charts) use fixed colours, not currentColor, so this leaves them be. */
+.rtt-cell.rtt-preview-change, .rtt-cell.rtt-preview-change * { color:var(--preview-text-color) !important; }
+.rtt-cell.rtt-preview-change .rtt-frac-num { border-bottom-color:var(--preview-text-color) !important; }
+.rtt-cell.rtt-preview-change.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
+.rtt-cell.rtt-preview-change.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--preview-text-color) !important; }
 /* the structural remove-preview: hovering a +/- that DELETES a column or row rings the cells it
    removes in RED (they are still on screen, so the user sees exactly what goes away), while the
    cells whose value the re-solve only MOVES keep the amber rtt-preview-change above. Same inset ring

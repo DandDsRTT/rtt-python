@@ -120,6 +120,45 @@ def test_no_title_overhang_reports_zero():
     assert lay.right_overhang == 0
 
 
+def _title_edges(lay):
+    # each column header's (key, title-left, title-right) for its unwrapped title centred on its
+    # gridline, left to right
+    return [(c.id.split("header:", 1)[1],
+             c.x + c.w / 2 - spreadsheet._title_w(c.text) / 2,
+             c.x + c.w / 2 + spreadsheet._title_w(c.text) / 2)
+            for c in sorted((c for c in lay.cells if c.kind == "colheader"), key=lambda c: c.x)]
+
+
+def test_adjacent_column_titles_keep_a_margin():
+    # Titles render unwrapped and centred on their gridline, overhanging a content-hugged column.
+    # When two narrow columns sit side by side, the gap between them widens so the two overhangs
+    # always stay >= TITLE_MARGIN apart — a long title (the "other intervals of interest" header)
+    # can never overspill into its neighbour's title. The worst case is the empty held-intervals
+    # column right beside the empty interest column, with the wide target-intervals column that
+    # normally shields interest hidden: before the fix interest's title started 54px LEFT of where
+    # held's title ended (the "o" of "other" left of the "s" of held's "intervals").
+    s = settings.defaults()
+    s["optimization"] = True  # show the (narrow) held-intervals column, immediately left of interest
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, targets_in_use=False)
+    edges = _title_edges(lay)
+    assert [k for k, _l, _r in edges][-2:] == ["held", "interest"]  # the colliding pair, now adjacent
+    for (lk, _ll, lr), (rk, rl, _rr) in zip(edges, edges[1:]):
+        assert rl - lr >= spreadsheet.TITLE_MARGIN - 0.5, f"{lk}->{rk} titles only {rl - lr:.1f}px apart"
+
+
+def test_title_clearance_leaves_shielded_columns_untouched():
+    # The gap only widens on an ACTUAL title collision: where a column's neighbour is wide (its
+    # title well inside its footprint) the clearance term goes slack and the gap stays GAP, so the
+    # common layouts are unchanged. In the default view the wide target-intervals column sits left
+    # of interest, so interest keeps its plain GAP and narrow footprint (and still overhangs the
+    # grid's right edge — right_overhang > 0).
+    lay = _layout()
+    interest = {c.id: c for c in lay.cells}["header:interest"]
+    targets = {c.id: c for c in lay.cells}["header:targets"]
+    assert interest.x == targets.x + targets.w + spreadsheet.GAP  # plain GAP, not widened
+    assert lay.right_overhang > 0  # interest's title still overhangs the right edge (pane widens to show it)
+
+
 def _assert_freeze_partition(lay):
     # the frozen bands hold the titles + toggles AND the branching ± / drag-grip controls; every
     # value cell and grey value tile clears both bands, so the renderer's frozen panes never mask
@@ -7899,22 +7938,37 @@ def test_projection_at_full_rank_keeps_the_nullity_count_in_a_readable_stub():
 
 
 def test_projection_pending_comma_reddens_the_unchanged_interval_it_will_delete():
-    # adding a comma drops the rank by one, deleting an unchanged interval — preview that interval red
-    # (the app's standard "this is going away" highlight) on the LAST U column while the draft is open
+    # adding a comma drops the rank by one, deleting an unchanged interval — preview that interval with
+    # the app's STANDARD remove highlight (CellBox.preview_remove → rtt-preview-remove), across its
+    # WHOLE column (every value tile, not a smattering), while the draft is open. NOT the constraint
+    # `alert` flag, and not just a couple of tiles.
     s = settings.defaults()
     s["projection"] = True
+    s["counts"] = True
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                             held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None])
     cells = {c.id: c for c in lay.cells}
     nu = sum(1 for i in cells if i.startswith("cell:unchanged:0:"))
     assert nu >= 2
-    assert all(cells[f"cell:unchanged:{p}:{nu - 1}"].alert for p in range(3))  # last U column: red
-    assert cells[f"unchanged:{nu - 1}"].alert                                  # its ratio too
-    assert not any(cells[f"cell:unchanged:{p}:0"].alert for p in range(3))     # earlier U columns: not
-    # with NO draft open, nothing is doomed — no U cell is reddened
-    plain = {c.id: c for c in spreadsheet.build(
-        service.from_mapping(((1, 1, 0), (0, 1, 4))), s, held_basis_ratios=("2/1", "5/4")).cells}
-    assert not any(plain[f"cell:unchanged:{p}:{j}"].alert for p in range(3) for j in range(nu))
+    last, v = nu - 1, 1 + (nu - 1)   # doomed U column index, and its V-column position (nc=1 comma)
+    # the doomed column reddens across EVERY value tile: vectors, the ratio, mapping, all three size
+    # rows, P·V and the scaling factor — one consistent preview, the whole column
+    doomed_ids = ([f"cell:unchanged:{p}:{last}" for p in range(3)] + [f"unchanged:{last}"]
+                  + [f"cell:mapped_unchanged:{i}:{last}" for i in range(2)]
+                  + [f"tuning:comma:{v}", f"just:comma:{v}", f"retune:comma:{v}"]
+                  + [f"cell:proj_v:{p}:{v}" for p in range(3)] + [f"cell:scaling:{v}"])
+    assert all(cells[cid].preview_remove for cid in doomed_ids), \
+        [cid for cid in doomed_ids if not cells[cid].preview_remove]
+    # and it uses the standard flag, NOT the constraint-alert red
+    assert not any(c.alert for c in lay.cells if c.preview_remove)
+    # the earlier U column, the unchanged count/caption, and the drag grip are NOT reddened
+    assert not any(cells[f"cell:unchanged:{p}:0"].preview_remove for p in range(3))
+    assert not cells["count:commas:u"].preview_remove
+    assert not cells[f"grip:unchanged:{last}"].preview_remove
+    # with NO draft open, nothing is doomed
+    plain = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                              held_basis_ratios=("2/1", "5/4"))
+    assert not any(c.preview_remove for c in plain.cells)
 
 
 def test_unchanged_columns_have_cross_list_drag_grips():

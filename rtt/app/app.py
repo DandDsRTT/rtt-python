@@ -98,6 +98,12 @@ _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the 
 _PREVIEW_COLOR = "#f5a623"  # amber ring on a cell the in-progress edit moves (the edit-preview
 # highlight) — a warm "this changed" hue, kept distinct from the red _ALERT_COLOR / remove-preview
 # and the green _PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
+_PREVIEW_TEXT_COLOR = "#a37b00"  # the matching DARK gold/yellow a "changing" cell's TEXT wears: the
+# bright amber ring above is too light to read as text on the pale wash, so the value face uses this
+# darkened amber instead — the changing analogue of a draft's green text (_PENDING_COLOR) and an
+# alert's red text (_ALERT_COLOR). It also overrides the red a cell would otherwise inherit from
+# .rtt-alert when the live edit moves a cell that is ALSO alerting (gold "changing" wins while the
+# edit previews; the red returns on blur if the cell is still invalid). Tweakable apart from the ring
 _ALERT_COLOR = "#e53935"  # red for an alerting cell (.rtt-alert: a held interval the current tuning
 # no longer holds just). Once shared with the pending draft via _PENDING_COLOR; split off when drafts
 # went green, so "now invalid" stays red while "being created" reads green
@@ -275,7 +281,7 @@ def _control_svg(glyph: str) -> str:
 
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --tab-h:{_TAB_H}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
-  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --alert-color:{_ALERT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
+  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --alert-color:{_ALERT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
@@ -2488,11 +2494,11 @@ class _Reconciler:
     # only removes and the re-solving adds (a prime, un-tempering a comma) have on-screen cells to ring.
     def _build_comma_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_comma))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_comma, "comma"))
 
     def _build_element_plus(self, cb, wrap):  # nonstandard-domain box on: open a blank ?/? element draft
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_element))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_element, "element"))
 
     def _build_element_minus(self, cb, wrap):  # cancel the pending element draft (the ?/? column's −)
         wrap.classes("rtt-minus-zone")
@@ -2514,21 +2520,21 @@ class _Reconciler:
 
     def _build_interest_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_interest))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_interest, "interest"))
 
     def _build_held_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_held, self._editor.remove_held)
 
     def _build_held_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_held))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_held, "held"))
 
     def _build_target_minus(self, cb, wrap):
         self._build_list_minus(cb, wrap, self._editor.cancel_pending_target, self._editor.remove_target)
 
     def _build_target_plus(self, cb, wrap):
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_target))
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_target, "target"))
 
     def _build_colgrip(self, cb, wrap):  # a per-column drag handle / drop target on the fan gridline:
         # drag one column's grip onto another to MOVE/reorder it; the per-list "grip:{list}:add" zone
@@ -3203,6 +3209,40 @@ def index() -> None:
         action()
         render()
 
+    # the draft-column + buttons (comma / target / held / interest, and the nonstandard-domain
+    # element) drop the cursor straight into the new green column: the quantities-row ratio cell
+    # when that row is shown, else the first gridded value of the interval-vectors column. The map
+    # gives each group its (quantities draft-cell id, vectors draft-cell kind); the element draft
+    # lives only in the header row, so it has no vectors fallback (None).
+    draft_focus = {
+        "comma":    ("comma:pending",    "commacell"),
+        "target":   ("target:pending",   "targetcell"),
+        "held":     ("held:pending",     "heldcell"),
+        "interest": ("interest:pending", "interestcell"),
+        "element":  ("prime:pending",    None),
+    }
+
+    def add_interval(action, group):
+        # add the draft column, then focus into it: the quantities ratio cell if its row is shown
+        # (the layout emitted it), else the first gridded vector cell (prime 0) of the draft column.
+        act(action)
+        quant_id, vec_kind = draft_focus[group]
+        lay = last_lay[0]
+        if any(cb.id == quant_id for cb in lay.cells):
+            target = quant_id
+        elif vec_kind is not None:
+            target = next((cb.id for cb in lay.cells
+                           if cb.pending and cb.prime == 0 and cb.kind == vec_kind), None)
+        else:
+            target = None
+        inp = rec.inputs.get(target) if target is not None else None
+        if inp is not None:
+            # focus into the draft cell. render() above created it, and the outbox emits that
+            # element's 'update' before this focus message (see outbox.run_loop), so the client has
+            # mounted it by the time runMethod resolves the ref. (A frame-deferred focus would be
+            # fragile — requestAnimationFrame is paused whenever the page isn't visible.)
+            inp.run_method("focus")
+
     def on_show_toggle(key, value):
         # building[0] guards the echo when render() syncs a checkbox to the document
         # (e.g. after undo/redo/reset/select-all) rather than a real user toggle
@@ -3669,6 +3709,7 @@ def index() -> None:
     # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
     rec._cb = SimpleNamespace(
         act=act,
+        add_interval=add_interval,
         combine_begin=combine_begin,
         combine_preview=combine_preview,
         combine_commit=combine_commit,
@@ -3855,17 +3896,17 @@ def index() -> None:
             rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
             rec.update_cell(cb)
             ringed = cb.id in preview
-            # render owns BOTH ring colours for every cell it touches. The amber "value moved" ring
-            # is the edit/combine preview's, toggled by `ringed`. The red "will be removed" ring is
-            # only ever painted by a no-reflow hover (show_preview: a +/- / chooser hover, a domain-
-            # element edit, a shrinking-temperament hover) and is ALWAYS stale by the time a real
-            # render runs — the document has been committed or reverted, so a surviving cell is no
-            # longer going away. So strip rtt-preview-remove unconditionally here: without it a red
-            # ring on a cell the render KEEPS is orphaned forever (render never re-touched red, and it
-            # clobbers preview_shown below so clear_preview can't reach it either).
-            rec.els[cb.id].classes(
-                add="rtt-preview-change" if ringed else "",
-                remove="rtt-preview-remove" if ringed else "rtt-preview-change rtt-preview-remove")
+            # render owns BOTH ring colours for every cell it touches. The amber "value moved" ring is
+            # the edit/combine preview's, toggled by `ringed`. The red "will be removed" ring is USUALLY
+            # a transient no-reflow hover (show_preview: a +/- / chooser hover, a domain-element edit, a
+            # shrinking-temperament hover), stale by the time a render runs — so it's stripped here. The
+            # EXCEPTION is a builder-driven `preview_remove`: a value a pending comma draft will delete
+            # (the doomed unchanged interval), a STEADY render-state painted with the same red look and
+            # kept until the draft closes (the next render without the flag strips it).
+            remove_red = cb.preview_remove
+            add_cls = ("rtt-preview-change " if ringed else "") + ("rtt-preview-remove" if remove_red else "")
+            rem_cls = ("" if ringed else "rtt-preview-change ") + ("" if remove_red else "rtt-preview-remove")
+            rec.els[cb.id].classes(add=add_cls.strip(), remove=rem_cls.strip())
         rec.preview_shown = set(preview)  # every rung id is a live cell (changed_cell_ids ⊆ lay.cells)
 
         for eid in [e for e in rec.els if e not in seen]:
