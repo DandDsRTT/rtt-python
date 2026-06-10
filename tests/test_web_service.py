@@ -1654,3 +1654,15 @@ def test_unchanged_interval_basis_for_a_rank_2_4d_temperament():
     U = service.unchanged_interval_basis(state)
     assert U == ((1, 0, 0, 0), (0, 0, 0, 1))
     assert len(U) == state.r == state.d - state.n
+
+
+def test_unchanged_interval_basis_follows_the_chosen_established_projection():
+    # U is the eigenbasis of the DISPLAYED projection, so the established-projection chooser drives
+    # it just like it drives P and G: third-comma holds 6/5 (NOT 5/4), so prime 5 is no longer
+    # unchanged — U becomes {2, 5/3} rather than quarter-comma's {2, 5}. (Same span as the held
+    # {2, 6/5}; the nullspace returns the denominator-cleared canonical basis.)
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.unchanged_interval_basis(state, held=("2/1", "6/5")) == ((1, 0, 0), (0, -1, 1))
+    assert service.unchanged_interval_ratios(state, held=("2/1", "6/5")) == ("2/1", "5/3")
+    # the None default still gives quarter-comma's {2, 5}, unchanged from before
+    assert service.unchanged_interval_basis(state) == ((1, 0, 0), (0, 0, 1))

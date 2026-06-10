@@ -935,7 +935,10 @@ class _GridBuilder:
         # +/−/drag and the pending draft (a structural edit would change the rank, hence U). Gated
         # on there being a comma to merge with (n > 0). Its mapped / sized / complexity twins are
         # precomputed so the V value tiles read one geometry, exactly as the comma column's do.
-        self.unchanged_basis = (service.unchanged_interval_basis(self.state)
+        # held=self.projection_held ties U to the SAME established projection P/G use, so the
+        # V = C|U column and the scaling row track the established-projection chooser too (U is, by
+        # definition, the eigenbasis of the DISPLAYED P).
+        self.unchanged_basis = (service.unchanged_interval_basis(self.state, held=self.projection_held)
                                 if (show_temp and show_tuning and self.settings["projection"] and self.state.n) else None)
         self.show_unchanged = self.unchanged_basis is not None
         self.nu = len(self.unchanged_basis) if self.show_unchanged else 0

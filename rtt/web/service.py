@@ -668,31 +668,27 @@ def tuning_embedding(state: TemperamentState, held=None):
         return None
 
 
-def unchanged_interval_basis(state: TemperamentState) -> Matrix | None:
+def unchanged_interval_basis(state: TemperamentState, held=None) -> Matrix | None:
     """The unchanged-interval basis ``U = nullspace(P − I)`` — the projection ``P``'s
     eigenvalue-1 eigenvectors, i.e. the intervals it holds exactly just (``P·u = u``).
     Returned as ``u`` integer column vectors stored rows-as-intervals (the comma-basis
     convention), with each vector cleared to primitive integers like a comma. Together
     with the comma basis ``C = nullspace(P)`` it forms the projection's full eigenvector
     basis ``V = C | U`` — the commas vanish (eigenvalue 0), the unchanged are held
-    (eigenvalue 1). Its count ``u = d − n = r`` (one unchanged direction per generator);
-    for quarter-comma meantone holding {2, 5} it is the held primes ``((1,0,0),(0,0,1))``.
+    (eigenvalue 1). Its count ``u = d − n = r`` (one unchanged direction per generator).
 
-    Returns ``None`` on any degenerate / unsupported case, mirroring
-    :func:`tuning_projection` (whose ``P`` it is the eigenbasis of)."""
+    ``held`` is the established projection's rational unchanged intervals (the chooser's named
+    tuning) — the SAME basis driving :func:`tuning_projection`, so ``U`` is the eigenbasis of the
+    DISPLAYED projection and tracks the chooser: quarter-comma (the ``None`` default for meantone)
+    holds {2, 5} → ``((1,0,0),(0,0,1))``, third-comma {2, 6/5} → {2, 5/3} → ``((1,0,0),(0,-1,1))``.
+
+    Returns ``None`` on any degenerate / unsupported case, mirroring :func:`tuning_projection`."""
     try:
-        d, r = state.d, state.r
-        if d <= 0 or not 0 < r <= d:
+        inputs = _projection_temperaments(state, held)
+        if inputs is None:
             return None
-        held_indices = _held_prime_indices(state)
-        if len(held_indices) != r:
-            return None
-        held_rows = tuple(
-            tuple(1 if k == j else 0 for k in range(d)) for j in held_indices
-        )
-        mapping_t = Temperament(state.mapping, Variance.ROW, state.domain_basis)
-        held_t = Temperament(held_rows, Variance.COL, state.domain_basis)
-        projection = get_tempering_projection(mapping_t, held_t)
+        d = state.d
+        projection = get_tempering_projection(*inputs)
         p_minus_i = sp.Matrix(
             [[projection[i][j] - (1 if i == j else 0) for j in range(d)] for i in range(d)]
         )
@@ -709,11 +705,12 @@ def unchanged_interval_basis(state: TemperamentState) -> Matrix | None:
         return None
 
 
-def unchanged_interval_ratios(state: TemperamentState) -> tuple[str, ...] | None:
+def unchanged_interval_ratios(state: TemperamentState, held=None) -> tuple[str, ...] | None:
     """Each unchanged interval as a ratio string (the held primes ``"2/1"``, ``"5/1"`` …) —
-    the unchanged-basis analogue of :func:`comma_ratios`. ``None`` when the basis can't be
-    formed; the empty tuple has no meaning here (a present projection always holds the rank)."""
-    unchanged = unchanged_interval_basis(state)
+    the unchanged-basis analogue of :func:`comma_ratios`. ``held`` selects the established
+    projection as in :func:`unchanged_interval_basis`. ``None`` when the basis can't be formed;
+    the empty tuple has no meaning here (a present projection always holds the rank)."""
+    unchanged = unchanged_interval_basis(state, held)
     if unchanged is None:
         return None
     return _vectors_to_ratios(unchanged, state.domain_basis)

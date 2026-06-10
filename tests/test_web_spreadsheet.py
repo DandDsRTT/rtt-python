@@ -7831,3 +7831,19 @@ def test_projection_prescaling_and_complexity_rows_span_v():
     assert {f"complexity:comma:{i}" for i in range(3)} <= set(cells)
     # the unchanged complexity sits on its V sub-axis (aligned with its vector column)
     assert cells["complexity:comma:2"].x == cells["cell:unchanged:0:1"].x
+
+
+def test_v_column_unchanged_basis_follows_the_established_projection():
+    # U is the eigenbasis of the DISPLAYED projection, so the established-projection chooser drives
+    # the V = C|U column too (projection_held flows into the unchanged-basis compute): third-comma
+    # (holds 6/5) changes the unchanged basis from quarter-comma's {2, 5} to {2, 5/3}.
+    s = settings.defaults()
+    s["projection"] = True
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    default = {c.id: c for c in spreadsheet.build(state, s).cells}
+    third = {c.id: c for c in spreadsheet.build(state, s, projection_held=("2/1", "6/5")).cells}
+    # default (quarter-comma): the second unchanged vector is 5/1 = (0, 0, 1)
+    assert [default[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["0", "0", "1"]
+    # third-comma: the second unchanged vector is 5/3 = (0, -1, 1) — prime 3 enters, prime 5 no
+    # longer stands alone (it is tempered by third-comma)
+    assert [third[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["0", "-1", "1"]
