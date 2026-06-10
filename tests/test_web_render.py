@@ -1752,20 +1752,53 @@ async def test_a_maximal_render_dispatches_every_emitted_cell_kind(user: User) -
 
 # --- the edit-preview highlight: while a cell is focused, ring the cells its edit changes ---
 
-async def test_editing_a_cell_stages_then_commits_on_blur(user: User) -> None:
-    # the editable matrix/vector integer cells STAGE the typed value and COMMIT it only on Enter/blur
-    # (exactly like the ratio cells), rather than re-solving on every keystroke. Typing does not apply
-    # the edit; blur (or Enter) does.
+async def test_editing_a_cell_previews_the_ripple_then_commits_on_blur(user: User) -> None:
+    # the editable matrix/vector integer cells PREVIEW as you type and COMMIT on Enter/blur (like the
+    # ratio + domain-element cells), rather than re-solving on every keystroke. Focusing a cell captures
+    # a baseline; typing then rings every OTHER cell whose value the edit WOULD move (rtt-preview-change)
+    # WITHOUT applying it — the focused cell itself is never ringed — and the value lands only on blur
+    # (or Enter), which also clears the preview.
     await user.open("/")
     assert _cell_text(user, "cell:mapped:1:6") == "4"    # the committed mapped value (meantone)
     src = _cell_child(user, "cell:mapping:1:2")          # the fifth's prime-5 entry (meantone: 4)
+    UserInteraction(user, {src}, None).trigger("focus")  # capture the pre-edit baseline
+    src.set_value("7")                                   # TYPE 4 -> 7: previews only, not yet committed
+    await user.should_see(marker="cell:mapped:1:6")
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6")        # the moved cell is ringed...
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")   # ...the source is not
+    assert _cell_text(user, "cell:mapped:1:6") == "4"    # ...and the edit is NOT applied yet (preview only)
+    UserInteraction(user, {src}, None).trigger("blur")   # blur COMMITS the edit and clears the preview
+    await user.should_see(marker="cell:mapped:1:6")
+    assert _cell_text(user, "cell:mapped:1:6") == "7"                            # now applied
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")    # and the ring cleared
+
+
+async def test_repeated_edits_keep_previewing(user: User) -> None:
+    # the live preview must keep working across repeated edit-commit cycles, not just the first. Each
+    # commit ends the preview (blur), and re-focusing re-arms it. (Enter is wired to blur the input —
+    # see make_cell — precisely so it routes through this proven blur path rather than committing while
+    # focus is retained, which desynced the input and stopped the browser firing on_change after the
+    # first edit: the reported "preview works only once until I refresh" bug.)
+    await user.open("/")
+    src = _cell_child(user, "cell:mapping:1:2")
+    # cycle 1
     UserInteraction(user, {src}, None).trigger("focus")
-    src.set_value("7")                                   # TYPE 4 -> 7: staged, not yet applied
+    src.set_value("7")                                   # previews
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6")
+    UserInteraction(user, {src}, None).trigger("blur")   # commit (Enter does this too, via blur)
     await user.should_see(marker="cell:mapped:1:6")
-    assert _cell_text(user, "cell:mapped:1:6") == "4"    # the edit is NOT applied while typing
-    UserInteraction(user, {src}, None).trigger("blur")   # blur COMMITS the edit
+    assert _cell_text(user, "cell:mapped:1:6") == "7"    # applied
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapped:1:6")  # ring cleared
+    # cycle 2 — re-focus and edit again: the preview must ring AGAIN (it broke here before)
+    src = _cell_child(user, "cell:mapping:1:2")
+    UserInteraction(user, {src}, None).trigger("focus")
+    src.set_value("9")
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapped:1:6"), \
+        "the live preview must keep working on later edits, not only the first"
+    assert _cell_text(user, "cell:mapped:1:6") == "7"    # still a preview (not yet committed)
+    UserInteraction(user, {src}, None).trigger("blur")
     await user.should_see(marker="cell:mapped:1:6")
-    assert _cell_text(user, "cell:mapped:1:6") == "7"    # now applied
+    assert _cell_text(user, "cell:mapped:1:6") == "9"    # cycle-2 commit applied
 
 
 async def test_typing_a_target_limit_rings_the_rows_it_moves(user: User) -> None:
@@ -2309,12 +2342,11 @@ async def test_a_disabled_history_button_shows_no_preview(user: User) -> None:
 # focus (so no blur fires), and the red remove-preview that a later render must reconcile away rather
 # than orphan (render owns both ring colours and rewrites preview_shown, so a stranded red is unreachable).
 
-async def test_relabeling_a_domain_element_with_enter_clears_the_edit_preview(user: User) -> None:
-    # a chapter-9 domain basis element commits its relabel on Enter as well as blur, but Enter keeps
-    # FOCUS — so the edit-preview must end here too, else the moved cells stay ringed after the relabel
-    # is applied (the commit's render re-rings them against the now-stale focus baseline, with no blur to
-    # clear it). Relabel element 1 of the (2 3 5) basis to 7: just:prime:1 (its prime-column just value)
-    # moves and survives. The live ring shows while typing, then clears the moment Enter commits.
+async def test_relabeling_a_domain_element_clears_the_edit_preview_on_commit(user: User) -> None:
+    # a chapter-9 domain basis element commits its relabel on blur (Enter routes through blur too), and
+    # the edit-preview must end there: the moved cells must not stay ringed after the relabel is applied.
+    # Relabel element 1 of the (2 3 5) basis to 7: just:prime:1 (its prime-column just value) moves and
+    # survives. The live ring shows while typing, then clears the moment the relabel commits.
     await user.open("/")
     _toggle(user, "nonstandard domain")          # makes the domain basis elements editable (prime:i inputs)
     await user.should_see(marker="prime:1")
@@ -2322,21 +2354,21 @@ async def test_relabeling_a_domain_element_with_enter_clears_the_edit_preview(us
     UserInteraction(user, {inp}, None).trigger("focus")   # snapshot the edit-preview baseline
     inp.set_value("7")                                    # a valid independent relabel -> the live preview rings
     assert "rtt-preview-change" in _wrap_classes(user, "just:prime:1")     # the moved cell rings while editing
-    UserInteraction(user, {inp}, None).trigger("keydown.enter")            # APPLY via Enter (focus retained)
+    UserInteraction(user, {inp}, None).trigger("blur")                     # APPLY (Enter does this via blur)
     await user.should_see(marker="just:prime:1")          # the moved cell survived the relabel (still on screen)
     assert _cell_child(user, "prime:1").value == "7"       # the relabel committed
-    assert "rtt-preview-change" not in _wrap_classes(user, "just:prime:1")  # ...and the ring cleared on Enter
+    assert "rtt-preview-change" not in _wrap_classes(user, "just:prime:1")  # ...and the ring cleared on commit
 
 
-async def _relabel_across_kind_change_clears(user: User, submit: str) -> None:
+async def test_relabeling_a_domain_element_across_a_kind_change_clears_on_blur(user: User) -> None:
     # the hard case the same-kind test above misses: a relabel that crosses the element's KIND — an
     # integer prime (elementcell) → a fraction (elementratio), e.g. 3 → 9/7 — makes the commit's render
-    # REBUILD the prime:1 cell. The rebuilt input is a new element, so the old input's blur / Enter
-    # listeners (which call on_cell_blur) are destroyed before they fire: nothing ends the edit-preview,
-    # and render re-rings the moved cell against the stale focus baseline. render now detects that the
-    # focused cell is being rebuilt and ends the preview itself, so the amber clears on submit (Enter AND
-    # blur) instead of lingering until a later blur lands on another cell. (basis (2 3 5); 9/7 = 3²/7 is
-    # independent of {2,5}, so it is a valid relabel; just:prime:1 moves and survives the rebuild.)
+    # REBUILD the prime:1 cell. The rebuilt input is a new element, so the old input's blur listener
+    # (which ends the edit-preview) is destroyed before it fires, and render re-rings the moved cell
+    # against the stale focus baseline. render now detects that the focused cell is being rebuilt and
+    # ends the preview itself, so the amber clears on commit instead of lingering until a later blur lands
+    # on another cell. (basis (2 3 5); 9/7 = 3²/7 is independent of {2,5}; just:prime:1 moves and survives.)
+    # (Enter commits via blur too — see make_cell — so blur is the one commit gesture to exercise.)
     await user.open("/")
     _toggle(user, "nonstandard domain")
     await user.should_see(marker="prime:1")
@@ -2344,32 +2376,24 @@ async def _relabel_across_kind_change_clears(user: User, submit: str) -> None:
     UserInteraction(user, {inp}, None).trigger("focus")
     inp.set_value("9/7")                                  # int → fraction: a kind change that rebuilds the cell
     assert "rtt-preview-change" in _wrap_classes(user, "just:prime:1")    # the live preview rings while editing
-    UserInteraction(user, {inp}, None).trigger(submit)    # APPLY (the rebuild destroys the old input)
+    UserInteraction(user, {inp}, None).trigger("blur")    # APPLY (the rebuild destroys the old input)
     await user.should_see(marker="just:prime:1")          # the moved cell survived the rebuild (still on screen)
     assert _cell_child(user, "prime:1").value == "9/7"     # the relabel committed
     assert "rtt-preview-change" not in _wrap_classes(user, "just:prime:1"), \
-        f"the kind-change relabel left the amber ring stuck after {submit}"
+        "the kind-change relabel left the amber ring stuck after commit"
 
 
-async def test_relabeling_a_domain_element_across_a_kind_change_clears_on_enter(user: User) -> None:
-    await _relabel_across_kind_change_clears(user, "keydown.enter")
-
-
-async def test_relabeling_a_domain_element_across_a_kind_change_clears_on_blur(user: User) -> None:
-    await _relabel_across_kind_change_clears(user, "blur")
-
-
-async def test_committing_a_ratio_with_enter_clears_the_edit_preview(user: User) -> None:
-    # the editable quantities-row ratios (comma / target / held / interest) commit on Enter as well as
-    # blur, and Enter keeps focus, so the edit-preview must end here too. Retype the syntonic comma 80/81
-    # as the chromatic semitone 25/24 = (-3 -1 2) and commit with Enter: the comma's interval-vector cells
-    # move and survive, and must not stay ringed once the change has been applied.
+async def test_committing_a_ratio_clears_the_edit_preview(user: User) -> None:
+    # the editable quantities-row ratios (comma / target / held / interest) commit on blur (Enter routes
+    # through blur too), and the edit-preview must end there. Retype the syntonic comma 80/81 as the
+    # chromatic semitone 25/24 = (-3 -1 2) and commit: the comma's interval-vector cells move and survive,
+    # and must not stay ringed once the change has been applied.
     await user.open("/")
     await user.should_see(marker="comma:0")
     inp = _cell_child(user, "comma:0")
     UserInteraction(user, {inp}, None).trigger("focus")
     inp.set_value("25/24")
-    UserInteraction(user, {inp}, None).trigger("keydown.enter")            # APPLY via Enter (focus retained)
+    UserInteraction(user, {inp}, None).trigger("blur")                     # APPLY (Enter does this via blur)
     await user.should_see(marker="cell:comma:0:0")
     assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["-3", "-1", "2"]  # committed
     for p in range(3):                                     # the surviving moved vector cells carry no ring

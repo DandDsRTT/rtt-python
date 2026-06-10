@@ -1398,12 +1398,13 @@ class _Reconciler:
         if edit_input is not None:
             edit_input.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid))
             edit_input.on("blur", lambda _=None: self._cb.on_cell_blur())
-            # Enter commits the blur/Enter-committing cells (the ratio cells, the domain-element cell)
-            # but does NOT blur them — focus is retained — so end the edit-preview here too. Otherwise
-            # preview_baseline stays at the pre-edit snapshot and the commit's render leaves the moved
-            # cells ringed amber until a later blur. on_cell_blur only clears the preview state (it
-            # doesn't re-render), so the committed value the handler just rendered is untouched.
-            edit_input.on("keydown.enter", lambda _=None: self._cb.on_cell_blur())
+            # Enter just BLURS the input (client-side) — it does not commit on its own. Blurring routes
+            # Enter through the proven blur path: the cell's own blur handler commits the value and
+            # on_cell_blur ends the edit-preview. This matches the expected UX (the cursor leaves the box)
+            # and, crucially, avoids the bug where committing + re-rendering an input's value WHILE it
+            # stays focused desynced it so the browser stopped firing on_change — leaving the live preview
+            # working only on the first edit until the cell was left and re-entered (or the tab refreshed).
+            edit_input.on("keydown.enter", js_handler="(e) => e.target.blur()")
         # every editable numeric input steps by its _WHEEL_STEPS amount on a wheel notch while
         # focused. The listener rides the wrap (so a scroll anywhere in the cell counts) and its
         # js_handler only emits when the cell holds focus, so an unfocused scroll just pages the grid
@@ -1662,12 +1663,11 @@ class _Reconciler:
     # / gentuningcell / powerinput also overlay a stacked face (cents whole/.frac, power ∞/(max)). ----
     def _build_mapping(self, cb, wrap):
         wrap.classes("rtt-cell-input")  # a per-cell unit overlays inside the input box
-        # the integer cells stage the typed value and COMMIT only on Enter / blur (like the ratio cells),
-        # rather than re-solving on every keystroke. No on_change: a per-keystroke commit would retune
-        # mid-edit, and the value still syncs to the server so the blur/Enter handler reads it.
-        inp = ui.input().props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_mapping_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_mapping_change())
+        # the integer cells PREVIEW the ripple as you type (on_change, preview=True) and COMMIT only on
+        # Enter / blur — like the ratio + domain-element cells — rather than re-solving on every keystroke
+        inp = ui.input(on_change=lambda e: self._cb.on_mapping_change(preview=True)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        inp.on("blur", lambda _=None: self._cb.on_mapping_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_row_target(wrap, cb.gen)  # drop a dragged generator row onto this row to combine
 
@@ -1676,10 +1676,10 @@ class _Reconciler:
 
     def _build_commacell(self, cb, wrap):
         wrap.classes("rtt-cell-input")
-        # stage on type, COMMIT on Enter/blur (see _build_mapping)
-        inp = ui.input().props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_comma_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_comma_change())
+        # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
+        inp = ui.input(on_change=lambda e: self._cb.on_comma_change(preview=True)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        inp.on("blur", lambda _=None: self._cb.on_comma_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_col_target(wrap, "comma", cb.comma)  # drop a dragged comma onto this one to combine
 
@@ -1694,28 +1694,28 @@ class _Reconciler:
 
     def _build_interestcell(self, cb, wrap):
         wrap.classes("rtt-cell-input")
-        # stage on type, COMMIT on Enter/blur (see _build_mapping)
-        inp = ui.input().props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_interest_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_interest_change())
+        # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
+        inp = ui.input(on_change=lambda e: self._cb.on_interest_change(preview=True)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        inp.on("blur", lambda _=None: self._cb.on_interest_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_col_target(wrap, "interest", cb.comma)
 
     def _build_heldcell(self, cb, wrap):
         wrap.classes("rtt-cell-input")
-        # stage on type, COMMIT on Enter/blur (see _build_mapping)
-        inp = ui.input().props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_held_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_held_change())
+        # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
+        inp = ui.input(on_change=lambda e: self._cb.on_held_change(preview=True)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        inp.on("blur", lambda _=None: self._cb.on_held_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_col_target(wrap, "held", cb.comma)
 
     def _build_targetcell(self, cb, wrap):
         wrap.classes("rtt-cell-input")
-        # stage on type, COMMIT on Enter/blur (see _build_mapping)
-        inp = ui.input().props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_target_cells_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_target_cells_change())
+        # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
+        inp = ui.input(on_change=lambda e: self._cb.on_target_cells_change(preview=True)) \
+            .props("dense borderless").classes("rtt-cellinput")
+        inp.on("blur", lambda _=None: self._cb.on_target_cells_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_col_target(wrap, "target", cb.comma)
 
@@ -1857,8 +1857,7 @@ class _Reconciler:
         wrap.classes("rtt-cell-input rtt-cell-stacked")
         commit = lambda _=None, cid=cb.id: self._cb.on_ratio_change(cid)
         inp = ui.input().props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", commit)
-        inp.on("keydown.enter", commit)
+        inp.on("blur", commit)  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._ratio(cb, approx=False, overlay=True)
 
@@ -1875,8 +1874,7 @@ class _Reconciler:
         commit = lambda _=None, cid=cb.id: self._cb.on_element_change(cid)
         inp = ui.input(on_change=lambda _=None, cid=cb.id: self._cb.on_element_preview(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", commit)
-        inp.on("keydown.enter", commit)
+        inp.on("blur", commit)  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
 
     def _build_elementcell(self, cb, wrap):
@@ -2563,27 +2561,54 @@ def index() -> None:
         ids = last_lay[0].identities if last_lay[0] is not None else None
         return [tok for tok, _ in (ids or {}).get(name, [])]
 
-    def on_mapping_change():
-        # commit the typed matrix on Enter/blur (these cells stage the value while typing, like the
-        # ratio cells, rather than re-solving on every keystroke). An improper temperament toasts +
-        # reverts; an incomplete entry is ignored until every cell is filled.
+    def _preview_edit(apply):
+        # The live edit-preview core for the editable matrix/vector cells (mapping / comma / interest /
+        # held / target), in the spirit of on_element_preview: while a cell is focused, show what the
+        # typed value WOULD change — apply the candidate to a snapshot, diff it against the focus
+        # baseline, ring those cells (show_preview, no reflow), then revert. NO commit: the value lands
+        # only on Enter/blur. A no-op unless a cell is being edited (the baseline is the diff reference).
+        if rec._editing is None or rec.preview_baseline is None:
+            return
+        token = editor.capture_for_preview()
+        try:
+            apply()  # the hypothetical edit, on the snapshot only
+            new = editor.layout(prev_ids=rec.preview_baseline.identities)
+            modified = spreadsheet.changed_cell_ids(rec.preview_baseline, new) - {rec._editing}
+            removed = spreadsheet.removed_cell_ids(rec.preview_baseline, new)
+        finally:
+            editor.restore_for_preview(token)  # leave no trace: the document never actually changed
+        rec.clear_preview()
+        rec.show_preview(modified, removed)
+
+    def on_mapping_change(preview=False):
+        # commit (Enter/blur), or with preview=True (live, on each keystroke) ring the cells the typed
+        # matrix WOULD move without committing. An incomplete / improper entry rings nothing (no toast)
+        # while previewing; only the commit toasts + reverts.
         if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
             return
         d, r = editor.state.d, len(editor.state.mapping)
         matrix = [[_parse_int(rec.inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
         if any(v is None for row in matrix for v in row):
+            if preview:
+                rec.clear_preview()
             return
         if not service.is_proper_temperament(matrix):
+            if preview:
+                rec.clear_preview()  # an improper in-progress matrix previews nothing (no toast)
+                return
             ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
             render()  # revert the cells to the current temperament
+            return
+        if preview:
+            _preview_edit(lambda: editor.edit_mapping(matrix))
             return
         editor.edit_mapping(matrix)
         render()
 
-    def on_comma_change():
+    def on_comma_change(preview=False):
         # the comma basis (the mapping's dual) is edited in the interval-vectors row, present
-        # independent of the temperament boxes. Commits the typed vectors on Enter/blur (staged while
-        # typing, like the ratio cells); a draft column commits once its vector is valid + independent.
+        # independent of the temperament boxes. preview=True rings the would-be change without
+        # committing (commit lands on Enter/blur); a draft column previews nothing (off-screen).
         if building[0]:
             return
         d, nc = editor.state.d, len(editor.state.comma_basis)
@@ -2591,26 +2616,41 @@ def index() -> None:
             # the draft column rides at index nc; hand its cells to the editor, which
             # commits (and re-ranks) once they form a valid independent comma
             if any(f"cell:comma:{p}:{nc}" not in rec.inputs for p in range(d)):
+                if preview:
+                    rec.clear_preview()
                 return  # the draft cells aren't shown (folded away)
+            if preview:
+                rec.clear_preview()  # a draft column is off-screen until committed — preview nothing
+                return
             editor.set_pending_comma([_parse_int(rec.inputs[f"cell:comma:{p}:{nc}"].value) for p in range(d)])
             render()
             return
         if any(f"cell:comma:{p}:{c}" not in rec.inputs for c in range(nc) for p in range(d)):
+            if preview:
+                rec.clear_preview()
             return  # the comma cells aren't currently shown (folded away)
         # the comma cells are the basis transposed (prime down the rows, comma across)
         basis = [[_parse_int(rec.inputs[f"cell:comma:{p}:{c}"].value) for p in range(d)] for c in range(nc)]
         if any(v is None for comma in basis for v in comma):
+            if preview:
+                rec.clear_preview()
             return
         if not service.is_proper_temperament(service.from_comma_basis(basis).mapping):
+            if preview:
+                rec.clear_preview()
+                return
             ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
             render()
+            return
+        if preview:
+            _preview_edit(lambda: editor.edit_comma_basis(basis))
             return
         editor.edit_comma_basis(basis)
         render()
 
-    def on_interest_change():
+    def on_interest_change(preview=False):
         # the intervals of interest are edited as vectors in the interval-vectors row, like the comma
-        # basis; read the d-tall columns and replace the set. Commits on Enter/blur (staged while typing).
+        # basis; read the d-tall columns and replace the set. preview=True rings without committing.
         if building[0]:
             return
         d, mi = editor.state.d, len(editor.interest_vectors)
@@ -2619,21 +2659,33 @@ def index() -> None:
             # the draft column rides one token past the committed ones; commit it once filled
             pt = spreadsheet.pending_token(toks)
             if any(f"cell:interest:{p}:{pt}" not in rec.inputs for p in range(d)):
+                if preview:
+                    rec.clear_preview()
                 return  # the draft cells aren't shown (folded away)
+            if preview:
+                rec.clear_preview()  # a draft column is off-screen until committed — preview nothing
+                return
             editor.set_pending_interest([_parse_int(rec.inputs[f"cell:interest:{p}:{pt}"].value) for p in range(d)])
             render()
             return
         if len(toks) != mi or any(f"cell:interest:{p}:{toks[i]}" not in rec.inputs for i in range(mi) for p in range(d)):
+            if preview:
+                rec.clear_preview()
             return  # the interest cells aren't currently shown (folded away)
         vectors = [[_parse_int(rec.inputs[f"cell:interest:{p}:{toks[i]}"].value) for p in range(d)] for i in range(mi)]
         if any(v is None for m in vectors for v in m):
+            if preview:
+                rec.clear_preview()
+            return
+        if preview:
+            _preview_edit(lambda: editor.set_interest_vectors(vectors))
             return
         editor.set_interest_vectors(vectors)
         render()
 
-    def on_held_change():
+    def on_held_change(preview=False):
         # the held intervals are edited as vectors in the interval-vectors row, like the intervals of
-        # interest; read the d-tall columns and replace the held set. Commits on Enter/blur.
+        # interest; read the d-tall columns and replace the held set. preview=True rings, no commit.
         if building[0]:
             return
         d, nh = editor.state.d, len(editor.held_vectors)
@@ -2642,22 +2694,34 @@ def index() -> None:
             # the draft column rides one token past the committed ones; commit it once filled
             pt = spreadsheet.pending_token(toks)
             if any(f"cell:held:{p}:{pt}" not in rec.inputs for p in range(d)):
+                if preview:
+                    rec.clear_preview()
                 return  # the draft cells aren't shown (folded away)
+            if preview:
+                rec.clear_preview()  # a draft column is off-screen until committed — preview nothing
+                return
             editor.set_pending_held([_parse_int(rec.inputs[f"cell:held:{p}:{pt}"].value) for p in range(d)])
             render()
             return
         if len(toks) != nh or any(f"cell:held:{p}:{toks[i]}" not in rec.inputs for i in range(nh) for p in range(d)):
+            if preview:
+                rec.clear_preview()
             return  # the held cells aren't currently shown (folded away / optimization off)
         vectors = [[_parse_int(rec.inputs[f"cell:held:{p}:{toks[i]}"].value) for p in range(d)] for i in range(nh)]
         if any(v is None for m in vectors for v in m):
+            if preview:
+                rec.clear_preview()
+            return
+        if preview:
+            _preview_edit(lambda: editor.set_held_vectors(vectors))
             return
         editor.set_held_vectors(vectors)
         render()
 
-    def on_target_cells_change():
+    def on_target_cells_change(preview=False):
         # the target interval list is edited as vector columns, like the comma basis; read the d-tall
-        # columns (id is cell:vec:targets:{column}:{prime}) and replace the target set. Commits on
-        # Enter/blur (staged while typing); a draft column commits once filled.
+        # columns (id is cell:vec:targets:{column}:{prime}) and replace the target set. preview=True
+        # rings without committing (commit lands on Enter/blur); a draft column previews nothing.
         if building[0]:
             return
         d = editor.state.d
@@ -2669,14 +2733,26 @@ def index() -> None:
             # the draft column rides one token past the committed ones; commit it once filled
             pt = spreadsheet.pending_token(toks)
             if any(f"cell:vec:targets:{pt}:{p}" not in rec.inputs for p in range(d)):
+                if preview:
+                    rec.clear_preview()
                 return  # the draft cells aren't shown (folded away)
+            if preview:
+                rec.clear_preview()  # a draft column is off-screen until committed — preview nothing
+                return
             editor.set_pending_target([_parse_int(rec.inputs[f"cell:vec:targets:{pt}:{p}"].value) for p in range(d)])
             render()
             return
         if len(toks) != k or any(f"cell:vec:targets:{toks[j]}:{p}" not in rec.inputs for j in range(k) for p in range(d)):
+            if preview:
+                rec.clear_preview()
             return  # the target cells aren't currently shown (folded away)
         vectors = [[_parse_int(rec.inputs[f"cell:vec:targets:{toks[j]}:{p}"].value) for p in range(d)] for j in range(k)]
         if any(v is None for m in vectors for v in m):
+            if preview:
+                rec.clear_preview()
+            return
+        if preview:
+            _preview_edit(lambda: editor.set_target_override_vectors(vectors))
             return
         editor.set_target_override_vectors(vectors)
         render()
@@ -2875,9 +2951,9 @@ def index() -> None:
         if step is None:
             return
         rec.inputs[cid].value = _wheel_step(rec.inputs[cid].value, delta_y, step)
-        # A wheel notch is a deliberate step, so it COMMITS. The matrix/vector cells have no on_change
-        # (they commit on Enter/blur), so setting the value alone wouldn't commit — dispatch their commit
-        # explicitly. The other wheeled kinds (power / prescaler) still commit in their own on_change.
+        # A wheel notch is a deliberate step, so it COMMITS. The matrix/vector cells now only PREVIEW on
+        # their on_change (committing on Enter/blur), so the notch must commit them explicitly here; the
+        # other wheeled kinds (power / prescaler) still commit in their own on_change, so they don't.
         commit = {"mapping": on_mapping_change, "commacell": on_comma_change,
                   "interestcell": on_interest_change, "heldcell": on_held_change,
                   "targetcell": on_target_cells_change}.get(rec.kinds.get(cid))
