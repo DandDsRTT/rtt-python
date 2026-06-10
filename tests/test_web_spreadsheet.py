@@ -7742,3 +7742,16 @@ def test_no_scaling_factors_or_unchanged_columns_without_projection():
     assert "label:scaling_factors" not in cells
     assert not any(c.startswith("cell:scaling:") for c in cells)
     assert not any(c.startswith("cell:unchanged:") for c in cells)
+
+
+def test_projection_prescaling_and_complexity_rows_span_v():
+    # with complexity weighting on, the prescaling (𝐿·v) and complexity (‖𝐿·v‖) rows run over
+    # V = C|U too — the unchanged intervals get prescaled / normed exactly like the commas
+    cells = {c.id: c for c in _with("minimax-S", projection=True, weighting=True).cells}
+    # prescaling: a d-tall 𝐿·v matrix per V sub-column; the two unchanged columns are at sub-
+    # indices nc..d-1 (nc=1 here), so row 0 of each appears
+    assert {"cell:prescaling:commas:0:1", "cell:prescaling:commas:0:2"} <= set(cells)
+    # complexity: the list 𝒄 = ‖𝐿·v‖ over all d V sub-columns
+    assert {f"complexity:comma:{i}" for i in range(3)} <= set(cells)
+    # the unchanged complexity sits on its V sub-axis (aligned with its vector column)
+    assert cells["complexity:comma:2"].x == cells["cell:unchanged:0:1"].x

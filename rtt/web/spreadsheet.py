@@ -3009,7 +3009,8 @@ class _GridBuilder:
                 "ssprimes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
                 # 𝐿·B_Ls: each domain element as a dL superspace vector (B_L's rows ARE these columns)
                 "primes": service.basis_in_superspace(self.elements),
-                "commas": _lift(self.state.comma_basis),
+                # over V the prescaler scales the unchanged basis too (its held intervals)
+                "commas": _lift(self.state.comma_basis) + (_lift(self.unchanged_basis) if self.show_unchanged else ()),
                 "targets": _lift(self.target_vectors),
                 "interest": _lift(self.interest),
                 "held": _lift(self.held),
@@ -3023,7 +3024,8 @@ class _GridBuilder:
             ss_elements = self.elements
             prescale_vectors = {
                 "primes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),
-                "commas": self.state.comma_basis,
+                # over V = C|U the prescaler scales the unchanged basis too (its held intervals)
+                "commas": self.state.comma_basis + (self.unchanged_basis if self.show_unchanged else ()),
                 "targets": self.target_vectors,
                 "interest": self.interest,
                 "held": self.held,
@@ -3171,7 +3173,10 @@ class _GridBuilder:
                                      text="dual norm power"))
         if self.row_open("complexity"):  # 𝒄 over every interval set: a map over primes, lists elsewhere
             for group in ("primes", "commas", "targets", "interest", "held", "detempering"):
-                self.tuning_value_row("complexity", group, self.complexities[group],
+                # the comma list runs over V = C|U when projection is on (the unchanged intervals'
+                # complexities append to the commas'); the empty tuple no-ops off projection
+                values = self.complexities[group] + (self.unchanged_complexities if group == "commas" else ())
+                self.tuning_value_row("complexity", group, values,
                               alerts=self.held_unheld if group == "held" else ())
             # the superspace shift's "next row": the prime complexity map moves into the ss-primes
             # column (‖𝐿[i]‖q = each true prime's own diagonal weight), while the domain-primes tile
@@ -3927,7 +3932,7 @@ class _GridBuilder:
         # Separators between columns are drawn for 𝐿T and 𝐿H per the mockup; the 𝐿C / 𝐿D tiles
         # keep their columns spaced without dividing rules. Interest stays standalone (no outer
         # wrap, no separators).
-        self.vector_list_marks("prescaling", "prescaling:commas", "commas", self.comma_left, self.nc, foot="ebkangle", separators=False)
+        self.vector_list_marks("prescaling", "prescaling:commas", "commas", self.comma_left, self.nc + self.nu, foot="ebkangle", separators=False)  # 𝐿C then 𝐿U over V
         self.vector_list_marks("prescaling", "prescaling:detempering", "detempering", self.detempering_left, self.r, foot="ebkangle", separators=False)
         self.vector_list_marks("prescaling", "prescaling:targets", "targets", self.target_left, self.k, foot="ebkangle", separators=True)
         self.vector_list_marks("prescaling", "prescaling:held", "held", self.held_left, self.nh, foot="ebkangle", separators=True)
