@@ -44,48 +44,38 @@ If `.venv/` is ever missing, rebuild it once with a 3.10+ interpreter (this mach
 /opt/homebrew/bin/python3.14 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
-## When work is done, merge to main — that's how the user sees it
+## Git: you're on a fast-moving team — rebase onto main, then ff-merge
 
-The user validates everything on **their own `python app.py` running on 8137**, which serves
-the **main checkout** and hot-reloads on `*.py`/`*.css` changes. Work that lives only on a
-worktree branch is **invisible to them**. So the job isn't done until the branch is on `main`:
+You work in your own worktree on a `claude/<name>` branch. Several agents run in parallel and
+`main` moves every few minutes; the user is the **manager**, who deliberately assigns
+**separable** tasks — so when you sync with `main`, conflicts are rare and superficial. The
+user validates everything on **their own `python app.py` on 8137**, which serves the **main
+checkout** and hot-reloads, so work on your branch is invisible until it lands on `main`. Work
+like a normal engineer on that team — branch, rebase onto main, merge. No `reset` gymnastics,
+no fear:
 
-- When a task is complete (and tests pass), **fast-forward the branch onto `main`**:
-  `git -C <main-checkout> merge --ff-only <branch>`. The main instance reloads and the user
-  can validate immediately on 8137 — no extra steps from them.
-- **Don't make the user think about branches, worktrees, or verification ports.** They don't
-  need a play-by-play of which 8200+ port you used to check your work — just land it on main.
-  Mention the merge (and whether you pushed to `origin`), nothing more.
-- This is a git merge, not an edit of the main checkout — it does **not** violate "all edits
-  go in the worktree." Never hand-edit files in the main checkout; only ever `git merge` into it.
-
-## Commit every turn — never let work live only in the working tree
-
-Many agents run in parallel, each in its own worktree, while `main` moves every few minutes.
-The harness's worktree auto-sync can, in that churn, move a dirty tree aside or re-point a
-branch — and **anything that exists only as uncommitted edits or untracked files can be
-silently discarded between turns** (this has happened: a clean tree, vanished edits, an
-absent new file, then a branch reset onto `main`). The defense is simple: **the only safe
-place for work is a commit on your own branch.** Committed work is always recoverable from the
-reflog; uncommitted work is not.
-
-- **End every turn with a commit.** `git add -A && git commit -m "wip: <what changed>"`. A
-  string of `wip:` commits is fine — protecting the work matters far more than tidy history.
-- **`git add` new files the moment you create them.** Untracked files are the most fragile —
-  they're the first thing a stray `clean -fd` / `stash -u` removes. Don't leave a new test
-  file untracked across a turn boundary.
-- **Stay on your own `claude/<name>` branch.** Never `git checkout main` / `git switch main`,
-  and never `git reset` or `git rebase` your branch onto `main`, *inside your worktree* —
-  that is exactly what strands a worktree on `main` and drops your commits. The **only** way
-  to touch `main` is `git -C <main-checkout> merge --ff-only <your-branch>` (see above).
-- **To pick up others' changes, merge `main` *into* your branch** — `git merge main` — and
-  only on a clean tree (commit first). Merge is additive and never discards; rebase/reset
-  rewrite history and can lose work. If it conflicts, resolve and commit — never `reset --hard`
-  to escape.
-- **Never `git reset --hard`, `git clean -fd`, or `git stash` while you have unsaved work.**
-  Those are precisely how work disappears. Commit first, then operate.
-- Want one tidy commit on `main` instead of a chain of `wip:`s? Just before the ff-merge,
-  collapse them without interactive rebase: `git reset --soft main && git commit -m "<msg>"`.
+- **Commit as you go** (and `git add` new files) — always before you rebase or land. A commit
+  on your branch is the safe, recoverable home for work; only uncommitted / untracked files in
+  a worktree are fragile.
+- **Stay on your `claude/<name>` branch.** Never `git checkout` / `switch main`, and never
+  hand-edit the main checkout — it's the live app the user is using (a hook blocks such edits).
+- **Sync by rebasing onto main.** On a clean (committed) tree: `git rebase main`. It replays
+  your commits on top of main's current tip and keeps you on your branch. Resolve the
+  (superficial) conflicts and `git rebase --continue` — don't `--abort` and start over, don't
+  `reset --hard` to escape. Rebase again whenever `main` has moved.
+- **Land it when the task is done and tests pass.** A final `git rebase main` makes your branch
+  exactly `main + your commits`, so fast-forward main onto it:
+  `git -C <main-checkout> merge --ff-only <your-branch>`. The live app reloads and the user
+  validates on 8137. If the ff-merge is rejected because `main` moved again, just `git rebase
+  main` and retry — a teammate landed first, nothing more.
+- **Never `reset --soft`/`--hard main`, `clean -fd`, or `stash` to "tidy" or "fix."**
+  `reset --soft main` only does what you want when your base already IS `main`; once `main` has
+  moved past your base it silently **reverts every teammate's commit since that base** into your
+  squash (this has bitten us — it reverted a whole feature once). Rebase is the clean tool. Want
+  one commit instead of a `wip:` chain? Squash only your OWN commits:
+  `git reset --soft $(git merge-base main HEAD) && git commit` — never plain `reset --soft main`.
+- **Just report the merge** — not the 8200+ port you tested on, not branch/worktree mechanics,
+  and not `main`-vs-`origin` or push status (the user handles pushing).
 
 ## Web app port: 8137 is the user's — agents launch on their own port
 
