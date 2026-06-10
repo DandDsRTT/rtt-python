@@ -1979,9 +1979,12 @@ class _GridBuilder:
             mx, mw = self.matrix_span(ckey)
             return mx + mw / 2
         if ckey == "commas" and self.show_unchanged:
-            # no free stub past the commas — U (and the gap) occupy those slots — so the comma + rides
-            # ON the rightmost comma's branch point (the bus still spans all of V; see column_axis)
-            return self.sub_axis_x("commas", self.nc_shown - 1)
+            # the + rides its ORDINARY stub — one slot past the last comma — which is exactly where the
+            # new comma's gridline lands when clicked (the pending draft pushes U right). Using
+            # nc_shown (not group_n = nv_shown) keeps it at the C boundary rather than out past U; the
+            # bus still spans all of V (see column_axis). This separates it from the − at the last
+            # comma's branch point (a COL_W to its left), which previously sat right on top of it.
+            return self.sub_axis_x("commas", self.nc_shown - 1) + COL_W
         return self.sub_axis_x(ckey, n - 1) + COL_W  # one slot past the last branch point
 
     def _plus_shows(self, ckey):  # mirrors the +'s emit gate in the quantities block (col_open for the

@@ -7852,8 +7852,11 @@ def test_projection_keeps_the_comma_add_remove_controls():
     # and the − its usual last-comma hover zone. No +/− on the unchanged half.
     assert "comma_plus" in cells and "comma_minus" in cells
     assert cells["comma_plus"].x < cells["cell:unchanged:0:0"].x   # the + sits left of U
-    # the + rides the rightmost comma's branch point, NOT a stub one COL_W past it
-    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet.COL_W / 2 - spreadsheet.BTN / 2)) < 0.51
+    # the + rides its ORDINARY stub — one COL_W past the last comma's branch point — clear of the −
+    # (which sits ON that branch point), where the new column lands on click
+    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet.COL_W * 1.5 - spreadsheet.BTN / 2)) < 0.51
+    # and a COL_W clear of the − hover zone on the last comma (so the + is actually clickable)
+    assert cells["comma_plus"].x - cells["comma_minus"].x >= spreadsheet.COL_W - spreadsheet.BTN
 
 
 def test_projection_pending_comma_pushes_the_unchanged_half_past_the_draft():
