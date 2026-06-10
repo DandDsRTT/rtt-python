@@ -201,6 +201,18 @@ async def test_editing_the_unchanged_basis_retunes(user: User) -> None:
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
+async def test_editing_the_unchanged_ratio_retunes(user: User) -> None:
+    # the unchanged intervals are editable in their RATIO form too (the quantities row), not only as
+    # vectors: retype the default meantone's second unchanged ratio from 5/4 to 6/5 and it retunes to
+    # third-comma — the scalar twin of editing the U vectors
+    await _enable(user, "projection")
+    await user.should_see(marker="unchanged:1")
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"   # default = 1/4-comma
+    _cell_child(user, "unchanged:1").set_value("6/5")
+    _commit(user, "unchanged:1")                                   # blur commits the typed fraction
+    assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
+
+
 async def test_projection_renders_the_consolidated_v_and_scaling_factors(user: User) -> None:
     # projection also consolidates the commas + unchanged basis U into V = C|U and adds the
     # scaling-factors row λ. Assert the new cells render (and lean on the ERROR-log guard for any

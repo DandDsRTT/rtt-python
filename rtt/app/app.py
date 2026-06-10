@@ -2897,6 +2897,14 @@ def index() -> None:
             replace(editor.interest_vectors, editor.set_interest_vectors)
         elif group == "held":
             replace(editor.held_vectors, editor.set_held_vectors)
+        elif group == "unchanged":
+            # the unchanged-interval ratios drive the projection as a WHOLE: read the full basis (this
+            # column's new ratio + the others) and retune to the projection that holds it — the scalar
+            # twin of editing the U vectors (on_unchanged_change)
+            ratios = [str(rec.inputs[f"unchanged:{j}"].value).strip() for j in range(editor.state.r)
+                      if f"unchanged:{j}" in rec.inputs]
+            if len(ratios) == editor.state.r and all(ratios):
+                editor.set_unchanged_basis(tuple(ratios))
         else:  # target
             targets = editor.target_override or service.target_interval_set(
                 editor.target_spec, editor.state.domain_basis)

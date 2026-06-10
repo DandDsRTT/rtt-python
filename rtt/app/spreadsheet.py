@@ -2666,10 +2666,15 @@ class _GridBuilder:
                 if self.pending is not None:  # the draft's editable "?/?" ratio: type a fraction to fill it
                     # (or its vector cells). A distinct id so it's removed, not restructured, on commit.
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
-                if self.show_unchanged:  # the unchanged-interval ratios complete V = C|U — read-only
-                    for j in range(self.nu):  # (derived from the projection), the held primes "2/1", "5/1"
+                if self.show_unchanged:  # the unchanged-interval ratios complete V = C|U. EDITABLE (an
+                    # unchangedratio, the scalar twin of the editable U vector) when the tuning is a full
+                    # rational projection — typing a fraction retunes; read-only "commaratio" otherwise.
+                    full_u = self.unchanged_basis is not None and all(v is not None for v in self.unchanged_basis)
+                    for j in range(self.nu):
                         doomed = self.pending is not None and j == self.nu - 1  # about to be deleted (rank drops)
-                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc_shown + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j] or DASH, comma=self.nc + j, alert=doomed))
+                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc_shown + j), qy, COL_W, ROW_H,
+                                             "ratiocell" if (full_u and not doomed) else "commaratio",
+                                             text=self.unchanged_ratios[j] or DASH, comma=self.nc + j, alert=doomed))
                         self._voice("quantities:commas", self.nc + j, self.unchanged_sizes.just[j])
                 # commas mirror the domain controls: + starts a (pending) comma; the − rides the
                 # last column's branch point — cancelling the draft, or un-tempering a real comma,
