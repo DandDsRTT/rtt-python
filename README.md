@@ -52,15 +52,15 @@ python app.py
 
 ## Using the library directly
 
-The `rtt` package is a standalone RTT math library — the web app is just one consumer of it.
+The `rtt.library` package is a standalone RTT math library — the web app (`rtt.app`) is just one consumer of it.
 Temperaments are read and written in **extended bra–ket notation** (EBK): maps are written
 `⟨…]` and vectors `[…⟩`.
 
 ```python
-from rtt.parsing import parse_temperament_data
-from rtt.canonicalization import canonical_form
-from rtt.dual import dual
-from rtt.tuning import optimize_generator_tuning_map
+from rtt.library.parsing import parse_temperament_data
+from rtt.library.canonicalization import canonical_form
+from rtt.library.dual import dual
+from rtt.library.tuning import optimize_generator_tuning_map
 
 t = parse_temperament_data("[⟨1 1 0] ⟨0 1 4]}")      # 5-limit meantone, as a mapping
 
@@ -77,13 +77,14 @@ weighting, and the complexity used.
 
 ```
 app.py            # entry point: python app.py [port]
-rtt/              # the RTT math library (pure, framework-free)
-rtt/web/          # the NiceGUI front end
+rtt/library/      # the RTT math library (pure, framework-free)
+rtt/app/          # the NiceGUI front end
 guide/            # the D&D guide to RTT, mirrored for reference
-tests/            # ~2,000 tests covering the library and the web layer
+tests/library/    # library tests (unit/)
+tests/app/        # web-app tests (unit/ and integration/)
 ```
 
-### The math library (`rtt/`)
+### The math library (`rtt/library/`)
 
 | Module | Responsibility |
 | --- | --- |
@@ -102,7 +103,7 @@ tests/            # ~2,000 tests covering the library and the web layer
 | `parsing.py`, `formatting.py` | EBK input/output |
 | `math_utils.py`, `matrix_utils.py`, `dimensions.py`, … | Shared numeric helpers |
 
-### The web front end (`rtt/web/`)
+### The web front end (`rtt/app/`)
 
 The UI imports the library's public API directly — there is no HTTP layer — and funnels every
 library call through a single seam, `service.py`.
