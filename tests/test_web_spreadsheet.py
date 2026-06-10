@@ -7845,12 +7845,28 @@ def test_projection_v_column_fans_one_gridline_per_subcolumn():
     assert {"v:comma:0", "v:comma:1", "v:comma:2"} <= lines  # n+u = 3 sub-axes
 
 
-def test_projection_freezes_the_comma_count_controls():
-    cells = {c.id for c in _with(projection=True).cells}
-    # the consolidated V mixes editable C with read-only U; structural comma edits (which
-    # would change the rank and so U) are frozen — no +, no −, no drag grips on V
-    assert "comma_plus" not in cells and "comma_minus" not in cells
-    assert not any(c.startswith("grip:commas:") for c in cells)
+def test_projection_keeps_the_comma_add_remove_controls():
+    cells = {c.id: c for c in _with(projection=True).cells}
+    # commas stay addable/removable in the consolidated V view (adding one shrinks U by a column);
+    # the + rides the rightmost comma's branch point — no free stub past it, U holds the next slots —
+    # and the − its usual last-comma hover zone. No +/− on the unchanged half.
+    assert "comma_plus" in cells and "comma_minus" in cells
+    assert cells["comma_plus"].x < cells["cell:unchanged:0:0"].x   # the + sits left of U
+    # the + rides the rightmost comma's branch point, NOT a stub one COL_W past it
+    assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet.COL_W / 2 - spreadsheet.BTN / 2)) < 0.51
+
+
+def test_projection_pending_comma_pushes_the_unchanged_half_past_the_draft():
+    # adding a comma opens a pending draft column at index nc; the unchanged half U must sit PAST it
+    # (and past the C|U gap), so the draft and U never overlap
+    s = settings.defaults()
+    s["projection"] = True
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                            held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None])
+    cells = {c.id: c for c in lay.cells}
+    draft = cells["cell:comma:0:1"]            # the draft column rides at nc = 1
+    u_first = cells["cell:unchanged:0:0"]      # the first unchanged column
+    assert u_first.x > draft.x + spreadsheet.COL_W   # U is past the draft (with the gap between)
 
 
 def test_projection_v_column_counts_both_nullity_and_unchanged():
