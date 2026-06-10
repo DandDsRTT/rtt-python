@@ -367,6 +367,35 @@ def test_quantities_row_pluses_ride_the_bus_stub_past_the_last_branch_point():
         assert abs((bus.start + bus.length) - stub) < 0.51  # and the bus reaches it
 
 
+def test_interval_pluses_survive_hiding_the_quantities_row():
+    # the interval columns' + ride the shared column fan above the grid, NOT the quantities row, so
+    # they stay addable straight from the interval-vectors row when the quantities row is hidden —
+    # either folded (its row toggle) or dropped by the domain-quantities setting. Clicking + then
+    # drops the cursor into the new column's first vector cell (see app.add_interval). The
+    # domain/generator + (plus, gen_plus) DO answer to the quantities row: their draft is a ratio /
+    # element header, with no editable vectors-row twin to fall back to.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    interval_pluses = {"comma_plus", "target_plus", "interest_plus"}
+    quantities_only = {"plus", "gen_plus"}
+
+    shown = {c.id for c in spreadsheet.build(state).cells}
+    assert (interval_pluses | quantities_only) <= shown  # both kinds present with the row shown
+
+    folded = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"}).cells}
+    assert interval_pluses <= folded                     # interval + survive the fold...
+    assert quantities_only.isdisjoint(folded)            # ...the domain/generator + fold away with it
+
+    off = settings.defaults()
+    off["domain_quantities"] = False                     # the setting drops the row from the layout
+    dropped = {c.id for c in spreadsheet.build(state, off).cells}
+    assert interval_pluses <= dropped
+    assert quantities_only.isdisjoint(dropped)
+
+    # with BOTH interval rows hidden there is nowhere to place or focus a draft, so every + goes
+    both_hidden = {c.id for c in spreadsheet.build(state, off, collapsed={"row:vectors"}).cells}
+    assert (interval_pluses | quantities_only).isdisjoint(both_hidden)
+
+
 def test_generators_plus_and_minus_ride_the_generators_fan():
     # the generators ± rides the generators column's fan, like the domain ±: the + on the
     # stub one COL_W past the last generator's branch point (the bus stretched to reach it),
