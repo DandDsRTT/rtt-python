@@ -7758,10 +7758,11 @@ def test_projection_adds_a_scaling_factors_row_over_v():
 
 def test_projection_consolidates_commas_and_unchanged_into_v():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # a full rational hold completes U
-    # V = C|U: the editable comma vectors C stay, the unchanged basis U appends read-only
+    # V = C|U: the editable comma vectors C stay, the unchanged basis U appends — also editable now
+    # (a full rational projection), retyping it retunes
     assert cells["cell:comma:0:0"].kind == "commacell"   # C stays editable
     u_first = cells["cell:unchanged:0:0"]
-    assert u_first.kind == "vec"                         # U is read-only
+    assert u_first.kind == "unchangedcell"               # U is editable when it's a full projection
     # the unchanged half U is pushed right of the comma half by the extra C|U gap (so the divider
     # clears the cells); within U the columns stay one COL_W apart
     assert u_first.x == cells["cell:comma:0:0"].x + spreadsheet.COL_W + spreadsheet.V_SPLIT_GAP

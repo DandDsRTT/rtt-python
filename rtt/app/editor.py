@@ -734,14 +734,27 @@ class Editor:
         ratios = presets.projection_held_ratios(self.state, name)
         if ratios is None:
             return
+        self._hold_as_manual_tuning(ratios)
+
+    def _hold_as_manual_tuning(self, ratios) -> None:
+        """Freeze the generator tuning at the rational tuning that holds ``ratios`` (a full
+        projection), WITHOUT writing the held column — the shared core of picking an established
+        projection and hand-editing the unchanged basis / G / P. Undoable."""
         self._snapshot()
-        # solve the named rational tuning's 𝒈 (it holds ``ratios`` fully) WITHOUT writing the held
-        # column, then freeze it as a manual tuning so the grid shows exactly that tuning
         self.generator_tuning = service.tuning(
-            self.state.mapping, self.tuning_scheme, held=ratios, targets=self.target_override
+            self.state.mapping, self.tuning_scheme, held=tuple(ratios), targets=self.target_override
         ).generator_map
         self.superspace_generator_tuning = None
         self.manual_tuning = True  # a deliberate tuning override (not the scheme optimum)
+
+    def set_unchanged_basis(self, ratios) -> None:
+        """Apply a hand-edited unchanged-interval basis (the editable U cells) — set the tuning to the
+        rational projection that holds those intervals, exactly like picking an established projection
+        but with your own basis. A no-op when they don't form a valid FULL rational projection, so an
+        in-progress or degenerate edit is rejected and reverts on re-render. Undoable."""
+        if service.tuning_projection(self.state, tuple(ratios)) is None:
+            return  # not a valid full-rank rational projection — reject the edit
+        self._hold_as_manual_tuning(ratios)
 
     def _displayed_retuning_map(self) -> tuple[float, ...] | None:
         """The per-prime retuning (tempered − just sizes, in cents) of the tuning the grid is

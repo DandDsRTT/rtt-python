@@ -2910,16 +2910,20 @@ class _GridBuilder:
                     for p in range(self.d):
                         self.cells.append(CellBox(f"cell:comma:{p}:{c}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                         self._voice("vectors:commas", c, self.comma_sizes.just[c])
-                # the unchanged basis U completes V = C|U: read-only vector columns ("vec", like the
-                # detempering D), the projection's eigenvalue-1 eigenvectors held just (e.g. 2/1, 5/1).
-                # While a comma is being ADDED (a pending draft), the rank drops by one — so the last
-                # unchanged column is about to be deleted: preview it red (the app's standard "this is
-                # going away" highlight, as the comma − reddens the comma it would remove).
+                # the unchanged basis U completes V = C|U: the projection's eigenvalue-1 eigenvectors,
+                # held just (e.g. 2/1, 5/1). EDITABLE (like the comma basis) when U is a FULL rational
+                # projection — typing a new basis retunes to the projection that holds it; read-only
+                # "vec" (with em-dashes) when the tuning leaves any direction irrational. While a comma
+                # is being ADDED (a pending draft), the rank drops by one, so the last unchanged column
+                # is about to be deleted: preview it red ("this is going away") and don't make it editable.
+                full_u = self.unchanged_basis is not None and all(v is not None for v in self.unchanged_basis)
                 for j in range(self.nu):
                     doomed = self.pending is not None and j == self.nu - 1
                     for p in range(self.d):
                         vec_text = DASH if self.unchanged_basis[j] is None else str(self.unchanged_basis[j][p])
-                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H, "vec", text=vec_text, prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p), alert=doomed))
+                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H,
+                                             "unchangedcell" if (full_u and not doomed) else "vec", text=vec_text, prime=p, comma=self.nc + j,
+                                             unit=self.cell_unit("vectors", "commas", prime=p), alert=doomed))
                     self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
                 if self.pending is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):

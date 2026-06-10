@@ -187,6 +187,20 @@ async def test_back_to_scheme_button_shows_without_the_presets_setting(user: Use
     await user.should_not_see(marker="preset:projection")  # presets off → no chooser, but the button stays
 
 
+async def test_editing_the_unchanged_basis_retunes(user: User) -> None:
+    # the unchanged basis U is editable when the tuning is a full rational projection (like the comma
+    # basis): the default meantone holds {2/1, 5/4}; retype its second column as 6/5 = (1, 1, -1) and
+    # the tuning re-solves to the projection that holds {2/1, 6/5} — third-comma (1200, 694.786)
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:unchanged:0:1")
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"   # default = 1/4-comma
+    _cell_child(user, "cell:unchanged:0:1").set_value("1")        # prime 2
+    _cell_child(user, "cell:unchanged:1:1").set_value("1")        # prime 3
+    _cell_child(user, "cell:unchanged:2:1").set_value("-1")       # prime 5  → column is now 6/5
+    _commit(user, "cell:unchanged:2:1")                            # blur commits the edited basis
+    assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
+
+
 async def test_projection_renders_the_consolidated_v_and_scaling_factors(user: User) -> None:
     # projection also consolidates the commas + unchanged basis U into V = C|U and adds the
     # scaling-factors row λ. Assert the new cells render (and lean on the ERROR-log guard for any

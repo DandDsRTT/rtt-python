@@ -46,12 +46,19 @@ If `.venv/` is ever missing, rebuild it once with a 3.10+ interpreter (this mach
 
 ## Run the fast suite while iterating; the full suite is a merge gate
 
-The ~2,530-test suite takes ~3:18, but **one file is ~67% of that wall-clock**:
-`tests/app/integration/test_web_render.py` — 171 in-process page-render tests (NiceGUI's `User` plugin) that
-rebuild the whole spreadsheet page and re-run the RTT math on every `await user.open("/")`
-(~0.8s each). The other ~2,360 tests — all the math / parsing / service / spreadsheet / editor
-checks — finish in ~75s. (Despite its name, `tests/app/integration/test_web_integration.py` is **not** the slow
-one; it's 16 fast in-process tests — see the section below.) So split the loop:
+Tests live in three folders: **`tests/library/unit/`** (the pure math library — ~1,260 tests,
+~10s), **`tests/app/unit/`** (web logic without a live page: Editor / layout / spreadsheet
+building), and **`tests/app/integration/`** (cross-layer scenarios run in-process — see the
+last section). Convention: a test is *integration* only if it drives multiple layers through a
+whole scenario — currently just the two files in `tests/app/integration/`; everything else,
+library and app alike, is *unit*, and the library has no integration tests. Place new tests
+accordingly.
+
+The full suite is ~2,530 tests in **~3–5 min** (it drifts with parallel-agent CPU load), but
+**one file is ~67% of that wall-clock**: `tests/app/integration/test_web_render.py` — 171
+in-process page-render tests (NiceGUI's `User` plugin) that rebuild the whole spreadsheet page
+and re-run the RTT math on every `await user.open("/")` (~0.8s each). The other ~2,360 tests —
+all the library, service, editor and spreadsheet-layout checks — finish in ~75s. So split the loop:
 
 - **While iterating, run the fast pass** — skip the one heavy file:
   `.venv/bin/python -m pytest -q --ignore=tests/app/integration/test_web_render.py` (~75s). Use it for quick
@@ -121,15 +128,19 @@ biggest way agents disrupt the user. So, for **every** agent-initiated launch:
   a `reload=True` agent instance churns on every edit (yours and other agents') and orphans
   workers that keep the port bound. Agents relaunch deliberately; they don't need reload.
 
-## Integration tests run in-process — run them, don't ask
+## The integration tests run in-process — run them, don't ask
 
-This project's only "integration" suite, `tests/app/integration/test_web_integration.py`, drives the
-`Editor` (service + undo state) **entirely in-process**: no `ui.run`, no port bound, no
-network, no external API — it's a unit test in everything but its filename. **Run it freely
-as part of the normal `pytest` run. Do not ask permission first.**
+`tests/app/integration/` holds the project's integration tests — the ones that drive whole
+user scenarios across layers: `test_web_integration.py` (the `Editor`: service + undo state)
+and `test_web_render.py` (the live page, via NiceGUI's `User` plugin). They are integration
+tests **by scope**, but they run **entirely in-process**: no `ui.run` server, no port bound,
+no network, no external API. That in-process fact — *not* their scope — is what matters here,
+so **run them freely as part of the normal `pytest` run. Do not ask permission first.**
+(`test_web_render.py` is also the slow one — see the fast-suite section above for pacing.)
 
 This overrides the global rule that gates integration tests behind a permission prompt. That
 rule guards against *disruptive* tests — a server launch on the user's port, or slow /
-external / side-effecting runs. None of that can happen here, so the prompt is pure ceremony
-that wastes a round-trip. (If a genuinely disruptive test is ever added — one that binds a
-port or calls out — the global rule applies again to that test; see the port section above.)
+external / side-effecting runs. Neither file does any of that — in-process, no I/O — so the
+prompt is pure ceremony that wastes a round-trip. (If a genuinely disruptive test is ever
+added — one that binds a port or calls out — the global rule applies again to that test; see
+the port section above.)
