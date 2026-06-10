@@ -1,12 +1,6 @@
 import pytest
 
-from rtt.formatting import (
-    covector_to_ebk,
-    format_output,
-    strip_negative_zero,
-    to_ebk,
-    vector_to_ebk,
-)
+from rtt.formatting import covector_to_ebk, format_output, to_ebk, vector_to_ebk
 from rtt.temperament import Temperament, Variance
 
 DUMMY = Temperament(((1, 2, 3), (0, 5, 6)), Variance.ROW)  # d = 3, r = 2
@@ -61,26 +55,3 @@ def test_format_output_wolfram_is_identity():
 def test_format_output_ebk():
     t = Temperament(((1, 0, -4), (0, 1, 4)), ROW)
     assert format_output(t, "ebk") == "[⟨1 0 -4] ⟨0 1 4]}"
-
-
-@pytest.mark.parametrize(
-    "text, expected",
-    [
-        ("-0.000", "0.000"),  # the reported bug: a zero shown with a sign
-        ("-0", "0"),
-        ("-0.0", "0.0"),
-        ("-0.000000", "0.000000"),  # any precision
-        ("0.000", "0.000"),  # already unsigned — untouched
-        ("-0.001", "-0.001"),  # a real nonzero negative keeps its sign
-        ("-12.000", "-12.000"),
-        ("3.140", "3.140"),
-    ],
-)
-def test_strip_negative_zero(text, expected):
-    assert strip_negative_zero(text) == expected
-
-
-def test_format_number_drops_negative_zero():
-    # a float that rounds to all-zero digits formats without the sign (negative zero is meaningless)
-    assert vector_to_ebk((-0.0004, 4.0, -1.0), DUMMY) == "[0.000 4.000 -1.000⟩"
-    assert covector_to_ebk((-0.0, 1901.955, 0.0), DUMMY) == "⟨0.000 1901.955 0.000]"

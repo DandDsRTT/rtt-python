@@ -25,7 +25,7 @@ from rtt.domain_basis import (
     is_standard_prime_limit_domain_basis,
 )
 from rtt.dual import dual
-from rtt.formatting import strip_negative_zero, to_ebk
+from rtt.formatting import to_ebk
 from rtt.generator_detempering import get_generator_detempering
 from rtt.generator_embedding import get_generator_embedding, get_tempering_projection
 from rtt.math_utils import get_primes, pcv_to_quotient, quotient_to_pcv
@@ -1610,7 +1610,7 @@ def cents(value) -> str:
     tuning doesn't pin) renders as an em-dash."""
     if value is None:
         return "—"
-    return strip_negative_zero(f"{value:.3f}")
+    return f"{value:.3f}"
 
 
 def prescale_text(value: float) -> str:

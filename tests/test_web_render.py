@@ -2135,6 +2135,20 @@ async def test_hovering_the_form_canonical_option_previews_canonicalizing(user: 
     assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:2")
 
 
+def test_option_hover_delegation_cancels_the_settle_timer_on_pointerdown() -> None:
+    # the dropdown option-hover preview DEBOUNCES: hovering an option arms a 90 ms setTimeout that then
+    # fires `opthover` (a server re-solve + ring). If that timer were left to fire AFTER the user clicks
+    # an option, it would re-ring the change preview once the popup has already closed and the commit's
+    # render + popup-hide have cleared the rings — a preview highlight STRANDED on screen (the reported
+    # "highlight doesn't go away after the action" bug, in its dropdown form). The fix cancels the pending
+    # timer on pointerdown (the commit press), rather than leaning on a popup-removal `mouseout` to do it
+    # (a removed element under the cursor does not fire mouseout reliably across browsers). Guard the
+    # wiring structurally: a capture-phase pointerdown listener that clearTimeout(timer)s.
+    js = "".join(web_app._OPTION_HOVER_DELEGATION.split())  # whitespace-insensitive
+    assert "addEventListener('pointerdown'" in js, "the delegation must cancel its timer on a press"
+    assert "clearTimeout(timer);},true)" in js, "pointerdown must clearTimeout(timer) in the capture phase"
+
+
 async def test_hovering_a_target_family_reddens_the_rows_it_drops(user: User) -> None:
     # the TILT/OLD family chooser gets the same option-hover preview through the shared _arm_option_hover
     # hook (it rides the (num, sel) target tuple). Hovering a family previews switching to it: the target
@@ -2377,6 +2391,26 @@ async def test_a_disabled_history_button_shows_no_preview(user: User) -> None:
 # been applied." Two mechanisms are guarded: the amber edit-preview after an Enter-commit that keeps
 # focus (so no blur fires), and the red remove-preview that a later render must reconcile away rather
 # than orphan (render owns both ring colours and rewrites preview_shown, so a stranded red is unreachable).
+
+async def test_hovering_then_clicking_the_optimize_button_clears_the_preview(user: User) -> None:
+    # the reported bug, in its optimize-button form: hovering the optimize button rings the cells its
+    # action would MOVE (the lock-toggle hover preview), and clicking the button to APPLY must clear them.
+    # The mouse stays over the button on the click (no mouseleave fires), so the clear rides the commit's
+    # render alone (which owns every ring and recomputes an empty preview set). Push the tuning off the
+    # optimum first so a click would actually move it, then hover -> assert a moved cell rings -> click ->
+    # assert it clears.
+    await user.open("/")
+    _toggle(user, "optimization")                              # the button + its hover preview only exist here
+    await user.should_see(marker="optimization:button")
+    _cell_child(user, "tuning:gen:1").set_value("700.000")     # hand-tune off the optimum -> a click would move it
+    await user.should_see(marker="optimization:button")
+    wrap = set(user.find(marker="optimization:button").elements)   # the wrap carries the mouseenter preview
+    UserInteraction(user, wrap, None).trigger("mouseenter")        # hover -> ring the cells optimizing would move
+    assert "rtt-preview-change" in _wrap_classes(user, "retune:target:1")   # a moved retuning cell rings on hover
+    user.find(kind=ui.button, content="optimize").click()         # APPLY (mouse still over the button)
+    await user.should_see(marker="optimization:button")
+    assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:1")  # ...and the ring cleared on the click
+
 
 async def test_relabeling_a_domain_element_clears_the_edit_preview_on_commit(user: User) -> None:
     # a chapter-9 domain basis element commits its relabel on blur (Enter routes through blur too), and

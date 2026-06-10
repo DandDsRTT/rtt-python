@@ -23,7 +23,6 @@ from urllib.parse import quote
 
 from nicegui import app, background_tasks, helpers, ui
 
-from rtt.formatting import strip_negative_zero
 from rtt.web import presets
 from rtt.web import service
 from rtt.web import settings as show_settings
@@ -485,7 +484,7 @@ def _range_chart(w, h, ranges, tunings=()):
 
     def label(cx, y, v):
         return (f'<text x="{cx:.2f}" y="{y:.2f}" text-anchor="middle" '
-                f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">{strip_negative_zero(f"{v:.3f}")}</text>')
+                f'font-size="{_RANGE_FONT}" fill="{_BR_COLOR}">{v:.3f}</text>')
 
     body = []
     for i, (lo, hi) in enumerate(ranges):
@@ -529,7 +528,7 @@ def _wheel_step(value, delta_y, step=1) -> str:
     if isinstance(step, int):
         return str(int(new)) if new == int(new) else str(new)
     decimals = max(0, -math.floor(math.log10(step)))
-    return strip_negative_zero(f"{round(new, decimals):.{decimals}f}")
+    return f"{round(new, decimals):.{decimals}f}"
 
 
 def _limit_text(limit) -> str | None:
@@ -1080,6 +1079,15 @@ _OPTION_HOVER_DELEGATION = """
     const it = optOf(e.target);
     if (it && !optOf(e.relatedTarget)) { clearTimeout(timer); fire(it.getAttribute('data-optcid'), -1); }
   });
+  // A PRESS ends the hover-intent: the user is committing a pick (or dismissing the popup). Cancel any
+  // pending settle-timer right now, so it can't fire AFTER the select commits. Without this, a timer
+  // armed <90 ms before the click fires once the popup has already closed — re-dispatching `opthover` at
+  // the chooser, which re-rings the change preview (show_preview) with nothing left to clear it (the
+  // commit's render and the popup-hide both already ran). That is a preview ring STRANDED on screen.
+  // Capture-phase so it runs before the click commits, wherever the press lands. We do NOT lean on the
+  // popup-removal `mouseout` above to cancel it: a removed element under the cursor does not fire
+  // mouseout reliably across browsers, so the timer could otherwise outlive the commit.
+  document.addEventListener('pointerdown', () => { clearTimeout(timer); }, true);
 })()
 """
 
