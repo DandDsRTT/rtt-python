@@ -63,7 +63,9 @@ OPTION_BOX_PX = 16   # the one shared size for every small option square: every 
 #                      and the tuning-ranges monotone/tradeoff radio boxes. app.py pins the q-checkbox
 #                      CSS and the .rtt-rangebox to this, and the control-check CELL hugs the square.
 PRESET_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
-SCHEME_BTN_W = 104  # the "back to scheme" button on the projection / embedding tiles
+SCHEME_BTN_SQ = 22  # the square ✕ "return to scheme" button on the projection / embedding tiles
+SCHEME_LABEL_W = 92  # the "return to scheme" caption beside it
+SCHEME_CTRL_W = SCHEME_BTN_SQ + 4 + SCHEME_LABEL_W  # the ✕ + gap + caption, as one control slot
 TARGET_PRESET_W = 144  # wider: the target chooser seats a 30px gridded limit square + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
 # always fits on ONE line within its column (a long tuning row just gets smaller text)
@@ -980,14 +982,6 @@ class _GridBuilder:
         # the u unchanged sub-columns (0 off-projection). One geometry for the width, the gridline
         # fan, the EBK marks and every value tile that renders over the consolidated column.
         self.nv_shown = self.nc_shown + self.nu
-        # at full rank (no comma sub-columns: n = 0 and no pending draft) the comma half would
-        # collapse to zero width, squishing the "nullity" count caption to one character per line
-        # and dropping the "n = 0" tally. Reserve a comma-half stub wide enough for "nullity" on a
-        # single line: the nullity count + caption sit in it, and the unchanged half is pushed right
-        # of it (comma_left), so the space where the commas were "remains". The stub is held OUTSIDE
-        # the EBK matrix (matrix_span subtracts it on the left) so the bracket still hugs U.
-        self.empty_comma_w = (_min_width_for_lines("nullity", 1)
-                              if (self.show_unchanged and self.nc_shown == 0) else 0)
         # under the consolidated view EVERY tile of this column reads as the unrotated vector list
         # V = C|U, not the bare comma basis C: the column title, each tile's name ("comma basis" →
         # "unrotated vector list"), its symbol (C → V, in the caption loop) and its per-column labels
@@ -1275,7 +1269,7 @@ class _GridBuilder:
             ("ssprimes", 2 * BRACKET_W + self.dL * COL_W + 2 * self.matlabel_ssprimes_w, self.show_superspace, True),
             ("primes", 2 * BRACKET_W + self.d_shown * COL_W + 2 * self.matlabel_primes_w + 2 * self.row_handle_w, show_temp, True),
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
-            ("commas", 2 * BRACKET_W + self.nv_shown * COL_W + (V_SPLIT_GAP if (self.show_unchanged and self.nc_shown > 0) else 0) + self.empty_comma_w, show_temp, True),
+            ("commas", 2 * BRACKET_W + self.nv_shown * COL_W + (V_SPLIT_GAP if self.show_unchanged else 0), show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
             ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning and self.targets_in_use, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
@@ -1498,7 +1492,7 @@ class _GridBuilder:
         self.row_y, self.row_h, self.row_label, self.row_collapsible = {}, {}, {}, {}
         self.tile_h, self.tile_top, self.row_frame, self.row_sym, self.row_cap, self.row_units, self.row_ptext, self.chart_top = {}, {}, {}, {}, {}, {}, {}, {}
         self.row_pre = {}  # the preset band height, so the <choose form> chooser can stack below it
-        self.row_schemebtn = {}  # the "back to scheme" button band (projection rows), below the preset band
+        self.row_schemebtn = {}  # the ✕ "return to scheme" row (projection tiles), below the preset band
         self.row_nsub = {}  # each row's natural cell-row count (a matrix's height in cells), so the
         # gridline pass can fan a multi-row matrix into that many horizontal sub-axes -- and keep
         # drawing all of them, converged, while it's folded, so the fold animates as a merge
@@ -1572,13 +1566,13 @@ class _GridBuilder:
             pre = self.preset_band_h(key) if ((self.show_presets and key in PRESET_ROWS
                                              or self.settings["all_interval"] and key == "vectors")
                                             and not folded) else 0
+            # the ✕ "return to scheme" control rides its own row on the projection tiles, directly
+            # below the established-projection chooser (or the plain-text box when presets is off) —
+            # not in its own bordered box; always shown when projection is on
+            schemebtn = self.control_region_band_h(SCHEME_BTN_SQ) if (key == "projection" and self.settings["projection"] and not folded) else 0
             # the form chooser rides one box below the preset chooser, in the mapping and
             # comma-basis boxes, when form controls are shown
             formctrl = self.formchooser_band_h(key) if (self.show_form_controls and key in FORM_CHOOSER_ROWS and not folded) else 0
-            # the always-present "back to scheme" button rides its own band below the preset band on
-            # the projection row (not gated by presets); projection rows have no form chooser, so it
-            # reuses that free slot
-            schemebtn = self.control_region_band_h(PRESET_H) if (key == "projection" and self.settings["projection"] and not folded) else 0
             ptext = self.ptext_band(key, folded)
             self.row_h[key] = STRIP if folded else natural
             self.row_nsub[key] = round(natural / ROW_H)  # matrix height in cells (fold-independent)
@@ -1598,7 +1592,7 @@ class _GridBuilder:
             self.row_units[key] = uni  # the plain-text box and preset chooser sit below the units line
             self.row_ptext[key] = ptext  # the plain-text band, with the preset chooser below it
             self.row_pre[key] = pre  # the preset band, with the <choose form> chooser below it
-            self.row_schemebtn[key] = schemebtn  # the back-to-scheme button band, below the preset band
+            self.row_schemebtn[key] = schemebtn  # the ✕ return-to-scheme row, below the preset band
             self.row_label[key] = label
             self.row_collapsible[key] = collapsible
             self.tile_h[key] = head + top_frame + chart_band + self.row_h[key] + bot_frame + sym + cap + uni + pre + ptext + formctrl + schemebtn
@@ -1707,6 +1701,10 @@ class _GridBuilder:
         labels += [l for _n, _r, c, l in FORM_CHOOSERS if c == key and l] if self.show_form_controls else []
         if labels:
             floor = max(floor, BOX_OUTER + BOX_INNER + 6 + max(_min_width_for_lines(l, 1) for l in labels))
+        # the ✕ "return to scheme" control (button + caption) rides its own row on the projection /
+        # embedding tiles; widen the column only enough to seat that one row (no chooser beside it)
+        if key in ("primes", "gens") and self.settings["projection"]:
+            floor = max(floor, 2 * BOX_OUTER + SCHEME_CTRL_W)
         return floor
 
     def content_box(self, key):
@@ -1765,7 +1763,7 @@ class _GridBuilder:
         # band must reserve for the taller of the two (the long unchanged name in its u·COL_W half)
         if key == "counts" and self.show_unchanged and "commas" in self.col_x:
             lines.append(_wrap_lines("unchanged interval count", self.nu * COL_W))
-            lines.append(_wrap_lines("nullity", self.nc * COL_W + self.empty_comma_w))
+            lines.append(_wrap_lines("nullity", self.nc * COL_W))
         return max(lines, default=1) * CAPTION_LINE
 
     def ptext_editable(self, rkey, ckey):
@@ -1903,13 +1901,7 @@ class _GridBuilder:
         # column widened past them keeps the EBK hugging the matrix with the labels/handles outside.
         x, w = self.content_box(group_key)
         mx = self.outer_gutter_w(group_key)
-        x, w = x + mx, w - 2 * mx
-        # the consolidated V column reserves a comma-half stub on the LEFT (empty_comma_w, for the
-        # nullity count/caption) when there are no comma columns; the EBK matrix hugs U, so the
-        # bracket starts past that stub — drop it from the span's left edge (right edge unchanged).
-        if group_key == "commas" and self.empty_comma_w:
-            x, w = x + self.empty_comma_w, w - self.empty_comma_w
-        return x, w
+        return x + mx, w - 2 * mx
 
     def _weight_simplicity_header(self, i):
         # the all-interval simplicity weight's per-column header — simply the reciprocal of the
@@ -1938,7 +1930,7 @@ class _GridBuilder:
         # divider clear of the cells. Only when there IS a comma half (nc_shown > 0): at full rank
         # (n = 0) the column is the whole unchanged basis with no C, so no gap and no divider.
         gap = V_SPLIT_GAP if (self.show_unchanged and 0 < self.nc_shown <= c) else 0
-        return self.commas_x + BRACKET_W + self.empty_comma_w + c * COL_W + gap
+        return self.commas_x + BRACKET_W + c * COL_W + gap
 
     def comma_value_pos(self, i):
         # the DISPLAY sub-column for the i-th value of the consolidated commas group, whose value
@@ -2331,6 +2323,16 @@ class _GridBuilder:
         self.cells.append(CellBox("caption:all_interval", check_x, check_y + OPTION_BOX_PX, LBOX_DIM_W,
                              CAPTION_LINE, "caption", text="all-interval"))
 
+    def emit_scheme_button(self, x, ctrl_y, ckey):
+        # the square ✕ "return to scheme" button + a caption to its right, seated on a control row at
+        # ctrl_y. Rides the established-projection chooser's box (seated to the dropdown's right by
+        # emit_preset when presets is on), or the band alone when presets is off. back_to_scheme is
+        # wired in app.py, which greys it when the tuning is already scheme-driven.
+        sq_y = ctrl_y + (PRESET_H - SCHEME_BTN_SQ) / 2  # centre the square on the control row
+        self.cells.append(CellBox(f"scheme:{ckey}", x, sq_y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
+        self.cells.append(CellBox(f"scheme:{ckey}:label", x + SCHEME_BTN_SQ + 4, sq_y, SCHEME_LABEL_W,
+                             SCHEME_BTN_SQ, "caption", text="return to scheme", align="left"))
+
     def emit_diminuator_check(self, check_x, ctrl_y):
         # the "replace diminuator" checkbox + caption, seated to the RIGHT of the predefined-
         # pretransformers dropdown inside its preset box — box 𝐋's control riding the existing
@@ -2475,15 +2477,10 @@ class _GridBuilder:
                 if ckey == "commas" and self.show_unchanged:
                     # the consolidated V = C|U carries two counts: the nullity n over the comma half,
                     # the unchanged-interval count u over the unchanged half (split by the C|U bar).
-                    # At full rank (n = 0) the comma half is the reserved empty_comma_w stub — the
-                    # n = 0 tally and its "nullity" caption still show there (sized to fit), and only
-                    # a true zero-width comma half (a pending first comma, no stub) drops the tally.
-                    comma_half_w = self.nc * COL_W + self.empty_comma_w
-                    if comma_half_w:
-                        # the reserved stub sits LEFT of the EBK bracket (at commas_x); the real comma
-                        # cells sit after it (comma_left(0)). Pick whichever this case has.
-                        comma_half_x = self.commas_x if self.empty_comma_w else self.comma_left(0)
-                        self.cells.append(CellBox("count:commas", comma_half_x, self.row_y["counts"], comma_half_w, ROW_H,
+                    # At full rank (n = 0) there is no comma half, so only the u count shows (the
+                    # n count would be a zero-width cell over the empty C side).
+                    if self.nc:
+                        self.cells.append(CellBox("count:commas", self.comma_left(0), self.row_y["counts"], self.nc * COL_W, ROW_H,
                                              "count", text=f"{_count_sym('n')} = {self.state.n}"))
                     self.cells.append(CellBox("count:commas:u", self.comma_left(self.nc_shown), self.row_y["counts"], self.nu * COL_W, ROW_H,
                                          "count", text=f"{_count_sym('u')} = {self.nu}"))
@@ -2646,8 +2643,7 @@ class _GridBuilder:
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
                 if self.show_unchanged:  # the unchanged-interval ratios complete V = C|U — read-only
                     for j in range(self.nu):  # (derived from the projection), the held primes "2/1", "5/1"
-                        doomed = self.pending is not None and j == self.nu - 1  # about to be deleted (rank drops)
-                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc_shown + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j] or DASH, comma=self.nc + j, alert=doomed))
+                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc_shown + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j] or DASH, comma=self.nc + j))
                         self._voice("quantities:commas", self.nc + j, self.unchanged_sizes.just[j])
                 # commas mirror the domain controls: + starts a (pending) comma; the − rides the
                 # last column's branch point — cancelling the draft, or un-tempering a real comma,
@@ -2896,15 +2892,11 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"cell:comma:{p}:{c}", self.comma_left(c), self.vec_top(p), COL_W, ROW_H, "commacell", text=str(self.state.comma_basis[c][p]), prime=p, comma=c, unit=self.cell_unit("vectors", "commas", prime=p)))
                         self._voice("vectors:commas", c, self.comma_sizes.just[c])
                 # the unchanged basis U completes V = C|U: read-only vector columns ("vec", like the
-                # detempering D), the projection's eigenvalue-1 eigenvectors held just (e.g. 2/1, 5/1).
-                # While a comma is being ADDED (a pending draft), the rank drops by one — so the last
-                # unchanged column is about to be deleted: preview it red (the app's standard "this is
-                # going away" highlight, as the comma − reddens the comma it would remove).
+                # detempering D), the projection's eigenvalue-1 eigenvectors held just (e.g. 2/1, 5/1)
                 for j in range(self.nu):
-                    doomed = self.pending is not None and j == self.nu - 1
                     for p in range(self.d):
                         vec_text = DASH if self.unchanged_basis[j] is None else str(self.unchanged_basis[j][p])
-                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H, "vec", text=vec_text, prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p), alert=doomed))
+                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H, "vec", text=vec_text, prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p)))
                     self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
                 if self.pending is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
@@ -3961,11 +3953,8 @@ class _GridBuilder:
                 # the consolidated V counts split into two names, each centred over its half (mirroring
                 # the n / u tallies above them): "nullity" over the comma sub-columns, "unchanged
                 # interval count" over the unchanged ones
-                comma_half_w = self.nc * COL_W + self.empty_comma_w
-                if comma_half_w:
-                    comma_half_x = self.commas_x if self.empty_comma_w else self.comma_left(0)
-                    self.cells.append(CellBox("caption:counts:commas", comma_half_x, cy, comma_half_w,
-                                         self.row_cap[rkey], "caption", text="nullity"))
+                self.cells.append(CellBox("caption:counts:commas", self.comma_left(0), cy, self.nc * COL_W,
+                                     self.row_cap[rkey], "caption", text="nullity"))
                 self.cells.append(CellBox("caption:counts:commas:u", self.comma_left(self.nc_shown), cy, self.nu * COL_W,
                                      self.row_cap[rkey], "caption", text="unchanged interval count"))
                 continue
@@ -4068,18 +4057,17 @@ class _GridBuilder:
                 cx, cw, cy = self.control_box(f"block:formchooser:{name}", ckey, top, PRESET_W, label)
                 self.cells.append(CellBox(f"formchooser:{name}", cx, cy, cw, PRESET_H, "formchooser"))
 
-        # the always-present "back to scheme" button on the projection (P) and embedding (G) tiles —
-        # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). It
-        # rides its own band below the preset band and is NOT gated by presets (so it shows even with
-        # the established-projection chooser hidden); app.py greys it when there's nothing to revert.
+        # the always-present "return to scheme" ✕ button on the projection (P) and embedding (G) tiles —
+        # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). It rides
+        # its own row directly below the established-projection chooser (or the plain-text box when
+        # presets is off), NOT in a separate bordered box — just the ✕ square and its caption. app.py
+        # greys it when there's nothing to revert.
         if self.settings["projection"]:
             for ckey in ("primes", "gens"):
                 if not self.tile_open("projection", ckey):
                     continue
                 top = self.ptext_band_y("projection") + self.row_ptext["projection"] + self.row_pre["projection"]
-                bx, _bw, by = self.control_box(f"block:scheme:{ckey}", ckey, top, SCHEME_BTN_W, "")
-                self.cells.append(CellBox(f"scheme:{ckey}", bx, by, SCHEME_BTN_W, PRESET_H, "scheme_button",
-                                     text="back to scheme"))
+                self.emit_scheme_button(self.col_x[ckey] + BOX_OUTER, top + BOX_OUTER + BOX_INNER, ckey)
 
         # plain-text value band: each tile's value as its natural EBK string, directly
         # below the symbol/caption stack (above the preset chooser). The two editable
