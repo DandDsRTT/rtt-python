@@ -12,6 +12,7 @@ import pytest
 from rtt.library.tuning_scheme_names import (
     TuningSchemeSpec,
     annotation_code,
+    resolve_tuning_scheme,
     systematic_name,
     tuning_scheme_from_systematic_name as parse,
 )
@@ -90,7 +91,10 @@ def test_rendered_name_parses_back_to_the_same_spec(name):
 
 
 def _resolve(name):
-    from rtt.library.tuning_scheme_names import resolve_tuning_scheme
+    # Use the module-level import (bound at collection), NOT a lazy re-import: the render
+    # tests evict and re-import rtt.* (tests/render_main.py), which mints a 2nd TuningSchemeSpec
+    # class. A lazy resolve here would return that new class, and `parse(rendered) == spec`
+    # would fail on the frozen dataclass's class-identity check despite identical fields.
     return resolve_tuning_scheme(name)
 
 
