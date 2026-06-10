@@ -987,15 +987,17 @@ class _GridBuilder:
         # the u unchanged sub-columns (0 off-projection). One geometry for the width, the gridline
         # fan, the EBK marks and every value tile that renders over the consolidated column.
         self.nv_shown = self.nc_shown + self.nu
-        # under the consolidated view the interval-vectors header tile reads as the whole unrotated
-        # vector basis V = C|U, not just the comma basis C (the symbol → V, the equiv → C|U are set
-        # in the caption loop). Overriding the caption here also widens the column to seat the name.
+        # under the consolidated view EVERY tile of this column reads as the unrotated vector list
+        # V = C|U, not the bare comma basis C: the column title, each tile's name ("comma basis" →
+        # "unrotated vector list"), its symbol (C → V, in the caption loop) and its per-column labels
+        # (𝐜 → 𝐯, in the col-label loop). The "(made to vanish!)" note is dropped — only the comma
+        # half of V vanishes now, and the scaling-factors row's λ = 0 already marks which sub-columns.
+        # (The column TITLE is renamed where col_header is built, below.)
         if self.show_unchanged:
-            self.effective_captions[("vectors", "commas")] = "unrotated vector basis"
-            # the V column's per-column labels keep the C|U identities the mockup draws: 𝐜ᵢ over the
-            # comma sub-columns, 𝐮ᵢ over the unchanged ones (the scaling row's λᵢ spans all of V).
-            self.col_labels[("vectors", "commas")] = (
-                lambda i: f"𝐜{_sub(i + 1)}" if i < self.nc else f"𝐮{_sub(i - self.nc + 1)}")
+            for (rk, ck), name in list(self.effective_captions.items()):
+                if ck == "commas":
+                    self.effective_captions[(rk, ck)] = (
+                        name.replace("comma basis", "unrotated vector list").replace(" (made to vanish!)", ""))
         # other intervals of interest: a user-built set held as vectors and edited like
         # the comma basis (editable vector cells). Normalize each vector to the current d
         # (pad/trim) so a domain change can't misalign them, then derive the ratios the
@@ -1207,6 +1209,8 @@ class _GridBuilder:
                       "commas": "commas",
                       "held": "held\nintervals", "targets": "target\nintervals",
                       "interest": "other intervals\nof interest"}
+        if self.show_unchanged:  # the consolidated column is the unrotated vector list V = C|U
+            self.col_header["commas"] = "unrotated\nvector list"
         # The leftmost quantities column is the spine: a header + fold toggle + a single
         # vertical rule, the column-axis dual of the quantities spine row. The units column
         # (the specific `domain_units` toggle) is a second spine column right after it,
@@ -2335,6 +2339,18 @@ class _GridBuilder:
         for c in range(1, n_cols):  # a rule on each interior column boundary
             self.cells.append(CellBox(f"sep:{name}:{c}", left(c) - SEP_W / 2, self.row_y[rkey], SEP_W, self.row_h[rkey], "vbar"))
 
+    def v_split_bars(self):
+        # the single vertical rule dividing the comma half C from the unchanged half U in EVERY
+        # tile of the consolidated unrotated-vector-list column V = C|U (the mockup's V | divider).
+        # The per-column separators are off throughout V, so this lone bar is its only divider.
+        if not self.show_unchanged or self.commas_x is None:
+            return
+        x = self.comma_left(self.nc) - SEP_W / 2
+        for rkey in ("counts", "quantities", "units", "scaling_factors", "vectors", "projection",
+                     "mapping", "tuning", "just", "retune", "prescaling", "complexity"):
+            if self.tile_open(rkey, "commas"):
+                self.cells.append(CellBox(f"vsplit:{rkey}", x, self.row_y[rkey], SEP_W, self.row_h[rkey], "vbar"))
+
     def layout(self) -> Layout:
         self.cells: list[CellBox] = []
         self.lines: list[Line] = []
@@ -2394,9 +2410,18 @@ class _GridBuilder:
                            "detempering": self.r,
                            "ssgens": self.rL, "ssprimes": self.dL}
             for ckey, sym, _name in COUNTS + OPTIMIZATION_COUNTS + DETEMPERING_COUNTS + SUPERSPACE_COUNTS:
-                if self.tile_open("counts", ckey):
-                    self.cells.append(CellBox(f"count:{ckey}", self.col_x[ckey], self.row_y["counts"], self.col_w[ckey], ROW_H,
-                                         "count", text=f"{_count_sym(sym)} = {cardinality[ckey]}"))
+                if not self.tile_open("counts", ckey):
+                    continue
+                if ckey == "commas" and self.show_unchanged:
+                    # the consolidated V = C|U carries two counts: the nullity n over the comma half,
+                    # the unchanged-interval count u over the unchanged half (split by the C|U bar)
+                    self.cells.append(CellBox("count:commas", self.comma_left(0), self.row_y["counts"], self.nc * COL_W, ROW_H,
+                                         "count", text=f"{_count_sym('n')} = {self.state.n}"))
+                    self.cells.append(CellBox("count:commas:u", self.comma_left(self.nc), self.row_y["counts"], self.nu * COL_W, ROW_H,
+                                         "count", text=f"{_count_sym('u')} = {self.nu}"))
+                    continue
+                self.cells.append(CellBox(f"count:{ckey}", self.col_x[ckey], self.row_y["counts"], self.col_w[ckey], ROW_H,
+                                     "count", text=f"{_count_sym(sym)} = {cardinality[ckey]}"))
 
         # units row + column (the specific `domain_units` toggle): coordinate-unit labels.
         # The units COLUMN labels each row's coordinate — the interval-vectors basis in
@@ -2722,14 +2747,32 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"cell:embed:{i}:{g}", self.gen_left(g), self.proj_top(i),
                                          COL_W, ROW_H, "mapped", text=text, gen=g))
 
+        # the projected unrotated vector list P·V (the projection row over the V column): each
+        # unrotated vector scaled by its eigenvalue — the comma columns vanish (P·𝐜 = 0, the
+        # eigenvalue-0 directions), the unchanged columns are held unchanged (P·𝐮 = 𝐮, eigenvalue 1).
+        # d-tall prime-count-vector columns, like the interval-vectors V it projects.
+        if self.show_unchanged and self.row_open("projection") and self.tile_open("projection", "commas"):
+            for c in range(self.nc):  # P·comma = the zero vector
+                for p in range(self.d):
+                    self.cells.append(CellBox(f"cell:proj_v:{p}:{c}", self.comma_left(c), self.proj_top(p),
+                                         COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
+            for j in range(self.nu):  # P·unchanged = the unchanged interval itself (dashed if U is)
+                dashed = self.unchanged_basis[j] is None
+                for p in range(self.d):
+                    self.cells.append(CellBox(f"cell:proj_v:{p}:{self.nc + j}", self.comma_left(self.nc + j), self.proj_top(p),
+                                         COL_W, ROW_H, "mapped",
+                                         text=DASH if dashed else str(self.unchanged_basis[j][p]), prime=p, comma=self.nc + j))
+
         # the scaling factors λ = diag(λ): the projection's eigenvalue list over the V column —
         # 0 for each comma sub-column (vanished, eigenvalue 0) then 1 for each unchanged
         # sub-column (held, eigenvalue 1). Read-only computed values ("mapped"), one ROW_H list.
         if self.row_open("scaling_factors") and self.tile_open("scaling_factors", "commas"):
-            scaling = [0] * self.nc + [1] * self.nu
+            # 0 for each comma (vanished), 1 for each KNOWN unchanged direction; a dashed unchanged
+            # column (the tuning leaves that direction irrational) has no determined eigenvalue → dash
+            scaling = ["0"] * self.nc + [(DASH if v is None else "1") for v in self.unchanged_basis]
             for c, lam in enumerate(scaling):
                 self.cells.append(CellBox(f"cell:scaling:{c}", self.comma_left(c), self.row_y["scaling_factors"],
-                                     COL_W, ROW_H, "mapped", text=str(lam), comma=c))
+                                     COL_W, ROW_H, "mapped", text=lam, comma=c))
 
         # the canonical-mapping form box: M in canonical form (defactored + HNF), a stack of
         # read-only maps over the primes, framed like the mapping matrix one row above it; the
@@ -3443,6 +3486,9 @@ class _GridBuilder:
         if self.row_open("projection") and self.tile_open("projection", "gens"):  # G: { … ] per row, generator coords
             for i in range(self.d):
                 self.bracket(f"embed:{i}", GENMAP_BRACKETS, "gens", self.proj_top(i), ROW_H)
+        if self.show_unchanged and self.row_open("projection") and self.tile_open("projection", "commas"):
+            # P·V is a list of projected vectors (kets) — [ … ⟩ per column, [ ] outer, like V itself
+            self.bracket("proj_v", LIST_BRACKETS, "commas", self.row_y["projection"], self.d * ROW_H, fit=True)
         if self.row_open("scaling_factors") and self.tile_open("scaling_factors", "commas"):  # λ: a [ … ] list over V
             self.bracket("scaling", LIST_BRACKETS, "commas", self.row_y["scaling_factors"], ROW_H)
         if self.row_open("mapping"):
@@ -3662,6 +3708,8 @@ class _GridBuilder:
                 y = self.row_matlabel_top[rkey]
                 for i in range(group_count[ckey]):
                     text = label(i) if callable(label) else f"{label}{_sub(i + 1)}"
+                    if self.show_unchanged and ckey == "commas":  # the column's vectors are 𝐯, not 𝐜
+                        text = text.replace("𝐜", "𝐯")
                     self.cells.append(CellBox(
                         f"matlabel:col:{rkey}:{ckey}:{i}",
                         left(i), y, COL_W, MATLABEL_H,
@@ -3784,9 +3832,11 @@ class _GridBuilder:
                         ("weight", "targets"): WEIGHT_EQUIVALENCE_BY_SLOPE[slope],
                         ("prescaling", "ssprimes" if self.show_superspace else "primes"): self.prescaler_equivalence,
                         **(ALL_INTERVAL_EQUIVALENCES if ai else {}),
-                        # the consolidated interval-vectors header: V = C|U (the comma basis and
-                        # the unchanged basis concatenated)
-                        **({("vectors", "commas"): " = C|U"} if self.show_unchanged else {})}
+                        # the consolidated interval-vectors header: V = C|U (the comma basis and the
+                        # unchanged basis concatenated). The mapped tile drops its "= 𝑂" (only the
+                        # comma half of M·V vanishes; the unchanged half maps to the held generators).
+                        **({("vectors", "commas"): " = C|U", ("mapping", "commas"): ""}
+                           if self.show_unchanged else {})}
         if ai:
             # all-interval (Tₚ = I): the kept target tiles take prime-proxy closed forms in the live
             # prescaler glyph (X→L). The complexity list IS the prescaler diagonal; the (simplicity)
@@ -3818,8 +3868,8 @@ class _GridBuilder:
                 base_symbol = self.prescaling_symbols.get((rkey, ckey), SYMBOLS.get((rkey, ckey), ""))
                 if ai and (rkey, ckey) in ALL_INTERVAL_SYMBOLS:  # e.g. the target list T → Tₚ
                     base_symbol = ALL_INTERVAL_SYMBOLS[(rkey, ckey)]
-                if self.show_unchanged and (rkey, ckey) == ("vectors", "commas"):  # C → V (the unrotated basis)
-                    base_symbol = "V"
+                if self.show_unchanged and ckey == "commas":  # the whole column reads V, not C
+                    base_symbol = base_symbol.replace("C", "V")
                 glyph = base_symbol if (self.show_symbols or equiv) else ""
                 if glyph or equiv:
                     self.cells.append(CellBox(f"symbol:{rkey}:{ckey}", self.col_x[ckey], cy, self.col_w[ckey], SYMBOL_H, "symbol", text=glyph + equiv))
@@ -3973,7 +4023,12 @@ class _GridBuilder:
         self.matrix_frame("ss_mapping", "primes", "ss_msl")
         self.matrix_frame("ss_mapping", "ssgens", "ss_selfmap")
 
-        self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc + self.nu)  # M·C then M·U over V
+        # the mapped comma basis is one bracketed list, NOT a matrix of separated columns — so no
+        # dividing rules between its entries (a long-standing stray-separator bug); over V the single
+        # C|U bar (drawn by _v_split) is the only divider, as for every consolidated-column tile
+        self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc + self.nu, separators=False)  # M·C then M·U over V
+        # the projected unrotated vector list P·V: prime-count-vector columns (kets), C|U bar only
+        self.vector_list_marks("projection", "proj_v", "commas", self.comma_left, self.nc + self.nu, foot="ebkangle", separators=False)
         self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.k)
         # the interest column's mapped images stand alone — no separator rules between columns
         self.vector_list_marks("mapping", "imapped", "interest", self.interest_left, self.mi, separators=False)
@@ -4026,6 +4081,7 @@ class _GridBuilder:
         self.vector_list_marks("prescaling", "prescaling:targets", "targets", self.target_left, self.k, foot="ebkangle", separators=True)
         self.vector_list_marks("prescaling", "prescaling:held", "held", self.held_left, self.nh, foot="ebkangle", separators=True)
         self.vector_list_marks("prescaling", "prescaling:interest", "interest", self.interest_left, self.mi, foot="ebkangle", separators=False)
+        self.v_split_bars()  # the lone C|U divider down every tile of the consolidated V column
 
         # a per-tile fold toggle inset into each content tile's top-left corner: it
         # sits in the head strip reserved above the content, TOGGLE_INSET in from the
