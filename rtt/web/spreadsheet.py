@@ -157,6 +157,8 @@ LINE_W = 2  # px thickness of the shared-axis gridlines: the renderer's .rtt-lin
 MAP_BRACKETS = ("⟨", "]")  # ⟨ … ] for maps (covectors)
 LIST_BRACKETS = ("[", "]")  # [ … ] for plain lists/matrices
 GENMAP_BRACKETS = ("{", "]")  # { … ] for the generator tuning map (per the mockup)
+DASH = "—"  # an em-dash for a DASHED cell — an unknown value the under-held tuning doesn't pin
+            # (an unchanged column the held basis doesn't reach, or P/G when h < r — not a projection)
 
 # The semantic content tables (COUNTS / CAPTIONS / SYMBOLS / CELL_FACTORS / TILES / ...) -- pure
 # data describing which quantities exist and their symbols, captions, units, mnemonics,
@@ -944,12 +946,32 @@ class _GridBuilder:
         self.show_unchanged = self.unchanged_basis is not None
         self.nu = len(self.unchanged_basis) if self.show_unchanged else 0
         if self.show_unchanged:
-            self.unchanged_ratios = service.comma_ratios(self.unchanged_basis, self.elements)
-            self.unchanged_mapped = service.mapped_commas(self.state.mapping, self.unchanged_basis)  # M·U (r × u; held, ≠ 0)
-            self.unchanged_sizes = service.interval_sizes(self.tun, self.unchanged_ratios, self.elements)
-            self.unchanged_complexities = service.interval_complexities(
-                self.state.mapping, self.tuning_scheme, self.unchanged_ratios,
-                prescaler_override=self.custom_prescaler, domain_basis=self.elements)
+            # U may carry DASHED columns (None) — directions the under-held tuning leaves
+            # irrational. Compute the derived twins (ratios, M·U, sizes, complexities) over the
+            # KNOWN columns only, then scatter them back to the r column positions, leaving None
+            # (rendered as an em-dash) for the dashed ones.
+            known = tuple(v for v in self.unchanged_basis if v is not None)
+            kidx = [j for j, v in enumerate(self.unchanged_basis) if v is not None]
+
+            def _scatter(per_known):
+                out = [None] * self.nu
+                for pos, j in enumerate(kidx):
+                    out[j] = per_known[pos]
+                return tuple(out)
+
+            ratios = service.comma_ratios(known, self.elements) if known else ()
+            self.unchanged_ratios = _scatter(ratios)  # ratio string or None per column
+            mapped = service.mapped_commas(self.state.mapping, known) if known else ()  # M·U over known
+            self.unchanged_mapped = tuple(_scatter(mapped[i] if known else ())
+                                          for i in range(len(self.state.mapping)))
+            sizes = service.interval_sizes(self.tun, ratios, self.elements)  # empty ratios → empty sizes
+            self.unchanged_sizes = service.IntervalSizes(
+                _scatter(sizes.tempered), _scatter(sizes.just),
+                _scatter(sizes.errors), _scatter(sizes.damage))
+            comps = service.interval_complexities(
+                self.state.mapping, self.tuning_scheme, ratios,
+                prescaler_override=self.custom_prescaler, domain_basis=self.elements) if known else ()
+            self.unchanged_complexities = _scatter(comps)
         else:
             self.unchanged_ratios = self.unchanged_mapped = self.unchanged_complexities = ()
             self.unchanged_sizes = service.IntervalSizes((), (), (), ())
@@ -1111,16 +1133,16 @@ class _GridBuilder:
         # the rational tempering projection P = GM and its generator embedding G (the projection
         # sub-control of tuning boxes): P is a d×d operator over the domain primes, G a d×r matrix
         # whose columns are the held tuning's generators as fractional vectors. Both are built from
-        # the SAME unchanged-interval basis — the established projection the chooser selected
-        # (self.projection_held: ratio strings), or the auto-picked default when None — so P = GM.
-        # service returns None for any case it can't form (degenerate hold, etc.), so the box simply
-        # drops rather than rendering. Computed only when both the tuning boxes and the projection
-        # toggle are on. Resolved here, ahead of the row-band list, so the band can gate on it.
-        show_projection = show_tuning and self.settings["projection"]
+        # the tuning's held-interval basis (self.held_basis_ratios) — so P = GM. service returns None
+        # when the tuning is NOT a full rational projection (it holds fewer than r rational intervals,
+        # or a degenerate basis): the box then renders TOTALLY DASHED rather than asserting a tuning
+        # the optimum doesn't have. The band/tiles are present whenever the projection toggle is on
+        # (self.show_projection), so the dashed P/G show — they aren't dropped, only dashed.
+        self.show_projection = show_tuning and self.settings["projection"]
         self.projection_matrix = (service.tuning_projection(self.state, self.held_basis_ratios)
-                                  if show_projection else None)
+                                  if self.show_projection else None)
         self.embedding_matrix = (service.tuning_embedding(self.state, self.held_basis_ratios)
-                                 if show_projection else None)
+                                 if self.show_projection else None)
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
@@ -1132,11 +1154,6 @@ class _GridBuilder:
         # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
         # for a stray hardcoded column list to keep drawing a tile that no longer exists.
         self.declared_tiles = {(rkey, ckey) for _bid, rkey, ckey in self.tiles}
-        if self.embedding_matrix is None:
-            # the generator embedding G shares P's held basis, so it forms exactly when P does;
-            # drop its tile whenever P couldn't be built (projection off, or a degenerate basis)
-            # so the gens-column box never shows empty (the P band is already gone in that case).
-            self.declared_tiles -= {("projection", "gens")}
         if service.is_all_interval(self.tuning_scheme):
             # all-interval (Tₚ = I): every target-column list that just re-expresses an existing column
             # collapses to a duplicate, so drop it — mapped 𝑀T → 𝑀, prescaled 𝐿T → 𝐿, and each size/error
@@ -1286,7 +1303,7 @@ class _GridBuilder:
             # d rows tall like the interval-vectors row, framed like the mapping. Placed between
             # the mapping and the tuning rows (the mockup). Present only when service could build
             # it (projection on, tuning boxes on); a None matrix drops the band entirely.
-            ("projection", self.d * ROW_H, self.projection_matrix is not None, True, "projection"),
+            ("projection", self.d * ROW_H, self.show_projection, True, "projection"),
             # the chapter-9 superspace rows sit between mapping and tuning, the row
             # counterparts of the ssgens / ssprimes columns: ss_vectors holds the dL-tall
             # vector columns (B_L, target/comma vectors in the superspace); ss_mapping the
@@ -1968,7 +1985,8 @@ class _GridBuilder:
         unchanged sub-columns of V (i ≥ nc): an unchanged interval isn't tempered out,
         so its retuning is the optimization error, not the negated-just closed form."""
         if key == "just":
-            return _log_operand(self.group_ratio[group](i))
+            ratio = self.group_ratio[group](i)
+            return _log_operand(ratio) if ratio is not None else None  # a dashed unchanged col: no ratio
         if group == "commas" and key == "retune" and i < self.nc:
             recip = 1 / Fraction(self.comma_ratios[i])
             return _log_operand(f"{recip.numerator}/{recip.denominator}")
@@ -1992,7 +2010,10 @@ class _GridBuilder:
         """Make the just-built cell (``self.cells[-1]``) click-to-play: hovering it reveals a speaker
         that sounds ``cents``. ``tile`` + ``idx`` group a row's cells so the bank's arp / chord /
         rolled-chord modes sweep the whole tile from the clicked note — the client derives the chord
-        from the tile's sibling cells, so it stays correct across reorders with no baked pitch list."""
+        from the tile's sibling cells, so it stays correct across reorders with no baked pitch list.
+        A ``None`` size (a DASHED cell — an unchanged interval the tuning doesn't pin) has no pitch."""
+        if cents is None:
+            return
         self.cells[-1] = replace(self.cells[-1], audio=(tile, int(idx), float(cents)))
 
     def tuning_value_row(self, key, group, values, alerts=()):
@@ -2532,7 +2553,7 @@ class _GridBuilder:
                     self.cells.append(CellBox("comma:pending", self.comma_left(self.nc), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.nc, pending=True))
                 if self.show_unchanged:  # the unchanged-interval ratios complete V = C|U — read-only
                     for j in range(self.nu):  # (derived from the projection), the held primes "2/1", "5/1"
-                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j], comma=self.nc + j))
+                        self.cells.append(CellBox(f"unchanged:{j}", self.comma_left(self.nc + j), qy, COL_W, ROW_H, "commaratio", text=self.unchanged_ratios[j] or DASH, comma=self.nc + j))
                         self._voice("quantities:commas", self.nc + j, self.unchanged_sizes.just[j])
                 # commas mirror the domain controls: + starts a (pending) comma; the − rides the
                 # last column's branch point — cancelling the draft, or un-tempering a real comma,
@@ -2675,24 +2696,31 @@ class _GridBuilder:
                     for c in range(self.nc):
                         self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
                     for j in range(self.nu):
-                        self.cells.append(CellBox(f"cell:mapped_unchanged:{i}:{j}", self.comma_left(self.nc + j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.unchanged_mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+                        mapped_text = DASH if self.unchanged_mapped[i][j] is None else str(self.unchanged_mapped[i][j])
+                        self.cells.append(CellBox(f"cell:mapped_unchanged:{i}:{j}", self.comma_left(self.nc + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
 
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
         # maps like the mapping. Its cells are "mapped" (a computed value, not editable like the
         # mapping's), carrying the rational entry text ("1", "0", "1/4") service stringified.
+        # P is totally DASHED when the tuning isn't a full rational projection (projection_matrix
+        # None — it holds fewer than r rational intervals): every cell an em-dash, not a fabricated
+        # value.
         if self.row_open("projection") and self.tile_open("projection", "primes"):
             for i in range(self.d):
                 for p in range(self.d):
+                    text = DASH if self.projection_matrix is None else self.projection_matrix[i][p]
                     self.cells.append(CellBox(f"cell:proj:{i}:{p}", self.prime_left(p), self.proj_top(i),
-                                         COL_W, ROW_H, "mapped", text=self.projection_matrix[i][p], prime=p))
+                                         COL_W, ROW_H, "mapped", text=text, prime=p))
         # the generator embedding G = H(MH)⁻¹ (d×r), beside P in the gens columns: its columns are
         # the held tuning's generators as fractional vectors. Read-only ("mapped") cells like P, but
         # over the r generator columns rather than the d primes (rows are the d primes, like P).
+        # Dashed in lockstep with P (embedding_matrix None ⟺ not a full rational projection).
         if self.row_open("projection") and self.tile_open("projection", "gens"):
             for i in range(self.d):
                 for g in range(self.r):
+                    text = DASH if self.embedding_matrix is None else self.embedding_matrix[i][g]
                     self.cells.append(CellBox(f"cell:embed:{i}:{g}", self.gen_left(g), self.proj_top(i),
-                                         COL_W, ROW_H, "mapped", text=self.embedding_matrix[i][g], gen=g))
+                                         COL_W, ROW_H, "mapped", text=text, gen=g))
 
         # the scaling factors λ = diag(λ): the projection's eigenvalue list over the V column —
         # 0 for each comma sub-column (vanished, eigenvalue 0) then 1 for each unchanged
@@ -2749,7 +2777,8 @@ class _GridBuilder:
                 # detempering D), the projection's eigenvalue-1 eigenvectors held just (e.g. 2/1, 5/1)
                 for j in range(self.nu):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc + j), self.vec_top(p), COL_W, ROW_H, "vec", text=str(self.unchanged_basis[j][p]), prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p)))
+                        vec_text = DASH if self.unchanged_basis[j] is None else str(self.unchanged_basis[j][p])
+                        self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc + j), self.vec_top(p), COL_W, ROW_H, "vec", text=vec_text, prime=p, comma=self.nc + j, unit=self.cell_unit("vectors", "commas", prime=p)))
                     self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
                 if self.pending is not None:  # the draft column: blank, red-outlined cells the user fills in
                     for p in range(self.d):
@@ -3092,10 +3121,16 @@ class _GridBuilder:
                 continue
             left = self.group_left[group]
             for c, vec in enumerate(prescale_vectors[group]):
+                u = self.cell_unit("prescaling", group, prime=c if group == bare_group else None)
+                if vec is None:  # a DASHED unchanged column of V = C|U — its prescaled vector 𝐿·v is unknown
+                    for i in range(nrows + self.size_rows):
+                        cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
+                        cx, cy = left(c), self.row_y["prescaling"] + i * ROW_H
+                        self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue", text=DASH, unit=u))
+                    continue
                 # the bare prescaler's columns ARE the (super)space primes, so each column's unit
                 # subscripts its p by that prime (oct/pᵢ) — like the mapping's /p denominator. The
                 # other groups (incl. 𝐿·B_Ls) scale a vector set, plain octaves (no per-column p).
-                u = self.cell_unit("prescaling", group, prime=c if group == bare_group else None)
                 # the prescaled vector 𝑋·v: a diagonal pretransformer multiplies element-wise (𝐿ᵢvᵢ);
                 # a non-diagonal one (the editable square's matrix override) is a matrix-vector product
                 prescaled = ([sum(prescaler_diag[i][k] * vec[k] for k in range(nrows)) for i in range(nrows)]

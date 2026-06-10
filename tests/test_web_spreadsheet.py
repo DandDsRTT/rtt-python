@@ -21,6 +21,16 @@ def _with(scheme=None, **overrides):
     return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, tuning_scheme=scheme)
 
 
+def _proj_build(held_basis_ratios=(), **overrides):
+    # a meantone build with the projection box on and a given held-interval basis — () leaves the
+    # tuning under-held (P/G/U dashed), a full rational basis like ("2/1", "5/4") completes it.
+    s = settings.defaults()
+    s["projection"] = True
+    s.update(overrides)
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                             held_basis_ratios=held_basis_ratios)
+
+
 def _with_interest(interest, collapsed=None):
     return spreadsheet.build(
         service.from_mapping(((1, 1, 0), (0, 1, 4))), collapsed=collapsed, interest=interest
@@ -7633,10 +7643,17 @@ def test_projection_on_adds_a_dxd_matrix_between_mapping_and_tuning():
     assert cells["cell:proj:1:0"].y == c00.y + spreadsheet.ROW_H
 
 
-def test_projection_box_shows_the_real_quarter_comma_meantone_projection():
-    # the rational projection P = GM holding {2, 5} — quarter-comma meantone, the fifth
-    # flat by 1/4 comma (the 1/4 on prime 3's image). Reproduces the mockup exactly.
-    cells = {c.id: c for c in _with(projection=True).cells}
+def test_projection_box_is_dashed_until_the_tuning_is_a_rational_projection():
+    # the corrected model: the default tuning holds nothing rational, so P is TOTALLY DASHED
+    # (every cell an em-dash) — NOT a fabricated quarter-comma it doesn't actually realise.
+    dashed = {c.id: c for c in _proj_build().cells}
+    assert all(dashed[f"cell:proj:{i}:{p}"].text == "—" for i in range(3) for p in range(3))
+
+
+def test_projection_box_shows_the_real_quarter_comma_when_fully_held():
+    # holding a full rational basis {2/1, 5/4} pins quarter-comma meantone: the fifth flat by 1/4
+    # comma (the 1/4 on prime 3's image). Reproduces the mockup exactly.
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}
     expected = (("1", "1", "0"), ("0", "0", "0"), ("0", "1/4", "1"))
     for i in range(3):
         for p in range(3):
@@ -7671,7 +7688,7 @@ def test_projection_hides_with_its_parent_tuning_boxes():
 
 
 def test_projection_on_adds_the_generator_embedding_G_beside_P():
-    cells = {c.id: c for c in _with(projection=True).cells}
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: a full rational hold
     # G shares the projection band (the d prime rows) but lives in the r generator columns:
     # a d×r matrix of read-only cells (d=3, r=2 here)
     for i in range(3):
@@ -7680,11 +7697,14 @@ def test_projection_on_adds_the_generator_embedding_G_beside_P():
             assert cell.kind == "mapped"                  # read-only computed value, like P
             assert cell.x == cells[f"tuning:gen:{g}"].x   # the same generator columns as 𝒈
             assert cell.y == cells[f"cell:proj:{i}:0"].y  # the same prime rows as P
-    # default (auto-pick) embedding = quarter-comma meantone's G: the octave and 5^(1/4)
+    # quarter-comma's embedding G: the octave and 5^(1/4)
     expected = (("1", "0"), ("0", "0"), ("0", "1/4"))
     for i in range(3):
         for g in range(2):
             assert cells[f"cell:embed:{i}:{g}"].text == expected[i][g]
+    # under-held (the default), G dashes out in lockstep with P
+    dashed = {c.id: c for c in _proj_build().cells}
+    assert all(dashed[f"cell:embed:{i}:{g}"].text == "—" for i in range(3) for g in range(2))
 
 
 def test_generator_embedding_is_captioned_and_framed_in_generator_coords():
@@ -7737,7 +7757,7 @@ def test_projection_adds_a_scaling_factors_row_over_v():
 
 
 def test_projection_consolidates_commas_and_unchanged_into_v():
-    cells = {c.id: c for c in _with(projection=True).cells}
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # a full rational hold completes U
     # V = C|U: the editable comma vectors C stay, the unchanged basis U appends read-only
     assert cells["cell:comma:0:0"].kind == "commacell"   # C stays editable
     u_first = cells["cell:unchanged:0:0"]
@@ -7745,17 +7765,23 @@ def test_projection_consolidates_commas_and_unchanged_into_v():
     # U columns sit immediately right of the comma column(s), one COL_W apart
     assert u_first.x == cells["cell:comma:0:0"].x + spreadsheet.COL_W
     assert cells["cell:unchanged:0:1"].x == u_first.x + spreadsheet.COL_W
-    # the unchanged vectors are the held primes 2 and 5 — U = ((1,0,0),(0,0,1))
+    # U is the held basis as entered — u₁ = 2/1 = (1,0,0), u₂ = 5/4 = (-2,0,1)
     assert [cells[f"cell:unchanged:{p}:0"].text for p in range(3)] == ["1", "0", "0"]
-    assert [cells[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["0", "0", "1"]
+    assert [cells[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["-2", "0", "1"]
+
+
+def test_projection_dashes_the_unchanged_columns_when_under_held():
+    # default (under-held): both unchanged columns are dashed — every U cell an em-dash
+    cells = {c.id: c for c in _proj_build().cells}
+    assert all(cells[f"cell:unchanged:{p}:{j}"].text == "—" for p in range(3) for j in range(2))
 
 
 def test_projection_mapping_row_spans_v_mapping_the_unchanged_intervals():
-    cells = {c.id: c for c in _with(projection=True).cells}
-    # M·C = 0 (the comma vanishes) stays; M·U appends — the unchanged intervals' generator
-    # coords. For meantone M·(5/1) = ⟨0 4] (four fifths), so gen-row-1 of u₂ reads 4.
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: full hold
+    # M·C = 0 (the comma vanishes) stays; M·U appends — the unchanged intervals' generator coords.
     assert cells["cell:mapped_comma:0:0"].text == "0"
-    assert cells["cell:mapped_unchanged:1:1"].text == "4"
+    assert cells["cell:mapped_unchanged:0:0"].text == "1"   # M·(2/1) = ⟨1 0] (the period)
+    assert cells["cell:mapped_unchanged:1:1"].text == "4"   # M·(5/4): gen-row 1 = four fifths
     assert cells["cell:mapped_unchanged:0:0"].x == cells["cell:unchanged:0:0"].x
 
 
@@ -7833,17 +7859,11 @@ def test_projection_prescaling_and_complexity_rows_span_v():
     assert cells["complexity:comma:2"].x == cells["cell:unchanged:0:1"].x
 
 
-def test_v_column_unchanged_basis_follows_the_established_projection():
-    # U is the eigenbasis of the DISPLAYED projection, so the established-projection chooser drives
-    # the V = C|U column too (projection_held flows into the unchanged-basis compute): third-comma
-    # (holds 6/5) changes the unchanged basis from quarter-comma's {2, 5} to {2, 5/3}.
-    s = settings.defaults()
-    s["projection"] = True
-    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    default = {c.id: c for c in spreadsheet.build(state, s).cells}
-    third = {c.id: c for c in spreadsheet.build(state, s, projection_held=("2/1", "6/5")).cells}
-    # default (quarter-comma): the second unchanged vector is 5/1 = (0, 0, 1)
-    assert [default[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["0", "0", "1"]
-    # third-comma: the second unchanged vector is 5/3 = (0, -1, 1) — prime 3 enters, prime 5 no
-    # longer stands alone (it is tempered by third-comma)
-    assert [third[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["0", "-1", "1"]
+def test_v_column_unchanged_basis_follows_the_held_basis():
+    # U is the held basis, so the held intervals / established-projection chooser drive the V = C|U
+    # column: holding {2/1, 5/4} (quarter-comma) vs {2/1, 6/5} (third-comma) changes the second
+    # unchanged column from 5/4 to 6/5.
+    quarter = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}
+    third = {c.id: c for c in _proj_build(("2/1", "6/5")).cells}
+    assert [quarter[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["-2", "0", "1"]  # 5/4
+    assert [third[f"cell:unchanged:{p}:1"].text for p in range(3)] == ["1", "1", "-1"]     # 6/5

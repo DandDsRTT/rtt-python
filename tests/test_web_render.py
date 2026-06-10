@@ -144,20 +144,22 @@ async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> 
     await user.open("/")
     _toggle(user, "presets")
     user.find(kind=ui.checkbox, content="projection").click()
-    await user.should_see(marker="cell:embed:2:1")          # G's 5^(1/4) entry, locatable like P
+    await user.should_see(marker="cell:embed:2:1")          # G's entry, locatable like P
     await user.should_see(marker="preset:projection")       # established projection, under P
     await user.should_see(marker="preset:projection:gens")  # established embedding, under G
-    # default meantone shows quarter-comma; both P and G carry the 1/4
-    assert _cell_child(user, "preset:projection").value == "quarter-comma"
-    assert _cell_text(user, "cell:embed:2:1") == "1/4"
-    assert _cell_text(user, "cell:proj:2:1") == "1/4"
-    # pick third-comma -> P and G both re-form (it holds 6/5 instead of 5/4), and the embedding
-    # copy mirrors the selection (one tuning, two views)
+    # default meantone (TILT minimax-U) holds nothing rational, so it is NOT a rational projection:
+    # the choosers are blank and P/G are DASHED — not a fabricated quarter-comma
+    assert _cell_child(user, "preset:projection").value is None
+    assert _cell_text(user, "cell:proj:2:1") == "—"
+    assert _cell_text(user, "cell:embed:2:1") == "—"
+    # pick third-comma -> P and G fill in (it holds 6/5), both choosers track it, and the genmap
+    # actually re-solves to third-comma (1200, 694.786)
     _cell_child(user, "preset:projection").set_value("third-comma")
     await user.should_see(marker="cell:embed:2:1")
-    assert _cell_text(user, "cell:embed:2:1") == "1/3"
     assert _cell_text(user, "cell:proj:2:1") == "1/3"
+    assert _cell_text(user, "cell:embed:2:1") == "1/3"
     assert _cell_child(user, "preset:projection:gens").value == "third-comma"
+    assert _cell_child(user, "tuning:gen:1").value == "694.786"  # the dropdown changed the tuning
 
 
 async def test_projection_renders_the_consolidated_v_and_scaling_factors(user: User) -> None:

@@ -1485,9 +1485,12 @@ def vector_list_pending_text(committed_vectors, pending) -> tuple[str, str, str]
     return committed[:-1] + " ", draft, "]"
 
 
-def cents(value: float) -> str:
-    """A cents quantity at the 3-dp the grid and plain-text views share, so the
-    two displays always agree."""
+def cents(value) -> str:
+    """A cents quantity at the 3-dp the grid and plain-text views share, so the two displays
+    always agree. ``None`` (a dashed value — e.g. the size of an unknown unchanged interval the
+    tuning doesn't pin) renders as an em-dash."""
+    if value is None:
+        return "—"
     return f"{value:.3f}"
 
 

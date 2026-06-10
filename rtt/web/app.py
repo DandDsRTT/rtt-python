@@ -416,7 +416,9 @@ def _bar_chart(w, h, values, indicator=None, indicator_label=""):
     ⟪𝐝⟫ label whose subscript is ``indicator_label`` (the scheme's Lp power ∞ / 2 / 1)."""
     axis_x, col_w = spreadsheet.BRACKET_W, spreadsheet.COL_W
     values = tuple(values)
-    ticks = _chart_ticks(min(values + (0.0,)), max(values + (0.0,)))  # 0 in range: baseline shows
+    present = tuple(v for v in values if v is not None)  # a DASHED (None) cell — an unknown size the
+    # under-held tuning doesn't pin (a dashed unchanged column of V) — gets no bar and no axis weight
+    ticks = _chart_ticks(min(present + (0.0,)), max(present + (0.0,)))  # 0 in range: baseline shows
     axis_lo, axis_hi = ticks[0], ticks[-1]  # the axis spans the ticks, so the top one clears the bars
     plot_top, plot_bot = _CHART_PAD_T, h - _CHART_PAD_B
     span = axis_hi - axis_lo
@@ -437,6 +439,8 @@ def _bar_chart(w, h, values, indicator=None, indicator_label=""):
     body.append(_rect(axis_x, plot_top, 0.8, plot_bot - plot_top))  # vertical y-axis
     bw = col_w * _CHART_BAR_FRAC
     for i, v in enumerate(values):
+        if v is None:  # a dashed cell has no bar
+            continue
         cx = axis_x + i * col_w + col_w / 2
         yv = y_of(v)
         top, bot = min(zero_y, yv), max(zero_y, yv)
