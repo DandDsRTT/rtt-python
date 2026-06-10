@@ -137,6 +137,17 @@ async def test_enabling_projection_renders_the_box(user: User) -> None:
     await user.should_see(marker="cell:proj:2:1")  # the 1/4 entry (mapped kind, locatable like the mapping)
 
 
+async def test_projection_renders_the_consolidated_v_and_scaling_factors(user: User) -> None:
+    # projection also consolidates the commas + unchanged basis U into V = C|U and adds the
+    # scaling-factors row λ. Assert the new cells render (and lean on the ERROR-log guard for any
+    # fault building the appended unchanged columns / λ list / their EBK marks).
+    await _enable(user, "projection")
+    await user.should_see(marker="label:scaling_factors")
+    await user.should_see(marker="cell:scaling:1")             # λ₂ = 1 (a held interval)
+    await user.should_see(marker="cell:unchanged:0:0")         # the first unchanged-basis vector cell
+    await user.should_see(marker="cell:mapped_unchanged:1:1")  # M·U appended to the mapping row over V
+
+
 async def test_optimization_with_charts_renders_the_damage_indicator(user: User) -> None:
     # optimization + charts: the damage chart gains the minimized-damage indicator line.
     # Drive that _bar_chart(indicator=…) branch and confirm the chart still renders.
