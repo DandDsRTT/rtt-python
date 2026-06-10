@@ -193,6 +193,7 @@ _RATIO_HELP: dict[str, str] = {
     "target": "Target ratio — an interval the tuning optimizes over. Type a fraction to override the chosen target set.",
     "held": "Held-interval ratio — an interval held unchanged (pure) by the tuning. Type a fraction to edit it.",
     "interest": "Interval-of-interest ratio — an interval you're tracking. Type a fraction to edit it.",
+    "unchanged": "Unchanged-interval ratio — an interval the tuning holds just. Type a fraction to retune to the projection that holds it.",
 }
 
 # the editable plain-text duals (kind ``ptextedit``), each naming its own value. These
