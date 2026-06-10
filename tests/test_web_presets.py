@@ -166,3 +166,68 @@ def test_prescaler_options_gate_the_alternatives_behind_the_setting():
     assert presets.prescaler_options(include_alternatives=True) == tuple(service.PRESCALERS)
     # log-prime is offered in both modes (the un-gated default)
     assert "log-prime" in presets.prescaler_options(include_alternatives=True)
+
+
+# --- established projection / embedding chooser ---
+
+def test_established_projections_lists_the_three_meantone_tunings():
+    # the only established rational tunings the guide documents — quarter-comma (pure 5/4),
+    # third-comma (pure 6/5) and the Pythagorean (0-comma) tuning (pure 3/2)
+    meantone = service.from_mapping(INITIAL_MAPPING)
+    assert presets.established_projections(meantone) == {
+        "quarter-comma": ("2/1", "5/4"),
+        "third-comma": ("2/1", "6/5"),
+        "Pythagorean": ("2/1", "3/2"),
+    }
+
+
+def test_projection_options_are_value_equals_label_for_meantone():
+    meantone = service.from_mapping(INITIAL_MAPPING)
+    assert presets.projection_options(meantone) == {
+        "quarter-comma": "quarter-comma",
+        "third-comma": "third-comma",
+        "Pythagorean": "Pythagorean",
+    }
+
+
+def test_projection_options_match_any_equivalent_meantone_form():
+    # identify keys off the canonical comma signature, so the octave-twelfth form offers them too
+    octave_twelfth = service.from_mapping(((1, 0, -4), (0, 1, 4)))
+    assert set(presets.projection_options(octave_twelfth)) == {"quarter-comma", "third-comma", "Pythagorean"}
+
+
+def test_projection_options_empty_for_a_preset_without_established_tunings():
+    # augmented is a preset, but no rational named tuning is documented for it — empty chooser
+    augmented = service.from_comma_basis(((7, 0, -3),))
+    assert presets.identify(augmented) == "5:Augmented"
+    assert presets.projection_options(augmented) == {}
+
+
+def test_projection_options_empty_for_a_non_preset_temperament():
+    ji = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
+    assert presets.projection_options(ji) == {}
+
+
+def test_projection_held_ratios_resolves_a_chosen_tuning_else_none():
+    meantone = service.from_mapping(INITIAL_MAPPING)
+    assert presets.projection_held_ratios(meantone, "third-comma") == ("2/1", "6/5")
+    assert presets.projection_held_ratios(meantone, None) is None      # default → auto-pick
+    assert presets.projection_held_ratios(meantone, "bogus") is None   # unknown → auto-pick
+
+
+def test_identify_established_projection_shows_quarter_comma_by_default():
+    # meantone's auto-picked default projection coincides with quarter-comma, so with nothing
+    # explicitly chosen the chooser shows that name (not a bare placeholder)
+    meantone = service.from_mapping(INITIAL_MAPPING)
+    assert presets.identify_established_projection(meantone, None) == "quarter-comma"
+
+
+def test_identify_established_projection_honours_an_explicit_pick():
+    meantone = service.from_mapping(INITIAL_MAPPING)
+    assert presets.identify_established_projection(meantone, "third-comma") == "third-comma"
+
+
+def test_identify_established_projection_drops_a_pick_that_no_longer_applies():
+    # a name carried over to a temperament that has no established tunings shows the placeholder
+    augmented = service.from_comma_basis(((7, 0, -3),))
+    assert presets.identify_established_projection(augmented, "quarter-comma") is None

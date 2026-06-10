@@ -230,6 +230,74 @@ def tuning_scheme_options(all_interval: bool, include_alternatives: bool, weight
     }
 
 
+# Established rational projections / embeddings, keyed by temperament chooser value (see
+# :func:`temperament_options`): the recognized rational tunings of each temperament, as
+# ``{name: held ratio strings}``. A tuning belongs here only if it holds a FULL-RANK set of
+# RATIONAL intervals exactly just (its unchanged-interval basis) — only then is it expressible
+# as a rational projection ``P = GM`` and embedding ``G`` (the established-projection chooser
+# drives P/G by the chosen tuning's held intervals; see :func:`rtt.web.service.tuning_projection`).
+# Most temperaments have NO such established tuning — an OPTIMIZED tuning (minimax-S, minimax-ES …)
+# generally holds nothing rational and has no rational projection — so the chooser is empty for
+# them, and that is the common case.
+#
+# Provenance — every entry is sourced from the snapshotted D&D guide AND computationally verified
+# (rational, idempotent P, full rank r, non-degenerate, holds exactly its stated intervals).
+# Meantone's three are the guide's worked examples: quarter-comma (pure 5/4) and third-comma
+# (pure 6/5) in ``guide/other/Projection``, and the Pythagorean (0-comma) tuning holding the pure
+# fifth in ``guide/other/Generator embedding optimization``. The general fractional-comma family
+# (1/5-, 1/6-, 2/7-comma …) is irrational and is excluded; web-only "pure-X" tunings of other
+# temperaments (Magic, Helmholtz, Superpyth, Compton) lacked a solid named-tuning citation and a
+# degenerate candidate (pajara's 2/1 & 7/5) was rejected, so none are included.
+ESTABLISHED_PROJECTIONS: dict[str, dict[str, tuple[str, ...]]] = {
+    "5:Meantone": {
+        "quarter-comma": ("2/1", "5/4"),  # pure major third
+        "third-comma": ("2/1", "6/5"),    # pure minor third
+        "Pythagorean": ("2/1", "3/2"),    # pure fifth (the 0-comma limit; extreme but rational)
+    },
+}
+
+
+def established_projections(state) -> dict[str, tuple[str, ...]]:
+    """The current temperament's established rational tunings as ``{name: held ratios}`` (see
+    :data:`ESTABLISHED_PROJECTIONS`), or ``{}`` when it matches no preset or has none. Only
+    entries that actually form a rational projection for this mapping are kept — a degenerate
+    hold (one interval mapping to a fraction of another's image) is dropped, never offered."""
+    candidates = ESTABLISHED_PROJECTIONS.get(identify(state), {})
+    return {name: ratios for name, ratios in candidates.items()
+            if service.tuning_projection(state, held=ratios) is not None}
+
+
+def projection_options(state) -> dict[str, str]:
+    """The established-projection / established-embedding chooser's ``{value: label}``: the
+    current temperament's named rational tunings (see :func:`established_projections`), value
+    and label both the tuning name. Empty when the temperament has no established rational
+    projection — the chooser then shows only its placeholder."""
+    return {name: name for name in established_projections(state)}
+
+
+def projection_held_ratios(state, scheme: str | None) -> tuple[str, ...] | None:
+    """The rational unchanged intervals that drive ``P`` and ``G`` for the chosen established
+    tuning ``scheme`` (a value from :func:`projection_options`), or ``None`` when nothing valid
+    is chosen — the projection then falls back to its auto-picked default basis."""
+    return established_projections(state).get(scheme) if scheme else None
+
+
+def identify_established_projection(state, scheme: str | None) -> str | None:
+    """The chooser value to display: the explicitly-chosen ``scheme`` when it is still a valid
+    option, else the established tuning whose projection coincides with the current default — so
+    a temperament whose auto-picked default IS a named rational tuning (meantone's default is
+    quarter-comma) shows that name with nothing chosen. ``None`` (the placeholder) when neither
+    a valid pick nor a default match exists."""
+    options = established_projections(state)
+    if scheme in options:
+        return scheme
+    default = service.tuning_projection(state)
+    if default is None:
+        return None
+    return next((name for name, ratios in options.items()
+                 if service.tuning_projection(state, held=ratios) == default), None)
+
+
 @functools.lru_cache(maxsize=1)
 def _signature_to_value() -> dict[tuple[tuple[int, ...], ...], str]:
     """Each preset's canonical comma-basis signature -> its chooser value. The

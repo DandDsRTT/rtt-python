@@ -18,6 +18,7 @@ import re
 from dataclasses import dataclass
 from fractions import Fraction
 
+from rtt.web import presets
 from rtt.web import service
 from rtt.web import settings as show_settings
 from rtt.web import spreadsheet
@@ -77,6 +78,12 @@ class _Doc:
     # a full d×d matrix (a non-diagonal pretransformer).
     custom_prescaler: tuple | None
     target_override: tuple[str, ...] | None  # a typed explicit target list, overriding the TILT/OLD spec
+    # The established projection / embedding chosen in that chooser — the NAME of a recognized
+    # rational tuning of the current temperament (e.g. "quarter-comma"), whose held intervals
+    # drive the projection P = GM and embedding G. None = the auto-picked default basis. A NAME
+    # (not the resolved vectors) so it harmlessly falls back when the temperament no longer has
+    # it (see Editor.displayed_projection_scheme_name / projection_held).
+    projection_scheme: str | None
     settings: tuple[tuple[str, bool], ...]
     collapsed: frozenset[str]
 
@@ -126,6 +133,7 @@ def _initial_doc() -> _Doc:
         manual_tuning=False,  # the default freeze is the scheme's optimum, not a hand-edit
         custom_prescaler=None,
         target_override=None,
+        projection_scheme=None,  # the projection box starts on its auto-picked default basis
         settings=tuple(sorted(show_settings.defaults().items())),
         collapsed=INITIAL_COLLAPSED,
     )
@@ -187,6 +195,7 @@ class Editor:
             manual_tuning=self.manual_tuning,
             custom_prescaler=self.custom_prescaler,
             target_override=self.target_override,
+            projection_scheme=self.projection_scheme,
             settings=tuple(sorted(self.settings.items())),
             collapsed=frozenset(self.collapsed),
         )
@@ -207,6 +216,7 @@ class Editor:
         self.manual_tuning = doc.manual_tuning
         self.custom_prescaler = doc.custom_prescaler
         self.target_override = doc.target_override
+        self.projection_scheme = doc.projection_scheme
         self.settings = dict(doc.settings)
         self.collapsed = set(doc.collapsed)
         self._clear_pending()  # a draft never survives a document restore
@@ -315,6 +325,8 @@ class Editor:
             nonprime_approach=self.nonprime_basis_approach,
             superspace_generator_tuning=self.superspace_generator_tuning,
             displayed_tuning_name=self.displayed_tuning_scheme_name,
+            projection_held=self.projection_held,
+            displayed_projection_name=self.displayed_projection_scheme_name,
             prev_ids=prev_ids)
 
     @property
@@ -701,6 +713,31 @@ class Editor:
         # set the target set as a structured trait (not by gluing a prefix onto the name) so a
         # held-/destretched- modifier in the name survives — string concatenation would hide it
         self.tuning_scheme = service.scheme_with_targets(name, target)
+
+    def set_projection_scheme(self, name: str | None) -> None:
+        """Apply an established projection / embedding from that chooser: the named rational
+        tuning's held intervals drive the projection P = GM and the generator embedding G (one
+        and the same tuning, so the established-projection and established-embedding choosers move
+        together). ``None`` (or an off-list value) clears back to the auto-picked default basis.
+        Independent of the optimization tuning — it only re-forms the projection/embedding box.
+        Undoable."""
+        self._snapshot()
+        self.projection_scheme = name or None
+
+    @property
+    def projection_held(self) -> tuple[str, ...] | None:
+        """The rational unchanged intervals (ratio strings) that drive P and G for the chosen
+        established tuning, or ``None`` (the auto-picked default) when nothing valid is chosen —
+        what :meth:`layout` passes to the projection/embedding service builders."""
+        return presets.projection_held_ratios(self.state, self.projection_scheme)
+
+    @property
+    def displayed_projection_scheme_name(self) -> str | None:
+        """The established-projection / -embedding chooser's value: the chosen tuning's name, or —
+        with nothing chosen — the named tuning matching the auto-picked default (meantone's is
+        quarter-comma); ``None`` (the placeholder) when the temperament has no matching established
+        rational tuning. Mirrors :attr:`displayed_tuning_scheme_name` for the projection presets."""
+        return presets.identify_established_projection(self.state, self.projection_scheme)
 
     def set_complexity_prescaler(self, prescaler: str) -> None:
         """Swap the complexity prescaler (the predefined-prescalers preset), which
@@ -1224,6 +1261,7 @@ class Editor:
             "manual_tuning": self.manual_tuning,
             "custom_prescaler": _prescaler_to_json(self.custom_prescaler),
             "target_override": list(self.target_override) if self.target_override is not None else None,
+            "projection_scheme": self.projection_scheme,
             "settings": dict(self.settings),
             "collapsed": sorted(self.collapsed),
         }
@@ -1254,6 +1292,7 @@ class Editor:
             custom_prescaler=_prescaler_from_json(data.get("custom_prescaler")),
             target_override=tuple(data["target_override"])
             if data.get("target_override") is not None else None,
+            projection_scheme=data.get("projection_scheme"),
             settings=tuple(sorted(show_settings.from_persisted(data.get("settings", {})).items())),
             collapsed=frozenset(data.get("collapsed", INITIAL_COLLAPSED)),
         )

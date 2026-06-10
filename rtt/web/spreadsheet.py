@@ -686,7 +686,7 @@ class _GridBuilder:
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
-                 displayed_tuning_name=None):
+                 displayed_tuning_name=None, projection_held=None, displayed_projection_name=None):
         self.prev_ids = prev_ids or {}
         self.state = state
         self.settings = settings
@@ -713,6 +713,12 @@ class _GridBuilder:
         # app._build_preset's on-list check. None (a bare spreadsheet.build) keeps the chooser a
         # dropdown; the live page always passes it (see Editor.layout).
         self.displayed_tuning_name = displayed_tuning_name
+        # the established projection / embedding chosen in that chooser: the rational unchanged
+        # intervals (ratio strings) driving P = GM and G, or None for the auto-picked default
+        # (editor.projection_held); and the NAME the chooser shows (editor.displayed_projection_
+        # scheme_name), threaded in to match app._build_preset's on-list check like the tuning name.
+        self.projection_held = projection_held
+        self.displayed_projection_name = displayed_projection_name
 
         if self.settings is None:
             self.settings = _default_settings()
@@ -1060,14 +1066,19 @@ class _GridBuilder:
             ("block:complexity:detempering", "complexity", "detempering"),
             ("block:urow:detempering", "units", "detempering"),
         ) if self.show_detempering else ()
-        # the rational tempering projection P = GM (the projection sub-control of tuning boxes):
-        # a d×d operator over the domain primes, built from the auto-picked default embedding.
-        # service returns None for any case it can't form, so the row simply drops (no empty box)
-        # rather than rendering — and the matrix is only computed when both the tuning boxes and
-        # the projection toggle are on. Resolved here, ahead of the row-band list, so the band's
-        # presence can gate on it.
-        self.projection_matrix = (service.tuning_projection(self.state)
-                                  if (show_tuning and self.settings["projection"]) else None)
+        # the rational tempering projection P = GM and its generator embedding G (the projection
+        # sub-control of tuning boxes): P is a d×d operator over the domain primes, G a d×r matrix
+        # whose columns are the held tuning's generators as fractional vectors. Both are built from
+        # the SAME unchanged-interval basis — the established projection the chooser selected
+        # (self.projection_held: ratio strings), or the auto-picked default when None — so P = GM.
+        # service returns None for any case it can't form (degenerate hold, etc.), so the box simply
+        # drops rather than rendering. Computed only when both the tuning boxes and the projection
+        # toggle are on. Resolved here, ahead of the row-band list, so the band can gate on it.
+        show_projection = show_tuning and self.settings["projection"]
+        self.projection_matrix = (service.tuning_projection(self.state, held=self.projection_held)
+                                  if show_projection else None)
+        self.embedding_matrix = (service.tuning_embedding(self.state, held=self.projection_held)
+                                 if show_projection else None)
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
@@ -3919,11 +3930,11 @@ def build(state, settings=None, collapsed=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
           pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
           pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
-          displayed_tuning_name=None) -> Layout:
+          displayed_tuning_name=None, projection_held=None, displayed_projection_name=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
         optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
         prev_ids, pending_element, nonprime_approach, superspace_generator_tuning,
-        displayed_tuning_name,
+        displayed_tuning_name, projection_held, displayed_projection_name,
     ).layout()

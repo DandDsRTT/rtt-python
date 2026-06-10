@@ -1900,3 +1900,43 @@ def test_remove_element_cancels_the_draft():
     ed.add_element()
     ed.remove_element()
     assert ed.pending_element is None
+
+
+def test_projection_scheme_defaults_to_quarter_comma_and_resolves_to_auto_pick():
+    # a fresh editor is meantone; with nothing explicitly chosen the established-projection
+    # chooser shows quarter-comma (the auto-picked default's matching name) and the held
+    # override is None — so P/G use the auto-pick basis.
+    ed = Editor()
+    assert ed.projection_scheme is None
+    assert ed.displayed_projection_scheme_name == "quarter-comma"
+    assert ed.projection_held is None
+
+
+def test_set_projection_scheme_picks_a_named_tuning_and_is_undoable():
+    ed = Editor()
+    ed.set_projection_scheme("third-comma")
+    assert ed.projection_scheme == "third-comma"
+    assert ed.displayed_projection_scheme_name == "third-comma"
+    assert ed.projection_held == ("2/1", "6/5")  # drives P = GM for both the P and G tiles
+    ed.undo()
+    assert ed.projection_scheme is None
+    assert ed.displayed_projection_scheme_name == "quarter-comma"
+
+
+def test_projection_scheme_round_trips_through_serialize():
+    ed = Editor()
+    ed.set_projection_scheme("Pythagorean")
+    reloaded = Editor()
+    reloaded.load(ed.serialize())
+    assert reloaded.projection_scheme == "Pythagorean"
+    assert reloaded.displayed_projection_scheme_name == "Pythagorean"
+
+
+def test_projection_scheme_falls_back_when_the_temperament_has_no_established_tuning():
+    # carrying a meantone pick over to augmented (no established rational tuning) shows the
+    # placeholder and resolves to the auto-pick default — never a stale, inapplicable basis.
+    ed = Editor()
+    ed.set_projection_scheme("third-comma")
+    ed.state = service.from_comma_basis(((7, 0, -3),))  # augmented
+    assert ed.displayed_projection_scheme_name is None
+    assert ed.projection_held is None
