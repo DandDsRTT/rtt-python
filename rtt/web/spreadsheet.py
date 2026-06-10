@@ -3073,7 +3073,10 @@ class _GridBuilder:
             prescaler_diag = service.superspace_complexity_prescaler(self.state, self.tuning_scheme)
             prescaler_is_matrix = False
             ss_elements = service.superspace_primes(self.elements)
-            _lift = lambda vs: service.lift_vectors_to_superspace(self.elements, vs)
+            # None-preserving lift: a DASHED unchanged column (V = C|U over a nonstandard domain)
+            # has no vector to lift, so it stays None (the prescaling loop dashes it out below)
+            _lift = lambda vs: tuple(None if v is None else service.lift_vectors_to_superspace(self.elements, (v,))[0]
+                                     for v in vs)
             prescale_vectors = {
                 # the bare (superspace) prescaler 𝐿: identity columns over the dL true primes
                 "ssprimes": tuple(tuple(1 if i == p else 0 for i in range(nrows)) for p in range(nrows)),

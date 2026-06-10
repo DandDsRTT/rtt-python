@@ -7776,6 +7776,19 @@ def test_projection_dashes_the_unchanged_columns_when_under_held():
     assert all(cells[f"cell:unchanged:{p}:{j}"].text == "—" for p in range(3) for j in range(2))
 
 
+def test_projection_on_a_nonstandard_domain_lifts_dashes_cleanly():
+    # regression: projection + a genuinely nonstandard domain (2.3.13/5) lifts the V = C|U column
+    # into the chapter-9 superspace; a DASHED (under-held) unchanged column has no vector to lift,
+    # so it must stay dashed rather than crash the superspace lift.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s["projection"] = True
+    s["nonstandard_domain"] = True
+    cells = {c.id: c for c in spreadsheet.build(state, s).cells}  # must not raise
+    unchanged = [c for c in cells if c.startswith("cell:unchanged:")]
+    assert unchanged and all(cells[c].text == "—" for c in unchanged)
+
+
 def test_projection_mapping_row_spans_v_mapping_the_unchanged_intervals():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: full hold
     # M·C = 0 (the comma vanishes) stays; M·U appends — the unchanged intervals' generator coords.
