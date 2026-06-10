@@ -3847,17 +3847,17 @@ def index() -> None:
             rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
             rec.update_cell(cb)
             ringed = cb.id in preview
-            # render owns BOTH ring colours for every cell it touches. The amber "value moved" ring
-            # is the edit/combine preview's, toggled by `ringed`. The red "will be removed" ring is
-            # only ever painted by a no-reflow hover (show_preview: a +/- / chooser hover, a domain-
-            # element edit, a shrinking-temperament hover) and is ALWAYS stale by the time a real
-            # render runs — the document has been committed or reverted, so a surviving cell is no
-            # longer going away. So strip rtt-preview-remove unconditionally here: without it a red
-            # ring on a cell the render KEEPS is orphaned forever (render never re-touched red, and it
-            # clobbers preview_shown below so clear_preview can't reach it either).
-            rec.els[cb.id].classes(
-                add="rtt-preview-change" if ringed else "",
-                remove="rtt-preview-remove" if ringed else "rtt-preview-change rtt-preview-remove")
+            # render owns BOTH ring colours for every cell it touches. The amber "value moved" ring is
+            # the edit/combine preview's, toggled by `ringed`. The red "will be removed" ring is USUALLY
+            # a transient no-reflow hover (show_preview: a +/- / chooser hover, a domain-element edit, a
+            # shrinking-temperament hover), stale by the time a render runs — so it's stripped here. The
+            # EXCEPTION is a builder-driven `preview_remove`: a value a pending comma draft will delete
+            # (the doomed unchanged interval), a STEADY render-state painted with the same red look and
+            # kept until the draft closes (the next render without the flag strips it).
+            remove_red = cb.preview_remove
+            add_cls = ("rtt-preview-change " if ringed else "") + ("rtt-preview-remove" if remove_red else "")
+            rem_cls = ("" if ringed else "rtt-preview-change ") + ("" if remove_red else "rtt-preview-remove")
+            rec.els[cb.id].classes(add=add_cls.strip(), remove=rem_cls.strip())
         rec.preview_shown = set(preview)  # every rung id is a live cell (changed_cell_ids ⊆ lay.cells)
 
         for eid in [e for e in rec.els if e not in seen]:

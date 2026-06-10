@@ -2915,7 +2915,8 @@ class _GridBuilder:
                 # projection — typing a new basis retunes to the projection that holds it; read-only
                 # "vec" (with em-dashes) when the tuning leaves any direction irrational. While a comma
                 # is being ADDED (a pending draft), the rank drops by one, so the last unchanged column
-                # is about to be deleted: preview it red ("this is going away") and don't make it editable.
+                # is about to be deleted: it goes read-only (not editable) and a single post-pass below
+                # previews its WHOLE column red with the app's standard remove-preview look.
                 full_u = self.unchanged_basis is not None and all(v is not None for v in self.unchanged_basis)
                 for j in range(self.nu):
                     doomed = self.pending is not None and j == self.nu - 1
@@ -2923,7 +2924,7 @@ class _GridBuilder:
                         vec_text = DASH if self.unchanged_basis[j] is None else str(self.unchanged_basis[j][p])
                         self.cells.append(CellBox(f"cell:unchanged:{p}:{j}", self.comma_left(self.nc_shown + j), self.vec_top(p), COL_W, ROW_H,
                                              "unchangedcell" if (full_u and not doomed) else "vec", text=vec_text, prime=p, comma=self.nc + j,
-                                             unit=self.cell_unit("vectors", "commas", prime=p), alert=doomed))
+                                             unit=self.cell_unit("vectors", "commas", prime=p)))
                     self._voice("vectors:commas", self.nc + j, self.unchanged_sizes.just[j])
                 if self.pending is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
@@ -4235,6 +4236,20 @@ class _GridBuilder:
         elif not self.show_quantities:
             self.cells = [replace(cb, blank=True, text="") if cb.kind in BLANKED_NUMBER_KINDS else cb
                      for cb in self.cells]
+
+        # While a comma DRAFT is open over the consolidated V column, committing it drops the rank by
+        # one and deletes the last unchanged interval. Preview that interval's WHOLE column red — the
+        # app's standard remove-preview look (rtt-preview-remove), across every value tile, not just a
+        # couple. The doomed column's value cells all share one x (comma_left of its sub-column), so a
+        # single pass flags them; the w == COL_W / kind guard skips the count + caption that ride that
+        # x when there is only one unchanged column (nu == 1).
+        if self.pending is not None and self.show_unchanged and self.nu:
+            doomed_x = self.comma_left(self.nc_shown + self.nu - 1)
+            self.cells = [replace(cb, preview_remove=True)
+                          if (cb.w == COL_W and cb.x == doomed_x
+                              and cb.kind not in ("count", "caption", "colgrip"))
+                          else cb
+                          for cb in self.cells]
 
         # Each column title renders unwrapped and centred on its gridline (see _title_w and the
         # .rtt-colheader rule), so one wider than its content-hugging column overhangs it. Interior

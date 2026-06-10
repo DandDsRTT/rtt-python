@@ -7899,22 +7899,37 @@ def test_projection_at_full_rank_keeps_the_nullity_count_in_a_readable_stub():
 
 
 def test_projection_pending_comma_reddens_the_unchanged_interval_it_will_delete():
-    # adding a comma drops the rank by one, deleting an unchanged interval — preview that interval red
-    # (the app's standard "this is going away" highlight) on the LAST U column while the draft is open
+    # adding a comma drops the rank by one, deleting an unchanged interval — preview that interval with
+    # the app's STANDARD remove highlight (CellBox.preview_remove → rtt-preview-remove), across its
+    # WHOLE column (every value tile, not a smattering), while the draft is open. NOT the constraint
+    # `alert` flag, and not just a couple of tiles.
     s = settings.defaults()
     s["projection"] = True
+    s["counts"] = True
     lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
                             held_basis_ratios=("2/1", "5/4"), pending_comma=[None, None, None])
     cells = {c.id: c for c in lay.cells}
     nu = sum(1 for i in cells if i.startswith("cell:unchanged:0:"))
     assert nu >= 2
-    assert all(cells[f"cell:unchanged:{p}:{nu - 1}"].alert for p in range(3))  # last U column: red
-    assert cells[f"unchanged:{nu - 1}"].alert                                  # its ratio too
-    assert not any(cells[f"cell:unchanged:{p}:0"].alert for p in range(3))     # earlier U columns: not
-    # with NO draft open, nothing is doomed — no U cell is reddened
-    plain = {c.id: c for c in spreadsheet.build(
-        service.from_mapping(((1, 1, 0), (0, 1, 4))), s, held_basis_ratios=("2/1", "5/4")).cells}
-    assert not any(plain[f"cell:unchanged:{p}:{j}"].alert for p in range(3) for j in range(nu))
+    last, v = nu - 1, 1 + (nu - 1)   # doomed U column index, and its V-column position (nc=1 comma)
+    # the doomed column reddens across EVERY value tile: vectors, the ratio, mapping, all three size
+    # rows, P·V and the scaling factor — one consistent preview, the whole column
+    doomed_ids = ([f"cell:unchanged:{p}:{last}" for p in range(3)] + [f"unchanged:{last}"]
+                  + [f"cell:mapped_unchanged:{i}:{last}" for i in range(2)]
+                  + [f"tuning:comma:{v}", f"just:comma:{v}", f"retune:comma:{v}"]
+                  + [f"cell:proj_v:{p}:{v}" for p in range(3)] + [f"cell:scaling:{v}"])
+    assert all(cells[cid].preview_remove for cid in doomed_ids), \
+        [cid for cid in doomed_ids if not cells[cid].preview_remove]
+    # and it uses the standard flag, NOT the constraint-alert red
+    assert not any(c.alert for c in lay.cells if c.preview_remove)
+    # the earlier U column, the unchanged count/caption, and the drag grip are NOT reddened
+    assert not any(cells[f"cell:unchanged:{p}:0"].preview_remove for p in range(3))
+    assert not cells["count:commas:u"].preview_remove
+    assert not cells[f"grip:unchanged:{last}"].preview_remove
+    # with NO draft open, nothing is doomed
+    plain = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                              held_basis_ratios=("2/1", "5/4"))
+    assert not any(c.preview_remove for c in plain.cells)
 
 
 def test_unchanged_columns_have_cross_list_drag_grips():
