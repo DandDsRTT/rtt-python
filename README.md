@@ -52,7 +52,7 @@ python app.py
 
 ## Using the library directly
 
-The `rtt` package is a standalone RTT math library — the web app is just one consumer of it.
+The `rtt.library` package is a standalone RTT math library — the web app (`rtt.app`) is just one consumer of it.
 Temperaments are read and written in **extended bra–ket notation** (EBK): maps are written
 `⟨…]` and vectors `[…⟩`.
 
@@ -77,13 +77,14 @@ weighting, and the complexity used.
 
 ```
 app.py            # entry point: python app.py [port]
-rtt/              # the RTT math library (pure, framework-free)
+rtt/library/      # the RTT math library (pure, framework-free)
 rtt/app/          # the NiceGUI front end
 guide/            # the D&D guide to RTT, mirrored for reference
-tests/            # ~2,000 tests covering the library and the web layer
+tests/library/    # library tests (unit/)
+tests/app/        # web-app tests (unit/ and integration/)
 ```
 
-### The math library (`rtt/`)
+### The math library (`rtt/library/`)
 
 | Module | Responsibility |
 | --- | --- |
