@@ -7744,6 +7744,14 @@ def test_no_scaling_factors_or_unchanged_columns_without_projection():
     assert not any(c.startswith("cell:unchanged:") for c in cells)
 
 
+def test_v_consolidation_needs_the_commas_column_present():
+    # V = C|U lives in the commas column; with the temperament boxes off that column is gone,
+    # so projection-on adds no consolidation and no (empty) scaling-factors row
+    cells = {c.id for c in _with(projection=True, temperament_boxes=False).cells}
+    assert "label:scaling_factors" not in cells
+    assert not any(c.startswith(("cell:scaling:", "cell:unchanged:")) for c in cells)
+
+
 def test_projection_relabels_the_commas_header_as_the_unrotated_vector_basis():
     # the consolidated interval-vectors header reads as the whole unrotated vector basis V = C|U,
     # not the bare comma basis C — caption (names, on by default) and symbol/equivalence (symbols on)

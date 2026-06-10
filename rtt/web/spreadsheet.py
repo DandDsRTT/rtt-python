@@ -930,7 +930,7 @@ class _GridBuilder:
         # on there being a comma to merge with (n > 0). Its mapped / sized / complexity twins are
         # precomputed so the V value tiles read one geometry, exactly as the comma column's do.
         self.unchanged_basis = (service.unchanged_interval_basis(self.state)
-                                if (show_tuning and self.settings["projection"] and self.state.n) else None)
+                                if (show_temp and show_tuning and self.settings["projection"] and self.state.n) else None)
         self.show_unchanged = self.unchanged_basis is not None
         self.nu = len(self.unchanged_basis) if self.show_unchanged else 0
         if self.show_unchanged:
