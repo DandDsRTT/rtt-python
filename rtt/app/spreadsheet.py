@@ -2039,19 +2039,24 @@ class _GridBuilder:
             return self.sub_axis_x("commas", self.nc_shown - 1) + COL_W
         return self.sub_axis_x(ckey, n - 1) + COL_W  # one slot past the last branch point
 
-    def _plus_shows(self, ckey):  # mirrors the +'s emit gate in the quantities block (col_open for the
-        if ckey in ("interest", "held"):  # addable sets, so an empty-but-open column still adds one)
-            return self.col_open(ckey) and self.row_open("quantities")
+    def _plus_shows(self, ckey):  # whether column ckey shows a + (and so where its fan bus ends).
+        # The interval columns (commas / targets / held / interest) are addable from EITHER interval
+        # row — the quantities ratios OR the interval vectors — so their + survives hiding the
+        # quantities row, then drops the cursor into the new column's first vector cell instead (see
+        # app.add_interval). gens / primes add through the quantities row alone: their draft is a
+        # ratio / domain-element header with no editable vectors-row twin to fall back to.
+        if ckey in ("interest", "held"):  # addable sets, so an empty-but-open column still adds one
+            return self.col_open(ckey) and (self.row_open("quantities") or self.row_open("vectors"))
         if ckey == "targets":  # the target list is user-curated only when NOT all-interval (else it's auto Tₚ = I)
-            return self.tile_open("quantities", "targets") and not self.all_interval
+            return (self.tile_open("quantities", "targets") or self.tile_open("vectors", "targets")) and not self.all_interval
         if ckey == "gens":  # the generators + un-temps a comma (−n, +r), so it needs one to un-temper
             return self.tile_open("quantities", "gens") and self.state.n > 0
         if ckey == "primes":  # off: the + walks to the next standard prime (inapplicable to a subgroup).
             # On (nonstandard-domain box): the + starts a typed ?/? element draft, valid for ANY domain.
             return self.tile_open("quantities", "primes") and (self.show_nonstandard_domain or self.standard_domain)
         if ckey == "commas":  # commas stay addable/removable even in the consolidated V view (adding
-            return self.tile_open("quantities", "commas")  # one shrinks U by a column — see comma_value_pos)
-        return self.tile_open("quantities", ckey)
+            return self.tile_open("quantities", "commas") or self.tile_open("vectors", "commas")  # one shrinks U — see comma_value_pos
+        return self.tile_open("quantities", ckey) or self.tile_open("vectors", ckey)
 
     def closed_form_operand(self, key, group, i):
         """The operand ``R`` of a cell's exact closed form ``1200 · log₂R``, or None
@@ -2622,11 +2627,6 @@ class _GridBuilder:
                 self.cells.append(CellBox(cid, self.sub_axis_x(ckey, i) - COL_W / 2, self.fanout_y, COL_W,
                                      qy - self.fanout_y, kind, **kw))
 
-            def branch_plus(cid, ckey, kind):
-                # the always-shown + centred on the column's stub, one slot past the last branch
-                # point (the top bus stretches out to reach it); an empty set centres it on the trunk
-                self.cells.append(CellBox(cid, self.plus_stub_x[ckey] - BTN / 2, self.fanout_y - BTN / 2, BTN, BTN, kind))
-
             if self.tile_open("quantities", "gens"):  # the generator ratios heading their sub-columns,
                 for g in range(self.r):                # the column-header dual of the spine list (gen:i)
                     self.cells.append(CellBox(f"qgen:{g}", self.gen_left(g), qy, COL_W, ROW_H, "genratio", text=self.gens[g], gen=g))
@@ -2731,16 +2731,6 @@ class _GridBuilder:
                     # blank green vector cells below, and a − on its branch point to cancel the draft
                     self.cells.append(CellBox("interest:pending", self.interest_left(self.mi), qy, COL_W, ROW_H, "ratiocell", text="?/?", comma=self.mi, pending=True))
                     branch_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
-            # the always-shown + on each addable column's stub (plus_stub_x has the entry exactly
-            # when its emit gate held above — col_open for the empty-but-open interest/held sets, so
-            # the first interval can still be added). The − is the hover counterpart on a branch point.
-            # with the nonstandard-domain box on, the domain + starts a typed ?/? element draft
-            # (element_plus → editor.add_element) rather than walking to the next prime (plus → expand)
-            primes_plus = "element_plus" if self.show_nonstandard_domain else "plus"
-            for ckey, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
-                              ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
-                if ckey in self.plus_stub_x:
-                    branch_plus(cid, ckey, cid)
 
             # drag-and-drop reorder grips: a ⠿ on each interval column, riding the GRIP_BAND room on
             # the fan — along the column's sub-axis gridline, in the band BETWEEN the − above (at the
@@ -2766,11 +2756,13 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"grip:{ckey}:add", self.plus_stub_x[ckey] - COL_W / 2,
                                      grip_top, COL_W, GRIP_BAND, "colgrip"))
 
-            # gate on _plus_shows — the same "this list's fan (with its +) is visible" test the + uses.
-            # Every list grips each existing column: even a sole comma drags out now (un-tempering it).
+            # the grips (and their drop zone) ride this quantities-row block, so they stay tied to it:
+            # _plus_shows now also fires for a column shown only in the vectors row (so its + survives
+            # there), but the reorder grips remain a quantities-row affordance — gate them back on the
+            # row being open. Every list grips each existing column: even a sole comma drags out now.
             counts = {"commas": self.nc, "targets": self.k, "held": self.nh, "interest": self.mi}
             for ckey in ("commas", "targets", "held", "interest"):
-                if self._plus_shows(ckey):
+                if self.row_open("quantities") and self._plus_shows(ckey):
                     drag_controls(ckey, counts[ckey])
             # the consolidated V's unchanged half U also grips — each KNOWN unchanged interval is a
             # cross-list DRAG SOURCE (drop it on another list to copy it there; U is derived, so it
@@ -2782,6 +2774,20 @@ class _GridBuilder:
                     if self.unchanged_basis[j] is not None:
                         self.cells.append(CellBox(f"grip:unchanged:{j}", self.sub_axis_x("commas", self.nc_shown + j) - COL_W / 2,
                                              grip_top, COL_W, GRIP_BAND, "colgrip", comma=j))
+
+        # The addable columns' + controls ride the shared column fan above the grid, NOT inside the
+        # quantities row — so they survive that row being hidden, keeping every interval kind addable
+        # from the interval-vectors row alone (clicking + then drops the cursor into the new column's
+        # first vector cell; see app.add_interval). plus_stub_x already holds exactly the columns whose
+        # + shows — built from _plus_shows, which counts the vectors row too — and where on the fan its
+        # stub rides (the top bus stretches out to reach it; an empty set centres it on the trunk). With
+        # the nonstandard-domain box on, the domain + opens a typed ?/? element draft (element_plus →
+        # editor.add_element) rather than walking to the next prime (plus → expand).
+        primes_plus = "element_plus" if self.show_nonstandard_domain else "plus"
+        for ckey, cid in (("gens", "gen_plus"), ("primes", primes_plus), ("commas", "comma_plus"),
+                          ("targets", "target_plus"), ("held", "held_plus"), ("interest", "interest_plus")):
+            if ckey in self.plus_stub_x:
+                self.cells.append(CellBox(cid, self.plus_stub_x[ckey] - BTN / 2, self.fanout_y - BTN / 2, BTN, BTN, cid))
 
         # generator ratios (aligned with the mapping rows they label) + the mapping
         # matrix and its mapped target interval list
