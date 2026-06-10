@@ -7859,6 +7859,23 @@ def test_projection_keeps_the_comma_add_remove_controls():
     assert cells["comma_plus"].x - cells["comma_minus"].x >= spreadsheet.COL_W - spreadsheet.BTN
 
 
+def test_projection_at_full_rank_shows_the_complete_unchanged_basis():
+    # removing the LAST comma → just intonation (n = 0): nothing is tempered, so P = I and the column
+    # is the FULL unchanged basis — all d primes, no comma half — NOT a wiped-out empty column.
+    s = settings.defaults()
+    s["projection"] = True
+    cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1))), s).cells}
+    assert not any(c.startswith("cell:comma:") for c in cells)   # no commas (C empty)
+    assert [[cells[f"cell:unchanged:{p}:{j}"].text for p in range(3)] for j in range(3)] == \
+        [["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]]      # U = all d primes
+    assert [cells[f"cell:scaling:{c}"].text for c in range(3)] == ["1", "1", "1"]  # every prime unchanged
+    assert "comma_plus" in cells           # …and a + to add a first comma back
+    assert "comma_minus" not in cells      # nothing to remove
+    # no comma half, so no C|U divider and no wasted gap — U starts at the column's left and runs flush
+    assert not any(c.startswith("vsplit:") for c in cells)
+    assert cells["cell:unchanged:0:1"].x - cells["cell:unchanged:0:0"].x == spreadsheet.COL_W
+
+
 def test_unchanged_columns_have_cross_list_drag_grips():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4"), drag_to_combine=True).cells}
     # each KNOWN unchanged interval gets a drag grip — a cross-list drag SOURCE (drop it on another

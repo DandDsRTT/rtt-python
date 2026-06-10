@@ -950,10 +950,13 @@ class _GridBuilder:
         # the unchanged half U (vectors, ratios, M·U, sizes, complexities — dash-aware) is assembled
         # ONCE by service.unchanged_interval_data and shared with the plain text (see
         # plain_text_values), so the consolidated V = C|U reads identically as a grid and as inline
-        # EBK text. None when projection is off / there is no comma to merge with (n = 0).
+        # EBK text. None only when projection is off. NB it stays present at full rank (n = 0, just
+        # intonation): nothing is tempered, so P = I and U is the FULL basis of all d primes (C
+        # empty) — the column shows that complete unchanged basis rather than collapsing, and the
+        # comma + (still shown) adds a first comma back.
         _udata = (service.unchanged_interval_data(self.state, self.held_basis_ratios, self.tun,
                                                   self.tuning_scheme, self.elements, self.custom_prescaler)
-                  if (show_temp and show_tuning and self.settings["projection"] and self.state.n) else None)
+                  if (show_temp and show_tuning and self.settings["projection"]) else None)
         self.show_unchanged = _udata is not None
         self.nu = len(_udata.basis) if self.show_unchanged else 0
         if _udata is not None:
@@ -1911,8 +1914,9 @@ class _GridBuilder:
     def comma_left(self, c):
         # the unchanged half U (the sub-columns at or past nc_shown — i.e. past the comma cells AND
         # any pending draft) is pushed right by V_SPLIT_GAP, opening the gap that holds the C|U
-        # divider clear of the cells (only under the consolidated V view)
-        gap = V_SPLIT_GAP if (self.show_unchanged and c >= self.nc_shown) else 0
+        # divider clear of the cells. Only when there IS a comma half (nc_shown > 0): at full rank
+        # (n = 0) the column is the whole unchanged basis with no C, so no gap and no divider.
+        gap = V_SPLIT_GAP if (self.show_unchanged and 0 < self.nc_shown <= c) else 0
         return self.commas_x + BRACKET_W + c * COL_W + gap
 
     def comma_value_pos(self, i):
@@ -2378,8 +2382,8 @@ class _GridBuilder:
         # list column V = C|U (the mockup's V | divider). The per-column separators are off
         # throughout V, so this lone bar is its only divider. The counts tile is excluded — it holds
         # only the two scalar tallies (n, u), not a matrix, so a dividing rule there reads as noise.
-        if not self.show_unchanged or self.commas_x is None:
-            return
+        if not self.show_unchanged or self.commas_x is None or self.nc_shown == 0:
+            return  # no comma half (full rank, n = 0 → the whole column is U): nothing to divide
         x = self.comma_left(self.nc_shown) - V_SPLIT_GAP / 2 - SEP_W / 2  # mid-gap, between C (+ any draft) and U
         for rkey in ("quantities", "units", "scaling_factors", "vectors", "projection",
                      "mapping", "tuning", "just", "retune", "prescaling", "complexity"):
@@ -2449,9 +2453,12 @@ class _GridBuilder:
                     continue
                 if ckey == "commas" and self.show_unchanged:
                     # the consolidated V = C|U carries two counts: the nullity n over the comma half,
-                    # the unchanged-interval count u over the unchanged half (split by the C|U bar)
-                    self.cells.append(CellBox("count:commas", self.comma_left(0), self.row_y["counts"], self.nc * COL_W, ROW_H,
-                                         "count", text=f"{_count_sym('n')} = {self.state.n}"))
+                    # the unchanged-interval count u over the unchanged half (split by the C|U bar).
+                    # At full rank (n = 0) there is no comma half, so only the u count shows (the
+                    # n count would be a zero-width cell over the empty C side).
+                    if self.nc:
+                        self.cells.append(CellBox("count:commas", self.comma_left(0), self.row_y["counts"], self.nc * COL_W, ROW_H,
+                                             "count", text=f"{_count_sym('n')} = {self.state.n}"))
                     self.cells.append(CellBox("count:commas:u", self.comma_left(self.nc_shown), self.row_y["counts"], self.nu * COL_W, ROW_H,
                                          "count", text=f"{_count_sym('u')} = {self.nu}"))
                     continue
