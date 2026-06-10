@@ -3618,7 +3618,7 @@ def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 1 real comma, mapping r=2
     cells = {c.id: c for c in spreadsheet.build(base, pending_comma=[None, None, None]).cells}
     assert cells["comma:0"].text == "80/81"  # the real comma stays
-    # a draft column rides to its right: an editable "?/?" ratio and blank, red-flagged vector cells
+    # a draft column rides to its right: an editable "?/?" ratio and blank, green-flagged vector cells
     assert cells["comma:pending"].text == "?/?" and cells["comma:pending"].pending
     assert cells["comma:pending"].x > cells["comma:0"].x
     assert cells["cell:comma:0:1"].text == "" and cells["cell:comma:0:1"].pending
@@ -3640,17 +3640,17 @@ def test_a_partly_typed_pending_comma_shows_its_entered_components():
     assert all(cells[f"cell:comma:{p}:1"].pending for p in range(3))
 
 
-def test_the_pending_comma_columns_ket_marks_are_flagged_for_red():
+def test_the_pending_comma_columns_ket_marks_are_flagged_for_green():
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 1 real comma + a pending draft (col 1)
     cells = {c.id: c for c in spreadsheet.build(base, pending_comma=[None, None, None]).cells}
-    # the draft column's EBK ket marks render red (like its cells); the real comma's don't
+    # the draft column's EBK ket marks render green (like its cells); the real comma's don't
     assert cells["ebktop:vec:commas:1"].pending and cells["ebkangle:vec:commas:1"].pending
     assert not cells["ebktop:vec:commas:0"].pending
 
 
 def test_the_comma_basis_plain_text_becomes_a_two_tone_draft_box_while_pending():
     # while a comma is pending the comma-basis plain text can't be a single-colour input
-    # (it must show the committed commas black and the draft vector red), so it flips to a
+    # (it must show the committed commas black and the draft vector green), so it flips to a
     # static two-tone "ptextpending" box; the mapping keeps its editable text box, and once
     # there's no draft the comma basis returns to an editable box too.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
@@ -4118,8 +4118,8 @@ def test_empty_but_open_interest_still_offers_the_add_control():
     assert not any(c.startswith("interest_minus:") for c in cells)
 
 
-def test_adding_an_interval_of_interest_opens_a_blank_red_draft_column():
-    # mirrors the pending comma: + opens a blank, red-outlined draft column (an editable "?/?"
+def test_adding_an_interval_of_interest_opens_a_blank_green_draft_column():
+    # mirrors the pending comma: + opens a blank, green-outlined draft column (an editable "?/?"
     # ratio header over empty vector cells) the user fills in — not a pre-filled 1/1
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     cells = {c.id: c for c in spreadsheet.build(base, interest=(), pending_interest=[None, None, None]).cells}
@@ -4149,7 +4149,7 @@ def test_a_pending_interest_draft_rides_right_of_the_committed_intervals():
     assert not cells["cell:interest:0:0"].pending  # the committed interval stays black
     assert cells["cell:interest:0:1"].pending and cells["cell:interest:0:1"].text == ""
     assert cells["interest:pending"].x > cells["interest:0"].x
-    # the draft column's ket marks render red (like its cells); the real interval's don't
+    # the draft column's ket marks render green (like its cells); the real interval's don't
     assert cells["ebkangle:vec:interest:1"].pending
     assert not cells["ebkangle:vec:interest:0"].pending
 
@@ -4161,7 +4161,7 @@ def _with_held(held_vectors, pending_held=None):
                              held_vectors=held_vectors, pending_held=pending_held)
 
 
-def test_adding_a_held_interval_opens_a_blank_red_draft_column():
+def test_adding_a_held_interval_opens_a_blank_green_draft_column():
     # the held intervals column gets the same pending-draft behaviour as the commas/interest
     cells = {c.id: c for c in _with_held((), pending_held=[None, None, None]).cells}
     assert cells["held:pending"].text == "?/?" and cells["held:pending"].pending
@@ -4195,13 +4195,13 @@ def _target_count():
     return len(service.target_interval_set(service.DEFAULT_TARGET_SPEC, base.domain_basis))
 
 
-def test_adding_a_target_opens_a_blank_red_draft_column():
+def test_adding_a_target_opens_a_blank_green_draft_column():
     # the target intervals list gets the same pending-draft behaviour as the commas
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     k = _target_count()
     cells = {c.id: c for c in spreadsheet.build(base, pending_target=[None, None, None]).cells}
     assert cells["target:pending"].text == "?/?" and cells["target:pending"].pending
-    # the draft rides at index k (right of the committed targets), blank and red
+    # the draft rides at index k (right of the committed targets), blank and green
     assert all(cells[f"cell:vec:targets:{k}:{p}"].text == "" and cells[f"cell:vec:targets:{k}:{p}"].pending
                for p in range(3))
     assert cells["target:pending"].x > cells[f"target:{k - 1}"].x
@@ -4230,7 +4230,7 @@ def test_a_pending_target_draft_is_suppressed_in_all_interval_mode():
 
 def test_the_target_list_plain_text_becomes_a_two_tone_draft_box_while_pending():
     # the target vector list is an editable plain-text dual (like the comma basis), so while a
-    # target is pending it flips to a static two-tone box (committed black, draft red); with no
+    # target is pending it flips to a static two-tone box (committed black, draft green); with no
     # draft it is an editable box again
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
@@ -7599,7 +7599,7 @@ def test_domain_plus_is_element_draft_with_the_box_on():
     assert "plus" in off and "element_plus" not in off  # the + walks to the next prime
 
 
-def test_pending_element_renders_a_red_draft_column():
+def test_pending_element_renders_a_green_draft_column():
     state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
     s = settings.defaults() | {"nonstandard_domain": True}
     cells = {c.id: c for c in spreadsheet.build(state, s, pending_element="").cells}
@@ -7857,6 +7857,23 @@ def test_projection_keeps_the_comma_add_remove_controls():
     assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet.COL_W * 1.5 - spreadsheet.BTN / 2)) < 0.51
     # and a COL_W clear of the − hover zone on the last comma (so the + is actually clickable)
     assert cells["comma_plus"].x - cells["comma_minus"].x >= spreadsheet.COL_W - spreadsheet.BTN
+
+
+def test_projection_at_full_rank_shows_the_complete_unchanged_basis():
+    # removing the LAST comma → just intonation (n = 0): nothing is tempered, so P = I and the column
+    # is the FULL unchanged basis — all d primes, no comma half — NOT a wiped-out empty column.
+    s = settings.defaults()
+    s["projection"] = True
+    cells = {c.id: c for c in spreadsheet.build(service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1))), s).cells}
+    assert not any(c.startswith("cell:comma:") for c in cells)   # no commas (C empty)
+    assert [[cells[f"cell:unchanged:{p}:{j}"].text for p in range(3)] for j in range(3)] == \
+        [["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]]      # U = all d primes
+    assert [cells[f"cell:scaling:{c}"].text for c in range(3)] == ["1", "1", "1"]  # every prime unchanged
+    assert "comma_plus" in cells           # …and a + to add a first comma back
+    assert "comma_minus" not in cells      # nothing to remove
+    # no comma half, so no C|U divider and no wasted gap — U starts at the column's left and runs flush
+    assert not any(c.startswith("vsplit:") for c in cells)
+    assert cells["cell:unchanged:0:1"].x - cells["cell:unchanged:0:0"].x == spreadsheet.COL_W
 
 
 def test_unchanged_columns_have_cross_list_drag_grips():

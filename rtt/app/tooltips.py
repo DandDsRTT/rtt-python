@@ -126,6 +126,7 @@ _KIND_HELP: dict[str, str] = {
     # other grid controls
     "rangemode": "Choose how the generator's tuning range is measured — monotone or tradeoff.",
     "optimize": "Optimize the tuning to minimize damage now. Double-click to lock auto-optimize on.",
+    "scheme_button": "Back to the scheme — discard a picked or edited projection and return the tuning to the scheme's optimized result, bringing the target list back.",
     # add / remove buttons
     "plus": "Add the next prime to the domain.",
     "minus": "Remove the highest prime from the domain.",

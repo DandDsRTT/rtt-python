@@ -803,7 +803,7 @@ def test_interest_intervals_add_edit_remove():
     assert editor.interest_vectors == []  # starts empty
     editor.add_interest()
     assert editor.interest_vectors == []  # add only starts a blank draft (no committed 1/1)...
-    assert editor.pending_interest == [None, None, None]  # ...a red, blank, d-length draft
+    assert editor.pending_interest == [None, None, None]  # ...a green, blank, d-length draft
     editor.set_pending_interest([-1, 1, 0])  # fill it in -> commits 3/2
     assert editor.interest_vectors == [(-1, 1, 0)] and editor.pending_interest is None
     editor.set_interest_vectors([[-1, 1, 0], [2, 0, -1]])  # editing existing cells replaces the set
@@ -813,7 +813,7 @@ def test_interest_intervals_add_edit_remove():
 
 
 def test_adding_an_interval_of_interest_starts_a_blank_pending_draft():
-    # like add_comma: a blank, red-outlined draft column the user fills in, NOT a committed
+    # like add_comma: a blank, green-outlined draft column the user fills in, NOT a committed
     # 1/1. Starting it touches neither the document nor the undo history.
     editor = Editor()
     assert editor.pending_interest is None
@@ -858,7 +858,7 @@ def test_held_intervals_add_edit_remove():
     assert editor.held_vectors == []  # starts empty
     editor.add_held()
     assert editor.held_vectors == []  # add only starts a blank draft (no committed 1/1)...
-    assert editor.pending_held == [None, None, None]  # ...a red, blank, d-length draft
+    assert editor.pending_held == [None, None, None]  # ...a green, blank, d-length draft
     editor.set_pending_held([1, 0, 0])  # fill it in -> holds the octave
     assert editor.held_vectors == [(1, 0, 0)] and editor.pending_held is None
     editor.set_held_vectors([[1, 0, 0], [-1, 1, 0]])  # editing existing cells replaces the set
@@ -1872,7 +1872,7 @@ def test_set_domain_element_rejects_a_dependent_relabel():
 def test_add_element_draft_commits_a_valid_rational_held_just():
     ed = Editor()  # 2.3.5
     ed.add_element()
-    assert ed.pending_element == ""  # a blank red ?/? draft, not yet part of the domain
+    assert ed.pending_element == ""  # a blank green ?/? draft, not yet part of the domain
     assert ed.state.d == 3
     ed.set_pending_element("7")  # a valid independent addition commits and clears the draft
     assert ed.pending_element is None

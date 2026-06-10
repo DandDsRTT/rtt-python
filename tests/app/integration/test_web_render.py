@@ -162,6 +162,31 @@ async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> 
     assert _cell_child(user, "tuning:gen:1").value == "694.786"  # the dropdown changed the tuning
 
 
+async def test_back_to_scheme_button_reverts_a_picked_projection(user: User) -> None:
+    # the always-present "back to scheme" button on the projection tile hands a picked tuning back to
+    # the scheme + target list: pick 1/3-comma (target list hidden), click it, and the target list
+    # returns and the tuning is the scheme optimum (1/4-comma) again
+    await user.open("/")
+    _toggle(user, "presets")
+    user.find(kind=ui.checkbox, content="projection").click()
+    await user.should_see(marker="scheme:primes")          # the button is there regardless of presets
+    await user.should_see(marker="target:0")               # default: the target list shows
+    _cell_child(user, "preset:projection").set_value("1/3-comma")
+    await user.should_not_see(marker="target:0")           # deviated onto a projection → target list gone
+    _click_glyph(user, "scheme:primes")                    # back to scheme
+    await user.should_see(marker="target:0")               # the target list is restored
+    assert _cell_child(user, "preset:projection").value == "1/4-comma"  # back at the scheme optimum
+
+
+async def test_back_to_scheme_button_shows_without_the_presets_setting(user: User) -> None:
+    # "not gated by the presets setting": the button is on the projection tiles even when presets is
+    # off (so the established-projection chooser is hidden)
+    await _enable(user, "projection")
+    await user.should_see(marker="scheme:primes")
+    await user.should_see(marker="scheme:gens")
+    await user.should_not_see(marker="preset:projection")  # presets off → no chooser, but the button stays
+
+
 async def test_projection_renders_the_consolidated_v_and_scaling_factors(user: User) -> None:
     # projection also consolidates the commas + unchanged basis U into V = C|U and adds the
     # scaling-factors row λ. Assert the new cells render (and lean on the ERROR-log guard for any
@@ -718,7 +743,7 @@ async def test_editing_a_held_ratio_updates_the_interval(user: User) -> None:
     # First commit a held interval via the draft flow (fill its vector cells), then edit the ratio.
     await user.open("/")
     _toggle(user, "optimization")                    # show the optimization box's held column
-    _click_glyph(user, "held_plus")                  # start a blank red held-interval draft
+    _click_glyph(user, "held_plus")                  # start a blank green held-interval draft
     _cell_child(user, "cell:held:0:0").set_value("-1")  # fill it to 3/2 = (-1 1 0)
     _cell_child(user, "cell:held:1:0").set_value("1")
     _cell_child(user, "cell:held:2:0").set_value("0")
@@ -734,7 +759,7 @@ async def test_editing_an_interest_ratio_updates_the_interval(user: User) -> Non
     # the interval-of-interest ratio is editable, like the comma/held ratios; commit one via the
     # draft flow first (its column and the interval-vectors row are open by default)
     await user.open("/")
-    _click_glyph(user, "interest_plus")              # start a blank red draft
+    _click_glyph(user, "interest_plus")              # start a blank green draft
     _cell_child(user, "cell:interest:0:0").set_value("1")  # fill it to 6/5 = (1 1 -1)
     _cell_child(user, "cell:interest:1:0").set_value("1")
     _cell_child(user, "cell:interest:2:0").set_value("-1")
@@ -754,7 +779,7 @@ async def test_typing_a_ratio_into_a_pending_draft_fills_it(user: User) -> None:
     _toggle(user, "optimization")                    # show the held column
     _click_glyph(user, "held_plus")                  # start a blank draft -> the "?/?" head appears
     await user.should_see(marker="held:pending")
-    assert "rtt-pending" in _wrap_classes(user, "held:pending")  # the draft head reads red
+    assert "rtt-pending" in _wrap_classes(user, "held:pending")  # the draft head reads green
     assert _cell_child(user, "held:pending").value == "?/?"  # pre-filled, so you edit "?/?" not a blank box
     _cell_child(user, "held:pending").set_value("3/2")  # type the fraction into the draft head
     _commit(user, "held:pending")                       # blur commits it = (-1 1 0)
@@ -1381,7 +1406,7 @@ async def test_unheld_held_interval_renders_red_until_reoptimized(user: User) ->
     # add a held interval, make it the fifth 3/2, then hand-tune a generator off the held optimum.
     await user.open("/")
     _toggle(user, "optimization")                          # show the optimization box's held column
-    _click_glyph(user, "held_plus")                        # start a blank, red held-interval draft
+    _click_glyph(user, "held_plus")                        # start a blank, green held-interval draft
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")     # make it the fifth 3/2 = (-1 1 0)
     _cell_child(user, "cell:held:1:0").set_value("1")
@@ -1436,12 +1461,12 @@ async def test_a_held_interval_does_not_retune_the_grid_until_optimize(user: Use
 
 
 async def test_adding_an_interval_of_interest_commits_when_filled(user: User) -> None:
-    # the whole user flow: + opens a blank red draft, and filling every vector component commits
+    # the whole user flow: + opens a blank green draft, and filling every vector component commits
     # it (an interval of interest is no longer a pre-filled 1/1 — it stays a draft until complete)
     await user.open("/")
-    _click_glyph(user, "interest_plus")               # start a blank red draft
+    _click_glyph(user, "interest_plus")               # start a blank green draft
     await user.should_see(marker="cell:interest:0:0")
-    assert "rtt-pending" in _cell_child(user, "cell:interest:0:0")._classes  # the draft cell is red
+    assert "rtt-pending" in _cell_child(user, "cell:interest:0:0")._classes  # the draft cell is green
     _cell_child(user, "cell:interest:0:0").set_value("-1")  # make it 3/2 = (-1 1 0)
     _cell_child(user, "cell:interest:1:0").set_value("1")
     _cell_child(user, "cell:interest:2:0").set_value("0")
@@ -1455,7 +1480,7 @@ async def test_adding_a_target_commits_when_filled(user: User) -> None:
     # filling it materializes the spec set into an override with the new interval appended
     k = len(service.target_interval_set(service.DEFAULT_TARGET_SPEC, Editor().state.domain_basis))
     await user.open("/")
-    _click_glyph(user, "target_plus")               # start a blank red target draft
+    _click_glyph(user, "target_plus")               # start a blank green target draft
     await user.should_see(marker=f"cell:vec:targets:{k}:0")
     assert "rtt-pending" in _cell_child(user, f"cell:vec:targets:{k}:0")._classes
     _cell_child(user, f"cell:vec:targets:{k}:0").set_value("-1")  # make it 3/2 = (-1 1 0)

@@ -503,36 +503,42 @@
 .rtt-cellinput .q-field__native { text-align:center; padding:0 !important; color:#000; font-size:var(--cell-font);
             min-height:0; font-family:'Cambria',Georgia,serif; }
 .rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal { display:none !important; }
-/* a pending comma's draft cells: red-outlined and empty until the user types a valid
-   independent comma, at which point it commits and reverts to a normal black cell. The
-   typed entries are red too, matching the brackets, the "?" quantity, and the plain text */
-.rtt-cellinput.rtt-pending .q-field__control { border-color:var(--pending-color) !important; }
+/* a pending NEW-entry draft cell: a GREEN inset ring + faint green wash — the SAME highlight style
+   as the amber edit-preview and the red remove-preview below, in green to read "being created".
+   (Replaces the old red outline so the three highlight states share one visual language: green =
+   creating, amber = changing, red = deleting/invalid.) Empty until the user types a valid
+   independent comma, at which point it commits and reverts to a normal black cell. Repeated on the
+   .q-field__control because the input's opaque white fill would otherwise hide the wrap's highlight. */
+.rtt-cellinput.rtt-pending .q-field__control { box-shadow:inset 0 0 0 2px var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
 .rtt-cellinput.rtt-pending .q-field__native { color:var(--pending-color) !important; }
 /* a pending comma's "?" quantity (and the draft vector in the plain text), in the same
-   red as its draft cells/brackets */
+   green as its draft cells/brackets */
 .rtt-pending-q { color:var(--pending-color) !important; }
-/* a pending draft's editable "?/?" ratio (the wrap carries rtt-pending): red like a draft comma —
-   the input frame and the stacked ?/? fraction face — until a valid fraction (or the vector cells)
-   fills it. */
-.rtt-cell-input.rtt-pending .q-field__control { border-color:var(--pending-color) !important; }
+/* a pending draft's editable "?/?" ratio (the wrap carries rtt-pending): the same green ring + wash
+   on its input frame, with the stacked ?/? fraction face green — until a valid fraction (or the
+   vector cells) fills it. */
+.rtt-cell-input.rtt-pending .q-field__control { box-shadow:inset 0 0 0 2px var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
 .rtt-cell-input.rtt-pending .rtt-frac-num,
 .rtt-cell-input.rtt-pending .rtt-frac-den { color:var(--pending-color) !important; }
 .rtt-cell-input.rtt-pending .rtt-frac-num { border-bottom-color:var(--pending-color) !important; }
-/* the typed text reddens only WHILE FOCUSED; unfocused it stays transparent (rtt-cell-stacked)
+/* the typed text greens only WHILE FOCUSED; unfocused it stays transparent (rtt-cell-stacked)
    so the "?/?" face shows alone, not doubled over the raw input text — the bug a plain (always-on)
-   red rule caused by overriding the stacked-cell transparency with !important. */
+   colour rule caused by overriding the stacked-cell transparency with !important. */
 .rtt-cell-input.rtt-pending:focus-within .rtt-cellinput .q-field__native { color:var(--pending-color) !important; }
 /* a held interval the current tuning no longer holds just (its retuning error reads nonzero):
    the WHOLE cell renders red — every face inside the wrap, a plain input's text, and the
-   fraction bar — clearing to black when the tuning is re-optimized */
-.rtt-alert, .rtt-alert * { color:var(--pending-color) !important; }
-.rtt-alert .rtt-frac-num { border-bottom-color:var(--pending-color) !important; }
+   fraction bar — clearing to black when the tuning is re-optimized. Its own --alert-color (red),
+   split from the now-green --pending-color so "now invalid" stays red while a draft reads green. */
+.rtt-alert, .rtt-alert * { color:var(--alert-color) !important; }
+.rtt-alert .rtt-frac-num { border-bottom-color:var(--alert-color) !important; }
 /* a STACKED ratio (the held interval's editable ratiocell) is the exception: the blanket red
    above would reveal its hidden raw "num/den" on top of the stacked fraction face — doubling the
    value. Keep the input text transparent while unfocused (only the red FACE shows); reveal it red
    only while focused, the same focus-scoped handling a pending draft's "?/?" already gets. */
 .rtt-alert.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
-.rtt-alert.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--pending-color) !important; }
+.rtt-alert.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--alert-color) !important; }
 /* the edit-preview highlight: while one cell is being edited, every OTHER cell whose value that
    edit moves wears an amber ring + faint wash, so the user previews the ripple before leaving the
    cell. INSET so it never bleeds onto the densely-packed neighbours; amber to stay clear of the red
@@ -614,6 +620,25 @@
 .rtt-optimize-idle:active:not(.rtt-optimize-locked) { background:linear-gradient(#e6e6e6,#d6d6d6) !important;
             box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
 .rtt-optimize-idle:active:not(.rtt-optimize-locked) .q-btn__content { transform:none !important; }
+/* the "back to scheme" button on the projection / generator-embedding tiles — the optimize button's
+   raised face, greyed (.rtt-scheme-btn-idle) when the tuning is already scheme-driven (nothing to
+   hand back). It stays clickable when idle; only the look changes. */
+.rtt-scheme-btn { width:100% !important; min-width:0 !important; height:100% !important;
+            border:var(--cell-border) !important; border-radius:0 !important; padding:0 !important;
+            background:linear-gradient(#fafafa,#cfcfcf) !important;
+            box-shadow:inset 1px 1px 0 #fff, inset -1px -1px 1px rgba(0,0,0,0.30) !important;
+            transition:background .06s linear, box-shadow .06s linear !important; }
+.rtt-scheme-btn .q-btn__content { font-size:var(--cell-font); transition:transform .06s linear; }
+.rtt-scheme-btn:hover:not(.rtt-scheme-btn-idle) { background:linear-gradient(#fff,#dadada) !important; }
+.rtt-scheme-btn:active:not(.rtt-scheme-btn-idle) { background:linear-gradient(#c2c2c2,#e6e6e6) !important;
+            box-shadow:inset 1px 1px 2px rgba(0,0,0,0.38), inset -1px -1px 0 rgba(255,255,255,0.65) !important; }
+.rtt-scheme-btn:active:not(.rtt-scheme-btn-idle) .q-btn__content { transform:translate(1px,1px); }
+.rtt-scheme-btn-idle { cursor:default !important;
+            background:linear-gradient(#e6e6e6,#d6d6d6) !important;
+            box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
+.rtt-scheme-btn-idle .q-btn__content { color:#999 !important; }
+.rtt-scheme-btn-idle:hover, .rtt-scheme-btn-idle:active { background:linear-gradient(#e6e6e6,#d6d6d6) !important;
+            box-shadow:inset 1px 1px 0 rgba(255,255,255,0.6), inset -1px -1px 1px rgba(0,0,0,0.08) !important; }
 /* an in-tile box title (the optimization box's "optimization" header, and every titled
    control box): left-aligned at the top-left of the box (its cell otherwise centres it),
    padded off the left border. One line that overhangs to the right rather than wrapping —
