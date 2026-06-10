@@ -62,7 +62,7 @@ _PAD = 12  # px margin of #c0c0c0 around the coordinate space
 _T = "0.25s"  # transition duration
 _PANEL_W = 330  # px width the settings drawer opens to (the Show + example columns)
 _TAB_W = 40  # px width of the collapsed settings tab (the hamburger over the quarter-turned title)
-_TAB_H = 200  # px height of the collapsed tab's chrome (room for the title turned a quarter-turn)
+_TAB_H = 214  # px height of the collapsed tab's chrome (room for the title turned a quarter-turn, padded ~9px below)
 _CHROME_H = 40  # px height of the open pane's horizontal title bar (hamburger + upright title)
 _TOOLTIP_DELAY_MS = 700  # hover delay before a tooltip appears — long enough that the dense grid's
 # help waits for a deliberate rest instead of popping on every passing cursor (Quasar defaults to 0)

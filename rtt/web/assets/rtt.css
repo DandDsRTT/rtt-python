@@ -56,7 +56,7 @@
    upright ACROSS the open bar (beside it). Absolutely placed and pivoted about its top-left corner —
    which barely moves — so it reads as one title turning, not two titles swapping. Noticeably larger
    than the 13px row/column titles. */
-.rtt-sidetitle { position:absolute; transform-origin:top left; left:31px; top:38px;
+.rtt-sidetitle { position:absolute; transform-origin:top left; left:31px; top:45px;
                  transform:rotate(90deg); font-family:'Cambria',Georgia,serif; font-size:22px;
                  font-weight:bold; color:#000; white-space:nowrap; line-height:1;
                  transition:transform var(--t), left var(--t), top var(--t); }
