@@ -1541,3 +1541,28 @@ def test_tuning_projection_of_just_intonation_is_the_identity():
         ("0", "1", "0"),
         ("0", "0", "1"),
     )
+
+
+def test_unchanged_interval_basis_for_meantone_holds_2_and_5():
+    # U = nullspace(P − I): the eigenvalue-1 eigenvectors of P (the unchanged-interval
+    # basis), as integer column vectors stored rows-as-intervals like the comma basis.
+    # For quarter-comma meantone holding {2, 5}, U is exactly the held primes 2 and 5.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.unchanged_interval_basis(state) == ((1, 0, 0), (0, 0, 1))
+    assert service.unchanged_interval_ratios(state) == ("2/1", "5/1")
+
+
+def test_unchanged_interval_basis_of_just_intonation_is_every_prime():
+    # nullity 0 (no commas): P = I, so every prime is held — U spans the whole domain.
+    state = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
+    assert service.unchanged_interval_basis(state) == ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+    assert service.unchanged_interval_ratios(state) == ("2/1", "3/1", "5/1")
+
+
+def test_unchanged_interval_basis_for_a_rank_2_4d_temperament():
+    # 7-limit pajara (d=4, n=2): the two unchanged intervals are the held primes 2 and 7,
+    # and the count u = r = d − n = 2 (one unchanged direction per generator).
+    state = service.from_mapping(((2, 3, 5, 6), (0, 1, -2, -2)))
+    U = service.unchanged_interval_basis(state)
+    assert U == ((1, 0, 0, 0), (0, 0, 0, 1))
+    assert len(U) == state.r == state.d - state.n

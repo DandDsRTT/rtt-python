@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
 from fractions import Fraction
+from functools import reduce
+from math import lcm
 
 import sympy as sp
 
@@ -614,6 +616,57 @@ def tuning_projection(state: TemperamentState):
         return tuple(tuple(str(entry) for entry in row) for row in projection)
     except (ArithmeticError, ValueError, IndexError, TypeError):
         return None
+
+
+def unchanged_interval_basis(state: TemperamentState) -> Matrix | None:
+    """The unchanged-interval basis ``U = nullspace(P − I)`` — the projection ``P``'s
+    eigenvalue-1 eigenvectors, i.e. the intervals it holds exactly just (``P·u = u``).
+    Returned as ``u`` integer column vectors stored rows-as-intervals (the comma-basis
+    convention), with each vector cleared to primitive integers like a comma. Together
+    with the comma basis ``C = nullspace(P)`` it forms the projection's full eigenvector
+    basis ``V = C | U`` — the commas vanish (eigenvalue 0), the unchanged are held
+    (eigenvalue 1). Its count ``u = d − n = r`` (one unchanged direction per generator);
+    for quarter-comma meantone holding {2, 5} it is the held primes ``((1,0,0),(0,0,1))``.
+
+    Returns ``None`` on any degenerate / unsupported case, mirroring
+    :func:`tuning_projection` (whose ``P`` it is the eigenbasis of)."""
+    try:
+        d, r = state.d, state.r
+        if d <= 0 or not 0 < r <= d:
+            return None
+        held_indices = _held_prime_indices(state)
+        if len(held_indices) != r:
+            return None
+        held_rows = tuple(
+            tuple(1 if k == j else 0 for k in range(d)) for j in held_indices
+        )
+        mapping_t = Temperament(state.mapping, Variance.ROW, state.domain_basis)
+        held_t = Temperament(held_rows, Variance.COL, state.domain_basis)
+        projection = get_tempering_projection(mapping_t, held_t)
+        p_minus_i = sp.Matrix(
+            [[projection[i][j] - (1 if i == j else 0) for j in range(d)] for i in range(d)]
+        )
+        # the rational nullspace, each basis vector cleared to primitive integers (the
+        # same denominator-clearing the comma basis gets via rtt.dual._integer_null_space)
+        unchanged = tuple(
+            tuple(int(entry * reduce(lcm, (int(e.q) for e in vector), 1)) for entry in vector)
+            for vector in p_minus_i.nullspace()
+        )
+        if len(unchanged) != d - state.n:  # u must be the rank r = d − n
+            return None
+        return unchanged
+    except (ArithmeticError, ValueError, IndexError, TypeError):
+        return None
+
+
+def unchanged_interval_ratios(state: TemperamentState) -> tuple[str, ...] | None:
+    """Each unchanged interval as a ratio string (the held primes ``"2/1"``, ``"5/1"`` …) —
+    the unchanged-basis analogue of :func:`comma_ratios`. ``None`` when the basis can't be
+    formed; the empty tuple has no meaning here (a present projection always holds the rank)."""
+    unchanged = unchanged_interval_basis(state)
+    if unchanged is None:
+        return None
+    return _vectors_to_ratios(unchanged, state.domain_basis)
 
 
 def form_matrix(mapping) -> Matrix:
