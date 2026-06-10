@@ -1398,12 +1398,13 @@ class _Reconciler:
         if edit_input is not None:
             edit_input.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid))
             edit_input.on("blur", lambda _=None: self._cb.on_cell_blur())
-            # Enter commits but KEEPS focus, so it RE-ARMS the edit-preview (clears the ring the commit's
-            # render painted and re-captures the just-committed grid as the new baseline) rather than
-            # ending it like blur. Without this, the pre-edit baseline would be left stale and on_cell_focus
-            # never re-fires (focus is retained), so the preview would work only on the first edit until
-            # the cell is left and re-entered (or the tab refreshed).
-            edit_input.on("keydown.enter", lambda _=None: self._cb.on_cell_enter())
+            # Enter just BLURS the input (client-side) — it does not commit on its own. Blurring routes
+            # Enter through the proven blur path: the cell's own blur handler commits the value and
+            # on_cell_blur ends the edit-preview. This matches the expected UX (the cursor leaves the box)
+            # and, crucially, avoids the bug where committing + re-rendering an input's value WHILE it
+            # stays focused desynced it so the browser stopped firing on_change — leaving the live preview
+            # working only on the first edit until the cell was left and re-entered (or the tab refreshed).
+            edit_input.on("keydown.enter", js_handler="(e) => e.target.blur()")
         # every editable numeric input steps by its _WHEEL_STEPS amount on a wheel notch while
         # focused. The listener rides the wrap (so a scroll anywhere in the cell counts) and its
         # js_handler only emits when the cell holds focus, so an unfocused scroll just pages the grid
@@ -1666,8 +1667,7 @@ class _Reconciler:
         # Enter / blur — like the ratio + domain-element cells — rather than re-solving on every keystroke
         inp = ui.input(on_change=lambda e: self._cb.on_mapping_change(preview=True)) \
             .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_mapping_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_mapping_change())
+        inp.on("blur", lambda _=None: self._cb.on_mapping_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_row_target(wrap, cb.gen)  # drop a dragged generator row onto this row to combine
 
@@ -1679,8 +1679,7 @@ class _Reconciler:
         # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
         inp = ui.input(on_change=lambda e: self._cb.on_comma_change(preview=True)) \
             .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_comma_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_comma_change())
+        inp.on("blur", lambda _=None: self._cb.on_comma_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_col_target(wrap, "comma", cb.comma)  # drop a dragged comma onto this one to combine
 
@@ -1698,8 +1697,7 @@ class _Reconciler:
         # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
         inp = ui.input(on_change=lambda e: self._cb.on_interest_change(preview=True)) \
             .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_interest_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_interest_change())
+        inp.on("blur", lambda _=None: self._cb.on_interest_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_col_target(wrap, "interest", cb.comma)
 
@@ -1708,8 +1706,7 @@ class _Reconciler:
         # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
         inp = ui.input(on_change=lambda e: self._cb.on_held_change(preview=True)) \
             .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_held_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_held_change())
+        inp.on("blur", lambda _=None: self._cb.on_held_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_col_target(wrap, "held", cb.comma)
 
@@ -1718,8 +1715,7 @@ class _Reconciler:
         # PREVIEW on type, COMMIT on Enter/blur (see _build_mapping)
         inp = ui.input(on_change=lambda e: self._cb.on_target_cells_change(preview=True)) \
             .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_target_cells_change())
-        inp.on("keydown.enter", lambda _=None: self._cb.on_target_cells_change())
+        inp.on("blur", lambda _=None: self._cb.on_target_cells_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._arm_col_target(wrap, "target", cb.comma)
 
@@ -1861,8 +1857,7 @@ class _Reconciler:
         wrap.classes("rtt-cell-input rtt-cell-stacked")
         commit = lambda _=None, cid=cb.id: self._cb.on_ratio_change(cid)
         inp = ui.input().props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", commit)
-        inp.on("keydown.enter", commit)
+        inp.on("blur", commit)  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
         self._ratio(cb, approx=False, overlay=True)
 
@@ -1879,8 +1874,7 @@ class _Reconciler:
         commit = lambda _=None, cid=cb.id: self._cb.on_element_change(cid)
         inp = ui.input(on_change=lambda _=None, cid=cb.id: self._cb.on_element_preview(cid)) \
             .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", commit)
-        inp.on("keydown.enter", commit)
+        inp.on("blur", commit)  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
 
     def _build_elementcell(self, cb, wrap):
@@ -3265,23 +3259,6 @@ def index() -> None:
         rec._wheel_cid = None
         rec.clear_preview()
 
-    def on_cell_enter():
-        # Enter commits an editable cell but KEEPS the cursor in it (unlike blur). The commit handler has
-        # already applied + re-rendered the value (ringing the moved cells against the pre-edit baseline);
-        # this strips that ring and RE-ARMS the edit-preview against the just-committed grid, so a further
-        # edit in the same still-focused cell previews again. Without re-arming, the baseline would be
-        # stale and on_cell_focus never re-fires (focus is retained), so no later edit would ring until
-        # the cell is left and re-entered — the "preview works only once until I refresh" bug. If the
-        # commit rebuilt the cell (a kind flip — render's guard nulled _editing), there is nothing to
-        # re-arm, so just clear.
-        rec.clear_preview()
-        if rec._editing is not None and rec._editing in rec.els:
-            rec.preview_baseline = last_lay[0]   # the just-committed grid is the new diff reference
-            rec.preview_source = rec._editing
-        else:
-            rec.preview_baseline = None
-            rec.preview_source = None
-
     # drag-to-combine preview: while a row/interval is dragged onto another, show what the drop would
     # do — ring the cells it moves and show their would-be values — by applying the combine to a
     # snapshot and reverting it when the hover moves on or the drag ends. Reuses the edit-preview
@@ -3593,7 +3570,6 @@ def index() -> None:
         gentuning_hover=gentuning_hover,
         gentuning_unhover=gentuning_unhover,
         on_cell_blur=on_cell_blur,
-        on_cell_enter=on_cell_enter,
         on_cell_focus=on_cell_focus,
         on_comma_change=on_comma_change,
         on_drag_start=on_drag_start,
