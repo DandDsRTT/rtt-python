@@ -118,6 +118,10 @@ CAPTIONS = {
     # generators as fractional vectors. Rides the projection row band in the gens columns,
     # beside P (which it multiplies the mapping into: P = GM). Same projection sub-control.
     ("projection", "gens"): "generator embedding",
+    # the scaling factors λ = diag(λ) — the projection's eigenvalue list over the
+    # consolidated V = C|U column (0 per comma, 1 per unchanged interval); toggled with
+    # projection, one row above the interval-vectors row
+    ("scaling_factors", "commas"): "scaling factor (eigenvalue) list",
     ("tuning", "gens"): "generator tuning map",
     ("tuning", "primes"): "tuning map",
     ("tuning", "commas"): "tempered comma basis interval size list (made to vanish!)",
@@ -207,6 +211,7 @@ SYMBOLS = {
     ("ss_mapping", "held"): f"𝑀ₛ→{SUBSCRIPT_L}H",
     ("ss_mapping", "targets"): f"Y{SUBSCRIPT_L}",     # Y_L = M_s→L·T
     ("ss_mapping", "detempering"): f"𝑀ₛ→{SUBSCRIPT_L}D",
+    ("scaling_factors", "commas"): "λ",  # the eigenvalue list diag(λ) over V
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -287,6 +292,8 @@ ROW_LABEL_LETTERS = {
 }
 ROW_LABELED_TILES = frozenset(ROW_LABEL_LETTERS)
 COL_LABEL_LETTERS = {
+    # the scaling factors λ = diag(λ): one eigenvalue λᵢ per V sub-column (commas then unchanged)
+    ("scaling_factors", "commas"): "λ",
     # interval vectors row — d-tall column-vector matrices
     ("vectors", "commas"): "𝐜",
     ("vectors", "targets"): "𝐭",
@@ -765,6 +772,7 @@ TILES = (
     ("block:mapping", "mapping", "primes"),
     ("block:projection", "projection", "primes"),
     ("block:projection_embedding", "projection", "gens"),  # the generator embedding G, beside P
+    ("block:scaling_factors", "scaling_factors", "commas"),  # the λ list over V (projection on)
     ("block:mapped_comma", "mapping", "commas"),
     ("block:mapped", "mapping", "targets"),
     ("block:tuning:gens", "tuning", "gens"),
