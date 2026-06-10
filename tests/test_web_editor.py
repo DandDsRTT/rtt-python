@@ -1902,41 +1902,50 @@ def test_remove_element_cancels_the_draft():
     assert ed.pending_element is None
 
 
-def test_projection_scheme_defaults_to_quarter_comma_and_resolves_to_auto_pick():
-    # a fresh editor is meantone; with nothing explicitly chosen the established-projection
-    # chooser shows quarter-comma (the auto-picked default's matching name) and the held
-    # override is None — so P/G use the auto-pick basis.
+def test_established_projection_is_none_for_the_default_under_held_tuning():
+    # a fresh editor is meantone on TILT minimax-U, which holds nothing rational — so it is NOT a
+    # rational projection, and the established-projection chooser shows "-" (None), not a
+    # fabricated quarter-comma. (The held basis is empty.)
     ed = Editor()
-    assert ed.projection_scheme is None
-    assert ed.displayed_projection_scheme_name == "quarter-comma"
-    assert ed.projection_held is None
+    assert ed.held_basis_ratios == ()
+    assert ed.displayed_projection_scheme_name is None
 
 
-def test_set_projection_scheme_picks_a_named_tuning_and_is_undoable():
+def test_set_established_projection_holds_the_basis_and_resolves_the_tuning():
     ed = Editor()
-    ed.set_projection_scheme("third-comma")
-    assert ed.projection_scheme == "third-comma"
+    ed.set_established_projection("third-comma")
+    # the held column now holds third-comma's full rational basis, and the chooser shows it
+    assert ed.held_basis_ratios == ("2/1", "6/5")
     assert ed.displayed_projection_scheme_name == "third-comma"
-    assert ed.projection_held == ("2/1", "6/5")  # drives P = GM for both the P and G tiles
+    # the tuning actually re-solved to third-comma (1200, 694.786) — it CHANGED 𝒈
+    assert [round(x, 3) for x in ed.generator_tuning] == [1200.0, 694.786]
+    # a fully-held tuning isn't the bare scheme's optimum, so the scheme chooser drops to "-"
+    assert ed.displayed_tuning_scheme_name is None
+
+
+def test_set_established_projection_is_undoable():
+    ed = Editor()
+    ed.set_established_projection("quarter-comma")
+    assert ed.displayed_projection_scheme_name == "quarter-comma"
+    assert [round(x, 3) for x in ed.generator_tuning] == [1200.0, 696.578]
     ed.undo()
-    assert ed.projection_scheme is None
+    assert ed.held_basis_ratios == ()
+    assert ed.displayed_projection_scheme_name is None
+
+
+def test_established_projection_reflects_a_hand_typed_held_basis():
+    # the chooser is just a view of the held basis — typing {2/1, 5/4} into the held column shows
+    # quarter-comma without ever touching the dropdown
+    ed = Editor()
+    v = lambda r: tuple(service.interval_vector(r, ed.state.d, ed.state.domain_basis))
+    ed.set_held_vectors([v("2/1"), v("5/4")])
     assert ed.displayed_projection_scheme_name == "quarter-comma"
 
 
-def test_projection_scheme_round_trips_through_serialize():
+def test_established_projection_round_trips_via_the_held_column():
+    # there is no separate projection field — the choice rides the held column, which serializes
     ed = Editor()
-    ed.set_projection_scheme("Pythagorean")
+    ed.set_established_projection("Pythagorean")
     reloaded = Editor()
     reloaded.load(ed.serialize())
-    assert reloaded.projection_scheme == "Pythagorean"
     assert reloaded.displayed_projection_scheme_name == "Pythagorean"
-
-
-def test_projection_scheme_falls_back_when_the_temperament_has_no_established_tuning():
-    # carrying a meantone pick over to augmented (no established rational tuning) shows the
-    # placeholder and resolves to the auto-pick default — never a stale, inapplicable basis.
-    ed = Editor()
-    ed.set_projection_scheme("third-comma")
-    ed.state = service.from_comma_basis(((7, 0, -3),))  # augmented
-    assert ed.displayed_projection_scheme_name is None
-    assert ed.projection_held is None

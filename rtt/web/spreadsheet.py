@@ -686,7 +686,7 @@ class _GridBuilder:
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
-                 displayed_tuning_name=None, projection_held=None, displayed_projection_name=None):
+                 displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None):
         self.prev_ids = prev_ids or {}
         self.state = state
         self.settings = settings
@@ -713,11 +713,12 @@ class _GridBuilder:
         # app._build_preset's on-list check. None (a bare spreadsheet.build) keeps the chooser a
         # dropdown; the live page always passes it (see Editor.layout).
         self.displayed_tuning_name = displayed_tuning_name
-        # the established projection / embedding chosen in that chooser: the rational unchanged
-        # intervals (ratio strings) driving P = GM and G, or None for the auto-picked default
-        # (editor.projection_held); and the NAME the chooser shows (editor.displayed_projection_
-        # scheme_name), threaded in to match app._build_preset's on-list check like the tuning name.
-        self.projection_held = projection_held
+        # the tuning's held-interval basis (ratio strings: the scheme's structural held plus the
+        # held column — editor.held_basis_ratios) drives the projection P = GM, the embedding G and
+        # the unchanged basis U; whatever it doesn't pin (h < r) is dashed out. The NAME the
+        # established-projection chooser shows (editor.displayed_projection_scheme_name) is threaded
+        # in to match app._build_preset's on-list check, like the tuning name.
+        self.held_basis_ratios = held_basis_ratios
         self.displayed_projection_name = displayed_projection_name
 
         if self.settings is None:
@@ -935,10 +936,10 @@ class _GridBuilder:
         # +/−/drag and the pending draft (a structural edit would change the rank, hence U). Gated
         # on there being a comma to merge with (n > 0). Its mapped / sized / complexity twins are
         # precomputed so the V value tiles read one geometry, exactly as the comma column's do.
-        # held=self.projection_held ties U to the SAME established projection P/G use, so the
-        # V = C|U column and the scaling row track the established-projection chooser too (U is, by
-        # definition, the eigenbasis of the DISPLAYED P).
-        self.unchanged_basis = (service.unchanged_interval_basis(self.state, held=self.projection_held)
+        # the unchanged basis U from the tuning's held-interval basis: r columns, the h held
+        # intervals (known) padded with None (dashed) for what the tuning doesn't pin. So the V =
+        # C|U column and the scaling row track the held intervals / established-projection chooser.
+        self.unchanged_basis = (service.unchanged_interval_basis(self.state, self.held_basis_ratios)
                                 if (show_temp and show_tuning and self.settings["projection"] and self.state.n) else None)
         self.show_unchanged = self.unchanged_basis is not None
         self.nu = len(self.unchanged_basis) if self.show_unchanged else 0
@@ -1116,9 +1117,9 @@ class _GridBuilder:
         # drops rather than rendering. Computed only when both the tuning boxes and the projection
         # toggle are on. Resolved here, ahead of the row-band list, so the band can gate on it.
         show_projection = show_tuning and self.settings["projection"]
-        self.projection_matrix = (service.tuning_projection(self.state, held=self.projection_held)
+        self.projection_matrix = (service.tuning_projection(self.state, self.held_basis_ratios)
                                   if show_projection else None)
-        self.embedding_matrix = (service.tuning_embedding(self.state, held=self.projection_held)
+        self.embedding_matrix = (service.tuning_embedding(self.state, self.held_basis_ratios)
                                  if show_projection else None)
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
@@ -4043,11 +4044,11 @@ def build(state, settings=None, collapsed=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
           pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
           pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
-          displayed_tuning_name=None, projection_held=None, displayed_projection_name=None) -> Layout:
+          displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
         optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
         prev_ids, pending_element, nonprime_approach, superspace_generator_tuning,
-        displayed_tuning_name, projection_held, displayed_projection_name,
+        displayed_tuning_name, held_basis_ratios, displayed_projection_name,
     ).layout()

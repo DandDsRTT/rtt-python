@@ -170,30 +170,34 @@ def test_prescaler_options_gate_the_alternatives_behind_the_setting():
 
 # --- established projection / embedding chooser ---
 
-def test_established_projections_lists_the_three_meantone_tunings():
-    # the only established rational tunings the guide documents — quarter-comma (pure 5/4),
-    # third-comma (pure 6/5) and the Pythagorean (0-comma) tuning (pure 3/2)
+_MEANTONE_FAMILY = {
+    "Pythagorean": ("2/1", "3/2"),
+    "1/7-comma": ("2/1", "135/128"),
+    "1/6-comma": ("2/1", "45/32"),
+    "1/5-comma": ("2/1", "15/8"),
+    "2/9-comma": ("2/1", "75/64"),
+    "quarter-comma": ("2/1", "5/4"),
+    "2/7-comma": ("2/1", "25/24"),
+    "third-comma": ("2/1", "6/5"),
+}
+
+
+def test_established_projections_list_the_meantone_comma_fraction_family():
+    # the whole fractional-comma family is rational (n fifths reach a rational), so all eight
+    # named tunings are offered — quarter-comma is no longer special
     meantone = service.from_mapping(INITIAL_MAPPING)
-    assert presets.established_projections(meantone) == {
-        "quarter-comma": ("2/1", "5/4"),
-        "third-comma": ("2/1", "6/5"),
-        "Pythagorean": ("2/1", "3/2"),
-    }
+    assert presets.established_projections(meantone) == _MEANTONE_FAMILY
 
 
 def test_projection_options_are_value_equals_label_for_meantone():
     meantone = service.from_mapping(INITIAL_MAPPING)
-    assert presets.projection_options(meantone) == {
-        "quarter-comma": "quarter-comma",
-        "third-comma": "third-comma",
-        "Pythagorean": "Pythagorean",
-    }
+    assert presets.projection_options(meantone) == {name: name for name in _MEANTONE_FAMILY}
 
 
 def test_projection_options_match_any_equivalent_meantone_form():
     # identify keys off the canonical comma signature, so the octave-twelfth form offers them too
     octave_twelfth = service.from_mapping(((1, 0, -4), (0, 1, 4)))
-    assert set(presets.projection_options(octave_twelfth)) == {"quarter-comma", "third-comma", "Pythagorean"}
+    assert set(presets.projection_options(octave_twelfth)) == set(_MEANTONE_FAMILY)
 
 
 def test_projection_options_empty_for_a_preset_without_established_tunings():
@@ -210,24 +214,30 @@ def test_projection_options_empty_for_a_non_preset_temperament():
 
 def test_projection_held_ratios_resolves_a_chosen_tuning_else_none():
     meantone = service.from_mapping(INITIAL_MAPPING)
-    assert presets.projection_held_ratios(meantone, "third-comma") == ("2/1", "6/5")
-    assert presets.projection_held_ratios(meantone, None) is None      # default → auto-pick
-    assert presets.projection_held_ratios(meantone, "bogus") is None   # unknown → auto-pick
+    assert presets.projection_held_ratios(meantone, "2/7-comma") == ("2/1", "25/24")
+    assert presets.projection_held_ratios(meantone, None) is None       # nothing chosen
+    assert presets.projection_held_ratios(meantone, "bogus") is None    # not an option
 
 
-def test_identify_established_projection_shows_quarter_comma_by_default():
-    # meantone's auto-picked default projection coincides with quarter-comma, so with nothing
-    # explicitly chosen the chooser shows that name (not a bare placeholder)
+def test_identify_established_projection_matches_the_current_held_basis():
+    # the chooser shows whichever named tuning the current held basis realises (by projection)
     meantone = service.from_mapping(INITIAL_MAPPING)
-    assert presets.identify_established_projection(meantone, None) == "quarter-comma"
+    assert presets.identify_established_projection(meantone, ("2/1", "5/4")) == "quarter-comma"
+    assert presets.identify_established_projection(meantone, ("2/1", "6/5")) == "third-comma"
+    # a span-equivalent basis still matches (5/3 spans the same as 6/5 with the octave)
+    assert presets.identify_established_projection(meantone, ("2/1", "5/3")) == "third-comma"
 
 
-def test_identify_established_projection_honours_an_explicit_pick():
+def test_identify_established_projection_is_none_when_not_a_full_projection():
+    # an under-held tuning (held octave only, or nothing) isn't a rational projection → placeholder
     meantone = service.from_mapping(INITIAL_MAPPING)
-    assert presets.identify_established_projection(meantone, "third-comma") == "third-comma"
+    assert presets.identify_established_projection(meantone, ("2/1",)) is None
+    assert presets.identify_established_projection(meantone, ()) is None
 
 
-def test_identify_established_projection_drops_a_pick_that_no_longer_applies():
-    # a name carried over to a temperament that has no established tunings shows the placeholder
-    augmented = service.from_comma_basis(((7, 0, -3),))
-    assert presets.identify_established_projection(augmented, "quarter-comma") is None
+def test_identify_established_projection_is_none_for_an_unnamed_rational_tuning():
+    # a full rational hold that matches no named tuning still shows the placeholder (holding the
+    # minor whole tone 10/9 is a perfectly good rational meantone tuning, just not a named one)
+    meantone = service.from_mapping(INITIAL_MAPPING)
+    assert service.tuning_projection(meantone, ("2/1", "10/9")) is not None  # it IS rational
+    assert presets.identify_established_projection(meantone, ("2/1", "10/9")) is None  # but unnamed

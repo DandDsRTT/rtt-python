@@ -3453,7 +3453,7 @@ def index() -> None:
         if cid.startswith("preset:prescaler"):
             return lambda: editor.set_complexity_prescaler(value)
         if cid.startswith("preset:projection"):  # base (P) + the embedding (G) copy — one selection
-            return lambda: editor.set_projection_scheme(value)
+            return lambda: editor.set_established_projection(value)
         if cid == "control:complexity":
             if value == "custom":  # the off-preset display state — selecting it is a no-op, so is a hover
                 return None

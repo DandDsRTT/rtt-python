@@ -240,19 +240,27 @@ def tuning_scheme_options(all_interval: bool, include_alternatives: bool, weight
 # generally holds nothing rational and has no rational projection — so the chooser is empty for
 # them, and that is the common case.
 #
-# Provenance — every entry is sourced from the snapshotted D&D guide AND computationally verified
-# (rational, idempotent P, full rank r, non-degenerate, holds exactly its stated intervals).
-# Meantone's three are the guide's worked examples: quarter-comma (pure 5/4) and third-comma
-# (pure 6/5) in ``guide/other/Projection``, and the Pythagorean (0-comma) tuning holding the pure
-# fifth in ``guide/other/Generator embedding optimization``. The general fractional-comma family
-# (1/5-, 1/6-, 2/7-comma …) is irrational and is excluded; web-only "pure-X" tunings of other
-# temperaments (Magic, Helmholtz, Superpyth, Compton) lacked a solid named-tuning citation and a
-# degenerate candidate (pajara's 2/1 & 7/5) was rejected, so none are included.
+# Provenance — every entry is computationally verified (idempotent rational P, full rank r,
+# non-degenerate, holds exactly its stated intervals, and reproduces the named comma fraction to
+# the digit). KEY POINT: a fractional-comma meantone IS a rational projection even though its
+# FIFTH is an irrational root — because n fifths reach a RATIONAL interval ((3/2)ⁿ/(81/80)ᵐ for the
+# m/n-comma tuning), and THAT is the held unchanged interval. The whole comma-fraction family
+# therefore qualifies. Historical names: Pythagorean (0-comma, pure fifth); quarter-comma (Pietro
+# Aron, 1523, pure 5/4); 2/7-comma (Zarlino, 1558); third-comma (Salinas, 1577, pure 6/5);
+# 1/6-comma (Silbermann); 2/9-comma (Smith, soft attribution); 1/5- and 1/7-comma (standard
+# comma-fraction names). Ordered by tempering amount (the fifth flattening from pure). No other
+# preset temperament has a literature-named rational tuning (a thorough adversarial search found
+# none; the projection is simply dashed out for them — the common case).
 ESTABLISHED_PROJECTIONS: dict[str, dict[str, tuple[str, ...]]] = {
     "5:Meantone": {
-        "quarter-comma": ("2/1", "5/4"),  # pure major third
-        "third-comma": ("2/1", "6/5"),    # pure minor third
-        "Pythagorean": ("2/1", "3/2"),    # pure fifth (the 0-comma limit; extreme but rational)
+        "Pythagorean": ("2/1", "3/2"),       # 0-comma: pure fifth
+        "1/7-comma": ("2/1", "135/128"),
+        "1/6-comma": ("2/1", "45/32"),       # Silbermann
+        "1/5-comma": ("2/1", "15/8"),
+        "2/9-comma": ("2/1", "75/64"),       # Smith
+        "quarter-comma": ("2/1", "5/4"),     # Aron: pure major third
+        "2/7-comma": ("2/1", "25/24"),       # Zarlino
+        "third-comma": ("2/1", "6/5"),       # Salinas: pure minor third
     },
 }
 
@@ -264,7 +272,7 @@ def established_projections(state) -> dict[str, tuple[str, ...]]:
     hold (one interval mapping to a fraction of another's image) is dropped, never offered."""
     candidates = ESTABLISHED_PROJECTIONS.get(identify(state), {})
     return {name: ratios for name, ratios in candidates.items()
-            if service.tuning_projection(state, held=ratios) is not None}
+            if service.tuning_projection(state, ratios) is not None}
 
 
 def projection_options(state) -> dict[str, str]:
@@ -275,27 +283,23 @@ def projection_options(state) -> dict[str, str]:
     return {name: name for name in established_projections(state)}
 
 
-def projection_held_ratios(state, scheme: str | None) -> tuple[str, ...] | None:
-    """The rational unchanged intervals that drive ``P`` and ``G`` for the chosen established
-    tuning ``scheme`` (a value from :func:`projection_options`), or ``None`` when nothing valid
-    is chosen — the projection then falls back to its auto-picked default basis."""
-    return established_projections(state).get(scheme) if scheme else None
+def projection_held_ratios(state, name: str | None) -> tuple[str, ...] | None:
+    """The rational held intervals of the established tuning ``name`` (a value from
+    :func:`projection_options`) — the basis the chooser writes into the held column to re-solve
+    the tuning — or ``None`` when ``name`` is not a current option."""
+    return established_projections(state).get(name) if name else None
 
 
-def identify_established_projection(state, scheme: str | None) -> str | None:
-    """The chooser value to display: the explicitly-chosen ``scheme`` when it is still a valid
-    option, else the established tuning whose projection coincides with the current default — so
-    a temperament whose auto-picked default IS a named rational tuning (meantone's default is
-    quarter-comma) shows that name with nothing chosen. ``None`` (the placeholder) when neither
-    a valid pick nor a default match exists."""
-    options = established_projections(state)
-    if scheme in options:
-        return scheme
-    default = service.tuning_projection(state)
-    if default is None:
+def identify_established_projection(state, held_ratios) -> str | None:
+    """The named established tuning the current held basis realises — the chooser's displayed
+    value — found by matching its projection. ``None`` (the placeholder) when the tuning isn't a
+    full rational projection (``P`` dashed, so the held basis is under-rank) or matches no named
+    tuning. ``held_ratios`` is the tuning's held-interval basis (scheme held + held column)."""
+    current = service.tuning_projection(state, held_ratios)
+    if current is None:
         return None
-    return next((name for name, ratios in options.items()
-                 if service.tuning_projection(state, held=ratios) == default), None)
+    return next((name for name, ratios in established_projections(state).items()
+                 if service.tuning_projection(state, ratios) == current), None)
 
 
 @functools.lru_cache(maxsize=1)
