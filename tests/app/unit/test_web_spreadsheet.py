@@ -120,6 +120,45 @@ def test_no_title_overhang_reports_zero():
     assert lay.right_overhang == 0
 
 
+def _title_edges(lay):
+    # each column header's (key, title-left, title-right) for its unwrapped title centred on its
+    # gridline, left to right
+    return [(c.id.split("header:", 1)[1],
+             c.x + c.w / 2 - spreadsheet._title_w(c.text) / 2,
+             c.x + c.w / 2 + spreadsheet._title_w(c.text) / 2)
+            for c in sorted((c for c in lay.cells if c.kind == "colheader"), key=lambda c: c.x)]
+
+
+def test_adjacent_column_titles_keep_a_margin():
+    # Titles render unwrapped and centred on their gridline, overhanging a content-hugged column.
+    # When two narrow columns sit side by side, the gap between them widens so the two overhangs
+    # always stay >= TITLE_MARGIN apart — a long title (the "other intervals of interest" header)
+    # can never overspill into its neighbour's title. The worst case is the empty held-intervals
+    # column right beside the empty interest column, with the wide target-intervals column that
+    # normally shields interest hidden: before the fix interest's title started 54px LEFT of where
+    # held's title ended (the "o" of "other" left of the "s" of held's "intervals").
+    s = settings.defaults()
+    s["optimization"] = True  # show the (narrow) held-intervals column, immediately left of interest
+    lay = spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s, targets_in_use=False)
+    edges = _title_edges(lay)
+    assert [k for k, _l, _r in edges][-2:] == ["held", "interest"]  # the colliding pair, now adjacent
+    for (lk, _ll, lr), (rk, rl, _rr) in zip(edges, edges[1:]):
+        assert rl - lr >= spreadsheet.TITLE_MARGIN - 0.5, f"{lk}->{rk} titles only {rl - lr:.1f}px apart"
+
+
+def test_title_clearance_leaves_shielded_columns_untouched():
+    # The gap only widens on an ACTUAL title collision: where a column's neighbour is wide (its
+    # title well inside its footprint) the clearance term goes slack and the gap stays GAP, so the
+    # common layouts are unchanged. In the default view the wide target-intervals column sits left
+    # of interest, so interest keeps its plain GAP and narrow footprint (and still overhangs the
+    # grid's right edge — right_overhang > 0).
+    lay = _layout()
+    interest = {c.id: c for c in lay.cells}["header:interest"]
+    targets = {c.id: c for c in lay.cells}["header:targets"]
+    assert interest.x == targets.x + targets.w + spreadsheet.GAP  # plain GAP, not widened
+    assert lay.right_overhang > 0  # interest's title still overhangs the right edge (pane widens to show it)
+
+
 def _assert_freeze_partition(lay):
     # the frozen bands hold the titles + toggles AND the branching ± / drag-grip controls; every
     # value cell and grey value tile clears both bands, so the renderer's frozen panes never mask

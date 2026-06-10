@@ -28,6 +28,10 @@ COL_W = 30  # px per value column; == ROW_H so matrix cells are squares that til
 # the column (a shared-border grid, per the mockup); cents stack int-over-frac to fit
 GAP = 20  # px between row/column groups (the visible gap between two grey tiles is GAP - 2*PAD)
 PAD = 4  # px a block extends around its cells
+TITLE_MARGIN = 8  # min px kept between two adjacent columns' centred, unwrapped titles: a column's
+# title overhangs its content-hugged footprint into the gaps (see the col-layout loop), so the gap
+# to its neighbour widens by however much keeps the two overhanging titles this far apart — no title
+# can overspill into a neighbour's, however narrow either column is
 WASH_PAD = GAP / 2  # px a colorization wash extends around its cells — wide enough that
 # adjacent washed tiles' rects meet across the gap, so the colour reads as one
 # continuous band behind the grey tiles (which overhang only by the smaller PAD)
@@ -1281,10 +1285,11 @@ class _GridBuilder:
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
             ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning and self.targets_in_use, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
-            # padding. Its long two-line title needs more room, so the column's *footprint*
-            # is floored at the title width (see the loop below) and the narrow content is
-            # centred within it: the title centres over the whole column on its gridline, and
-            # the tiles centre on that same gridline. The board height is independent of mi.
+            # padding. Its long two-line title is wider than that, so (like the spine titles) it
+            # overhangs the narrow footprint, centred on the column gridline above the tiles, which
+            # centre on the same gridline. The gap to its left neighbour widens to keep that overhang
+            # clear of the neighbour's title (the gap rule in the loop below). The board height is
+            # independent of mi.
             ("interest", 2 * BRACKET_W + self.mi_shown * COL_W, show_interest, True),
         )
         # A fold-toggle node column sits between the row-label gutter and the content
@@ -1344,11 +1349,14 @@ class _GridBuilder:
             key for key, _h, present, _c, _l in row_bands if present and key in CAPTIONED_ROWS)
 
         # each column hugs its content (a long caption widens the footprint), the columns laid
-        # left to right a GAP apart. The element +/− controls no longer ride inside these tiles
-        # (they sit up on the fan's top bus, see plus_stub_x), so no column reserves overhang for one.
+        # left to right a GAP apart — widened to TITLE_MARGIN where two columns' overhanging titles
+        # would otherwise collide (see the gap rule at the foot of the loop). The element +/−
+        # controls no longer ride inside these tiles (they sit up on the fan's top bus, see
+        # plus_stub_x), so no column reserves overhang for one.
         self.col_x, self.col_w, self.content_w, self.col_collapsible, self.open_col_w = {}, {}, {}, {}, {}
         x = content_x0
         first_present = True  # the leftmost column carries a title-clearance floor (see below)
+        prev_title_oh = None  # previous present column's title half-overhang (signed); None before the first
         for key, natural, present, collapsible in col_bands:
             if not present:
                 continue
@@ -1369,8 +1377,9 @@ class _GridBuilder:
             # it does NOT otherwise reserve room for a wider title (the leftmost column above is the
             # one exception). A title wider than its column (the "quantities"/"units" spines, the long
             # interest header) overhangs it instead, rendered without wrapping and centred on the
-            # column gridline. The grey tile fills the footprint, with content centred within it (see
-            # content_x).
+            # column gridline; the gap to the neighbour then widens to keep the two titles clear (the
+            # rule at the foot of the loop). The grey tile fills the footprint, with content centred
+            # within it (see content_x).
             if collapsed_col:
                 # Folded to a title strip — sized to read the (widest line of the) title, but capped
                 # at the open footprint so collapsing never WIDENS a column: one already narrower than
@@ -1380,9 +1389,21 @@ class _GridBuilder:
                 self.content_w[key] = natural
                 self.col_w[key] = hug_w  # the footprint widens for a long caption
             self.col_collapsible[key] = collapsible
+            # A title renders unwrapped, centred on its column gridline, so it overhangs a
+            # content-hugged column symmetrically by half_oh each side (negative when it fits within
+            # the column). Seat each column a GAP from its left neighbour, but open the gap wider where
+            # the two columns' overhanging titles would otherwise land within TITLE_MARGIN of each
+            # other — so a long title (the interest header) can never overspill into a neighbour's,
+            # however narrow either column is. The widening only kicks in on an actual collision: a
+            # wide neighbour (its title well inside, half_oh negative) feeds slack in and the gap stays
+            # GAP, leaving the common layouts untouched.
+            half_oh = _title_w(self.col_header[key]) / 2 - self.col_w[key] / 2
+            if prev_title_oh is not None:
+                x += max(GAP, TITLE_MARGIN + prev_title_oh + half_oh)
             self.col_x[key] = x
-            x += self.col_w[key] + GAP
-        self.total_w = x
+            x += self.col_w[key]
+            prev_title_oh = half_oh
+        self.total_w = x + GAP
 
         # Content is centred within each footprint: the margin is (footprint − content) / 2,
         # zero for the common case (content fills the column) and positive only where a long
