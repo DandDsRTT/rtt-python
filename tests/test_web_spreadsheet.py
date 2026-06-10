@@ -5325,7 +5325,7 @@ def test_held_interval_held_to_display_precision_is_not_flagged():
     # milli-cent residual that still reads 0.000 — the interval is held to display precision, so
     # NOT red. The red follows the shown retuning error, never hidden float noise.
     cells = _held_with_tuning((1200.0, 701.955))
-    assert cells["retune:held:0"].text in ("0.000", "-0.000")  # reads as zero error
+    assert cells["retune:held:0"].text == "0.000"  # reads as zero error (never a signed -0.000)
     for cid in _held_value_cells():
         assert not cells[cid].alert, cid
 
