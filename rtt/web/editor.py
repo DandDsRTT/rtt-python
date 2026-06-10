@@ -322,6 +322,7 @@ class Editor:
             displayed_tuning_name=self.displayed_tuning_scheme_name,
             held_basis_ratios=self.unchanged_ratios,
             displayed_projection_name=self.displayed_projection_scheme_name,
+            targets_in_use=self.targets_in_use,
             prev_ids=prev_ids)
 
     @property
@@ -761,6 +762,32 @@ class Editor:
                       + tuple(service.target_interval_set(self.target_spec, self.state.domain_basis))
                       + (tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()))
         return service.unchanged_ratios_of_tuning(self.state, retuning, candidates)
+
+    @property
+    def targets_in_use(self) -> bool:
+        """Whether the target-interval list is actually computing the displayed tuning. The targets
+        only do their job — minimizing damage to pin the generators — when the displayed tuning IS
+        the scheme's target-driven optimum. Once you specify a projection (pick one, or edit U/G/P)
+        whose tuning deviates from that optimum, the targets play no role, so the whole target column
+        is hidden (ch3's h + k ≥ r: pin a full projection and there's nothing left for targets to do;
+        a tuning that still equals the optimum — e.g. the default, which lands on 1/4-comma — keeps
+        it). The targets only drop away once a FULL rational projection (r unchanged intervals) pins
+        the tuning AWAY from the optimum; an under-rank tuning (a partial projection, or a hand-edit
+        holding fewer than r rational intervals) still needs the targets to fix the rest (ch3
+        h + k ≥ r), so they stay. True too when the optimum can't be measured, so we never hide
+        spuriously."""
+        if not self.manual_tuning:
+            return True  # auto-optimize, or frozen AT the scheme optimum — the targets produce it
+        if len(self.unchanged_ratios) < self.state.r:
+            return True  # under-rank: the targets still pin the unconstrained generators
+        displayed = self.effective_generator_tuning()  # a full projection — does it equal the optimum?
+        if displayed is None:
+            return True
+        try:
+            optimum = self._optimum_generator_tuning()
+        except (ValueError, ArithmeticError, IndexError, TypeError):
+            return True
+        return len(displayed) == len(optimum) and all(abs(a - b) < 1e-6 for a, b in zip(displayed, optimum))
 
     @property
     def displayed_projection_scheme_name(self) -> str | None:

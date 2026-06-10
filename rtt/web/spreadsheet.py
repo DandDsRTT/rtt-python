@@ -690,8 +690,12 @@ class _GridBuilder:
                  custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
-                 displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None):
+                 displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
+                 targets_in_use=True):
         self.prev_ids = prev_ids or {}
+        # the target-interval column is hidden when the targets aren't computing the tuning (the
+        # displayed tuning has deviated from the scheme's target-driven optimum onto a projection)
+        self.targets_in_use = targets_in_use
         self.state = state
         self.settings = settings
         self.collapsed = collapsed
@@ -1278,7 +1282,7 @@ class _GridBuilder:
             ("detempering", 2 * BRACKET_W + self.r * COL_W, self.show_detempering, True),
             ("commas", 2 * BRACKET_W + self.nv_shown * COL_W + (V_SPLIT_GAP if self.show_unchanged else 0), show_temp, True),
             ("held", 2 * BRACKET_W + self.nh_shown * COL_W, self.show_optimization, True),
-            ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning, True),
+            ("targets", 2 * BRACKET_W + self.k_shown * COL_W, show_tuning and self.targets_in_use, True),
             # The interest column's tiles hug this content width (32 + mi·COL_W) — no empty
             # padding. Its long two-line title needs more room, so the column's *footprint*
             # is floored at the title width (see the loop below) and the narrow content is
@@ -4164,11 +4168,12 @@ def build(state, settings=None, collapsed=None,
           custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
           pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
           pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
-          displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None) -> Layout:
+          displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
+          targets_in_use=True) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
         optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
         prev_ids, pending_element, nonprime_approach, superspace_generator_tuning,
-        displayed_tuning_name, held_basis_ratios, displayed_projection_name,
+        displayed_tuning_name, held_basis_ratios, displayed_projection_name, targets_in_use,
     ).layout()
