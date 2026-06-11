@@ -519,7 +519,7 @@
             box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
 .rtt-fraccell .rtt-cellinput .q-field__native { font-size:inherit; line-height:1.04; padding:0 3px !important;
             min-height:0 !important; }
-.rtt-frac-bar { height:1px; background:#000; align-self:stretch; margin:0 1px; user-select:none; pointer-events:none; }
+.rtt-frac-bar { height:1px; background:#000; align-self:stretch; margin:0 4px; user-select:none; pointer-events:none; }
 .rtt-frac-edit[data-fracmode="int"] .rtt-frac-den-in,
 .rtt-frac-edit[data-fracmode="int"] .rtt-frac-bar { display:none; }
 /* fraction-cell state colours: the green draft (on the WRAP), the red held-no-longer-just alert and

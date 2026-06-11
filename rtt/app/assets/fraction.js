@@ -35,6 +35,10 @@
       if (!box) return;
       e.preventDefault();
       box.dataset.fracmode = 'ratio';
+      // shrink to the ratio size NOW so the bar sits where it settles — otherwise the int-size (17px)
+      // font lingers until a render (commit) and floats the bar high. 13 == _RATIO_MAX_FONT; a render
+      // re-fits both fields (and shrinks a long fraction further) on commit.
+      box.querySelectorAll('.rtt-frac-num-in input, .rtt-frac-den-in input').forEach(function (i) { i.style.fontSize = '13px'; });
       const den = box.querySelector('.rtt-frac-den-in input');
       if (den) den.focus();
     }
