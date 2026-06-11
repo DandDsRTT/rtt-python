@@ -515,7 +515,8 @@
             width:100%; height:100%; line-height:1.04; font-size:var(--cell-font); }
 .rtt-fraccell .rtt-cellinput { height:auto; }
 .rtt-fraccell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
-            border:none !important; width:100% !important; height:auto !important; min-height:0 !important; }
+            border:none !important; width:100% !important; height:auto !important; min-height:0 !important;
+            box-shadow:none !important; }  /* the WRAP owns the box + the pending/preview ring — not each input */
 .rtt-fraccell .rtt-cellinput .q-field__native { font-size:inherit; line-height:1.04; padding:0 3px !important;
             min-height:0 !important; }
 .rtt-frac-bar { height:1px; background:#000; align-self:stretch; margin:0 1px; user-select:none; pointer-events:none; }

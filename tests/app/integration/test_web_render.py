@@ -902,6 +902,23 @@ async def test_typing_a_ratio_into_a_pending_draft_fills_it(user: User) -> None:
     assert [_cell_child(user, f"cell:held:{p}:0").value for p in range(3)] == ["-1", "1", "0"]
 
 
+async def test_typing_a_bare_integer_into_a_pending_draft_fills_it(user: User) -> None:
+    # the "?/?" draft splits into two fields (numerator "?" over denominator "?"). Typing a bare
+    # INTEGER into only the numerator (the octave 2 = 2/1) must commit the integer — NOT "2/?" — so
+    # the untouched "?" denominator collapses like a blank/1 (cell_value treats it as no denominator).
+    await user.open("/")
+    _toggle(user, "optimization")
+    _click_glyph(user, "held_plus")
+    await user.should_see(marker="held:pending")
+    num, den = _frac_inputs(user, "held:pending")
+    assert (num.value, den.value) == ("?", "?")          # both fields pre-filled with the placeholder
+    num.set_value("2")                                   # type the octave into the NUMERATOR only
+    _commit(user, "held:pending")                        # blur commits it = 2/1 = (1 0 0)
+    await user.should_see(marker="held:0")
+    assert _ratio_value(user, "held:0") == "2"           # committed the bare integer, not "2/?"
+    assert [_cell_child(user, f"cell:held:{p}:0").value for p in range(3)] == ["1", "0", "0"]
+
+
 async def test_editable_ratio_cell_renders_a_stacked_fraction_face(user: User) -> None:
     # the editable comma ratio is an in-place stacked fraction: two separate inputs (numerator over a
     # bar over denominator), not an overlaid face on one input — the syntonic comma reads 80 over 81

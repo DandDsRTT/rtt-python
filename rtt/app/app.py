@@ -681,19 +681,24 @@ _RATIO_PAD = 6.0  # px — the .rtt-frac-num/.rtt-frac-den left+right padding (3
                   # fixed regardless of font, so it is reserved before the digits get the rest of the cell
 
 
+def _digit_fit_font(longest, width, max_font):
+    """The largest font (px, capped at ``max_font``) at which ``longest`` digits plus the fixed
+    fraction-bar padding fit a ``width``-px square. Truncated (not rounded) to 0.1px so the chosen
+    size never rounds back up and spills; like ``_ptext_font`` there is no readability floor — the
+    cell is a hard boundary. Shared by the stacked-fraction face (capped at the comfortable ratio
+    size) and the big-integer view (capped at the value-cell font)."""
+    if not longest:
+        return max_font
+    fit = (width - _RATIO_PAD) / (longest * _RATIO_DIGIT_EM)
+    return int(min(max_font, fit) * 10) / 10
+
+
 def _ratio_font(num, den, width):
     """The largest font (px, capped at ``_RATIO_MAX_FONT``) at which a stacked fraction's longer
     line fits its ``width``-px square. A long numerator or denominator (e.g. 65536 = the target
     2/1 re-vectored to [16 0 0⟩) spills the 30px cell at the comfortable size, so the whole
-    fraction shrinks to fit — num and den share the size, as a fraction should. The lines are all
-    digits, so a uniform digit width estimates the fit without a browser; the fixed bar padding is
-    reserved first. Truncated (not rounded) to 0.1px so the chosen size never rounds back up and
-    spills. Like ``_ptext_font`` there is no readability floor — the cell is a hard boundary."""
-    longest = max(len(num), len(den))
-    if not longest:
-        return _RATIO_MAX_FONT
-    fit = (width - _RATIO_PAD) / (longest * _RATIO_DIGIT_EM)
-    return int(min(_RATIO_MAX_FONT, fit) * 10) / 10
+    fraction shrinks to fit — num and den share the size, as a fraction should."""
+    return _digit_fit_font(max(len(num), len(den)), width, _RATIO_MAX_FONT)
 
 
 _DESCENDERS = "gjpqy"  # letters whose tail dips below the baseline
@@ -1637,10 +1642,14 @@ class _Reconciler:
         num = str(self.inputs[cid].value).strip()
         if not num:
             return ""
+        if num == "?":  # an untouched draft numerator: the "?/?" no-op sentinel (a blank/cleared draft)
+            return "?/?"
         if "/" in num:  # the numerator already carries a whole ratio (a paste, or a test set_value)
             return num
         den = str(self.den_inputs[cid].value).strip() if cid in self.den_inputs else ""
-        return num if den in ("", "1") else f"{num}/{den}"
+        # a blank/1/"?" (untouched draft) denominator is the big-integer view — so typing a bare
+        # integer into a draft's "?/?" commits the integer, not "N/?"
+        return num if den in ("", "1", "?") else f"{num}/{den}"
 
     # ---- cell-kind handlers (audit #3): each kind's build + update, co-located here so a
     # built-but-not-filled drift between the two ladders becomes structurally impossible ----
@@ -1886,17 +1895,11 @@ class _Reconciler:
         self._fit_fraction(cb.id, num, den, cb.w, ratio)
 
     def _fit_fraction(self, cid, num, den, width, ratio):
-        # the stacked fraction shrinks both lines together to fit a long num/den (see _ratio_font); the
-        # integer view fills the square at the big value font, shrunk only if a long integer (e.g. a
-        # target 65536) would spill. Set on both inputs (the __native font inherits), so they share one
-        # size and the fitted size is readable per field.
-        if ratio:
-            size = _ratio_font(num, den, width)
-        elif num:
-            fit = (width - _RATIO_PAD) / (len(num) * _RATIO_DIGIT_EM)
-            size = int(min(float(_CELL_FONT), fit) * 10) / 10
-        else:
-            size = float(_CELL_FONT)
+        # the stacked fraction shrinks both lines together to fit a long num/den (capped at the
+        # comfortable ratio size); the integer view fills the square at the big value font, shrunk only
+        # if a long integer (e.g. a target 65536) would spill. Both share _digit_fit_font. Set on both
+        # inputs (the __native font inherits), so they share one size and the fit is readable per field.
+        size = _ratio_font(num, den, width) if ratio else _digit_fit_font(len(num), width, float(_CELL_FONT))
         style = f"font-size:{size:.2f}px"
         self.inputs[cid].style(style)
         self.den_inputs[cid].style(style)
