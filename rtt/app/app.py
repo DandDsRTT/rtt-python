@@ -1322,6 +1322,7 @@ class _Reconciler:
         self.frac_edits: dict = {}  # fraction cell id -> the .rtt-frac-edit box (its data-fracmode drives int/ratio view)
         self.labels: dict = {}  # cell id -> the label whose text tracks state
         self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
+        self.ratio_faces: dict = {}  # genratio/commaratio id -> its .rtt-ratio container (rebuilt in place)
         self.stacked_faces: dict = {}  # stacked-value cell id -> (main label, sub label): cents whole/.frac, power ∞/(max)
         self.gensign_faces: dict = {}  # generator-tuning cell id -> (sign, whole, .frac) labels: the clickable signed cents face
         self.htmls: dict = {}  # EBK svg cell id -> the ui.html holding its hand-drawn mark
@@ -1349,7 +1350,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The active preview gesture — the ONE record the ring highlights derive from (see
         # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
         self.gesture: _Gesture | None = None
@@ -1620,19 +1621,32 @@ class _Reconciler:
     def _ratio(self, cb, approx, overlay=False):
         """A ratio rendered as a stacked fraction (with a ~ prefix when approximate). With
         ``overlay`` the fraction is an ``rtt-cellface`` laid over an editable input (the
-        ratiocell) instead of a read-only cell — it shows when the cell isn't focused."""
+        ratiocell) instead of a read-only cell — it shows when the cell isn't focused. The
+        ``.rtt-ratio`` container is kept (``ratio_faces``) so _update_ratio can rebuild its
+        contents in place when the value's shape flips between a fraction and a blank/dash."""
+        face = ui.element("div").classes("rtt-ratio rtt-cellface" if overlay else "rtt-ratio")
+        self.ratio_faces[cb.id] = face
+        with face:
+            self._ratio_body(cb, approx)
+
+    def _ratio_body(self, cb, approx):
+        """Fill the ``.rtt-ratio`` container: the ~approximate marker + stacked fraction for a real
+        NUMERIC ratio; otherwise the bare value (empty when blanked, a lone ``—`` when dashed). The
+        ~ and the fraction's bar are for numbers only — a dash or a blank gets neither (so a
+        quantities-off cell goes truly empty, never leaving a stranded ``~`` over an empty bar)."""
         parts = _ratio_parts(cb.text)
-        with ui.element("div").classes("rtt-ratio rtt-cellface" if overlay else "rtt-ratio"):
-            if approx and parts:  # the ~ marks an approximate FRACTION; a non-ratio ("–") gets none
-                ui.label("~").classes("rtt-approx")
-            if parts:
-                with ui.element("div").classes("rtt-frac"):
-                    num = ui.label(parts[0]).classes("rtt-frac-num")
-                    den = ui.label(parts[1]).classes("rtt-frac-den")
-                self.fracs[cb.id] = (num, den)
-                self._fit_ratio(cb.id, parts[0], parts[1], cb.w)
-            else:
-                self.labels[cb.id] = ui.label(cb.text).classes("rtt-value")
+        if parts and not all(p.lstrip("-").isdigit() for p in parts):
+            parts = None  # a dashed "—/—" isn't a number — render it bare, no ~ / fraction bar
+        if approx and parts:
+            ui.label("~").classes("rtt-approx")
+        if parts:
+            with ui.element("div").classes("rtt-frac"):
+                num = ui.label(parts[0]).classes("rtt-frac-num")
+                den = ui.label(parts[1]).classes("rtt-frac-den")
+            self.fracs[cb.id] = (num, den)
+            self._fit_ratio(cb.id, parts[0], parts[1], cb.w)
+        else:
+            self.labels[cb.id] = ui.label(cb.text).classes("rtt-value")
 
     def _fit_ratio(self, cid, num, den, width):
         """Size a stacked fraction's two lines to fit its square: a long numerator/denominator
@@ -2055,13 +2069,21 @@ class _Reconciler:
         else:
             self._ratio(cb, approx=False)
 
-    def _update_ratio(self, cb):  # genratio / commaratio (read-only): refresh the stacked fraction face
-        # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
-        if cb.id in self.fracs:
-            num, den = _ratio_parts(cb.text) or (cb.text, "")
-            self.fracs[cb.id][0].set_text(num)
-            self.fracs[cb.id][1].set_text(den)
-            self._fit_ratio(cb.id, num, den, cb.w)  # a re-vectored ratio (e.g. 2/1 -> 65536/1) re-fits
+    def _update_ratio(self, cb):  # genratio / commaratio (read-only): rebuild the stacked fraction face
+        # The value's SHAPE can flip between renders — a real numeric ratio <-> a blanked (quantities
+        # off) or dashed value — and the ~approx + fraction structure differs from a bare label.
+        # Patching the fraction's numbers in place (the old path) would strand a ~ over an empty
+        # fraction bar when the value blanks (the reported "~-"), so rebuild the container's contents
+        # from the current value instead. The .rtt-ratio container itself (and the per-cell unit that
+        # rides the wrap beside it) are untouched. A pending "?" cell has no container — it's static.
+        face = self.ratio_faces.get(cb.id)
+        if face is None:
+            return
+        face.clear()
+        self.fracs.pop(cb.id, None)
+        self.labels.pop(cb.id, None)
+        with face:
+            self._ratio_body(cb, approx=(cb.kind == "genratio"))
 
     def _build_tuning_value(self, cb, wrap):
         self.cents_face(cb, "rtt-tuning-value")  # the read-only stacked int-over-fraction cents face

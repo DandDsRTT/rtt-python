@@ -557,6 +557,36 @@ async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cel
     await user.should_see(marker="prime:0")
 
 
+def _approx_markers(user: User, cell_id: str) -> list:
+    """The ``rtt-approx`` "~" labels rendered inside a cell (the approximate-ratio marker). Walks the
+    cell wrap's descendants — the ~ rides the ``.rtt-ratio`` face, not the wrap itself."""
+    wrap = next(iter(user.find(marker=cell_id).elements))
+    found, stack = [], list(wrap.default_slot.children)
+    while stack:
+        el = stack.pop()
+        if "rtt-approx" in getattr(el, "_classes", []):
+            found.append(el)
+        slot = getattr(el, "default_slot", None)
+        stack.extend(slot.children if slot is not None else [])
+    return found
+
+
+async def test_quantities_off_at_runtime_does_not_strand_a_tilde_on_blanked_generator_ratios(user: User) -> None:
+    # generator / mapping quantities are ~approximate stacked fractions (genratio). Turning quantities
+    # off at runtime BLANKS them, which must clear the whole face: the old update path patched the
+    # fraction's numbers in place and left the "~" stranded over an empty fraction bar — a meaningless
+    # "~-". Drive the runtime toggle and assert no approximate marker survives on a blanked generator
+    # cell (the fresh-load render never hits this — only the in-place value update does).
+    await user.open("/")
+    assert _approx_markers(user, "gen:0")      # mapping-row quantity shows ~2/1 by default
+    assert _approx_markers(user, "qgen:0")     # generator-col quantity likewise
+    user.find(marker="showpart:quantities").click()   # turn general quantities OFF (the dummy-tile part)
+    assert not _approx_markers(user, "gen:0")  # blanked: the whole face cleared, no stray ~ (nor bar)
+    assert not _approx_markers(user, "qgen:0")
+    user.find(marker="showpart:quantities").click()   # back on
+    assert _approx_markers(user, "gen:0")      # the ~2/1 face is rebuilt
+
+
 # --- tier 3: the edit -> render -> undo pipeline (input -> handler -> render) ---
 
 def _cell_child(user: User, cell_id: str):
