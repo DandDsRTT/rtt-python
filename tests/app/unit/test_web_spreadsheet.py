@@ -2949,6 +2949,49 @@ def test_power_value_cells_hide_when_gridded_values_are_off():
     assert {"control:q", "control:dual", "optimization:power"} <= on  # sanity: the scenario really builds them
 
 
+def test_gridded_values_off_hides_the_nonstandard_domain_element_cells_and_controls():
+    # With the nonstandard-domain box ON the domain basis is editable, so its quantities-row /
+    # spine cells render as elementcell/elementratio (not the read-only "prime") and carry per-
+    # element ± controls (element_minus/element_plus, not the plain minus/plus walk). Those kinds
+    # were overlooked in GRIDDED_KINDS, so gridded-off used to leave them floating while the rest
+    # of the row/column collapsed. They must now collapse with everything else. The projection P/G
+    # grids (read-only "mapped" cells, cell:proj:*/cell:embed:*) ride along to confirm gridded-off
+    # still hides them too — they were already gridded, this guards against regressing that.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # genuinely nonstandard (13/5)
+    s = {**settings.defaults(), "nonstandard_domain": True, "projection": True}
+    on = {c.id: c for c in spreadsheet.build(state, {**s, "gridded_values": True}).cells}
+    off = {c.id for c in spreadsheet.build(state, {**s, "gridded_values": False}).cells}
+    # sanity: the scenario really builds the editable domain cells (a prime as elementcell, the
+    # 13/5 element as a stacked elementratio), the per-element controls, and the P/G grids
+    assert on["prime:0"].kind == "elementcell" and on["prime:2"].kind == "elementratio"
+    assert on["basis:0"].kind == "elementcell" and on["basis_plus"].kind == "element_plus"
+    domain_value_ids = {"prime:0", "prime:1", "prime:2", "basis:0", "basis:1", "basis:2"}
+    domain_control_ids = {"element_minus:0", "element_minus:1", "element_minus:2",
+                          "element_minus:basis:0", "element_minus:basis:1", "element_minus:basis:2",
+                          "element_plus", "basis_plus"}
+    proj_grid_ids = {c for c in on if c.startswith(("cell:proj:", "cell:embed:"))}
+    assert proj_grid_ids and all(on[c].kind == "mapped" for c in proj_grid_ids)
+    assert domain_value_ids <= on.keys() and domain_control_ids <= on.keys()
+    # gridded off: every one of those is gone (only captions/tile boxes/plain-text survive)
+    assert not (domain_value_ids & off)
+    assert not (domain_control_ids & off)
+    assert not (proj_grid_ids & off)
+
+
+def test_gridded_values_off_hides_the_editable_unchanged_basis_cells():
+    # The editable unchanged basis U (the U half of the consolidated V = C|U view, rendered as
+    # "unchangedcell" when the tuning is a full rational projection — meantone fully held by 2/1
+    # and 5/4) was also missing from GRIDDED_KINDS, so it leaked when gridded-off. (The read-only
+    # dashed form "vec" was already filtered; only the editable kind was overlooked.) It must hide.
+    mt = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = {**settings.defaults(), "projection": True}
+    on = {c.id: c for c in spreadsheet.build(mt, {**s, "gridded_values": True}, held_basis_ratios=("2/1", "5/4")).cells}
+    off = {c.id for c in spreadsheet.build(mt, {**s, "gridded_values": False}, held_basis_ratios=("2/1", "5/4")).cells}
+    unchanged_ids = {c for c in on if c.startswith("cell:unchanged:")}
+    assert unchanged_ids and all(on[c].kind == "unchangedcell" for c in unchanged_ids)  # really editable here
+    assert not (unchanged_ids & off)  # gridded off collapses them with the comma cells beside them
+
+
 def test_dual_q_shows_only_when_the_scheme_is_all_interval():
     # dual(q) is gated on the all-interval CHECKBOX (is_all_interval), NOT the show-panel entry:
     # an all-interval scheme renders dual(q); a target-based scheme hides it. The q field and the

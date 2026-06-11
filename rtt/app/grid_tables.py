@@ -942,8 +942,16 @@ GRIDDED_KINDS = frozenset({
     "prime", "ratiocell", "commaratio", "genratio", "mapping", "mapped", "commacell",
     "vec", "tuningvalue", "mathexpr", "interestcell", "formcell", "heldcell", "gentuningcell", "targetcell",
     "prescalercell",
+    # the nonstandard-domain (box-on) editable twins of the read-only value cells above: the
+    # domain basis element cells (quantities row "prime:*" + spine "basis:*", standing in for
+    # "prime") and the editable unchanged basis U (standing in for "vec"). Filtered alongside
+    # their read-only forms so a typed domain / consolidated-V view collapses with everything else.
+    "elementcell", "elementratio", "unchangedcell",
     "bracket", "ebktop", "ebkbrace", "ebkangle", "vbar", "matlabel",
     "minus", "plus", "gen_minus", "gen_plus", "map_minus", "map_plus", "comma_minus", "comma_plus", "basis_minus",
+    # the nonstandard-domain (box-on) twins of the domain ± walk controls (minus/plus/basis_minus):
+    # a per-element − on every element and the typed-element + on both axes
+    "element_minus", "element_plus",
     "interest_minus", "interest_plus", "held_minus", "held_plus", "target_minus", "target_plus", "optimize",
     "colgrip",  # the drag-and-drop reorder grip on each interval column's fan branch
     "boxtitle", "powerinput", "powerdisplay",  # both power-value faces (editable input / locked value)
