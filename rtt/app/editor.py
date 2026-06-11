@@ -354,6 +354,13 @@ class Editor:
         return service.can_shrink_domain(self.state)
 
     @property
+    def can_remove_domain_element(self) -> bool:
+        """Whether the nonstandard-domain per-element − applies — any element of any basis can go,
+        down to the last one (see :func:`service.can_remove_domain_element`). The shared predicate
+        the renderer gates each element's − on, so it never shows while inert (``d == 1``)."""
+        return service.can_remove_domain_element(self.state)
+
+    @property
     def can_add_mapping_row(self) -> bool:
         """Whether the mapping + applies: it un-tempers a comma into a new generator, so it
         needs a comma to un-temper (nullity > 0; at full rank there is nothing tempered)."""
@@ -1372,6 +1379,17 @@ class Editor:
         """Cancel the pending domain basis element draft (the green ?/? column's −). Not an undoable
         edit — the draft was never committed. A no-op when there is no draft."""
         self.pending_element = None
+
+    def remove_domain_element(self, index: int) -> None:
+        """Drop domain basis element ``index`` (its per-element − with the nonstandard-domain box on):
+        an undoable structural edit that re-duals over the reduced basis (see
+        :func:`service.remove_domain_element`). Changing d invalidates any length-d draft, so clear it
+        like :meth:`shrink` does. A no-op down at the last element (``can_remove_domain_element``)."""
+        if not self.can_remove_domain_element:
+            return
+        self._snapshot()
+        self._clear_pending()
+        self.state = service.remove_domain_element(self.state, index)
 
     def set_domain_element(self, index: int, text) -> None:
         """Relabel domain basis element ``index`` to the typed ``text`` — a pure basis relabel that

@@ -7792,14 +7792,30 @@ def test_domain_plus_is_element_draft_with_the_box_on():
     assert off["basis_plus"].kind == "plus"             # ...and so does the spine +
 
 
-def test_basis_spine_walk_minus_is_suppressed_with_the_box_on():
-    # the spine walk − (basis_minus → shrink) only shows when the domain is prime-walked (box off);
-    # with the box on the domain is typed, so it's withheld — the row mirror of the quantities − .
-    augmented = service.from_comma_basis(((7, 0, -3),))  # 2.3.5, a shrinkable standard limit
+def test_box_off_walk_minus_gives_way_to_a_per_element_minus_with_the_box_on():
+    # box OFF: a single walk − (basis_minus / minus → shrink) over the highest prime only, on both
+    # axes. box ON: that one walk − gives way to a per-element − over EVERY element (each removing
+    # just that element via remove_domain_element), on both axes — the fix for the domain − that
+    # previously vanished entirely with the box on.
+    augmented = service.from_comma_basis(((7, 0, -3),))  # 2.3.5 (d=3), a shrinkable standard limit
     off = {c.id for c in spreadsheet.build(augmented).cells}
-    assert "basis_minus" in off and "minus" in off  # box off: the − is offered on both axes
-    on = {c.id for c in spreadsheet.build(augmented, _nonstd_on(augmented)).cells}
-    assert "basis_minus" not in on and "minus" not in on  # box on: typed, so no walk − on either axis
+    assert "basis_minus" in off and "minus" in off  # box off: the single walk − on both axes
+    assert not any(i.startswith("element_minus") for i in off)  # ...and no per-element −
+    on = {c.id: c for c in spreadsheet.build(augmented, _nonstd_on(augmented)).cells}
+    assert "basis_minus" not in on and "minus" not in on  # box on: no walk − on either axis
+    qty = {f"element_minus:{p}" for p in range(augmented.d)}        # a − over each quantities header
+    spine = {f"element_minus:basis:{p}" for p in range(augmented.d)}  # ...and each spine row
+    assert qty <= set(on) and spine <= set(on)
+    assert all(on[f"element_minus:{p}"].prime == p for p in range(augmented.d))  # each carries its index
+
+
+def test_per_element_domain_minus_is_withheld_at_the_last_element():
+    # a domain keeps at least one element, so with d == 1 there is nothing to remove — no − on
+    # either axis even with the box on (never shown inert, like the walk − at d == 1).
+    sole = service.from_mapping(((1,),))  # d == 1
+    on = {c.id for c in spreadsheet.build(sole, _nonstd_on(sole)).cells}
+    assert not any(i.startswith("element_minus") for i in on)
+    assert "minus" not in on and "basis_minus" not in on
 
 
 def test_pending_element_renders_drafts_on_both_axes():
@@ -7809,10 +7825,10 @@ def test_pending_element_renders_drafts_on_both_axes():
     # the quantities-row ratio draft AND the interval-vectors spine draft, two views of one
     # pending element — each a "?/?" placeholder committing through the SAME on_element_change
     for draft_id, minus_id in (("prime:pending", "element_minus:pending"),
-                               ("basis:pending", "element_minus:basis")):
+                               ("basis:pending", "element_minus:basis:pending")):
         draft = cells[draft_id]
         assert draft.kind == "elementratio" and draft.pending and draft.text == "?/?"
-        assert minus_id in cells  # its − cancels the draft
+        assert minus_id in cells  # its − cancels the draft (the ":pending" id steers it to remove_element)
     # the spine draft sits one ROW_H below the basis stack, past which the spine + has dropped
     assert cells["basis:pending"].y == cells["basis:2"].y + spreadsheet.ROW_H
     assert cells["basis_plus"].y > cells["basis:pending"].y  # the + rides the stub below the draft

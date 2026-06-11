@@ -81,6 +81,10 @@ _DISAMBIGUATED = [
     ("ptextedit", "ptext:tuning:gens"),
     ("ptextedit", "ptext:vectors:targets"),
     ("ptextedit", "ptext:prescaling:primes"),
+    ("element_minus", "element_minus:1"),             # the per-element domain remove (quantities axis)
+    ("element_minus", "element_minus:basis:2"),       # ...and its interval-vectors spine twin
+    ("element_minus", "element_minus:pending"),       # the ?/? draft's cancel (quantities axis)
+    ("element_minus", "element_minus:basis:pending"),  # ...and its spine twin
 ]
 
 
@@ -107,6 +111,11 @@ def test_overloaded_kinds_resolve_to_distinct_text_per_role():
                 _help("preset", "preset:target"),
                 _help("preset", "preset:prescaler")}) == 4
     assert _help("preset", "preset:tuning:gens") == _help("preset", "preset:tuning")
+    # the domain − reads "remove this element" per-element, "cancel the draft" for the ?/? draft —
+    # on both axes, told apart by the ":pending" suffix in the id
+    assert _help("element_minus", "element_minus:1") == _help("element_minus", "element_minus:basis:2")
+    assert _help("element_minus", "element_minus:pending") == _help("element_minus", "element_minus:basis:pending")
+    assert _help("element_minus", "element_minus:1") != _help("element_minus", "element_minus:pending")
 
 
 def test_target_preset_help_describes_an_integer_or_odd_limit_not_a_prime_limit():

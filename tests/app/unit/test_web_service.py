@@ -1535,6 +1535,52 @@ def test_can_set_domain_element_rejects_a_dependent_relabel():
     assert not service.can_set_domain_element(state, 2, "1")
 
 
+def test_remove_domain_element_drops_the_named_element_keeping_the_basis_nonstandard():
+    # over the nonstandard 2.3.13/5: removing ANY element drops it and re-duals over the remaining
+    # basis (kept nonstandard, not reset to a prime limit), lowering d by one.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert service.remove_domain_element(state, 0).domain_basis == (3, Fraction(13, 5))
+    assert service.remove_domain_element(state, 1).domain_basis == (2, Fraction(13, 5))
+    assert service.remove_domain_element(state, 2).domain_basis == (2, 3)  # the lone nonprime gone → standard
+    for k in range(state.d):
+        assert service.remove_domain_element(state, k).d == state.d - 1
+
+
+def test_remove_domain_element_inverts_add_domain_element():
+    # add_domain_element appends an element with an all-zero comma column (held just); trimming that
+    # column and re-dualing recovers the SAME temperament (comma basis + domain) it started from. The
+    # mapping re-canonicalizes (a re-dual, like shrink_domain), so compare the temperament, not the
+    # generator basis.
+    state = service.from_comma_basis(((4, -4, 1),))  # meantone 2.3.5
+    added = service.add_domain_element(state, service.parse_domain_element("13/5"))
+    back = service.remove_domain_element(added, added.d - 1)  # drop the element just added
+    assert back.domain_basis == state.domain_basis and back.comma_basis == state.comma_basis
+    assert (back.d, back.r, back.n) == (state.d, state.r, state.n)
+
+
+def test_remove_domain_element_matches_shrink_for_the_last_standard_element():
+    # over a standard limit, removing the highest element is exactly the prime-walk shrink — so the
+    # box-on per-element − and the box-off walk − coincide on the last element.
+    state = service.from_comma_basis(((4, -4, 1),))  # meantone 2.3.5
+    removed = service.remove_domain_element(state, state.d - 1)
+    shrunk = service.shrink_domain(state)
+    assert removed.domain_basis == shrunk.domain_basis == (2, 3)
+    assert removed.mapping == shrunk.mapping and removed.comma_basis == shrunk.comma_basis
+
+
+def test_remove_domain_element_collapsing_every_comma_leaves_just_intonation():
+    # tempering out the prime 5 (comma 0,0,1): removing the 5 trims that comma to zero, so nothing
+    # tempered survives — just intonation over the reduced basis (nullity 0).
+    state = service.from_comma_basis(((0, 0, 1),))  # 2.3.5, 5 tempered to a unison
+    ji = service.remove_domain_element(state, 2)
+    assert ji.domain_basis == (2, 3) and ji.n == 0 and ji.r == ji.d == 2
+
+
+def test_can_remove_domain_element_keeps_at_least_one_element():
+    assert service.can_remove_domain_element(service.from_comma_basis(((4, -4, 1),)))  # d = 3
+    assert not service.can_remove_domain_element(service.from_mapping(((1,),)))  # d = 1: nothing to remove
+
+
 def test_generator_tuning_range_is_none_for_an_unmeasurable_mixed_basis():
     # 2.3.5.13/5 (5 and 13/5 share the prime 5): the odd-limit diamond the range solver works over
     # isn't defined, so the range gracefully degrades to None rather than crashing the tuning build.

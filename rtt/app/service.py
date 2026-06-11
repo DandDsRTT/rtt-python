@@ -1977,6 +1977,36 @@ def add_domain_element(state: TemperamentState, element) -> TemperamentState:
     return from_mapping(extended + (new_generator,), new_basis)
 
 
+def can_remove_domain_element(state: TemperamentState) -> bool:
+    """Whether a domain basis element can be removed: a domain keeps at least one element, so the
+    only bar is ``d == 1``. Unlike :func:`can_shrink_domain` (the standard prime-walk −, which is
+    confined to a standard limit and only drops the TOP prime), this gates the nonstandard-domain
+    per-element −, which removes ANY element of ANY basis — removing an element from a
+    multiplicatively independent basis always leaves an independent one, so no further check."""
+    return state.d > 1
+
+
+def remove_domain_element(state: TemperamentState, index: int) -> TemperamentState:
+    """Drop basis element ``index`` from the domain: trim its component off each comma and off the
+    basis, then re-dual over the reduced basis. The arbitrary-index, nonstandard-aware generalization
+    of :func:`shrink_domain` (which always drops the last component, re-dualing to a standard limit).
+    As there, trimming can collapse independent commas into dependent ones, so keep only a maximal
+    independent subset (each comma that still raises the nullity over the reduced basis); an emptied
+    set is just intonation over the smaller domain. Inverts :func:`add_domain_element` for the element
+    it just added (whose comma column is all-zero, so trimming it recovers the prior state). Callers
+    guard with :func:`can_remove_domain_element`."""
+    i = index % state.d
+    new_basis = state.domain_basis[:i] + state.domain_basis[i + 1:]
+    independent: list[tuple[int, ...]] = []
+    for comma in (c[:i] + c[i + 1:] for c in state.comma_basis):
+        trial = independent + [comma]
+        if from_comma_basis(tuple(trial), new_basis).n == len(trial):  # raises the nullity over the reduced basis
+            independent.append(comma)
+    if not independent:
+        return just_intonation(new_basis)  # nothing tempered survives the trim
+    return from_comma_basis(tuple(independent), new_basis)
+
+
 def add_mapping_row_to(state: TemperamentState, source: int, target: int) -> TemperamentState:
     """Add generator row ``source`` into row ``target`` (the row dropped onto): ``target``'s
     mapping row becomes ``row[target] + row[source]``. A unimodular row operation, so the

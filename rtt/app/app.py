@@ -2618,11 +2618,19 @@ class _Reconciler:
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
             .on("click", lambda _=None: self._cb.add_interval(self._editor.add_element, "element"))
 
-    def _build_element_minus(self, cb, wrap):  # cancel the pending element draft (the ?/? column's −)
+    def _build_element_minus(self, cb, wrap):  # nonstandard-domain box on: the domain − (both axes)
+        # one builder for every nonstandard-domain −, told apart by id (like _build_list_minus): a
+        # ":pending" draft cancels the ?/? draft (remove_element), any other removes that committed
+        # element (remove_domain_element, carrying its index as cb.prime). The ":basis" ids are the
+        # interval-vectors spine's, revealed vertically on the left bus (rtt-minus-btn-v) like
+        # _build_basis_minus; the quantities-row ids reveal above the header (rtt-minus-btn).
+        action = self._editor.remove_element if cb.id.endswith(":pending") \
+            else (lambda idx=cb.prime: self._editor.remove_domain_element(idx))
+        btn = "rtt-minus-btn-v" if ":basis" in cb.id else "rtt-minus-btn"
         wrap.classes("rtt-minus-zone")
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.remove_element))
-        self._preview_control(wrap, self._editor.remove_element)
+        ui.html(_control_svg("minus")).classes(f"rtt-glyph {btn}") \
+            .on("click", lambda _=None: self._cb.act(action))
+        self._preview_control(wrap, action)
 
     def _build_list_minus(self, cb, wrap, cancel, remove):
         # an interval-list column's − (interest / held / target): the draft column's cancels the

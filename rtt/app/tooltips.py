@@ -139,7 +139,7 @@ _KIND_HELP: dict[str, str] = {
     "int_drag": "Drag this interval onto another in the same column to combine them into their product. For the comma basis this re-expresses the same temperament; for a target / held / interest list it just combines the two intervals.",
     "basis_minus": "Remove the highest prime from the domain.",
     "element_plus": "Add a domain basis element — opens a blank ?/? draft; type any positive rational (e.g. 13/5) to add it, held just (its own pure generator).",
-    "element_minus": "Cancel the pending domain basis element draft.",
+    "element_minus": "Remove this domain basis element — re-expresses the temperament over the remaining basis.",
     "comma_plus": "Add a comma to the basis.",
     "comma_minus": "Un-temper this comma — raising the rank; removing the sole comma leaves just intonation.",
     "interest_plus": "Add an interval of interest.",
@@ -160,6 +160,10 @@ _KIND_HELP: dict[str, str] = {
 
 # Controls whose kind backs several roles, told apart by the cell's exact id.
 _ID_HELP: dict[str, str] = {
+    # element_minus: the per-element domain − (its kind help) vs the ?/? draft's cancel − on either
+    # axis (the quantities-row "element_minus:pending" and the spine "element_minus:basis:pending")
+    "element_minus:pending": "Cancel the pending domain basis element draft.",
+    "element_minus:basis:pending": "Cancel the pending domain basis element draft.",
     # powerinput: the optimization power vs the complexity norm power and its dual
     "optimization:power": "Optimization power 𝑝 — ∞ minimizes the worst damage (minimax), 2 the RMS, 1 the mean. Type ∞, or scroll the wheel to step a finite power by 1.",
     "control:q": "Interval-complexity norm power 𝑞. Type it, or scroll the wheel to step it by 1.",

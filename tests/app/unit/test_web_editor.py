@@ -2071,6 +2071,37 @@ def test_remove_element_cancels_the_draft():
     assert ed.pending_element is None
 
 
+def test_remove_domain_element_drops_a_committed_element_and_is_undoable():
+    ed = Editor()
+    ed.settings["nonstandard_domain"] = True
+    ed.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    before = ed.state
+    ed.remove_domain_element(0)  # drop the 2 — an arbitrary (non-last) element, not just the highest
+    assert ed.state.domain_basis == (3, Fraction(13, 5)) and ed.state.d == 2
+    assert ed.can_undo is True  # a structural edit, undoable (unlike the draft cancel)
+    ed.undo()
+    assert ed.state.domain_basis == before.domain_basis and ed.state.comma_basis == before.comma_basis
+
+
+def test_remove_domain_element_clears_an_open_draft():
+    # removing an element changes d, which would strand a length-d draft — so it clears it, like shrink
+    ed = Editor()
+    ed.settings["nonstandard_domain"] = True
+    ed.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    ed.add_element()
+    assert ed.pending_element == ""
+    ed.remove_domain_element(2)  # drop the 13/5
+    assert ed.pending_element is None and ed.state.domain_basis == (2, 3)
+
+
+def test_remove_domain_element_is_a_no_op_at_the_last_element():
+    ed = Editor()
+    ed.settings["nonstandard_domain"] = True
+    ed.state = service.from_mapping(((1,),))  # d == 1: a domain keeps at least one element
+    ed.remove_domain_element(0)
+    assert ed.state.d == 1 and ed.can_undo is False  # nothing removed, no snapshot taken
+
+
 def test_established_projection_shows_for_the_default_meantone():
     # the default minimax-U meantone IS quarter-comma — it holds 2/1 and 5/4 at zero damage — so the
     # established-projection chooser reads "1/4-comma" with a real P, NOT a placeholder. U is read off

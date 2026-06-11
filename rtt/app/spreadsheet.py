@@ -2687,12 +2687,18 @@ class _GridBuilder:
                     self.cells.append(CellBox("prime:pending", self.prime_left(self.d), qy, COL_W, ROW_H,
                                               self._element_cell_kind(draft_text), text=draft_text, prime=self.d, pending=True))
                     branch_minus("element_minus:pending", "primes", self.d, "element_minus")
-                # Only the highest prime is removable (shrink_domain trims the last), so its
-                # − rides that prime's branch point (the last top-bus split) — and only when the
-                # shrink actually applies (gated like editor.shrink, never shown inert). With the
-                # nonstandard-domain box on the domain is edited by typing, not prime-walked, so the
-                # walk − is suppressed (the draft column carries its own − to cancel instead).
-                if self.domain_can_shrink and not self.show_nonstandard_domain:
+                # The domain −. Box OFF (standard prime walk): only the HIGHEST prime is removable
+                # (shrink_domain trims the last), so a single − rides that prime's branch point — and
+                # only when the shrink actually applies (gated like editor.shrink, never shown inert).
+                # Box ON (nonstandard, typed domain): the walk − gives way to a per-element − on EVERY
+                # element's branch point — each removes just that element (remove_domain_element),
+                # mirroring how each interval-list column carries its own −. Both are withheld at the
+                # last element (d == 1: a domain keeps one). The draft column carries its own cancel −.
+                if self.show_nonstandard_domain:
+                    if self.d > 1:
+                        for p in range(self.d):
+                            branch_minus(f"element_minus:{p}", "primes", p, "element_minus", prime=p)
+                elif self.domain_can_shrink:
                     branch_minus("minus", "primes", self.d - 1, "minus")
             # the chapter-9 superspace columns' quantity headers (the dual of their spine basis
             # index): the rL superspace generators as ~ratios (read-only — derived from M_L) and
@@ -3068,21 +3074,27 @@ class _GridBuilder:
                 # the left bus the controls ride (node_edge + FAN when the row fans — matching
                 # row_axis); the − zone drops from it rightward over the bottom prime as the hover target
                 basis_bus_x = self.node_edge + self.FAN if self._row_fans("vectors") else self.node_edge
+                def basis_minus(cid, p, kind, **kw):  # a vertical − zone on the left bus, over row p's prime
+                    self.cells.append(CellBox(cid, basis_bus_x, self.vec_top(p),
+                                         (bx + COL_W) - basis_bus_x, ROW_H, kind, **kw))
                 if self.element_draft:  # the green ?/? draft row below the stack: type a rational to add a
                     # new basis element (held just) — the row twin of the quantities-row prime:pending draft,
                     # committing through the SAME on_element_change. A distinct id so it's removed, not
-                    # restructured, on commit; its − cancels the draft (like the quantities row's).
+                    # restructured, on commit; its − cancels the draft (like the quantities row's). The
+                    # ":basis" id steers the shared element_minus builder to vertical (left-bus) styling.
                     draft_text = self.pending_element or "?/?"
                     self.cells.append(CellBox("basis:pending", bx, self.vec_top(self.d), COL_W, ROW_H,
                                               self._element_cell_kind(draft_text), text=draft_text, prime=self.d, pending=True))
-                    self.cells.append(CellBox("element_minus:basis", basis_bus_x, self.vec_top(self.d),
-                                         (bx + COL_W) - basis_bus_x, ROW_H, "element_minus"))
-                # the highest prime's walk − (shrink) only when the domain is prime-walked (box off); with
-                # the box on the domain is typed, not prime-walked, so the draft carries its own − instead
-                # (the row mirror of the quantities row's suppression).
-                if self.domain_can_shrink and not self.show_nonstandard_domain:
-                    self.cells.append(CellBox("basis_minus", basis_bus_x, self.vec_top(self.d - 1),
-                                         (bx + COL_W) - basis_bus_x, ROW_H, "basis_minus"))
+                    basis_minus("element_minus:basis:pending", self.d, "element_minus")
+                # the domain − on the spine, the row twin of the quantities − (see there). Box OFF: the
+                # walk − (shrink) over the highest prime, only when it applies. Box ON: a per-element −
+                # over EVERY element's row, each removing just that element; both withheld at d == 1.
+                if self.show_nonstandard_domain:
+                    if self.d > 1:
+                        for p in range(self.d):
+                            basis_minus(f"element_minus:basis:{p}", p, "element_minus", prime=p)
+                elif self.domain_can_shrink:
+                    basis_minus("basis_minus", self.d - 1, "basis_minus")
                 if "vectors" in self.row_plus_y:  # the basis +: a typed ?/? element draft (element_plus →
                     # editor.add_element, box on) or the standard prime walk (plus → editor.expand, box off)
                     plus_kind = "element_plus" if self.show_nonstandard_domain else "plus"
