@@ -3748,13 +3748,17 @@ class _GridBuilder:
                     self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H)
                 if self.pending_mapping_row is not None:  # the draft row's own ⟨ … ] map brackets, green
                     self.bracket("map:pending", MAP_BRACKETS, "primes", self.map_top(self.r), ROW_H, pending=True)
-            if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
-                self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], self.r * ROW_H, fit=True)
+            # the spanning derived [ ]s grow to r_shown — enclosing the (empty) draft-row slot at the
+            # band floor, exactly as the comma-draft's mapped_comma [ ] grows over nc_shown to enclose
+            # its empty draft-column slot. r_shown == r whenever no row is pending, so the resting
+            # render is unchanged.
+            if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over the rows
+                self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], self.r_shown * ROW_H, fit=True)
             if self.tile_open("mapping", "targets"):
-                self.bracket("mapped", LIST_BRACKETS, "targets", self.row_y["mapping"], self.r * ROW_H, fit=True)
+                self.bracket("mapped", LIST_BRACKETS, "targets", self.row_y["mapping"], self.r_shown * ROW_H, fit=True)
             # the interest mapped images stand alone (no outer [ … ]), mirroring the vectors row
             if self.nh and self.tile_open("mapping", "held"):  # held mapped list, like the targets / interest
-                self.bracket("hmapped", LIST_BRACKETS, "held", self.row_y["mapping"], self.r * ROW_H, fit=True)
+                self.bracket("hmapped", LIST_BRACKETS, "held", self.row_y["mapping"], self.r_shown * ROW_H, fit=True)
         # the chapter-9 superspace mapping M_L: a rL × dL covector stack over the ssprimes
         # column, framed exactly like M (per-row ⟨ … ] brackets + top/bottom matrix_frame)
         if self.row_open("ss_mapping") and self.tile_open("ss_mapping", "ssprimes"):

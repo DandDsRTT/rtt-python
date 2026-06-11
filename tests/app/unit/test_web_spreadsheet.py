@@ -3810,6 +3810,20 @@ def test_the_mapping_plain_text_becomes_a_two_tone_draft_box_while_a_row_is_pend
     assert resting["ptext:mapping:primes"].kind == "ptextedit"  # no draft -> editable again
 
 
+def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_empty_slot():
+    # the spanning derived [ ]s (M·targets, M·commas) grow with the band so they enclose the draft
+    # row's slot at the band floor — mirroring the comma draft, whose mapped_comma [ ] grows over
+    # nc_shown to enclose its empty draft-COLUMN slot. No mapped cell is emitted in the draft row
+    # (its value is undefined until the row commits); the bracket just extends over the empty slot.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # r=2
+    plain = {c.id: c for c in spreadsheet.build(base).cells}
+    drafting = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
+    for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
+        assert plain[bid].h == 2 * spreadsheet.ROW_H        # committed: r rows
+        assert drafting[bid].h == 3 * spreadsheet.ROW_H     # draft: r_shown rows (encloses the slot)
+    assert "cell:mapped:2:0" not in drafting                # ...but no derived cell is emitted in it
+
+
 # --- math expressions: the just row's exact log₂ closed forms ---
 
 def test_math_expressions_render_the_just_tuning_primes_as_logs():
