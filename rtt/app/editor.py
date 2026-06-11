@@ -230,15 +230,28 @@ class Editor:
         be applied (through the normal edit methods, which would otherwise push an undo step) for a
         live preview, then fully reverted via :meth:`restore_for_preview`, leaving no trace. The
         drag-to-combine drop preview uses this to show the would-be result while hovering, without
-        committing it or polluting the undo history."""
-        return (self._capture(), list(self._undo_stack), list(self._redo_stack))
+        committing it or polluting the undo history.
+
+        "No trace" includes the transients OUTSIDE the document: the pending drafts,
+        ``_nudging_generator`` (wheel-undo coalescing) and ``superspace_generator_tuning``, which
+        :meth:`_restore` wipes, plus ``nonprime_basis_approach``, which a hypothetical op can mutate
+        through the state setter's side effect (and _restore never resets). Without carrying them, a
+        mere hover preview destroys an open draft column or silently commits the hovered approach."""
+        transients = (self.pending_comma, self.pending_interest, self.pending_held,
+                      self.pending_target, self.pending_element, self.pending_mapping_row,
+                      self._nudging_generator, self.superspace_generator_tuning,
+                      self.nonprime_basis_approach)
+        return (self._capture(), list(self._undo_stack), list(self._redo_stack), transients)
 
     def restore_for_preview(self, token: tuple) -> None:
-        """Revert to a :meth:`capture_for_preview` snapshot — document and history both."""
-        doc, undo, redo = token
+        """Revert to a :meth:`capture_for_preview` snapshot — document, history, and transients."""
+        doc, undo, redo, transients = token
         self._restore(doc)
         self._undo_stack[:] = undo
         self._redo_stack[:] = redo
+        (self.pending_comma, self.pending_interest, self.pending_held, self.pending_target,
+         self.pending_element, self.pending_mapping_row, self._nudging_generator,
+         self.superspace_generator_tuning, self.nonprime_basis_approach) = transients
 
     def _clear_pending(self) -> None:
         """Discard every in-progress draft. Called whenever the document or domain shifts

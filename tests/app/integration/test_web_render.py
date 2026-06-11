@@ -2605,9 +2605,9 @@ async def test_a_disabled_history_button_shows_no_preview(user: User) -> None:
 # The hover/edit-preview tests above all clear via mouse-out (mouseleave / opthover -1 / blur). These
 # cover the other way a gesture ends: the user COMMITS (Enter, an unrelated render, a chooser select).
 # A regression here is exactly the reported bug — "preview highlighting persists after the change has
-# been applied." Two mechanisms are guarded: the amber edit-preview after an Enter-commit that keeps
-# focus (so no blur fires), and the red remove-preview that a later render must reconcile away rather
-# than orphan (render owns both ring colours and rewrites preview_shown, so a stranded red is unreachable).
+# been applied." The rings are a pure function of (document, active gesture), recomputed by every
+# render/paint, and commits structurally end the hover-family gestures (render ends any such gesture
+# it didn't initiate) — so a stranded ring is unreachable by construction; these tests lock that.
 
 async def test_hovering_then_clicking_the_optimize_button_clears_the_preview(user: User) -> None:
     # the reported bug, in its optimize-button form: hovering the optimize button rings the cells its
@@ -2690,9 +2690,9 @@ async def test_committing_a_ratio_clears_the_edit_preview(user: User) -> None:
 async def test_an_unrelated_render_does_not_strand_a_control_hovers_red_ring(user: User) -> None:
     # a +/- hover reddens the cells its click would remove, in place (no reflow) — but that red must not
     # outlive a render. If any unrelated render runs while the hover is up (here toggling a Show layer),
-    # render reconciles the rings: it strips the now-stale red rather than orphaning it (render never
-    # re-touches red on its own and it rewrites preview_shown, so a later mouse-out could not reach a
-    # stranded ring). Hover the generator − (reddens the doomed generator), toggle "counts", and the red
+    # the render ends the hover gesture (a hover never renders, so a render arriving mid-hover is by
+    # definition foreign) and repaints the rings from the now-empty gesture state — the red is stripped,
+    # not orphaned. Hover the generator − (reddens the doomed generator), toggle "counts", and the red
     # is gone from the surviving cell — and stays gone after mouse-out.
     await user.open("/")
     btn = set(user.find(marker="gen_minus").elements)
@@ -2730,6 +2730,137 @@ async def test_selecting_a_temperament_clears_a_prior_shrink_hovers_red(user: Us
     _cell_child(user, "preset:temperament").set_value(other7)               # APPLY a different 7-limit (keeps prime:3)
     await user.should_see(marker="prime:3")                                  # the column survived the commit
     assert "rtt-preview-remove" not in _wrap_classes(user, "prime:3")        # ...and the stale red was cleared
+
+
+async def test_completing_a_held_interval_draft_clears_the_rings_without_blur(user: User) -> None:
+    # the reported bug, in its submit-a-held-interval form: a draft column COMMITS the moment its
+    # typed vector completes — no blur fires (the focused vector cell keeps its id across the
+    # commit), so nothing external ends the edit gesture. The change is APPLIED, so its rings must
+    # go away immediately: the commit rebases the gesture on the new grid instead of leaving the
+    # commit's render ringing everything the new column moved (stranded until a click elsewhere).
+    # Completing the vector via a wheel notch is the commit path with no blur anywhere near it.
+    await user.open("/")
+    _toggle(user, "optimization")                    # show the held column
+    _click_glyph(user, "held_plus")                  # start a blank green draft
+    await user.should_see(marker="cell:held:0:0")
+    inp = _cell_child(user, "cell:held:0:0")
+    UserInteraction(user, {inp}, None).trigger("focus")          # the edit gesture rides the vector cell
+    _cell_child(user, "cell:held:1:0").set_value("1")            # fill the rest of 3/2 = (-1 1 0)
+    _cell_child(user, "cell:held:2:0").set_value("0")
+    wrap = set(user.find(marker="cell:held:0:0").elements)
+    UserInteraction(user, wrap, None).trigger("wheel", {"deltaY": 100})  # one notch down: blank → -1 → COMMITS
+    await user.should_see(marker="held:0")                       # the draft materialized (no blur fired)
+    assert _cell_child(user, "held:0").value == "3/2"
+    for p in range(3):                                           # the committed column carries no ring
+        assert "rtt-preview-change" not in _wrap_classes(user, f"cell:held:{p}:0"), \
+            "the held-interval commit left its rings stranded (no blur ever fires on this path)"
+    assert "rtt-preview-change" not in _wrap_classes(user, "held:0")
+
+
+async def test_clicking_reset_after_hovering_it_clears_the_preview(user: User) -> None:
+    # the reported bug, in its reset form: hovering the reset button rings the cells restoring the
+    # defaults would move; clicking it APPLIES — and the mouse never leaves the button, so the clear
+    # cannot ride a mouseleave. The commit itself (act ends the hover gesture; its render repaints
+    # from the empty gesture) must strip the rings.
+    await user.open("/")
+    _cell_child(user, "tuning:gen:1").set_value("700.000")   # an edit, so reset has something to restore
+    await user.should_see(marker="reset")
+    btn = set(user.find(marker="reset").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")   # hover: the hand-tuned cell would move back
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:gen:1")
+    user.find(marker="reset").click()                        # APPLY (mouse still over the button)
+    await user.should_see(marker="tuning:gen:1")
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:1")   # cleared on the commit
+    assert "rtt-preview-remove" not in _wrap_classes(user, "tuning:gen:1")
+
+
+async def test_selecting_an_established_projection_clears_the_chooser_preview(user: User) -> None:
+    # the reported bug, in its established-projection form: hovering a projection option rings the
+    # cells re-forming P/G to it would move; SELECTING it applies the change, and the rings must not
+    # survive the commit (no opthover -1 need ever arrive — the commit's render ends the gesture).
+    await user.open("/")
+    _toggle(user, "presets")
+    user.find(kind=ui.checkbox, content="projection").click()
+    await user.should_see(marker="preset:projection")
+    sel = _cell_child(user, "preset:projection")
+    wrap = set(user.find(marker="preset:projection").elements)
+    idx = list(sel.options).index("1/3-comma")
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # hover: the genmap would re-solve
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:gen:1")
+    sel.set_value("1/3-comma")                                               # APPLY (commit via the select)
+    await user.should_see(marker="preset:projection")
+    assert _cell_child(user, "tuning:gen:1").value == "694.786"              # the pick committed
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:1"), \
+        "the projection pick left its hover rings stranded after the commit"
+
+
+async def test_a_stale_opthover_after_popup_hide_is_dropped(user: User) -> None:
+    # the documented client race: the option-hover delegation debounces 90 ms, so a settle-timer
+    # armed just before a click can fire AFTER the popup closed — re-arming a preview with nothing
+    # left to clear it. The server now gates arms on the popup's state: an opthover landing after
+    # this chooser's popup-hide (and before a new popup-show) is a stale fire and is dropped. A
+    # fresh popup-show reopens the gate. (Choosers that never report popup state — these tests
+    # elsewhere — stay allowed: absent means untracked, not closed.)
+    from rtt.app import presets
+    await user.open("/")
+    _toggle(user, "presets")
+    _toggle(user, "weighting")                                 # >1 tuning-scheme option (S/U/C)
+    await user.should_see(marker="preset:tuning")
+    sel = _cell_child(user, "preset:tuning")
+    wrap = set(user.find(marker="preset:tuning").elements)
+    idx = list(presets.tuning_scheme_options(False, False, True)).index("minimax-S")
+    UserInteraction(user, {sel}, None).trigger("popup-show")                 # the popup opens
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # a real hover previews
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
+    UserInteraction(user, {sel}, None).trigger("popup-hide")                 # the popup closed (a pick/Escape)
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")  # the close ended the preview
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # the stale settle-timer fire
+    assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1"), \
+        "a stale opthover after popup-hide re-armed the preview (the stranded-ring race)"
+    UserInteraction(user, {sel}, None).trigger("popup-show")                 # a genuine reopen
+    UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
+    assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")    # ...previews again
+
+
+async def test_a_control_hover_preserves_an_open_draft(user: User) -> None:
+    # a +/- hover previews by applying its op to an editor snapshot and reverting — and that revert
+    # must carry the editor's transients: the pending draft column lives OUTSIDE the undoable
+    # document, so a restore that drops it silently destroys the user's half-built draft on a mere
+    # hover. Open a comma draft, hover the prime − (its hypothetical shrink would also doom the
+    # draft — it reds, fine), leave, then force an unrelated render: the green draft must survive.
+    await user.open("/")
+    _click_glyph(user, "comma_plus")                 # start a blank green comma draft
+    await user.should_see(marker="comma:pending")
+    UserInteraction(user, {_cell_child(user, "comma:pending")}, None).trigger("blur")  # leave the draft cell
+    btn = set(user.find(marker="minus").elements)
+    UserInteraction(user, btn, None).trigger("mouseenter")    # the hover's hypothetical runs + reverts
+    UserInteraction(user, btn, None).trigger("mouseleave")
+    _toggle(user, "counts")                                   # any unrelated render re-reads editor state
+    await user.should_see(marker="comma:pending")             # the draft survived the hover
+    assert "rtt-pending" in _wrap_classes(user, "comma:pending")   # ...still the green draft head
+    await user.should_see(marker="cell:comma:0:1")            # its draft vector column survived too
+
+
+async def test_gensign_hover_hands_the_wheel_preview_back(user: User) -> None:
+    # the clickable sign lives INSIDE the generator-tuning cell, so pointing at it stacks two
+    # gestures: the cell's wheel hover (already armed) and the sign's flip hover. The sign hover
+    # takes over while it lasts, and leaving it hands the wheel gesture back — so a notch after the
+    # sign detour still rings the ripple against the wheel's baseline.
+    await user.open("/")
+    cell = set(user.find(marker="tuning:gen:1").elements)
+    UserInteraction(user, cell, None).trigger("mouseenter")        # arm the wheel gesture
+    sign = set(user.find(marker="gensign:1").elements)
+    UserInteraction(user, sign, None).trigger("mouseenter")        # the in-cell sign hover takes over
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2")  # the flip preview rings
+    UserInteraction(user, sign, None).trigger("mouseleave")        # ...and hands the wheel back
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
+    UserInteraction(user, cell, None).trigger("wheel.prevent", {"deltaY": -1})  # a notch: nudge + render
+    await user.should_see(marker="retune:target:0")
+    assert "rtt-preview-change" in _wrap_classes(user, "retune:target:0"), \
+        "the sign-hover detour lost the wheel gesture — the notch rang nothing"
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:1")   # the scrolled cell never rings
+    UserInteraction(user, cell, None).trigger("mouseleave")
+    assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:0")
 
 
 async def test_hovering_a_nonstandard_approach_option_previews_setting_it(user: User) -> None:

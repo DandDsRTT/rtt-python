@@ -15,6 +15,7 @@ import json
 import math
 import os
 import sys
+from dataclasses import dataclass
 from html import escape as _escape
 from pathlib import Path
 from types import SimpleNamespace
@@ -1165,13 +1166,13 @@ _OPTION_HOVER_DELEGATION = """
     if (it && !optOf(e.relatedTarget)) { clearTimeout(timer); fire(it.getAttribute('data-optcid'), -1); }
   });
   // A PRESS ends the hover-intent: the user is committing a pick (or dismissing the popup). Cancel any
-  // pending settle-timer right now, so it can't fire AFTER the select commits. Without this, a timer
-  // armed <90 ms before the click fires once the popup has already closed — re-dispatching `opthover` at
-  // the chooser, which re-rings the change preview (show_preview) with nothing left to clear it (the
-  // commit's render and the popup-hide both already ran). That is a preview ring STRANDED on screen.
-  // Capture-phase so it runs before the click commits, wherever the press lands. We do NOT lean on the
-  // popup-removal `mouseout` above to cancel it: a removed element under the cursor does not fire
-  // mouseout reliably across browsers, so the timer could otherwise outlive the commit.
+  // pending settle-timer right now, so it can't fire AFTER the select commits. A timer armed <90 ms
+  // before the click would otherwise fire once the popup has already closed, re-dispatching `opthover`
+  // at the chooser. (The SERVER also drops such stale arms — popup_state marks the popup 'closed'
+  // before they arrive, see _Reconciler.popup_state — so this cancel is a rate-limit nicety, not the
+  // correctness mechanism.) Capture-phase so it runs before the click commits, wherever the press
+  // lands. We do NOT lean on the popup-removal `mouseout` above to cancel it: a removed element under
+  // the cursor does not fire mouseout reliably across browsers.
   document.addEventListener('pointerdown', () => { clearTimeout(timer); }, true);
 })()
 """
@@ -1265,14 +1266,49 @@ def _option_key(select: ui.select, index):
     return keys[index] if 0 <= index < len(keys) else None
 
 
+@dataclass
+class _Gesture:
+    """The ONE record of the active preview gesture — the single source of truth the ring
+    highlights are computed from. The DOM's ring classes are a pure function of (document,
+    gesture): ``compute_rings`` derives the amber/red sets from this record on every paint, and
+    the one idempotent painter applies them — nothing else ever touches the ring classes, so a
+    ring structurally cannot outlive its gesture (the stranded-highlight bug class).
+
+    kind        'edit' (a focused editable cell), 'wheel' (gentuning hover-scroll), 'hover'
+                (a +/-, history, checkbox, approach or gensign control), 'chooser' (a dropdown
+                option), 'temp' (the temperament chooser — its own kind because it may REFLOW),
+                or 'drag' (combine / reorder).
+    source      the focused/scrolled cell's id — never rung (the user is already looking at it).
+    apply       the hypothetical op (a zero-arg editor thunk) the gesture previews WITHOUT
+                committing; None = no candidate (invalid/incomplete entry previews nothing).
+    baseline    the layout snapshotted when the gesture armed — the diff base for gestures whose
+                document MOVES mid-gesture (committed keystrokes / wheel notches / a temporarily
+                applied drag or temperament-grow).
+    target_pred a drag-combine extra: also ring the dropped-on row/column's editable cells
+                (their input values aren't part of the layout content signature).
+    token       an editor snapshot held while the DOCUMENT temporarily carries a hypothetical
+                state between events (drag, temperament-grow). Ending such a gesture always
+                restores the token first (see end_gesture), and render() skips persistence
+                while one is held — a hypothetical doc must never reach storage.
+    reflowed    temp only: the doc currently holds an applied (grid-reflowing) hypothetical.
+    prev        a one-deep suspend: the wheel gesture displaced by the in-cell generator-sign
+                hover, re-armed when that hover ends."""
+    kind: str
+    source: str | None = None
+    apply: Callable | None = None
+    baseline: "object | None" = None
+    target_pred: Callable | None = None
+    token: tuple | None = None
+    reflowed: bool = False
+    prev: "_Gesture | None" = None
+
+
 class _Reconciler:
     def __init__(self, editor):
         self._editor = editor
         self._cb = None  # callbacks (act, render, on_*) wired by index() after they are defined
         self._row_drag: int | None = None  # the mapping row a drag-to-add started on (dragstart → drop)
         self._col_drag: tuple[str, int] | None = None  # the (interval group, index) a drag-to-add started on
-        self._drag_token = None  # editor snapshot taken at drag pick-up, so the hover preview can revert
-        self._reorder_baseline = None  # the grid at reorder pick-up: a cross-list move's ring-diff baseline
         self.els: dict = {}  # entity id -> outer element (persists across renders)
         self.inputs: dict = {}  # mapping cell id -> q-input (a fraction cell's NUMERATOR / its sole integer input)
         self.den_inputs: dict = {}  # fraction cell id -> its DENOMINATOR q-input (ratio mode only; see _build_gridvalue)
@@ -1307,36 +1343,16 @@ class _Reconciler:
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
         self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
-        # The edit-preview highlight: while one editable cell is focused, every render rings the
-        # OTHER cells whose value the in-progress edit has moved, so the user previews the ripple
-        # before leaving the cell. preview_baseline is the layout captured when the cell took focus
-        # (None when nothing is being edited); preview_source is that focused cell's id (never rung —
-        # the user is already looking at it); preview_shown is the set currently carrying the ring,
-        # so clear_preview can strip them without a re-render when focus leaves.
-        self.preview_baseline = None
-        self.preview_source = None
-        self.preview_shown: set = set()
-        # While a drag-to-combine hover previews a drop, the target row/column's editable cells
-        # change VALUE but aren't caught by changed_cell_ids (an input cell's value isn't in the
-        # layout content signature), so they'd update silently with no ring. This predicate, set on
-        # the previewing hover, marks those target cells so render() rings them too. None otherwise.
-        self.combine_target_pred = None
-        # which gesture currently owns the preview, so each one only clears its own rings:
-        # _editing is the focused editable cell (a keyboard edit), _wheel_cid the generator-tuning
-        # cell whose wheel preview a hover armed, _control_hovering whether a +/- button is showing
-        # its hover preview, _chooser_hovering whether a dropdown option-hover is showing one. (A drag
-        # owns it via _drag_token.)
-        self._editing = None
-        self._wheel_cid = None
-        self._control_hovering = False
-        self._chooser_hovering = False
-        # the temperament-dropdown hover preview REFLOWS the grid (so a different rank/dimensionality
-        # shows its new columns/rows): _temp_token is the snapshot to revert/commit from, _temp_baseline
-        # the grid before it (for the ring diff), _previewing_temperament keeps the chooser's own value
-        # and open popup steady (the GRID previews, not the chooser) while it's live.
-        self._temp_token = None
-        self._temp_baseline = None
-        self._previewing_temperament = False
+        # The active preview gesture — the ONE record the ring highlights derive from (see
+        # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
+        self.gesture: _Gesture | None = None
+        # The server-side popup gate: chooser cell id -> 'open' | 'closed' (absent = never
+        # tracked, which ALLOWS — the in-process tests drive `opthover` without a popup). An
+        # option-hover ARM is dropped when its chooser's popup is 'closed': the client's 90 ms
+        # settle-timer can fire AFTER a commit closed the popup, and the socket's FIFO order
+        # guarantees that stale arm is seen after the popup-hide — so it can no longer strand a
+        # ring (the bug documented on _OPTION_HOVER_DELEGATION). Leaves/popup-hide are ungated.
+        self.popup_state: dict = {}
         # The cell-kind dispatch registry (audit #3): kind -> _KindHandlers(build[, update]).
         # Every kind is registered below; make_cell/update_cell index it directly (no fallback),
         # so an unregistered kind raises loudly rather than rendering a silent blank cell.
@@ -1435,33 +1451,6 @@ class _Reconciler:
         self.els[eid].delete()
         for d in self._handle_dicts:
             d.pop(eid, None)
-
-    def clear_preview(self):
-        """Strip every preview ring — the amber "value moved" and the red "will be removed" both
-        (the focused cell was left, or the +/- hover ended). Removes the classes straight from the
-        rung cells rather than via a render, so the highlight clears even when leaving triggers no
-        re-render (most editable cells have already committed live)."""
-        for eid in self.preview_shown:
-            if eid in self.els:
-                self.els[eid].classes(remove="rtt-preview-change rtt-preview-remove")
-        self.preview_shown = set()
-
-    def show_preview(self, modified, removed):
-        """Ring the on-screen cells a hovered +/- control would change, straight away and WITHOUT a
-        re-render: the cells whose value the click MOVES (``modified``) in amber, the cells it
-        REMOVES (``removed``) in red. Skipping the render keeps the control from sliding out from
-        under the cursor (an add/remove reflows the grid), so the highlight reads as a steady "this
-        is what changes" rather than a flicker. Cells absent from the DOM (a brand-new column the
-        click would add lives off-screen until committed) are skipped — only what's on screen can
-        ring. clear_preview strips both colours on mouse-out."""
-        self.clear_preview()
-        shown = set()
-        for ids, cls in ((modified, "rtt-preview-change"), (removed, "rtt-preview-remove")):
-            for eid in ids:
-                if eid in self.els:
-                    self.els[eid].classes(add=cls)
-                    shown.add(eid)
-        self.preview_shown = shown
 
     def make_cell(self, cb):
         # build a cell's element in the active parent (the caller opens the freeze container),
@@ -2198,7 +2187,12 @@ class _Reconciler:
             </q-item>
         """)
         wrap.on("opthover", lambda e: self._cb.on_chooser_hover(cid, e.args), args=["detail"])
-        sel.on("popup-hide", lambda _=None: self._cb.on_chooser_hover(cid, None))
+        # the popup events feed the server-side gate (popup_state): an option-hover ARM that
+        # arrives while this chooser's popup is 'closed' is a stale debounce-timer fire from a
+        # popup that already committed/closed — dropped, so it can never strand a ring. The hide
+        # also ends a live chooser/temperament gesture (the leave path), ungated.
+        sel.on("popup-show", lambda _=None: self._cb.on_popup(cid, True))
+        sel.on("popup-hide", lambda _=None: self._cb.on_popup(cid, False))
 
     def _build_preset(self, cb, wrap):
         name = cb.id.split(":")[1]  # temperament / tuning / target (a copy adds a :col suffix)
@@ -2332,7 +2326,7 @@ class _Reconciler:
         # placeholder), the target chooser splits into limit + family, the tuning chooser shows its
         # scheme. building[0] guards echoes.
         if cb.id.startswith("preset:temperament"):  # base + the comma-basis copy
-            if self._previewing_temperament:
+            if self.gesture is not None and self.gesture.kind == "temp" and self.gesture.reflowed:
                 return  # a hover preview reflows the GRID; leave the chooser's value + open popup steady
             value = presets.identify(self._editor.state)
             self.selects[cb.id].value = value
@@ -2755,10 +2749,18 @@ def index() -> None:
     last_lay = [None]  # the most recently built layout, so the master toggle can read its foldable bands
     refs: dict = {}
     target_limit_commit = [None]  # pending debounced commit task for the target-limit wheel
-    # a pending target-limit debounce must not outlive the page: if the user leaves mid-gesture,
-    # cancel it so the commit never renders into a gone client (which would just log an error).
-    ui.context.client.on_disconnect(
-        lambda: target_limit_commit[0].cancel() if target_limit_commit[0] is not None else None)
+
+    def _on_disconnect():
+        # a pending target-limit debounce must not outlive the page: if the user leaves mid-
+        # gesture, cancel it so the commit never renders into a gone client (which would just log
+        # an error). And a gesture holding the document in a hypothetical state (a drag / temp-grow
+        # whose dragend/popup-hide was lost with the socket) must restore the real document, or it
+        # would block persistence indefinitely (see render's persist guard).
+        if target_limit_commit[0] is not None:
+            target_limit_commit[0].cancel()
+        end_gesture()
+
+    ui.context.client.on_disconnect(_on_disconnect)
     # install the shared chooser-option hover delegation once per page (inert until a dropdown opens)
     ui.run_javascript(_OPTION_HOVER_DELEGATION)
     # dismiss any hover tooltip on pointerdown so it can't strand when the click removes/reflows its
@@ -2772,24 +2774,130 @@ def index() -> None:
         ids = last_lay[0].identities if last_lay[0] is not None else None
         return [tok for tok, _ in (ids or {}).get(name, [])]
 
-    def _preview_edit(apply):
-        # The live edit-preview core for the editable matrix/vector cells (mapping / comma / interest /
-        # held / target), in the spirit of on_element_preview: while a cell is focused, show what the
-        # typed value WOULD change — apply the candidate to a snapshot, diff it against the focus
-        # baseline, ring those cells (show_preview, no reflow), then revert. NO commit: the value lands
-        # only on Enter/blur. A no-op unless a cell is being edited (the baseline is the diff reference).
-        if rec._editing is None or rec.preview_baseline is None:
-            return
-        token = editor.capture_for_preview()
+    # ---- The declarative preview-ring core ------------------------------------------------------
+    # The ring highlights (amber rtt-preview-change / red rtt-preview-remove) are a PURE FUNCTION
+    # of (document, rec.gesture), recomputed and repainted in full on every paint — render() ends
+    # with a paint, and gesture transitions that don't move the document paint directly. Nothing
+    # else ever touches the ring classes, so a ring structurally cannot survive its gesture: every
+    # commit renders, every render repaints from state. (This replaced two parallel mechanisms — a
+    # direct class-poke and a baseline render-diff — coordinated by ~10 flags, whose missed clear
+    # paths were the recurring stranded-highlight bugs.)
+
+    gesture_rendering = [False]  # True while a gesture's OWN handler renders (drag hover, temp grow)
+
+    def gesture_render():
+        # a render initiated by the live gesture itself (a drag's reflow preview, a temperament
+        # grow), exempt from render()'s ends-foreign-gestures guard
+        gesture_rendering[0] = True
         try:
-            apply()  # the hypothetical edit, on the snapshot only
-            new = editor.layout(prev_ids=rec.preview_baseline.identities)
-            modified = spreadsheet.changed_cell_ids(rec.preview_baseline, new) - {rec._editing}
-            removed = spreadsheet.removed_cell_ids(rec.preview_baseline, new)
+            render()
         finally:
-            editor.restore_for_preview(token)  # leave no trace: the document never actually changed
-        rec.clear_preview()
-        rec.show_preview(modified, removed)
+            gesture_rendering[0] = False
+
+    def end_gesture():
+        # The ONE way a gesture dies. A gesture holding a token has the document in a hypothetical
+        # state (drag hover, temperament grow) — restore it FIRST, so whatever runs next (a commit,
+        # a render) acts on the real document. Returns the ended gesture (or None) so callers can
+        # ask whether it had reflowed. Never null rec.gesture directly.
+        g, rec.gesture = rec.gesture, None
+        if g is not None and g.token is not None:
+            editor.restore_for_preview(g.token)
+        return g
+
+    def compute_rings(lay):
+        # the amber ("value would move" / "value moved") and red ("would be removed") cell-id sets
+        # for the current gesture against layout `lay` — the pure function the painter applies.
+        # The layout contributes its OWN steady reds independent of any gesture: a builder-driven
+        # cb.preview_remove (the value a pending comma draft will delete — the doomed unchanged
+        # interval) is render-state, painted with the same red look and kept until the draft
+        # closes (the next build without the flag drops it from the set).
+        static_red = frozenset(cb.id for cb in lay.cells if cb.preview_remove)
+        amber, red = _gesture_rings(lay)
+        return amber, red | static_red
+
+    def _gesture_rings(lay):
+        # the active gesture's contribution to the ring sets (empty when no gesture is live)
+        g = rec.gesture
+        if g is None:
+            return frozenset(), frozenset()
+        if g.apply is not None:
+            # hypothetical mode: the document is unchanged; diff the gesture's base (the focus-time
+            # baseline for an edit, else the current grid) against the would-be layout, painting on
+            # the CURRENT grid — no reflow, so a hovered control never slides from under the cursor.
+            # Cells the op would ADD exist only in `hyp`, so they can't ring (off-screen until
+            # committed); cells it would REMOVE are still on screen, so red can mark them.
+            base = g.baseline if g.baseline is not None else lay
+            token = editor.capture_for_preview()
+            try:
+                g.apply()
+                hyp = editor.layout(prev_ids=base.identities)
+                amber = spreadsheet.changed_cell_ids(base, hyp)
+                red = spreadsheet.removed_cell_ids(base, hyp)
+            finally:
+                editor.restore_for_preview(token)  # leave no trace
+            return amber - {g.source}, red
+        if g.baseline is not None:
+            # live mode: the document has moved (committed keystrokes / wheel notches / a
+            # temporarily-applied drag or temperament-grow) — diff the arm-time baseline against
+            # the current grid. Red never applies here: anything removed is already off-screen.
+            amber = spreadsheet.changed_cell_ids(g.baseline, lay) - {g.source}
+            if g.target_pred is not None:  # drag-combine: also ring the dropped-on row/column's
+                # editable cells (their input values aren't in the layout content signature)
+                amber |= frozenset(cb.id for cb in lay.cells if g.target_pred(cb))
+            return amber, frozenset()
+        return frozenset(), frozenset()
+
+    def paint_cell(eid, amber, red):
+        # idempotently set one cell's ring classes from the computed sets (NiceGUI's classes() is
+        # change-detected, so a no-op repaint sends nothing over the socket)
+        el = rec.els.get(eid)
+        if el is None:
+            return  # a ring id with no DOM element (nothing on screen to mark) — skip
+        el.classes(add="rtt-preview-change" if eid in amber else "",
+                   remove="" if eid in amber else "rtt-preview-change")
+        el.classes(add="rtt-preview-remove" if eid in red else "",
+                   remove="" if eid in red else "rtt-preview-remove")
+
+    def paint_rings():
+        # repaint every cell's rings from the current gesture WITHOUT a render — the path for
+        # gesture transitions that don't move the document (hover arm/disarm, a keystroke's new
+        # candidate, blur). render() does the same sweep itself at the end of its cell pass.
+        lay = last_lay[0]
+        if lay is None:
+            return
+        amber, red = compute_rings(lay)
+        for cb in lay.cells:
+            paint_cell(cb.id, amber, red)
+
+    def take_over_gesture():
+        # end the live gesture so a new one can arm: the token (if any) restores the real
+        # document, and a temperament grow-preview that had REFLOWED the grid rebuilds it
+        was = end_gesture()
+        if was is not None and was.reflowed:
+            gesture_render()
+
+    def _edit_candidate(apply):
+        # a keystroke's new preview candidate for the focused cell: the editor thunk the typed
+        # value WOULD commit, or None when the entry is invalid/incomplete/a draft (previews
+        # nothing). NO commit — the value lands only on Enter/blur.
+        g = rec.gesture
+        if g is None or g.kind != "edit":
+            return
+        g.apply = apply
+        paint_rings()
+
+    def _rebase_edit_gesture():
+        # a DRAFT column just materialized under the focused cell (the green pending vector
+        # committed the moment its last value was typed — no blur fires, so the edit gesture
+        # stays armed). The change is APPLIED, so its rings must go away immediately: rebase the
+        # gesture on the just-rendered grid — the diff against the new reality is empty, and any
+        # CONTINUED typing previews against the committed state. (Without this, the commit's
+        # render rings everything the new column moved, stranded until the user clicks elsewhere
+        # — the reported submit-a-held-interval bug.)
+        g = rec.gesture
+        if g is not None and g.kind == "edit":
+            g.baseline = last_lay[0]
+            paint_rings()
 
     def on_mapping_change(preview=False):
         # commit (Enter/blur), or with preview=True (live, on each keystroke) ring the cells the typed
@@ -2804,28 +2912,31 @@ def index() -> None:
             # is off-screen-until-committed for preview purposes, so a preview pass rings nothing.
             if any(f"cell:mapping:{r}:{p}" not in rec.inputs for p in range(d)):
                 if preview:
-                    rec.clear_preview()
+                    _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
                 return
             editor.set_pending_mapping_row([_parse_int(rec.inputs[f"cell:mapping:{r}:{p}"].value) for p in range(d)])
+            committed = editor.pending_mapping_row is None  # the draft materialized into a real row
             render()
+            if committed:
+                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
             return
         matrix = [[_parse_int(rec.inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
         if any(v is None for row in matrix for v in row):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return
         if not service.is_proper_temperament(matrix):
             if preview:
-                rec.clear_preview()  # an improper in-progress matrix previews nothing (no toast)
+                _edit_candidate(None)  # an improper in-progress matrix previews nothing (no toast)
                 return
             ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
             render()  # revert the cells to the current temperament
             return
         if preview:
-            _preview_edit(lambda: editor.edit_mapping(matrix))
+            _edit_candidate(lambda: editor.edit_mapping(matrix))
             return
         editor.edit_mapping(matrix)
         render()
@@ -2842,33 +2953,36 @@ def index() -> None:
             # commits (and re-ranks) once they form a valid independent comma
             if any(f"cell:comma:{p}:{nc}" not in rec.inputs for p in range(d)):
                 if preview:
-                    rec.clear_preview()
+                    _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
             if preview:
-                rec.clear_preview()  # a draft column is off-screen until committed — preview nothing
+                _edit_candidate(None)  # a draft column is off-screen until committed — preview nothing
                 return
             editor.set_pending_comma([_parse_int(rec.inputs[f"cell:comma:{p}:{nc}"].value) for p in range(d)])
+            committed = editor.pending_comma is None  # the draft materialized into a real column
             render()
+            if committed:
+                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
             return
         if any(f"cell:comma:{p}:{c}" not in rec.inputs for c in range(nc) for p in range(d)):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return  # the comma cells aren't currently shown (folded away)
         # the comma cells are the basis transposed (prime down the rows, comma across)
         basis = [[_parse_int(rec.inputs[f"cell:comma:{p}:{c}"].value) for p in range(d)] for c in range(nc)]
         if any(v is None for comma in basis for v in comma):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return
         if not service.is_proper_temperament(service.from_comma_basis(basis).mapping):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
                 return
             ui.notify(_INVALID_TEMPERAMENT, type="negative", position="top")
             render()
             return
         if preview:
-            _preview_edit(lambda: editor.edit_comma_basis(basis))
+            _edit_candidate(lambda: editor.edit_comma_basis(basis))
             return
         editor.edit_comma_basis(basis)
         render()
@@ -2882,21 +2996,21 @@ def index() -> None:
         d, r = editor.state.d, editor.state.r
         if any(f"cell:unchanged:{p}:{j}" not in rec.inputs for j in range(r) for p in range(d)):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return  # U isn't editable (under-rank) or not shown
         vectors = [[_parse_int(rec.inputs[f"cell:unchanged:{p}:{j}"].value) for p in range(d)] for j in range(r)]
         if any(v is None for vec in vectors for v in vec):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return  # an in-progress / non-integer edit
         try:
             ratios = service.comma_ratios(tuple(tuple(v) for v in vectors), editor.state.domain_basis)
         except (ValueError, ZeroDivisionError, ArithmeticError):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return
         if preview:
-            _preview_edit(lambda: editor.set_unchanged_basis(ratios))
+            _edit_candidate(lambda: editor.set_unchanged_basis(ratios))
             return
         editor.set_unchanged_basis(ratios)
         render()
@@ -2913,25 +3027,28 @@ def index() -> None:
             pt = spreadsheet.pending_token(toks)
             if any(f"cell:interest:{p}:{pt}" not in rec.inputs for p in range(d)):
                 if preview:
-                    rec.clear_preview()
+                    _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
             if preview:
-                rec.clear_preview()  # a draft column is off-screen until committed — preview nothing
+                _edit_candidate(None)  # a draft column is off-screen until committed — preview nothing
                 return
             editor.set_pending_interest([_parse_int(rec.inputs[f"cell:interest:{p}:{pt}"].value) for p in range(d)])
+            committed = editor.pending_interest is None  # the draft materialized into a real column
             render()
+            if committed:
+                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
             return
         if len(toks) != mi or any(f"cell:interest:{p}:{toks[i]}" not in rec.inputs for i in range(mi) for p in range(d)):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return  # the interest cells aren't currently shown (folded away)
         vectors = [[_parse_int(rec.inputs[f"cell:interest:{p}:{toks[i]}"].value) for p in range(d)] for i in range(mi)]
         if any(v is None for m in vectors for v in m):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return
         if preview:
-            _preview_edit(lambda: editor.set_interest_vectors(vectors))
+            _edit_candidate(lambda: editor.set_interest_vectors(vectors))
             return
         editor.set_interest_vectors(vectors)
         render()
@@ -2948,25 +3065,28 @@ def index() -> None:
             pt = spreadsheet.pending_token(toks)
             if any(f"cell:held:{p}:{pt}" not in rec.inputs for p in range(d)):
                 if preview:
-                    rec.clear_preview()
+                    _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
             if preview:
-                rec.clear_preview()  # a draft column is off-screen until committed — preview nothing
+                _edit_candidate(None)  # a draft column is off-screen until committed — preview nothing
                 return
             editor.set_pending_held([_parse_int(rec.inputs[f"cell:held:{p}:{pt}"].value) for p in range(d)])
+            committed = editor.pending_held is None  # the draft materialized into a real column
             render()
+            if committed:
+                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
             return
         if len(toks) != nh or any(f"cell:held:{p}:{toks[i]}" not in rec.inputs for i in range(nh) for p in range(d)):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return  # the held cells aren't currently shown (folded away / optimization off)
         vectors = [[_parse_int(rec.inputs[f"cell:held:{p}:{toks[i]}"].value) for p in range(d)] for i in range(nh)]
         if any(v is None for m in vectors for v in m):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return
         if preview:
-            _preview_edit(lambda: editor.set_held_vectors(vectors))
+            _edit_candidate(lambda: editor.set_held_vectors(vectors))
             return
         editor.set_held_vectors(vectors)
         render()
@@ -2987,25 +3107,28 @@ def index() -> None:
             pt = spreadsheet.pending_token(toks)
             if any(f"cell:vec:targets:{pt}:{p}" not in rec.inputs for p in range(d)):
                 if preview:
-                    rec.clear_preview()
+                    _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
             if preview:
-                rec.clear_preview()  # a draft column is off-screen until committed — preview nothing
+                _edit_candidate(None)  # a draft column is off-screen until committed — preview nothing
                 return
             editor.set_pending_target([_parse_int(rec.inputs[f"cell:vec:targets:{pt}:{p}"].value) for p in range(d)])
+            committed = editor.pending_target is None  # the draft materialized into a real column
             render()
+            if committed:
+                _rebase_edit_gesture()  # the change is applied — its rings go away NOW (no blur fires)
             return
         if len(toks) != k or any(f"cell:vec:targets:{toks[j]}:{p}" not in rec.inputs for j in range(k) for p in range(d)):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return  # the target cells aren't currently shown (folded away)
         vectors = [[_parse_int(rec.inputs[f"cell:vec:targets:{toks[j]}:{p}"].value) for p in range(d)] for j in range(k)]
         if any(v is None for m in vectors for v in m):
             if preview:
-                rec.clear_preview()
+                _edit_candidate(None)
             return
         if preview:
-            _preview_edit(lambda: editor.set_target_override_vectors(vectors))
+            _edit_candidate(lambda: editor.set_target_override_vectors(vectors))
             return
         editor.set_target_override_vectors(vectors)
         render()
@@ -3106,13 +3229,12 @@ def index() -> None:
         render()
 
     def on_element_preview(cid):
-        # live edit preview: as a VALID element is typed into a domain cell, ring the cells the
-        # relabel / held-just add would move — WITHOUT committing. The scalar ratio cells commit on
-        # blur (so they get no live preview for free the way the per-keystroke vector cells do), so
-        # we apply the hypothetical to a snapshot, diff against the focus baseline, ring, and revert.
-        # An invalid / unchanged value clears the rings. Mirrors _preview_apply, but runs WHILE the
-        # cell is focused (which _preview_apply bails on) and diffs against preview_baseline.
-        if building[0] or rec._editing != cid or rec.preview_baseline is None or cid not in rec.inputs:
+        # live edit preview: as a VALID element is typed into a domain cell, set the candidate the
+        # relabel / held-just add would commit — the rings paint from it WITHOUT committing (the
+        # scalar ratio cells commit on blur, so they don't get the per-keystroke vector cells'
+        # preview for free). An invalid / unchanged value previews nothing.
+        g = rec.gesture
+        if building[0] or g is None or g.kind != "edit" or g.source != cid or cid not in rec.inputs:
             return
         raw = rec.cell_value(cid)  # the cell's "num/den" (a fraction cell rejoins its two fields)
         tok = cid.split(":")[1]
@@ -3123,23 +3245,11 @@ def index() -> None:
             valid = (parsed is not None and parsed != editor.state.domain_basis[int(tok)]
                      and service.can_set_domain_element(editor.state, int(tok), parsed))
         if not valid:
-            rec.clear_preview()  # nothing valid to preview (yet)
-            return
-        saved_pending = editor.pending_element  # the snapshot doesn't carry the transient draft
-        token = editor.capture_for_preview()
-        try:
-            if tok == "pending":
-                editor.set_pending_element(raw)  # commits the held-just add on the snapshot
-            else:
-                editor.set_domain_element(int(tok), raw)
-            new = editor.layout(prev_ids=rec.preview_baseline.identities)
-            modified = spreadsheet.changed_cell_ids(rec.preview_baseline, new) - {cid}
-            removed = spreadsheet.removed_cell_ids(rec.preview_baseline, new)
-        finally:
-            editor.restore_for_preview(token)
-            editor.pending_element = saved_pending
-        rec.clear_preview()
-        rec.show_preview(modified, removed)
+            _edit_candidate(None)  # nothing valid to preview (yet)
+        elif tok == "pending":
+            _edit_candidate(lambda: editor.set_pending_element(raw))  # the held-just add
+        else:
+            _edit_candidate(lambda: editor.set_domain_element(int(tok), raw))  # the relabel
 
     def on_power_change(cid):
         # editable power inputs share this kind: optimization:power drives the Lp optimization
@@ -3260,21 +3370,21 @@ def index() -> None:
     def on_target_limit_preview(typed=None):
         # live edit preview for the TILT/OLD limit field, mirroring on_element_preview: as the shown
         # limit changes (a wheel notch steps it, a keystroke types it) but BEFORE the debounced commit
-        # reflows the grid, ring the target-interval cells the new limit would MOVE (amber) / REMOVE
-        # (red) — applied to a snapshot, diffed against the focus baseline, reverted. LOWERING the limit
-        # drops intervals; reddening them in place is what shows "what's going away" while they're still
-        # on screen — a post-commit render can't, because the reflow has already deleted them (red only
-        # ever rings live cells). RAISING it just rings the survivors that move (the added rows are off-
-        # screen until committed, so show_preview skips them), like every other no-reflow add preview.
-        # `typed` is the live field text for a keystroke (the loopback field's debounced model value
-        # lags a keystroke behind); the wheel passes None and reads the number it just stepped server-side.
-        if building[0] or rec._editing != "preset:target" or rec.preview_baseline is None:
+        # reflows the grid, the candidate rings the target-interval cells the new limit would MOVE
+        # (amber) / REMOVE (red) in place. LOWERING the limit drops intervals; reddening them while
+        # they're still on screen is what shows "what's going away" — a post-commit render can't, the
+        # reflow has already deleted them. RAISING it just rings the survivors that move (the added
+        # rows are off-screen until committed, so they can't ring), like every other no-reflow add
+        # preview. `typed` is the live field text for a keystroke (the loopback field's debounced
+        # model value lags a keystroke behind); the wheel passes None and reads the stepped number.
+        g = rec.gesture
+        if building[0] or g is None or g.kind != "edit" or g.source != "preset:target":
             return
         num, sel = rec.selects["preset:target"]
         family = sel.value or "TILT"
         raw = num.value if typed is None else typed
         if service.target_limit_problem(family, raw) == "whole":
-            rec.clear_preview()  # a non-number isn't a previewable limit (yet); the commit toasts it
+            _edit_candidate(None)  # a non-number isn't a previewable limit (yet); the commit toasts it
             return
         text = (str(raw) if raw is not None else "").strip()
         spec = f"{int(float(text))}-{family}" if text else family  # blank -> the bare family (domain default)
@@ -3283,18 +3393,9 @@ def index() -> None:
         except Exception:
             valid = False
         if not valid:
-            rec.clear_preview()
+            _edit_candidate(None)
             return
-        token = editor.capture_for_preview()
-        try:
-            editor.set_target_spec(spec)  # the same edit on_target_change commits, on a snapshot
-            new = editor.layout(prev_ids=rec.preview_baseline.identities)
-            modified = spreadsheet.changed_cell_ids(rec.preview_baseline, new) - {"preset:target"}
-            removed = spreadsheet.removed_cell_ids(rec.preview_baseline, new)
-        finally:
-            editor.restore_for_preview(token)  # leave no trace: the real document never moved
-        rec.clear_preview()
-        rec.show_preview(modified, removed)
+        _edit_candidate(lambda: editor.set_target_spec(spec))  # the same edit on_target_change commits
 
     def on_prescaler_change(cid):
         # a bare prescaler 𝐿 diagonal cell (cid "cell:prescaling:primes:i:i"): a valid float
@@ -3368,6 +3469,12 @@ def index() -> None:
                 ui.notify(toast, type="negative", position="top")
 
     def act(action):
+        # a commit ends any hover-family gesture FIRST — its rings are previews of a click that
+        # has now landed (or been superseded), and a token gesture must restore the real document
+        # before the action mutates it (e.g. Ctrl+Z while a temperament hover holds a hypothetical
+        # doc). The edit/wheel gestures survive their own commits and end on blur/mouseleave.
+        if rec.gesture is not None and rec.gesture.kind in ("hover", "chooser", "temp", "drag"):
+            end_gesture()
         action()
         render()
 
@@ -3468,12 +3575,8 @@ def index() -> None:
             # so only a real preset reaches here; load its comma basis (undoable), then re-render to
             # snap the box onto the now-matching preset.
             if value in presets.TEMPERAMENT_COMMAS:
-                if rec._temp_token is not None:  # a hover preview is live — revert it so the commit is
-                    editor.restore_for_preview(rec._temp_token)  # one clean undo step from the real base
-                    rec._temp_token = None
-                    rec._temp_baseline = None
-                    rec._previewing_temperament = False
-                    rec.preview_baseline = None
+                end_gesture()  # a live hover preview reverts (its token restores the real document),
+                # so the load below is one clean undo step from the real base
                 editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[value])
             render()
             return
@@ -3563,172 +3666,177 @@ def index() -> None:
         render()
 
     def on_cell_focus(cid):
-        # an editable cell took focus: snapshot the on-screen grid as the preview baseline so every
-        # subsequent live edit can ring exactly the cells it moves (computed against this snapshot in
-        # render), until the cell is left. No render needed — nothing has changed against itself yet.
-        # The keyboard edit now OWNS the preview (rec._editing), so a wheel/control hover stands down.
-        rec.preview_baseline = last_lay[0]
-        rec.preview_source = cid
-        rec._editing = cid
+        # an editable cell took focus: arm the EDIT gesture — its baseline is the on-screen grid,
+        # so every live candidate (and every commit while focused) rings exactly the cells it
+        # moves, until the cell is left. Focus takes over from whatever gesture was live (a hover
+        # or wheel stands down; a token gesture's document restores first). No paint needed —
+        # nothing has changed against itself yet.
+        take_over_gesture()
+        rec.gesture = _Gesture(kind="edit", source=cid, baseline=last_lay[0])
 
     def on_cell_blur():
-        # leaving the cell ends the preview: forget the baseline and strip every highlight ring
-        rec.preview_baseline = None
-        rec.preview_source = None
-        rec._editing = None
-        rec._wheel_cid = None
-        rec.clear_preview()
+        # leaving the cell ends the edit (or a lingering wheel) gesture; the repaint strips its rings
+        if rec.gesture is not None and rec.gesture.kind in ("edit", "wheel"):
+            end_gesture()
+            paint_rings()
 
-    # drag-to-combine preview: while a row/interval is dragged onto another, show what the drop would
-    # do — ring the cells it moves and show their would-be values — by applying the combine to a
-    # snapshot and reverting it when the hover moves on or the drag ends. Reuses the edit-preview
-    # machinery (preview_baseline + the render diff); the actual drop commits it as one undo step.
+    # drag-to-combine preview: while a row/interval is dragged onto another, show what the drop
+    # would do — ring the cells it moves and show their would-be values — by applying the combine
+    # to the document under the gesture's token and reverting when the hover moves on or the drag
+    # ends. The rings are the baseline diff (pickup grid vs the temporarily-applied grid); the
+    # actual drop commits it as one undo step.
     def combine_begin():
-        rec._drag_token = editor.capture_for_preview()  # so the hover preview can be reverted
-        rec.preview_baseline = last_lay[0]  # the diff baseline: the grid as it was at pick-up
-        rec.preview_source = None  # a drop has no single "source cell" to exclude from the ring
+        end_gesture()  # a stale token gesture (e.g. stranded by a disconnect) dies first
+        rec.gesture = _Gesture(kind="drag", token=editor.capture_for_preview(),
+                               baseline=last_lay[0])
 
     def combine_preview(apply, target_pred=None):
-        # hovering a target: revert to the picked-up state, apply the hypothetical combine (when valid;
-        # apply is None for an invalid/self target), and render — the moved cells ring + show their new
-        # values. target_pred marks the dropped-on row/column's editable cells so they ring too (they
-        # change value but aren't caught by changed_cell_ids). Re-entrant: each enter resets first.
-        if rec._drag_token is None:
+        # hovering a target: revert to the picked-up state, apply the hypothetical combine (when
+        # valid; apply is None for an invalid/self target), and render — the moved cells ring +
+        # show their would-be values. target_pred marks the dropped-on row/column's editable cells
+        # so they ring too (their input values aren't in the layout content signature).
+        # Re-entrant: each enter resets first.
+        g = rec.gesture
+        if g is None or g.kind != "drag":
             return
-        editor.restore_for_preview(rec._drag_token)
-        rec.combine_target_pred = target_pred if apply is not None else None
+        editor.restore_for_preview(g.token)
+        g.target_pred = target_pred if apply is not None else None
         if apply is not None:
             apply()
-        render()
+        gesture_render()
 
     def combine_commit(apply):
-        # the drop: revert the preview, then apply the combine for real (one undo step) and render.
-        if rec._drag_token is None:
+        # the drop: revert the preview (end_gesture restores the picked-up state), then apply the
+        # combine for real — one undo step — and render.
+        g = rec.gesture
+        if g is None or g.kind != "drag":
             return
-        editor.restore_for_preview(rec._drag_token)
-        rec._drag_token = None
-        rec.preview_baseline = None
-        rec.preview_source = None
-        rec.combine_target_pred = None
+        end_gesture()
         act(apply)
 
     def combine_end():
         # the drag ended off a target (no drop): revert any live preview and clear the drag state.
-        if rec._drag_token is None:
+        g = rec.gesture
+        if g is None or g.kind != "drag":
             return
-        editor.restore_for_preview(rec._drag_token)
-        rec._drag_token = None
-        rec.preview_baseline = None
-        rec.preview_source = None
-        rec.combine_target_pred = None
+        end_gesture()
         render()
 
     # +/- control hover preview: hovering a structural +/- (add/remove a prime, generator, comma or
-    # interval) previews its click before committing — the cells it REMOVES ring red, the cells whose
-    # value the re-solve MOVES ring amber. Unlike the drag preview it does NOT reflow the grid: an
-    # add/remove would slide the very button being hovered out from under the cursor (and flicker
-    # enter/leave), so it applies the hypothetical to a SNAPSHOT, diffs it, rings the on-screen cells
-    # in place, and reverts immediately. The removed cells are still on screen at hover time (the
-    # click hasn't landed), so red shows what goes away — which a plain changed-cell diff can't, since
-    # it omits anything absent from the new layout. A brand-new column the click would ADD lives
-    # off-screen until committed, so it isn't ringed (show_preview skips ids not in the DOM). The
-    # click then commits for real via the control's own handler. A keyboard edit or a drag owns the
-    # preview while active, so the control hover stands down for them.
-    def _preview_apply(apply):
-        # the snapshot → apply-hypothetical → diff → ring → revert core shared by the +/- control hover
-        # and the dropdown option hover (chooser_hover): neither reflows, so the diff rings what MOVES
-        # (amber) and what's REMOVED (red), brand-new cells stay off-screen, and the real document is
-        # left untouched. Returns whether it rang (False when another gesture already owns the grid).
-        if rec._editing is not None or rec._drag_token is not None or last_lay[0] is None:
-            return False
-        token = editor.capture_for_preview()
-        try:
-            apply()
-            new = editor.layout(prev_ids=last_lay[0].identities)
-            modified = spreadsheet.changed_cell_ids(last_lay[0], new)  # value moved → amber
-            removed = spreadsheet.removed_cell_ids(last_lay[0], new)   # gone from the grid → red
-        finally:
-            editor.restore_for_preview(token)  # leave no trace: the grid never actually moved
-        rec.show_preview(modified, removed)
-        return True
-
+    # interval) previews its click before committing — the cells it REMOVES ring red, the cells
+    # whose value the re-solve MOVES ring amber. Unlike the drag preview it does NOT reflow the
+    # grid: an add/remove would slide the very button being hovered out from under the cursor (and
+    # flicker enter/leave), so the HOVER gesture carries the click's op as a hypothetical candidate
+    # — compute_rings applies it to a snapshot, diffs, and reverts, painting the on-screen cells in
+    # place. The removed cells are still on screen at hover time (the click hasn't landed), so red
+    # shows what goes away; a brand-new column the click would ADD lives off-screen until
+    # committed, so it can't ring. The click then commits for real via the control's own handler —
+    # and because every render repaints the rings from the gesture (which any commit/foreign
+    # render ends), the rings structurally cannot survive the click. A keyboard edit or a drag
+    # owns the grid while active, so the control hover stands down for them; a live WHEEL gesture
+    # (the generator-sign control rides inside the gentuning cell) is suspended under the hover
+    # and re-armed when it ends.
     def control_hover(apply):
-        if _preview_apply(apply):
-            rec._control_hovering = True
+        g = rec.gesture
+        if g is not None and g.kind in ("edit", "drag"):
+            return
+        prev = None
+        if g is not None and g.kind == "wheel":
+            prev = g  # the in-cell gensign hover displaces the wheel gesture — remember it
+        elif g is not None:
+            take_over_gesture()  # replace a stale hover/chooser/temp outright
+        rec.gesture = _Gesture(kind="hover", apply=apply, prev=prev)
+        paint_rings()
 
     def control_unhover():
-        # leaving the +/- clears only the rings IT showed (not a live edit's or drag's)
-        if rec._control_hovering:
-            rec._control_hovering = False
-            rec.clear_preview()
+        # leaving the control ends only ITS hover (not a live edit's or drag's rings); a wheel
+        # gesture it displaced comes back as-is
+        g = rec.gesture
+        if g is None or g.kind != "hover":
+            return
+        rec.gesture = g.prev
+        paint_rings()
 
     def chooser_hover(apply):
-        # a dropdown option hover previews applying its candidate, exactly like control_hover (snapshot,
-        # ring the diff, revert at once — no reflow, so the open popup and the chooser's own value stay
-        # put). Its own ownership flag so leaving/closing clears only its rings.
-        if _preview_apply(apply):
-            rec._chooser_hovering = True
+        # a dropdown option hover previews applying its candidate, exactly like control_hover (the
+        # CHOOSER gesture carries the option's op; compute_rings snapshots, diffs and reverts — no
+        # reflow, so the open popup and the chooser's own value stay put). Its own kind so
+        # leaving/closing ends only its rings.
+        g = rec.gesture
+        if g is not None and g.kind in ("edit", "drag"):
+            return
+        if g is not None and g.kind != "chooser":
+            take_over_gesture()  # a hover/wheel/temp gives way (a temp's token restores the doc,
+            # and a reflowed temp preview rebuilds the real grid)
+        if rec.gesture is None:
+            rec.gesture = _Gesture(kind="chooser")
+        rec.gesture.apply = apply
+        paint_rings()
 
     def chooser_unhover():
-        # leaving an option / closing the popup clears only the rings the chooser hover showed
-        if rec._chooser_hovering:
-            rec._chooser_hovering = False
-            rec.clear_preview()
+        # leaving an option / closing the popup ends only the chooser hover's rings
+        g = rec.gesture
+        if g is None or g.kind != "chooser":
+            return
+        end_gesture()
+        paint_rings()
 
     def _end_temperament_preview():
-        # revert a live temperament hover preview (pointer left an option / popup closed)
-        if rec._temp_token is not None:
-            editor.restore_for_preview(rec._temp_token)
-            was_reflow = rec._previewing_temperament  # a REFLOW changed the DOM shape; a redden didn't
-            rec._temp_token = None
-            rec._temp_baseline = None
-            rec._previewing_temperament = False
-            rec.preview_baseline = None
-            rec.clear_preview()      # strip a redden preview's red/amber rings (render won't touch red)
-            if was_reflow:
-                render()             # only a reflow needs rebuilding back to the real grid
+        # revert a live temperament hover preview (pointer left an option / popup closed):
+        # end_gesture restores the real document; a REFLOW preview also rebuilds the real grid
+        g = rec.gesture
+        if g is None or g.kind != "temp":
+            return
+        was = end_gesture()
+        if was.reflowed:
+            render()    # only a reflow changed the DOM shape
+        else:
+            paint_rings()  # a redden preview just drops its rings
 
     def _temperament_hover_preview(key):
         # hovering a temperament option in the open dropdown previews loading it. How it previews
         # depends on whether the temperament GROWS/keeps the grid or SHRINKS it:
-        #   • grow / value-only — REFLOW: apply to a snapshot and re-render the whole would-be grid, so
-        #     a new prime / comma / generator actually APPEARS (a bare ring can't show a cell that isn't
-        #     there yet), the changed cells ringed amber against the pre-hover grid.
-        #   • shrink (fewer primes / commas / generators) — REDDEN, don't reflow: a reflow would just
-        #     delete the doomed column/row mid-preview. Instead hold the current grid so it stays on
-        #     screen and ring it RED (the +/- remove preview's behaviour — the user asked to see what a
-        #     hover would delete), the surviving changed cells amber. In a mixed change the deletion
-        #     wins (additions aren't shown); seeing what goes away is what was asked for.
-        # Temperament alone REFLOWS (it changes the grid's dimensionality), so it keeps this sticky path
-        # rather than the amber-only chooser_hover the other dropdowns use. Reverts on leave / popup-
-        # close (_end_temperament_preview), commits for real on select (on_preset); on_chooser_hover has
-        # already mapped the hovered option's index back to its key.
+        #   • grow / value-only — REFLOW: apply to the document (under the gesture's token) and
+        #     re-render the whole would-be grid, so a new prime / comma / generator actually
+        #     APPEARS (a bare ring can't show a cell that isn't there yet), the changed cells
+        #     ringed amber against the pre-hover grid (the gesture baseline).
+        #   • shrink (fewer primes / commas / generators) — REDDEN, don't reflow: a reflow would
+        #     just delete the doomed column/row mid-preview. Instead hold the current grid and arm
+        #     the load as a hypothetical candidate — the doomed cells ring RED in place, the
+        #     surviving changed cells amber. In a mixed change the deletion wins (additions aren't
+        #     shown); seeing what goes away is what was asked for.
+        # Temperament alone REFLOWS (it changes the grid's dimensionality), so it keeps this
+        # sticky TEMP gesture rather than the amber-only chooser_hover the other dropdowns use.
+        # The token is captured ONCE per gesture and survives option-to-option moves (including
+        # grow→shrink, which arrives with no leave in between); every option re-bases on it.
+        # Reverts on leave / popup-close (_end_temperament_preview), commits on select (on_preset).
         if key not in presets.TEMPERAMENT_COMMAS:  # a divider header, null, or the mouse leaving
             _end_temperament_preview()
             return
-        if rec._temp_token is None:  # first option of this gesture: snapshot the real document + its grid
-            rec._temp_token = editor.capture_for_preview()
-            rec._temp_baseline = last_lay[0]
-        editor.restore_for_preview(rec._temp_token)              # re-apply from the same base each option
-        base = editor.state                                      # its dimensions, before the temperament
+        g = rec.gesture
+        if g is None or g.kind != "temp":
+            if g is not None and g.kind in ("edit", "drag"):
+                return  # a keyboard edit / drag owns the grid
+            end_gesture()  # replace a plain hover/chooser outright
+            g = rec.gesture = _Gesture(kind="temp", token=editor.capture_for_preview(),
+                                       baseline=last_lay[0])
+        editor.restore_for_preview(g.token)  # re-base: each option evaluates from the real document
+        if g.reflowed:                       # a prior option reflowed the DOM — rebuild the real grid
+            g.reflowed = False
+            g.apply = None
+            gesture_render()
+        base = editor.state                  # its dimensions, before the temperament...
         editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key])
-        hyp = editor.state                                       # ...and after, to spot a shrink
-        new = editor.layout(prev_ids=rec._temp_baseline.identities)
+        hyp = editor.state                   # ...and after, to spot a shrink (state dims only — no
+        # probe layout; the one hypothetical layout runs in compute_rings / the reflow render)
         if hyp.d < base.d or hyp.r < base.r or hyp.n < base.n:   # drops a prime / comma / generator
-            modified = spreadsheet.changed_cell_ids(rec._temp_baseline, new)  # value moved → amber
-            removed = spreadsheet.removed_cell_ids(rec._temp_baseline, new)   # gone from the grid → red
-            editor.restore_for_preview(rec._temp_token)          # back to the real doc; the grid keeps its shape
-            if rec._previewing_temperament:                      # a prior option reflowed the DOM — rebuild it
-                rec._previewing_temperament = False
-                rec.preview_baseline = None
-                render()
-            rec.show_preview(modified, removed)                  # redden the doomed cells in place, no reflow
+            editor.restore_for_preview(g.token)  # back to the real doc; the grid keeps its shape
+            g.apply = lambda: editor.edit_comma_basis(presets.TEMPERAMENT_COMMAS[key])
+            paint_rings()                    # redden the doomed cells in place, no reflow
         else:
-            rec.clear_preview()                                  # drop any red a prior shrink option left
-            rec._previewing_temperament = True                   # keep the chooser's own value + popup steady
-            rec.preview_baseline = rec._temp_baseline            # ring every cell this temperament moves
-            rec.preview_source = None
-            render()
+            g.apply = None                   # the document now holds the hypothetical: baseline diff
+            g.reflowed = True                # keep the chooser's own value + popup steady (_update_preset)
+            gesture_render()                 # reflow into the would-be grid
 
     def _candidate_apply(cid, value):
         # the SINGLE map from a chooser option to the editor edit it commits, as a zero-arg thunk — or
@@ -3772,6 +3880,13 @@ def index() -> None:
         if not isinstance(sel, ui.select):
             return  # the chooser is gone
         index = _hover_index(detail)
+        # The server-side popup gate: a positive ARM for a chooser whose popup is 'closed' is a
+        # stale client debounce-fire from a popup that already committed/closed (the socket's FIFO
+        # order puts it after the popup-hide) — drop it, so it can never strand a ring. Leaves
+        # (index None) pass through to the unhover path ungated; an untracked chooser (absent —
+        # e.g. the in-process tests, which drive `opthover` without opening a popup) allows.
+        if index is not None and rec.popup_state.get(cid) == "closed":
+            return
         if cid.startswith("preset:temperament"):
             _temperament_hover_preview(_option_key(sel, index))
             return
@@ -3800,25 +3915,34 @@ def index() -> None:
             return
         chooser_hover(apply)
 
-    # generator-tuning wheel preview: hovering the cell snapshots a baseline so each wheel notch (a
-    # real, committed nudge — handled by on_gentuning_wheel, which re-renders) rings the OTHER cells
-    # it moves against that baseline. Leaving the cell drops the rings; the nudge itself stays. The
-    # scrolled cell is the preview source, so it is never rung. A keyboard edit of the same cell owns
-    # the preview instead (focus set the baseline), so the wheel hover neither arms nor clears it.
+    def on_popup(cid, is_open):
+        # a chooser's Quasar popup opened/closed: feed the server-side gate (see on_chooser_hover)
+        # and treat the close as the gesture's leave — the option the pointer was on is gone, so a
+        # live chooser/temperament preview ends (ungated; only positive arms are gated).
+        rec.popup_state[cid] = "open" if is_open else "closed"
+        if not is_open:
+            on_chooser_hover(cid, None)
+
+    # generator-tuning wheel preview: hovering the cell arms the WHEEL gesture, whose baseline is
+    # the grid at hover time, so each wheel notch (a real, committed nudge — handled by
+    # on_gentuning_wheel, which re-renders) rings the OTHER cells it moves against that baseline.
+    # Leaving the cell drops the rings; the nudge itself stays. The scrolled cell is the gesture
+    # source, so it is never rung. A keyboard edit, a drag, or the in-cell sign's control hover
+    # owns the grid while active, so the wheel hover stands down for them (the sign hover SUSPENDS
+    # an already-armed wheel gesture and hands it back — see control_hover).
     def gentuning_hover(cid):
-        if rec._editing is not None or rec._drag_token is not None or rec._control_hovering:
+        g = rec.gesture
+        if g is not None and g.kind in ("edit", "drag", "hover"):
             return
-        rec.preview_baseline = last_lay[0]
-        rec.preview_source = cid
-        rec._wheel_cid = cid
+        take_over_gesture()  # replace a stale wheel/chooser/temp arm outright
+        rec.gesture = _Gesture(kind="wheel", source=cid, baseline=last_lay[0])
 
     def gentuning_unhover(cid):
-        if rec._wheel_cid != cid or rec._editing == cid:
-            return  # not our gesture, or a keyboard edit took it over — leave its rings be
-        rec._wheel_cid = None
-        rec.preview_baseline = None
-        rec.preview_source = None
-        rec.clear_preview()
+        g = rec.gesture
+        if g is None or g.kind != "wheel" or g.source != cid:
+            return  # not our gesture (a keyboard edit / the sign hover took it over) — leave it be
+        end_gesture()
+        paint_rings()
 
     # drag-and-drop reorder: a grip's dragstart records the column it picked up; dropping it onto
     # another column's grip (drop reads the recorded source) moves it to that column's slot, or onto a
@@ -3830,9 +3954,9 @@ def index() -> None:
     def on_drag_start(lst, idx):
         drag_src[0] = (lst, idx)
         reorder_dst[0] = (lst, idx)  # pick-up == dropping on itself: no move previewed yet
-        rec._drag_token = editor.capture_for_preview()  # so each hover preview reverts cleanly
-        rec._reorder_baseline = last_lay[0]  # the grid at pick-up — a cross-list move's ring baseline
-        rec.preview_source = None  # a drag has no single source cell to exclude from the rings
+        end_gesture()  # a stale token gesture (e.g. stranded by a disconnect) dies first
+        rec.gesture = _Gesture(kind="drag", token=editor.capture_for_preview(),
+                               baseline=last_lay[0])
 
     def on_drag_enter(dst_list, dst_idx):
         # hovering a target column (or a list's gridline "add" zone, dst_idx=None) while dragging:
@@ -3840,44 +3964,44 @@ def index() -> None:
         # will land — before releasing. The grips are index-keyed (slot-bound), so they stay put under
         # the cursor while the value columns glide, keeping the previewed target stable. The hover
         # preview is reverted on dragend / re-applied on each new target, and committed on drop.
-        if rec._drag_token is None or drag_src[0] is None or (dst_list, dst_idx) == reorder_dst[0]:
+        # Rings: a move that CHANGES THE SET — across lists, or into/out of the commas (temper out /
+        # un-temper) — re-optimizes the temperament, so the baseline diff rings the cells whose value
+        # it moves. A pure within-list reorder changes no values (only positions — the columns are
+        # content-keyed, so the diff is empty): it just glides, no rings.
+        g = rec.gesture
+        if g is None or g.kind != "drag" or drag_src[0] is None or (dst_list, dst_idx) == reorder_dst[0]:
             return
         reorder_dst[0] = (dst_list, dst_idx)
-        editor.restore_for_preview(rec._drag_token)  # back to the picked-up state...
+        editor.restore_for_preview(g.token)  # back to the picked-up state...
         idx = dst_idx if dst_idx is not None else (1 << 30)
         editor.move_interval(drag_src[0][0], drag_src[0][1], dst_list, idx)  # ...then the hypothetical move
-        # a move that CHANGES THE SET — across lists, or into/out of the commas (temper out / un-temper)
-        # — re-optimizes the temperament, so ring the cells whose value it moves, like the edit & combine
-        # previews. A pure within-list reorder changes no values (only positions): it just glides, no rings.
-        rec.preview_baseline = rec._reorder_baseline if dst_list != drag_src[0][0] else None
-        render()
+        gesture_render()
 
     def on_drag_end():
         # released off a target (no drop): revert any live preview to the picked-up state
-        if rec._drag_token is not None:
-            editor.restore_for_preview(rec._drag_token)
-            rec._drag_token = None
-            rec.preview_baseline = None  # clear any cross-list change rings
+        if rec.gesture is not None and rec.gesture.kind == "drag":
+            end_gesture()
             render()
         drag_src[0] = None
         reorder_dst[0] = None
 
     def on_drop(dst_list, dst_idx):
         # dst_idx is the dropped-on column's index (insert there), or None from a list's "add" zone
-        # (append). Revert the live preview first so the move is snapshotted from the picked-up state —
-        # one undo step — then commit it (the screen is already in the previewed shape, so it doesn't move).
+        # (append). Revert the live preview first (end_gesture) so the move is snapshotted from the
+        # picked-up state — one undo step — then commit it (the screen is already in the previewed
+        # shape, so it doesn't move).
         src = drag_src[0]
         drag_src[0] = None
         reorder_dst[0] = None
-        token = rec._drag_token
-        rec._drag_token = None
-        rec.preview_baseline = None  # the rings were the hover preview; the committed grid stands on its own
-        if token is not None:
-            editor.restore_for_preview(token)
+        had_preview = rec.gesture is not None and rec.gesture.kind == "drag"
+        if had_preview:
+            end_gesture()
         if not src:
+            if had_preview:
+                render()  # clear the reverted preview
             return
         idx = dst_idx if dst_idx is not None else (1 << 30)  # None = append (insert clamps to the end)
-        if editor.move_interval(src[0], src[1], dst_list, idx) or token is not None:
+        if editor.move_interval(src[0], src[1], dst_list, idx) or had_preview:
             render()  # reflow into the committed shape, or (a no-op drop) clear the reverted preview
     # wire the reconciler's callbacks now that the event handlers exist: the cell
     # builders fire these (a control's on_change/on_click -> an editor edit + re-render)
@@ -3894,6 +4018,7 @@ def index() -> None:
         gentuning_unhover=gentuning_unhover,
         on_cell_blur=on_cell_blur,
         on_cell_focus=on_cell_focus,
+        on_popup=on_popup,
         on_comma_change=on_comma_change,
         on_unchanged_change=on_unchanged_change,
         on_drag_start=on_drag_start,
@@ -3927,6 +4052,21 @@ def index() -> None:
 
 
     def render():
+        # Renders end gestures that don't render: a render arriving while a hover / chooser /
+        # temp / drag gesture is live — and NOT initiated by that gesture's own handler
+        # (gesture_render) — is by definition an external commit or unrelated rebuild, so the
+        # gesture ends here, structurally, whatever path the commit took (act, a chooser's
+        # on_change, a Show toggle, the debounced target commit...). end_gesture restores a held
+        # token FIRST, so the layout below builds from the real document. The edit/wheel gestures
+        # legitimately render mid-gesture (their commits) and end on blur/mouseleave instead —
+        # but any doc-moving render consumes a pending edit candidate (it is stale once the doc
+        # moves; the baseline diff takes over, and no hypothetical solve runs inside a commit).
+        g = rec.gesture
+        if g is not None and not gesture_rendering[0]:
+            if g.kind in ("hover", "chooser", "temp", "drag"):
+                end_gesture()
+            else:
+                g.apply = None
         building[0] = True
         st = editor.state
         # thread the previous render's interval-column identities so a within-list reorder keeps
@@ -4034,27 +4174,24 @@ def index() -> None:
             for pane in _block_panes(bl, fx, fy):
                 place_block(bl, pane)
 
-        # If this render is about to REBUILD the very cell that owns the edit-preview (a kind flip —
-        # the loop below drops + remakes a cell whose kind changed, e.g. a domain element relabelled
-        # from an integer prime to a fraction, elementcell↔elementratio), end the edit-preview now.
-        # The blur / Enter listeners that normally call on_cell_blur ride that cell's input, so when
-        # the rebuild destroys it those listeners never fire — leaving preview_baseline set and the
-        # moved cells ringed amber until a later blur lands elsewhere (the "highlight lingers until I
-        # click another cell" bug). Dropping the baseline here makes the same render compute an empty
-        # preview set and strip the rings. Gated on _editing (a keyboard edit), so hover/wheel/drag
-        # previews — which stand _editing down — are untouched.
-        if (rec._editing is not None
-                and any(cb.id == rec._editing and rec.kinds.get(cb.id) != cb.kind for cb in lay.cells)):
-            rec.preview_baseline = None
-            rec.preview_source = None
-            rec._editing = None
-        # the edit-preview highlight: while a cell is focused, ring every OTHER cell whose value this
-        # render has moved against the baseline snapshotted when the cell took focus. With nothing
-        # being edited (no baseline) the set is empty, so the loop below clears any lingering rings.
-        preview = (spreadsheet.changed_cell_ids(rec.preview_baseline, lay) - {rec.preview_source}
-                   if rec.preview_baseline is not None else frozenset())
-        if rec.combine_target_pred is not None:  # also ring the dropped-on row/column's editable cells
-            preview = preview | {cb.id for cb in lay.cells if rec.combine_target_pred(cb)}
+        # Source-cell-gone guard: if this render DROPS or REBUILDS the very cell anchoring the
+        # gesture — the id vanished (e.g. committing the held:pending ratio cell replaces it with
+        # held:{tok}) or its kind flipped (a domain element relabelled int↔fraction,
+        # elementcell↔elementratio) — end the gesture now. The blur listeners that would normally
+        # end it ride that cell's input, so when the rebuild destroys it they never fire; without
+        # this guard the gesture (and its rings) would strand until a later blur landed elsewhere
+        # (both the historical "lingers until I click another cell" bug and the reported
+        # held-interval-submit one).
+        g = rec.gesture
+        if g is not None and g.source is not None:
+            src_kind = next((cb.kind for cb in lay.cells if cb.id == g.source), None)
+            if src_kind is None or (g.source in rec.kinds and rec.kinds[g.source] != src_kind):
+                end_gesture()
+        # the ring highlights: a pure function of (document, gesture), recomputed every render —
+        # so any commit's render structurally repaints/strips them, whatever path it came from.
+        # While a gesture is live the renders that reach here are doc-moving (guard at the top
+        # nulled any edit candidate), so this is always the cheap baseline diff — never a solve.
+        amber, red = compute_rings(lay)
 
         for cb in lay.cells:
             seen.add(cb.id)
@@ -4069,19 +4206,7 @@ def index() -> None:
             top = cb.y - (fy if container in ("body", "row") else 0)
             rec.els[cb.id].style(f"left:{cb.x}px; top:{top}px; width:{cb.w}px; height:{cb.h}px")
             rec.update_cell(cb)
-            ringed = cb.id in preview
-            # render owns BOTH ring colours for every cell it touches. The amber "value moved" ring is
-            # the edit/combine preview's, toggled by `ringed`. The red "will be removed" ring is USUALLY
-            # a transient no-reflow hover (show_preview: a +/- / chooser hover, a domain-element edit, a
-            # shrinking-temperament hover), stale by the time a render runs — so it's stripped here. The
-            # EXCEPTION is a builder-driven `preview_remove`: a value a pending comma draft will delete
-            # (the doomed unchanged interval), a STEADY render-state painted with the same red look and
-            # kept until the draft closes (the next render without the flag strips it).
-            remove_red = cb.preview_remove
-            add_cls = ("rtt-preview-change " if ringed else "") + ("rtt-preview-remove" if remove_red else "")
-            rem_cls = ("" if ringed else "rtt-preview-change ") + ("" if remove_red else "rtt-preview-remove")
-            rec.els[cb.id].classes(add=add_cls.strip(), remove=rem_cls.strip())
-        rec.preview_shown = set(preview)  # every rung id is a live cell (changed_cell_ids ⊆ lay.cells)
+            paint_cell(cb.id, amber, red)
 
         for eid in [e for e in rec.els if e not in seen]:
             rec.drop(eid)
@@ -4145,8 +4270,12 @@ def index() -> None:
             select_all_box.classes(add="rtt-show-mixed")
         else:
             select_all_box.classes(remove="rtt-show-mixed")
-        # persist the whole document so a browser refresh restores exactly this state
-        _doc_store()[_STORE_KEY] = editor.serialize()
+        # persist the whole document so a browser refresh restores exactly this state — UNLESS a
+        # token gesture has the document in a temporarily-applied hypothetical state (a drag hover,
+        # a temperament grow-preview): persisting that would resurrect a never-committed document
+        # on refresh. The gesture's end always renders the real document, which persists then.
+        if rec.gesture is None or rec.gesture.token is None:
+            _doc_store()[_STORE_KEY] = editor.serialize()
         building[0] = False
         # (the scrollbar-fit pass re-runs on its own when the grid resizes — the board's width/height
         # CSS transition fires the listener in freeze.js — so render needn't push any JS here.)
