@@ -2172,16 +2172,17 @@ class _GridBuilder:
 
     # EBK brackets in the value groups' gutters: prime-side rows are maps (⟨…]),
     # target-side rows are lists ([ … ]). Maps stack one per generator row.
-    def bracket(self, bid, glyphs, group_key, y, h, *, fit=False, span=None):
+    def bracket(self, bid, glyphs, group_key, y, h, *, fit=False, span=None, pending=False):
         # value brackets are short and centred in their row (so stacked rows keep a
         # gap); the enclosing mapped-list [ ] passes fit=True to span the matrix.
         # matrix_span hugs the cells (interest's content, not its footprint) and steps
         # the left ⟨ right past the matlabel gutter, so the row labels sit inside the
         # panel left of the ⟨ rather than overflowing it. ``span`` overrides the default span.
+        # ``pending`` recolours the bracket green (via _ebk_svg) to match a draft row's cells.
         gx, gw = span if span else self.matrix_span(group_key)
         by, bh = (y, h) if fit else (y + (h - VAL_BRACKET_H) / 2, VAL_BRACKET_H)
-        self.cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0]))
-        self.cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1]))
+        self.cells.append(CellBox(f"bracket:{bid}:l", gx, by, BRACKET_W, bh, "bracket", text=glyphs[0], pending=pending))
+        self.cells.append(CellBox(f"bracket:{bid}:r", gx + gw - BRACKET_W, by, BRACKET_W, bh, "bracket", text=glyphs[1], pending=pending))
 
     # the single place a gridline is recorded. ``dotted`` marks a rule whose band is
     # collapsed: a folded row/column converges its fan onto one centre rule, drawn dotted
@@ -3745,8 +3746,8 @@ class _GridBuilder:
             if self.tile_open("mapping", "primes"):
                 for i in range(self.r):
                     self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H)
-                if self.pending_mapping_row is not None:  # the draft row's own ⟨ … ] map brackets
-                    self.bracket("map:pending", MAP_BRACKETS, "primes", self.map_top(self.r), ROW_H)
+                if self.pending_mapping_row is not None:  # the draft row's own ⟨ … ] map brackets, green
+                    self.bracket("map:pending", MAP_BRACKETS, "primes", self.map_top(self.r), ROW_H, pending=True)
             if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
                 self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], self.r * ROW_H, fit=True)
             if self.tile_open("mapping", "targets"):
@@ -4257,12 +4258,14 @@ class _GridBuilder:
             for (rkey, ckey), text in self.ptext_strings.items():
                 if not self.tile_open(rkey, ckey):
                     continue
-                # an editable vector-list dual flips to a static two-tone box while its column has
-                # a pending draft (the committed vectors black, the draft vector green — a single-
-                # colour input can't do that): the comma basis when a comma is pending, the target
-                # list when a target is. The mapping and read-only values keep their normal kinds.
+                # an editable dual flips to a static two-tone box while it has a pending draft (the
+                # committed part black, the draft entry green — a single-colour input can't do that):
+                # the comma basis when a comma is pending, the target list when a target is, and the
+                # MAPPING when a generator ROW is pending (the draft map greens like its grid cells).
+                # The other read-only values keep their normal kinds.
                 if (rkey, ckey) == ("vectors", "commas") and self.pending is not None \
-                        or (rkey, ckey) == ("vectors", "targets") and self.pending_target is not None:
+                        or (rkey, ckey) == ("vectors", "targets") and self.pending_target is not None \
+                        or (rkey, ckey) == ("mapping", "primes") and self.pending_mapping_row is not None:
                     kind = "ptextpending"
                 elif self.ptext_editable(rkey, ckey) and (ckey != "targets" or self.targets_editable):
                     kind = "ptextedit"  # the auto Tₚ = I list reads as static plain text, not an input

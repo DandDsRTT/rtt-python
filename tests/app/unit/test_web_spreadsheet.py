@@ -3770,7 +3770,7 @@ def test_adding_a_mapping_row_starts_a_pending_draft_row_that_does_not_re_rank()
     assert "cell:mapping:3:0" not in cells  # exactly one draft row
     # a "?" generator ratio on the spine, the draft's own ⟨ … ] map brackets, and a − to cancel it
     assert cells["gen:pending"].text == "?" and cells["gen:pending"].pending
-    assert "bracket:map:pending:l" in cells and "bracket:map:pending:r" in cells
+    assert cells["bracket:map:pending:l"].pending and cells["bracket:map:pending:r"].pending  # green, like the cells
     assert cells["map_minus:pending"].pending
     # the temperament is untouched: the genmap stays at the committed rank (no 3rd generator ratio),
     # and the derived mapped target column carries no entry for the draft row (its [ ] stays at r rows)
@@ -3793,6 +3793,21 @@ def test_a_pending_mapping_row_grows_only_the_mapping_band_by_one_row():
     drafting = spreadsheet.build(base, pending_mapping_row=[None, None, None])
     # the draft adds exactly one ROW_H to the grid (the extra mapping row) — no other band changes
     assert drafting.height - plain.height == spreadsheet.ROW_H
+
+
+def test_the_mapping_plain_text_becomes_a_two_tone_draft_box_while_a_row_is_pending():
+    # the ROW mirror of test_the_comma_basis_plain_text_...: while a generator row is pending, the
+    # mapping's editable plain-text box flips to a static two-tone "ptextpending" box (committed maps
+    # black, draft map green — a single-colour input can't do that); the comma basis keeps its
+    # editable box, and once there's no draft the mapping returns to an editable box.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    s = settings.defaults()
+    s["plain_text_values"] = True
+    drafting = {c.id: c for c in spreadsheet.build(base, s, pending_mapping_row=[None, None, None]).cells}
+    assert drafting["ptext:mapping:primes"].kind == "ptextpending"
+    assert drafting["ptext:vectors:commas"].kind == "ptextedit"  # the comma basis is untouched
+    resting = {c.id: c for c in spreadsheet.build(base, s).cells}
+    assert resting["ptext:mapping:primes"].kind == "ptextedit"  # no draft -> editable again
 
 
 # --- math expressions: the just row's exact log₂ closed forms ---

@@ -1196,6 +1196,21 @@ def test_vector_list_pending_text_splits_the_draft_for_two_tone_display():
     assert service.vector_list_pending_text(((4, -4, 1), (4, -5, 1)), [None, None, None])[0] == "[[4 -4 1⟩ [4 -5 1⟩ "
 
 
+def test_mapping_pending_text_splices_the_draft_map_before_the_closing_brace():
+    # the ROW mirror: while a generator row is being added the editable mapping string is shown
+    # two-tone — the committed maps (and the wrapping [ … }) stay black, the draft map greens. The
+    # helper returns (black prefix, green draft map, black suffix); the draft shows the entered
+    # components only (blanks omitted), e.g. (0, _, 1) -> "⟨0 1]".
+    prefix, draft, suffix = service.mapping_pending_text("[⟨1 1 0] ⟨0 1 4]}", [0, None, 1])
+    assert (prefix, draft, suffix) == ("[⟨1 1 0] ⟨0 1 4] ", "⟨0 1]", "}")
+    assert prefix + draft + suffix == "[⟨1 1 0] ⟨0 1 4] ⟨0 1]}"  # the full string, reassembled
+    # a brand-new (all-blank) draft is just an empty map
+    assert service.mapping_pending_text("[⟨1 1 0] ⟨0 1 4]}", [None, None, None])[1] == "⟨]"
+    # a domain-prefixed (nonstandard) mapping keeps its prefix in the black part
+    assert service.mapping_pending_text("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}", [None, None, None])[0] \
+        == "2.3.13/5 [⟨1 2 2] ⟨0 -2 -3] "
+
+
 def test_parse_mapping_reads_an_ebk_map_string():
     assert service.parse_mapping("[⟨1 1 0] ⟨0 1 4]}") == ((1, 1, 0), (0, 1, 4))
     assert service.parse_mapping("⟨12 19 28]") == ((12, 19, 28),)  # a single map

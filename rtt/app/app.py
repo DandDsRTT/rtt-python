@@ -1675,8 +1675,16 @@ class _Reconciler:
         self.htmls[cb.id] = ui.html("").classes("rtt-ptextpending")
 
     def _update_ptextpending(self, cb):
-        # the committed vectors black and the draft vector green (same green as its grid cells)
+        # the committed part black and the draft entry green (same green as its grid cells)
         ed = self._editor
+        if cb.id == "ptext:mapping:primes":
+            # the mapping draft is a ROW, not a column — splice the green draft map before the
+            # committed matrix's closing } (cb.text is the committed mapping plain text)
+            prefix, draft, suffix = service.mapping_pending_text(cb.text, ed.pending_mapping_row)
+            self.htmls[cb.id].set_content(
+                f"{prefix}<span class='rtt-pending-q'>{draft}</span>{suffix}")
+            self.htmls[cb.id].style(f"font-size:{_ptext_font(prefix + draft + suffix, cb.w)}px")
+            return
         if cb.id == "ptext:vectors:targets":
             targets = ed.target_override or service.target_interval_set(ed.target_spec, ed.state.domain_basis)
             committed = service.target_interval_vectors(targets, ed.state.d, ed.state.domain_basis)

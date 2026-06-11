@@ -1662,6 +1662,17 @@ def vector_list_pending_text(committed_vectors, pending) -> tuple[str, str, str]
     return committed[:-1] + " ", draft, "]"
 
 
+def mapping_pending_text(committed_ebk, pending) -> tuple[str, str, str]:
+    """Split the wrapped mapping plain text for the two-tone draft display while a generator ROW is
+    being added: the committed maps and the wrapping ``[ … }`` stay black, the in-progress draft map
+    greens. The ROW mirror of :func:`vector_list_pending_text`. ``committed_ebk`` is the mapping's
+    plain text (e.g. ``"[⟨1 1 0] ⟨0 1 4]}"``, possibly domain-prefixed), which always closes with the
+    generator-coordinate ``}``. Returns ``(black_prefix, green_draft_map, black_suffix)``; the draft
+    map shows the entered components only (``None`` blanks omitted): ``[0, None, 1] -> "⟨0 1]"``."""
+    draft = "⟨" + " ".join(str(x) for x in pending if x is not None) + "]"
+    return committed_ebk[:-1] + " ", draft, "}"
+
+
 def cents(value) -> str:
     """A cents quantity at the 3-dp the grid and plain-text views share, so the two displays
     always agree. ``None`` (a dashed value — e.g. the size of an unknown unchanged interval the
