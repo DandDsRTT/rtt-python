@@ -1427,6 +1427,16 @@ class _Reconciler:
                 wrap.tooltip(help_text)
         self.els[cb.id] = wrap
         self.kinds[cb.id] = cb.kind
+        # A fan + / − control must not blur a focused draft cell when clicked. The browser blurs the
+        # active input on mousedown of another element, and that blur COMMITS the draft's typed value
+        # (its blur handler) BEFORE the control's own click action runs — so clicking a draft's − to
+        # cancel it first committed the typed comma (re-ranking), then removed a column: the "− kills
+        # the draft AND the column to its left" bug. Swallowing the control's mousedown default keeps
+        # the input focused (no commit); the click still fires, the action runs, and the draft cell's
+        # later removal-blur is a guarded no-op (on_ratio_change/on_*_change bail on building / a
+        # dropped cell). colgrip is excluded — it needs mousedown to start an HTML5 drag.
+        if cb.kind.endswith(("plus", "minus")):
+            wrap.on("mousedown", js_handler="(e) => e.preventDefault()")
         # an editable text cell drives the edit-preview highlight: focusing it snapshots the grid as
         # the baseline, leaving it clears the rings. Every such cell registers its q-input in `inputs`
         # or `ptext_inputs`, so wiring here covers all of them at once (and no others — a dropdown /
