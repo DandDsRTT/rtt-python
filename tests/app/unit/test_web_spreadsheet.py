@@ -7758,11 +7758,11 @@ def test_projection_hides_with_its_parent_tuning_boxes():
 def test_projection_on_adds_the_generator_embedding_G_beside_P():
     cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}  # quarter-comma: a full rational hold
     # G shares the projection band (the d prime rows) but lives in the r generator columns:
-    # a d×r matrix of read-only cells (d=3, r=2 here)
+    # a d×r matrix of editable cells (d=3, r=2 here) when the tuning is a full rational projection
     for i in range(3):
         for g in range(2):
             cell = cells[f"cell:embed:{i}:{g}"]
-            assert cell.kind == "mapped"                  # read-only computed value, like P
+            assert cell.kind == "embedcell"               # editable, retyping G retunes
             assert cell.x == cells[f"tuning:gen:{g}"].x   # the same generator columns as 𝒈
             assert cell.y == cells[f"cell:proj:{i}:0"].y  # the same prime rows as P
     # quarter-comma's embedding G: the octave and 5^(1/4)
