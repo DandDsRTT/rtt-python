@@ -2356,7 +2356,15 @@ def test_option_hover_delegation_cancels_the_settle_timer_on_pointerdown() -> No
     # wiring structurally: a capture-phase pointerdown listener that clearTimeout(timer)s.
     js = "".join(web_app._OPTION_HOVER_DELEGATION.split())  # whitespace-insensitive
     assert "addEventListener('pointerdown'" in js, "the delegation must cancel its timer on a press"
-    assert "clearTimeout(timer);},true)" in js, "pointerdown must clearTimeout(timer) in the capture phase"
+    assert "clearTimeout(timer);" in js and ";},true)" in js, \
+        "pointerdown must clearTimeout(timer) in the capture phase"
+    # ...and the SAME press must reset the (chooser, option) dedupe. A popup that closes under the
+    # pointer fires no mouseout for the hovered option, so without this reset lastCid/lastIdx would
+    # survive into the NEXT popup session and swallow a re-hover of the same option — reopening a
+    # small dropdown and pointing at the option you want would preview nothing, reading as a dead
+    # chooser (the real-browser bug the in-process opthover tests can't see).
+    assert "lastCid=null;lastIdx=null;},true)" in js, \
+        "pointerdown must reset the dedupe so each popup session's first hover fires"
 
 
 async def test_hovering_a_target_family_reddens_the_rows_it_drops(user: User) -> None:

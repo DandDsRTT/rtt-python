@@ -1173,7 +1173,14 @@ _OPTION_HOVER_DELEGATION = """
   // correctness mechanism.) Capture-phase so it runs before the click commits, wherever the press
   // lands. We do NOT lean on the popup-removal `mouseout` above to cancel it: a removed element under
   // the cursor does not fire mouseout reliably across browsers.
-  document.addEventListener('pointerdown', () => { clearTimeout(timer); }, true);
+  //
+  // The press ALSO resets the dedupe. A popup that closes UNDER the pointer (a pick, Escape, an
+  // outside click) fires no `mouseout` for the hovered option, so lastCid/lastIdx would otherwise
+  // keep that option across popup sessions — and REOPENING the chooser and hovering the SAME option
+  // (the common case in a 2-4 option dropdown: you aim at the one you want) would be swallowed as a
+  // duplicate, reading as "this chooser's preview is dead". Every reopen starts with a press, so
+  // resetting here makes each popup session's first hover always fire.
+  document.addEventListener('pointerdown', () => { clearTimeout(timer); lastCid = null; lastIdx = null; }, true);
 })()
 """
 
