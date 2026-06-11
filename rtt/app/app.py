@@ -1635,16 +1635,18 @@ class _Reconciler:
         ~ and the fraction's bar are for numbers only — a dash or a blank gets neither (so a
         quantities-off cell goes truly empty, never leaving a stranded ``~`` over an empty bar).
 
-        A WHOLE numeric ratio (``"n/1"``) collapses to a bare big integer ``n`` — no ~, no bar, no
-        denominator (``rtt-frac-whole`` hides the latter two) — the read-only twin of the editable
-        cell's int view (``_update_fraction``), so a generator-detempering / unrotated-vector-list /
-        generator value of ``2/1`` reads "2", not "2 over 1". _update_ratio rebuilds this body on
-        every render, so the collapse follows the value with no separate in-place patching."""
+        A WHOLE numeric ratio (``"n/1"``) collapses to a bare big integer ``n`` — no bar, no
+        denominator (``rtt-frac-whole`` hides both) — the read-only twin of the editable cell's int
+        view (``_update_fraction``), so a generator-detempering / unrotated-vector-list / generator
+        value of ``2/1`` reads "2", not "2 over 1". The ~approximate marker STILL rides a collapsed
+        integer in an approximate tile (the generators show "~2", not "2") — it approximates the
+        whole VALUE, not just a fraction; only a non-number (dash / blank) drops it. _update_ratio
+        rebuilds this body on every render, so the collapse follows the value with no patching."""
         parts = _ratio_parts(cb.text)
         if parts and not all(p.lstrip("-").isdigit() for p in parts):
             parts = None  # a dashed "—/—" isn't a number — render it bare, no ~ / fraction bar
         whole = bool(parts) and parts[1] == "1"  # "n/1" -> the bare integer "n" (collapse like the editable cell)
-        if approx and parts and not whole:  # ~ marks an approximate FRACTION, never a bare integer / dash / blank
+        if approx and parts:  # ~ marks an approximate NUMBER (integer or fraction); only a dash / blank gets none
             ui.label("~").classes("rtt-approx")
         if parts:
             with ui.element("div").classes("rtt-frac rtt-frac-whole" if whole else "rtt-frac"):

@@ -128,29 +128,33 @@ async def test_enabling_generator_detempering_renders_the_column(user: User) -> 
     await user.should_see(marker="header:detempering")
 
 
-async def test_generators_column_collapses_a_whole_ratio_to_a_bare_integer(user: User) -> None:
-    # the generators quantities-row ratios are a READ-ONLY ratio face (genratio). The default
-    # meantone's detempering D = (2/1, 3/2): the octave period is a WHOLE ratio, so it must render
-    # as a bare "2" — not the stacked "2 over 1" — like the editable ratio cells already collapse it.
+async def test_generators_column_collapses_a_whole_ratio_but_keeps_its_approx_tilde(user: User) -> None:
+    # the generators quantities-row ratios are a READ-ONLY ~APPROXIMATE ratio face (genratio). The
+    # default meantone's detempering D = (2/1, 3/2): the octave is a WHOLE ratio, so it renders as a
+    # bare "2" (not the stacked "2 over 1") — but, being an approximate tile, it KEEPS its ~ ("~2"),
+    # just like the fraction generator (~3/2). Only the bar + denominator collapse, never the ~.
     await user.open("/")
     num, _den, collapsed = _ro_ratio_face(user, "qgen:0")
-    assert collapsed and num == "2"            # 2/1 -> bare integer, ~ and bar dropped
+    assert collapsed and num == "2"            # 2/1 -> bare integer (bar + denominator dropped)
+    assert _approx_markers(user, "qgen:0")     # ...but the ~ still rides the collapsed integer
     _n, _d, gen_collapsed = _ro_ratio_face(user, "qgen:1")
-    assert not gen_collapsed                    # the fifth (~3/2) stays a stacked fraction
-    # the collapse survives a re-render: toggling an unrelated layer drives qgen:0 through
-    # _update_ratio (the persisted-cell path, distinct from the initial build), and it stays "2"
+    assert not gen_collapsed and _approx_markers(user, "qgen:1")  # the fifth stays a stacked ~3/2
+    # both the collapse AND its ~ survive a re-render: toggling an unrelated layer drives qgen:0
+    # through _update_ratio (the persisted-cell rebuild path, distinct from the initial build)
     _toggle(user, "symbols")
     num2, _d2, still = _ro_ratio_face(user, "qgen:0")
-    assert still and num2 == "2"
+    assert still and num2 == "2" and _approx_markers(user, "qgen:0")
 
 
 async def test_detempering_column_collapses_a_whole_ratio_to_a_bare_integer(user: User) -> None:
     # the generator-detempering quantities-row ratios are a READ-ONLY ratio face (commaratio) — the
-    # column the user named. Its octave detempering 2/1 must collapse to a bare "2" too.
+    # column the user named. Its octave detempering 2/1 must collapse to a bare "2" too. Unlike the
+    # generators, detempering is NOT an approximate tile, so its bare integer carries no ~.
     await _enable(user, "generator detempering")
     await user.should_see(marker="detempering:0")
     num, _den, collapsed = _ro_ratio_face(user, "detempering:0")
     assert collapsed and num == "2"            # 2/1 -> bare integer
+    assert not _approx_markers(user, "detempering:0")  # detempering is exact — no ~ on the integer
     _n, _d, fifth_collapsed = _ro_ratio_face(user, "detempering:1")
     assert not fifth_collapsed                  # the fifth (3/2) stays a stacked fraction
 
@@ -603,17 +607,17 @@ async def test_quantities_off_at_runtime_does_not_strand_a_tilde_on_blanked_gene
     # off at runtime BLANKS them, which must clear the whole face: the old update path patched the
     # fraction's numbers in place and left the "~" stranded over an empty fraction bar — a meaningless
     # "~-". Drive the runtime toggle and assert no approximate marker survives on a blanked generator
-    # cell (the fresh-load render never hits this — only the in-place value update does). Use the
-    # SECOND generator (the fifth, ~3/2) — the first is the octave 2/1, which now collapses to a bare
-    # "2" with no ~ (a whole ratio isn't an approximate fraction), so it carries no marker to strand.
+    # cell (the fresh-load render never hits this — only the in-place value update does). The octave
+    # generator is a whole ratio that collapses to a bare "2" but, being an approximate tile, keeps
+    # its ~ ("~2") — so it carries a marker to strand, making it a valid (and the natural) subject.
     await user.open("/")
-    assert _approx_markers(user, "gen:1")      # mapping-row quantity shows ~3/2 by default
-    assert _approx_markers(user, "qgen:1")     # generator-col quantity likewise
+    assert _approx_markers(user, "gen:0")      # mapping-row quantity shows ~2 (the octave) by default
+    assert _approx_markers(user, "qgen:0")     # generator-col quantity likewise
     user.find(marker="showpart:quantities").click()   # turn general quantities OFF (the dummy-tile part)
-    assert not _approx_markers(user, "gen:1")  # blanked: the whole face cleared, no stray ~ (nor bar)
-    assert not _approx_markers(user, "qgen:1")
+    assert not _approx_markers(user, "gen:0")  # blanked: the whole face cleared, no stray ~ (nor bar)
+    assert not _approx_markers(user, "qgen:0")
     user.find(marker="showpart:quantities").click()   # back on
-    assert _approx_markers(user, "gen:1")      # the ~3/2 face is rebuilt
+    assert _approx_markers(user, "gen:0")      # the ~2 face is rebuilt
 
 
 # --- tier 3: the edit -> render -> undo pipeline (input -> handler -> render) ---
