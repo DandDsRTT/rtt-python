@@ -2813,6 +2813,37 @@ class _GridBuilder:
             if ckey in self.plus_stub_x:
                 self.cells.append(CellBox(cid, self.plus_stub_x[ckey] - BTN / 2, self.fanout_y - BTN / 2, BTN, BTN, cid))
 
+        # The interval columns' − controls — each column's removal, and the draft column's cancel —
+        # normally ride the quantities row (emitted in its block above). When that row is hidden but
+        # the interval vectors are shown, re-home them onto the vectors row: its top edge bounds the
+        # hover zone, exactly as the quantities row's did, so a column (or an accidental draft) stays
+        # removable there. The block above already emits these when the quantities row IS open, so
+        # this stays idle then to avoid doubling them. The domain/generator − are NOT re-homed — their
+        # twins basis_minus (vectors row) and map_minus (mapping row) already cover those.
+        if not self.row_open("quantities") and self.row_open("vectors"):
+            vtop = self.row_y["vectors"]
+            def vec_minus(cid, ckey, i, kind, **kw):  # a − hover zone over column ckey's i-th branch point
+                self.cells.append(CellBox(cid, self.sub_axis_x(ckey, i) - COL_W / 2, self.fanout_y,
+                                     COL_W, vtop - self.fanout_y, kind, **kw))
+            if self.tile_open("vectors", "commas") and (self.pending is not None or self.nc > 0):
+                vec_minus("comma_minus", "commas", self.nc_shown - 1, "comma_minus")
+            if self.tile_open("vectors", "targets"):
+                if self.targets_editable:
+                    for j in range(self.k):
+                        vec_minus(f"target_minus:{j}", "targets", j, "target_minus", comma=j)
+                if self.pending_target is not None:
+                    vec_minus("target_minus:pending", "targets", self.k, "target_minus")
+            if self.tile_open("vectors", "held"):
+                for i in range(self.nh):
+                    vec_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
+                if self.pending_held is not None:
+                    vec_minus("held_minus:pending", "held", self.nh, "held_minus")
+            if self.tile_open("vectors", "interest"):
+                for i in range(self.mi):
+                    vec_minus(f"interest_minus:{i}", "interest", i, "interest_minus", comma=i)
+                if self.pending_interest is not None:
+                    vec_minus("interest_minus:pending", "interest", self.mi, "interest_minus")
+
         # generator ratios (aligned with the mapping rows they label) + the mapping
         # matrix and its mapped target interval list
         if self.row_open("mapping"):

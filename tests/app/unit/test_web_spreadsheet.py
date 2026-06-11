@@ -396,6 +396,35 @@ def test_interval_pluses_survive_hiding_the_quantities_row():
     assert (interval_pluses | quantities_only).isdisjoint(both_hidden)
 
 
+def test_interval_minuses_rehome_to_the_vectors_row_when_quantities_hidden():
+    # the twin of the + fix: the interval columns' − (each column's removal, and a draft's cancel)
+    # ride the quantities row when it shows, but re-home onto the interval-vectors row when it is
+    # hidden, so a column — or an accidental draft — stays removable there. The domain/generator −
+    # (the domain shrink "minus", "gen_minus") do NOT re-home: their twins basis_minus (vectors row)
+    # and map_minus (mapping row) already offer those removals where the quantities row is gone.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+
+    shown = {c.id for c in spreadsheet.build(state).cells}
+    assert {"comma_minus", "target_minus:0", "minus", "gen_minus"} <= shown  # all there with the row shown
+
+    folded = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"}).cells}
+    assert {"comma_minus", "target_minus:0"} <= folded   # the interval − re-home onto the vectors row...
+    assert {"minus", "gen_minus"}.isdisjoint(folded)     # ...the domain/generator − do not
+    assert "basis_minus" in folded                       # (the domain − twin already lives on the vectors row)
+
+    # a draft opened while the quantities row is hidden still carries its cancel − there
+    drafts = (("pending_comma", "comma_minus"), ("pending_interest", "interest_minus:pending"))
+    for arg, minus_id in drafts:
+        cells = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"},
+                                                 **{arg: [None, None, None]}).cells}
+        assert minus_id in cells
+
+    # both interval rows hidden → nothing to remove from, so the re-homed − go too
+    off = settings.defaults(); off["domain_quantities"] = False
+    both_hidden = {c.id for c in spreadsheet.build(state, off, collapsed={"row:vectors"}).cells}
+    assert {"comma_minus", "target_minus:0"}.isdisjoint(both_hidden)
+
+
 def test_generators_plus_and_minus_ride_the_generators_fan():
     # the generators ± rides the generators column's fan, like the domain ±: the + on the
     # stub one COL_W past the last generator's branch point (the bus stretched to reach it),

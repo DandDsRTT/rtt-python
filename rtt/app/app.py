@@ -3316,11 +3316,17 @@ def index() -> None:
             target = next((cb.id for cb in lay.cells if cb.id == "basis:pending"), None)
         inp = rec.inputs.get(target) if target is not None else None
         if inp is not None:
-            # focus into the draft cell. render() above created it, and the outbox emits that
-            # element's 'update' before this focus message (see outbox.run_loop), so the client has
-            # mounted it by the time runMethod resolves the ref. (A frame-deferred focus would be
-            # fragile — requestAnimationFrame is paused whenever the page isn't visible.)
-            inp.run_method("focus")
+            # Focus into the freshly-created draft cell. A direct runMethod can lose a race in a real
+            # (visible) browser: the cell-create 'update' and this focus message can be delivered in
+            # one frame, so the focus runs before Vue has mounted the new cell and populated its
+            # $ref — and silently no-ops. So defer to the next macrotask and poll briefly for the
+            # mount (getElement returns the ref once it exists). setTimeout works whether the page is
+            # visible or hidden — requestAnimationFrame would be paused while hidden (e.g. the render
+            # tests / a backgrounded tab), so it is the wrong tool here.
+            ui.run_javascript(
+                f"(function(){{var id={inp.id},n=0;function go(){{"
+                f"if(getElement(id)){{runMethod(id,'focus',[]);return;}}"
+                f"if(n++<60)setTimeout(go,16);}}setTimeout(go,0);}})()")
 
     def on_show_toggle(key, value):
         # building[0] guards the echo when render() syncs a checkbox to the document
