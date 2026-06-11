@@ -1019,7 +1019,7 @@ GRIDDED_KINDS = frozenset({
     # the nonstandard-domain (box-on) twins of the domain ± walk controls (minus/plus/basis_minus):
     # a per-element − on every element and the typed-element + on both axes
     "element_minus", "element_plus",
-    "interest_minus", "interest_plus", "held_minus", "held_plus", "target_minus", "target_plus", "optimize",
+    "interest_minus", "interest_plus", "held_minus", "held_plus", "target_minus", "target_plus",
     "colgrip",  # the drag-and-drop reorder grip on each interval column's fan branch
     "boxtitle", "powerinput", "powerdisplay",  # both power-value faces (editable input / locked value)
 })

@@ -48,7 +48,7 @@ SHOW_HELP: dict[str, str] = {
     "form_controls": "Show the form controls — rewrite the mapping or comma basis into a chosen form.",
     "form_colorization": "Tint the cells touched by the form 𝐹. Refines “form controls”.",
     "tuning_boxes": "Show the tuning boxes — the generator tuning map, prescaler, damage, and more.",
-    "optimization": "Show the optimization box — the mean damage, the optimize button, and the power 𝑝.",
+    "optimization": "Show the optimization box — the mean damage and the power 𝑝.",
     "tuning_ranges": "Chart each generator's tuning range as an I-beam under the generator tuning map.",
     "weighting": "Show the weighting boxes — the prescaler, the complexity 𝒄, and the weight 𝒘.",
     "all_interval": "Show the all-interval control — optimize over every interval rather than a finite target list.",
@@ -126,7 +126,6 @@ _KIND_HELP: dict[str, str] = {
     "elementratio": "Domain basis element — a prime, or any rational (e.g. 13/5) for a nonstandard domain. Type to relabel this basis element; the ?/? draft adds a new one (held just). Valid if it's a positive rational that keeps the basis independent.",
     # other grid controls
     "rangemode": "Choose how the generator's tuning range is measured — monotone or tradeoff.",
-    "optimize": "Optimize the tuning to minimize damage now. Double-click to lock auto-optimize on.",
     "scheme_button": "Back to the scheme — discard a picked or edited projection and return the tuning to the scheme's optimized result, bringing the target list back.",
     # add / remove buttons
     "plus": "Add the next prime to the domain.",

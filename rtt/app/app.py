@@ -1332,7 +1332,6 @@ class _Reconciler:
         self.checks: dict = {}  # control_check cell id -> its q-checkbox (the box-𝐋 "replace diminuator")
         self.ptext_inputs: dict = {}  # editable plain-text cell id -> its q-input (mapping / comma basis)
         self.rangeopts: dict = {}  # range-mode cell id -> {mode: its clickable square option} (monotone / tradeoff)
-        self.opt_buttons: dict = {}  # optimize-button cell id -> its ui.button (for the auto-lock visual)
         self.scheme_buttons: dict = {}  # back-to-scheme button cell id -> its ui.button (for the idle grey)
         self.mean_damage_tips: dict = {}  # optimization-mean damage cell id -> its ui.tooltip (text swaps with all-interval mode)
         self.target_limit_tip = None  # the target chooser's ui.tooltip (text swaps to an invalid-limit message)
@@ -1346,7 +1345,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.ratio_faces, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The active preview gesture — the ONE record the ring highlights derive from (see
         # _Gesture). None when no gesture is live; every paint recomputes the rings from it.
         self.gesture: _Gesture | None = None
@@ -1416,7 +1415,6 @@ class _Reconciler:
         self.cell_kinds["boxtitle"] = _KindHandlers(self._label_builder("rtt-boxtitle"), None)  # a static in-tile title
 
         self.cell_kinds["rangemode"] = _KindHandlers(self._build_rangemode, self._update_rangemode)
-        self.cell_kinds["optimize"] = _KindHandlers(self._build_optimize, self._update_optimize)
         self.cell_kinds["scheme_button"] = _KindHandlers(self._build_scheme_button, self._update_scheme_button)
         self.cell_kinds["rowtoggle"] = _KindHandlers(self._build_foldtoggle, self._update_foldtoggle)
         self.cell_kinds["coltoggle"] = _KindHandlers(self._build_foldtoggle, self._update_foldtoggle)
@@ -2133,7 +2131,7 @@ class _Reconciler:
         self.labels[cb.id].set_text(cb.text)
         self.labels[cb.id].style(f"font-size:{_ptext_font(cb.text, cb.w)}px")
 
-    # ---- interactive controls with an update: range-mode selector, optimize button, fold toggles ----
+    # ---- interactive controls with an update: range-mode selector, fold toggles ----
     def _build_rangemode(self, cb, wrap):
         wrap.classes("rtt-rangemode")  # two square indicators side by side (the mockup style)
         opts = {}
@@ -2151,17 +2149,6 @@ class _Reconciler:
             (opt.classes(add="rtt-rangeopt-on") if mode == cb.text
              else opt.classes(remove="rtt-rangeopt-on"))
 
-    def _build_optimize(self, cb, wrap):
-        # single click optimizes once (freeze at the optimum); double click toggles the auto-
-        # optimize lock. A double-click also fires its two single clicks, but optimize() is
-        # idempotent, so a double-click's net effect is the lock toggle.
-        self.opt_buttons[cb.id] = ui.button(cb.text, on_click=lambda: self._cb.act(self._editor.optimize), color=None) \
-            .props("unelevated dense no-caps").classes("rtt-optimize")
-        self.opt_buttons[cb.id].on("dblclick", lambda: self._cb.act(self._editor.toggle_optimize_lock))
-        # hover-preview the double-click's lock toggle: with an off-optimum tuning, locking snaps it back,
-        # so the hover rings what that would move (the op still fires only on the real double-click)
-        self._preview_control(wrap, self._editor.toggle_optimize_lock)
-
     def _build_scheme_button(self, cb, wrap):
         # single click hands the tuning back to the scheme + target list (back_to_scheme); always
         # present on the projection / embedding tiles, regardless of the presets toggle
@@ -2172,16 +2159,6 @@ class _Reconciler:
         btn = self.scheme_buttons[cb.id]
         (btn.classes(add="rtt-scheme-btn-idle") if not self._editor.manual_tuning
          else btn.classes(remove="rtt-scheme-btn-idle"))
-
-    def _update_optimize(self, cb):  # reflect the auto-optimize lock + grey it when already optimal
-        btn = self.opt_buttons[cb.id]
-        (btn.classes(add="rtt-optimize-locked") if self._editor.optimize_locked
-         else btn.classes(remove="rtt-optimize-locked"))
-        # grey the button when a single click would do nothing (the tuning already sits at the
-        # optimum) so it reads as "nothing to optimize"; it stays clickable, so the double-click
-        # auto-lock toggle still works. The locked face wins over this (CSS scopes idle :not-locked).
-        (btn.classes(add="rtt-optimize-idle") if self._editor.optimize_redundant
-         else btn.classes(remove="rtt-optimize-idle"))
 
     def _build_foldtoggle(self, cb, wrap):  # rowtoggle / coltoggle / tiletoggle: a clickable chevron over its band
         item = cb.id.split("toggle:", 1)[1]  # "row:tuning" / "col:targets" / "tile:mapping:primes"

@@ -9,8 +9,8 @@
    --option-box-* SVGs) are retinted once — here, or in app._CSS_DARK_VARS for the baked SVGs —
    and their rules follow for free; the rest are re-targeted by selector below.
 
-   The colorization washes and the optimize button's 3-D face are OFF in the default document, so
-   they are left un-themed for now (their light colours only surface once those Show layers are
+   The colorization washes and the back-to-scheme button's 3-D face are OFF in the default document,
+   so they are left un-themed for now (their light colours only surface once those Show layers are
    turned on). What IS always present — and so themed below — is the audio bank, the per-column hover
    speaker, and the dummy tile's sample chart (its bars and axes ride _BR_COLOR, retinted by the
    marks rule below; the real per-tile charts share that token, so they follow for free once the

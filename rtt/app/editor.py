@@ -4,7 +4,7 @@ Holds the whole editor *document* — everything the user can change — and the
 undo/redo history over it. The document bundles the temperament
 (:class:`~rtt.app.service.TemperamentState`), the view selections shown over it
 (tuning scheme, target interval set, intervals of interest, held intervals, range
-mode, optimize lock) and the UI state (the Show settings and the folded
+mode) and the UI state (the Show settings and the folded
 rows/columns/tiles). It is all one history: any change snapshots the whole
 document, undo/redo swap snapshots, :meth:`Editor.reset` restores the defaults, and
 :meth:`Editor.serialize`/:meth:`Editor.load` persist it across a page refresh. The
@@ -56,15 +56,16 @@ class _Doc:
     interest_vectors: tuple[tuple[int, ...], ...]
     held_vectors: tuple[tuple[int, ...], ...]
     range_mode: str
-    optimize_locked: bool
+    # The MANUAL generator-tuning override (a typed/nudged generator, a picked established
+    # projection, or a hand-edited unchanged basis / G / P), or None — the scheme-driven state,
+    # where the grid recomputes the scheme's optimum on every change (optimization is always on;
+    # there is no freeze-at-optimum state and no optimize button). A manual override deviates
+    # deliberately: the established-scheme chooser shows "-" and the mean damage drops its min().
     generator_tuning: tuple[float, ...] | None
-    # Whether ``generator_tuning`` is a MANUAL hand-edit (a typed/nudged generator) rather than a
-    # scheme-derived freeze (the default, an Optimize click, or whatever an earlier optimum froze).
-    # It splits the two reasons a frozen tuning can deviate from the current scheme's optimum: a
-    # hand-edit genuinely leaves the scheme (the established-scheme chooser shows "-"), whereas a
-    # tuning left STALE by a scheme pick (auto-optimize off) still belongs to the established scheme
-    # — only un-reoptimized — so the chooser keeps the name and the optimize button flags the
-    # staleness. See :attr:`Editor.displayed_tuning_scheme_name`.
+    # Whether the tuning is that manual hand-edit rather than scheme-driven. Tracks
+    # ``generator_tuning is not None`` for the document, but also covers a transient manual
+    # superspace 𝒈L (held outside the document) while one is active.
+    # See :attr:`Editor.displayed_tuning_scheme_name`.
     manual_tuning: bool
     # The user's override for the complexity prescaler 𝐿's diagonal — d floats, one per
     # domain prime. ``None`` means "no override": every weighting calculation falls back to
@@ -121,14 +122,10 @@ def _initial_doc() -> _Doc:
         interest_vectors=(),
         held_vectors=(),
         range_mode="monotone",
-        optimize_locked=False,
-        # auto-optimize is OFF by default: the generator tuning starts FROZEN at the as-shipped
-        # scheme's optimum, so the tuning shows correctly at startup but does NOT silently re-
-        # optimize as the temperament/targets change (that auto-recompute is the optimize lock,
-        # off here). A frozen value — not None, which means "auto" — keeps the button unlocked
-        # and the state consistent; the user clicks optimize to retune.
-        generator_tuning=service.tuning(state.mapping, service.DEFAULT_DOCUMENT_SCHEME).generator_map,
-        manual_tuning=False,  # the default freeze is the scheme's optimum, not a hand-edit
+        # optimization is always on: no manual override, so the grid recomputes the scheme's
+        # optimum on every change — the tuning is never stale against what's on screen
+        generator_tuning=None,
+        manual_tuning=False,
         custom_prescaler=None,
         target_override=None,
         settings=tuple(sorted(show_settings.defaults().items())),
@@ -194,7 +191,6 @@ class Editor:
             interest_vectors=tuple(self.interest_vectors),
             held_vectors=tuple(self.held_vectors),
             range_mode=self.range_mode,
-            optimize_locked=self.optimize_locked,
             generator_tuning=self.generator_tuning,
             manual_tuning=self.manual_tuning,
             custom_prescaler=self.custom_prescaler,
@@ -214,7 +210,6 @@ class Editor:
         self.interest_vectors = [tuple(m) for m in doc.interest_vectors]
         self.held_vectors = [tuple(m) for m in doc.held_vectors]
         self.range_mode = doc.range_mode
-        self.optimize_locked = doc.optimize_locked
         self.generator_tuning = doc.generator_tuning
         self.manual_tuning = doc.manual_tuning
         self.custom_prescaler = doc.custom_prescaler
@@ -332,7 +327,6 @@ class Editor:
             generator_tuning=self.effective_generator_tuning(),
             target_override=self.target_override,
             custom_prescaler=self.custom_prescaler,
-            optimize_locked=self.optimize_locked,
             tuning_optimized=self.tuning_is_optimized,
             pending_interest=self.pending_interest,
             pending_held=self.pending_held,
@@ -484,48 +478,24 @@ class Editor:
         return service.tuning(self.state.mapping, self.tuning_scheme, held=held,
                               targets=self.target_override).generator_map
 
-    def optimize(self) -> None:
-        """The optimize button's single click: freeze the generator tuning at the scheme's
-        current optimum (respecting any held intervals). With the lock off, the frozen tuning
-        then stays put as the temperament/scheme change, until optimized again. Idempotent —
-        re-optimizing to the same tuning (e.g. the extra clicks a double-click fires) does not
-        push a redundant undo step."""
-        optimum = self._optimum_generator_tuning()
-        if optimum == self.generator_tuning and not self.manual_tuning:
-            return  # already at the optimum and not a manual freeze — nothing to apply
-        self._snapshot()
-        self.generator_tuning = optimum
-        self.superspace_generator_tuning = None  # optimizing drops any manual 𝒈L too
-        self.manual_tuning = False  # the freeze is now the scheme's optimum, no longer a hand-edit
-
     def back_to_scheme(self) -> None:
         """The projection / generator-embedding tiles' "back to scheme" button: leave a picked or
         hand-edited tuning and hand the wheel back to the scheme + target list. The tuning returns
-        to the scheme's target-driven optimum (auto if the optimize lock is on, else frozen at it),
-        so the target list comes back and the projection reverts to a read-only identification of
+        to the scheme's target-driven optimum (recomputed on every change, as always), so the
+        target list comes back and the projection reverts to a read-only identification of
         the resulting tuning. A no-op (no undo step) when the tuning is already scheme-driven."""
         if not self.manual_tuning:
             return  # already the scheme's optimum — nothing to hand back
         self._snapshot()
-        self.generator_tuning = None if self.optimize_locked else self._optimum_generator_tuning()
+        self.generator_tuning = None
         self.superspace_generator_tuning = None
         self.manual_tuning = False
 
-    def toggle_optimize_lock(self) -> None:
-        """The optimize button's double click: toggle auto-optimize. Locked on, the tuning
-        recomputes to the optimum on every change; unlocking freezes it at the current optimum."""
-        self._snapshot()
-        self.optimize_locked = not self.optimize_locked
-        # auto: recompute the optimum on every change (None); unlocking freezes at it now
-        self.generator_tuning = None if self.optimize_locked else self._optimum_generator_tuning()
-        self.superspace_generator_tuning = None  # back to the auto/optimum 𝒈L too
-        self.manual_tuning = False  # auto-optimal, or frozen AT the optimum — neither is a hand-edit
-
     def effective_generator_tuning(self) -> tuple[float, ...] | None:
-        """The generator tuning the grid should display: None (recompute the optimum every
-        render) while the auto-optimize lock is on; else the frozen tuning — the scheme's optimum
-        by default (auto-optimize is off, so it does not auto-recompute as the temperament/targets
-        change), a hand-edited map, or whatever the last Optimize froze.
+        """The generator tuning the grid should display: None (recompute the scheme's optimum
+        every render — optimization is always on) until a manual override deviates; then the
+        hand-edited / projection-picked map, until back_to_scheme or a scheme pick hands the
+        wheel back.
 
         In the prime-based superspace, a manual 𝒈L drives the on-domain maps too: the editable map
         is 𝒈L (over the superspace generators), so the on-domain 𝒈 is its projection — every
@@ -534,19 +504,17 @@ class Editor:
                 and self.nonprime_basis_approach == "prime-based" \
                 and service.domain_has_nonprimes(self.state.domain_basis):
             return service.project_superspace_generators_to_domain(self.state, self.superspace_generator_tuning)
-        return None if self.optimize_locked else self.generator_tuning
+        return self.generator_tuning
 
     @property
     def displayed_tuning_scheme_name(self) -> str | None:
         """The ESTABLISHED scheme's systematic name, or None — for which the tuning chooser shows
         "-". The chooser tracks the scheme the user has established (a weight slope, optimization
-        power or named pick), so a scheme change updates it even though the frozen tuning does not
-        retune (auto-optimize off): a STALE frozen tuning is the optimize button's concern, not a
-        scheme deviation. "-" only when the *displayed* tuning genuinely leaves the bare scheme —
-        a hand-edited generator (:attr:`manual_tuning`), or a held interval the tuning has actually
-        been re-optimized to hold (adding one without optimizing keeps the name) — or when the
-        scheme has no systematic name (an unnameable optimization power or complexity). Compared at
-        DISPLAY precision (the shown cents), mirroring :attr:`displayed_prescaler_name`."""
+        power or named pick). "-" only when the *displayed* tuning genuinely leaves the bare scheme —
+        a hand-edited generator (:attr:`manual_tuning`), or a held interval pulling the (always-
+        optimized) tuning off the bare scheme — or when the scheme has no systematic name (an
+        unnameable optimization power or complexity). Compared at DISPLAY precision (the shown
+        cents), mirroring :attr:`displayed_prescaler_name`."""
         # the optimum WITH held intervals (what the grid would show if optimized) vs the BARE optimum
         # WITHOUT them — over the SAME displayed target list either way. With no held interval the two
         # coincide, so skip the second solve.
@@ -557,8 +525,8 @@ class Editor:
         displayed = (override if override is not None and len(override) == len(self.state.mapping)
                      else held_optimum)
         if not _same_cents_map(displayed, held_optimum):
-            # the displayed tuning is NOT the current optimum: a hand-edit leaves the scheme ("-"),
-            # but a tuning merely left stale by a scheme pick still belongs to it (keep the name).
+            # the displayed tuning is NOT the current optimum — a manual override leaves the
+            # scheme ("-"); one typed back at the optimum's displayed cents reads as no deviation
             if self.manual_tuning:
                 return None
         elif not _same_cents_map(held_optimum, bare):
@@ -572,26 +540,16 @@ class Editor:
     @property
     def tuning_is_optimized(self) -> bool:
         """Whether the grid's displayed generator tuning sits at the scheme's optimum — so the
-        mean damage shown IS the minimized value and its symbol wraps in min(). True with auto-optimize
-        on, with nothing frozen, or once optimized (the frozen tuning equals the current optimum);
+        mean damage shown IS the minimized value and its symbol wraps in min(). True while the
+        tuning is scheme-driven (optimization is always on, so the grid shows the optimum);
         False as soon as a manual generator edit pulls it off. Compared at DISPLAY precision like
         :attr:`displayed_tuning_scheme_name`, but against the optimum that HOLDS any held intervals
-        (holding then optimizing is still optimized) — so only a hand-edit drops the min(), whereas a
-        held interval, which leaves the BARE scheme, drops the scheme NAME but not the min()."""
+        — so only a hand-edit drops the min(), whereas a held interval, which leaves the BARE
+        scheme, drops the scheme NAME but not the min()."""
         override = self.effective_generator_tuning()
         if override is None or len(override) != len(self.state.mapping):
-            return True  # auto-optimize on / nothing frozen / stale override → the grid shows the optimum
+            return True  # scheme-driven (or a stale-length override) → the grid shows the optimum
         return _same_cents_map(override, self._optimum_generator_tuning())
-
-    @property
-    def optimize_redundant(self) -> bool:
-        """Whether a single click of the optimize button would do nothing — the displayed tuning
-        already sits at the scheme's optimum — so the button greys to read as "nothing to optimize".
-        False while the auto-optimize lock is on: there the button wears its dark locked face and is
-        the double-click *unlock* control, an engaged state rather than a redundant one. (The button
-        stays interactive either way — only its look changes — so the double-click auto-lock toggle
-        keeps working even while greyed.)"""
-        return self.tuning_is_optimized and not self.optimize_locked
 
     @property
     def displayed_prescaler_name(self) -> str | None:
@@ -603,36 +561,33 @@ class Editor:
             self.state.mapping, self.tuning_scheme, self.custom_prescaler)
 
     def set_generator_tuning_text(self, text: str) -> bool:
-        """Freeze a typed manual generator tuning (the editable generator tuning map): parse a
-        cents map of exactly r values and hold it, turning auto-optimize off (a manual tuning
-        and auto-optimize are mutually exclusive). False (state untouched) when it is not r
-        cents values, so the caller can flag the input rather than mangling the tuning."""
+        """Hold a typed manual generator tuning (the editable generator tuning map): parse a
+        cents map of exactly r values and hold it as the manual override. False (state
+        untouched) when it is not r cents values, so the caller can flag the input rather
+        than mangling the tuning."""
         gens = service.parse_cents_map(text, len(self.state.mapping))
         if gens is None:
             return False
         self._snapshot()
-        self.optimize_locked = False
         self.generator_tuning = gens
         self.manual_tuning = True  # a typed tuning is a hand-edit — it leaves the established scheme
         return True
 
     def _override_generator(self, i: int, transform, *, snapshot: bool = True) -> None:
-        """Freeze a manual generator tuning with component ``i`` replaced by
-        ``transform(current[i])``, seeding the rest from the frozen tuning or, when none is
-        frozen, the current optimum. Turns auto-optimize off, like a typed tuning. Backs the
-        editable cell (set to a typed value) and the wheel nudge (step it). ``snapshot=False``
-        extends the current undo step instead of opening a new one — how a continuous wheel
-        gesture coalesces its notches."""
-        # a frozen tuning whose length no longer matches the rank (a domain ± or comma/mapping edit
-        # since it was frozen) is stale — seed from the optimum instead, as the grid does, so editing
-        # the new generator's cell can't index past the stale shorter tuning
-        frozen = self.effective_generator_tuning()
-        base = list(frozen if frozen is not None and len(frozen) == len(self.state.mapping)
+        """Hold a manual generator tuning with component ``i`` replaced by
+        ``transform(current[i])``, seeding the rest from the manual override or, when the tuning
+        is scheme-driven, the current optimum. Backs the editable cell (set to a typed value)
+        and the wheel nudge (step it). ``snapshot=False`` extends the current undo step instead
+        of opening a new one — how a continuous wheel gesture coalesces its notches."""
+        # a manual override whose length no longer matches the rank (a domain ± or comma/mapping
+        # edit since it was set) is stale — seed from the optimum instead, as the grid does, so
+        # editing the new generator's cell can't index past the stale shorter tuning
+        override = self.effective_generator_tuning()
+        base = list(override if override is not None and len(override) == len(self.state.mapping)
                     else self._optimum_generator_tuning())
         base[i] = float(transform(base[i]))
         if snapshot:
             self._snapshot()
-        self.optimize_locked = False
         self.generator_tuning = tuple(base)
         self.manual_tuning = True  # editing one generator is a hand-edit — it leaves the scheme
 
@@ -645,39 +600,37 @@ class Editor:
         return service.superspace_tuning(self.state, self.tuning_scheme, "prime-based").generator_map
 
     def set_superspace_generator_tuning_text(self, text: str) -> bool:
-        """Freeze a typed manual superspace generator tuning 𝒈L (the prime-based approach's editable
-        generator map): parse a cents map of exactly rL values and hold it, turning auto-optimize
-        off. False (state untouched) when it is not rL cents values, so the caller can flag the
+        """Hold a typed manual superspace generator tuning 𝒈L (the prime-based approach's editable
+        generator map): parse a cents map of exactly rL values and hold it as the manual override.
+        False (state untouched) when it is not rL cents values, so the caller can flag the
         input. The on-domain 𝒈 follows as 𝒈L's projection (see effective_generator_tuning)."""
         gens = service.parse_cents_map(text, service.superspace_rank(self.state))
         if gens is None:
             return False
         self._snapshot()
-        self.optimize_locked = False
         self.superspace_generator_tuning = gens
         self.manual_tuning = True
         return True
 
     def set_superspace_generator_tuning_component(self, i: int, cents: float) -> None:
         """Override one superspace generator's tuning (one editable 𝒈L cell), seeding the rest from
-        the frozen 𝒈L or, when none is frozen, the prime-based superspace optimum."""
-        frozen = self.superspace_generator_tuning
+        the manual 𝒈L or, when none is held, the prime-based superspace optimum."""
+        manual = self.superspace_generator_tuning
         rL = service.superspace_rank(self.state)
-        base = list(frozen if frozen is not None and len(frozen) == rL
+        base = list(manual if manual is not None and len(manual) == rL
                     else self._optimum_superspace_generator_tuning())
         base[i] = float(cents)
         self._snapshot()
-        self.optimize_locked = False
         self.superspace_generator_tuning = tuple(base)
         self.manual_tuning = True
 
     def nudge_superspace_generator_tuning_component(self, i: int, steps: int) -> None:
         """Wheel fine-adjust one superspace generator 𝒈L cell by ``steps`` thousandths of a cent
-        (the prime-based shift's counterpart of the on-domain genmap nudge), seeding from the frozen
+        (the prime-based shift's counterpart of the on-domain genmap nudge), seeding from the manual
         𝒈L or the superspace optimum and rounding to the 3 dp the cell shows."""
         rL = service.superspace_rank(self.state)
-        frozen = self.superspace_generator_tuning
-        base = list(frozen if frozen is not None and len(frozen) == rL
+        manual = self.superspace_generator_tuning
+        base = list(manual if manual is not None and len(manual) == rL
                     else self._optimum_superspace_generator_tuning())
         self.set_superspace_generator_tuning_component(
             i, round(round(base[i], 3) + steps * _GENERATOR_NUDGE_CENTS, 3))
@@ -687,8 +640,8 @@ class Editor:
         A generator and its mapping row are the same quantity, so negating the generator negates
         mapping row ``i`` too; with the row and the generator's tuned size both flipped, the prime
         tuning map 𝒕 = 𝒈𝑀 is unchanged — the generator just points the other way (e.g. a fifth
-        becomes a descending fourth's worth). With auto-optimize on, the re-optimized tuning
-        flips the generator's size on its own; a frozen manual tuning has its component negated
+        becomes a descending fourth's worth). A scheme-driven tuning re-optimizes and flips the
+        generator's size on its own; a manual override has its component negated
         here so 𝒕 holds. One undoable edit (the mapping edit's snapshot covers both halves)."""
         override = self.effective_generator_tuning()
         mapping = [list(row) for row in self.state.mapping]
@@ -764,15 +717,19 @@ class Editor:
     def set_tuning_scheme(self, name: str) -> None:
         """Apply a systematic scheme name from the established-tuning-scheme chooser, preserving
         the current target mode: all-interval when the scheme currently targets every interval,
-        else over the displayed target list (the chooser's T-prefixed entries). With auto-optimize
-        off the generator tuning stays frozen — picking a scheme does NOT retune; the chooser names
-        the newly established scheme (the optimize button flags the now-stale tuning) while a hand-
-        edited tuning keeps it at "-". (With the auto lock on, the grid recomputes anyway.) Undoable."""
+        else over the displayed target list (the chooser's T-prefixed entries). Picking a scheme
+        establishes it outright: any manual tuning override is dropped, so the grid retunes to the
+        picked scheme's optimum (optimization is always on) and the chooser names it. Undoable."""
         self._snapshot()
         target = "{}" if service.is_all_interval(self.tuning_scheme) else self.target_spec
         # set the target set as a structured trait (not by gluing a prefix onto the name) so a
         # held-/destretched- modifier in the name survives — string concatenation would hide it
         self.tuning_scheme = service.scheme_with_targets(name, target)
+        # the pick is a deliberate "use this scheme": with no optimize button to apply it over a
+        # manual tuning, the pick itself hands the wheel back (else it would be a dead control)
+        self.generator_tuning = None
+        self.superspace_generator_tuning = None
+        self.manual_tuning = False
 
     def set_established_projection(self, name: str | None) -> None:
         """Apply an established projection / embedding from that chooser: set the generator tuning
@@ -1476,7 +1433,6 @@ class Editor:
             "interest_vectors": [list(m) for m in self.interest_vectors],
             "held_vectors": [list(m) for m in self.held_vectors],
             "range_mode": self.range_mode,
-            "optimize_locked": self.optimize_locked,
             "generator_tuning": list(self.generator_tuning) if self.generator_tuning is not None else None,
             "manual_tuning": self.manual_tuning,
             "custom_prescaler": _prescaler_to_json(self.custom_prescaler),
@@ -1504,9 +1460,10 @@ class Editor:
             interest_vectors=tuple(tuple(int(x) for x in m) for m in data.get("interest_vectors", ())),
             held_vectors=tuple(tuple(int(x) for x in m) for m in data.get("held_vectors", ())),
             range_mode=data.get("range_mode", "monotone"),
-            optimize_locked=bool(data.get("optimize_locked", False)),
+            # a saved tuning is honoured only as a MANUAL override; a doc saved by an older build
+            # with a non-manual frozen tuning (the retired freeze-at-optimum state) re-optimizes
             generator_tuning=tuple(data["generator_tuning"])
-            if data.get("generator_tuning") is not None else None,
+            if data.get("generator_tuning") is not None and data.get("manual_tuning") else None,
             manual_tuning=bool(data.get("manual_tuning", False)),
             custom_prescaler=_prescaler_from_json(data.get("custom_prescaler")),
             target_override=tuple(data["target_override"])

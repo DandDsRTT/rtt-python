@@ -103,17 +103,15 @@ OPT_TITLE_H = 14  # height of the optimization box's title strip ("optimization"
 OPT_PAD_T = 3  # inset above the title so it sits inside the box, not awkwardly on its top border
 OPT_PAD_B = 4  # bottom margin below the captions (the box hugs the contents vertically too)
 OPT_PAD_L = 8  # left margin: inset of the mean damage from the box's left edge
-OPT_PAD_R = 8  # right margin: inset of the optimize button from the box's right edge
+OPT_PAD_R = 8  # right margin: inset of the power's clearance from the box's right edge
 OPT_TITLE_GAP = 6  # bottom margin under the title, before the control row
 OPT_COL_GAP = 8  # the standard gap between adjacent in-tile controls — sizes OPT_BOX_MIN_W
 # (the clearance around the optimization box's centered power) and the box-𝐋 / q-dual / all-
 # interval slots elsewhere
-# The box spans the FULL width of the damage tile; its three controls DISTRIBUTE across it: the
-# mean damage hugs the left edge, the optimize button the right edge, and the power 𝑝 sits centered
-# in the gap between them, so the "optimization power" caption has clear room either side. The
-# min-damage value and the ∞ field are ordinary COL_W gridded cells (contents centred); their
-# symbols/captions centre under them. The captions stay on ONE line each.
-OPT_BTN_W = 94   # optimize button — wide enough to seat "double-click to unlock" on one line beneath it
+# The box spans the FULL width of the damage tile; its two controls DISTRIBUTE across it: the
+# mean damage hugs the left edge, and the power 𝑝 sits centered in the gap to its right, so the
+# "optimization power" caption has clear room either side. The min-damage value and the ∞ field
+# are ordinary COL_W gridded cells (contents centred); their symbols/captions centre under them.
 OPT_POW_CAP_W = 90  # the "optimization power" caption cell (one line, centred under the ∞ cell)
 OPT_MEAN_DAMAGE_W = 64  # the mean damage's COLUMN: its value cell is COL_W centred within this, and its symbol
 # and caption span it, so the WIDEST mean damage label — the min()-wrapped symbol min(⟪𝐝⟫ₚ) (~69px) /
@@ -121,9 +119,9 @@ OPT_MEAN_DAMAGE_W = 64  # the mean damage's COLUMN: its value cell is COL_W cent
 # "optimization power" caption to its right. Also the caption's wrap width: "power mean" fits on one
 # line, while the wider "retuning magnitude" breaks at the space into the two lines cap_band reserves.
 # the narrowest the box can be and still seat its spread-out controls with the power's caption clear
-# of both neighbors — left pad | mean damage column | gap | power+caption | gap | button | right pad.
+# of both neighbors — left pad | mean damage column | gap | power+caption | right pad.
 # A damage tile narrower than this floors its column up to fit (see _control_floor).
-OPT_BOX_MIN_W = OPT_PAD_L + OPT_MEAN_DAMAGE_W + OPT_COL_GAP + OPT_POW_CAP_W + OPT_COL_GAP + OPT_BTN_W + OPT_PAD_R
+OPT_BOX_MIN_W = OPT_PAD_L + OPT_MEAN_DAMAGE_W + OPT_COL_GAP + OPT_POW_CAP_W + OPT_PAD_R
 # An in-tile control box: a dropdown / checkbox enclosed in a thin-bordered frame that SPANS its
 # tile's full width (like the optimization / tuning-ranges boxes), with the control at its top-left
 # and a small field LABEL beneath naming what it sets ("established tuning scheme"). BOX_OUTER is
@@ -699,7 +697,7 @@ class _GridBuilder:
     def __init__(self, state, settings=None, collapsed=None,
                  tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
                  pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
-                 custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
+                 custom_prescaler=None, tuning_optimized=False,
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
@@ -727,7 +725,6 @@ class _GridBuilder:
         self.generator_tuning = generator_tuning
         self.target_override = target_override
         self.custom_prescaler = custom_prescaler
-        self.optimize_locked = optimize_locked
         self.tuning_optimized = tuning_optimized
         self.nonprime_approach = nonprime_approach
         self.superspace_generator_tuning = superspace_generator_tuning  # manual 𝒈L (rL) in prime-based
@@ -925,9 +922,10 @@ class _GridBuilder:
         self.pending_held = list(self.pending_held) if (self.pending_held is not None and self.show_optimization) else None
         self.nh_shown = self.nh + (1 if self.pending_held is not None else 0)
         self.held_ratios = service.comma_ratios(self.held, self.elements)  # vector -> "num/den" (the shared renderer)
-        # a frozen manual generator tuning (optimize lock off) drives the maps directly; otherwise
-        # the scheme's optimum (holding the held intervals just). A stale tuning whose generator
-        # count no longer matches the mapping (a rank change) falls back to the optimum.
+        # a manual generator-tuning override drives the maps directly; otherwise the scheme's
+        # optimum (holding the held intervals just), recomputed every build — optimization is
+        # always on. A stale override whose generator count no longer matches the mapping (a
+        # rank change) falls back to the optimum.
         if generator_tuning is not None and len(generator_tuning) == len(self.state.mapping):
             self.tun = service.tuning_from_generators(self.state.mapping, generator_tuning, self.elements)
         else:
@@ -1519,10 +1517,10 @@ class _GridBuilder:
         # sub-control. Reserve their height up front so the board stays clear below the tile.
         self.opt_ctrl = (self.show_optimization and "row:damage" not in self.collapsed
                     and self.col_open("targets") and "tile:damage:targets" not in self.collapsed)
-        # the optimization box: a title strip over a row of three controls distributed across the
+        # the optimization box: a title strip over a row of two controls distributed across the
         # tile's full width — the mean damage (the minimized damage ⟪𝐝⟫ₚ, "power mean", or the
         # all-interval retuning magnitude) and the editable power 𝑝 (each a value above its symbol
-        # above its caption) plus the optimize button. Its height = a title inset + the title + a
+        # above its caption). Its height = a title inset + the title + a
         # title gap + the value row + the symbol row + the caption band + pad (the width is the
         # targets column, floored to OPT_BOX_MIN_W). The mean damage's caption names the quantity, and
         # gains a "minimized" prefix while the tuning is optimized (matching the symbol's min() wrap).
@@ -3846,14 +3844,13 @@ class _GridBuilder:
 
         # the optimization box, nested at the BOTTOM of the target interval damage list tile (the
         # tuning's own column, whose damages it minimizes): a bordered box titled "optimization",
-        # spanning the FULL width of the tile (like the tuning-ranges box) and DISTRIBUTING three
+        # spanning the FULL width of the tile (like the tuning-ranges box) and DISTRIBUTING two
         # controls across it — the minimized-damage mean damage (a read-only gridded value over ⟪𝐝⟫ₚ)
-        # hugging the left, the optimize button (over its "double-click to lock" hint) hugging the
-        # right, and the editable power (the ∞ cell over 𝑝 over "optimization power") centered in the
-        # gap between them, so its caption has clear room either side. The min-damage and ∞ are plain
-        # COL_W gridded cells (contents centred). The damage tile's panel grows by opt_extra to enclose
-        # the box's height, and the targets column is floored to OPT_BOX_MIN_W (see _control_floor) so
-        # the spread-out controls always fit.
+        # hugging the left, and the editable power (the ∞ cell over 𝑝 over "optimization power")
+        # centered in the gap to its right, so its caption has clear room either side. The min-damage
+        # and ∞ are plain COL_W gridded cells (contents centred). The damage tile's panel grows by
+        # opt_extra to enclose the box's height, and the targets column is floored to OPT_BOX_MIN_W
+        # (see _control_floor) so the spread-out controls always fit.
         opt_box = None  # (x, y, w, h) of the bordered frame around the optimization controls
         approach_frame = None  # (x, y, w, h) of the bordered frame around the approach box
         self.approach_box = None  # (x, y, w, h) the approach radio is positioned over (None ⇒ hidden)
@@ -3869,14 +3866,13 @@ class _GridBuilder:
             cap_top = sym_top + SYMBOL_H             # the caption row, under the symbols
             cap_band = self.opt_cap_lines * CAPTION_LINE  # one line, or two when the wide mean damage wraps
             body_h = ROW_H + SYMBOL_H + cap_band + OPT_PAD_B  # value + symbol + caption band + pad
-            # the three controls, distributed across the box: the mean damage column at the left, the
-            # optimize button at the right, the power centered in the gap between them (so its caption
-            # clears both neighbors). The mean damage's value/symbol/caption all centre on the column's
+            # the two controls, distributed across the box: the mean damage column at the left, the
+            # power centered in the gap to its right (so its caption clears both the mean damage and
+            # the box's right edge). The mean damage's value/symbol/caption all centre on the column's
             # mid-line, so a wide symbol/caption overflows evenly and stays within the box.
             mean_damage_x = ox + OPT_PAD_L                       # the mean damage column's left edge
             mean_damage_val_x = mean_damage_x + (OPT_MEAN_DAMAGE_W - COL_W) / 2  # the COL_W value cell, centred in the column
-            btn_x = ox + box_w - OPT_PAD_R - OPT_BTN_W
-            pow_x = ((mean_damage_x + OPT_MEAN_DAMAGE_W) + btn_x) / 2 - COL_W / 2
+            pow_x = ((mean_damage_x + OPT_MEAN_DAMAGE_W) + (ox + box_w - OPT_PAD_R)) / 2 - COL_W / 2
             # the mean damage aggregates the damages at the power the optimizer MINIMIZED at — 𝑝 target-
             # based, dual(𝑞) all-interval (the ‖𝒓𝑋⁻¹‖ symbol's dual(𝑞) subscript). The 𝑝 cell below
             # keeps displayed_optimization_power() (∞ all-interval): power over intervals vs over primes.
@@ -3922,14 +3918,6 @@ class _GridBuilder:
                                  "symbol", text="𝑝"))
             self.cells.append(CellBox("optimization:power:caption", pow_x + (COL_W - OPT_POW_CAP_W) / 2, cap_top,
                                  OPT_POW_CAP_W, CAPTION_LINE, "caption", text="optimization power"))
-            # the optimize button: a normal ROW_H-tall rectangle wide enough to seat the "double-click
-            # to unlock" hint on one line beneath it. It single-clicks to optimize once, double-clicks
-            # to lock auto-optimize; app.py owns that behaviour + the lock visual. The hint names the
-            # double-click's NEXT effect, so it flips to "unlock" while the auto-optimize lock is on.
-            self.cells.append(CellBox("optimization:button", btn_x, content_top, OPT_BTN_W, ROW_H, "optimize",
-                                 text="optimize"))
-            self.cells.append(CellBox("optimization:button:hint", btn_x, sym_top, OPT_BTN_W, CAPTION_LINE,
-                                 "caption", text=f"double-click to {'unlock' if self.optimize_locked else 'lock'}"))
             opt_box = (ox, box_top, box_w, OPT_PAD_T + OPT_TITLE_H + OPT_TITLE_GAP + body_h)
 
         # the chapter-9 approach box: a bordered control box (the tuning-ranges / optimization style)
@@ -4716,7 +4704,7 @@ class _GridBuilder:
 def build(state, settings=None, collapsed=None,
           tuning_scheme=None, target_spec=None, interest=(), range_mode="monotone",
           pending_comma=None, held_vectors=(), generator_tuning=None, target_override=None,
-          custom_prescaler=None, optimize_locked=False, tuning_optimized=False,
+          custom_prescaler=None, tuning_optimized=False,
           pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
           pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
           displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
@@ -4724,7 +4712,7 @@ def build(state, settings=None, collapsed=None,
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
-        optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
+        tuning_optimized, pending_interest, pending_held, pending_target,
         prev_ids, pending_element, nonprime_approach, superspace_generator_tuning,
         displayed_tuning_name, held_basis_ratios, displayed_projection_name, targets_in_use,
         pending_mapping_row=pending_mapping_row,
