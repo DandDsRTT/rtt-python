@@ -109,23 +109,17 @@ _PENDING_TEXT_COLOR = "color-mix(in srgb, var(--pending-color) 60%, black)"  # a
 # lightness drops; the mid ring is too light to read as text on the pale wash, hence this darker shade.
 # The green analogue of the changing _PREVIEW_TEXT_COLOR and going-away _PREVIEW_REMOVE_TEXT_COLOR
 _PREVIEW_COLOR = "#e8c00a"  # yellow ring on a cell the in-progress edit moves (the edit-preview
-# highlight) — a clear "this changed" hue, kept distinct from the red _ALERT_COLOR / remove-preview
-# and the green _PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
+# highlight) — a clear "this changed" hue, kept distinct from the red remove-preview and the green
+# _PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
 _PREVIEW_TEXT_COLOR = "color-mix(in srgb, var(--preview-color) 60%, black)"  # the "changing" cell's
 # TEXT: the yellow ring above DARKENED toward black — single-sourced from --preview-color so the wash,
 # the ring and the text are ONE golden-yellow hue at three lightnesses (light wash / mid ring / dark
 # text), never a mix of hues. Mixing with black scales every channel equally, so the hue is preserved
 # exactly — only the lightness drops. The bright ring itself is too light to read as text on the pale
 # wash, hence the dark shade. This is the changing analogue of a draft's green text (_PENDING_COLOR)
-# and an alert's red text (_ALERT_COLOR); it also overrides the red a moved cell would otherwise
-# inherit from .rtt-alert when it is ALSO alerting (gold "changing" wins while the edit previews; the
-# red returns on blur if the cell is still invalid)
-_ALERT_COLOR = "#e53935"  # red for an alerting cell (.rtt-alert: a held interval the current tuning
-# no longer holds just). Once shared with the pending draft via _PENDING_COLOR; split off when drafts
-# went green, so "now invalid" stays red while "being created" reads green
+# and the going-away red text of the remove-preview (_PREVIEW_REMOVE_TEXT_COLOR)
 _PREVIEW_REMOVE_COLOR = "#e53935"  # red ring on a cell a hovered +/- will REMOVE (the structural
-# remove-preview) — "this is going away", paired with the yellow "this value moved"; its own var so
-# it stays tweakable apart from the matching _ALERT_COLOR red
+# remove-preview) — "this is going away", paired with the yellow "this value moved"
 _PREVIEW_REMOVE_TEXT_COLOR = "color-mix(in srgb, var(--preview-remove-color) 60%, black)"  # a going-
 # away cell's TEXT: the red remove-ring above DARKENED toward black, single-sourced from
 # --preview-remove-color so the wash, ring and text are one red at three lightnesses — the removing
@@ -351,7 +345,7 @@ def _control_svg(glyph: str) -> str:
 
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --tab-h:{_TAB_H}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
-  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --pending-text-color:{_PENDING_TEXT_COLOR}; --alert-color:{_ALERT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR}; --preview-remove-text-color:{_PREVIEW_REMOVE_TEXT_COLOR};
+  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --pending-text-color:{_PENDING_TEXT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR}; --preview-remove-text-color:{_PREVIEW_REMOVE_TEXT_COLOR};
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;
@@ -1542,11 +1536,6 @@ class _Reconciler:
         handlers = self.cell_kinds[cb.kind]  # registered for every kind (see make_cell); raises on drift
         if handlers.update is not None:
             handlers.update(cb)
-        # a flagged value (a held interval the current tuning no longer holds just) reddens its
-        # whole cell — the .rtt-alert CSS paints every face inside the wrap red, clearing back to
-        # black when the flag lifts. Toggled generically so any alerting cell kind picks it up.
-        self.els[cb.id].classes(add="rtt-alert" if cb.alert else "",
-                                remove="" if cb.alert else "rtt-alert")
         # per-cell unit (the `units` toggle): a tiny line at the bottom of the value
         # cell, the value lifted to stay centred. cb.unit is "" unless units is on, so
         # this adds/updates/removes the overlay as the toggle (or the domain) changes.

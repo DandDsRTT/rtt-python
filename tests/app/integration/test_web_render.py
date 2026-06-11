@@ -652,7 +652,7 @@ def _ratio_value(user: User, cell_id: str) -> str:
 
 
 def _wrap_classes(user: User, cell_id: str) -> list[str]:
-    """The CSS classes on a grid cell's wrap (e.g. rtt-alert when its value is flagged red)."""
+    """The CSS classes on a grid cell's wrap (e.g. rtt-preview-change when an edit moves its value)."""
     return next(iter(user.find(marker=cell_id).elements))._classes
 
 
@@ -1672,28 +1672,6 @@ async def test_optimization_renders_the_held_column_and_its_add_control(user: Us
     await _enable(user, "optimization")
     await user.should_see(marker="header:held")
     await user.should_see(marker="held_plus")
-
-
-async def test_unheld_held_interval_renders_red_until_reoptimized(user: User) -> None:
-    # a held interval the current tuning no longer holds renders red (rtt-alert on its cells);
-    # re-optimizing restores the held-just tuning and clears it. Drives the whole user flow:
-    # add a held interval, make it the fifth 3/2, then hand-tune a generator off the held optimum.
-    await user.open("/")
-    _toggle(user, "optimization")                          # show the optimization box's held column
-    _click_glyph(user, "held_plus")                        # start a blank, green held-interval draft
-    await user.should_see(marker="cell:held:0:0")
-    _cell_child(user, "cell:held:0:0").set_value("-1")     # make it the fifth 3/2 = (-1 1 0)
-    _cell_child(user, "cell:held:1:0").set_value("1")
-    _cell_child(user, "cell:held:2:0").set_value("0")
-    _commit(user, "cell:held:2:0")                         # commit the draft on blur (filling only previews)
-    _cell_child(user, "tuning:gen:1").set_value("700.000")  # freeze a tuning ~2¢ off the held fifth
-    await user.should_see(marker="retune:held:0")
-    assert "rtt-alert" in _wrap_classes(user, "retune:held:0")  # the retuning-error cell reddens...
-    assert "rtt-alert" in _wrap_classes(user, "held:0")         # ...and so does the whole interval (its ratio)
-    user.find(kind=ui.button, content="optimize").click()       # re-optimize -> hold the fifth again
-    await user.should_see(marker="retune:held:0")
-    assert "rtt-alert" not in _wrap_classes(user, "retune:held:0")  # back to happy black
-    assert "rtt-alert" not in _wrap_classes(user, "held:0")
 
 
 async def test_optimize_button_greys_while_the_tuning_is_already_optimal(user: User) -> None:

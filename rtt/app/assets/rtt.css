@@ -533,14 +533,13 @@
 .rtt-frac-bar { height:1px; background:#000; align-self:stretch; margin:0 4px; user-select:none; pointer-events:none; }
 .rtt-frac-edit[data-fracmode="int"] .rtt-frac-den-in,
 .rtt-frac-edit[data-fracmode="int"] .rtt-frac-bar { display:none; }
-/* fraction-cell state colours: the green draft (on the WRAP), the red held-no-longer-just alert and
-   the amber edit-preview reuse the blanket text rules already on .q-field__native (no overlay face to
-   double, so no transparent-while-unfocused exception is needed); only the bar needs its own colour. */
+/* fraction-cell state colours: the green draft (on the WRAP) and the amber edit-preview reuse the
+   blanket text rules already on .q-field__native (no overlay face to double, so no transparent-while-
+   unfocused exception is needed); only the bar needs its own colour. */
 .rtt-fraccell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
 .rtt-fraccell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
 .rtt-fraccell.rtt-pending .rtt-frac-bar { background:var(--pending-color); }
-.rtt-alert .rtt-frac-bar { background:var(--alert-color) !important; }
 .rtt-cell.rtt-preview-change .rtt-frac-bar { background:var(--preview-text-color) !important; }
 /* a pending NEW-entry draft cell: a GREEN inset ring + faint green wash — the SAME highlight style
    as the amber edit-preview and the red remove-preview below, in green to read "being created".
@@ -574,22 +573,10 @@
    preview-remove plain cells use. The placeholders are blank, so no text colour is needed. */
 .rtt-cell:not(.rtt-cell-input).rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
-/* a held interval the current tuning no longer holds just (its retuning error reads nonzero):
-   the WHOLE cell renders red — every face inside the wrap, a plain input's text, and the
-   fraction bar — clearing to black when the tuning is re-optimized. Its own --alert-color (red),
-   split from the now-green --pending-color so "now invalid" stays red while a draft reads green. */
-.rtt-alert, .rtt-alert * { color:var(--alert-color) !important; }
-.rtt-alert .rtt-frac-num { border-bottom-color:var(--alert-color) !important; }
-/* a STACKED ratio (the held interval's editable ratiocell) is the exception: the blanket red
-   above would reveal its hidden raw "num/den" on top of the stacked fraction face — doubling the
-   value. Keep the input text transparent while unfocused (only the red FACE shows); reveal it red
-   only while focused, the same focus-scoped handling a pending draft's "?/?" already gets. */
-.rtt-alert.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
-.rtt-alert.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--alert-color) !important; }
 /* the edit-preview highlight: while one cell is being edited, every OTHER cell whose value that
    edit moves wears an amber ring + faint wash, so the user previews the ripple before leaving the
-   cell. INSET so it never bleeds onto the densely-packed neighbours; amber to stay clear of the red
-   alert/pending error states. The wash uses color-mix (var single-sourced from --preview-color) and
+   cell. INSET so it never bleeds onto the densely-packed neighbours; amber to stay clear of the green
+   pending and red remove-preview states. The wash uses color-mix (var single-sourced from --preview-color) and
    simply falls back to transparent — leaving the ring — where unsupported. No transition: it tracks
    the live value, appearing the instant the value does. */
 .rtt-cell.rtt-preview-change { box-shadow:inset 0 0 0 2px var(--preview-color);
@@ -599,15 +586,12 @@
    the ring). Repeat the highlight on the control so it shows on input cells too. */
 .rtt-cell.rtt-preview-change .q-field__control { box-shadow:inset 0 0 0 2px var(--preview-color);
             background:color-mix(in srgb, var(--preview-color) 14%, transparent); }
-/* the changing cell's TEXT, the changing analogue of a draft's green and an alert's red: a moved
-   value reads in dark gold (--preview-text-color, the amber ring darkened so it's legible as text on
-   the pale wash) — "this changed" — instead of the default black. It also WINS over .rtt-alert's
-   blanket red on a cell that BOTH alerts and is moved by the live edit (the user saw red text on the
-   amber ring there): while the edit previews, the changing hue dominates, reverting to red on blur
-   if the cell is still invalid. Mirrors the alert rule (blanket * + frac-bar + the stacked-focus
-   exception, each one class more specific so it overrides the red) so it recolours every value face
-   yet never reveals a stacked ratio's hidden raw input doubled over its face. The value-cell SVG
-   marks (EBK lattice, bar charts) use fixed colours, not currentColor, so this leaves them be. */
+/* the changing cell's TEXT, the changing analogue of a draft's green and the remove-preview's red: a
+   moved value reads in dark gold (--preview-text-color, the amber ring darkened so it's legible as
+   text on the pale wash) — "this changed" — instead of the default black. The blanket * + frac-bar +
+   the stacked-focus exception (each one class more specific) recolour every value face yet never
+   reveal a stacked ratio's hidden raw input doubled over its face. The value-cell SVG marks (EBK
+   lattice, bar charts) use fixed colours, not currentColor, so this leaves them be. */
 .rtt-cell.rtt-preview-change, .rtt-cell.rtt-preview-change * { color:var(--preview-text-color) !important; }
 .rtt-cell.rtt-preview-change .rtt-frac-num { border-bottom-color:var(--preview-text-color) !important; }
 .rtt-cell.rtt-preview-change.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
@@ -615,7 +599,7 @@
 /* the structural remove-preview: hovering a +/- that DELETES a column or row rings the cells it
    removes in RED (they are still on screen, so the user sees exactly what goes away), while the
    cells whose value the re-solve only MOVES keep the amber rtt-preview-change above. Same inset ring
-   + faint wash, in the alert/draft red — paired colours so the two effects read apart at a glance. */
+   + faint wash, in red — paired with the amber so the two effects read apart at a glance. */
 .rtt-cell.rtt-preview-remove { box-shadow:inset 0 0 0 2px var(--preview-remove-color);
             background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
 .rtt-cell.rtt-preview-remove .q-field__control { box-shadow:inset 0 0 0 2px var(--preview-remove-color);
@@ -623,7 +607,7 @@
 /* the going-away cell's TEXT: dark red (--preview-remove-text-color, the red ring darkened so it is
    legible on the pale wash) — "this is going away" — the removing analogue of a draft's dark-green
    and a changing cell's dark-gold text, so a cell a hovered +/- will delete reads dark red instead of
-   plain black while still on screen. Mirrors the preview-change / alert text rules (blanket * + frac-
+   plain black while still on screen. Mirrors the preview-change text rules (blanket * + frac-
    bar + the stacked-focus exception, each one class more specific so it wins) so every value face
    reddens yet a stacked ratio's hidden raw input is never doubled over its face. */
 .rtt-cell.rtt-preview-remove, .rtt-cell.rtt-preview-remove * { color:var(--preview-remove-text-color) !important; }

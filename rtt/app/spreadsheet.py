@@ -375,7 +375,7 @@ def toggle_all_collapsed(layout, collapsed) -> set:
 # (gen/prime/comma, fixed for a given id). Two cells with the same id and the same content signature
 # display the same thing; a difference between them is a value change worth flagging.
 _CONTENT_FIELDS = ("kind", "text", "values", "ranges", "indicator", "indicator_label",
-                   "pending", "alert", "checked", "blank", "unit", "underlines")
+                   "pending", "checked", "blank", "unit", "underlines")
 
 
 def _cell_content(cell: CellBox) -> tuple:
@@ -941,13 +941,6 @@ class _GridBuilder:
         self.target_sizes = service.interval_sizes(self.tun, self.targets, self.elements, weights=self.target_weights)
         self.held_mapped = service.mapped_intervals(self.state.mapping, self.held_ratios, self.elements)  # M·held (gen coords)
         self.held_sizes = service.interval_sizes(self.tun, self.held_ratios, self.elements)  # tempered/just/error sizes
-        # a held interval stays "held" only while the current tuning tunes it exactly just. Once the
-        # user changes something (the mapping, a generator, the held set) so the tuning no longer
-        # does, its retuning error reads nonzero — and the whole interval renders red (CellBox.alert),
-        # clearing back to black when the tuning is re-optimized to hold it. Decided at DISPLAY
-        # precision (the shown cents), so typing the displayed optimum — which reads 0.000 though it
-        # carries sub-milli-cent float noise — counts as held, not a false red.
-        self.held_unheld = tuple(float(service.cents(e)) != 0.0 for e in self.held_sizes.errors)
         # a full-rank temperament (n=0) carries only the trivial zero comma; show nothing, not a "1/1"
         self.comma_ratios = service.comma_ratios(self.state.comma_basis, self.elements) if self.state.n else ()
         self.nc = len(self.comma_ratios)  # the real commas (those that define the temperament)
@@ -2185,7 +2178,7 @@ class _GridBuilder:
             return
         self.cells[-1] = replace(self.cells[-1], audio=(tile, int(idx), float(cents)))
 
-    def tuning_value_row(self, key, group, values, alerts=()):
+    def tuning_value_row(self, key, group, values):
         if not self.tile_open(key, group):
             return
         values = tuple(values)
@@ -2204,14 +2197,11 @@ class _GridBuilder:
             # places the unchanged half past any pending comma draft (identity for every other group)
             x = self.group_left[group](self.comma_value_pos(i) if group == "commas" else i)
             u = self.cell_unit(key, group, gen=i if is_gen_group else None, prime=i if is_prime_group else None)
-            # the held column passes per-interval alert flags: an interval the tuning no longer
-            # holds reddens its size cells too (alerts is empty — no flags — for every other column)
-            alert = bool(alerts[i]) if i < len(alerts) else False
             operand = self.closed_form_operand(key, group, i) if self.show_math else None
             if operand is not None:
-                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities), unit=u, alert=alert))
+                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "mathexpr", text=_math_expr(operand, v, self.show_quantities), unit=u))
             else:
-                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tuningvalue", text=service.cents(v), unit=u, alert=alert))
+                self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tuningvalue", text=service.cents(v), unit=u))
             if key in ("tuning", "just"):  # the tuning row sounds each interval's TEMPERED size, the
                 self._voice(f"{key}:{group}", i, v)  # just row its JUST size; retune (errors) is no pitch
         # a pending comma/target/held/interest draft also gets a blank GREEN placeholder in every
@@ -2718,7 +2708,7 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"urow:interest:{ii}", self.interest_left(ii), uy, COL_W, ROW_H, "units", text="/1"))
             if self.tile_open("units", "held"):
                 for ih in range(self.nh):
-                    self.cells.append(CellBox(f"urow:held:{ih}", self.held_left(ih), uy, COL_W, ROW_H, "units", text="/1", alert=self.held_unheld[ih]))
+                    self.cells.append(CellBox(f"urow:held:{ih}", self.held_left(ih), uy, COL_W, ROW_H, "units", text="/1"))
 
         # quantities row: domain primes (+ controls) and target ratios (below the
         # tile's toggle head, like every other row's values). The whole row -- its
@@ -2837,7 +2827,7 @@ class _GridBuilder:
             if self.tile_open("quantities", "held"):  # the held intervals, edited like the intervals of interest
                 for i in range(self.nh):
                     # the ratio heads each column and is editable too (a ratiocell, like the comma)
-                    self.cells.append(CellBox(f"held:{self.col_token('held', i)}", self.held_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.held_ratios[i], comma=i, alert=self.held_unheld[i]))
+                    self.cells.append(CellBox(f"held:{self.col_token('held', i)}", self.held_left(i), qy, COL_W, ROW_H, "ratiocell", text=self.held_ratios[i], comma=i))
                     self._voice("quantities:held", i, self.held_sizes.just[i])
                     # each held interval carries its own − on its branch point (any one is removable)
                     branch_minus(f"held_minus:{i}", "held", i, "held_minus", comma=i)
@@ -2997,7 +2987,7 @@ class _GridBuilder:
                         self.cells.append(CellBox(f"cell:imapped:{i}:draft", self.interest_left(self.mi), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                 if self.tile_open("mapping", "held"):  # held mapped through M, like the targets / interest
                     for hi in range(self.nh):
-                        self.cells.append(CellBox(f"cell:hmapped:{i}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i), alert=self.held_unheld[hi]))
+                        self.cells.append(CellBox(f"cell:hmapped:{i}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i)))
                     if self.pending_held is not None:  # blank green placeholder under the draft held interval
                         self.cells.append(CellBox(f"cell:hmapped:{i}:draft", self.held_left(self.nh), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                 # the comma basis mapped through M — it vanishes to 0 (parallel to the
@@ -3274,7 +3264,7 @@ class _GridBuilder:
             if self.tile_open("vectors", "held"):  # the held intervals as editable vectors, like the intervals of interest
                 for i in range(self.nh):
                     for p in range(self.d):
-                        self.cells.append(CellBox(f"cell:held:{p}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p), alert=self.held_unheld[i]))
+                        self.cells.append(CellBox(f"cell:held:{p}:{self.col_token('held', i)}", self.held_left(i), self.vec_top(p), COL_W, ROW_H, "heldcell", text=str(self.held[i][p]), prime=p, comma=i, unit=self.cell_unit("vectors", "held", prime=p)))
                         self._voice("vectors:held", i, self.held_sizes.just[i])
                 if self.pending_held is not None:  # the draft column: blank, green-outlined cells the user fills in
                     for p in range(self.d):
@@ -3475,7 +3465,7 @@ class _GridBuilder:
                 self.tuning_value_row(key, "commas", comma_vals)
                 self.tuning_value_row(key, "targets", target_vals)
                 self.tuning_value_row(key, "interest", interest_vals)
-                self.tuning_value_row(key, "held", held_vals, alerts=self.held_unheld)
+                self.tuning_value_row(key, "held", held_vals)
         # the generator tuning map: the tuning row's map over the generators (the gens-column
         # counterpart of the tuning map over the primes). Its cells are EDITABLE (a hybrid input):
         # typing a cents value overrides that generator's tuning, like typing the whole map in the
@@ -3611,9 +3601,6 @@ class _GridBuilder:
                     value = prescaled[i] if i < nrows else self.size_factor * sum(prescaled)
                     cid = f"cell:prescaling:{group}:{i}:{self.col_token(group, c)}"
                     cx, cy = left(self.comma_value_pos(c) if group == "commas" else c), self.row_y["prescaling"] + i * ROW_H
-                    # held column: a prescaled held interval the tuning no longer holds reddens too
-                    # (the editable 𝐋 diagonal below is primes-only, so it never carries this flag)
-                    alert = self.held_unheld[c] if group == "held" else False
                     # the bare pretransformer's EDITABLE cells are prescalercells — the input boxes the
                     # user types overrides into — and win over the math-expression closed form. The
                     # diagonal is always editable; with alt complexity the WHOLE top square is, so a
@@ -3628,10 +3615,10 @@ class _GridBuilder:
                                              text=service.prescale_text(value), prime=i, unit=u))
                     elif i < nrows and self.show_math and vec[i] != 0 and i in prime_term:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "mathexpr",
-                                             text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities), unit=u, alert=alert))
+                                             text=_prescale_math_expr(vec[i], prime_term[i], value, self.show_quantities), unit=u))
                     else:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue",
-                                             text=service.prescale_text(value), unit=u, alert=alert))
+                                             text=service.prescale_text(value), unit=u))
             # a pending comma/target/held/interest draft also gets a blank GREEN placeholder column,
             # stacked over every prescaled sub-row, so the draft reads green through the advanced
             # complexity-prescaling matrix too — the multi-row twin of tuning_value_row's single-row
@@ -3733,8 +3720,7 @@ class _GridBuilder:
                 # the comma list runs over V = C|U when projection is on (the unchanged intervals'
                 # complexities append to the commas'); the empty tuple no-ops off projection
                 values = self.complexities[group] + (self.unchanged_complexities if group == "commas" else ())
-                self.tuning_value_row("complexity", group, values,
-                              alerts=self.held_unheld if group == "held" else ())
+                self.tuning_value_row("complexity", group, values)
             # the superspace shift's "next row": the prime complexity map moves into the ss-primes
             # column (‖𝐿[i]‖q = each true prime's own diagonal weight), while the domain-primes tile
             # above keeps self.complexities["primes"] — now the SUBSPACE basis element complexity map

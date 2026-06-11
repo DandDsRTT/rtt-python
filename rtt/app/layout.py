@@ -58,8 +58,6 @@ class CellBox:
     indicator_label: str = ""  # the subscript on that indicator's ⟪𝐝⟫ label — the scheme's Lp
     # power (∞ / 2 / 1) — so the renderer can letter the line-breaking label
     pending: bool = False  # a not-yet-valid comma draft cell — rendered blank with a green ring + wash
-    alert: bool = False  # a value that violates a constraint (a held interval the current tuning
-    # does not hold just): the renderer paints the whole cell red until the constraint is restored
     preview_remove: bool = False  # a value cell a pending edit will DELETE (e.g. the unchanged
     # interval a comma-being-added will drop): the renderer rings it red with the standard
     # remove-preview look (rtt-preview-remove), persistently while the draft is open

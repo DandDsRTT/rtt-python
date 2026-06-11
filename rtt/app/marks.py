@@ -8,8 +8,8 @@ import math
 
 _BR_COLOR = "#1a1a1a"
 _PENDING_COLOR = "#2e9e3f"  # green for a NEW (pending) entry's draft cells, brackets and "?" —
-# the additive "being created" hue, a peer to the amber edit-preview and the red remove-preview /
-# alert: a draft cell wears a green ring + wash (see rtt.css), its marks and "?" the same green
+# the additive "being created" hue, a peer to the amber edit-preview and the red remove-preview:
+# a draft cell wears a green ring + wash (see rtt.css), its marks and "?" the same green
 _BR_BAR = 2  # main bar / vector-rule / square-bracket bar thickness (px)
 _BR_SERIF_T = 0.9  # square + top bracket serif thickness — a thin foot, well under the bar
 _BR_SERIF_L = 6  # square + top bracket serif length (how far the foot reaches) — also
