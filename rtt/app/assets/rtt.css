@@ -256,8 +256,11 @@
 /* the quantity symbol above the caption: _math_html renders the base letter in the
    UI serif with explicit weight/slant (bold-italic for maps, bold-upright for
    vectors/matrices) — not a maths-font glyph, whose styling font fallback dropped */
+/* the symbol + its equivalence (e.g. 𝑃 = G𝑀 = V·diag(𝝀)V⁻¹) stay on ONE line — never wrapping.
+   The column floors its width to fit the widest symbol (spreadsheet._symbol_floor), so it shouldn't
+   need to overflow; nowrap guarantees it never breaks onto a second line regardless. */
 .rtt-symbol { width:100%; text-align:center; font-size:15px; color:#000; line-height:1;
-              font-family:'Cambria',Georgia,serif; }
+              white-space:nowrap; overflow:visible; font-family:'Cambria',Georgia,serif; }
 /* the per-row / per-column matrix label (𝒎ᵢ at the left of each mapping row, 𝐜ᵢ
    above each comma, 𝒕ᵢ above each tuned prime, …): same _math_html serif as .rtt-symbol
    but smaller, so the subscript reads at a glance without dominating the value below */

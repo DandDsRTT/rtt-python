@@ -7933,12 +7933,14 @@ def test_projection_box_is_framed_like_a_matrix_of_maps():
     # each of the d rows is a map: ⟨ … ] brackets, like the mapping rows
     assert cells["bracket:proj:0:l"].text == "⟨" and cells["bracket:proj:0:r"].text == "]"
     assert {"bracket:proj:1:l", "bracket:proj:2:l"} <= set(cells)  # d=3 rows
-    # and the whole matrix is enclosed by a spanning top bracket + bottom curly brace
-    assert "ebktop:proj" in cells and "ebkbrace:proj" in cells
-    top, brace = cells["ebktop:proj"], cells["ebkbrace:proj"]
+    # and the whole matrix is enclosed by a spanning top bracket + bottom ANGLE close ⟩ (P is p/p, so
+    # its outer closes with the prime-coordinate ket ⟩, matching its plain text [⟨…]…⟩ — not the
+    # mapping's generator-coordinate })
+    assert "ebktop:proj" in cells and "ebkangle:proj" in cells and "ebkbrace:proj" not in cells
+    top, brace = cells["ebktop:proj"], cells["ebkangle:proj"]
     first, last = cells["cell:proj:0:0"], cells["cell:proj:2:0"]
     assert top.y + top.h <= first.y       # the top bracket sits above the matrix
-    assert brace.y >= last.y + last.h     # the brace sits below it
+    assert brace.y >= last.y + last.h     # the angle close sits below it
 
 
 def test_projection_row_fans_a_gridline_per_subrow():
@@ -7982,8 +7984,8 @@ def test_projection_p_and_g_carry_full_chrome_and_editable_plain_text():
     # the only edit path now the gridded cells are read-only "mapped".
     cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, units=True,
                                           equivalences=True, plain_text_values=True).cells}
-    assert cells["symbol:projection:primes"].text.startswith("𝑃") and "= 𝐺𝑀" in cells["symbol:projection:primes"].text
-    assert cells["symbol:projection:gens"].text.startswith("𝐺")
+    assert cells["symbol:projection:primes"].text.startswith("𝑃") and "= G𝑀" in cells["symbol:projection:primes"].text
+    assert cells["symbol:projection:gens"].text.startswith("G")   # upright G (a basis), not italic 𝐺
     assert cells["units:projection:primes"].text == "units: p/p"
     assert cells["units:projection:gens"].text == "units: p/g"
     assert cells["matlabel:row:projection:primes:0"].text == "𝒑₁"   # P's covector rows
@@ -7993,7 +7995,7 @@ def test_projection_p_and_g_carry_full_chrome_and_editable_plain_text():
     assert cells["ptext:projection:primes"].kind == "ptextedit"
     assert cells["ptext:projection:gens"].kind == "ptextedit"
     assert cells["ptext:projection:primes"].text == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
-    assert cells["ptext:projection:gens"].text == "[[1 0 0⟩ [0 0 1/4⟩]"
+    assert cells["ptext:projection:gens"].text == "{[1 0 0⟩ [0 0 1/4⟩]"
 
 
 def test_projection_plain_text_bands_dash_when_under_held():
@@ -8001,7 +8003,20 @@ def test_projection_plain_text_bands_dash_when_under_held():
     # with the grid cells
     cells = {c.id: c for c in _proj_build(plain_text_values=True).cells}
     assert cells["ptext:projection:primes"].text == "[⟨— — —]⟨— — —]⟨— — —]⟩"
-    assert cells["ptext:projection:gens"].text == "[[— — —⟩ [— — —⟩]"
+    assert cells["ptext:projection:gens"].text == "{[— — —⟩ [— — —⟩]"
+
+
+def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps():
+    # P's equivalence (𝑃 = G𝑀 = V·diag(𝝀)V⁻¹) is wider than the bare 3-column matrix, so the column
+    # widens (the _symbol_floor) to fit it on ONE line — the symbol/equivalence must never wrap. The
+    # matrix then centres in the widened column.
+    from rtt.app.spreadsheet import _min_width_for_lines, SYMBOL_FONT
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, equivalences=True, names=True).cells}
+    sym = cells["symbol:projection:primes"]
+    assert sym.w >= _min_width_for_lines(sym.text, 1, SYMBOL_FONT)   # the cell is wide enough — no wrap
+    left = cells["cell:proj:0:0"].x - sym.x                          # margin from the column edge to the matrix
+    right = (sym.x + sym.w) - (cells["cell:proj:0:2"].x + cells["cell:proj:0:2"].w)
+    assert abs(left - right) <= 1                                    # the matrix is centred in the widened column
 
 
 def test_return_to_scheme_button_is_boxed_above_the_dropdown_with_presets():
@@ -8029,13 +8044,14 @@ def test_return_to_scheme_button_keeps_its_own_box_without_presets():
     assert box.x <= sq.x and box.y <= sq.y and sq.x + sq.w <= box.x + box.w and sq.y + sq.h <= box.y + box.h
 
 
-def test_generator_embedding_is_captioned_and_framed_in_generator_coords():
+def test_generator_embedding_is_a_vector_list_of_generator_kets():
     cells = {c.id: c for c in _with(projection=True).cells}
     assert cells["caption:projection:gens"].text == "generator embedding"
-    # framed like the generator map: { … ] per row, plus a spanning top + bottom brace
-    assert cells["bracket:embed:0:l"].text == "{" and cells["bracket:embed:0:r"].text == "]"
-    assert {"bracket:embed:1:l", "bracket:embed:2:l"} <= set(cells)  # d=3 rows
-    assert "ebktop:embed" in cells and "ebkbrace:embed" in cells
+    # G is a VECTOR LIST (matching its plain text {[…⟩…]): an outer { … ] (curly open, square close)
+    # around r prime-count ket [ … ⟩ columns — NOT a per-row covector stack
+    assert cells["bracket:embed:l"].text == "{" and cells["bracket:embed:r"].text == "]"  # outer { … ]
+    assert {"ebktop:embed:0", "ebkangle:embed:0", "ebktop:embed:1", "ebkangle:embed:1"} <= set(cells)  # r=2 ket columns
+    assert "bracket:embed:0:l" not in cells and "ebkbrace:embed" not in cells  # no old per-row covector frame
 
 
 def test_generator_embedding_hides_when_projection_is_off():
@@ -8299,7 +8315,7 @@ def test_projected_unrotated_vector_list_tile_is_complete():
     # the P·V tile carries the full complement like every other V-column tile: a symbol, a units
     # line, and a plain-text EBK string (not just the gridded cells)
     cells = {c.id: c for c in _proj_build(("2/1", "5/4"), symbols=True, units=True, plain_text_values=True).cells}
-    assert cells["symbol:projection:commas"].text == "PV"      # P·V (= V·diag(λ))
+    assert cells["symbol:projection:commas"].text == "𝑃V"      # P·V (= V·diag(λ)); italic 𝑃 operator
     assert cells["units:projection:commas"].text == "units: p"  # prime-count vectors, like V
     # the plain text shows the WHOLE column V = C|U: P·𝐜 = 𝟎 (commas vanish) then P·𝐮 = 𝐮 (held)
     assert cells["ptext:projection:commas"].text == "[[0 0 0⟩ [1 0 0⟩ [-2 0 1⟩]"

@@ -76,6 +76,8 @@ PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box
 PTEXT_H = 13  # px height of a one-line read-only plain-text value
 PTEXT_EDIT_H = 16  # px height of an editable plain-text input box (a touch taller than a text line)
 SYMBOL_H = 18  # height of the quantity-symbol glyph above the caption (when symbols shown)
+SYMBOL_FONT = 15  # px font size of the symbol + equivalence glyph (matches .rtt-symbol in rtt.css);
+# its width drives _symbol_floor, which widens a tile so the symbol/equivalence never wraps
 MATLABEL_H = 13  # height of a per-column matrix label (𝐜₁, 𝒕₁, 𝐲₁, …) when symbols is on
 MATLABEL_PAD = 4  # padding above + below the label within its band, so the label sits
 # roughly equidistant from the tile's top edge and the matrix's top bracket
@@ -1370,7 +1372,7 @@ class _GridBuilder:
             if not present:
                 continue
             collapsed_col = f"col:{key}" in self.collapsed
-            hug_w = max(natural, self._caption_floor(key), self._control_floor(key))  # the open footprint: hugs content (+ caption / control room)
+            hug_w = max(natural, self._caption_floor(key), self._control_floor(key), self._symbol_floor(key))  # hugs content (+ caption / control / symbol room)
             if first_present:
                 # The leftmost column's title can't overhang LEFT: the frozen corner abuts the first
                 # tile at freeze_x and paints over anything left of it (clipping "quantities" to
@@ -1713,6 +1715,31 @@ class _GridBuilder:
         return max((_min_width_for_lines(self.effective_captions[(rk, key)], MAX_CAPTION_LINES)
                     for rk in self.present_caption_rows
                     if (rk, key) in self.effective_captions and (rk, key) in self.declared_tiles), default=0)
+
+    def _projection_superspace_tail(self) -> str:
+        # the superspace decomposition appended to P's equivalence when the superspace block shows
+        # (per the mockup): P = … = Gₛ→ₗ𝑀ₛ→ₗ. Shared by the build() override and _symbol_floor so the
+        # widened width and the rendered text agree.
+        return f" = G{SUBSCRIPT_L}→ₛ𝑀ₛ→{SUBSCRIPT_L}" if self.show_superspace else ""
+
+    def _symbol_floor(self, key):
+        # the width an open column needs so its widest symbol + equivalence fits on ONE line — the
+        # symbol/equivalence element must never wrap (it widens the tile instead, like a long caption).
+        # Zero when neither symbols nor equivalences show. P's equivalence (with the superspace tail)
+        # is the long one this guards; short symbols floor below the natural width, so no effect.
+        if not (self.show_symbols or self.show_equiv):
+            return 0
+        floor = 0
+        for (rkey, ckey), glyph in SYMBOLS.items():
+            # declared_tiles (not tile_open) — this runs during column sizing, before row_y exists,
+            # exactly like _caption_floor
+            if ckey != key or (rkey, ckey) not in self.declared_tiles:
+                continue
+            equiv = EQUIVALENCES.get((rkey, ckey), "") if self.show_equiv else ""
+            if self.show_equiv and (rkey, ckey) == ("projection", "primes"):
+                equiv += self._projection_superspace_tail()
+            floor = max(floor, _min_width_for_lines(glyph + equiv, 1, SYMBOL_FONT))
+        return floor
 
     def _control_floor(self, key):
         # the width an open column needs so its in-tile choosers fit without overhanging the
@@ -3784,9 +3811,11 @@ class _GridBuilder:
         if self.row_open("projection") and self.tile_open("projection", "primes"):  # P = GM: ⟨ … ] per row, like the mapping
             for i in range(self.d):
                 self.bracket(f"proj:{i}", MAP_BRACKETS, "primes", self.proj_top(i), ROW_H)
-        if self.row_open("projection") and self.tile_open("projection", "gens"):  # G: { … ] per row, generator coords
-            for i in range(self.d):
-                self.bracket(f"embed:{i}", GENMAP_BRACKETS, "gens", self.proj_top(i), ROW_H)
+        if self.row_open("projection") and self.tile_open("projection", "gens"):
+            # G is a vector LIST: each held generator a prime-count ket [ … ⟩ column (marks emitted by
+            # vector_list_marks below) inside an outer { … ] (curly open, square close, generator
+            # coords) — matching its plain text {[…⟩…], NOT a covector stack
+            self.bracket("embed", GENMAP_BRACKETS, "gens", self.row_y["projection"], self.d * ROW_H, fit=True)
         if self.show_unchanged and self.row_open("projection") and self.tile_open("projection", "commas"):
             # P·V is a list of projected vectors (kets) — [ … ⟩ per column, [ ] outer, like V itself
             self.bracket("proj_v", LIST_BRACKETS, "commas", self.row_y["projection"], self.d * ROW_H, fit=True)
@@ -4148,7 +4177,7 @@ class _GridBuilder:
                            if self.show_unchanged else {})}
         if self.show_superspace:  # P's equivalence gains the superspace decomposition (per the mockup)
             equivalences[("projection", "primes")] = (
-                EQUIVALENCES[("projection", "primes")] + f" = 𝐺{SUBSCRIPT_L}→ₛ𝑀ₛ→{SUBSCRIPT_L}")
+                EQUIVALENCES[("projection", "primes")] + self._projection_superspace_tail())
         if ai:
             # all-interval (Tₚ = I): the kept target tiles take prime-proxy closed forms in the live
             # prescaler glyph (X→L). The complexity list IS the prescaler diagonal; the (simplicity)
@@ -4345,8 +4374,9 @@ class _GridBuilder:
             # service seam above), which the gridded "2 3 5" cells don't show that way.
 
         self.matrix_frame("mapping", "primes", "primes")
-        self.matrix_frame("projection", "primes", "proj")  # P = GM, framed like the mapping
-        self.matrix_frame("projection", "gens", "embed", foot="ebkbrace")  # G, framed like the genmap
+        # P = GM: a covector stack like the mapping, but closing with the prime-coordinate ket ⟩
+        # (P is p/p) — matching its plain text [⟨…]…⟩, not the mapping's generator-coordinate }
+        self.matrix_frame("projection", "primes", "proj", foot="ebkangle")
         self.matrix_frame("canon", "primes", "canon")
         self.matrix_frame("canon", "gens", "form")
         # the BARE prescaler 𝐿 reads exactly like the mapping in plain text — outer
@@ -4373,6 +4403,9 @@ class _GridBuilder:
         self.vector_list_marks("mapping", "mapped_comma", "commas", self.comma_left, self.nc + self.nu, separators=False)  # M·C then M·U over V
         # the projected unrotated vector list P·V: prime-count-vector columns (kets), C|U bar only
         self.vector_list_marks("projection", "proj_v", "commas", self.comma_left, self.nc + self.nu, foot="ebkangle", separators=False)
+        # the generator embedding G: each held generator a prime-count ket [ … ⟩ column over the gens
+        # columns (the outer { … ] is the bracket() call above), no dividing rules
+        self.vector_list_marks("projection", "embed", "gens", self.gen_left, self.r, foot="ebkangle", separators=False)
         self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.k)
         # the interest column's mapped images stand alone — no separator rules between columns
         self.vector_list_marks("mapping", "imapped", "interest", self.interest_left, self.mi, separators=False)

@@ -2023,10 +2023,18 @@ class _Reconciler:
         sub.set_text(f".{frac}" if frac else "")
 
     def _build_ptextedit(self, cb, wrap):
-        # an editable dual: typing a valid EBK string drives the grid (its own ptext_inputs dict)
-        self.ptext_inputs[cb.id] = ui.input(value=cb.text,
-                on_change=lambda e, cid=cb.id: self._cb.on_ptext_edit(cid, e.value)) \
-            .props("dense borderless").classes("rtt-ptextedit")
+        # an editable dual: typing a valid EBK string drives the grid (its own ptext_inputs dict).
+        # Most duals commit LIVE (on_change). The projection P / embedding G bands commit only on
+        # SUBMIT (blur / Enter): you type the WHOLE matrix unmolested — no retune, no red box, no toast
+        # — until you're done, then it validates (a single partial keystroke can't be a valid matrix).
+        if cb.id.startswith("ptext:projection:"):
+            inp = ui.input(value=cb.text).props("dense borderless").classes("rtt-ptextedit")
+            inp.on("blur", lambda e=None, cid=cb.id: self._cb.on_ptext_edit(cid, self.ptext_inputs[cid].value))
+        else:
+            inp = ui.input(value=cb.text,
+                    on_change=lambda e, cid=cb.id: self._cb.on_ptext_edit(cid, e.value)) \
+                .props("dense borderless").classes("rtt-ptextedit")
+        self.ptext_inputs[cb.id] = inp
 
     def _update_ptextedit(self, cb):  # reflect the canonical string + its shrink-to-fit font
         self.ptext_inputs[cb.id].value = cb.text

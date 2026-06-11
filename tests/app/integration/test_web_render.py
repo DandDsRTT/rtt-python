@@ -216,13 +216,14 @@ async def test_editing_the_unchanged_ratio_retunes(user: User) -> None:
 
 async def test_editing_the_generator_embedding_retunes(user: User) -> None:
     # G's gridded cells are read-only (a single entry can't keep 𝑀𝐺 = 𝐼); editing is via its
-    # plain-text band. Type 1/3-comma's G as a vector-list EBK string and the tuning re-solves to
-    # third-comma (1200, 694.786).
+    # plain-text band, which commits on SUBMIT (blur). Type 1/3-comma's G as a vector-list EBK string
+    # and the tuning re-solves to third-comma (1200, 694.786).
     await _enable(user, "projection")
     _toggle(user, "plain text values")
     await user.should_see(marker="ptext:projection:gens")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"
-    _cell_child(user, "ptext:projection:gens").set_value("[[1 0 0⟩[1/3 -1/3 1/3⟩]")  # 1/3-comma G
+    _cell_child(user, "ptext:projection:gens").set_value("{[1 0 0⟩[1/3 -1/3 1/3⟩]")  # 1/3-comma G
+    _commit(user, "ptext:projection:gens")
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
@@ -234,42 +235,61 @@ async def test_editing_the_projection_matrix_retunes(user: User) -> None:
     await user.should_see(marker="ptext:projection:primes")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"
     _cell_child(user, "ptext:projection:primes").set_value("[⟨1 4/3 4/3]⟨0 -1/3 -4/3]⟨0 1/3 4/3]⟩")  # 1/3-comma P
+    _commit(user, "ptext:projection:primes")
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
+async def test_a_projection_plain_text_edit_is_unmolested_until_submit(user: User) -> None:
+    # the whole point of the plain-text edit: while you TYPE (before blur/Enter) an in-progress string
+    # neither retunes, reddens, nor toasts — only SUBMITTING validates. An invalid value left
+    # uncommitted does nothing; committing it THEN reddens and toasts.
+    await _enable(user, "projection")
+    _toggle(user, "plain text values")
+    await user.should_see(marker="ptext:projection:primes")
+    _cell_child(user, "ptext:projection:primes").set_value("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩")  # invalid, but not submitted
+    assert "rtt-ptext-error" not in _cell_child(user, "ptext:projection:primes").classes  # unmolested
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"                            # not retuned
+    _commit(user, "ptext:projection:primes")                                              # NOW submit
+    await user.should_see("isn't a valid projection")
+    assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:primes").classes
+
+
 async def test_an_invalid_projection_plain_text_toasts_and_reddens(user: User) -> None:
-    # a P plain-text string that parses but ISN'T a valid projection (a 2 on the diagonal breaks
+    # a submitted P string that parses but ISN'T a valid projection (a 2 on the diagonal breaks
     # idempotency P² = P) toasts the reason at top and reddens the band — the tuning stays put.
     await _enable(user, "projection")
     _toggle(user, "plain text values")
     await user.should_see(marker="ptext:projection:primes")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"   # 1/4-comma
     _cell_child(user, "ptext:projection:primes").set_value("[⟨2 0 0]⟨0 1 0]⟨0 0 1]⟩")  # P[0][0]=2 → P²≠P
+    _commit(user, "ptext:projection:primes")
     await user.should_see("isn't a valid projection")           # the red toast names the reason
     assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:primes").classes
     assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
 
 
 async def test_an_invalid_embedding_plain_text_toasts_and_reddens(user: User) -> None:
-    # a G plain-text string that parses but isn't a valid embedding (a zeroed column → 𝑀𝐺 ≠ 𝐼) toasts
+    # a submitted G string that parses but isn't a valid embedding (a zeroed column → 𝑀𝐺 ≠ 𝐼) toasts
     # the reason and reddens — the embedding counterpart of the invalid-projection case.
     await _enable(user, "projection")
     _toggle(user, "plain text values")
     await user.should_see(marker="ptext:projection:gens")
     assert _cell_child(user, "tuning:gen:1").value == "696.578"
-    _cell_child(user, "ptext:projection:gens").set_value("[[0 0 0⟩[0 0 1/4⟩]")  # zeroed column → 𝑀𝐺 ≠ 𝐼
+    _cell_child(user, "ptext:projection:gens").set_value("{[0 0 0⟩[0 0 1/4⟩]")  # zeroed column → 𝑀𝐺 ≠ 𝐼
+    _commit(user, "ptext:projection:gens")
     await user.should_see("isn't a valid embedding")
     assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:gens").classes
     assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
 
 
 async def test_an_unparseable_projection_plain_text_reddens_without_a_toast(user: User) -> None:
-    # garbage that isn't even a parseable map string just reddens the band (its shape is the feedback)
-    # — no toast, like the mapping / comma-basis / prescaler duals. The tuning stays put.
+    # garbage that isn't even a parseable map string just reddens the band on submit (its shape is the
+    # feedback) — no toast, like the mapping / comma-basis / prescaler duals. The tuning stays put.
     await _enable(user, "projection")
     _toggle(user, "plain text values")
     await user.should_see(marker="ptext:projection:primes")
     _cell_child(user, "ptext:projection:primes").set_value("not a matrix")
+    _commit(user, "ptext:projection:primes")
     assert "rtt-ptext-error" in _cell_child(user, "ptext:projection:primes").classes
     assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
 

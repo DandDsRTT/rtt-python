@@ -1711,13 +1711,13 @@ def test_projection_and_embedding_ebk_match_the_mockup_and_round_trip():
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # 5-limit meantone, d=3 r=2
     P = service.tuning_projection(state, ("2/1", "5/4"))   # 1/4-comma
     G = service.tuning_embedding(state, ("2/1", "5/4"))
-    assert service.projection_ebk(P, 3) == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"
-    assert service.embedding_ebk(G, 3, 2) == "[[1 0 0⟩ [0 0 1/4⟩]"
+    assert service.projection_ebk(P, 3) == "[⟨1 1 0]⟨0 0 0]⟨0 1/4 1]⟩"   # map list, outer [ … ⟩
+    assert service.embedding_ebk(G, 3, 2) == "{[1 0 0⟩ [0 0 1/4⟩]"        # vector list, outer { … ]
     assert service.parse_projection(service.projection_ebk(P, 3)) == P
     assert service.parse_embedding(service.embedding_ebk(G, 3, 2), 3, 2) == G
     # a None matrix (not a full rational projection) dashes every entry, matching the dashed grid
     assert service.projection_ebk(None, 3) == "[⟨— — —]⟨— — —]⟨— — —]⟩"
-    assert service.embedding_ebk(None, 3, 2) == "[[— — —⟩ [— — —⟩]"
+    assert service.embedding_ebk(None, 3, 2) == "{[— — —⟩ [— — —⟩]"
 
 
 def test_projection_and_embedding_parsers_reject_bad_input():

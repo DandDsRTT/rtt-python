@@ -1646,11 +1646,12 @@ def projection_ebk(matrix, d: int) -> str:
 
 def embedding_ebk(matrix, d: int, r: int) -> str:
     """The rational generator embedding G as a vector-list EBK string — its r held generators as
-    prime-count ket columns: ``[[1 0 0⟩[0 0 -1/4⟩]``. ``matrix`` is the d×r grid of display strings
-    from :func:`tuning_embedding`; ``None`` dashes every entry. The editable dual the projection-gens
-    plain text shows (parsed by :func:`parse_embedding`)."""
+    prime-count ket columns inside an outer ``{ … ]`` (curly open, square close — generator-coordinate
+    columns): ``{[1 0 0⟩ [0 0 1/4⟩]``. ``matrix`` is the d×r grid of display strings from
+    :func:`tuning_embedding`; ``None`` dashes every entry. The editable dual the projection-gens plain
+    text shows (parsed by :func:`parse_embedding`)."""
     grid = matrix if matrix is not None else tuple((_DASH,) * r for _ in range(d))  # d×r
-    return _ket_list(list(zip(*grid)), "⟩")  # transpose to the r ket columns
+    return "{" + _ket_list(list(zip(*grid)), "⟩", wrap=False) + "]"  # transpose to the r ket columns
 
 
 def _prescale_vector_list(vectors, col: str = "[⟩", outer: str = "[]") -> str:

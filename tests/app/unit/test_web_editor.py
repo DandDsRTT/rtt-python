@@ -2143,9 +2143,9 @@ def test_try_edit_embedding_text_retunes_or_rejects():
     # the editable G plain-text band: a valid vector-list EBK string (its r kets transposed into d×r)
     # retunes; an invalid embedding (𝑀𝐺 ≠ 𝐼) or wrong variance/shape returns False
     ed = Editor()
-    assert ed.try_edit_embedding_text("[[1 0 0⟩[1/3 -1/3 1/3⟩]") is True   # 1/3-comma G
+    assert ed.try_edit_embedding_text("{[1 0 0⟩[1/3 -1/3 1/3⟩]") is True   # 1/3-comma G
     assert [round(x, 3) for x in ed.effective_generator_tuning()] == [1200.0, 694.786]
-    assert ed.try_edit_embedding_text("[[0 0 0⟩[0 0 1/4⟩]") is False       # zeroed column → 𝑀𝐺 ≠ 𝐼
+    assert ed.try_edit_embedding_text("{[0 0 0⟩[0 0 1/4⟩]") is False       # zeroed column → 𝑀𝐺 ≠ 𝐼
     assert ed.try_edit_embedding_text("[⟨1 1 0]⟨0 1 4]}") is False         # a map, not a vector list
 
 

@@ -113,7 +113,7 @@ CAPTIONS = {
     ("mapping", "targets"): "mapped target interval list",
     # the rational tempering projection P = GM (a d×d operator over the domain primes),
     # a stack of maps like the mapping itself (toggled with the projection sub-control)
-    ("projection", "primes"): "projection matrix",
+    ("projection", "primes"): "projection",
     # the rational generator embedding G = H(MH)⁻¹ (d×r): its columns are the held tuning's
     # generators as fractional vectors. Rides the projection row band in the gens columns,
     # beside P (which it multiplies the mapping into: P = GM). Same projection sub-control.
@@ -215,9 +215,9 @@ SYMBOLS = {
     ("ss_mapping", "targets"): f"Y{SUBSCRIPT_L}",     # Y_L = M_s→L·T
     ("ss_mapping", "detempering"): f"𝑀ₛ→{SUBSCRIPT_L}D",
     ("scaling_factors", "commas"): "𝝀",  # the eigenvalue list diag(λ) over V (bold-italic λ)
-    ("projection", "commas"): "PV",  # the projected unrotated vector list P·V = V·diag(λ) over V
+    ("projection", "commas"): "𝑃V",  # the projected unrotated vector list P·V (italic 𝑃 operator + upright V basis)
     ("projection", "primes"): "𝑃",   # the rational tempering projection P = GM (math-italic P, like 𝑀)
-    ("projection", "gens"): "𝐺",     # the rational generator embedding G = H(MH)⁻¹ (math-italic G)
+    ("projection", "gens"): "G",     # the rational generator embedding G — an UPRIGHT capital (a basis, like C/T/D/B)
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -303,8 +303,8 @@ COL_LABEL_LETTERS = {
     # the scaling factors λ = diag(λ): one eigenvalue λᵢ per V sub-column (commas then unchanged),
     # the scalar entries in italic (𝜆ᵢ), like the other size lists' italic scalar headers
     ("scaling_factors", "commas"): "𝜆",
-    # the projected unrotated vector list: each column is P·𝐯ᵢ (Pv₁ Pv₂ … in the mockup)
-    ("projection", "commas"): "P𝐯",
+    # the projected unrotated vector list: each column is 𝑃·𝐯ᵢ (𝑃v₁ 𝑃v₂ … in the mockup; italic 𝑃)
+    ("projection", "commas"): "𝑃𝐯",
     # the generator embedding G is a vector list (each column a held generator 𝐠ᵢ as a prime vector)
     ("projection", "gens"): "𝐠",
     # interval vectors row — d-tall column-vector matrices
@@ -630,10 +630,11 @@ EQUIVALENCES = {
     ("ss_mapping", "targets"): " = 𝑀ₛ→LT",
     ("mapping", "commas"): " = 𝑂",
     ("mapping", "targets"): " = 𝑀T",
-    # the rational tempering projection and generator embedding (the superspace tail on P,
-    # " = 𝐺ₛ→ₗ𝑀ₛ→ₗ", is appended per-render in build() only when show_superspace, like the prescaler)
-    ("projection", "primes"): " = 𝐺𝑀 = 𝐺C𝑀C = 𝑉·diag(𝝀)𝑉⁻¹",
-    ("projection", "gens"): " = 𝐺C𝐹⁻¹ = U(𝑀U)⁻¹",
+    # the rational tempering projection and generator embedding. G and V are bases (upright), P and M
+    # operators (italic). The canonical-form decompositions (𝐺CᴹC / GCF⁻¹) wait for the form feature;
+    # the superspace tail on P (" = Gₛ→ₗ𝑀ₛ→ₗ") is appended per-render in build() only when show_superspace.
+    ("projection", "primes"): " = G𝑀 = V·diag(𝝀)V⁻¹",
+    ("projection", "gens"): " = U(𝑀U)⁻¹",
     ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",
