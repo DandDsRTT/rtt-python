@@ -1478,6 +1478,22 @@ def test_superspace_tuning_projection_is_none_when_under_held():
     assert service.tuning_projection(barb, ("2",)) is None  # the on-domain row dashes in lockstep
 
 
+def test_plain_text_values_includes_the_superspace_projection_when_projection_on():
+    # parity with the on-domain projection P and the sibling superspace matrices (B_L, M_L, M_jL):
+    # P_L gets a plain-text EBK band too — a covector stack closing with the prime-coordinate angle ⟩
+    # (the b/b operator, framed like P), gated on the projection toggle (consolidate_v) like P. Dashed
+    # in lockstep when the tuning isn't a full rational projection.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pt = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=("2", "13/5"))
+    assert pt[("ss_projection", "ssprimes")] == "[⟨1 2/3 0 0]⟨0 0 0 0]⟨0 -2/3 1 0]⟨0 2/3 0 1]⟩"
+    # projection off (no V consolidation): no P_L band, exactly like the on-domain P plain text
+    off = service.plain_text_values(state, superspace=True, consolidate_v=False, held_basis_ratios=("2", "13/5"))
+    assert ("ss_projection", "ssprimes") not in off
+    # under-held: the band is present but fully dashed (lockstep with the dashed grid)
+    dashed = service.plain_text_values(state, superspace=True, consolidate_v=True, held_basis_ratios=())
+    assert dashed[("ss_projection", "ssprimes")] == service.projection_ebk(None, 4)
+
+
 def test_plain_text_values_includes_superspace_entries_when_superspace_on():
     # Phase 4: the nonstandard-domain superspace region (B_L, M_L, M_jL, 𝒈ₗ / 𝒕ₗ / 𝒋ₗ /
     # 𝒓ₗ) gets its own plain-text strings when the superspace flag is on — the EBK string

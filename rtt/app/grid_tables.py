@@ -1002,9 +1002,9 @@ PTEXT_ROWS = frozenset({"quantities", "vectors", "mapping", "tuning", "just", "r
                         # keeps the text from spilling into the row below
                         "projection", "scaling_factors",
                         # the chapter-9 superspace matrices carry a plain-text EBK string too
-                        # (B_L, M_L, M_jL); listing them reserves the band height so the text
-                        # doesn't spill past the tile into the row below
-                        "ss_vectors", "ss_mapping", "ss_just_mapping"})
+                        # (B_L, M_L, M_jL, and the superspace projection P_L); listing them reserves
+                        # the band height so the text doesn't spill past the tile into the row below
+                        "ss_vectors", "ss_mapping", "ss_just_mapping", "ss_projection"})
 
 # Cell kinds the value-display toggles filter out. "gridded values" hides
 # everything a tile holds besides its fold toggle, name caption and plain-text

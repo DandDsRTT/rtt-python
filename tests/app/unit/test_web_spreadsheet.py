@@ -6856,6 +6856,17 @@ def test_superspace_projection_units_column_reads_basis_element():
     assert cells["ucol:ss_projection:3"].text == "b₄/"
 
 
+def test_superspace_projection_emits_a_plain_text_band():
+    # plain_text_values on: P_L gets its own EBK string band under the tile, like M_L / M_jL / B_L and
+    # the on-domain P — P_L was the sole matrix row missing one (PTEXT_ROWS + plain_text_values parity).
+    cells = {c.id for c in _barbados_proj(plain_text_values=True).cells}
+    assert "ptext:ss_projection:ssprimes" in cells
+    # absent without the projection toggle: the superspace mapping's band shows, P_L's does not
+    off = {c.id for c in _barbados_ss(plain_text_values=True).cells}  # projection off
+    assert "ptext:ss_mapping:ssprimes" in off
+    assert "ptext:ss_projection:ssprimes" not in off
+
+
 def test_superspace_projection_caption_symbol_and_units_when_named():
     # names + symbols + units on: the tile carries the "superspace projection" caption, the in-tile
     # 𝒑Lᵢ covector row labels, the b/b units line, and the P_L = G_L M_L symbol/equivalence

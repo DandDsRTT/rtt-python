@@ -1745,6 +1745,13 @@ def plain_text_values(
             ("just", "ssprimes"): _cents_map(ss_tun.just_map),
             ("retune", "ssprimes"): _cents_map(ss_tun.retuning_map),
         })
+        # the superspace projection P_L = G_L·M_L's EBK band — the plain-text twin of its grid, a
+        # covector stack closing with the angle ⟩ (the b/b operator, framed like the on-domain P).
+        # Only when the projection toggle is on (consolidate_v), like the on-domain P band below, and
+        # built from the SAME held basis so the two views agree; projection_ebk dashes a None matrix.
+        if consolidate_v:
+            values[("ss_projection", "ssprimes")] = projection_ebk(
+                superspace_tuning_projection(state, held_basis_ratios), len(ss_primes))
         # the chapter-9 prescaler SHIFT (the plain-text twin of the gridded cells): the bare 𝐿
         # moves into the ss-primes column — the dL×dL log-prime diagonal over the TRUE primes, a
         # covector stack [ ⟨…] ⟨…] ⟩ that stays EDITABLE — while the domain-primes tile becomes the
