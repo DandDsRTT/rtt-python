@@ -1175,6 +1175,18 @@ def test_set_pending_comma_preserves_a_nonstandard_domain():
     assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
 
 
+def test_move_interval_into_commas_preserves_a_nonstandard_domain():
+    # dragging an interval into the comma column tempers it out via the same from_comma_basis
+    # path as a draft comma, so it must thread the domain too — else 2.3.13/5 silently reverts
+    # to the standard 2.3.5 (the drag-and-drop twin of set_pending_comma's domain bug).
+    editor = Editor()
+    editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    editor.interest_vectors = [(0, 0, 1)]  # an interval of interest to drag into commas
+    assert editor.move_interval("interest", 0, "commas", 1) is True
+    assert editor.state.n == 2  # the dragged interval was tempered out (re-ranked)
+    assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
+
+
 def test_opening_a_draft_discards_any_other_pending_draft():
     # one draft at a time: each opener clears the others, so two drafts can never co-exist and
     # corrupt the state by re-ranking from different sources of truth. Walk the openers in a ring.

@@ -1087,7 +1087,8 @@ class Editor:
         if src == "commas" and self.state.n == 0:
             return False  # nothing tempered: no real comma to drag out (parity with the comma −)
         if dst == "commas":  # tempering the interval out must genuinely raise the nullity
-            extended = service.from_comma_basis(self.state.comma_basis + (tuple(vector),))
+            domain_basis = self.state.domain_basis if len(vector) == self.state.d else None
+            extended = service.from_comma_basis(self.state.comma_basis + (tuple(vector),), domain_basis)
             if extended.n <= self.state.n:
                 return False  # a dependent interval re-ranks nothing — reject the drop
         return True
@@ -1116,7 +1117,8 @@ class Editor:
         elif name == "interest":
             self.interest_vectors.insert(i, tuple(vector))
         else:  # commas — temper the interval out (+n, −r); the dual fixes the column order
-            self.state = service.from_comma_basis(self.state.comma_basis + (tuple(vector),))
+            domain_basis = self.state.domain_basis if len(vector) == self.state.d else None
+            self.state = service.from_comma_basis(self.state.comma_basis + (tuple(vector),), domain_basis)
 
     def move_interval(self, src_list: str, src_idx: int, dst_list: str, dst_idx: int) -> bool:
         """Move interval ``src_idx`` of ``src_list`` so it LANDS AT index ``dst_idx`` of ``dst_list``
