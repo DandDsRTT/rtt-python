@@ -661,6 +661,60 @@ def tuning_embedding(state: TemperamentState, held_ratios=()):
         return None
 
 
+def _integer_columns(vectors):
+    """sympy rational column vectors → primitive integer tuples (rows-as-intervals, like a comma
+    basis): clear each to its lowest-terms integer form."""
+    from math import gcd
+    from functools import reduce
+    out = []
+    for v in vectors:
+        entries = [sp.Rational(x) for x in v]
+        lcm_d = 1
+        for e in entries:
+            lcm_d = lcm_d * int(e.q) // gcd(lcm_d, int(e.q))
+        ints = [int(e * lcm_d) for e in entries]
+        g = reduce(gcd, [abs(i) for i in ints], 0) or 1
+        out.append(tuple(i // g for i in ints))
+    return out
+
+
+def unchanged_basis_from_projection(state: TemperamentState, projection):
+    """The unchanged-interval basis ``U`` recovered from a hand-edited projection matrix ``P`` (a
+    ``d×d`` grid of fraction strings) — its eigenvalue-1 eigenvectors ``nullspace(P − I)`` as
+    primitive integer interval vectors. ``None`` when the edit isn't a valid rational tempering
+    projection of THIS temperament: not idempotent (``P² ≠ P``), the commas not in its kernel
+    (``P·c ≠ 0``), or the wrong rank. The inverse of :func:`tuning_projection`, for the editable P."""
+    try:
+        d, r = state.d, state.r
+        P = sp.Matrix([[sp.Rational(x) for x in row] for row in projection])
+        if P.shape != (d, d) or P * P != P:  # must be idempotent
+            return None
+        for comma in state.comma_basis:  # the commas must vanish (be in the kernel)
+            if P * sp.Matrix(comma) != sp.zeros(d, 1):
+                return None
+        U = _integer_columns((P - sp.eye(d)).nullspace())
+        return tuple(U) if len(U) == r else None
+    except (ArithmeticError, ValueError, IndexError, TypeError):
+        return None
+
+
+def unchanged_basis_from_embedding(state: TemperamentState, embedding):
+    """The unchanged-interval basis ``U`` recovered from a hand-edited generator embedding ``G`` (a
+    ``d×r`` grid of fraction strings) — the integer basis of its column space (the generators span
+    the held subspace). ``None`` when ``G`` isn't a valid embedding of this temperament: ``M·G ≠ I``
+    (its generators don't map to themselves) or the wrong rank. The inverse of :func:`tuning_embedding`."""
+    try:
+        d, r = state.d, state.r
+        G = sp.Matrix([[sp.Rational(x) for x in row] for row in embedding])
+        M = sp.Matrix([list(row) for row in state.mapping])
+        if G.shape != (d, r) or M * G != sp.eye(r):  # the generators must map to the identity
+            return None
+        U = _integer_columns(G.columnspace())
+        return tuple(U) if len(U) == r else None
+    except (ArithmeticError, ValueError, IndexError, TypeError):
+        return None
+
+
 def unchanged_interval_basis(state: TemperamentState, held_ratios=()):
     """The unchanged-interval basis ``U`` as exactly ``r`` columns: the tuning's held intervals
     (``h`` known, rational vectors, stored rows-as-intervals like the comma basis) padded to rank

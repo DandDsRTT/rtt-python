@@ -213,6 +213,32 @@ async def test_editing_the_unchanged_ratio_retunes(user: User) -> None:
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
+async def test_editing_the_generator_embedding_retunes(user: User) -> None:
+    # the generator embedding G is editable too: retype the default meantone's G (1/4-comma) as
+    # 1/3-comma's G = ((1,1/3),(0,-1/3),(0,1/3)) and the tuning re-solves to third-comma
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:embed:2:1")
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"
+    for (i, g), v in {(0, 0): "1", (0, 1): "1/3", (1, 0): "0", (1, 1): "-1/3", (2, 0): "0", (2, 1): "1/3"}.items():
+        _cell_child(user, f"cell:embed:{i}:{g}").set_value(v)
+    _commit(user, "cell:embed:2:1")                               # blur commits the whole matrix
+    assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
+
+
+async def test_editing_the_projection_matrix_retunes(user: User) -> None:
+    # the projection matrix P is editable too: retype the default meantone's P (1/4-comma) as
+    # 1/3-comma's P and the tuning re-solves to third-comma — rejected if it weren't a valid projection
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:proj:2:1")
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"
+    p13 = (("1", "4/3", "4/3"), ("0", "-1/3", "-4/3"), ("0", "1/3", "4/3"))
+    for i in range(3):
+        for p in range(3):
+            _cell_child(user, f"cell:proj:{i}:{p}").set_value(p13[i][p])
+    _commit(user, "cell:proj:2:2")                               # blur commits the whole matrix
+    assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
+
+
 async def test_projection_renders_the_consolidated_v_and_scaling_factors(user: User) -> None:
     # projection also consolidates the commas + unchanged basis U into V = C|U and adds the
     # scaling-factors row λ. Assert the new cells render (and lean on the ERROR-log guard for any

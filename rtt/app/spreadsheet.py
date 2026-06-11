@@ -2864,21 +2864,23 @@ class _GridBuilder:
         # None — it holds fewer than r rational intervals): every cell an em-dash, not a fabricated
         # value.
         if self.row_open("projection") and self.tile_open("projection", "primes"):
+            full_p = self.projection_matrix is not None  # EDITABLE when shown (a full rational projection)
             for i in range(self.d):
                 for p in range(self.d):
-                    text = DASH if self.projection_matrix is None else self.projection_matrix[i][p]
+                    text = DASH if not full_p else self.projection_matrix[i][p]
                     self.cells.append(CellBox(f"cell:proj:{i}:{p}", self.prime_left(p), self.proj_top(i),
-                                         COL_W, ROW_H, "mapped", text=text, prime=p))
+                                         COL_W, ROW_H, "projcell" if full_p else "mapped", text=text, prime=p))
         # the generator embedding G = H(MH)⁻¹ (d×r), beside P in the gens columns: its columns are
         # the held tuning's generators as fractional vectors. Read-only ("mapped") cells like P, but
         # over the r generator columns rather than the d primes (rows are the d primes, like P).
         # Dashed in lockstep with P (embedding_matrix None ⟺ not a full rational projection).
         if self.row_open("projection") and self.tile_open("projection", "gens"):
+            full_g = self.embedding_matrix is not None  # EDITABLE when shown (a full rational projection)
             for i in range(self.d):
                 for g in range(self.r):
-                    text = DASH if self.embedding_matrix is None else self.embedding_matrix[i][g]
+                    text = DASH if not full_g else self.embedding_matrix[i][g]
                     self.cells.append(CellBox(f"cell:embed:{i}:{g}", self.gen_left(g), self.proj_top(i),
-                                         COL_W, ROW_H, "mapped", text=text, gen=g))
+                                         COL_W, ROW_H, "embedcell" if full_g else "mapped", text=text, gen=g))
 
         # the projected unrotated vector list P·V (the projection row over the V column): each
         # unrotated vector scaled by its eigenvalue — the comma columns vanish (P·𝐜 = 0, the

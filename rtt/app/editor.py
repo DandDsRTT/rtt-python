@@ -756,6 +756,21 @@ class Editor:
             return  # not a valid full-rank rational projection — reject the edit
         self._hold_as_manual_tuning(ratios)
 
+    def set_projection_matrix(self, projection) -> None:
+        """Apply a hand-edited projection matrix P (the editable P tile): recover its unchanged basis
+        (the eigenvalue-1 eigenvectors) and retune to it, like editing U. A no-op when the edit isn't a
+        valid rational tempering projection of this temperament (rejected → reverts). Undoable."""
+        U = service.unchanged_basis_from_projection(self.state, projection)
+        if U is not None:
+            self.set_unchanged_basis(service.comma_ratios(U, self.state.domain_basis))
+
+    def set_embedding_matrix(self, embedding) -> None:
+        """Apply a hand-edited generator embedding G (the editable G tile): recover its unchanged basis
+        (its column space) and retune to it. A no-op when G isn't a valid embedding (M·G ≠ I). Undoable."""
+        U = service.unchanged_basis_from_embedding(self.state, embedding)
+        if U is not None:
+            self.set_unchanged_basis(service.comma_ratios(U, self.state.domain_basis))
+
     def _displayed_retuning_map(self) -> tuple[float, ...] | None:
         """The per-prime retuning (tempered − just sizes, in cents) of the tuning the grid is
         actually showing — a frozen/hand-edited/established 𝒈 if there is one, else the scheme's
