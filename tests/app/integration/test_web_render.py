@@ -2100,6 +2100,36 @@ async def test_repeated_edits_keep_previewing(user: User) -> None:
     assert _cell_text(user, "cell:mapped:1:6") == "9"    # cycle-2 commit applied
 
 
+async def test_adding_a_comma_previews_the_rank_drop_on_the_mapping(user: User) -> None:
+    # opening + typing a comma draft drops the rank when it commits: the last mapping (generator) row
+    # goes and the survivors recombine, so the whole temperament re-solves. The draft now PREVIEWS that
+    # commit while a draft cell is focused — the doomed generator row rings red (rtt-preview-remove) and
+    # the surviving row + the rest of the re-solve ring amber (rtt-preview-change) — without applying it
+    # until blur. (The draft used to ring NOTHING, "off-screen until committed", so the mapping showed
+    # no highlight as the user added a comma.)
+    await user.open("/")
+    _click_glyph(user, "comma_plus")                          # open the draft comma column at index 1
+    await user.should_see(marker="cell:comma:0:1")
+    await user.should_see(marker="cell:mapping:1:0")          # meantone is rank 2: row 1 is on screen
+    # fill the diesis 128/125 = (7 0 -3); set the first two, then focus + type the last so the now
+    # complete, independent draft previews the would-be commit while the cell holds focus
+    _cell_child(user, "cell:comma:0:1").set_value("7")
+    _cell_child(user, "cell:comma:1:1").set_value("0")
+    last = _cell_child(user, "cell:comma:2:1")
+    UserInteraction(user, {last}, None).trigger("focus")      # arm the edit gesture (baseline = the grid)
+    last.set_value("-3")                                      # complete + independent → preview the rank drop
+    await user.should_see(marker="cell:mapping:0:0")
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:1:0")  # doomed generator row → red
+    assert "rtt-preview-remove" in _wrap_classes(user, "cell:mapping:1:2")
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:2")  # the survivor recombines → amber
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:comma:2:1")  # the focused source is never rung
+    # still a PREVIEW: the rank has not dropped (row 1 is present, the comma is uncommitted)
+    assert _cell_child(user, "cell:comma:2:1").value == "-3"
+    UserInteraction(user, {last}, None).trigger("blur")       # blur COMMITS → rank 1, rings clear
+    await user.should_see(marker="cell:mapping:0:0")
+    await user.should_not_see(marker="cell:mapping:1:0")      # row 1 gone: committed to rank 1
+
+
 async def test_typing_a_target_limit_rings_the_rows_it_moves(user: User) -> None:
     # the target chooser's numeric limit is an editable control, so it drives the same edit-preview as a
     # grid cell: focusing it captures a baseline, and typing a new limit (which commits live and

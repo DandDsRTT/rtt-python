@@ -2974,10 +2974,21 @@ def index() -> None:
         editor.edit_mapping(matrix)
         render()
 
+    def _draft_comma_reranks(values):
+        # whether a complete draft comma is independent of the basis — so committing it raises the
+        # nullity (drops the rank), the change worth previewing. Mirrors editor.set_pending_comma's
+        # own commit guard, so the preview fires exactly when the blur would commit + re-rank.
+        if any(v is None for v in values):
+            return False
+        new_comma = tuple(int(v) for v in values)
+        domain = editor.state.domain_basis if len(new_comma) == editor.state.d else None
+        return service.from_comma_basis(editor.state.comma_basis + (new_comma,), domain).n > editor.state.n
+
     def on_comma_change(preview=False):
         # the comma basis (the mapping's dual) is edited in the interval-vectors row, present
         # independent of the temperament boxes. preview=True rings the would-be change without
-        # committing (commit lands on Enter/blur); a draft column previews nothing (off-screen).
+        # committing (commit lands on Enter/blur); a complete draft comma previews its would-be
+        # commit (the rank drop), an incomplete or dependent one rings nothing.
         if building[0]:
             return
         d, nc = editor.state.d, len(editor.state.comma_basis)
@@ -2988,10 +2999,18 @@ def index() -> None:
                 if preview:
                     _edit_candidate(None)
                 return  # the draft cells aren't shown (folded away)
+            values = [_parse_int(rec.inputs[f"cell:comma:{p}:{nc}"].value) for p in range(d)]
             if preview:
-                _edit_candidate(None)  # a draft column is off-screen until committed — preview nothing
+                # a complete, independent draft comma WILL commit and re-rank on blur — the rank
+                # drops, so the last mapping row goes (red) and the survivors recombine, while the
+                # rest of the temperament re-solves (amber). Preview that whole commit by arming it
+                # as the edit candidate; capture/restore sandboxes the would-be set_pending_comma, so
+                # nothing lands on the live document until blur. An incomplete or dependent draft (no
+                # re-rank, like the off-screen draft column this used to skip) still rings nothing.
+                _edit_candidate((lambda v=values: editor.set_pending_comma(v))
+                                if _draft_comma_reranks(values) else None)
                 return
-            editor.set_pending_comma([_parse_int(rec.inputs[f"cell:comma:{p}:{nc}"].value) for p in range(d)])
+            editor.set_pending_comma(values)
             committed = editor.pending_comma is None  # the draft materialized into a real column
             render()
             if committed:
