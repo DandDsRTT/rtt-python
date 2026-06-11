@@ -735,6 +735,73 @@ def superspace_prime_projection_display(state: TemperamentState, held_ratios=())
     return _matrix_strings(p) if p is not None else None
 
 
+def _superspace_held_basis(state: TemperamentState, held_ratios, ml):
+    """The held-interval basis that pins ``P_L``, as ``rL`` independent ``dL``-tall vectors over the
+    superspace primes (rows-as-intervals, the COL-variance storage convention), or ``None`` when the
+    tuning isn't a full rational projection (its domain held basis isn't full rank ``r``).
+
+    The domain held basis (every prime for the trivial ``n = 0`` temperament, else the tuning's held
+    intervals) is lifted into the superspace (``B_L · held``) — ``r`` vectors spanning the held
+    directions WITHIN the domain. The superspace adds ``dL − d`` dimensions OUTSIDE the domain that no
+    comma touches (the commas all live in the domain), so they are held justly; the basis is filled out
+    to rank ``rL`` by greedily taking the lowest superspace primes that extend ``M_L``'s image. Which
+    off-domain prime is held there is a free choice the mockup pins no rule for — lowest-first mirrors
+    :func:`held_basis_vectors`' greedy independence. The held intervals are kept unconditionally, so a
+    tuning that tries to hold a tempered interval yields a rank-deficient ``M_L·held_L`` and dashes (the
+    caller's :func:`get_tempering_projection` raises, caught as ``None``) — exactly like ``P``."""
+    domain_held = _held_for_projection(state, held_ratios)
+    if len(domain_held) != state.r:
+        return None
+    lifted = lift_vectors_to_superspace(state.domain_basis, domain_held)  # r vectors, dL tall
+    rL, dL = len(ml), len(ml[0])
+    m = sp.Matrix([list(row) for row in ml])  # rL × dL
+    image_rank = lambda cols: (m * sp.Matrix.hstack(*cols)).rank() if cols else 0
+    columns = [sp.Matrix(dL, 1, list(v)) for v in lifted]  # the held intervals, mandatory
+    rank = image_rank(columns)
+    for j in range(dL):  # fill to rank rL with the lowest superspace primes that extend M_L's image
+        if len(columns) >= rL:
+            break
+        e = sp.Matrix(dL, 1, [1 if k == j else 0 for k in range(dL)])
+        if image_rank(columns + [e]) > rank:
+            columns.append(e)
+            rank += 1
+    if len(columns) != rL:
+        return None
+    return tuple(tuple(int(c[k]) for k in range(dL)) for c in columns)
+
+
+def _superspace_projection_temperaments(state: TemperamentState, held_ratios):
+    """The ``(M_L, held_L)`` :class:`Temperament` pair :func:`superspace_tuning_projection` feeds the
+    convention-free :func:`get_tempering_projection`, or ``None`` when no full rational projection
+    exists. ``M_L`` is the superspace mapping (ROW); ``held_L`` the lifted held basis as columns (COL)."""
+    ml = _to_matrix(superspace_mapping(state))
+    if not ml:
+        return None
+    held_L = _superspace_held_basis(state, held_ratios, ml)
+    if held_L is None:
+        return None
+    superspace = superspace_primes(state.domain_basis)
+    return (Temperament(ml, Variance.ROW, superspace),
+            Temperament(held_L, Variance.COL, superspace))
+
+
+def superspace_tuning_projection(state: TemperamentState, held_ratios=()):
+    """The chapter-9 superspace tempering projection ``P_L = G_L·M_L`` as a ``dL × dL`` grid of display
+    strings, or ``None`` when the tuning isn't a full rational projection (dashed, in lockstep with the
+    on-domain :func:`tuning_projection`). The superspace analogue of ``P``: the domain projection lifted
+    onto the prime superspace mapping ``M_L``, holding the same tuning's held intervals (lifted) and the
+    untempered extra primes. Built with the SAME convention-free :func:`get_tempering_projection` ``P``
+    uses, just over ``M_L`` and its lifted held basis. Reduces to ``P`` over a standard prime basis
+    (``dL = d``); ``I_dL`` for the trivial temperament (``n = 0``)."""
+    try:
+        inputs = _superspace_projection_temperaments(state, held_ratios)
+        if inputs is None:
+            return None
+        return _matrix_strings(get_tempering_projection(*inputs))
+    except (ArithmeticError, ValueError, IndexError, TypeError):
+        return None
+
+
 def _integer_columns(vectors):
     """sympy rational column vectors → primitive integer tuples (rows-as-intervals, like a comma
     basis): clear each to its lowest-terms integer form."""

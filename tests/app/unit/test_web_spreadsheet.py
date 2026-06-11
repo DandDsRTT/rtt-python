@@ -6778,6 +6778,94 @@ def test_superspace_columns_get_their_fold_toggles_in_the_header_band():
     assert {"toggle:col:ssgens", "toggle:col:ssprimes"} <= cells
 
 
+def _barbados_proj(held_basis_ratios=("2", "13/5"), **overrides):
+    # BARBADOS superspace with the projection box on and a full held basis ({2/1, 13/5} pins P_L);
+    # held_basis_ratios=() leaves it under-held (P_L dashed), like _proj_build for the on-domain row.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    s = settings.defaults()
+    s["nonstandard_domain"] = True
+    s["projection"] = True
+    s.update(overrides)
+    return spreadsheet.build(state, s, held_basis_ratios=held_basis_ratios)
+
+
+def test_superspace_projection_row_renders_PL_over_the_superspace_primes():
+    # the projection toggle adds a third superspace row band — the superspace projection P_L = G_L·M_L,
+    # a dL × dL covector stack over the superspace primes (the chapter-9 analogue of the on-domain P).
+    # It seats just below the superspace mapping and above the on-domain projection row.
+    cells = {c.id: c for c in _barbados_proj().cells}
+    assert cells["label:ss_projection"].text == "superspace\nprojection"
+    # dL = 4 rows tall (one covector per superspace prime)
+    assert cells["label:ss_projection"].h == 4 * spreadsheet.ROW_H
+    # ordered: ss_mapping < ss_projection < projection
+    assert cells["label:ss_mapping"].y < cells["label:ss_projection"].y < cells["label:projection"].y
+    # the full 4 × 4 P_L grid renders over the ssprimes column
+    assert {f"cell:ss_projection:ssprimes:{i}:{j}" for i in range(4) for j in range(4)} <= set(cells)
+    # P_L for BARBADOS held by {2/1, 13/5}: [[1,2/3,0,0],[0,0,0,0],[0,-2/3,1,0],[0,2/3,0,1]]
+    assert cells["cell:ss_projection:ssprimes:0:0"].text == "1"
+    assert cells["cell:ss_projection:ssprimes:0:1"].text == "2/3"
+    assert cells["cell:ss_projection:ssprimes:2:2"].text == "1"
+    assert cells["cell:ss_projection:ssprimes:3:1"].text == "2/3"
+    # the cells share the ssprimes column x with the superspace mapping M_L above
+    assert cells["cell:ss_projection:ssprimes:0:0"].x == cells["cell:ss_mapping:ssprimes:0:0"].x
+
+
+def test_superspace_projection_row_dashes_when_under_held():
+    # under-held (P_L undetermined, service returns None): every cell an em-dash — in lockstep with
+    # the on-domain projection P, never asserting a projection the optimum doesn't have.
+    cells = {c.id: c for c in _barbados_proj(held_basis_ratios=()).cells}
+    assert cells["cell:ss_projection:ssprimes:0:0"].text == spreadsheet.DASH
+    assert cells["cell:ss_projection:ssprimes:3:3"].text == spreadsheet.DASH
+
+
+def test_superspace_projection_row_absent_without_the_projection_toggle():
+    # additive-only: the superspace mapping shows (nonstandard domain on) but P_L needs the projection
+    # toggle too — off, it leaves no trace
+    cells = {c.id for c in _barbados_ss().cells}  # projection off
+    assert "label:ss_mapping" in cells  # the superspace block is up
+    assert "label:ss_projection" not in cells
+    assert not any(c.startswith("cell:ss_projection:") for c in cells)
+
+
+def test_superspace_projection_row_absent_on_a_standard_domain():
+    # a standard prime domain has no superspace, so no P_L even with the projection box on — only
+    # the on-domain P renders
+    cells = {c.id for c in _proj_build(("2", "5/4")).cells}  # meantone, projection on, standard domain
+    assert "cell:proj:0:0" in cells  # the on-domain projection P is there
+    assert "label:ss_projection" not in cells
+    assert not any(c.startswith("cell:ss_projection:") for c in cells)
+
+
+def test_superspace_projection_quantities_spine_is_greek_basis_names():
+    # the superspace projection's quantities spine names the dL projected superspace basis elements
+    # with sequential Greek letters (the mockup): the projection sends the just primes to tempered
+    # basis directions that no longer name a just ratio, so the spine labels them abstractly.
+    cells = {c.id: c for c in _barbados_proj().cells}
+    assert [cells[f"ss_proj_basis:{p}"].text for p in range(4)] == ["α", "β", "γ", "δ"]
+    # spine-centred in the quantities column, sharing its x with the superspace mapping spine above
+    assert cells["ss_proj_basis:0"].x == cells["ss_basis:0"].x
+    assert cells["ss_proj_basis:0"].w == spreadsheet.COL_W
+
+
+def test_superspace_projection_units_column_reads_basis_element():
+    # P_L is a b/b operator (basis element → basis element), so its units column reads bᵢ/ down the
+    # dL rows — the numerator side, like the on-domain projection's, with b the nonstandard basis label.
+    # The units COLUMN rides the domain_units toggle (the units-line below the tile is the units toggle).
+    cells = {c.id: c for c in _barbados_proj(domain_units=True).cells}
+    assert cells["ucol:ss_projection:0"].text == "b₁/"
+    assert cells["ucol:ss_projection:3"].text == "b₄/"
+
+
+def test_superspace_projection_caption_symbol_and_units_when_named():
+    # names + symbols + units on: the tile carries the "superspace projection" caption, the in-tile
+    # 𝒑Lᵢ covector row labels, the b/b units line, and the P_L = G_L M_L symbol/equivalence
+    cells = {c.id: c for c in _barbados_proj(names=True, symbols=True, units=True).cells}
+    assert cells["caption:ss_projection:ssprimes"].text == "superspace projection"
+    assert "matlabel:row:ss_projection:ssprimes:0" in cells  # 𝒑L₁ row label
+    # the units line under the tile reads b/b (a basis-element operator)
+    assert cells["units:ss_projection:ssprimes"].text == "units: b/b"
+
+
 def test_superspace_rows_get_their_fold_toggles_in_the_label_gutter():
     # the ss_vectors / ss_mapping rows are collapsible like every other content row
     cells = {c.id for c in _barbados_ss().cells}

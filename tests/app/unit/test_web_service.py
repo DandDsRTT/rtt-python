@@ -1434,6 +1434,50 @@ def test_superspace_tuning_runs_over_the_superspace_primes():
     )
 
 
+def test_superspace_tuning_projection_reduces_to_the_on_domain_projection():
+    # over a standard prime basis the superspace IS the domain (dL = d), so P_L = P: the
+    # superspace projection equals the on-domain tuning_projection cell-for-cell. Quarter-comma
+    # meantone held by {2/1, 5/4} is a full rational projection there.
+    mt = service.from_mapping([[1, 1, 0], [0, 1, 4]])
+    held = ("2", "5/4")
+    assert service.superspace_tuning_projection(mt, held) == service.tuning_projection(mt, held)
+
+
+def test_superspace_tuning_projection_is_the_identity_for_just_intonation():
+    # n = 0 (no commas) over a nonstandard domain: nothing is tempered, so P_L = I_dL. JI over
+    # 2.3.13/5 lifts to dL = 4, and every superspace prime is held justly.
+    triv = service.from_temperament_data("2.3.13/5 [⟨1 0 0] ⟨0 1 0] ⟨0 0 1]}")
+    pl = service.superspace_tuning_projection(triv)
+    assert pl == (("1", "0", "0", "0"), ("0", "1", "0", "0"),
+                  ("0", "0", "1", "0"), ("0", "0", "0", "1"))
+
+
+def test_superspace_tuning_projection_is_a_dL_idempotent_holding_the_lifted_held():
+    # BARBADOS over 2.3.13/5 (d=3, dL=4, r=2, rL=3) held by {2/1, 13/5}: P_L is the dL × dL = 4×4
+    # rational projection P_L = G_L·M_L over the superspace primes (2, 3, 5, 13). It is idempotent,
+    # holds each held interval (lifted) justly, and tempers out the lifted comma 676/675 = (2,-3,-2,2).
+    import sympy as sp
+    barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    pl = service.superspace_tuning_projection(barb, ("2", "13/5"))
+    assert pl is not None
+    assert len(pl) == 4 and all(len(row) == 4 for row in pl)  # dL × dL
+    m = sp.Matrix([[sp.Rational(x) for x in row] for row in pl])
+    assert m * m == m  # idempotent (a genuine projection)
+    # holds 2/1 = (1,0,0,0) and 13/5 = (0,0,-1,1) lifted to the superspace
+    for held in ((1, 0, 0, 0), (0, 0, -1, 1)):
+        assert list(m * sp.Matrix(4, 1, list(held))) == list(held)
+    # the lifted comma is in the kernel (tempered out)
+    assert list(m * sp.Matrix(4, 1, [2, -3, -2, 2])) == [0, 0, 0, 0]
+
+
+def test_superspace_tuning_projection_is_none_when_under_held():
+    # under-held (fewer than r rational held intervals): no full rational projection, so None —
+    # the row dashes, exactly like the on-domain tuning_projection. BARBADOS (r=2) held by only 2/1.
+    barb = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    assert service.superspace_tuning_projection(barb, ("2",)) is None
+    assert service.tuning_projection(barb, ("2",)) is None  # the on-domain row dashes in lockstep
+
+
 def test_plain_text_values_includes_superspace_entries_when_superspace_on():
     # Phase 4: the nonstandard-domain superspace region (B_L, M_L, M_jL, 𝒈ₗ / 𝒕ₗ / 𝒋ₗ /
     # 𝒓ₗ) gets its own plain-text strings when the superspace flag is on — the EBK string

@@ -1183,6 +1183,14 @@ class _GridBuilder:
                                      if (self.show_projection and self.show_superspace) else None)
         self.projection_superspace = (service.superspace_prime_projection_display(self.state, self.held_basis_ratios)
                                       if (self.show_projection and self.show_superspace) else None)
+        # the chapter-9 superspace projection row P_L = G_L·M_L (its own row band, the superspace analogue
+        # of the on-domain projection row): a dL×dL operator over the superspace primes, present when the
+        # projection toggle is on AND the superspace shows. None (totally dashed) in lockstep with P when
+        # the tuning isn't a full rational projection — service.superspace_tuning_projection mirrors
+        # service.tuning_projection, built from the same held basis lifted into the superspace.
+        self.show_ss_projection = self.show_projection and self.show_superspace
+        self.ss_projection_matrix = (service.superspace_tuning_projection(self.state, self.held_basis_ratios)
+                                     if self.show_ss_projection else None)
         # the projection row's column tiles, each gated on its column being present exactly like the
         # vectors-row tile it projects (and overall on the projection toggle): the quantities/units
         # spine, then P·D / P·T / P·H / P·interest. Declared here (not in the static TILES) so the
@@ -1383,6 +1391,11 @@ class _GridBuilder:
             # rL × dL mapping M_L (ss_mapping × ssprimes), only its gens-column self-map drops.
             ("ss_just_mapping", self.dL * ROW_H,
              self.show_superspace and self.show_identity_objects, True, "superspace\nJI mapping"),
+            # the superspace tempering projection P_L = G_L M_L, a dL × dL matrix over the superspace
+            # primes — the chapter-9 analogue of the projection row, framed like M_L. Seats just below
+            # the superspace mapping and above the on-domain projection (the mockup). Present with the
+            # projection toggle AND the superspace; a None matrix dashes the band (it isn't dropped).
+            ("ss_projection", self.dL * ROW_H, self.show_ss_projection, True, "superspace\nprojection"),
             # the rational tempering projection P = GM, a d×d matrix over the domain primes — d rows
             # tall like the interval-vectors row, framed like the mapping. Comes AFTER the superspace
             # rows (the mockup), so its superspace tiles G_L→s / P_L→s sit below B_L / M_L. Present only
@@ -2102,6 +2115,9 @@ class _GridBuilder:
     def ss_just_map_top(self, i):  # the y of ss_just_mapping row i (the dL stacked superspace JI maps)
         return self.row_y["ss_just_mapping"] + i * ROW_H
 
+    def ss_proj_top(self, i):  # the y of ss_projection row i (the dL stacked maps of P_L = G_L M_L)
+        return self.row_y["ss_projection"] + i * ROW_H
+
     # The element +/− controls ride each fanning column's TOP bus (the fan-out, just after the
     # toggle), not the quantities row: the − sits on a branch point (a per-element split), the +
     # on a "stub" one COL_W past the last branch point — the slot where the next element would
@@ -2668,6 +2684,13 @@ class _GridBuilder:
             for p in range(self.dL):
                 self.cells.append(CellBox(f"ucol:ss_just_mapping:{p}", self.col_x["units"], self.ss_just_map_top(p), self.col_w["units"], ROW_H,
                                      "units", text=f"p{_sub(p + 1)}/"))
+        # the superspace projection P_L is a b/b operator (each row a projected basis element), so its
+        # units-column numerator reads bᵢ/ — the basis label (b for a nonstandard subgroup), like the
+        # on-domain projection's, NOT the true-prime pᵢ/ of M_L / M_jL above it
+        if self.tile_open("ss_projection", "units"):
+            for p in range(self.dL):
+                self.cells.append(CellBox(f"ucol:ss_projection:{p}", self.col_x["units"], self.ss_proj_top(p), self.col_w["units"], ROW_H,
+                                     "units", text=f"{self.domain_label}{_sub(p + 1)}/"))
         # the cents / octave / annotated-unit rows (guide ch.10 "Annotated units"). Each renders one
         # unit cell PER SUBROW — derived from the cell-row count row_nsub — so a matrix-valued row (the
         # prescaler 𝑋 = 𝑍𝐿's size row) carries a unit on EVERY row, not just its first. Generic to any
@@ -3326,6 +3349,16 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"ss_gen:{i}", self.col_x["quantities"], self.ss_map_top(i),
                                           self.col_w["quantities"], ROW_H, "genratio",
                                           text=ss_gens[i] if i < len(ss_gens) else ""))
+        # the superspace PROJECTION row's spine: the dL projected superspace basis elements named with
+        # sequential Greek letters α, β, γ … (the mockup). P_L sends each just superspace prime to a
+        # tempered basis direction that no longer names a just ratio, so — unlike the on-domain
+        # projection spine (the domain primes) — the spine labels them abstractly. Read-only, like
+        # proj_basis (the whole row is derived). Centred COL_W squares, sharing the spine's x.
+        if self.row_open("ss_projection") and self.tile_open("ss_projection", "quantities"):
+            bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
+            for p in range(self.dL):
+                self.cells.append(CellBox(f"ss_proj_basis:{p}", bx, self.ss_proj_top(p), COL_W, ROW_H, "prime",
+                                          text=GREEK_LETTERS[p] if p < len(GREEK_LETTERS) else "", prime=p))
         # B_L (basis-embedding matrix): each domain element as a dL-tall vector of integer
         # vector coefficients over the superspace primes. The cells form a dL × d grid sharing
         # the prime-column gridlines with the existing vectors row above (the same prime_left
@@ -3440,6 +3473,22 @@ class _GridBuilder:
                         "mapped", text=str(mjl[i][j]),
                         gen=i, prime=j,
                         unit=self.cell_unit("ss_just_mapping", "ssprimes", prime=j),
+                    ))
+        # P_L = G_L M_L (superspace projection): the dL × dL rational projection the tuning lifts to
+        # over its superspace primes. Sits in (ss_projection, ssprimes), each row a covector over the
+        # dL ss_primes — read-only "mapped" cells like M_L (P_L is DERIVED, edited only via the on-
+        # domain held basis). TOTALLY DASHED (every cell an em-dash) when self.ss_projection_matrix is
+        # None — the tuning isn't a full rational projection — in lockstep with the on-domain P.
+        if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssprimes"):
+            full = self.ss_projection_matrix is not None
+            for i in range(self.dL):
+                for j in range(self.dL):
+                    text = DASH if not full else self.ss_projection_matrix[i][j]
+                    self.cells.append(CellBox(
+                        f"cell:ss_projection:ssprimes:{i}:{j}",
+                        self.ss_prime_left(j), self.ss_proj_top(i), COL_W, ROW_H,
+                        "mapped", text=text, gen=i, prime=j,
+                        unit=self.cell_unit("ss_projection", "ssprimes", gen=i, prime=j),
                     ))
 
         # tuning rows over the primes, commas and targets (cents); each can collapse on
@@ -3965,6 +4014,10 @@ class _GridBuilder:
             for i in range(self.dL):
                 self.bracket(f"ss_just_map:{i}", MAP_BRACKETS, "ssprimes",
                              self.ss_just_map_top(i), ROW_H)
+        # P_L: a dL × dL covector stack over the ssprimes column, per-row ⟨ … ] like M_L / M_jL
+        if self.row_open("ss_projection") and self.tile_open("ss_projection", "ssprimes"):
+            for i in range(self.dL):
+                self.bracket(f"ss_proj:{i}", MAP_BRACKETS, "ssprimes", self.ss_proj_top(i), ROW_H)
         # the chapter-9 "new × new" tiles. M_jL = I at (ss_vectors, ssprimes): a dL × dL covector
         # stack ⟨ … ] like M_L. M_s→L at (ss_mapping, primes): rL covectors over the domain
         # elements. M_LgL = I at (ss_mapping, ssgens): the gen-space self-map, framed { … ] (the
@@ -4116,6 +4169,7 @@ class _GridBuilder:
                 ("ss_mapping", "ssprimes"): self.ss_map_top,
                 ("ss_mapping", "primes"): self.ss_map_top,
                 ("ss_just_mapping", "ssprimes"): self.ss_just_map_top,
+                ("ss_projection", "ssprimes"): self.ss_proj_top,  # P_L's dL rows of maps 𝒑ₗᵢ
             }
             row_count = {("mapping", "primes"): self.r,
                          ("projection", "primes"): self.d,  # P is d×d (a map per domain prime)
@@ -4125,7 +4179,8 @@ class _GridBuilder:
                          ("prescaling", "ssprimes"): self.prescale_rows + self.size_rows,
                          ("ss_mapping", "ssprimes"): self.rL,
                          ("ss_mapping", "primes"): self.rL,
-                         ("ss_just_mapping", "ssprimes"): self.dL}
+                         ("ss_just_mapping", "ssprimes"): self.dL,
+                         ("ss_projection", "ssprimes"): self.dL}  # P_L is dL × dL (a covector per superspace prime)
             for (rkey, ckey), glyph in self.row_labels.items():
                 if not self.tile_open(rkey, ckey):
                     continue
@@ -4513,6 +4568,9 @@ class _GridBuilder:
         self.matrix_frame("ss_mapping", "ssprimes", "ss_mapping")
         # M_jL = I rides the same matrix-frame pattern over its own dL × dL identity band
         self.matrix_frame("ss_just_mapping", "ssprimes", "ss_just_mapping")
+        # the superspace projection P_L = G_L M_L: a covector stack framed like P (the on-domain
+        # projection), closing with the prime-coordinate angle ⟩ (ebkangle) — an operator, not a map
+        self.matrix_frame("ss_projection", "ssprimes", "ss_proj", foot="ebkangle")
         # the chapter-9 "new × new" covector stacks: M_jL = I in the ss_vectors row, M_s→L over
         # the domain elements, and the gen-space self-map M_LgL = I — each framed like M_L
         self.matrix_frame("ss_vectors", "ssprimes", "ss_vec_jmap")
