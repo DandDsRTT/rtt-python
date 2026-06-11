@@ -2809,15 +2809,17 @@ async def test_a_stale_opthover_after_popup_hide_is_dropped(user: User) -> None:
     sel = _cell_child(user, "preset:tuning")
     wrap = set(user.find(marker="preset:tuning").elements)
     idx = list(presets.tuning_scheme_options(False, False, True)).index("minimax-S")
-    UserInteraction(user, {sel}, None).trigger("popup-show")                 # the popup opens
+    # NiceGUI stores .on("popup-show"/"popup-hide") listeners under camelCased types (its own
+    # Select registers the same pair internally), and trigger() matches the stored type exactly.
+    UserInteraction(user, {sel}, None).trigger("popupShow")                  # the popup opens
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # a real hover previews
     assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")
-    UserInteraction(user, {sel}, None).trigger("popup-hide")                 # the popup closed (a pick/Escape)
+    UserInteraction(user, {sel}, None).trigger("popupHide")                  # the popup closed (a pick/Escape)
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")  # the close ended the preview
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})   # the stale settle-timer fire
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1"), \
         "a stale opthover after popup-hide re-armed the preview (the stranded-ring race)"
-    UserInteraction(user, {sel}, None).trigger("popup-show")                 # a genuine reopen
+    UserInteraction(user, {sel}, None).trigger("popupShow")                  # a genuine reopen
     UserInteraction(user, wrap, None).trigger("opthover", {"detail": idx})
     assert "rtt-preview-change" in _wrap_classes(user, "weight:target:1")    # ...previews again
 
@@ -2846,19 +2848,21 @@ async def test_gensign_hover_hands_the_wheel_preview_back(user: User) -> None:
     # gestures: the cell's wheel hover (already armed) and the sign's flip hover. The sign hover
     # takes over while it lasts, and leaving it hands the wheel gesture back — so a notch after the
     # sign detour still rings the ripple against the wheel's baseline.
+    # (generator 0, whose notch test_wheeling_a_generator_tuning_rings_... proves moves
+    # retune:target:0; its flip preview rings cell:mapping:0:0, the 1 → −1 entry)
     await user.open("/")
-    cell = set(user.find(marker="tuning:gen:1").elements)
+    cell = set(user.find(marker="tuning:gen:0").elements)
     UserInteraction(user, cell, None).trigger("mouseenter")        # arm the wheel gesture
-    sign = set(user.find(marker="gensign:1").elements)
+    sign = set(user.find(marker="gensign:0").elements)
     UserInteraction(user, sign, None).trigger("mouseenter")        # the in-cell sign hover takes over
-    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:1:2")  # the flip preview rings
+    assert "rtt-preview-change" in _wrap_classes(user, "cell:mapping:0:0")  # the flip preview rings
     UserInteraction(user, sign, None).trigger("mouseleave")        # ...and hands the wheel back
-    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:1:2")
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:0")
     UserInteraction(user, cell, None).trigger("wheel.prevent", {"deltaY": -1})  # a notch: nudge + render
     await user.should_see(marker="retune:target:0")
     assert "rtt-preview-change" in _wrap_classes(user, "retune:target:0"), \
         "the sign-hover detour lost the wheel gesture — the notch rang nothing"
-    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:1")   # the scrolled cell never rings
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:0")   # the scrolled cell never rings
     UserInteraction(user, cell, None).trigger("mouseleave")
     assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:0")
 
