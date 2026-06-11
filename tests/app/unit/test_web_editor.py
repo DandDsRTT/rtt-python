@@ -1162,6 +1162,62 @@ def test_try_edit_comma_basis_text_preserves_a_nonstandard_domain():
     assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
 
 
+def test_set_pending_comma_preserves_a_nonstandard_domain():
+    # committing a DRAFT comma on a nonstandard temperament keeps the basis — the new comma
+    # re-ranks over 2.3.13/5, not the default 2.3.5 a standard prime limit would impose (the
+    # comma-box twin of test_try_edit_comma_basis_text_preserves_a_nonstandard_domain).
+    editor = Editor()
+    editor.state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    editor.add_comma()
+    editor.set_pending_comma([0, 0, 1])  # independent -> commits, re-ranking the temperament
+    assert editor.pending_comma is None  # the draft committed
+    assert editor.state.n == 2
+    assert editor.state.domain_basis == (2, 3, Fraction(13, 5))
+
+
+def test_opening_a_draft_discards_any_other_pending_draft():
+    # one draft at a time: each opener clears the others, so two drafts can never co-exist and
+    # corrupt the state by re-ranking from different sources of truth. Walk the openers in a ring.
+    editor = Editor()
+    editor.add_comma()
+    assert editor.pending_comma is not None
+    editor.add_interest()  # opening interest discards the comma draft
+    assert editor.pending_comma is None and editor.pending_interest is not None
+    editor.add_held()  # ... and so on around the ring
+    assert editor.pending_interest is None and editor.pending_held is not None
+    editor.add_target()
+    assert editor.pending_held is None and editor.pending_target is not None
+    editor.add_element()
+    assert editor.pending_target is None and editor.pending_element is not None
+    editor.add_comma()  # back to the start: opening comma discards the element draft
+    assert editor.pending_element is None and editor.pending_comma is not None
+
+
+def test_add_mapping_row_discards_a_pending_comma_draft():
+    # add_mapping_row commits directly (it re-ranks via the mapping); a half-typed comma draft
+    # left open would later re-dual from the comma basis and silently undo the new generator row.
+    editor = Editor()
+    editor.state = service.from_mapping(((12, 19, 28),))
+    editor.add_comma()
+    editor.set_pending_comma([4, -4, None])  # partial draft, deliberately left open
+    editor.add_mapping_row()
+    assert editor.pending_comma is None
+    assert editor.state.r == 2
+
+
+def test_comma_and_element_drafts_cannot_coexist():
+    # opening the element draft discards the comma draft, so committing the element (which grows d
+    # 3 -> 4) can't later collide with a stale length-3 comma — which used to raise ValueError.
+    editor = Editor()
+    editor.state = service.from_mapping(((12, 19, 28),))
+    editor.add_comma()
+    editor.set_pending_comma([4, -4, None])
+    editor.add_element()
+    assert editor.pending_comma is None
+    editor.set_pending_element("7")  # grows the domain; must not raise
+    assert editor.state.d == 4
+
+
 def test_optimize_button_freezes_the_tuning_and_lock_toggles_auto():
     editor = Editor()
     # default: auto-optimize OFF -> the tuning is FROZEN at the scheme's optimum (not the auto None)

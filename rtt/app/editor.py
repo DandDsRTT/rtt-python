@@ -409,6 +409,7 @@ class Editor:
     def add_interest(self) -> None:
         """Begin a blank interval-of-interest draft (a green, blank column the user fills in),
         mirroring add_comma. Not part of the document and not undoable until it commits."""
+        self._clear_pending()  # one draft at a time: opening this discards any other
         self.pending_interest = [None] * self.state.d
 
     def set_pending_interest(self, values) -> None:
@@ -433,6 +434,7 @@ class Editor:
     def add_held(self) -> None:
         """Begin a blank held-interval draft — the held intervals column's + control,
         mirroring :meth:`add_interest`."""
+        self._clear_pending()  # one draft at a time: opening this discards any other
         self.pending_held = [None] * self.state.d
 
     def set_pending_held(self, values) -> None:
@@ -1021,6 +1023,7 @@ class Editor:
     def add_target(self) -> None:
         """Begin a blank target-interval draft — the target list's + control, mirroring
         :meth:`add_interest`. Off in all-interval (the control is hidden there)."""
+        self._clear_pending()  # one draft at a time: opening this discards any other
         self.pending_target = [None] * self.state.d
 
     def set_pending_target(self, values) -> None:
@@ -1323,6 +1326,7 @@ class Editor:
         """Begin a pending comma: a blank draft column for the user to fill in. It is
         not part of the temperament (the mapping is unchanged) and not an undoable
         edit until it commits — see set_pending_comma."""
+        self._clear_pending()  # one draft at a time: opening this discards any other
         self.pending_comma = [None] * self.state.d
 
     def set_pending_comma(self, values) -> None:
@@ -1333,7 +1337,12 @@ class Editor:
         self.pending_comma = list(values)
         if any(v is None for v in values):
             return  # still being typed in
-        extended = service.from_comma_basis(self.state.comma_basis + (tuple(int(v) for v in values),))
+        new_comma = tuple(int(v) for v in values)
+        # keep a nonstandard domain when the draft's length matches d, mirroring
+        # try_edit_comma_basis_text — else from_comma_basis would silently rebuild the
+        # standard prime limit and revert the temperament's basis (e.g. 2.3.13/5 -> 2.3.5).
+        domain_basis = self.state.domain_basis if len(new_comma) == self.state.d else None
+        extended = service.from_comma_basis(self.state.comma_basis + (new_comma,), domain_basis)
         if extended.n > self.state.n:  # an independent new comma re-ranks the temperament
             self._snapshot()
             self.state = extended
@@ -1342,6 +1351,7 @@ class Editor:
     def add_element(self) -> None:
         """Begin a pending domain basis element: a blank green ?/? draft column. Not part of the
         domain (d unchanged) and not an undoable edit until it commits — see set_pending_element."""
+        self._clear_pending()  # one draft at a time: opening this discards any other
         self.pending_element = ""
 
     def set_pending_element(self, text) -> None:
