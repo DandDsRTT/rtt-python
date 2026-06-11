@@ -121,6 +121,13 @@ CAPTIONS = {
     # the projected unrotated vector list P·V — each unrotated vector scaled by its eigenvalue:
     # the comma columns vanish (P·c = 0), the unchanged columns are held unchanged (P·u = u)
     ("projection", "commas"): "projected unrotated vector list",
+    # the projected vector lists riding the projection row band — P applied to each column's interval
+    # vectors (P·D / P·T / P·H / P·interest), the projection-row counterparts of the interval-vectors
+    # row's tiles. P·D is the embedding G (P·D = GMD = G); P·H = H (the held intervals are unchanged).
+    ("projection", "detempering"): "projected generator detempering",
+    ("projection", "targets"): "projected target-interval list",
+    ("projection", "held"): "projected held-interval basis",
+    ("projection", "interest"): "projected intervals",
     # the scaling factors λ = diag(λ) — the projection's eigenvalue list over the
     # consolidated V = C|U column (0 per comma, 1 per unchanged interval); toggled with
     # projection, one row above the interval-vectors row
@@ -218,6 +225,11 @@ SYMBOLS = {
     ("projection", "commas"): "𝑃V",  # the projected unrotated vector list P·V (italic 𝑃 operator + upright V basis)
     ("projection", "primes"): "𝑃",   # the rational tempering projection P = GM (math-italic P, like 𝑀)
     ("projection", "gens"): "G",     # the rational generator embedding G — an UPRIGHT capital (a basis, like C/T/D/B)
+    # the projected vector lists: 𝑃 (italic operator) applied to each column's basis (upright capital,
+    # like the vectors row's D/T/H). interest carries no symbol (a loose collection, like the vectors row).
+    ("projection", "detempering"): "𝑃D",
+    ("projection", "targets"): "𝑃T",
+    ("projection", "held"): "𝑃H",
     ("vectors", "commas"): "C",
     ("vectors", "targets"): "T",
     ("vectors", "detempering"): "D",  # the generator detempering matrix (upright, like C/T)
@@ -307,6 +319,12 @@ COL_LABEL_LETTERS = {
     ("projection", "commas"): "𝑃𝐯",
     # the generator embedding G is a vector list (each column a held generator 𝐠ᵢ as a prime vector)
     ("projection", "gens"): "𝐠",
+    # the projected vector lists' columns: 𝑃 (italic operator) + the bold column letter of the list it
+    # projects (𝑃𝐝 / 𝑃𝐭 / 𝑃𝐡 / 𝑃𝐢), like the mapped lists' 𝑀𝐜 / 𝑀𝐡
+    ("projection", "detempering"): "𝑃𝐝",
+    ("projection", "targets"): "𝑃𝐭",
+    ("projection", "held"): "𝑃𝐡",
+    ("projection", "interest"): "𝑃𝐢",
     # interval vectors row — d-tall column-vector matrices
     ("vectors", "commas"): "𝐜",
     ("vectors", "targets"): "𝐭",
@@ -635,6 +653,8 @@ EQUIVALENCES = {
     # the superspace tail on P (" = Gₛ→ₗ𝑀ₛ→ₗ") is appended per-render in build() only when show_superspace.
     ("projection", "primes"): " = G𝑀 = V·diag(𝝀)V⁻¹",
     ("projection", "gens"): " = U(𝑀U)⁻¹",
+    # P·H = H: the held intervals are P's eigenvalue-1 directions, returned unchanged by the projection
+    ("projection", "held"): " = H",
     ("tuning", "detempering"): " = 𝒈",  # 𝒕D = the generator tuning map (tempering D gives the generators)
     ("tuning", "primes"): " = 𝒈𝑀",
     ("tuning", "targets"): " = 𝒕T",
@@ -679,6 +699,11 @@ UNITS = {
     # prime-count vectors (p/g, the mapping's reciprocal)
     ("projection", "primes"): "p/p",
     ("projection", "gens"): "p/g",
+    # the projected vector lists are prime-count vectors (p), like the interval-vectors lists they project
+    ("projection", "detempering"): "p",
+    ("projection", "targets"): "p",
+    ("projection", "held"): "p",
+    ("projection", "interest"): "p",
     ("vectors", "targets"): "p",
     ("vectors", "held"): "p",
     ("vectors", "detempering"): "p",

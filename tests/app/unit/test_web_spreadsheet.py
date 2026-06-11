@@ -8006,6 +8006,141 @@ def test_projection_plain_text_bands_dash_when_under_held():
     assert cells["ptext:projection:gens"].text == "{[— — —⟩ [— — —⟩]"
 
 
+def _proj_full(**overrides):
+    # a quarter-comma (fully held) projection build with extra build kwargs (held_vectors, interest)
+    s = settings.defaults()
+    s["projection"] = True
+    kwargs = {k: overrides.pop(k) for k in ("held_vectors", "interest") if k in overrides}
+    s.update(overrides)
+    return spreadsheet.build(service.from_mapping(((1, 1, 0), (0, 1, 4))), s,
+                             held_basis_ratios=("2/1", "5/4"), **kwargs)
+
+
+def test_projection_quantities_spine_lists_the_domain_primes():
+    # the projection row's quantities column labels its prime-indexed rows with the domain basis
+    # (2, 3, 5), like the interval-vectors basis spine — read-only (the whole projection row is derived)
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}
+    assert [cells[f"proj_basis:{p}"].text for p in range(3)] == ["2", "3", "5"]
+    assert cells["proj_basis:0"].kind == "prime"                  # read-only
+    assert cells["proj_basis:0"].y == cells["cell:proj:0:0"].y    # aligned with P's top prime row
+    assert cells["proj_basis:0"].x == cells["basis:0"].x          # same quantities spine as the vectors row
+
+
+def test_projection_units_spine_labels_each_row_as_a_prime_coordinate():
+    # P is a p/p operator, so the units column reads pᵢ/ down the projection row, like the vectors row
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), domain_units=True).cells}
+    assert [cells[f"ucol:projection:{p}"].text for p in range(3)] == ["p₁/", "p₂/", "p₃/"]
+    assert cells["ucol:projection:0"].y == cells["cell:proj:0:0"].y
+
+
+def test_projection_detempering_tile_shows_P_times_D():
+    # the projected generator detempering P·D over the detempering column: d-tall ket columns, one per
+    # generator. P·D = the embedding G (P·D = GMD = G, since M·D = I): quarter-comma's columns are the
+    # octave [1 0 0] and 5^(1/4) = [0 0 1/4]. Read-only "mapped" cells, like P/G.
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True).cells}
+    expected = (("1", "0", "0"), ("0", "0", "1/4"))
+    for i in range(2):  # r = 2 generators
+        for p in range(3):
+            cell = cells[f"cell:proj_pd:{i}:{p}"]
+            assert cell.text == expected[i][p]
+            assert cell.kind == "mapped"
+            assert cell.x == cells[f"cell:vec:detempering:{i}:{p}"].x  # the detempering column
+            assert cell.y == cells[f"cell:proj:{p}:0"].y               # the projection row's prime rows
+
+
+def test_projection_targets_tile_shows_P_times_T():
+    # P·T over the targets column: each default target (the 5-limit diamond) projected to its tempered
+    # vector — the 8 columns of the mockup's PT tile (e.g. 3/2 → 5^(1/4) = [0 0 1/4], 6/5 → [2 0 -3/4])
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4")).cells}
+    expected = (("1", "0", "0"), ("1", "0", "1/4"), ("0", "0", "1/4"), ("1", "0", "-1/4"),
+                ("-1", "0", "1"), ("-1", "0", "3/4"), ("-2", "0", "1"), ("2", "0", "-3/4"))
+    for j, col in enumerate(expected):
+        for p in range(3):
+            cell = cells[f"cell:proj_pt:{j}:{p}"]
+            vec = cells[f"cell:vec:targets:{j}:{p}"]
+            assert cell.text == col[p]
+            assert cell.kind == "mapped"
+            assert cell.x + cell.w / 2 == vec.x + vec.w / 2  # column-centred on the targets column
+            assert cell.y == cells[f"cell:proj:{p}:0"].y     # the projection row's prime rows
+
+
+def test_projection_held_tile_shows_P_times_H_equals_H():
+    # P·H = H: the held intervals are P's eigenvalue-1 directions, unchanged by the projection
+    cells = {c.id: c for c in _proj_full(optimization=True,
+                                         held_vectors=[(1, 0, 0), (-2, 0, 1)]).cells}
+    expected = (("1", "0", "0"), ("-2", "0", "1"))
+    for i in range(2):
+        for p in range(3):
+            assert cells[f"cell:proj_ph:{i}:{p}"].text == expected[i][p]
+            assert cells[f"cell:proj_ph:{i}:{p}"].kind == "mapped"
+
+
+def test_projection_interest_tile_shows_P_times_interest():
+    # P·interest over the loose interest kets: 3/2 → [0 0 1/4], 6/5 → [2 0 -3/4]
+    cells = {c.id: c for c in _proj_full(interest=[(-1, 1, 0), (1, 1, -1)]).cells}
+    expected = (("0", "0", "1/4"), ("2", "0", "-3/4"))
+    for i in range(2):
+        for p in range(3):
+            assert cells[f"cell:proj_pi:{i}:{p}"].text == expected[i][p]
+            assert cells[f"cell:proj_pi:{i}:{p}"].kind == "mapped"
+
+
+def test_projection_column_tiles_dash_when_under_held():
+    # under-held (no rational projection), every projected tile dashes in lockstep with P
+    cells = {c.id: c for c in _proj_build(generator_detempering=True).cells}
+    assert all(cells[f"cell:proj_pd:{i}:{p}"].text == "—" for i in range(2) for p in range(3))
+    assert all(cells[f"cell:proj_pt:{j}:{p}"].text == "—" for j in range(3) for p in range(3))
+
+
+def test_projection_column_tiles_carry_full_chrome():
+    # captions, symbols, units and per-column labels at parity with the vectors-row tiles they project
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True,
+                                          symbols=True, units=True, equivalences=True).cells}
+    assert cells["caption:projection:detempering"].text == "projected generator detempering"
+    assert cells["caption:projection:targets"].text == "projected target-interval list"
+    assert cells["symbol:projection:detempering"].text == "𝑃D"
+    assert cells["symbol:projection:targets"].text == "𝑃T"
+    assert cells["units:projection:detempering"].text == "units: p"
+    assert cells["units:projection:targets"].text == "units: p"
+    assert cells["matlabel:col:projection:detempering:0"].text == "𝑃𝐝₁"
+    assert cells["matlabel:col:projection:targets:0"].text == "𝑃𝐭₁"
+
+
+def test_projection_held_tile_carries_the_equals_H_equivalence():
+    # PH = H: the held tile's symbol gains the "= H" equivalence (the held intervals are unchanged)
+    cells = {c.id: c for c in _proj_full(optimization=True, held_vectors=[(1, 0, 0), (-2, 0, 1)],
+                                         symbols=True, equivalences=True).cells}
+    assert cells["caption:projection:held"].text == "projected held-interval basis"
+    assert cells["symbol:projection:held"].text == "𝑃H = H"
+    assert cells["matlabel:col:projection:held:0"].text == "𝑃𝐡₁"
+
+
+def test_projection_interest_tile_caption_and_label():
+    # interest carries a caption + per-column label but NO big symbol (a loose collection, like the vectors row)
+    cells = {c.id: c for c in _proj_full(interest=[(-1, 1, 0), (1, 1, -1)], symbols=True).cells}
+    assert cells["caption:projection:interest"].text == "projected intervals"
+    assert cells["matlabel:col:projection:interest:0"].text == "𝑃𝐢₁"
+    assert "symbol:projection:interest" not in cells
+
+
+def test_projection_column_tiles_carry_plain_text_bands():
+    # the EBK strings under each projected tile: P·D the embedding form { … ], P·T a ket list [ … ]
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True,
+                                          plain_text_values=True).cells}
+    assert cells["ptext:projection:detempering"].text == "{[1 0 0⟩ [0 0 1/4⟩]"
+    assert cells["ptext:projection:targets"].text == (
+        "[[1 0 0⟩ [1 0 1/4⟩ [0 0 1/4⟩ [1 0 -1/4⟩ [-1 0 1⟩ [-1 0 3/4⟩ [-2 0 1⟩ [2 0 -3/4⟩]")
+
+
+def test_projection_column_tiles_use_their_vectors_row_brackets():
+    # P·D takes the embedding's { … ] (genmap), P·T a list [ … ]; their per-column ket marks ride the
+    # projection row's frame band, like the matrix tiles' marks
+    cells = {c.id: c for c in _proj_build(("2/1", "5/4"), generator_detempering=True).cells}
+    assert cells["bracket:proj_pd:l"].text == "{" and cells["bracket:proj_pd:r"].text == "]"
+    assert cells["bracket:proj_pt:l"].text == "[" and cells["bracket:proj_pt:r"].text == "]"
+    assert "ebkangle:proj_pd:0" in cells and "ebkangle:proj_pt:0" in cells  # per-column ket feet
+
+
 def test_projection_symbol_floor_widens_the_tile_so_the_equivalence_never_wraps():
     # P's equivalence (𝑃 = G𝑀 = V·diag(𝝀)V⁻¹) is wider than the bare 3-column matrix, so the column
     # widens (the _symbol_floor) to fit it on ONE line — the symbol/equivalence must never wrap. The

@@ -1566,6 +1566,22 @@ def plain_text_values(
     if consolidate_v:
         values[("projection", "primes")] = projection_ebk(tuning_projection(state, held_basis_ratios), state.d)
         values[("projection", "gens")] = embedding_ebk(tuning_embedding(state, held_basis_ratios), state.d, len(state.mapping))
+        # the projected vector lists' read-only EBK bands (P·D / P·T / P·H / P·interest), the projection-
+        # row counterparts of the interval-vectors row's strings. P·D = the embedding G takes the curly
+        # { … ] (generator-coordinate columns, like G); P·T / P·H the plain [ … ]; P·interest stands
+        # alone (no outer wrap). Dashed in lockstep with P when the tuning isn't a rational projection.
+        p_rat = projection_matrix_rationals(state, held_basis_ratios)
+
+        def _proj_cols(vectors):
+            cols = project_vectors(p_rat, vectors)
+            return list(cols) if cols else [tuple(_DASH for _ in range(state.d)) for _ in vectors]
+
+        values[("projection", "detempering")] = "{" + _ket_list(_proj_cols(detemper_vectors), "⟩", wrap=False) + "]"
+        values[("projection", "targets")] = _ket_list(_proj_cols(target_vectors), "⟩")
+        if held:
+            values[("projection", "held")] = _ket_list(_proj_cols(held), "⟩")
+        if interest:
+            values[("projection", "interest")] = _ket_list(_proj_cols(interest), "⟩", wrap=False)
     # the chapter-9 nonstandard-domain superspace region: B_L (the basis-embedding matrix
     # as a list of dL-tall kets, one per domain element), M_L (the temperament's mapping
     # over the superspace primes — a covector stack like M), M_jL (the dL × dL identity),

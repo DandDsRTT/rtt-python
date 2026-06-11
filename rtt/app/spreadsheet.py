@@ -1167,12 +1167,42 @@ class _GridBuilder:
                                   if self.show_projection else None)
         self.embedding_matrix = (service.tuning_embedding(self.state, self.held_basis_ratios)
                                  if self.show_projection else None)
+        # the projected vector lists riding the projection row band: P applied to each column's
+        # interval vectors. P·D is the generator embedding G (P·D = GMD = G, since M·D = I); P·H = H
+        # (the held intervals are P's eigenvalue-1 directions); P·T / P·interest send each target /
+        # interest interval to its tempered fractional vector. Rationals (Fraction entries) so the
+        # cells show "1/4" like P itself; () / None when the tuning isn't a full rational projection,
+        # so the tiles dash in lockstep with P (projection_rationals None ⟺ projection_matrix None).
+        self.projection_rationals = (service.projection_matrix_rationals(self.state, self.held_basis_ratios)
+                                     if self.show_projection else None)
+        self.proj_detempering = service.project_vectors(self.projection_rationals, self.detempering_vectors)
+        self.proj_held = service.project_vectors(self.projection_rationals, self.held)
+        self.proj_targets = service.project_vectors(self.projection_rationals, self.target_vectors)
+        self.proj_interest = service.project_vectors(self.projection_rationals, self.interest)
+        # the projection row's column tiles, each gated on its column being present exactly like the
+        # vectors-row tile it projects (and overall on the projection toggle): the quantities/units
+        # spine, then P·D / P·T / P·H / P·interest. Declared here (not in the static TILES) so the
+        # conditional columns drop their projected tile with the column, cells/brackets/marks and all.
+        projection_col_tiles = ()
+        if self.show_projection:
+            projection_col_tiles += (
+                ("block:proj:quantities", "projection", "quantities"),
+                ("block:proj:units", "projection", "units"),
+            )
+            if self.show_detempering:
+                projection_col_tiles += (("block:proj:detempering", "projection", "detempering"),)
+            if self.k:
+                projection_col_tiles += (("block:proj:targets", "projection", "targets"),)
+            if self.nh_shown:
+                projection_col_tiles += (("block:proj:held", "projection", "held"),)
+            if self.mi_shown:
+                projection_col_tiles += (("block:proj:interest", "projection", "interest"),)
         # the optimization controls (power 𝑝 etc.) nest at the bottom of the damage×targets
         # tile (see opt_box below), not in a tile/row of their own
         self.tiles = (COUNTS_TILES + OPTIMIZATION_COUNTS_TILES + DETEMPERING_COUNTS_TILES
                  + SUPERSPACE_COUNTS_TILES
                  + TILES + UNITS_TILES + SUPERSPACE_TILES
-                 + interest_tiles + held_tiles + detempering_tiles)
+                 + interest_tiles + held_tiles + detempering_tiles + projection_col_tiles)
         # The authoritative set of real (row, column) tiles. tile_open() consults it, so a
         # tile's existence lives in ONE place: drop its entry here (via TILES etc.) and it
         # vanishes everywhere — panels, toggles, cells, brackets and marks — with no chance
@@ -2603,6 +2633,13 @@ class _GridBuilder:
             for p in range(self.d):
                 self.cells.append(CellBox(f"ucol:vectors:{p}", self.col_x["units"], self.vec_top(p), self.col_w["units"], ROW_H,
                                      "units", text=f"{self.domain_label}{_sub(p + 1)}/"))
+        # the projection row labels each of its prime-indexed rows pᵢ/ (P is a p/p operator), like the
+        # interval-vectors row above — the numerator side of its p/p units (the /pᵢ denominators ride
+        # the units row over the primes columns)
+        if self.tile_open("projection", "units"):
+            for p in range(self.d):
+                self.cells.append(CellBox(f"ucol:projection:{p}", self.col_x["units"], self.proj_top(p), self.col_w["units"], ROW_H,
+                                     "units", text=f"{self.domain_label}{_sub(p + 1)}/"))
         if self.tile_open("mapping", "units"):
             for i in range(self.r):
                 self.cells.append(CellBox(f"ucol:mapping:{i}", self.col_x["units"], self.map_top(i), self.col_w["units"], ROW_H,
@@ -3042,6 +3079,46 @@ class _GridBuilder:
                     self.cells.append(CellBox(f"cell:proj_v:{p}:{self.nc + j}", self.comma_left(self.nc_shown + j), self.proj_top(p),
                                          COL_W, ROW_H, "mapped",
                                          text=DASH if dashed else str(self.unchanged_basis[j][p]), prime=p, comma=self.nc + j))
+
+        # the projection row's quantities spine: the domain primes (2, 3, 5) label its prime-indexed
+        # rows, like the interval-vectors basis spine — read-only (the whole projection row is derived,
+        # so no editable elementcell / domain ± controls; the domain is edited from the vectors row).
+        if self.row_open("projection") and self.tile_open("projection", "quantities"):
+            bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
+            for p in range(self.d):
+                self.cells.append(CellBox(f"proj_basis:{p}", bx, self.proj_top(p), COL_W, ROW_H, "prime", text=str(self.elements[p]), prime=p))
+        # the projected vector lists — P applied to each column's interval vectors — read-only ("mapped")
+        # cells carrying the rational entry text ("1", "0", "1/4"), DASHED in lockstep with P when the
+        # tuning isn't a full rational projection (projection_rationals None). d-tall columns over the
+        # domain primes, like the interval-vectors row they project: P·D over the detempering column (=
+        # the embedding G), P·T over the targets, P·H = H over the held basis, P·interest over the loose
+        # interest kets (inset, a collection not a matrix).
+        full_proj = self.projection_rationals is not None
+        if self.row_open("projection") and self.tile_open("projection", "detempering"):  # P·D = G
+            for i in range(self.r):
+                for p in range(self.d):
+                    text = DASH if not full_proj else str(self.proj_detempering[i][p])
+                    self.cells.append(CellBox(f"cell:proj_pd:{i}:{p}", self.detempering_left(i), self.proj_top(p),
+                                         COL_W, ROW_H, "mapped", text=text, prime=p, gen=i))
+        if self.row_open("projection") and self.tile_open("projection", "targets"):  # P·T
+            for j in range(self.k):
+                for p in range(self.d):
+                    text = DASH if not full_proj else str(self.proj_targets[j][p])
+                    self.cells.append(CellBox(f"cell:proj_pt:{j}:{p}", self.target_left(j), self.proj_top(p),
+                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=j))
+        if self.row_open("projection") and self.tile_open("projection", "held"):  # P·H = H
+            for i in range(self.nh):
+                for p in range(self.d):
+                    text = DASH if not full_proj else str(self.proj_held[i][p])
+                    self.cells.append(CellBox(f"cell:proj_ph:{i}:{p}", self.held_left(i), self.proj_top(p),
+                                         COL_W, ROW_H, "mapped", text=text, prime=p, comma=i))
+        if self.row_open("projection") and self.tile_open("projection", "interest"):  # P·interest
+            for i in range(self.mi):
+                for p in range(self.d):
+                    text = DASH if not full_proj else str(self.proj_interest[i][p])
+                    # inset within the COL_W slot (centred), like the interest kets — a loose collection
+                    self.cells.append(CellBox(f"cell:proj_pi:{i}:{p}", self.interest_left(i) + KET_INSET, self.proj_top(p),
+                                         COL_W - 2 * KET_INSET, ROW_H, "mapped", text=text, prime=p, comma=i))
 
         # the scaling factors λ = diag(λ): the projection's eigenvalue list over the V column —
         # 0 for each comma sub-column (vanished, eigenvalue 0) then 1 for each unchanged
@@ -3819,6 +3896,16 @@ class _GridBuilder:
         if self.show_unchanged and self.row_open("projection") and self.tile_open("projection", "commas"):
             # P·V is a list of projected vectors (kets) — [ … ⟩ per column, [ ] outer, like V itself
             self.bracket("proj_v", LIST_BRACKETS, "commas", self.row_y["projection"], self.d * ROW_H, fit=True)
+        # the projected vector lists' outer brackets (their per-column ket marks come from
+        # vector_list_marks below): P·D = the embedding G takes the curly { … ] (generator-coordinate
+        # columns, like G), P·T and P·H the plain [ … ] of the lists they project. P·interest stands
+        # alone (no outer wrap), like the interest column it projects.
+        if self.row_open("projection") and self.tile_open("projection", "detempering"):
+            self.bracket("proj_pd", GENMAP_BRACKETS, "detempering", self.row_y["projection"], self.d * ROW_H, fit=True)
+        if self.row_open("projection") and self.tile_open("projection", "targets"):
+            self.bracket("proj_pt", LIST_BRACKETS, "targets", self.row_y["projection"], self.d * ROW_H, fit=True)
+        if self.row_open("projection") and self.tile_open("projection", "held"):
+            self.bracket("proj_ph", LIST_BRACKETS, "held", self.row_y["projection"], self.d * ROW_H, fit=True)
         if self.row_open("scaling_factors") and self.tile_open("scaling_factors", "commas"):  # λ: a [ … ] list over V
             self.bracket("scaling", LIST_BRACKETS, "commas", self.row_y["scaling_factors"], ROW_H)
         if self.row_open("mapping"):
@@ -3980,7 +4067,7 @@ class _GridBuilder:
             # the per-column group's count, so a tile's columns are iterated by its
             # (rkey, ckey) without re-deriving the loop bounds each time
             group_count = {"gens": self.r, "primes": self.d, "commas": self.nc + self.nu, "targets": self.k,
-                           "held": self.nh, "detempering": self.r,
+                           "held": self.nh, "detempering": self.r, "interest": self.mi,
                            "ssgens": self.rL, "ssprimes": self.dL}
             # the y of the i-th row inside a row-labelled tile: the mapping stacks under
             # row_y["mapping"]; the prescaler stacks d rows under row_y["prescaling"]; the
@@ -4406,6 +4493,14 @@ class _GridBuilder:
         # the generator embedding G: each held generator a prime-count ket [ … ⟩ column over the gens
         # columns (the outer { … ] is the bracket() call above), no dividing rules
         self.vector_list_marks("projection", "embed", "gens", self.gen_left, self.r, foot="ebkangle", separators=False)
+        # the projected vector lists' per-column ket marks (P·D / P·T / P·H / P·interest): [ … ⟩ feet
+        # over each column, like the interval-vectors row they project. P·D = the embedding G (no
+        # separators, like G); P·T a matrix (separator rules, like T); P·H mirrors the held column; the
+        # P·interest kets stand alone (no separators, no outer wrap, like interest).
+        self.vector_list_marks("projection", "proj_pd", "detempering", self.detempering_left, self.r, foot="ebkangle", separators=False)
+        self.vector_list_marks("projection", "proj_pt", "targets", self.target_left, self.k, foot="ebkangle")
+        self.vector_list_marks("projection", "proj_ph", "held", self.held_left, self.nh, foot="ebkangle")
+        self.vector_list_marks("projection", "proj_pi", "interest", self.interest_left, self.mi, foot="ebkangle", separators=False)
         self.vector_list_marks("mapping", "mapped", "targets", self.target_left, self.k)
         # the interest column's mapped images stand alone — no separator rules between columns
         self.vector_list_marks("mapping", "imapped", "interest", self.interest_left, self.mi, separators=False)
