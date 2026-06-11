@@ -2400,6 +2400,21 @@ async def test_hovering_a_column_minus_reddens_the_removed_column(user: User) ->
     assert "rtt-preview-remove" not in _wrap_classes(user, "prime:2")
 
 
+async def test_clicking_a_per_element_domain_minus_removes_that_element(user: User) -> None:
+    # the bug: with the nonstandard-domain box on the domain − had vanished — no element was
+    # removable. Now every element carries its own −. Clicking the one on the MIDDLE element (the 3
+    # of 2.3.5) drops it, shrinking the domain to 2.5 (d: 3 → 2) — proving the per-element − is not
+    # confined to the last element. End-to-end: the − glyph → _build_element_minus →
+    # editor.remove_domain_element, then a live re-render.
+    await _enable(user, "nonstandard domain")
+    await user.should_see(marker="element_minus:0")          # a − on EVERY element now (was none on any)
+    await user.should_see(marker="element_minus:2")
+    await user.should_see(marker="prime:2")                  # 2.3.5: three domain elements
+    _click_glyph(user, "element_minus:1")                    # drop the middle element (the 3)
+    await user.should_not_see(marker="prime:2")              # d fell to 2 — the third column is gone
+    await user.should_not_see(marker="element_minus:2")      # ...and so is its −
+
+
 async def test_clicking_the_mapping_plus_opens_a_green_draft_row_to_fill_in(user: User) -> None:
     # the mapping + (add a generator) mirrors the interval-list +'s: instead of silently un-tempering
     # a comma, it opens a blank GREEN draft ROW the user types a new generator into, committing once
