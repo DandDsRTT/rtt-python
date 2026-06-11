@@ -459,12 +459,13 @@
 .rtt-frac-num { border-bottom:1px solid #000; padding:0 3px; }
 .rtt-frac-den { padding:0 3px; }
 /* a WHOLE read-only ratio "n/1" collapses to a bare big integer (the read-only twin of the
-   editable cell's data-fracmode="int" view): _ratio_body omits the ~, and these drop the fraction
-   bar and the denominator so only the numerator shows, sized big by _fit_ratio. The win on
-   specificity over .rtt-frac-num's bar (and dark mode's border-bottom-color, which sets colour not
-   style) means no rule re-draws it. */
+   editable cell's data-fracmode="int" view): drop the fraction bar and the denominator so only the
+   numerator shows, sized big by _fit_ratio. Also drop the numerator's 0 3px h-padding — that exists
+   to give the (now-hidden) fraction bar its overhang, so without a bar it only pushes a sibling ~
+   too far from the integer (the generators' "~2"). The win on specificity over .rtt-frac-num's bar
+   (and dark mode's border-bottom-color, which sets colour not style) means no rule re-draws it. */
 .rtt-frac-whole .rtt-frac-den { display:none; }
-.rtt-frac-whole .rtt-frac-num { border-bottom:none; }
+.rtt-frac-whole .rtt-frac-num { border-bottom:none; padding:0; }
 .rtt-tuning-value { display:flex; flex-direction:column; align-items:center; justify-content:center;
             width:100%; color:#000; white-space:nowrap; line-height:1.05; }
 /* a stacked gridded-value face: a big main glyph over a smaller sub-line. Cents stack the
