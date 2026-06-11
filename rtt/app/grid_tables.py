@@ -983,15 +983,24 @@ GRIDDED_KINDS = frozenset({
     "boxtitle", "powerinput", "powerdisplay",  # both power-value faces (editable input / locked value)
 })
 # "quantities" (general) is gentler than gridded values: it keeps every cell box
-# AND the EBK marks framing them, and only *blanks the numbers* of the body
-# quantity values -- the matrix, mapped list, comma basis, generator ratios,
-# tuning cents, and the static / plain-text-vector / other-interval value cells --
-# so the bare gridded structure remains. (The quantities-row header ratios answer
-# to "domain_quantities"; the just row's "mathexpr" log₂ form is not a bare number,
-# so math_expressions' own show_value logic trims it.)
+# AND the EBK marks framing them, and only *blanks the numbers* of EVERY value cell --
+# the matrix, mapped list, comma basis, generator ratios, tuning cents, the static /
+# plain-text-vector / other-interval value cells, AND the quantities row + spine column
+# (the domain primes / nonstandard elements / interval-ratio headers) and the unrotated
+# vector list's editable unchanged cells -- so only the bare gridded structure remains.
+# (Superspace mirrors the main block with the same kinds, so its quantities blank too;
+# the just row's "mathexpr" log₂ form is not a bare number, so math_expressions' own
+# show_value logic trims it.)
 BLANKED_NUMBER_KINDS = frozenset({
     "genratio", "mapping", "mapped", "commacell", "vec", "tuningvalue", "interestcell", "formcell", "heldcell",
     "gentuningcell", "targetcell", "prescalercell",
+    # the quantities row + spine column and the unrotated vector list: the domain primes
+    # ("prime"), the nonstandard-domain element cells ("elementcell"/"elementratio"), the
+    # interval-ratio headers ("ratiocell") and the unchanged/detempering ratios
+    # ("commaratio"), and the editable unchanged basis ("unchangedcell"). The generator
+    # ratios ("genratio") and read-only comma/unchanged vectors ("commacell"/"vec") above
+    # already covered the rest of those regions.
+    "prime", "elementcell", "elementratio", "ratiocell", "commaratio", "unchangedcell",
 })
 
 # The cell kinds the edit-preview ring may flag — the value-bearing cells the user reads a computed
@@ -1002,5 +1011,8 @@ BLANKED_NUMBER_KINDS = frozenset({
 # noise. (powerdisplay is the locked optimization power's read-only value; charts are excluded — the
 # inset ring is built for discrete value cells, not a plot.)
 RINGABLE_KINDS = BLANKED_NUMBER_KINDS | frozenset({
-    "prime", "ratiocell", "commaratio", "mathexpr", "powerdisplay",
+    # the value faces quantities-off does NOT blank but the ring still flags: the just row's
+    # closed-form "mathexpr" and the locked optimization power "powerdisplay". (prime / ratiocell /
+    # commaratio and the editable element / unchanged cells are now in BLANKED_NUMBER_KINDS above.)
+    "mathexpr", "powerdisplay",
 })

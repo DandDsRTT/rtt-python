@@ -1004,9 +1004,35 @@ def test_general_quantities_off_blanks_the_body_numbers_keeping_boxes_and_bracke
     # the EBK marks framing them stay (this is the whole difference from gridded off)
     assert any(c.startswith("bracket:") for c in off)
     assert "ebktop:primes" in off and "ebkbrace:primes" in off
-    # quantities-row headers and the domain/comma controls are untouched
-    assert {"prime:0", "comma:0", "target:0", "plus", "minus", "comma_plus"} <= set(off)
-    assert {"label:mapping", "header:primes", "toggle:row:mapping"} <= set(off)
+    # the domain/comma ± controls and the tile structure carry no value, so they're untouched
+    assert {"plus", "minus", "comma_plus", "label:mapping", "header:primes", "toggle:row:mapping"} <= set(off)
+    # the quantities ROW headers + spine COLUMN now blank too (their boxes stay, numbers cleared)
+    for cid in ("prime:0", "comma:0", "target:0"):
+        assert cid in off and not on[cid].blank and off[cid].blank and off[cid].text == ""
+
+
+def test_general_quantities_off_blanks_the_quantities_row_col_and_unrotated_vectors():
+    # general quantities-off blanks the numbers of EVERY value cell -- including the three regions
+    # that used to leak: the quantities ROW (domain primes / nonstandard elements / interval-ratio
+    # headers), the quantities COLUMN / spine (the domain basis), and the unrotated vector list's
+    # editable unchanged cells. Superspace mirrors the main block with the same kinds, so its
+    # quantities blank too. Boxes/EBK marks stay (the gentle behavior) -- only the numbers clear.
+    state = service.from_temperament_data("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")
+    full = settings.defaults() | {k: True for k in settings.IMPLEMENTED}
+    on = {c.id: c for c in spreadsheet.build(state, {**full, "quantities": True}).cells}
+    off = {c.id: c for c in spreadsheet.build(state, {**full, "quantities": False}).cells}
+    regions = (
+        "prime:0", "prime:2",              # quantities row: a domain prime + a nonstandard element (13/5)
+        "comma:0", "target:0",             # quantities row: interval-ratio headers
+        "basis:0", "basis:2",              # quantities spine column: the domain basis
+        "qgen:0",                          # quantities row: a generator ratio
+        "ssqprime:0", "ssqgen:0",          # superspace mirror: its primes + generator ratios
+    )
+    for cid in regions:
+        assert cid in on and on[cid].text and not on[cid].blank  # carries a value when on
+        assert off[cid].blank and off[cid].text == ""            # box kept, number cleared when off
+    # the structure stays (this is quantities-off, not gridded-off): the spine cell's box survives
+    assert "basis:0" in off and any(c.startswith("bracket:") for c in off)
 
 
 def test_gridded_values_off_also_empties_the_math_expression_cells():
