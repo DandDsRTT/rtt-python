@@ -2244,6 +2244,36 @@ async def test_the_dropped_target_red_preview_clears_when_the_limit_field_is_lef
     assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:7")
 
 
+async def test_the_target_remove_preview_diffs_the_on_screen_grid_not_the_focus_snapshot(
+        user: User, monkeypatch) -> None:
+    # the remove-preview (the red on the rows a lowered limit would drop) must diff against the grid
+    # ACTUALLY on screen, not the frozen focus-time snapshot. The limit field commits IN PLACE while
+    # still focused — a wheel notch / a typed value lands and reflows the grid WITHOUT ending the
+    # gesture (it ends on blur) — so the on-screen grid can differ from the snapshot the focus took.
+    # _gesture_rings must therefore compute RED as removed_cell_ids(CURRENT layout, hypothetical), not
+    # against the stale focus base. The sharpest case is a focused commit that GREW the set: from the
+    # 6-TILT default (8 targets, rows 0..7) commit UP to 8-TILT (10 targets, adding rows 8 and 9),
+    # then preview the limit back DOWN — those just-added rows are exactly what the lower limit drops,
+    # so they MUST redden. Against the stale 6-TILT snapshot they're invisible (it never had rows 8/9),
+    # so the red was silently missing — the bug. (_TARGET_LIMIT_DEBOUNCE is pinned small so the typed
+    # commit lands, then pinned out so the follow-up preview stays a pure no-reflow preview.)
+    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 0.01)
+    await _enable(user, "presets")
+    await user.should_see(marker="retune:target:7")           # the 6-TILT default is on screen
+    num, _sel = _target_preset(user)
+    UserInteraction(user, {num}, None).trigger("focus")        # baseline = the 6-TILT grid (8 rows)
+    num.set_value("8")                                         # commit UP to 8-TILT while focused: grows to 10 rows
+    await user.should_see(marker="retune:target:9")            # row 9 is one of the rows the grow added
+    # now preview the limit back DOWN to 6 (without leaving the field): rows 8 and 9 are dropped, so
+    # they must redden. Pin the debounce out so this stays a pure no-reflow preview, no commit.
+    monkeypatch.setattr(web_app, "_TARGET_LIMIT_DEBOUNCE", 100)
+    UserInteraction(user, {num}, None).trigger("keyup", "6")   # type the limit back down to 6
+    assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:8"), \
+        "a preview after a focused commit must diff the on-screen (8-TILT) grid, not the focus snapshot"
+    assert "rtt-preview-remove" in _wrap_classes(user, "retune:target:9")  # the other added row reddens too
+    assert "rtt-preview-remove" not in _wrap_classes(user, "retune:target:6")  # a surviving row is untouched
+
+
 async def test_scrolling_the_target_limit_up_reddens_no_target_rows(user: User, monkeypatch) -> None:
     # the mirror guard: GROWING the limit removes nothing, so the remove-preview must stay empty — a
     # raised limit only adds rows (off-screen until committed) and re-solves the survivors. No red

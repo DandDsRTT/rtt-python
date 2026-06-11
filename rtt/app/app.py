@@ -2875,7 +2875,17 @@ def index() -> None:
                 g.apply()
                 hyp = editor.layout(prev_ids=base.identities)
                 amber = spreadsheet.changed_cell_ids(base, hyp)
-                red = spreadsheet.removed_cell_ids(base, hyp)
+                # RED marks the rows ON SCREEN NOW that the op would remove, so it must diff the
+                # CURRENT layout (`lay`) against `hyp`, NOT the focus-time `base`. An edit gesture
+                # commits in place while still focused (a wheeled / typed target limit lands and
+                # reflows the grid without ending the gesture), so the on-screen grid can differ
+                # from the focus snapshot: e.g. focus at 6-TILT, commit UP to 8-TILT (rows 8/9
+                # appear), then preview back DOWN — rows 8/9 are on screen and dropped, but they're
+                # absent from the stale `base`, so `removed_cell_ids(base, hyp)` would miss them
+                # (and symmetrically a shrunk grid would mark rows no longer present). `lay` is the
+                # truth for what's paintable. AMBER stays against `base` — it's the "what your edit
+                # moved since you focused" feedback, which is exactly the focus-relative diff.
+                red = spreadsheet.removed_cell_ids(lay, hyp)
             finally:
                 editor.restore_for_preview(token)  # leave no trace
             return amber - {g.source}, red
