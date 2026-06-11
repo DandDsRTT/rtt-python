@@ -2134,6 +2134,15 @@ class _GridBuilder:
                 self.cells.append(CellBox(cid, x, y, COL_W, ROW_H, "tuningvalue", text=service.cents(v), unit=u, alert=alert))
             if key in ("tuning", "just"):  # the tuning row sounds each interval's TEMPERED size, the
                 self._voice(f"{key}:{group}", i, v)  # just row its JUST size; retune (errors) is no pitch
+        # a pending comma/target/held/interest draft also gets a blank GREEN placeholder in every
+        # tuning-family row (tuning / just / retune / complexity / damage / weight), so the draft
+        # column reads green top-to-bottom — not only at its editable vectors up top. The enclosing
+        # bracket already spans the draft (content_w is _shown-wide), so only the cell is needed.
+        pending_idx = {"commas": (self.pending, self.nc), "targets": (self.pending_target, self.k),
+                       "held": (self.pending_held, self.nh), "interest": (self.pending_interest, self.mi)}.get(group)
+        if pending_idx is not None and pending_idx[0] is not None:
+            self.cells.append(CellBox(f"{key}:{self.group_elem[group]}:draft", self.group_left[group](pending_idx[1]),
+                                      y, COL_W, ROW_H, "tuningvalue", text="", pending=True))
 
     # a charted tile draws a bar chart in the band reserved above its values. The box spans
     # the value block exactly — the left bracket gutter, the value columns, and the right
@@ -2844,18 +2853,27 @@ class _GridBuilder:
                 if self.tile_open("mapping", "targets"):
                     for j in range(self.k):
                         self.cells.append(CellBox(f"cell:mapped:{i}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped[i][j]), gen=i, unit=self.cell_unit("mapping", "targets", gen=i)))
+                    if self.pending_target is not None:  # blank green placeholder under the draft target
+                        self.cells.append(CellBox(f"cell:mapped:{i}:draft", self.target_left(self.k), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                 if self.tile_open("mapping", "interest"):  # interest mapped through M, like the targets
                     for ii in range(self.mi):
                         self.cells.append(CellBox(f"cell:imapped:{i}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.interest_mapped[i][ii]), gen=i, unit=self.cell_unit("mapping", "interest", gen=i)))
+                    if self.pending_interest is not None:  # blank green placeholder under the draft interest interval
+                        self.cells.append(CellBox(f"cell:imapped:{i}:draft", self.interest_left(self.mi), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                 if self.tile_open("mapping", "held"):  # held mapped through M, like the targets / interest
                     for hi in range(self.nh):
                         self.cells.append(CellBox(f"cell:hmapped:{i}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.held_mapped[i][hi]), gen=i, unit=self.cell_unit("mapping", "held", gen=i), alert=self.held_unheld[hi]))
+                    if self.pending_held is not None:  # blank green placeholder under the draft held interval
+                        self.cells.append(CellBox(f"cell:hmapped:{i}:draft", self.held_left(self.nh), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                 # the comma basis mapped through M — it vanishes to 0 (parallel to the
                 # mapped target list); the raw basis lives in the interval-vectors row.
                 # Over V the unchanged basis maps too (M·U ≠ 0 — the held intervals in gen coords).
                 if self.tile_open("mapping", "commas"):
                     for c in range(self.nc):
                         self.cells.append(CellBox(f"cell:mapped_comma:{i}:{c}", self.comma_left(c), self.map_top(i), COL_W, ROW_H, "mapped", text=str(self.mapped_commas[i][c]), gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+                    if self.pending is not None:  # blank green placeholder under the draft comma, so the
+                        # draft column reads green down through the computed rows, not just its vectors
+                        self.cells.append(CellBox(f"cell:mapped_comma:{i}:{self.nc}", self.comma_left(self.nc), self.map_top(i), COL_W, ROW_H, "mapped", text="", gen=i, pending=True))
                     for j in range(self.nu):
                         mapped_text = DASH if self.unchanged_mapped[i][j] is None else str(self.unchanged_mapped[i][j])
                         self.cells.append(CellBox(f"cell:mapped_unchanged:{i}:{j}", self.comma_left(self.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
@@ -2894,6 +2912,10 @@ class _GridBuilder:
                 for p in range(self.d):
                     self.cells.append(CellBox(f"cell:proj_v:{p}:{c}", self.comma_left(c), self.proj_top(p),
                                          COL_W, ROW_H, "mapped", text="0", prime=p, comma=c))
+            if self.pending is not None:  # blank green placeholder column under the draft comma (P·draft)
+                for p in range(self.d):
+                    self.cells.append(CellBox(f"cell:proj_v:{p}:draft", self.comma_left(self.nc), self.proj_top(p),
+                                         COL_W, ROW_H, "mapped", text="", prime=p, pending=True))
             for j in range(self.nu):  # P·unchanged = the unchanged interval itself (dashed if U is)
                 dashed = self.unchanged_basis[j] is None
                 for p in range(self.d):

@@ -98,12 +98,15 @@ _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the 
 _PREVIEW_COLOR = "#f5a623"  # amber ring on a cell the in-progress edit moves (the edit-preview
 # highlight) — a warm "this changed" hue, kept distinct from the red _ALERT_COLOR / remove-preview
 # and the green _PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
-_PREVIEW_TEXT_COLOR = "#a37b00"  # the matching DARK gold/yellow a "changing" cell's TEXT wears: the
-# bright amber ring above is too light to read as text on the pale wash, so the value face uses this
-# darkened amber instead — the changing analogue of a draft's green text (_PENDING_COLOR) and an
-# alert's red text (_ALERT_COLOR). It also overrides the red a cell would otherwise inherit from
-# .rtt-alert when the live edit moves a cell that is ALSO alerting (gold "changing" wins while the
-# edit previews; the red returns on blur if the cell is still invalid). Tweakable apart from the ring
+_PREVIEW_TEXT_COLOR = "color-mix(in srgb, var(--preview-color) 60%, black)"  # the "changing" cell's
+# TEXT: the amber ring above DARKENED toward black — single-sourced from --preview-color so the wash,
+# the ring and the text are ONE golden-amber hue at three lightnesses (light wash / mid ring / dark
+# text), never a mix of hues. Mixing with black scales every channel equally, so the hue is preserved
+# exactly — only the lightness drops. The bright ring itself is too light to read as text on the pale
+# wash, hence the dark shade. This is the changing analogue of a draft's green text (_PENDING_COLOR)
+# and an alert's red text (_ALERT_COLOR); it also overrides the red a moved cell would otherwise
+# inherit from .rtt-alert when it is ALSO alerting (gold "changing" wins while the edit previews; the
+# red returns on blur if the cell is still invalid)
 _ALERT_COLOR = "#e53935"  # red for an alerting cell (.rtt-alert: a held interval the current tuning
 # no longer holds just). Once shared with the pending draft via _PENDING_COLOR; split off when drafts
 # went green, so "now invalid" stays red while "being created" reads green
@@ -1977,6 +1980,11 @@ class _Reconciler:
 
     def _update_tuning_value(self, cb):
         self.set_cents_face(cb.id, cb.text)
+        # a blank pending PLACEHOLDER in a tuning-family row (tuning / just / retune / complexity /
+        # …) of the draft column, ringed green by .rtt-cell:not(.rtt-cell-input).rtt-pending — the
+        # tuningvalue twin of the _update_label toggle. Committed cells are pending=False (no-op).
+        self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                remove="" if cb.pending else "rtt-pending")
 
     # ---- plain label cells: a ui.label whose text the update keeps in sync (set_text). prime /
     # formcell sit in a white-bordered box; ptext also tracks a shrink-to-fit font; boxtitle is static ----
@@ -1987,6 +1995,12 @@ class _Reconciler:
 
     def _update_label(self, cb):  # prime / formcell / colheader / rowlabel / mapped / vec
         self.labels[cb.id].set_text(cb.text)
+        # a blank pending PLACEHOLDER: the draft column's computed rows (mapping / tuning / …) are
+        # filled with empty cells so the WHOLE draft column reads green, not just its editable cells.
+        # Toggle rtt-pending on the wrap; .rtt-cell:not(.rtt-cell-input).rtt-pending rings it green.
+        # Committed cells are pending=False, so this just keeps the class cleared for them.
+        self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                                remove="" if cb.pending else "rtt-pending")
 
     def _update_ptext(self, cb):  # a read-only value: keep its text and shrink-to-fit font in sync
         self.labels[cb.id].set_text(cb.text)

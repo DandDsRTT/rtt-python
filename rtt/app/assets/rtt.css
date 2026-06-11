@@ -527,6 +527,14 @@
    so the "?/?" face shows alone, not doubled over the raw input text — the bug a plain (always-on)
    colour rule caused by overriding the stacked-cell transparency with !important. */
 .rtt-cell-input.rtt-pending:focus-within .rtt-cellinput .q-field__native { color:var(--pending-color) !important; }
+/* a pending NON-interactive placeholder: the draft column's computed rows below the vectors
+   (mapping, tuning, complexity, …) get filled with blank cells so the WHOLE draft column reads
+   green, not just its editable cells up top. Plain .rtt-cell only — :not(.rtt-cell-input) so it
+   never double-rings the editable draft cells (which carry their own .rtt-cellinput/.rtt-cell-input
+   green ring) — with the same green inset ring + faint wash the amber preview-change / red
+   preview-remove plain cells use. The placeholders are blank, so no text colour is needed. */
+.rtt-cell:not(.rtt-cell-input).rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
 /* a held interval the current tuning no longer holds just (its retuning error reads nonzero):
    the WHOLE cell renders red — every face inside the wrap, a plain input's text, and the
    fraction bar — clearing to black when the tuning is re-optimized. Its own --alert-color (red),
