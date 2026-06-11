@@ -529,6 +529,22 @@ async def test_dummy_tile_parts_reflect_and_drive_the_live_show_state(user: User
     assert "rtt-mnem-underline" in _part_classes(user, "mnemonics")
 
 
+async def test_toggling_gridded_values_off_at_runtime_removes_the_grid_value_cells(user: User) -> None:
+    # the user's own action: open the live page, then click the gridded-values part to turn it OFF.
+    # The dummy-tile test above only checks the PART's class flips; this drives the whole reconcile
+    # and asserts the actual grid value cells leave the DOM (render's orphan sweep drops every eid no
+    # longer in the layout). Guards the runtime-toggle path the fresh-load render tests never exercise
+    # — a value cell that survived a toggle (a kind missing from GRIDDED_KINDS) would be caught here.
+    await user.open("/")
+    await user.should_see(marker="prime:0")    # a quantities-row domain header cell (kind "prime")
+    await user.should_see(marker="target:0")   # a quantities-row interval-ratio cell (kind "ratiocell")
+    user.find(marker="showpart:gridded_values").click()  # turn gridded values OFF
+    await user.should_not_see(marker="prime:0")   # the value cells are gone, not just greyed
+    await user.should_not_see(marker="target:0")
+    user.find(marker="showpart:gridded_values").click()  # back on
+    await user.should_see(marker="prime:0")
+
+
 # --- tier 3: the edit -> render -> undo pipeline (input -> handler -> render) ---
 
 def _cell_child(user: User, cell_id: str):
