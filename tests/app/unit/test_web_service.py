@@ -1683,6 +1683,55 @@ def test_tuning_embedding_is_dashed_when_the_projection_is():
     assert service.tuning_embedding(state, ("2/1",)) is None
 
 
+def test_projection_matrix_rationals_returns_the_rational_p():
+    # the rational source behind tuning_projection's display strings — Fraction entries, so the
+    # spreadsheet can multiply vector sets through P (the projected lists P·D, P·H, P·T, P·interest)
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.projection_matrix_rationals(state, ("2/1", "5/4")) == (
+        (Fraction(1), Fraction(1), Fraction(0)),
+        (Fraction(0), Fraction(0), Fraction(0)),
+        (Fraction(0), Fraction(1, 4), Fraction(1)),
+    )
+
+
+def test_projection_matrix_rationals_is_none_for_an_under_held_tuning():
+    # None in lockstep with tuning_projection — an under-held tuning is no rational projection
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    assert service.projection_matrix_rationals(state) is None
+    assert service.projection_matrix_rationals(state, ("2/1",)) is None
+
+
+def test_project_vectors_applies_the_projection_to_each_column():
+    # P·v for each d-tall column. Projecting the generator detempering D gives the embedding G
+    # (P·D = GMD = G, since M·D = I): quarter-comma's second generator projects to 5^(1/4) = [0 0 1/4]
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    p = service.projection_matrix_rationals(state, ("2/1", "5/4"))
+    detempering = service.generator_detempering(state.mapping)  # ((1, 0, 0), (-1, 1, 0))
+    assert service.project_vectors(p, detempering) == (
+        (Fraction(1), Fraction(0), Fraction(0)),
+        (Fraction(0), Fraction(0), Fraction(1, 4)),
+    )
+
+
+def test_project_vectors_holds_the_held_intervals_fixed():
+    # P·H = H: the held intervals are the eigenvalue-1 directions, unchanged by the projection
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    p = service.projection_matrix_rationals(state, ("2/1", "5/4"))
+    held = ((1, 0, 0), (-2, 0, 1))  # 2/1 and 5/4
+    assert service.project_vectors(p, held) == (
+        (Fraction(1), Fraction(0), Fraction(0)),
+        (Fraction(-2), Fraction(0), Fraction(1)),
+    )
+
+
+def test_project_vectors_is_empty_without_a_projection():
+    # no P (None, an under-held tuning) or no vectors → empty, so the caller dashes / shows nothing
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    p = service.projection_matrix_rationals(state, ("2/1", "5/4"))
+    assert service.project_vectors(None, ((1, 0, 0),)) == ()
+    assert service.project_vectors(p, ()) == ()
+
+
 def test_unchanged_basis_from_projection_recovers_U_and_rejects_invalid():
     # a hand-edited P round-trips to its unchanged basis (eigenvalue-1 eigenvectors); an invalid edit
     # (not idempotent, or commas not in its kernel) is rejected with None

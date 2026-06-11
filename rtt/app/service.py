@@ -661,6 +661,34 @@ def tuning_embedding(state: TemperamentState, held_ratios=()):
         return None
 
 
+def projection_matrix_rationals(state: TemperamentState, held_ratios=()):
+    """The rational tempering projection ``P = GM`` as the ``d×d`` matrix of ``Fraction`` entries —
+    the numeric source behind :func:`tuning_projection`'s display strings, for multiplying vector
+    sets through ``P`` (the projected lists P·D / P·H / P·T / P·interest). ``None`` in lockstep with
+    :func:`tuning_projection` (an under-held / degenerate tuning is no rational projection)."""
+    try:
+        inputs = _projection_temperaments(state, _held_for_projection(state, held_ratios))
+        if inputs is None:
+            return None
+        return get_tempering_projection(*inputs)
+    except (ArithmeticError, ValueError, IndexError, TypeError):
+        return None
+
+
+def project_vectors(p_matrix, vectors):
+    """Each ``d``-tall column vector ``v`` projected through ``P`` (``P·v``). Returns a tuple of
+    ``d``-tall vectors (one per input column), or ``()`` when there is no projection (``p_matrix``
+    is ``None`` — the caller dashes the tile) or no vectors. Plain matrix·vector products, reused
+    by the spreadsheet's projection-row tiles and the matching plain-text bands."""
+    if p_matrix is None or not vectors:
+        return ()
+    d = len(p_matrix)
+    return tuple(
+        tuple(sum(p_matrix[i][j] * v[j] for j in range(d)) for i in range(d))
+        for v in vectors
+    )
+
+
 def _integer_columns(vectors):
     """sympy rational column vectors → primitive integer tuples (rows-as-intervals, like a comma
     basis): clear each to its lowest-terms integer form."""
