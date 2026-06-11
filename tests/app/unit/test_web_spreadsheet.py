@@ -3745,6 +3745,22 @@ def test_the_pending_comma_columns_ket_marks_are_flagged_for_green():
     assert not cells["ebktop:vec:commas:0"].pending
 
 
+def test_the_pending_comma_greens_the_advanced_prescaling_matrix_draft_column():
+    # the advanced complexity-prescaling matrix was the last tuning-family row leaving its draft
+    # column blank-white while a comma was pending; it now emits a blank green placeholder stacked
+    # over every prescaled sub-row, so the draft reads green top-to-bottom through it too.
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    alt = settings.defaults(); alt["weighting"] = True; alt["alt_complexity"] = True
+    cells = {c.id: c for c in spreadsheet.build(  # a non-unity slope reveals the prescaling matrix
+        base, alt, tuning_scheme="TILT minimax-S", pending_comma=[None, None, None]).cells}
+    draft = [k for k in cells if k.startswith("cell:prescaling:commas:") and k.endswith(":draft")]
+    assert draft, "the prescaling matrix emits a comma-draft placeholder column"
+    assert all(cells[k].pending and cells[k].text == "" for k in draft)  # blank, green-flagged
+    assert abs(cells[draft[0]].x - cells["tuning:comma:draft"].x) < 0.5  # same draft column as above
+    resting = {c.id: c for c in spreadsheet.build(base, alt, tuning_scheme="TILT minimax-S").cells}
+    assert not any(k.startswith("cell:prescaling:") and k.endswith(":draft") for k in resting)
+
+
 def test_the_comma_basis_plain_text_becomes_a_two_tone_draft_box_while_pending():
     # while a comma is pending the comma-basis plain text can't be a single-colour input
     # (it must show the committed commas black and the draft vector green), so it flips to a
