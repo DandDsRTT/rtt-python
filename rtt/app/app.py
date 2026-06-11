@@ -1203,7 +1203,8 @@ class _Reconciler:
         self._drag_token = None  # editor snapshot taken at drag pick-up, so the hover preview can revert
         self._reorder_baseline = None  # the grid at reorder pick-up: a cross-list move's ring-diff baseline
         self.els: dict = {}  # entity id -> outer element (persists across renders)
-        self.inputs: dict = {}  # mapping cell id -> q-input
+        self.inputs: dict = {}  # mapping cell id -> q-input (a fraction cell's NUMERATOR / its sole integer input)
+        self.den_inputs: dict = {}  # fraction cell id -> its DENOMINATOR q-input (ratio mode only; see _build_gridvalue)
         self.labels: dict = {}  # cell id -> the label whose text tracks state
         self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
         self.stacked_faces: dict = {}  # stacked-value cell id -> (main label, sub label): cents whole/.frac, power ∞/(max)
@@ -1233,7 +1234,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The edit-preview highlight: while one editable cell is focused, every render rings the
         # OTHER cells whose value the in-progress edit has moved, so the user previews the ripple
         # before leaving the cell. preview_baseline is the layout captured when the cell took focus
@@ -1566,6 +1567,21 @@ class _Reconciler:
         font = f"font-size:{_ratio_font(num, den, width):.2f}px"
         self.fracs[cid][0].style(font)
         self.fracs[cid][1].style(font)
+
+    def cell_value(self, cid):
+        """The committed string a gridded ratio-or-integer cell currently holds, reassembled from
+        its input(s). A fraction cell (``_build_gridvalue`` with ``ratio_allowed``) edits its
+        numerator and denominator in two separate inputs (``inputs[cid]`` / ``den_inputs[cid]``);
+        this rejoins them into the ``"num/den"`` the commit/parse callbacks expect — collapsing a
+        blank/``1`` denominator to a bare ``"num"`` (so ``2/1`` reads as ``2``), and a blank
+        numerator to ``""`` (a cleared cell, a silent no-op). An integer-mode cell has no
+        denominator input, so this is just its sole input's value. The single read every commit /
+        whole-matrix callback uses, so a split cell looks like one combined field to them."""
+        num = str(self.inputs[cid].value).strip()
+        den = str(self.den_inputs[cid].value).strip() if cid in self.den_inputs else ""
+        if not num:
+            return ""
+        return num if den in ("", "1") else f"{num}/{den}"
 
     # ---- cell-kind handlers (audit #3): each kind's build + update, co-located here so a
     # built-but-not-filled drift between the two ladders becomes structurally impossible ----
@@ -2949,7 +2965,7 @@ def index() -> None:
             if any(cid2 not in rec.inputs for row in ids for cid2 in row):
                 render()
                 return
-            matrix = [[str(rec.inputs[cid2].value).strip() for cid2 in row] for row in ids]
+            matrix = [[rec.cell_value(cid2) for cid2 in row] for row in ids]  # rejoin a fraction cell's num/den
             if any(not x for row in matrix for x in row):  # an in-progress edit (a cleared cell)
                 render()
                 return
@@ -2961,7 +2977,7 @@ def index() -> None:
             render()
             return
         group, tok = parts  # the column's id-TOKEN, not its index — a reorder decouples them
-        raw = str(rec.inputs[cid].value).strip()
+        raw = rec.cell_value(cid)  # the cell's "num/den" (a fraction cell rejoins its two fields)
         if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
             render()
             return
@@ -2996,7 +3012,7 @@ def index() -> None:
             # the unchanged-interval ratios drive the projection as a WHOLE: read the full basis (this
             # column's new ratio + the others) and retune to the projection that holds it — the scalar
             # twin of editing the U vectors (on_unchanged_change)
-            ratios = [str(rec.inputs[f"unchanged:{j}"].value).strip() for j in range(editor.state.r)
+            ratios = [rec.cell_value(f"unchanged:{j}") for j in range(editor.state.r)
                       if f"unchanged:{j}" in rec.inputs]
             if len(ratios) == editor.state.r and all(ratios):
                 editor.set_unchanged_basis(tuple(ratios))
@@ -3014,7 +3030,7 @@ def index() -> None:
         # back and toasts why. A cleared / unchanged cell is a silent no-op (no toast, no undo step).
         if building[0] or cid not in rec.inputs:
             return
-        raw = str(rec.inputs[cid].value).strip()
+        raw = rec.cell_value(cid)  # the cell's "num/den" (a fraction cell rejoins its two fields)
         tok = cid.split(":")[1]
         if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
             render()
@@ -3054,7 +3070,7 @@ def index() -> None:
         # cell is focused (which _preview_apply bails on) and diffs against preview_baseline.
         if building[0] or rec._editing != cid or rec.preview_baseline is None or cid not in rec.inputs:
             return
-        raw = str(rec.inputs[cid].value).strip()
+        raw = rec.cell_value(cid)  # the cell's "num/den" (a fraction cell rejoins its two fields)
         tok = cid.split(":")[1]
         parsed = service.parse_domain_element(raw) if raw not in ("", "?/?") else None
         if tok == "pending":
