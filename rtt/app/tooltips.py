@@ -141,7 +141,7 @@ _KIND_HELP: dict[str, str] = {
     "element_plus": "Add a domain basis element — opens a blank ?/? draft; type any positive rational (e.g. 13/5) to add it, held just (its own pure generator).",
     "element_minus": "Cancel the pending domain basis element draft.",
     "comma_plus": "Add a comma to the basis.",
-    "comma_minus": "Remove the last comma — un-tempers it, raising the rank; removing the sole comma leaves just intonation.",
+    "comma_minus": "Un-temper this comma — raising the rank; removing the sole comma leaves just intonation.",
     "interest_plus": "Add an interval of interest.",
     "interest_minus": "Remove this interval of interest.",
     "held_plus": "Add a held interval.",

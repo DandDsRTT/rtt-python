@@ -39,7 +39,7 @@ _INTERACTIVE_KINDS = [
     ("map_minus", "map_minus:0"),
     ("map_plus", "map_plus"),
     ("basis_minus", "basis_minus"),
-    ("comma_minus", "comma_minus"),
+    ("comma_minus", "comma_minus:0"),
     ("comma_plus", "comma_plus"),
     ("interest_minus", "interest_minus:0"),
     ("interest_plus", "interest_plus"),

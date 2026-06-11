@@ -2724,12 +2724,15 @@ class _GridBuilder:
                                              "ratiocell" if (full_u and not doomed) else "commaratio",
                                              text=self.unchanged_ratios[j] or DASH, comma=self.nc + j))
                         self._voice("quantities:commas", self.nc + j, self.unchanged_sizes.just[j])
-                # commas mirror the domain controls: + starts a (pending) comma; the − rides the
-                # last column's branch point — cancelling the draft, or un-tempering a real comma,
-                # down to the last one (which leaves just intonation, nullity 0 — nothing to remove).
-                # Stays live in the consolidated V view (removing a comma grows U by a column).
-                if self.pending is not None or self.nc > 0:
-                    branch_minus("comma_minus", "commas", self.nc_shown - 1, "comma_minus")
+                # commas mirror the interval lists: + starts a (pending) comma; each comma carries
+                # its OWN − on its branch point, so ANY one is removable — un-tempering it (−n, +r),
+                # down to and including the last (which leaves just intonation, nullity 0). The draft
+                # column's − cancels it. Stays live in the consolidated V view (removing a comma grows
+                # U by a column) — only the C half carries −, never the derived unchanged columns.
+                for c in range(self.nc):
+                    branch_minus(f"comma_minus:{c}", "commas", c, "comma_minus", comma=c)
+                if self.pending is not None:
+                    branch_minus("comma_minus:pending", "commas", self.nc, "comma_minus")
             if self.tile_open("quantities", "detempering"):  # the detempering generators as ratios (read-only,
                 for i in range(self.r):                       # derived from M like the comma ratios — no ± control)
                     self.cells.append(CellBox(f"detempering:{i}", self.detempering_left(i), qy, COL_W, ROW_H, "commaratio", text=self.gens[i]))
@@ -2840,8 +2843,11 @@ class _GridBuilder:
             def vec_minus(cid, ckey, i, kind, **kw):  # a − hover zone over column ckey's i-th branch point
                 self.cells.append(CellBox(cid, self.sub_axis_x(ckey, i) - COL_W / 2, self.fanout_y,
                                      COL_W, vtop - self.fanout_y, kind, **kw))
-            if self.tile_open("vectors", "commas") and (self.pending is not None or self.nc > 0):
-                vec_minus("comma_minus", "commas", self.nc_shown - 1, "comma_minus")
+            if self.tile_open("vectors", "commas"):
+                for c in range(self.nc):
+                    vec_minus(f"comma_minus:{c}", "commas", c, "comma_minus", comma=c)
+                if self.pending is not None:
+                    vec_minus("comma_minus:pending", "commas", self.nc, "comma_minus")
             if self.tile_open("vectors", "targets"):
                 if self.targets_editable:
                     for j in range(self.k):

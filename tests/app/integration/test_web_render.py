@@ -928,6 +928,30 @@ async def test_editable_ratio_cell_renders_a_stacked_fraction_face(user: User) -
     assert (num.value, den.value) == ("80", "81")              # the two fraction fields
 
 
+async def test_clicking_a_non_last_comma_minus_un_tempers_that_comma(user: User) -> None:
+    # each comma carries its own − now: clicking a NON-last comma's − un-tempers THAT comma, not the
+    # last. End-to-end through the live page: the click → app._build_list_minus → editor.remove_comma
+    # (index) wiring must route the clicked column's index. Drive meantone (81/80) to two commas by
+    # adding the diesis 128/125 = (7 0 -3), then click the FIRST comma's −.
+    await user.open("/")
+    _click_glyph(user, "comma_plus")                        # open the draft comma column (cell:comma:*:1)
+    _cell_child(user, "cell:comma:0:1").set_value("7")      # fill the diesis vector (7 0 -3)…
+    _cell_child(user, "cell:comma:1:1").set_value("0")
+    _cell_child(user, "cell:comma:2:1").set_value("-3")
+    _commit(user, "cell:comma:2:1")                         # …commit on blur → two commas, rank 1
+    await user.should_see(marker="comma_minus:1")           # the 2nd comma now carries its own −
+    # the same two-comma temperament built straight from the service, to predict each removal. The
+    # page renders state.comma_basis in canonical order and removes that same index, so comparing
+    # against service.remove_comma(·, 0) holds whatever order the basis canonicalises to.
+    two = service.from_comma_basis(((4, -4, 1), (7, 0, -3)))
+    drop0, drop_last = service.remove_comma(two, 0), service.remove_comma(two, -1)
+    keep0, keep_last = service.comma_ratios(drop0.comma_basis)[0], service.comma_ratios(drop_last.comma_basis)[0]
+    assert keep0 != keep_last                               # dropping the first vs the last genuinely differ
+    _click_glyph(user, "comma_minus:0")                     # click the FIRST comma's − (not the last)
+    await user.should_not_see(marker="comma_minus:1")       # back to a single comma
+    assert _ratio_value(user, "comma:0") == keep0           # the index-0 removal rendered, NOT the last-comma one
+
+
 def test_ratio_font_shrinks_a_long_fraction_to_fit_its_square() -> None:
     # the stacked fraction face sits at a fixed comfortable size, but a long numerator or
     # denominator (e.g. 65536 = the target 2/1 re-vectored to [16 0 0⟩) outgrows the 30px square.

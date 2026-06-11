@@ -1383,14 +1383,20 @@ class Editor:
         self._snapshot()
         self.state = service.set_domain_element(self.state, index, service.parse_domain_element(str(text)))
 
-    def remove_comma(self) -> None:
-        if self.pending_comma is not None:
-            self.pending_comma = None  # cancel the draft (not an undoable edit)
-            return
+    def cancel_pending_comma(self) -> None:
+        """Discard the pending comma draft without committing (the draft column's −).
+        Not an undoable edit — the draft was never part of the temperament."""
+        self.pending_comma = None
+
+    def remove_comma(self, index: int = -1) -> None:
+        """Un-temper comma ``index`` (the last by default) — re-dualing to a mapping with one
+        more row (−n, +r). Each comma carries its own −, so ANY one is removable, down to and
+        including the last (which leaves just intonation, nullity 0). A no-op with nothing
+        tempered; the + adds a comma back."""
         if self.state.n == 0:
             return  # nothing tempered: no comma to un-temper (the + adds one back)
         self._snapshot()
-        self.state = service.remove_comma(self.state)
+        self.state = service.remove_comma(self.state, index)
 
     def undo(self) -> None:
         if self._undo_stack:

@@ -405,15 +405,15 @@ def test_interval_minuses_rehome_to_the_vectors_row_when_quantities_hidden():
     state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
 
     shown = {c.id for c in spreadsheet.build(state).cells}
-    assert {"comma_minus", "target_minus:0", "minus", "gen_minus"} <= shown  # all there with the row shown
+    assert {"comma_minus:0", "target_minus:0", "minus", "gen_minus"} <= shown  # all there with the row shown
 
     folded = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"}).cells}
-    assert {"comma_minus", "target_minus:0"} <= folded   # the interval − re-home onto the vectors row...
+    assert {"comma_minus:0", "target_minus:0"} <= folded   # the interval − re-home onto the vectors row...
     assert {"minus", "gen_minus"}.isdisjoint(folded)     # ...the domain/generator − do not
     assert "basis_minus" in folded                       # (the domain − twin already lives on the vectors row)
 
     # a draft opened while the quantities row is hidden still carries its cancel − there
-    drafts = (("pending_comma", "comma_minus"), ("pending_interest", "interest_minus:pending"))
+    drafts = (("pending_comma", "comma_minus:pending"), ("pending_interest", "interest_minus:pending"))
     for arg, minus_id in drafts:
         cells = {c.id for c in spreadsheet.build(state, collapsed={"row:quantities"},
                                                  **{arg: [None, None, None]}).cells}
@@ -422,7 +422,7 @@ def test_interval_minuses_rehome_to_the_vectors_row_when_quantities_hidden():
     # both interval rows hidden → nothing to remove from, so the re-homed − go too
     off = settings.defaults(); off["domain_quantities"] = False
     both_hidden = {c.id for c in spreadsheet.build(state, off, collapsed={"row:vectors"}).cells}
-    assert {"comma_minus", "target_minus:0"}.isdisjoint(both_hidden)
+    assert {"comma_minus:0", "target_minus:0"}.isdisjoint(both_hidden)
 
 
 def test_generators_plus_and_minus_ride_the_generators_fan():
@@ -979,7 +979,7 @@ def test_gridded_values_off_empties_the_tiles_but_keeps_the_structure():
                    for c in ids)
     # no EBK marks (brackets, top brackets, braces, vector rules) and no domain/comma controls
     assert not any(c.startswith(("bracket:", "ebktop:", "ebkbrace:", "sep:")) for c in ids)
-    assert {"minus", "plus", "comma_minus", "comma_plus", "gen_minus", "gen_plus",
+    assert {"minus", "plus", "comma_minus:0", "comma_plus", "gen_minus", "gen_plus",
             "map_minus:0", "map_plus", "target_minus:0", "target_plus"}.isdisjoint(ids)  # every fan ± control goes too
     # ...but the tiles stand empty save their fold toggles and name captions, and
     # the labels, headers and gridlines remain so the empty grid still reads
@@ -1057,7 +1057,7 @@ def test_temperament_boxes_off_removes_the_mapping_and_vectors_rows_and_domain_c
     assert "header:commas" not in off
     assert not any(c.startswith(("comma:", "cell:comma:", "tuning:comma:", "just:comma:",
                                  "retune:comma:")) for c in off)
-    assert {"comma_plus", "comma_minus"}.isdisjoint(off)
+    assert {"comma_plus", "comma_minus:0"}.isdisjoint(off)
     # tuning over the targets survives and rises into the freed space
     assert "tuning:target:0" in off
     assert off["tuning:target:0"].y < on["tuning:target:0"].y
@@ -3696,19 +3696,21 @@ def test_commas_column_has_an_add_comma_control():
     assert cells["comma_plus"].x > cells["comma:0"].x  # in the gutter right of the basis
 
 
-def test_comma_minus_rides_the_last_comma_whenever_one_is_tempered():
+def test_each_comma_carries_its_own_minus_on_its_branch_point():
     lay = _layout()  # meantone exposes a single comma
     one, by1 = {c.id: c for c in lay.cells}, {ln.id: ln for ln in lay.lines}
-    assert "comma_minus" in one  # the SOLE comma is removable now (un-tempers to just intonation)
-    cm = one["comma_minus"]  # centred on the lone comma's branch point, dropping from the top bus
+    assert "comma_minus:0" in one  # the SOLE comma is removable now (un-tempers to just intonation)
+    cm = one["comma_minus:0"]  # centred on the lone comma's branch point, dropping from the top bus
     assert abs((cm.x + cm.w / 2) - by1["v:comma:0"].pos) < 0.51
     assert cm.y == by1["bus:commas:top"].pos
-    two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real commas: − tracks the new last
+    two = service.from_comma_basis([[4, -4, 1], [4, -5, 1]])  # two real commas: EACH carries its own −
     tlay = spreadsheet.build(two)
     cells, by2 = {c.id: c for c in tlay.cells}, {ln.id: ln for ln in tlay.lines}
-    assert abs((cells["comma_minus"].x + cells["comma_minus"].w / 2) - by2["v:comma:1"].pos) < 0.51
+    assert {"comma_minus:0", "comma_minus:1"} <= set(cells)  # any comma removable, not just the last
+    assert abs((cells["comma_minus:0"].x + cells["comma_minus:0"].w / 2) - by2["v:comma:0"].pos) < 0.51
+    assert abs((cells["comma_minus:1"].x + cells["comma_minus:1"].w / 2) - by2["v:comma:1"].pos) < 0.51
     ji = service.add_mapping_row(service.from_mapping(((1, 1, 0), (0, 1, 4))))  # full rank, n=0
-    assert "comma_minus" not in {c.id for c in spreadsheet.build(ji).cells}  # nothing tempered to remove
+    assert not any(c.startswith("comma_minus") for c in {c.id for c in spreadsheet.build(ji).cells})  # nothing to remove
 
 
 def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():
@@ -3723,9 +3725,10 @@ def test_adding_a_comma_starts_a_pending_draft_column_that_does_not_re_rank():
     assert "cell:mapping:1:0" in cells and "cell:mapping:2:0" not in cells
     # the draft has no size cells (undefined until valid)
     assert "tuning:comma:1" not in cells
-    # the − rides the draft column's branch point (to cancel it)
+    # the draft column carries its own − on its branch point (to cancel it); the real comma keeps its
     by_id = {ln.id: ln for ln in spreadsheet.build(base, pending_comma=[None, None, None]).lines}
-    assert abs((cells["comma_minus"].x + cells["comma_minus"].w / 2) - by_id["v:comma:1"].pos) < 0.51
+    assert "comma_minus:0" in cells  # the real comma stays independently removable
+    assert abs((cells["comma_minus:pending"].x + cells["comma_minus:pending"].w / 2) - by_id["v:comma:1"].pos) < 0.51
 
 
 def test_a_partly_typed_pending_comma_shows_its_entered_components():
@@ -6468,7 +6471,7 @@ def test_changed_cell_ids_rings_only_value_cells_not_marks_or_controls():
         CellBox("ebkangle:vec:commas:1", 0, 0, 10, 10, "ebkangle"),
         CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),         # a column separator ("subgridline")
         CellBox("grip:targets:0", 0, 0, 10, 10, "colgrip"),     # a drag grip
-        CellBox("comma_minus", 0, 0, 10, 10, "comma_minus"),    # a - control
+        CellBox("comma_minus:0", 0, 0, 10, 10, "comma_minus"),  # a - control
     )
     assert spreadsheet.changed_cell_ids(old, new) == frozenset({"v"})
 
@@ -6495,7 +6498,7 @@ def test_removed_cell_ids_ignores_survivors_added_cells_and_removed_scaffolding(
         CellBox("ebkangle:vec:commas:1", 0, 0, 10, 10, "ebkangle"),  # marks / controls deleted with it
         CellBox("sep:targets:1", 0, 0, 10, 10, "vbar"),
         CellBox("grip:commas:1", 0, 0, 10, 10, "colgrip"),
-        CellBox("comma_minus", 0, 0, 10, 10, "comma_minus"),
+        CellBox("comma_minus:1", 0, 0, 10, 10, "comma_minus"),
     )
     new = _diff_layout(_diff_cell("survivor", "1"), _diff_cell("added", "9"))
     assert spreadsheet.removed_cell_ids(old, new) == frozenset({"value"})
@@ -8084,14 +8087,14 @@ def test_projection_keeps_the_comma_add_remove_controls():
     cells = {c.id: c for c in _with(projection=True).cells}
     # commas stay addable/removable in the consolidated V view (adding one shrinks U by a column);
     # the + rides the rightmost comma's branch point — no free stub past it, U holds the next slots —
-    # and the − its usual last-comma hover zone. No +/− on the unchanged half.
-    assert "comma_plus" in cells and "comma_minus" in cells
+    # and each comma carries its own − hover zone. No +/− on the unchanged half.
+    assert "comma_plus" in cells and "comma_minus:0" in cells
     assert cells["comma_plus"].x < cells["cell:unchanged:0:0"].x   # the + sits left of U
     # the + rides its ORDINARY stub — one COL_W past the last comma's branch point — clear of the −
     # (which sits ON that branch point), where the new column lands on click
     assert abs(cells["comma_plus"].x - (cells["cell:comma:0:0"].x + spreadsheet.COL_W * 1.5 - spreadsheet.BTN / 2)) < 0.51
-    # and a COL_W clear of the − hover zone on the last comma (so the + is actually clickable)
-    assert cells["comma_plus"].x - cells["comma_minus"].x >= spreadsheet.COL_W - spreadsheet.BTN
+    # and a COL_W clear of the − hover zone on the lone comma (so the + is actually clickable)
+    assert cells["comma_plus"].x - cells["comma_minus:0"].x >= spreadsheet.COL_W - spreadsheet.BTN
 
 
 def test_projection_at_full_rank_shows_the_complete_unchanged_basis():
@@ -8105,7 +8108,7 @@ def test_projection_at_full_rank_shows_the_complete_unchanged_basis():
         [["1", "0", "0"], ["0", "1", "0"], ["0", "0", "1"]]      # U = all d primes
     assert [cells[f"cell:scaling:{c}"].text for c in range(3)] == ["1", "1", "1"]  # every prime unchanged
     assert "comma_plus" in cells           # …and a + to add a first comma back
-    assert "comma_minus" not in cells      # nothing to remove
+    assert not any(c.startswith("comma_minus") for c in cells)  # nothing to remove
     # no comma half, so no C|U divider and no wasted gap — U starts at the column's left and runs flush
     assert not any(c.startswith("vsplit:") for c in cells)
     assert cells["cell:unchanged:0:1"].x - cells["cell:unchanged:0:0"].x == spreadsheet.COL_W

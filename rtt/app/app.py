@@ -2604,11 +2604,8 @@ class _Reconciler:
             .on("click", lambda _=None: self._cb.act(self._editor.shrink))
         self._preview_control(wrap, self._editor.shrink)
 
-    def _build_comma_minus(self, cb, wrap):  # drop the last comma, or cancel the pending draft
-        wrap.classes("rtt-minus-zone")
-        ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.remove_comma))
-        self._preview_control(wrap, self._editor.remove_comma)
+    def _build_comma_minus(self, cb, wrap):  # each comma's − un-tempers just that comma; the draft's − cancels it
+        self._build_list_minus(cb, wrap, self._editor.cancel_pending_comma, self._editor.remove_comma)
 
     # the + that opens a blank, off-screen draft column (comma / interest / held / target) gets NO
     # hover preview: the new column is empty and not yet placed, so nothing on screen would change —

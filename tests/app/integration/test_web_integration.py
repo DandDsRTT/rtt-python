@@ -130,7 +130,7 @@ def test_removing_the_last_comma_reaches_just_intonation_and_renders():
     assert _mapping(editor) == [[1, 0, 0], [0, 1, 0], [0, 0, 1]]  # identity: nothing tempered
     assert editor.state.n == 0
     ids = {c.id for c in editor.layout().cells}
-    assert "comma_plus" in ids and "comma_minus" not in ids  # + to add one back; nothing to remove
+    assert "comma_plus" in ids and not any(c.startswith("comma_minus") for c in ids)  # + to add one back; nothing to remove
     assert "comma:0" not in ids and "cell:comma:0:0" not in ids  # the commas column is empty
     editor.undo()
     assert _comma_basis(editor) == [[4, -4, 1]]  # one undoable edit restores meantone

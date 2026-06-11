@@ -518,26 +518,42 @@ def test_incomplete_or_dependent_pending_comma_is_held_not_committed():
     assert editor.pending_comma == [8, -8, 2] and editor.state.r == 2  # not a new comma -> held
 
 
-def test_removing_a_pending_comma_cancels_the_draft():
-    # a pending draft takes precedence: remove_comma cancels the DRAFT rather than dropping a real
-    # comma (even though the last real comma is itself removable now — see the un-tempering tests).
+def test_cancelling_a_pending_comma_discards_the_draft():
+    # the draft column's − cancels the DRAFT (cancel_pending_comma), leaving any real comma
+    # untouched — distinct from remove_comma, which un-tempers a real comma (see below).
     editor = Editor()
     editor.add_comma()
     assert editor.can_remove_comma is True  # a pending draft can be cancelled
-    editor.remove_comma()
+    editor.cancel_pending_comma()
     assert editor.pending_comma is None
     assert editor.state.comma_basis == ((4, -4, 1),)  # the real comma untouched — the draft went, not it
     assert editor.can_undo is False  # cancelling a draft is not an undoable edit
 
 
-def test_removing_a_real_comma_drops_the_last_when_no_draft_is_pending():
+def test_removing_a_real_comma_drops_the_last_by_default():
     editor = Editor()
     editor.add_comma()
     editor.set_pending_comma([4, -5, 1])  # commit a 2nd comma -> 2 real, no pending
     assert editor.pending_comma is None and len(editor.state.comma_basis) == 2
-    editor.remove_comma()  # no draft -> drop the last real comma
+    editor.remove_comma()  # the default drops the last real comma
     assert editor.state.comma_basis == ((4, -4, 1),)
     assert editor.state.r == 2  # the mapping regained its row
+
+
+def test_removing_a_comma_can_target_any_index_not_only_the_last():
+    # each comma carries its own − now, so remove_comma takes the column's index: dropping the
+    # FIRST of two commas un-tempers just it — a different result from dropping the last.
+    editor = Editor()
+    editor.add_comma()
+    editor.set_pending_comma([4, -5, 1])  # 2 real commas
+    two = editor.state
+    assert len(two.comma_basis) == 2 and two.r == 1  # both tempered: nullity 2, rank 1
+    editor.remove_comma(0)  # drop the FIRST comma, not the last
+    assert editor.state.n == 1 and editor.state.r == 2          # one comma un-tempered
+    assert editor.state == service.remove_comma(two, 0)         # exactly the index-0 drop...
+    assert editor.state != service.remove_comma(two, -1)        # ...NOT the default last-comma drop
+    editor.undo()
+    assert editor.state == two  # one undoable edit restores both commas
 
 
 def test_editor_starts_with_default_tuning_scheme_and_target_spec():
