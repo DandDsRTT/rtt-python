@@ -2920,12 +2920,13 @@ class _GridBuilder:
                         mapped_text = DASH if self.unchanged_mapped[i][j] is None else str(self.unchanged_mapped[i][j])
                         self.cells.append(CellBox(f"cell:mapped_unchanged:{i}:{j}", self.comma_left(self.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
             # the draft generator row being added: a green ?/blank row at index r — the ROW mirror of
-            # the pending comma column. It rides ONLY the mapping band (the genmap, canonical mapping
+            # the pending comma COLUMN. It rides ONLY the mapping band (the genmap, canonical mapping
             # and comma dual all stay at the committed rank), and commits once the typed row appended
-            # to M is a proper temperament (set_pending_mapping_row). Its cells are the editable matrix
-            # BLANKS the user fills, plus a "?" generator ratio on the spine and a − that cancels the
-            # add; the derived mapped columns carry no entry for it yet (their [ ] stay at the r
-            # committed rows), so the draft slot there is simply empty until it commits.
+            # to M is a proper temperament (set_pending_mapping_row). Beyond the editable matrix BLANKS
+            # the user fills (plus a "?" generator ratio on the spine and a − to cancel), every derived
+            # mapped tile gets a blank green PLACEHOLDER at the draft row, so the row reads green ALL
+            # THE WAY ACROSS the band — the row mirror of a draft column reading green top-to-bottom
+            # (the values are undefined until the row commits). The r_shown brackets enclose them.
             if self.pending_mapping_row is not None:
                 dr = self.r  # the draft row's index, one past the committed generators
                 if self.tile_open("mapping", "quantities"):
@@ -2937,6 +2938,22 @@ class _GridBuilder:
                     for p in range(self.d):
                         v = self.pending_mapping_row[p]
                         self.cells.append(CellBox(f"cell:mapping:{dr}:{p}", self.prime_left(p), self.map_top(dr), COL_W, ROW_H, "mapping", text="" if v is None else str(v), gen=dr, prime=p, pending=True))
+                # blank green placeholders in the derived mapped tiles (M·target / M·interest / M·held
+                # / M·comma / M·U for the not-yet-committed generator), so the whole draft row greens
+                if self.tile_open("mapping", "targets"):
+                    for j in range(self.k):
+                        self.cells.append(CellBox(f"cell:mapped:{dr}:{self.col_token('targets', j)}", self.target_left(j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                if self.tile_open("mapping", "interest"):
+                    for ii in range(self.mi):
+                        self.cells.append(CellBox(f"cell:imapped:{dr}:{self.col_token('interest', ii)}", self.interest_left(ii), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                if self.tile_open("mapping", "held"):
+                    for hi in range(self.nh):
+                        self.cells.append(CellBox(f"cell:hmapped:{dr}:{self.col_token('held', hi)}", self.held_left(hi), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                if self.tile_open("mapping", "commas"):
+                    for c in range(self.nc):
+                        self.cells.append(CellBox(f"cell:mapped_comma:{dr}:{c}", self.comma_left(c), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
+                    for j in range(self.nu):
+                        self.cells.append(CellBox(f"cell:mapped_unchanged:{dr}:{j}", self.comma_left(self.nc_shown + j), self.map_top(dr), COL_W, ROW_H, "mapped", text="", gen=dr, pending=True))
 
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
         # maps like the mapping. Its cells are "mapped" (a computed value, not editable like the

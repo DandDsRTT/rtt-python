@@ -3772,10 +3772,11 @@ def test_adding_a_mapping_row_starts_a_pending_draft_row_that_does_not_re_rank()
     assert cells["gen:pending"].text == "?" and cells["gen:pending"].pending
     assert cells["bracket:map:pending:l"].pending and cells["bracket:map:pending:r"].pending  # green, like the cells
     assert cells["map_minus:pending"].pending
-    # the temperament is untouched: the genmap stays at the committed rank (no 3rd generator ratio),
-    # and the derived mapped target column carries no entry for the draft row (its [ ] stays at r rows)
+    # the temperament is untouched: the genmap / canonical mapping stay at the committed rank (no 3rd
+    # generator ratio). The derived mapped tiles DO get a blank green placeholder at the draft row, so
+    # the whole row reads green across the band (the row mirror of a draft column reading green down).
     assert "gen:2" not in cells
-    assert "cell:mapped:2:0" not in cells and "cell:mapped:2:t0" not in cells
+    assert cells["cell:mapped:2:0"].pending and cells["cell:mapped:2:0"].text == ""
 
 
 def test_a_partly_typed_pending_mapping_row_shows_its_entered_components():
@@ -3810,18 +3811,20 @@ def test_the_mapping_plain_text_becomes_a_two_tone_draft_box_while_a_row_is_pend
     assert resting["ptext:mapping:primes"].kind == "ptextedit"  # no draft -> editable again
 
 
-def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_empty_slot():
+def test_the_mapped_list_brackets_grow_to_enclose_the_draft_rows_placeholders():
     # the spanning derived [ ]s (M·targets, M·commas) grow with the band so they enclose the draft
-    # row's slot at the band floor — mirroring the comma draft, whose mapped_comma [ ] grows over
-    # nc_shown to enclose its empty draft-COLUMN slot. No mapped cell is emitted in the draft row
-    # (its value is undefined until the row commits); the bracket just extends over the empty slot.
+    # row's blank green placeholders at the band floor — mirroring the comma draft, whose mapped_comma
+    # [ ] grows over nc_shown to enclose its draft-COLUMN placeholder. The placeholders read green
+    # (their value is undefined until the row commits), so the draft row greens all the way across.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # r=2
     plain = {c.id: c for c in spreadsheet.build(base).cells}
     drafting = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
     for bid in ("bracket:mapped:l", "bracket:mapped_comma:l"):
         assert plain[bid].h == 2 * spreadsheet.ROW_H        # committed: r rows
-        assert drafting[bid].h == 3 * spreadsheet.ROW_H     # draft: r_shown rows (encloses the slot)
-    assert "cell:mapped:2:0" not in drafting                # ...but no derived cell is emitted in it
+        assert drafting[bid].h == 3 * spreadsheet.ROW_H     # draft: r_shown rows
+    # the draft row's mapped cells are blank green placeholders the grown bracket now encloses
+    assert drafting["cell:mapped:2:0"].pending and drafting["cell:mapped:2:0"].text == ""
+    assert drafting["cell:mapped_comma:2:0"].pending and drafting["cell:mapped_comma:2:0"].text == ""
 
 
 # --- math expressions: the just row's exact log₂ closed forms ---
