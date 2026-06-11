@@ -1234,6 +1234,7 @@ class Editor:
         independent generator can be added holding the d primes, so the + does not open a draft."""
         if not self.can_add_mapping_row:
             return  # full rank: no independent generator to add (n = 0)
+        self._clear_pending()  # one draft at a time: opening this discards any other
         self.pending_mapping_row = [None] * self.state.d
 
     def set_pending_mapping_row(self, values) -> None:

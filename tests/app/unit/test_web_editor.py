@@ -1205,16 +1205,22 @@ def test_opening_a_draft_discards_any_other_pending_draft():
     assert editor.pending_element is None and editor.pending_comma is not None
 
 
-def test_add_mapping_row_discards_a_pending_comma_draft():
-    # add_mapping_row commits directly (it re-ranks via the mapping); a half-typed comma draft
-    # left open would later re-dual from the comma basis and silently undo the new generator row.
+def test_comma_and_mapping_row_drafts_cannot_coexist():
+    # add_mapping_row opens a DRAFT row (the mapping-row draft, the row mirror of add_comma).
+    # Opening either must discard the other, else completing one re-ranks from a different source
+    # of truth (comma basis vs mapping) and silently undoes the other's edit.
     editor = Editor()
-    editor.state = service.from_mapping(((12, 19, 28),))
+    editor.state = service.from_mapping(((12, 19, 28),))  # n = 2, so a row draft can open
     editor.add_comma()
-    editor.set_pending_comma([4, -4, None])  # partial draft, deliberately left open
-    editor.add_mapping_row()
+    editor.set_pending_comma([4, -4, None])  # partial comma draft, deliberately left open
+    editor.add_mapping_row()  # opening the row draft discards the comma draft
     assert editor.pending_comma is None
-    assert editor.state.r == 2
+    assert editor.pending_mapping_row is not None
+    # symmetric: opening a comma draft discards a pending mapping-row draft
+    editor.set_pending_mapping_row([1, 0, None])  # partial row draft
+    editor.add_comma()
+    assert editor.pending_mapping_row is None
+    assert editor.pending_comma is not None
 
 
 def test_comma_and_element_drafts_cannot_coexist():
