@@ -1633,26 +1633,36 @@ class _Reconciler:
         """Fill the ``.rtt-ratio`` container: the ~approximate marker + stacked fraction for a real
         NUMERIC ratio; otherwise the bare value (empty when blanked, a lone ``—`` when dashed). The
         ~ and the fraction's bar are for numbers only — a dash or a blank gets neither (so a
-        quantities-off cell goes truly empty, never leaving a stranded ``~`` over an empty bar)."""
+        quantities-off cell goes truly empty, never leaving a stranded ``~`` over an empty bar).
+
+        A WHOLE numeric ratio (``"n/1"``) collapses to a bare big integer ``n`` — no ~, no bar, no
+        denominator (``rtt-frac-whole`` hides the latter two) — the read-only twin of the editable
+        cell's int view (``_update_fraction``), so a generator-detempering / unrotated-vector-list /
+        generator value of ``2/1`` reads "2", not "2 over 1". _update_ratio rebuilds this body on
+        every render, so the collapse follows the value with no separate in-place patching."""
         parts = _ratio_parts(cb.text)
         if parts and not all(p.lstrip("-").isdigit() for p in parts):
             parts = None  # a dashed "—/—" isn't a number — render it bare, no ~ / fraction bar
-        if approx and parts:
+        whole = bool(parts) and parts[1] == "1"  # "n/1" -> the bare integer "n" (collapse like the editable cell)
+        if approx and parts and not whole:  # ~ marks an approximate FRACTION, never a bare integer / dash / blank
             ui.label("~").classes("rtt-approx")
         if parts:
-            with ui.element("div").classes("rtt-frac"):
+            with ui.element("div").classes("rtt-frac rtt-frac-whole" if whole else "rtt-frac"):
                 num = ui.label(parts[0]).classes("rtt-frac-num")
                 den = ui.label(parts[1]).classes("rtt-frac-den")
             self.fracs[cb.id] = (num, den)
-            self._fit_ratio(cb.id, parts[0], parts[1], cb.w)
+            self._fit_ratio(cb.id, parts[0], parts[1], cb.w, whole)
         else:
             self.labels[cb.id] = ui.label(cb.text).classes("rtt-value")
 
-    def _fit_ratio(self, cid, num, den, width):
+    def _fit_ratio(self, cid, num, den, width, whole=False):
         """Size a stacked fraction's two lines to fit its square: a long numerator/denominator
         would spill the cell at the comfortable face size, so num and den shrink together (see
-        _ratio_font). Shared by the build and the in-place update so a re-vectored ratio re-fits."""
-        font = f"font-size:{_ratio_font(num, den, width):.2f}px"
+        _ratio_font). A whole ratio (collapsed to a bare integer) fills the square at the big value
+        font instead — the read-only twin of the editable int view (_fit_fraction). Shared by the
+        build and the in-place update so a re-vectored ratio re-fits."""
+        size = _digit_fit_font(len(num), width, float(_CELL_FONT)) if whole else _ratio_font(num, den, width)
+        font = f"font-size:{size:.2f}px"
         self.fracs[cid][0].style(font)
         self.fracs[cid][1].style(font)
 
@@ -2071,11 +2081,13 @@ class _Reconciler:
 
     def _update_ratio(self, cb):  # genratio / commaratio (read-only): rebuild the stacked fraction face
         # The value's SHAPE can flip between renders — a real numeric ratio <-> a blanked (quantities
-        # off) or dashed value — and the ~approx + fraction structure differs from a bare label.
-        # Patching the fraction's numbers in place (the old path) would strand a ~ over an empty
-        # fraction bar when the value blanks (the reported "~-"), so rebuild the container's contents
-        # from the current value instead. The .rtt-ratio container itself (and the per-cell unit that
-        # rides the wrap beside it) are untouched. A pending "?" cell has no container — it's static.
+        # off) or dashed value, or a whole "n/1" <-> a true fraction — and the ~approx + fraction
+        # structure differs from a bare label / bare integer. Patching the fraction's numbers in
+        # place (the old path) would strand a ~ over an empty fraction bar when the value blanks (the
+        # reported "~-"), so rebuild the container's contents from the current value instead — which
+        # also re-applies the whole-number collapse for free. The .rtt-ratio container itself (and
+        # the per-cell unit that rides the wrap beside it) are untouched. A pending "?" cell has no
+        # container — it's static.
         face = self.ratio_faces.get(cb.id)
         if face is None:
             return

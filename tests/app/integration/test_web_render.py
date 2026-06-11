@@ -128,6 +128,33 @@ async def test_enabling_generator_detempering_renders_the_column(user: User) -> 
     await user.should_see(marker="header:detempering")
 
 
+async def test_generators_column_collapses_a_whole_ratio_to_a_bare_integer(user: User) -> None:
+    # the generators quantities-row ratios are a READ-ONLY ratio face (genratio). The default
+    # meantone's detempering D = (2/1, 3/2): the octave period is a WHOLE ratio, so it must render
+    # as a bare "2" — not the stacked "2 over 1" — like the editable ratio cells already collapse it.
+    await user.open("/")
+    num, _den, collapsed = _ro_ratio_face(user, "qgen:0")
+    assert collapsed and num == "2"            # 2/1 -> bare integer, ~ and bar dropped
+    _n, _d, gen_collapsed = _ro_ratio_face(user, "qgen:1")
+    assert not gen_collapsed                    # the fifth (~3/2) stays a stacked fraction
+    # the collapse survives a re-render: toggling an unrelated layer drives qgen:0 through
+    # _update_ratio (the persisted-cell path, distinct from the initial build), and it stays "2"
+    _toggle(user, "symbols")
+    num2, _d2, still = _ro_ratio_face(user, "qgen:0")
+    assert still and num2 == "2"
+
+
+async def test_detempering_column_collapses_a_whole_ratio_to_a_bare_integer(user: User) -> None:
+    # the generator-detempering quantities-row ratios are a READ-ONLY ratio face (commaratio) — the
+    # column the user named. Its octave detempering 2/1 must collapse to a bare "2" too.
+    await _enable(user, "generator detempering")
+    await user.should_see(marker="detempering:0")
+    num, _den, collapsed = _ro_ratio_face(user, "detempering:0")
+    assert collapsed and num == "2"            # 2/1 -> bare integer
+    _n, _d, fifth_collapsed = _ro_ratio_face(user, "detempering:1")
+    assert not fifth_collapsed                  # the fifth (3/2) stays a stacked fraction
+
+
 async def test_enabling_projection_renders_the_box(user: User) -> None:
     # the projection box P = GM (a tuning-boxes sub-control). Assert the row label renders, and
     # lean on the fixture's ERROR-log guard to catch any fault building the d×d matrix's cells,
@@ -576,15 +603,17 @@ async def test_quantities_off_at_runtime_does_not_strand_a_tilde_on_blanked_gene
     # off at runtime BLANKS them, which must clear the whole face: the old update path patched the
     # fraction's numbers in place and left the "~" stranded over an empty fraction bar — a meaningless
     # "~-". Drive the runtime toggle and assert no approximate marker survives on a blanked generator
-    # cell (the fresh-load render never hits this — only the in-place value update does).
+    # cell (the fresh-load render never hits this — only the in-place value update does). Use the
+    # SECOND generator (the fifth, ~3/2) — the first is the octave 2/1, which now collapses to a bare
+    # "2" with no ~ (a whole ratio isn't an approximate fraction), so it carries no marker to strand.
     await user.open("/")
-    assert _approx_markers(user, "gen:0")      # mapping-row quantity shows ~2/1 by default
-    assert _approx_markers(user, "qgen:0")     # generator-col quantity likewise
+    assert _approx_markers(user, "gen:1")      # mapping-row quantity shows ~3/2 by default
+    assert _approx_markers(user, "qgen:1")     # generator-col quantity likewise
     user.find(marker="showpart:quantities").click()   # turn general quantities OFF (the dummy-tile part)
-    assert not _approx_markers(user, "gen:0")  # blanked: the whole face cleared, no stray ~ (nor bar)
-    assert not _approx_markers(user, "qgen:0")
+    assert not _approx_markers(user, "gen:1")  # blanked: the whole face cleared, no stray ~ (nor bar)
+    assert not _approx_markers(user, "qgen:1")
     user.find(marker="showpart:quantities").click()   # back on
-    assert _approx_markers(user, "gen:0")      # the ~2/1 face is rebuilt
+    assert _approx_markers(user, "gen:1")      # the ~3/2 face is rebuilt
 
 
 # --- tier 3: the edit -> render -> undo pipeline (input -> handler -> render) ---
@@ -621,6 +650,20 @@ def _ratio_value(user: User, cell_id: str) -> str:
 def _wrap_classes(user: User, cell_id: str) -> list[str]:
     """The CSS classes on a grid cell's wrap (e.g. rtt-alert when its value is flagged red)."""
     return next(iter(user.find(marker=cell_id).elements))._classes
+
+
+def _ro_ratio_face(user: User, cell_id: str):
+    """A READ-ONLY ratio face (genratio / commaratio: detempering, generators, unchanged auto-list)
+    as ``(numerator_text, denominator_text, collapsed)``. ``collapsed`` is True when the value is a
+    whole ratio ``"n/1"`` shown as a bare integer — flagged by ``rtt-frac-whole`` on the .rtt-frac
+    div (the ~ omitted, the bar and denominator hidden). The wrap's first child is the .rtt-ratio
+    container (a label-only "–" placeholder has no .rtt-frac, so callers pass it only when the value
+    is a real ratio)."""
+    face = _cell_child(user, cell_id)  # the .rtt-ratio div
+    frac = next(c for c in face.default_slot.children if "rtt-frac" in getattr(c, "_classes", []))
+    collapsed = "rtt-frac-whole" in getattr(frac, "_classes", [])
+    num, den = frac.default_slot.children[0], frac.default_slot.children[1]
+    return num.text, den.text, collapsed
 
 
 def _click_glyph(user: User, cell_id: str) -> None:
