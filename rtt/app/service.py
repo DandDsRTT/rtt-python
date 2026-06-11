@@ -1505,14 +1505,17 @@ def plain_text_values(
     superspace_generator_override=None,
     consolidate_v: bool = False,
     held_basis_ratios=(),
+    custom_prescaler=None,
 ) -> dict[tuple[str, str], str]:
     """Each value group's natural plain-text form, keyed by its ``(row, column)``
     tile (the same vocabulary the spreadsheet layout uses). The grid and this text
     show the same numbers two ways — the EBK string is the inline notation. ``held``
     (the held interval vectors), ``interest`` (the other-intervals-of-interest vectors),
-    ``generator_tuning`` (a frozen manual tuning) and ``target_override`` (a typed explicit
-    target list) are threaded into the same tuning/targets the grid builds, so the two views
-    can't diverge."""
+    ``generator_tuning`` (a frozen manual tuning), ``target_override`` (a typed explicit
+    target list), ``nonprime_approach`` (the nonprime-basis optimization trait) and
+    ``custom_prescaler`` (the bare prescaler tile's hand-edited diagonal / matrix override)
+    are threaded into the same tuning/weights/complexity/prescaling the grid builds, so the
+    two views can't diverge."""
     db = state.domain_basis
     targets = displayed_targets(state, scheme, target_spec, target_override)  # all-interval-aware, like the grid
     # the REAL comma basis: empty at full rank (n = 0), where state.comma_basis is just the trivial
@@ -1528,12 +1531,17 @@ def plain_text_values(
     # drives the maps directly; otherwise the scheme's optimum holding the held intervals just
     if generator_tuning is not None and len(generator_tuning) == len(state.mapping):
         tun = tuning_from_generators(state.mapping, generator_tuning, db)
-    else:  # a typed target-list override retunes the optimum, matching the grid's own tuning
-        tun = tuning(state.mapping, scheme, db, held=held_ratios, targets=target_override)
+    else:  # a typed target-list override retunes the optimum, matching the grid's own tuning —
+        # over the SAME nonprime approach + custom prescaler the grid threads (else the tuning rows
+        # diverge from the grid's optimum under a hand-edited prescaler or a nonprime domain)
+        tun = tuning(state.mapping, scheme, db, nonprime_approach, held=held_ratios,
+                     prescaler_override=custom_prescaler, targets=target_override)
     # the target damage row is the scheme-weighted 𝐝 = |𝐞|·W (the same weights the weight row
     # shows and the optimizer minimizes), so the displayed damage tracks the unity/complexity/
-    # simplicity slope rather than staying plain |error|.
-    target_damage_weights = interval_weights(state.mapping, scheme, targets, domain_basis=db)
+    # simplicity slope rather than staying plain |error|. The custom prescaler rides into the
+    # weights too (the grid passes it to interval_weights), so a hand-edited diagonal reweights here.
+    target_damage_weights = interval_weights(state.mapping, scheme, targets, domain_basis=db,
+                                             prescaler_override=custom_prescaler)
     target_sizes = interval_sizes(tun, targets, db, weights=target_damage_weights)
     comma_sizes = interval_sizes(tun, commas, db)  # comma sizes, like the grid's commas column
     detemper_ratios = generators(state.mapping, db)  # the detempering as ratios (= service.generators)
@@ -1541,13 +1549,23 @@ def plain_text_values(
     detemper_vectors = generator_detempering(state.mapping)  # D's vectors, for the prescaling matrix
     # the weighting region: complexity (a covector over the primes, lists elsewhere), the
     # per-target weight list, and the prescaling matrices (L applied to each vector set, as
-    # ket lists). Complexity over the primes is the complexity of each domain basis element.
-    prime_ratios = tuple(f"{p}/1" for p in standard_primes(state.d))
-    prescaler = complexity_prescaler(state.mapping, scheme)
+    # ket lists). Complexity over the primes is the complexity of each domain basis element
+    # (over the domain basis, like the grid) — NOT the standard primes, so a nonprime element
+    # prime-factors correctly (13/5 reads log₂(13·5), not log₂5 over a domain that has no 5).
+    prime_ratios = tuple(element_ratio(e) for e in db)
+    # the bare prescaler 𝑋 (its diagonal, or a hand-entered non-diagonal matrix override) — the
+    # SAME override the grid threads into every prescaling/complexity/weight/tuning calculation.
+    prescaler = complexity_prescaler(state.mapping, scheme, override=custom_prescaler)
+    prescaler_is_matrix = bool(prescaler) and isinstance(prescaler[0], (tuple, list))
     size_factor = complexity_size_factor(scheme)  # nonzero ⇒ the rectangular 𝑋 = 𝑍𝐿 (size row)
-    prime_units = tuple(tuple(1 if i == p else 0 for i in range(state.d)) for p in range(state.d))
 
     def _prescaled(vectors):
+        # the prescaled vector 𝑋·v: a diagonal pretransformer multiplies element-wise (𝐿ᵢvᵢ); a
+        # non-diagonal one (the editable square's matrix override) is a matrix-vector product — the
+        # same split the grid takes (spreadsheet.py's prescaling loop)
+        if prescaler_is_matrix:
+            return tuple(tuple(sum(prescaler[i][k] * v[k] for k in range(state.d)) for i in range(state.d))
+                         for v in vectors)
         return tuple(tuple(prescaler[i] * v[i] for i in range(state.d)) for v in vectors)
 
     def _sized(cols):
@@ -1558,28 +1576,37 @@ def plain_text_values(
             return cols
         return tuple(col + (size_factor * sum(col),) for col in cols)
 
+    # the bare prescaler 𝑋 as its d matrix ROWS: a diagonal 𝐿 broadcast to [0…𝐿ᵢ…0] rows; a
+    # hand-entered non-diagonal pretransformer its own rows — matching the grid's 2D placement,
+    # where cell (i, c) = 𝑋[i][c] (the diagonal case renders identically either way).
+    if prescaler_is_matrix:
+        bare_rows = [tuple(prescaler[i]) for i in range(state.d)]
+    else:
+        bare_rows = [tuple(prescaler[i] if k == i else 0 for k in range(state.d)) for i in range(state.d)]
     # the bare prescaler is a covector STACK, so the size factor appends one extra ROW — the
-    # size-sensitizing covector sf·𝐋 (each entry sf·𝐿ᵢ), keeping the row length d — rather than
-    # extending each column the way the products do. This 𝑋 = 𝑍𝐿 size row is the only growth the
-    # weighting region shows; the all-interval simplicity weight stays a per-target list (its generic
-    # 𝒘 = 𝒄⁻¹ form lives in the grid tile's symbol, not the plain text).
-    bare_size_row = ((tuple(size_factor * w for w in prescaler),) if size_factor else ())
+    # size-sensitizing covector sf·𝐋 (each entry sf·Σᵢ𝑋ᵢⱼ, the column sum — sf·𝐿ⱼ for a diagonal),
+    # keeping the row length d — rather than extending each column the way the products do. This
+    # 𝑋 = 𝑍𝐿 size row is the only growth the weighting region shows; the all-interval simplicity
+    # weight stays a per-target list (its 𝒘 = 𝒄⁻¹ form lives in the grid tile's symbol, not here).
+    bare_size_row = ((tuple(size_factor * sum(col) for col in zip(*bare_rows)),) if size_factor else ())
     weight_text = _cents_list(target_damage_weights)
     tp_text = _ket_list(target_vectors, "⟩")
-    bare_x_text = _prescale_vector_list(_prescaled(prime_units) + bare_size_row, col="⟨]", outer="[⟩")
-    complexity_text = _cents_list(interval_complexities(state.mapping, scheme, targets, domain_basis=db))
+    bare_x_text = _prescale_vector_list(bare_rows + list(bare_size_row), col="⟨]", outer="[⟩")
+    complexity_text = _cents_list(interval_complexities(state.mapping, scheme, targets, domain_basis=db,
+                                                        prescaler_override=custom_prescaler))
     damage_text = _cents_list(target_sizes.damage)
     # the unchanged half U of the consolidated V = C|U column (projection on): assembled the SAME way
-    # the grid does — service.unchanged_interval_data — so the inline plain text matches the grid
-    # cell-for-cell, em-dashes and all, where the under-held tuning leaves a direction irrational. Off
-    # (or n = 0), the u_* lists stay empty and every V tile reads as the bare comma side C alone.
-    udata = unchanged_interval_data(state, held_basis_ratios, tun, scheme, db) if consolidate_v else None
+    # the grid does — service.unchanged_interval_data, over the same custom prescaler — so the inline
+    # plain text matches the grid cell-for-cell, em-dashes and all, where the under-held tuning leaves
+    # a direction irrational. Off (or n = 0), the u_* lists stay empty and every V tile reads as C alone.
+    udata = unchanged_interval_data(state, held_basis_ratios, tun, scheme, db,
+                                    custom_prescaler) if consolidate_v else None
     if udata is not None:
         nrow = len(state.mapping)
         u_basis = list(udata.basis)  # P·𝐮 = 𝐮, so this also serves the projected list P·V's unchanged half
         u_mapped_cols = [None if udata.basis[j] is None else tuple(udata.mapped[i][j] for i in range(nrow))
                          for j in range(len(udata.basis))]
-        u_prescaled = [None if u is None else _sized((tuple(prescaler[i] * u[i] for i in range(state.d)),))[0]
+        u_prescaled = [None if u is None else _sized(_prescaled((u,)))[0]
                        for u in udata.basis]
         u_tempered, u_just, u_errors = list(udata.sizes.tempered), list(udata.sizes.just), list(udata.sizes.errors)
         u_comps = list(udata.complexities)
@@ -1634,9 +1661,9 @@ def plain_text_values(
         ("prescaling", "commas"): _prescale_vector_list(list(_sized(_prescaled(comma_basis))) + u_prescaled),
         ("prescaling", "detempering"): _prescale_vector_list(_sized(_prescaled(detemper_vectors))),
         ("prescaling", "targets"): _prescale_vector_list(_sized(_prescaled(target_vectors))),
-        ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios)),
-        ("complexity", "commas"): _cents_list(list(interval_complexities(state.mapping, scheme, commas, domain_basis=db)) + u_comps),
-        ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios, domain_basis=db)),
+        ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, prime_ratios, domain_basis=db, prescaler_override=custom_prescaler)),
+        ("complexity", "commas"): _cents_list(list(interval_complexities(state.mapping, scheme, commas, domain_basis=db, prescaler_override=custom_prescaler)) + u_comps),
+        ("complexity", "detempering"): _cents_list(interval_complexities(state.mapping, scheme, detemper_ratios, domain_basis=db, prescaler_override=custom_prescaler)),
         ("complexity", "targets"): complexity_text,
         ("weight", "targets"): weight_text,
     }
@@ -1653,7 +1680,7 @@ def plain_text_values(
             ("just", "held"): _cents_list(held_sizes.just),
             ("retune", "held"): _cents_list(held_sizes.errors),
             ("prescaling", "held"): _prescale_vector_list(_sized(_prescaled(held))),
-            ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios, domain_basis=db)),
+            ("complexity", "held"): _cents_list(interval_complexities(state.mapping, scheme, held_ratios, domain_basis=db, prescaler_override=custom_prescaler)),
         })
     # the other-intervals-of-interest column is a loose collection, not a basis, so every
     # row is unwrapped (wrap=False): its vectors and mapped images stand alone (each its own
@@ -1670,7 +1697,7 @@ def plain_text_values(
             ("just", "interest"): _cents_list(interest_sizes.just, wrap=False),
             ("retune", "interest"): _cents_list(interest_sizes.errors, wrap=False),
             ("prescaling", "interest"): _prescale_vector_list(_sized(_prescaled(interest)), outer=""),
-            ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios, domain_basis=db), wrap=False),
+            ("complexity", "interest"): _cents_list(interval_complexities(state.mapping, scheme, interest_ratios, domain_basis=db, prescaler_override=custom_prescaler), wrap=False),
         })
     # the projection P and generator embedding G plain-text bands (the editable duals — the only edit
     # path now that the gridded cells are read-only). Computed from the SAME held basis the grid's
@@ -1774,7 +1801,7 @@ def plain_text_values(
             # around the per-column kets [ … ⟩ (matching ss_vectors/primes, not the plain products)
             ("prescaling", "primes"): _prescale_vector_list(_sized(_prescaled_ss(bl)), col="[⟩", outer="⟨]"),
             ("complexity", "ssprimes"): _cents_map(ss_prescaler),
-            ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, elem_ratios, domain_basis=db)),
+            ("complexity", "primes"): _cents_map(interval_complexities(state.mapping, scheme, elem_ratios, domain_basis=db, prescaler_override=custom_prescaler)),
         })
     return values
 

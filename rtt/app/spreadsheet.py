@@ -1608,7 +1608,11 @@ class _GridBuilder:
                                                    # consolidated V = C|U: the plain text appends the
                                                    # unchanged half U to every V tile, matching the grid
                                                    consolidate_v=self.show_unchanged,
-                                                   held_basis_ratios=self.held_basis_ratios)
+                                                   held_basis_ratios=self.held_basis_ratios,
+                                                   # the bare prescaler tile's hand-edited diagonal /
+                                                   # matrix override, threaded into the same tuning /
+                                                   # weights / complexity / prescaling the grid builds
+                                                   custom_prescaler=self.custom_prescaler)
                          if self.show_ptext else {})
 
         y = rows_top_y

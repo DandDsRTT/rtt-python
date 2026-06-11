@@ -3,7 +3,8 @@ from fractions import Fraction
 
 import pytest
 
-from rtt.app import service
+from rtt.app import service, spreadsheet
+from rtt.app import settings as app_settings
 
 
 def test_base_scheme_name_strips_the_target_prefix():
@@ -970,6 +971,81 @@ def test_plain_text_tuning_follows_a_target_override():
     base = service.plain_text_values(state, "TILT minimax-U", "TILT")
     overridden = service.plain_text_values(state, "TILT minimax-U", "TILT", target_override=("2/1", "3/2"))
     assert overridden[("tuning", "gens")] != base[("tuning", "gens")]
+
+
+def _grid_with_ptext(state, scheme, custom_prescaler=None, **extra):
+    """A _GridBuilder with the plain-text band + weighting + alt-complexity on (the layers the
+    prescaler/complexity divergences live under), so ptext_strings and the grid's own quantities
+    can be compared directly inside one builder — the strongest 'the two views agree' check."""
+    se = app_settings.defaults()
+    se.update({"plain_text_values": True, "weighting": True, "alt_complexity": True})
+    se.update(extra)
+    return spreadsheet._GridBuilder(state, se, None, service.resolve_tuning_scheme(scheme), "TILT",
+                                    custom_prescaler=custom_prescaler)
+
+
+def test_plain_text_custom_prescaler_matches_the_grid():
+    # the bare prescaler tile's hand-edited diagonal threads into plain_text_values exactly as it
+    # does into the grid: the SAME retuned tuning map, target complexity and weight (the grid passes
+    # custom_prescaler into service.tuning / interval_weights / interval_complexities). Without the
+    # thread the ptext re-derived from the scheme's log-prime diagonal and diverged from every one of
+    # those grid tiles — the bug this guards.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone over 2.3.5
+    gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=(1.0, 2.0, 3.0))
+    pt = gb.ptext_strings
+    # each retuned ptext tile equals the grid's own quantity (the same formatter the grid value uses)
+    assert pt[("tuning", "primes")] == service._cents_map(gb.tun.tuning_map)
+    assert pt[("complexity", "targets")] == service._cents_list(gb.complexities["targets"])
+    assert pt[("weight", "targets")] == service._cents_list(gb.target_weights)
+    # the bare prescaler reads the typed diagonal (1, 2, 3), not the scheme's log-prime weights
+    assert pt[("prescaling", "primes")] == "[⟨1 0 0] ⟨0 2 0] ⟨0 0 3]⟩"
+    # and it genuinely deviates from the no-override views (the divergence is gone, not coincidental)
+    plain = _grid_with_ptext(state, "TILT minimax-S").ptext_strings
+    assert pt[("tuning", "primes")] != plain[("tuning", "primes")]
+    assert pt[("prescaling", "primes")] != plain[("prescaling", "primes")]
+
+
+def test_plain_text_custom_prescaler_renders_an_off_diagonal_matrix_like_the_grid():
+    # a non-diagonal pretransformer (the alt-complexity square's off-diagonal edit) renders its actual
+    # matrix ROWS in the bare prescaler band — not the transpose — matching the grid cell (i, c) =
+    # 𝑋[i][c]: the 0.5 sits in row 0, col 1. A naïve 𝐿·eₚ reuse would have shown its transpose.
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    matrix = ((1.0, 0.5, 0.0), (0.0, 1.585, 0.0), (0.0, 0.0, 2.322))
+    pt = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=matrix).ptext_strings
+    assert pt[("prescaling", "primes")] == "[⟨1 0.500 0] ⟨0 1.585 0] ⟨0 0 2.322]⟩"
+    # the products and complexity still match the grid under the matrix override (no element-wise crash)
+    gb = _grid_with_ptext(state, "TILT minimax-S", custom_prescaler=matrix)
+    assert gb.ptext_strings[("tuning", "primes")] == service._cents_map(gb.tun.tuning_map)
+    assert gb.ptext_strings[("complexity", "targets")] == service._cents_list(gb.complexities["targets"])
+
+
+def test_plain_text_primes_complexity_runs_over_the_domain_basis_not_standard_primes():
+    # the complexity-over-primes tile is each DOMAIN basis element's complexity, like the grid — NOT
+    # the standard primes. Over 2.3.7 the third column is log₂7, never log₂5 (a prime the domain does
+    # not even contain). Guards the standard_primes() truncation that diverged from the grid.
+    state = service.from_temperament_data("2.3.7 [⟨1 1 3] ⟨0 2 -1]}")
+    band = service.plain_text_values(state, "TILT minimax-S", "TILT")[("complexity", "primes")]
+    elems = tuple(service.element_ratio(e) for e in state.domain_basis)
+    over_basis = service.interval_complexities(state.mapping, "TILT minimax-S", elems,
+                                               domain_basis=state.domain_basis)
+    assert band == service._cents_map(over_basis)        # exactly the grid's domain-basis map
+    assert service.cents(over_basis[2]) in band          # log₂7 ≈ 2.807 shows
+    truncated = service.interval_complexities(state.mapping, "TILT minimax-S",
+                                              tuple(f"{p}/1" for p in service.standard_primes(state.d)))
+    assert service.cents(truncated[2]) not in band       # not the prime-truncated log₂5 ≈ 2.322
+
+
+def test_plain_text_threads_the_nonprime_approach_into_its_tuning():
+    # the grid passes nonprime_approach into service.tuning; plain_text_values must too, or its tuning
+    # rows diverge from the grid over a nonprime domain. A nonprime-based approach retunes differently
+    # from the neutral default here, so the ptext tuning map moves when the approach is threaded.
+    state = service.from_temperament_data("2.7/3.11/3 [⟨1 1 2] ⟨0 2 -1]]")
+    neutral = service.plain_text_values(state, "TILT minimax-S", "TILT")
+    nonprime = service.plain_text_values(state, "TILT minimax-S", "TILT", nonprime_approach="nonprime-based")
+    assert nonprime[("tuning", "primes")] != neutral[("tuning", "primes")]
+    # and it matches service.tuning called with that same approach (the grid's own input)
+    tun = service.tuning(state.mapping, "TILT minimax-S", state.domain_basis, "nonprime-based")
+    assert nonprime[("tuning", "primes")] == service._cents_map(tun.tuning_map)
 
 
 def test_plain_text_mapping_is_the_ebk_string():
