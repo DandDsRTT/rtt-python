@@ -5168,7 +5168,8 @@ def test_nonstandard_domain_units_use_basis_element_label_b():
 def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
     # per the mockup, the optimization controls live INSIDE the target interval damage list
     # tile as a bordered, titled box — not a separate row — laid out as two value-over-label
-    # columns (the mean damage ⟪𝐝⟫ₚ and the editable power 𝑝) with the optimize button at right.
+    # columns: the mean damage ⟪𝐝⟫ₚ and the editable power 𝑝 (optimization is always on, so
+    # there is no optimize button to trigger it).
     lay = _with(optimization=True)
     on = {c.id: c for c in lay.cells}
     assert on["optimization:title"].text == "optimization"
@@ -5181,25 +5182,12 @@ def test_optimization_box_sits_at_the_bottom_of_the_damage_tile():
     assert on["optimization:power"].text == "∞"                     # ...showing the current Lp order
     assert on["optimization:power:symbol"].text == "𝑝"
     assert on["optimization:power:caption"].text == "optimization power"
-    assert on["optimization:button"].text == "optimize"
     # the box sits below the damage values, in the target intervals column
     assert on["optimization:title"].y > on["damage:target:0"].y
     assert on["optimization:title"].x == on["header:targets"].x
     # ...and there is no separate optimization row
     assert "label:optimization" not in on
     assert "h:optimization" not in {ln.id for ln in lay.lines}
-
-
-def test_optimization_hint_invites_unlock_once_the_auto_lock_is_latched():
-    # the optimize button's hint reads "double-click to lock" by default; once the auto-
-    # optimize lock is latched on, the next double-click UNlocks it, so the hint flips to match
-    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
-    s = settings.defaults()
-    s["optimization"] = True
-    unlocked = {c.id: c for c in spreadsheet.build(base, s).cells}
-    locked = {c.id: c for c in spreadsheet.build(base, s, optimize_locked=True).cells}
-    assert unlocked["optimization:button:hint"].text == "double-click to lock"
-    assert locked["optimization:button:hint"].text == "double-click to unlock"
 
 
 def test_optimization_power_field_reflects_the_current_scheme():
@@ -5220,13 +5208,13 @@ def test_optimization_needs_its_parent_tuning_boxes():
     assert "optimization:title" not in cells
 
 
-def test_optimization_box_lays_out_mean_damage_power_and_button_in_columns():
+def test_optimization_box_lays_out_mean_damage_and_power():
     lay = _with(optimization=True)
     on = {c.id: c for c in lay.cells}
     box = {b.id: b for b in lay.blocks}["block:optimization:box"]
-    # the three controls sit on one row, left to right: mean damage | power | optimize button
-    assert on["optimization:mean_damage"].x < on["optimization:power"].x < on["optimization:button"].x
-    assert on["optimization:mean_damage"].y == on["optimization:power"].y == on["optimization:button"].y
+    # the two controls sit on one row, left to right: mean damage | power
+    assert on["optimization:mean_damage"].x < on["optimization:power"].x
+    assert on["optimization:mean_damage"].y == on["optimization:power"].y
     # within each column the value/control sits above its symbol/label
     assert on["optimization:mean_damage"].y < on["optimization:mean_damage:symbol"].y
     assert (on["optimization:power"].y < on["optimization:power:symbol"].y
@@ -5238,33 +5226,31 @@ def test_optimization_box_lays_out_mean_damage_power_and_button_in_columns():
     # the controls DISTRIBUTE across the full-width box (no longer packed left): the mean damage is a
     # COLUMN hugging the left edge — its symbol and caption span the column width and its COL_W value
     # cell is centred within it, so a wide min()-wrapped symbol overflows evenly and stays inside the
-    # box. The optimize button hugs the right edge; the power sits centered in the gap between them.
+    # box. The power sits centered in the gap between the column and the box's right inner edge.
     mean_damage_col_x = box.x + spreadsheet.OPT_PAD_L
     assert on["optimization:mean_damage:symbol"].x == mean_damage_col_x
     assert on["optimization:mean_damage:symbol"].w == spreadsheet.OPT_MEAN_DAMAGE_W
     assert on["optimization:mean_damage:caption"].x == mean_damage_col_x
     assert on["optimization:mean_damage"].x == mean_damage_col_x + (spreadsheet.OPT_MEAN_DAMAGE_W - spreadsheet.COL_W) / 2
-    assert (on["optimization:button"].x + on["optimization:button"].w
-            == box.x + box.w - spreadsheet.OPT_PAD_R)
     mean_damage_r = mean_damage_col_x + spreadsheet.OPT_MEAN_DAMAGE_W  # the mean damage column's right edge
-    btn_l = on["optimization:button"].x
-    pow_c = on["optimization:power"].x + on["optimization:power"].w / 2
-    assert abs(pow_c - (mean_damage_r + btn_l) / 2) < 1  # power centered in the gap between column and button
+    box_inner_r = box.x + box.w - spreadsheet.OPT_PAD_R               # the box's right inner edge
+    # power centered in the gap to the column's right: its COL_W value cell straddles the midpoint
+    assert on["optimization:power"].x == (mean_damage_r + box_inner_r) / 2 - spreadsheet.COL_W / 2
     cap = on["optimization:power:caption"]
-    assert cap.x > mean_damage_r and cap.x + cap.w < btn_l  # ...and its caption clears both neighbors
-    # the optimize button is a normal rectangle the same height as the value boxes (the p input),
-    # not a giant full-height button, with a "double-click to lock" hint beneath it
-    assert on["optimization:button"].h == on["optimization:mean_damage"].h
-    assert on["optimization:button:hint"].text == "double-click to lock"
-    assert on["optimization:button:hint"].y > on["optimization:button"].y
-    # the captions occupy a single line (so "optimization power" sits right under 𝑝, not a
-    # two-line band that floats it lower), and so does the hint
+    assert cap.x > mean_damage_r and cap.x + cap.w < box.x + box.w  # ...and its caption clears both sides
+    # the box is floored wide enough to seat the spread-out controls
+    assert box.w >= spreadsheet.OPT_BOX_MIN_W
+    # the caption occupies a single line (so "optimization power" sits right under 𝑝, not a
+    # two-line band that floats it lower)
     assert on["optimization:power:caption"].h == spreadsheet.CAPTION_LINE
-    assert on["optimization:button:hint"].h == spreadsheet.CAPTION_LINE
     # the title sits inside the box (below its top border) with a gap before the controls
     assert on["optimization:title"].y > box.y
     assert on["optimization:mean_damage"].y > on["optimization:title"].y + on["optimization:title"].h
-    assert "optimization:button" not in {c.id for c in _with(optimization=False).cells}
+    # optimization is always on — no optimize button, and no lock hint beneath it
+    ids = {c.id for c in lay.cells}
+    assert "optimization:button" not in ids
+    assert "optimization:button:hint" not in ids
+    assert not any(c.id.startswith("optimization:") for c in _with(optimization=False).cells)
 
 
 def test_optimization_box_fills_the_full_width_of_the_damage_tile():
@@ -5293,8 +5279,8 @@ def test_a_narrow_damage_tile_widens_to_seat_the_optimization_box():
 
 
 def test_a_manual_generator_tuning_drives_the_displayed_maps():
-    # a frozen manual generator tuning (optimize lock off) drives the tuning maps directly, not the
-    # scheme optimum: a pure octave + pure fifth tunes prime 3 (= g0 + g1) to exactly the just fifth
+    # a manual generator-tuning override drives the tuning maps directly, not the scheme
+    # optimum: a pure octave + pure fifth tunes prime 3 (= g0 + g1) to exactly the just fifth
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     manual = {c.id: c for c in spreadsheet.build(base, s, generator_tuning=(1200.0, 701.955)).cells}
@@ -5340,8 +5326,8 @@ def test_a_target_override_drives_the_target_columns():
 
 def test_a_target_override_retunes_the_generator_map():
     # the grid's auto-optimized tuning minimizes over the target intervals, so a typed override
-    # retunes the generator map itself — not just the displayed target columns. Same fix as the
-    # optimize button: targeting only 2/1 + 3/2 under minimax-U pulls the fifth toward just.
+    # retunes the generator map itself — not just the displayed target columns: targeting only
+    # 2/1 + 3/2 under minimax-U pulls the fifth toward just.
     base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
     s = settings.defaults()
     plain = {c.id: c for c in spreadsheet.build(base, s, tuning_scheme="TILT minimax-U", target_spec="TILT").cells}

@@ -31,7 +31,6 @@ _INTERACTIVE_KINDS = [
     ("gentuningcell", "cell:tuning:gens:0"),
     ("ptextedit", "ptext:mapping:primes"),
     ("rangemode", "rangemode:tuning:gens"),
-    ("optimize", "optimization:button"),
     ("minus", "minus:2"),
     ("plus", "plus"),
     ("gen_minus", "gen_minus"),

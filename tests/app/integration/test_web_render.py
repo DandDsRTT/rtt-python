@@ -1315,19 +1315,21 @@ async def test_tuning_chooser_shows_the_prompt_when_the_generator_tuning_is_over
     assert all(_cell_child(user, cid)._props.get("display-value") == "-" for cid in both)
 
 
-async def test_picking_a_scheme_leaves_the_frozen_tuning_until_optimize(user: User) -> None:
-    # auto-optimize off: re-picking a scheme from the dropdown does NOT retune — the hand-edited
-    # tuning stays put and the dropdown stays "-" (the displayed tuning still deviates from the
-    # scheme). The user clicks Optimize to apply it (the apply step is covered at the editor level).
+async def test_picking_a_scheme_clears_the_manual_tuning_and_retunes(user: User) -> None:
+    # picking a scheme from the dropdown ESTABLISHES it: with no Optimize button the pick must
+    # apply itself, so it clears the hand-edited manual tuning and the grid retunes to the picked
+    # scheme's optimum — the dropdown recovers the name instead of staying "-" (set_tuning_scheme
+    # is the reset path, like re-picking a prescaler).
     await user.open("/")
     _toggle(user, "presets")
+    seed = _cell_child(user, "tuning:gen:1").value          # the scheme's optimum fifth
     _cell_child(user, "tuning:gen:1").set_value("700.000")  # deviate -> dropdown shows "-"
     await user.should_see(marker="preset:tuning")
     assert _cell_child(user, "preset:tuning")._props.get("display-value") == "-"
     _cell_child(user, "preset:tuning").set_value("minimax-U")  # re-pick the scheme
     await user.should_see(marker="preset:tuning")
-    assert _cell_child(user, "preset:tuning")._props.get("display-value") == "-"  # still "-": not snapped
-    assert _cell_child(user, "tuning:gen:1").value == "700.000"  # the tuning stayed frozen
+    assert "display-value" not in _cell_child(user, "preset:tuning")._props  # named again: the pick applied
+    assert _cell_child(user, "tuning:gen:1").value == seed  # the hand-typed cents replaced by the optimum
 
 
 async def test_prescaler_chooser_shows_the_prompt_when_a_diagonal_is_overridden(user: User) -> None:
@@ -1518,7 +1520,7 @@ async def test_changing_the_weight_slope_renames_the_established_scheme_chooser(
     # the reported bug, end to end: picking complexity-weight in the box-𝒘 slope chooser re-
     # establishes the scheme, so the established-tuning-scheme chooser must show its complexity-
     # weighted variant (minimax-U -> minimax-C) rather than blanking to "-". Both choosers set the
-    # same scheme trait; the frozen tuning stays put (auto-optimize off) — only the name follows.
+    # same scheme trait, and the scheme-driven tuning retunes to the new variant's optimum.
     await user.open("/")
     _toggle(user, "presets")                                  # the established-scheme dropdown
     user.find(kind=ui.checkbox, content="weighting").click()  # the box-𝒘 slope chooser + the -S/-C variants
@@ -1565,17 +1567,17 @@ async def test_range_mode_selector_highlights_the_live_mode(user: User) -> None:
     assert len(on) == 1  # exactly the live mode (monotone, the default) is highlighted
 
 
-async def test_optimization_renders_the_optimize_button(user: User) -> None:
-    # the optimize button renders in the damage tile when optimization is on (its single/
-    # double-click optimize+lock behaviour is covered by the editor tests). The fixture
-    # catches any error rendering the new "optimize" cell branch.
+async def test_optimization_renders_the_mean_damage_and_power(user: User) -> None:
+    # the optimization box's value-over-label cells render when optimization is on: the mean
+    # damage value + its ⟪𝐝⟫ₚ symbol, the editable power, and the power's symbol + "optimization
+    # power" caption. The fixture catches any error rendering those cell branches.
     await _enable(user, "optimization")
-    await user.should_see(marker="optimization:button")
-    # the box's value-over-label cells render too: the mean damage value + its ⟪𝐝⟫ₚ symbol,
-    # the editable power, and the power's symbol + "optimization power" caption
     for marker in ("optimization:mean_damage", "optimization:mean_damage:symbol",
                    "optimization:power", "optimization:power:symbol", "optimization:power:caption"):
         await user.should_see(marker=marker)
+    # there is NO optimize button: optimization is always invisibly on (the grid recomputes the
+    # scheme's optimum on every change), so nothing renders for the retired "optimization:button"
+    await user.should_not_see(marker="optimization:button")
 
 
 async def test_minimax_power_stacks_a_max_annotation_below_infinity(user: User) -> None:
@@ -1674,32 +1676,16 @@ async def test_optimization_renders_the_held_column_and_its_add_control(user: Us
     await user.should_see(marker="held_plus")
 
 
-async def test_optimize_button_greys_while_the_tuning_is_already_optimal(user: User) -> None:
-    # the optimize button greys ("nothing to optimize") whenever the displayed tuning already sits at
-    # the optimum, and goes live once a hand-edited generator pulls it off — the cue that a click
-    # would now actually move it. Drives the real input -> handler -> render pipeline.
-    await user.open("/")
-    _toggle(user, "optimization")                              # the button only renders with the box
-    await user.should_see(marker="optimization:button")
-    assert "rtt-optimize-idle" in _cell_child(user, "optimization:button")._classes   # frozen at the optimum
-    _cell_child(user, "tuning:gen:1").set_value("700.000")     # hand-tune a generator off the optimum
-    await user.should_see(marker="optimization:button")
-    assert "rtt-optimize-idle" not in _cell_child(user, "optimization:button")._classes  # a click would move it
-    user.find(kind=ui.button, content="optimize").click()      # re-optimize -> back at the optimum
-    await user.should_see(marker="optimization:button")
-    assert "rtt-optimize-idle" in _cell_child(user, "optimization:button")._classes   # greyed again
-
-
-async def test_a_held_interval_does_not_retune_the_grid_until_optimize(user: User) -> None:
-    # auto-optimize off: adding a held interval does NOT retune — the frozen tuning still realises
-    # the scheme, so the established-tuning-scheme chooser keeps the scheme name (it drops to "-"
-    # only after Optimize re-optimises to hold it, the apply step covered by the editor tests). In
-    # the default view that chooser has a single option, so it is a DISABLED dropdown holding the
-    # scheme; keeping the name means it stays "minimax-U", not flipping to an enabled "-" chooser.
+async def test_a_held_interval_retunes_the_grid_immediately(user: User) -> None:
+    # optimization is always invisibly on: committing a held interval retunes the grid right away —
+    # the displayed generator tuning moves to the held-constrained optimum (holding 3/2 makes the
+    # fifth generator pure, 701.955¢), with no Optimize step in between. That held optimum no longer
+    # realises the bare scheme, so the established-tuning-scheme chooser drops to "-".
     await user.open("/")
     _toggle(user, "presets")             # show the chooser
     _toggle(user, "optimization")        # ...and the held-interval column
     assert _cell_child(user, "preset:tuning").value == "minimax-U"  # the default scheme, named
+    assert _cell_child(user, "tuning:gen:1").value != "701.955"     # the unheld optimum fifth is tempered
     _click_glyph(user, "held_plus")                  # start a blank held-interval draft
     await user.should_see(marker="cell:held:0:0")
     _cell_child(user, "cell:held:0:0").set_value("-1")  # make it the fifth 3/2
@@ -1708,8 +1694,8 @@ async def test_a_held_interval_does_not_retune_the_grid_until_optimize(user: Use
     _commit(user, "cell:held:2:0")                      # commit the draft on blur (filling only previews)
     await user.should_see(marker="preset:tuning")
     assert _cell_child(user, "cell:held:0:0").value == "-1"          # the held interval is committed...
-    assert _cell_child(user, "preset:tuning").value == "minimax-U"   # ...but the tuning didn't retune (still named)
-    assert "display-value" not in _cell_child(user, "preset:tuning")._props  # so the chooser is NOT "-"
+    assert _cell_child(user, "tuning:gen:1").value == "701.955"      # ...and the grid retuned to hold 3/2 just
+    assert _cell_child(user, "preset:tuning")._props.get("display-value") == "-"  # off the bare scheme -> "-"
 
 
 async def test_adding_an_interval_of_interest_commits_when_filled(user: User) -> None:
@@ -2118,8 +2104,9 @@ async def test_typing_a_target_limit_rings_the_rows_it_moves(user: User) -> None
     # the target chooser's numeric limit is an editable control, so it drives the same edit-preview as a
     # grid cell: focusing it captures a baseline, and typing a new limit (which commits live and
     # re-derives the target set) rings the rows the change brings in, while leaving clears them. From the
-    # 5-limit default (6-TILT, 8 targets) typing a 9 grows the set, so the new target rows ring; an
-    # unmoved generator tuning does not. The chooser is the source and so is never rung itself.
+    # 5-limit default (6-TILT, 8 targets) typing a 9 grows the set, so the new target rows ring — and the
+    # scheme-driven tuning re-optimizes over the grown set, so the generator tuning rings as moved too;
+    # an unmoved mapping entry does not. The chooser is the source and so is never rung itself.
     await _enable(user, "presets")
     await user.should_see(marker="preset:target")
     num, _sel = _target_preset(user)
@@ -2127,7 +2114,8 @@ async def test_typing_a_target_limit_rings_the_rows_it_moves(user: User) -> None
     num.set_value("9")                                     # grow 6-TILT -> 9-TILT, adding target rows
     await user.should_see(marker="retune:target:8")        # a target row the larger limit brings in
     assert "rtt-preview-change" in _wrap_classes(user, "retune:target:8")     # ...rings as moved
-    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:gen:0")    # an unmoved cell does not
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:gen:0")        # the retuned generator rings too
+    assert "rtt-preview-change" not in _wrap_classes(user, "cell:mapping:0:0")  # an unmoved cell does not
     UserInteraction(user, {num}, None).trigger("blur")     # leaving the field clears the preview
     assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:8")
 
@@ -2651,35 +2639,19 @@ async def test_hovering_the_all_interval_checkbox_previews_collapsing_to_the_pri
     assert "rtt-preview-change" not in _wrap_classes(user, "weight:target:1")
 
 
-async def test_hovering_the_optimize_button_previews_toggling_the_auto_lock(user: User) -> None:
-    # the optimize button's double-click toggles the auto-optimize lock; hovering it previews that toggle.
-    # With a hand-edited (off-optimum) generator tuning, locking auto-optimize snaps the tuning back to
-    # the optimum — so the hover rings the cells that snap-back moves. The op only fires on the real
-    # double-click; the hover just shows it.
-    await user.open("/")
-    user.find(kind=ui.checkbox, content="optimization").click()   # reveal the optimize button
-    await user.should_see(marker="optimization:button")
-    _cell_child(user, "tuning:gen:0").set_value("1150")           # hand-edit the octave off its optimum
-    await user.should_see(marker="optimization:button")
-    btn = set(user.find(marker="optimization:button").elements)
-    UserInteraction(user, btn, None).trigger("mouseenter")
-    assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:0")   # snapping back to the optimum rings
-    UserInteraction(user, btn, None).trigger("mouseleave")
-    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:prime:0")  # cleared on mouse-out
-
-
 async def test_hovering_undo_rings_what_reverting_the_last_edit_changes(user: User) -> None:
     # the undo button reverts the last edit; hovering it previews that revert — ringing exactly the
     # cells one undo step would move — without committing. Make an edit so there is something to undo.
+    # (reverting the mapping edit also retunes back to the old optimum; tuning:target:1 moves either way)
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")          # edit the mapping (an undoable step)
     _commit(user, "cell:mapping:1:2")                            # commit on blur (typing only previews now)
-    await user.should_see(marker="tuning:target:4")
+    await user.should_see(marker="tuning:target:1")
     btn = set(user.find(marker="undo").elements)
     UserInteraction(user, btn, None).trigger("mouseenter")
-    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:4")   # reverting the edit rings it
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:1")   # reverting the edit rings it
     UserInteraction(user, btn, None).trigger("mouseleave")
-    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:4")  # cleared on mouse-out
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:1")  # cleared on mouse-out
 
 
 async def test_hovering_redo_rings_what_redoing_the_undone_edit_changes(user: User) -> None:
@@ -2689,12 +2661,12 @@ async def test_hovering_redo_rings_what_redoing_the_undone_edit_changes(user: Us
     _cell_child(user, "cell:mapping:1:2").set_value("7")          # edit (an undoable step)
     _commit(user, "cell:mapping:1:2")                            # commit on blur (typing only previews now)
     user.find(marker="undo").click()                             # undo it -> a redo step is now available
-    await user.should_see(marker="tuning:target:4")
+    await user.should_see(marker="tuning:target:1")
     btn = set(user.find(marker="redo").elements)
     UserInteraction(user, btn, None).trigger("mouseenter")
-    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:4")   # redoing re-applies the edit
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:1")   # redoing re-applies the edit
     UserInteraction(user, btn, None).trigger("mouseleave")
-    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:4")  # cleared on mouse-out
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:1")  # cleared on mouse-out
 
 
 async def test_hovering_reset_rings_everything_snapping_back_to_defaults(user: User) -> None:
@@ -2703,12 +2675,12 @@ async def test_hovering_reset_rings_everything_snapping_back_to_defaults(user: U
     await user.open("/")
     _cell_child(user, "cell:mapping:1:2").set_value("7")          # diverge from the defaults
     _commit(user, "cell:mapping:1:2")                            # commit on blur (typing only previews now)
-    await user.should_see(marker="tuning:target:4")
+    await user.should_see(marker="tuning:target:1")
     btn = set(user.find(marker="reset").elements)
     UserInteraction(user, btn, None).trigger("mouseenter")
-    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:4")   # the reverted edit rings
+    assert "rtt-preview-change" in _wrap_classes(user, "tuning:target:1")   # the reverted edit rings
     UserInteraction(user, btn, None).trigger("mouseleave")
-    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:4")  # cleared on mouse-out
+    assert "rtt-preview-change" not in _wrap_classes(user, "tuning:target:1")  # cleared on mouse-out
 
 
 async def test_a_disabled_history_button_shows_no_preview(user: User) -> None:
@@ -2729,26 +2701,6 @@ async def test_a_disabled_history_button_shows_no_preview(user: User) -> None:
 # been applied." The rings are a pure function of (document, active gesture), recomputed by every
 # render/paint, and commits structurally end the hover-family gestures (render ends any such gesture
 # it didn't initiate) — so a stranded ring is unreachable by construction; these tests lock that.
-
-async def test_hovering_then_clicking_the_optimize_button_clears_the_preview(user: User) -> None:
-    # the reported bug, in its optimize-button form: hovering the optimize button rings the cells its
-    # action would MOVE (the lock-toggle hover preview), and clicking the button to APPLY must clear them.
-    # The mouse stays over the button on the click (no mouseleave fires), so the clear rides the commit's
-    # render alone (which owns every ring and recomputes an empty preview set). Push the tuning off the
-    # optimum first so a click would actually move it, then hover -> assert a moved cell rings -> click ->
-    # assert it clears.
-    await user.open("/")
-    _toggle(user, "optimization")                              # the button + its hover preview only exist here
-    await user.should_see(marker="optimization:button")
-    _cell_child(user, "tuning:gen:1").set_value("700.000")     # hand-tune off the optimum -> a click would move it
-    await user.should_see(marker="optimization:button")
-    wrap = set(user.find(marker="optimization:button").elements)   # the wrap carries the mouseenter preview
-    UserInteraction(user, wrap, None).trigger("mouseenter")        # hover -> ring the cells optimizing would move
-    assert "rtt-preview-change" in _wrap_classes(user, "retune:target:1")   # a moved retuning cell rings on hover
-    user.find(kind=ui.button, content="optimize").click()         # APPLY (mouse still over the button)
-    await user.should_see(marker="optimization:button")
-    assert "rtt-preview-change" not in _wrap_classes(user, "retune:target:1")  # ...and the ring cleared on the click
-
 
 async def test_relabeling_a_domain_element_clears_the_edit_preview_on_commit(user: User) -> None:
     # a chapter-9 domain basis element commits its relabel on blur (Enter routes through blur too), and
@@ -2992,15 +2944,12 @@ async def test_hovering_a_nonstandard_approach_option_previews_setting_it(user: 
     # the chapter-9 nonstandard-domain-approach radio appears once the domain carries a nonprime element.
     # Hovering one of its square options previews reading the temperament that way — ringing the cells the
     # re-analysis moves — without committing the choice. Each option is its own hover target (mouseenter),
-    # the whole radio its mouse-out; here we drive those events directly. Auto-optimize is on so the
-    # displayed tuning actually re-solves under the hovered approach.
+    # the whole radio its mouse-out; here we drive those events directly. The tuning is scheme-driven
+    # (optimization always invisibly on), so the displayed tuning re-solves under the hovered approach.
     await user.open("/")
     _toggle(user, "plain text values")                            # reveal the editable mapping EBK dual
     _cell_child(user, "ptext:mapping:primes").set_value("2.3.13/5 [⟨1 2 2] ⟨0 -2 -3]}")  # a nonprime domain
     await user.should_see(marker="approach")                      # ...so the approach radio shows
-    user.find(kind=ui.checkbox, content="optimization").click()   # reveal the optimize button
-    await user.should_see(marker="optimization:button")
-    UserInteraction(user, {_cell_child(user, "optimization:button")}, None).trigger("dblclick")  # auto-optimize on
     prime_opt = set(user.find(marker="approach-prime-based").elements)
     UserInteraction(user, prime_opt, None).trigger("mouseenter")                  # hover "prime-based"
     assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:0")   # the prime-based retune rings
