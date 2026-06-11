@@ -1622,6 +1622,27 @@ def test_tuning_embedding_is_dashed_when_the_projection_is():
     assert service.tuning_embedding(state, ("2/1",)) is None
 
 
+def test_unchanged_basis_from_projection_recovers_U_and_rejects_invalid():
+    # a hand-edited P round-trips to its unchanged basis (eigenvalue-1 eigenvectors); an invalid edit
+    # (not idempotent, or commas not in its kernel) is rejected with None
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    p13 = service.tuning_projection(state, ("2/1", "6/5"))           # third-comma's P
+    U = service.unchanged_basis_from_projection(state, p13)
+    assert U is not None and service.tuning_projection(state, service.comma_ratios(U)) == p13
+    assert service.unchanged_basis_from_projection(state, (("1", "1", "0"), ("0", "1", "0"), ("0", "0", "1"))) is None
+    assert service.unchanged_basis_from_projection(state, (("2", "0", "0"), ("0", "1", "0"), ("0", "0", "1"))) is None
+
+
+def test_unchanged_basis_from_embedding_recovers_U_and_rejects_invalid():
+    # a hand-edited G round-trips to its unchanged basis (column space); an invalid edit (M·G ≠ I) is
+    # rejected with None
+    state = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    g13 = service.tuning_embedding(state, ("2/1", "6/5"))            # third-comma's G
+    U = service.unchanged_basis_from_embedding(state, g13)
+    assert U is not None and service.tuning_embedding(state, service.comma_ratios(U)) == g13
+    assert service.unchanged_basis_from_embedding(state, (("2", "0"), ("0", "0"), ("0", "1/4"))) is None  # M·G ≠ I
+
+
 def test_tuning_embedding_of_just_intonation_is_the_identity():
     # nullity 0: every prime is its own generator, so G = I (the d×d identity).
     state = service.from_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
