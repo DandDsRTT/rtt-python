@@ -231,7 +231,7 @@ def test_generator_detempering_vectors():
 
 def test_tuning_from_generators_applies_a_manual_generator_tuning():
     # a manually-set generator tuning gives tuning_map = generators · mapping (not the
-    # scheme optimum) — what the optimize button freezes when its auto-lock is off. For
+    # scheme optimum) — what a manual generator-tuning override produces. For
     # 5-limit meantone with a pure octave + pure fifth (1200, 701.955):
     tun = service.tuning_from_generators([[1, 1, 0], [0, 1, 4]], (1200.0, 701.955))
     assert tun.generator_map == (1200.0, 701.955)

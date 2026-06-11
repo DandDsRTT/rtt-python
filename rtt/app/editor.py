@@ -36,8 +36,8 @@ _GENERATOR_NUDGE_CENTS = 0.001
 
 def _same_cents_map(a, b) -> bool:
     """Whether two generator tunings are equal at DISPLAY precision — the cents the grid actually
-    shows (:func:`service.cents`). Comparing what's shown (not bit-exact floats) means a tuning
-    frozen or typed back at its displayed value reads as 'no deviation', mirroring how
+    shows (:func:`service.cents`). Comparing what's shown (not bit-exact floats) means a manual
+    tuning typed back at its displayed value reads as 'no deviation', mirroring how
     :func:`service.displayed_prescaler_name` compares prescaler diagonals."""
     return len(a) == len(b) and all(service.cents(x) == service.cents(y) for x, y in zip(a, b))
 
@@ -175,7 +175,8 @@ class Editor:
         # approach over a nonprime domain: there the optimization lives in the prime superspace, so
         # 𝒈L is the editable generator map and the on-domain 𝒈 is its (read-only) projection. None
         # = auto (the prime-based optimum). A view-ish field like nonprime_basis_approach (not in
-        # the undo document); cleared on any approach change, domain change, optimize, or restore.
+        # the undo document); cleared on any approach change, domain change, scheme pick,
+        # back-to-scheme, or restore.
         self.superspace_generator_tuning: tuple[float, ...] | None = None
         self._restore(_initial_doc())
 
@@ -787,13 +788,13 @@ class Editor:
 
     def _displayed_retuning_map(self) -> tuple[float, ...] | None:
         """The per-prime retuning (tempered − just sizes, in cents) of the tuning the grid is
-        actually showing — a frozen/hand-edited/established 𝒈 if there is one, else the scheme's
+        actually showing — a hand-edited/established manual 𝒈 if there is one, else the scheme's
         live optimum. Its zeros are the intervals held unchanged, which is what drives U/P/G.
-        ``None`` when it can't be measured (a stale frozen 𝒈 from before a dimension change, or a
+        ``None`` when it can't be measured (a stale manual 𝒈 from before a dimension change, or a
         nonstandard mixed basis the solver can't size) — the projection then simply dashes out."""
         try:
             generators = self.effective_generator_tuning()
-            if generators is None or len(generators) != self.state.r:  # auto, or a stale frozen 𝒈
+            if generators is None or len(generators) != self.state.r:  # scheme-driven, or a stale manual 𝒈
                 held = tuple(service.comma_ratios(self.held_vectors)) if self.held_vectors else ()
                 return service.tuning(self.state.mapping, self.tuning_scheme, held=held,
                                       targets=self.target_override).retuning_map
@@ -835,7 +836,7 @@ class Editor:
             return True  # the target-list-hiding is a projection-feature behaviour — with the
             # projection box off there's no projection in play, so the target list always shows
         if not self.manual_tuning:
-            return True  # auto-optimize, or frozen AT the scheme optimum — the targets produce it
+            return True  # scheme-driven: the targets produce the displayed optimum
         if len(self.unchanged_ratios) < self.state.r:
             return True  # under-rank: the targets still pin the unconstrained generators
         displayed = self.effective_generator_tuning()  # a full projection — does it equal the optimum?
@@ -1265,10 +1266,10 @@ class Editor:
     def add_mapping_row_to(self, source: int, target: int) -> None:
         """Drag generator row ``source`` onto a DIFFERENT row ``target``: add the dragged row into
         the dropped-on one (``row[target] += row[source]``). A generator-basis change that holds the
-        temperament and the sounding tuning — see :func:`service.add_mapping_row_to`. A frozen
+        temperament and the sounding tuning — see :func:`service.add_mapping_row_to`. A manual
         generator tuning is transformed so the pitches are preserved (the dragged generator's size
-        loses the target's); auto-optimize (None) just re-solves the same optimum. ``source ==
-        target`` is a no-op (dropping a row on itself is not a meaningful operation)."""
+        loses the target's); a scheme-driven tuning (None) just re-solves the same optimum.
+        ``source == target`` is a no-op (dropping a row on itself is not a meaningful operation)."""
         r = len(self.state.mapping)
         if source == target or not (0 <= source < r and 0 <= target < r):
             return
@@ -1461,10 +1462,14 @@ class Editor:
             held_vectors=tuple(tuple(int(x) for x in m) for m in data.get("held_vectors", ())),
             range_mode=data.get("range_mode", "monotone"),
             # a saved tuning is honoured only as a MANUAL override; a doc saved by an older build
-            # with a non-manual frozen tuning (the retired freeze-at-optimum state) re-optimizes
+            # with a non-manual frozen tuning (the retired freeze-at-optimum state) re-optimizes.
+            # The flag is coupled to the honoured tuning: a doc saved while a manual superspace 𝒈L
+            # was active carries manual_tuning=true with no generator_tuning (𝒈L is transient and
+            # never persists), and honouring the orphaned flag would light the back-to-scheme
+            # button over a scheme-driven grid.
             generator_tuning=tuple(data["generator_tuning"])
             if data.get("generator_tuning") is not None and data.get("manual_tuning") else None,
-            manual_tuning=bool(data.get("manual_tuning", False)),
+            manual_tuning=bool(data.get("manual_tuning") and data.get("generator_tuning") is not None),
             custom_prescaler=_prescaler_from_json(data.get("custom_prescaler")),
             target_override=tuple(data["target_override"])
             if data.get("target_override") is not None else None,

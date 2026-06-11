@@ -1061,8 +1061,8 @@ def tuning(
 
 def tuning_from_generators(mapping, generators, domain_basis=None) -> Tuning:
     """The Tuning produced by a manually-set generator tuning (cents per generator):
-    ``tuning_map = generators · mapping``, rather than the scheme's optimum. Used when the
-    optimize lock is off and the user has frozen/edited the generator tuning. Just map and
+    ``tuning_map = generators · mapping``, rather than the scheme's optimum. Backs a manual
+    generator-tuning override (a typed/nudged/projection-picked tuning). Just map and
     generator ranges are temperament properties, computed as for the optimum."""
     t = Temperament(_to_matrix(mapping), Variance.ROW, domain_basis)
     tempered = tuple(float(x) for x in tuning_map_from_generators(t, generators))
@@ -1524,7 +1524,7 @@ def plain_text_values(
     mapped_comma = mapped_commas(state.mapping, comma_basis)
     target_vectors = target_interval_vectors(targets, state.d, db)
     held_ratios = comma_ratios(held, db) if held else ()
-    # match the grid's tuning exactly: a frozen manual generator tuning (optimize lock off)
+    # match the grid's tuning exactly: a manual generator-tuning override
     # drives the maps directly; otherwise the scheme's optimum holding the held intervals just
     if generator_tuning is not None and len(generator_tuning) == len(state.mapping):
         tun = tuning_from_generators(state.mapping, generator_tuning, db)

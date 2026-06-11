@@ -213,9 +213,9 @@
    Compounded selector (0,2,0) to out-specify the base .rtt-caption #333. */
 .rtt-caption.rtt-caption-disabled { color:#999; }
 .rtt-caption-cell { align-items:center; }
-/* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power", "double-click
-   to lock") stay on ONE line — centred under their control, overflowing sideways if need be —
-   so ⟪𝐝⟫ₚ never wraps its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
+/* the optimization box's symbols (⟪𝐝⟫ₚ, 𝑝) and captions ("optimization power") stay on ONE
+   line — centred under their control, overflowing sideways if need be — so ⟪𝐝⟫ₚ never wraps
+   its ₚ to a second line (which also pushed ⟪𝐝⟫ up into the value row) */
 .rtt-opt-1line { white-space:nowrap; overflow-wrap:normal; text-wrap:nowrap; }
 /* the all-interval mean damage relabels to the retuning magnitude ‖𝒓𝐿⁻¹‖dual(q), far wider than
    the short ⟪𝐝⟫ₚ — shrink it (to the .rtt-matlabel-norm size used for the other wide ‖…‖q norm
