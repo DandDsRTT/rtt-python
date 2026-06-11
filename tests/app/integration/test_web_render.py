@@ -137,6 +137,18 @@ async def test_enabling_projection_renders_the_box(user: User) -> None:
     await user.should_see(marker="cell:proj:2:1")  # the 1/4 entry (mapped kind, locatable like the mapping)
 
 
+async def test_projection_renders_the_projected_column_tiles(user: User) -> None:
+    # the projection row's projected vector lists: P·D (= the embedding G) over the detempering column
+    # and P·T over the targets. The default meantone is quarter-comma (holds 2/1, 5/4), so they fill —
+    # P·d₂ = 5^(1/4) = [0 0 1/4]. Read-only "mapped" cells, locatable like P; lean on the fixture's
+    # ERROR-log guard to catch any fault building the projected cells, { … ]/[ … ] brackets or ket marks.
+    await _enable(user, "projection")
+    _toggle(user, "generator detempering")
+    await user.should_see(marker="cell:proj_pd:1:2")  # P·D's second column, bottom prime
+    assert _cell_text(user, "cell:proj_pd:1:2") == "1/4"
+    await user.should_see(marker="cell:proj_pt:0:0")  # P·T's first column (the octave)
+
+
 async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> None:
     # projection + presets: the generator embedding G renders beside P, with the established-
     # projection (under P) and established-embedding (under G) choosers. They are one selection —
