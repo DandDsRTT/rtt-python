@@ -69,7 +69,7 @@ OPTION_BOX_PX = 16   # the one shared size for every small option square: every 
 PRESET_W = 124  # its width — fits "<choose temperament>" and caps the wide target tile
 SCHEME_BTN_SQ = 22  # the square ✕ "return to scheme" button on the projection / embedding tiles
 SCHEME_LABEL_W = 92  # the "return to scheme" caption beside it
-SCHEME_CTRL_W = SCHEME_BTN_SQ + 4 + SCHEME_LABEL_W  # the ✕ + gap + caption, as one control slot
+SCHEME_CTRL_W = SCHEME_BTN_SQ + 2 + SCHEME_LABEL_W  # the ✕ + gap + caption, as one control slot
 TARGET_PRESET_W = 144  # wider: the target chooser seats a 30px gridded limit square + the family select
 PTEXT_MAX_FONT = 10  # px cap on the plain-text font; the app shrinks it per box so every value
 # always fits on ONE line within its column (a long tuning row just gets smaller text)
@@ -2358,11 +2358,12 @@ class _GridBuilder:
         box_x, box_y = self.col_x[ckey], top + BOX_OUTER  # spans the tile footprint; BOX_OUTER is vertical only
         self.blocks.append(Block(box_id, box_x, box_y, self.col_w[ckey], box_h, boxed=True))
         ctrl_x, ctrl_y = box_x + BOX_INNER, box_y + BOX_INNER
+        if scheme_btn:  # the ✕ "return to scheme" row sits ABOVE the dropdown, at the top of the box
+            self.emit_scheme_button(ctrl_x, ctrl_y, ckey)
+            ctrl_y += SCHEME_BTN_SQ + CTRL_LABEL_GAP  # the dropdown + caption drop below it
         if label:  # disabled greys the label with its control (a locked chooser, e.g. all-interval target)
             self.cells.append(CellBox(f"{box_id}:label", ctrl_x, ctrl_y + PRESET_H, dropdown_w, label_h,
                                  "caption", text=label, align="left", disabled=disabled))
-        if scheme_btn:  # the ✕ "return to scheme" row, inside this box below the dropdown + caption
-            self.emit_scheme_button(ctrl_x, ctrl_y + PRESET_H + label_h + CTRL_LABEL_GAP, ckey)
         return ctrl_x, dropdown_w, ctrl_y
 
     def control_region(self, box_id, ckey, top, content_h):
@@ -2393,14 +2394,15 @@ class _GridBuilder:
                              CAPTION_LINE, "caption", text="all-interval"))
 
     def emit_scheme_button(self, x, y, ckey):
-        # the square ✕ "return to scheme" button + a caption to its right, with the ✕'s top-left at
-        # (x, y). Seated INSIDE the established-projection chooser's box (a row below the dropdown +
-        # caption) when presets is on, or in its own small box when presets is off. back_to_scheme is
-        # wired in app.py, which greys it when the tuning is already scheme-driven.
-        sq_y = y
-        self.cells.append(CellBox(f"scheme:{ckey}", x, sq_y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
-        self.cells.append(CellBox(f"scheme:{ckey}:label", x + SCHEME_BTN_SQ + 4, sq_y, SCHEME_LABEL_W,
-                             SCHEME_BTN_SQ, "caption", text="return to scheme", align="left"))
+        # the square ✕ "return to scheme" button + a caption snug to its right (vertically centred on
+        # the square), with the ✕'s top-left at (x, y). Seated INSIDE the established-projection
+        # chooser's box (the row ABOVE the dropdown) when presets is on, or in its own small box when
+        # presets is off. back_to_scheme is wired in app.py, which greys it when the tuning is already
+        # scheme-driven.
+        self.cells.append(CellBox(f"scheme:{ckey}", x, y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
+        label_y = y + (SCHEME_BTN_SQ - CAPTION_LINE) / 2  # centre the one-line caption on the square
+        self.cells.append(CellBox(f"scheme:{ckey}:label", x + SCHEME_BTN_SQ + 2, label_y, SCHEME_LABEL_W,
+                             CAPTION_LINE, "caption", text="return to scheme", align="left"))
 
     def emit_diminuator_check(self, check_x, ctrl_y):
         # the "replace diminuator" checkbox + caption, seated to the RIGHT of the predefined-
@@ -2966,8 +2968,9 @@ class _GridBuilder:
             for i in range(self.d):
                 for p in range(self.d):
                     text = DASH if not full_p else self.projection_matrix[i][p]
+                    # editable as the SAME stacked-fraction ratiocell every other gridded fraction uses
                     self.cells.append(CellBox(f"cell:proj:{i}:{p}", self.prime_left(p), self.proj_top(i),
-                                         COL_W, ROW_H, "projcell" if full_p else "mapped", text=text, prime=p))
+                                         COL_W, ROW_H, "ratiocell" if full_p else "mapped", text=text, prime=p))
         # the generator embedding G = H(MH)⁻¹ (d×r), beside P in the gens columns: its columns are
         # the held tuning's generators as fractional vectors. Read-only ("mapped") cells like P, but
         # over the r generator columns rather than the d primes (rows are the d primes, like P).
@@ -2977,8 +2980,9 @@ class _GridBuilder:
             for i in range(self.d):
                 for g in range(self.r):
                     text = DASH if not full_g else self.embedding_matrix[i][g]
+                    # editable as the SAME stacked-fraction ratiocell (like P, the comma ratios, …)
                     self.cells.append(CellBox(f"cell:embed:{i}:{g}", self.gen_left(g), self.proj_top(i),
-                                         COL_W, ROW_H, "embedcell" if full_g else "mapped", text=text, gen=g))
+                                         COL_W, ROW_H, "ratiocell" if full_g else "mapped", text=text, gen=g))
 
         # the projected unrotated vector list P·V (the projection row over the V column): each
         # unrotated vector scaled by its eigenvalue — the comma columns vanish (P·𝐜 = 0, the
@@ -4268,8 +4272,13 @@ class _GridBuilder:
                 if not self.tile_open("projection", ckey):
                     continue
                 top = self.ptext_band_y("projection") + self.row_ptext["projection"]
-                ctrl_x, ctrl_y = self.control_region(f"block:scheme:{ckey}", ckey, top, SCHEME_BTN_SQ)
-                self.emit_scheme_button(ctrl_x, ctrl_y, ckey)
+                # its own small box (the presets-off counterpart of control_box's scheme_btn row).
+                # We're past the _control_region_boxes flush, so append the box straight to self.blocks
+                # — it still layers on top of the panels (appended just above) since z-order is list order.
+                box_y = top + BOX_OUTER
+                self.blocks.append(Block(f"block:scheme:{ckey}", self.col_x[ckey], box_y, self.col_w[ckey],
+                                         BOX_INNER + SCHEME_BTN_SQ + CTRL_LABEL_GAP, boxed=True))
+                self.emit_scheme_button(self.col_x[ckey] + BOX_INNER, box_y + BOX_INNER, ckey)
 
         # plain-text value band: each tile's value as its natural EBK string, directly
         # below the symbol/caption stack (above the preset chooser). The two editable

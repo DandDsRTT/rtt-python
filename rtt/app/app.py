@@ -1285,8 +1285,6 @@ class _Reconciler:
         self.cell_kinds["mapping"] = _KindHandlers(self._build_mapping, self._update_mapping)
         self.cell_kinds["commacell"] = _KindHandlers(self._build_commacell, self._update_commacell)
         self.cell_kinds["unchangedcell"] = _KindHandlers(self._build_unchangedcell, self._update_input_text)
-        self.cell_kinds["projcell"] = _KindHandlers(self._build_projcell, self._update_input_text)
-        self.cell_kinds["embedcell"] = _KindHandlers(self._build_embedcell, self._update_input_text)
         self.cell_kinds["interestcell"] = _KindHandlers(self._build_interestcell, self._update_input_text)
         self.cell_kinds["heldcell"] = _KindHandlers(self._build_heldcell, self._update_input_text)
         self.cell_kinds["targetcell"] = _KindHandlers(self._build_targetcell, self._update_input_text)
@@ -1747,24 +1745,6 @@ class _Reconciler:
         inp = ui.input(on_change=lambda e: self._cb.on_unchanged_change(preview=True)) \
             .props("dense borderless").classes("rtt-cellinput")
         inp.on("blur", lambda _=None: self._cb.on_unchanged_change())
-        self.inputs[cb.id] = inp
-
-    def _build_projcell(self, cb, wrap):
-        # an editable projection-matrix P cell (a fraction like 1/4): retyping P recovers its unchanged
-        # basis (eigenvalue-1 eigenvectors) and retunes — rejected if P isn't a valid projection.
-        wrap.classes("rtt-cell-input")
-        inp = ui.input(on_change=lambda e: self._cb.on_proj_change(preview=True)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_proj_change())
-        self.inputs[cb.id] = inp
-
-    def _build_embedcell(self, cb, wrap):
-        # an editable generator-embedding G cell: retyping G recovers its unchanged basis (column
-        # space) and retunes — rejected if G isn't a valid embedding (M·G ≠ I).
-        wrap.classes("rtt-cell-input")
-        inp = ui.input(on_change=lambda e: self._cb.on_embed_change(preview=True)) \
-            .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", lambda _=None: self._cb.on_embed_change())
         self.inputs[cb.id] = inp
 
     def _update_commacell(self, cb):
@@ -2823,48 +2803,6 @@ def index() -> None:
         editor.set_unchanged_basis(ratios)
         render()
 
-    def on_proj_change(preview=False):
-        # the projection matrix P is editable (d×d fractions) when the tuning is a full rational
-        # projection: read the whole matrix and retune to it (rejected if it isn't a valid projection)
-        if building[0]:
-            return
-        d = editor.state.d
-        if any(f"cell:proj:{i}:{p}" not in rec.inputs for i in range(d) for p in range(d)):
-            if preview:
-                rec.clear_preview()
-            return
-        matrix = [[str(rec.inputs[f"cell:proj:{i}:{p}"].value).strip() for p in range(d)] for i in range(d)]
-        if any(not x for row in matrix for x in row):
-            if preview:
-                rec.clear_preview()
-            return
-        if preview:
-            _preview_edit(lambda: editor.set_projection_matrix(matrix))
-            return
-        editor.set_projection_matrix(matrix)
-        render()
-
-    def on_embed_change(preview=False):
-        # the generator embedding G is editable (d×r fractions) when the tuning is a full rational
-        # projection: read the whole matrix and retune to it (rejected if M·G ≠ I)
-        if building[0]:
-            return
-        d, r = editor.state.d, editor.state.r
-        if any(f"cell:embed:{i}:{g}" not in rec.inputs for i in range(d) for g in range(r)):
-            if preview:
-                rec.clear_preview()
-            return
-        matrix = [[str(rec.inputs[f"cell:embed:{i}:{g}"].value).strip() for g in range(r)] for i in range(d)]
-        if any(not x for row in matrix for x in row):
-            if preview:
-                rec.clear_preview()
-            return
-        if preview:
-            _preview_edit(lambda: editor.set_embedding_matrix(matrix))
-            return
-        editor.set_embedding_matrix(matrix)
-        render()
-
     def on_interest_change(preview=False):
         # the intervals of interest are edited as vectors in the interval-vectors row, like the comma
         # basis; read the d-tall columns and replace the set. preview=True rings without committing.
@@ -2984,7 +2922,28 @@ def index() -> None:
         # cell is a silent no-op (no toast), not an error.
         if building[0] or cid not in rec.inputs:
             return
-        group, tok = cid.split(":")  # the column's id-TOKEN, not its index — a reorder decouples them
+        parts = cid.split(":")
+        if parts[0] == "cell":  # the editable projection P / embedding G MATRIX cells (scalar fractions,
+            # cell:proj:i:p / cell:embed:i:g) — read the WHOLE matrix and retune to the projection it
+            # defines; an invalid edit toasts WHY instead of silently reverting
+            kind, d, r = parts[1], editor.state.d, editor.state.r
+            ncols = d if kind == "proj" else r
+            ids = [[f"cell:{kind}:{i}:{j}" for j in range(ncols)] for i in range(d)]
+            if any(cid2 not in rec.inputs for row in ids for cid2 in row):
+                render()
+                return
+            matrix = [[str(rec.inputs[cid2].value).strip() for cid2 in row] for row in ids]
+            if any(not x for row in matrix for x in row):  # an in-progress edit (a cleared cell)
+                render()
+                return
+            ok = editor.set_projection_matrix(matrix) if kind == "proj" else editor.set_embedding_matrix(matrix)
+            if not ok:
+                ui.notify("That isn't a valid projection — 𝑃 must be idempotent (𝑃² = 𝑃) with the commas in its kernel."
+                          if kind == "proj" else "That isn't a valid embedding — 𝑀𝐺 must equal the identity.",
+                          type="negative", position="top")
+            render()
+            return
+        group, tok = parts  # the column's id-TOKEN, not its index — a reorder decouples them
         raw = str(rec.inputs[cid].value).strip()
         if raw in ("", "?/?"):  # an untouched draft placeholder or a cleared cell
             render()
@@ -3847,8 +3806,6 @@ def index() -> None:
         on_cell_focus=on_cell_focus,
         on_comma_change=on_comma_change,
         on_unchanged_change=on_unchanged_change,
-        on_proj_change=on_proj_change,
-        on_embed_change=on_embed_change,
         on_drag_start=on_drag_start,
         on_drag_enter=on_drag_enter,
         on_drag_end=on_drag_end,

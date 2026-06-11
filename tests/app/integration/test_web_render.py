@@ -150,7 +150,7 @@ async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> 
     # the default meantone (TILT minimax-U) IS quarter-comma — it holds 2/1 and 5/4 — so the choosers
     # read 1/4-comma and P/G fill in (the 5^(1/4) entries), NOT dashes
     assert _cell_child(user, "preset:projection").value == "1/4-comma"
-    # P and G are now editable cells (projcell/embedcell) — read their value, not the cell text
+    # P and G are now editable ratiocells (the shared stacked-fraction cell) — read their value
     assert _cell_child(user, "cell:proj:2:1").value == "1/4"
     assert _cell_child(user, "cell:embed:2:1").value == "1/4"
     # pick 1/3-comma -> P and G re-form (it holds 6/5), both choosers track it, and the genmap

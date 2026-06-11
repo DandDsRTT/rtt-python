@@ -7884,7 +7884,7 @@ def test_projection_on_adds_the_generator_embedding_G_beside_P():
     for i in range(3):
         for g in range(2):
             cell = cells[f"cell:embed:{i}:{g}"]
-            assert cell.kind == "embedcell"               # editable, retyping G retunes
+            assert cell.kind == "ratiocell"               # editable, retyping G retunes (the shared stacked-fraction cell)
             assert cell.x == cells[f"tuning:gen:{g}"].x   # the same generator columns as 𝒈
             assert cell.y == cells[f"cell:proj:{i}:0"].y  # the same prime rows as P
     # quarter-comma's embedding G: the octave and 5^(1/4)

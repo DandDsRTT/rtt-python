@@ -765,20 +765,26 @@ class Editor:
             return  # not a valid full-rank rational projection — reject the edit
         self._hold_as_manual_tuning(ratios)
 
-    def set_projection_matrix(self, projection) -> None:
+    def set_projection_matrix(self, projection) -> bool:
         """Apply a hand-edited projection matrix P (the editable P tile): recover its unchanged basis
-        (the eigenvalue-1 eigenvectors) and retune to it, like editing U. A no-op when the edit isn't a
-        valid rational tempering projection of this temperament (rejected → reverts). Undoable."""
+        (the eigenvalue-1 eigenvectors) and retune to it, like editing U. Returns False (so the caller
+        can toast why) when the edit isn't a valid rational tempering projection of this temperament.
+        Undoable."""
         U = service.unchanged_basis_from_projection(self.state, projection)
-        if U is not None:
-            self.set_unchanged_basis(service.comma_ratios(U, self.state.domain_basis))
+        if U is None:
+            return False
+        self.set_unchanged_basis(service.comma_ratios(U, self.state.domain_basis))
+        return True
 
-    def set_embedding_matrix(self, embedding) -> None:
+    def set_embedding_matrix(self, embedding) -> bool:
         """Apply a hand-edited generator embedding G (the editable G tile): recover its unchanged basis
-        (its column space) and retune to it. A no-op when G isn't a valid embedding (M·G ≠ I). Undoable."""
+        (its column space) and retune to it. Returns False (so the caller can toast why) when G isn't a
+        valid embedding (M·G ≠ I). Undoable."""
         U = service.unchanged_basis_from_embedding(self.state, embedding)
-        if U is not None:
-            self.set_unchanged_basis(service.comma_ratios(U, self.state.domain_basis))
+        if U is None:
+            return False
+        self.set_unchanged_basis(service.comma_ratios(U, self.state.domain_basis))
+        return True
 
     def _displayed_retuning_map(self) -> tuple[float, ...] | None:
         """The per-prime retuning (tempered − just sizes, in cents) of the tuning the grid is
