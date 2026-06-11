@@ -2297,18 +2297,26 @@ async def test_hovering_a_column_minus_reddens_the_removed_column(user: User) ->
     assert "rtt-preview-remove" not in _wrap_classes(user, "prime:2")
 
 
-async def test_hovering_a_resolving_plus_reddens_what_it_consumes(user: User) -> None:
-    # an ADD that re-solves (here the generator + that un-tempers a comma into a new generator) still
-    # previews honestly: the comma it consumes goes red (it's removed from the grid), the cells whose
-    # value the re-solve moves go amber. The new generator column it adds lives off-screen until the
-    # click commits, so it isn't ringed — only the on-screen consequences show.
-    await user.open("/")
-    btn = set(user.find(marker="gen_plus").elements)               # un-temper the comma into a generator
-    UserInteraction(user, btn, None).trigger("mouseenter")
-    assert "rtt-preview-remove" in _wrap_classes(user, "comma:0")          # the un-tempered comma → red
-    assert "rtt-preview-change" in _wrap_classes(user, "tuning:prime:1")   # the re-solved tuning → amber
-    UserInteraction(user, btn, None).trigger("mouseleave")
-    assert "rtt-preview-remove" not in _wrap_classes(user, "comma:0")
+async def test_clicking_the_mapping_plus_opens_a_green_draft_row_to_fill_in(user: User) -> None:
+    # the mapping + (add a generator) mirrors the interval-list +'s: instead of silently un-tempering
+    # a comma, it opens a blank GREEN draft ROW the user types a new generator into, committing once
+    # the row appended to M is a proper temperament. (Like a draft column, the cursor also drops into
+    # its first matrix cell — the same add_interval focus path; there is no hover-preview, as the
+    # column +'s have none.)
+    await user.open("/")  # meantone, r=2 n=1
+    await user.should_not_see(marker="cell:mapping:2:0")          # no draft row yet
+    _click_glyph(user, "gen_plus")                               # open the draft row
+    await user.should_see(marker="cell:mapping:2:0")
+    await user.should_see(marker="gen:pending")                  # a "?" generator-ratio on the spine
+    assert "rtt-pending" in _cell_child(user, "cell:mapping:2:0")._classes  # the draft row reads green
+    assert _cell_child(user, "cell:mapping:2:0").value == ""                # blank until filled
+    # type a new independent generator (prime 5, held just) across the draft row, then commit
+    for p, v in zip(range(3), ("0", "0", "1")):
+        _cell_child(user, f"cell:mapping:2:{p}").set_value(v)
+    _commit(user, "cell:mapping:2:2")                            # blur commits the completed row
+    await user.should_see(marker="cell:mapping:2:0")             # a real committed 3rd generator now
+    assert "rtt-pending" not in _cell_child(user, "cell:mapping:2:0")._classes  # committed: no longer green
+    assert [_cell_child(user, f"cell:mapping:2:{p}").value for p in range(3)] == ["0", "0", "1"]
 
 
 async def test_hovering_a_temperament_of_a_different_dimensionality_reflows_the_grid(user: User) -> None:

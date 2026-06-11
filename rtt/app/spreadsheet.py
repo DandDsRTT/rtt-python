@@ -698,7 +698,7 @@ class _GridBuilder:
                  pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
                  pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
                  displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
-                 targets_in_use=True):
+                 targets_in_use=True, pending_mapping_row=None):
         self.prev_ids = prev_ids or {}
         # the target-interval column is hidden when the targets aren't computing the tuning (the
         # displayed tuning has deviated from the scheme's target-driven optimum onto a projection)
@@ -715,6 +715,9 @@ class _GridBuilder:
         self.pending_held = pending_held
         self.pending_target = pending_target
         self.pending_element = pending_element  # chapter-9 domain basis element draft (str / None)
+        # a generator being added: a draft mapping ROW (d ints, None while blank) the user types in,
+        # rendered as a green draft row across the mapping band — the row mirror of pending_comma
+        self.pending_mapping_row = pending_mapping_row
         self.held_vectors = held_vectors
         self.generator_tuning = generator_tuning
         self.target_override = target_override
@@ -794,6 +797,12 @@ class _GridBuilder:
         header_h = HEADER_H
         self.d = self.state.d
         self.r = len(self.state.mapping)
+        # the mapping rows the grid SHOWS: the r committed generators, plus one extra while a draft
+        # generator row is being added (the row mirror of nc_shown growing the comma half). The draft
+        # rides at index r (one past the committed rows); it grows ONLY the mapping band's height, so
+        # its brackets enclose the green ?/blank row, while everything keyed off self.r (the genmap,
+        # canonical mapping, comma dual, tuning rows) stays at the committed rank.
+        self.r_shown = self.r + (1 if self.pending_mapping_row is not None else 0)
         # the d domain elements: the standard primes, or a nonstandard subgroup's (possibly
         # nonprime) basis. Every interval set is read over this basis (so 13/5 keeps its 13).
         self.elements = self.state.domain_basis
@@ -1314,7 +1323,7 @@ class _GridBuilder:
             ("scaling_factors", ROW_H, self.show_unchanged, True, "scaling factors"),
             ("vectors", self.d * ROW_H, show_temp, True, "interval vectors"),
             ("canon", self.rc * ROW_H, self.show_form_controls, True, "canonical mapping"),
-            ("mapping", self.r * ROW_H, show_temp, True, "mapping"),
+            ("mapping", self.r_shown * ROW_H, show_temp, True, "mapping"),
             # the rational tempering projection P = GM, a d×d matrix over the domain primes —
             # d rows tall like the interval-vectors row, framed like the mapping. Placed between
             # the mapping and the tuning rows (the mockup). Present only when service could build
@@ -1692,7 +1701,8 @@ class _GridBuilder:
         if self.tile_open("vectors", "quantities") and (self.show_nonstandard_domain or self.standard_domain):
             self.row_plus_y["vectors"] = self.vec_top(self.d_shown) + ROW_H / 2
         if self.tile_open("mapping", "quantities") and self.state.n > 0:
-            self.row_plus_y["mapping"] = self.map_top(self.r) + ROW_H / 2
+            # below the last SHOWN row — so an open draft row pushes the + down past it
+            self.row_plus_y["mapping"] = self.map_top(self.r_shown) + ROW_H / 2
 
     def _caption_floor(self, key):
         # the width an open column needs so its captions stay within MAX_CAPTION_LINES,
@@ -2908,6 +2918,24 @@ class _GridBuilder:
                     for j in range(self.nu):
                         mapped_text = DASH if self.unchanged_mapped[i][j] is None else str(self.unchanged_mapped[i][j])
                         self.cells.append(CellBox(f"cell:mapped_unchanged:{i}:{j}", self.comma_left(self.nc_shown + j), self.map_top(i), COL_W, ROW_H, "mapped", text=mapped_text, gen=i, unit=self.cell_unit("mapping", "commas", gen=i)))
+            # the draft generator row being added: a green ?/blank row at index r — the ROW mirror of
+            # the pending comma column. It rides ONLY the mapping band (the genmap, canonical mapping
+            # and comma dual all stay at the committed rank), and commits once the typed row appended
+            # to M is a proper temperament (set_pending_mapping_row). Its cells are the editable matrix
+            # BLANKS the user fills, plus a "?" generator ratio on the spine and a − that cancels the
+            # add; the derived mapped columns carry no entry for it yet (their [ ] stay at the r
+            # committed rows), so the draft slot there is simply empty until it commits.
+            if self.pending_mapping_row is not None:
+                dr = self.r  # the draft row's index, one past the committed generators
+                if self.tile_open("mapping", "quantities"):
+                    self.cells.append(CellBox("gen:pending", self.col_x["quantities"], self.map_top(dr), self.col_w["quantities"], ROW_H, "genratio", text="?", gen=dr, pending=True))
+                    map_bus_x = self.node_edge + self.FAN if self._row_fans("mapping") else self.node_edge
+                    gen_right = self.col_x["quantities"] + self.col_w["quantities"]
+                    self.cells.append(CellBox("map_minus:pending", map_bus_x, self.map_top(dr), gen_right - map_bus_x, ROW_H, "map_minus", gen=dr, pending=True))
+                if self.tile_open("mapping", "primes"):
+                    for p in range(self.d):
+                        v = self.pending_mapping_row[p]
+                        self.cells.append(CellBox(f"cell:mapping:{dr}:{p}", self.prime_left(p), self.map_top(dr), COL_W, ROW_H, "mapping", text="" if v is None else str(v), gen=dr, prime=p, pending=True))
 
         # the projection matrix P = GM: a d×d operator over the domain primes, a stack of read-only
         # maps like the mapping. Its cells are "mapped" (a computed value, not editable like the
@@ -3717,6 +3745,8 @@ class _GridBuilder:
             if self.tile_open("mapping", "primes"):
                 for i in range(self.r):
                     self.bracket(f"map:{i}", MAP_BRACKETS, "primes", self.map_top(i), ROW_H)
+                if self.pending_mapping_row is not None:  # the draft row's own ⟨ … ] map brackets
+                    self.bracket("map:pending", MAP_BRACKETS, "primes", self.map_top(self.r), ROW_H)
             if self.tile_open("mapping", "commas"):  # the mapped (vanishing) comma basis: a [ ] over r rows
                 self.bracket("mapped_comma", LIST_BRACKETS, "commas", self.row_y["mapping"], self.r * ROW_H, fit=True)
             if self.tile_open("mapping", "targets"):
@@ -4399,11 +4429,12 @@ def build(state, settings=None, collapsed=None,
           pending_interest=None, pending_held=None, pending_target=None, prev_ids=None,
           pending_element=None, nonprime_approach="", superspace_generator_tuning=None,
           displayed_tuning_name=None, held_basis_ratios=(), displayed_projection_name=None,
-          targets_in_use=True) -> Layout:
+          targets_in_use=True, pending_mapping_row=None) -> Layout:
     return _GridBuilder(
         state, settings, collapsed, tuning_scheme, target_spec, interest, range_mode,
         pending_comma, held_vectors, generator_tuning, target_override, custom_prescaler,
         optimize_locked, tuning_optimized, pending_interest, pending_held, pending_target,
         prev_ids, pending_element, nonprime_approach, superspace_generator_tuning,
         displayed_tuning_name, held_basis_ratios, displayed_projection_name, targets_in_use,
+        pending_mapping_row=pending_mapping_row,
     ).layout()

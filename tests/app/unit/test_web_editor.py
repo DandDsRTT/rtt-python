@@ -653,10 +653,14 @@ def test_add_remove_mapping_row_change_rank_holding_dimensionality():
     editor = Editor()  # meantone, d=3 r=2 n=1
     editor.remove_mapping_row(0)  # drop a generator (any row)
     assert (editor.state.r, editor.state.d, editor.state.n) == (1, 3, 2)  # −r, +n, d held
-    editor.add_mapping_row()  # un-temper a comma
+    editor.add_mapping_row()  # OPEN a blank green draft row (the row mirror of add_comma)
+    assert editor.pending_mapping_row == [None, None, None]  # a draft, not yet committed
+    assert (editor.state.r, editor.state.d, editor.state.n) == (1, 3, 2)  # the draft changes nothing yet
+    editor.set_pending_mapping_row([1, 1, 0])  # type a new independent generator → commits (+r, −n)
+    assert editor.pending_mapping_row is None
     assert (editor.state.r, editor.state.d, editor.state.n) == (2, 3, 1)  # +r, −n, d held
     editor.undo()
-    assert editor.state.r == 1  # each is a single undoable step
+    assert editor.state.r == 1  # the commit is a single undoable step
 
 
 def test_mapping_row_guards():
@@ -676,6 +680,66 @@ def test_add_mapping_row_to_combines_rows_as_one_undoable_step():
     assert editor.state.comma_basis == commas  # same temperament, new generator basis
     editor.undo()
     assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))  # a single undoable step
+
+
+def test_add_mapping_row_starts_a_blank_pending_draft_row_without_touching_the_temperament():
+    # the ROW mirror of test_add_comma_starts_a_blank_pending_draft: the mapping + opens a green
+    # draft generator the user fills in, rather than silently un-tempering a comma.
+    editor = Editor()  # meantone, d=3 r=2 n=1
+    assert editor.pending_mapping_row is None
+    editor.add_mapping_row()
+    assert editor.pending_mapping_row == [None, None, None]  # a blank d-length draft row
+    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))    # the temperament is unchanged...
+    assert (editor.state.r, editor.state.n) == (2, 1)        # ...the mapping keeps its rows...
+    assert editor.can_undo is False                          # ...and starting a draft is not undoable
+
+
+def test_filling_the_pending_mapping_row_with_an_independent_generator_commits_and_reranks():
+    editor = Editor()  # meantone, d=3 r=2 n=1
+    editor.add_mapping_row()
+    editor.set_pending_mapping_row([0, 0, 1])  # a new independent generator (prime 5 held just)
+    assert editor.pending_mapping_row is None  # committed, no longer pending
+    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4), (0, 0, 1))  # the typed row appended as-is
+    assert (editor.state.r, editor.state.n) == (3, 0)  # +r, −n (full rank now), d held
+    assert editor.can_undo is True  # the commit is the undoable edit
+    editor.undo()
+    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))  # one undoable step restores it
+
+
+def test_incomplete_or_dependent_pending_mapping_row_is_held_not_committed():
+    editor = Editor()  # meantone, d=3 r=2 n=1
+    editor.add_mapping_row()
+    editor.set_pending_mapping_row([0, 0, None])  # still being typed
+    assert editor.pending_mapping_row == [0, 0, None] and editor.state.r == 2  # held, no re-rank
+    editor.set_pending_mapping_row([2, 2, 0])  # complete but dependent (2× existing row 0) -> no new generator
+    assert editor.pending_mapping_row == [2, 2, 0] and editor.state.r == 2  # held, not committed
+
+
+def test_cancel_pending_mapping_row_discards_the_draft():
+    editor = Editor()
+    editor.add_mapping_row()
+    editor.set_pending_mapping_row([0, 0, None])  # a partly-typed draft
+    editor.cancel_pending_mapping_row()
+    assert editor.pending_mapping_row is None              # discarded
+    assert editor.state.mapping == ((1, 1, 0), (0, 1, 4))  # temperament untouched
+    assert editor.can_undo is False                        # cancelling a never-committed draft is not undoable
+
+
+def test_a_temperament_edit_clears_a_pending_mapping_row_draft():
+    # a draft's length is tied to the current temperament, so a structural edit (or undo/redo/reset)
+    # abandons it — exactly like the column drafts (_clear_pending).
+    editor = Editor()
+    editor.add_mapping_row()
+    editor.edit_comma_basis(((4, -4, 1),))  # a temperament edit
+    assert editor.pending_mapping_row is None
+
+
+def test_add_mapping_row_opens_no_draft_at_full_rank():
+    editor = Editor()
+    editor.edit_mapping(((1, 0, 0), (0, 1, 0), (0, 0, 1)))  # JI, full rank, n=0
+    assert editor.can_add_mapping_row is False
+    editor.add_mapping_row()  # guarded: no independent generator can be added holding the d primes
+    assert editor.pending_mapping_row is None
 
 
 def test_add_mapping_row_to_preserves_a_frozen_tuning():
@@ -1228,9 +1292,9 @@ def test_editing_to_a_degenerate_temperament_is_rejected():
 
 
 def test_remove_comma_un_tempers_the_last_comma_to_just_intonation():
-    # the comma − un-tempers down to AND INCLUDING the sole comma — the comma-space face of the
-    # mapping + (add_mapping_row), which already reaches nullity 0. Removing meantone's 81/80 leaves
-    # 5-limit just intonation (the identity mapping), one undoable edit.
+    # the comma − un-tempers down to AND INCLUDING the sole comma — the comma-space face of adding a
+    # generator, reaching nullity 0. Removing meantone's 81/80 leaves 5-limit just intonation (the
+    # identity mapping), one undoable edit.
     editor = Editor()
     assert editor.can_remove_comma is True  # the last comma IS removable
     editor.remove_comma()

@@ -3760,6 +3760,41 @@ def test_the_comma_basis_plain_text_becomes_a_two_tone_draft_box_while_pending()
     assert resting["ptext:vectors:commas"].kind == "ptextedit"  # no draft -> editable again
 
 
+def test_adding_a_mapping_row_starts_a_pending_draft_row_that_does_not_re_rank():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # meantone, r=2
+    cells = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[None, None, None]).cells}
+    # the two committed generator rows stay; a draft row rides ONE ROW_H below them (at index r=2)
+    assert "cell:mapping:1:0" in cells and not cells["cell:mapping:1:0"].pending
+    assert cells["cell:mapping:2:0"].text == "" and cells["cell:mapping:2:0"].pending  # blank, green-flagged
+    assert cells["cell:mapping:2:0"].y - cells["cell:mapping:1:0"].y == spreadsheet.ROW_H
+    assert "cell:mapping:3:0" not in cells  # exactly one draft row
+    # a "?" generator ratio on the spine, the draft's own ⟨ … ] map brackets, and a − to cancel it
+    assert cells["gen:pending"].text == "?" and cells["gen:pending"].pending
+    assert "bracket:map:pending:l" in cells and "bracket:map:pending:r" in cells
+    assert cells["map_minus:pending"].pending
+    # the temperament is untouched: the genmap stays at the committed rank (no 3rd generator ratio),
+    # and the derived mapped target column carries no entry for the draft row (its [ ] stays at r rows)
+    assert "gen:2" not in cells
+    assert "cell:mapped:2:0" not in cells and "cell:mapped:2:t0" not in cells
+
+
+def test_a_partly_typed_pending_mapping_row_shows_its_entered_components():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))
+    cells = {c.id: c for c in spreadsheet.build(base, pending_mapping_row=[0, None, 1]).cells}
+    assert cells["cell:mapping:2:0"].text == "0"   # typed
+    assert cells["cell:mapping:2:1"].text == ""    # still blank
+    assert cells["cell:mapping:2:2"].text == "1"
+    assert all(cells[f"cell:mapping:2:{p}"].pending for p in range(3))
+
+
+def test_a_pending_mapping_row_grows_only_the_mapping_band_by_one_row():
+    base = service.from_mapping(((1, 1, 0), (0, 1, 4)))  # r=2
+    plain = spreadsheet.build(base)
+    drafting = spreadsheet.build(base, pending_mapping_row=[None, None, None])
+    # the draft adds exactly one ROW_H to the grid (the extra mapping row) — no other band changes
+    assert drafting.height - plain.height == spreadsheet.ROW_H
+
+
 # --- math expressions: the just row's exact log₂ closed forms ---
 
 def test_math_expressions_render_the_just_tuning_primes_as_logs():

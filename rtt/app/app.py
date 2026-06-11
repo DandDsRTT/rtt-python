@@ -1708,10 +1708,20 @@ class _Reconciler:
             .props("dense borderless").classes("rtt-cellinput")
         inp.on("blur", lambda _=None: self._cb.on_mapping_change())  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
-        self._arm_row_target(wrap, cb.gen)  # drop a dragged generator row onto this row to combine
+        # drop a dragged generator row onto this row to combine. Armed even for the draft row (gen = r):
+        # it's inert while the row stays a draft (a drop onto index r no-ops — see add_mapping_row_to's
+        # guard), and once the draft commits the reconciler reuses this same element, so arming it now
+        # means the freshly-committed generator is a drop target without waiting for a full rebuild.
+        self._arm_row_target(wrap, cb.gen)
 
     def _update_mapping(self, cb):
-        self.inputs[cb.id].value = "" if cb.blank else str(self._editor.state.mapping[cb.gen][cb.prime])
+        if cb.pending:  # the draft row: show the typed component (blank if None), green-ringed
+            v = self._editor.pending_mapping_row[cb.prime] if self._editor.pending_mapping_row is not None else None
+            self.inputs[cb.id].value = "" if v is None else str(v)
+        else:
+            self.inputs[cb.id].value = "" if cb.blank else str(self._editor.state.mapping[cb.gen][cb.prime])
+        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
+                              remove="" if cb.pending else "rtt-pending")
 
     def _build_commacell(self, cb, wrap):
         wrap.classes("rtt-cell-input")
@@ -1899,6 +1909,9 @@ class _Reconciler:
 
     # ---- ratio faces (a stacked fraction via _ratio) + the read-only cents (tuning value) face ----
     def _build_genratio(self, cb, wrap):
+        if cb.pending:  # the draft row's generator ratio: a green "?" placeholder until the row commits
+            self.labels[cb.id] = ui.label(cb.text).classes("rtt-value rtt-pending-q")
+            return
         self._ratio(cb, approx=True)  # a generator ratio, shown ~approximate
 
     def _build_commaratio(self, cb, wrap):
@@ -2375,21 +2388,23 @@ class _Reconciler:
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
         self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
 
-    def _build_gen_plus(self, cb, wrap):  # add a generator by un-tempering a comma (−n, +r); the + on the bus stub
+    def _build_gen_plus(self, cb, wrap):  # add a generator: open a blank green draft mapping ROW (the bus stub)
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
-        self._preview_control(wrap, self._editor.add_mapping_row)
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_mapping_row, "mapping"))
 
     def _build_map_minus(self, cb, wrap):  # remove generator cb.gen (a mapping row); a hover − on the left bus
         wrap.classes("rtt-minus-zone")  # clear of the generator-ratio spine it drops over
+        if cb.pending:  # the draft row's −: cancel the add (nothing committed yet, so no preview)
+            ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
+                .on("click", lambda _=None: self._cb.act(self._editor.cancel_pending_mapping_row))
+            return
         ui.html(_control_svg("minus")).classes("rtt-glyph rtt-minus-btn-v") \
             .on("click", lambda _=None, idx=cb.gen: self._cb.act(lambda: self._editor.remove_mapping_row(idx)))
         self._preview_control(wrap, lambda i=cb.gen: self._editor.remove_mapping_row(i))
 
-    def _build_map_plus(self, cb, wrap):  # add a generator (un-temper a comma); the + on the left-bus stub
+    def _build_map_plus(self, cb, wrap):  # add a generator: open a blank green draft mapping ROW (left-bus stub)
         ui.html(_control_svg("plus")).classes("rtt-glyph rtt-fanbtn") \
-            .on("click", lambda _=None: self._cb.act(self._editor.add_mapping_row))
-        self._preview_control(wrap, self._editor.add_mapping_row)
+            .on("click", lambda _=None: self._cb.add_interval(self._editor.add_mapping_row, "mapping"))
 
     def _build_map_drag(self, cb, wrap):  # drag generator row cb.gen onto another row's grip to merge
         # HTML5 drag-to-combine, built EXACTLY like the working column-reorder grip (_build_colgrip):
@@ -2697,6 +2712,20 @@ def index() -> None:
         if building[0] or not editor.settings["temperament_boxes"]:  # no editable matrix when hidden
             return
         d, r = editor.state.d, len(editor.state.mapping)
+        if editor.pending_mapping_row is not None:
+            # the draft row rides at index r; hand its cells to the editor, which commits (and
+            # re-ranks) once they form a proper, independent generator. Like the comma draft, the row
+            # is off-screen-until-committed for preview purposes, so a preview pass rings nothing.
+            if any(f"cell:mapping:{r}:{p}" not in rec.inputs for p in range(d)):
+                if preview:
+                    rec.clear_preview()
+                return  # the draft cells aren't shown (folded away)
+            if preview:
+                rec.clear_preview()
+                return
+            editor.set_pending_mapping_row([_parse_int(rec.inputs[f"cell:mapping:{r}:{p}"].value) for p in range(d)])
+            render()
+            return
         matrix = [[_parse_int(rec.inputs[f"cell:mapping:{i}:{p}"].value) for p in range(d)] for i in range(r)]
         if any(v is None for row in matrix for v in row):
             if preview:
@@ -3296,6 +3325,9 @@ def index() -> None:
         "held":     ("held:pending",     "heldcell"),
         "interest": ("interest:pending", "interestcell"),
         "element":  ("prime:pending",    None),
+        # a draft mapping ROW has no editable ratio cell (the generator ratio is read-only) — so it
+        # has no quantities-cell target; focus drops straight into the first matrix cell (prime 0)
+        "mapping":  (None,               "mapping"),
     }
 
     def add_interval(action, group):

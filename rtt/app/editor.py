@@ -150,6 +150,13 @@ class Editor:
         self.pending_interest: list[int | None] | None = None
         self.pending_held: list[int | None] | None = None
         self.pending_target: list[int | None] | None = None
+        # A generator being added but not yet complete: the ROW mirror of pending_comma — a draft
+        # mapping row (d components, each an int or None while blank) the user types a new generator
+        # into. It renders as a blank, green-outlined ROW across the mapping band (matching the green
+        # draft COLUMNS the interval lists grow), and like them lives OUTSIDE the document — no
+        # undo/redo/restore. It commits once the row, appended to the mapping, is a proper temperament
+        # (independent of the existing rows, re-ranking +r/−n — see set_pending_mapping_row).
+        self.pending_mapping_row: list[int | None] | None = None
         # the chapter-9 domain basis element draft (nonstandard-domain box on): a green ?/? column
         # the user types a rational into. None = no draft; "" / a partial ratio = being typed. It
         # commits once the text is a valid, independent addition (added held just — see
@@ -242,6 +249,7 @@ class Editor:
         self.pending_held = None
         self.pending_target = None
         self.pending_element = None
+        self.pending_mapping_row = None
 
     @property
     def state(self) -> TemperamentState:
@@ -317,6 +325,7 @@ class Editor:
             pending_held=self.pending_held,
             pending_target=self.pending_target,
             pending_element=self.pending_element,
+            pending_mapping_row=self.pending_mapping_row,
             nonprime_approach=self.nonprime_basis_approach,
             superspace_generator_tuning=self.superspace_generator_tuning,
             displayed_tuning_name=self.displayed_tuning_scheme_name,
@@ -1207,11 +1216,35 @@ class Editor:
         self.state = service.shrink_domain(self.state)
 
     def add_mapping_row(self) -> None:
+        """Begin a pending mapping row: a blank green draft row the user types a new generator into,
+        the ROW mirror of :meth:`add_comma`. It is NOT part of the temperament (the mapping is
+        unchanged) and not an undoable edit until it commits — see :meth:`set_pending_mapping_row`.
+        Gated like before on there being a comma to un-temper (nullity > 0): at full rank no
+        independent generator can be added holding the d primes, so the + does not open a draft."""
         if not self.can_add_mapping_row:
-            return  # nothing tempered to un-temper into a new generator
-        self._snapshot()
-        self._clear_pending()
-        self.state = service.add_mapping_row(self.state)
+            return  # full rank: no independent generator to add (n = 0)
+        self.pending_mapping_row = [None] * self.state.d
+
+    def set_pending_mapping_row(self, values) -> None:
+        """Hold the draft generator's typed components. Once all d are filled and the row, appended
+        to the mapping, is a proper temperament — independent of the existing rows, so it genuinely
+        adds a generator (+r, −n) — commit it (re-dualing the comma basis) and clear the draft. An
+        incomplete or dependent draft is kept as-is (shown pending), changing nothing. The row-space
+        twin of :meth:`set_pending_comma`; like it, commits directly (no :meth:`_clear_pending`, which
+        would wipe the very draft mid-edit)."""
+        self.pending_mapping_row = list(values)
+        if any(v is None for v in values):
+            return  # still being typed in
+        extended = [list(row) for row in self.state.mapping] + [[int(v) for v in values]]
+        if service.is_proper_temperament(extended):  # an independent new row re-ranks the temperament
+            self._snapshot()
+            self.state = service.from_mapping(extended, self.state.domain_basis)
+            self.pending_mapping_row = None
+
+    def cancel_pending_mapping_row(self) -> None:
+        """Discard the draft mapping row without committing (the draft row's − control). Not an
+        undoable edit — the row was never committed. A no-op when there is no draft."""
+        self.pending_mapping_row = None
 
     def remove_mapping_row(self, i: int) -> None:
         if not self.can_remove_mapping_row:
