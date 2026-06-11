@@ -20,13 +20,6 @@ SUB_CLOSE = chr(0xE004)
 # <sub> rather than the lowercase ₗ (U+2097) the tables used to embed.
 SUBSCRIPT_L = SUB_OPEN + "L" + SUB_CLOSE
 
-# Abstract names for the dL projected superspace basis elements down the superspace-projection
-# row's quantities spine (the mockup): the tempering projection P_L sends each just superspace
-# prime to a tempered basis direction that no longer names a just ratio, so the spine labels them
-# with sequential lowercase Greek letters rather than the primes (which the on-domain projection
-# spine still shows). dL never reaches the end of the alphabet in practice.
-GREEK_LETTERS = tuple("αβγδεζηθικλμνξοπρστυφχψω")
-
 # The counts row: each column's set cardinality, as (column key, symbol, name).
 # The symbol+value (e.g. "r = 2", the symbol rendered math-italic via _mathit) is
 # the cell; the name ("rank") is its caption.
@@ -776,7 +769,8 @@ UNITS = {
     ("ss_mapping", "detempering"): f"g{SUBSCRIPT_L}",
     ("ss_just_mapping", "ssprimes"): "p/p",
     # P_L is a basis-element → basis-element operator (the projected superspace basis), so b/b — NOT
-    # the gL/p or p/p of M_L / M_jL (the mockup labels its rows bᵢ and spine α, β, γ …)
+    # the gL/p or p/p of M_L / M_jL (the mockup labels its rows bᵢ; its spine α, β, γ … are
+    # placeholders for the superspace primes the row's quantities spine actually lists)
     ("ss_projection", "ssprimes"): "b/b",
     # the cyan superspace tuning row mirrors the on-domain tuning row over the superspace
     # primes (p, true primes); 𝒈ₗ is ¢ per superspace generator gL.
@@ -931,9 +925,9 @@ SUPERSPACE_TILES = (
     ("block:ss_mapping:gens", "ss_mapping", "gens"),               # M_L over its own generators (trivially identity)
     ("block:ss_just_mapping:ssprimes", "ss_just_mapping", "ssprimes"),  # M_jL = I (dL × dL identity)
     # the superspace tempering projection P_L = G_L·M_L (gated on the projection toggle via its row band):
-    # the dL × dL operator over the superspace primes, plus its quantities spine (the projected basis names)
+    # the dL × dL operator over the superspace primes, plus its quantities spine (the dL superspace primes)
     ("block:ss_projection:ssprimes", "ss_projection", "ssprimes"),     # P_L itself, the dL × dL projection
-    ("block:ss_projection:quantities", "ss_projection", "quantities"), # the spine: the dL projected basis names α, β, …
+    ("block:ss_projection:quantities", "ss_projection", "quantities"), # the spine: the dL superspace primes
     ("block:tuning:ssgens", "tuning", "ssgens"),                   # 𝒈L (Phase 4F)
     ("block:tuning:ssprimes", "tuning", "ssprimes"),               # 𝒕L (Phase 4F)
     ("block:just:ssprimes", "just", "ssprimes"),                   # 𝒋L (Phase 4F)

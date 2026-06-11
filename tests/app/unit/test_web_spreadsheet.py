@@ -6836,12 +6836,14 @@ def test_superspace_projection_row_absent_on_a_standard_domain():
     assert not any(c.startswith("cell:ss_projection:") for c in cells)
 
 
-def test_superspace_projection_quantities_spine_is_greek_basis_names():
-    # the superspace projection's quantities spine names the dL projected superspace basis elements
-    # with sequential Greek letters (the mockup): the projection sends the just primes to tempered
-    # basis directions that no longer name a just ratio, so the spine labels them abstractly.
+def test_superspace_projection_quantities_spine_lists_the_superspace_primes():
+    # the superspace projection's quantities spine lists the dL superspace primes (the mockup's
+    # α, β, γ … are placeholders for them), one per row — exactly like the superspace interval-
+    # vectors spine above it. For BARBADOS over 2.3.13/5 the superspace is 2.3.5.13.
     cells = {c.id: c for c in _barbados_proj().cells}
-    assert [cells[f"ss_proj_basis:{p}"].text for p in range(4)] == ["α", "β", "γ", "δ"]
+    assert [cells[f"ss_proj_basis:{p}"].text for p in range(4)] == ["2", "3", "5", "13"]
+    # the same superspace primes the ss_vectors spine shows (both rows are indexed by them)
+    assert [cells[f"ss_proj_basis:{p}"].text for p in range(4)] == [cells[f"ss_basis:{p}"].text for p in range(4)]
     # spine-centred in the quantities column, sharing its x with the superspace mapping spine above
     assert cells["ss_proj_basis:0"].x == cells["ss_basis:0"].x
     assert cells["ss_proj_basis:0"].w == spreadsheet.COL_W

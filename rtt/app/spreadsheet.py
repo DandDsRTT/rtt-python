@@ -3349,16 +3349,16 @@ class _GridBuilder:
                 self.cells.append(CellBox(f"ss_gen:{i}", self.col_x["quantities"], self.ss_map_top(i),
                                           self.col_w["quantities"], ROW_H, "genratio",
                                           text=ss_gens[i] if i < len(ss_gens) else ""))
-        # the superspace PROJECTION row's spine: the dL projected superspace basis elements named with
-        # sequential Greek letters α, β, γ … (the mockup). P_L sends each just superspace prime to a
-        # tempered basis direction that no longer names a just ratio, so — unlike the on-domain
-        # projection spine (the domain primes) — the spine labels them abstractly. Read-only, like
-        # proj_basis (the whole row is derived). Centred COL_W squares, sharing the spine's x.
+        # the superspace PROJECTION row's spine: the dL superspace primes label its prime-indexed
+        # rows, like the superspace interval-vectors spine (ss_basis) above it and the on-domain
+        # projection's domain-prime spine. (The mockup draws placeholder Greek letters α, β, γ …
+        # here; they stand for these superspace primes.) Read-only, like proj_basis (the whole row
+        # is derived). Centred COL_W squares, sharing the spine's x with ss_basis.
         if self.row_open("ss_projection") and self.tile_open("ss_projection", "quantities"):
             bx = self.col_x["quantities"] + (self.col_w["quantities"] - COL_W) / 2  # square, centred in the spine
             for p in range(self.dL):
                 self.cells.append(CellBox(f"ss_proj_basis:{p}", bx, self.ss_proj_top(p), COL_W, ROW_H, "prime",
-                                          text=GREEK_LETTERS[p] if p < len(GREEK_LETTERS) else "", prime=p))
+                                          text=str(self.superspace_primes[p]), prime=p))
         # B_L (basis-embedding matrix): each domain element as a dL-tall vector of integer
         # vector coefficients over the superspace primes. The cells form a dL × d grid sharing
         # the prime-column gridlines with the existing vectors row above (the same prime_left
