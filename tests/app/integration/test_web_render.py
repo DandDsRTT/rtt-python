@@ -2750,7 +2750,7 @@ async def test_completing_a_held_interval_draft_clears_the_rings_without_blur(us
     wrap = set(user.find(marker="cell:held:0:0").elements)
     UserInteraction(user, wrap, None).trigger("wheel", {"deltaY": 100})  # one notch down: blank → -1 → COMMITS
     await user.should_see(marker="held:0")                       # the draft materialized (no blur fired)
-    assert _cell_child(user, "held:0").value == "3/2"
+    assert _ratio_value(user, "held:0") == "3/2"
     for p in range(3):                                           # the committed column carries no ring
         assert "rtt-preview-change" not in _wrap_classes(user, f"cell:held:{p}:0"), \
             "the held-interval commit left its rings stranded (no blur ever fires on this path)"
