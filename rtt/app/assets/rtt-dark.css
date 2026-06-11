@@ -14,8 +14,10 @@
    turned on). What IS always present — and so themed below — is the audio bank, the per-column hover
    speaker, and the dummy tile's sample chart (its bars and axes ride _BR_COLOR, retinted by the
    marks rule below; the real per-tile charts share that token, so they follow for free once the
-   charts layer is on). Accent hues — the pending-comma green and the edit-preview amber — read on
-   dark unchanged and are kept as-is.
+   charts layer is on). The preview-highlight accent RINGS and washes (the pending green, the edit-
+   preview amber, the remove red) ride their accent vars unchanged and read on dark as-is; only the
+   three accent-derived TEXT colours, which light mode darkens toward black, are re-derived toward
+   white below (dark text on a dark cell is invisible — see the --*-text-color overrides).
 
    Palette (mirrors the anchors in app.py): pane #1f2329 · panel #272c33 · group #2c323a ·
    box #31373f · cell #1b1f24 · text #e3e6ea · caption #aeb4bc · muted #71777f · icon #9aa1a9 ·
@@ -32,6 +34,17 @@ body.rtt-dark {
      that each drop ONE to #1e give clean dark secondaries — tuning ⊓ temperament = #1e451e (green),
      mirroring the light cyan ⊓ yellow = green. */
   --wash-base:#454545; --wash-tuning:#1e4545; --wash-temperament:#45451e; --wash-form:#451e45;
+  /* the preview-highlight TEXT colours. Light mode shows three lightnesses of one accent hue per
+     state — a pale wash, the mid ring, and TEXT darkened toward black so it reads on the near-white
+     wash (--*-text-color = color-mix(accent 60%, black), in app._CSS_VARS). On a dark cell that
+     darkened text is dark-on-dark, unreadable — so flip the third lightness: re-derive each from the
+     SAME accent mixed toward WHITE, making the text the LIGHTEST of the three (the faithful inversion
+     of light mode). Every preview/pending/remove rule reads these vars, so overriding them here
+     re-lights the text, fraction bars and num-rule for all three states at once; the rings + washes
+     ride the untouched accent vars and need no override. */
+  --pending-text-color:color-mix(in srgb, var(--pending-color) 60%, white);
+  --preview-text-color:color-mix(in srgb, var(--preview-color) 60%, white);
+  --preview-remove-text-color:color-mix(in srgb, var(--preview-remove-color) 60%, white);
 }
 /* the EBK bracket & brace marks — and the chart bars / axes (the per-tile damage chart and the
    dummy tile's sample sparkline) — bake _BR_COLOR (#1a1a1a) into their SVG fill (bars, the y-axis
