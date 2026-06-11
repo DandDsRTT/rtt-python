@@ -95,12 +95,18 @@ _NONSTANDARD_BASIS_IN_USE = (
 )
 
 _SEAM = "#999"  # the thin grey rule separating the frozen title panes from the scrolling body
-_PREVIEW_COLOR = "#f5a623"  # amber ring on a cell the in-progress edit moves (the edit-preview
-# highlight) — a warm "this changed" hue, kept distinct from the red _ALERT_COLOR / remove-preview
+_PENDING_TEXT_COLOR = "color-mix(in srgb, var(--pending-color) 60%, black)"  # a draft cell's TEXT:
+# the green ring (_PENDING_COLOR, imported) DARKENED toward black — single-sourced from --pending-color
+# so the wash, the ring and the text are ONE green at three lightnesses (light wash / mid ring / dark
+# text). Mixing with black scales every channel equally, so the hue is preserved exactly and only the
+# lightness drops; the mid ring is too light to read as text on the pale wash, hence this darker shade.
+# The green analogue of the changing _PREVIEW_TEXT_COLOR and going-away _PREVIEW_REMOVE_TEXT_COLOR
+_PREVIEW_COLOR = "#e8c00a"  # yellow ring on a cell the in-progress edit moves (the edit-preview
+# highlight) — a clear "this changed" hue, kept distinct from the red _ALERT_COLOR / remove-preview
 # and the green _PENDING_COLOR add-preview, so the three highlight hues read apart at a glance
 _PREVIEW_TEXT_COLOR = "color-mix(in srgb, var(--preview-color) 60%, black)"  # the "changing" cell's
-# TEXT: the amber ring above DARKENED toward black — single-sourced from --preview-color so the wash,
-# the ring and the text are ONE golden-amber hue at three lightnesses (light wash / mid ring / dark
+# TEXT: the yellow ring above DARKENED toward black — single-sourced from --preview-color so the wash,
+# the ring and the text are ONE golden-yellow hue at three lightnesses (light wash / mid ring / dark
 # text), never a mix of hues. Mixing with black scales every channel equally, so the hue is preserved
 # exactly — only the lightness drops. The bright ring itself is too light to read as text on the pale
 # wash, hence the dark shade. This is the changing analogue of a draft's green text (_PENDING_COLOR)
@@ -111,8 +117,13 @@ _ALERT_COLOR = "#e53935"  # red for an alerting cell (.rtt-alert: a held interva
 # no longer holds just). Once shared with the pending draft via _PENDING_COLOR; split off when drafts
 # went green, so "now invalid" stays red while "being created" reads green
 _PREVIEW_REMOVE_COLOR = "#e53935"  # red ring on a cell a hovered +/- will REMOVE (the structural
-# remove-preview) — "this is going away", paired with the amber "this value moved"; its own var so
+# remove-preview) — "this is going away", paired with the yellow "this value moved"; its own var so
 # it stays tweakable apart from the matching _ALERT_COLOR red
+_PREVIEW_REMOVE_TEXT_COLOR = "color-mix(in srgb, var(--preview-remove-color) 60%, black)"  # a going-
+# away cell's TEXT: the red remove-ring above DARKENED toward black, single-sourced from
+# --preview-remove-color so the wash, ring and text are one red at three lightnesses — the removing
+# analogue of the green _PENDING_TEXT_COLOR and changing _PREVIEW_TEXT_COLOR, so a cell a hovered +/-
+# will delete reads dark red (not plain black) while it is still on screen
 # the value cells tile into a shared-border grid (a ruled spreadsheet, per the
 # mockup): each cell draws a rule and overlaps its neighbour by exactly the rule
 # width, so two abutting borders coincide as ONE line — no doubled inner rules.
@@ -334,7 +345,7 @@ def _control_svg(glyph: str) -> str:
 
 _CSS_VARS = f""":root {{
   --pad:{_PAD}px; --t:{_T}; --tab-w:{_TAB_W}px; --tab-h:{_TAB_H}px; --chrome-h:{_CHROME_H}px; --panel-w:{_PANEL_W}px;
-  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --alert-color:{_ALERT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR};
+  --seam:{_SEAM}; --pending-color:{_PENDING_COLOR}; --pending-text-color:{_PENDING_TEXT_COLOR}; --alert-color:{_ALERT_COLOR}; --preview-color:{_PREVIEW_COLOR}; --preview-text-color:{_PREVIEW_TEXT_COLOR}; --preview-remove-color:{_PREVIEW_REMOVE_COLOR}; --preview-remove-text-color:{_PREVIEW_REMOVE_TEXT_COLOR};
   --c-gridline:#e0e0e0;
   --wash-base:#fff; --wash-tuning:{_TINTS['tuning']}; --wash-temperament:{_TINTS['temperament']}; --wash-form:{_TINTS['form']};
   --cell-border-w:{_CELL_BORDER_W}px; --cell-border:{_CELL_BORDER}; --cell-font:{_CELL_FONT}px;

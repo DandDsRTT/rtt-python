@@ -3489,6 +3489,18 @@ class _GridBuilder:
                     else:
                         self.cells.append(CellBox(cid, cx, cy, COL_W, ROW_H, "tuningvalue",
                                              text=service.prescale_text(value), unit=u, alert=alert))
+            # a pending comma/target/held/interest draft also gets a blank GREEN placeholder column,
+            # stacked over every prescaled sub-row, so the draft reads green through the advanced
+            # complexity-prescaling matrix too — the multi-row twin of tuning_value_row's single-row
+            # placeholder (lines ~2147). The enclosing bracket already spans the draft (content_w is
+            # _shown-wide), so only the cells are needed. left() is this group's group_left.
+            pending_idx = {"commas": (self.pending, self.nc), "targets": (self.pending_target, self.k),
+                           "held": (self.pending_held, self.nh), "interest": (self.pending_interest, self.mi)}.get(group)
+            if pending_idx is not None and pending_idx[0] is not None:
+                for i in range(nrows + self.size_rows):
+                    cy = self.row_y["prescaling"] + i * ROW_H
+                    self.cells.append(CellBox(f"cell:prescaling:{group}:{i}:draft", left(pending_idx[1]),
+                                         cy, COL_W, ROW_H, "tuningvalue", text="", pending=True))
         if self.lbox_ctrl:  # box 𝐋's lone alt.-complexity control: the "replace diminuator" checkbox,
             # in a bordered box at the bottom of the prescaling matrix (the prescaler chooser is a preset
             # now, riding the preset band above). A SQUARE (no inline label — it wraps broken in the narrow

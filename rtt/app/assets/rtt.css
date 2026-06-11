@@ -539,22 +539,22 @@
    .q-field__control because the input's opaque white fill would otherwise hide the wrap's highlight. */
 .rtt-cellinput.rtt-pending .q-field__control { box-shadow:inset 0 0 0 2px var(--pending-color);
             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
-.rtt-cellinput.rtt-pending .q-field__native { color:var(--pending-color) !important; }
-/* a pending comma's "?" quantity (and the draft vector in the plain text), in the same
-   green as its draft cells/brackets */
-.rtt-pending-q { color:var(--pending-color) !important; }
+.rtt-cellinput.rtt-pending .q-field__native { color:var(--pending-text-color) !important; }
+/* a pending comma's "?" quantity (and the draft vector in the plain text), in the same DARK
+   green as its draft cells' text — the ring/brackets keep the lighter --pending-color */
+.rtt-pending-q { color:var(--pending-text-color) !important; }
 /* a pending draft's editable "?/?" ratio (the wrap carries rtt-pending): the same green ring + wash
    on its input frame, with the stacked ?/? fraction face green — until a valid fraction (or the
    vector cells) fills it. */
 .rtt-cell-input.rtt-pending .q-field__control { box-shadow:inset 0 0 0 2px var(--pending-color);
             background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
 .rtt-cell-input.rtt-pending .rtt-frac-num,
-.rtt-cell-input.rtt-pending .rtt-frac-den { color:var(--pending-color) !important; }
-.rtt-cell-input.rtt-pending .rtt-frac-num { border-bottom-color:var(--pending-color) !important; }
+.rtt-cell-input.rtt-pending .rtt-frac-den { color:var(--pending-text-color) !important; }
+.rtt-cell-input.rtt-pending .rtt-frac-num { border-bottom-color:var(--pending-text-color) !important; }
 /* the typed text greens only WHILE FOCUSED; unfocused it stays transparent (rtt-cell-stacked)
    so the "?/?" face shows alone, not doubled over the raw input text — the bug a plain (always-on)
    colour rule caused by overriding the stacked-cell transparency with !important. */
-.rtt-cell-input.rtt-pending:focus-within .rtt-cellinput .q-field__native { color:var(--pending-color) !important; }
+.rtt-cell-input.rtt-pending:focus-within .rtt-cellinput .q-field__native { color:var(--pending-text-color) !important; }
 /* a pending NON-interactive placeholder: the draft column's computed rows below the vectors
    (mapping, tuning, complexity, …) get filled with blank cells so the WHOLE draft column reads
    green, not just its editable cells up top. Plain .rtt-cell only — :not(.rtt-cell-input) so it
@@ -609,6 +609,16 @@
             background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
 .rtt-cell.rtt-preview-remove .q-field__control { box-shadow:inset 0 0 0 2px var(--preview-remove-color);
             background:color-mix(in srgb, var(--preview-remove-color) 14%, transparent); }
+/* the going-away cell's TEXT: dark red (--preview-remove-text-color, the red ring darkened so it is
+   legible on the pale wash) — "this is going away" — the removing analogue of a draft's dark-green
+   and a changing cell's dark-gold text, so a cell a hovered +/- will delete reads dark red instead of
+   plain black while still on screen. Mirrors the preview-change / alert text rules (blanket * + frac-
+   bar + the stacked-focus exception, each one class more specific so it wins) so every value face
+   reddens yet a stacked ratio's hidden raw input is never doubled over its face. */
+.rtt-cell.rtt-preview-remove, .rtt-cell.rtt-preview-remove * { color:var(--preview-remove-text-color) !important; }
+.rtt-cell.rtt-preview-remove .rtt-frac-num { border-bottom-color:var(--preview-remove-text-color) !important; }
+.rtt-cell.rtt-preview-remove.rtt-cell-stacked .rtt-cellinput .q-field__native { color:transparent !important; }
+.rtt-cell.rtt-preview-remove.rtt-cell-stacked:focus-within .rtt-cellinput .q-field__native { color:var(--preview-remove-text-color) !important; }
 /* the comma basis plain text while a comma is pending: not an editable input (which is
    one colour) but a static box matching the input's frame, holding the committed commas
    in black and the red draft vector — you edit the draft in the red grid cells */
