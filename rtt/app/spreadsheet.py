@@ -1841,7 +1841,7 @@ class _GridBuilder:
         label_h = CAPTION_LINE if label else 0  # one line (overflows right, never wraps the box wider)
         box_h = BOX_INNER + PRESET_H + (label_h + CTRL_LABEL_GAP if label else BOX_INNER)
         # the established-projection chooser carries the ✕ "return to scheme" button on a row inside
-        # its own box, below the dropdown + caption (so the button is NOT a separate control box)
+        # its own box, ABOVE the dropdown + caption (so the button is NOT a separate control box)
         box_h += (SCHEME_BTN_SQ + CTRL_LABEL_GAP) if scheme_btn else 0
         return dropdown_w, label_h, box_h
 
@@ -2401,6 +2401,8 @@ class _GridBuilder:
         # scheme-driven.
         self.cells.append(CellBox(f"scheme:{ckey}", x, y, SCHEME_BTN_SQ, SCHEME_BTN_SQ, "scheme_button", text="✕"))
         label_y = y + (SCHEME_BTN_SQ - CAPTION_LINE) / 2  # centre the one-line caption on the square
+        # the caption box starts 2px right of the ✕; its rtt-caption-left class adds a 6px text inset,
+        # so the glyphs sit ~8px off the square — snug, and tighter than the prior 4px box gap.
         self.cells.append(CellBox(f"scheme:{ckey}:label", x + SCHEME_BTN_SQ + 2, label_y, SCHEME_LABEL_W,
                              CAPTION_LINE, "caption", text="return to scheme", align="left"))
 
@@ -2968,9 +2970,14 @@ class _GridBuilder:
             for i in range(self.d):
                 for p in range(self.d):
                     text = DASH if not full_p else self.projection_matrix[i][p]
-                    # editable as the SAME stacked-fraction ratiocell every other gridded fraction uses
+                    # editable like every mixed int/fraction gridded value (the domain elements): an
+                    # integer entry ("1","0") as a plain elementcell, a fraction ("1/4") as the stacked
+                    # elementratio — switching kind across an int↔fraction retune so the reconciler
+                    # rebuilds the face (else a stale "0" lingers where "-1/3" now belongs). Dashed →
+                    # read-only "mapped". Commit routes to on_ratio_change by the cell: id (see _element_input).
+                    kind = self._element_cell_kind(text) if full_p else "mapped"
                     self.cells.append(CellBox(f"cell:proj:{i}:{p}", self.prime_left(p), self.proj_top(i),
-                                         COL_W, ROW_H, "ratiocell" if full_p else "mapped", text=text, prime=p))
+                                         COL_W, ROW_H, kind, text=text, prime=p))
         # the generator embedding G = H(MH)⁻¹ (d×r), beside P in the gens columns: its columns are
         # the held tuning's generators as fractional vectors. Read-only ("mapped") cells like P, but
         # over the r generator columns rather than the d primes (rows are the d primes, like P).
@@ -2980,9 +2987,11 @@ class _GridBuilder:
             for i in range(self.d):
                 for g in range(self.r):
                     text = DASH if not full_g else self.embedding_matrix[i][g]
-                    # editable as the SAME stacked-fraction ratiocell (like P, the comma ratios, …)
+                    # editable like P (elementcell for an integer, elementratio for a fraction; kind
+                    # follows the value across an int↔fraction retune). Dashed → read-only "mapped".
+                    kind = self._element_cell_kind(text) if full_g else "mapped"
                     self.cells.append(CellBox(f"cell:embed:{i}:{g}", self.gen_left(g), self.proj_top(i),
-                                         COL_W, ROW_H, "ratiocell" if full_g else "mapped", text=text, gen=g))
+                                         COL_W, ROW_H, kind, text=text, gen=g))
 
         # the projected unrotated vector list P·V (the projection row over the V column): each
         # unrotated vector scaled by its eigenvalue — the comma columns vanish (P·𝐜 = 0, the
@@ -4265,7 +4274,7 @@ class _GridBuilder:
         # the always-present "return to scheme" ✕ button on the projection (P) and embedding (G) tiles —
         # hands a picked/edited tuning back to the scheme + target list (editor.back_to_scheme). With
         # presets ON it rides INSIDE the established-projection chooser's box (control_box's scheme_btn,
-        # below the dropdown + caption). With presets OFF there is no chooser, so it gets its own small
+        # ABOVE the dropdown + caption). With presets OFF there is no chooser, so it gets its own small
         # box here. app.py greys it when there's nothing to revert.
         if self.settings["projection"] and not self.show_presets:
             for ckey in ("primes", "gens"):

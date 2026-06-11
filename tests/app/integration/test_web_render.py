@@ -240,6 +240,47 @@ async def test_editing_the_projection_matrix_retunes(user: User) -> None:
     assert _cell_child(user, "tuning:gen:1").value == "694.786"   # retuned to third-comma
 
 
+async def test_a_projection_cell_rerenders_its_face_when_it_flips_integer_to_fraction(user: User) -> None:
+    # reuse-fidelity guard: P/G entries are elementcell (plain integer) / elementratio (stacked
+    # fraction) by shape, so a retune that flips an entry int→fraction must REBUILD the cell — not
+    # leave a stale integer where a fraction now belongs (the bug a single ratiocell kind would have).
+    # 1/4-comma's P[1][1] = "0" (a plain elementcell); retuning to 1/3-comma (hold 6/5) makes it
+    # "-1/3" (a stacked elementratio). Assert the VISIBLE stacked face, not just the input .value.
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:proj:1:1")
+    assert _cell_child(user, "cell:proj:1:1").value == "0"        # 1/4-comma: a plain integer face
+    _cell_child(user, "unchanged:1").set_value("6/5")            # retune to 1/3-comma
+    _commit(user, "unchanged:1")
+    num, den = _ratio_face(user, "cell:proj:1:1")               # rebuilt as a stacked fraction
+    assert (num.text, den.text) == ("-1", "3")                  # the face followed the value, not a stale "0"
+
+
+async def test_an_invalid_projection_edit_toasts_and_reverts(user: User) -> None:
+    # editing P to something that ISN'T a valid projection (a 2 on the diagonal breaks idempotency
+    # P² = P) must TOAST the reason at top and revert the field — not silently retune or swallow it.
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:proj:0:0")
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"   # 1/4-comma
+    _cell_child(user, "cell:proj:0:0").set_value("2")            # P[0][0] = 2 → P² ≠ P
+    _commit(user, "cell:proj:0:0")
+    await user.should_see("isn't a valid projection")           # the red toast names the reason
+    assert _cell_child(user, "cell:proj:0:0").value == "1"      # reverted, not left showing the bad 2
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
+
+
+async def test_an_invalid_embedding_edit_toasts_and_reverts(user: User) -> None:
+    # editing G so that M·G ≠ I (here zeroing the octave generator's prime-2 coordinate) must toast
+    # the reason at top and revert — the embedding counterpart of the invalid-projection toast.
+    await _enable(user, "projection")
+    await user.should_see(marker="cell:embed:0:0")
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"
+    _cell_child(user, "cell:embed:0:0").set_value("0")          # G[0][0] = 0 → M·G ≠ I
+    _commit(user, "cell:embed:0:0")
+    await user.should_see("isn't a valid embedding")
+    assert _cell_child(user, "cell:embed:0:0").value == "1"     # reverted
+    assert _cell_child(user, "tuning:gen:1").value == "696.578"  # tuning unchanged
+
+
 async def test_projection_renders_the_consolidated_v_and_scaling_factors(user: User) -> None:
     # projection also consolidates the commas + unchanged basis U into V = C|U and adds the
     # scaling-factors row λ. Assert the new cells render (and lean on the ERROR-log guard for any

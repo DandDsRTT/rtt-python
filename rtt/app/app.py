@@ -1935,12 +1935,19 @@ class _Reconciler:
         self._update_ratio(cb)              # the overlaid stacked face mirrors the fraction
 
     def _element_input(self, cb):
-        # the shared input for both domain-element cell kinds: commits the relabel / draft-add on
-        # blur / Enter (on_element_change), and previews it LIVE as a valid value is typed
-        # (on_element_preview rings the cells the edit would move, without committing).
-        commit = lambda _=None, cid=cb.id: self._cb.on_element_change(cid)
-        inp = ui.input(on_change=lambda _=None, cid=cb.id: self._cb.on_element_preview(cid)) \
-            .props("dense borderless").classes("rtt-cellinput")
+        # the shared input for the elementcell / elementratio kinds. A domain-element cell commits the
+        # relabel / draft-add on blur (on_element_change) and previews it LIVE as a valid value is typed
+        # (on_element_preview). The SAME pair also renders the editable projection P / embedding G
+        # MATRIX entries (a mix of integers and fractions, so they need the int↔fraction kind switch the
+        # element pair already does) — those carry a "cell:proj/embed:…" id and commit the WHOLE matrix
+        # on blur via on_ratio_change, with no live preview (a partial fraction can't be a valid matrix).
+        if cb.id.startswith(("cell:proj:", "cell:embed:")):
+            commit = lambda _=None, cid=cb.id: self._cb.on_ratio_change(cid)
+            inp = ui.input().props("dense borderless").classes("rtt-cellinput")
+        else:
+            commit = lambda _=None, cid=cb.id: self._cb.on_element_change(cid)
+            inp = ui.input(on_change=lambda _=None, cid=cb.id: self._cb.on_element_preview(cid)) \
+                .props("dense borderless").classes("rtt-cellinput")
         inp.on("blur", commit)  # Enter blurs (make_cell), committing here
         self.inputs[cb.id] = inp
 

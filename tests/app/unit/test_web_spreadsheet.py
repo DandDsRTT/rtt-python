@@ -7884,7 +7884,10 @@ def test_projection_on_adds_the_generator_embedding_G_beside_P():
     for i in range(3):
         for g in range(2):
             cell = cells[f"cell:embed:{i}:{g}"]
-            assert cell.kind == "ratiocell"               # editable, retyping G retunes (the shared stacked-fraction cell)
+            # editable like the domain elements: a fraction is the stacked elementratio, an integer
+            # the plain elementcell — the kind follows the value's shape so the face rebuilds across
+            # an int↔fraction retune (else a stale "0" lingers where "1/4" now belongs)
+            assert cell.kind == ("elementratio" if "/" in cell.text else "elementcell")
             assert cell.x == cells[f"tuning:gen:{g}"].x   # the same generator columns as 𝒈
             assert cell.y == cells[f"cell:proj:{i}:0"].y  # the same prime rows as P
     # quarter-comma's embedding G: the octave and 5^(1/4)
@@ -7895,6 +7898,31 @@ def test_projection_on_adds_the_generator_embedding_G_beside_P():
     # under-held (the default), G dashes out in lockstep with P
     dashed = {c.id: c for c in _proj_build().cells}
     assert all(dashed[f"cell:embed:{i}:{g}"].text == "—" for i in range(3) for g in range(2))
+
+
+def test_return_to_scheme_button_is_boxed_above_the_dropdown_with_presets():
+    # the ✕ "return to scheme" row rides INSIDE the established-projection chooser's box, ABOVE the
+    # dropdown (not in a separate control box). Assert the ✕ cell sits above the preset dropdown and
+    # both are enclosed by the same chooser box block.
+    lay = _with(projection=True, presets=True)
+    cells = {c.id: c for c in lay.cells}
+    sq, dropdown = cells["scheme:primes"], cells["preset:projection"]
+    assert sq.y < dropdown.y  # ✕ row above the dropdown
+    box = next(b for b in lay.blocks if b.id == "block:preset:projection")
+    for cell in (sq, dropdown):
+        assert box.x <= cell.x and cell.y >= box.y and cell.y < box.y + box.h  # both inside the box
+
+
+def test_return_to_scheme_button_keeps_its_own_box_without_presets():
+    # with presets OFF there is no chooser dropdown, but the ✕ + label must still be boxed (a real
+    # bug once dropped the box because it was built after the control-region flush). Assert the
+    # block:scheme:primes box exists and encloses the ✕ square.
+    lay = _with(projection=True, presets=False)
+    cells = {c.id: c for c in lay.cells}
+    sq = cells["scheme:primes"]
+    box = next((b for b in lay.blocks if b.id == "block:scheme:primes"), None)
+    assert box is not None and getattr(box, "boxed", False)
+    assert box.x <= sq.x and box.y <= sq.y and sq.x + sq.w <= box.x + box.w and sq.y + sq.h <= box.y + box.h
 
 
 def test_generator_embedding_is_captioned_and_framed_in_generator_coords():

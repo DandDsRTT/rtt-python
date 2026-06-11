@@ -250,10 +250,12 @@ def control_help(kind: str, cid: str) -> str | None:
         return _PRESET_HELP.get(cid.split(":")[1])
     if kind == "ptextedit":
         return _PTEXT_HELP.get(cid)
-    if kind == "ratiocell":  # comma / target / held / interest / unchanged + the P / G matrix cells
-        if cid.startswith("cell:proj"):
-            return "Projection-matrix entry — a fraction of 𝑃 = 𝐺𝑀. Retype 𝑃 to retune to the projection it defines (rejected unless it's a valid projection)."
-        if cid.startswith("cell:embed"):
-            return "Generator-embedding entry — a fraction of 𝐺. Retype 𝐺 to retune to the embedding it defines (rejected unless 𝑀𝐺 = 𝐼)."
+    # the editable projection P / embedding G matrix cells are elementcell/elementratio by entry shape
+    # (int vs fraction), so route them by id, not kind, before the element-kind help below.
+    if cid.startswith("cell:proj:"):  # the editable P entries, NOT the read-only P·V list (cell:proj_v:…)
+        return "Projection-matrix entry — a fraction of 𝑃 = 𝐺𝑀. Retype 𝑃 to retune to the projection it defines (rejected unless it's a valid projection)."
+    if cid.startswith("cell:embed:"):
+        return "Generator-embedding entry — a fraction of 𝐺. Retype 𝐺 to retune to the embedding it defines (rejected unless 𝑀𝐺 = 𝐼)."
+    if kind == "ratiocell":  # comma / target / held / interest / unchanged
         return _RATIO_HELP.get(cid.split(":")[0])
     return _ID_HELP.get(cid) or _KIND_HELP.get(kind)
