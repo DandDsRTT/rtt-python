@@ -503,6 +503,33 @@
 .rtt-cellinput .q-field__native { text-align:center; padding:0 !important; color:#000; font-size:var(--cell-font);
             min-height:0; font-family:'Cambria',Georgia,serif; }
 .rtt-cellinput .q-field__bottom, .rtt-cellinput .q-field__marginal { display:none !important; }
+/* ---- the editable stacked fraction cells (the unified ratio-or-integer gridvalue, ratio_allowed):
+   a numerator input over a bar over a denominator input, edited IN PLACE — no overlay face, no
+   diagonal slash. The white box + black outline rides the WRAP (one box around two inputs), and the
+   font cascades from the .rtt-frac-edit box (set inline by _fit_fraction) so num + den shrink
+   together. data-fracmode flips the view: "int" (denominator blank/1) shows just the big numerator;
+   "ratio" shows num over bar over den. _FRACTION_JS keeps it live as you type; the server sets it
+   authoritatively from the committed value. ---- */
+.rtt-fraccell { background:#fff; border:var(--cell-border); box-sizing:border-box; overflow:hidden; }
+.rtt-frac-edit { display:flex; flex-direction:column; align-items:center; justify-content:center;
+            width:100%; height:100%; line-height:1.04; font-size:var(--cell-font); }
+.rtt-fraccell .rtt-cellinput { height:auto; }
+.rtt-fraccell .rtt-cellinput .q-field__control { position:static !important; background:transparent;
+            border:none !important; width:100% !important; height:auto !important; min-height:0 !important; }
+.rtt-fraccell .rtt-cellinput .q-field__native { font-size:inherit; line-height:1.04; padding:0 3px !important;
+            min-height:0 !important; }
+.rtt-frac-bar { height:1px; background:#000; align-self:stretch; margin:0 1px; user-select:none; pointer-events:none; }
+.rtt-frac-edit[data-fracmode="int"] .rtt-frac-den-in,
+.rtt-frac-edit[data-fracmode="int"] .rtt-frac-bar { display:none; }
+/* fraction-cell state colours: the green draft (on the WRAP), the red held-no-longer-just alert and
+   the amber edit-preview reuse the blanket text rules already on .q-field__native (no overlay face to
+   double, so no transparent-while-unfocused exception is needed); only the bar needs its own colour. */
+.rtt-fraccell.rtt-pending { box-shadow:inset 0 0 0 2px var(--pending-color);
+            background:color-mix(in srgb, var(--pending-color) 14%, transparent); }
+.rtt-fraccell.rtt-pending .q-field__native { color:var(--pending-color) !important; }
+.rtt-fraccell.rtt-pending .rtt-frac-bar { background:var(--pending-color); }
+.rtt-alert .rtt-frac-bar { background:var(--alert-color) !important; }
+.rtt-cell.rtt-preview-change .rtt-frac-bar { background:var(--preview-text-color) !important; }
 /* a pending NEW-entry draft cell: a GREEN inset ring + faint green wash — the SAME highlight style
    as the amber edit-preview and the red remove-preview below, in green to read "being created".
    (Replaces the old red outline so the three highlight states share one visual language: green =

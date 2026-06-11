@@ -209,7 +209,11 @@ class _GridValueSpec(NamedTuple):
 # cell:proj:* / cell:embed:*, committed through on_ratio_change), so they ride this row for free.
 _GRIDVALUE_SPECS = {
     "ratiocell":     _GridValueSpec(True,  True,  "on_ratio_change",        None,                 True),
+    # the domain basis elements (prime:i) AND the projection P / embedding G matrix entries
+    # (cell:proj/embed:i) — an integer shows the big-number view, a fraction the stacked view, the
+    # kind following the value's shape. P/G dispatch to on_ratio_change by cid (see _gridvalue_handlers).
     "elementcell":   _GridValueSpec(True,  True,  "on_element_change",      "on_element_preview",  True),
+    "elementratio":  _GridValueSpec(True,  True,  "on_element_change",      "on_element_preview",  True),
     "mapping":       _GridValueSpec(False, True,  "on_mapping_change",      "on_mapping_change",   False, ("row",)),
     "commacell":     _GridValueSpec(False, True,  "on_comma_change",        "on_comma_change",     False, ("col", "comma")),
     "unchangedcell": _GridValueSpec(False, False, "on_unchanged_change",    "on_unchanged_change", False),
@@ -271,6 +275,18 @@ _AUDIO_JS = (_ASSETS / "audio.js").read_text(encoding="utf-8")
 # .rtt-gridbody has scrolled off zero on that axis, toggled as rtt-scrolled-x/y on .rtt-app. scroll
 # doesn't bubble → capture phase, so the body's scroll events are still caught here.
 _FREEZE_JS = (_ASSETS / "freeze.js").read_text(encoding="utf-8")
+
+# Live int<->ratio mode-switching for the editable stacked fraction cells (the "/" key opens a
+# denominator, a blank/1 denominator collapses to the big-integer view). Pure client-side — commits
+# still happen on blur (see _build_fraction / _build_gridvalue).
+_FRACTION_JS = (_ASSETS / "fraction.js").read_text(encoding="utf-8")
+
+# A fraction cell holds TWO inputs (numerator + denominator) in one cell. This client-side guard makes
+# a focus/blur/commit handler fire only when focus crosses the WHOLE cell's boundary — not on the
+# num<->den Tab hop inside it — so the edit-preview baseline is taken once and the value commits only
+# when you truly leave. (relatedTarget is the element focus is moving to/from.)
+_FRAC_EXIT_JS = ("(e) => { const b = e.target.closest('.rtt-frac-edit'); "
+                 "if (!b || !b.contains(e.relatedTarget)) emit(); }")
 
 
 def _option_box_svg(fill: str | None, *, box: str = "#fff", border: str = "#555") -> str:
@@ -1239,6 +1255,7 @@ class _Reconciler:
         self.els: dict = {}  # entity id -> outer element (persists across renders)
         self.inputs: dict = {}  # mapping cell id -> q-input (a fraction cell's NUMERATOR / its sole integer input)
         self.den_inputs: dict = {}  # fraction cell id -> its DENOMINATOR q-input (ratio mode only; see _build_gridvalue)
+        self.frac_edits: dict = {}  # fraction cell id -> the .rtt-frac-edit box (its data-fracmode drives int/ratio view)
         self.labels: dict = {}  # cell id -> the label whose text tracks state
         self.fracs: dict = {}  # ratio cell id -> (numerator label, denominator label)
         self.stacked_faces: dict = {}  # stacked-value cell id -> (main label, sub label): cents whole/.frac, power ∞/(max)
@@ -1268,7 +1285,7 @@ class _Reconciler:
         # The single source of truth for every per-id handle dict, so drop() clears an entity from ALL
         # of them. Forgetting one leaks handles to a deleted element (checks was historically omitted —
         # the box-𝐋 diminuator checkbox); a NEW per-id handle dict MUST be added here.
-        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
+        self._handle_dicts = (self.els, self.inputs, self.den_inputs, self.frac_edits, self.labels, self.fracs, self.stacked_faces, self.gensign_faces, self.htmls, self.ebk_sizes, self.chart_keys, self.range_keys, self.exprs, self.expr_state, self.kinds, self.selects, self.checks, self.ptext_inputs, self.rangeopts, self.opt_buttons, self.mean_damage_tips, self.captions, self.caption_html, self.math_cells, self.math_rendered, self.fold_state, self.cell_units, self.cell_unit_text)
         # The edit-preview highlight: while one editable cell is focused, every render rings the
         # OTHER cells whose value the in-progress edit has moved, so the user previews the ripple
         # before leaving the cell. preview_baseline is the layout captured when the cell took focus
@@ -1332,16 +1349,15 @@ class _Reconciler:
 
         self.cell_kinds["genratio"] = _KindHandlers(self._build_genratio, self._update_ratio)
         # the editable quantities-row ratios (comma / target / held / interest): a fraction face
-        # overlaid on an input, the scalar twin of the interval-vectors row's editable column cells
-        self.cell_kinds["ratiocell"] = _KindHandlers(self._build_ratiocell, self._update_ratiocell)
-        # a chapter-9 domain basis element (nonstandard-domain box on): an editable ratio cell that
-        # commits a basis RELABEL / a new held-just element rather than an interval edit
-        # a chapter-9 domain basis element (nonstandard-domain box on): an integer prime shows as a
-        # plain number (elementcell), a nonprime as a stacked fraction face (elementratio) — like its
-        # read-only form. The build picks the kind by the value's form, so a relabel that crosses
-        # int↔fraction rebuilds the cell (the reconciler rebuilds on a kind change).
-        self.cell_kinds["elementcell"] = _KindHandlers(self._build_elementcell, self._update_elementcell)
-        self.cell_kinds["elementratio"] = _KindHandlers(self._build_elementratio, self._update_elementratio)
+        # the scalar twin of the interval-vectors row's editable column cells — an editable stacked
+        # fraction (the shared gridvalue component, ratio_allowed)
+        self.cell_kinds["ratiocell"] = _gridvalue
+        # a chapter-9 domain basis element (nonstandard-domain box on), and the projection P /
+        # embedding G matrix entries — the shared stacked-fraction component. An integer prime shows
+        # the big-number view, a nonprime the stacked fraction; the spreadsheet picks elementcell vs
+        # elementratio by the value's shape, so a relabel that crosses int↔fraction rebuilds the cell.
+        self.cell_kinds["elementcell"] = _gridvalue
+        self.cell_kinds["elementratio"] = _gridvalue
         self.cell_kinds["commaratio"] = _KindHandlers(self._build_commaratio, self._update_ratio)
         self.cell_kinds["tuningvalue"] = _KindHandlers(self._build_tuning_value, self._update_tuning_value)
 
@@ -1478,15 +1494,22 @@ class _Reconciler:
         # checkbox commits instantly, with no "while editing" window to preview).
         edit_input = self.inputs.get(cb.id) or self.ptext_inputs.get(cb.id)
         if edit_input is not None:
-            edit_input.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid))
-            edit_input.on("blur", lambda _=None: self._cb.on_cell_blur())
-            # Enter just BLURS the input (client-side) — it does not commit on its own. Blurring routes
-            # Enter through the proven blur path: the cell's own blur handler commits the value and
-            # on_cell_blur ends the edit-preview. This matches the expected UX (the cursor leaves the box)
-            # and, crucially, avoids the bug where committing + re-rendering an input's value WHILE it
-            # stays focused desynced it so the browser stopped firing on_change — leaving the live preview
-            # working only on the first edit until the cell was left and re-entered (or the tab refreshed).
-            edit_input.on("keydown.enter", js_handler="(e) => e.target.blur()")
+            # a fraction cell holds TWO inputs (numerator + denominator) in one cell: wire BOTH, and
+            # gate the focus/blur with _FRAC_EXIT_JS so the edit-preview baseline is taken once (not
+            # re-snapshotted on the num<->den Tab hop) and on_cell_blur fires only when focus truly
+            # leaves the cell. A single-input cell has no den (guard None → fire on every focus/blur).
+            den = self.den_inputs.get(cb.id)
+            guard = _FRAC_EXIT_JS if den is not None else None
+            for fld in (edit_input, den) if den is not None else (edit_input,):
+                fld.on("focus", lambda _=None, cid=cb.id: self._cb.on_cell_focus(cid), js_handler=guard)
+                fld.on("blur", lambda _=None: self._cb.on_cell_blur(), js_handler=guard)
+                # Enter just BLURS the input (client-side) — it does not commit on its own. Blurring routes
+                # Enter through the proven blur path: the cell's own blur handler commits the value and
+                # on_cell_blur ends the edit-preview. This matches the expected UX (the cursor leaves the box)
+                # and, crucially, avoids the bug where committing + re-rendering an input's value WHILE it
+                # stays focused desynced it so the browser stopped firing on_change — leaving the live preview
+                # working only on the first edit until the cell was left and re-entered (or the tab refreshed).
+                fld.on("keydown.enter", js_handler="(e) => e.target.blur()")
         # every editable numeric input steps by its _WHEEL_STEPS amount on a wheel notch while
         # focused. The listener rides the wrap (so a scroll anywhere in the cell counts) and its
         # js_handler only emits when the cell holds focus, so an unfocused scroll just pages the grid
@@ -1612,9 +1635,11 @@ class _Reconciler:
         denominator input, so this is just its sole input's value. The single read every commit /
         whole-matrix callback uses, so a split cell looks like one combined field to them."""
         num = str(self.inputs[cid].value).strip()
-        den = str(self.den_inputs[cid].value).strip() if cid in self.den_inputs else ""
         if not num:
             return ""
+        if "/" in num:  # the numerator already carries a whole ratio (a paste, or a test set_value)
+            return num
+        den = str(self.den_inputs[cid].value).strip() if cid in self.den_inputs else ""
         return num if den in ("", "1") else f"{num}/{den}"
 
     # ---- cell-kind handlers (audit #3): each kind's build + update, co-located here so a
@@ -1771,20 +1796,51 @@ class _Reconciler:
     def _build_gridvalue(self, cb, wrap):
         # PREVIEW the ripple as you type (the kinds that have a live preview) and COMMIT on Enter /
         # blur (Enter blurs via make_cell) — never re-solving on every keystroke. A per-cell unit
-        # overlays inside the input box; drag-to-combine arming is per its spec.
+        # overlays inside the input box; drag-to-combine arming is per its spec. A ratio_allowed kind
+        # is an editable stacked fraction (numerator over bar over denominator, two fields); an
+        # integer-only kind is one input.
         spec = _GRIDVALUE_SPECS[cb.kind]
         commit, preview = self._gridvalue_handlers(cb, spec)
-        wrap.classes("rtt-cell-input")
-        inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", commit)
-        self.inputs[cb.id] = inp
+        if spec.ratio_allowed:
+            self._build_fraction(cb, wrap, commit, preview)
+        else:
+            wrap.classes("rtt-cell-input")
+            inp = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput")
+            inp.on("blur", commit)
+            self.inputs[cb.id] = inp
         self._arm_gridvalue(wrap, cb, spec)
+
+    def _build_fraction(self, cb, wrap, commit, preview):
+        # the editable stacked fraction: a numerator input over a bar over a denominator input, edited
+        # IN PLACE (no overlay face, no diagonal slash). The two are SEPARATE fields — Tab moves
+        # num->den, the bar isn't selectable — and the cell collapses to the big-integer view when the
+        # denominator is blank/1 ("/" in integer view splits it open again). _FRACTION_JS drives the
+        # live int<->ratio switch client-side; make_cell gates focus/blur (it also wires the den) so
+        # the commit fires only when focus leaves the WHOLE cell. The white box + black outline rides
+        # the WRAP (one box around two inputs), not each input's own Quasar control.
+        wrap.classes("rtt-cell-input rtt-fraccell")
+        box = ui.element("div").classes("rtt-frac-edit")
+        with box:
+            num = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput rtt-frac-num-in")
+            ui.element("div").classes("rtt-frac-bar")  # the horizontal rule — a div, so it is never selectable
+            den = ui.input(on_change=preview).props("dense borderless").classes("rtt-cellinput rtt-frac-den-in")
+        num.on("blur", commit, js_handler=_FRAC_EXIT_JS)  # commit only when focus leaves the whole cell
+        den.on("blur", commit, js_handler=_FRAC_EXIT_JS)
+        self.inputs[cb.id] = num
+        self.den_inputs[cb.id] = den
+        self.frac_edits[cb.id] = box
 
     def _gridvalue_handlers(self, cb, spec):
         """A gridded cell's (commit, preview) event handlers. The scalar ratio / domain-element
         cells pass the cell id and commit one at a time; the integer matrix/vector cells re-read the
         WHOLE matrix and take a ``preview=`` flag. ``preview`` is None for the ratiocell — it commits
         on blur with no live keystroke preview (parsing a half-typed fraction would mis-retune)."""
+        # the element kinds do double duty: a projection P / embedding G matrix entry
+        # (cell:proj/embed:i) commits the WHOLE matrix via on_ratio_change with no preview (a partial
+        # fraction can't be a valid matrix), unlike a domain basis element (prime:i), which relabels
+        # via on_element_change with a live preview. Dispatch the P/G entries by their cell id.
+        if cb.id.startswith(("cell:proj:", "cell:embed:")):
+            return (lambda _=None, cid=cb.id: self._cb.on_ratio_change(cid)), None
         fn = getattr(self._cb, spec.commit)
         if spec.cid_arg:
             commit = lambda _=None, cid=cb.id: fn(cid)
@@ -1805,10 +1861,45 @@ class _Reconciler:
 
     def _update_gridvalue(self, cb):
         spec = _GRIDVALUE_SPECS[cb.kind]
-        self.inputs[cb.id].value = self._gridvalue_text(cb)
+        text = self._gridvalue_text(cb)
+        if spec.ratio_allowed:
+            self._update_fraction(cb, text)
+        else:
+            self.inputs[cb.id].value = text
         if spec.pending:  # the green draft ring/wash + text (a comma/target/held/interest being added)
-            self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                       remove="" if cb.pending else "rtt-pending")
+            # the fraction cells carry it on the WRAP (it rings the whole box + colours both fields and
+            # the bar); the single-input cells carry it on the input
+            target = self.els[cb.id] if spec.ratio_allowed else self.inputs[cb.id]
+            target.classes(add="rtt-pending" if cb.pending else "",
+                           remove="" if cb.pending else "rtt-pending")
+
+    def _update_fraction(self, cb, text):
+        # split the committed value into the two fields and pick the view: a blank/1 denominator is the
+        # big-integer view (collapse EVERYWHERE — a committed "2/1" rests as a big "2"), anything else
+        # is the stacked fraction. _FRACTION_JS keeps data-fracmode live as you type; this is the
+        # authoritative resting state (and the den is cleared in integer view so "/" reopens it empty).
+        num, den = _ratio_parts(text) or (text, "")
+        ratio = den not in ("", "1")
+        self.inputs[cb.id].value = num
+        self.den_inputs[cb.id].value = den if ratio else ""
+        self.frac_edits[cb.id].props(f'data-fracmode={"ratio" if ratio else "int"}')
+        self._fit_fraction(cb.id, num, den, cb.w, ratio)
+
+    def _fit_fraction(self, cid, num, den, width, ratio):
+        # the stacked fraction shrinks both lines together to fit a long num/den (see _ratio_font); the
+        # integer view fills the square at the big value font, shrunk only if a long integer (e.g. a
+        # target 65536) would spill. Set on both inputs (the __native font inherits), so they share one
+        # size and the fitted size is readable per field.
+        if ratio:
+            size = _ratio_font(num, den, width)
+        elif num:
+            fit = (width - _RATIO_PAD) / (len(num) * _RATIO_DIGIT_EM)
+            size = int(min(float(_CELL_FONT), fit) * 10) / 10
+        else:
+            size = float(_CELL_FONT)
+        style = f"font-size:{size:.2f}px"
+        self.inputs[cid].style(style)
+        self.den_inputs[cid].style(style)
 
     def _gridvalue_text(self, cb):
         """The string a gridded cell shows. A live DRAFT (a comma column / a mapping row being added)
@@ -1941,74 +2032,13 @@ class _Reconciler:
     def _build_ratio_or_pending(self, cb):
         # a read-only comma ratio heading its column — the generator-detempering D ratio, or a
         # pending comma draft's green "?" placeholder (no value until the vector is filled in). The
-        # editable comma/target/held/interest ratios are ratiocells (see _build_ratiocell).
+        # editable comma/target/held/interest ratios are ratiocells (the shared _build_gridvalue).
         if cb.pending:
             self.labels[cb.id] = ui.label(cb.text).classes("rtt-value rtt-pending-q")
         else:
             self._ratio(cb, approx=False)
 
-    def _build_ratiocell(self, cb, wrap):
-        # an editable comma / target / held / interest ratio: an input (the white box + black
-        # outline) carrying the same stacked fraction face as the read-only ratios, overlaid so
-        # the cell reads as a fraction until clicked, then swaps to the raw "num/den" for editing.
-        # It commits the WHOLE typed fraction on blur / Enter, not per keystroke — parsing "2" of a
-        # "25/24" mid-edit would momentarily retune to 2/1 and fight the typing. A pending draft's
-        # green "?/?" face stays put until a valid fraction fills it (or its vector cells do).
-        wrap.classes("rtt-cell-input rtt-cell-stacked")
-        commit = lambda _=None, cid=cb.id: self._cb.on_ratio_change(cid)
-        inp = ui.input().props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", commit)  # Enter blurs (make_cell), committing here
-        self.inputs[cb.id] = inp
-        self._ratio(cb, approx=False, overlay=True)
-
-    def _update_ratiocell(self, cb):
-        self.inputs[cb.id].value = cb.text  # committed: the ratio; a draft pre-fills "?/?" so you edit it
-        self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                remove="" if cb.pending else "rtt-pending")  # green draft styling
-        self._update_ratio(cb)              # the overlaid stacked face mirrors the fraction
-
-    def _element_input(self, cb):
-        # the shared input for the elementcell / elementratio kinds. A domain-element cell commits the
-        # relabel / draft-add on blur (on_element_change) and previews it LIVE as a valid value is typed
-        # (on_element_preview). The SAME pair also renders the editable projection P / embedding G
-        # MATRIX entries (a mix of integers and fractions, so they need the int↔fraction kind switch the
-        # element pair already does) — those carry a "cell:proj/embed:…" id and commit the WHOLE matrix
-        # on blur via on_ratio_change, with no live preview (a partial fraction can't be a valid matrix).
-        if cb.id.startswith(("cell:proj:", "cell:embed:")):
-            commit = lambda _=None, cid=cb.id: self._cb.on_ratio_change(cid)
-            inp = ui.input().props("dense borderless").classes("rtt-cellinput")
-        else:
-            commit = lambda _=None, cid=cb.id: self._cb.on_element_change(cid)
-            inp = ui.input(on_change=lambda _=None, cid=cb.id: self._cb.on_element_preview(cid)) \
-                .props("dense borderless").classes("rtt-cellinput")
-        inp.on("blur", commit)  # Enter blurs (make_cell), committing here
-        self.inputs[cb.id] = inp
-
-    def _build_elementcell(self, cb, wrap):
-        # an INTEGER domain basis element (a prime): a plain input showing the bare number (e.g. "2"),
-        # like a mapping/comma entry — not the stacked fraction face (a prime has no denominator below).
-        wrap.classes("rtt-cell-input")
-        self._element_input(cb)
-
-    def _update_elementcell(self, cb):
-        self.inputs[cb.id].value = cb.text  # the bare element (e.g. "2"), or "?/?" for a draft
-        self.inputs[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                   remove="" if cb.pending else "rtt-pending")
-
-    def _build_elementratio(self, cb, wrap):
-        # a NONPRIME domain basis element (e.g. 13/5): the stacked fraction face (horizontal bar,
-        # denominator below) over an input — identical to every other gridded ratio.
-        wrap.classes("rtt-cell-input rtt-cell-stacked")
-        self._element_input(cb)
-        self._ratio(cb, approx=False, overlay=True)
-
-    def _update_elementratio(self, cb):
-        self.inputs[cb.id].value = cb.text  # the live element (e.g. "13/5"), or "?/?" for a draft
-        self.els[cb.id].classes(add="rtt-pending" if cb.pending else "",
-                                remove="" if cb.pending else "rtt-pending")  # green draft styling
-        self._update_ratio(cb)  # the overlaid stacked fraction face mirrors the value
-
-    def _update_ratio(self, cb):  # genratio / commaratio / ratiocell: refresh the stacked fraction face
+    def _update_ratio(self, cb):  # genratio / commaratio (read-only): refresh the stacked fraction face
         # only the fraction form is refreshed; a plain-label ratio (no num/den) is static, as built
         if cb.id in self.fracs:
             num, den = _ratio_parts(cb.text) or (cb.text, "")
@@ -2654,6 +2684,8 @@ def index() -> None:
     ui.add_body_html(f"<script>{_AUDIO_JS}\nwindow.rttAudio.glyphs = {json.dumps(_AUDIO_GLYPHS)};</script>")
     # keep the frozen title bands pinned to the scrolling grid pane (see _FREEZE_JS)
     ui.add_body_html(f"<script>{_FREEZE_JS}</script>")
+    # live int<->ratio switching for the editable stacked fraction cells (see _FRACTION_JS)
+    ui.add_body_html(f"<script>{_FRACTION_JS}</script>")
     # trim NiceGUI's default 16px content padding to a slim margin around the whole app
     ui.query(".nicegui-content").style("padding:6px")
 

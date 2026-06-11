@@ -150,15 +150,15 @@ async def test_projection_renders_the_embedding_and_its_choosers(user: User) -> 
     # the default meantone (TILT minimax-U) IS quarter-comma — it holds 2/1 and 5/4 — so the choosers
     # read 1/4-comma and P/G fill in (the 5^(1/4) entries), NOT dashes
     assert _cell_child(user, "preset:projection").value == "1/4-comma"
-    # P and G are now editable ratiocells (the shared stacked-fraction cell) — read their value
-    assert _cell_child(user, "cell:proj:2:1").value == "1/4"
-    assert _cell_child(user, "cell:embed:2:1").value == "1/4"
+    # P and G are now editable stacked-fraction cells — read their rejoined value
+    assert _ratio_value(user, "cell:proj:2:1") == "1/4"
+    assert _ratio_value(user, "cell:embed:2:1") == "1/4"
     # pick 1/3-comma -> P and G re-form (it holds 6/5), both choosers track it, and the genmap
     # actually re-solves to third-comma (1200, 694.786)
     _cell_child(user, "preset:projection").set_value("1/3-comma")
     await user.should_see(marker="cell:embed:2:1")
-    assert _cell_child(user, "cell:proj:2:1").value == "1/3"
-    assert _cell_child(user, "cell:embed:2:1").value == "1/3"
+    assert _ratio_value(user, "cell:proj:2:1") == "1/3"
+    assert _ratio_value(user, "cell:embed:2:1") == "1/3"
     assert _cell_child(user, "preset:projection:gens").value == "1/3-comma"
     assert _cell_child(user, "tuning:gen:1").value == "694.786"  # the dropdown changed the tuning
 
@@ -248,11 +248,11 @@ async def test_a_projection_cell_rerenders_its_face_when_it_flips_integer_to_fra
     # "-1/3" (a stacked elementratio). Assert the VISIBLE stacked face, not just the input .value.
     await _enable(user, "projection")
     await user.should_see(marker="cell:proj:1:1")
-    assert _cell_child(user, "cell:proj:1:1").value == "0"        # 1/4-comma: a plain integer face
+    assert _cell_child(user, "cell:proj:1:1").value == "0"        # 1/4-comma: the big-integer view
     _cell_child(user, "unchanged:1").set_value("6/5")            # retune to 1/3-comma
     _commit(user, "unchanged:1")
     num, den = _ratio_face(user, "cell:proj:1:1")               # rebuilt as a stacked fraction
-    assert (num.text, den.text) == ("-1", "3")                  # the face followed the value, not a stale "0"
+    assert (num.value, den.value) == ("-1", "3")                # the face followed the value, not a stale "0"
 
 
 async def test_an_invalid_projection_edit_toasts_and_reverts(user: User) -> None:
@@ -411,8 +411,8 @@ async def test_editing_a_ratio_after_a_reorder_edits_the_column_it_heads(user: U
     # must edit the column the cell now heads — the bug this guards read the token straight back as a
     # list index and edited whatever interval sat at that index (a different column).
     await user.open("/")
-    assert _cell_child(user, "target:0").value == "2/1"
-    assert _cell_child(user, "target:1").value == "3/1"
+    assert _ratio_value(user, "target:0") == "2"   # 2/1 rests as the big-integer view (den 1 collapses)
+    assert _ratio_value(user, "target:1") == "3"
     # swap the first two targets: drag target 0's grip onto target 1's, so token 1 (the 3/1) now
     # heads the FIRST slot while token 0 (the 2/1) heads the second
     UserInteraction(user, set(user.find(marker="grip:targets:0").elements), None).trigger("dragstart")
@@ -421,8 +421,8 @@ async def test_editing_a_ratio_after_a_reorder_edits_the_column_it_heads(user: U
     _cell_child(user, "target:1").set_value("9/8")   # edit the cell now heading the first slot
     _commit(user, "target:1")
     await user.should_see(marker="target:1")
-    assert _cell_child(user, "target:1").value == "9/8"   # the edit stuck to the column it heads...
-    assert _cell_child(user, "target:0").value == "2/1"   # ...not the one at token-as-index 1
+    assert _ratio_value(user, "target:1") == "9/8"   # the edit stuck to the column it heads...
+    assert _ratio_value(user, "target:0") == "2"     # ...not the one at token-as-index 1
 
 
 async def test_enabling_colorization_keeps_the_board_rendering(user: User) -> None:
@@ -519,9 +519,32 @@ async def test_dummy_tile_parts_reflect_and_drive_the_live_show_state(user: User
 # --- tier 3: the edit -> render -> undo pipeline (input -> handler -> render) ---
 
 def _cell_child(user: User, cell_id: str):
-    """The inner control of a grid cell (the marker rides its wrap)."""
+    """The inner control of a grid cell (the marker rides its wrap). An editable stacked-fraction
+    cell wraps its numerator + denominator inputs in a .rtt-frac-edit box; the NUMERATOR is the
+    "primary" control the marker-based interactions drive (and, headless, a whole ``"3/2"`` typed
+    into it still commits — cell_value rejoins it with the empty denominator)."""
     wrap = next(iter(user.find(marker=cell_id).elements))
-    return wrap.default_slot.children[0]
+    child = wrap.default_slot.children[0]
+    if "rtt-frac-edit" in getattr(child, "_classes", []):
+        return child.default_slot.children[0]  # the numerator input
+    return child
+
+
+def _frac_inputs(user: User, cell_id: str):
+    """The (numerator, denominator) input fields of an editable stacked-fraction cell — the two
+    separate fields that replaced the old overlaid num-over-den face. The .rtt-frac-edit box is the
+    wrap's first child; its children are num, the bar div, den."""
+    wrap = next(iter(user.find(marker=cell_id).elements))
+    box = wrap.default_slot.children[0]
+    return box.default_slot.children[0], box.default_slot.children[2]
+
+
+def _ratio_value(user: User, cell_id: str) -> str:
+    """The committed ratio a stacked-fraction cell shows, rejoined from its numerator + denominator
+    inputs the way cell_value does (a blank/1 denominator is the big-integer view, so it returns the
+    bare numerator)."""
+    num, den = _frac_inputs(user, cell_id)
+    return num.value if den.value in ("", "1") else f"{num.value}/{den.value}"
 
 
 def _wrap_classes(user: User, cell_id: str) -> list[str]:
@@ -570,13 +593,10 @@ def _gentuning_face(user: User, cell_id: str):
 
 
 def _ratio_face(user: User, cell_id: str):
-    """The (numerator, denominator) labels of an editable ratio cell's overlaid fraction face —
-    the stacked num-over-den that makes the editable input read like a read-only ratio until
-    focused. The input is child[0]; the face (an rtt-ratio.rtt-cellface) is child[1], holding the
-    rtt-frac div whose two labels are the numerator and denominator."""
-    wrap = next(iter(user.find(marker=cell_id).elements))
-    frac = wrap.default_slot.children[1].default_slot.children[0]
-    return frac.default_slot.children[0], frac.default_slot.children[1]
+    """The (numerator, denominator) INPUT fields of an editable stacked-fraction cell. The cell is
+    now edited in place (no overlay face): the numerator and denominator are two real inputs, so the
+    face's "text" is each input's ``.value``."""
+    return _frac_inputs(user, cell_id)
 
 
 def _target_preset(user: User):
@@ -791,12 +811,12 @@ async def test_editing_a_comma_ratio_updates_the_basis(user: User) -> None:
     # the quantities-row comma ratio is editable — the scalar twin of the comma vector below it.
     # Committing a new fraction (on blur) re-parses to that comma's vector, so the cells follow.
     await user.open("/")
-    assert _cell_child(user, "comma:0").value == "80/81"  # 5-limit meantone's syntonic comma
+    assert _ratio_value(user, "comma:0") == "80/81"  # 5-limit meantone's syntonic comma
     _cell_child(user, "comma:0").set_value("25/24")        # the chromatic semitone = (-3 -1 2)
     _commit(user, "comma:0")                               # blur commits the whole fraction
     await user.should_see(marker="cell:comma:0:0")
     assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["-3", "-1", "2"]
-    assert _cell_child(user, "comma:0").value == "25/24"   # and the ratio cell reflects the edit
+    assert _ratio_value(user, "comma:0") == "25/24"   # and the ratio cell reflects the edit
 
 
 async def test_an_out_of_limit_comma_ratio_toasts_and_reverts(user: User) -> None:
@@ -807,7 +827,7 @@ async def test_an_out_of_limit_comma_ratio_toasts_and_reverts(user: User) -> Non
     _cell_child(user, "comma:0").set_value("82/81")
     _commit(user, "comma:0")
     await user.should_see("outside the 2.3.5 domain")     # the toast explains the prime-limit failure
-    assert _cell_child(user, "comma:0").value == "80/81"  # reverted, not left showing the bad 82/81
+    assert _ratio_value(user, "comma:0") == "80/81"  # reverted, not left showing the bad 82/81
     assert [_cell_child(user, f"cell:comma:{p}:0").value for p in range(3)] == ["4", "-4", "1"]
 
 
@@ -818,18 +838,18 @@ async def test_an_unparseable_comma_ratio_toasts_that_its_invalid(user: User) ->
     _cell_child(user, "comma:0").set_value("12three")
     _commit(user, "comma:0")
     await user.should_see("not a valid ratio")
-    assert _cell_child(user, "comma:0").value == "80/81"
+    assert _ratio_value(user, "comma:0") == "80/81"
 
 
 async def test_editing_a_target_ratio_overrides_the_set(user: User) -> None:
     # the quantities-row target ratio is editable: committing a fraction overrides the target set,
     # like editing the target vector. The typed value survives the render only if the override held.
     await user.open("/")
-    assert _cell_child(user, "target:0").value == "2/1"
+    assert _ratio_value(user, "target:0") == "2"   # 2/1 rests as the big-integer view
     _cell_child(user, "target:0").set_value("5/4")
     _commit(user, "target:0")
     await user.should_see(marker="target:0")
-    assert _cell_child(user, "target:0").value == "5/4"
+    assert _ratio_value(user, "target:0") == "5/4"
 
 
 async def test_editing_a_held_ratio_updates_the_interval(user: User) -> None:
@@ -874,21 +894,21 @@ async def test_typing_a_ratio_into_a_pending_draft_fills_it(user: User) -> None:
     _click_glyph(user, "held_plus")                  # start a blank draft -> the "?/?" head appears
     await user.should_see(marker="held:pending")
     assert "rtt-pending" in _wrap_classes(user, "held:pending")  # the draft head reads green
-    assert _cell_child(user, "held:pending").value == "?/?"  # pre-filled, so you edit "?/?" not a blank box
+    assert _ratio_value(user, "held:pending") == "?/?"  # pre-filled, so you edit "?/?" not a blank box
     _cell_child(user, "held:pending").set_value("3/2")  # type the fraction into the draft head
     _commit(user, "held:pending")                       # blur commits it = (-1 1 0)
     await user.should_see(marker="held:0")
-    assert _cell_child(user, "held:0").value == "3/2"   # the draft committed to a real held interval
+    assert _ratio_value(user, "held:0") == "3/2"   # the draft committed to a real held interval
     assert [_cell_child(user, f"cell:held:{p}:0").value for p in range(3)] == ["-1", "1", "0"]
 
 
 async def test_editable_ratio_cell_renders_a_stacked_fraction_face(user: User) -> None:
-    # the editable comma ratio is an input (the white box + black outline) carrying the SAME
-    # stacked num-over-den fraction face as the read-only ratios, shown until the cell is focused
+    # the editable comma ratio is an in-place stacked fraction: two separate inputs (numerator over a
+    # bar over denominator), not an overlaid face on one input — the syntonic comma reads 80 over 81
     await user.open("/")
-    assert isinstance(_cell_child(user, "comma:0"), ui.input)  # the editable box, not a static label
+    assert isinstance(_cell_child(user, "comma:0"), ui.input)  # the editable numerator box, not a static label
     num, den = _ratio_face(user, "comma:0")
-    assert (num.text, den.text) == ("80", "81")                # the overlaid syntonic-comma fraction
+    assert (num.value, den.value) == ("80", "81")              # the two fraction fields
 
 
 def test_ratio_font_shrinks_a_long_fraction_to_fit_its_square() -> None:
@@ -910,21 +930,22 @@ def test_ratio_font_shrinks_a_long_fraction_to_fit_its_square() -> None:
 
 
 async def test_a_long_ratio_face_shrinks_to_fit_its_cell(user: User) -> None:
-    # Bug: a fraction whose numerator/denominator outgrows the 30px square — e.g. the target 2/1
-    # re-vectored to [16 0 0⟩ = 65536/1 — spilled past the cell at the fixed 13px face. The stacked
-    # fraction must shrink to fit (num and den together), like the cents / plain-text faces do.
+    # Bug: a value whose numerator/denominator outgrows the 30px square — e.g. the target 2/1
+    # re-vectored to [16 0 0⟩ = 65536/1, which collapses to the big-integer view "65536" — spilled
+    # past the cell at the fixed font. The fitted font shrinks to fit, and the two fraction fields
+    # share one size.
     await user.open("/")
     num, den = _ratio_face(user, "target:0")
-    assert (num.text, den.text) == ("2", "1")
-    assert "font-size" in num._style, "the ratio face must carry a fitted font size"
+    assert (num.value, den.value) == ("2", "")                    # 2/1 collapses to the big-integer view
+    assert "font-size" in num._style, "the fraction field must carry a fitted font size"
     big = float(num._style["font-size"].rstrip("px"))             # the comfortable 1-digit size
     _cell_child(user, "target:0").set_value("65536/1")            # 2^16 = the [16 0 0⟩ target vector
     _commit(user, "target:0")
     await user.should_see(marker="target:0")
     num, den = _ratio_face(user, "target:0")
-    assert (num.text, den.text) == ("65536", "1")
+    assert num.value == "65536"
     small = float(num._style["font-size"].rstrip("px"))
-    assert small < big                                            # the 5-digit fraction shrank to fit
+    assert small < big                                            # the 5-digit value shrank to fit
     assert num._style["font-size"] == den._style["font-size"]     # num and den share one size
 
 
@@ -2575,7 +2596,7 @@ async def test_relabeling_a_domain_element_across_a_kind_change_clears_on_blur(u
     assert "rtt-preview-change" in _wrap_classes(user, "just:prime:1")    # the live preview rings while editing
     UserInteraction(user, {inp}, None).trigger("blur")    # APPLY (the rebuild destroys the old input)
     await user.should_see(marker="just:prime:1")          # the moved cell survived the rebuild (still on screen)
-    assert _cell_child(user, "prime:1").value == "9/7"     # the relabel committed
+    assert _ratio_value(user, "prime:1") == "9/7"     # the relabel committed
     assert "rtt-preview-change" not in _wrap_classes(user, "just:prime:1"), \
         "the kind-change relabel left the amber ring stuck after commit"
 

@@ -87,7 +87,12 @@ body.rtt-dark .rtt-ratio,
 body.rtt-dark .rtt-tuning-value,
 body.rtt-dark .rtt-stacked-sub,
 body.rtt-dark .rtt-mathexpr-stack { color:#e3e6ea; }
-body.rtt-dark .rtt-frac-num { border-bottom-color:#e3e6ea; }   /* the fraction bar */
+body.rtt-dark .rtt-frac-num { border-bottom-color:#e3e6ea; }   /* the read-only fraction bar */
+/* the editable stacked fraction cells: the dark box rides the WRAP (the two inputs' controls stay
+   transparent so it shows through), and the bar + light input text re-light like every dark cell. */
+body.rtt-dark .rtt-fraccell { background:#1b1f24; }
+body.rtt-dark .rtt-fraccell .rtt-cellinput .q-field__control { background:transparent; }
+body.rtt-dark .rtt-frac-bar { background:#e3e6ea; }
 /* the row/column titles, the per-value symbols & matrix labels, captions, units */
 body.rtt-dark .rtt-colheader,
 body.rtt-dark .rtt-rowlabel,
